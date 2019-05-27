@@ -40,3 +40,10 @@ Factored using phrases:
       _ connect: "localhost" -print-main-tables.
       _ connect: "remote" -print-main-tables.
     }.
+
+## Virtual Machine
+
+Simplicity is a virtue:
+- easy to implement
+- easy to target
+- ok to assume things like max 256 arguments, 256 variables, 216 methods...
