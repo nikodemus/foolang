@@ -1,4 +1,6 @@
-
+lazy_static! {
+    static ref INT_CLASS: Class  = 
+}
 
 struct Method {
   name: String,
@@ -8,12 +10,26 @@ struct Method {
 
 struct Class {
   name: String,
-  methods: HashMap<String,Rc<Method>>,
+  methods: HashMap<Rc<Object>,Rc<Method>>,
+}
+
+enum Datum {
+    Int(i64),
+    Slots(Vec<Rc<Object>>),
 }
 
 struct Object {
   class: Class,
-  slots: Vec<Rc<Object>>,
+  datum: Datum,
+}
+
+impl Object {
+    fn int(x: i64) -> Rc<Object> {
+        Rc::new(Object {
+            class: INT_CLASS,
+            datum: Datum::Int(x),
+        })
+    }
 }
 
 struct MethodContext {
@@ -31,6 +47,11 @@ struct VM {
 }
 
 impl VM {
+    fn run(&mut self) {
+        loop {
+            OPCODES[bytecode()](self);
+        }
+    }
     fn send(&mut self) {
         let m = self.receiver.class.methods[self.constant()];
         self.stack.push(self.context);
@@ -186,61 +207,26 @@ const OPCODES: [(&str,OpImpl), 20] = [
     ("slot_to_slot", op_slot_to_slot),
 ];
 
-fn exec() {
-   // XXX: If everything is 256 in size I can just use arrays! (Just need an arg pointer?)
-   let context = MethodContext {
-       registers: Vec::new(),
-       myself: myself,
-       method: method,
-       ip: 0,
-   };
-   let stack: Vec<MethodContext> = Vec::new();
-   let receiver = NONE;
-   let args: Vec<Object> = Vec::new();
-
-   loop {
-       let opcode = contex.method.bytecode[context.ip()];
-
-       if single_byte_opcode(opcode) {
-
-       }
-
-         // Passing arguments
-         Bytecode::ConstArg(i)    => args.push(method.constants[i]),
-         Bytecode::RegisterArg(i) => args.push(registers[i]),
-         Bytecode::SelfArg()      => args.push(myself),
-         Bytecode::SlotArg(i)     => args.push(myself.slots[i]),
-
-         // Setting receiver
-         Bytecode::ConstReceiver(i)    => { receiver = method.constants[i]; },
-         Bytecode::RegisterReceiver(i) => { receiver = registers[i]; }
-         Bytecode::SelfReceiver        => { receiver = myself; }
-         Bytecode::SlotReceiver(i)     => { receiver = myself.slots[i]; }
-
-         // Sending the message
-         Bytecode::SendMessage(i) => {
-           let m = myself.methods[method.constants[i]],
-           stack.push(context);
-           context = MethodContext {
-                   registers: args,
-                   myself: receiver,
-                   method: m,
-                   ip: 0,
-           };
-           receiver = NONE;
-           args = Vec::new();
-         },
-
-         // Returning a value
-         Bytecode::ReturnReceiver => {
-            context = stack.pop();
-         }
-     }
-  }
+fn exec(obj: Rc<Object>, selector: Rc<object>) {
+    let vm = VM {
+        stack: Vec::new(),
+        context: MethodContext {
+            registers: Vec::new(),
+            method: obj.class.methods[selector],
+            myself: obj,
+            ip: 0,
+        },
+        receiver: obj.clone(),
+        args: Vec::new(),
+    };
+    vm.run();
 }
 
 #[test]
-fn test_send1() {
+fn test_easy() {
+    let m = Method::new();
+    m.emit_constant(Object::int(42));
+    m.emit("push_const")
    let r1 = Object.new();
    let m1 = r1.add_method("foo", Method.new());
    m1.emit(Bytecode::sendMessage(
