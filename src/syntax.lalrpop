@@ -1,0 +1,99 @@
+use std::str::FromStr;
+use foolang::{Ident, Expr, prepend};
+
+grammar;
+
+pub Syntax: Expr = Expression;
+
+PrimaryExpression: Expr = {
+  Literal,
+  Identifier => Expr::Variable(<>),
+  Block,
+  "(" <e:Expression> ")" => e,
+}
+
+Block: Expr = {
+   "{" ":" <p:Identifiers> "|" <s:Statements> "}" => Expr::Block(p, s),
+   "{" <s:Statements> "}" => Expr::Block(vec![], s),
+   "{" "}" => Expr::Block(vec![], vec![]),
+}
+
+Statements: Vec<Expr> = {
+  <s:Statement> "." <ss:Statements> => prepend(s, ss),
+  <s:Statement> "." => vec![s],
+  <s:Statement> => vec![s],
+}
+
+Statement: Expr = {
+  "^" <e:Expression> => Expr::Return(Box::new(e)),
+  Expression,
+}
+
+Expression: Expr = {
+   <i:Identifier> ":=" <e:MainExpression> => Expr::Assign(i, Box::new(e)),
+   MainExpression,
+}
+
+MainExpression: Expr = {
+  PrimaryExpression,
+  MessageExpression,
+}
+
+MessageExpression: Expr = {
+  UnaryExpression,
+  BinaryExpression,
+  KeywordExpression,
+}
+
+UnaryExpression: Expr = {
+  <o:UnaryObjectDescription> <m:UnarySelector> => Expr::Unary(Box::new(o), m),
+}
+
+UnaryObjectDescription: Expr = {
+  PrimaryExpression,
+  UnaryExpression,
+}
+
+BinaryObjectDescription: Expr = {
+  UnaryObjectDescription,
+  BinaryExpression,
+}
+
+UnarySelector: Ident = {
+  Identifier,
+}
+
+BinaryExpression: Expr = {
+  <a:BinaryObjectDescription> <s:BinarySelector> <b:UnaryObjectDescription>
+    => Expr::Binary(Box::new(a), s, Box::new(b))
+}
+
+BinarySelector: Ident = {
+  "-" => Ident(String::from(<>)),
+  r"[+/\\*~<>=@%|&?!]{1,2}" => Ident(String::from(<>)),
+}
+
+KeywordExpression: Expr = {
+  <a:BinaryObjectDescription> <s:Keyword> <b:KeywordExpression>
+    => Expr::Keyword(Box::new(a), s, Box::new(b)),
+  <a:BinaryObjectDescription> <s:Keyword> <b:BinaryObjectDescription>
+    => Expr::Keyword(Box::new(a), s, Box::new(b)),
+}
+
+Keyword: Ident = {
+  r"[a-zA-Z][a-zA-Z0-9]*:" => Ident(String::from(<>))
+}
+
+Identifiers: Vec<Ident> = {
+   <i:Identifier> <is:Identifiers> => prepend(i, is),
+   <i:Identifier> => vec![i]
+}
+
+Identifier: Ident = {
+  r"[a-zA-Z][a-zA-Z0-9]*" => Ident(String::from(<>))
+};
+
+Literal: Expr = {
+  r"[0-9]+\.[0-9]+" => Expr::Float(f64::from_str(<>).unwrap()),
+  r"[0-9]+" => Expr::Int(i64::from_str(<>).unwrap()),
+};
