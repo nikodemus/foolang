@@ -1,35 +1,121 @@
-lazy_static! {
-    static ref INT_CLASS: Class  = 
+/**
+ * Let's be crystal clear here: this is not an efficient
+ * VM implementation or object representation.
+ */
+
+use lazy_static::lazy_static;
+use std::collections::HashMap;
+use std::rc::Rc;
+
+struct Core {
+    classes: Vec<Class>,
+    symbols: Vec<Rc<Object>>,
 }
 
-struct Method {
-  name: String,
-  code: Vec<u8>,
-  constants: Vec<Rc<Object>>,
-}
+static mut CORE: Option<Core> = None;
 
-struct Class {
-  name: String,
-  methods: HashMap<Rc<Object>,Rc<Method>>,
-}
+impl Core {
+    fn get() -> &'static Core {
+        unsafe match CORE {
+            None => {
+                let classes: Vec<Rc<Object>> = Vec::new();
+                let symbols: Vec<Rc<Object>> = Vec::new();
+                let s_symbol = Rc::new(Object {
+                    class: 0,
+                    value: Value::Str(String::from("Symbol")),
+                });
+                let
+                classes.push(
+                    Class {
+                        name: s_symbol.clone(),
+                        methods: Vec::new(),
+                    }
+                );
+                let s_class = Rc::new(Object {
+                    class: 1,
+                    value: Value::Slots()
+                })
+                let o_symbol =
+                let c_symbol = Class {
+                    name: None,
+                    methods: Vec::new(),
+                };
+                c_symbol.name = Some()
+                let symbol = ;
+                let s_symbol = Object {
+                    class:
+                }
+                let s_class = Value::Sym(Rc::new(String::from("Class")));
+                let c_symbol = Class {
+                    name: symval.clone(),
+                    methods: Vec::new(),
+                };
+                let
+                CORE = Core::init()
+                &CORE
+            }
+            Some(core) => &core
+        }
+    }
+    fn int(&self, x: i64) -> Rc<Object> {
+        Rc::new(Object {
+            class: self.INT,
+            value: Value::Int(x),
+        })
+    }
+    fn intern(&mut self, name: &str) -> Rc<Object> {
+        for sym in self.symbols.iter() {
+            if let Value::Sym(_) = sym.value {
+                return sym.to_owned();
+            } else {
+                panic!("Non-symbol in symbol table!");
+            }
+        }
+        let sym = Rc::new(Object {
+            class: self.SYMBOL,
+            value: Value::Sym(String::from(name)),
+        });
+        self.symbols.push(sym.clone());
+        sym;
+    }
+    fn class(&mut self, name: Rc<Object>) -> Rc<Class> {
+        asert!(name.class == SYMBOL);
+        for c in self.classes.iter() {
+            if c.name == name {
+                panic!("Cannot redefine classes yet...");
+            }
+        }
+        let class = Rc::new(Class {
+                name: intern(name),
+                methods: Vec::new(),
+        });
+        self.classes.push(class.clone());
+        class
+    }
 
-enum Datum {
-    Int(i64),
-    Slots(Vec<Rc<Object>>),
+    }
 }
 
 struct Object {
-  class: Class,
-  datum: Datum,
+    class: usize,
+    value: Value,
 }
 
-impl Object {
-    fn int(x: i64) -> Rc<Object> {
-        Rc::new(Object {
-            class: INT_CLASS,
-            datum: Datum::Int(x),
-        })
-    }
+enum Value {
+    Str(String),
+    Slots(Vec<Rc<Object>>),
+}
+
+
+struct Method {
+  name: Rc<Object>,
+  constants: Vec<Rc<Object>>,
+  code: Vec<u8>,
+}
+
+struct Class {
+  name: Rc<Object>,
+  methods: Vec<Rc<Method>>,
 }
 
 struct MethodContext {
@@ -184,27 +270,27 @@ fn op_slot_to_slot(vm: &mut VM) {
     vm.set_slot(vm.slot());
 }
 
-const OPCODES: [(&str,OpImpl), 20] = [
-    ("self", op_self),
-    ("const", op_const),
-    ("reg", op_reg),
-    ("slot", op_slot),
-    ("push_self", op_push_self),
-    ("return", op_return),
-    ("push_const", op_push_const),
-    ("push_reg", op_push_reg),
-    ("push_slot", op_push_slot),
-    ("push_receiver", op_push_receiver),
-    ("send", op_send),
-    ("self_to_reg", op_self_to_reg),
-    ("receiver_to_reg", op_receiver_to_reg),
-    ("self_to_slot", op_self_to_slot),
-    ("receiver_to_slot", op_receiver_to_slot),
-    ("const_to_reg", op_const_to_reg),
-    ("slot_to_reg", op_slot_to_reg),
-    ("reg_to_reg", op_reg_to_reg),
-    ("const_to_slot", op_const_to_slot),
-    ("slot_to_slot", op_slot_to_slot),
+const OPCODES: [(&str,&Fn(&mut VM) -> ()); 20] = [
+    ("self", &op_self),
+    ("const", &op_const),
+    ("reg", &op_reg),
+    ("slot", &op_slot),
+    ("push_self", &op_push_self),
+    ("return", &op_return),
+    ("push_const", &op_push_const),
+    ("push_reg", &op_push_reg),
+    ("push_slot", &op_push_slot),
+    ("push_receiver", &op_push_receiver),
+    ("send", &op_send),
+    ("self_to_reg", &op_self_to_reg),
+    ("receiver_to_reg", &op_receiver_to_reg),
+    ("self_to_slot", &op_self_to_slot),
+    ("receiver_to_slot", &op_receiver_to_slot),
+    ("const_to_reg", &op_const_to_reg),
+    ("slot_to_reg", &op_slot_to_reg),
+    ("reg_to_reg", &op_reg_to_reg),
+    ("const_to_slot", &op_const_to_slot),
+    ("slot_to_slot", &op_slot_to_slot),
 ];
 
 fn exec(obj: Rc<Object>, selector: Rc<object>) {
@@ -224,6 +310,7 @@ fn exec(obj: Rc<Object>, selector: Rc<object>) {
 
 #[test]
 fn test_easy() {
+
     let m = Method::new();
     m.emit_constant(Object::int(42));
     m.emit("push_const")

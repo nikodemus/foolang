@@ -5,3 +5,4 @@ authors = ["Nikodemus Siivola <nikodemus@random-state.net>"]
 edition = "2018"
 
 [dependencies]
+lazy_static = "*"
