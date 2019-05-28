@@ -89,4 +89,15 @@ Factored using phrases:
 
 - Smalltalk-80: The Language and Its Implementation
   http://www.mirandabanda.org/bluebook/bluebook_imp_toc.html
- 
+
+## MMmmmaaaybe
+
+- Serialize classes using json:
+
+  { "class": "Class",
+    "name": "Point",
+    "slots": ["x", "y"],
+    "methods": [{ "type": "method", "selector": "foo:with:",
+                  "args": ["bar", "quux"],
+                  "body": "bar ding: quux, reportTo: self"}]}
+
