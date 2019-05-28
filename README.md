@@ -85,9 +85,8 @@ Factored using phrases:
       _ connect: "remote" -print-main-tables.
     }.
 
-## Virtual Machine
+## References
 
-Simplicity is a virtue:
-- easy to implement
-- easy to target
-- ok to assume things like max 256 arguments, 256 variables, 216 methods...
+- Smalltalk-80: The Language and Its Implementation
+  http://www.mirandabanda.org/bluebook/bluebook_imp_toc.html
+ 
