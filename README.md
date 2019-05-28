@@ -2,9 +2,26 @@
 
 ## Parts
 
-### Parser
+### Syntax / Parser
 
-Smalltalkish parser written in Rust.
+TODO:
+[ ] String literals
+[ ] Message chaining with ,  
+[ ] Message cascading with ;
+[ ] => {}
+[ ] local variables with let name = expr
+[ ] block arguments { |foo| }
+[ ] assignment with name = expr
+[ ] Negative numbers
+[ ] Methods
+[ ] Tests
+
+I'm kind of tempted to implement a bootstrap evaluator... Without closures this is
+a stupidly simple language. Object representation in Rust is a bit painful,
+but for bootstrapping it doesn't really matter that much, I think. (And it's
+not much more complex with closures!)
+
+Then I could implement the compiler in Foolang itself...
 
 ### Bootstrap Compiler
 
@@ -92,6 +109,15 @@ Factored using phrases:
 
 ## MMmmmaaaybe
 
+- Annotation assisted escape analysis:
+
+  selector: arg <&Foo>
+    arg stuff
+
+  Check that value of arg cannot escape: cannot be passed
+  to unknown methods, or as arguments not marked as &Foo.
+  If this is true then the object can be stack-allocated automatically.
+
 - Serialize classes using json:
 
   { "class": "Class",
@@ -100,4 +126,3 @@ Factored using phrases:
     "methods": [{ "type": "method", "selector": "foo:with:",
                   "args": ["bar", "quux"],
                   "body": "bar ding: quux, reportTo: self"}]}
-

@@ -81,7 +81,7 @@ KeywordExpression: Expr = {
 }
 
 Keyword: Ident = {
-  r"[a-zA-Z][a-zA-Z0-9]*:" => Ident(String::from(<>))
+  r"[_a-zA-Z][_a-zA-Z0-9]*:" => Ident(String::from(<>))
 }
 
 Identifiers: Vec<Ident> = {
@@ -90,7 +90,7 @@ Identifiers: Vec<Ident> = {
 }
 
 Identifier: Ident = {
-  r"[a-zA-Z][a-zA-Z0-9]*" => Ident(String::from(<>))
+  r"[_a-zA-Z][_a-zA-Z0-9]*" => Ident(String::from(<>))
 };
 
 Literal: Expr = {
