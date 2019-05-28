@@ -1,5 +1,31 @@
 # foolang
 
+## Plan
+
+Compiler for a limited subset:
+
+  compile(slots, methods, source, compiler_backend)
+
+  backend emits C
+
+  Handles:
+   - slot references
+   - slot assignments
+   - argument references
+   - messages
+
+  This allows me to specify VM in foolang itself.
+
+    "newContext: newMethod on: newSelf
+        stack push: context
+        context = Context new: newMethod on: newSelf with: context args"
+
+    "bytecodeSend: selector
+        self newContext: (findMethod: selector) on: receiver"
+
+
+    
+
 ## Specificationish
 
 Smalltalk syntax, except:
