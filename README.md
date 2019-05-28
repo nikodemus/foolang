@@ -10,11 +10,32 @@ TODO:
 [ ] Message cascading with ;
 [ ] => {}
 [ ] local variables with let name = expr
-[ ] block arguments { |foo| }
+[ ] block arguments all with colons { :foo :bar | ... }
+[ ] array syntax [x.y.z]
+[ ] dict syntax [foo: x signum.
+                 quux: y.
+                 zot: z.]
+[ ] Unimplemented marker ...
 [ ] assignment with name = expr
 [ ] Negative numbers
+[ ] Unary minus and negation
+[ ] Indexing foo[x] and foo[x][y]
+[ ] Operator precedence
+    0. Attached (unary) - and ~
+    1. Attached ^
+    2. * / // %
+    3. + -
+    4. << >>
+    5. & |
+    6. == < > =< >=
+    7. &&
+    8. ||
 [ ] Methods
 [ ] Tests
+
+   x or y and z
+
+   y and z or s
 
 I'm kind of tempted to implement a bootstrap evaluator... Without closures this is
 a stupidly simple language. Object representation in Rust is a bit painful,
