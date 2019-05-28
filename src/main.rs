@@ -1,7 +1,6 @@
 /**
  * Let's be crystal clear here: this is not an efficient
  * VM implementation or object representation.
- */
 
 use lazy_static::lazy_static;
 use std::collections::HashMap;
@@ -319,6 +318,24 @@ fn test_easy() {
    m1.emit(Bytecode::sendMessage(
 }
 
+*/
+
+use lalrpop_util::lalrpop_mod;
+
+lalrpop_mod!(pub syntax);
+
+fn show(s: &str) {
+    let e = syntax::SyntaxParser::new().parse(s).unwrap();
+    println!("parse: {:?}", e);
+}
+
 fn main() {
-    println!("Hello, world!");
+    show("foo put: x - 1 at: 4 + 2");
+    show("foo - bar");
+    show("foo ++ bar");
+    show("123");
+    show("123.123");
+    show("foobar");
+    show("{ foo. bar. (fot) unary1 unary2 }");
+    show("{ :x| foo. ^x. quux }");
 }
