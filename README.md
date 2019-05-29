@@ -1,25 +1,40 @@
 # foolang
 
+Planned divergences
+- No subtyping except for interfaces
+- Type inference (and runtime assertions)
+- Conflict-safe extensions to third-party classes
+- Package system
+
 ## Parts
 
 ### Syntax / Parser / Formatter
 
 [x] Formatter
 [ ] Tests
+[ ] # Comments
+[ ] => {}
+[ ] class syntax -- just so that i can sensibly write stuff in files
+     class Name |a b c|
+       #foo
+         ^a
+       #bar: x with: y
+         self foo
+         x do: y
 
 Later
-[ ] # Comments
-[ ] String interpolation
-[ ] => {}
-[ ] Message chaining with ,  
-[ ] Unary minus and negation
-[ ] less restrictive ;
+[ ] local variables with let name = expr (important for type safety)
+[ ] return with return
+[ ] last expression of method body is implicit return
+[ ] String interpolation #"This is {self name}!"
+[ ] Message chaining with ,
+[ ] Unary minus and negation  -foo ~foo
 [ ] array syntax [x.y.z]
-[ ] dict syntax [foo: x signum.
-                 quux: y.
-                 zot: z.]
-[ ] Unimplemented marker ...
+[ ] dict syntax { foo: x signum.
+                  quux: y.
+                  zot: z. }
 [ ] Indexing foo[x] and foo[x][y]
+[ ] Indexing assignment foo[x] = 42
 [ ] Operator precedence
     0. Attached (unary) - and ~
     1. Attached ^
@@ -30,7 +45,6 @@ Later
     6. == < > =< >=
     7. &&
     8. ||
-[ ] local variables with let name = expr
 
 I'm kind of tempted to implement a bootstrap evaluator... Without closures this is
 a stupidly simple language. Object representation in Rust is a bit painful,
