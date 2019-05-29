@@ -170,7 +170,7 @@ String: Expr  = {
 }
 
 CharacterConstant: Expr = {
-  r"\$[.]" => Expr::Character(String::from(<>)),
+  <s:r"\$."> => Expr::Character(chop(String::from(s))),
 }
 
 SymbolConstant: Ident = {
@@ -192,10 +192,11 @@ Symbol: Ident = {
 }
 
 ArrayConstant: Expr = {
-  "#" <a:Array> => a
+  "#" <a:Array> => Expr::ArrayConstant(Box::new(a)),
 }
 
 Array: Expr = {
+  "(" ")" => Expr::Array(vec![]),
   "(" <a:ArrayData> ")" => Expr::Array(a)
 }
 

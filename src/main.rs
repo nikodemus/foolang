@@ -321,7 +321,6 @@ fn test_easy() {
 */
 
 use lalrpop_util::lalrpop_mod;
-use foolang::format;
 
 lalrpop_mod!(pub syntax);
 
@@ -337,12 +336,25 @@ fn showm(s: &str) {
 
 fn foo(s: &str) {
     let e = syntax::MethodParser::new().parse(s).unwrap();
-    println!("pretty: {}", format(e));
-
+    println!("pretty: {}", e.format());
 }
 
 fn main() {
-
+    foo("unary
+           |a b c|
+           a = self foo: 1 bar: { :x |
+               x print.
+               'foobar' print.
+               $x printTo: #stdout.
+           }.
+           #() send.
+           #(1) send.
+           #(1 2 (13)) send.
+           Screen new;
+              open;
+              set_geometry_to: 200 by: 400;
+              + 1000.
+           ^42.1");
     showm("unary
               self foo: 1 bar: 2");
     show("x foo; bar; quux; zot: 2 frob: 1; + 1");
