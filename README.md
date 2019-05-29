@@ -2,22 +2,19 @@
 
 ## Parts
 
-### Syntax / Parser
+### Syntax / Parser / Formatter
 
-TODO:
-[ ] String literals
-[ ] Message chaining with ,  
-[ ] Message cascading with ;
+[ ] Formatter
+[ ] Tests
+
+Later
 [ ] => {}
-[ ] local variables with let name = expr
-[ ] block arguments all with colons { :foo :bar | ... }
+[ ] less restrictive ;
 [ ] array syntax [x.y.z]
 [ ] dict syntax [foo: x signum.
                  quux: y.
                  zot: z.]
 [ ] Unimplemented marker ...
-[ ] assignment with name = expr
-[ ] Negative numbers
 [ ] Unary minus and negation
 [ ] Indexing foo[x] and foo[x][y]
 [ ] Operator precedence
@@ -30,12 +27,8 @@ TODO:
     6. == < > =< >=
     7. &&
     8. ||
-[ ] Methods
-[ ] Tests
-
-   x or y and z
-
-   y and z or s
+[ ] Message chaining with ,  
+[ ] local variables with let name = expr
 
 I'm kind of tempted to implement a bootstrap evaluator... Without closures this is
 a stupidly simple language. Object representation in Rust is a bit painful,
