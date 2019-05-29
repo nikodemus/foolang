@@ -4,18 +4,21 @@
 
 ### Syntax / Parser / Formatter
 
-[ ] Formatter
+[x] Formatter
 [ ] Tests
 
 Later
+[ ] # Comments
+[ ] String interpolation
 [ ] => {}
+[ ] Message chaining with ,  
+[ ] Unary minus and negation
 [ ] less restrictive ;
 [ ] array syntax [x.y.z]
 [ ] dict syntax [foo: x signum.
                  quux: y.
                  zot: z.]
 [ ] Unimplemented marker ...
-[ ] Unary minus and negation
 [ ] Indexing foo[x] and foo[x][y]
 [ ] Operator precedence
     0. Attached (unary) - and ~
@@ -27,7 +30,6 @@ Later
     6. == < > =< >=
     7. &&
     8. ||
-[ ] Message chaining with ,  
 [ ] local variables with let name = expr
 
 I'm kind of tempted to implement a bootstrap evaluator... Without closures this is
