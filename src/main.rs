@@ -321,21 +321,39 @@ fn test_easy() {
 */
 
 use lalrpop_util::lalrpop_mod;
+use foolang::format;
 
 lalrpop_mod!(pub syntax);
 
 fn show(s: &str) {
-    let e = syntax::SyntaxParser::new().parse(s).unwrap();
-    println!("parse: {:?}", e);
+    let e = syntax::ExpressionParser::new().parse(s).unwrap();
+    println!("expr: {:?}", e);
+}
+
+fn showm(s: &str) {
+    let e = syntax::MethodParser::new().parse(s).unwrap();
+    println!("method: {:?}", e);
+}
+
+fn foo(s: &str) {
+    let e = syntax::MethodParser::new().parse(s).unwrap();
+    println!("pretty: {}", format(e));
+
 }
 
 fn main() {
+
+    showm("unary
+              self foo: 1 bar: 2");
+    show("x foo; bar; quux; zot: 2 frob: 1; + 1");
     show("foo put: x - 1 at: 4 + 2");
     show("foo - bar");
     show("foo ++ bar");
+    show("x = y = Thing new");
     show("123");
     show("123.123");
     show("foobar");
     show("{ foo. bar. (fot) unary1 unary2 }");
     show("{ :x| foo. ^x. quux }");
+    show("{ :x :y | foo. ^x. y }");
 }

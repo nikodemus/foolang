@@ -1,9 +1,21 @@
 use std::str::FromStr;
-use foolang::{Ident, Expr, prepend};
+use foolang::{Ident, Expr, Cascade, Pattern, Method, prepend, chop};
 
 grammar;
 
-pub Syntax: Expr = Expression;
+pub Expression: Expr = {
+   <i:Identifier> "=" <e:Expression> => Expr::Assign(i, Box::new(e)),
+   MainExpression,
+}
+
+pub Method: Method = {
+  <p:MessagePattern> <t:Temporaries> <s:Statements>
+    => Method { pattern: p, temporaries: t, statements: s},
+  <p:MessagePattern> <s:Statements>
+    => Method { pattern: p, temporaries: vec![], statements: s},
+  <p:MessagePattern>
+    => Method { pattern: p, temporaries: vec![], statements: vec![]},
+}
 
 PrimaryExpression: Expr = {
   Literal,
@@ -13,9 +25,14 @@ PrimaryExpression: Expr = {
 }
 
 Block: Expr = {
-   "{" ":" <p:Identifiers> "|" <s:Statements> "}" => Expr::Block(p, s),
+   "{" <p:BlockParams> "|" <s:Statements> "}" => Expr::Block(p, s),
    "{" <s:Statements> "}" => Expr::Block(vec![], s),
    "{" "}" => Expr::Block(vec![], vec![]),
+}
+
+BlockParams: Vec<Ident> = {
+   <i:BlockParam> <is:BlockParams> => prepend(i, is),
+   <i:BlockParam> => vec![i]
 }
 
 Statements: Vec<Expr> = {
@@ -29,14 +46,10 @@ Statement: Expr = {
   Expression,
 }
 
-Expression: Expr = {
-   <i:Identifier> ":=" <e:MainExpression> => Expr::Assign(i, Box::new(e)),
-   MainExpression,
-}
-
 MainExpression: Expr = {
   PrimaryExpression,
   MessageExpression,
+  CascadedMessageExpression,
 }
 
 MessageExpression: Expr = {
@@ -68,11 +81,6 @@ BinaryExpression: Expr = {
     => Expr::Binary(Box::new(a), s, Box::new(b))
 }
 
-BinarySelector: Ident = {
-  "-" => Ident(String::from(<>)),
-  r"[+/\\*~<>=@%|&?!]{1,2}" => Ident(String::from(<>)),
-}
-
 KeywordExpression: Expr = {
   <a:BinaryObjectDescription> <s:Keyword> <b:KeywordExpression>
     => Expr::Keyword(Box::new(a), s, Box::new(b)),
@@ -80,8 +88,51 @@ KeywordExpression: Expr = {
     => Expr::Keyword(Box::new(a), s, Box::new(b)),
 }
 
-Keyword: Ident = {
-  r"[_a-zA-Z][_a-zA-Z0-9]*:" => Ident(String::from(<>))
+CascadedMessageExpression: Expr = {
+  <a:MessageExpression> <t:CascadedMessageTail>
+    => Expr::Cascade(Box::new(a), t),
+}
+
+CascadedMessageTail: Vec<Cascade> = {
+    ";" <a:CascadedMessage> <b:CascadedMessageTail> => prepend(a, b),
+    ";" <a:CascadedMessage> => vec![a],
+}
+
+// This syntax feels restrictive: why not allow
+//
+// DB open: "localhost";
+//    tables print;
+//    users print;
+//    + 1 / 2
+//
+// ?
+CascadedMessage: Cascade = {
+   <a:UnarySelector> => Cascade::Unary(a),
+   <a:BinarySelector> <b:UnaryObjectDescription>
+     => Cascade::Binary(a, b),
+   CascadedKeywordMessage,
+}
+
+CascadedKeywordMessage: Cascade = {
+  <a:Keyword> <b:BinaryObjectDescription> <c:CascadedKeywordMessage>
+    => Cascade::Keyword(a, b, Some(Box::new(c))),
+  <a:Keyword> <b:BinaryObjectDescription>
+    => Cascade::Keyword(a, b, None),
+}
+
+Temporaries: Vec<Ident> = {
+  "|" <a:Identifiers> "|" => a
+}
+
+MessagePattern: Pattern = {
+  UnarySelector => Pattern::Unary(<>),
+  <a:BinarySelector> <b:Identifier> => Pattern::Binary(a,b),
+  KeywordPattern,
+}
+
+KeywordPattern: Pattern = {
+  <a:Keyword> <b:Identifier> <c:KeywordPattern> => Pattern::Keyword(a, b, Some(Box::new(c))),
+  <a:Keyword> <b:Identifier> => Pattern::Keyword(a, b, None)
 }
 
 Identifiers: Vec<Ident> = {
@@ -89,11 +140,79 @@ Identifiers: Vec<Ident> = {
    <i:Identifier> => vec![i]
 }
 
+Keyword: Ident = {
+  r"[_a-zA-Z][_a-zA-Z0-9]*:" => Ident(String::from(<>))
+}
+
+BlockParam: Ident = {
+  r":[_a-zA-Z][_a-zA-Z0-9]*" => Ident(chop(String::from(<>)))
+}
+
 Identifier: Ident = {
   r"[_a-zA-Z][_a-zA-Z0-9]*" => Ident(String::from(<>))
 };
 
+BinarySelector: Ident = {
+  "-" => Ident(String::from(<>)),
+  r"[+/\\*~<>=@%|&?!]{1,2}" => Ident(String::from(<>)),
+}
+
 Literal: Expr = {
-  r"[0-9]+\.[0-9]+" => Expr::Float(f64::from_str(<>).unwrap()),
-  r"[0-9]+" => Expr::Int(i64::from_str(<>).unwrap()),
+  Number,
+  SymbolConstant => Expr::Symbol(<>),
+  CharacterConstant,
+  String,
+  ArrayConstant,
 };
+
+String: Expr  = {
+  r"'([^']|(''))*'" => Expr::String(String::from(<>)),
+}
+
+CharacterConstant: Expr = {
+  r"\$[.]" => Expr::Character(String::from(<>)),
+}
+
+SymbolConstant: Ident = {
+  // Unary
+  r"#[_a-zA-Z][_a-zA-Z0-9]*" => Ident(chop(String::from(<>))),
+  // Keyword
+  // XXX: This is not entirely correct as it allows foo:::bar::
+  r"#[_a-zA-Z][:_a-zA-Z0-9]*:" => Ident(chop(String::from(<>))),
+  // BinarySelector
+  r"#-" => Ident(chop(String::from(<>))),
+  r"#[+/\\*~<>=@%|&?!]{1,2}" => Ident(chop(String::from(<>))),
+}
+
+Symbol: Ident = {
+  Identifier,
+  BinarySelector,
+  Keyword,
+  r"[_a-zA-Z][_a-zA-Z0-9]*:[:_a-zA-Z0-9]*:" => Ident(String::from(<>))
+}
+
+ArrayConstant: Expr = {
+  "#" <a:Array> => a
+}
+
+Array: Expr = {
+  "(" <a:ArrayData> ")" => Expr::Array(a)
+}
+
+ArrayData: Vec<Expr> = {
+  <e:ArrayElt> <a:ArrayData> => prepend(e, a),
+  <a:ArrayElt> => vec![a],
+}
+
+ArrayElt: Expr = {
+  Number,
+  Symbol => Expr::Symbol(<>),
+  CharacterConstant,
+  String,
+  Array
+}
+
+Number: Expr = {
+  r"-?[0-9]+\.[0-9]+" => Expr::Float(f64::from_str(<>).unwrap()),
+  r"-?[0-9]+" => Expr::Int(i64::from_str(<>).unwrap()),
+}
