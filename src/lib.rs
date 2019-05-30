@@ -1,20 +1,57 @@
 //use std::fmt::Debug;
 
-#[derive(Debug)]
-pub struct Ident(pub String);
+#[derive(Debug, PartialEq)]
+pub struct Identifier(pub String);
 
-impl Ident {
-    pub fn append(mut self, s: &str) -> Ident {
+#[derive(Debug, PartialEq)]
+pub enum Literal {
+    Integer(i64),
+    Float(f64),
+    Character(String),
+    Symbol(String),
+    String(String),
+    Array(Vec<Literal>),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Method {
+    pub pattern: Pattern,
+    pub temporaries: Vec<Identifier>,
+    pub statements: Vec<Expr>,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Pattern {
+    Unary(Identifier),
+    Binary(Identifier, Identifier),
+    Keyword(Identifier, Identifier, Option<Box<Pattern>>),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Cascade {
+    Unary(Identifier),
+    Binary(Identifier, Expr),
+    Keyword(Identifier, Expr, Option<Box<Cascade>>),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Expr {
+    Constant(Literal),
+    Variable(Identifier),
+    Unary(Box<Expr>, Identifier),
+    Binary(Box<Expr>, Identifier, Box<Expr>),
+    Keyword(Box<Expr>, Vec<Identifier>, Vec<Expr>),
+    Assign(Identifier, Box<Expr>),
+    Return(Box<Expr>),
+    Block(Vec<Identifier>, Vec<Expr>),
+    Cascade(Box<Expr>, Vec<Cascade>),
+}
+
+impl Identifier {
+    pub fn append(mut self, s: &str) -> Identifier {
         self.0.push_str(s);
         self
     }
-}
-
-#[derive(Debug)]
-pub struct Method {
-    pub pattern: Pattern,
-    pub temporaries: Vec<Ident>,
-    pub statements: Vec<Expr>,
 }
 
 const INDENT: usize = 4;
@@ -67,23 +104,16 @@ fn write(s: &str, pos: usize, buf: &mut String) -> usize {
     pos + s.len()
 }
 
-#[derive(Debug)]
-pub enum Pattern {
-    Unary(Ident),
-    Binary(Ident, Ident),
-    Keyword(Ident, Ident, Option<Box<Pattern>>),
-}
-
 impl Pattern {
     fn _format(&self, indent: usize, pos: usize, buf: &mut String) {
         match self {
-            Pattern::Unary(Ident(m)) => buf.push_str(m.as_str()),
-            Pattern::Binary(Ident(m), Ident(a)) => {
+            Pattern::Unary(Identifier(m)) => buf.push_str(m.as_str()),
+            Pattern::Binary(Identifier(m), Identifier(a)) => {
                 buf.push_str(m.as_str());
                 buf.push_str(" ");
                 buf.push_str(a.as_str());
             },
-            Pattern::Keyword(Ident(m), Ident(a), x) => {
+            Pattern::Keyword(Identifier(m), Identifier(a), x) => {
                 buf.push_str(m.as_str());
                 buf.push_str(": ");
                 buf.push_str(a.as_str());
@@ -96,51 +126,10 @@ impl Pattern {
     }
 }
 
-
-#[derive(Debug)]
-pub enum Expr {
-    Int(i64),
-    Float(f64),
-    Symbol(Ident),
-    Character(String),
-    String(String),
-    ArrayConstant(Box<Expr>),
-    Array(Vec<Expr>),
-    Variable(Ident),
-    Return(Box<Expr>),
-    Block(Vec<Ident>, Vec<Expr>),
-    Assign(Ident, Box<Expr>),
-    Unary(Box<Expr>, Ident),
-    Binary(Box<Expr>, Ident, Box<Expr>),
-    Keyword(Box<Expr>, Ident, Box<Expr>),
-    Cascade(Box<Expr>, Vec<Cascade>),
-}
-
-impl Expr {
+impl Literal {
     fn _format(&self, mut indent: usize, mut pos: usize, buf: &mut String) -> usize {
         match self {
-            Expr::Int(i) => {
-                let s = i.to_string();
-                pos = write(s.as_str(), pos, buf);
-            },
-            Expr::Float(f) => {
-                let s = f.to_string();
-                pos = write(s.as_str(), pos, buf);
-            },
-            Expr::Character(s) => {
-                pos = write(format!("${}", s).as_str(), pos, buf);
-            }
-            Expr::Symbol(Ident(s)) => {
-                pos = write(format!("#{}", s).as_str(), pos, buf);
-            }
-            Expr::String(s) => {
-                pos = write(s.as_str(), pos, buf);
-            }
-            Expr::ArrayConstant(data) => {
-                pos = write("#", pos, buf);
-                data._format(indent, pos, buf);
-            }
-            Expr::Array(elts) => {
+            Literal::Array(elts) => {
                 pos = write("(", pos, buf);
                 if elts.len() > 0 {
                     pos = elts[0]._format(indent, pos, buf);
@@ -153,11 +142,48 @@ impl Expr {
                 }
                 pos = write(")", pos, buf);
             }
-            Expr::Assign(Ident(s), val) => {
+            Literal::Symbol(s) => {
+                pos = write(s, pos, buf);
+            },
+            Literal::Character(s) => {
+                pos = write(format!("${}", s).as_str(), pos, buf);
+            },
+            Literal::Integer(i) => {
+                let s = i.to_string();
+                pos = write(s.as_str(), pos, buf);
+            },
+            Literal::Float(f) => {
+                let s = f.to_string();
+                pos = write(s.as_str(), pos, buf);
+            },
+            Literal::String(s) => {
+                pos = write(s.as_str(), pos, buf);
+            },
+        }
+        pos
+    }
+}
+
+impl Expr {
+    fn _format(&self, mut indent: usize, mut pos: usize, buf: &mut String) -> usize {
+        match self {
+            Expr::Constant(c) => {
+                match c {
+                    Literal::Array(_) => {
+                        pos = write("#", pos, buf);
+                    },
+                    Literal::Symbol(_) => {
+                        pos = write("#", pos, buf);
+                    },
+                    _ => {},
+                }
+                pos = c._format(indent, pos, buf);
+            }
+            Expr::Assign(Identifier(s), val) => {
                 pos = write(format!("{} = ", s).as_str(), pos, buf);
                 pos = val._format(indent, pos, buf);
             }
-            Expr::Variable(Ident(s)) => {
+            Expr::Variable(Identifier(s)) => {
                 pos = write(s.as_str(), pos, buf);
             },
             Expr::Block(args, stms) => {
@@ -175,14 +201,16 @@ impl Expr {
                 pos = write("^", pos, buf);
                 pos = obj._format(indent, pos, buf);
             }
-            Expr::Unary(obj, Ident(s)) => {
+            Expr::Unary(obj, Identifier(s)) => {
                 pos = obj._format(indent, pos, buf);
                 pos = write(format!(" {}", s).as_str(), pos, buf);
             }
-            Expr::Keyword(obj, Ident(s), cont) => {
+            Expr::Keyword(obj, keys, args) => {
                 pos = obj._format(indent, pos, buf);
-                pos = write(format!(" {} ", s).as_str(), pos, buf);
-                pos = cont._format(indent, pos, buf);
+                for (k, a) in keys.into_iter().zip(args.into_iter()) {
+                    pos = write(format!(" {} ", k.0).as_str(), pos, buf);
+                    pos = a._format(indent, pos, buf);
+                }
             }
             Expr::Cascade(obj, cascade) => {
                 pos = obj._format(indent, pos, buf);
@@ -202,23 +230,16 @@ impl Expr {
 }
 
 
-#[derive(Debug)]
-pub enum Cascade {
-    Unary(Ident),
-    Binary(Ident, Expr),
-    Keyword(Ident, Expr, Option<Box<Cascade>>),
-}
-
 impl Cascade {
     fn _format(&self, mut indent: usize, mut pos: usize, buf: &mut String) -> usize {
         match self {
-            Cascade::Unary(Ident(s)) => {
+            Cascade::Unary(Identifier(s)) => {
                 pos = write(s, pos, buf);
             },
-            Cascade::Binary(Ident(s), e) => {
+            Cascade::Binary(Identifier(s), e) => {
                 write("XXX binary", pos, buf);
             },
-            Cascade::Keyword(Ident(s), e, _) => {
+            Cascade::Keyword(Identifier(s), e, _) => {
                 write("XXX bkey", pos, buf);
             },
         }
@@ -231,7 +252,18 @@ pub fn prepend<T>(e: T, mut es: Vec<T>) -> Vec<T> {
     es
 }
 
+pub fn cat(mut a: String, b: String) -> String {
+    a.push_str(b.as_str());
+    a
+}
+
 pub fn chop(mut s: String) -> String {
+    s.remove(0);
+    s
+}
+
+pub fn chopchop(mut s: String) -> String {
+    s.pop();
     s.remove(0);
     s
 }

@@ -1,10 +1,13 @@
 use std::str::FromStr;
-use foolang::{Ident, Expr, Cascade, Pattern, Method, prepend, chop};
+use foolang::{
+  Identifier, Expr, Literal, Cascade, Pattern, Method,
+  prepend, chop, chopchop
+};
 
 grammar;
 
 pub Expression: Expr = {
-   <i:Identifier> "=" <e:Expression> => Expr::Assign(i, Box::new(e)),
+   <i:Identifier> ":=" <e:Expression> => Expr::Assign(i, Box::new(e)),
    MainExpression,
 }
 
@@ -18,8 +21,8 @@ pub Method: Method = {
 }
 
 PrimaryExpression: Expr = {
-  Literal,
   Identifier => Expr::Variable(<>),
+  ConstantExpr,
   Block,
   "(" <e:Expression> ")" => e,
 }
@@ -30,7 +33,7 @@ Block: Expr = {
    "{" "}" => Expr::Block(vec![], vec![]),
 }
 
-BlockParams: Vec<Ident> = {
+BlockParams: Vec<Identifier> = {
    <i:BlockParam> <is:BlockParams> => prepend(i, is),
    <i:BlockParam> => vec![i]
 }
@@ -72,7 +75,7 @@ BinaryObjectDescription: Expr = {
   BinaryExpression,
 }
 
-UnarySelector: Ident = {
+UnarySelector: Identifier = {
   Identifier,
 }
 
@@ -82,10 +85,18 @@ BinaryExpression: Expr = {
 }
 
 KeywordExpression: Expr = {
-  <a:BinaryObjectDescription> <s:Keyword> <b:KeywordExpression>
-    => Expr::Keyword(Box::new(a), s, Box::new(b)),
+  <a:BinaryObjectDescription> <s:Keyword> <b:KeywordTail>
+    => Expr::Keyword(Box::new(a), prepend(s, b.1), prepend(b.0, b.2)),
+}
+
+// This is immediately destructured in KeywordExpression -- This
+// exists as a separate thing only to make the typechecking nice for
+// the grammar.
+KeywordTail: (Expr, Vec<Identifier>, Vec<Expr>) = {
+  <a:BinaryObjectDescription> <s:Keyword> <b:KeywordTail>
+    => (a, prepend(s, b.1), prepend(b.0, b.2)),
   <a:BinaryObjectDescription> <s:Keyword> <b:BinaryObjectDescription>
-    => Expr::Keyword(Box::new(a), s, Box::new(b)),
+    => (a, vec![s], vec![b]),
 }
 
 CascadedMessageExpression: Expr = {
@@ -120,7 +131,7 @@ CascadedKeywordMessage: Cascade = {
     => Cascade::Keyword(a, b, None),
 }
 
-Temporaries: Vec<Ident> = {
+Temporaries: Vec<Identifier> = {
   "|" <a:Identifiers> "|" => a
 }
 
@@ -135,85 +146,89 @@ KeywordPattern: Pattern = {
   <a:Keyword> <b:Identifier> => Pattern::Keyword(a, b, None)
 }
 
-Identifiers: Vec<Ident> = {
+Identifiers: Vec<Identifier> = {
    <i:Identifier> <is:Identifiers> => prepend(i, is),
    <i:Identifier> => vec![i]
 }
 
-Keyword: Ident = {
-  r"[_a-zA-Z][_a-zA-Z0-9]*:" => Ident(String::from(<>))
+Keyword: Identifier = {
+  r"[_a-zA-Z][_a-zA-Z0-9]*:" => Identifier(String::from(<>))
 }
 
-BlockParam: Ident = {
-  r":[_a-zA-Z][_a-zA-Z0-9]*" => Ident(chop(String::from(<>)))
+BlockParam: Identifier = {
+  r":[_a-zA-Z][_a-zA-Z0-9]*" => Identifier(chop(String::from(<>)))
 }
 
-Identifier: Ident = {
-  r"[_a-zA-Z][_a-zA-Z0-9]*" => Ident(String::from(<>))
+Identifier: Identifier = {
+  r"[_a-zA-Z][_a-zA-Z0-9]*" => Identifier(String::from(<>))
 };
 
-BinarySelector: Ident = {
-  "-" => Ident(String::from(<>)),
-  r"[+/\\*~<>=@%|&?!]{1,2}" => Ident(String::from(<>)),
+BinarySelector: Identifier = {
+  "-" => Identifier(String::from(<>)),
+  r"[+/\\*~<>=@%|&?!]{1,2}" => Identifier(String::from(<>)),
 }
 
-Literal: Expr = {
+ConstantExpr: Expr = {
+  Constant => Expr::Constant(<>)
+}
+
+// So, amusingly we have both Constant and Literal.
+//
+// Constant is for "naked" constants in source code,
+// and literal is for those wrapped inside arrays.
+//
+// The only difference is #-prefixes for symbols and
+// arrays.
+Constant: Literal = {
+  "#" <a:Array> => a,
+  "#" <s:Symbol> => s,
+  SimpleLiteral,
+}
+
+Literal: Literal = {
+  Array,
+  Symbol,
+  SimpleLiteral,
+}
+
+SimpleLiteral: Literal = {
   Number,
-  SymbolConstant => Expr::Symbol(<>),
-  CharacterConstant,
   String,
-  ArrayConstant,
-};
-
-String: Expr  = {
-  r"'([^']|(''))*'" => Expr::String(String::from(<>)),
+  Character,
 }
 
-CharacterConstant: Expr = {
-  <s:r"\$."> => Expr::Character(chop(String::from(s))),
+String: Literal  = {
+  r"'([^']|(''))*'" => Literal::String(chopchop(String::from(<>))),
 }
 
-SymbolConstant: Ident = {
-  // Unary
-  r"#[_a-zA-Z][_a-zA-Z0-9]*" => Ident(chop(String::from(<>))),
-  // Keyword
-  // XXX: This is not entirely correct as it allows foo:::bar::
-  r"#[_a-zA-Z][:_a-zA-Z0-9]*:" => Ident(chop(String::from(<>))),
-  // BinarySelector
-  r"#-" => Ident(chop(String::from(<>))),
-  r"#[+/\\*~<>=@%|&?!]{1,2}" => Ident(chop(String::from(<>))),
+Character: Literal = {
+  <s:r"\$."> => Literal::Character(chop(String::from(s))),
 }
 
-Symbol: Ident = {
-  Identifier,
-  BinarySelector,
-  Keyword,
-  r"[_a-zA-Z][_a-zA-Z0-9]*:[:_a-zA-Z0-9]*:" => Ident(String::from(<>))
+Symbol: Literal = {
+  SymbolName => Literal::Symbol(<>),
 }
 
-ArrayConstant: Expr = {
-  "#" <a:Array> => Expr::ArrayConstant(Box::new(a)),
+SymbolName: String = {
+  <s:Identifier> => s.0,
+  <s:BinarySelector> => s.0,
+  <s:Keyword> => s.0,
+  // FIXME: This currently allows foo:::bar: to pass, which
+  // it probably should not.
+  r"[_a-zA-Z][_a-zA-Z0-9]*:[:_a-zA-Z0-9]*:" => String::from(<>),
 }
 
-Array: Expr = {
-  "(" ")" => Expr::Array(vec![]),
-  "(" <a:ArrayData> ")" => Expr::Array(a)
+Array: Literal = {
+  "(" ")" => Literal::Array(vec![]),
+  "(" <a:ArrayData> ")" => Literal::Array(a),
 }
 
-ArrayData: Vec<Expr> = {
-  <e:ArrayElt> <a:ArrayData> => prepend(e, a),
-  <a:ArrayElt> => vec![a],
+ArrayData: Vec<Literal> = {
+  <e:Literal> <a:ArrayData> => prepend(e, a),
+  <a:Literal> => vec![a],
 }
 
-ArrayElt: Expr = {
-  Number,
-  Symbol => Expr::Symbol(<>),
-  CharacterConstant,
-  String,
-  Array
-}
-
-Number: Expr = {
-  r"-?[0-9]+\.[0-9]+" => Expr::Float(f64::from_str(<>).unwrap()),
-  r"-?[0-9]+" => Expr::Int(i64::from_str(<>).unwrap()),
+Number: Literal = {
+  r"-?[0-9]+\.[0-9]+" => Literal::Float(f64::from_str(<>).unwrap()),
+  r"-?[0-9]+" => Literal::Integer(i64::from_str(<>).unwrap()),
 }
