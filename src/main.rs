@@ -429,8 +429,49 @@ mod tests {
         assert_eq!(parse_expr("{ foo }"), Expr::Block(
             vec![], vec![variable("foo")]
         ));
-        assert_eq!(parse_expr("{ :a | foo }"), Expr::Block(
-            vec![identifier("a")], vec![variable("foo")]
+        assert_eq!(parse_expr("{ foo bar }"), Expr::Block(
+            vec![],
+            vec![Expr::Unary(
+                    Box::new(variable("foo")),
+                    identifier("bar"))
+                ]
+        ));
+        assert_eq!(parse_expr("{ foo bar. quux }"), Expr::Block(
+            vec![],
+            vec![Expr::Unary(
+                    Box::new(variable("foo")),
+                    identifier("bar")),
+                variable("quux")]
+        ));
+        assert_eq!(parse_expr("{ :a | foo bar }"), Expr::Block(
+            vec![identifier("a")],
+            vec![Expr::Unary(
+                    Box::new(variable("foo")),
+                    identifier("bar"))
+                ]
+        ));
+        assert_eq!(parse_expr("{ :a | foo bar. quux }"), Expr::Block(
+            vec![identifier("a")],
+            vec![Expr::Unary(
+                    Box::new(variable("foo")),
+                    identifier("bar")),
+                variable("quux")]
+        ));
+        assert_eq!(parse_expr("{ :a | foo + bar. quux }"), Expr::Block(
+            vec![identifier("a")],
+            vec![Expr::Binary(
+                    Box::new(variable("foo")),
+                    identifier("+"),
+                    Box::new(variable("bar"))),
+                variable("quux")]
+        ));
+        assert_eq!(parse_expr("{ :a | foo with: bar. quux }"), Expr::Block(
+            vec![identifier("a")],
+            vec![Expr::Keyword(
+                    Box::new(variable("foo")),
+                    vec![identifier("+")],
+                    vec![variable("bar")]),
+                variable("quux")]
         ));
         /*
         assert_eq!(parse_expr("{ :a :b | a plus: b }"), Expr::Block(
