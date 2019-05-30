@@ -424,6 +424,26 @@ mod tests {
                     Identifier(s("bar")))),
                 Identifier(s("quux"))))));
     }
+    #[test]
+    fn parse_block() {
+        assert_eq!(parse_expr("{ foo }"), Expr::Block(
+            vec![], vec![variable("foo")]
+        ));
+        assert_eq!(parse_expr("{ :a | foo }"), Expr::Block(
+            vec![identifier("a")], vec![variable("foo")]
+        ));
+        /*
+        assert_eq!(parse_expr("{ :a :b | a plus: b }"), Expr::Block(
+            vec![identifier("a"), identifier("b")],
+            vec![Expr::Keyword(
+                    Box::new(variable("a")),
+                    vec![identifier("plus")],
+                    vec![variable("b")]),
+                 Expr::Return(Box::new(Expr::Unary(
+                     Box::new(variable("b")),
+                     identifier("bloop"))))]));
+            */
+    }
         /* return is not an expression
         assert_eq!(parse_expr("^foo bar"), Expr::Return(Box::new(Expr::Unary(
             Box::new(Expr::Variable(Identifier(s("foo")))),
