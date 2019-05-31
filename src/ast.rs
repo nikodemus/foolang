@@ -12,24 +12,10 @@ pub enum Literal {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Method {
-    pub pattern: Pattern,
-    pub temporaries: Vec<Identifier>,
-    pub statements: Vec<Expr>,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Pattern {
-    Unary(Identifier),
-    Binary(Identifier, Identifier),
-    Keyword(Identifier, Identifier, Option<Box<Pattern>>),
-}
-
-#[derive(Debug, PartialEq)]
 pub enum Cascade {
     Unary(Identifier),
     Binary(Identifier, Expr),
-    Keyword(Identifier, Expr, Option<Box<Cascade>>),
+    Keyword(Vec<Identifier>, Vec<Expr>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -43,4 +29,18 @@ pub enum Expr {
     Return(Box<Expr>),
     Block(Vec<Identifier>, Vec<Expr>),
     Cascade(Box<Expr>, Vec<Cascade>),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Method {
+    pub pattern: Pattern,
+    pub temporaries: Vec<Identifier>,
+    pub statements: Vec<Expr>,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Pattern {
+    Unary(Identifier),
+    Binary(Identifier, Identifier),
+    Keyword(Vec<Identifier>, Vec<Identifier>),
 }

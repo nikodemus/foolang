@@ -1,4 +1,8 @@
+use crate::ast::Expr;
+
 const INDENT: usize = 4;
+
+trait FoolangFormat {}
 
 impl Method {
     pub fn format(&self) -> String {
@@ -56,7 +60,7 @@ impl Pattern {
                 buf.push_str(m.as_str());
                 buf.push_str(" ");
                 buf.push_str(a.as_str());
-            },
+            }
             Pattern::Keyword(Identifier(m), Identifier(a), x) => {
                 buf.push_str(m.as_str());
                 buf.push_str(": ");
@@ -65,7 +69,7 @@ impl Pattern {
                     buf.push_str(" ");
                     p._format(indent, pos, buf);
                 }
-            },
+            }
         }
     }
 }
@@ -88,21 +92,21 @@ impl Literal {
             }
             Literal::Symbol(s) => {
                 pos = write(s, pos, buf);
-            },
+            }
             Literal::Character(s) => {
                 pos = write(format!("${}", s).as_str(), pos, buf);
-            },
+            }
             Literal::Integer(i) => {
                 let s = i.to_string();
                 pos = write(s.as_str(), pos, buf);
-            },
+            }
             Literal::Float(f) => {
                 let s = f.to_string();
                 pos = write(s.as_str(), pos, buf);
-            },
+            }
             Literal::String(s) => {
                 pos = write(s.as_str(), pos, buf);
-            },
+            }
         }
         pos
     }
@@ -115,11 +119,11 @@ impl Expr {
                 match c {
                     Literal::Array(_) => {
                         pos = write("#", pos, buf);
-                    },
+                    }
                     Literal::Symbol(_) => {
                         pos = write("#", pos, buf);
-                    },
-                    _ => {},
+                    }
+                    _ => {}
                 }
                 pos = c._format(indent, pos, buf);
             }
@@ -129,7 +133,7 @@ impl Expr {
             }
             Expr::Variable(Identifier(s)) => {
                 pos = write(s.as_str(), pos, buf);
-            },
+            }
             Expr::Block(args, stms) => {
                 pos = write("{", pos, buf);
                 let blk_indent = indent + INDENT;
@@ -167,25 +171,24 @@ impl Expr {
             }
             _ => {
                 buf.push_str(format!("XXX: {:?}", self).as_str());
-            },
+            }
         }
         pos
     }
 }
-
 
 impl Cascade {
     fn _format(&self, mut indent: usize, mut pos: usize, buf: &mut String) -> usize {
         match self {
             Cascade::Unary(Identifier(s)) => {
                 pos = write(s, pos, buf);
-            },
+            }
             Cascade::Binary(Identifier(s), e) => {
                 write("XXX binary", pos, buf);
-            },
+            }
             Cascade::Keyword(Identifier(s), e, _) => {
                 write("XXX bkey", pos, buf);
-            },
+            }
         }
         pos
     }
