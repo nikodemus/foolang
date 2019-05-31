@@ -11,7 +11,7 @@ impl Method {
         buf
     }
     fn _format(&self, mut indent: usize, mut pos: usize, buf: &mut String) {
-        self.pattern._format(indent, pos, buf);
+self.pattern._format(indent, pos, buf);
         indent = newline(indent + INDENT, buf);
         pos = indent;
         if self.temporaries.len() > 0 {

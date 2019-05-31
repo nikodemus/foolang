@@ -20,9 +20,7 @@ pub enum Cascade {
 
 #[derive(Debug, PartialEq)]
 pub enum Expr {
-
-
-Constant(Literal),
+    Constant(Literal),
     Variable(Identifier),
     Unary(Box<Expr>, Identifier),
     Binary(Box<Expr>, Identifier, Box<Expr>),
