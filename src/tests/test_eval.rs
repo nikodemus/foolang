@@ -32,5 +32,8 @@ fn eval_global() {
 
 #[test]
 fn eval_block() {
-    assert_eq!(eval(parse_expr("{ :a | a + 1 } value: 41")), Object::Integer(42));
+    assert_eq!(
+        eval(parse_expr("{ :a | a + 1 } value: 41")),
+        Object::Integer(42)
+    );
 }
