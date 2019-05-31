@@ -8,7 +8,9 @@ grammar;
 
 pub Expression: Expr = {
    <i:Identifier> ":=" <e:Expression> => Expr::Assign(i, Box::new(e)),
-   MainExpression,
+   PrimaryExpression,
+   MessageExpression,
+   CascadedMessageExpression,
 }
 
 pub Method: Method = {
@@ -49,12 +51,6 @@ Statement: Expr = {
   Expression,
 }
 
-MainExpression: Expr = {
-  PrimaryExpression,
-  MessageExpression,
-  CascadedMessageExpression,
-}
-
 MessageExpression: Expr = {
   UnaryExpression,
   BinaryExpression,
@@ -85,18 +81,18 @@ BinaryExpression: Expr = {
 }
 
 KeywordExpression: Expr = {
-  <a:BinaryObjectDescription> <s:Keyword> <b:KeywordTail>
-    => Expr::Keyword(Box::new(a), prepend(s, b.1), prepend(b.0, b.2)),
+  <a:BinaryObjectDescription> <b:KeywordTail>
+    => Expr::Keyword(Box::new(a), b.0, b.1),
 }
 
 // This is immediately destructured in KeywordExpression -- This
 // exists as a separate thing only to make the typechecking nice for
 // the grammar.
-KeywordTail: (Expr, Vec<Identifier>, Vec<Expr>) = {
-  <a:BinaryObjectDescription> <s:Keyword> <b:KeywordTail>
-    => (a, prepend(s, b.1), prepend(b.0, b.2)),
-  <a:BinaryObjectDescription> <s:Keyword> <b:BinaryObjectDescription>
-    => (a, vec![s], vec![b]),
+KeywordTail: (Vec<Identifier>, Vec<Expr>) = {
+  <k:Keyword> <arg:BinaryObjectDescription> <more:KeywordTail>
+    => (prepend(k, more.0), prepend(arg, more.1)),
+  <k:Keyword> <arg:BinaryObjectDescription>
+    => (vec![k], vec![arg]),
 }
 
 CascadedMessageExpression: Expr = {
