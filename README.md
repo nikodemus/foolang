@@ -1,6 +1,6 @@
 # foolang
 
-Planned divergences
+Planned divergences from Smalltalk
 - No subtyping except for interfaces
 - Type inference (and runtime assertions)
 - Conflict-safe extensions to third-party classes
@@ -8,24 +8,38 @@ Planned divergences
 
 ## Parts
 
-### Syntax / Parser / Formatter
+[x] AST
+[x] Expression parser
+[x] Method parser
+[ ] Evaluator
+[ ] Class parser
+    Class new: #MyClass;
+      instanceVariables: #(a b);
+      classMethod: #new:with: is: { :a :b | instance |
+          instance := self new.
+          instance a: a.
+          instance b: b.
+          ^instance
+      };
+      method: #both is: {
+        ^a + b
+      };
+      method: #rot: is: { :x |
+        b := a
+        a := x
+      }
+[ ] Formatter
 
-[x] Formatter
-[x] Tests
+Syntax extensions:
 [ ] # Comments
 [ ] => {}
-[ ] class syntax -- just so that i can sensibly write stuff in files
-     class Name |a b c|
-       #foo
-         ^a
-       #bar: x with: y
-         self foo
-         x do: y
-
-Later
+[ ] Block temporaries
+[ ] Positional/variable arguments:
+    Array of: 1 : 2 : 3
+      Array addMethod: #of: { :(args*) | ^args toArray }
+    { :(a b) | a + b } : 1 : 2
 [ ] local variables with let name = expr (important for type safety)
 [ ] return with return
-[ ] last expression of method body is implicit return
 [ ] String interpolation #"This is {self name}!"
 [ ] Message chaining with ,
 [ ] Unary minus and negation  -foo ~foo
@@ -45,13 +59,6 @@ Later
     6. == < > =< >=
     7. &&
     8. ||
-
-I'm kind of tempted to implement a bootstrap evaluator... Without closures this is
-a stupidly simple language. Object representation in Rust is a bit painful,
-but for bootstrapping it doesn't really matter that much, I think. (And it's
-not much more complex with closures!)
-
-Then I could implement the compiler in Foolang itself...
 
 ### Bootstrap Compiler
 
