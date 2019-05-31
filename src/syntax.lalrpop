@@ -3,7 +3,7 @@ use crate::ast::{
   Identifier, Expr, Literal, Cascade, Pattern, Method,
 };
 use crate::utils::{
-  prepend, chop, chopchop
+  prepend, chop, chopchop,
 };
 
 grammar;
@@ -90,11 +90,11 @@ KeywordExpression: Expr = {
 // This is immediately destructured in KeywordExpression -- This
 // exists as a separate thing only to make the typechecking nice for
 // the grammar.
-KeywordTail: (Vec<Identifier>, Vec<Expr>) = {
+KeywordTail: (Identifier, Vec<Expr>) = {
   <k:Keyword> <arg:BinaryObjectDescription> <more:KeywordTail>
-    => (prepend(k, more.0), prepend(arg, more.1)),
+    => (k.concat(more.0), prepend(arg, more.1)),
   <k:Keyword> <arg:BinaryObjectDescription>
-    => (vec![k], vec![arg]),
+    => (k, vec![arg]),
 }
 
 CascadedMessageExpression: Expr = {
@@ -131,11 +131,11 @@ MessagePattern: Pattern = {
   <a:KeywordPattern> => Pattern::Keyword(a.0, a.1),
 }
 
-KeywordPattern: (Vec<Identifier>, Vec<Identifier>) = {
+KeywordPattern: (Identifier, Vec<Identifier>) = {
   <a:Keyword> <b:Identifier> <c:KeywordPattern>
-    => (prepend(a, c.0), prepend(b, c.1)),
+    => (a.concat(c.0), prepend(b, c.1)),
   <a:Keyword> <b:Identifier>
-    => (vec![a], vec![b]),
+    => (a, vec![b]),
 }
 
 Identifiers: Vec<Identifier> = {

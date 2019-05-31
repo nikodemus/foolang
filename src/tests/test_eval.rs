@@ -19,3 +19,13 @@ fn eval_binary() {
     assert_eq!(eval(parse_expr("100 + 23 - 1")), Object::Integer(122));
     assert_eq!(eval(parse_expr("100 + 23.32 - 2")), Object::Float(121.32));
 }
+
+#[test]
+fn eval_keyword() {
+    assert_eq!(eval(parse_expr("100 gcd: 12")), Object::Integer(4));
+}
+
+#[test]
+fn eval_global() {
+    assert_eq!(eval(parse_expr("PI")), Object::Float(std::f64::consts::PI));
+}
