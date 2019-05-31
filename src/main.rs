@@ -321,25 +321,9 @@ fn test_easy() {
 */
 
 use lalrpop_util::lalrpop_mod;
-use foolang::Expr;
-use foolang::Literal;
+use foolang::syntax::Expr;
 
 lalrpop_mod!(pub syntax);
-
-fn show(s: &str) {
-    let e = syntax::ExpressionParser::new().parse(s).unwrap();
-    println!("expr: {:?}", e);
-}
-
-fn showm(s: &str) {
-    let e = syntax::MethodParser::new().parse(s).unwrap();
-    println!("method: {:?}", e);
-}
-
-fn foo(s: &str) {
-    let e = syntax::MethodParser::new().parse(s).unwrap();
-    println!("pretty: {}", e.format());
-}
 
 fn parse_expr(s: &str) -> Expr {
     match syntax::ExpressionParser::new().parse(s) {
@@ -352,7 +336,7 @@ fn parse_expr(s: &str) -> Expr {
 
 #[cfg(test)]
 mod tests {
-    use foolang::{Expr, Literal, Identifier};
+    use foolang::syntax::{Expr, Literal, Identifier};
     use crate::parse_expr;
 
     // helpers
@@ -473,52 +457,14 @@ mod tests {
                     vec![variable("bar"), variable("a")]),
                 variable("quux")]
         ));
-        /*
-        assert_eq!(parse_expr("{ :a :b | a plus: b }"), Expr::Block(
-            vec![identifier("a"), identifier("b")],
-            vec![Expr::Keyword(
-                    Box::new(variable("a")),
-                    vec![identifier("plus")],
-                    vec![variable("b")]),
-                 Expr::Return(Box::new(Expr::Unary(
-                     Box::new(variable("b")),
-                     identifier("bloop"))))]));
-            */
+        assert_eq!(parse_expr("{ ^Foo new }"), Expr::Block(
+            vec![],
+            vec![Expr::Return(Box::new(Expr::Unary(
+                    Box::new(variable("Foo")),
+                    identifier("new"))))]));
     }
-        /* return is not an expression
-        assert_eq!(parse_expr("^foo bar"), Expr::Return(Box::new(Expr::Unary(
-            Box::new(Expr::Variable(Identifier(s("foo")))),
-            Identifier(s("bar"))))));
-        */
 }
 
 fn main() {
-    foo("unary
-           |a b c|
-           a = self foo: 1 bar: { :x |
-               x print.
-               'foobar' print.
-               $x printTo: #stdout.
-           }.
-           #() send.
-           #(1) send.
-           #(1 2 (13)) send.
-           Screen new;
-              open;
-              set_geometry_to: 200 by: 400;
-              + 1000.
-           ^42.1");
-    showm("unary
-              self foo: 1 bar: 2");
-    show("x foo; bar; quux; zot: 2 frob: 1; + 1");
-    show("foo put: x - 1 at: 4 + 2");
-    show("foo - bar");
-    show("foo ++ bar");
-    show("x = y = Thing new");
-    show("123");
-    show("123.123");
-    show("foobar");
-    show("{ foo. bar. (fot) unary1 unary2 }");
-    show("{ :x| foo. ^x. quux }");
-    show("{ :x :y | foo. ^x. y }");
+    println!("This is foolang 0.1.0");
 }

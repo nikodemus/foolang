@@ -1,6 +1,8 @@
 use std::str::FromStr;
-use foolang::{
+use foolang::syntax::{
   Identifier, Expr, Literal, Cascade, Pattern, Method,
+};
+use foolang::utils::{
   prepend, chop, chopchop
 };
 
