@@ -77,7 +77,7 @@ fn parse_keyword() {
         parse_expr("x foo: y bar: z"),
         Expr::Keyword(
             Box::new(variable("x")),
-            vec![identifier("foo:"), identifier("bar:")],
+            identifier("foo:bar:"),
             vec![variable("y"), variable("z")]
         )
     );
@@ -159,7 +159,7 @@ fn parse_block() {
             vec![
                 Expr::Keyword(
                     Box::new(variable("foo")),
-                    vec![identifier("with:"), identifier("and:")],
+                    identifier("with:and:"),
                     vec![variable("bar"), variable("a")]
                 ),
                 variable("quux")
@@ -191,11 +191,11 @@ fn parse_cascade() {
                 identifier("d")
             )),
             vec![
-                Cascade::Keyword(vec![identifier("then:")], vec![variable("e")]),
+                Cascade::Keyword(identifier("then:"), vec![variable("e")]),
                 Cascade::Binary(identifier("+"), variable("f")),
                 Cascade::Unary(identifier("g")),
                 Cascade::Keyword(
-                    vec![identifier("then:"), identifier("and:")],
+                    identifier("then:and:"),
                     vec![variable("h"), variable("j")]
                 ),
             ]
@@ -254,7 +254,7 @@ fn parse_keyword_method() {
         parse_method("foo: x with: y x frob. y blarg ding: x"),
         Method {
             pattern: Pattern::Keyword(
-                vec![identifier("foo:"), identifier("with:")],
+                identifier("foo:with:"),
                 vec![identifier("x"), identifier("y")]
             ),
             temporaries: vec![],
@@ -262,7 +262,7 @@ fn parse_keyword_method() {
                 Expr::Unary(Box::new(variable("x")), identifier("frob")),
                 Expr::Keyword(
                     Box::new(Expr::Unary(Box::new(variable("y")), identifier("blarg"))),
-                    vec![identifier("ding:")],
+                    identifier("ding:"),
                     vec![variable("x")]
                 )
             ]

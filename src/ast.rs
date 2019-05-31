@@ -1,6 +1,13 @@
 #[derive(Debug, PartialEq)]
 pub struct Identifier(pub String);
 
+impl Identifier {
+    pub fn concat(mut self, other: Identifier) -> Identifier {
+        self.0.push_str(other.0.as_str());
+        self
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Literal {
     Integer(i64),
@@ -15,7 +22,7 @@ pub enum Literal {
 pub enum Cascade {
     Unary(Identifier),
     Binary(Identifier, Expr),
-    Keyword(Vec<Identifier>, Vec<Expr>),
+    Keyword(Identifier, Vec<Expr>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -24,7 +31,7 @@ pub enum Expr {
     Variable(Identifier),
     Unary(Box<Expr>, Identifier),
     Binary(Box<Expr>, Identifier, Box<Expr>),
-    Keyword(Box<Expr>, Vec<Identifier>, Vec<Expr>),
+    Keyword(Box<Expr>, Identifier, Vec<Expr>),
     Assign(Identifier, Box<Expr>),
     Return(Box<Expr>),
     Block(Vec<Identifier>, Vec<Expr>),
@@ -42,5 +49,5 @@ pub struct Method {
 pub enum Pattern {
     Unary(Identifier),
     Binary(Identifier, Identifier),
-    Keyword(Vec<Identifier>, Vec<Identifier>),
+    Keyword(Identifier, Vec<Identifier>),
 }
