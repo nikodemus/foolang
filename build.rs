@@ -1,5 +1,5 @@
 use lalrpop;
 
 fn main() {
-    lalrpop::process_root().expect("Parser generation failed!");
+    lalrpop::process_root().expect("LALRPOP parser generation failed!");
 }

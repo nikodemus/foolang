@@ -321,7 +321,7 @@ fn test_easy() {
 */
 
 use lalrpop_util::lalrpop_mod;
-use foolang::syntax::Expr;
+use foolang::ast::Expr;
 
 lalrpop_mod!(pub syntax);
 
@@ -336,7 +336,7 @@ fn parse_expr(s: &str) -> Expr {
 
 #[cfg(test)]
 mod tests {
-    use foolang::syntax::{Expr, Literal, Identifier};
+    use foolang::ast::{Expr, Literal, Identifier};
     use crate::parse_expr;
 
     // helpers

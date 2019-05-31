@@ -1,3 +1,3 @@
-pub mod syntax;
+pub mod ast;
 pub mod utils;
 // mod format;
