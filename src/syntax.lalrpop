@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use crate::ast::{
-  Identifier, Expr, Literal, Cascade, Pattern, Method,
+  Identifier, Expr, Literal, Cascade, Pattern, Method, Block
 };
 use crate::utils::{
   prepend, chop, chopchop,
@@ -27,14 +27,14 @@ pub Method: Method = {
 PrimaryExpression: Expr = {
   Identifier => Expr::Variable(<>),
   ConstantExpr,
-  Block,
+  Block => Expr::Block(<>),
   "(" <e:Expression> ")" => e,
 }
 
-Block: Expr = {
-   "{" <p:BlockParams> "|" <s:Statements> "}" => Expr::Block(p, s),
-   "{" <s:Statements> "}" => Expr::Block(vec![], s),
-   "{" "}" => Expr::Block(vec![], vec![]),
+Block: Block = {
+   "{" <p:BlockParams> "|" <s:Statements> "}" => Block { parameters: p, statements: s },
+   "{" <s:Statements> "}" => Block{ parameters: vec![], statements: s },
+   "{" "}" => Block { parameters: vec![], statements: vec![] },
 }
 
 BlockParams: Vec<Identifier> = {
