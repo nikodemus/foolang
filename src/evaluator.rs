@@ -1,8 +1,8 @@
 use crate::ast::{Expr, Identifier, Literal};
 use crate::objects::Object;
 use lazy_static::lazy_static;
-use std::collections::HashMap;
 use std::borrow::ToOwned;
+use std::collections::HashMap;
 
 pub type MethodFunction = fn(Object, Vec<Object>) -> Object;
 
@@ -14,14 +14,25 @@ enum MethodImpl {
 pub fn eval(expr: Expr) -> Object {
     match expr {
         Expr::Constant(lit) => eval_literal(lit),
-        Expr::Variable(Identifier(s)) => {
-                GLOBALS.get(&s).expect("unbound variable").to_owned()
-        }
+        Expr::Variable(Identifier(s)) => GLOBALS.get(&s).expect("unbound variable").to_owned(),
         Expr::Unary(expr, selector) => send_unary(eval(*expr), selector),
-        Expr::Binary(left, selector, right) => send_binary(
-            eval(*left), selector, eval(*right)),
+        Expr::Binary(left, selector, right) => send_binary(eval(*left), selector, eval(*right)),
         Expr::Keyword(expr, selector, args) => send_keyword(
-            eval(*expr), selector, args.into_iter().map(|arg| eval(arg)).collect()),
+            eval(*expr),
+            selector,
+            args.into_iter().map(|arg| eval(arg)).collect(),
+        ),
+        // XXX HERE XXX
+        //
+        //   So, how to represent runtime blocks?
+        //
+        //   Since this is an evaluator they can just as well contain Exprs.
+        //   So Object::Block(Rc<Expr::Block>) is probably about right.
+        //
+        //   (I will need to add an environment to them as well, but I'm
+        //   skipping that for now.)
+        //
+        // Expr::Block(params, stmts) => Object::Block(params, stmts),
         _ => unimplemented!("eval({:?})", expr),
     }
 }
@@ -37,12 +48,10 @@ fn method_neg(receiver: Object, args: Vec<Object>) -> Object {
 fn method_gcd(receiver: Object, args: Vec<Object>) -> Object {
     assert!(args.len() == 1);
     match receiver {
-        Object::Integer(i) => {
-            match args[0] {
-                Object::Integer(j) => Object::Integer(num::integer::gcd(i, j)),
-                _ => panic!("Non-integer in GCD!"),
-            }
-        }
+        Object::Integer(i) => match args[0] {
+            Object::Integer(j) => Object::Integer(num::integer::gcd(i, j)),
+            _ => panic!("Non-integer in GCD!"),
+        },
         _ => panic!("Bad receiver for builtin GCD!"),
     }
 }

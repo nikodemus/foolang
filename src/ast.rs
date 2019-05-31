@@ -32,9 +32,9 @@ pub enum Expr {
     Unary(Box<Expr>, Identifier),
     Binary(Box<Expr>, Identifier, Box<Expr>),
     Keyword(Box<Expr>, Identifier, Vec<Expr>),
+    Block(Vec<Identifier>, Vec<Expr>),
     Assign(Identifier, Box<Expr>),
     Return(Box<Expr>),
-    Block(Vec<Identifier>, Vec<Expr>),
     Cascade(Box<Expr>, Vec<Cascade>),
 }
 

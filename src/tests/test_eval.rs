@@ -29,3 +29,8 @@ fn eval_keyword() {
 fn eval_global() {
     assert_eq!(eval(parse_expr("PI")), Object::Float(std::f64::consts::PI));
 }
+
+#[test]
+fn eval_block() {
+    assert_eq!(eval(parse_expr("{ :a | a + 1 } value: 41")), Object::Integer(42));
+}
