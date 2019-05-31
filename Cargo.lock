@@ -231,6 +231,7 @@ version = "0.1.0"
 dependencies = [
  "lalrpop 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lalrpop-util 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

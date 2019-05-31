@@ -11,3 +11,4 @@ lalrpop = "0.17.0"
 [dependencies]
 lalrpop-util = "0.17.0"
 regex = "1"
+lazy_static = "*"
