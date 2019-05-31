@@ -194,10 +194,7 @@ fn parse_cascade() {
                 Cascade::Keyword(identifier("then:"), vec![variable("e")]),
                 Cascade::Binary(identifier("+"), variable("f")),
                 Cascade::Unary(identifier("g")),
-                Cascade::Keyword(
-                    identifier("then:and:"),
-                    vec![variable("h"), variable("j")]
-                ),
+                Cascade::Keyword(identifier("then:and:"), vec![variable("h"), variable("j")]),
             ]
         )
     )
