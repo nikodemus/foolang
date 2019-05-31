@@ -11,7 +11,7 @@ Planned divergences
 ### Syntax / Parser / Formatter
 
 [x] Formatter
-[ ] Tests
+[x] Tests
 [ ] # Comments
 [ ] => {}
 [ ] class syntax -- just so that i can sensibly write stuff in files
