@@ -465,12 +465,12 @@ mod tests {
                     Box::new(variable("bar"))),
                 variable("quux")]
         ));
-        assert_eq!(parse_expr("{ :a | foo with: bar. quux }"), Expr::Block(
+        assert_eq!(parse_expr("{ :a | foo with: bar and: a. quux }"), Expr::Block(
             vec![identifier("a")],
             vec![Expr::Keyword(
                     Box::new(variable("foo")),
-                    vec![identifier("+")],
-                    vec![variable("bar")]),
+                    vec![identifier("with:"), identifier("and:")],
+                    vec![variable("bar"), variable("a")]),
                 variable("quux")]
         ));
         /*
