@@ -3,6 +3,7 @@ use crate::objects::Object;
 use lazy_static::lazy_static;
 use std::borrow::ToOwned;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 pub type MethodFunction = fn(Object, Vec<Object>) -> Object;
 
@@ -12,27 +13,36 @@ enum MethodImpl {
 }
 
 pub fn eval(expr: Expr) -> Object {
+    let novars = vec![];
+    let novals = vec![];
+    eval_in_env(expr, &novars, &novals)
+}
+
+pub fn eval_in_env(expr: Expr, vars: &Vec<Identifier>, vals: &Vec<Object>) -> Object {
     match expr {
         Expr::Constant(lit) => eval_literal(lit),
-        Expr::Variable(Identifier(s)) => GLOBALS.get(&s).expect("unbound variable").to_owned(),
-        Expr::Unary(expr, selector) => send_unary(eval(*expr), selector),
-        Expr::Binary(left, selector, right) => send_binary(eval(*left), selector, eval(*right)),
-        Expr::Keyword(expr, selector, args) => send_keyword(
-            eval(*expr),
+        Expr::Variable(Identifier(s)) => {
+            for (var, val) in vars.iter().zip(vals.iter()) {
+                if &var.0 == &s {
+                    return val.to_owned();
+                }
+            }
+            GLOBALS.get(&s).expect("unbound variable").to_owned()
+        }
+        Expr::Unary(expr, selector) => send_unary(eval_in_env(*expr, vars, vals), selector),
+        Expr::Binary(left, selector, right) => send_binary(
+            eval_in_env(*left, vars, vals),
             selector,
-            args.into_iter().map(|arg| eval(arg)).collect(),
+            eval_in_env(*right, vars, vals),
         ),
-        // XXX HERE XXX
-        //
-        //   So, how to represent runtime blocks?
-        //
-        //   Since this is an evaluator they can just as well contain Exprs.
-        //   So Object::Block(Rc<Expr::Block>) is probably about right.
-        //
-        //   (I will need to add an environment to them as well, but I'm
-        //   skipping that for now.)
-        //
-        // Expr::Block(params, stmts) => Object::Block(params, stmts),
+        Expr::Keyword(expr, selector, args) => send_keyword(
+            eval_in_env(*expr, vars, vals),
+            selector,
+            args.into_iter()
+                .map(|arg| eval_in_env(arg, vars, vals))
+                .collect(),
+        ),
+        Expr::Block(b) => Object::Block(Arc::new(b)),
         _ => unimplemented!("eval({:?})", expr),
     }
 }
@@ -42,6 +52,7 @@ fn method_neg(receiver: Object, args: Vec<Object>) -> Object {
     match receiver {
         Object::Integer(i) => Object::Integer(-i),
         Object::Float(i) => Object::Float(-i),
+        _ => panic!("Bad receiver for neg!"),
     }
 }
 
@@ -50,9 +61,9 @@ fn method_gcd(receiver: Object, args: Vec<Object>) -> Object {
     match receiver {
         Object::Integer(i) => match args[0] {
             Object::Integer(j) => Object::Integer(num::integer::gcd(i, j)),
-            _ => panic!("Non-integer in GCD!"),
+            _ => panic!("Non-integer in gcd!"),
         },
-        _ => panic!("Bad receiver for builtin GCD!"),
+        _ => panic!("Bad receiver for builtin gcd!"),
     }
 }
 
@@ -62,11 +73,14 @@ fn method_plus(receiver: Object, args: Vec<Object>) -> Object {
         Object::Integer(i) => match args[0] {
             Object::Integer(j) => Object::Integer(i + j),
             Object::Float(j) => Object::Float(i as f64 + j),
+            _ => panic!("Bad argument for plus!"),
         },
         Object::Float(i) => match args[0] {
             Object::Integer(j) => Object::Float(i + j as f64),
             Object::Float(j) => Object::Float(i + j),
+            _ => panic!("Bad argument for plus!"),
         },
+        _ => panic!("Bad receiver for plus!"),
     }
 }
 
@@ -76,11 +90,27 @@ fn method_minus(receiver: Object, args: Vec<Object>) -> Object {
         Object::Integer(i) => match args[0] {
             Object::Integer(j) => Object::Integer(i - j),
             Object::Float(j) => Object::Float(i as f64 - j),
+            _ => panic!("Bad argument for minus!"),
         },
         Object::Float(i) => match args[0] {
             Object::Integer(j) => Object::Float(i - j as f64),
             Object::Float(j) => Object::Float(i - j),
+            _ => panic!("Bad argument for minus!"),
         },
+        _ => panic!("Bad receiver for minus!"),
+    }
+}
+
+fn method_block_apply(receiver: Object, args: Vec<Object>) -> Object {
+    let mut res = receiver.clone();
+    match receiver {
+        Object::Block(blk) => {
+            for stm in blk.statements.iter() {
+                res = eval_in_env(stm.to_owned(), &blk.parameters, &args);
+            }
+            res
+        }
+        _ => panic!("Bad receiver for block_apply!"),
     }
 }
 
@@ -111,6 +141,7 @@ fn find_method(receiver: &Object, selector: Identifier) -> MethodImpl {
     match receiver {
         Object::Integer(_) => MethodImpl::Builtin(INTEGER_METHODS[&selector.0]),
         Object::Float(_) => MethodImpl::Builtin(FLOAT_METHODS[&selector.0]),
+        Object::Block(_) => MethodImpl::Builtin(method_block_apply),
     }
 }
 

@@ -1,3 +1,4 @@
+use crate::ast;
 use crate::ast::{Cascade, Expr, Identifier, Literal, Method, Pattern};
 use crate::parser::{parse_expr, parse_method};
 
@@ -102,47 +103,50 @@ fn parse_assign() {
 fn parse_block() {
     assert_eq!(
         parse_expr("{ foo }"),
-        Expr::Block(vec![], vec![variable("foo")])
+        Expr::Block(ast::Block {
+            parameters: vec![],
+            statements: vec![variable("foo")]
+        })
     );
     assert_eq!(
         parse_expr("{ foo bar }"),
-        Expr::Block(
-            vec![],
-            vec![Expr::Unary(Box::new(variable("foo")), identifier("bar"))]
-        )
+        Expr::Block(ast::Block {
+            parameters: vec![],
+            statements: vec![Expr::Unary(Box::new(variable("foo")), identifier("bar"))]
+        })
     );
     assert_eq!(
         parse_expr("{ foo bar. quux }"),
-        Expr::Block(
-            vec![],
-            vec![
+        Expr::Block(ast::Block {
+            parameters: vec![],
+            statements: vec![
                 Expr::Unary(Box::new(variable("foo")), identifier("bar")),
                 variable("quux")
             ]
-        )
+        })
     );
     assert_eq!(
         parse_expr("{ :a | foo bar }"),
-        Expr::Block(
-            vec![identifier("a")],
-            vec![Expr::Unary(Box::new(variable("foo")), identifier("bar"))]
-        )
+        Expr::Block(ast::Block {
+            parameters: vec![identifier("a")],
+            statements: vec![Expr::Unary(Box::new(variable("foo")), identifier("bar"))]
+        })
     );
     assert_eq!(
         parse_expr("{ :a | foo bar. quux }"),
-        Expr::Block(
-            vec![identifier("a")],
-            vec![
+        Expr::Block(ast::Block {
+            parameters: vec![identifier("a")],
+            statements: vec![
                 Expr::Unary(Box::new(variable("foo")), identifier("bar")),
                 variable("quux")
             ]
-        )
+        })
     );
     assert_eq!(
         parse_expr("{ :a | foo + bar. quux }"),
-        Expr::Block(
-            vec![identifier("a")],
-            vec![
+        Expr::Block(ast::Block {
+            parameters: vec![identifier("a")],
+            statements: vec![
                 Expr::Binary(
                     Box::new(variable("foo")),
                     identifier("+"),
@@ -150,13 +154,13 @@ fn parse_block() {
                 ),
                 variable("quux")
             ]
-        )
+        })
     );
     assert_eq!(
         parse_expr("{ :a | foo with: bar and: a. quux }"),
-        Expr::Block(
-            vec![identifier("a")],
-            vec![
+        Expr::Block(ast::Block {
+            parameters: vec![identifier("a")],
+            statements: vec![
                 Expr::Keyword(
                     Box::new(variable("foo")),
                     identifier("with:and:"),
@@ -164,17 +168,17 @@ fn parse_block() {
                 ),
                 variable("quux")
             ]
-        )
+        })
     );
     assert_eq!(
         parse_expr("{ ^Foo new }"),
-        Expr::Block(
-            vec![],
-            vec![Expr::Return(Box::new(Expr::Unary(
+        Expr::Block(ast::Block {
+            parameters: vec![],
+            statements: vec![Expr::Return(Box::new(Expr::Unary(
                 Box::new(variable("Foo")),
                 identifier("new")
             )))]
-        )
+        })
     );
 }
 

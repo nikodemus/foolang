@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Identifier(pub String);
 
 impl Identifier {
@@ -8,7 +8,13 @@ impl Identifier {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
+pub struct Block {
+    pub parameters: Vec<Identifier>,
+    pub statements: Vec<Expr>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Literal {
     Integer(i64),
     Float(f64),
@@ -18,21 +24,21 @@ pub enum Literal {
     Array(Vec<Literal>),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Cascade {
     Unary(Identifier),
     Binary(Identifier, Expr),
     Keyword(Identifier, Vec<Expr>),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Constant(Literal),
     Variable(Identifier),
     Unary(Box<Expr>, Identifier),
     Binary(Box<Expr>, Identifier, Box<Expr>),
     Keyword(Box<Expr>, Identifier, Vec<Expr>),
-    Block(Vec<Identifier>, Vec<Expr>),
+    Block(Block),
     Assign(Identifier, Box<Expr>),
     Return(Box<Expr>),
     Cascade(Box<Expr>, Vec<Cascade>),
