@@ -222,3 +222,25 @@ fn parse_binary_method() {
         }
     );
 }
+
+#[test]
+fn parse_keyword_method() {
+    assert_eq!(
+        parse_method("foo: x with: y x frob. y blarg ding: x"),
+        Method {
+            pattern: Pattern::Keyword(
+                vec![identifier("foo:"), identifier("with:")],
+                vec![identifier("x"), identifier("y")]
+            ),
+            temporaries: vec![],
+            statements: vec![
+                Expr::Unary(Box::new(variable("x")), identifier("frob")),
+                Expr::Keyword(
+                    Box::new(Expr::Unary(Box::new(variable("y")), identifier("blarg"))),
+                    vec![identifier("ding:")],
+                    vec![variable("x")]
+                )
+            ]
+        }
+    )
+}
