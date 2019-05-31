@@ -1,4 +1,4 @@
-use crate::ast::{Expr, Identifier, Literal, Method, Pattern};
+use crate::ast::{Cascade, Expr, Identifier, Literal, Method, Pattern};
 use crate::parser::{parse_expr, parse_method};
 
 // helpers
@@ -176,6 +176,31 @@ fn parse_block() {
             )))]
         )
     );
+}
+
+#[test]
+fn parse_cascade() {
+    assert_eq!(
+        parse_expr("a b c d; then: e; + f; g; then: h and: j"),
+        Expr::Cascade(
+            Box::new(Expr::Unary(
+                Box::new(Expr::Unary(
+                    Box::new(Expr::Unary(Box::new(variable("a")), identifier("b"))),
+                    identifier("c")
+                )),
+                identifier("d")
+            )),
+            vec![
+                Cascade::Keyword(vec![identifier("then:")], vec![variable("e")]),
+                Cascade::Binary(identifier("+"), variable("f")),
+                Cascade::Unary(identifier("g")),
+                Cascade::Keyword(
+                    vec![identifier("then:"), identifier("and:")],
+                    vec![variable("h"), variable("j")]
+                ),
+            ]
+        )
+    )
 }
 
 #[test]
