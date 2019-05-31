@@ -207,4 +207,18 @@ fn parse_unary_method() {
     );
 }
 
-// #[test]
+#[test]
+fn parse_binary_method() {
+    assert_eq!(
+        parse_method("+ x ^value + x"),
+        Method {
+            pattern: Pattern::Binary(identifier("+"), identifier("x")),
+            temporaries: vec![],
+            statements: vec![Expr::Return(Box::new(Expr::Binary(
+                Box::new(variable("value")),
+                identifier("+"),
+                Box::new(variable("x"))
+            )))]
+        }
+    );
+}
