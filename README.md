@@ -1,8 +1,28 @@
 # foolang
 
+[x] AST
+[x] Expression parser
+[x] Expression evaluator
+[X] Tests
+[ ] # Comments
+[ ] Change array syntax to #[] and add [] for runtime constructed arrays
+[ ] Change local variable syntax to let x := y
+[ ] Reserved words: method, class-method, class, constant, let
+[ ] Program parser: Class parser
+[ ] Program parser: class-method parser
+[ ] Method evaluator (handles ^)
+[ ] Program parser: Method parser
+[ ] Formatter
+[ ] Blocks are closures
+[ ] Backtrace for errors
+[ ] Source locations for expressions
+[ ] Self hosting compiler with abstract backend
+[ ] Bootstrap backend: compiles methods to rust code (or C?)
+[ ] VM: built using the bootstrap compiler
+[ ] Bytecode backend: targets the VM
+
 Planned divergences from Smalltalk
-- No subtyping except for interfaces
-- Type inference (and runtime assertions)
+- Local type inference (and runtime assertions)
 - Conflict-safe extensions to third-party classes
 - Package system
 - Methods implemented in terms of blocks
@@ -12,73 +32,62 @@ Planned divergences from Smalltalk
   b value: 1 : 2 : 3 # keyword
   b apply: array
 
-## Thinking
+## Declarative Syntax
 
-Why am I so hesitant about addMethod using a block?
+### Example
 
-I _do_ want the system to be able to work interactively.
+```
+class Bar [x y z] # This is actually not consistent with using [x . y . z]
+                  # for runtime allocated arrays... but I don't think
+                  # I care.
 
-...but I want that interaction to be based on mirrors instead
-of ad-hoc class mutation.
+class-method Bar x: xval y: yval
+    ^self create-instance: [x . y] # This is nice because the vector can just be wrapped in the class.
 
-...so I need declarative syntax for classes and methods.
+method Bar foo: change
+    x := x + change
 
-...or at least I need a function that generates a deep copy
-of the default environment, so that i can do add_class and
-add_method on it on the rust side?
+phrase ring!
+    ding ding ding
 
-class Foo | x y z |
+constant PI := 3.14
 
-   x: x y: y: z
-     |obj|
-     obj := self new.
-     obj x: x
-     obj y: y
-     obj z: z
-     ^obj
+import Quux
+import foopkg.Foo as: Foofoo
 
-Foo::
+```
+
+### Grammar
+
+```
+program := program-element*
+
+program-element := class | instance-method | class-method | phrase
+
+class := "class" Identifier "[" identifier* "]"
+
+instance-method := "method" Identifier method-pattern method-body
+
+class-method := "class-method" Identifier method-pattern method-body
+
+phrase := "phrase" identifier! message-chain
+
+constant := "constant" IDENTIFIER ":=" expression
+```
 
 ## Parts
 
-[x] AST
-[x] Expression parser
-[x] Method parser
-[ ] Evaluator
-[ ] Class parser
-    Class new: #MyClass;
-      instanceVariables: #(a b);
-      classMethod: #new:with: is: { :a :b | instance |
-          instance := self new.
-          instance a: a.
-          instance b: b.
-          ^instance
-      };
-      method: #both is: {
-        ^a + b
-      };
-      method: #rot: is: { :x |
-        b := a
-        a := x
-      }
-[ ] Formatter
-[ ] Closures
 
 Syntax work:
-[ ] $newline, $space, $tab
-[ ] # Comments
+[ ] rework string and character syntax
 [ ] => {}
-[ ] Block temporaries
 [ ] Positional/variable arguments:
     Array of: 1 : 2 : 3
       Array addMethod: #of: { :(args*) | ^args toArray }
     { :(a b) | a + b } : 1 : 2
-[ ] local variables with let name = expr (important for type safety)
-[ ] return with return
 [ ] String interpolation #"This is {self name}!"
 [ ] Message chaining with ,
 [ ] Unary minus and negation  -foo ~foo
-[ ] array syntax [x.y.z]
 [ ] dict syntax { foo: x signum.
                   quux: y.
                   zot: z. }
