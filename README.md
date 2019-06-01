@@ -30,7 +30,8 @@ Planned divergences from Smalltalk
       }
 [ ] Formatter
 
-Syntax extensions:
+Syntax work:
+[ ] $newline, $space, $tab
 [ ] # Comments
 [ ] => {}
 [ ] Block temporaries
