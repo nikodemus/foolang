@@ -9,6 +9,16 @@ fn eval_number() {
 }
 
 #[test]
+fn eval_string() {
+    assert_eq!(eval(parse_expr("'foo'")), Object::make_string("foo"));
+}
+
+#[test]
+fn eval_character() {
+    assert_eq!(eval(parse_expr("$x")), Object::make_char("x"));
+}
+
+#[test]
 fn eval_unary() {
     assert_eq!(eval(parse_expr("123 neg")), Object::Integer(-123));
     assert_eq!(eval(parse_expr("123.123 neg")), Object::Float(-123.123));
