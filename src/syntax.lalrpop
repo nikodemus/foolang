@@ -32,9 +32,14 @@ PrimaryExpression: Expr = {
 }
 
 Block: Block = {
-   "{" <p:BlockParams> "|" <s:Statements> "}" => Block { parameters: p, statements: s },
-   "{" <s:Statements> "}" => Block{ parameters: vec![], statements: s },
-   "{" "}" => Block { parameters: vec![], statements: vec![] },
+   // FIXME: This causes a conflict with Variable and I'm not sure how to fix that -- but
+   // since I'm planning to change to let-style anywhow I'm not going to worry about it now,
+   // and I only needed temps for testing assignment anyhow...
+   //  "{" <p:BlockParams> "|" <t:Identifiers> "|" <s:Statements> "}" => Block { parameters: p, temporaries: t, statements: s },
+   "{" "|" <t:Identifiers> "|" <s:Statements> "}" => Block { parameters: vec![], temporaries: t, statements: s },
+   "{" <p:BlockParams> "|" <s:Statements> "}" => Block { parameters: p, temporaries: vec![], statements: s },
+   "{" <s:Statements> "}" => Block{ parameters: vec![], temporaries: vec![], statements: s },
+   "{" "}" => Block { parameters: vec![], temporaries: vec![], statements: vec![] },
 }
 
 BlockParams: Vec<Identifier> = {

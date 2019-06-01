@@ -14,11 +14,11 @@ enum MethodImpl {
 
 pub fn eval(expr: Expr) -> Object {
     let novars = vec![];
-    let novals = vec![];
-    eval_in_env(expr, &novars, &novals)
+    let mut novals = vec![];
+    eval_in_env(expr, &novars, &mut novals)
 }
 
-pub fn eval_in_env(expr: Expr, vars: &Vec<Identifier>, vals: &Vec<Object>) -> Object {
+pub fn eval_in_env(expr: Expr, vars: &Vec<Identifier>, vals: &mut Vec<Object>) -> Object {
     match expr {
         Expr::Constant(lit) => eval_literal(lit),
         Expr::Variable(Identifier(s)) => {
@@ -29,6 +29,16 @@ pub fn eval_in_env(expr: Expr, vars: &Vec<Identifier>, vals: &Vec<Object>) -> Ob
             }
             GLOBALS.get(&s).expect("unbound variable").to_owned()
         }
+        Expr::Assign(Identifier(s), expr) => match vars.iter().position(|id| &id.0 == &s) {
+            Some(p) => {
+                vals[p] = eval_in_env(*expr, vars, vals);
+                vals[p].to_owned()
+            }
+            None => panic!(
+                "Cannot assign to an unbound variable: {}. Available names: {:?}",
+                s, vars
+            ),
+        },
         Expr::Unary(expr, selector) => send_unary(eval_in_env(*expr, vars, vals), selector),
         Expr::Binary(left, selector, right) => send_binary(
             eval_in_env(*left, vars, vals),
@@ -118,12 +128,19 @@ fn method_mul(receiver: Object, args: Vec<Object>) -> Object {
     }
 }
 
-fn method_block_apply(receiver: Object, args: Vec<Object>) -> Object {
+fn method_block_apply(receiver: Object, mut args: Vec<Object>) -> Object {
     let mut res = receiver.clone();
     match receiver {
         Object::Block(blk) => {
+            assert!(args.len() == blk.parameters.len());
+            let mut names = blk.parameters.clone();
+            names.append(&mut blk.temporaries.clone());
+            for _ in 0..(names.len() - args.len()) {
+                // FIXME...
+                args.push(Object::Integer(0));
+            }
             for stm in blk.statements.iter() {
-                res = eval_in_env(stm.to_owned(), &blk.parameters, &args);
+                res = eval_in_env(stm.to_owned(), &names, &mut args);
             }
             res
         }
@@ -165,19 +182,19 @@ lazy_static! {
         m
     };
     static ref STRING_METHODS: HashMap<String, MethodImpl> = {
-        let mut m: HashMap<String, MethodImpl> = HashMap::new();
+        let m: HashMap<String, MethodImpl> = HashMap::new();
         m
     };
     static ref CHARACTER_METHODS: HashMap<String, MethodImpl> = {
-        let mut m: HashMap<String, MethodImpl> = HashMap::new();
+        let m: HashMap<String, MethodImpl> = HashMap::new();
         m
     };
     static ref SYMBOL_METHODS: HashMap<String, MethodImpl> = {
-        let mut m: HashMap<String, MethodImpl> = HashMap::new();
+        let m: HashMap<String, MethodImpl> = HashMap::new();
         m
     };
     static ref ARRAY_METHODS: HashMap<String, MethodImpl> = {
-        let mut m: HashMap<String, MethodImpl> = HashMap::new();
+        let m: HashMap<String, MethodImpl> = HashMap::new();
         m
     };
 }
@@ -225,6 +242,5 @@ fn eval_literal(lit: Literal) -> Object {
         Literal::Symbol(s) => Object::Symbol(Arc::new(s)),
         Literal::Character(s) => Object::Character(Arc::new(s)),
         Literal::Array(s) => Object::Array(Arc::new(s.into_iter().map(eval_literal).collect())),
-        _ => unimplemented!("eval_literal({:?})", lit),
     }
 }
