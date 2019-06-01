@@ -12,6 +12,33 @@ Planned divergences from Smalltalk
   b value: 1 : 2 : 3 # keyword
   b apply: array
 
+## Thinking
+
+Why am I so hesitant about addMethod using a block?
+
+I _do_ want the system to be able to work interactively.
+
+...but I want that interaction to be based on mirrors instead
+of ad-hoc class mutation.
+
+...so I need declarative syntax for classes and methods.
+
+...or at least I need a function that generates a deep copy
+of the default environment, so that i can do add_class and
+add_method on it on the rust side?
+
+class Foo | x y z |
+
+   x: x y: y: z
+     |obj|
+     obj := self new.
+     obj x: x
+     obj y: y
+     obj z: z
+     ^obj
+
+Foo::
+
 ## Parts
 
 [x] AST
@@ -151,6 +178,21 @@ Factored using phrases:
 
 - Smalltalk-80: The Language and Its Implementation
   http://www.mirandabanda.org/bluebook/bluebook_imp_toc.html
+
+## BIG GOAL
+
+class Ackermann
+  m: m<i64> n: n<i64> ^<i64>
+    m == 0 then: {
+      ^n + 1
+    }.
+    n == 0 then: {
+      ^Ackermann m: m - 1 n: 1
+    }.
+    ^ Ackermann m: m - 1 n: (Ackermann m: m n: n - 1)
+
+This should compile into decent native code. Something close enough
+to what gcc -O0 would produce.
 
 ## MMmmmaaaybe
 
