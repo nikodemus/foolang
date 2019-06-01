@@ -35,6 +35,14 @@ fn eval_array() {
 }
 
 #[test]
+fn eval_assign() {
+    assert_eq!(
+        eval(parse_expr("{ |x| x := 1 + 41. x } value")),
+        Object::Integer(42)
+    )
+}
+
+#[test]
 fn eval_unary() {
     assert_eq!(eval(parse_expr("123 neg")), Object::Integer(-123));
     assert_eq!(eval(parse_expr("123.123 neg")), Object::Float(-123.123));

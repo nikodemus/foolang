@@ -11,6 +11,7 @@ impl Identifier {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Block {
     pub parameters: Vec<Identifier>,
+    pub temporaries: Vec<Identifier>,
     pub statements: Vec<Expr>,
 }
 

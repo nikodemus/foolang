@@ -99,12 +99,26 @@ fn parse_assign() {
         )
     );
 }
+
+#[test]
+fn parse_block_with_temporaries() {
+    assert_eq!(
+        parse_expr("{ |x| foo }"),
+        Expr::Block(ast::Block {
+            parameters: vec![],
+            temporaries: vec![identifier("x")],
+            statements: vec![variable("foo")]
+        })
+    );
+}
+
 #[test]
 fn parse_block() {
     assert_eq!(
         parse_expr("{ foo }"),
         Expr::Block(ast::Block {
             parameters: vec![],
+            temporaries: vec![],
             statements: vec![variable("foo")]
         })
     );
@@ -112,6 +126,7 @@ fn parse_block() {
         parse_expr("{ foo bar }"),
         Expr::Block(ast::Block {
             parameters: vec![],
+            temporaries: vec![],
             statements: vec![Expr::Unary(Box::new(variable("foo")), identifier("bar"))]
         })
     );
@@ -119,6 +134,7 @@ fn parse_block() {
         parse_expr("{ foo bar. quux }"),
         Expr::Block(ast::Block {
             parameters: vec![],
+            temporaries: vec![],
             statements: vec![
                 Expr::Unary(Box::new(variable("foo")), identifier("bar")),
                 variable("quux")
@@ -129,6 +145,7 @@ fn parse_block() {
         parse_expr("{ :a | foo bar }"),
         Expr::Block(ast::Block {
             parameters: vec![identifier("a")],
+            temporaries: vec![],
             statements: vec![Expr::Unary(Box::new(variable("foo")), identifier("bar"))]
         })
     );
@@ -136,6 +153,7 @@ fn parse_block() {
         parse_expr("{ :a | foo bar. quux }"),
         Expr::Block(ast::Block {
             parameters: vec![identifier("a")],
+            temporaries: vec![],
             statements: vec![
                 Expr::Unary(Box::new(variable("foo")), identifier("bar")),
                 variable("quux")
@@ -146,6 +164,7 @@ fn parse_block() {
         parse_expr("{ :a | foo + bar. quux }"),
         Expr::Block(ast::Block {
             parameters: vec![identifier("a")],
+            temporaries: vec![],
             statements: vec![
                 Expr::Binary(
                     Box::new(variable("foo")),
@@ -160,6 +179,7 @@ fn parse_block() {
         parse_expr("{ :a | foo with: bar and: a. quux }"),
         Expr::Block(ast::Block {
             parameters: vec![identifier("a")],
+            temporaries: vec![],
             statements: vec![
                 Expr::Keyword(
                     Box::new(variable("foo")),
@@ -174,6 +194,7 @@ fn parse_block() {
         parse_expr("{ ^Foo new }"),
         Expr::Block(ast::Block {
             parameters: vec![],
+            temporaries: vec![],
             statements: vec![Expr::Return(Box::new(Expr::Unary(
                 Box::new(variable("Foo")),
                 identifier("new")
