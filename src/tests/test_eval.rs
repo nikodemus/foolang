@@ -75,3 +75,8 @@ fn eval_block() {
         Object::Integer(42)
     );
 }
+
+#[test]
+fn eval_cascade() {
+    assert_eq!(eval(parse_expr("1 + 100; + 41")), Object::Integer(42));
+}

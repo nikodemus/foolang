@@ -1,4 +1,4 @@
-use crate::ast::{Expr, Identifier, Literal};
+use crate::ast::{Cascade, Expr, Identifier, Literal};
 use crate::objects::Object;
 use lazy_static::lazy_static;
 use std::borrow::ToOwned;
@@ -15,46 +15,75 @@ enum MethodImpl {
 pub fn eval(expr: Expr) -> Object {
     let novars = vec![];
     let mut novals = vec![];
-    eval_in_env(expr, &novars, &mut novals)
+    eval_in_env1(expr, &novars, &mut novals)
 }
 
-pub fn eval_in_env(expr: Expr, vars: &Vec<Identifier>, vals: &mut Vec<Object>) -> Object {
+fn eval_in_env1(expr: Expr, vars: &Vec<Identifier>, vals: &mut Vec<Object>) -> Object {
+    let (val, _) = eval_in_env(expr, vars, vals);
+    val
+}
+
+fn eval_in_env(expr: Expr, vars: &Vec<Identifier>, vals: &mut Vec<Object>) -> (Object, Object) {
+    fn dup(x: Object) -> (Object, Object) {
+        (x.clone(), x)
+    }
     match expr {
-        Expr::Constant(lit) => eval_literal(lit),
+        Expr::Constant(lit) => dup(eval_literal(lit)),
         Expr::Variable(Identifier(s)) => {
             for (var, val) in vars.iter().zip(vals.iter()) {
                 if &var.0 == &s {
-                    return val.to_owned();
+                    return dup(val.to_owned());
                 }
             }
-            GLOBALS.get(&s).expect("unbound variable").to_owned()
+            dup(GLOBALS.get(&s).expect("unbound variable").to_owned())
         }
         Expr::Assign(Identifier(s), expr) => match vars.iter().position(|id| &id.0 == &s) {
             Some(p) => {
-                vals[p] = eval_in_env(*expr, vars, vals);
-                vals[p].to_owned()
+                vals[p] = eval_in_env1(*expr, vars, vals);
+                dup(vals[p].to_owned())
             }
             None => panic!(
                 "Cannot assign to an unbound variable: {}. Available names: {:?}",
                 s, vars
             ),
         },
-        Expr::Unary(expr, selector) => send_unary(eval_in_env(*expr, vars, vals), selector),
-        Expr::Binary(left, selector, right) => send_binary(
-            eval_in_env(*left, vars, vals),
-            selector,
-            eval_in_env(*right, vars, vals),
-        ),
-        Expr::Keyword(expr, selector, args) => send_keyword(
-            eval_in_env(*expr, vars, vals),
-            selector,
-            args.into_iter()
-                .map(|arg| eval_in_env(arg, vars, vals))
-                .collect(),
-        ),
-        Expr::Block(b) => Object::Block(Arc::new(b)),
+        Expr::Unary(expr, selector) => {
+            let receiver = eval_in_env1(*expr, vars, vals);
+            (send_unary(receiver.clone(), &selector), receiver)
+        }
+        Expr::Binary(left, selector, right) => {
+            let receiver = eval_in_env1(*left, vars, vals);
+            (
+                send_binary(
+                    receiver.clone(),
+                    &selector,
+                    eval_in_env1(*right, vars, vals),
+                ),
+                receiver,
+            )
+        }
+        Expr::Keyword(expr, selector, args) => {
+            let receiver = eval_in_env1(*expr, vars, vals);
+            (
+                send_keyword(
+                    receiver.clone(),
+                    &selector,
+                    args.into_iter()
+                        .map(|arg| eval_in_env1(arg, vars, vals))
+                        .collect(),
+                ),
+                receiver,
+            )
+        }
+        Expr::Block(b) => dup(Object::Block(Arc::new(b))),
+        Expr::Cascade(expr, cascade) => {
+            let (value, receiver) = eval_in_env(*expr, vars, vals);
+            (
+                eval_cascade(receiver.clone(), cascade, vars, vals),
+                receiver,
+            )
+        }
         // return
-        // cascade
         _ => unimplemented!("eval({:?})", expr),
     }
 }
@@ -142,7 +171,7 @@ fn method_block_apply(receiver: Object, mut args: Vec<Object>) -> Object {
                 args.push(Object::Integer(0));
             }
             for stm in blk.statements.iter() {
-                res = eval_in_env(stm.to_owned(), &names, &mut args);
+                res = eval_in_env1(stm.to_owned(), &names, &mut args);
             }
             res
         }
@@ -201,7 +230,7 @@ lazy_static! {
     };
 }
 
-fn find_method(receiver: &Object, selector: Identifier) -> MethodImpl {
+fn find_method(receiver: &Object, selector: &Identifier) -> MethodImpl {
     // println!("find_method {:?} {:?}", receiver, selector);
     let item = match receiver {
         Object::Block(_) => return MethodImpl::Builtin(method_block_apply),
@@ -224,15 +253,15 @@ fn invoke(method: MethodImpl, receiver: Object, args: Vec<Object>) -> Object {
     }
 }
 
-fn send_unary(receiver: Object, selector: Identifier) -> Object {
+fn send_unary(receiver: Object, selector: &Identifier) -> Object {
     invoke(find_method(&receiver, selector), receiver, vec![])
 }
 
-fn send_binary(receiver: Object, selector: Identifier, arg: Object) -> Object {
+fn send_binary(receiver: Object, selector: &Identifier, arg: Object) -> Object {
     invoke(find_method(&receiver, selector), receiver, vec![arg])
 }
 
-fn send_keyword(receiver: Object, selector: Identifier, args: Vec<Object>) -> Object {
+fn send_keyword(receiver: Object, selector: &Identifier, args: Vec<Object>) -> Object {
     invoke(find_method(&receiver, selector), receiver, args)
 }
 
@@ -245,4 +274,32 @@ fn eval_literal(lit: Literal) -> Object {
         Literal::Character(s) => Object::Character(Arc::new(s)),
         Literal::Array(s) => Object::Array(Arc::new(s.into_iter().map(eval_literal).collect())),
     }
+}
+
+fn eval_cascade(
+    receiver: Object,
+    cascade: Vec<Cascade>,
+    vars: &Vec<Identifier>,
+    vals: &mut Vec<Object>,
+) -> Object {
+    let mut value = receiver.clone();
+    for thing in cascade.iter() {
+        value = match thing {
+            Cascade::Unary(selector) => send_unary(receiver.clone(), selector),
+            Cascade::Binary(selector, expr) => send_binary(
+                receiver.clone(),
+                selector,
+                eval_in_env1(expr.to_owned(), vars, vals),
+            ),
+            Cascade::Keyword(selector, exprs) => send_keyword(
+                receiver.clone(),
+                selector,
+                exprs
+                    .iter()
+                    .map(|x| eval_in_env1(x.to_owned(), vars, vals))
+                    .collect(),
+            ),
+        }
+    }
+    value
 }
