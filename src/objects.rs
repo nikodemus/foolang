@@ -9,6 +9,7 @@ pub enum Object {
     String(Arc<String>),
     Symbol(Arc<String>),
     Block(Arc<ast::Block>),
+    Array(Arc<Vec<Object>>),
 }
 
 impl Object {
@@ -22,5 +23,8 @@ impl Object {
         let s = String::from(s);
         assert!(s.len() == 1);
         Object::Character(Arc::new(s))
+    }
+    pub fn make_array(data: &[Object]) -> Object {
+        Object::Array(Arc::new(data.to_vec()))
     }
 }

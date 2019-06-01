@@ -27,6 +27,14 @@ fn eval_symbol() {
 }
 
 #[test]
+fn eval_array() {
+    assert_eq!(
+        eval(parse_expr("#(1 2 3)")),
+        Object::make_array(&[Object::Integer(1), Object::Integer(2), Object::Integer(3)])
+    );
+}
+
+#[test]
 fn eval_unary() {
     assert_eq!(eval(parse_expr("123 neg")), Object::Integer(-123));
     assert_eq!(eval(parse_expr("123.123 neg")), Object::Float(-123.123));
