@@ -172,6 +172,10 @@ lazy_static! {
         let mut m: HashMap<String, MethodImpl> = HashMap::new();
         m
     };
+    static ref SYMBOL_METHODS: HashMap<String, MethodImpl> = {
+        let mut m: HashMap<String, MethodImpl> = HashMap::new();
+        m
+    };
 }
 
 fn find_method(receiver: &Object, selector: Identifier) -> MethodImpl {
@@ -181,6 +185,7 @@ fn find_method(receiver: &Object, selector: Identifier) -> MethodImpl {
         Object::Integer(_) => INTEGER_METHODS.get(&selector.0),
         Object::Float(_) => FLOAT_METHODS.get(&selector.0),
         Object::String(_) => STRING_METHODS.get(&selector.0),
+        Object::Symbol(_) => SYMBOL_METHODS.get(&selector.0),
         Object::Character(_) => CHARACTER_METHODS.get(&selector.0),
     };
     match item {
@@ -212,6 +217,7 @@ fn eval_literal(lit: Literal) -> Object {
         Literal::Integer(x) => Object::Integer(x),
         Literal::Float(x) => Object::Float(x),
         Literal::String(s) => Object::String(Arc::new(s)),
+        Literal::Symbol(s) => Object::Symbol(Arc::new(s)),
         Literal::Character(s) => Object::Character(Arc::new(s)),
         _ => unimplemented!("eval_literal({:?})", lit),
     }

@@ -19,6 +19,14 @@ fn eval_character() {
 }
 
 #[test]
+fn eval_symbol() {
+    assert_eq!(
+        eval(parse_expr("#foo:bar:")),
+        Object::make_symbol("foo:bar:")
+    );
+}
+
+#[test]
 fn eval_unary() {
     assert_eq!(eval(parse_expr("123 neg")), Object::Integer(-123));
     assert_eq!(eval(parse_expr("123.123 neg")), Object::Float(-123.123));
