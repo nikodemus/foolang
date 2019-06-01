@@ -7,81 +7,112 @@ use std::sync::Arc;
 
 pub type MethodFunc = fn(Object, Vec<Object>) -> Object;
 
+// type MethodTable = HashMap<String,MethodImpl>;
+
+struct Lexenv<'a> {
+    names: Vec<Identifier>,
+    values: Vec<Object>,
+    parent: Option<&'a mut Lexenv<'a>>,
+}
+
+impl<'a> Lexenv<'a> {
+    fn new() -> Lexenv<'a> {
+        Lexenv {
+            names: vec![],
+            values: vec![],
+            parent: None,
+        }
+    }
+    fn from(names: Vec<Identifier>, values: Vec<Object>) -> Lexenv<'a> {
+        Lexenv {
+            names,
+            values,
+            parent: None,
+        }
+    }
+    fn index(&self, name: &str) -> Option<usize> {
+        self.names.iter().position(|id| &id.0 == name)
+    }
+    fn set_index(&mut self, index: usize, value: Object) {
+        self.values[index] = value;
+    }
+    fn find(&self, name: &str) -> Option<&Object> {
+        match self.names.iter().position(|id| &id.0 == name) {
+            Some(p) => self.values.get(p),
+            None => match &self.parent {
+                Some(env) => env.find(name),
+                None => None,
+            },
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 enum MethodImpl {
     Builtin(MethodFunc),
 }
 
 pub fn eval(expr: Expr) -> Object {
-    let novars = vec![];
-    let mut novals = vec![];
-    eval_in_env1(expr, &novars, &mut novals)
+    eval_in_env1(expr, &mut Lexenv::new())
 }
 
-fn eval_in_env1(expr: Expr, vars: &Vec<Identifier>, vals: &mut Vec<Object>) -> Object {
-    let (val, _) = eval_in_env(expr, vars, vals);
+fn eval_in_env1(expr: Expr, env: &mut Lexenv) -> Object {
+    let (val, _) = eval_in_env(expr, env);
     val
 }
 
-fn eval_in_env(expr: Expr, vars: &Vec<Identifier>, vals: &mut Vec<Object>) -> (Object, Object) {
+fn eval_in_env(expr: Expr, env: &mut Lexenv) -> (Object, Object) {
     fn dup(x: Object) -> (Object, Object) {
         (x.clone(), x)
     }
     match expr {
         Expr::Constant(lit) => dup(eval_literal(lit)),
         Expr::Variable(Identifier(s)) => {
-            for (var, val) in vars.iter().zip(vals.iter()) {
-                if &var.0 == &s {
-                    return dup(val.to_owned());
-                }
+            if let Some(value) = env.find(&s) {
+                return dup(value.to_owned());
             }
-            dup(GLOBALS.get(&s).expect("unbound variable").to_owned())
+            match GLOBALS.get(&s) {
+                Some(g) => dup(g.to_owned()),
+                None => panic!("Unbound variable: {}", s),
+            }
         }
-        Expr::Assign(Identifier(s), expr) => match vars.iter().position(|id| &id.0 == &s) {
-            Some(p) => {
-                vals[p] = eval_in_env1(*expr, vars, vals);
-                dup(vals[p].to_owned())
+        Expr::Assign(Identifier(s), expr) => match env.index(&s) {
+            Some(idx) => {
+                let val = eval_in_env1(*expr, env);
+                env.set_index(idx, val.clone());
+                dup(val)
             }
             None => panic!(
                 "Cannot assign to an unbound variable: {}. Available names: {:?}",
-                s, vars
+                s, env.names
             ),
         },
         Expr::Unary(expr, selector) => {
-            let receiver = eval_in_env1(*expr, vars, vals);
+            let receiver = eval_in_env1(*expr, env);
             (send_unary(receiver.clone(), &selector), receiver)
         }
         Expr::Binary(left, selector, right) => {
-            let receiver = eval_in_env1(*left, vars, vals);
+            let receiver = eval_in_env1(*left, env);
             (
-                send_binary(
-                    receiver.clone(),
-                    &selector,
-                    eval_in_env1(*right, vars, vals),
-                ),
+                send_binary(receiver.clone(), &selector, eval_in_env1(*right, env)),
                 receiver,
             )
         }
         Expr::Keyword(expr, selector, args) => {
-            let receiver = eval_in_env1(*expr, vars, vals);
+            let receiver = eval_in_env1(*expr, env);
             (
                 send_keyword(
                     receiver.clone(),
                     &selector,
-                    args.into_iter()
-                        .map(|arg| eval_in_env1(arg, vars, vals))
-                        .collect(),
+                    args.into_iter().map(|arg| eval_in_env1(arg, env)).collect(),
                 ),
                 receiver,
             )
         }
         Expr::Block(b) => dup(Object::Block(Arc::new(b))),
         Expr::Cascade(expr, cascade) => {
-            let (_, receiver) = eval_in_env(*expr, vars, vals);
-            (
-                eval_cascade(receiver.clone(), cascade, vars, vals),
-                receiver,
-            )
+            let (_, receiver) = eval_in_env(*expr, env);
+            (eval_cascade(receiver.clone(), cascade, env), receiver)
         }
         Expr::Return(_expr) => unimplemented!("TODO: return"),
     }
@@ -169,8 +200,10 @@ fn method_block_apply(receiver: Object, mut args: Vec<Object>) -> Object {
                 // FIXME...
                 args.push(Object::Integer(0));
             }
+            // FIXME: Should refer to outer scope...
+            let mut env = Lexenv::from(names, args);
             for stm in blk.statements.iter() {
-                res = eval_in_env1(stm.to_owned(), &names, &mut args);
+                res = eval_in_env1(stm.to_owned(), &mut env);
             }
             res
         }
@@ -275,12 +308,7 @@ fn eval_literal(lit: Literal) -> Object {
     }
 }
 
-fn eval_cascade(
-    receiver: Object,
-    cascade: Vec<Cascade>,
-    vars: &Vec<Identifier>,
-    vals: &mut Vec<Object>,
-) -> Object {
+fn eval_cascade(receiver: Object, cascade: Vec<Cascade>, env: &mut Lexenv) -> Object {
     let mut value = receiver.clone();
     for thing in cascade.iter() {
         value = match thing {
@@ -288,14 +316,14 @@ fn eval_cascade(
             Cascade::Binary(selector, expr) => send_binary(
                 receiver.clone(),
                 selector,
-                eval_in_env1(expr.to_owned(), vars, vals),
+                eval_in_env1(expr.to_owned(), env),
             ),
             Cascade::Keyword(selector, exprs) => send_keyword(
                 receiver.clone(),
                 selector,
                 exprs
                     .iter()
-                    .map(|x| eval_in_env1(x.to_owned(), vars, vals))
+                    .map(|x| eval_in_env1(x.to_owned(), env))
                     .collect(),
             ),
         }
