@@ -29,6 +29,7 @@ Planned divergences from Smalltalk
         a := x
       }
 [ ] Formatter
+[ ] Closures
 
 Syntax work:
 [ ] $newline, $space, $tab
