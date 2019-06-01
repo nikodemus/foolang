@@ -77,14 +77,13 @@ fn eval_in_env(expr: Expr, vars: &Vec<Identifier>, vals: &mut Vec<Object>) -> (O
         }
         Expr::Block(b) => dup(Object::Block(Arc::new(b))),
         Expr::Cascade(expr, cascade) => {
-            let (value, receiver) = eval_in_env(*expr, vars, vals);
+            let (_, receiver) = eval_in_env(*expr, vars, vals);
             (
                 eval_cascade(receiver.clone(), cascade, vars, vals),
                 receiver,
             )
         }
-        // return
-        _ => unimplemented!("eval({:?})", expr),
+        Expr::Return(_expr) => unimplemented!("TODO: return"),
     }
 }
 
