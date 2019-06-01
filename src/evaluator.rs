@@ -135,7 +135,7 @@ trait MethodTable {
     fn add_builtin(&mut self, name: &str, f: MethodFunc);
 }
 
-impl MethodTable for HashMap<String,MethodImpl> {
+impl MethodTable for HashMap<String, MethodImpl> {
     fn add_builtin(&mut self, name: &str, f: MethodFunc) {
         self.insert(String::from(name), MethodImpl::Builtin(f));
     }
@@ -159,8 +159,7 @@ lazy_static! {
     static ref FLOAT_METHODS: HashMap<String, MethodImpl> = {
         let mut m: HashMap<String, MethodImpl> = HashMap::new();
         m.add_builtin("neg", method_neg);
-        m.add_builtin("*",
- method_mul);
+        m.add_builtin("*", method_mul);
         m.add_builtin("+", method_plus);
         m.add_builtin("-", method_minus);
         m
@@ -176,7 +175,7 @@ fn find_method(receiver: &Object, selector: Identifier) -> MethodImpl {
     };
     match item {
         Some(method) => method.to_owned(),
-        None => panic!("No method {} on {:?}", selector.0, receiver)
+        None => panic!("No method {} on {:?}", selector.0, receiver),
     }
 }
 
