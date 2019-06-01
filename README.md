@@ -5,6 +5,12 @@ Planned divergences from Smalltalk
 - Type inference (and runtime assertions)
 - Conflict-safe extensions to third-party classes
 - Package system
+- Methods implemented in terms of blocks
+- Blocks implement: value, value::::, and apply:
+  b value            # unary
+  b value: 1         # keyword
+  b value: 1 : 2 : 3 # keyword
+  b apply: array
 
 ## Parts
 

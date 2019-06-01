@@ -9,14 +9,23 @@ fn s(s: &str) -> String {
 fn identifier(s: &str) -> Identifier {
     Identifier(s.to_string())
 }
+
 fn variable(s: &str) -> Expr {
     Expr::Variable(identifier(s))
 }
 
+fn integer(x: i64) -> Expr {
+    Expr::Constant(Literal::Integer(x))
+}
+
+fn float(x: f64) -> Expr {
+    Expr::Constant(Literal::Float(x))
+}
+
 #[test]
 fn parse_literals() {
-    assert_eq!(parse_expr("42"), Expr::Constant(Literal::Integer(42)));
-    assert_eq!(parse_expr("12.23"), Expr::Constant(Literal::Float(12.23)));
+    assert_eq!(parse_expr("42"), integer(42));
+    assert_eq!(parse_expr("12.23"), float(12.23));
     assert_eq!(parse_expr("$x"), Expr::Constant(Literal::Character(s("x"))));
     assert_eq!(
         parse_expr("#foo:bar:"),
@@ -204,7 +213,33 @@ fn parse_block() {
 }
 
 #[test]
-fn parse_cascade() {
+fn parse_binary_cascade() {
+    assert_eq!(
+        parse_expr("a + b; + c"),
+        Expr::Cascade(
+            Box::new(Expr::Binary(
+                Box::new(variable("a")),
+                identifier("+"),
+                Box::new(variable("b"))
+            )),
+            vec![Cascade::Binary(identifier("+"), variable("c"))]
+        )
+    );
+    assert_eq!(
+        parse_expr("1 + 3; + 41"),
+        Expr::Cascade(
+            Box::new(Expr::Binary(
+                Box::new(integer(1)),
+                identifier("+"),
+                Box::new(integer(3))
+            )),
+            vec![Cascade::Binary(identifier("+"), integer(41))]
+        )
+    );
+}
+
+#[test]
+fn parse_keyword_cascade() {
     assert_eq!(
         parse_expr("a b c d; then: e; + f; g; then: h and: j"),
         Expr::Cascade(
