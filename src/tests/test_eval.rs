@@ -36,10 +36,8 @@ fn eval_block() {
         eval(parse_expr("{ :a | a + 1 } value: 41")),
         Object::Integer(42)
     );
-    /* XXX this next XXX
     assert_eq!(
         eval(parse_expr("{ :a :b | b * a + 2 } a: 20 b: 2")),
         Object::Integer(42)
     );
-    */
 }

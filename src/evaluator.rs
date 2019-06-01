@@ -5,11 +5,11 @@ use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-pub type MethodFunction = fn(Object, Vec<Object>) -> Object;
+pub type MethodFunc = fn(Object, Vec<Object>) -> Object;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum MethodImpl {
-    Builtin(MethodFunction),
+    Builtin(MethodFunc),
 }
 
 pub fn eval(expr: Expr) -> Object {
@@ -101,6 +101,23 @@ fn method_minus(receiver: Object, args: Vec<Object>) -> Object {
     }
 }
 
+fn method_mul(receiver: Object, args: Vec<Object>) -> Object {
+    assert!(args.len() == 1);
+    match receiver {
+        Object::Integer(i) => match args[0] {
+            Object::Integer(j) => Object::Integer(i * j),
+            Object::Float(j) => Object::Float(i as f64 * j),
+            _ => panic!("Bad argument for mul!"),
+        },
+        Object::Float(i) => match args[0] {
+            Object::Integer(j) => Object::Float(i * j as f64),
+            Object::Float(j) => Object::Float(i * j),
+            _ => panic!("Bad argument for mul!"),
+        },
+        _ => panic!("Bad receiver for mul!"),
+    }
+}
+
 fn method_block_apply(receiver: Object, args: Vec<Object>) -> Object {
     let mut res = receiver.clone();
     match receiver {
@@ -114,34 +131,52 @@ fn method_block_apply(receiver: Object, args: Vec<Object>) -> Object {
     }
 }
 
+trait MethodTable {
+    fn add_builtin(&mut self, name: &str, f: MethodFunc);
+}
+
+impl MethodTable for HashMap<String,MethodImpl> {
+    fn add_builtin(&mut self, name: &str, f: MethodFunc) {
+        self.insert(String::from(name), MethodImpl::Builtin(f));
+    }
+}
+
 lazy_static! {
     static ref GLOBALS: HashMap<String, Object> = {
         let mut m: HashMap<String, Object> = HashMap::new();
         m.insert(String::from("PI"), Object::Float(std::f64::consts::PI));
         m
     };
-    static ref INTEGER_METHODS: HashMap<String, MethodFunction> = {
-        let mut m: HashMap<String, MethodFunction> = HashMap::new();
-        m.insert(String::from("neg"), method_neg);
-        m.insert(String::from("gcd:"), method_gcd);
-        m.insert(String::from("+"), method_plus);
-        m.insert(String::from("-"), method_minus);
+    static ref INTEGER_METHODS: HashMap<String, MethodImpl> = {
+        let mut m: HashMap<String, MethodImpl> = HashMap::new();
+        m.add_builtin("neg", method_neg);
+        m.add_builtin("gcd:", method_gcd);
+        m.add_builtin("*", method_mul);
+        m.add_builtin("+", method_plus);
+        m.add_builtin("-", method_minus);
         m
     };
-    static ref FLOAT_METHODS: HashMap<String, MethodFunction> = {
-        let mut m: HashMap<String, MethodFunction> = HashMap::new();
-        m.insert(String::from("neg"), method_neg);
-        m.insert(String::from("+"), method_plus);
-        m.insert(String::from("-"), method_minus);
+    static ref FLOAT_METHODS: HashMap<String, MethodImpl> = {
+        let mut m: HashMap<String, MethodImpl> = HashMap::new();
+        m.add_builtin("neg", method_neg);
+        m.add_builtin("*",
+ method_mul);
+        m.add_builtin("+", method_plus);
+        m.add_builtin("-", method_minus);
         m
     };
 }
 
 fn find_method(receiver: &Object, selector: Identifier) -> MethodImpl {
-    match receiver {
-        Object::Integer(_) => MethodImpl::Builtin(INTEGER_METHODS[&selector.0]),
-        Object::Float(_) => MethodImpl::Builtin(FLOAT_METHODS[&selector.0]),
-        Object::Block(_) => MethodImpl::Builtin(method_block_apply),
+    // println!("find_method {:?} {:?}", receiver, selector);
+    let item = match receiver {
+        Object::Integer(_) => INTEGER_METHODS.get(&selector.0),
+        Object::Float(_) => FLOAT_METHODS.get(&selector.0),
+        Object::Block(_) => return MethodImpl::Builtin(method_block_apply),
+    };
+    match item {
+        Some(method) => method.to_owned(),
+        None => panic!("No method {} on {:?}", selector.0, receiver)
     }
 }
 
