@@ -68,15 +68,8 @@ pub struct InstanceMethodDescription {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Method {
-    // FIXME: refactor pattern into selector and parameters.
-    pub pattern: Pattern,
+    pub selector: Identifier,
+    pub parameters: Vec<Identifier>,
     pub temporaries: Vec<Identifier>,
     pub statements: Vec<Expr>,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Pattern {
-    Unary(Identifier),
-    Binary(Identifier, Identifier),
-    Keyword(Identifier, Vec<Identifier>),
 }

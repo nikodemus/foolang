@@ -1,9 +1,9 @@
-use crate::ast::{ClassDescription, Expr, Method};
+use crate::ast;
 
 use lalrpop_util::lalrpop_mod;
 lalrpop_mod!(pub syntax);
 
-pub fn parse_expr(s: &str) -> Expr {
+pub fn parse_expr(s: &str) -> ast::Expr {
     match syntax::ExpressionParser::new().parse(s) {
         Ok(e) => e,
         Err(e) => {
@@ -12,7 +12,7 @@ pub fn parse_expr(s: &str) -> Expr {
     }
 }
 
-pub fn parse_method(s: &str) -> Method {
+pub fn parse_method(s: &str) -> ast::Method {
     match syntax::MethodParser::new().parse(s) {
         Ok(e) => e,
         Err(e) => {
@@ -21,8 +21,17 @@ pub fn parse_method(s: &str) -> Method {
     }
 }
 
-pub fn parse_class(s: &str) -> ClassDescription {
+pub fn parse_class(s: &str) -> ast::ClassDescription {
     match syntax::ClassParser::new().parse(s) {
+        Ok(e) => e,
+        Err(e) => {
+            panic!(format!("Could not parse class: {}\nError: {}", s, e));
+        }
+    }
+}
+
+pub fn parse_instance_method(s: &str) -> ast::InstanceMethodDescription {
+    match syntax::InstanceMethodParser::new().parse(s) {
         Ok(e) => e,
         Err(e) => {
             panic!(format!("Could not parse class: {}\nError: {}", s, e));

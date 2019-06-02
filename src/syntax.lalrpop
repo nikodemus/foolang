@@ -1,6 +1,7 @@
 use std::str::FromStr;
 use crate::ast::{
-  Identifier, Expr, Literal, Cascade, Pattern, Method, Block, ClassDescription, ProgramElement, Program
+  Identifier, Expr, Literal, Cascade, Method, Block, ClassDescription, ProgramElement, Program,
+  InstanceMethodDescription
 };
 use crate::utils::{
   prepend, chop, chopchop,
@@ -11,47 +12,60 @@ grammar;
 pub Program: Program = {
   <e:ProgramElement> <p:Program> => prepend(e, p),
   <e:ProgramElement> => vec![e],
-}
+};
 
 ProgramElement: ProgramElement = {
   Class => ProgramElement::Class(<>),
-//  InstanceMethod => ProgramElement::InstanceMethod(<>)
-}
+  InstanceMethod => ProgramElement::InstanceMethod(<>)
+};
 
 pub Class: ClassDescription = {
-  "class" <id:Identifier> <s:SlotNames> => ClassDescription {
+  "@class" <id:Identifier> <s:SlotNames> => ClassDescription {
     name: id,
     slots: s,
   }
-}
+};
 
-//pub InstanceMethod: InstanceMethodDescription = {
-//  <class:Identifier> ">>" Method => InstanceMethodDescription {
-//    class: class,
-//    method: method,
-//  }
-//}
+pub InstanceMethod: InstanceMethodDescription = {
+  "@method" <class:Identifier> <method:Method> => InstanceMethodDescription {
+    class: class,
+    method: method,
+  }
+};
 
 pub Method: Method = {
   <p:MessagePattern> <t:Temporaries> <s:Statements>
-    => Method { pattern: p, temporaries: t, statements: s},
+    => Method { selector: p.0, parameters: p.1, temporaries: t, statements: s},
   <p:MessagePattern> <s:Statements>
-    => Method { pattern: p, temporaries: vec![], statements: s},
+    => Method { selector: p.0, parameters: p.1, temporaries: vec![], statements: s},
   <p:MessagePattern>
-    => Method { pattern: p, temporaries: vec![], statements: vec![]},
-}
+    => Method { selector: p.0, parameters: p.1, temporaries: vec![], statements: vec![]},
+};
+
+MessagePattern: (Identifier, Vec<Identifier>) = {
+  UnarySelector => (<>, vec![]),
+  <a:BinarySelector> <b:Identifier> => (a, vec![b]),
+  <a:KeywordPattern> => a,
+};
+
+KeywordPattern: (Identifier, Vec<Identifier>) = {
+  <a:Keyword> <b:Identifier> <c:KeywordPattern>
+    => (a.concat(c.0), prepend(b, c.1)),
+  <a:Keyword> <b:Identifier>
+    => (a, vec![b]),
+};
 
 SlotNames: Vec<Identifier> = {
   "[" "]" => vec![],
   "[" <i:Identifiers> "]" => i,
-}
+};
 
 pub Expression: Expr = {
    <i:Identifier> ":=" <e:Expression> => Expr::Assign(i, Box::new(e)),
    PrimaryExpression,
    MessageExpression,
    CascadedMessageExpression,
-}
+};
 
 PrimaryExpression: Expr = {
   Identifier => Expr::Variable(<>),
@@ -59,12 +73,12 @@ PrimaryExpression: Expr = {
   Block => Expr::Block(<>),
   "(" <e:Expression> ")" => e,
   "[" <e:DottedExpressions> "]" => Expr::ArrayCtor(e),
-}
+};
 
 DottedExpressions: Vec<Expr> = {
   <e:Expression> "." <v:DottedExpressions> => prepend(e, v),
   <e:Expression> => vec![e],
-}
+};
 
 Block: Block = {
    // FIXME: This causes a conflict with Variable and I'm not sure how to fix that -- but
@@ -75,57 +89,57 @@ Block: Block = {
    "{" <p:BlockParams> "|" <s:Statements> "}" => Block { parameters: p, temporaries: vec![], statements: s },
    "{" <s:Statements> "}" => Block{ parameters: vec![], temporaries: vec![], statements: s },
    "{" "}" => Block { parameters: vec![], temporaries: vec![], statements: vec![] },
-}
+};
 
 BlockParams: Vec<Identifier> = {
    <i:BlockParam> <is:BlockParams> => prepend(i, is),
    <i:BlockParam> => vec![i]
-}
+};
 
 Statements: Vec<Expr> = {
   <s:Statement> "." <ss:Statements> => prepend(s, ss),
   <s:Statement> "." => vec![s],
   <s:Statement> => vec![s],
-}
+};
 
 Statement: Expr = {
   "^" <e:Expression> => Expr::Return(Box::new(e)),
   Expression,
-}
+};
 
 MessageExpression: Expr = {
   UnaryExpression,
   BinaryExpression,
   KeywordExpression,
-}
+};
 
 UnaryExpression: Expr = {
   <o:UnaryObjectDescription> <m:UnarySelector> => Expr::Unary(Box::new(o), m),
-}
+};
 
 UnaryObjectDescription: Expr = {
   PrimaryExpression,
   UnaryExpression,
-}
+};
 
 BinaryObjectDescription: Expr = {
   UnaryObjectDescription,
   BinaryExpression,
-}
+};
 
 UnarySelector: Identifier = {
   Identifier,
-}
+};
 
 BinaryExpression: Expr = {
   <a:BinaryObjectDescription> <s:BinarySelector> <b:UnaryObjectDescription>
     => Expr::Binary(Box::new(a), s, Box::new(b))
-}
+};
 
 KeywordExpression: Expr = {
   <a:BinaryObjectDescription> <b:KeywordTail>
     => Expr::Keyword(Box::new(a), b.0, b.1),
-}
+};
 
 // This is immediately destructured in KeywordExpression -- This
 // exists as a separate thing only to make the typechecking nice for
@@ -135,17 +149,17 @@ KeywordTail: (Identifier, Vec<Expr>) = {
     => (k.concat(more.0), prepend(arg, more.1)),
   <k:Keyword> <arg:BinaryObjectDescription>
     => (k, vec![arg]),
-}
+};
 
 CascadedMessageExpression: Expr = {
   <a:MessageExpression> <t:CascadedMessageTail>
     => Expr::Cascade(Box::new(a), t),
-}
+};
 
 CascadedMessageTail: Vec<Cascade> = {
     ";" <a:CascadedMessage> <b:CascadedMessageTail> => prepend(a, b),
     ";" <a:CascadedMessage> => vec![a],
-}
+};
 
 // This syntax feels restrictive: why not allow
 //
@@ -159,37 +173,24 @@ CascadedMessage: Cascade = {
    <a:UnarySelector> => Cascade::Unary(a),
    <a:BinarySelector> <b:UnaryObjectDescription> => Cascade::Binary(a, b),
    <a:KeywordTail> => Cascade::Keyword(a.0, a.1),
-}
+};
 
 Temporaries: Vec<Identifier> = {
   "|" <a:Identifiers> "|" => a
-}
-
-MessagePattern: Pattern = {
-  UnarySelector => Pattern::Unary(<>),
-  <a:BinarySelector> <b:Identifier> => Pattern::Binary(a,b),
-  <a:KeywordPattern> => Pattern::Keyword(a.0, a.1),
-}
-
-KeywordPattern: (Identifier, Vec<Identifier>) = {
-  <a:Keyword> <b:Identifier> <c:KeywordPattern>
-    => (a.concat(c.0), prepend(b, c.1)),
-  <a:Keyword> <b:Identifier>
-    => (a, vec![b]),
-}
+};
 
 Identifiers: Vec<Identifier> = {
    <i:Identifier> <is:Identifiers> => prepend(i, is),
    <i:Identifier> => vec![i]
-}
+};
 
 Keyword: Identifier = {
   r"[_a-zA-Z][_a-zA-Z0-9]*:" => Identifier(String::from(<>))
-}
+};
 
 BlockParam: Identifier = {
   r":[_a-zA-Z][_a-zA-Z0-9]*" => Identifier(chop(String::from(<>)))
-}
+};
 
 Identifier: Identifier = {
   r"[_a-zA-Z][_a-zA-Z0-9]*" => Identifier(String::from(<>))
@@ -198,11 +199,11 @@ Identifier: Identifier = {
 BinarySelector: Identifier = {
   "-" => Identifier(String::from(<>)),
   r"[+/\\*~<>=@%|&?!]{1,2}" => Identifier(String::from(<>)),
-}
+};
 
 ConstantExpr: Expr = {
   Constant => Expr::Constant(<>)
-}
+};
 
 // So, amusingly we have both Constant and Literal.
 //
@@ -215,31 +216,31 @@ Constant: Literal = {
   "#" <a:Array> => a,
   "#" <s:Symbol> => s,
   SimpleLiteral,
-}
+};
 
 Literal: Literal = {
   Array,
   Symbol,
   SimpleLiteral,
-}
+};
 
 SimpleLiteral: Literal = {
   Number,
   String,
   Character,
-}
+};
 
 String: Literal  = {
   r"'([^']|(''))*'" => Literal::String(chopchop(String::from(<>))),
-}
+};
 
 Character: Literal = {
   <s:r"\$."> => Literal::Character(chop(String::from(s))),
-}
+};
 
 Symbol: Literal = {
   SymbolName => Literal::Symbol(<>),
-}
+};
 
 SymbolName: String = {
   <s:Identifier> => s.0,
@@ -248,19 +249,19 @@ SymbolName: String = {
   // FIXME: This currently allows foo:::bar: to pass, which
   // it probably should not.
   r"[_a-zA-Z][_a-zA-Z0-9]*:[:_a-zA-Z0-9]*:" => String::from(<>),
-}
+};
 
 Array: Literal = {
   "[" "]" => Literal::Array(vec![]),
   "[" <a:ArrayData> "]" => Literal::Array(a),
-}
+};
 
 ArrayData: Vec<Literal> = {
   <e:Literal> <a:ArrayData> => prepend(e, a),
   <a:Literal> => vec![a],
-}
+};
 
 Number: Literal = {
   r"-?[0-9]+\.[0-9]+" => Literal::Float(f64::from_str(<>).unwrap()),
   r"-?[0-9]+" => Literal::Integer(i64::from_str(<>).unwrap()),
-}
+};
