@@ -1,8 +1,6 @@
 use crate::ast;
 use crate::ast::{Cascade, Expr, Identifier, Literal, Method};
-use crate::parser::{
-    parse_class, parse_class_method, parse_expr, parse_instance_method, parse_method,
-};
+use crate::parser::*;
 
 // helpers
 fn s(s: &str) -> String {
@@ -391,5 +389,34 @@ fn parse_class_method_description() {
                 )))]
             }
         }
+    );
+}
+
+#[test]
+fn parse_program1() {
+    let prog = parse_program(
+        "
+        @class Foo []
+        @method Foo theAnswer
+            ^42
+    ",
+    );
+    assert_eq!(
+        prog,
+        vec![
+            ast::ProgramElement::Class(ast::ClassDescription {
+                name: identifier("Foo"),
+                slots: vec![],
+            }),
+            ast::ProgramElement::InstanceMethod(ast::MethodDescription {
+                class: identifier("Foo"),
+                method: ast::Method {
+                    selector: identifier("theAnswer"),
+                    parameters: vec![],
+                    temporaries: vec![],
+                    statements: vec![Expr::Return(Box::new(Expr::Constant(Literal::Integer(42))))]
+                }
+            })
+        ]
     );
 }

@@ -50,3 +50,12 @@ pub fn parse_class_method(s: &str) -> ast::MethodDescription {
         }
     }
 }
+
+pub fn parse_program(s: &str) -> ast::Program {
+    match syntax::ProgramParser::new().parse(s) {
+        Ok(e) => e,
+        Err(e) => {
+            panic!(format!("Could not parse Program: {}\nError: {}", s, e));
+        }
+    }
+}
