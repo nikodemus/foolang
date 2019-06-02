@@ -1,6 +1,8 @@
 use crate::ast;
 use crate::ast::{Cascade, Expr, Identifier, Literal, Method};
-use crate::parser::{parse_class, parse_expr, parse_instance_method, parse_method};
+use crate::parser::{
+    parse_class, parse_class_method, parse_expr, parse_instance_method, parse_method,
+};
 
 // helpers
 fn s(s: &str) -> String {
@@ -356,7 +358,27 @@ fn parse_class_description() {
 fn parse_instance_method_description() {
     assert_eq!(
         parse_instance_method("@method Foo a:x b:y ^x + y"),
-        ast::InstanceMethodDescription {
+        ast::MethodDescription {
+            class: identifier("Foo"),
+            method: ast::Method {
+                selector: identifier("a:b:"),
+                parameters: vec![identifier("x"), identifier("y")],
+                temporaries: vec![],
+                statements: vec![Expr::Return(Box::new(Expr::Binary(
+                    Box::new(variable("x")),
+                    identifier("+"),
+                    Box::new(variable("y"))
+                )))]
+            }
+        }
+    );
+}
+
+#[test]
+fn parse_class_method_description() {
+    assert_eq!(
+        parse_class_method("@class-method Foo a:x b:y ^x + y"),
+        ast::MethodDescription {
             class: identifier("Foo"),
             method: ast::Method {
                 selector: identifier("a:b:"),

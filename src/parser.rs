@@ -30,11 +30,23 @@ pub fn parse_class(s: &str) -> ast::ClassDescription {
     }
 }
 
-pub fn parse_instance_method(s: &str) -> ast::InstanceMethodDescription {
+pub fn parse_instance_method(s: &str) -> ast::MethodDescription {
     match syntax::InstanceMethodParser::new().parse(s) {
         Ok(e) => e,
         Err(e) => {
-            panic!(format!("Could not parse class: {}\nError: {}", s, e));
+            panic!(format!(
+                "Could not parse instance method: {}\nError: {}",
+                s, e
+            ));
+        }
+    }
+}
+
+pub fn parse_class_method(s: &str) -> ast::MethodDescription {
+    match syntax::ClassMethodParser::new().parse(s) {
+        Ok(e) => e,
+        Err(e) => {
+            panic!(format!("Could not parse class method: {}\nError: {}", s, e));
         }
     }
 }

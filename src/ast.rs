@@ -51,7 +51,8 @@ pub type Program = Vec<ProgramElement>;
 #[derive(Debug, PartialEq, Clone)]
 pub enum ProgramElement {
     Class(ClassDescription),
-    InstanceMethod(InstanceMethodDescription),
+    InstanceMethod(MethodDescription),
+    ClassMethod(MethodDescription),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -61,7 +62,7 @@ pub struct ClassDescription {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct InstanceMethodDescription {
+pub struct MethodDescription {
     pub class: Identifier,
     pub method: Method,
 }

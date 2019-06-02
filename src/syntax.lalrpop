@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use crate::ast::{
   Identifier, Expr, Literal, Cascade, Method, Block, ClassDescription, ProgramElement, Program,
-  InstanceMethodDescription
+  MethodDescription
 };
 use crate::utils::{
   prepend, chop, chopchop,
@@ -16,7 +16,8 @@ pub Program: Program = {
 
 ProgramElement: ProgramElement = {
   Class => ProgramElement::Class(<>),
-  InstanceMethod => ProgramElement::InstanceMethod(<>)
+  InstanceMethod => ProgramElement::InstanceMethod(<>),
+  ClassMethod => ProgramElement::ClassMethod(<>)
 };
 
 pub Class: ClassDescription = {
@@ -26,8 +27,15 @@ pub Class: ClassDescription = {
   }
 };
 
-pub InstanceMethod: InstanceMethodDescription = {
-  "@method" <class:Identifier> <method:Method> => InstanceMethodDescription {
+pub InstanceMethod: MethodDescription = {
+  "@method" <class:Identifier> <method:Method> => MethodDescription {
+    class: class,
+    method: method,
+  }
+};
+
+pub ClassMethod: MethodDescription = {
+  "@class-method" <class:Identifier> <method:Method> => MethodDescription {
     class: class,
     method: method,
   }

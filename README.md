@@ -48,10 +48,10 @@ TODO:
 - [x] Method tables live in a global array, objects refer to it by index.
 - [x] Program parser: Class parser
 - [x] Program parser: method parser
+- [x] Program parser: class-method parser
 - [ ] Program loader
 - [ ] Method evaluator (handles ^)
-- [ ] "comments"
-- [ ] Program parser: class-method parser
+- [ ] "comments" (preserved in the AST!)
 - [ ] Source formatter
 - [ ] Bare bones environment that works directly on files
       - [ ] Session: this is closest thing to an image -- like a notebook
