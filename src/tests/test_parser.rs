@@ -36,7 +36,7 @@ fn parse_literals() {
         Expr::Constant(Literal::String(s("bleep''bloop")))
     );
     assert_eq!(
-        parse_expr("#(321 34.5 $$ _foobar:quux:zot: 'string' (level2))"),
+        parse_expr("#[321 34.5 $$ _foobar:quux:zot: 'string' [level2]]"),
         Expr::Constant(Literal::Array(vec![
             Literal::Integer(321),
             Literal::Float(34.5),

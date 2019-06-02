@@ -216,8 +216,8 @@ SymbolName: String = {
 }
 
 Array: Literal = {
-  "(" ")" => Literal::Array(vec![]),
-  "(" <a:ArrayData> ")" => Literal::Array(a),
+  "[" "]" => Literal::Array(vec![]),
+  "[" <a:ArrayData> "]" => Literal::Array(a),
 }
 
 ArrayData: Vec<Literal> = {
