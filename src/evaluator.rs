@@ -8,6 +8,7 @@ type MethodFunc = fn(Object, Vec<Object>) -> Object;
 
 type MethodTable = HashMap<String, MethodImpl>;
 
+#[derive(Clone)]
 struct ClassInfo {
     names: HashMap<String, ClassId>,
     methods: Vec<MethodTable>,
@@ -92,6 +93,29 @@ lazy_static! {
     };
 }
 
+struct GlobalEnv {
+    classes: ClassInfo,
+    variables: HashMap<String, Object>,
+}
+
+impl GlobalEnv {
+    fn new() -> GlobalEnv {
+        GlobalEnv {
+            classes: CLASSES.clone(),
+            variables: GLOBALS.clone(),
+        }
+    }
+    fn send(&self, receiver: Object, selector: &Identifier, args: Vec<Object>) -> Object {
+        match receiver.datum {
+            Datum::Block(_) => block_apply(receiver, args, self),
+            _ => self
+                .classes
+                .find_method(&receiver.class, &selector.0)
+                .invoke(receiver, args),
+        }
+    }
+}
+
 struct Lexenv<'a> {
     names: Vec<Identifier>,
     values: Vec<Object>,
@@ -135,16 +159,24 @@ enum MethodImpl {
     Builtin(MethodFunc),
 }
 
-pub fn eval(expr: Expr) -> Object {
-    eval_in_env1(expr, &mut Lexenv::new())
+impl MethodImpl {
+    fn invoke(&self, receiver: Object, args: Vec<Object>) -> Object {
+        match self {
+            MethodImpl::Builtin(func) => func(receiver, args),
+        }
+    }
 }
 
-fn eval_in_env1(expr: Expr, env: &mut Lexenv) -> Object {
-    let (val, _) = eval_in_env(expr, env);
+pub fn eval(expr: Expr) -> Object {
+    eval_in_env1(expr, &mut Lexenv::new(), &GlobalEnv::new())
+}
+
+fn eval_in_env1(expr: Expr, env: &mut Lexenv, global: &GlobalEnv) -> Object {
+    let (val, _) = eval_in_env(expr, env, global);
     val
 }
 
-fn eval_in_env(expr: Expr, env: &mut Lexenv) -> (Object, Object) {
+fn eval_in_env(expr: Expr, env: &mut Lexenv, global: &GlobalEnv) -> (Object, Object) {
     fn dup(x: Object) -> (Object, Object) {
         (x.clone(), x)
     }
@@ -154,14 +186,14 @@ fn eval_in_env(expr: Expr, env: &mut Lexenv) -> (Object, Object) {
             if let Some(value) = env.find(&s) {
                 return dup(value.to_owned());
             }
-            match GLOBALS.get(&s) {
+            match global.variables.get(&s) {
                 Some(g) => dup(g.to_owned()),
                 None => panic!("Unbound variable: {}", s),
             }
         }
         Expr::Assign(Identifier(s), expr) => match env.index(&s) {
             Some(idx) => {
-                let val = eval_in_env1(*expr, env);
+                let val = eval_in_env1(*expr, env, global);
                 env.set_index(idx, val.clone());
                 dup(val)
             }
@@ -171,36 +203,45 @@ fn eval_in_env(expr: Expr, env: &mut Lexenv) -> (Object, Object) {
             ),
         },
         Expr::Unary(expr, selector) => {
-            let receiver = eval_in_env1(*expr, env);
-            (send_unary(receiver.clone(), &selector), receiver)
+            let receiver = eval_in_env1(*expr, env, global);
+            (global.send(receiver.clone(), &selector, vec![]), receiver)
         }
         Expr::Binary(left, selector, right) => {
-            let receiver = eval_in_env1(*left, env);
+            let receiver = eval_in_env1(*left, env, global);
             (
-                send_binary(receiver.clone(), &selector, eval_in_env1(*right, env)),
+                global.send(
+                    receiver.clone(),
+                    &selector,
+                    vec![eval_in_env1(*right, env, global)],
+                ),
                 receiver,
             )
         }
         Expr::Keyword(expr, selector, args) => {
-            let receiver = eval_in_env1(*expr, env);
+            let receiver = eval_in_env1(*expr, env, global);
             (
-                send_keyword(
+                global.send(
                     receiver.clone(),
                     &selector,
-                    args.into_iter().map(|arg| eval_in_env1(arg, env)).collect(),
+                    args.into_iter()
+                        .map(|arg| eval_in_env1(arg, env, global))
+                        .collect(),
                 ),
                 receiver,
             )
         }
         Expr::Block(b) => dup(Object::into_block(b)),
         Expr::Cascade(expr, cascade) => {
-            let (_, receiver) = eval_in_env(*expr, env);
-            (eval_cascade(receiver.clone(), cascade, env), receiver)
+            let (_, receiver) = eval_in_env(*expr, env, global);
+            (
+                eval_cascade(receiver.clone(), cascade, env, global),
+                receiver,
+            )
         }
         Expr::ArrayCtor(exprs) => {
             let mut data = Vec::new();
             for e in exprs.iter() {
-                data.push(eval_in_env1(e.to_owned(), env));
+                data.push(eval_in_env1(e.to_owned(), env, global));
             }
             dup(Object::make_array(&data))
         }
@@ -279,7 +320,7 @@ fn method_mul(receiver: Object, args: Vec<Object>) -> Object {
     }
 }
 
-fn method_block_apply(receiver: Object, mut args: Vec<Object>) -> Object {
+fn block_apply(receiver: Object, mut args: Vec<Object>, global: &GlobalEnv) -> Object {
     let mut res = receiver.clone();
     match receiver.datum {
         Datum::Block(blk) => {
@@ -293,38 +334,12 @@ fn method_block_apply(receiver: Object, mut args: Vec<Object>) -> Object {
             // FIXME: Should refer to outer scope...
             let mut env = Lexenv::from(names, args);
             for stm in blk.statements.iter() {
-                res = eval_in_env1(stm.to_owned(), &mut env);
+                res = eval_in_env1(stm.to_owned(), &mut env, global);
             }
             res
         }
         _ => panic!("Bad receiver for block_apply!"),
     }
-}
-
-fn find_method(receiver: &Object, selector: &Identifier) -> MethodImpl {
-    // println!("find_method {:?} {:?}", receiver, selector);
-    match receiver.datum {
-        Datum::Block(_) => MethodImpl::Builtin(method_block_apply),
-        _ => CLASSES.find_method(&receiver.class, &selector.0),
-    }
-}
-
-fn invoke(method: MethodImpl, receiver: Object, args: Vec<Object>) -> Object {
-    match method {
-        MethodImpl::Builtin(func) => func(receiver, args),
-    }
-}
-
-fn send_unary(receiver: Object, selector: &Identifier) -> Object {
-    invoke(find_method(&receiver, selector), receiver, vec![])
-}
-
-fn send_binary(receiver: Object, selector: &Identifier, arg: Object) -> Object {
-    invoke(find_method(&receiver, selector), receiver, vec![arg])
-}
-
-fn send_keyword(receiver: Object, selector: &Identifier, args: Vec<Object>) -> Object {
-    invoke(find_method(&receiver, selector), receiver, args)
 }
 
 fn eval_literal(lit: Literal) -> Object {
@@ -338,22 +353,27 @@ fn eval_literal(lit: Literal) -> Object {
     }
 }
 
-fn eval_cascade(receiver: Object, cascade: Vec<Cascade>, env: &mut Lexenv) -> Object {
+fn eval_cascade(
+    receiver: Object,
+    cascade: Vec<Cascade>,
+    env: &mut Lexenv,
+    global: &GlobalEnv,
+) -> Object {
     let mut value = receiver.clone();
     for thing in cascade.iter() {
         value = match thing {
-            Cascade::Unary(selector) => send_unary(receiver.clone(), selector),
-            Cascade::Binary(selector, expr) => send_binary(
+            Cascade::Unary(selector) => global.send(receiver.clone(), selector, vec![]),
+            Cascade::Binary(selector, expr) => global.send(
                 receiver.clone(),
                 selector,
-                eval_in_env1(expr.to_owned(), env),
+                vec![eval_in_env1(expr.to_owned(), env, global)],
             ),
-            Cascade::Keyword(selector, exprs) => send_keyword(
+            Cascade::Keyword(selector, exprs) => global.send(
                 receiver.clone(),
                 selector,
                 exprs
                     .iter()
-                    .map(|x| eval_in_env1(x.to_owned(), env))
+                    .map(|x| eval_in_env1(x.to_owned(), env, global))
                     .collect(),
             ),
         }

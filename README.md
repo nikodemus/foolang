@@ -49,6 +49,7 @@ TODO:
 - [x] Program parser: Class parser
 - [x] Program parser: method parser
 - [x] Program parser: class-method parser
+- [x] Explicit representation for the global environment
 - [ ] Program loader
 - [ ] Method evaluator (handles ^)
 - [ ] "comments" (preserved in the AST!)
