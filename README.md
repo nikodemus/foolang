@@ -30,10 +30,16 @@ lessons from catenative languages to heart.
   has its own heap so GC pauses are per thread, passing objects between
   threads means copying the object.
 
-## 0.1.0
+## 0.1.0: The Evaluator
 
 _Isn't this just a really bad Smalltalk with effed up syntax?_
 
+Non-Goals:
+- Speed
+- Completely settled down syntax
+- Fancy extensions
+
+TODO:
 - [x] AST
 - [x] Expression parser
 - [x] Expression evaluator
@@ -46,12 +52,20 @@ _Isn't this just a really bad Smalltalk with effed up syntax?_
 - [ ] "comments"
 - [ ] Program parser: class-method parser
 - [ ] Source formatter
-- [ ] Bare bones environment that works directly on files (no image!)
+- [ ] Bare bones environment that works directly on files
       - [ ] Session: this is closest thing to an image -- like a notebook
       - [ ] Playground
       - [ ] Browser
       - [ ] Transcript
       - [ ] Inspector
+- [ ] The Book
+
+## Later
+
+- 0.2.0: typechecking: AST -> TST
+- 0.3.0: bootstrap compiler and VM, threads, coroutines
+- 0.4.0: JIT and AOT compilers
+- 0.5.0: immutable value types
 
 Planned divergences from Smalltalk
 - Local type inference (and runtime assertions)
@@ -69,15 +83,19 @@ Planned divergences from Smalltalk
 ### Example
 
 ```
-class Bar
-  slots: [x y z]
-  class-slots: []
+class Bar [x y z]
 
-class-method Bar x: xval y: yval
-    ^self create-instance: [x . y] # This is nice because the vector can just be wrapped in the class.
+Bar class >> x: xv y: yv z: zv
+    ^self create-instance: [xv . yv . zv]
 
-method Bar method foo: change
+Bar >> foo: change
     x := x + change
+
+class-method Bar x: xv y: yv z: zv
+   ^self create-instance: [xv . yv . zv]
+
+method Bar foo: change
+   x := x + change
 
 phrase ring!
     ding ding ding
