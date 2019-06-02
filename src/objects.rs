@@ -9,15 +9,23 @@ pub struct ClassId(pub usize);
 pub const CLASS_ARRAY: ClassId = ClassId(0);
 pub const CLASS_BLOCK: ClassId = ClassId(1);
 pub const CLASS_CHARACTER: ClassId = ClassId(2);
-pub const CLASS_FLOAT: ClassId = ClassId(3);
-pub const CLASS_INTEGER: ClassId = ClassId(4);
-pub const CLASS_STRING: ClassId = ClassId(5);
-pub const CLASS_SYMBOL: ClassId = ClassId(6);
+pub const CLASS_CLASS: ClassId = ClassId(3);
+pub const CLASS_FLOAT: ClassId = ClassId(4);
+pub const CLASS_INTEGER: ClassId = ClassId(5);
+pub const CLASS_STRING: ClassId = ClassId(6);
+pub const CLASS_SYMBOL: ClassId = ClassId(7);
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Object {
     pub class: ClassId,
     pub datum: Datum,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ClassObject {
+    pub id: ClassId,
+    pub name: String,
+    pub slots: Vec<ast::Identifier>,
 }
 
 // XXX: Would be nice to be able to switch between this and union
@@ -31,9 +39,25 @@ pub enum Datum {
     Symbol(Arc<String>),
     Block(Arc<ast::Block>),
     Array(Arc<Vec<Object>>),
+    Class(Arc<ClassObject>),
 }
 
 impl Object {
+    pub fn make_class(
+        meta: ClassId,
+        id: ClassId,
+        name: &str,
+        slots: Vec<ast::Identifier>,
+    ) -> Object {
+        Object {
+            class: meta,
+            datum: Datum::Class(Arc::new(ClassObject {
+                id,
+                name: String::from(name),
+                slots,
+            })),
+        }
+    }
     pub fn make_float(x: f64) -> Object {
         Object {
             class: CLASS_FLOAT,
