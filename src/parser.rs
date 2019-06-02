@@ -1,4 +1,4 @@
-use crate::ast::{Expr, Method};
+use crate::ast::{ClassDescription, Expr, Method};
 
 use lalrpop_util::lalrpop_mod;
 lalrpop_mod!(pub syntax);
@@ -17,6 +17,15 @@ pub fn parse_method(s: &str) -> Method {
         Ok(e) => e,
         Err(e) => {
             panic!(format!("Could not parse method: {}\nError: {}", s, e));
+        }
+    }
+}
+
+pub fn parse_class(s: &str) -> ClassDescription {
+    match syntax::ClassParser::new().parse(s) {
+        Ok(e) => e,
+        Err(e) => {
+            panic!(format!("Could not parse class: {}\nError: {}", s, e));
         }
     }
 }
