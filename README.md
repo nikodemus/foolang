@@ -23,7 +23,8 @@ _Isn't this just a bad Smalltalk?_
 - [x] AST
 - [x] Expression parser
 - [x] Expression evaluator
-- [ ] Use #[] for literal arrays.
+- [x] Use #[] for literal arrays.
+- [ ] Array ctor [x . y . z]
 - [ ] Method tables live in a global array, objects refer to it by index.
 - [ ] Program parser: Class parser
 - [ ] Program parser: method parser
@@ -224,7 +225,7 @@ to what gcc -O0 would produce.
 
 - Annotation assisted escape analysis:
 
-  selector: arg <&Foo>
+  selector<&Foo>: arg
     arg stuff
 
   Check that value of arg cannot escape: cannot be passed
