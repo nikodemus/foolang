@@ -114,6 +114,13 @@ fn eval_in_env(expr: Expr, env: &mut Lexenv) -> (Object, Object) {
             let (_, receiver) = eval_in_env(*expr, env);
             (eval_cascade(receiver.clone(), cascade, env), receiver)
         }
+        Expr::ArrayCtor(exprs) => {
+            let mut data = Vec::new();
+            for e in exprs.iter() {
+                data.push(eval_in_env1(e.to_owned(), env));
+            }
+            dup(Object::make_array(&data))
+        }
         Expr::Return(_expr) => unimplemented!("TODO: return"),
     }
 }

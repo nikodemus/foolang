@@ -81,6 +81,14 @@ fn eval_cascade() {
     assert_eq!(eval(parse_expr("1 + 100; + 41")), Object::Integer(42));
 }
 
+#[test]
+fn eval_array_ctor() {
+    assert_eq!(
+        eval(parse_expr("[1. 1+1. 3.0 neg neg]")),
+        Object::make_array(&[Object::Integer(1), Object::Integer(2), Object::Float(3.0),])
+    );
+}
+
 /*
 #[test]
 fn eval_return() {

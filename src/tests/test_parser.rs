@@ -326,3 +326,16 @@ fn parse_keyword_method() {
         }
     )
 }
+
+#[test]
+fn parse_array_ctor() {
+    assert_eq!(
+        parse_expr("[1 . 2 + 1. 3.1. 4]"),
+        Expr::ArrayCtor(vec![
+            integer(1),
+            Expr::Binary(Box::new(integer(2)), identifier("+"), Box::new(integer(1))),
+            float(3.1),
+            integer(4)
+        ])
+    );
+}

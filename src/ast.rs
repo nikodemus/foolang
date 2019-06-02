@@ -43,6 +43,7 @@ pub enum Expr {
     Assign(Identifier, Box<Expr>),
     Return(Box<Expr>),
     Cascade(Box<Expr>, Vec<Cascade>),
+    ArrayCtor(Vec<Expr>),
 }
 
 #[derive(Debug, PartialEq)]
