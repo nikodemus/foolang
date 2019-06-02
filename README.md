@@ -5,16 +5,30 @@
 Foolang is a Smalltalk-inspired object language that tries to take some
 lessons from catenative languages to heart.
 
-## Goals & Beliefs
+## Goals & Beliefs & Suspicions
 
-- Code should be easy to read from left to right.
-- Code with less variables is easier to read and factor.
-- Static typing is a good servant.
-- Mirrors are better than omnipresent metaobjects.
-- Files are better than images, but interactive development should be front
-  and center.
+- Code should be written and read left-to-right.
+- The less variables one needs to express oneself clearly, the better.
+- Image based development is NOT a good idea. Being able to reproduce
+  state is more important than saving it, and source files are actually
+  a GOOD idea.
+- Smalltalk-style environment is still better than anything other
+  languages have to offer: VM and JIT are a must to support interactive
+  development, and the environment must be front and center, not an
+  afterthought.
+- Good support for AOT compilation is needed for good performance: good
+  performance means matching -O0 compiled C++ without jumping through
+  hoops. This in turn requires type annotations and replacing metaobjects
+  with mirrors, and possibly having value types of some sort to avoid
+  layers of indirection.
+- Messages everywhere is the right idea, but given how Smalltalk needs to
+  reserve ifTrue and some other messages for performance reasons, then
+  maybe it would be better to just have control structures in the language
+  as primitives?
 - Multithreading is everywhere. Either you have a solution for doing it
-  well or you're irrelevant.
+  well or you're irrelevant. Plan: global objects immutable, every thread
+  has its own heap so GC pauses are per thread, passing objects between
+  threads means copying the object.
 
 ## 0.1.0
 
@@ -24,7 +38,7 @@ _Isn't this just a bad Smalltalk?_
 - [x] Expression parser
 - [x] Expression evaluator
 - [x] Use #[] for literal arrays.
-- [ ] Array ctor [x . y . z]
+- [x] Array ctor [x . y . z]
 - [ ] Method tables live in a global array, objects refer to it by index.
 - [ ] Program parser: Class parser
 - [ ] Program parser: method parser

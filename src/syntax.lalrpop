@@ -29,6 +29,12 @@ PrimaryExpression: Expr = {
   ConstantExpr,
   Block => Expr::Block(<>),
   "(" <e:Expression> ")" => e,
+  "[" <e:DottedExpressions> "]" => Expr::ArrayCtor(e),
+}
+
+DottedExpressions: Vec<Expr> = {
+  <e:Expression> "." <v:DottedExpressions> => prepend(e, v),
+  <e:Expression> => vec![e],
 }
 
 Block: Block = {
