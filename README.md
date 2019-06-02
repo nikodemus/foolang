@@ -32,14 +32,14 @@ lessons from catenative languages to heart.
 
 ## 0.1.0
 
-_Isn't this just a bad Smalltalk?_
+_Isn't this just a really bad Smalltalk with effed up syntax?_
 
 - [x] AST
 - [x] Expression parser
 - [x] Expression evaluator
 - [x] Use #[] for literal arrays.
 - [x] Array ctor [x . y . z]
-- [ ] Method tables live in a global array, objects refer to it by index.
+- [x] Method tables live in a global array, objects refer to it by index.
 - [ ] Program parser: Class parser
 - [ ] Program parser: method parser
 - [ ] Method evaluator (handles ^)
