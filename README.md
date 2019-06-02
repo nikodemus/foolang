@@ -30,7 +30,7 @@ lessons from catenative languages to heart.
   has its own heap so GC pauses are per thread, passing objects between
   threads means copying the object.
 
-## 0.1.0: The Evaluator
+## WIP: 0.1.0: The Evaluator
 
 _Isn't this just a really bad Smalltalk with effed up syntax?_
 
@@ -53,13 +53,41 @@ TODO:
 - [ ] Method evaluator (handles ^)
 - [ ] "comments" (preserved in the AST!)
 - [ ] Source formatter
-- [ ] Bare bones environment that works directly on files
+- [ ] Terminal playground
+- Bare bones environment that works directly on files
       - [ ] Session: this is closest thing to an image -- like a notebook
       - [ ] Playground
       - [ ] Browser
       - [ ] Transcript
       - [ ] Inspector
-- [ ] The Book
+- Optional extras:
+  - [ ] The Book
+  - [ ] String interpolation '1 + 1 = {1 + 1}'
+  - [ ] Phrases
+  - [ ] # Comments
+  - [ ] Receiver stack (method local!)
+  - [ ] => { :that | ... }
+  - [ ] Message chaining with ,
+  - [ ] Prefix messages: -foo, !foo, ~foo
+  - [ ] Record syntax [ foo: x signum. quux: y. ] and #[foo: 42]
+  - [ ] Positional arguments in keyword messages:
+        Blocks implement: value, value::::, and apply:
+        b value            # unary
+        b value: 1         # keyword
+        b value: 1 : 2 : 3 # keyword
+        b apply: array
+  - [ ] Operator precedence for binary messages
+        0. Attached (unary) - and ~
+        1. Attached ^ ie, 2^x
+        2. * / // %
+        3. + -
+        4. << >>
+        5. & |
+        6. == < > =< >=
+        7. &&
+        8. ||
+   - [ ] Indexing foo[x] as sugar for at:
+   - [ ] Indexing assignment foo[x] := 42 as sugar for at:put:
 
 ## Later
 
@@ -68,16 +96,9 @@ TODO:
 - 0.4.0: JIT and AOT compilers
 - 0.5.0: immutable value types
 
-Planned divergences from Smalltalk
-- Local type inference (and runtime assertions)
-- Conflict-safe extensions to third-party classes
+Moar:
+- Class extensions
 - Package system
-- Methods implemented in terms of blocks
-- Blocks implement: value, value::::, and apply:
-  b value            # unary
-  b value: 1         # keyword
-  b value: 1 : 2 : 3 # keyword
-  b apply: array
 
 ## Declarative Syntax
 
@@ -94,68 +115,18 @@ Planned divergences from Smalltalk
 @method Bar foo: change
     x := x + change
 
-class-method Bar x: xv y: yv z: zv
-   ^self create-instance: [xv . yv . zv]
-
-method Bar foo: change
-   x := x + change
-
-phrase ring!
+@phrase ring!
+    "No unbound variables allowed! Constants are OK, though."
     ding ding ding
 
-constant PI := 3.14
+@constant PI := 3.14
 
-import Quux
-import foopkg.Foo as: Foofoo
+@import Quux
+@import foopkg.Foo as: Foofoo
 
-```
-
-### Grammar
-
-```
-program := program-element*
-
-program-element := class | instance-method | class-method | phrase
-
-class := "class" Identifier "[" identifier* "]"
-
-instance-method := "method" Identifier method-pattern method-body
-
-class-method := "class-method" Identifier method-pattern method-body
-
-phrase := "phrase" identifier! message-chain
-
-constant := "constant" IDENTIFIER ":=" expression
 ```
 
 ## Parts
-
-
-Syntax work:
-[ ] rework string and character syntax
-[ ] => {}
-[ ] Positional/variable arguments:
-    Array of: 1 : 2 : 3
-      Array addMethod: #of: { :(args*) | ^args toArray }
-    { :(a b) | a + b } : 1 : 2
-[ ] String interpolation #"This is {self name}!"
-[ ] Message chaining with ,
-[ ] Unary minus and negation  -foo ~foo
-[ ] dict syntax { foo: x signum.
-                  quux: y.
-                  zot: z. }
-[ ] Indexing foo[x] and foo[x][y]
-[ ] Indexing assignment foo[x] = 42
-[ ] Operator precedence
-    0. Attached (unary) - and ~
-    1. Attached ^
-    2. * / // %
-    3. + -
-    4. << >>
-    5. & |
-    6. == < > =< >=
-    7. &&
-    8. ||
 
 ### Bootstrap Compiler
 
@@ -170,21 +141,12 @@ Goal: specify VM core in foolang:
     "invoke: method
         self newContext: method on: receiver"
 
-- Generates code for methods given class description, method source,
-  and backend.
-- Initial backend is C.
-- Supports:
-  - self slot references and assignments
-  - argument references
-  - messages
-  - constants
-  - simple blocks (no closures)
-- Quality of generated code unimportant, as long as it works.
+Quality of generated code unimportant, as long as it works.
 
 ### GC
 
-Steal from Jazzlang, but give up on the double-wide stuff. Double-word
-allocations.
+Simplest thing that could possibly work: mark and sweep on top of malloc and
+free.
 
 Allocation header:
   Bits 00-01: GC marks
@@ -193,48 +155,6 @@ Allocation header:
   Bits 18-25: number of weak slots
   Bits 26-28: no tail / raw tail / weak tail / pointer tail
   Bits 29-31: n^2 = tail element width in bytes if raw tail
-
-## Specificationish
-
-Smalltalk syntax, except:
-
-- Comma used for message chaining instead of parentheses.
-- Blocks use {}
-- Blocks can have implicit argument _.
-- x => { ... } desugars into { ... } value: x
-
-## Motivating Examples
-
-### Example 1
-
-Using blocks:
-
-    Backend select: #postgres => {
-      _ connect: "localhost" => {
-          _ query: "select * from users", do: { "User: {_ name}" print }.
-          _ query: "select * from suppliers", do: { "Vendor: {_ name}" print }.
-      }.
-      _ connect: "remote" => {
-          _ query: "select * from users", do: { "User: {_ name}" print }.
-          _ query: "select * from suppliers", do: { "Vendor: {_ name}" print }.
-      }.
-    }.
-
-Factored using phrases:
-
-    define -print-names-in-table: table as: pretty {
-      _ query: "select * from {table}", do: { "{pretty}: {_ name}" print }
-    }
-
-    define -print-main-tables {
-      _ -print-names-in-table: "users" as: "User".
-      _ -print-names-in-table: "suppliers" as: "Vendor".
-    }
-
-    Backend select: #postgres => {
-      _ connect: "localhost" -print-main-tables.
-      _ connect: "remote" -print-main-tables.
-    }.
 
 ## References
 
@@ -260,18 +180,9 @@ to what gcc -O0 would produce.
 
 - Annotation assisted escape analysis:
 
-  selector<&Foo>: arg
+  selector: &arg
     arg stuff
 
-  Check that value of arg cannot escape: cannot be passed
-  to unknown methods, or as arguments not marked as &Foo.
-  If this is true then the object can be stack-allocated automatically.
-
-- Serialize classes using json:
-
-  { "class": "Class",
-    "name": "Point",
-    "slots": ["x", "y"],
-    "methods": [{ "type": "method", "selector": "foo:with:",
-                  "args": ["bar", "quux"],
-                  "body": "bar ding: quux, reportTo: self"}]}
+  Check that value of arg cannot escape: cannot be stored,
+  cannot be passed to as non-& arguments. If this is true
+  then the object can be stack-allocated safely.
