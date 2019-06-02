@@ -1,6 +1,6 @@
 use crate::ast;
 use crate::ast::{Cascade, Expr, Identifier, Literal, Method, Pattern};
-use crate::parser::{parse_expr, parse_method};
+use crate::parser::{parse_class, parse_expr, parse_method};
 
 // helpers
 fn s(s: &str) -> String {
@@ -338,4 +338,15 @@ fn parse_array_ctor() {
             integer(4)
         ])
     );
+}
+
+#[test]
+fn parse_class_description() {
+    assert_eq!(
+        parse_class("class Foo [x y z]"),
+        ast::ClassDescription {
+            name: identifier("Foo"),
+            slots: vec![identifier("x"), identifier("y"), identifier("z")]
+        }
+    )
 }

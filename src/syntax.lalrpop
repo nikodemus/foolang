@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use crate::ast::{
-  Identifier, Expr, Literal, Cascade, Pattern, Method, Block
+  Identifier, Expr, Literal, Cascade, Pattern, Method, Block, ClassDescription, ProgramElement, Program
 };
 use crate::utils::{
   prepend, chop, chopchop,
@@ -8,12 +8,29 @@ use crate::utils::{
 
 grammar;
 
-pub Expression: Expr = {
-   <i:Identifier> ":=" <e:Expression> => Expr::Assign(i, Box::new(e)),
-   PrimaryExpression,
-   MessageExpression,
-   CascadedMessageExpression,
+pub Program: Program = {
+  <e:ProgramElement> <p:Program> => prepend(e, p),
+  <e:ProgramElement> => vec![e],
 }
+
+ProgramElement: ProgramElement = {
+  Class => ProgramElement::Class(<>),
+//  InstanceMethod => ProgramElement::InstanceMethod(<>)
+}
+
+pub Class: ClassDescription = {
+  "class" <id:Identifier> <s:SlotNames> => ClassDescription {
+    name: id,
+    slots: s,
+  }
+}
+
+//pub InstanceMethod: InstanceMethodDescription = {
+//  <class:Identifier> ">>" Method => InstanceMethodDescription {
+//    class: class,
+//    method: method,
+//  }
+//}
 
 pub Method: Method = {
   <p:MessagePattern> <t:Temporaries> <s:Statements>
@@ -22,6 +39,18 @@ pub Method: Method = {
     => Method { pattern: p, temporaries: vec![], statements: s},
   <p:MessagePattern>
     => Method { pattern: p, temporaries: vec![], statements: vec![]},
+}
+
+SlotNames: Vec<Identifier> = {
+  "[" "]" => vec![],
+  "[" <i:Identifiers> "]" => i,
+}
+
+pub Expression: Expr = {
+   <i:Identifier> ":=" <e:Expression> => Expr::Assign(i, Box::new(e)),
+   PrimaryExpression,
+   MessageExpression,
+   CascadedMessageExpression,
 }
 
 PrimaryExpression: Expr = {

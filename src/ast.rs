@@ -46,14 +46,35 @@ pub enum Expr {
     ArrayCtor(Vec<Expr>),
 }
 
-#[derive(Debug, PartialEq)]
+pub type Program = Vec<ProgramElement>;
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum ProgramElement {
+    Class(ClassDescription),
+    InstanceMethod(InstanceMethodDescription),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ClassDescription {
+    pub name: Identifier,
+    pub slots: Vec<Identifier>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct InstanceMethodDescription {
+    pub class: Identifier,
+    pub method: Method,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Method {
+    // FIXME: refactor pattern into selector and parameters.
     pub pattern: Pattern,
     pub temporaries: Vec<Identifier>,
     pub statements: Vec<Expr>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Pattern {
     Unary(Identifier),
     Binary(Identifier, Identifier),

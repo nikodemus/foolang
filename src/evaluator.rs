@@ -3,7 +3,6 @@ use crate::objects::*;
 use lazy_static::lazy_static;
 use std::borrow::ToOwned;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 type MethodFunc = fn(Object, Vec<Object>) -> Object;
 
@@ -36,9 +35,6 @@ impl ClassInfo {
             class.0,
             self.methods.len()
         );
-    }
-    fn find_class(&self, name: &str) -> Option<ClassId> {
-        self.names.get(name).map(|c| c.to_owned())
     }
     fn find_method(&self, class: &ClassId, name: &str) -> MethodImpl {
         match self.methods[class.0].get(name) {

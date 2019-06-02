@@ -46,7 +46,7 @@ TODO:
 - [x] Use #[] for literal arrays.
 - [x] Array ctor [x . y . z]
 - [x] Method tables live in a global array, objects refer to it by index.
-- [ ] Program parser: Class parser
+- [x] Program parser: Class parser
 - [ ] Program parser: method parser
 - [ ] Method evaluator (handles ^)
 - [ ] "comments"
