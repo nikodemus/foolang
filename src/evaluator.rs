@@ -1,4 +1,6 @@
-use crate::ast::{Cascade, Expr, Identifier, Literal};
+use crate::ast::{
+    Cascade, ClassDescription, Expr, Identifier, Literal, Method, MethodDescription, ProgramElement,
+};
 use crate::objects::*;
 use lazy_static::lazy_static;
 use std::borrow::ToOwned;
@@ -46,11 +48,14 @@ impl ClassInfo {
     fn add_builtin(&mut self, class: &ClassId, name: &str, f: MethodFunc) {
         self.methods[class.0].insert(String::from(name), MethodImpl::Builtin(f));
     }
+    fn add_method(&mut self, class: &ClassId, name: &str, f: Method) {
+        self.methods[class.0].insert(String::from(name), MethodImpl::Evaluator(f));
+    }
 }
 
 lazy_static! {
     static ref CLASSES: ClassInfo = {
-        let mut info = ClassInfo { names: HashMap::new(), methods: Vec::new() };
+        let mut info = ClassInfo { names: HashMap::new(), methods: Vec::new(), };
 
         // NOTE: Alphabetic order matches objects.rs
 
@@ -62,6 +67,9 @@ lazy_static! {
 
         let character = info.add_class("Character");
         assert_eq!(character, CLASS_CHARACTER, "Bad classId for Character");
+
+        let character = info.add_class("Class");
+        assert_eq!(character, CLASS_CLASS, "Bad classId for Class");
 
         let float = info.add_class("Float");
         assert_eq!(float, CLASS_FLOAT);
@@ -93,17 +101,28 @@ lazy_static! {
     };
 }
 
-struct GlobalEnv {
+pub struct GlobalEnv {
     classes: ClassInfo,
     variables: HashMap<String, Object>,
 }
 
 impl GlobalEnv {
-    fn new() -> GlobalEnv {
+    pub fn new() -> GlobalEnv {
         GlobalEnv {
             classes: CLASSES.clone(),
             variables: GLOBALS.clone(),
         }
+    }
+    fn add_class(&mut self, name: &str, slots: Vec<Identifier>) {
+        if self.variables.contains_key(name) {
+            panic!("{} alredy exists!", name);
+        }
+        // Our metaclasses don't currently exist as actual objects!
+        let metaname = format!("[{}]", name);
+        let metaid = self.classes.add_class(&metaname);
+        let id = self.classes.add_class(name);
+        let class = Object::make_class(metaid, id, name, slots);
+        self.variables.insert(name.to_string(), class);
     }
     fn send(&self, receiver: Object, selector: &Identifier, args: Vec<Object>) -> Object {
         match receiver.datum {
@@ -111,8 +130,45 @@ impl GlobalEnv {
             _ => self
                 .classes
                 .find_method(&receiver.class, &selector.0)
-                .invoke(receiver, args),
+                .invoke(receiver, args, self),
         }
+    }
+    pub fn load(&mut self, program: Vec<ProgramElement>) {
+        for p in program {
+            match p {
+                ProgramElement::Class(ClassDescription { name, slots }) => {
+                    self.add_class(&name.0, slots);
+                }
+                ProgramElement::InstanceMethod(MethodDescription { class, method }) => {
+                    match self.variables.get(&class.0) {
+                        Some(Object {
+                            class: _,
+                            datum: Datum::Class(classobj),
+                        }) => {
+                            let mname = method.selector.0.clone();
+                            self.classes.add_method(&classobj.id, &mname, method);
+                        }
+                        None => panic!("Cannot install method in unknown class: {}", class.0),
+                        _ => panic!("Cannot install methods in non-class objects."),
+                    }
+                }
+                ProgramElement::ClassMethod(MethodDescription { class, method }) => {
+                    match self.variables.get(&class.0) {
+                        Some(Object {
+                            class: classid,
+                            datum: _,
+                        }) => {
+                            let mname = method.selector.0.clone();
+                            self.classes.add_method(&classid, &mname, method);
+                        }
+                        None => panic!("Cannot install class-method in unknown class: {}", class.0),
+                    }
+                }
+            }
+        }
+    }
+    pub fn eval(&self, expr: Expr) -> Object {
+        eval_in_env1(expr, &mut Lexenv::new(), self)
     }
 }
 
@@ -137,6 +193,13 @@ impl<'a> Lexenv<'a> {
             parent: None,
         }
     }
+    fn add_temporaries(&mut self, temps: Vec<Identifier>) {
+        self.names.extend(temps);
+        for _ in 0..(self.names.len() - self.values.len()) {
+            // FIXME: nil
+            self.values.push(Object::make_integer(0));
+        }
+    }
     fn index(&self, name: &str) -> Option<usize> {
         self.names.iter().position(|id| &id.0 == name)
     }
@@ -157,28 +220,46 @@ impl<'a> Lexenv<'a> {
 #[derive(Debug, Clone)]
 enum MethodImpl {
     Builtin(MethodFunc),
+    Evaluator(Method),
 }
 
 impl MethodImpl {
-    fn invoke(&self, receiver: Object, args: Vec<Object>) -> Object {
+    fn invoke(&self, receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Object {
         match self {
             MethodImpl::Builtin(func) => func(receiver, args),
+            MethodImpl::Evaluator(method) => {
+                let mut env = Lexenv::from(method.parameters.clone(), args);
+                env.add_temporaries(method.temporaries.clone());
+                for stm in method.statements.iter() {
+                    if let Eval::Return(val) = eval_in_env(stm.to_owned(), &mut env, global) {
+                        return val;
+                    }
+                }
+                return receiver;
+            }
         }
     }
 }
 
+enum Eval {
+    Result(Object, Object),
+    Return(Object),
+}
+
 pub fn eval(expr: Expr) -> Object {
-    eval_in_env1(expr, &mut Lexenv::new(), &GlobalEnv::new())
+    GlobalEnv::new().eval(expr)
 }
 
 fn eval_in_env1(expr: Expr, env: &mut Lexenv, global: &GlobalEnv) -> Object {
-    let (val, _) = eval_in_env(expr, env, global);
-    val
+    match eval_in_env(expr, env, global) {
+        Eval::Result(value, _) => value,
+        Eval::Return(_) => panic!("Unexpected return!"),
+    }
 }
 
-fn eval_in_env(expr: Expr, env: &mut Lexenv, global: &GlobalEnv) -> (Object, Object) {
-    fn dup(x: Object) -> (Object, Object) {
-        (x.clone(), x)
+fn eval_in_env(expr: Expr, env: &mut Lexenv, global: &GlobalEnv) -> Eval {
+    fn dup(x: Object) -> Eval {
+        Eval::Result(x.clone(), x)
     }
     match expr {
         Expr::Constant(lit) => dup(eval_literal(lit)),
@@ -203,40 +284,43 @@ fn eval_in_env(expr: Expr, env: &mut Lexenv, global: &GlobalEnv) -> (Object, Obj
             ),
         },
         Expr::Unary(expr, selector) => {
-            let receiver = eval_in_env1(*expr, env, global);
-            (global.send(receiver.clone(), &selector, vec![]), receiver)
+            let val = eval_in_env1(*expr, env, global);
+            Eval::Result(global.send(val.clone(), &selector, vec![]), val)
         }
         Expr::Binary(left, selector, right) => {
-            let receiver = eval_in_env1(*left, env, global);
-            (
+            let val = eval_in_env1(*left, env, global);
+            Eval::Result(
                 global.send(
-                    receiver.clone(),
+                    val.clone(),
                     &selector,
                     vec![eval_in_env1(*right, env, global)],
                 ),
-                receiver,
+                val,
             )
         }
         Expr::Keyword(expr, selector, args) => {
-            let receiver = eval_in_env1(*expr, env, global);
-            (
+            let val = eval_in_env1(*expr, env, global);
+            Eval::Result(
                 global.send(
-                    receiver.clone(),
+                    val.clone(),
                     &selector,
                     args.into_iter()
                         .map(|arg| eval_in_env1(arg, env, global))
                         .collect(),
                 ),
-                receiver,
+                val,
             )
         }
         Expr::Block(b) => dup(Object::into_block(b)),
         Expr::Cascade(expr, cascade) => {
-            let (_, receiver) = eval_in_env(*expr, env, global);
-            (
-                eval_cascade(receiver.clone(), cascade, env, global),
-                receiver,
-            )
+            if let Eval::Result(_, receiver) = eval_in_env(*expr, env, global) {
+                Eval::Result(
+                    eval_cascade(receiver.clone(), cascade, env, global),
+                    receiver,
+                )
+            } else {
+                panic!("Unexpected return in cascade expression.")
+            }
         }
         Expr::ArrayCtor(exprs) => {
             let mut data = Vec::new();
@@ -245,7 +329,7 @@ fn eval_in_env(expr: Expr, env: &mut Lexenv, global: &GlobalEnv) -> (Object, Obj
             }
             dup(Object::make_array(&data))
         }
-        Expr::Return(_expr) => unimplemented!("TODO: return"),
+        Expr::Return(expr) => Eval::Return(eval_in_env1(*expr, env, global)),
     }
 }
 
@@ -324,6 +408,7 @@ fn block_apply(receiver: Object, mut args: Vec<Object>, global: &GlobalEnv) -> O
     let mut res = receiver.clone();
     match receiver.datum {
         Datum::Block(blk) => {
+            // FIXME: use lexenv methods!
             assert!(args.len() == blk.parameters.len());
             let mut names = blk.parameters.clone();
             names.append(&mut blk.temporaries.clone());
@@ -334,6 +419,7 @@ fn block_apply(receiver: Object, mut args: Vec<Object>, global: &GlobalEnv) -> O
             // FIXME: Should refer to outer scope...
             let mut env = Lexenv::from(names, args);
             for stm in blk.statements.iter() {
+                // FIXME: returns
                 res = eval_in_env1(stm.to_owned(), &mut env, global);
             }
             res
