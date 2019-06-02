@@ -47,7 +47,8 @@ TODO:
 - [x] Array ctor [x . y . z]
 - [x] Method tables live in a global array, objects refer to it by index.
 - [x] Program parser: Class parser
-- [ ] Program parser: method parser
+- [x] Program parser: method parser
+- [ ] Program loader
 - [ ] Method evaluator (handles ^)
 - [ ] "comments"
 - [ ] Program parser: class-method parser
@@ -80,15 +81,17 @@ Planned divergences from Smalltalk
 
 ## Declarative Syntax
 
+@-prefixes are a workaround for LR conflicts for now.
+
 ### Example
 
 ```
-class Bar [x y z]
+@class Bar [x y z]
 
-Bar class >> x: xv y: yv z: zv
+@class-method Bar x: xv y: yv z: zv
     ^self create-instance: [xv . yv . zv]
 
-Bar >> foo: change
+@method Bar foo: change
     x := x + change
 
 class-method Bar x: xv y: yv z: zv

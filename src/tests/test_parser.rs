@@ -1,6 +1,6 @@
 use crate::ast;
-use crate::ast::{Cascade, Expr, Identifier, Literal, Method, Pattern};
-use crate::parser::{parse_class, parse_expr, parse_method};
+use crate::ast::{Cascade, Expr, Identifier, Literal, Method};
+use crate::parser::{parse_class, parse_expr, parse_instance_method, parse_method};
 
 // helpers
 fn s(s: &str) -> String {
@@ -265,7 +265,8 @@ fn parse_unary_method() {
     assert_eq!(
         parse_method("foo bar quux"),
         Method {
-            pattern: Pattern::Unary(identifier("foo")),
+            selector: identifier("foo"),
+            parameters: vec![],
             temporaries: vec![],
             statements: vec![Expr::Unary(Box::new(variable("bar")), identifier("quux"))]
         }
@@ -273,7 +274,8 @@ fn parse_unary_method() {
     assert_eq!(
         parse_method("foo |x| x := bar quux. ^x zot"),
         Method {
-            pattern: Pattern::Unary(identifier("foo")),
+            selector: identifier("foo"),
+            parameters: vec![],
             temporaries: vec![identifier("x")],
             statements: vec![
                 Expr::Assign(
@@ -294,7 +296,8 @@ fn parse_binary_method() {
     assert_eq!(
         parse_method("+ x ^value + x"),
         Method {
-            pattern: Pattern::Binary(identifier("+"), identifier("x")),
+            selector: identifier("+"),
+            parameters: vec![identifier("x")],
             temporaries: vec![],
             statements: vec![Expr::Return(Box::new(Expr::Binary(
                 Box::new(variable("value")),
@@ -310,10 +313,8 @@ fn parse_keyword_method() {
     assert_eq!(
         parse_method("foo: x with: y x frob. y blarg ding: x"),
         Method {
-            pattern: Pattern::Keyword(
-                identifier("foo:with:"),
-                vec![identifier("x"), identifier("y")]
-            ),
+            selector: identifier("foo:with:"),
+            parameters: vec![identifier("x"), identifier("y")],
             temporaries: vec![],
             statements: vec![
                 Expr::Unary(Box::new(variable("x")), identifier("frob")),
@@ -343,10 +344,30 @@ fn parse_array_ctor() {
 #[test]
 fn parse_class_description() {
     assert_eq!(
-        parse_class("class Foo [x y z]"),
+        parse_class("@class Foo [x y z]"),
         ast::ClassDescription {
             name: identifier("Foo"),
             slots: vec![identifier("x"), identifier("y"), identifier("z")]
         }
     )
+}
+
+#[test]
+fn parse_instance_method_description() {
+    assert_eq!(
+        parse_instance_method("@method Foo a:x b:y ^x + y"),
+        ast::InstanceMethodDescription {
+            class: identifier("Foo"),
+            method: ast::Method {
+                selector: identifier("a:b:"),
+                parameters: vec![identifier("x"), identifier("y")],
+                temporaries: vec![],
+                statements: vec![Expr::Return(Box::new(Expr::Binary(
+                    Box::new(variable("x")),
+                    identifier("+"),
+                    Box::new(variable("y"))
+                )))]
+            }
+        }
+    );
 }
