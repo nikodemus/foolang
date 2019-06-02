@@ -1,25 +1,42 @@
 # foolang
 
-[x] AST
-[x] Expression parser
-[x] Expression evaluator
-[X] Tests
-[ ] # Comments
-[ ] Change array syntax to #[] and add [] for runtime constructed arrays
-[ ] Change local variable syntax to let x := y
-[ ] Reserved words: method, class-method, class, constant, let
-[ ] Program parser: Class parser
-[ ] Program parser: class-method parser
-[ ] Method evaluator (handles ^)
-[ ] Program parser: Method parser
-[ ] Formatter
-[ ] Blocks are closures
-[ ] Backtrace for errors
-[ ] Source locations for expressions
-[ ] Self hosting compiler with abstract backend
-[ ] Bootstrap backend: compiles methods to rust code (or C?)
-[ ] VM: built using the bootstrap compiler
-[ ] Bytecode backend: targets the VM
+(Name is a placeholder.)
+
+Foolang is a Smalltalk-inspired object language that tries to take some
+lessons from catenative languages to heart.
+
+## Goals & Beliefs
+
+- Code should be easy to read from left to right.
+- Code with less variables is easier to read and factor.
+- Static typing is a good servant.
+- Mirrors are better than omnipresent metaobjects.
+- Files are better than images, but interactive development should be front
+  and center.
+- Multithreading is everywhere. Either you have a solution for doing it
+  well or you're irrelevant.
+
+## 0.1.0
+
+_Isn't this just a bad Smalltalk?_
+
+- [x] AST
+- [x] Expression parser
+- [x] Expression evaluator
+- [ ] Use #[] for literal arrays.
+- [ ] Method tables live in a global array, objects refer to it by index.
+- [ ] Program parser: Class parser
+- [ ] Program parser: method parser
+- [ ] Method evaluator (handles ^)
+- [ ] "comments"
+- [ ] Program parser: class-method parser
+- [ ] Source formatter
+- [ ] Bare bones environment that works directly on files (no image!)
+      - [ ] Session: this is closest thing to an image -- like a notebook
+      - [ ] Playground
+      - [ ] Browser
+      - [ ] Transcript
+      - [ ] Inspector
 
 Planned divergences from Smalltalk
 - Local type inference (and runtime assertions)
@@ -37,14 +54,14 @@ Planned divergences from Smalltalk
 ### Example
 
 ```
-class Bar [x y z] # This is actually not consistent with using [x . y . z]
-                  # for runtime allocated arrays... but I don't think
-                  # I care.
+class Bar
+  slots: [x y z]
+  class-slots: []
 
 class-method Bar x: xval y: yval
     ^self create-instance: [x . y] # This is nice because the vector can just be wrapped in the class.
 
-method Bar foo: change
+method Bar method foo: change
     x := x + change
 
 phrase ring!
