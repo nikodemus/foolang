@@ -45,7 +45,7 @@ _Isn't this just a really bad Smalltalk with effed up syntax?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 52h
+Time spent: 54h
 Estimated remaining: 55h
 
 - [x] AST
@@ -129,12 +129,14 @@ _...so now it's slow SmallTalk with effed up syntax and an environment from the 
 
 **Non-goals**: performance beyond "IDE is usable", fancy extensions, useful class library.
 
-Estimated remaining: 85h
+Estimated remaining: 130h
 
-- [ ] Bare bones playground. Est 10h.
-- [ ] Bare bones transcript. Est 5h.
+- [ ] Persistent playgrounds. Est 10h.
+- [ ] Persistent transcripts. Est 10h
+- [ ] Bare bones finder. Est 10h
 - [ ] Bare bones browser. Est 10h.
 - [ ] Bare bones inspector. Est 10h.
+- [ ] Bare bones debugger. Est 20h.
 - [ ] Session: this is closest thing to an image -- like a notebook. Est 10h
 - [ ] A nice editor. Est 40h.
 
@@ -142,23 +144,24 @@ Estimated remaining: 85h
 
 _Ok. I can kinda see the point now!_
 
-**Goals**: matching -O0 C++ performance for simple benchmarks with native AOT. Beating
-python with JIT. Ability to deliver standalone applications and precompiled libraries.
-First public release.
+**Goals**: matching -O0 C++ performance for simple benchmarks with native AOT.
+Beating python with JIT. Ability to deliver standalone applications and
+precompiled libraries. First public release.
 
-**Non-goals**: sophisticated type system, fancy extensions, useful class library.
+**Non-goals**: sophisticated type system, fancy extensions, useful class
+library.
 
-Estimated remaining: 160h
+Estimated remaining: 130h
 
 - [ ] Proper name instead of foolang. Est 5h.
 - [ ] Bytecode -> IR decompiler. Est 5h.
 - [ ] IR JIT compiler. Est 40h.
 - [ ] Simple static type annotations with dynamic checks. Est 10h.
-- [ ] IR optimization to elide dispatch and typechecks. Est 40h.
+- [ ] IR optimization to elide dispatch and typechecks in trivial cases. Est 10h.
 - [ ] IR inlining. Est 10h.
 - [ ] IR AOT compiler (platform specific OK). Est 10h.
 - [ ] The Book. Est 20h.
-- [ ] Examples. Est 20h.
+- [ ] Examples + livestreaming Est 20h.
 
 ### Planned: 0.5.0: The Type System
 
@@ -279,6 +282,14 @@ This should compile into decent native code. Something close enough
 to what gcc -O0 would produce.
 
 ## MMmmmaaaybe
+
+- Being able to load "regular smalltalk code" might a big timesaver...
+
+- Finding using examples is amazing! The reason it isn't _that_ dangerous
+  is that you specify the object.
+
+  ...but still, doing Directory("/") . "/" spinning through deleteTree
+  gives me the creeps. MAYBE if it trapped in a system object?
 
 - Annotation assisted escape analysis:
 
