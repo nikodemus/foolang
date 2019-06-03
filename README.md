@@ -129,16 +129,24 @@ _...so now it's slow SmallTalk with effed up syntax and an environment from the 
 
 **Non-goals**: performance beyond "IDE is usable", fancy extensions, useful class library.
 
-Estimated remaining: 130h
+Estimated remaining: 120h
 
-- [ ] Persistent playgrounds. Est 10h.
-- [ ] Persistent transcripts. Est 10h
-- [ ] Bare bones finder. Est 10h
-- [ ] Bare bones browser. Est 10h.
-- [ ] Bare bones inspector. Est 10h.
-- [ ] Bare bones debugger. Est 20h.
-- [ ] Session: this is closest thing to an image -- like a notebook. Est 10h
-- [ ] A nice editor. Est 40h.
+- [ ] Wrap a rust server as foolang objects. 5h
+- Bare bones class browser widget:
+  - [ ] List classes and methods. 5h
+  - [ ] Adding and editing classes. 5h
+  - [ ] Adding and editing methods. 5h.
+- Make the editor components nice
+  - [ ] Generate an overlay: highlight classes and errors stuff. 5h
+  - [ ] Offer completions for classes and selectors. 5h
+  - [ ] Keyboard shortcuts. 5h
+- Add a persistent playground widget. 5h
+- Add a persistent transcript widget. 5h
+- Add a finder (opens browser) widget. 5h
+- Add an inspector widget. 10h
+- Add debugger widget. 20h
+- Add notebooks / sessions. 20h.
+- Integrate these components into a nice whole. 20h
 
 ### Planned: 0.4.0: The Compiler
 
@@ -272,7 +280,6 @@ Allocation header:
   - Code editor: https://codemirror.net/doc/manual.html
   - Code editor: https://github.com/Microsoft/monaco-editor
   - Code editor: https://icecoder.net/
-  - Code editor: https://github.com/kazzkiq/CodeFlask
   - Drawing: http://literallycanvas.com/
 
 ## BIG GOAL
@@ -291,6 +298,40 @@ This should compile into decent native code. Something close enough
 to what gcc -O0 would produce.
 
 ## MMmmmaaaybe
+
+- Considering how I'm planning to use files in but have a class browser
+  as the editing environment... maybe I should go "full Java" and have
+
+     pkgname.foopkg/
+        classname/
+           _classname_.fooclass
+           methodname1.foo
+           methodname2.foo
+
+  That way there is no need to figure out which bit needs rewriting,
+  and thing remain sane-ish to browse too.
+
+  ...though names will have to be mangled, since : isn't allowed on
+  windows. So I will have to forbid either - or _ in selectors to use
+  for ":"
+
+  ...and I need to be case-insensitive?! Well, forbidding multiple
+  selectors that only differ in capitalization in the same class doesn't
+  sound too bad.
+
+  __ prefix for class
+  _ prefix for class methods
+  _ in place of :
+  ...allow dashing-names?
+
+  ```
+    core.foopkg/Box/__Box.fooclass
+                    _new.foomethod
+                    value.foomethod
+                    value_.foomethod
+  ```
+
+  Then _allow_ human written .foo files which mix everything.
 
 - Being able to load "regular smalltalk code" might a big timesaver...
 
