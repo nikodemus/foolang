@@ -68,6 +68,7 @@ _Isn't this just a really bad Smalltalk with effed up syntax?_
 - [ ] Terminal playground
 - [ ] Source file execution
 - [ ] Threads
+- [ ] Benchmarks: foolang, pharo, python, SBCL, clang
 - Optional extras:
   - [ ] String interpolation '1 + 1 = {1 + 1}'
   - [ ] Phrases
