@@ -266,6 +266,15 @@ Allocation header:
 - Smalltalk-80: The Language and Its Implementation
   http://www.mirandabanda.org/bluebook/bluebook_imp_toc.html
 
+- Various browser editor components
+  - Rich text: https://quilljs.com/guides/why-quill/
+  - Code editor: https://ace.c9.io/
+  - Code editor: https://codemirror.net/doc/manual.html
+  - Code editor: https://github.com/Microsoft/monaco-editor
+  - Code editor: https://icecoder.net/
+  - Code editor: https://github.com/kazzkiq/CodeFlask
+  - Drawing: http://literallycanvas.com/
+
 ## BIG GOAL
 
 class Ackermann
