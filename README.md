@@ -68,14 +68,17 @@ Estimated remaining: 50h
       refcell: then returns can (1) check that they're still value, and
       (2) unwind until the method holding the right refcell.
 - [x] Method evaluator (handles ^ in method bodies)
+- [ ] return in an expression context "just returns". Est 5h.
 - [ ] "comments" (preserved in the AST and methods, returned using help: #selector) Est 5h.
 - [ ] Source formatter. Est 10h.
 - [ ] Terminal playground. Est 5h.
 - [ ] Source file execution. Est 5h.
 - [ ] Threads. Est 10h.
 - [ ] Benchmarks: foolang, pharo, python, SBCL, clang. Est 5h.
+- [ ] Read Pharo by Example. 10h
 - Optional extras:
   - [ ] String interpolation '1 + 1 = {1 + 1}'
+  - [ ] Rework string syntax: raw, interpolated, block
   - [ ] Phrases
   - [ ] # Comments
   - [ ] Receiver stack (method local!)
@@ -101,7 +104,7 @@ Estimated remaining: 50h
         8. ||
    - [ ] Indexing foo[x] as sugar for at:
    - [ ] Indexing assignment foo[x] := 42 as sugar for at:put:
-   
+
 ### Planned: 0.2.0: The Virtual Machine
 
 _Ok, kind of impressive you're doing all this, but why are you doing this?_
@@ -164,7 +167,7 @@ _This is getting interesting!_
 **Goals**: enough fancy features to match -O1 C++ performance for harder
 cases. Ability to controllably extend builtin classes.
 
-**Non-goals**: useful class-library. 
+**Non-goals**: useful class-library.
 
 Estimated remaining: 110h
 
