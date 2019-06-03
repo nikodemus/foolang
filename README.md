@@ -51,8 +51,16 @@ TODO:
 - [x] Program parser: class-method parser
 - [x] Explicit representation for the global environment
 - [ ] Program loader
-- [ ] Method evaluator (handles ^)
-- [ ] "comments" (preserved in the AST!)
+      - [ ] self
+      - [ ] createInstance
+      - [ ] instance variables
+      Both self and instance variables require that eval_in_env knows
+      the current receiver. I think this is the perfect opportunity to
+      turn lexenv into context that holds also self and a 'still-valid'
+      refcell: then returns can (1) check that they're still value, and
+      (2) unwind until the method holding the right refcell.
+- [x] Method evaluator (handles ^ in method bodies)
+- [ ] "comments" (preserved in the AST and methods, returned using help: #selector)
 - [ ] Source formatter
 - [ ] Terminal playground
 - Bare bones environment that works directly on files
