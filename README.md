@@ -9,17 +9,20 @@ lessons from catenative languages to heart.
 
 - Code should be written and read left-to-right.
 - The less variables one needs to express oneself clearly, the better.
-- Image based development is NOT a good idea. Being able to reproduce
-  state is more important than saving it, and source files are actually
-  a GOOD idea.
+- Image based development is not a good idea: focusing on reproduction of
+  state is better than saving state.
+- Stateful notebooks are a good idea, but as an exploration tool, not as
+  a development environment.
 - Smalltalk-style environment is still better than anything other
-  languages have to offer: VM and JIT are a must to support interactive
-  development, and the environment must be front and center, not an
-  afterthought.
-- Good support for AOT compilation is needed for good performance: good
-  performance means matching -O0 compiled C++ without jumping through
-  hoops. This in turn requires type annotations and replacing metaobjects
-  with mirrors, and possibly having value types of some sort to avoid
+  languages have to offer: interactive development and tools
+  like browser and inspector and transcript and... are a must. They
+  need to be front and center, not an afterthought. (Supporting people's
+  favorite editor is not important, as long as they don't need to buy into
+  the infrastructure for their first Hello-World.)
+- Predictably good performance is a must. AOT compilation is needed for that.
+  Predictably good performance means matching -O0 compiled C++ without jumping
+  through hoops. This in turn requires type annotations and replacing metaobjects
+  with mirrors, and possibly having value types of some sort to avoid extra
   layers of indirection.
 - Messages everywhere is the right idea, but given how Smalltalk needs to
   reserve ifTrue and some other messages for performance reasons, then
@@ -30,16 +33,16 @@ lessons from catenative languages to heart.
   has its own heap so GC pauses are per thread, passing objects between
   threads means copying the object.
 
-## WIP: 0.1.0: The Evaluator
+## Project Plan
+
+### WIP: 0.1.0: The Evaluator
 
 _Isn't this just a really bad Smalltalk with effed up syntax?_
 
-Non-Goals:
-- Speed
-- Completely settled down syntax
-- Fancy extensions
+**Goals**: syntax v1, working evaluator, threads.
 
-TODO:
+**Non-goals**: performance, fancy extensions, useful class library.
+
 - [x] AST
 - [x] Expression parser
 - [x] Expression evaluator
@@ -63,14 +66,9 @@ TODO:
 - [ ] "comments" (preserved in the AST and methods, returned using help: #selector)
 - [ ] Source formatter
 - [ ] Terminal playground
-- Bare bones environment that works directly on files
-      - [ ] Session: this is closest thing to an image -- like a notebook
-      - [ ] Playground
-      - [ ] Browser
-      - [ ] Transcript
-      - [ ] Inspector
+- [ ] Source file execution
+- [ ] Threads
 - Optional extras:
-  - [ ] The Book
   - [ ] String interpolation '1 + 1 = {1 + 1}'
   - [ ] Phrases
   - [ ] # Comments
@@ -97,17 +95,64 @@ TODO:
         8. ||
    - [ ] Indexing foo[x] as sugar for at:
    - [ ] Indexing assignment foo[x] := 42 as sugar for at:put:
+   
+### Planned: 0.2.0: The Virtual Machine
 
-## Later
+**Goals**: self-hosted VM, getting to write code in foolang to figure out what works.
 
-- 0.2.0: typechecking: AST -> TST
-- 0.3.0: bootstrap compiler and VM, threads, coroutines
-- 0.4.0: JIT and AOT compilers
-- 0.5.0: immutable value types
+**Non-goals**: performance, fancy extensions, useful class library.
 
-Moar:
-- Class extensions
-- Package system
+- [ ] Self-hosted AST -> IR compiler (arbitrary code)
+- [ ] Self-hosted IR -> bytecode compiler (arbitrary code)
+- [ ] Self-hosted IR -> Rust compiler (subsetted for VM implementation)
+- [ ] Self-hosted VM
+
+### Planned: 0.3.0: The IDE
+
+**Goals**: a working Smalltalk-like IDE using Mirrors, one that I don't mind using.
+
+**Non-goals**: performance beyond "IDE is usable", fancy extensions, useful class library.
+
+- [ ] Session: this is closest thing to an image -- like a notebook
+- [ ] Playground
+- [ ] Browser
+- [ ] Transcript
+- [ ] Inspector
+- [ ] Editor
+
+### Planned: 0.4.0: The Compiler
+
+**Goals**: matching -O0 C++ performance for simple benchmarks with native AOT. Beating
+python with JIT. Ability to deliver standalone applications and precompiled libraries.
+
+**Non-goals**: sophisticated type system, fancy extensions, useful class library.
+
+- [ ] Bytecode -> IR decompiler
+- [ ] IR JIT compiler
+- [ ] Simple static type annotations with dynamic checks
+- [ ] IR optimization to elide dispatch and typechecks
+- [ ] IR inlining
+- [ ] IR AOT compiler
+
+### Planned: 0.5.0: The Type System
+
+**Goals**: enough fancy features to match -O1 C++ performance for harder
+cases. Ability to controllably extend builtin classes.
+
+**Non-goals**: useful class-library. 
+
+- [ ] Value types
+- [ ] Parameteric classes
+- [ ] Class extensions
+- [ ] Module system
+
+### Planned: 1.0.0: Useful Class Library
+
+- [ ] The Book
+- [ ] Examples
+- [ ] Libraries
+- [ ] Library system (ie. cargo-lookalike)
+- [ ] Tooling for wrapping Rust code.
 
 ## Declarative Syntax
 
