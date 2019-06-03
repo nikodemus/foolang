@@ -268,6 +268,7 @@ fn parse_unary_method() {
             selector: identifier("foo"),
             parameters: vec![],
             temporaries: vec![],
+            docstring: None,
             statements: vec![Expr::Unary(Box::new(variable("bar")), identifier("quux"))]
         }
     );
@@ -277,6 +278,7 @@ fn parse_unary_method() {
             selector: identifier("foo"),
             parameters: vec![],
             temporaries: vec![identifier("x")],
+            docstring: None,
             statements: vec![
                 Expr::Assign(
                     identifier("x"),
@@ -294,11 +296,12 @@ fn parse_unary_method() {
 #[test]
 fn parse_binary_method() {
     assert_eq!(
-        parse_method("+ x ^value + x"),
+        parse_method(r#"+ x "This adds stuff." ^value + x"#),
         Method {
             selector: identifier("+"),
             parameters: vec![identifier("x")],
             temporaries: vec![],
+            docstring: Some(String::from("This adds stuff.")),
             statements: vec![Expr::Return(Box::new(Expr::Binary(
                 Box::new(variable("value")),
                 identifier("+"),
@@ -316,6 +319,7 @@ fn parse_keyword_method() {
             selector: identifier("foo:with:"),
             parameters: vec![identifier("x"), identifier("y")],
             temporaries: vec![],
+            docstring: None,
             statements: vec![
                 Expr::Unary(Box::new(variable("x")), identifier("frob")),
                 Expr::Keyword(
@@ -362,6 +366,7 @@ fn parse_instance_method_description() {
                 selector: identifier("a:b:"),
                 parameters: vec![identifier("x"), identifier("y")],
                 temporaries: vec![],
+                docstring: None,
                 statements: vec![Expr::Return(Box::new(Expr::Binary(
                     Box::new(variable("x")),
                     identifier("+"),
@@ -382,6 +387,7 @@ fn parse_class_method_description() {
                 selector: identifier("a:b:"),
                 parameters: vec![identifier("x"), identifier("y")],
                 temporaries: vec![],
+                docstring: None,
                 statements: vec![Expr::Return(Box::new(Expr::Binary(
                     Box::new(variable("x")),
                     identifier("+"),
@@ -414,6 +420,7 @@ fn parse_program1() {
                     selector: identifier("theAnswer"),
                     parameters: vec![],
                     temporaries: vec![],
+                    docstring: None,
                     statements: vec![Expr::Return(Box::new(Expr::Constant(Literal::Integer(42))))]
                 }
             })

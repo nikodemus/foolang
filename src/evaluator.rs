@@ -6,7 +6,7 @@ use lazy_static::lazy_static;
 use std::borrow::ToOwned;
 use std::collections::HashMap;
 
-type MethodFunc = fn(Object, Vec<Object>) -> Object;
+type MethodFunc = fn(Object, Vec<Object>, &GlobalEnv) -> Object;
 
 type MethodTable = HashMap<String, MethodImpl>;
 
@@ -42,7 +42,15 @@ impl ClassInfo {
     fn find_method(&self, class: &ClassId, name: &str) -> MethodImpl {
         match self.methods[class.0].get(name) {
             Some(method) => method.to_owned(),
-            None => panic!("No method {} on {}", name, self.class_name(class)),
+            None => {
+                let methods: Vec<_> = self.methods[class.0].keys().collect();
+                panic!(
+                    "No method {} on {}\nAvailable methods: {:?}",
+                    name,
+                    self.class_name(class),
+                    methods
+                )
+            }
         }
     }
     fn add_builtin(&mut self, class: &ClassId, name: &str, f: MethodFunc) {
@@ -113,20 +121,24 @@ impl GlobalEnv {
             variables: GLOBALS.clone(),
         }
     }
+    fn find_method(&self, classid: &ClassId, name: &str) -> MethodImpl {
+        self.classes.find_method(classid, name)
+    }
     fn add_class(&mut self, name: &str, slots: Vec<Identifier>) {
         if self.variables.contains_key(name) {
             panic!("{} alredy exists!", name);
         }
         // Our metaclasses don't currently exist as actual objects!
-        let metaname = format!("[{}]", name);
+        let metaname = format!("#<metaclass {}>", name);
         let metaid = self.classes.add_class(&metaname);
         let id = self.classes.add_class(name);
-        let class = Object::make_class(metaid, id, name, slots);
+        let class = Object::make_class(metaid.clone(), id.clone(), name, slots);
+        self.classes.add_builtin(&metaid, "help:", method_help);
         self.variables.insert(name.to_string(), class);
     }
     fn send(&self, receiver: Object, selector: &Identifier, args: Vec<Object>) -> Object {
         match receiver.datum {
-            Datum::Block(_) => block_apply(receiver, args, self),
+            Datum::Block(_) => method_block_apply(receiver, args, self),
             _ => self
                 .classes
                 .find_method(&receiver.class, &selector.0)
@@ -217,7 +229,7 @@ impl<'a> Lexenv<'a> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 enum MethodImpl {
     Builtin(MethodFunc),
     Evaluator(Method),
@@ -226,7 +238,7 @@ enum MethodImpl {
 impl MethodImpl {
     fn invoke(&self, receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Object {
         match self {
-            MethodImpl::Builtin(func) => func(receiver, args),
+            MethodImpl::Builtin(func) => func(receiver, args, global),
             MethodImpl::Evaluator(method) => {
                 let mut env = Lexenv::from(method.parameters.clone(), args);
                 env.add_temporaries(method.temporaries.clone());
@@ -333,7 +345,7 @@ fn eval_in_env(expr: Expr, env: &mut Lexenv, global: &GlobalEnv) -> Eval {
     }
 }
 
-fn method_neg(receiver: Object, args: Vec<Object>) -> Object {
+fn method_neg(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
     assert!(args.len() == 0);
     match receiver.datum {
         Datum::Integer(i) => Object::make_integer(-i),
@@ -342,7 +354,7 @@ fn method_neg(receiver: Object, args: Vec<Object>) -> Object {
     }
 }
 
-fn method_gcd(receiver: Object, args: Vec<Object>) -> Object {
+fn method_gcd(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
     assert!(args.len() == 1);
     match receiver.datum {
         Datum::Integer(i) => match args[0].datum {
@@ -353,7 +365,7 @@ fn method_gcd(receiver: Object, args: Vec<Object>) -> Object {
     }
 }
 
-fn method_plus(receiver: Object, args: Vec<Object>) -> Object {
+fn method_plus(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
     assert!(args.len() == 1);
     match receiver.datum {
         Datum::Integer(i) => match args[0].datum {
@@ -370,7 +382,7 @@ fn method_plus(receiver: Object, args: Vec<Object>) -> Object {
     }
 }
 
-fn method_minus(receiver: Object, args: Vec<Object>) -> Object {
+fn method_minus(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
     assert!(args.len() == 1);
     match receiver.datum {
         Datum::Integer(i) => match args[0].datum {
@@ -387,7 +399,7 @@ fn method_minus(receiver: Object, args: Vec<Object>) -> Object {
     }
 }
 
-fn method_mul(receiver: Object, args: Vec<Object>) -> Object {
+fn method_mul(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
     assert!(args.len() == 1);
     match receiver.datum {
         Datum::Integer(i) => match args[0].datum {
@@ -404,7 +416,22 @@ fn method_mul(receiver: Object, args: Vec<Object>) -> Object {
     }
 }
 
-fn block_apply(receiver: Object, mut args: Vec<Object>, global: &GlobalEnv) -> Object {
+fn method_help(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Object {
+    assert!(args.len() == 1);
+    match &args[0].datum {
+        Datum::Symbol(name) => {
+            if let MethodImpl::Evaluator(m) = &global.find_method(&receiver.class, &name) {
+                if let Some(s) = &m.docstring {
+                    return Object::make_string(s);
+                }
+            }
+        }
+        _ => panic!("Bad argument to help:!"),
+    }
+    Object::make_string("No help available.")
+}
+
+fn method_block_apply(receiver: Object, mut args: Vec<Object>, global: &GlobalEnv) -> Object {
     let mut res = receiver.clone();
     match receiver.datum {
         Datum::Block(blk) => {
@@ -424,7 +451,7 @@ fn block_apply(receiver: Object, mut args: Vec<Object>, global: &GlobalEnv) -> O
             }
             res
         }
-        _ => panic!("Bad receiver for block_apply!"),
+        _ => panic!("Bad receiver for block apply!"),
     }
 }
 

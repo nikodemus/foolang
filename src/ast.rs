@@ -72,5 +72,6 @@ pub struct Method {
     pub selector: Identifier,
     pub parameters: Vec<Identifier>,
     pub temporaries: Vec<Identifier>,
+    pub docstring: Option<String>,
     pub statements: Vec<Expr>,
 }

@@ -45,8 +45,8 @@ _Isn't this just a really bad Smalltalk with effed up syntax?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 50h
-Estimated remaining: 60h
+Time spent: 52h
+Estimated remaining: 55h
 
 - [x] AST
 - [x] Expression parser
@@ -69,7 +69,7 @@ Estimated remaining: 60h
       (2) unwind until the method holding the right refcell.
 - [x] Method evaluator (handles ^ in method bodies)
 - [X] ~~return in an expression context "just returns". Est 5h.~~
-- [ ] "comments" (preserved in the AST and methods, returned using help: #selector) Est 5h.
+- [x] "comments" (preserved in the AST and methods, returned using help: #selector) Est 5h.
 - [ ] Source formatter. Est 10h.
 - [ ] Terminal playground. Est 5h.
 - [ ] Source file execution. Est 5h.

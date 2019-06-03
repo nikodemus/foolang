@@ -42,12 +42,26 @@ pub ClassMethod: MethodDescription = {
 };
 
 pub Method: Method = {
-  <p:MessagePattern> <t:Temporaries> <s:Statements>
-    => Method { selector: p.0, parameters: p.1, temporaries: t, statements: s},
-  <p:MessagePattern> <s:Statements>
-    => Method { selector: p.0, parameters: p.1, temporaries: vec![], statements: s},
+  <p:MessagePattern> <b:MethodBody>
+    => Method {
+        selector: p.0, parameters: p.1,
+        temporaries: b.0, docstring: b.1, statements: b.2
+  },
   <p:MessagePattern>
-    => Method { selector: p.0, parameters: p.1, temporaries: vec![], statements: vec![]},
+    => Method {
+        selector: p.0, parameters: p.1,
+        temporaries: vec![], docstring: None, statements: vec![]
+  },
+};
+
+MethodBody: (Vec<Identifier>, Option<String>, Vec<Expr>) = {
+  <t:Temporaries> <d:DocString> <s:Statements> => (t, Some(d), s),
+  <d:DocString> <s:Statements> => (vec![], Some(d), s),
+  <t:Temporaries> <s:Statements> => (t, None, s),
+  <t:Temporaries> <d:DocString> => (t, Some(d), vec![]),
+  <t:Temporaries> => (t, None, vec![]),
+  <d:DocString> => (vec![], Some(d), vec![]),
+  <s:Statements> => (vec![], None, s),
 };
 
 MessagePattern: (Identifier, Vec<Identifier>) = {
@@ -66,6 +80,10 @@ KeywordPattern: (Identifier, Vec<Identifier>) = {
 SlotNames: Vec<Identifier> = {
   "[" "]" => vec![],
   "[" <i:Identifiers> "]" => i,
+};
+
+DocString: String  = {
+  r#""([^"]|(""))*""# => chopchop(String::from(<>)),
 };
 
 pub Expression: Expr = {
