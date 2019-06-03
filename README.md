@@ -98,16 +98,21 @@ _Isn't this just a really bad Smalltalk with effed up syntax?_
    
 ### Planned: 0.2.0: The Virtual Machine
 
+_Ok, kind of impressive you're doing all this, but why are you doing this?_
+
 **Goals**: self-hosted VM, getting to write code in foolang to figure out what works.
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
 - [ ] Self-hosted AST -> IR compiler (arbitrary code)
 - [ ] Self-hosted IR -> bytecode compiler (arbitrary code)
-- [ ] Self-hosted IR -> Rust compiler (subsetted for VM implementation)
+- [ ] Self-hosted IR -> Rust compiler (subsetted for VM & GC implementation)
 - [ ] Self-hosted VM
+- [ ] Self-hosted GC
 
 ### Planned: 0.3.0: The IDE
+
+_...so now it's slow SmallTalk with effed up syntax and an environment from the 80s?_
 
 **Goals**: a working Smalltalk-like IDE using Mirrors, one that I don't mind using.
 
@@ -122,11 +127,15 @@ _Isn't this just a really bad Smalltalk with effed up syntax?_
 
 ### Planned: 0.4.0: The Compiler
 
+_Ok. I can kinda see the point now!_
+
 **Goals**: matching -O0 C++ performance for simple benchmarks with native AOT. Beating
 python with JIT. Ability to deliver standalone applications and precompiled libraries.
+First public release.
 
 **Non-goals**: sophisticated type system, fancy extensions, useful class library.
 
+- [ ] Proper name instead of foolang
 - [ ] Bytecode -> IR decompiler
 - [ ] IR JIT compiler
 - [ ] Simple static type annotations with dynamic checks
@@ -135,6 +144,8 @@ python with JIT. Ability to deliver standalone applications and precompiled libr
 - [ ] IR AOT compiler
 
 ### Planned: 0.5.0: The Type System
+
+_This is getting interesting!_
 
 **Goals**: enough fancy features to match -O1 C++ performance for harder
 cases. Ability to controllably extend builtin classes.
@@ -146,13 +157,31 @@ cases. Ability to controllably extend builtin classes.
 - [ ] Class extensions
 - [ ] Module system
 
-### Planned: 1.0.0: Useful Class Library
+### Planned: 0.6.0: Useful Class Library
+
+_What are people using this for? Can you share some success stories?_
+
+**Goals**: a "batteries included" release.
 
 - [ ] The Book
 - [ ] Examples
 - [ ] Libraries
 - [ ] Library system (ie. cargo-lookalike)
 - [ ] Tooling for wrapping Rust code.
+
+### Planned: 0.7.0: Fix What's Broken
+
+_I'm using this at work to do X!_
+
+**Goals**: After some use by other people than me, identify and fix
+the main issues likely to cause future problems.
+
+### Planned: 1.0.0: Stable Release
+
+_When's the next conference?_
+
+**Goals**: No foreseeable need for breaking changes. (Of course they
+will come!)
 
 ## Declarative Syntax
 
