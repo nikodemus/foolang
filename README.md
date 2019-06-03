@@ -35,6 +35,8 @@ lessons from catenative languages to heart.
 
 ## Project Plan
 
+Timeboxing in releases of 50-200h of work.
+
 ### WIP: 0.1.0: The Evaluator
 
 _Isn't this just a really bad Smalltalk with effed up syntax?_
@@ -42,6 +44,9 @@ _Isn't this just a really bad Smalltalk with effed up syntax?_
 **Goals**: syntax v1, working evaluator, threads.
 
 **Non-goals**: performance, fancy extensions, useful class library.
+
+Time spent: 50h
+Estimated remaining: 50h
 
 - [x] AST
 - [x] Expression parser
@@ -53,7 +58,7 @@ _Isn't this just a really bad Smalltalk with effed up syntax?_
 - [x] Program parser: method parser
 - [x] Program parser: class-method parser
 - [x] Explicit representation for the global environment
-- [ ] Program loader
+- [ ] Program loader. Est 10h.
       - [ ] self
       - [ ] createInstance
       - [ ] instance variables
@@ -63,12 +68,12 @@ _Isn't this just a really bad Smalltalk with effed up syntax?_
       refcell: then returns can (1) check that they're still value, and
       (2) unwind until the method holding the right refcell.
 - [x] Method evaluator (handles ^ in method bodies)
-- [ ] "comments" (preserved in the AST and methods, returned using help: #selector)
-- [ ] Source formatter
-- [ ] Terminal playground
-- [ ] Source file execution
-- [ ] Threads
-- [ ] Benchmarks: foolang, pharo, python, SBCL, clang
+- [ ] "comments" (preserved in the AST and methods, returned using help: #selector) Est 5h.
+- [ ] Source formatter. Est 10h.
+- [ ] Terminal playground. Est 5h.
+- [ ] Source file execution. Est 5h.
+- [ ] Threads. Est 10h.
+- [ ] Benchmarks: foolang, pharo, python, SBCL, clang. Est 5h.
 - Optional extras:
   - [ ] String interpolation '1 + 1 = {1 + 1}'
   - [ ] Phrases
@@ -105,11 +110,13 @@ _Ok, kind of impressive you're doing all this, but why are you doing this?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-- [ ] Self-hosted AST -> IR compiler (arbitrary code)
-- [ ] Self-hosted IR -> bytecode compiler (arbitrary code)
-- [ ] Self-hosted IR -> Rust compiler (subsetted for VM & GC implementation)
-- [ ] Self-hosted VM
-- [ ] Self-hosted GC
+Estimated remaining: 140h.
+
+- [ ] Self-hosted AST -> IR compiler. Est 10h
+- [ ] Self-hosted IR -> bytecode compiler. Est 10h
+- [ ] Self-hosted IR -> Rust compiler. Est 40h. (subsetted for VM & GC implementation)
+- [ ] Self-hosted VM. Est. 40h.
+- [ ] Self-hosted GC. Est. 40h
 
 ### Planned: 0.3.0: The IDE
 
@@ -119,12 +126,14 @@ _...so now it's slow SmallTalk with effed up syntax and an environment from the 
 
 **Non-goals**: performance beyond "IDE is usable", fancy extensions, useful class library.
 
-- [ ] Session: this is closest thing to an image -- like a notebook
-- [ ] Playground
-- [ ] Browser
-- [ ] Transcript
-- [ ] Inspector
-- [ ] Editor
+Estimated remaining: 85h
+
+- [ ] Bare bones playground. Est 10h.
+- [ ] Bare bones transcript. Est 5h.
+- [ ] Bare bones browser. Est 10h.
+- [ ] Bare bones inspector. Est 10h.
+- [ ] Session: this is closest thing to an image -- like a notebook. Est 10h
+- [ ] A nice editor. Est 40h.
 
 ### Planned: 0.4.0: The Compiler
 
@@ -136,13 +145,17 @@ First public release.
 
 **Non-goals**: sophisticated type system, fancy extensions, useful class library.
 
-- [ ] Proper name instead of foolang
-- [ ] Bytecode -> IR decompiler
-- [ ] IR JIT compiler
-- [ ] Simple static type annotations with dynamic checks
-- [ ] IR optimization to elide dispatch and typechecks
-- [ ] IR inlining
-- [ ] IR AOT compiler
+Estimated remaining: 160h
+
+- [ ] Proper name instead of foolang. Est 5h.
+- [ ] Bytecode -> IR decompiler. Est 5h.
+- [ ] IR JIT compiler. Est 40h.
+- [ ] Simple static type annotations with dynamic checks. Est 10h.
+- [ ] IR optimization to elide dispatch and typechecks. Est 40h.
+- [ ] IR inlining. Est 10h.
+- [ ] IR AOT compiler (platform specific OK). Est 10h.
+- [ ] The Book. Est 20h.
+- [ ] Examples. Est 20h.
 
 ### Planned: 0.5.0: The Type System
 
@@ -153,22 +166,24 @@ cases. Ability to controllably extend builtin classes.
 
 **Non-goals**: useful class-library. 
 
-- [ ] Value types
-- [ ] Parameteric classes
-- [ ] Class extensions
-- [ ] Module system
+Estimated remaining: 110h
+
+- [ ] Value types. Est 40h.
+- [ ] Parameteric classes. Est 40h.
+- [ ] Class extensions. Est 20h.
+- [ ] Module system. Est 10h.
 
 ### Planned: 0.6.0: Useful Class Library
 
 _What are people using this for? Can you share some success stories?_
 
-**Goals**: a "batteries included" release.
+**Goals**: a "batteries included" release, or at least the infrastructure for one.
 
-- [ ] The Book
-- [ ] Examples
-- [ ] Libraries
-- [ ] Library system (ie. cargo-lookalike)
-- [ ] Tooling for wrapping Rust code.
+Estimated remaining: 120h
+
+- [ ] Libraries. Est 40h.
+- [ ] Library system (ie. cargo-lookalike). Est 40h.
+- [ ] Tooling for wrapping Rust code. Est 40h
 
 ### Planned: 0.7.0: Fix What's Broken
 
