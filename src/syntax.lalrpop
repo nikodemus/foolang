@@ -140,7 +140,7 @@ MessageExpression: Expr = {
 };
 
 UnaryExpression: Expr = {
-  <o:UnaryObjectDescription> <m:UnarySelector> => Expr::Unary(Box::new(o), m),
+  <o:UnaryObjectDescription> <m:UnarySelector> => Expr::Send(Box::new(o), m, vec![]),
 };
 
 UnaryObjectDescription: Expr = {
@@ -159,12 +159,12 @@ UnarySelector: Identifier = {
 
 BinaryExpression: Expr = {
   <a:BinaryObjectDescription> <s:BinarySelector> <b:UnaryObjectDescription>
-    => Expr::Binary(Box::new(a), s, Box::new(b))
+    => Expr::Send(Box::new(a), s, vec![b])
 };
 
 KeywordExpression: Expr = {
   <a:BinaryObjectDescription> <b:KeywordTail>
-    => Expr::Keyword(Box::new(a), b.0, b.1),
+    => Expr::Send(Box::new(a), b.0, b.1),
 };
 
 // This is immediately destructured in KeywordExpression -- This
@@ -196,9 +196,9 @@ CascadedMessageTail: Vec<Cascade> = {
 //
 // ?
 CascadedMessage: Cascade = {
-   <a:UnarySelector> => Cascade::Unary(a),
-   <a:BinarySelector> <b:UnaryObjectDescription> => Cascade::Binary(a, b),
-   <a:KeywordTail> => Cascade::Keyword(a.0, a.1),
+   <a:UnarySelector> => Cascade::Message(a, vec![]),
+   <a:BinarySelector> <b:UnaryObjectDescription> => Cascade::Message(a, vec![b]),
+   <a:KeywordTail> => Cascade::Message(a.0, a.1),
 };
 
 Temporaries: Vec<Identifier> = {
