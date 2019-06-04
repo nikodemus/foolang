@@ -13,16 +13,18 @@ type MethodTable = HashMap<String, MethodImpl>;
 #[derive(Clone)]
 struct ClassInfo {
     names: HashMap<String, ClassId>,
+    slots: Vec<Vec<Identifier>>,
     methods: Vec<MethodTable>,
 }
 
 impl ClassInfo {
-    fn add_class(&mut self, name: &str) -> ClassId {
+    fn add_class(&mut self, name: &str, slots: Vec<Identifier>) -> ClassId {
         if self.names.contains_key(name) {
             panic!("Cannot redefine class! {} already exists.", name);
         } else {
             let id = ClassId(self.methods.len());
             self.names.insert(String::from(name), id.clone());
+            self.slots.push(slots);
             self.methods.push(MethodTable::new());
             id
         }
@@ -63,30 +65,34 @@ impl ClassInfo {
 
 lazy_static! {
     static ref CLASSES: ClassInfo = {
-        let mut info = ClassInfo { names: HashMap::new(), methods: Vec::new(), };
+        let mut info = ClassInfo {
+            names: HashMap::new(),
+            slots: Vec::new(),
+            methods: Vec::new(),
+        };
 
         // NOTE: Alphabetic order matches objects.rs
 
-        let array = info.add_class("Array");
+        let array = info.add_class("Array", vec![]);
         assert_eq!(array, CLASS_ARRAY, "Bad classId for Array");
 
-        let array = info.add_class("Block");
+        let array = info.add_class("Block", vec![]);
         assert_eq!(array, CLASS_BLOCK, "Bad classId for Block");
 
-        let character = info.add_class("Character");
+        let character = info.add_class("Character", vec![]);
         assert_eq!(character, CLASS_CHARACTER, "Bad classId for Character");
 
-        let character = info.add_class("Class");
+        let character = info.add_class("Class", vec![]);
         assert_eq!(character, CLASS_CLASS, "Bad classId for Class");
 
-        let float = info.add_class("Float");
+        let float = info.add_class("Float", vec![]);
         assert_eq!(float, CLASS_FLOAT);
         info.add_builtin(&float, "neg", method_neg);
         info.add_builtin(&float, "*", method_mul);
         info.add_builtin(&float, "+", method_plus);
         info.add_builtin(&float, "-", method_minus);
 
-        let integer = info.add_class("Integer");
+        let integer = info.add_class("Integer", vec![]);
         assert_eq!(integer, CLASS_INTEGER);
         info.add_builtin(&integer, "neg", method_neg);
         info.add_builtin(&integer, "gcd:", method_gcd);
@@ -94,10 +100,10 @@ lazy_static! {
         info.add_builtin(&integer, "+", method_plus);
         info.add_builtin(&integer, "-", method_minus);
 
-        let string = info.add_class("String");
+        let string = info.add_class("String", vec![]);
         assert_eq!(string, CLASS_STRING);
 
-        let symbol = info.add_class("Symbol");
+        let symbol = info.add_class("Symbol", vec![]);
         assert_eq!(symbol, CLASS_SYMBOL);
 
         info
@@ -124,16 +130,23 @@ impl GlobalEnv {
     fn find_method(&self, classid: &ClassId, name: &str) -> MethodImpl {
         self.classes.find_method(classid, name)
     }
+    fn find_slot(&self, class: &ClassId, name: &str) -> Option<usize> {
+        self.classes.slots[class.0]
+            .iter()
+            .position(|id| &id.0 == name)
+    }
     fn add_class(&mut self, name: &str, slots: Vec<Identifier>) {
         if self.variables.contains_key(name) {
             panic!("{} alredy exists!", name);
         }
         // Our metaclasses don't currently exist as actual objects!
         let metaname = format!("#<metaclass {}>", name);
-        let metaid = self.classes.add_class(&metaname);
-        let id = self.classes.add_class(name);
-        let class = Object::make_class(metaid.clone(), id.clone(), name, slots);
+        let metaid = self.classes.add_class(&metaname, vec![]);
+        let id = self.classes.add_class(name, slots.clone());
+        let class = Object::make_class(metaid.clone(), id.clone(), name);
         self.classes.add_builtin(&metaid, "help:", method_help);
+        self.classes
+            .add_builtin(&metaid, "createInstance:", method_create_instance);
         self.variables.insert(name.to_string(), class);
     }
     fn send(
@@ -300,6 +313,11 @@ fn eval_in_env(expr: Expr, env: &mut Lexenv, global: &GlobalEnv) -> Eval {
             if let Some(value) = env.find(&s) {
                 return dup(value.to_owned());
             }
+            if let Some(obj) = &env.receiver {
+                if let Some(idx) = global.find_slot(&obj.class, &s) {
+                    return dup(obj.slot(idx));
+                }
+            }
             match global.variables.get(&s) {
                 Some(g) => dup(g.to_owned()),
                 None => panic!("Unbound variable: {}", s),
@@ -421,6 +439,16 @@ fn method_mul(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
         },
         _ => panic!("Bad receiver for mul!"),
     }
+}
+
+fn method_create_instance(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
+    assert!(args.len() == 1);
+    if let Datum::Class(classobj) = receiver.datum {
+        if let Datum::Array(vec) = &args[0].datum {
+            return Object::make_instance(classobj.id.clone(), vec.to_vec());
+        }
+    }
+    panic!("Cannot create instance out of a non-class object!")
 }
 
 fn method_help(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Object {

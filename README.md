@@ -45,7 +45,7 @@ _Isn't this just a really bad Smalltalk with effed up syntax?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 58h
+Time spent: 59h
 Estimated remaining: 55h
 
 - [x] AST
@@ -62,11 +62,6 @@ Estimated remaining: 55h
       - [x] self
       - [ ] createInstance. 5h
       - [ ] instance variables. 5h
-      Both self and instance variables require that eval_in_env knows
-      the current receiver. I think this is the perfect opportunity to
-      turn lexenv into context that holds also self and a 'still-valid'
-      refcell: then returns can (1) check that they're still value, and
-      (2) unwind until the method holding the right refcell.
 - [x] Method evaluator (handles ^ in method bodies)
 - [X] ~~return in an expression context "just returns". Est 5h.~~
 - [x] "comments" (preserved in the AST and methods, returned using help: #selector) Est 5h.
