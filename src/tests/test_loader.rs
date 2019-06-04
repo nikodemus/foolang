@@ -44,12 +44,34 @@ fn load_empty_class_and_class_methods() {
 }
 
 #[test]
+fn load_box() {
+    let prog = parse_program(
+        r#"
+        @class Box [val]
+        @class-method Box new: value
+           "Create a Box instance holding the specified value."
+           ^self createInstance: [value]
+        @method Box value
+            ^val
+        @method Box value: newval
+            val := newval
+    "#,
+    );
+    let mut env = GlobalEnv::new();
+    env.load(prog);
+    assert_eq!(
+        env.eval(parse_expr("(Box new: 42) value")),
+        Object::make_integer(42)
+    );
+}
+
+#[test]
 #[ignore] // known to fail for now
 fn load_full_class() {
     let prog = parse_program(
         r#"
         @class Box [_value]
-        @class-method Box new: value |box|
+        @class-method Box new: value
            "Create a Box instance holding the specified value."
            ^self createInstance: [value]
         @method Box value

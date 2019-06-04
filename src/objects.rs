@@ -25,7 +25,11 @@ pub struct Object {
 pub struct ClassObject {
     pub id: ClassId,
     pub name: String,
-    pub slots: Vec<ast::Identifier>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct SlotObject {
+    pub slots: Vec<Object>,
 }
 
 // XXX: Would be nice to be able to switch between this and union
@@ -40,22 +44,30 @@ pub enum Datum {
     Block(Arc<ast::Block>),
     Array(Arc<Vec<Object>>),
     Class(Arc<ClassObject>),
+    Instance(Arc<SlotObject>),
 }
 
 impl Object {
-    pub fn make_class(
-        meta: ClassId,
-        id: ClassId,
-        name: &str,
-        slots: Vec<ast::Identifier>,
-    ) -> Object {
+    pub fn slot(&self, idx: usize) -> Object {
+        if let Datum::Instance(obj) = &self.datum {
+            obj.slots[idx].clone()
+        } else {
+            panic!("Cannot access slot of a non-slot object.");
+        }
+    }
+    pub fn make_class(meta: ClassId, id: ClassId, name: &str) -> Object {
         Object {
             class: meta,
             datum: Datum::Class(Arc::new(ClassObject {
                 id,
                 name: String::from(name),
-                slots,
             })),
+        }
+    }
+    pub fn make_instance(class: ClassId, slots: Vec<Object>) -> Object {
+        Object {
+            class,
+            datum: Datum::Instance(Arc::new(SlotObject { slots })),
         }
     }
     pub fn make_float(x: f64) -> Object {
