@@ -253,6 +253,39 @@ impl MethodImpl {
     }
 }
 
+// XXX sketch
+//
+// Create a BlockClosure:
+//
+//   BlockClosure {
+//       block: block,
+//       context: context,
+//   }
+//
+// Execute it in:
+//   Context {
+//      receiver: closure.context.receiver,
+//      closure: closure,
+//      method: Ok(closure.context.method),
+//      variables: closure.block.variables(),
+//   }
+//
+// Self is: context.receiver
+// Ivar lookup is: context.receiver[name]
+// Lvar lookup is: context.variables[name]
+// Return is: Return(value, context.method)
+//
+// Return "terminates" because method = return.method? Does that work
+// right with recursive calls? If not, add a unique RefCell.
+//
+// Context needs to be heap allocated with Rc!
+//
+// Method unwinding does: context.method = Err(method)
+//
+struct Context<'a> {
+    receiver: &'a Object,
+}
+
 enum Eval {
     Result(Object, Object),
     Return(Object),
