@@ -1,5 +1,6 @@
 use crate::ast;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct ClassId(pub usize);
@@ -27,9 +28,15 @@ pub struct ClassObject {
     pub name: String,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct SlotObject {
-    pub slots: Vec<Object>,
+    pub slots: Mutex<Vec<Object>>,
+}
+
+impl PartialEq for SlotObject {
+    fn eq(&self, other: &Self) -> bool {
+        self as *const _ == other as *const _
+    }
 }
 
 // XXX: Would be nice to be able to switch between this and union
@@ -50,7 +57,14 @@ pub enum Datum {
 impl Object {
     pub fn slot(&self, idx: usize) -> Object {
         if let Datum::Instance(obj) = &self.datum {
-            obj.slots[idx].clone()
+            obj.slots.lock().unwrap()[idx].clone()
+        } else {
+            panic!("Cannot access slot of a non-slot object.");
+        }
+    }
+    pub fn set_slot(&self, idx: usize, val: Object) {
+        if let Datum::Instance(obj) = &self.datum {
+            obj.slots.lock().unwrap()[idx] = val;
         } else {
             panic!("Cannot access slot of a non-slot object.");
         }
@@ -67,7 +81,9 @@ impl Object {
     pub fn make_instance(class: ClassId, slots: Vec<Object>) -> Object {
         Object {
             class,
-            datum: Datum::Instance(Arc::new(SlotObject { slots })),
+            datum: Datum::Instance(Arc::new(SlotObject {
+                slots: Mutex::new(slots),
+            })),
         }
     }
     pub fn make_float(x: f64) -> Object {

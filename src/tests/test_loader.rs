@@ -60,31 +60,8 @@ fn load_box() {
     let mut env = GlobalEnv::new();
     env.load(prog);
     assert_eq!(
-        env.eval(parse_expr("(Box new: 42) value")),
-        Object::make_integer(42)
-    );
-}
-
-#[test]
-#[ignore] // known to fail for now
-fn load_full_class() {
-    let prog = parse_program(
-        r#"
-        @class Box [_value]
-        @class-method Box new: value
-           "Create a Box instance holding the specified value."
-           ^self createInstance: [value]
-        @method Box value
-            ^_value
-        @method Box value: newval
-            _value := newval
-    "#,
-    );
-    let mut env = GlobalEnv::new();
-    env.load(prog);
-    assert_eq!(
         env.eval(parse_expr(
-            "{ |x| x := Box new: 40. x value: x value + 2. x value } value"
+            "{ |x| x := Box new: 40. x value: 2 + x value. x value } value"
         )),
         Object::make_integer(42)
     );
