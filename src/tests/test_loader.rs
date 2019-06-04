@@ -10,6 +10,10 @@ fn load_empty_class_and_class_methods() {
         @class-method Truth theAnswer
            "...to life, universe, and everything!"
             ^42
+        @class-method Truth whatItMeans
+            ^self theAnswer
+        @class-method Truth whatItMeansReally
+            ^{ self theAnswer } value
         @class Falsehood []
         @class-method Falsehood theAnswer
             ^13
@@ -19,6 +23,14 @@ fn load_empty_class_and_class_methods() {
     env.load(prog);
     assert_eq!(
         env.eval(parse_expr("Truth theAnswer")),
+        Object::make_integer(42)
+    );
+    assert_eq!(
+        env.eval(parse_expr("Truth whatItMeans")),
+        Object::make_integer(42)
+    );
+    assert_eq!(
+        env.eval(parse_expr("Truth whatItMeansReally")),
         Object::make_integer(42)
     );
     assert_eq!(

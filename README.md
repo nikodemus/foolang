@@ -45,7 +45,7 @@ _Isn't this just a really bad Smalltalk with effed up syntax?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 55h
+Time spent: 58h
 Estimated remaining: 55h
 
 - [x] AST
@@ -58,10 +58,10 @@ Estimated remaining: 55h
 - [x] Program parser: method parser
 - [x] Program parser: class-method parser
 - [x] Explicit representation for the global environment
-- [ ] Program loader. Est 10h.
-      - [ ] self
-      - [ ] createInstance
-      - [ ] instance variables
+- Program loader
+      - [x] self
+      - [ ] createInstance. 5h
+      - [ ] instance variables. 5h
       Both self and instance variables require that eval_in_env knows
       the current receiver. I think this is the perfect opportunity to
       turn lexenv into context that holds also self and a 'still-valid'
@@ -413,4 +413,3 @@ to what gcc -O0 would produce.
   - Cascade
   - Chain
   - Haibun
-  
