@@ -45,8 +45,8 @@ _Isn't this just a really bad Smalltalk with effed up syntax?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 59h
-Estimated remaining: 55h
+Time spent: 61h
+Estimated remaining: 45h
 
 - [x] AST
 - [x] Expression parser
@@ -60,8 +60,8 @@ Estimated remaining: 55h
 - [x] Explicit representation for the global environment
 - Program loader
       - [x] self
-      - [ ] createInstance. 5h
-      - [ ] instance variables. 5h
+      - [x] createInstance. 5h
+      - [x] instance variables. 5h
 - [x] Method evaluator (handles ^ in method bodies)
 - [X] ~~return in an expression context "just returns". Est 5h.~~
 - [x] "comments" (preserved in the AST and methods, returned using help: #selector) Est 5h.

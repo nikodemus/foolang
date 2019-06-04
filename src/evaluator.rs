@@ -323,17 +323,27 @@ fn eval_in_env(expr: Expr, env: &mut Lexenv, global: &GlobalEnv) -> Eval {
                 None => panic!("Unbound variable: {}", s),
             }
         }
-        Expr::Assign(Identifier(s), expr) => match env.index(&s) {
-            Some(idx) => {
-                let val = eval_in_env1(*expr, env, global);
-                env.set_index(idx, val.clone());
-                dup(val)
+        Expr::Assign(Identifier(s), expr) => {
+            let val = eval_in_env1(*expr, env, global);
+            match env.index(&s) {
+                Some(idx) => {
+                    env.set_index(idx, val.clone());
+                    dup(val)
+                }
+                None => {
+                    if let Some(obj) = &env.receiver {
+                        if let Some(idx) = global.find_slot(&obj.class, &s) {
+                            obj.set_slot(idx, val.clone());
+                            return dup(val);
+                        }
+                    }
+                    panic!(
+                        "Cannot assign to an unbound variable: {}. Available names: {:?}",
+                        s, env.names
+                    )
+                }
             }
-            None => panic!(
-                "Cannot assign to an unbound variable: {}. Available names: {:?}",
-                s, env.names
-            ),
-        },
+        }
         Expr::Send(expr, selector, args) => {
             let val = eval_in_env1(*expr, env, global);
             Eval::Result(
