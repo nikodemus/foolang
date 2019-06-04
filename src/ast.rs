@@ -27,18 +27,14 @@ pub enum Literal {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Cascade {
-    Unary(Identifier),
-    Binary(Identifier, Expr),
-    Keyword(Identifier, Vec<Expr>),
+    Message(Identifier, Vec<Expr>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Constant(Literal),
     Variable(Identifier),
-    Unary(Box<Expr>, Identifier),
-    Binary(Box<Expr>, Identifier, Box<Expr>),
-    Keyword(Box<Expr>, Identifier, Vec<Expr>),
+    Send(Box<Expr>, Identifier, Vec<Expr>),
     Block(Block),
     Assign(Identifier, Box<Expr>),
     Return(Box<Expr>),
