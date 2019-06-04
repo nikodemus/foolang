@@ -252,10 +252,11 @@ impl MethodImpl {
         match self {
             MethodImpl::Builtin(func) => func(receiver, args, global),
             MethodImpl::Evaluator(method) => {
+                let ctx = ctx.for_receiver(&receiver);
                 let mut env = Lexenv::from(method.parameters.clone(), args);
                 env.add_temporaries(method.temporaries.clone());
                 for stm in method.statements.iter() {
-                    if let Eval::Return(val) = eval_in_env(stm.to_owned(), &mut env, global, ctx) {
+                    if let Eval::Return(val) = eval_in_env(stm.to_owned(), &mut env, global, &ctx) {
                         return val;
                     }
                 }
@@ -302,6 +303,11 @@ impl Context {
     fn null() -> Context {
         Context { receiver: None }
     }
+    fn for_receiver(&self, receiver: &Object) -> Context {
+        Context {
+            receiver: Some(receiver.clone()),
+        }
+    }
 }
 
 enum Eval {
@@ -327,6 +333,12 @@ fn eval_in_env(expr: Expr, env: &mut Lexenv, global: &GlobalEnv, ctx: &Context) 
     match expr {
         Expr::Constant(lit) => dup(eval_literal(lit)),
         Expr::Variable(Identifier(s)) => {
+            if s == "self" {
+                match &ctx.receiver {
+                    None => panic!("Cannot use self outside methods."),
+                    Some(me) => return dup(me.clone()),
+                }
+            }
             if let Some(value) = env.find(&s) {
                 return dup(value.to_owned());
             }
