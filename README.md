@@ -349,3 +349,68 @@ to what gcc -O0 would produce.
   Check that value of arg cannot escape: cannot be stored,
   cannot be passed to as non-& arguments. If this is true
   then the object can be stack-allocated safely.
+
+- Names:
+
+  - Key
+     keylang - ok
+  - Base
+     baselang - ok
+  - Ah
+     ahlang - ok
+  - Aha
+     ahlang - ok
+  - One
+     onelang - ok
+  - Bat
+     batlang - ok
+  - Ha
+     halang ok
+
+- Rejects
+  - Fey
+     feylang ok
+     ...but there's faylang
+  - Sax
+     saxlang ok
+     ...but SAX = Simple Api for XML
+  - Kit kitlang taken
+   - star - starlang.org taken
+   - Song - songlang.org taken
+  - Basal (from basic)
+     basallang - meh
+  - Lune ("american haiku" -- perfect method lenght?)
+     lunelang - not terrible
+  - Logos (speechm logo)
+     logoslang - meh
+  - Ken (from range of knowledge: you're ment to ken what happens)
+     ken doll, nope
+  - Orrery (model of the world)
+     orrerylang is too long
+  - Syzygy (conjunction of opposites: dynamic environment and static compilation)
+     domains taken, syzygylang is too bizarre
+  - Ylem (primordial matter of the universe in big bang theory)
+     domains taken, ylemlang bleg
+  - Cant
+     no
+  - Docket
+     no
+  - Clue
+     no
+  - Idiom
+     no
+  - Shorthand
+  - Longhand
+  - Scribble
+  - Playpen
+  - Elegy
+  - Sonnet
+  - Cinquain
+  - Tanka
+  - Epigram
+  - Poem
+  - Verse
+  - Cascade
+  - Chain
+  - Haibun
+  
