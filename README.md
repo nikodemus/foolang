@@ -43,7 +43,7 @@ _Isn't this just a really bad Smalltalk with effed up syntax?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 62h
+Time spent: 65h
 Estimated remaining: 60h
 
 - [x] AST
