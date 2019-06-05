@@ -66,3 +66,19 @@ fn load_box() {
         Object::make_integer(42)
     );
 }
+
+#[test]
+fn load_block_closure() {
+    let prog = parse_program(
+        r#"
+        @class F []
+        @class-method F closeOver: value
+           ^{ :x | value + x }
+        @class-method F test
+            ^(self closeOver: 40) call: 2
+    "#,
+    );
+    let mut env = GlobalEnv::new();
+    env.load(prog);
+    assert_eq!(env.eval(parse_expr("F test")), Object::make_integer(42));
+}

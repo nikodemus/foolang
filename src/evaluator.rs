@@ -76,14 +76,14 @@ lazy_static! {
         let array = info.add_class("Array", vec![]);
         assert_eq!(array, CLASS_ARRAY, "Bad classId for Array");
 
-        let array = info.add_class("Block", vec![]);
-        assert_eq!(array, CLASS_BLOCK, "Bad classId for Block");
-
         let character = info.add_class("Character", vec![]);
         assert_eq!(character, CLASS_CHARACTER, "Bad classId for Character");
 
         let character = info.add_class("Class", vec![]);
         assert_eq!(character, CLASS_CLASS, "Bad classId for Class");
+
+        let closure = info.add_class("Closure", vec![]);
+        assert_eq!(closure, CLASS_CLOSURE, "Bad classId for Closure");
 
         let float = info.add_class("Float", vec![]);
         assert_eq!(float, CLASS_FLOAT);
@@ -156,8 +156,11 @@ impl GlobalEnv {
         args: Vec<Object>,
         env: &Lexenv,
     ) -> Object {
-        match receiver.datum {
-            Datum::Block(_) => method_block_apply(receiver, args, env, self),
+        match receiver.datum.clone() {
+            Datum::Closure(closure) => {
+                let env = &closure.env();
+                method_block_apply(receiver, args, &env, self)
+            }
             _ => self
                 .classes
                 .find_method(&receiver.class, &selector.0)
@@ -203,11 +206,11 @@ impl GlobalEnv {
     }
 }
 
-struct Lexenv<'a> {
-    receiver: Option<Object>,
-    names: Vec<Identifier>,
-    values: Vec<Object>,
-    parent: Option<&'a mut Lexenv<'a>>,
+pub struct Lexenv<'a> {
+    pub receiver: Option<Object>,
+    pub names: Vec<Identifier>,
+    pub values: Vec<Object>,
+    pub parent: Option<&'a mut Lexenv<'a>>,
 }
 
 impl<'a> Lexenv<'a> {
@@ -219,7 +222,11 @@ impl<'a> Lexenv<'a> {
             parent: None,
         }
     }
-    fn from(receiver: Option<Object>, names: Vec<Identifier>, values: Vec<Object>) -> Lexenv<'a> {
+    pub fn from(
+        receiver: Option<Object>,
+        names: Vec<Identifier>,
+        values: Vec<Object>,
+    ) -> Lexenv<'a> {
         Lexenv {
             receiver,
             names,
@@ -358,7 +365,7 @@ fn eval_in_env(expr: Expr, env: &mut Lexenv, global: &GlobalEnv) -> Eval {
                 val,
             )
         }
-        Expr::Block(b) => dup(Object::into_block(b)),
+        Expr::Block(b) => dup(Object::into_closure(b, env)),
         Expr::Cascade(expr, cascade) => {
             if let Eval::Result(_, receiver) = eval_in_env(*expr, env, global) {
                 Eval::Result(
@@ -479,22 +486,25 @@ fn method_help(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Objec
 fn method_block_apply(
     receiver: Object,
     mut args: Vec<Object>,
-    env: &Lexenv,
+    _env: &Lexenv,
     global: &GlobalEnv,
 ) -> Object {
     let mut res = receiver.clone();
     match receiver.datum {
-        Datum::Block(blk) => {
+        Datum::Closure(closure) => {
+            let blk = &closure.block;
             // FIXME: use lexenv methods!
             assert!(args.len() == blk.parameters.len());
-            let mut names = blk.parameters.clone();
+            let mut names = closure.names.clone();
+            names.append(&mut blk.parameters.clone());
             names.append(&mut blk.temporaries.clone());
-            for _ in 0..(names.len() - args.len()) {
-                // FIXME...
-                args.push(Object::make_integer(0));
+            let mut values = closure.values.clone();
+            values.append(&mut args);
+            for _ in 0..(names.len() - values.len()) {
+                values.push(Object::make_integer(0));
             }
             // FIXME: Should refer to outer scope...
-            let mut env = Lexenv::from(env.receiver.clone(), names, args);
+            let mut env = Lexenv::from(Some(closure.receiver.clone()), names, values);
             for stm in blk.statements.iter() {
                 // FIXME: returns
                 res = eval_in_env1(stm.to_owned(), &mut env, global);

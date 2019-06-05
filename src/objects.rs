@@ -1,4 +1,5 @@
 use crate::ast;
+use crate::evaluator::Lexenv;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -8,9 +9,9 @@ pub struct ClassId(pub usize);
 // NOTE: ALPHABETIC ORDER!
 // Matches the order of builtin classes in evaluator.rs
 pub const CLASS_ARRAY: ClassId = ClassId(0);
-pub const CLASS_BLOCK: ClassId = ClassId(1);
-pub const CLASS_CHARACTER: ClassId = ClassId(2);
-pub const CLASS_CLASS: ClassId = ClassId(3);
+pub const CLASS_CHARACTER: ClassId = ClassId(1);
+pub const CLASS_CLASS: ClassId = ClassId(2);
+pub const CLASS_CLOSURE: ClassId = ClassId(3);
 pub const CLASS_FLOAT: ClassId = ClassId(4);
 pub const CLASS_INTEGER: ClassId = ClassId(5);
 pub const CLASS_STRING: ClassId = ClassId(6);
@@ -39,8 +40,33 @@ impl PartialEq for SlotObject {
     }
 }
 
-// XXX: Would be nice to be able to switch between this and union
-// depending on a build option!
+#[derive(Debug)]
+pub struct ClosureObject {
+    pub block: ast::Block,
+    pub receiver: Object,
+    pub names: Vec<ast::Identifier>,
+    pub values: Vec<Object>,
+}
+
+impl ClosureObject {
+    pub fn env(&self) -> Lexenv {
+        Lexenv::from(
+            Some(self.receiver.clone()),
+            self.names.to_owned(),
+            self.values.to_owned(),
+        )
+    }
+}
+
+impl PartialEq for ClosureObject {
+    fn eq(&self, other: &Self) -> bool {
+        self as *const _ == other as *const _
+    }
+}
+
+// FIXME: Should have the contained objects holding the
+// Arc so things which are known to receive them could
+// receive owned.
 #[derive(Debug, PartialEq, Clone)]
 pub enum Datum {
     Integer(i64),
@@ -48,10 +74,10 @@ pub enum Datum {
     Character(Arc<String>),
     String(Arc<String>),
     Symbol(Arc<String>),
-    Block(Arc<ast::Block>),
     Array(Arc<Vec<Object>>),
     Class(Arc<ClassObject>),
     Instance(Arc<SlotObject>),
+    Closure(Arc<ClosureObject>),
 }
 
 impl Object {
@@ -67,6 +93,17 @@ impl Object {
             obj.slots.lock().unwrap()[idx] = val;
         } else {
             panic!("Cannot access slot of a non-slot object.");
+        }
+    }
+    pub fn into_closure(x: ast::Block, env: &Lexenv) -> Object {
+        Object {
+            class: CLASS_CLOSURE,
+            datum: Datum::Closure(Arc::new(ClosureObject {
+                block: x,
+                receiver: env.receiver.to_owned().unwrap(),
+                names: env.names.to_owned(),
+                values: env.values.to_owned(),
+            })),
         }
     }
     pub fn make_class(meta: ClassId, id: ClassId, name: &str) -> Object {
@@ -96,12 +133,6 @@ impl Object {
         Object {
             class: CLASS_INTEGER,
             datum: Datum::Integer(x),
-        }
-    }
-    pub fn into_block(x: ast::Block) -> Object {
-        Object {
-            class: CLASS_BLOCK,
-            datum: Datum::Block(Arc::new(x)),
         }
     }
     pub fn make_string(s: &str) -> Object {
