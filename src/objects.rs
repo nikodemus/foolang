@@ -43,19 +43,7 @@ impl PartialEq for SlotObject {
 #[derive(Debug)]
 pub struct ClosureObject {
     pub block: ast::Block,
-    pub receiver: Object,
-    pub names: Vec<ast::Identifier>,
-    pub values: Vec<Object>,
-}
-
-impl ClosureObject {
-    pub fn env(&self) -> Lexenv {
-        Lexenv::from(
-            Some(self.receiver.clone()),
-            self.names.to_owned(),
-            self.values.to_owned(),
-        )
-    }
+    pub env: Lexenv,
 }
 
 impl PartialEq for ClosureObject {
@@ -95,14 +83,12 @@ impl Object {
             panic!("Cannot access slot of a non-slot object.");
         }
     }
-    pub fn into_closure(x: ast::Block, env: &Lexenv) -> Object {
+    pub fn into_closure(block: ast::Block, env: &Lexenv) -> Object {
         Object {
             class: CLASS_CLOSURE,
             datum: Datum::Closure(Arc::new(ClosureObject {
-                block: x,
-                receiver: env.receiver.to_owned().unwrap(),
-                names: env.names.to_owned(),
-                values: env.values.to_owned(),
+                block,
+                env: env.to_owned(),
             })),
         }
     }

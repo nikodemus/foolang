@@ -5,6 +5,8 @@ use crate::objects::*;
 use lazy_static::lazy_static;
 use std::borrow::ToOwned;
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 type MethodFunc = fn(Object, Vec<Object>, &GlobalEnv) -> Object;
 
@@ -158,8 +160,8 @@ impl GlobalEnv {
     ) -> Object {
         match receiver.datum.clone() {
             Datum::Closure(closure) => {
-                let env = &closure.env();
-                method_block_apply(receiver, args, &env, self)
+                let env = &closure.env;
+                method_block_apply(receiver, args, env, self)
             }
             _ => self
                 .classes
@@ -202,56 +204,88 @@ impl GlobalEnv {
         }
     }
     pub fn eval(&self, expr: Expr) -> Object {
-        eval_in_env1(expr, &mut Lexenv::new(), self)
+        eval_in_env1(expr, &Lexenv::null(), self)
     }
 }
 
-pub struct Lexenv<'a> {
-    pub receiver: Option<Object>,
-    pub names: Vec<Identifier>,
-    pub values: Vec<Object>,
-    pub parent: Option<&'a mut Lexenv<'a>>,
-}
+#[derive(Debug, Clone)]
+pub struct Lexenv(pub Arc<LexenvFrame>);
 
-impl<'a> Lexenv<'a> {
-    fn new() -> Lexenv<'a> {
-        Lexenv {
+impl Lexenv {
+    fn null() -> Lexenv {
+        Lexenv(Arc::new(LexenvFrame {
             receiver: None,
             names: vec![],
-            values: vec![],
+            values: Mutex::new(vec![]),
             parent: None,
-        }
+        }))
     }
-    pub fn from(
-        receiver: Option<Object>,
-        names: Vec<Identifier>,
-        values: Vec<Object>,
-    ) -> Lexenv<'a> {
-        Lexenv {
-            receiver,
+
+    fn method(
+        receiver: &Object,
+        tmps: &Vec<Identifier>,
+        params: &Vec<Identifier>,
+        args: &Vec<Object>,
+    ) -> Lexenv {
+        let mut names = params.to_owned();
+        let mut values = args.to_owned();
+        for name in tmps.iter() {
+            names.push(name.clone());
+            // FIXME: Should be nil
+            values.push(Object::make_integer(0));
+        }
+        Lexenv(Arc::new(LexenvFrame {
+            receiver: Some(receiver.to_owned()),
             names,
-            values,
+            values: Mutex::new(values),
             parent: None,
-        }
+        }))
     }
-    fn add_temporaries(&mut self, temps: Vec<Identifier>) {
-        self.names.extend(temps);
-        for _ in 0..(self.names.len() - self.values.len()) {
-            // FIXME: nil
-            self.values.push(Object::make_integer(0));
+
+    pub fn extend(
+        &self,
+        tmps: &Vec<Identifier>,
+        params: &Vec<Identifier>,
+        args: &Vec<Object>,
+    ) -> Lexenv {
+        let mut names = params.to_owned();
+        let mut values = args.to_owned();
+        for name in tmps.iter() {
+            names.push(name.clone());
+            // FIXME: Should be nil
+            values.push(Object::make_integer(0));
         }
+        Lexenv(Arc::new(LexenvFrame {
+            receiver: self.0.receiver.to_owned(),
+            names,
+            values: Mutex::new(values),
+            parent: Some(self.to_owned()),
+        }))
     }
     fn index(&self, name: &str) -> Option<usize> {
-        self.names.iter().position(|id| &id.0 == name)
+        self.0.names.iter().position(|id| &id.0 == name)
     }
-    fn set_index(&mut self, index: usize, value: Object) {
-        self.values[index] = value;
+    fn set_index(&self, index: usize, value: Object) {
+        let mut values = self.0.values.lock().unwrap();
+        values[index] = value;
     }
-    fn find(&self, name: &str) -> Option<&Object> {
+}
+
+#[derive(Debug)]
+pub struct LexenvFrame {
+    pub receiver: Option<Object>,
+    pub names: Vec<Identifier>,
+    pub values: Mutex<Vec<Object>>,
+    pub parent: Option<Lexenv>,
+}
+
+impl LexenvFrame {
+    fn find(&self, name: &str) -> Option<Object> {
+        let values = self.values.lock().unwrap();
         match self.names.iter().position(|id| &id.0 == name) {
-            Some(p) => self.values.get(p),
+            Some(p) => values.get(p).map(|x| x.to_owned()),
             None => match &self.parent {
-                Some(env) => env.find(name),
+                Some(env) => env.0.find(name),
                 None => None,
             },
         }
@@ -275,10 +309,9 @@ impl MethodImpl {
         match self {
             MethodImpl::Builtin(func) => func(receiver, args, global),
             MethodImpl::Evaluator(method) => {
-                let mut env = Lexenv::from(Some(receiver.clone()), method.parameters.clone(), args);
-                env.add_temporaries(method.temporaries.clone());
+                let env = Lexenv::method(&receiver, &method.temporaries, &method.parameters, &args);
                 for stm in method.statements.iter() {
-                    if let Eval::Return(val) = eval_in_env(stm.to_owned(), &mut env, global) {
+                    if let Eval::Return(val) = eval_in_env(stm.to_owned(), &env, global) {
                         return val;
                     }
                 }
@@ -297,14 +330,14 @@ pub fn eval(expr: Expr) -> Object {
     GlobalEnv::new().eval(expr)
 }
 
-fn eval_in_env1(expr: Expr, env: &mut Lexenv, global: &GlobalEnv) -> Object {
+fn eval_in_env1(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Object {
     match eval_in_env(expr, env, global) {
         Eval::Result(value, _) => value,
         Eval::Return(_) => panic!("Unexpected return!"),
     }
 }
 
-fn eval_in_env(expr: Expr, env: &mut Lexenv, global: &GlobalEnv) -> Eval {
+fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
     fn dup(x: Object) -> Eval {
         Eval::Result(x.clone(), x)
     }
@@ -312,15 +345,15 @@ fn eval_in_env(expr: Expr, env: &mut Lexenv, global: &GlobalEnv) -> Eval {
         Expr::Constant(lit) => dup(eval_literal(lit)),
         Expr::Variable(Identifier(s)) => {
             if s == "self" {
-                match &env.receiver {
+                match &env.0.receiver {
                     None => panic!("Cannot use self outside methods."),
                     Some(me) => return dup(me.clone()),
                 }
             }
-            if let Some(value) = env.find(&s) {
+            if let Some(value) = env.0.find(&s) {
                 return dup(value.to_owned());
             }
-            if let Some(obj) = &env.receiver {
+            if let Some(obj) = &env.0.receiver {
                 if let Some(idx) = global.find_slot(&obj.class, &s) {
                     return dup(obj.slot(idx));
                 }
@@ -338,7 +371,7 @@ fn eval_in_env(expr: Expr, env: &mut Lexenv, global: &GlobalEnv) -> Eval {
                     dup(val)
                 }
                 None => {
-                    if let Some(obj) = &env.receiver {
+                    if let Some(obj) = &env.0.receiver {
                         if let Some(idx) = global.find_slot(&obj.class, &s) {
                             obj.set_slot(idx, val.clone());
                             return dup(val);
@@ -346,7 +379,7 @@ fn eval_in_env(expr: Expr, env: &mut Lexenv, global: &GlobalEnv) -> Eval {
                     }
                     panic!(
                         "Cannot assign to an unbound variable: {}. Available names: {:?}",
-                        s, env.names
+                        s, env.0.names
                     )
                 }
             }
@@ -485,7 +518,7 @@ fn method_help(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Objec
 
 fn method_block_apply(
     receiver: Object,
-    mut args: Vec<Object>,
+    args: Vec<Object>,
     _env: &Lexenv,
     global: &GlobalEnv,
 ) -> Object {
@@ -493,21 +526,10 @@ fn method_block_apply(
     match receiver.datum {
         Datum::Closure(closure) => {
             let blk = &closure.block;
-            // FIXME: use lexenv methods!
-            assert!(args.len() == blk.parameters.len());
-            let mut names = closure.names.clone();
-            names.append(&mut blk.parameters.clone());
-            names.append(&mut blk.temporaries.clone());
-            let mut values = closure.values.clone();
-            values.append(&mut args);
-            for _ in 0..(names.len() - values.len()) {
-                values.push(Object::make_integer(0));
-            }
-            // FIXME: Should refer to outer scope...
-            let mut env = Lexenv::from(Some(closure.receiver.clone()), names, values);
+            let env = closure.env.extend(&blk.temporaries, &blk.parameters, &args);
             for stm in blk.statements.iter() {
                 // FIXME: returns
-                res = eval_in_env1(stm.to_owned(), &mut env, global);
+                res = eval_in_env1(stm.to_owned(), &env, global);
             }
             res
         }
@@ -529,7 +551,7 @@ fn eval_literal(lit: Literal) -> Object {
 fn eval_cascade(
     receiver: Object,
     cascade: Vec<Cascade>,
-    env: &mut Lexenv,
+    env: &Lexenv,
     global: &GlobalEnv,
 ) -> Object {
     let mut value = receiver.clone();
