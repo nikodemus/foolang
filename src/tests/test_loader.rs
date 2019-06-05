@@ -82,3 +82,21 @@ fn load_block_closure() {
     env.load(prog);
     assert_eq!(env.eval(parse_expr("F test")), Object::make_integer(42));
 }
+
+#[test]
+fn load_block_closure_mutation() {
+    let prog = parse_program(
+        r#"
+        @class F []
+        @class-method F counter
+           |x| x := 0.
+           ^{ x := x + 1. x }
+        @class-method F test
+            |counter| counter := self counter.
+            ^[counter value . counter value . counter value]
+    "#,
+    );
+    let mut env = GlobalEnv::new();
+    env.load(prog);
+    assert_eq!(env.eval(parse_expr("F test")), Object::make_integer(42));
+}
