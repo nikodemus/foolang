@@ -105,15 +105,3 @@ fn eval_array_ctor() {
         ])
     );
 }
-
-/*
-#[test]
-fn eval_return() {
-    let m = parse_method("double ^self * 2. 123123132");
-    let env = Env::new();
-    env.find_class("Integer").add_method("double", m);
-    assert_eq!(
-        eval_in_env(parse_expr("21 double"), env),
-        Object::make_integer(42));
-}
-*/
