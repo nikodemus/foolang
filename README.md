@@ -237,6 +237,57 @@ will come!)
 
 ```
 
+## Refactoring Notes
+
+// Mutex needed because lazy_static! requires Sync, and
+// closures require mutability.
+type Bindings =  HashMap<Identifier,Mutex<Object>>
+// Rc needed because entire lexenv is captured by Closures,
+// which makes lifetimes unpredictable.
+type Lexenv = Rc<LexenvFrame>
+
+  env.eval(&Expr) -> Object
+
+  // env.rs
+  trait Env {
+    fn eval(&self, &Expr) -> Object
+    fn extend(&self, &Bindings) -> Lexenv {
+
+    }
+  }
+
+  impl Env for Lexenv {
+
+  }
+
+  impl Env for GlobalEnv {
+
+  }
+
+  // globalenv.rs
+  struct GlobalEnv {
+
+  }
+
+  impl GlobalEnv {
+
+  }
+
+  // lexenv.rs
+  struct LexenvFrame {
+    bindings: Bindings,
+    parent: Lexenv
+  }
+
+  impl Lexenv {
+
+  }
+
+Need to move things out of
+GlobalEnv is ok
+Not 100% sure about separate Lexenv and GlobalEnv, but it doesn't seem like a real issue.
+
+
 ## Parts
 
 ### Bootstrap Compiler
