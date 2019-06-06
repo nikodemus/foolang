@@ -107,3 +107,20 @@ fn load_block_closure_mutation() {
         ])
     );
 }
+
+#[test]
+fn load_return_from_method_block() {
+    let prog = parse_program(
+        r#"
+        @class Foo []
+        @class-method Foo test
+            Foo boo: { ^42 }.
+            ^31
+        @class-method Foo boo: blk
+            blk value
+        "#,
+    );
+    let mut env = GlobalEnv::new();
+    env.load(prog);
+    assert_eq!(env.eval(parse_expr("Foo test")), Object::make_integer(42));
+}
