@@ -157,7 +157,7 @@ impl GlobalEnv {
         selector: &Identifier,
         args: Vec<Object>,
         env: &Lexenv,
-    ) -> Object {
+    ) -> Eval {
         match receiver.datum.clone() {
             Datum::Closure(closure) => {
                 let env = &closure.env;
@@ -316,17 +316,19 @@ impl MethodImpl {
         args: Vec<Object>,
         _env: &Lexenv,
         global: &GlobalEnv,
-    ) -> Object {
+    ) -> Eval {
         match self {
-            MethodImpl::Builtin(func) => func(receiver, args, global),
+            MethodImpl::Builtin(func) => {
+                Eval::Result(func(receiver.clone(), args, global), receiver)
+            }
             MethodImpl::Evaluator(method) => {
                 let env = Lexenv::method(&receiver, &method.temporaries, &method.parameters, &args);
                 for stm in method.statements.iter() {
                     if let Eval::Return(val) = eval_in_env(stm.to_owned(), &env, global) {
-                        return val;
+                        return Eval::Result(val, receiver);
                     }
                 }
-                return receiver;
+                return Eval::Result(receiver.clone(), receiver);
             }
         }
     }
@@ -375,7 +377,10 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
             }
         }
         Expr::Assign(Identifier(s), expr) => {
-            let val = eval_in_env1(*expr, env, global);
+            let val = match eval_in_env(*expr, env, global) {
+                Eval::Result(val, _) => val,
+                Eval::Return(res) => return Eval::Return(res),
+            };
             if env.try_set_variable(&s, &val) {
                 return dup(val);
             }
@@ -388,26 +393,27 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
             panic!("Cannot assign to an unbound variable: {}.", s)
         }
         Expr::Send(expr, selector, args) => {
-            let val = eval_in_env1(*expr, env, global);
-            Eval::Result(
-                global.send(
-                    val.clone(),
-                    &selector,
-                    args.into_iter()
-                        .map(|arg| eval_in_env1(arg, env, global))
-                        .collect(),
-                    env,
-                ),
-                val,
-            )
+            let res = eval_in_env(*expr, env, global);
+            match &res {
+                Eval::Return(_) => res,
+                Eval::Result(val, _) => {
+                    let mut argvals = Vec::new();
+                    for arg in args.into_iter() {
+                        match eval_in_env(arg, env, global) {
+                            Eval::Return(r) => return Eval::Return(r),
+                            Eval::Result(argval, _) => {
+                                argvals.push(argval);
+                            }
+                        }
+                    }
+                    global.send(val.to_owned(), &selector, argvals, env)
+                }
+            }
         }
         Expr::Block(b) => dup(Object::into_closure(b, env)),
         Expr::Cascade(expr, cascade) => {
             if let Eval::Result(_, receiver) = eval_in_env(*expr, env, global) {
-                Eval::Result(
-                    eval_cascade(receiver.clone(), cascade, env, global),
-                    receiver,
-                )
+                eval_cascade(receiver.clone(), cascade, env, global)
             } else {
                 panic!("Unexpected return in cascade expression.")
             }
@@ -415,11 +421,18 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
         Expr::ArrayCtor(exprs) => {
             let mut data = Vec::new();
             for e in exprs.iter() {
-                data.push(eval_in_env1(e.to_owned(), env, global));
+                let elt = match eval_in_env(e.to_owned(), env, global) {
+                    Eval::Result(val, _) => val,
+                    Eval::Return(res) => return Eval::Return(res),
+                };
+                data.push(elt);
             }
             dup(Object::make_array(&data))
         }
-        Expr::Return(expr) => Eval::Return(eval_in_env1(*expr, env, global)),
+        Expr::Return(expr) => match eval_in_env(*expr, env, global) {
+            Eval::Result(val, _) => Eval::Return(val),
+            Eval::Return(val) => Eval::Return(val),
+        },
     }
 }
 
@@ -524,17 +537,21 @@ fn method_block_apply(
     args: Vec<Object>,
     _env: &Lexenv,
     global: &GlobalEnv,
-) -> Object {
+) -> Eval {
     let mut res = receiver.clone();
-    match receiver.datum {
+    match &receiver.datum {
         Datum::Closure(closure) => {
-            let blk = &closure.block;
+            let blk = &closure.block.clone();
             let env = closure.env.extend(&blk.temporaries, &blk.parameters, &args);
             for stm in blk.statements.iter() {
-                // FIXME: returns
-                res = eval_in_env1(stm.to_owned(), &env, global);
+                match eval_in_env(stm.to_owned(), &env, global) {
+                    Eval::Result(value, _) => {
+                        res = value;
+                    }
+                    Eval::Return(value) => return Eval::Return(value),
+                }
             }
-            res
+            Eval::Result(res, receiver)
         }
         _ => panic!("Bad receiver for block apply!"),
     }
@@ -551,25 +568,28 @@ fn eval_literal(lit: Literal) -> Object {
     }
 }
 
-fn eval_cascade(
-    receiver: Object,
-    cascade: Vec<Cascade>,
-    env: &Lexenv,
-    global: &GlobalEnv,
-) -> Object {
+fn eval_cascade(receiver: Object, cascade: Vec<Cascade>, env: &Lexenv, global: &GlobalEnv) -> Eval {
     let mut value = receiver.clone();
     for thing in cascade.iter() {
-        value = match thing {
-            Cascade::Message(selector, exprs) => global.send(
-                receiver.clone(),
-                selector,
-                exprs
-                    .iter()
-                    .map(|x| eval_in_env1(x.to_owned(), env, global))
-                    .collect(),
-                env,
-            ),
+        let res = match thing {
+            Cascade::Message(selector, exprs) => {
+                let mut vals = Vec::new();
+                for exp in exprs.iter() {
+                    let val = match eval_in_env(exp.to_owned(), env, global) {
+                        Eval::Result(val, _) => val,
+                        Eval::Return(val) => return Eval::Return(val),
+                    };
+                    vals.push(val);
+                }
+                global.send(receiver.clone(), selector, vals, env)
+            }
+        };
+        match res {
+            Eval::Result(val, _) => {
+                value = val;
+            }
+            Eval::Return(val) => return Eval::Return(val),
         }
     }
-    value
+    Eval::Result(value, receiver)
 }
