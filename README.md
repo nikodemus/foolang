@@ -37,7 +37,7 @@ Timeboxing in releases of 50-200h of work.
 
 ### WIP: 0.1.0: The Evaluator
 
-_Isn't this just a really bad Smalltalk with effed up syntax?_
+_Isn't this just a bad Smalltalk without any dev environment?_
 
 **Goals**: syntax v1, working evaluator, threads.
 
@@ -101,33 +101,18 @@ Estimated remaining: 50h
    - [ ] Indexing foo[x] as sugar for at:
    - [ ] Indexing assignment foo[x] := 42 as sugar for at:put:
 
-### Planned: 0.2.0: The Virtual Machine
+### Planned: 0.2.0: The IDE
 
-_Ok, kind of impressive you're doing all this, but why are you doing this?_
+_...a bad SmallTalk with an environment from the 80s?_
 
-**Goals**: self-hosted VM, getting to write code in foolang to figure out what works.
+**Goals**: a working Smalltalk-like IDE using Mirrors, actually writing foolang
+code.
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Estimated remaining: 140h.
-
-- [ ] Self-hosted AST -> IR compiler. Est 10h
-- [ ] Self-hosted IR -> bytecode compiler. Est 10h
-- [ ] Self-hosted IR -> Rust compiler. Est 40h. (subsetted for VM & GC implementation)
-- [ ] Self-hosted VM. Est. 40h.
-- [ ] Self-hosted GC. Est. 40h
-
-### Planned: 0.3.0: The IDE
-
-_...so now it's slow SmallTalk with effed up syntax and an environment from the 80s?_
-
-**Goals**: a working Smalltalk-like IDE using Mirrors, one that I don't mind using.
-
-**Non-goals**: performance beyond "IDE is usable", fancy extensions, useful class library.
-
 Estimated remaining: 120h
 
-- [ ] Wrap a rust server as foolang objects. 5h
+- [ ] Wrap a rust web server as foolang object. 5h
 - Bare bones class browser widget:
   - [ ] List classes and methods. 5h
   - [ ] Adding and editing classes. 5h
@@ -143,6 +128,23 @@ Estimated remaining: 120h
 - Add debugger widget. 20h
 - Add notebooks / sessions. 20h.
 - Integrate these components into a nice whole. 20h
+
+### Planned: 0.3.0: The Virtual Machine
+
+_Ok, kind of impressive you're doing all this, but why are you doing this?_
+
+**Goals**: self-hosted VM, ability to extend the environment in foolang.
+
+**Non-goals**: performance, fancy extensions, useful class library.
+
+Estimated remaining: 150h.
+
+- [ ] Self-hosted AST -> IR compiler. Est 10h
+- [ ] Self-hosted AST -> javascript compiler. Est 10h
+- [ ] Self-hosted IR -> bytecode compiler. Est 10h
+- [ ] Self-hosted IR -> Rust compiler. Est 40h. (subsetted for VM & GC implementation)
+- [ ] Self-hosted VM. Est. 40h.
+- [ ] Self-hosted GC. Est. 40h
 
 ### Planned: 0.4.0: The Compiler
 
