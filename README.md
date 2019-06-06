@@ -74,13 +74,8 @@ Estimated remaining: 50h
 - [ ] Read Pharo by Example. 10h
 - Optional extras:
   - [ ] String interpolation '1 + 1 = {1 + 1}'
-  - [ ] Rework string syntax: raw, interpolated, block
-  - [ ] Phrases
-  - [ ] # Comments
-  - [ ] Receiver stack (method local!)
   - [ ] => { :that | ... }
   - [ ] Message chaining with ,
-  - [ ] Prefix messages: -foo, !foo, ~foo
   - [ ] Record syntax [ foo: x signum. quux: y. ] and #[foo: 42]
   - [ ] Positional arguments in keyword messages:
         Blocks implement: value, value::::, and apply:
@@ -98,8 +93,13 @@ Estimated remaining: 50h
         6. == < > =< >=
         7. &&
         8. ||
-   - [ ] Indexing foo[x] as sugar for at:
-   - [ ] Indexing assignment foo[x] := 42 as sugar for at:put:
+  - [ ] Phrases
+  - [ ] Rework string syntax: raw, interpolated, block
+  - [ ] # Comments
+  - [ ] Receiver stack (method local!)
+  - [ ] Prefix messages: -foo, !foo, ~foo
+  - [ ] Indexing foo[x] as sugar for at:
+  - [ ] Indexing assignment foo[x] := 42 as sugar for at:put:
 
 ### Planned: 0.2.0: The IDE
 
@@ -113,6 +113,7 @@ code.
 Estimated remaining: 120h
 
 - [ ] Wrap a rust web server as foolang object. 5h
+      Actix bind: "/foo" to: { |request| ... }
 - Bare bones class browser widget:
   - [ ] List classes and methods. 5h
   - [ ] Adding and editing classes. 5h
