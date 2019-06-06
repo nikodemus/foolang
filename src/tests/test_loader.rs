@@ -98,5 +98,12 @@ fn load_block_closure_mutation() {
     );
     let mut env = GlobalEnv::new();
     env.load(prog);
-    assert_eq!(env.eval(parse_expr("F test")), Object::make_integer(42));
+    assert_eq!(
+        env.eval(parse_expr("F test")),
+        Object::make_array(&[
+            Object::make_integer(1),
+            Object::make_integer(2),
+            Object::make_integer(3)
+        ])
+    );
 }
