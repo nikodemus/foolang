@@ -262,12 +262,36 @@ impl Lexenv {
             parent: Some(self.to_owned()),
         }))
     }
+
     fn index(&self, name: &str) -> Option<usize> {
         self.0.names.iter().position(|id| &id.0 == name)
     }
-    fn set_index(&self, index: usize, value: Object) {
-        let mut values = self.0.values.lock().unwrap();
-        values[index] = value;
+
+    fn try_set_variable(&self, name: &str, val: &Object) -> bool {
+        match self.index(name) {
+            Some(idx) => {
+                let mut values = self.0.values.lock().unwrap();
+                values[idx] = val.to_owned();
+                true
+            }
+            None => match &self.0.parent {
+                Some(parent) => parent.try_set_variable(name, val),
+                None => false,
+            },
+        }
+    }
+
+    fn find(&self, name: &str) -> Option<Object> {
+        match self.index(name) {
+            Some(p) => {
+                let values = self.0.values.lock().unwrap();
+                values.get(p).map(|x| x.to_owned())
+            }
+            None => match &self.0.parent {
+                Some(env) => env.find(name),
+                None => None,
+            },
+        }
     }
 }
 
@@ -277,19 +301,6 @@ pub struct LexenvFrame {
     pub names: Vec<Identifier>,
     pub values: Mutex<Vec<Object>>,
     pub parent: Option<Lexenv>,
-}
-
-impl LexenvFrame {
-    fn find(&self, name: &str) -> Option<Object> {
-        let values = self.values.lock().unwrap();
-        match self.names.iter().position(|id| &id.0 == name) {
-            Some(p) => values.get(p).map(|x| x.to_owned()),
-            None => match &self.parent {
-                Some(env) => env.0.find(name),
-                None => None,
-            },
-        }
-    }
 }
 
 #[derive(Clone)]
@@ -350,7 +361,7 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
                     Some(me) => return dup(me.clone()),
                 }
             }
-            if let Some(value) = env.0.find(&s) {
+            if let Some(value) = env.find(&s) {
                 return dup(value.to_owned());
             }
             if let Some(obj) = &env.0.receiver {
@@ -365,24 +376,16 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
         }
         Expr::Assign(Identifier(s), expr) => {
             let val = eval_in_env1(*expr, env, global);
-            match env.index(&s) {
-                Some(idx) => {
-                    env.set_index(idx, val.clone());
-                    dup(val)
-                }
-                None => {
-                    if let Some(obj) = &env.0.receiver {
-                        if let Some(idx) = global.find_slot(&obj.class, &s) {
-                            obj.set_slot(idx, val.clone());
-                            return dup(val);
-                        }
-                    }
-                    panic!(
-                        "Cannot assign to an unbound variable: {}. Available names: {:?}",
-                        s, env.0.names
-                    )
+            if env.try_set_variable(&s, &val) {
+                return dup(val);
+            }
+            if let Some(obj) = &env.0.receiver {
+                if let Some(idx) = global.find_slot(&obj.class, &s) {
+                    obj.set_slot(idx, val.clone());
+                    return dup(val);
                 }
             }
+            panic!("Cannot assign to an unbound variable: {}.", s)
         }
         Expr::Send(expr, selector, args) => {
             let val = eval_in_env1(*expr, env, global);
