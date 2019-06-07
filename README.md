@@ -44,7 +44,7 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 **Non-goals**: performance, fancy extensions, useful class library.
 
 Time spent: 69h
-Estimated remaining: 45h
+Estimated remaining: 35h
 
 - [x] AST
 - [x] Expression parser
@@ -66,7 +66,6 @@ Estimated remaining: 45h
 - [x] Blocks are closures (variables). 5h.
 - [x] Blocks are closures (return). 5h
 - [x] Local variables in methods. 5h
-- [ ] Source formatter. Est 10h.
 - [ ] Terminal playground. Est 5h.
 - [ ] Source file execution. Est 5h.
 - [ ] Threads. Est 10h.
@@ -110,8 +109,9 @@ code.
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Estimated remaining: 120h
+Estimated remaining: 110h
 
+- [ ] Source formatter. Est 10h.
 - [ ] Wrap a rust web server as foolang object. 5h
       Actix bind: "/foo" to: { |request| ... }
 - Bare bones class browser widget:
@@ -127,7 +127,6 @@ Estimated remaining: 120h
 - Add a finder (opens browser) widget. 5h
 - Add an inspector widget. 10h
 - Add debugger widget. 20h
-- Add notebooks / sessions. 20h.
 - Integrate these components into a nice whole. 20h
 
 ### Planned: 0.3.0: The Virtual Machine
