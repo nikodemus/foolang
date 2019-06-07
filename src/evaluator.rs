@@ -1,10 +1,14 @@
 use crate::ast::{
-    Cascade, ClassDescription, Expr, Identifier, Literal, Method, MethodDescription, ProgramElement,
+    Cascade, ClassDescription, Expr, Identifier, Literal, Method, MethodDescription,
+    PlaygroundElement, ProgramElement,
 };
 use crate::objects::*;
+use crate::parser::parse_playground;
+use crate::parser::parse_program;
 use lazy_static::lazy_static;
 use std::borrow::ToOwned;
 use std::collections::HashMap;
+use std::fs;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -102,6 +106,12 @@ lazy_static! {
         info.add_builtin(&integer, "+", method_plus);
         info.add_builtin(&integer, "-", method_minus);
 
+        let stdin = info.add_class("Stdin", vec![]);
+        assert_eq!(stdin, CLASS_STDIN);
+
+        let stdout = info.add_class("Stdout", vec![]);
+        assert_eq!(stdout, CLASS_STDOUT);
+
         let string = info.add_class("String", vec![]);
         assert_eq!(string, CLASS_STRING);
 
@@ -169,38 +179,57 @@ impl GlobalEnv {
                 .invoke(receiver, args, env, self),
         }
     }
-    pub fn load(&mut self, program: Vec<ProgramElement>) {
-        for p in program {
-            match p {
-                ProgramElement::Class(ClassDescription { name, slots }) => {
-                    self.add_class(&name.0, slots);
-                }
-                ProgramElement::InstanceMethod(MethodDescription { class, method }) => {
-                    match self.variables.get(&class.0) {
-                        Some(Object {
-                            class: _,
-                            datum: Datum::Class(classobj),
-                        }) => {
-                            let mname = method.selector.0.clone();
-                            self.classes.add_method(&classobj.id, &mname, method);
-                        }
-                        None => panic!("Cannot install method in unknown class: {}", class.0),
-                        _ => panic!("Cannot install methods in non-class objects."),
+    pub fn load_file(&mut self, fname: &str) {
+        self.load(parse_program(
+            fs::read_to_string(fname)
+                .expect("Could not load file.")
+                .as_str(),
+        ))
+    }
+    pub fn eval_str(&mut self, text: &str) -> Object {
+        match parse_playground(text) {
+            PlaygroundElement::ProgramElement(pe) => self.load_program_element(pe),
+            PlaygroundElement::Expr(ex) => self.eval(ex),
+        }
+    }
+    fn load_program_element(&mut self, program_element: ProgramElement) -> Object {
+        match program_element {
+            ProgramElement::Class(ClassDescription { name, slots }) => {
+                self.add_class(&name.0, slots);
+                Object::make_symbol(&name.0)
+            }
+            ProgramElement::InstanceMethod(MethodDescription { class, method }) => {
+                match self.variables.get(&class.0) {
+                    Some(Object {
+                        class: _,
+                        datum: Datum::Class(classobj),
+                    }) => {
+                        let mname = method.selector.0.clone();
+                        self.classes.add_method(&classobj.id, &mname, method);
+                        Object::make_symbol(&mname)
                     }
-                }
-                ProgramElement::ClassMethod(MethodDescription { class, method }) => {
-                    match self.variables.get(&class.0) {
-                        Some(Object {
-                            class: classid,
-                            datum: _,
-                        }) => {
-                            let mname = method.selector.0.clone();
-                            self.classes.add_method(&classid, &mname, method);
-                        }
-                        None => panic!("Cannot install class-method in unknown class: {}", class.0),
-                    }
+                    None => panic!("Cannot install method in unknown class: {}", class.0),
+                    _ => panic!("Cannot install methods in non-class objects."),
                 }
             }
+            ProgramElement::ClassMethod(MethodDescription { class, method }) => {
+                match self.variables.get(&class.0) {
+                    Some(Object {
+                        class: classid,
+                        datum: _,
+                    }) => {
+                        let mname = method.selector.0.clone();
+                        self.classes.add_method(&classid, &mname, method);
+                        Object::make_symbol(&mname)
+                    }
+                    None => panic!("Cannot install class-method in unknown class: {}", class.0),
+                }
+            }
+        }
+    }
+    pub fn load(&mut self, program: Vec<ProgramElement>) {
+        for p in program {
+            self.load_program_element(p);
         }
     }
     pub fn eval(&self, expr: Expr) -> Object {

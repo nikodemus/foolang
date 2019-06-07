@@ -42,6 +42,11 @@ pub enum Expr {
     ArrayCtor(Vec<Expr>),
 }
 
+pub enum PlaygroundElement {
+    Expr(Expr),
+    ProgramElement(ProgramElement),
+}
+
 pub type Program = Vec<ProgramElement>;
 
 #[derive(Debug, PartialEq, Clone)]

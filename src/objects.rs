@@ -15,8 +15,10 @@ pub const CLASS_CLASS: ClassId = ClassId(2);
 pub const CLASS_CLOSURE: ClassId = ClassId(3);
 pub const CLASS_FLOAT: ClassId = ClassId(4);
 pub const CLASS_INTEGER: ClassId = ClassId(5);
-pub const CLASS_STRING: ClassId = ClassId(6);
-pub const CLASS_SYMBOL: ClassId = ClassId(7);
+pub const CLASS_STDIN: ClassId = ClassId(6);
+pub const CLASS_STDOUT: ClassId = ClassId(7);
+pub const CLASS_STRING: ClassId = ClassId(8);
+pub const CLASS_SYMBOL: ClassId = ClassId(9);
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Object {

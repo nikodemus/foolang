@@ -1,13 +1,18 @@
 use std::str::FromStr;
 use crate::ast::{
   Identifier, Expr, Literal, Cascade, Method, Block, ClassDescription, ProgramElement, Program,
-  MethodDescription
+  MethodDescription, PlaygroundElement
 };
 use crate::utils::{
   prepend, chop, chopchop,
 };
 
 grammar;
+
+pub PlaygroundElement: PlaygroundElement = {
+  Expression => PlaygroundElement::Expr(<>),
+  ProgramElement => PlaygroundElement::ProgramElement(<>),
+}
 
 pub Program: Program = {
   <e:ProgramElement> <p:Program> => prepend(e, p),

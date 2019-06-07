@@ -320,33 +320,9 @@ fn test_easy() {
 
 */
 use foolang::evaluator::GlobalEnv;
-use foolang::parser::*;
-use std::io::{self, BufRead, Write};
 
 fn main() {
-    println!("This is foolang 0.1.0");
-    let env = GlobalEnv::new();
-    // Ok, so I need to be able tell where methods end.
-    //
-    // - Use a terminating character like . or ! or @
-    // - Change the syntax to use {} around the body
-    // - Terminate on an empty line
-    //
-    // Can check if starts on @ -> wait for empty line
-    //
-    // Can I tell incomplete parses apart from bad ones?
-    let prog = r#"
-    @class REPL []
-    @class-method REPL run
-        { true } while: {
-            Stdin parseExpr eval print.
-        }
-    "#;
-    print!("> ");
-    io::stdout().flush().unwrap();
-    for line in io::stdin().lock().lines() {
-        println!("{}", env.eval(parse_expr(line.unwrap().as_str())));
-        print!("> ");
-        io::stdout().flush().unwrap();
-    }
+    let mut env = GlobalEnv::new();
+    env.load_file("foo/playground.foo");
+    env.eval_str("Playground terminal run");
 }
