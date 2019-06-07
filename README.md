@@ -44,7 +44,7 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 **Non-goals**: performance, fancy extensions, useful class library.
 
 Time spent: 69h
-Estimated remaining: 35h
+Estimated remaining: 36h
 
 - [x] AST
 - [x] Expression parser
@@ -66,7 +66,10 @@ Estimated remaining: 35h
 - [x] Blocks are closures (variables). 5h.
 - [x] Blocks are closures (return). 5h
 - [x] Local variables in methods. 5h
-- [ ] Terminal playground. Est 5h.
+- Terminal playground.
+  - [x] Ability to evaluate expressions. 1h.
+  - [ ] Ability to evaluate class and method specs. 1h
+  - [ ] Ability to let-bind and assign variables. 5h
 - [ ] Source file execution. Est 5h.
 - [ ] Threads. Est 10h.
 - [ ] Benchmarks: foolang, pharo, python, SBCL, clang. Est 5h.
