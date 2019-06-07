@@ -69,6 +69,7 @@ Estimated remaining: 36h
 - Terminal playground.
   - [x] Ability to evaluate expressions. 1h.
   - [ ] Ability to evaluate class and method specs. 1h
+        PlaygroundElement := Expr || ProgramElement
   - [ ] Ability to let-bind and assign variables. 5h
 - [ ] Source file execution. Est 5h.
 - [ ] Threads. Est 10h.
