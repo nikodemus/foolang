@@ -1,5 +1,6 @@
 use crate::ast;
 use crate::evaluator::Lexenv;
+use std::fmt;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -21,6 +22,30 @@ pub const CLASS_SYMBOL: ClassId = ClassId(7);
 pub struct Object {
     pub class: ClassId,
     pub datum: Datum,
+}
+
+impl fmt::Display for Object {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self.datum {
+            Datum::Integer(i) => write!(f, "{}", i),
+            Datum::Float(x) => write!(f, "{}", x),
+            Datum::Character(c) => write!(f, "${}", &c),
+            Datum::String(s) => write!(f, r#"'{}'"#, &s),
+            Datum::Symbol(s) => write!(f, "#{}", &s),
+            Datum::Array(vec) => {
+                write!(f, "#")?;
+                let mut sep = "[";
+                for elt in vec.iter() {
+                    write!(f, "{}{}", sep, elt)?;
+                    sep = " ";
+                }
+                write!(f, "]")
+            }
+            Datum::Class(class) => write!(f, "#<class {}>", class.name),
+            Datum::Instance(_slot) => write!(f, "#<obj>"),
+            Datum::Closure(_closure) => write!(f, "#<closure>"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]

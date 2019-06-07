@@ -319,14 +319,13 @@ fn test_easy() {
 }
 
 */
-use crate::ast;
-use crate::evaluator::GlobalEnv;
-use crate::parser::*;
-use std::io::{self, BufRead};
+use foolang::evaluator::GlobalEnv;
+use foolang::parser::*;
+use std::io::{self, BufRead, Write};
 
 fn main() {
     println!("This is foolang 0.1.0");
-    let mut env = GlobalEnv::new();
+    let env = GlobalEnv::new();
     // Ok, so I need to be able tell where methods end.
     //
     // - Use a terminating character like . or ! or @
@@ -336,8 +335,12 @@ fn main() {
     // Can check if starts on @ -> wait for empty line
     //
     // Can I tell incomplete parses apart from bad ones?
+
+    print!("> ");
+    io::stdout().flush().unwrap();
     for line in io::stdin().lock().lines() {
-        // match parser::parse_foolang(line.unwrap()) {
-        // }
+        println!("{}", env.eval(parse_expr(line.unwrap().as_str())));
+        print!("> ");
+        io::stdout().flush().unwrap();
     }
 }
