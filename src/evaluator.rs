@@ -204,12 +204,23 @@ impl GlobalEnv {
         }
     }
     pub fn eval(&self, expr: Expr) -> Object {
-        eval_in_env1(expr, &Lexenv::null(), self)
+        match eval_in_env(expr, &Lexenv::null(), self) {
+            Eval::Result(value, _) => value,
+            Eval::Return(val, to) => {
+                panic!("Unexpected return!\n  value = {:?}\n  to = {:?}", val, to)
+            }
+        }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Lexenv(pub Arc<LexenvFrame>);
+
+impl PartialEq for Lexenv {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+}
 
 impl Lexenv {
     fn null() -> Lexenv {
@@ -240,6 +251,10 @@ impl Lexenv {
             values: Mutex::new(values),
             parent: None,
         }))
+    }
+
+    pub fn parent(&self) -> Option<Lexenv> {
+        self.0.parent.clone()
     }
 
     pub fn extend(
@@ -324,8 +339,12 @@ impl MethodImpl {
             MethodImpl::Evaluator(method) => {
                 let env = Lexenv::method(&receiver, &method.temporaries, &method.parameters, &args);
                 for stm in method.statements.iter() {
-                    if let Eval::Return(val) = eval_in_env(stm.to_owned(), &env, global) {
-                        return Eval::Result(val, receiver);
+                    if let Eval::Return(val, to) = eval_in_env(stm.to_owned(), &env, global) {
+                        if to == Some(env) || to == None {
+                            return Eval::Result(val, receiver);
+                        } else {
+                            return Eval::Return(val, to);
+                        }
                     }
                 }
                 return Eval::Result(receiver.clone(), receiver);
@@ -336,18 +355,11 @@ impl MethodImpl {
 
 enum Eval {
     Result(Object, Object),
-    Return(Object),
+    Return(Object, Option<Lexenv>),
 }
 
 pub fn eval(expr: Expr) -> Object {
     GlobalEnv::new().eval(expr)
-}
-
-fn eval_in_env1(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Object {
-    match eval_in_env(expr, env, global) {
-        Eval::Result(value, _) => value,
-        Eval::Return(_) => panic!("Unexpected return!"),
-    }
 }
 
 fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
@@ -379,7 +391,7 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
         Expr::Assign(Identifier(s), expr) => {
             let val = match eval_in_env(*expr, env, global) {
                 Eval::Result(val, _) => val,
-                Eval::Return(res) => return Eval::Return(res),
+                Eval::Return(res, to) => return Eval::Return(res, to),
             };
             if env.try_set_variable(&s, &val) {
                 return dup(val);
@@ -395,12 +407,12 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
         Expr::Send(expr, selector, args) => {
             let res = eval_in_env(*expr, env, global);
             match &res {
-                Eval::Return(_) => res,
+                Eval::Return(_, _) => res,
                 Eval::Result(val, _) => {
                     let mut argvals = Vec::new();
                     for arg in args.into_iter() {
                         match eval_in_env(arg, env, global) {
-                            Eval::Return(r) => return Eval::Return(r),
+                            Eval::Return(r, to) => return Eval::Return(r, to),
                             Eval::Result(argval, _) => {
                                 argvals.push(argval);
                             }
@@ -423,15 +435,18 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
             for e in exprs.iter() {
                 let elt = match eval_in_env(e.to_owned(), env, global) {
                     Eval::Result(val, _) => val,
-                    Eval::Return(res) => return Eval::Return(res),
+                    Eval::Return(res, to) => return Eval::Return(res, to),
                 };
                 data.push(elt);
             }
             dup(Object::make_array(&data))
         }
         Expr::Return(expr) => match eval_in_env(*expr, env, global) {
-            Eval::Result(val, _) => Eval::Return(val),
-            Eval::Return(val) => Eval::Return(val),
+            Eval::Result(val, _) => {
+                println!("return from: {:?}", env);
+                Eval::Return(val, env.parent())
+            }
+            Eval::Return(val, to) => Eval::Return(val, to),
         },
     }
 }
@@ -548,7 +563,7 @@ fn method_block_apply(
                     Eval::Result(value, _) => {
                         res = value;
                     }
-                    Eval::Return(value) => return Eval::Return(value),
+                    Eval::Return(value, to) => return Eval::Return(value, to),
                 }
             }
             Eval::Result(res, receiver)
@@ -577,7 +592,7 @@ fn eval_cascade(receiver: Object, cascade: Vec<Cascade>, env: &Lexenv, global: &
                 for exp in exprs.iter() {
                     let val = match eval_in_env(exp.to_owned(), env, global) {
                         Eval::Result(val, _) => val,
-                        Eval::Return(val) => return Eval::Return(val),
+                        Eval::Return(val, to) => return Eval::Return(val, to),
                     };
                     vals.push(val);
                 }
@@ -588,7 +603,7 @@ fn eval_cascade(receiver: Object, cascade: Vec<Cascade>, env: &Lexenv, global: &
             Eval::Result(val, _) => {
                 value = val;
             }
-            Eval::Return(val) => return Eval::Return(val),
+            Eval::Return(val, to) => return Eval::Return(val, to),
         }
     }
     Eval::Result(value, receiver)
