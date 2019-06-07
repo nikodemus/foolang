@@ -335,7 +335,13 @@ fn main() {
     // Can check if starts on @ -> wait for empty line
     //
     // Can I tell incomplete parses apart from bad ones?
-
+    let prog = r#"
+    @class REPL []
+    @class-method REPL run
+        { true } while: {
+            Stdin parseExpr eval print.
+        }
+    "#;
     print!("> ");
     io::stdout().flush().unwrap();
     for line in io::stdin().lock().lines() {
