@@ -14,9 +14,9 @@ pub const CLASS_CHARACTER: ClassId = ClassId(1);
 pub const CLASS_CLASS: ClassId = ClassId(2);
 pub const CLASS_CLOSURE: ClassId = ClassId(3);
 pub const CLASS_FLOAT: ClassId = ClassId(4);
-pub const CLASS_INTEGER: ClassId = ClassId(5);
-pub const CLASS_STDIN: ClassId = ClassId(6);
-pub const CLASS_STDOUT: ClassId = ClassId(7);
+pub const CLASS_INPUT: ClassId = ClassId(5);
+pub const CLASS_INTEGER: ClassId = ClassId(6);
+pub const CLASS_OUTPUT: ClassId = ClassId(7);
 pub const CLASS_STRING: ClassId = ClassId(8);
 pub const CLASS_SYMBOL: ClassId = ClassId(9);
 
@@ -79,6 +79,9 @@ impl PartialEq for ClosureObject {
     }
 }
 
+#[derive(Debug)]
+pub struct InputStream(pub Box<dyn std::io::Read + Send + Sync>);
+
 // FIXME: Should have the contained objects holding the
 // Arc so things which are known to receive them could
 // receive owned.
@@ -93,6 +96,8 @@ pub enum Datum {
     Class(Arc<ClassObject>),
     Instance(Arc<SlotObject>),
     Closure(Arc<ClosureObject>),
+    Input(Arc<InputStream>),
+    Output(Arc<Box<dyn std::io::Write + Send + Sync>>),
 }
 
 impl Object {
@@ -140,6 +145,18 @@ impl Object {
         Object {
             class: CLASS_FLOAT,
             datum: Datum::Float(x),
+        }
+    }
+    pub fn make_input_stream(input: Box<dyn std::io::Read + Send + Sync>) -> Object {
+        Object {
+            class: CLASS_INPUT,
+            datum: Datum::Input(Arc::new(input)),
+        }
+    }
+    pub fn make_output_stream(output: Box<dyn std::io::Write + Send + Sync>) -> Object {
+        Object {
+            class: CLASS_OUTPUT,
+            datum: Datum::Output(Arc::new(output)),
         }
     }
     pub fn make_integer(x: i64) -> Object {

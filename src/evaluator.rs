@@ -98,6 +98,9 @@ lazy_static! {
         info.add_builtin(&float, "+", method_plus);
         info.add_builtin(&float, "-", method_minus);
 
+        let stdin = info.add_class("InputStream", vec![]);
+        assert_eq!(stdin, CLASS_INPUT);
+
         let integer = info.add_class("Integer", vec![]);
         assert_eq!(integer, CLASS_INTEGER);
         info.add_builtin(&integer, "neg", method_neg);
@@ -106,11 +109,8 @@ lazy_static! {
         info.add_builtin(&integer, "+", method_plus);
         info.add_builtin(&integer, "-", method_minus);
 
-        let stdin = info.add_class("Stdin", vec![]);
-        assert_eq!(stdin, CLASS_STDIN);
-
-        let stdout = info.add_class("Stdout", vec![]);
-        assert_eq!(stdout, CLASS_STDOUT);
+        let stdin = info.add_class("OutputStream", vec![]);
+        assert_eq!(stdin, CLASS_OUTPUT);
 
         let string = info.add_class("String", vec![]);
         assert_eq!(string, CLASS_STRING);
@@ -123,6 +123,8 @@ lazy_static! {
     static ref GLOBALS: HashMap<String, Object> = {
         let mut m: HashMap<String, Object> = HashMap::new();
         m.insert(String::from("PI"), Object::make_float(std::f64::consts::PI));
+        m.insert(String::from("STDIN"), Object::make_input_stream(Box::new(std::io::stdin())));
+        m.insert(String::from("STDOUT"), Object::make_output_stream(Box::new(std::io::stdout())));
         m
     };
 }

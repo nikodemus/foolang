@@ -43,8 +43,8 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 69h
-Estimated remaining: 36h
+Time spent: 72h
+Estimated remaining: 44h
 
 - [x] AST
 - [x] Expression parser
@@ -66,11 +66,22 @@ Estimated remaining: 36h
 - [x] Blocks are closures (variables). 5h.
 - [x] Blocks are closures (return). 5h
 - [x] Local variables in methods. 5h
-- Terminal playground.
-  - [x] Ability to evaluate expressions. 1h.
-  - [ ] Ability to evaluate class and method specs. 1h
-        PlaygroundElement := Expr || ProgramElement
-  - [ ] Ability to let-bind and assign variables. 5h
+- Terminal REPL
+  - [x] REPL implemented in foolang.
+  - [ ] Input stdin. 1h
+  - [ ] Input readLine. 1h
+  - [ ] Input stdout. 1h
+  - [ ] Output print: 1h
+  - [ ] Output flush 1h
+  - [ ] Output newline 1h
+  - [ ] Foolang compiler 1h
+  - [ ] Compiler tryParse 1h
+  - [ ] Compiler evaluate 1h
+  - [ ] String new 1h
+  - [ ] String append 1h
+  - [ ] String clear 1h
+  - [ ] Block repeat 1h
+  - [ ] Block whileFalse 1h
 - [ ] Source file execution. Est 5h.
 - [ ] Threads. Est 10h.
 - [ ] Benchmarks: foolang, pharo, python, SBCL, clang. Est 5h.
@@ -351,6 +362,21 @@ This should compile into decent native code. Something close enough
 to what gcc -O0 would produce.
 
 ## MMmmmaaaybe
+
+- Stdout problem solution:
+
+  1. I cannot fully fix this given that users can create their own
+     equivalents by using the FD directly. So I should not try.
+
+  2. So there is no reason not to have a System stdout method which
+     returns the stream. That is not the nice way to use it, though,
+     just the medium layer.
+
+  3. For niceness have actor wrapping the object
+
+        @actor Stdout = System stdout
+
+  4. ...initially I can just use System stdout.
 
 - Considering how I'm planning to use files in but have a class browser
   as the editing environment... maybe I should go "full Java" and have
