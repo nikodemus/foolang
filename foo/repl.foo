@@ -14,7 +14,7 @@
         text append: input readLine.
         compiler tryParse: text
     }
-    whileFalse.
+    repeatWhileFalse.
     text clear
 
 @method REPL eval

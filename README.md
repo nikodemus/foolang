@@ -43,8 +43,8 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 77h
-Estimated remaining: 40h
+Time spent: 78h
+Estimated remaining: 39h
 
 - [x] AST
 - [x] Expression parser
@@ -81,7 +81,7 @@ Estimated remaining: 40h
   - [x] String append 1h
   - [x] String clear 1h
   - [x] Block repeat 1h
-  - [ ] Block whileFalse 1h
+  - [x] Block repeatWhileFalse 1h
   - [x] Booleans. Unest
 - [ ] Source file execution. Est 5h.
 - [ ] Threads. Est 10h.

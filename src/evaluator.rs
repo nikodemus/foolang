@@ -105,8 +105,9 @@ lazy_static! {
         let (class, _) = env.add_builtin_class("Closure");
         assert_eq!(class, CLASS_CLOSURE, "Bad classId for Closure");
         env.classes.add_builtin(&class, "repeat", method_closure_repeat);
-        env.classes.add_builtin(&class, "value", method_closure_apply);
+        env.classes.add_builtin(&class, "repeatWhileFalse", method_closure_repeatwhilefalse);
         env.classes.add_builtin(&class, "value:", method_closure_apply);
+        env.classes.add_builtin(&class, "value", method_closure_apply);
         env.classes.add_builtin(&class, "value:value:", method_closure_apply);
         env.classes.add_builtin(&class, "value:value:value:", method_closure_apply);
 
@@ -752,6 +753,29 @@ fn method_closure_repeat(receiver: Object, args: Vec<Object>, global: &GlobalEnv
             if let Eval::Return(val, to) = closure_apply(receiver.clone(), &closure, &args, global)
             {
                 return Eval::Return(val, to);
+            }
+        },
+        _ => panic!("Bad receiver for block apply!"),
+    }
+}
+
+fn method_closure_repeatwhilefalse(
+    receiver: Object,
+    args: Vec<Object>,
+    global: &GlobalEnv,
+) -> Eval {
+    match receiver.datum.clone() {
+        Datum::Closure(closure) => loop {
+            match closure_apply(receiver.clone(), &closure, &args, global) {
+                Eval::Return(val, to) => return Eval::Return(val, to),
+                Eval::Result(val, _) => {
+                    if let Datum::Boolean(false) = val.datum {
+                        // repeat
+                        ;
+                    } else {
+                        return make_method_result(receiver.clone(), val);
+                    }
+                }
             }
         },
         _ => panic!("Bad receiver for block apply!"),

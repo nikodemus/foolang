@@ -111,3 +111,20 @@ fn block_repeat() {
     );
     assert_eq!(env.eval_str("Foo test"), Object::make_string("lots"));
 }
+
+#[test]
+fn block_repeatwhilefalse() {
+    let env = load_str(
+        r#"
+        @class Foo []
+        @class-method Foo test |x|
+           x := 0.
+           ^{
+               x := x + 1.
+               x > 1000 ifTrue: { x }
+           }
+           repeatWhileFalse
+        "#,
+    );
+    assert_eq!(env.eval_str("Foo test"), Object::make_integer(1001));
+}
