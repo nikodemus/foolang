@@ -17,7 +17,7 @@ fn block_1_value() {
 #[test]
 fn block_2_value() {
     assert_eq!(
-        eval_str("{ :a :b | b * a + 2 } a: 20 b: 2"),
+        eval_str("{ :a :b | b * a + 2 } value: 20 value: 2"),
         Object::make_integer(42)
     );
 }
@@ -30,7 +30,7 @@ fn block_closure() {
         @class-method F closeOver: value
            ^{ :x | value + x }
         @class-method F test
-            ^(self closeOver: 40) call: 2
+            ^(self closeOver: 40) value: 2
     "#,
     );
     assert_eq!(env.eval_str("F test"), Object::make_integer(42));
@@ -74,20 +74,19 @@ fn return_from_method_block() {
     assert_eq!(env.eval_str("Foo test"), Object::make_integer(42));
 }
 
-/*
 #[test]
 fn block_repeat() {
     let env = load_str(
         r#"
+        @class Foo []
         @class-method Foo test |x|
-           x := 0
+           x := 0.
            {
                x > 1000 ifTrue: { ^'lots' }.
                x := x + 1
            }
            repeat
-        "#
-    )
+        "#,
+    );
     assert_eq!(env.eval_str("Foo test"), Object::make_string("lots"));
 }
-*/
