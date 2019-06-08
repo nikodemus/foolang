@@ -1,9 +1,8 @@
 use crate::ast::{
-    Cascade, ClassDescription, Expr, Identifier, Literal, Method, MethodDescription,
-    PlaygroundElement, ProgramElement,
+    Cascade, ClassDescription, Expr, Identifier, Literal, Method, MethodDescription, ProgramElement,
 };
 use crate::objects::*;
-use crate::parser::parse_playground;
+use crate::parser::parse_expr;
 use crate::parser::parse_program;
 use lazy_static::lazy_static;
 use std::borrow::ToOwned;
@@ -11,6 +10,16 @@ use std::collections::HashMap;
 use std::fs;
 use std::sync::Arc;
 use std::sync::Mutex;
+
+pub fn eval_str(code: &str) -> Object {
+    eval(parse_expr(code))
+}
+
+pub fn load_str(code: &str) -> GlobalEnv {
+    let mut env = GlobalEnv::new();
+    env.load(parse_program(code));
+    env
+}
 
 type MethodFunc = fn(Object, Vec<Object>, &GlobalEnv) -> Object;
 
@@ -200,11 +209,8 @@ impl GlobalEnv {
                 .as_str(),
         ))
     }
-    pub fn eval_str(&mut self, text: &str) -> Object {
-        match parse_playground(text) {
-            PlaygroundElement::ProgramElement(pe) => self.load_program_element(pe),
-            PlaygroundElement::Expr(ex) => self.eval(ex),
-        }
+    pub fn eval_str(&self, text: &str) -> Object {
+        self.eval(parse_expr(text))
     }
     fn load_program_element(&mut self, program_element: ProgramElement) -> Object {
         match program_element {

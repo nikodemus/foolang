@@ -78,18 +78,6 @@ fn eval_global() {
 }
 
 #[test]
-fn eval_block() {
-    assert_eq!(
-        eval(parse_expr("{ :a | a + 1 } value: 41")),
-        Object::make_integer(42)
-    );
-    assert_eq!(
-        eval(parse_expr("{ :a :b | b * a + 2 } a: 20 b: 2")),
-        Object::make_integer(42)
-    );
-}
-
-#[test]
 fn eval_cascade() {
     assert_eq!(eval(parse_expr("1 + 100; + 41")), Object::make_integer(42));
 }
