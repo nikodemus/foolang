@@ -12,15 +12,16 @@ pub struct ClassId(pub usize);
 // Matches the order of builtin classes in evaluator.rs
 // Steps by two because every second is a metaclass.
 pub const CLASS_ARRAY: ClassId = ClassId(1);
-pub const CLASS_CHARACTER: ClassId = ClassId(3);
-pub const CLASS_CLASS: ClassId = ClassId(5);
-pub const CLASS_CLOSURE: ClassId = ClassId(7);
-pub const CLASS_FLOAT: ClassId = ClassId(9);
-pub const CLASS_INPUT: ClassId = ClassId(11);
-pub const CLASS_INTEGER: ClassId = ClassId(13);
-pub const CLASS_OUTPUT: ClassId = ClassId(15);
-pub const CLASS_STRING: ClassId = ClassId(17);
-pub const CLASS_SYMBOL: ClassId = ClassId(19);
+pub const CLASS_BOOLEAN: ClassId = ClassId(3);
+pub const CLASS_CHARACTER: ClassId = ClassId(5);
+pub const CLASS_CLASS: ClassId = ClassId(7);
+pub const CLASS_CLOSURE: ClassId = ClassId(9);
+pub const CLASS_FLOAT: ClassId = ClassId(11);
+pub const CLASS_INPUT: ClassId = ClassId(13);
+pub const CLASS_INTEGER: ClassId = ClassId(15);
+pub const CLASS_OUTPUT: ClassId = ClassId(17);
+pub const CLASS_STRING: ClassId = ClassId(19);
+pub const CLASS_SYMBOL: ClassId = ClassId(21);
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Object {
@@ -33,6 +34,7 @@ impl fmt::Display for Object {
         match &self.datum {
             Datum::Integer(i) => write!(f, "{}", i),
             Datum::Float(x) => write!(f, "{}", x),
+            Datum::Boolean(x) => write!(f, "{}", x),
             Datum::Character(c) => write!(f, "${}", &c),
             Datum::String(s) => write!(f, r#"'{}'"#, &s.0.lock().unwrap().clone()),
             Datum::Symbol(s) => write!(f, "#{}", &s),
@@ -113,6 +115,7 @@ impl Deref for StringObject {
 pub enum Datum {
     Integer(i64),
     Float(f64),
+    Boolean(bool),
     Character(Arc<String>),
     String(Arc<StringObject>),
     Symbol(Arc<String>),
@@ -167,6 +170,12 @@ impl Object {
         Object {
             class: CLASS_FLOAT,
             datum: Datum::Float(x),
+        }
+    }
+    pub fn make_boolean(boolean: bool) -> Object {
+        Object {
+            class: CLASS_BOOLEAN,
+            datum: Datum::Boolean(boolean),
         }
     }
     /*
