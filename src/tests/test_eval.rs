@@ -110,3 +110,23 @@ fn eval_array_ctor() {
 fn eval_string_new() {
     assert_eq!(eval(parse_expr("String new")), Object::make_string(""));
 }
+
+#[test]
+fn eval_string_append() {
+    assert_eq!(
+        eval(parse_expr(
+            "{ |x| x := String new. x append: 'foo'. x append: 'bar'. x} value"
+        )),
+        Object::make_string("foobar")
+    );
+}
+
+#[test]
+fn eval_string_clear() {
+    assert_eq!(
+        eval(parse_expr(
+            "{ |x| x := String new. x append: 'foo'. x clear append: 'bar'. x} value"
+        )),
+        Object::make_string("bar")
+    );
+}
