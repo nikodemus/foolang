@@ -21,7 +21,7 @@ pub fn load_str(code: &str) -> GlobalEnv {
     env
 }
 
-type MethodFunc = fn(Object, Vec<Object>, &GlobalEnv) -> Object;
+type MethodFunc = fn(Object, Vec<Object>, &GlobalEnv) -> Eval;
 
 type MethodTable = HashMap<String, MethodImpl>;
 
@@ -94,7 +94,7 @@ lazy_static! {
 
         let (class, _) = env.add_builtin_class("Boolean");
         assert_eq!(class, CLASS_BOOLEAN, "Bad classId for Boolean");
-        // env.classes.add_builtin(&class, "ifTrue:", method_boolean_iftrue);
+        env.classes.add_builtin(&class, "ifTrue:", method_boolean_iftrue);
 
         let (character, _) = env.add_builtin_class("Character");
         assert_eq!(character, CLASS_CHARACTER, "Bad classId for Character");
@@ -102,8 +102,13 @@ lazy_static! {
         let (character, _) = env.add_builtin_class("Class");
         assert_eq!(character, CLASS_CLASS, "Bad classId for Class");
 
-        let (closure, _) = env.add_builtin_class("Closure");
-        assert_eq!(closure, CLASS_CLOSURE, "Bad classId for Closure");
+        let (class, _) = env.add_builtin_class("Closure");
+        assert_eq!(class, CLASS_CLOSURE, "Bad classId for Closure");
+        env.classes.add_builtin(&class, "repeat", method_closure_repeat);
+        env.classes.add_builtin(&class, "value", method_closure_apply);
+        env.classes.add_builtin(&class, "value:", method_closure_apply);
+        env.classes.add_builtin(&class, "value:value:", method_closure_apply);
+        env.classes.add_builtin(&class, "value:value:value:", method_closure_apply);
 
         let (class, _) = env.add_builtin_class("Float");
         assert_eq!(class, CLASS_FLOAT);
@@ -204,16 +209,9 @@ impl GlobalEnv {
         args: Vec<Object>,
         env: &Lexenv,
     ) -> Eval {
-        match receiver.datum.clone() {
-            Datum::Closure(closure) => {
-                let env = &closure.env;
-                method_block_apply(receiver, args, env, self)
-            }
-            _ => self
-                .classes
-                .find_method(&receiver.class, &selector.0)
-                .invoke(receiver, args, env, self),
-        }
+        self.classes
+            .find_method(&receiver.class, &selector.0)
+            .invoke(receiver, args, env, self)
     }
     pub fn load_file(&mut self, fname: &str) {
         self.load(parse_program(
@@ -291,6 +289,7 @@ impl Lexenv {
             names: vec![],
             values: Mutex::new(vec![]),
             parent: None,
+            method_env: None,
         }))
     }
 
@@ -312,11 +311,16 @@ impl Lexenv {
             names,
             values: Mutex::new(values),
             parent: None,
+            method_env: None,
         }))
     }
 
     pub fn parent(&self) -> Option<Lexenv> {
         self.0.parent.clone()
+    }
+
+    pub fn method_env(&self) -> Option<Lexenv> {
+        self.0.method_env.clone()
     }
 
     pub fn extend(
@@ -337,6 +341,10 @@ impl Lexenv {
             names,
             values: Mutex::new(values),
             parent: Some(self.to_owned()),
+            method_env: match self.0.method_env {
+                None => Some(self.to_owned()),
+                Some(_) => self.0.method_env.clone(),
+            },
         }))
     }
 
@@ -378,6 +386,7 @@ pub struct LexenvFrame {
     pub names: Vec<Identifier>,
     pub values: Mutex<Vec<Object>>,
     pub parent: Option<Lexenv>,
+    pub method_env: Option<Lexenv>,
 }
 
 #[derive(Clone)]
@@ -395,9 +404,7 @@ impl MethodImpl {
         global: &GlobalEnv,
     ) -> Eval {
         match self {
-            MethodImpl::Builtin(func) => {
-                Eval::Result(func(receiver.clone(), args, global), receiver)
-            }
+            MethodImpl::Builtin(func) => func(receiver, args, global),
             MethodImpl::Evaluator(method) => {
                 let env = Lexenv::method(&receiver, &method.temporaries, &method.parameters, &args);
                 for stm in method.statements.iter() {
@@ -424,29 +431,34 @@ pub fn eval(expr: Expr) -> Object {
     GlobalEnv::new().eval(expr)
 }
 
+fn make_method_result(receiver: Object, result: Object) -> Eval {
+    Eval::Result(result, receiver)
+}
+
+fn make_result(x: Object) -> Eval {
+    Eval::Result(x.clone(), x)
+}
+
 fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
-    fn dup(x: Object) -> Eval {
-        Eval::Result(x.clone(), x)
-    }
     match expr {
-        Expr::Constant(lit) => dup(eval_literal(lit)),
+        Expr::Constant(lit) => make_result(eval_literal(lit)),
         Expr::Variable(Identifier(s)) => {
             if s == "self" {
                 match &env.0.receiver {
                     None => panic!("Cannot use self outside methods."),
-                    Some(me) => return dup(me.clone()),
+                    Some(me) => return make_result(me.clone()),
                 }
             }
             if let Some(value) = env.find(&s) {
-                return dup(value.to_owned());
+                return make_result(value.to_owned());
             }
             if let Some(obj) = &env.0.receiver {
                 if let Some(idx) = global.find_slot(&obj.class, &s) {
-                    return dup(obj.slot(idx));
+                    return make_result(obj.slot(idx));
                 }
             }
             match global.variables.get(&s) {
-                Some(g) => dup(g.to_owned()),
+                Some(g) => make_result(g.to_owned()),
                 None => panic!("Unbound variable: {}", s),
             }
         }
@@ -456,12 +468,12 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
                 Eval::Return(res, to) => return Eval::Return(res, to),
             };
             if env.try_set_variable(&s, &val) {
-                return dup(val);
+                return make_result(val);
             }
             if let Some(obj) = &env.0.receiver {
                 if let Some(idx) = global.find_slot(&obj.class, &s) {
                     obj.set_slot(idx, val.clone());
-                    return dup(val);
+                    return make_result(val);
                 }
             }
             panic!("Cannot assign to an unbound variable: {}.", s)
@@ -484,7 +496,7 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
                 }
             }
         }
-        Expr::Block(b) => dup(Object::into_closure(b, env)),
+        Expr::Block(b) => make_result(Object::into_closure(b, env)),
         Expr::Cascade(expr, cascade) => {
             if let Eval::Result(_, receiver) = eval_in_env(*expr, env, global) {
                 eval_cascade(receiver.clone(), cascade, env, global)
@@ -501,215 +513,270 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
                 };
                 data.push(elt);
             }
-            dup(Object::make_array(&data))
+            make_result(Object::make_array(&data))
         }
         Expr::Return(expr) => match eval_in_env(*expr, env, global) {
-            Eval::Result(val, _) => {
-                println!("return from: {:?}", env);
-                Eval::Return(val, env.parent())
-            }
+            Eval::Result(val, _) => Eval::Return(val, env.method_env()),
             Eval::Return(val, to) => Eval::Return(val, to),
         },
     }
 }
 
-fn class_method_string_new(_: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
+fn class_method_string_new(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 0);
-    Object::make_string("")
+    make_method_result(receiver, Object::make_string(""))
 }
 
-fn method_string_append(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
+fn method_string_append(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 1);
     match (&receiver.datum, &args[0].datum) {
         (Datum::String(s), Datum::String(more)) => {
             s.lock().unwrap().push_str(more.to_string().as_str());
-            receiver
+            make_result(receiver)
         }
         _ => panic!("Bad arguments to 'String append:': #{:?}", args),
     }
 }
 
-fn method_string_clear(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
+fn method_string_clear(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 0);
     match &receiver.datum {
         Datum::String(s) => {
             s.lock().unwrap().clear();
-            receiver
+            make_result(receiver)
         }
         _ => panic!("Bad receiver in 'String clear': #{:?}", args),
     }
 }
 
-fn method_number_neg(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
-    assert!(args.len() == 0);
+fn method_boolean_iftrue(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
     match receiver.datum {
-        Datum::Integer(i) => Object::make_integer(-i),
-        Datum::Float(i) => Object::make_float(-i),
-        _ => panic!("Bad receiver for neg!"),
+        Datum::Boolean(boolean) => {
+            if boolean {
+                match &args[0].datum {
+                    Datum::Closure(closure) => closure_apply(receiver, closure, &args, global),
+                    _ => panic!("Bad argument to Boolean 'ifTrue:': {}", args[0]),
+                }
+            } else {
+                make_result(receiver)
+            }
+        }
+        _ => panic!("Bad receiver to Boolean 'ifTrue:': {}", receiver),
     }
 }
 
-fn method_integer_gcd(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
+fn method_number_neg(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
+    make_method_result(
+        receiver.clone(),
+        match receiver.datum {
+            Datum::Integer(i) => Object::make_integer(-i),
+            Datum::Float(i) => Object::make_float(-i),
+            _ => panic!("Bad receiver for neg!"),
+        },
+    )
+}
+
+fn method_integer_gcd(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 1);
-    match receiver.datum {
+    match receiver.datum.clone() {
         Datum::Integer(i) => match args[0].datum {
-            Datum::Integer(j) => Object::make_integer(num::integer::gcd(i, j)),
+            Datum::Integer(j) => {
+                make_method_result(receiver, Object::make_integer(num::integer::gcd(i, j)))
+            }
             _ => panic!("Non-integer in gcd!"),
         },
         _ => panic!("Bad receiver for builtin gcd!"),
     }
 }
 
-fn method_number_mul(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
+fn method_number_mul(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 1);
-    match receiver.datum {
-        Datum::Integer(i) => match args[0].datum {
-            Datum::Integer(j) => Object::make_integer(i * j),
-            Datum::Float(j) => Object::make_float((i as f64) * j),
-            _ => panic!("Bad argument to Integer *: {}", args[0]),
+    make_method_result(
+        receiver.clone(),
+        match receiver.datum {
+            Datum::Integer(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_integer(i * j),
+                Datum::Float(j) => Object::make_float((i as f64) * j),
+                _ => panic!("Bad argument to Integer *: {}", args[0]),
+            },
+            Datum::Float(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_float(i * (j as f64)),
+                Datum::Float(j) => Object::make_float(i * j),
+                _ => panic!("Bad argument to Float *: {}", args[0]),
+            },
+            _ => panic!("Bad receiver in method_number_mul: {}", receiver),
         },
-        Datum::Float(i) => match args[0].datum {
-            Datum::Integer(j) => Object::make_float(i * (j as f64)),
-            Datum::Float(j) => Object::make_float(i * j),
-            _ => panic!("Bad argument to Float *: {}", args[0]),
-        },
-        _ => panic!("Bad receiver in method_number_mul: {}", receiver),
-    }
+    )
 }
 
-fn method_number_plus(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
+fn method_number_plus(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 1);
-    match receiver.datum {
-        Datum::Integer(i) => match args[0].datum {
-            Datum::Integer(j) => Object::make_integer(i + j),
-            Datum::Float(j) => Object::make_float((i as f64) + j),
-            _ => panic!("Bad argument to Integer +: {}", args[0]),
+    make_method_result(
+        receiver.clone(),
+        match receiver.datum {
+            Datum::Integer(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_integer(i + j),
+                Datum::Float(j) => Object::make_float((i as f64) + j),
+                _ => panic!("Bad argument to Integer +: {}", args[0]),
+            },
+            Datum::Float(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_float(i + (j as f64)),
+                Datum::Float(j) => Object::make_float(i + j),
+                _ => panic!("Bad argument to Float +: {}", args[0]),
+            },
+            _ => panic!("Bad receiver in method_number_plus: {}", receiver),
         },
-        Datum::Float(i) => match args[0].datum {
-            Datum::Integer(j) => Object::make_float(i + (j as f64)),
-            Datum::Float(j) => Object::make_float(i + j),
-            _ => panic!("Bad argument to Float +: {}", args[0]),
-        },
-        _ => panic!("Bad receiver in method_number_plus: {}", receiver),
-    }
+    )
 }
 
-fn method_number_minus(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
+fn method_number_minus(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 1);
-    match receiver.datum {
-        Datum::Integer(i) => match args[0].datum {
-            Datum::Integer(j) => Object::make_integer(i - j),
-            Datum::Float(j) => Object::make_float((i as f64) - j),
-            _ => panic!("Bad argument to Integer -: {}", args[0]),
+    make_method_result(
+        receiver.clone(),
+        match receiver.datum {
+            Datum::Integer(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_integer(i - j),
+                Datum::Float(j) => Object::make_float((i as f64) - j),
+                _ => panic!("Bad argument to Integer -: {}", args[0]),
+            },
+            Datum::Float(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_float(i - (j as f64)),
+                Datum::Float(j) => Object::make_float(i - j),
+                _ => panic!("Bad argument to Float -: {}", args[0]),
+            },
+            _ => panic!("Bad receiver in method_number_minus: {}", receiver),
         },
-        Datum::Float(i) => match args[0].datum {
-            Datum::Integer(j) => Object::make_float(i - (j as f64)),
-            Datum::Float(j) => Object::make_float(i - j),
-            _ => panic!("Bad argument to Float -: {}", args[0]),
-        },
-        _ => panic!("Bad receiver in method_number_minus: {}", receiver),
-    }
+    )
 }
 
-fn method_number_lt(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
+fn method_number_lt(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 1);
-    match receiver.datum {
-        Datum::Integer(i) => match args[0].datum {
-            Datum::Integer(j) => Object::make_boolean(i < j),
-            Datum::Float(j) => Object::make_boolean((i as f64) < j),
-            _ => panic!("Bad argument to Integer <: {}", args[0]),
+    make_method_result(
+        receiver.clone(),
+        match receiver.datum {
+            Datum::Integer(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_boolean(i < j),
+                Datum::Float(j) => Object::make_boolean((i as f64) < j),
+                _ => panic!("Bad argument to Integer <: {}", args[0]),
+            },
+            Datum::Float(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_boolean(i < (j as f64)),
+                Datum::Float(j) => Object::make_boolean(i < j),
+                _ => panic!("Bad argument to Float <: {}", args[0]),
+            },
+            _ => panic!("Bad receiver in method_number_lt: {}", receiver),
         },
-        Datum::Float(i) => match args[0].datum {
-            Datum::Integer(j) => Object::make_boolean(i < (j as f64)),
-            Datum::Float(j) => Object::make_boolean(i < j),
-            _ => panic!("Bad argument to Float <: {}", args[0]),
-        },
-        _ => panic!("Bad receiver in method_number_lt: {}", receiver),
-    }
+    )
 }
 
-fn method_number_gt(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
+fn method_number_gt(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 1);
-    match receiver.datum {
-        Datum::Integer(i) => match args[0].datum {
-            Datum::Integer(j) => Object::make_boolean(i > j),
-            Datum::Float(j) => Object::make_boolean((i as f64) > j),
-            _ => panic!("Bad argument to Integer >: {}", args[0]),
+    make_method_result(
+        receiver.clone(),
+        match receiver.datum {
+            Datum::Integer(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_boolean(i > j),
+                Datum::Float(j) => Object::make_boolean((i as f64) > j),
+                _ => panic!("Bad argument to Integer >: {}", args[0]),
+            },
+            Datum::Float(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_boolean(i > (j as f64)),
+                Datum::Float(j) => Object::make_boolean(i > j),
+                _ => panic!("Bad argument to Float >: {}", args[0]),
+            },
+            _ => panic!("Bad receiver in method_number_gt: {}", receiver),
         },
-        Datum::Float(i) => match args[0].datum {
-            Datum::Integer(j) => Object::make_boolean(i > (j as f64)),
-            Datum::Float(j) => Object::make_boolean(i > j),
-            _ => panic!("Bad argument to Float >: {}", args[0]),
-        },
-        _ => panic!("Bad receiver in method_number_gt: {}", receiver),
-    }
+    )
 }
 
-fn method_number_eq(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
+fn method_number_eq(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 1);
-    match receiver.datum {
-        Datum::Integer(i) => match args[0].datum {
-            Datum::Integer(j) => Object::make_boolean(i == j),
-            Datum::Float(j) => Object::make_boolean((i as f64) == j),
-            _ => panic!("Bad argument to Integer ==: {}", args[0]),
+    make_method_result(
+        receiver.clone(),
+        match receiver.datum {
+            Datum::Integer(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_boolean(i == j),
+                Datum::Float(j) => Object::make_boolean((i as f64) == j),
+                _ => panic!("Bad argument to Integer ==: {}", args[0]),
+            },
+            Datum::Float(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_boolean(i == (j as f64)),
+                Datum::Float(j) => Object::make_boolean(i == j),
+                _ => panic!("Bad argument to Float ==: {}", args[0]),
+            },
+            _ => panic!("Bad receiver in method_number_eq: {}", receiver),
         },
-        Datum::Float(i) => match args[0].datum {
-            Datum::Integer(j) => Object::make_boolean(i == (j as f64)),
-            Datum::Float(j) => Object::make_boolean(i == j),
-            _ => panic!("Bad argument to Float ==: {}", args[0]),
-        },
-        _ => panic!("Bad receiver in method_number_eq: {}", receiver),
-    }
+    )
 }
 
-fn method_create_instance(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
+fn method_create_instance(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 1);
-    if let Datum::Class(classobj) = receiver.datum {
+    if let Datum::Class(classobj) = &receiver.datum {
         if let Datum::Array(vec) = &args[0].datum {
-            return Object::make_instance(classobj.id.clone(), vec.to_vec());
+            return make_method_result(
+                receiver.clone(),
+                Object::make_instance(classobj.id.to_owned(), vec.to_vec()),
+            );
         }
     }
     panic!("Cannot create instance out of a non-class object!")
 }
 
-fn method_help(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Object {
+fn method_help(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
     assert!(args.len() == 1);
     match &args[0].datum {
         Datum::Symbol(name) => {
             if let MethodImpl::Evaluator(m) = &global.find_method(&receiver.class, &name) {
                 if let Some(s) = &m.docstring {
-                    return Object::make_string(s);
+                    return make_method_result(receiver, Object::make_string(s));
                 }
             }
         }
         _ => panic!("Bad argument to help:!"),
     }
-    Object::make_string("No help available.")
+    make_method_result(receiver, Object::make_string("No help available."))
 }
 
-fn method_block_apply(
-    receiver: Object,
-    args: Vec<Object>,
-    _env: &Lexenv,
-    global: &GlobalEnv,
-) -> Eval {
-    let mut res = receiver.clone();
-    match &receiver.datum {
-        Datum::Closure(closure) => {
-            let blk = &closure.block.clone();
-            let env = closure.env.extend(&blk.temporaries, &blk.parameters, &args);
-            for stm in blk.statements.iter() {
-                match eval_in_env(stm.to_owned(), &env, global) {
-                    Eval::Result(value, _) => {
-                        res = value;
-                    }
-                    Eval::Return(value, to) => return Eval::Return(value, to),
-                }
-            }
-            Eval::Result(res, receiver)
-        }
+fn method_closure_apply(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
+    match receiver.datum.clone() {
+        Datum::Closure(closure) => closure_apply(receiver, &closure, &args, global),
         _ => panic!("Bad receiver for block apply!"),
     }
+}
+
+fn method_closure_repeat(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
+    match receiver.datum.clone() {
+        Datum::Closure(closure) => loop {
+            if let Eval::Return(val, to) = closure_apply(receiver.clone(), &closure, &args, global)
+            {
+                return Eval::Return(val, to);
+            }
+        },
+        _ => panic!("Bad receiver for block apply!"),
+    }
+}
+
+fn closure_apply(
+    receiver: Object,
+    closure: &Arc<ClosureObject>,
+    args: &Vec<Object>,
+    global: &GlobalEnv,
+) -> Eval {
+    let mut result = receiver.clone();
+    let env = closure
+        .env
+        .extend(&closure.block.temporaries, &closure.block.parameters, args);
+    for stm in closure.block.statements.iter() {
+        match eval_in_env(stm.to_owned(), &env, global) {
+            Eval::Result(value, _) => {
+                result = value;
+            }
+            Eval::Return(value, to) => return Eval::Return(value, to),
+        }
+    }
+    Eval::Result(result, receiver)
 }
 
 fn eval_literal(lit: Literal) -> Object {
