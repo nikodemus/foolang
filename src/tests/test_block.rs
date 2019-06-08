@@ -75,6 +75,27 @@ fn return_from_method_block() {
 }
 
 #[test]
+fn return_from_deep_block_to_middle() {
+    let env = load_str(
+        r#"
+        @class Foo []
+        @class-method Foo test
+            ^1 + (Foo test0: 41).
+        @class-method Foo test0: x
+            Foo test1: { ^x }.
+            ^0
+        @class-method Foo test1: blk
+            Foo test2: blk.
+            ^1
+        @class-method Foo test2: blk
+            blk value.
+            ^2
+        "#,
+    );
+    assert_eq!(env.eval_str("Foo test"), Object::make_integer(42));
+}
+
+#[test]
 fn block_repeat() {
     let env = load_str(
         r#"
