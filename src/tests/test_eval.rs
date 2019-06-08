@@ -105,3 +105,8 @@ fn eval_array_ctor() {
         ])
     );
 }
+
+#[test]
+fn eval_string_new() {
+    assert_eq!(eval(parse_expr("String new")), Object::make_string(""));
+}

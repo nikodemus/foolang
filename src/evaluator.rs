@@ -123,8 +123,6 @@ lazy_static! {
     static ref GLOBALS: HashMap<String, Object> = {
         let mut m: HashMap<String, Object> = HashMap::new();
         m.insert(String::from("PI"), Object::make_float(std::f64::consts::PI));
-        m.insert(String::from("STDIN"), Object::make_input_stream(Box::new(std::io::stdin())));
-        m.insert(String::from("STDOUT"), Object::make_output_stream(Box::new(std::io::stdout())));
         m
     };
 }

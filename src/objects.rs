@@ -79,9 +79,6 @@ impl PartialEq for ClosureObject {
     }
 }
 
-#[derive(Debug)]
-pub struct InputStream(pub Box<dyn std::io::Read + Send + Sync>);
-
 // FIXME: Should have the contained objects holding the
 // Arc so things which are known to receive them could
 // receive owned.
@@ -96,8 +93,6 @@ pub enum Datum {
     Class(Arc<ClassObject>),
     Instance(Arc<SlotObject>),
     Closure(Arc<ClosureObject>),
-    Input(Arc<InputStream>),
-    Output(Arc<Box<dyn std::io::Write + Send + Sync>>),
 }
 
 impl Object {
@@ -147,6 +142,7 @@ impl Object {
             datum: Datum::Float(x),
         }
     }
+    /*
     pub fn make_input_stream(input: Box<dyn std::io::Read + Send + Sync>) -> Object {
         Object {
             class: CLASS_INPUT,
@@ -159,6 +155,7 @@ impl Object {
             datum: Datum::Output(Arc::new(output)),
         }
     }
+    */
     pub fn make_integer(x: i64) -> Object {
         Object {
             class: CLASS_INTEGER,
