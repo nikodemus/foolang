@@ -1,6 +1,7 @@
 use crate::ast;
 use crate::evaluator::Lexenv;
 use std::fmt;
+use std::ops::Deref;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -33,7 +34,7 @@ impl fmt::Display for Object {
             Datum::Integer(i) => write!(f, "{}", i),
             Datum::Float(x) => write!(f, "{}", x),
             Datum::Character(c) => write!(f, "${}", &c),
-            Datum::String(s) => write!(f, r#"'{}'"#, &s),
+            Datum::String(s) => write!(f, r#"'{}'"#, &s.0.lock().unwrap().clone()),
             Datum::Symbol(s) => write!(f, "#{}", &s),
             Datum::Array(vec) => {
                 write!(f, "#")?;
@@ -80,6 +81,31 @@ impl PartialEq for ClosureObject {
     }
 }
 
+#[derive(Debug)]
+pub struct StringObject(Mutex<String>);
+
+impl PartialEq for StringObject {
+    fn eq(&self, other: &Self) -> bool {
+        if self as *const _ == other as *const _ {
+            return true;
+        }
+        self.lock().unwrap().as_str() == other.lock().unwrap().as_str()
+    }
+}
+
+impl StringObject {
+    pub fn to_string(&self) -> String {
+        self.lock().unwrap().clone()
+    }
+}
+
+impl Deref for StringObject {
+    type Target = Mutex<String>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 // FIXME: Should have the contained objects holding the
 // Arc so things which are known to receive them could
 // receive owned.
@@ -88,7 +114,7 @@ pub enum Datum {
     Integer(i64),
     Float(f64),
     Character(Arc<String>),
-    String(Arc<String>),
+    String(Arc<StringObject>),
     Symbol(Arc<String>),
     Array(Arc<Vec<Object>>),
     Class(Arc<ClassObject>),
@@ -169,7 +195,7 @@ impl Object {
     pub fn into_string(s: String) -> Object {
         Object {
             class: CLASS_STRING,
-            datum: Datum::String(Arc::new(s)),
+            datum: Datum::String(Arc::new(StringObject(Mutex::new(s)))),
         }
     }
     pub fn make_symbol(s: &str) -> Object {

@@ -115,7 +115,9 @@ lazy_static! {
 
         let (string, meta) = env.add_builtin_class("String");
         assert_eq!(string, CLASS_STRING);
-        env.classes.add_builtin(&meta, "new", method_String_new);
+        env.classes.add_builtin(&meta, "new", class_method_string_new);
+        env.classes.add_builtin(&string, "append:", method_string_append);
+        env.classes.add_builtin(&string, "clear", method_string_clear);
 
         let (symbol, _) = env.add_builtin_class("Symbol");
         assert_eq!(symbol, CLASS_SYMBOL);
@@ -492,10 +494,31 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
     }
 }
 
-#[allow(non_snake_case)]
-fn method_String_new(_: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
+fn class_method_string_new(_: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
     assert!(args.len() == 0);
     Object::make_string("")
+}
+
+fn method_string_append(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
+    assert!(args.len() == 1);
+    match (&receiver.datum, &args[0].datum) {
+        (Datum::String(s), Datum::String(more)) => {
+            s.lock().unwrap().push_str(more.to_string().as_str());
+            receiver
+        }
+        _ => panic!("Bad arguments to 'String append:': #{:?}", args),
+    }
+}
+
+fn method_string_clear(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
+    assert!(args.len() == 0);
+    match &receiver.datum {
+        Datum::String(s) => {
+            s.lock().unwrap().clear();
+            receiver
+        }
+        _ => panic!("Bad receiver in 'String clear': #{:?}", args),
+    }
 }
 
 fn method_neg(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
