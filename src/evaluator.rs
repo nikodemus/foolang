@@ -70,63 +70,65 @@ impl ClassInfo {
 }
 
 lazy_static! {
-    static ref CLASSES: ClassInfo = {
-        let mut info = ClassInfo {
-            names: HashMap::new(),
-            slots: Vec::new(),
-            methods: Vec::new(),
+    static ref BUILTIN_ENV: GlobalEnv =  {
+        let mut env = GlobalEnv {
+            classes: ClassInfo {
+                names: HashMap::new(),
+                slots: Vec::new(),
+                methods: Vec::new(),
+            },
+            variables: HashMap::new(),
         };
-
         // NOTE: Alphabetic order matches objects.rs
-
-        let array = info.add_class("Array", vec![]);
+        let (array, _) = env.add_builtin_class("Array");
         assert_eq!(array, CLASS_ARRAY, "Bad classId for Array");
 
-        let character = info.add_class("Character", vec![]);
+        let (character, _) = env.add_builtin_class("Character");
         assert_eq!(character, CLASS_CHARACTER, "Bad classId for Character");
 
-        let character = info.add_class("Class", vec![]);
+        let (character, _) = env.add_builtin_class("Class");
         assert_eq!(character, CLASS_CLASS, "Bad classId for Class");
 
-        let closure = info.add_class("Closure", vec![]);
+        let (closure, _) = env.add_builtin_class("Closure");
         assert_eq!(closure, CLASS_CLOSURE, "Bad classId for Closure");
 
-        let float = info.add_class("Float", vec![]);
+        let (float, _) = env.add_builtin_class("Float");
         assert_eq!(float, CLASS_FLOAT);
-        info.add_builtin(&float, "neg", method_neg);
-        info.add_builtin(&float, "*", method_mul);
-        info.add_builtin(&float, "+", method_plus);
-        info.add_builtin(&float, "-", method_minus);
+        env.classes.add_builtin(&float, "neg", method_neg);
+        env.classes.add_builtin(&float, "*", method_mul);
+        env.classes.add_builtin(&float, "+", method_plus);
+        env.classes.add_builtin(&float, "-", method_minus);
 
-        let stdin = info.add_class("InputStream", vec![]);
+        let (stdin, _) = env.add_builtin_class("InputStream");
         assert_eq!(stdin, CLASS_INPUT);
 
-        let integer = info.add_class("Integer", vec![]);
+        let (integer, _) = env.add_builtin_class("Integer");
         assert_eq!(integer, CLASS_INTEGER);
-        info.add_builtin(&integer, "neg", method_neg);
-        info.add_builtin(&integer, "gcd:", method_gcd);
-        info.add_builtin(&integer, "*", method_mul);
-        info.add_builtin(&integer, "+", method_plus);
-        info.add_builtin(&integer, "-", method_minus);
+        env.classes.add_builtin(&integer, "neg", method_neg);
+        env.classes.add_builtin(&integer, "gcd:", method_gcd);
+        env.classes.add_builtin(&integer, "*", method_mul);
+        env.classes.add_builtin(&integer, "+", method_plus);
+        env.classes.add_builtin(&integer, "-", method_minus);
 
-        let stdin = info.add_class("OutputStream", vec![]);
+        let (stdin, _) = env.add_builtin_class("OutputStream");
         assert_eq!(stdin, CLASS_OUTPUT);
 
-        let string = info.add_class("String", vec![]);
+        let (string, meta) = env.add_builtin_class("String");
         assert_eq!(string, CLASS_STRING);
+        env.classes.add_builtin(&meta, "new", method_String_new);
 
-        let symbol = info.add_class("Symbol", vec![]);
+        let (symbol, _) = env.add_builtin_class("Symbol");
         assert_eq!(symbol, CLASS_SYMBOL);
 
-        info
-    };
-    static ref GLOBALS: HashMap<String, Object> = {
-        let mut m: HashMap<String, Object> = HashMap::new();
-        m.insert(String::from("PI"), Object::make_float(std::f64::consts::PI));
-        m
+        /* GLOBALS */
+
+        env.variables.insert(String::from("PI"), Object::make_float(std::f64::consts::PI));
+
+        env
     };
 }
 
+#[derive(Clone)]
 pub struct GlobalEnv {
     classes: ClassInfo,
     variables: HashMap<String, Object>,
@@ -134,10 +136,7 @@ pub struct GlobalEnv {
 
 impl GlobalEnv {
     pub fn new() -> GlobalEnv {
-        GlobalEnv {
-            classes: CLASSES.clone(),
-            variables: GLOBALS.clone(),
-        }
+        BUILTIN_ENV.clone()
     }
     fn find_method(&self, classid: &ClassId, name: &str) -> MethodImpl {
         self.classes.find_method(classid, name)
@@ -147,9 +146,22 @@ impl GlobalEnv {
             .iter()
             .position(|id| &id.0 == name)
     }
+    fn add_builtin_class(&mut self, name: &str) -> (ClassId, ClassId) {
+        if self.variables.contains_key(name) {
+            panic!("{} already exists!", name);
+        }
+        // Our metaclasses don't currently exist as actual objects!
+        let metaname = format!("#<metaclass {}>", name);
+        let metaid = self.classes.add_class(&metaname, vec![]);
+        let id = self.classes.add_class(name, vec![]);
+        let class = Object::make_class(metaid.clone(), id.clone(), name);
+        self.classes.add_builtin(&metaid, "help:", method_help);
+        self.variables.insert(name.to_string(), class);
+        (id, metaid)
+    }
     fn add_class(&mut self, name: &str, slots: Vec<Identifier>) {
         if self.variables.contains_key(name) {
-            panic!("{} alredy exists!", name);
+            panic!("{} already exists!", name);
         }
         // Our metaclasses don't currently exist as actual objects!
         let metaname = format!("#<metaclass {}>", name);
@@ -478,6 +490,12 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
             Eval::Return(val, to) => Eval::Return(val, to),
         },
     }
+}
+
+#[allow(non_snake_case)]
+fn method_String_new(_: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
+    assert!(args.len() == 0);
+    Object::make_string("")
 }
 
 fn method_neg(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Object {
