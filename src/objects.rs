@@ -9,16 +9,17 @@ pub struct ClassId(pub usize);
 
 // NOTE: ALPHABETIC ORDER!
 // Matches the order of builtin classes in evaluator.rs
-pub const CLASS_ARRAY: ClassId = ClassId(0);
-pub const CLASS_CHARACTER: ClassId = ClassId(1);
-pub const CLASS_CLASS: ClassId = ClassId(2);
-pub const CLASS_CLOSURE: ClassId = ClassId(3);
-pub const CLASS_FLOAT: ClassId = ClassId(4);
-pub const CLASS_INPUT: ClassId = ClassId(5);
-pub const CLASS_INTEGER: ClassId = ClassId(6);
-pub const CLASS_OUTPUT: ClassId = ClassId(7);
-pub const CLASS_STRING: ClassId = ClassId(8);
-pub const CLASS_SYMBOL: ClassId = ClassId(9);
+// Steps by two because every second is a metaclass.
+pub const CLASS_ARRAY: ClassId = ClassId(1);
+pub const CLASS_CHARACTER: ClassId = ClassId(3);
+pub const CLASS_CLASS: ClassId = ClassId(5);
+pub const CLASS_CLOSURE: ClassId = ClassId(7);
+pub const CLASS_FLOAT: ClassId = ClassId(9);
+pub const CLASS_INPUT: ClassId = ClassId(11);
+pub const CLASS_INTEGER: ClassId = ClassId(13);
+pub const CLASS_OUTPUT: ClassId = ClassId(15);
+pub const CLASS_STRING: ClassId = ClassId(17);
+pub const CLASS_SYMBOL: ClassId = ClassId(19);
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Object {

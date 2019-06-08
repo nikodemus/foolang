@@ -43,8 +43,8 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 72h
-Estimated remaining: 44h
+Time spent: 73h
+Estimated remaining: 43h
 
 - [x] AST
 - [x] Expression parser
@@ -77,7 +77,7 @@ Estimated remaining: 44h
   - [ ] Foolang compiler 1h
   - [ ] Compiler tryParse 1h
   - [ ] Compiler evaluate 1h
-  - [ ] String new 1h
+  - [x] String new 1h
   - [ ] String append 1h
   - [ ] String clear 1h
   - [ ] Block repeat 1h
