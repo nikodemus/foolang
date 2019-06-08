@@ -73,3 +73,21 @@ fn return_from_method_block() {
     );
     assert_eq!(env.eval_str("Foo test"), Object::make_integer(42));
 }
+
+/*
+#[test]
+fn block_repeat() {
+    let env = load_str(
+        r#"
+        @class-method Foo test |x|
+           x := 0
+           {
+               x > 1000 ifTrue: { ^'lots' }.
+               x := x + 1
+           }
+           repeat
+        "#
+    )
+    assert_eq!(env.eval_str("Foo test"), Object::make_string("lots"));
+}
+*/

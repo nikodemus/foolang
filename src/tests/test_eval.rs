@@ -3,12 +3,6 @@ use crate::objects::Object;
 use crate::parser::parse_expr;
 
 #[test]
-fn eval_number() {
-    assert_eq!(eval(parse_expr("123")), Object::make_integer(123));
-    assert_eq!(eval(parse_expr("123.123")), Object::make_float(123.123));
-}
-
-#[test]
 fn eval_string() {
     assert_eq!(eval(parse_expr("'foo'")), Object::make_string("foo"));
 }
