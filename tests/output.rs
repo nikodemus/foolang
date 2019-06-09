@@ -23,3 +23,25 @@ fn stdout_print_flush() -> Result<(), Box<std::error::Error>> {
         .stdout(predicate::str::ends_with("hello world!\nboing!"));
     Ok(())
 }
+
+#[test]
+fn stdin_readline() -> Result<(), Box<std::error::Error>> {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("--eval").arg(
+        "
+            {
+                |out in|
+                in := Input stdin.
+                out := Output stdout.
+                out print: ('1: ' append: (in readline)); newline;
+                    print: ('2: ' append: (in readline)); newline
+            } value
+        ",
+    );
+    cmd.with_stdin()
+        .buffer("this is line 1\nthis is line 2\nthis is tailing stuff")
+        .assert()
+        .success()
+        .stdout("1: this is line 1\n2: this is line 2\n");
+    Ok(())
+}

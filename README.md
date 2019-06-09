@@ -43,8 +43,8 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 81h
-Estimated remaining: 35h
+Time spent: 83h
+Estimated remaining: 34h
 
 - [x] AST
 - [x] Expression parser
@@ -67,9 +67,10 @@ Estimated remaining: 35h
 - [x] Blocks are closures (return). 5h
 - [x] Local variables in methods. 5h
 - Terminal REPL
+  - [ ] Move stdout and stdin ctos to System. 1h
   - [x] REPL implemented in foolang.
-  - [ ] Input stdin. 1h
-  - [ ] Input readLine. 1h
+  - [x] Input stdin. 1h
+  - [x] Input readLine. 1h
   - [x] Output stdout. 1h
   - [x] Output print: 1h
   - [x] Output flush 1h
@@ -373,9 +374,7 @@ to what gcc -O0 would produce.
      returns the stream. That is not the nice way to use it, though,
      just the medium layer.
 
-  3. For niceness have actor wrapping the object
-
-        @actor Stdout = System stdout
+  3. For niceness have an actor that provides the global service.
 
   4. ...initially I can just use System stdout.
 
