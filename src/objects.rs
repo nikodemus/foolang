@@ -160,7 +160,7 @@ impl fmt::Debug for InputObject {
 }
 
 impl InputObject {
-    pub fn read_line(&self) -> String {
+    pub fn read_line(&self) -> Option<String> {
         let mut buf = self.buffer.lock().unwrap();
         let mut stream = self.stream.lock().unwrap();
         loop {
@@ -173,7 +173,7 @@ impl InputObject {
                 };
                 let line = String::from(std::str::from_utf8(&buf[0..end]).unwrap());
                 buf.drain(0..newline + 1);
-                return line;
+                return Some(line);
             }
             buf.reserve(1024);
             let len = buf.len();
@@ -183,6 +183,9 @@ impl InputObject {
                 let n = stream.read(&mut buf[len..]).unwrap();
                 buf.set_len(len + n);
             }
+            if len == buf.len() {
+                return None; // EOF
+            }
         }
     }
 }
@@ -190,7 +193,7 @@ impl InputObject {
 pub struct CompilerObject {
     pub env: Mutex<GlobalEnv>,
     // FIXME: sort out the naming
-    pub ast: Mutex<Option<ast::Expr>>,
+    pub ast: Mutex<Option<ast::ProgramElement>>,
 }
 
 impl fmt::Debug for CompilerObject {
@@ -243,6 +246,12 @@ impl Object {
             datum: Datum::Boolean(boolean),
         }
     }
+    pub fn boolean(&self) -> bool {
+        match &self.datum {
+            Datum::Boolean(truth) => truth.to_owned(),
+            _ => panic!("TypeError: {} is not a Boolean", self),
+        }
+    }
     // CHARACTER
     pub fn make_character(s: &str) -> Object {
         Object::into_character(String::from(s))
@@ -272,6 +281,12 @@ impl Object {
                 block,
                 env: env.to_owned(),
             })),
+        }
+    }
+    pub fn closure(&self) -> Arc<ClosureObject> {
+        match &self.datum {
+            Datum::Closure(closure) => closure.to_owned(),
+            _ => panic!("TypeError: not a Closure: {}", self),
         }
     }
     // COMPILER

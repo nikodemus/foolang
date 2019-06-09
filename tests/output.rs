@@ -45,3 +45,27 @@ fn stdin_readline() -> Result<(), Box<std::error::Error>> {
         .stdout("1: this is line 1\n2: this is line 2\n");
     Ok(())
 }
+
+#[test]
+fn repl() -> Result<(), Box<std::error::Error>> {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("--load")
+        .arg("foo/repl.foo")
+        .arg("--eval")
+        .arg("REPL run");
+    cmd.with_stdin()
+        // The repl is currently a tad aggressive about newlines...
+        // Should sniff @ at the beginning and require an empty line
+        // after, plus throw out the input after an empty line, maybe.
+        .buffer(
+            "
+            @class Foo []
+            @class-method Foo a:a b:b ^(a + b) * 2
+            Foo a: 1 b: 20
+        ",
+        )
+        .assert()
+        .success()
+        .stdout("Foolang 0.1.0\n> #Foo\n> #a:b:\n> 42\n> ");
+    Ok(())
+}

@@ -1,10 +1,11 @@
 use crate::ast::{
-    Cascade, ClassDescription, Expr, Identifier, Literal, Method, MethodDescription, ProgramElement,
+    Cascade, ClassDescription, Definition, Expr, Identifier, Literal, Method, MethodDescription,
+    ProgramElement,
 };
 use crate::objects::*;
 use crate::parser::parse_expr;
 use crate::parser::parse_program;
-use crate::parser::try_parse_expr;
+use crate::parser::try_parse;
 use lazy_static::lazy_static;
 use std::borrow::ToOwned;
 use std::collections::HashMap;
@@ -93,22 +94,28 @@ lazy_static! {
         let (class, _) = env.add_builtin_class("Array");
         assert_eq!(class, CLASS_ARRAY, "Bad classId for Array");
         env.classes.add_builtin(&class, "toString", method_object_tostring);
+        env.classes.add_builtin(&class, "==", method_object_eq);
 
         let (class, _) = env.add_builtin_class("Boolean");
         assert_eq!(class, CLASS_BOOLEAN, "Bad classId for Boolean");
         env.classes.add_builtin(&class, "ifTrue:", method_boolean_iftrue);
+        env.classes.add_builtin(&class, "ifFalse:", method_boolean_iffalse);
         env.classes.add_builtin(&class, "toString", method_object_tostring);
+        env.classes.add_builtin(&class, "==", method_object_eq);
 
         let (class, _) = env.add_builtin_class("Character");
         assert_eq!(class, CLASS_CHARACTER, "Bad classId for Character");
         env.classes.add_builtin(&class, "toString", method_object_tostring);
+        env.classes.add_builtin(&class, "==", method_object_eq);
 
         let (class, _) = env.add_builtin_class("Class");
         assert_eq!(class, CLASS_CLASS, "Bad classId for Class");
         env.classes.add_builtin(&class, "toString", method_object_tostring);
+        env.classes.add_builtin(&class, "==", method_object_eq);
 
         let (class, _) = env.add_builtin_class("Closure");
         assert_eq!(class, CLASS_CLOSURE, "Bad classId for Closure");
+        env.classes.add_builtin(&class, "until:", method_closure_until);
         env.classes.add_builtin(&class, "repeat", method_closure_repeat);
         env.classes.add_builtin(&class, "repeatWhileFalse", method_closure_repeatwhilefalse);
         env.classes.add_builtin(&class, "value:", method_closure_apply);
@@ -116,12 +123,14 @@ lazy_static! {
         env.classes.add_builtin(&class, "value:value:", method_closure_apply);
         env.classes.add_builtin(&class, "value:value:value:", method_closure_apply);
         env.classes.add_builtin(&class, "toString", method_object_tostring);
+        env.classes.add_builtin(&class, "==", method_object_eq);
 
         let (class, _) = env.add_builtin_class("Compiler");
         assert_eq!(class, CLASS_COMPILER, "Bad classId for Compiler");
         env.classes.add_builtin(&class, "tryParse:", method_compiler_tryparse);
         env.classes.add_builtin(&class, "evaluate", method_compiler_evaluate);
         env.classes.add_builtin(&class, "toString", method_object_tostring);
+        env.classes.add_builtin(&class, "==", method_object_eq);
 
         let (class, _) = env.add_builtin_class("Float");
         assert_eq!(class, CLASS_FLOAT);
@@ -138,11 +147,13 @@ lazy_static! {
         assert_eq!(class, CLASS_FOOLANG);
         env.classes.add_builtin(&meta, "compiler", class_method_foolang_compiler);
         env.classes.add_builtin(&class, "toString", method_object_tostring);
+        env.classes.add_builtin(&class, "==", method_object_eq);
 
         let (class, _meta) = env.add_builtin_class("Input");
         assert_eq!(class, CLASS_INPUT);
         env.classes.add_builtin(&class, "readline", method_input_readline);
         env.classes.add_builtin(&class, "toString", method_object_tostring);
+        env.classes.add_builtin(&class, "==", method_object_eq);
 
         let (class, _) = env.add_builtin_class("Integer");
         assert_eq!(class, CLASS_INTEGER);
@@ -162,6 +173,7 @@ lazy_static! {
         env.classes.add_builtin(&class, "newline", method_output_newline);
         env.classes.add_builtin(&class, "flush", method_output_flush);
         env.classes.add_builtin(&class, "toString", method_object_tostring);
+        env.classes.add_builtin(&class, "==", method_object_eq);
 
         let (class, meta) = env.add_builtin_class("String");
         assert_eq!(class, CLASS_STRING);
@@ -169,16 +181,19 @@ lazy_static! {
         env.classes.add_builtin(&class, "append:", method_string_append);
         env.classes.add_builtin(&class, "clear", method_string_clear);
         env.classes.add_builtin(&class, "toString", method_object_tostring);
+        env.classes.add_builtin(&class, "==", method_object_eq);
 
         let (class, _) = env.add_builtin_class("Symbol");
         assert_eq!(class, CLASS_SYMBOL);
         env.classes.add_builtin(&class, "toString", method_object_tostring);
+        env.classes.add_builtin(&class, "==", method_object_eq);
 
         let (class, meta) = env.add_builtin_class("System");
         assert_eq!(class, CLASS_SYSTEM);
         env.classes.add_builtin(&meta, "stdin", class_method_system_stdin);
         env.classes.add_builtin(&meta, "stdout", class_method_system_stdout);
         env.classes.add_builtin(&class, "toString", method_object_tostring);
+        env.classes.add_builtin(&class, "==", method_object_eq);
 
         /* GLOBALS */
 
@@ -257,13 +272,13 @@ impl GlobalEnv {
     pub fn eval_str(&self, text: &str) -> Object {
         self.eval(parse_expr(text))
     }
-    fn load_program_element(&mut self, program_element: ProgramElement) -> Object {
-        match program_element {
-            ProgramElement::Class(ClassDescription { name, slots }) => {
+    pub fn load_definition(&mut self, definition: Definition) -> Object {
+        match definition {
+            Definition::Class(ClassDescription { name, slots }) => {
                 self.add_class(&name.0, slots);
                 Object::make_symbol(&name.0)
             }
-            ProgramElement::InstanceMethod(MethodDescription { class, method }) => {
+            Definition::InstanceMethod(MethodDescription { class, method }) => {
                 match self.variables.get(&class.0) {
                     Some(Object {
                         class: _,
@@ -277,7 +292,7 @@ impl GlobalEnv {
                     _ => panic!("Cannot install methods in non-class objects."),
                 }
             }
-            ProgramElement::ClassMethod(MethodDescription { class, method }) => {
+            Definition::ClassMethod(MethodDescription { class, method }) => {
                 match self.variables.get(&class.0) {
                     Some(Object {
                         class: classid,
@@ -292,9 +307,9 @@ impl GlobalEnv {
             }
         }
     }
-    pub fn load(&mut self, program: Vec<ProgramElement>) {
+    pub fn load(&mut self, program: Vec<Definition>) {
         for p in program {
-            self.load_program_element(p);
+            self.load_definition(p);
         }
     }
     pub fn eval(&self, expr: Expr) -> Object {
@@ -456,9 +471,51 @@ impl MethodImpl {
     }
 }
 
+// FIXME: if I replaced this with Result I could use? to propagate returns.
 enum Eval {
     Result(Object, Object),
     Return(Object, Option<Lexenv>),
+}
+
+impl Eval {
+    pub fn is_return(&self) -> bool {
+        if let Eval::Return(_, _) = self {
+            return true;
+        }
+        return false;
+    }
+    pub fn value(&self) -> Object {
+        match self {
+            Eval::Result(val, _receiver) => val.to_owned(),
+            Eval::Return(val, _to) => val.to_owned(),
+        }
+    }
+    pub fn is_true(&self) -> bool {
+        if let Eval::Result(
+            Object {
+                datum: Datum::Boolean(true),
+                ..
+            },
+            ..
+        ) = self
+        {
+            return true;
+        }
+        return false;
+    }
+    pub fn is_false(&self) -> bool {
+        if let Eval::Result(
+            Object {
+                datum: Datum::Boolean(false),
+                ..
+            },
+            ..
+        ) = self
+        {
+            return true;
+        }
+        return false;
+    }
 }
 
 pub fn eval(expr: Expr) -> Object {
@@ -574,7 +631,10 @@ fn class_method_system_stdout(receiver: Object, args: Vec<Object>, _: &GlobalEnv
 fn method_input_readline(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 0);
     let line = match &receiver.datum {
-        Datum::Input(input) => Object::into_string(input.read_line()),
+        Datum::Input(input) => match input.read_line() {
+            Some(s) => Object::into_string(s),
+            None => Object::make_boolean(false),
+        },
         _ => panic!("Bad receiver for Input readline: {}", receiver),
     };
     make_method_result(receiver, line)
@@ -647,24 +707,34 @@ fn method_string_clear(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Ev
 
 fn method_boolean_iftrue(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
     assert!(args.len() == 1);
-    match receiver.datum {
-        Datum::Boolean(boolean) => {
-            if boolean {
-                match &args[0].datum {
-                    Datum::Closure(closure) => closure_apply(receiver, closure, &args, global),
-                    _ => panic!("Bad argument to Boolean 'ifTrue:': {}", args[0]),
-                }
-            } else {
-                make_result(receiver)
-            }
-        }
-        _ => panic!("Bad receiver to Boolean 'ifTrue:': {}", receiver),
+    if receiver.boolean() {
+        let closure = args[0].closure();
+        closure_apply(receiver, &closure, &vec![], global)
+    } else {
+        make_result(receiver)
     }
 }
 
-fn method_object_tostring(receiver: Object, _args: Vec<Object>, _: &GlobalEnv) -> Eval {
+fn method_boolean_iffalse(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
+    if !receiver.boolean() {
+        let closure = args[0].closure();
+        closure_apply(receiver, &closure, &vec![], global)
+    } else {
+        make_result(receiver)
+    }
+}
+
+fn method_object_tostring(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
     let string = Object::into_string(format!("{}", &receiver));
     make_method_result(receiver, string)
+}
+
+fn method_object_eq(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
+    let boolean = Object::make_boolean(receiver == args[0]);
+    make_method_result(receiver, boolean)
 }
 
 fn method_number_neg(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
@@ -800,7 +870,7 @@ fn method_number_eq(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval 
             Datum::Integer(i) => match args[0].datum {
                 Datum::Integer(j) => Object::make_boolean(i == j),
                 Datum::Float(j) => Object::make_boolean((i as f64) == j),
-                _ => panic!("Bad argument to Integer ==: {}", args[0]),
+                _ => Object::make_boolean(false),
             },
             Datum::Float(i) => match args[0].datum {
                 Datum::Integer(j) => Object::make_boolean(i == (j as f64)),
@@ -841,21 +911,37 @@ fn method_help(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval 
 }
 
 fn method_closure_apply(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
-    match receiver.datum.clone() {
-        Datum::Closure(closure) => closure_apply(receiver, &closure, &args, global),
-        _ => panic!("Bad receiver for block apply!"),
+    let closure = receiver.closure();
+    closure_apply(receiver, &closure, &args, global)
+}
+
+fn method_closure_until(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
+    let closure = receiver.closure();
+    let test = args[0].closure();
+    loop {
+        let res = closure_apply(receiver.clone(), &closure, &vec![], global);
+        if res.is_return() {
+            return res;
+        }
+        let res = closure_apply(receiver.clone(), &test, &vec![], global);
+        if res.is_return() || res.is_true() {
+            return make_method_result(receiver, res.value());
+        }
     }
 }
 
 fn method_closure_repeat(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
     match receiver.datum.clone() {
         Datum::Closure(closure) => loop {
-            if let Eval::Return(val, to) = closure_apply(receiver.clone(), &closure, &args, global)
+            if let Eval::Return(val, to) =
+                closure_apply(receiver.clone(), &closure, &vec![], global)
             {
                 return Eval::Return(val, to);
             }
         },
-        _ => panic!("Bad receiver for block apply!"),
+        _ => panic!("Bad receiver for closure repeat!"),
     }
 }
 
@@ -864,21 +950,15 @@ fn method_closure_repeatwhilefalse(
     args: Vec<Object>,
     global: &GlobalEnv,
 ) -> Eval {
-    match receiver.datum.clone() {
-        Datum::Closure(closure) => loop {
-            match closure_apply(receiver.clone(), &closure, &args, global) {
-                Eval::Return(val, to) => return Eval::Return(val, to),
-                Eval::Result(val, _) => {
-                    if let Datum::Boolean(false) = val.datum {
-                        // repeat
-                        ;
-                    } else {
-                        return make_method_result(receiver.clone(), val);
-                    }
-                }
-            }
-        },
-        _ => panic!("Bad receiver for block apply!"),
+    let closure = receiver.closure();
+    loop {
+        let res = closure_apply(receiver.clone(), &closure, &args, global);
+        if res.is_return() {
+            return res;
+        }
+        if !res.is_false() {
+            return make_method_result(receiver, res.value());
+        }
     }
 }
 
@@ -893,12 +973,11 @@ fn closure_apply(
         .env
         .extend(&closure.block.temporaries, &closure.block.parameters, args);
     for stm in closure.block.statements.iter() {
-        match eval_in_env(stm.to_owned(), &env, global) {
-            Eval::Result(value, _) => {
-                result = value;
-            }
-            Eval::Return(value, to) => return Eval::Return(value, to),
+        let res = eval_in_env(stm.to_owned(), &env, global);
+        if res.is_return() {
+            return res;
         }
+        result = res.value();
     }
     Eval::Result(result, receiver)
 }
@@ -906,11 +985,18 @@ fn closure_apply(
 fn method_compiler_evaluate(receiver: Object, args: Vec<Object>, _global: &GlobalEnv) -> Eval {
     assert!(args.len() == 0);
     let compiler = receiver.compiler();
-    let env = compiler.env.lock().unwrap();
+    let mut env = compiler.env.lock().unwrap();
     let ast = compiler.ast.lock().unwrap();
     match *ast {
         None => panic!("Cannot evaluate: no AST available."),
-        Some(ref ast) => make_method_result(receiver, env.eval(ast.to_owned())),
+        Some(ref ast) => match ast {
+            ProgramElement::Expr(ref expr) => {
+                make_method_result(receiver, env.eval(expr.to_owned()))
+            }
+            ProgramElement::Definition(ref def) => {
+                make_method_result(receiver, env.load_definition(def.to_owned()))
+            }
+        },
     }
 }
 
@@ -919,10 +1005,10 @@ fn method_compiler_tryparse(receiver: Object, args: Vec<Object>, _global: &Globa
     let compiler = receiver.compiler();
     let mut ast = compiler.ast.lock().unwrap();
     let mut ok = false;
-    *ast = match args[0].string().with_str(|s| try_parse_expr(s)) {
-        Ok(expr) => {
+    *ast = match args[0].string().with_str(|s| try_parse(s)) {
+        Ok(elt) => {
             ok = true;
-            Some(expr)
+            Some(elt)
         }
         Err(_) => None,
     };

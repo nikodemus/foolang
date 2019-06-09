@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use crate::ast::{
-  Identifier, Expr, Literal, Cascade, Method, Block, ClassDescription, ProgramElement, Program,
-  MethodDescription, PlaygroundElement
+  Identifier, Expr, Literal, Cascade, Method, Block, ClassDescription, Definition, Program,
+  MethodDescription, ProgramElement
 };
 use crate::utils::{
   prepend, chop, chopchop,
@@ -9,20 +9,21 @@ use crate::utils::{
 
 grammar;
 
-pub PlaygroundElement: PlaygroundElement = {
-  Expression => PlaygroundElement::Expr(<>),
-  ProgramElement => PlaygroundElement::ProgramElement(<>),
+pub ProgramElement: ProgramElement = {
+  Expression => ProgramElement::Expr(<>),
+  Definition => ProgramElement::Definition(<>),
 }
 
+// FIXME: rename to module
 pub Program: Program = {
-  <e:ProgramElement> <p:Program> => prepend(e, p),
-  <e:ProgramElement> => vec![e],
+  <e:Definition> <p:Program> => prepend(e, p),
+  <e:Definition> => vec![e],
 };
 
-ProgramElement: ProgramElement = {
-  Class => ProgramElement::Class(<>),
-  InstanceMethod => ProgramElement::InstanceMethod(<>),
-  ClassMethod => ProgramElement::ClassMethod(<>)
+Definition: Definition = {
+  Class => Definition::Class(<>),
+  InstanceMethod => Definition::InstanceMethod(<>),
+  ClassMethod => Definition::ClassMethod(<>)
 };
 
 pub Class: ClassDescription = {

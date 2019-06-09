@@ -1,4 +1,4 @@
-@class REPL [input output compiler text value]
+@class REPL [input output compiler text value eof]
 
 @class-method REPL run
     self new run
@@ -9,6 +9,7 @@
       System stdout.
       Foolang compiler.
       String new.
+      false.
       false
     ]
 
@@ -17,19 +18,23 @@
 
 @method REPL read
     {
-        text append: input readline.
-        compiler tryParse: text
+        |line|
+        line := input readline.
+        eof := line == false.
+        eof ifFalse: {
+          text append: line.
+          compiler tryParse: text
+        }
     }
     repeatWhileFalse.
     text clear
 
 @method REPL eval
-    value := compiler evaluate
+    eof ifFalse: { value := compiler evaluate }
 
 @method REPL print
-    output print: value toString; newline
+    eof ifFalse: { output print: value toString; newline }
 
 @method REPL run
-    output print: 'Foolang 0.1.0, let''s get started!'
-      ; newline.
-   { self prompt; read; eval; print } repeat
+    output print: 'Foolang 0.1.0'; newline.
+   { self prompt; read; eval; print } until: { eof == true }.

@@ -43,8 +43,8 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 84h
-Estimated remaining: 16h
+Time spent: 86h
+Estimated remaining: 15h
 
 - [x] AST
 - [x] Expression parser
@@ -85,10 +85,11 @@ Estimated remaining: 16h
   - [x] Compiler tryParse 1h
   - [x] Compiler evaluate 1h
   - [x] Command-line --script. 1h
-  - [ ] Fix parse and evaluate to deal with @class etc. 1h
+  - [x] Fix parse and evaluate to deal with @class etc. 1h
 - [ ] Benchmarks: foolang, pharo, python, SBCL, clang. Est 5h.
 - [ ] Read Pharo by Example. 10h
 - Optional extras:
+  - [ ] Change methods to default to last expression as return
   - [ ] Message chaining with ,
   - [ ] Record syntax [ foo: x signum. quux: y. ] and #[foo: 42]
   - [ ] String interpolation '1 + 1 = {1 + 1}'
