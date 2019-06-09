@@ -74,9 +74,9 @@ Estimated remaining: 39h
   - [ ] Output print: 1h
   - [ ] Output flush 1h
   - [ ] Output newline 1h
-  - [ ] Foolang compiler 1h
-  - [ ] Compiler tryParse 1h
-  - [ ] Compiler evaluate 1h
+  - [ ] Foolang evaluator 1h
+  - [ ] Evaluator tryParse 1h
+  - [ ] Evaluator evaluate 1h
   - [x] String new 1h
   - [x] String append 1h
   - [x] String clear 1h
