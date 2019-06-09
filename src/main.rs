@@ -1,3 +1,4 @@
+use clap::clap_app;
 /**
  * Let's be crystal clear here: this is not an efficient
  * VM implementation or object representation.
@@ -322,7 +323,14 @@ fn test_easy() {
 use foolang::evaluator::GlobalEnv;
 
 fn main() {
-    let mut env = GlobalEnv::new();
-    env.load_file("foo/playground.foo");
-    env.eval_str("Playground terminal run");
+    let matches = clap_app!(myapp =>
+        (version: "0.1.0")
+        (@arg expr: --eval +takes_value "Foolang expression to evaluate."))
+    .get_matches();
+    let env = GlobalEnv::new();
+    if let Some(expr) = matches.value_of("expr") {
+        env.eval_str(expr);
+    }
+    //env.load_file("foo/playground.foo");
+    //env.eval_str("Playground terminal run");
 }

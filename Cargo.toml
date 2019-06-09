@@ -13,3 +13,8 @@ lalrpop-util = "0.17.0"
 regex = "1"
 lazy_static = "*"
 num = "*"
+clap = "*"
+
+[dev-dependencies]
+assert_cmd = "*"
+predicates = "*"

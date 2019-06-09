@@ -121,7 +121,7 @@ lazy_static! {
         env.classes.add_builtin(&class, ">", method_number_gt);
         env.classes.add_builtin(&class, "==", method_number_eq);
 
-        let (stdin, _) = env.add_builtin_class("InputStream");
+        let (stdin, _) = env.add_builtin_class("Input");
         assert_eq!(stdin, CLASS_INPUT);
 
         let (class, _) = env.add_builtin_class("Integer");
@@ -135,8 +135,12 @@ lazy_static! {
         env.classes.add_builtin(&class, ">", method_number_gt);
         env.classes.add_builtin(&class, "==", method_number_eq);
 
-        let (stdin, _) = env.add_builtin_class("OutputStream");
-        assert_eq!(stdin, CLASS_OUTPUT);
+        let (class, meta) = env.add_builtin_class("Output");
+        assert_eq!(class, CLASS_OUTPUT);
+        env.classes.add_builtin(&meta, "stdout", class_method_output_stdout);
+        env.classes.add_builtin(&class, "print:", method_output_print);
+        env.classes.add_builtin(&class, "newline", method_output_newline);
+        env.classes.add_builtin(&class, "flush", method_output_flush);
 
         let (string, meta) = env.add_builtin_class("String");
         assert_eq!(string, CLASS_STRING);
@@ -521,6 +525,49 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
             Eval::Return(val, to) => Eval::Return(val, to),
         },
     }
+}
+
+fn class_method_output_stdout(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
+    make_method_result(receiver, Object::make_output(Box::new(std::io::stdout())))
+}
+
+fn method_output_print(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
+    match &receiver.datum {
+        Datum::Output(out) => match &args[0].datum {
+            Datum::String(s) => {
+                out.write(s.lock().unwrap().as_bytes());
+            }
+            _ => {
+                panic!("Bad argument to Output print: {}", args[0]);
+            }
+        },
+        _ => panic!("Bad receiver for Output print: {}", receiver),
+    }
+    make_method_result(receiver.clone(), receiver)
+}
+
+fn method_output_newline(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
+    match &receiver.datum {
+        Datum::Output(out) => {
+            out.write("\n".as_bytes());
+        }
+        _ => panic!("Bad receiver for Output newline: {}", receiver),
+    }
+    make_method_result(receiver.clone(), receiver)
+}
+
+fn method_output_flush(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
+    match &receiver.datum {
+        Datum::Output(out) => {
+            out.flush();
+        }
+        _ => panic!("Bad receiver for Output flush: {}", receiver),
+    }
+    make_method_result(receiver.clone(), receiver)
 }
 
 fn class_method_string_new(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
