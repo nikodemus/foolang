@@ -48,8 +48,9 @@ impl fmt::Display for Object {
                 write!(f, "]")
             }
             Datum::Class(class) => write!(f, "#<class {}>", class.name),
-            Datum::Instance(_slot) => write!(f, "#<obj>"),
-            Datum::Closure(_closure) => write!(f, "#<closure>"),
+            Datum::Instance(_slot) => write!(f, "#<Obj>"),
+            Datum::Closure(_closure) => write!(f, "#<Closure>"),
+            Datum::Output(_output) => write!(f, "#<Output>"),
         }
     }
 }
@@ -108,6 +109,29 @@ impl Deref for StringObject {
     }
 }
 
+pub struct OutputObject(pub Mutex<Box<dyn std::io::Write + Send + Sync>>);
+
+impl PartialEq for OutputObject {
+    fn eq(&self, other: &Self) -> bool {
+        self as *const _ == other as *const _
+    }
+}
+
+impl fmt::Debug for OutputObject {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "#<Output>")
+    }
+}
+
+impl OutputObject {
+    pub fn write(&self, bytes: &[u8]) {
+        self.0.lock().unwrap().write(bytes).unwrap();
+    }
+    pub fn flush(&self) {
+        self.0.lock().unwrap().flush().unwrap();
+    }
+}
+
 // FIXME: Should have the contained objects holding the
 // Arc so things which are known to receive them could
 // receive owned.
@@ -123,6 +147,7 @@ pub enum Datum {
     Class(Arc<ClassObject>),
     Instance(Arc<SlotObject>),
     Closure(Arc<ClosureObject>),
+    Output(Arc<OutputObject>),
 }
 
 impl Object {
@@ -185,13 +210,13 @@ impl Object {
             datum: Datum::Input(Arc::new(input)),
         }
     }
-    pub fn make_output_stream(output: Box<dyn std::io::Write + Send + Sync>) -> Object {
+    */
+    pub fn make_output(output: Box<dyn std::io::Write + Send + Sync>) -> Object {
         Object {
             class: CLASS_OUTPUT,
-            datum: Datum::Output(Arc::new(output)),
+            datum: Datum::Output(Arc::new(OutputObject(Mutex::new(output)))),
         }
     }
-    */
     pub fn make_integer(x: i64) -> Object {
         Object {
             class: CLASS_INTEGER,

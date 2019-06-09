@@ -43,8 +43,8 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 78h
-Estimated remaining: 39h
+Time spent: 81h
+Estimated remaining: 35h
 
 - [x] AST
 - [x] Expression parser
@@ -70,10 +70,10 @@ Estimated remaining: 39h
   - [x] REPL implemented in foolang.
   - [ ] Input stdin. 1h
   - [ ] Input readLine. 1h
-  - [ ] Input stdout. 1h
-  - [ ] Output print: 1h
-  - [ ] Output flush 1h
-  - [ ] Output newline 1h
+  - [x] Output stdout. 1h
+  - [x] Output print: 1h
+  - [x] Output flush 1h
+  - [x] Output newline 1h
   - [ ] Foolang evaluator 1h
   - [ ] Evaluator tryParse 1h
   - [ ] Evaluator evaluate 1h
