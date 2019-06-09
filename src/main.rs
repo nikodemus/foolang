@@ -325,9 +325,14 @@ use foolang::evaluator::GlobalEnv;
 fn main() {
     let matches = clap_app!(myapp =>
         (version: "0.1.0")
-        (@arg expr: --eval +takes_value "Foolang expression to evaluate."))
+        (@arg expr: --eval +takes_value "Expression to evaluate.")
+        (@arg file: --load +takes_value "File to load."))
     .get_matches();
-    let env = GlobalEnv::new();
+    let mut env = GlobalEnv::new();
+    if let Some(file) = matches.value_of("file") {
+        println!("loading: {}", &file);
+        env.load_file(file);
+    }
     if let Some(expr) = matches.value_of("expr") {
         env.eval_str(expr);
     }

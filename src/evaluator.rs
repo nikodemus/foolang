@@ -90,18 +90,22 @@ lazy_static! {
             variables: HashMap::new(),
         };
         // NOTE: Alphabetic order matches objects.rs
-        let (array, _) = env.add_builtin_class("Array");
-        assert_eq!(array, CLASS_ARRAY, "Bad classId for Array");
+        let (class, _) = env.add_builtin_class("Array");
+        assert_eq!(class, CLASS_ARRAY, "Bad classId for Array");
+        env.classes.add_builtin(&class, "toString", method_object_tostring);
 
         let (class, _) = env.add_builtin_class("Boolean");
         assert_eq!(class, CLASS_BOOLEAN, "Bad classId for Boolean");
         env.classes.add_builtin(&class, "ifTrue:", method_boolean_iftrue);
+        env.classes.add_builtin(&class, "toString", method_object_tostring);
 
-        let (character, _) = env.add_builtin_class("Character");
-        assert_eq!(character, CLASS_CHARACTER, "Bad classId for Character");
+        let (class, _) = env.add_builtin_class("Character");
+        assert_eq!(class, CLASS_CHARACTER, "Bad classId for Character");
+        env.classes.add_builtin(&class, "toString", method_object_tostring);
 
-        let (character, _) = env.add_builtin_class("Class");
-        assert_eq!(character, CLASS_CLASS, "Bad classId for Class");
+        let (class, _) = env.add_builtin_class("Class");
+        assert_eq!(class, CLASS_CLASS, "Bad classId for Class");
+        env.classes.add_builtin(&class, "toString", method_object_tostring);
 
         let (class, _) = env.add_builtin_class("Closure");
         assert_eq!(class, CLASS_CLOSURE, "Bad classId for Closure");
@@ -111,11 +115,13 @@ lazy_static! {
         env.classes.add_builtin(&class, "value", method_closure_apply);
         env.classes.add_builtin(&class, "value:value:", method_closure_apply);
         env.classes.add_builtin(&class, "value:value:value:", method_closure_apply);
+        env.classes.add_builtin(&class, "toString", method_object_tostring);
 
         let (class, _) = env.add_builtin_class("Compiler");
         assert_eq!(class, CLASS_COMPILER, "Bad classId for Compiler");
         env.classes.add_builtin(&class, "tryParse:", method_compiler_tryparse);
         env.classes.add_builtin(&class, "evaluate", method_compiler_evaluate);
+        env.classes.add_builtin(&class, "toString", method_object_tostring);
 
         let (class, _) = env.add_builtin_class("Float");
         assert_eq!(class, CLASS_FLOAT);
@@ -126,14 +132,17 @@ lazy_static! {
         env.classes.add_builtin(&class, "<", method_number_lt);
         env.classes.add_builtin(&class, ">", method_number_gt);
         env.classes.add_builtin(&class, "==", method_number_eq);
+        env.classes.add_builtin(&class, "toString", method_object_tostring);
 
         let (class, meta) = env.add_builtin_class("Foolang");
         assert_eq!(class, CLASS_FOOLANG);
         env.classes.add_builtin(&meta, "compiler", class_method_foolang_compiler);
+        env.classes.add_builtin(&class, "toString", method_object_tostring);
 
         let (class, _meta) = env.add_builtin_class("Input");
         assert_eq!(class, CLASS_INPUT);
         env.classes.add_builtin(&class, "readline", method_input_readline);
+        env.classes.add_builtin(&class, "toString", method_object_tostring);
 
         let (class, _) = env.add_builtin_class("Integer");
         assert_eq!(class, CLASS_INTEGER);
@@ -145,26 +154,31 @@ lazy_static! {
         env.classes.add_builtin(&class, "<", method_number_lt);
         env.classes.add_builtin(&class, ">", method_number_gt);
         env.classes.add_builtin(&class, "==", method_number_eq);
+        env.classes.add_builtin(&class, "toString", method_object_tostring);
 
         let (class, _meta) = env.add_builtin_class("Output");
         assert_eq!(class, CLASS_OUTPUT);
         env.classes.add_builtin(&class, "print:", method_output_print);
         env.classes.add_builtin(&class, "newline", method_output_newline);
         env.classes.add_builtin(&class, "flush", method_output_flush);
+        env.classes.add_builtin(&class, "toString", method_object_tostring);
 
-        let (string, meta) = env.add_builtin_class("String");
-        assert_eq!(string, CLASS_STRING);
+        let (class, meta) = env.add_builtin_class("String");
+        assert_eq!(class, CLASS_STRING);
         env.classes.add_builtin(&meta, "new", class_method_string_new);
-        env.classes.add_builtin(&string, "append:", method_string_append);
-        env.classes.add_builtin(&string, "clear", method_string_clear);
+        env.classes.add_builtin(&class, "append:", method_string_append);
+        env.classes.add_builtin(&class, "clear", method_string_clear);
+        env.classes.add_builtin(&class, "toString", method_object_tostring);
 
-        let (symbol, _) = env.add_builtin_class("Symbol");
-        assert_eq!(symbol, CLASS_SYMBOL);
+        let (class, _) = env.add_builtin_class("Symbol");
+        assert_eq!(class, CLASS_SYMBOL);
+        env.classes.add_builtin(&class, "toString", method_object_tostring);
 
         let (class, meta) = env.add_builtin_class("System");
         assert_eq!(class, CLASS_SYSTEM);
         env.classes.add_builtin(&meta, "stdin", class_method_system_stdin);
         env.classes.add_builtin(&meta, "stdout", class_method_system_stdout);
+        env.classes.add_builtin(&class, "toString", method_object_tostring);
 
         /* GLOBALS */
 
@@ -646,6 +660,11 @@ fn method_boolean_iftrue(receiver: Object, args: Vec<Object>, global: &GlobalEnv
         }
         _ => panic!("Bad receiver to Boolean 'ifTrue:': {}", receiver),
     }
+}
+
+fn method_object_tostring(receiver: Object, _args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    let string = Object::into_string(format!("{}", &receiver));
+    make_method_result(receiver, string)
 }
 
 fn method_number_neg(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {

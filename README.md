@@ -44,7 +44,7 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 **Non-goals**: performance, fancy extensions, useful class library.
 
 Time spent: 84h
-Estimated remaining: 32h
+Estimated remaining: 16h
 
 - [x] AST
 - [x] Expression parser
@@ -84,8 +84,8 @@ Estimated remaining: 32h
   - [x] Foolang compiler 1h
   - [x] Compiler tryParse 1h
   - [x] Compiler evaluate 1h
-- [ ] Source file execution. Est 5h.
-- [ ] Threads. Est 10h.
+  - [x] Command-line --script. 1h
+  - [ ] Fix parse and evaluate to deal with @class etc. 1h
 - [ ] Benchmarks: foolang, pharo, python, SBCL, clang. Est 5h.
 - [ ] Read Pharo by Example. 10h
 - Optional extras:
@@ -118,10 +118,6 @@ Estimated remaining: 32h
   - [ ] Indexing assignment foo[x] := 42 as sugar for at:put:
   - Command-line options
     - [ ] -p <path> ... 1h
-  - Command-line actions
-    - [ ] repl 1h. Run the inlined REPL code.
-    - [ ] eval <expr> 1h.
-    - [ ] run <file with @main> 5h.
 
 ### Planned: 0.1.1: Cleanups
 
