@@ -121,8 +121,10 @@ lazy_static! {
         env.classes.add_builtin(&class, ">", method_number_gt);
         env.classes.add_builtin(&class, "==", method_number_eq);
 
-        let (stdin, _) = env.add_builtin_class("Input");
-        assert_eq!(stdin, CLASS_INPUT);
+        let (class, meta) = env.add_builtin_class("Input");
+        assert_eq!(class, CLASS_INPUT);
+        env.classes.add_builtin(&meta, "stdin", class_method_input_stdin);
+        env.classes.add_builtin(&class, "readline", method_input_readline);
 
         let (class, _) = env.add_builtin_class("Integer");
         assert_eq!(class, CLASS_INTEGER);
@@ -525,6 +527,20 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
             Eval::Return(val, to) => Eval::Return(val, to),
         },
     }
+}
+
+fn class_method_input_stdin(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
+    make_method_result(receiver, Object::make_input(Box::new(std::io::stdin())))
+}
+
+fn method_input_readline(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
+    let line = match &receiver.datum {
+        Datum::Input(input) => Object::into_string(input.read_line()),
+        _ => panic!("Bad receiver for Input readline: {}", receiver),
+    };
+    make_method_result(receiver, line)
 }
 
 fn class_method_output_stdout(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {

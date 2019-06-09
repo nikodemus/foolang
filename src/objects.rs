@@ -51,6 +51,7 @@ impl fmt::Display for Object {
             Datum::Instance(_slot) => write!(f, "#<Obj>"),
             Datum::Closure(_closure) => write!(f, "#<Closure>"),
             Datum::Output(_output) => write!(f, "#<Output>"),
+            Datum::Input(_input) => write!(f, "#<Input>"),
         }
     }
 }
@@ -132,6 +133,51 @@ impl OutputObject {
     }
 }
 
+pub struct InputObject {
+    pub stream: Mutex<Box<dyn std::io::Read + Send + Sync>>,
+    pub buffer: Mutex<Vec<u8>>,
+}
+
+impl PartialEq for InputObject {
+    fn eq(&self, other: &Self) -> bool {
+        self as *const _ == other as *const _
+    }
+}
+
+impl fmt::Debug for InputObject {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "#<Input>")
+    }
+}
+
+impl InputObject {
+    pub fn read_line(&self) -> String {
+        let mut buf = self.buffer.lock().unwrap();
+        let mut stream = self.stream.lock().unwrap();
+        loop {
+            if let Some(newline) = buf.iter().position(|x| *x == 10) {
+                // Check for preceding carriage return.
+                let end = if newline > 0 && buf[newline - 1] == 13 {
+                    newline - 1
+                } else {
+                    newline
+                };
+                let line = String::from(std::str::from_utf8(&buf[0..end]).unwrap());
+                buf.drain(0..newline + 1);
+                return line;
+            }
+            buf.reserve(1024);
+            let len = buf.len();
+            let capacity = buf.capacity();
+            unsafe {
+                buf.set_len(capacity);
+                let n = stream.read(&mut buf[len..]).unwrap();
+                buf.set_len(len + n);
+            }
+        }
+    }
+}
+
 // FIXME: Should have the contained objects holding the
 // Arc so things which are known to receive them could
 // receive owned.
@@ -148,6 +194,7 @@ pub enum Datum {
     Instance(Arc<SlotObject>),
     Closure(Arc<ClosureObject>),
     Output(Arc<OutputObject>),
+    Input(Arc<InputObject>),
 }
 
 impl Object {
@@ -203,14 +250,15 @@ impl Object {
             datum: Datum::Boolean(boolean),
         }
     }
-    /*
-    pub fn make_input_stream(input: Box<dyn std::io::Read + Send + Sync>) -> Object {
+    pub fn make_input(input: Box<dyn std::io::Read + Send + Sync>) -> Object {
         Object {
             class: CLASS_INPUT,
-            datum: Datum::Input(Arc::new(input)),
+            datum: Datum::Input(Arc::new(InputObject {
+                stream: Mutex::new(input),
+                buffer: Mutex::new(Vec::new()),
+            })),
         }
     }
-    */
     pub fn make_output(output: Box<dyn std::io::Write + Send + Sync>) -> Object {
         Object {
             class: CLASS_OUTPUT,
