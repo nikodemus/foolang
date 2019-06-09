@@ -16,13 +16,15 @@ pub const CLASS_BOOLEAN: ClassId = ClassId(3);
 pub const CLASS_CHARACTER: ClassId = ClassId(5);
 pub const CLASS_CLASS: ClassId = ClassId(7);
 pub const CLASS_CLOSURE: ClassId = ClassId(9);
-pub const CLASS_FLOAT: ClassId = ClassId(11);
-pub const CLASS_INPUT: ClassId = ClassId(13);
-pub const CLASS_INTEGER: ClassId = ClassId(15);
-pub const CLASS_OUTPUT: ClassId = ClassId(17);
-pub const CLASS_STRING: ClassId = ClassId(19);
-pub const CLASS_SYMBOL: ClassId = ClassId(21);
-pub const CLASS_SYSTEM: ClassId = ClassId(23);
+pub const CLASS_COMPILER: ClassId = ClassId(11);
+pub const CLASS_FLOAT: ClassId = ClassId(13);
+pub const CLASS_FOOLANG: ClassId = ClassId(15);
+pub const CLASS_INPUT: ClassId = ClassId(17);
+pub const CLASS_INTEGER: ClassId = ClassId(19);
+pub const CLASS_OUTPUT: ClassId = ClassId(21);
+pub const CLASS_STRING: ClassId = ClassId(23);
+pub const CLASS_SYMBOL: ClassId = ClassId(25);
+pub const CLASS_SYSTEM: ClassId = ClassId(27);
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Object {
@@ -53,6 +55,7 @@ impl fmt::Display for Object {
             Datum::Closure(_closure) => write!(f, "#<Closure>"),
             Datum::Output(_output) => write!(f, "#<Output>"),
             Datum::Input(_input) => write!(f, "#<Input>"),
+            Datum::Compiler(_input) => write!(f, "#<Compiler>"),
         }
     }
 }
@@ -179,6 +182,9 @@ impl InputObject {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub struct CompilerObject {}
+
 // FIXME: Should have the contained objects holding the
 // Arc so things which are known to receive them could
 // receive owned.
@@ -196,9 +202,91 @@ pub enum Datum {
     Closure(Arc<ClosureObject>),
     Output(Arc<OutputObject>),
     Input(Arc<InputObject>),
+    Compiler(Arc<CompilerObject>),
 }
 
 impl Object {
+    // ARRAY
+    pub fn make_array(data: &[Object]) -> Object {
+        Object::into_array(data.to_vec())
+    }
+    pub fn into_array(data: Vec<Object>) -> Object {
+        Object {
+            class: CLASS_ARRAY,
+            datum: Datum::Array(Arc::new(data)),
+        }
+    }
+    // BOOLEAN
+    pub fn make_boolean(boolean: bool) -> Object {
+        Object {
+            class: CLASS_BOOLEAN,
+            datum: Datum::Boolean(boolean),
+        }
+    }
+    // CHARACTER
+    pub fn make_character(s: &str) -> Object {
+        Object::into_character(String::from(s))
+    }
+    pub fn into_character(s: String) -> Object {
+        assert!(s.len() == 1);
+        Object {
+            class: CLASS_CHARACTER,
+            datum: Datum::Character(Arc::new(s)),
+        }
+    }
+    // CLASS
+    pub fn make_class(meta: ClassId, id: ClassId, name: &str) -> Object {
+        Object {
+            class: meta,
+            datum: Datum::Class(Arc::new(ClassObject {
+                id,
+                name: String::from(name),
+            })),
+        }
+    }
+    // CLOSURE
+    pub fn into_closure(block: ast::Block, env: &Lexenv) -> Object {
+        Object {
+            class: CLASS_CLOSURE,
+            datum: Datum::Closure(Arc::new(ClosureObject {
+                block,
+                env: env.to_owned(),
+            })),
+        }
+    }
+    // COMPILER
+    pub fn make_compiler() -> Object {
+        Object {
+            class: CLASS_COMPILER,
+            datum: Datum::Compiler(Arc::new(CompilerObject {})),
+        }
+    }
+    // FLOAT
+    pub fn make_float(x: f64) -> Object {
+        Object {
+            class: CLASS_FLOAT,
+            datum: Datum::Float(x),
+        }
+    }
+    // INPUT
+    pub fn make_input(input: Box<dyn std::io::Read + Send + Sync>) -> Object {
+        Object {
+            class: CLASS_INPUT,
+            datum: Datum::Input(Arc::new(InputObject {
+                stream: Mutex::new(input),
+                buffer: Mutex::new(Vec::new()),
+            })),
+        }
+    }
+    // INSTANCE
+    pub fn make_instance(class: ClassId, slots: Vec<Object>) -> Object {
+        Object {
+            class,
+            datum: Datum::Instance(Arc::new(SlotObject {
+                slots: Mutex::new(slots),
+            })),
+        }
+    }
     pub fn slot(&self, idx: usize) -> Object {
         if let Datum::Instance(obj) = &self.datum {
             obj.slots.lock().unwrap()[idx].clone()
@@ -213,65 +301,21 @@ impl Object {
             panic!("Cannot access slot of a non-slot object.");
         }
     }
-    pub fn into_closure(block: ast::Block, env: &Lexenv) -> Object {
-        Object {
-            class: CLASS_CLOSURE,
-            datum: Datum::Closure(Arc::new(ClosureObject {
-                block,
-                env: env.to_owned(),
-            })),
-        }
-    }
-    pub fn make_class(meta: ClassId, id: ClassId, name: &str) -> Object {
-        Object {
-            class: meta,
-            datum: Datum::Class(Arc::new(ClassObject {
-                id,
-                name: String::from(name),
-            })),
-        }
-    }
-    pub fn make_instance(class: ClassId, slots: Vec<Object>) -> Object {
-        Object {
-            class,
-            datum: Datum::Instance(Arc::new(SlotObject {
-                slots: Mutex::new(slots),
-            })),
-        }
-    }
-    pub fn make_float(x: f64) -> Object {
-        Object {
-            class: CLASS_FLOAT,
-            datum: Datum::Float(x),
-        }
-    }
-    pub fn make_boolean(boolean: bool) -> Object {
-        Object {
-            class: CLASS_BOOLEAN,
-            datum: Datum::Boolean(boolean),
-        }
-    }
-    pub fn make_input(input: Box<dyn std::io::Read + Send + Sync>) -> Object {
-        Object {
-            class: CLASS_INPUT,
-            datum: Datum::Input(Arc::new(InputObject {
-                stream: Mutex::new(input),
-                buffer: Mutex::new(Vec::new()),
-            })),
-        }
-    }
-    pub fn make_output(output: Box<dyn std::io::Write + Send + Sync>) -> Object {
-        Object {
-            class: CLASS_OUTPUT,
-            datum: Datum::Output(Arc::new(OutputObject(Mutex::new(output)))),
-        }
-    }
+    // INTEGER
     pub fn make_integer(x: i64) -> Object {
         Object {
             class: CLASS_INTEGER,
             datum: Datum::Integer(x),
         }
     }
+    // OUTPUT
+    pub fn make_output(output: Box<dyn std::io::Write + Send + Sync>) -> Object {
+        Object {
+            class: CLASS_OUTPUT,
+            datum: Datum::Output(Arc::new(OutputObject(Mutex::new(output)))),
+        }
+    }
+    // STRING
     pub fn make_string(s: &str) -> Object {
         Object::into_string(String::from(s))
     }
@@ -281,6 +325,7 @@ impl Object {
             datum: Datum::String(Arc::new(StringObject(Mutex::new(s)))),
         }
     }
+    // SYMBOL
     pub fn make_symbol(s: &str) -> Object {
         Object::into_symbol(String::from(s))
     }
@@ -288,25 +333,6 @@ impl Object {
         Object {
             class: CLASS_SYMBOL,
             datum: Datum::Symbol(Arc::new(s)),
-        }
-    }
-    pub fn make_character(s: &str) -> Object {
-        Object::into_character(String::from(s))
-    }
-    pub fn into_character(s: String) -> Object {
-        assert!(s.len() == 1);
-        Object {
-            class: CLASS_CHARACTER,
-            datum: Datum::Character(Arc::new(s)),
-        }
-    }
-    pub fn make_array(data: &[Object]) -> Object {
-        Object::into_array(data.to_vec())
-    }
-    pub fn into_array(data: Vec<Object>) -> Object {
-        Object {
-            class: CLASS_ARRAY,
-            datum: Datum::Array(Arc::new(data)),
         }
     }
 }

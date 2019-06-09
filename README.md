@@ -44,7 +44,7 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 **Non-goals**: performance, fancy extensions, useful class library.
 
 Time spent: 83h
-Estimated remaining: 33h
+Estimated remaining: 34h
 
 - [x] AST
 - [x] Expression parser
@@ -81,18 +81,18 @@ Estimated remaining: 33h
   - [x] Block repeatWhileFalse 1h
   - [x] Booleans. Unest
   - [x] Move stdout and stdin ctos to System. 1h
-  - [ ] Foolang compiler 1h
-  - [ ] Evaluator tryParse 1h
-  - [ ] Evaluator evaluate 1h
+  - [x] Foolang compiler 1h
+  - [ ] Compiler tryParse 1h
+  - [ ] Compiler evaluate 1h
 - [ ] Source file execution. Est 5h.
 - [ ] Threads. Est 10h.
 - [ ] Benchmarks: foolang, pharo, python, SBCL, clang. Est 5h.
 - [ ] Read Pharo by Example. 10h
 - Optional extras:
-  - [ ] String interpolation '1 + 1 = {1 + 1}'
-  - [ ] => { :that | ... }
   - [ ] Message chaining with ,
   - [ ] Record syntax [ foo: x signum. quux: y. ] and #[foo: 42]
+  - [ ] String interpolation '1 + 1 = {1 + 1}'
+  - [ ] => { :that | ... }
   - [ ] Positional arguments in keyword messages:
         Blocks implement: value, value::::, and apply:
         b value            # unary
@@ -116,6 +116,11 @@ Estimated remaining: 33h
   - [ ] Prefix messages: -foo, !foo, ~foo
   - [ ] Indexing foo[x] as sugar for at:
   - [ ] Indexing assignment foo[x] := 42 as sugar for at:put:
+  - Command-line options
+    - [ ] -p <path> ... 1h
+  - Command-line actions
+    - [ ] eval <expr> 1h.
+    - [ ] load <class with main from path as class.fooclass> 5h.
 
 ### Planned: 0.2.0: The IDE
 
@@ -374,6 +379,33 @@ to what gcc -O0 would produce.
 
 ## MMmmmaaaybe
 
+- I still wonder if blocks should have "selectors" instead,
+  ```
+    { :foo :ding | ... } foo: x ding: y
+  ```
+  reserving value for no-arg blocks.
+  ...but then block class cannot implement things like repeat.
+  ...but then I have the perfect excuse of making control classes like
+  ```
+   Loop while: { } do: { }
+   Loop repeat: { }
+   Loop doUntil: { }
+   Loop until: { } do: { }
+   Cond if: { } then: { }, elseif: { } then: { }, else: { }
+  ```
+  That's pretty nice but would be even better if I could figure out
+  how to make
+  ```
+      If: { } then: { }
+  ```
+  work. ...and optimizing
+  ```
+   Cond if: { a } then: { x }, elseif: { b } then: { y }, else: { z }
+   ==>
+   Cond if: { a } then: { x } else: { Cond if: { b } then: { y } else: { z }}
+  ```
+  is an interesting problem! Note though, that I can implement these classes
+  even if block have repeat and booleans have ifTrue, etc.
 - Make ${} and $[] a literal json objects
 
 - Stdout problem solution:
