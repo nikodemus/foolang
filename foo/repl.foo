@@ -17,7 +17,7 @@
 
 @method REPL read
     {
-        text append: input readLine.
+        text append: input readline.
         compiler tryParse: text
     }
     repeatWhileFalse.
@@ -27,9 +27,9 @@
     value := compiler evaluate
 
 @method REPL print
-    output print: value
+    output print: value toString; newline
 
 @method REPL run
-    output print: 'Foolang 0.1.0, let's get started!'
+    output print: 'Foolang 0.1.0, let''s get started!'
       ; newline.
    { self prompt; read; eval; print } repeat
