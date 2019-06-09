@@ -43,8 +43,8 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 83h
-Estimated remaining: 34h
+Time spent: 84h
+Estimated remaining: 32h
 
 - [x] AST
 - [x] Expression parser
@@ -82,8 +82,8 @@ Estimated remaining: 34h
   - [x] Booleans. Unest
   - [x] Move stdout and stdin ctos to System. 1h
   - [x] Foolang compiler 1h
-  - [ ] Compiler tryParse 1h
-  - [ ] Compiler evaluate 1h
+  - [x] Compiler tryParse 1h
+  - [x] Compiler evaluate 1h
 - [ ] Source file execution. Est 5h.
 - [ ] Threads. Est 10h.
 - [ ] Benchmarks: foolang, pharo, python, SBCL, clang. Est 5h.
