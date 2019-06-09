@@ -22,6 +22,7 @@ pub const CLASS_INTEGER: ClassId = ClassId(15);
 pub const CLASS_OUTPUT: ClassId = ClassId(17);
 pub const CLASS_STRING: ClassId = ClassId(19);
 pub const CLASS_SYMBOL: ClassId = ClassId(21);
+pub const CLASS_SYSTEM: ClassId = ClassId(23);
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Object {

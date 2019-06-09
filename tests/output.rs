@@ -6,7 +6,7 @@ use std::process::Command; // Run programs // Used for writing assertions
 fn stdout_print_no_flush() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("--eval")
-        .arg("Output stdout print: 'hello world!'; newline; print: 'boing!'");
+        .arg("System stdout print: 'hello world!'; newline; print: 'boing!'");
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("hello world!\n"));
@@ -17,7 +17,7 @@ fn stdout_print_no_flush() -> Result<(), Box<std::error::Error>> {
 fn stdout_print_flush() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("--eval")
-        .arg("Output stdout print: 'hello world!'; newline; print: 'boing!'; flush");
+        .arg("System stdout print: 'hello world!'; newline; print: 'boing!'; flush");
     cmd.assert()
         .success()
         .stdout(predicate::str::ends_with("hello world!\nboing!"));
@@ -31,8 +31,8 @@ fn stdin_readline() -> Result<(), Box<std::error::Error>> {
         "
             {
                 |out in|
-                in := Input stdin.
-                out := Output stdout.
+                in := System stdin.
+                out := System stdout.
                 out print: ('1: ' append: (in readline)); newline;
                     print: ('2: ' append: (in readline)); newline
             } value
