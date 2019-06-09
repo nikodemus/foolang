@@ -121,30 +121,39 @@ Estimated remaining: 33h
 
 _...a bad SmallTalk with an environment from the 80s?_
 
-**Goals**: a working Smalltalk-like IDE using Mirrors, actually writing foolang
+**Goals**: a working Smalltalk-like ID, actually writing foolang
 code.
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Estimated remaining: 110h
+Estimated remaining: 100h
+Time spent: 0h
 
-- [ ] Source formatter. Est 10h.
-- [ ] Wrap a rust web server as foolang object. 5h
-      Actix bind: "/foo" to: { |request| ... }
-- Bare bones class browser widget:
-  - [ ] List classes and methods. 5h
-  - [ ] Adding and editing classes. 5h
-  - [ ] Adding and editing methods. 5h.
-- Make the editor components nice
-  - [ ] Generate an overlay: highlight classes and errors stuff. 5h
-  - [ ] Offer completions for classes and selectors. 5h
-  - [ ] Keyboard shortcuts. 5h
-- Add a persistent playground widget. 5h
-- Add a persistent transcript widget. 5h
-- Add a finder (opens browser) widget. 5h
-- Add an inspector widget. 10h
-- Add debugger widget. 20h
-- Integrate these components into a nice whole. 20h
+- [ ] Source formatter. 10h.
+- [ ] Wrap a rust web server as foolang object. 10h
+- Bare bones class browser widget: 20h
+  - [ ] Foolang classes. 1h
+  - [ ] Foolang reflect: class. 1h.
+  - [ ] ClassMirror slots. 1h.
+  - [ ] ClassMirror methods. 1h.
+  - [ ] ClassMirror help. 1h
+  - [ ] MethodMirror source. 1h.
+  - [ ] MethodMirror isClassMethod. 1h.
+  - [ ] MethodMirror class. 1h.
+  - [ ] MethodMirror selector. 1h.
+  - [ ] MethodMirror parameters. 1h.
+  - [ ] MethodMirror help. 1h.
+  - [ ] /foolang/list-classes. 1h
+  - [ ] /foolang/class/<name> => {name,help,slots,methods,classMethods} 1h
+  - [ ] /foolang/method/<class>/<selector> => {name,help,parameters,source} 1h
+  - [ ] ?. 1h
+  - [ ] browser.html + js. 5h
+- [ ] Editing in the class browset: 10h
+- [ ] Bare bones playground widget. 10h
+- [ ] Bare bones transcript widget. 10h
+- [ ] Bare bones inspector widget. 10h
+- [ ] Integrate these components into a whole. 10h
+- [ ] Make things slightly less bare bones. 10h
 
 ### Planned: 0.3.0: The Virtual Machine
 
