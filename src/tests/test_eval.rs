@@ -3,11 +3,6 @@ use crate::objects::Object;
 use crate::parser::parse_expr;
 
 #[test]
-fn eval_string() {
-    assert_eq!(eval(parse_expr("'foo'")), Object::make_string("foo"));
-}
-
-#[test]
 fn eval_character() {
     assert_eq!(eval(parse_expr("$x")), Object::make_character("x"));
 }
@@ -85,30 +80,5 @@ fn eval_array_ctor() {
             Object::make_integer(2),
             Object::make_float(3.0),
         ])
-    );
-}
-
-#[test]
-fn eval_string_new() {
-    assert_eq!(eval(parse_expr("String new")), Object::make_string(""));
-}
-
-#[test]
-fn eval_string_append() {
-    assert_eq!(
-        eval(parse_expr(
-            "{ |x| x := String new. x append: 'foo'. x append: 'bar'. x} value"
-        )),
-        Object::make_string("foobar")
-    );
-}
-
-#[test]
-fn eval_string_clear() {
-    assert_eq!(
-        eval(parse_expr(
-            "{ |x| x := String new. x append: 'foo'. x clear append: 'bar'. x} value"
-        )),
-        Object::make_string("bar")
     );
 }
