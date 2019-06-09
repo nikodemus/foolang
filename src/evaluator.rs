@@ -111,6 +111,9 @@ lazy_static! {
         env.classes.add_builtin(&class, "value:value:", method_closure_apply);
         env.classes.add_builtin(&class, "value:value:value:", method_closure_apply);
 
+        let (class, _) = env.add_builtin_class("Compiler");
+        assert_eq!(class, CLASS_COMPILER, "Bad classId for Compiler");
+
         let (class, _) = env.add_builtin_class("Float");
         assert_eq!(class, CLASS_FLOAT);
         env.classes.add_builtin(&class, "neg", method_number_neg);
@@ -120,6 +123,10 @@ lazy_static! {
         env.classes.add_builtin(&class, "<", method_number_lt);
         env.classes.add_builtin(&class, ">", method_number_gt);
         env.classes.add_builtin(&class, "==", method_number_eq);
+
+        let (class, meta) = env.add_builtin_class("Foolang");
+        assert_eq!(class, CLASS_FOOLANG);
+        env.classes.add_builtin(&meta, "compiler", class_method_foolang_compiler);
 
         let (class, _meta) = env.add_builtin_class("Input");
         assert_eq!(class, CLASS_INPUT);
@@ -530,6 +537,11 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
             Eval::Return(val, to) => Eval::Return(val, to),
         },
     }
+}
+
+fn class_method_foolang_compiler(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
+    make_method_result(receiver, Object::make_compiler())
 }
 
 fn class_method_system_stdin(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
