@@ -117,26 +117,23 @@ Estimated remaining: 15h
   - [ ] Prefix messages: -foo, !foo, ~foo
   - [ ] Indexing foo[x] as sugar for at:
   - [ ] Indexing assignment foo[x] := 42 as sugar for at:put:
-  - Command-line options
-    - [ ] -p <path> ... 1h
-
-### Planned: 0.1.1: Cleanups
-
-- [ ] Move methods from evaluator.rs into classes/class.rs
-- [ ] Move sub-object definitions from objects.rs into classes/class.rs
 
 ### Planned: 0.2.0: The IDE
 
 _...a bad SmallTalk with an environment from the 80s?_
 
-**Goals**: a working Smalltalk-like ID, actually writing foolang
-code.
+**Goals**: a Smalltalk-like ID, actually writing foolang code.
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
 Estimated remaining: 100h
 Time spent: 0h
 
+- Cleanups
+  - [ ] Have Object.underlying methods for all builtin classes. 2h
+  - [ ] Move methods from evaluator.rs into classes/class.rs. 1h.
+  - [ ] Move sub-object definitions from objects.rs into classes/class.rs. 1h
+  - [ ] History cleanup. 1h
 - [ ] Source formatter. 10h.
 - [ ] Wrap a rust web server as foolang object. 10h
 - Bare bones class browser widget: 20h
@@ -156,12 +153,12 @@ Time spent: 0h
   - [ ] /foolang/method/<class>/<selector> => {name,help,parameters,source} 1h
   - [ ] ?. 1h
   - [ ] browser.html + js. 5h
-- [ ] Editing in the class browset: 10h
+- [ ] Editing in the class browser: 10h
 - [ ] Bare bones playground widget. 10h
 - [ ] Bare bones transcript widget. 10h
 - [ ] Bare bones inspector widget. 10h
 - [ ] Integrate these components into a whole. 10h
-- [ ] Make things slightly less bare bones. 10h
+- [ ] Make things slightly less bare bones. 5h
 
 ### Planned: 0.3.0: The Virtual Machine
 
