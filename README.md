@@ -81,7 +81,7 @@ Estimated remaining: 33h
   - [x] Block repeatWhileFalse 1h
   - [x] Booleans. Unest
   - [x] Move stdout and stdin ctos to System. 1h
-  - [ ] Foolang evaluator 1h
+  - [ ] Foolang compiler 1h
   - [ ] Evaluator tryParse 1h
   - [ ] Evaluator evaluate 1h
 - [ ] Source file execution. Est 5h.

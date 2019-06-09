@@ -4,7 +4,13 @@
     self new run
 
 @class-method REPL new
-    ^self createInstance: [Input stdin . Output stdout . Foolang compiler . String new . false]
+    ^self createInstance: [
+      System stdin.
+      System stdout.
+      Foolang compiler.
+      String new.
+      false
+    ]
 
 @method REPL prompt
     output print: '> '; flush
