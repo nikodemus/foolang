@@ -119,8 +119,14 @@ Estimated remaining: 32h
   - Command-line options
     - [ ] -p <path> ... 1h
   - Command-line actions
+    - [ ] repl 1h. Run the inlined REPL code.
     - [ ] eval <expr> 1h.
-    - [ ] load <class with main from path as class.fooclass> 5h.
+    - [ ] run <file with @main> 5h.
+
+### Planned: 0.1.1: Cleanups
+
+- [ ] Move methods from evaluator.rs into classes/class.rs
+- [ ] Move sub-object definitions from objects.rs into classes/class.rs
 
 ### Planned: 0.2.0: The IDE
 
