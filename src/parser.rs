@@ -3,13 +3,6 @@ use crate::ast;
 use lalrpop_util::lalrpop_mod;
 lalrpop_mod!(pub syntax);
 
-pub fn try_parse_expr(s: &str) -> Result<ast::Expr, String> {
-    match syntax::ExpressionParser::new().parse(s) {
-        Ok(expr) => Ok(expr),
-        Err(err) => Err(format!("Could not parse: {}", err)),
-    }
-}
-
 pub fn parse_expr(s: &str) -> ast::Expr {
     match syntax::ExpressionParser::new().parse(s) {
         Ok(e) => e,
@@ -64,5 +57,12 @@ pub fn parse_program(s: &str) -> ast::Program {
         Err(e) => {
             panic!(format!("Could not parse Program: {}\nError: {}", s, e));
         }
+    }
+}
+
+pub fn try_parse(s: &str) -> Result<ast::ProgramElement, String> {
+    match syntax::ProgramElementParser::new().parse(s) {
+        Ok(elt) => Ok(elt),
+        Err(err) => Err(format!("Could not parse: {}", err)),
     }
 }

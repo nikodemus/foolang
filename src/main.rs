@@ -330,7 +330,6 @@ fn main() {
     .get_matches();
     let mut env = GlobalEnv::new();
     if let Some(file) = matches.value_of("file") {
-        println!("loading: {}", &file);
         env.load_file(file);
     }
     if let Some(expr) = matches.value_of("expr") {

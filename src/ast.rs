@@ -42,15 +42,15 @@ pub enum Expr {
     ArrayCtor(Vec<Expr>),
 }
 
-pub enum PlaygroundElement {
+pub enum ProgramElement {
     Expr(Expr),
-    ProgramElement(ProgramElement),
+    Definition(Definition),
 }
 
-pub type Program = Vec<ProgramElement>;
+pub type Program = Vec<Definition>;
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum ProgramElement {
+pub enum Definition {
     Class(ClassDescription),
     InstanceMethod(MethodDescription),
     ClassMethod(MethodDescription),

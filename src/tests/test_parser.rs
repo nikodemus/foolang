@@ -436,11 +436,11 @@ fn parse_program1() {
     assert_eq!(
         prog,
         vec![
-            ast::ProgramElement::Class(ast::ClassDescription {
+            ast::Definition::Class(ast::ClassDescription {
                 name: identifier("Foo"),
                 slots: vec![],
             }),
-            ast::ProgramElement::InstanceMethod(ast::MethodDescription {
+            ast::Definition::InstanceMethod(ast::MethodDescription {
                 class: identifier("Foo"),
                 method: ast::Method {
                     selector: identifier("theAnswer"),
