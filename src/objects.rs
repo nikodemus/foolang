@@ -1,4 +1,5 @@
 use crate::ast;
+use crate::evaluator::GlobalEnv;
 use crate::evaluator::Lexenv;
 use std::fmt;
 use std::ops::Deref;
@@ -105,6 +106,10 @@ impl StringObject {
     pub fn to_string(&self) -> String {
         self.lock().unwrap().clone()
     }
+    pub fn with_str<T>(&self, f: fn(&str) -> T) -> T {
+        let string = self.lock().unwrap();
+        f(string.as_str())
+    }
 }
 
 impl Deref for StringObject {
@@ -182,8 +187,23 @@ impl InputObject {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct CompilerObject {}
+pub struct CompilerObject {
+    pub env: Mutex<GlobalEnv>,
+    // FIXME: sort out the naming
+    pub ast: Mutex<Option<ast::Expr>>,
+}
+
+impl fmt::Debug for CompilerObject {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "#<Compiler>")
+    }
+}
+
+impl PartialEq for CompilerObject {
+    fn eq(&self, other: &Self) -> bool {
+        self as *const _ == other as *const _
+    }
+}
 
 // FIXME: Should have the contained objects holding the
 // Arc so things which are known to receive them could
@@ -258,7 +278,16 @@ impl Object {
     pub fn make_compiler() -> Object {
         Object {
             class: CLASS_COMPILER,
-            datum: Datum::Compiler(Arc::new(CompilerObject {})),
+            datum: Datum::Compiler(Arc::new(CompilerObject {
+                env: Mutex::new(GlobalEnv::new()),
+                ast: Mutex::new(None),
+            })),
+        }
+    }
+    pub fn compiler(&self) -> Arc<CompilerObject> {
+        match &self.datum {
+            Datum::Compiler(c) => c.to_owned(),
+            _ => panic!("TypeError: not a Compiler: {}", self),
         }
     }
     // FLOAT
@@ -323,6 +352,12 @@ impl Object {
         Object {
             class: CLASS_STRING,
             datum: Datum::String(Arc::new(StringObject(Mutex::new(s)))),
+        }
+    }
+    pub fn string(&self) -> Arc<StringObject> {
+        match &self.datum {
+            Datum::String(s) => s.to_owned(),
+            _ => panic!("TypeError: not a String: {}", self),
         }
     }
     // SYMBOL

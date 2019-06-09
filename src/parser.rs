@@ -3,12 +3,10 @@ use crate::ast;
 use lalrpop_util::lalrpop_mod;
 lalrpop_mod!(pub syntax);
 
-pub fn parse_playground(s: &str) -> ast::PlaygroundElement {
-    match syntax::PlaygroundElementParser::new().parse(s) {
-        Ok(e) => e,
-        Err(e) => {
-            panic!(format!("Could not parse: {}\nError: {}", s, e));
-        }
+pub fn try_parse_expr(s: &str) -> Result<ast::Expr, String> {
+    match syntax::ExpressionParser::new().parse(s) {
+        Ok(expr) => Ok(expr),
+        Err(err) => Err(format!("Could not parse: {}", err)),
     }
 }
 

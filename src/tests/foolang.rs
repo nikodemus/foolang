@@ -1,6 +1,18 @@
 use crate::evaluator::eval_str;
+use crate::objects::Object;
 
 #[test]
 fn foolang_compiler() {
-    eval_str("Foolang compiler");
+    assert_eq!(
+        eval_str("Foolang compiler tryParse: '1 +'"),
+        Object::make_boolean(false)
+    );
+    assert_eq!(
+        eval_str("Foolang compiler tryParse: '1 + 2'"),
+        Object::make_boolean(true)
+    );
+    assert_eq!(
+        eval_str("Foolang compiler tryParse: '1 + 2'; evaluate"),
+        Object::make_integer(3)
+    );
 }

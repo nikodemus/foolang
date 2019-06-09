@@ -4,6 +4,7 @@ use crate::ast::{
 use crate::objects::*;
 use crate::parser::parse_expr;
 use crate::parser::parse_program;
+use crate::parser::try_parse_expr;
 use lazy_static::lazy_static;
 use std::borrow::ToOwned;
 use std::collections::HashMap;
@@ -113,6 +114,8 @@ lazy_static! {
 
         let (class, _) = env.add_builtin_class("Compiler");
         assert_eq!(class, CLASS_COMPILER, "Bad classId for Compiler");
+        env.classes.add_builtin(&class, "tryParse:", method_compiler_tryparse);
+        env.classes.add_builtin(&class, "evaluate", method_compiler_evaluate);
 
         let (class, _) = env.add_builtin_class("Float");
         assert_eq!(class, CLASS_FLOAT);
@@ -879,6 +882,32 @@ fn closure_apply(
         }
     }
     Eval::Result(result, receiver)
+}
+
+fn method_compiler_evaluate(receiver: Object, args: Vec<Object>, _global: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
+    let compiler = receiver.compiler();
+    let env = compiler.env.lock().unwrap();
+    let ast = compiler.ast.lock().unwrap();
+    match *ast {
+        None => panic!("Cannot evaluate: no AST available."),
+        Some(ref ast) => make_method_result(receiver, env.eval(ast.to_owned())),
+    }
+}
+
+fn method_compiler_tryparse(receiver: Object, args: Vec<Object>, _global: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
+    let compiler = receiver.compiler();
+    let mut ast = compiler.ast.lock().unwrap();
+    let mut ok = false;
+    *ast = match args[0].string().with_str(|s| try_parse_expr(s)) {
+        Ok(expr) => {
+            ok = true;
+            Some(expr)
+        }
+        Err(_) => None,
+    };
+    make_method_result(receiver, Object::make_boolean(ok))
 }
 
 fn eval_literal(lit: Literal) -> Object {
