@@ -121,9 +121,8 @@ lazy_static! {
         env.classes.add_builtin(&class, ">", method_number_gt);
         env.classes.add_builtin(&class, "==", method_number_eq);
 
-        let (class, meta) = env.add_builtin_class("Input");
+        let (class, _meta) = env.add_builtin_class("Input");
         assert_eq!(class, CLASS_INPUT);
-        env.classes.add_builtin(&meta, "stdin", class_method_input_stdin);
         env.classes.add_builtin(&class, "readline", method_input_readline);
 
         let (class, _) = env.add_builtin_class("Integer");
@@ -137,9 +136,8 @@ lazy_static! {
         env.classes.add_builtin(&class, ">", method_number_gt);
         env.classes.add_builtin(&class, "==", method_number_eq);
 
-        let (class, meta) = env.add_builtin_class("Output");
+        let (class, _meta) = env.add_builtin_class("Output");
         assert_eq!(class, CLASS_OUTPUT);
-        env.classes.add_builtin(&meta, "stdout", class_method_output_stdout);
         env.classes.add_builtin(&class, "print:", method_output_print);
         env.classes.add_builtin(&class, "newline", method_output_newline);
         env.classes.add_builtin(&class, "flush", method_output_flush);
@@ -152,6 +150,11 @@ lazy_static! {
 
         let (symbol, _) = env.add_builtin_class("Symbol");
         assert_eq!(symbol, CLASS_SYMBOL);
+
+        let (class, meta) = env.add_builtin_class("System");
+        assert_eq!(class, CLASS_SYSTEM);
+        env.classes.add_builtin(&meta, "stdin", class_method_system_stdin);
+        env.classes.add_builtin(&meta, "stdout", class_method_system_stdout);
 
         /* GLOBALS */
 
@@ -529,9 +532,14 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
     }
 }
 
-fn class_method_input_stdin(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+fn class_method_system_stdin(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 0);
     make_method_result(receiver, Object::make_input(Box::new(std::io::stdin())))
+}
+
+fn class_method_system_stdout(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
+    make_method_result(receiver, Object::make_output(Box::new(std::io::stdout())))
 }
 
 fn method_input_readline(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
@@ -541,11 +549,6 @@ fn method_input_readline(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> 
         _ => panic!("Bad receiver for Input readline: {}", receiver),
     };
     make_method_result(receiver, line)
-}
-
-fn class_method_output_stdout(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    make_method_result(receiver, Object::make_output(Box::new(std::io::stdout())))
 }
 
 fn method_output_print(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {

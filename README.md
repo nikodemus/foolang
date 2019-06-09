@@ -44,7 +44,7 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 **Non-goals**: performance, fancy extensions, useful class library.
 
 Time spent: 83h
-Estimated remaining: 34h
+Estimated remaining: 33h
 
 - [x] AST
 - [x] Expression parser
@@ -67,7 +67,6 @@ Estimated remaining: 34h
 - [x] Blocks are closures (return). 5h
 - [x] Local variables in methods. 5h
 - Terminal REPL
-  - [ ] Move stdout and stdin ctos to System. 1h
   - [x] REPL implemented in foolang.
   - [x] Input stdin. 1h
   - [x] Input readLine. 1h
@@ -75,15 +74,16 @@ Estimated remaining: 34h
   - [x] Output print: 1h
   - [x] Output flush 1h
   - [x] Output newline 1h
-  - [ ] Foolang evaluator 1h
-  - [ ] Evaluator tryParse 1h
-  - [ ] Evaluator evaluate 1h
   - [x] String new 1h
   - [x] String append 1h
   - [x] String clear 1h
   - [x] Block repeat 1h
   - [x] Block repeatWhileFalse 1h
   - [x] Booleans. Unest
+  - [x] Move stdout and stdin ctos to System. 1h
+  - [ ] Foolang evaluator 1h
+  - [ ] Evaluator tryParse 1h
+  - [ ] Evaluator evaluate 1h
 - [ ] Source file execution. Est 5h.
 - [ ] Threads. Est 10h.
 - [ ] Benchmarks: foolang, pharo, python, SBCL, clang. Est 5h.
@@ -364,6 +364,8 @@ This should compile into decent native code. Something close enough
 to what gcc -O0 would produce.
 
 ## MMmmmaaaybe
+
+- Make ${} and $[] a literal json objects
 
 - Stdout problem solution:
 
