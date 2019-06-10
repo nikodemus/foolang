@@ -5,31 +5,20 @@ lessons from concatenative languages to heart.
 
 ## Goals & Beliefs & Suspicions
 
-- Code should be written and read left-to-right.
+- Messages instead of method invocations is the right metaphor.
+- Code should be read and written left-to-right.
 - The less variables one needs to express oneself clearly, the better.
+- Smalltalk-style environment is still better than anything other
+  languages have to offer.
 - Image based development is not a good idea: focusing on reproduction of
   state is better than saving state.
 - Stateful notebooks are a good idea, but as an exploration tool, not as
   a development environment.
-- Smalltalk-style environment is still better than anything other
-  languages have to offer: interactive development and tools
-  like browser and inspector and transcript and... are a must. They
-  need to be front and center, not an afterthought. (Supporting people's
-  favorite editor is not important, as long as they don't need to buy into
-  the infrastructure for their first Hello-World.)
-- Predictably good performance is a must. AOT compilation is needed for that.
-  Predictably good performance means matching -O0 compiled C++ without jumping
-  through hoops. This in turn requires type annotations and replacing metaobjects
-  with mirrors, and possibly having value types of some sort to avoid extra
-  layers of indirection.
-- Messages everywhere is the right idea, but given how Smalltalk needs to
-  reserve ifTrue and some other messages for performance reasons, then
-  maybe it would be better to just have control structures in the language
-  as primitives?
-- Multithreading is everywhere. Either you have a solution for doing it
-  well or you're irrelevant. Plan: global objects immutable, every thread
-  has its own heap so GC pauses are per thread, passing objects between
-  threads means copying the object.
+- A well designed language plus a semi-decent compiler should reliably produce
+  code roughly matching the performance of equivalent -O1 compiled C++ code.
+  Factor of 2 is acceptable, factor of 10 is not.
+- A language that doesn't have a good solution for doing multithreading reliably
+  is not a modern general purpose language.
 
 ## Project Plan
 
@@ -140,10 +129,10 @@ Estimated remaining: 100h
 Time spent: 0h
 
 - Cleanups
-  - [ ] Have Object.underlying methods for all builtin classes. 2h
   - [ ] Move methods from evaluator.rs into classes/class.rs. 1h.
   - [ ] Move sub-object definitions from objects.rs into classes/class.rs. 1h
   - [ ] History cleanup. 1h
+  - [ ] Some sort of @main solution. 1h
 - [ ] Source formatter. 10h.
 - [ ] Wrap a rust web server as foolang object. 10h
 - Bare bones class browser widget: 20h
