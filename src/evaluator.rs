@@ -192,6 +192,7 @@ lazy_static! {
         assert_eq!(class, CLASS_SYSTEM);
         env.classes.add_builtin(&meta, "stdin", class_method_system_stdin);
         env.classes.add_builtin(&meta, "stdout", class_method_system_stdout);
+        env.classes.add_builtin(&meta, "timeInfo", class_method_system_timeinfo);
         env.classes.add_builtin(&class, "toString", method_object_tostring);
         env.classes.add_builtin(&class, "==", method_object_eq);
 
@@ -626,6 +627,12 @@ fn class_method_system_stdin(receiver: Object, args: Vec<Object>, _: &GlobalEnv)
 fn class_method_system_stdout(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 0);
     make_method_result(receiver, Object::make_output(Box::new(std::io::stdout())))
+}
+
+fn class_method_system_timeinfo(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
+    unimplemented!("System timeInfo")
+    // make_method_result(receiver, Object::make_timeinfo(TimeInfo::now());
 }
 
 fn method_input_readline(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
