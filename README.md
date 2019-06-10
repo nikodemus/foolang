@@ -43,8 +43,8 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 87h
-Estimated remaining: 17h
+Time spent: 90h
+Estimated remaining: 15h
 
 - [x] AST
 - [x] Expression parser
@@ -89,9 +89,11 @@ Estimated remaining: 17h
 - Benchmarks:
   - foolang
      - [x] framework and benchmarks 1h
-     - [ ] System info -> SystemInfo. 1h.
-     - [ ] SystemInfo minus, plus. 1h
-     - [ ] Fixing. 1h
+     - [x] System info -> SystemInfo. 1h.
+     - [x] SystemInfo minus. 1h
+     - [x] Benchmarks working.
+     - [ ] Tests for new methods. 1h
+     - [ ] Array push, inject. 1h
   - [ ] python 1h
   - [ ] SBCL 1h
   - [ ] clang 1h
