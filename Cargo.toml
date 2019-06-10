@@ -14,7 +14,12 @@ regex = "1"
 lazy_static = "*"
 num = "*"
 clap = "*"
+
+[target.'cfg(unix)'.dependencies]
 libc = "*"
+
+[target.'cfg(windows)'.dependencies]
+winapi = "*"
 
 [dev-dependencies]
 assert_cmd = "*"

@@ -6,6 +6,7 @@ use crate::objects::*;
 use crate::parser::parse_expr;
 use crate::parser::parse_program;
 use crate::parser::try_parse;
+use crate::time::TimeInfo;
 use lazy_static::lazy_static;
 use std::borrow::ToOwned;
 use std::collections::HashMap;
@@ -93,8 +94,9 @@ lazy_static! {
         // NOTE: Alphabetic order matches objects.rs
         let (class, _) = env.add_builtin_class("Array");
         assert_eq!(class, CLASS_ARRAY, "Bad classId for Array");
-        env.classes.add_builtin(&class, "toString", method_object_tostring);
         env.classes.add_builtin(&class, "==", method_object_eq);
+        env.classes.add_builtin(&class, "each:", method_array_each);
+        env.classes.add_builtin(&class, "toString", method_object_tostring);
 
         let (class, _) = env.add_builtin_class("Boolean");
         assert_eq!(class, CLASS_BOOLEAN, "Bad classId for Boolean");
@@ -134,13 +136,14 @@ lazy_static! {
 
         let (class, _) = env.add_builtin_class("Float");
         assert_eq!(class, CLASS_FLOAT);
-        env.classes.add_builtin(&class, "neg", method_number_neg);
         env.classes.add_builtin(&class, "*", method_number_mul);
         env.classes.add_builtin(&class, "+", method_number_plus);
         env.classes.add_builtin(&class, "-", method_number_minus);
         env.classes.add_builtin(&class, "<", method_number_lt);
         env.classes.add_builtin(&class, ">", method_number_gt);
         env.classes.add_builtin(&class, "==", method_number_eq);
+        env.classes.add_builtin(&class, "neg", method_number_neg);
+        env.classes.add_builtin(&class, "to:do:", method_number_to_do);
         env.classes.add_builtin(&class, "toString", method_object_tostring);
 
         let (class, meta) = env.add_builtin_class("Foolang");
@@ -157,14 +160,15 @@ lazy_static! {
 
         let (class, _) = env.add_builtin_class("Integer");
         assert_eq!(class, CLASS_INTEGER);
-        env.classes.add_builtin(&class, "neg", method_number_neg);
-        env.classes.add_builtin(&class, "gcd:", method_integer_gcd);
         env.classes.add_builtin(&class, "*", method_number_mul);
         env.classes.add_builtin(&class, "+", method_number_plus);
         env.classes.add_builtin(&class, "-", method_number_minus);
         env.classes.add_builtin(&class, "<", method_number_lt);
         env.classes.add_builtin(&class, ">", method_number_gt);
         env.classes.add_builtin(&class, "==", method_number_eq);
+        env.classes.add_builtin(&class, "gcd:", method_integer_gcd);
+        env.classes.add_builtin(&class, "neg", method_number_neg);
+        env.classes.add_builtin(&class, "to:do:", method_number_to_do);
         env.classes.add_builtin(&class, "toString", method_object_tostring);
 
         let (class, _meta) = env.add_builtin_class("Output");
@@ -195,6 +199,14 @@ lazy_static! {
         env.classes.add_builtin(&meta, "timeInfo", class_method_system_timeinfo);
         env.classes.add_builtin(&class, "toString", method_object_tostring);
         env.classes.add_builtin(&class, "==", method_object_eq);
+
+        let (class, _) = env.add_builtin_class("TimeInfo");
+        assert_eq!(class, CLASS_TIMEINFO);
+        env.classes.add_builtin(&class, "-", method_timeinfo_minus);
+        env.classes.add_builtin(&class, "realTime", method_timeinfo_realtime);
+        env.classes.add_builtin(&class, "systemTime", method_timeinfo_systemtime);
+        env.classes.add_builtin(&class, "toString", method_object_tostring);
+        env.classes.add_builtin(&class, "userTime", method_timeinfo_usertime);
 
         /* GLOBALS */
 
@@ -614,25 +626,46 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
     }
 }
 
+fn method_array_each(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
+    match &receiver.datum {
+        Datum::Array(v) => {
+            let closure = args[0].closure();
+            for each in v.iter() {
+                let res = closure_apply(receiver.clone(), &closure, &vec![each.to_owned()], global);
+                if res.is_return() {
+                    return res;
+                }
+            }
+        }
+        _ => panic!("TypeError: {} is not an Array", receiver),
+    }
+    make_method_result(receiver.clone(), receiver)
+}
+
+fn method_boolean_iftrue(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
+    if receiver.boolean() {
+        let closure = args[0].closure();
+        closure_apply(receiver, &closure, &vec![], global)
+    } else {
+        make_result(receiver)
+    }
+}
+
+fn method_boolean_iffalse(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
+    if !receiver.boolean() {
+        let closure = args[0].closure();
+        closure_apply(receiver, &closure, &vec![], global)
+    } else {
+        make_result(receiver)
+    }
+}
+
 fn class_method_foolang_compiler(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 0);
     make_method_result(receiver, Object::make_compiler())
-}
-
-fn class_method_system_stdin(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    make_method_result(receiver, Object::make_input(Box::new(std::io::stdin())))
-}
-
-fn class_method_system_stdout(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    make_method_result(receiver, Object::make_output(Box::new(std::io::stdout())))
-}
-
-fn class_method_system_timeinfo(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    unimplemented!("System timeInfo")
-    // make_method_result(receiver, Object::make_timeinfo(TimeInfo::now());
 }
 
 fn method_input_readline(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
@@ -645,6 +678,203 @@ fn method_input_readline(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> 
         _ => panic!("Bad receiver for Input readline: {}", receiver),
     };
     make_method_result(receiver, line)
+}
+
+fn method_integer_gcd(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
+    match receiver.datum.clone() {
+        Datum::Integer(i) => match args[0].datum {
+            Datum::Integer(j) => {
+                make_method_result(receiver, Object::make_integer(num::integer::gcd(i, j)))
+            }
+            _ => panic!("Non-integer in gcd!"),
+        },
+        _ => panic!("Bad receiver for builtin gcd!"),
+    }
+}
+
+fn method_number_mul(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
+    make_method_result(
+        receiver.clone(),
+        match receiver.datum {
+            Datum::Integer(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_integer(i * j),
+                Datum::Float(j) => Object::make_float((i as f64) * j),
+                _ => panic!("Bad argument to Integer *: {}", args[0]),
+            },
+            Datum::Float(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_float(i * (j as f64)),
+                Datum::Float(j) => Object::make_float(i * j),
+                _ => panic!("Bad argument to Float *: {}", args[0]),
+            },
+            _ => panic!("Bad receiver in method_number_mul: {}", receiver),
+        },
+    )
+}
+
+fn method_number_minus(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
+    make_method_result(
+        receiver.clone(),
+        match receiver.datum {
+            Datum::Integer(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_integer(i - j),
+                Datum::Float(j) => Object::make_float((i as f64) - j),
+                _ => panic!("Bad argument to Integer -: {}", args[0]),
+            },
+            Datum::Float(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_float(i - (j as f64)),
+                Datum::Float(j) => Object::make_float(i - j),
+                _ => panic!("Bad argument to Float -: {}", args[0]),
+            },
+            _ => panic!("Bad receiver in method_number_minus: {}", receiver),
+        },
+    )
+}
+
+fn method_number_neg(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
+    make_method_result(
+        receiver.clone(),
+        match receiver.datum {
+            Datum::Integer(i) => Object::make_integer(-i),
+            Datum::Float(i) => Object::make_float(-i),
+            _ => panic!("Bad receiver for neg!"),
+        },
+    )
+}
+
+fn method_number_plus(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
+    make_method_result(
+        receiver.clone(),
+        match receiver.datum {
+            Datum::Integer(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_integer(i + j),
+                Datum::Float(j) => Object::make_float((i as f64) + j),
+                _ => panic!("Bad argument to Integer +: {}", args[0]),
+            },
+            Datum::Float(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_float(i + (j as f64)),
+                Datum::Float(j) => Object::make_float(i + j),
+                _ => panic!("Bad argument to Float +: {}", args[0]),
+            },
+            _ => panic!("Bad receiver in method_number_plus: {}", receiver),
+        },
+    )
+}
+
+fn method_number_lt(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
+    make_method_result(
+        receiver.clone(),
+        match receiver.datum {
+            Datum::Integer(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_boolean(i < j),
+                Datum::Float(j) => Object::make_boolean((i as f64) < j),
+                _ => panic!("Bad argument to Integer <: {}", args[0]),
+            },
+            Datum::Float(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_boolean(i < (j as f64)),
+                Datum::Float(j) => Object::make_boolean(i < j),
+                _ => panic!("Bad argument to Float <: {}", args[0]),
+            },
+            _ => panic!("Bad receiver in method_number_lt: {}", receiver),
+        },
+    )
+}
+
+fn method_number_gt(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
+    make_method_result(
+        receiver.clone(),
+        match receiver.datum {
+            Datum::Integer(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_boolean(i > j),
+                Datum::Float(j) => Object::make_boolean((i as f64) > j),
+                _ => panic!("Bad argument to Integer >: {}", args[0]),
+            },
+            Datum::Float(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_boolean(i > (j as f64)),
+                Datum::Float(j) => Object::make_boolean(i > j),
+                _ => panic!("Bad argument to Float >: {}", args[0]),
+            },
+            _ => panic!("Bad receiver in method_number_gt: {}", receiver),
+        },
+    )
+}
+
+fn method_number_eq(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
+    make_method_result(
+        receiver.clone(),
+        match receiver.datum {
+            Datum::Integer(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_boolean(i == j),
+                Datum::Float(j) => Object::make_boolean((i as f64) == j),
+                _ => Object::make_boolean(false),
+            },
+            Datum::Float(i) => match args[0].datum {
+                Datum::Integer(j) => Object::make_boolean(i == (j as f64)),
+                Datum::Float(j) => Object::make_boolean(i == j),
+                _ => panic!("Bad argument to Float ==: {}", args[0]),
+            },
+            _ => panic!("Bad receiver in method_number_eq: {}", receiver),
+        },
+    )
+}
+
+fn method_number_to_do(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
+    assert!(args.len() == 2);
+    let closure = args[1].closure();
+    match &receiver.datum {
+        Datum::Integer(i) => {
+            let from = *i;
+            let to = args[0].integer();
+            for x in from..=to {
+                let res = closure_apply(
+                    receiver.clone(),
+                    &closure,
+                    &vec![Object::make_integer(x)],
+                    global,
+                );
+                if res.is_return() {
+                    return res;
+                }
+            }
+        }
+        Datum::Float(f) => {
+            let mut x = *f;
+            let end = args[0].float();
+            while x <= end {
+                let res = closure_apply(
+                    receiver.clone(),
+                    &closure,
+                    &vec![Object::make_float(x)],
+                    global,
+                );
+                if res.is_return() {
+                    return res;
+                }
+                x += 1.0;
+            }
+        }
+        _ => panic!("Bad receiver in method_number_to_do: {}", receiver),
+    }
+    make_method_result(receiver.clone(), receiver)
+}
+
+fn method_object_tostring(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
+    let string = Object::into_string(format!("{}", &receiver));
+    make_method_result(receiver, string)
+}
+
+fn method_object_eq(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
+    let boolean = Object::make_boolean(receiver == args[0]);
+    make_method_result(receiver, boolean)
 }
 
 fn method_output_print(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
@@ -712,181 +942,43 @@ fn method_string_clear(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Ev
     }
 }
 
-fn method_boolean_iftrue(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    if receiver.boolean() {
-        let closure = args[0].closure();
-        closure_apply(receiver, &closure, &vec![], global)
-    } else {
-        make_result(receiver)
-    }
-}
-
-fn method_boolean_iffalse(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    if !receiver.boolean() {
-        let closure = args[0].closure();
-        closure_apply(receiver, &closure, &vec![], global)
-    } else {
-        make_result(receiver)
-    }
-}
-
-fn method_object_tostring(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+fn class_method_system_stdin(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 0);
-    let string = Object::into_string(format!("{}", &receiver));
-    make_method_result(receiver, string)
+    make_method_result(receiver, Object::make_input(Box::new(std::io::stdin())))
 }
 
-fn method_object_eq(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    let boolean = Object::make_boolean(receiver == args[0]);
-    make_method_result(receiver, boolean)
-}
-
-fn method_number_neg(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+fn class_method_system_stdout(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 0);
-    make_method_result(
-        receiver.clone(),
-        match receiver.datum {
-            Datum::Integer(i) => Object::make_integer(-i),
-            Datum::Float(i) => Object::make_float(-i),
-            _ => panic!("Bad receiver for neg!"),
-        },
-    )
+    make_method_result(receiver, Object::make_output(Box::new(std::io::stdout())))
 }
 
-fn method_integer_gcd(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    match receiver.datum.clone() {
-        Datum::Integer(i) => match args[0].datum {
-            Datum::Integer(j) => {
-                make_method_result(receiver, Object::make_integer(num::integer::gcd(i, j)))
-            }
-            _ => panic!("Non-integer in gcd!"),
-        },
-        _ => panic!("Bad receiver for builtin gcd!"),
-    }
+fn class_method_system_timeinfo(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
+    make_method_result(receiver, Object::into_timeinfo(TimeInfo::now()))
 }
 
-fn method_number_mul(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+fn method_timeinfo_minus(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 1);
-    make_method_result(
-        receiver.clone(),
-        match receiver.datum {
-            Datum::Integer(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_integer(i * j),
-                Datum::Float(j) => Object::make_float((i as f64) * j),
-                _ => panic!("Bad argument to Integer *: {}", args[0]),
-            },
-            Datum::Float(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_float(i * (j as f64)),
-                Datum::Float(j) => Object::make_float(i * j),
-                _ => panic!("Bad argument to Float *: {}", args[0]),
-            },
-            _ => panic!("Bad receiver in method_number_mul: {}", receiver),
-        },
-    )
+    let delta = (&*receiver.timeinfo()).to_owned() - (&*args[0].timeinfo()).to_owned();
+    make_method_result(receiver, Object::into_timeinfo(delta))
 }
 
-fn method_number_plus(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    make_method_result(
-        receiver.clone(),
-        match receiver.datum {
-            Datum::Integer(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_integer(i + j),
-                Datum::Float(j) => Object::make_float((i as f64) + j),
-                _ => panic!("Bad argument to Integer +: {}", args[0]),
-            },
-            Datum::Float(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_float(i + (j as f64)),
-                Datum::Float(j) => Object::make_float(i + j),
-                _ => panic!("Bad argument to Float +: {}", args[0]),
-            },
-            _ => panic!("Bad receiver in method_number_plus: {}", receiver),
-        },
-    )
+fn method_timeinfo_realtime(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
+    let real = receiver.timeinfo().real;
+    make_method_result(receiver, Object::make_float(real))
 }
 
-fn method_number_minus(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    make_method_result(
-        receiver.clone(),
-        match receiver.datum {
-            Datum::Integer(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_integer(i - j),
-                Datum::Float(j) => Object::make_float((i as f64) - j),
-                _ => panic!("Bad argument to Integer -: {}", args[0]),
-            },
-            Datum::Float(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_float(i - (j as f64)),
-                Datum::Float(j) => Object::make_float(i - j),
-                _ => panic!("Bad argument to Float -: {}", args[0]),
-            },
-            _ => panic!("Bad receiver in method_number_minus: {}", receiver),
-        },
-    )
+fn method_timeinfo_systemtime(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
+    let system = receiver.timeinfo().system;
+    make_method_result(receiver, Object::make_float(system))
 }
 
-fn method_number_lt(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    make_method_result(
-        receiver.clone(),
-        match receiver.datum {
-            Datum::Integer(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_boolean(i < j),
-                Datum::Float(j) => Object::make_boolean((i as f64) < j),
-                _ => panic!("Bad argument to Integer <: {}", args[0]),
-            },
-            Datum::Float(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_boolean(i < (j as f64)),
-                Datum::Float(j) => Object::make_boolean(i < j),
-                _ => panic!("Bad argument to Float <: {}", args[0]),
-            },
-            _ => panic!("Bad receiver in method_number_lt: {}", receiver),
-        },
-    )
-}
-
-fn method_number_gt(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    make_method_result(
-        receiver.clone(),
-        match receiver.datum {
-            Datum::Integer(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_boolean(i > j),
-                Datum::Float(j) => Object::make_boolean((i as f64) > j),
-                _ => panic!("Bad argument to Integer >: {}", args[0]),
-            },
-            Datum::Float(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_boolean(i > (j as f64)),
-                Datum::Float(j) => Object::make_boolean(i > j),
-                _ => panic!("Bad argument to Float >: {}", args[0]),
-            },
-            _ => panic!("Bad receiver in method_number_gt: {}", receiver),
-        },
-    )
-}
-
-fn method_number_eq(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    make_method_result(
-        receiver.clone(),
-        match receiver.datum {
-            Datum::Integer(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_boolean(i == j),
-                Datum::Float(j) => Object::make_boolean((i as f64) == j),
-                _ => Object::make_boolean(false),
-            },
-            Datum::Float(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_boolean(i == (j as f64)),
-                Datum::Float(j) => Object::make_boolean(i == j),
-                _ => panic!("Bad argument to Float ==: {}", args[0]),
-            },
-            _ => panic!("Bad receiver in method_number_eq: {}", receiver),
-        },
-    )
+fn method_timeinfo_usertime(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
+    let user = receiver.timeinfo().user;
+    make_method_result(receiver, Object::make_float(user))
 }
 
 fn method_create_instance(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {

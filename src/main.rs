@@ -320,20 +320,17 @@ fn test_easy() {
 }
 
 */
-
-
-
 use foolang::evaluator::GlobalEnv;
 use foolang::time::TimeInfo;
 
 fn main() {
     TimeInfo::init();
+    let mut env = GlobalEnv::new();
     let matches = clap_app!(myapp =>
         (version: "0.1.0")
         (@arg expr: --eval +takes_value "Expression to evaluate.")
         (@arg file: --load +takes_value "File to load."))
     .get_matches();
-    let mut env = GlobalEnv::new();
     if let Some(file) = matches.value_of("file") {
         env.load_file(file);
     }

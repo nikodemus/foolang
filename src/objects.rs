@@ -1,6 +1,7 @@
 use crate::ast;
 use crate::evaluator::GlobalEnv;
 use crate::evaluator::Lexenv;
+use crate::time::TimeInfo;
 use std::fmt;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -26,6 +27,7 @@ pub const CLASS_OUTPUT: ClassId = ClassId(21);
 pub const CLASS_STRING: ClassId = ClassId(23);
 pub const CLASS_SYMBOL: ClassId = ClassId(25);
 pub const CLASS_SYSTEM: ClassId = ClassId(27);
+pub const CLASS_TIMEINFO: ClassId = ClassId(29);
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Object {
@@ -57,6 +59,11 @@ impl fmt::Display for Object {
             Datum::Output(_output) => write!(f, "#<Output>"),
             Datum::Input(_input) => write!(f, "#<Input>"),
             Datum::Compiler(_input) => write!(f, "#<Compiler>"),
+            Datum::TimeInfo(t) => write!(
+                f,
+                "#<TimeInfo user: {}, system: {}, real: {}>",
+                t.user, t.system, t.real
+            ),
         }
     }
 }
@@ -226,6 +233,7 @@ pub enum Datum {
     Output(Arc<OutputObject>),
     Input(Arc<InputObject>),
     Compiler(Arc<CompilerObject>),
+    TimeInfo(Arc<TimeInfo>),
 }
 
 impl Object {
@@ -312,6 +320,12 @@ impl Object {
             datum: Datum::Float(x),
         }
     }
+    pub fn float(&self) -> f64 {
+        match &self.datum {
+            Datum::Float(f) => f.to_owned(),
+            _ => panic!("TypeError: {} is not a Float", self),
+        }
+    }
     // INPUT
     pub fn make_input(input: Box<dyn std::io::Read + Send + Sync>) -> Object {
         Object {
@@ -352,6 +366,12 @@ impl Object {
             datum: Datum::Integer(x),
         }
     }
+    pub fn integer(&self) -> i64 {
+        match &self.datum {
+            Datum::Integer(i) => i.to_owned(),
+            _ => panic!("TypeError: {} is not an Integer", self),
+        }
+    }
     // OUTPUT
     pub fn make_output(output: Box<dyn std::io::Write + Send + Sync>) -> Object {
         Object {
@@ -383,6 +403,19 @@ impl Object {
         Object {
             class: CLASS_SYMBOL,
             datum: Datum::Symbol(Arc::new(s)),
+        }
+    }
+    // TIMEINFO
+    pub fn into_timeinfo(t: TimeInfo) -> Object {
+        Object {
+            class: CLASS_TIMEINFO,
+            datum: Datum::TimeInfo(Arc::new(t)),
+        }
+    }
+    pub fn timeinfo(&self) -> Arc<TimeInfo> {
+        match &self.datum {
+            Datum::TimeInfo(t) => t.to_owned(),
+            _ => panic!("TypeError: not a TimeInfo: {}", self),
         }
     }
 }
