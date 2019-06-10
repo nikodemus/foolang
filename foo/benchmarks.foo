@@ -72,21 +72,18 @@
     }
 
 @class Fibonacci []
-
 @class-method Fibonacci of: n
     n < 2
         ifTrue: { ^1 }.
     ^(Fibonacci of: n - 1) + (Fibonacci of: n - 2)
 
 @class Factorial []
-
 @class-method Factorial of: n
     n < 2
         ifTrue: { ^n }.
     ^n * (Factorial of: n - 1)
 
 @class Ackermann []
-
 @class-method Ackermann m:m n:n
     m == 0
         ifTrue: { ^n + 1 }.
