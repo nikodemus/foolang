@@ -321,83 +321,13 @@ fn test_easy() {
 
 */
 
-#[derive(Debug)]
-struct TimeInfo {
-  user: f64,
-  system: f64,
-  wall: f64,
-}
 
-// https://docs.rs/winapi/0.3.7/x86_64-pc-windows-msvc/winapi/um/sysinfoapi/fn.GetSystemInfo.html
-
-#[cfg(target_family = "windows")]
-fn foo() -> TimeInfo {
-   use winapi::um::sysinfoapi::{SYSTEM_INFO, GetSystemInfo};
-
-    let mut info = SYSTEM_INFO.default();
-}
-
-
-#[cfg(target_family = "unix")]
-fn foo() -> TimeInfo {
-   fn time0() -> libc::timeval {
-      libc::timeval { tv_sec: 0, tv_usec: 0 }
-   }
-   fn seconds(t: &libc::timeval) -> f64 {
-      t.tv_sec as f64 + (t.tv_usec as f64 / 1000_000.0)
-   }
-   let mut usage = libc::rusage {
-       ru_utime: time0(),
-       ru_stime: time0(),
-       ru_maxrss: 0,
-       ru_ixrss: 0,
-       ru_idrss: 0,
-       ru_isrss: 0,
-       ru_minflt: 0,
-       ru_majflt: 0,
-       ru_nswap: 0,
-       ru_inblock: 0,
-       ru_oublock: 0,
-       ru_msgsnd: 0,
-       ru_msgrcv: 0,
-       ru_nsignals: 0,
-       ru_nvcsw: 0,
-       ru_nivcsw: 0,
-   };
-   unsafe {
-      libc::getrusage(libc::RUSAGE_SELF, &mut usage as *mut libc::rusage);
-   };
-   let wall = std::time::Instant::now() - unsafe { START_TIME.unwrap() };
-   TimeInfo {
-      user: seconds(&usage.ru_utime),
-      system: seconds(&usage.ru_stime),
-      wall: (wall.as_secs() as f64) + (wall.subsec_millis() as f64 / 1000.0),
-   }
-}
 
 use foolang::evaluator::GlobalEnv;
-
-static mut START_TIME: Option<std::time::Instant> = None;
-
-fn spin(secs: u64) {
-   let t = std::time::Duration::from_secs(secs);
-   let start = std::time::Instant::now();
-   let mut end = std::time::Instant::now();
-   while t > end - start {
-         end = std::time::Instant::now();
-   }
-}
+use foolang::time::TimeInfo;
 
 fn main() {
-   unsafe { START_TIME = Some(std::time::Instant::now()) };
-   let t0 = foo();
-   println!("t0: {:?}", t0);
-   std::thread::sleep(std::time::Duration::from_secs(1));
-   let t1 = foo();
-   println!("t1: {:?}", t1);
-   spin(1);
-   let t2 = foo();
-   println!("t2: {:?} ({})", t2);
+    TimeInfo::init();
     let matches = clap_app!(myapp =>
         (version: "0.1.0")
         (@arg expr: --eval +takes_value "Expression to evaluate.")
