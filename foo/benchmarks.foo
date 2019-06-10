@@ -3,6 +3,7 @@
 @class-method Benchmarks all
     ^self createInstance: [[ Benchmark emptyLoop .
                              Benchmark factorial .
+                             Benchmark sumFloats .
                              Benchmark ackermann .
                              Benchmark fibonacci ]]
 
@@ -26,16 +27,6 @@
     systemTime := info systemTime.
     realTime := info realTime.
 
-@class-method Benchmark sumFloats
-    |array|
-    array := [0.0].
-    1.0 to: 10000.0 do: { :n |
-        array push: n
-    }.
-    ^Benchmark new: 'sumFloats' is: {
-        array inject: 0.0 into: { :sum :each | sum + each }
-    }
-
 @method Benchmark report
     System stdout
       print: name;
@@ -48,6 +39,16 @@
       newline.
     ^self
 
+@class-method Benchmark sumFloats
+    |array|
+    array := [0.0].
+    1.0 to: 150000.0 do: { :n |
+        array push: n
+    }.
+    ^Benchmark new: 'SumFloats' is: {
+        array inject: 0.0 into: { :sum :each | sum + each }
+    }
+
 @class-method Benchmark factorial
     ^Benchmark new: 'Factorial' is: {
         1 to: 2000 do: {
@@ -57,7 +58,7 @@
 
 @class-method Benchmark emptyLoop
     ^Benchmark new: 'EmptyLoop' is: {
-        1 to: 2000 do: {}
+        1 to: 600000 do: {}
     }
 
 @class-method Benchmark ackermann

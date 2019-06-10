@@ -96,6 +96,8 @@ lazy_static! {
         assert_eq!(class, CLASS_ARRAY, "Bad classId for Array");
         env.classes.add_builtin(&class, "==", method_object_eq);
         env.classes.add_builtin(&class, "each:", method_array_each);
+        env.classes.add_builtin(&class, "inject:into:", method_array_inject_into);
+        env.classes.add_builtin(&class, "push:", method_array_push);
         env.classes.add_builtin(&class, "toString", method_object_tostring);
 
         let (class, _) = env.add_builtin_class("Boolean");
@@ -631,12 +633,49 @@ fn method_array_each(receiver: Object, args: Vec<Object>, global: &GlobalEnv) ->
     match &receiver.datum {
         Datum::Array(v) => {
             let closure = args[0].closure();
-            for each in v.iter() {
+            for each in v.lock().unwrap().iter() {
                 let res = closure_apply(receiver.clone(), &closure, &vec![each.to_owned()], global);
                 if res.is_return() {
                     return res;
                 }
             }
+        }
+        _ => panic!("TypeError: {} is not an Array", receiver),
+    }
+    make_method_result(receiver.clone(), receiver)
+}
+
+fn method_array_inject_into(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
+    assert!(args.len() == 2);
+    match &receiver.datum {
+        Datum::Array(v) => {
+            let mut value = args[0].to_owned();
+            let closure = args[1].closure();
+            for each in v.lock().unwrap().iter() {
+                let res = closure_apply(
+                    receiver.clone(),
+                    &closure,
+                    &vec![value, each.to_owned()],
+                    global,
+                );
+                if res.is_return() {
+                    return res;
+                } else {
+                    value = res.value()
+                }
+            }
+            make_method_result(receiver, value)
+        }
+        _ => panic!("TypeError: {} is not an Array", receiver),
+    }
+}
+
+fn method_array_push(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 1);
+    match &receiver.datum {
+        Datum::Array(array) => {
+            let mut v = array.lock().unwrap();
+            v.push(args[0].to_owned());
         }
         _ => panic!("TypeError: {} is not an Array", receiver),
     }
@@ -983,15 +1022,9 @@ fn method_timeinfo_usertime(receiver: Object, args: Vec<Object>, _: &GlobalEnv) 
 
 fn method_create_instance(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 1);
-    if let Datum::Class(classobj) = &receiver.datum {
-        if let Datum::Array(vec) = &args[0].datum {
-            return make_method_result(
-                receiver.clone(),
-                Object::make_instance(classobj.id.to_owned(), vec.to_vec()),
-            );
-        }
-    }
-    panic!("Cannot create instance out of a non-class object!")
+    let class = receiver.class();
+    let slots = args[0].vec();
+    make_method_result(receiver, Object::make_instance(class.id.to_owned(), slots))
 }
 
 fn method_help(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {

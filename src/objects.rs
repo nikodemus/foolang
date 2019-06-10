@@ -47,7 +47,7 @@ impl fmt::Display for Object {
             Datum::Array(vec) => {
                 write!(f, "#")?;
                 let mut sep = "[";
-                for elt in vec.iter() {
+                for elt in vec.lock().unwrap().iter() {
                     write!(f, "{}{}", sep, elt)?;
                     sep = " ";
                 }
@@ -94,6 +94,32 @@ pub struct ClosureObject {
 impl PartialEq for ClosureObject {
     fn eq(&self, other: &Self) -> bool {
         self as *const _ == other as *const _
+    }
+}
+
+#[derive(Debug)]
+pub struct ArrayObject(Mutex<Vec<Object>>);
+
+impl PartialEq for ArrayObject {
+    fn eq(&self, other: &Self) -> bool {
+        if self as *const _ == other as *const _ {
+            return true;
+        }
+        return false;
+    }
+}
+
+impl ArrayObject {
+    pub fn with_slice<T>(&self, f: fn(&[Object]) -> T) -> T {
+        let vec = self.lock().unwrap();
+        f(&vec[..])
+    }
+}
+
+impl Deref for ArrayObject {
+    type Target = Mutex<Vec<Object>>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -226,7 +252,7 @@ pub enum Datum {
     Character(Arc<String>),
     String(Arc<StringObject>),
     Symbol(Arc<String>),
-    Array(Arc<Vec<Object>>),
+    Array(Arc<ArrayObject>),
     Class(Arc<ClassObject>),
     Instance(Arc<SlotObject>),
     Closure(Arc<ClosureObject>),
@@ -244,7 +270,13 @@ impl Object {
     pub fn into_array(data: Vec<Object>) -> Object {
         Object {
             class: CLASS_ARRAY,
-            datum: Datum::Array(Arc::new(data)),
+            datum: Datum::Array(Arc::new(ArrayObject(Mutex::new(data)))),
+        }
+    }
+    pub fn vec(&self) -> Vec<Object> {
+        match &self.datum {
+            Datum::Array(array) => array.lock().unwrap().to_owned(),
+            _ => panic!("TypeError: {} is not an Array", self),
         }
     }
     // BOOLEAN
@@ -279,6 +311,12 @@ impl Object {
                 id,
                 name: String::from(name),
             })),
+        }
+    }
+    pub fn class(&self) -> Arc<ClassObject> {
+        match &self.datum {
+            Datum::Class(class) => class.to_owned(),
+            _ => panic!("TypeError: not a Class: {}", self),
         }
     }
     // CLOSURE
