@@ -1,7 +1,7 @@
 # foolang
 
 Foolang is a Smalltalk-inspired object language that tries to take some
-lessons from catenative languages to heart.
+lessons from concatenative languages to heart.
 
 ## Goals & Beliefs & Suspicions
 
@@ -39,7 +39,7 @@ Timeboxing in releases of 50-200h of work.
 
 _Isn't this just a bad Smalltalk without any dev environment?_
 
-**Goals**: syntax v1, working evaluator, threads.
+**Goals**: syntax v1, working evaluator.
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
