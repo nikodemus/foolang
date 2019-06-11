@@ -32,7 +32,7 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 94h
+Time spent: 95h
 Estimated remaining: 10h
 
 - [x] AST
@@ -91,37 +91,6 @@ Estimated remaining: 10h
     ...surprising how _good_ python SumFloats is, and surprising how expensive
        python function calls are!
 - [ ] Read Pharo by Example. 10h
-- Optional extras:
-  - [ ] Fix empty array constructor.
-  - [ ] Remove literal arrays or make the immutable.
-  - [ ] Change methods to default to last expression as return
-  - [ ] Message chaining with ,
-  - [ ] Record syntax [ foo: x signum. quux: y. ] and #[foo: 42]
-  - [ ] String interpolation '1 + 1 = {1 + 1}'
-  - [ ] => { :that | ... }
-  - [ ] Positional arguments in keyword messages:
-        Blocks implement: value, value::::, and apply:
-        b value            # unary
-        b value: 1         # keyword
-        b value: 1 : 2 : 3 # keyword
-        b apply: array
-  - [ ] Operator precedence for binary messages
-        0. Attached (unary) - and ~
-        1. Attached ^ ie, 2^x
-        2. * / // %
-        3. + -
-        4. << >>
-        5. & |
-        6. == < > =< >=
-        7. &&
-        8. ||
-  - [ ] Phrases
-  - [ ] Rework string syntax: raw, interpolated, block
-  - [ ] # Comments
-  - [ ] Receiver stack (method local!)
-  - [ ] Prefix messages: -foo, !foo, ~foo
-  - [ ] Indexing foo[x] as sugar for at:
-  - [ ] Indexing assignment foo[x] := 42 as sugar for at:put:
 
 ### Planned: 0.2.0: The IDE
 
@@ -135,6 +104,7 @@ Estimated remaining: 100h
 Time spent: 0h
 
 - Cleanups
+  - [ ] Fix empty array constructor.
   - [ ] Move methods from evaluator.rs into classes/class.rs. 1h.
   - [ ] Move sub-object definitions from objects.rs into classes/class.rs. 1h
   - [ ] History cleanup. 1h
@@ -164,6 +134,39 @@ Time spent: 0h
 - [ ] Bare bones inspector widget. 10h
 - [ ] Integrate these components into a whole. 10h
 - [ ] Make things slightly less bare bones. 5h
+- Optional extras:
+  - Syntax & semantics package
+    - [ ] Change methods to default to last expression as return
+    - [ ] Change variable binding to let.
+    - [ ] Message chaining with ,
+    - [ ] if <expr> {} else if <expr> {} else {}
+  - [ ] Remove literal arrays or make the immutable.
+  - [ ] Record syntax [ foo: x signum. quux: y. ] and #[foo: 42]
+  - [ ] String interpolation '1 + 1 = {1 + 1}'
+  - [ ] => { :that | ... }
+  - [ ] Positional arguments in keyword messages:
+        Blocks implement: value, value::::, and apply:
+        b value            # unary
+        b value: 1         # keyword
+        b value: 1 : 2 : 3 # keyword
+        b apply: array
+  - [ ] Operator precedence for binary messages
+        0. Attached (unary) - and ~
+        1. Attached ^ ie, 2^x
+        2. * / // %
+        3. + -
+        4. << >>
+        5. & |
+        6. == < > =< >=
+        7. &&
+        8. ||
+  - [ ] Phrases
+  - [ ] Rework string syntax: raw, interpolated, block
+  - [ ] # Comments
+  - [ ] Receiver stack (method local!)
+  - [ ] Prefix messages: -foo, !foo, ~foo
+  - [ ] Indexing foo[x] as sugar for at:
+  - [ ] Indexing assignment foo[x] := 42 as sugar for at:put:
 
 ### Planned: 0.3.0: The Virtual Machine
 
