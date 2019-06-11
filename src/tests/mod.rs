@@ -1,4 +1,5 @@
 mod foolang;
+mod test_array;
 mod test_block;
 mod test_boolean;
 mod test_eval;
