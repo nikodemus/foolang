@@ -105,7 +105,7 @@ impl PartialEq for ArrayObject {
         if self as *const _ == other as *const _ {
             return true;
         }
-        return false;
+        return &*self.lock().unwrap() == &*other.lock().unwrap();
     }
 }
 
