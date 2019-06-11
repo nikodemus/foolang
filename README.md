@@ -34,7 +34,7 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 95h
+Time spent: 96h
 Estimated remaining: 10h
 
 - [x] AST
@@ -92,6 +92,7 @@ Estimated remaining: 10h
     => 750 - 1_250_000 times faster
     ...surprising how _good_ python SumFloats is, and surprising how expensive
        python function calls are!
+- [x] First cut at CI
 - [ ] Read Pharo by Example. 10h
 
 ### Planned: 0.2.0: The IDE
@@ -106,6 +107,8 @@ Estimated remaining: 100h
 Time spent: 0h
 
 - Cleanups
+  - [ ] 1 to: 10 creates a range.
+  - [ ] Azure pipeline for Windows and OS X as well.
   - [ ] Fix empty array constructor.
   - [ ] Move methods from evaluator.rs into classes/class.rs. 1h.
   - [ ] Move sub-object definitions from objects.rs into classes/class.rs. 1h
