@@ -32,8 +32,8 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 92h
-Estimated remaining: 11h
+Time spent: 93h
+Estimated remaining: 10h
 
 - [x] AST
 - [x] Expression parser
@@ -81,7 +81,7 @@ Estimated remaining: 11h
      - [x] System info -> SystemInfo. 1h.
      - [x] SystemInfo minus. 1h
      - [x] Benchmarks working.
-     - [ ] Tests for new methods. 1h
+     - [x] Tests for new methods. 1h
      - [x] Array push, inject. 1h
   - [x] python 1h
     => 1.5 sec vs 0.0004 sec, so python is currently 375 times faster...
@@ -92,6 +92,8 @@ Estimated remaining: 11h
        python function calls are!
 - [ ] Read Pharo by Example. 10h
 - Optional extras:
+  - [ ] Fix empty array constructor.
+  - [ ] Remove literal arrays or make the immutable.
   - [ ] Change methods to default to last expression as return
   - [ ] Message chaining with ,
   - [ ] Record syntax [ foo: x signum. quux: y. ] and #[foo: 42]
