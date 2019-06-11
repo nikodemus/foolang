@@ -1,5 +1,5 @@
 jobs:
-  - job: 'Build and test'
+  - job: 'Linux_build'
     pool:
       vmImage: 'ubuntu-16.04'
     container: 'rust:latest'
