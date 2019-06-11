@@ -1,3 +1,5 @@
+[![Build Status](https://dev.azure.com/nikodemus0619/foolang/_apis/build/status/nikodemus.foolang?branchName=master)](https://dev.azure.com/nikodemus0619/foolang/_build/latest?definitionId=1&branchName=master)
+
 # foolang
 
 Foolang is a Smalltalk-inspired object language that tries to take some
