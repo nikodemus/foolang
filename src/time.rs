@@ -69,7 +69,7 @@ impl TimeInfo {
         }
     }
     #[cfg(target_family = "unix")]
-    fn now() -> TimeInfo {
+    pub fn now() -> TimeInfo {
         fn time0() -> libc::timeval {
             libc::timeval {
                 tv_sec: 0,
@@ -103,7 +103,7 @@ impl TimeInfo {
         TimeInfo {
             user: seconds(&usage.ru_utime),
             system: seconds(&usage.ru_stime),
-            real: self.wallclock(),
+            real: wallclock(),
         }
     }
 }
