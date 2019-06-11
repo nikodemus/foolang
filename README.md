@@ -32,7 +32,7 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 93h
+Time spent: 94h
 Estimated remaining: 10h
 
 - [x] AST
