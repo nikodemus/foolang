@@ -33,7 +33,7 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 **Non-goals**: performance, fancy extensions, useful class library.
 
 Time spent: 92h
-Estimated remaining: 13h
+Estimated remaining: 11h
 
 - [x] AST
 - [x] Expression parser
@@ -86,8 +86,10 @@ Estimated remaining: 13h
   - [x] python 1h
     => 1.5 sec vs 0.0004 sec, so python is currently 375 times faster...
     ...not exactly surprising!
-  - [ ] SBCL 1h
-  - [ ] clang 1h
+  - [x] rust 1h
+    => 750 - 1_250_000 times faster
+    ...surprising how _good_ python SumFloats is, and surprising how expensive
+       python function calls are!
 - [ ] Read Pharo by Example. 10h
 - Optional extras:
   - [ ] Change methods to default to last expression as return
