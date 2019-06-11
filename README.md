@@ -32,8 +32,8 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 91h
-Estimated remaining: 14h
+Time spent: 92h
+Estimated remaining: 13h
 
 - [x] AST
 - [x] Expression parser
@@ -83,7 +83,9 @@ Estimated remaining: 14h
      - [x] Benchmarks working.
      - [ ] Tests for new methods. 1h
      - [x] Array push, inject. 1h
-  - [ ] python 1h
+  - [x] python 1h
+    => 1.5 sec vs 0.0004 sec, so python is currently 375 times faster...
+    ...not exactly surprising!
   - [ ] SBCL 1h
   - [ ] clang 1h
 - [ ] Read Pharo by Example. 10h
