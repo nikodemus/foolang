@@ -1,11 +1,27 @@
+strategy:
+  matrix:
+    windows-stable:
+      imageName: 'vs2017-win2016'
+    mac-stable:
+      imageName: 'macos-10.13'
+    linux-stable:
+      imageName: 'ubuntu-16.04'
+
 pool:
-  vmImage: 'ubuntu-16.04'
+  vmImage: '$(imageName)'
 
 steps:
   - script: |
       curl https://sh.rustup.rs -sSf | sh -s -- -y
       echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
-    displayName: Install rust
+    displayName: Unix install rust
+    condition: ne( variables['Agent.OS'], 'Windows_NT' )
+  - script: |
+      curl -sSf -o rustup-init.exe https://win.rustup.rs
+      rustup-init.exe -y
+      echo "##vso[task.setvariable variable=PATH;]%PATH%;%USERPROFILE%\.cargo\bin"
+    displayName: Windows install rust
+    condition: eq( variables['Agent.OS'], 'Windows_NT' )
   - script: cargo build --all
     displayName: Cargo build
   - script: cargo test --all
