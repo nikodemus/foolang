@@ -145,6 +145,7 @@ Time spent: 0h
     - [ ] Change variable binding to let.
     - [ ] Message chaining with ,
     - [ ] if <expr> {} else if <expr> {} else {}
+    - [ ] load-time-eval / compile-time-eval like things.
   - [ ] Remove literal arrays or make the immutable.
   - [ ] Record syntax [ foo: x signum. quux: y. ] and #[foo: 42]
   - [ ] String interpolation '1 + 1 = {1 + 1}'

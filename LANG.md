@@ -1,44 +1,88 @@
 # Foo The Language
 
+This document reflects the current state of the language.
+
 Everything is an expression that evaluates to an object.
 
 Everything happens by sending messages to objects.
 
 ## Quick Tour
 
-```
-# Comments are prefixed with hash-sign
+### Literals
 
-# Numbers
+```
 123
 123.123
-0b10101010
-0xffffffff
+'This is a string'
+\#['literal' 'constant' 'array']
+\#literalSymbol
+```
 
-# Strings
-"Simple string"
-"String with interpolation {user}!"
+### Array constructors
 
-# Arrays
-[evaluated . at . runtime]
-$["literal" "constant" "array"]
+Where every evaluation of an array literal returns the same array
+object, the array constructor expression creates a new array every
+time.
 
-# Symbols
-$literalSymbol
+```
+[ constructed . at . runtime ]
+```
 
-# Variables
+### Messages
+
+In the following examples both the parenthesized and unparenthesized
+expressions mean the same thing.
+
+*Unary Messages*
+
+Unary message is a single word. Unary messages have the highest
+precedence.
+
+```
+object messageOneToObject messageTwoToResultOfMessageOne
+```
+
+*Binary Messages*
+
+Binary messages are a symbol followed by an expression. Binary
+messages have the second highest precedence, but have no internal
+precedence ordering.
+
+```
+x + y + z * multipliesXplusYplusZ
+resultOfSinTOBeAdded + x sin
+```
+
+*Keyword Messages*
+
+Keyword messages are a sequence of ``keyword: value`` pairs. One such sequence
+is a single message. Keyword messages have the lowest precedence.
+
+```
+DB connect: "localhost" user: "me" password: secrets decodePassword
+```
+
+### Blocks
+
+First significant divergence from Smalltalk syntax: blocks are written using
+curly braces.
+
+```
+{ foo + 1 } value
+```
+
+WIP MARKER
+
+### Variables
+
+Variable bindings 
+
+
+
+{ | x y y | ...
 let x = 42 # lexical binding
 x          # reference
 x = 13     # assignment
-
-# Unary message
-x sign
-
-# Binary message
-x + x
-
-# Keyword message
-DB connect: "localhost" user: "me" password: "secret"
 
 # Dots are used to sequence expressions: value of the expression
 # before the dot is discarded.
