@@ -34,7 +34,7 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 96h
+Time spent: 97h
 Estimated remaining: 10h
 
 - [x] AST
@@ -108,7 +108,8 @@ Time spent: 0h
 
 - Cleanups
   - [ ] 1 to: 10 creates a range.
-  - [ ] Azure pipeline for Windows and OS X as well.
+  - [x] Azure pipeline for Windows and OS X as well.
+  - [ ] Azure pipeline for pull requests should merge the branch onto master first
   - [ ] Fix empty array constructor.
   - [ ] Move methods from evaluator.rs into classes/class.rs. 1h.
   - [ ] Move sub-object definitions from objects.rs into classes/class.rs. 1h
@@ -141,6 +142,8 @@ Time spent: 0h
 - [ ] Make things slightly less bare bones. 5h
 - Optional extras:
   - Syntax & semantics package
+    - [ ] rename Array::each to Array::do
+    - [ ] Instance syntax: ClassName::{ ... } $ClassName::{ ... }
     - [ ] Change methods to default to last expression as return
     - [ ] Change variable binding to let.
     - [ ] Message chaining with ,
