@@ -48,9 +48,9 @@ Estimated remaining: 10h
 - [x] Program parser: class-method parser
 - [x] Explicit representation for the global environment
 - Program loader
-      - [x] self
-      - [x] createInstance. 5h
-      - [x] instance variables. 5h
+   - [x] self
+   - [x] createInstance. 5h
+   - [x] instance variables. 5h
 - [x] Method evaluator (handles ^ in method bodies)
 - [X] ~~return in an expression context "just returns". Est 5h.~~
 - [x] "comments" (preserved in the AST and methods, returned using help: #selector) Est 5h.
@@ -395,6 +395,106 @@ This should compile into decent native code. Something close enough
 to what gcc -O0 would produce.
 
 ## MMmmmaaaybe
+
+- The more I think about it the more I like the idea of "main" receiving
+  an object that provides the OS interfaces.
+
+  The only question is ergonomics.
+
+  How to support printf-debugging in a random method?
+
+  I have several answers.
+
+  1. Dynamic variables.
+
+  2. It isn't _that_ hard to pass in a logger.
+
+  3. A nice environment means you don't reach for the printf
+     in the first place.
+
+  ...but how do agents get those objects? As messages?
+
+  Probably: toplevel agents cannot have them!
+
+  But if you set up a tree of processes then the capabilities can be
+  passed down.
+
+- ...aha. Smalltalk actually puts a lot of things which might otherwise
+  belong in a control flow class (or exist as first-class constructs)
+  into self:
+
+     self handle: [ :exeption | ... ]
+          do [ ... ]
+
+   Block would be another possible home:
+
+      { ... } handle: { ... } finally: { ... }
+
+- http://joeduffyblog.com/2016/02/07/the-error-model/
+
+    Conditions vs Errors
+
+    Error kills the agent.
+
+    Conditions are signalled and may have restarts.
+
+
+
+    Optional static analysis, like for everything.
+
+
+
+- Terminology
+
+    Words and sigils are both symbols.
+
+      foo <-- word
+
+      *^  <-- sigil
+
+- Syntax
+
+    use comma for sequencing: stmt, expr
+    use semicolon for cascades
+
+    dot is left free, or an operator
+
+    double-colons for namespacing and explicit extensions
+
+    Module::Class new
+
+    "foo" ext::capitalize
+
+- Binary messages
+
+    Consider binary messages to be syntax level transformations into
+    messages.
+
+    ```
+    @operator left => right
+       right value left
+    
+    @operator left - right
+       left sub: right
+    ```
+
+    Because the parser needs to know the precedence anyhow, it seems to
+    me that binary operators don't need to be strictly restricted to symbols anyhow.
+
+    @import MyOps::_div_
+
+- Could I support chaining for comparison operators?
+
+      0 < a < 5   and  a = b = c
+
+    ...I could. Parser could deal with them especially. Just say that comparison
+    operators are chained using and.
+
+      a _op1_ b _op2_ c ==> a _op1__ (let tmp := b) & tmp __op2__ c
+
+    The constraint that some things are classed as comparison operators.
+
+    This is not more complicated than precedence.
 
 - I still wonder if blocks should have "selectors" instead,
   ```
