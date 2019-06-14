@@ -1,0 +1,8 @@
+site_name: "the Foo programming language"
+
+theme:
+  name: 'readable'
+  highlightjs: False
+
+extra_css:
+  - 'stylesheets/extra.css'
