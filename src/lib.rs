@@ -1,4 +1,5 @@
 pub mod ast;
+pub mod classes;
 pub mod evaluator;
 pub mod objects;
 pub mod parser;
