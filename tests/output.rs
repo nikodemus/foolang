@@ -71,6 +71,7 @@ fn repl() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
+#[ignore] // takes a bit long, and will take longer as more are added
 fn benchmarks() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("--load")
