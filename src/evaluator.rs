@@ -95,7 +95,7 @@ lazy_static! {
         let (class, _) = env.add_builtin_class("Array");
         assert_eq!(class, CLASS_ARRAY, "Bad classId for Array");
         env.classes.add_builtin(&class, "==", method_object_eq);
-        env.classes.add_builtin(&class, "each:", method_array_each);
+        env.classes.add_builtin(&class, "do:", method_array_do);
         env.classes.add_builtin(&class, "inject:into:", method_array_inject_into);
         env.classes.add_builtin(&class, "push:", method_array_push);
         env.classes.add_builtin(&class, "toString", method_object_tostring);
@@ -628,7 +628,7 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
     }
 }
 
-fn method_array_each(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
+fn method_array_do(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
     assert!(args.len() == 1);
     match &receiver.datum {
         Datum::Array(v) => {

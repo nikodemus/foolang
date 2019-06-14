@@ -8,7 +8,7 @@
                              Benchmark fibonacci ]]
 
 @method Benchmarks run
-    benchmarks each: { :benchmark |
+    benchmarks do: { :benchmark |
         benchmark run report
     }
 

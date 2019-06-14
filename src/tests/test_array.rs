@@ -45,9 +45,9 @@ fn array_eq() {
 }
 
 #[test]
-fn array_each() {
+fn array_do() {
     assert_eq!(
-        eval_str("{ |x| [1, 2, 3] each: { :elt | x := x + elt }, x } value"),
+        eval_str("{ |x| [1, 2, 3] do: { :elt | x := x + elt }, x } value"),
         Object::make_integer(6)
     );
 }

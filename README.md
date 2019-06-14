@@ -34,12 +34,12 @@ _...a bad SmallTalk with an environment from the 80s?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Estimated remaining: 94h
+Estimated remaining: 93h
 Time spent: 1h
 
 - Cleanups: 10h
   - [x] Expressions are sequenced with comma, not dot. 1h
-  - [ ] rename Array::each to Array::do. 1h
+  - [x] rename Array::each to Array::do. 1h
   - [x] Fix empty array constructor. 1h
   - [x] Azure pipeline for Windows and OS X as well.
   - [ ] Move methods from evaluator.rs into classes/class.rs. 1h.
