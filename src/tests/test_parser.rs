@@ -1,5 +1,5 @@
 use crate::ast;
-use crate::ast::{Cascade, Expr, Identifier, Literal, Method};
+use crate::ast::{Expr, Identifier, Literal, Message, Method};
 use crate::parser::*;
 
 // helpers
@@ -233,7 +233,10 @@ fn parse_binary_cascade() {
                 identifier("+"),
                 vec![variable("b")]
             )),
-            vec![Cascade::Message(identifier("+"), vec![variable("c")])]
+            vec![Message {
+                selector: identifier("+"),
+                args: vec![variable("c")]
+            }]
         )
     );
     assert_eq!(
@@ -244,7 +247,10 @@ fn parse_binary_cascade() {
                 identifier("+"),
                 vec![integer(3)]
             )),
-            vec![Cascade::Message(identifier("+"), vec![integer(41)])]
+            vec![Message {
+                selector: identifier("+"),
+                args: vec![integer(41)]
+            }]
         )
     );
 }
@@ -264,10 +270,22 @@ fn parse_keyword_cascade() {
                 vec![]
             )),
             vec![
-                Cascade::Message(identifier("then:"), vec![variable("e")]),
-                Cascade::Message(identifier("+"), vec![variable("f")]),
-                Cascade::Message(identifier("g"), vec![]),
-                Cascade::Message(identifier("then:and:"), vec![variable("h"), variable("j")]),
+                Message {
+                    selector: identifier("then:"),
+                    args: vec![variable("e")]
+                },
+                Message {
+                    selector: identifier("+"),
+                    args: vec![variable("f")]
+                },
+                Message {
+                    selector: identifier("g"),
+                    args: vec![]
+                },
+                Message {
+                    selector: identifier("then:and:"),
+                    args: vec![variable("h"), variable("j")]
+                },
             ]
         )
     )

@@ -1,5 +1,5 @@
 use crate::ast::{
-    Cascade, ClassDescription, Definition, Expr, Identifier, Literal, Method, MethodDescription,
+    ClassDescription, Definition, Expr, Identifier, Literal, Message, Method, MethodDescription,
 };
 use crate::classes;
 use crate::objects::*;
@@ -587,25 +587,23 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
             }
             panic!("Cannot assign to an unbound variable: {}.", s)
         }
+        Expr::Block(b) => make_result(Object::into_closure(b, env)),
         Expr::Send(expr, selector, args) => {
             let res = eval_in_env(*expr, env, global);
-            match &res {
-                Eval::Return(_, _) => res,
-                Eval::Result(val, _) => {
-                    let mut argvals = Vec::new();
-                    for arg in args.into_iter() {
-                        match eval_in_env(arg, env, global) {
-                            Eval::Return(r, to) => return Eval::Return(r, to),
-                            Eval::Result(argval, _) => {
-                                argvals.push(argval);
-                            }
-                        }
-                    }
-                    global.send(val.to_owned(), &selector, argvals, env)
-                }
+            if res.is_return() {
+                return res;
             }
+            let val = res.value();
+            let mut argvals = Vec::new();
+            for arg in args.into_iter() {
+                let argval = eval_in_env(arg, env, global);
+                if argval.is_return() {
+                    return argval;
+                }
+                argvals.push(argval.value());
+            }
+            global.send(val.to_owned(), &selector, argvals, env)
         }
-        Expr::Block(b) => make_result(Object::into_closure(b, env)),
         Expr::Cascade(expr, cascade) => {
             if let Eval::Result(_, receiver) = eval_in_env(*expr, env, global) {
                 eval_cascade(receiver.clone(), cascade, env, global)
@@ -662,13 +660,13 @@ fn eval_literal(lit: Literal) -> Object {
     }
 }
 
-fn eval_cascade(receiver: Object, cascade: Vec<Cascade>, env: &Lexenv, global: &GlobalEnv) -> Eval {
+fn eval_cascade(receiver: Object, cascade: Vec<Message>, env: &Lexenv, global: &GlobalEnv) -> Eval {
     let mut value = receiver.clone();
     for thing in cascade.iter() {
         let res = match thing {
-            Cascade::Message(selector, exprs) => {
+            Message { selector, args } => {
                 let mut vals = Vec::new();
-                for exp in exprs.iter() {
+                for exp in args.iter() {
                     let val = match eval_in_env(exp.to_owned(), env, global) {
                         Eval::Result(val, _) => val,
                         Eval::Return(val, to) => return Eval::Return(val, to),

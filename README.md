@@ -34,9 +34,12 @@ _...a bad SmallTalk with an environment from the 80s?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Estimated remaining: 92h
+Estimated remaining: 94h
 Time spent: 2h
 
+- Language:
+  - [ ] Message chaining. 2h
+  - [ ] Block-arguments without prefix colons. 2h
 - Cleanups: 10h
   - [x] Expressions are sequenced with comma, not dot. 1h
   - [x] rename Array::each to Array::do. 1h

@@ -26,8 +26,9 @@ pub enum Literal {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Cascade {
-    Message(Identifier, Vec<Expr>),
+pub struct Message {
+    pub selector: Identifier,
+    pub args: Vec<Expr>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -38,7 +39,7 @@ pub enum Expr {
     Block(Block),
     Assign(Identifier, Box<Expr>),
     Return(Box<Expr>),
-    Cascade(Box<Expr>, Vec<Cascade>),
+    Cascade(Box<Expr>, Vec<Message>),
     ArrayCtor(Vec<Expr>),
 }
 

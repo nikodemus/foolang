@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use crate::ast::{
-  Identifier, Expr, Literal, Cascade, Method, Block, ClassDescription, Definition, Program,
+  Identifier, Expr, Literal, Message, Method, Block, ClassDescription, Definition, Program,
   MethodDescription, ProgramElement
 };
 use crate::utils::{
@@ -104,12 +104,12 @@ PrimaryExpression: Expr = {
   ConstantExpr,
   Block => Expr::Block(<>),
   "(" <e:Expression> ")" => e,
-  "[" <e:DottedExpressions> "]" => Expr::ArrayCtor(e),
+  "[" <e:ArrayElements> "]" => Expr::ArrayCtor(e),
   "[" "]" => Expr::ArrayCtor(vec![]),
 };
 
-DottedExpressions: Vec<Expr> = {
-  <e:Expression> "," <v:DottedExpressions> => prepend(e, v),
+ArrayElements: Vec<Expr> = {
+  <e:Expression> "," <v:ArrayElements> => prepend(e, v),
   <e:Expression> "," => vec![e],
   <e:Expression> => vec![e],
 };
@@ -147,21 +147,8 @@ MessageExpression: Expr = {
 };
 
 UnaryExpression: Expr = {
-  <o:UnaryObjectDescription> <m:UnarySelector> => Expr::Send(Box::new(o), m, vec![]),
-};
-
-UnaryObjectDescription: Expr = {
-  PrimaryExpression,
-  UnaryExpression,
-};
-
-BinaryObjectDescription: Expr = {
-  UnaryObjectDescription,
-  BinaryExpression,
-};
-
-UnarySelector: Identifier = {
-  Identifier,
+  <o:UnaryObjectDescription> <m:UnarySelector>
+    => Expr::Send(Box::new(o), m, vec![]),
 };
 
 BinaryExpression: Expr = {
@@ -172,6 +159,16 @@ BinaryExpression: Expr = {
 KeywordExpression: Expr = {
   <a:BinaryObjectDescription> <b:KeywordTail>
     => Expr::Send(Box::new(a), b.0, b.1),
+};
+
+UnaryObjectDescription: Expr = {
+  PrimaryExpression,
+  UnaryExpression,
+};
+
+BinaryObjectDescription: Expr = {
+  UnaryObjectDescription,
+  BinaryExpression,
 };
 
 // This is immediately destructured in KeywordExpression -- This
@@ -189,7 +186,7 @@ CascadedMessageExpression: Expr = {
     => Expr::Cascade(Box::new(a), t),
 };
 
-CascadedMessageTail: Vec<Cascade> = {
+CascadedMessageTail: Vec<Message> = {
     ";" <a:CascadedMessage> <b:CascadedMessageTail> => prepend(a, b),
     ";" <a:CascadedMessage> => vec![a],
 };
@@ -202,10 +199,10 @@ CascadedMessageTail: Vec<Cascade> = {
 //    + 1 / 2
 //
 // ?
-CascadedMessage: Cascade = {
-   <a:UnarySelector> => Cascade::Message(a, vec![]),
-   <a:BinarySelector> <b:UnaryObjectDescription> => Cascade::Message(a, vec![b]),
-   <a:KeywordTail> => Cascade::Message(a.0, a.1),
+CascadedMessage: Message = {
+   <a:UnarySelector> => Message{ selector: a, args: vec![] },
+   <a:BinarySelector> <b:UnaryObjectDescription> => Message{ selector: a, args: vec![b] },
+   <a:KeywordTail> => Message{ selector: a.0, args: a.1 },
 };
 
 Temporaries: Vec<Identifier> = {
@@ -227,6 +224,10 @@ BlockParam: Identifier = {
 
 Identifier: Identifier = {
   r"[_a-zA-Z][_a-zA-Z0-9]*" => Identifier(String::from(<>))
+};
+
+UnarySelector: Identifier = {
+  Identifier,
 };
 
 BinarySelector: Identifier = {
