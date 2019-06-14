@@ -5,7 +5,6 @@ use crate::classes;
 use crate::objects::*;
 use crate::parser::parse_expr;
 use crate::parser::parse_program;
-use crate::time::TimeInfo;
 use lazy_static::lazy_static;
 use std::borrow::ToOwned;
 use std::collections::HashMap;
@@ -149,13 +148,13 @@ lazy_static! {
 
         let (class, meta) = env.add_builtin_class("Foolang");
         assert_eq!(class, CLASS_FOOLANG);
-        env.classes.add_builtin(&meta, "compiler", class_method_foolang_compiler);
+        env.classes.add_builtin(&meta, "compiler", classes::foolang::class_method_compiler);
         env.classes.add_builtin(&class, "toString", classes::object::method_tostring);
         env.classes.add_builtin(&class, "==", classes::object::method_eq);
 
         let (class, _meta) = env.add_builtin_class("Input");
         assert_eq!(class, CLASS_INPUT);
-        env.classes.add_builtin(&class, "readline", method_input_readline);
+        env.classes.add_builtin(&class, "readline", classes::input::method_readline);
         env.classes.add_builtin(&class, "toString", classes::object::method_tostring);
         env.classes.add_builtin(&class, "==", classes::object::method_eq);
 
@@ -195,19 +194,19 @@ lazy_static! {
 
         let (class, meta) = env.add_builtin_class("System");
         assert_eq!(class, CLASS_SYSTEM);
-        env.classes.add_builtin(&meta, "stdin", class_method_system_stdin);
-        env.classes.add_builtin(&meta, "stdout", class_method_system_stdout);
-        env.classes.add_builtin(&meta, "timeInfo", class_method_system_timeinfo);
+        env.classes.add_builtin(&meta, "stdin", classes::system::class_method_stdin);
+        env.classes.add_builtin(&meta, "stdout", classes::system::class_method_stdout);
+        env.classes.add_builtin(&meta, "timeInfo", classes::system::class_method_timeinfo);
         env.classes.add_builtin(&class, "toString", classes::object::method_tostring);
         env.classes.add_builtin(&class, "==", classes::object::method_eq);
 
         let (class, _) = env.add_builtin_class("TimeInfo");
         assert_eq!(class, CLASS_TIMEINFO);
-        env.classes.add_builtin(&class, "-", method_timeinfo_minus);
-        env.classes.add_builtin(&class, "realTime", method_timeinfo_realtime);
-        env.classes.add_builtin(&class, "systemTime", method_timeinfo_systemtime);
+        env.classes.add_builtin(&class, "-", classes::timeinfo::method_minus);
+        env.classes.add_builtin(&class, "realTime", classes::timeinfo::method_realtime);
+        env.classes.add_builtin(&class, "systemTime", classes::timeinfo::method_systemtime);
         env.classes.add_builtin(&class, "toString", classes::object::method_tostring);
-        env.classes.add_builtin(&class, "userTime", method_timeinfo_usertime);
+        env.classes.add_builtin(&class, "userTime", classes::timeinfo::method_usertime);
 
         /* GLOBALS */
 
@@ -230,7 +229,7 @@ impl GlobalEnv {
     pub fn new() -> GlobalEnv {
         BUILTIN_ENV.clone()
     }
-    fn find_method(&self, classid: &ClassId, name: &str) -> MethodImpl {
+    pub fn find_method(&self, classid: &ClassId, name: &str) -> MethodImpl {
         self.classes.find_method(classid, name)
     }
     fn find_slot(&self, class: &ClassId, name: &str) -> Option<usize> {
@@ -247,7 +246,8 @@ impl GlobalEnv {
         let metaid = self.classes.add_class(&metaname, vec![]);
         let id = self.classes.add_class(name, vec![]);
         let class = Object::make_class(metaid.clone(), id.clone(), name);
-        self.classes.add_builtin(&metaid, "help:", method_help);
+        self.classes
+            .add_builtin(&metaid, "help:", classes::class::method_help);
         self.variables.insert(name.to_string(), class);
         (id, metaid)
     }
@@ -260,9 +260,13 @@ impl GlobalEnv {
         let metaid = self.classes.add_class(&metaname, vec![]);
         let id = self.classes.add_class(name, slots.clone());
         let class = Object::make_class(metaid.clone(), id.clone(), name);
-        self.classes.add_builtin(&metaid, "help:", method_help);
         self.classes
-            .add_builtin(&metaid, "createInstance:", method_create_instance);
+            .add_builtin(&metaid, "help:", classes::class::method_help);
+        self.classes.add_builtin(
+            &metaid,
+            "createInstance:",
+            classes::class::method_createinstance,
+        );
         self.variables.insert(name.to_string(), class);
     }
     fn send(
@@ -453,7 +457,7 @@ pub struct LexenvFrame {
 }
 
 #[derive(Clone)]
-enum MethodImpl {
+pub enum MethodImpl {
     Builtin(MethodFunc),
     Evaluator(Method),
 }
@@ -625,84 +629,6 @@ fn eval_in_env(expr: Expr, env: &Lexenv, global: &GlobalEnv) -> Eval {
             Eval::Return(val, to) => Eval::Return(val, to),
         },
     }
-}
-
-fn class_method_foolang_compiler(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    make_method_result(receiver, Object::make_compiler())
-}
-
-fn method_input_readline(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    let line = match &receiver.datum {
-        Datum::Input(input) => match input.read_line() {
-            Some(s) => Object::into_string(s),
-            None => Object::make_boolean(false),
-        },
-        _ => panic!("Bad receiver for Input readline: {}", receiver),
-    };
-    make_method_result(receiver, line)
-}
-
-fn class_method_system_stdin(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    make_method_result(receiver, Object::make_input(Box::new(std::io::stdin())))
-}
-
-fn class_method_system_stdout(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    make_method_result(receiver, Object::make_output(Box::new(std::io::stdout())))
-}
-
-fn class_method_system_timeinfo(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    make_method_result(receiver, Object::into_timeinfo(TimeInfo::now()))
-}
-
-fn method_timeinfo_minus(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    let delta = (&*receiver.timeinfo()).to_owned() - (&*args[0].timeinfo()).to_owned();
-    make_method_result(receiver, Object::into_timeinfo(delta))
-}
-
-fn method_timeinfo_realtime(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    let real = receiver.timeinfo().real;
-    make_method_result(receiver, Object::make_float(real))
-}
-
-fn method_timeinfo_systemtime(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    let system = receiver.timeinfo().system;
-    make_method_result(receiver, Object::make_float(system))
-}
-
-fn method_timeinfo_usertime(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    let user = receiver.timeinfo().user;
-    make_method_result(receiver, Object::make_float(user))
-}
-
-fn method_create_instance(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    let class = receiver.class();
-    let slots = args[0].vec();
-    make_method_result(receiver, Object::make_instance(class.id.to_owned(), slots))
-}
-
-fn method_help(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    match &args[0].datum {
-        Datum::Symbol(name) => {
-            if let MethodImpl::Evaluator(m) = &global.find_method(&receiver.class, &name) {
-                if let Some(s) = &m.docstring {
-                    return make_method_result(receiver, Object::make_string(s));
-                }
-            }
-        }
-        _ => panic!("Bad argument to help:!"),
-    }
-    make_method_result(receiver, Object::make_string("No help available."))
 }
 
 pub fn closure_apply(

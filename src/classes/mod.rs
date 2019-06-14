@@ -1,9 +1,14 @@
 pub mod array;
 pub mod boolean;
+pub mod class;
 pub mod closure;
 pub mod compiler;
+pub mod foolang;
+pub mod input;
 pub mod integer;
 pub mod number;
 pub mod object;
 pub mod output;
 pub mod string;
+pub mod system;
+pub mod timeinfo;
