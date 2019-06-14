@@ -1,3 +1,29 @@
+@class Parser []
+
+@class-method Parser parse: string
+   Parser new parseString: string
+
+@class-method Parser new
+   self createInstance
+
+@method Parser parseString: string
+   self parse: (self tokenize: string)
+
+@method Parser parse: tokens
+   self parse: tokens first then: tokens rest
+
+@method Parser parse: token then: tokens
+   token isOpenDelimiter
+      ifTrue: {
+          self pushDelimiter: token,
+          ^parse: tokens first then: tokens rest
+      },
+   token isCloseDelimiter
+      ifTrue: {
+          token closedBy: (self popDelimiter),
+          ^
+      }
+
 @class Context [
   "Current self."
   receiver

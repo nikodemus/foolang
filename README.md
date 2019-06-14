@@ -34,20 +34,24 @@ _...a bad SmallTalk with an environment from the 80s?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Estimated remaining: 94h
-Time spent: 2h
+Estimated remaining: 91h
+Time spent: 4h
 
 - Language:
-  - [ ] Message chaining. 2h
-  - [ ] Block-arguments without prefix colons. 2h
-- Cleanups: 10h
+  - ~~[ ] Message chaining. 2h~~
+    This turned out to be harder than I thought. I'm pretty sure it's
+    parsable, but I'm having trouble getting it right. Seems like something
+    that would be easy to do in a hand-written parser... but I don't think
+    I want to write one just now. OTOH, it would be a "good" opportunity
+    to write Rust and Foo in parallel.
+- Cleanups:
   - [x] Expressions are sequenced with comma, not dot. 1h
   - [x] rename Array::each to Array::do. 1h
   - [x] Fix empty array constructor. 1h
   - [x] Azure pipeline for Windows and OS X as well.
   - [x] Move methods from evaluator.rs into classes/class.rs. 1h.
   - [ ] Move sub-object definitions from objects.rs into classes/class.rs. 1h
-- [ ] Try out asciidoc for documentation: 1h
+- [x] Try out mkdoc for documentation: 1h
 - [ ] Wrap a rust web server as foolang object. 5h
 - Bare bones class browser widget: 20h
   - [ ] Foolang classes. 1h
@@ -139,8 +143,7 @@ library.
 
 Estimated remaining: 130h
 
-- [ ] Proper name instead of foolang. Est 5h.
-- [ ] Bytecode -> IR decompiler. Est 5h.
+- [ ] Bytecode -> IR decompiler. Est 10h.
 - [ ] IR JIT compiler. Est 40h.
 - [ ] Simple static type annotations with dynamic checks. Est 10h.
 - [ ] IR optimization to elide dispatch and typechecks in trivial cases. Est 10h.
