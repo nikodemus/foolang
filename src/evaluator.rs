@@ -1,12 +1,10 @@
 use crate::ast::{
     Cascade, ClassDescription, Definition, Expr, Identifier, Literal, Method, MethodDescription,
-    ProgramElement,
 };
 use crate::classes;
 use crate::objects::*;
 use crate::parser::parse_expr;
 use crate::parser::parse_program;
-use crate::parser::try_parse;
 use crate::time::TimeInfo;
 use lazy_static::lazy_static;
 use std::borrow::ToOwned;
@@ -132,8 +130,8 @@ lazy_static! {
 
         let (class, _) = env.add_builtin_class("Compiler");
         assert_eq!(class, CLASS_COMPILER, "Bad classId for Compiler");
-        env.classes.add_builtin(&class, "tryParse:", method_compiler_tryparse);
-        env.classes.add_builtin(&class, "evaluate", method_compiler_evaluate);
+        env.classes.add_builtin(&class, "tryParse:", classes::compiler::method_tryparse);
+        env.classes.add_builtin(&class, "evaluate", classes::compiler::method_evaluate);
         env.classes.add_builtin(&class, "toString", classes::object::method_tostring);
         env.classes.add_builtin(&class, "==", classes::object::method_eq);
 
@@ -975,39 +973,6 @@ pub fn closure_apply(
         result = res.value();
     }
     Eval::Result(result, receiver)
-}
-
-fn method_compiler_evaluate(receiver: Object, args: Vec<Object>, _global: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    let compiler = receiver.compiler();
-    let mut env = compiler.env.lock().unwrap();
-    let ast = compiler.ast.lock().unwrap();
-    match *ast {
-        None => panic!("Cannot evaluate: no AST available."),
-        Some(ref ast) => match ast {
-            ProgramElement::Expr(ref expr) => {
-                make_method_result(receiver, env.eval(expr.to_owned()))
-            }
-            ProgramElement::Definition(ref def) => {
-                make_method_result(receiver, env.load_definition(def.to_owned()))
-            }
-        },
-    }
-}
-
-fn method_compiler_tryparse(receiver: Object, args: Vec<Object>, _global: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    let compiler = receiver.compiler();
-    let mut ast = compiler.ast.lock().unwrap();
-    let mut ok = false;
-    *ast = match args[0].string().with_str(|s| try_parse(s)) {
-        Ok(elt) => {
-            ok = true;
-            Some(elt)
-        }
-        Err(_) => None,
-    };
-    make_method_result(receiver, Object::make_boolean(ok))
 }
 
 fn eval_literal(lit: Literal) -> Object {
