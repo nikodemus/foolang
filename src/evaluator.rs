@@ -167,7 +167,7 @@ lazy_static! {
         env.classes.add_builtin(&class, "<", classes::number::method_lt);
         env.classes.add_builtin(&class, ">", classes::number::method_gt);
         env.classes.add_builtin(&class, "==", classes::number::method_eq);
-        env.classes.add_builtin(&class, "gcd:", method_integer_gcd);
+        env.classes.add_builtin(&class, "gcd:", classes::integer::method_gcd);
         env.classes.add_builtin(&class, "neg", classes::number::method_neg);
         env.classes.add_builtin(&class, "to:do:", classes::number::method_to_do);
         env.classes.add_builtin(&class, "toString", classes::object::method_tostring);
@@ -182,9 +182,9 @@ lazy_static! {
 
         let (class, meta) = env.add_builtin_class("String");
         assert_eq!(class, CLASS_STRING);
-        env.classes.add_builtin(&meta, "new", class_method_string_new);
-        env.classes.add_builtin(&class, "append:", method_string_append);
-        env.classes.add_builtin(&class, "clear", method_string_clear);
+        env.classes.add_builtin(&meta, "new", classes::string::class_method_new);
+        env.classes.add_builtin(&class, "append:", classes::string::method_append);
+        env.classes.add_builtin(&class, "clear", classes::string::method_clear);
         env.classes.add_builtin(&class, "toString", classes::object::method_tostring);
         env.classes.add_builtin(&class, "==", classes::object::method_eq);
 
@@ -642,46 +642,6 @@ fn method_input_readline(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> 
         _ => panic!("Bad receiver for Input readline: {}", receiver),
     };
     make_method_result(receiver, line)
-}
-
-fn method_integer_gcd(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    match receiver.datum.clone() {
-        Datum::Integer(i) => match args[0].datum {
-            Datum::Integer(j) => {
-                make_method_result(receiver, Object::make_integer(num::integer::gcd(i, j)))
-            }
-            _ => panic!("Non-integer in gcd!"),
-        },
-        _ => panic!("Bad receiver for builtin gcd!"),
-    }
-}
-
-fn class_method_string_new(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    make_method_result(receiver, Object::make_string(""))
-}
-
-fn method_string_append(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    match (&receiver.datum, &args[0].datum) {
-        (Datum::String(s), Datum::String(more)) => {
-            s.lock().unwrap().push_str(more.to_string().as_str());
-            make_result(receiver)
-        }
-        _ => panic!("Bad arguments to 'String append:': #{:?}", args),
-    }
-}
-
-fn method_string_clear(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    match &receiver.datum {
-        Datum::String(s) => {
-            s.lock().unwrap().clear();
-            make_result(receiver)
-        }
-        _ => panic!("Bad receiver in 'String clear': #{:?}", args),
-    }
 }
 
 fn class_method_system_stdin(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
