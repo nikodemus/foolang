@@ -18,7 +18,7 @@ fn eval_symbol() {
 #[test]
 fn eval_array() {
     assert_eq!(
-        eval(parse_expr("#[1 2 3]")),
+        eval(parse_expr("#[1, 2, 3]")),
         Object::make_array(&[
             Object::make_integer(1),
             Object::make_integer(2),
@@ -30,7 +30,7 @@ fn eval_array() {
 #[test]
 fn eval_assign() {
     assert_eq!(
-        eval(parse_expr("{ |x| x := 1 + 41. x } value")),
+        eval(parse_expr("{ |x| x := 1 + 41, x } value")),
         Object::make_integer(42)
     )
 }
@@ -74,7 +74,7 @@ fn eval_cascade() {
 #[test]
 fn eval_array_ctor() {
     assert_eq!(
-        eval(parse_expr("[1. 1+1. 3.0 neg neg]")),
+        eval(parse_expr("[1, 1+1, 3.0 neg neg]")),
         Object::make_array(&[
             Object::make_integer(1),
             Object::make_integer(2),

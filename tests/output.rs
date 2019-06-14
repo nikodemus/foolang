@@ -31,8 +31,8 @@ fn stdin_readline() -> Result<(), Box<std::error::Error>> {
         "
             {
                 |out in|
-                in := System stdin.
-                out := System stdout.
+                in := System stdin,
+                out := System stdout,
                 out print: ('1: ' append: (in readline)); newline;
                     print: ('2: ' append: (in readline)); newline
             } value
@@ -67,5 +67,22 @@ fn repl() -> Result<(), Box<std::error::Error>> {
         .assert()
         .success()
         .stdout("Foolang 0.1.0\n> #Foo\n> #a:b:\n> 42\n> ");
+    Ok(())
+}
+
+#[test]
+fn benchmarks() -> Result<(), Box<std::error::Error>> {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("--load")
+        .arg("foo/benchmarks.foo")
+        .arg("--eval")
+        .arg("Benchmarks all run");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("EmptyLoop:"))
+        .stdout(predicate::str::contains("Factorial:"))
+        .stdout(predicate::str::contains("SumFloats:"))
+        .stdout(predicate::str::contains("Ackermann:"))
+        .stdout(predicate::str::contains("Fibonacci:"));
     Ok(())
 }

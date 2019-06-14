@@ -17,8 +17,8 @@ fn boolean_iftrue() {
         r#"
         @class Foo []
         @class-method Foo test: x |y|
-           y := 0.
-           x ifTrue: { y := 1 }.
+           y := 0,
+           x ifTrue: { y := 1 },
            ^y
         "#,
     );

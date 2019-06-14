@@ -42,11 +42,11 @@ fn block_closure_mutation() {
         r#"
         @class F []
         @class-method F counter
-           |x| x := 0.
-           ^{ x := x + 1. x }
+           |x| x := 0,
+           ^{ x := x + 1, x }
         @class-method F test
-            |counter| counter := self counter.
-            ^[counter value . counter value . counter value]
+            |counter| counter := self counter,
+            ^[counter value, counter value, counter value]
     "#,
     );
     assert_eq!(
@@ -65,7 +65,7 @@ fn return_from_method_block() {
         r#"
         @class Foo []
         @class-method Foo test
-            Foo boo: { ^42 }.
+            Foo boo: { ^42 },
             ^31
         @class-method Foo boo: blk
             blk value
@@ -80,15 +80,15 @@ fn return_from_deep_block_to_middle() {
         r#"
         @class Foo []
         @class-method Foo test
-            ^1 + (Foo test0: 41).
+            ^1 + (Foo test0: 41)
         @class-method Foo test0: x
-            Foo test1: { ^x }.
+            Foo test1: { ^x },
             ^0
         @class-method Foo test1: blk
-            Foo test2: blk.
+            Foo test2: blk,
             ^1
         @class-method Foo test2: blk
-            blk value.
+            blk value,
             ^2
         "#,
     );
@@ -101,9 +101,9 @@ fn block_repeat() {
         r#"
         @class Foo []
         @class-method Foo test |x|
-           x := 0.
+           x := 0,
            {
-               x > 1000 ifTrue: { ^'lots' }.
+               x > 1000 ifTrue: { ^'lots' },
                x := x + 1
            }
            repeat
@@ -118,9 +118,9 @@ fn block_repeatwhilefalse() {
         r#"
         @class Foo []
         @class-method Foo test |x|
-           x := 0.
+           x := 0,
            ^{
-               x := x + 1.
+               x := x + 1,
                x > 1000 ifTrue: { x }
            }
            repeatWhileFalse

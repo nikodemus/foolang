@@ -1,10 +1,10 @@
 @class Benchmarks [benchmarks]
 
 @class-method Benchmarks all
-    ^self createInstance: [[ Benchmark emptyLoop .
-                             Benchmark factorial .
-                             Benchmark sumFloats .
-                             Benchmark ackermann .
+    ^self createInstance: [[ Benchmark emptyLoop,
+                             Benchmark factorial,
+                             Benchmark sumFloats,
+                             Benchmark ackermann,
                              Benchmark fibonacci ]]
 
 @method Benchmarks run
@@ -15,17 +15,17 @@
 @class Benchmark [name block userTime systemTime realTime]
 
 @class-method Benchmark new: name is: block
-    ^self createInstance: [name . block . false . false . false]
+    ^self createInstance: [name, block, false, false, false]
 
 @method Benchmark run |info info0 info1 info2|
-    info0 := System timeInfo.
-    info1 := System timeInfo.
-    block value.
-    info2 := System timeInfo.
-    info := (info2 - info1) - (info1 - info0).
-    userTime := info userTime.
-    systemTime := info systemTime.
-    realTime := info realTime.
+    info0 := System timeInfo,
+    info1 := System timeInfo,
+    block value,
+    info2 := System timeInfo,
+    info := (info2 - info1) - (info1 - info0),
+    userTime := info userTime,
+    systemTime := info systemTime,
+    realTime := info realTime
 
 @method Benchmark report
     System stdout
@@ -36,15 +36,15 @@
       print: systemTime toString;
       print: ', ';
       print: realTime toString;
-      newline.
+      newline,
     ^self
 
 @class-method Benchmark sumFloats
     |array|
-    array := [0.0].
+    array := [0.0],
     1.0 to: 150000.0 do: { :n |
         array push: n
-    }.
+    },
     ^Benchmark new: 'SumFloats' is: {
         array inject: 0.0 into: { :sum :each | sum + each }
     }
@@ -74,19 +74,19 @@
 @class Fibonacci []
 @class-method Fibonacci of: n
     n < 2
-        ifTrue: { ^1 }.
+        ifTrue: { ^1 },
     ^(Fibonacci of: n - 1) + (Fibonacci of: n - 2)
 
 @class Factorial []
 @class-method Factorial of: n
     n < 2
-        ifTrue: { ^n }.
+        ifTrue: { ^n },
     ^n * (Factorial of: n - 1)
 
 @class Ackermann []
 @class-method Ackermann m:m n:n
     m == 0
-        ifTrue: { ^n + 1 }.
+        ifTrue: { ^n + 1 },
     n == 0
-        ifTrue: { ^Ackermann m: m - 1 n: 1 }.
+        ifTrue: { ^Ackermann m: m - 1 n: 1 },
     ^Ackermann m: m - 1 n: (Ackermann m: m n: n - 1)

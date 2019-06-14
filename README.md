@@ -34,17 +34,18 @@ _...a bad SmallTalk with an environment from the 80s?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Estimated remaining: 95h
-Time spent: 0h
+Estimated remaining: 94h
+Time spent: 1h
 
 - Cleanups: 10h
-  - [ ] Expressions are sequenced with comma, not dot. 1h
+  - [x] Expressions are sequenced with comma, not dot. 1h
   - [ ] rename Array::each to Array::do. 1h
-  - [ ] Fix empty array constructor. 1h
+  - [x] Fix empty array constructor. 1h
   - [x] Azure pipeline for Windows and OS X as well.
   - [ ] Move methods from evaluator.rs into classes/class.rs. 1h.
   - [ ] Move sub-object definitions from objects.rs into classes/class.rs. 1h
   - [ ] Wrap a rust web server as foolang object. 5h
+- Try out asciidoc for documentation: 1h
 - Bare bones class browser widget: 20h
   - [ ] Foolang classes. 1h
   - [ ] Foolang reflect: class. 1h.
@@ -381,6 +382,8 @@ to what gcc -O0 would produce.
       \*^  <-- sigil
 
 - Syntax
+
+    Allow newline to replace comma?
 
     double-colons for namespacing and explicit extensions?
 

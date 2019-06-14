@@ -105,10 +105,12 @@ PrimaryExpression: Expr = {
   Block => Expr::Block(<>),
   "(" <e:Expression> ")" => e,
   "[" <e:DottedExpressions> "]" => Expr::ArrayCtor(e),
+  "[" "]" => Expr::ArrayCtor(vec![]),
 };
 
 DottedExpressions: Vec<Expr> = {
-  <e:Expression> "." <v:DottedExpressions> => prepend(e, v),
+  <e:Expression> "," <v:DottedExpressions> => prepend(e, v),
+  <e:Expression> "," => vec![e],
   <e:Expression> => vec![e],
 };
 
@@ -129,8 +131,7 @@ BlockParams: Vec<Identifier> = {
 };
 
 Statements: Vec<Expr> = {
-  <s:Statement> "." <ss:Statements> => prepend(s, ss),
-  <s:Statement> "." => vec![s],
+  <s:Statement> "," <ss:Statements> => prepend(s, ss),
   <s:Statement> => vec![s],
 };
 
@@ -289,7 +290,8 @@ Array: Literal = {
 };
 
 ArrayData: Vec<Literal> = {
-  <e:Literal> <a:ArrayData> => prepend(e, a),
+  <e:Literal> "," <a:ArrayData> => prepend(e, a),
+  <a:Literal> "," => vec![a],
   <a:Literal> => vec![a],
 };
 

@@ -16,7 +16,7 @@ fn string_new() {
 fn string_append() {
     assert_eq!(
         eval(parse_expr(
-            "{ |x| x := String new. x append: 'foo'. x append: 'bar'. x} value"
+            "{ |x| x := String new, x append: 'foo', x append: 'bar', x} value"
         )),
         Object::make_string("foobar")
     );
@@ -26,7 +26,7 @@ fn string_append() {
 fn string_clear() {
     assert_eq!(
         eval(parse_expr(
-            "{ |x| x := String new. x append: 'foo'. x clear append: 'bar'. x} value"
+            "{ |x| x := String new, x append: 'foo', x clear append: 'bar', x} value"
         )),
         Object::make_string("bar")
     );

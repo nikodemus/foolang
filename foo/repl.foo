@@ -5,11 +5,11 @@
 
 @class-method REPL new
     ^self createInstance: [
-      System stdin.
-      System stdout.
-      Foolang compiler.
-      String new.
-      false.
+      System stdin,
+      System stdout,
+      Foolang compiler,
+      String new,
+      false,
       false
     ]
 
@@ -19,14 +19,14 @@
 @method REPL read
     {
         |line|
-        line := input readline.
-        eof := line == false.
+        line := input readline,
+        eof := line == false,
         eof ifFalse: {
-          text append: line.
+          text append: line,
           compiler tryParse: text
         }
     }
-    repeatWhileFalse.
+    repeatWhileFalse,
     text clear
 
 @method REPL eval
@@ -36,5 +36,5 @@
     eof ifFalse: { output print: value toString; newline }
 
 @method REPL run
-    output print: 'Foolang 0.1.0'; newline.
-   { self prompt; read; eval; print } until: { eof == true }.
+    output print: 'Foolang 0.1.0'; newline,
+   { self prompt; read; eval; print } until: { eof == true }

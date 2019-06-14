@@ -61,7 +61,7 @@ fn load_box() {
     env.load(prog);
     assert_eq!(
         env.eval(parse_expr(
-            "{ |x| x := Box new: 40. x value: 2 + x value. x value } value"
+            "{ |x| x := Box new: 40, x value: 2 + x value, x value } value"
         )),
         Object::make_integer(42)
     );

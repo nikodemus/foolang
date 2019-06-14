@@ -36,7 +36,7 @@ fn parse_literals() {
         Expr::Constant(Literal::String(s("bleep''bloop")))
     );
     assert_eq!(
-        parse_expr("#[321 34.5 $$ _foobar:quux:zot: 'string' [level2]]"),
+        parse_expr("#[321, 34.5, $$, _foobar:quux:zot:, 'string', [level2]]"),
         Expr::Constant(Literal::Array(vec![
             Literal::Integer(321),
             Literal::Float(34.5),
@@ -146,7 +146,7 @@ fn parse_block() {
         })
     );
     assert_eq!(
-        parse_expr("{ foo bar. quux }"),
+        parse_expr("{ foo bar, quux }"),
         Expr::Block(ast::Block {
             parameters: vec![],
             temporaries: vec![],
@@ -169,7 +169,7 @@ fn parse_block() {
         })
     );
     assert_eq!(
-        parse_expr("{ :a | foo bar. quux }"),
+        parse_expr("{ :a | foo bar, quux }"),
         Expr::Block(ast::Block {
             parameters: vec![identifier("a")],
             temporaries: vec![],
@@ -180,7 +180,7 @@ fn parse_block() {
         })
     );
     assert_eq!(
-        parse_expr("{ :a | foo + bar. quux }"),
+        parse_expr("{ :a | foo + bar, quux }"),
         Expr::Block(ast::Block {
             parameters: vec![identifier("a")],
             temporaries: vec![],
@@ -195,7 +195,7 @@ fn parse_block() {
         })
     );
     assert_eq!(
-        parse_expr("{ :a | foo with: bar and: a. quux }"),
+        parse_expr("{ :a | foo with: bar and: a, quux }"),
         Expr::Block(ast::Block {
             parameters: vec![identifier("a")],
             temporaries: vec![],
@@ -290,7 +290,7 @@ fn parse_unary_method() {
         }
     );
     assert_eq!(
-        parse_method("foo |x| x := bar quux. ^x zot"),
+        parse_method("foo |x| x := bar quux, ^x zot"),
         Method {
             selector: identifier("foo"),
             parameters: vec![],
@@ -336,7 +336,7 @@ fn parse_binary_method() {
 #[test]
 fn parse_keyword_method() {
     assert_eq!(
-        parse_method("foo: x with: y x frob. y blarg ding: x"),
+        parse_method("foo: x with: y x frob, y blarg ding: x"),
         Method {
             selector: identifier("foo:with:"),
             parameters: vec![identifier("x"), identifier("y")],
@@ -361,7 +361,7 @@ fn parse_keyword_method() {
 #[test]
 fn parse_array_ctor() {
     assert_eq!(
-        parse_expr("[1 . 2 + 1. 3.1. 4]"),
+        parse_expr("[1, 2 + 1, 3.1, 4]"),
         Expr::ArrayCtor(vec![
             integer(1),
             Expr::Send(Box::new(integer(2)), identifier("+"), vec![integer(1)]),
