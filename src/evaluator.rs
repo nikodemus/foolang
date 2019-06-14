@@ -174,9 +174,9 @@ lazy_static! {
 
         let (class, _meta) = env.add_builtin_class("Output");
         assert_eq!(class, CLASS_OUTPUT);
-        env.classes.add_builtin(&class, "print:", method_output_print);
-        env.classes.add_builtin(&class, "newline", method_output_newline);
-        env.classes.add_builtin(&class, "flush", method_output_flush);
+        env.classes.add_builtin(&class, "print:", classes::output::method_print);
+        env.classes.add_builtin(&class, "newline", classes::output::method_newline);
+        env.classes.add_builtin(&class, "flush", classes::output::method_flush);
         env.classes.add_builtin(&class, "toString", classes::object::method_tostring);
         env.classes.add_builtin(&class, "==", classes::object::method_eq);
 
@@ -655,44 +655,6 @@ fn method_integer_gcd(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eva
         },
         _ => panic!("Bad receiver for builtin gcd!"),
     }
-}
-
-fn method_output_print(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    match &receiver.datum {
-        Datum::Output(out) => match &args[0].datum {
-            Datum::String(s) => {
-                out.write(s.lock().unwrap().as_bytes());
-            }
-            _ => {
-                panic!("Bad argument to Output print: {}", args[0]);
-            }
-        },
-        _ => panic!("Bad receiver for Output print: {}", receiver),
-    }
-    make_method_result(receiver.clone(), receiver)
-}
-
-fn method_output_newline(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    match &receiver.datum {
-        Datum::Output(out) => {
-            out.write("\n".as_bytes());
-        }
-        _ => panic!("Bad receiver for Output newline: {}", receiver),
-    }
-    make_method_result(receiver.clone(), receiver)
-}
-
-fn method_output_flush(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    match &receiver.datum {
-        Datum::Output(out) => {
-            out.flush();
-        }
-        _ => panic!("Bad receiver for Output flush: {}", receiver),
-    }
-    make_method_result(receiver.clone(), receiver)
 }
 
 fn class_method_string_new(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
