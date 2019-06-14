@@ -26,76 +26,7 @@ lessons from concatenative languages to heart.
 
 Timeboxing in releases of 50-200h of work.
 
-### WIP: 0.1.0: The Evaluator
-
-_Isn't this just a bad Smalltalk without any dev environment?_
-
-**Goals**: syntax v1, working evaluator.
-
-**Non-goals**: performance, fancy extensions, useful class library.
-
-Time spent: 100h
-Estimated remaining: 0h
-
-- [x] AST
-- [x] Expression parser
-- [x] Expression evaluator
-- [x] Use #[] for literal arrays.
-- [x] Array ctor [x . y . z]
-- [x] Method tables live in a global array, objects refer to it by index.
-- [x] Program parser: Class parser
-- [x] Program parser: method parser
-- [x] Program parser: class-method parser
-- [x] Explicit representation for the global environment
-- Program loader
-   - [x] self
-   - [x] createInstance. 5h
-   - [x] instance variables. 5h
-- [x] Method evaluator (handles ^ in method bodies)
-- [X] ~~return in an expression context "just returns". Est 5h.~~
-- [x] "comments" (preserved in the AST and methods, returned using help: #selector) Est 5h.
-- [x] Blocks are closures (variables). 5h.
-- [x] Blocks are closures (return). 5h
-- [x] Local variables in methods. 5h
-- Terminal REPL
-  - [x] REPL implemented in foolang.
-  - [x] Input stdin. 1h
-  - [x] Input readLine. 1h
-  - [x] Output stdout. 1h
-  - [x] Output print: 1h
-  - [x] Output flush 1h
-  - [x] Output newline 1h
-  - [x] String new 1h
-  - [x] String append 1h
-  - [x] String clear 1h
-  - [x] Block repeat 1h
-  - [x] Block repeatWhileFalse 1h
-  - [x] Booleans. Unest
-  - [x] Move stdout and stdin ctos to System. 1h
-  - [x] Foolang compiler 1h
-  - [x] Compiler tryParse 1h
-  - [x] Compiler evaluate 1h
-  - [x] Command-line --script. 1h
-  - [x] Fix parse and evaluate to deal with @class etc. 1h
-- Benchmarks:
-  - foolang
-     - [x] framework and benchmarks 1h
-     - [x] System info -> SystemInfo. 1h.
-     - [x] SystemInfo minus. 1h
-     - [x] Benchmarks working.
-     - [x] Tests for new methods. 1h
-     - [x] Array push, inject. 1h
-  - [x] python 1h
-    => 1.5 sec vs 0.0004 sec, so python is currently 375 times faster...
-    ...not exactly surprising!
-  - [x] rust 1h
-    => 750 - 1_250_000 times faster
-    ...surprising how _good_ python SumFloats is, and surprising how expensive
-       python function calls are!
-- [x] First cut at CI
-- [x] Read Pharo by Example. 10h
-
-### Planned: 0.2.0: The IDE
+### WIP: 0.2.0: The IDE
 
 _...a bad SmallTalk with an environment from the 80s?_
 
@@ -103,20 +34,17 @@ _...a bad SmallTalk with an environment from the 80s?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Estimated remaining: 100h
+Estimated remaining: 95h
 Time spent: 0h
 
-- Cleanups
-  - [ ] 1 to: 10 creates a range.
+- Cleanups: 10h
+  - [ ] Expressions are sequenced with comma, not dot. 1h
+  - [ ] rename Array::each to Array::do. 1h
+  - [ ] Fix empty array constructor. 1h
   - [x] Azure pipeline for Windows and OS X as well.
-  - [ ] Azure pipeline for pull requests should merge the branch onto master first
-  - [ ] Fix empty array constructor.
   - [ ] Move methods from evaluator.rs into classes/class.rs. 1h.
   - [ ] Move sub-object definitions from objects.rs into classes/class.rs. 1h
-  - [ ] History cleanup. 1h
-  - [ ] Some sort of @main solution. 1h
-- [ ] Source formatter. 10h.
-- [ ] Wrap a rust web server as foolang object. 10h
+  - [ ] Wrap a rust web server as foolang object. 5h
 - Bare bones class browser widget: 20h
   - [ ] Foolang classes. 1h
   - [ ] Foolang reflect: class. 1h.
@@ -134,6 +62,7 @@ Time spent: 0h
   - [ ] /foolang/method/<class>/<selector> => {name,help,parameters,source} 1h
   - [ ] ?. 1h
   - [ ] browser.html + js. 5h
+- [ ] Source formatter for class browser. 10h.
 - [ ] Editing in the class browser: 10h
 - [ ] Bare bones playground widget. 10h
 - [ ] Bare bones transcript widget. 10h
@@ -142,11 +71,10 @@ Time spent: 0h
 - [ ] Make things slightly less bare bones. 5h
 - Optional extras:
   - Syntax & semantics package
-    - [ ] rename Array::each to Array::do
+    - [ ] 1 to: 10 creates a range.
     - [ ] Instance syntax: ClassName::{ ... } $ClassName::{ ... }
     - [ ] Change methods to default to last expression as return
     - [ ] Change variable binding to let.
-    - [ ] Message chaining with ,
     - [ ] if <expr> {} else if <expr> {} else {}
     - [ ] load-time-eval / compile-time-eval like things.
   - [ ] Remove literal arrays or make the immutable.
@@ -450,16 +378,11 @@ to what gcc -O0 would produce.
 
       foo <-- word
 
-      *^  <-- sigil
+      \*^  <-- sigil
 
 - Syntax
 
-    use comma for sequencing: stmt, expr
-    use semicolon for cascades
-
-    dot is left free, or an operator
-
-    double-colons for namespacing and explicit extensions
+    double-colons for namespacing and explicit extensions?
 
     Module::Class new
 
