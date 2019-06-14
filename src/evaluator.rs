@@ -120,13 +120,13 @@ lazy_static! {
 
         let (class, _) = env.add_builtin_class("Closure");
         assert_eq!(class, CLASS_CLOSURE, "Bad classId for Closure");
-        env.classes.add_builtin(&class, "until:", method_closure_until);
-        env.classes.add_builtin(&class, "repeat", method_closure_repeat);
-        env.classes.add_builtin(&class, "repeatWhileFalse", method_closure_repeatwhilefalse);
-        env.classes.add_builtin(&class, "value:", method_closure_apply);
-        env.classes.add_builtin(&class, "value", method_closure_apply);
-        env.classes.add_builtin(&class, "value:value:", method_closure_apply);
-        env.classes.add_builtin(&class, "value:value:value:", method_closure_apply);
+        env.classes.add_builtin(&class, "until:", classes::closure::method_until);
+        env.classes.add_builtin(&class, "repeat", classes::closure::method_repeat);
+        env.classes.add_builtin(&class, "repeatWhileFalse", classes::closure::method_repeatwhilefalse);
+        env.classes.add_builtin(&class, "value:", classes::closure::method_apply);
+        env.classes.add_builtin(&class, "value", classes::closure::method_apply);
+        env.classes.add_builtin(&class, "value:value:", classes::closure::method_apply);
+        env.classes.add_builtin(&class, "value:value:value:", classes::closure::method_apply);
         env.classes.add_builtin(&class, "toString", classes::object::method_tostring);
         env.classes.add_builtin(&class, "==", classes::object::method_eq);
 
@@ -955,58 +955,6 @@ fn method_help(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval 
         _ => panic!("Bad argument to help:!"),
     }
     make_method_result(receiver, Object::make_string("No help available."))
-}
-
-fn method_closure_apply(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
-    let closure = receiver.closure();
-    closure_apply(receiver, &closure, &args, global)
-}
-
-fn method_closure_until(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    let closure = receiver.closure();
-    let test = args[0].closure();
-    loop {
-        let res = closure_apply(receiver.clone(), &closure, &vec![], global);
-        if res.is_return() {
-            return res;
-        }
-        let res = closure_apply(receiver.clone(), &test, &vec![], global);
-        if res.is_return() || res.is_true() {
-            return make_method_result(receiver, res.value());
-        }
-    }
-}
-
-fn method_closure_repeat(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    match receiver.datum.clone() {
-        Datum::Closure(closure) => loop {
-            if let Eval::Return(val, to) =
-                closure_apply(receiver.clone(), &closure, &vec![], global)
-            {
-                return Eval::Return(val, to);
-            }
-        },
-        _ => panic!("Bad receiver for closure repeat!"),
-    }
-}
-
-fn method_closure_repeatwhilefalse(
-    receiver: Object,
-    args: Vec<Object>,
-    global: &GlobalEnv,
-) -> Eval {
-    let closure = receiver.closure();
-    loop {
-        let res = closure_apply(receiver.clone(), &closure, &args, global);
-        if res.is_return() {
-            return res;
-        }
-        if !res.is_false() {
-            return make_method_result(receiver, res.value());
-        }
-    }
 }
 
 pub fn closure_apply(
