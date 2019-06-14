@@ -137,14 +137,14 @@ lazy_static! {
 
         let (class, _) = env.add_builtin_class("Float");
         assert_eq!(class, CLASS_FLOAT);
-        env.classes.add_builtin(&class, "*", method_number_mul);
-        env.classes.add_builtin(&class, "+", method_number_plus);
-        env.classes.add_builtin(&class, "-", method_number_minus);
-        env.classes.add_builtin(&class, "<", method_number_lt);
-        env.classes.add_builtin(&class, ">", method_number_gt);
-        env.classes.add_builtin(&class, "==", method_number_eq);
-        env.classes.add_builtin(&class, "neg", method_number_neg);
-        env.classes.add_builtin(&class, "to:do:", method_number_to_do);
+        env.classes.add_builtin(&class, "*", classes::number::method_mul);
+        env.classes.add_builtin(&class, "+", classes::number::method_plus);
+        env.classes.add_builtin(&class, "-", classes::number::method_minus);
+        env.classes.add_builtin(&class, "<", classes::number::method_lt);
+        env.classes.add_builtin(&class, ">", classes::number::method_gt);
+        env.classes.add_builtin(&class, "==", classes::number::method_eq);
+        env.classes.add_builtin(&class, "neg", classes::number::method_neg);
+        env.classes.add_builtin(&class, "to:do:", classes::number::method_to_do);
         env.classes.add_builtin(&class, "toString", classes::object::method_tostring);
 
         let (class, meta) = env.add_builtin_class("Foolang");
@@ -161,15 +161,15 @@ lazy_static! {
 
         let (class, _) = env.add_builtin_class("Integer");
         assert_eq!(class, CLASS_INTEGER);
-        env.classes.add_builtin(&class, "*", method_number_mul);
-        env.classes.add_builtin(&class, "+", method_number_plus);
-        env.classes.add_builtin(&class, "-", method_number_minus);
-        env.classes.add_builtin(&class, "<", method_number_lt);
-        env.classes.add_builtin(&class, ">", method_number_gt);
-        env.classes.add_builtin(&class, "==", method_number_eq);
+        env.classes.add_builtin(&class, "*", classes::number::method_mul);
+        env.classes.add_builtin(&class, "+", classes::number::method_plus);
+        env.classes.add_builtin(&class, "-", classes::number::method_minus);
+        env.classes.add_builtin(&class, "<", classes::number::method_lt);
+        env.classes.add_builtin(&class, ">", classes::number::method_gt);
+        env.classes.add_builtin(&class, "==", classes::number::method_eq);
         env.classes.add_builtin(&class, "gcd:", method_integer_gcd);
-        env.classes.add_builtin(&class, "neg", method_number_neg);
-        env.classes.add_builtin(&class, "to:do:", method_number_to_do);
+        env.classes.add_builtin(&class, "neg", classes::number::method_neg);
+        env.classes.add_builtin(&class, "to:do:", classes::number::method_to_do);
         env.classes.add_builtin(&class, "toString", classes::object::method_tostring);
 
         let (class, _meta) = env.add_builtin_class("Output");
@@ -655,178 +655,6 @@ fn method_integer_gcd(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eva
         },
         _ => panic!("Bad receiver for builtin gcd!"),
     }
-}
-
-fn method_number_mul(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    make_method_result(
-        receiver.clone(),
-        match receiver.datum {
-            Datum::Integer(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_integer(i * j),
-                Datum::Float(j) => Object::make_float((i as f64) * j),
-                _ => panic!("Bad argument to Integer *: {}", args[0]),
-            },
-            Datum::Float(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_float(i * (j as f64)),
-                Datum::Float(j) => Object::make_float(i * j),
-                _ => panic!("Bad argument to Float *: {}", args[0]),
-            },
-            _ => panic!("Bad receiver in method_number_mul: {}", receiver),
-        },
-    )
-}
-
-fn method_number_minus(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    make_method_result(
-        receiver.clone(),
-        match receiver.datum {
-            Datum::Integer(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_integer(i - j),
-                Datum::Float(j) => Object::make_float((i as f64) - j),
-                _ => panic!("Bad argument to Integer -: {}", args[0]),
-            },
-            Datum::Float(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_float(i - (j as f64)),
-                Datum::Float(j) => Object::make_float(i - j),
-                _ => panic!("Bad argument to Float -: {}", args[0]),
-            },
-            _ => panic!("Bad receiver in method_number_minus: {}", receiver),
-        },
-    )
-}
-
-fn method_number_neg(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 0);
-    make_method_result(
-        receiver.clone(),
-        match receiver.datum {
-            Datum::Integer(i) => Object::make_integer(-i),
-            Datum::Float(i) => Object::make_float(-i),
-            _ => panic!("Bad receiver for neg!"),
-        },
-    )
-}
-
-fn method_number_plus(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    make_method_result(
-        receiver.clone(),
-        match receiver.datum {
-            Datum::Integer(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_integer(i + j),
-                Datum::Float(j) => Object::make_float((i as f64) + j),
-                _ => panic!("Bad argument to Integer +: {}", args[0]),
-            },
-            Datum::Float(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_float(i + (j as f64)),
-                Datum::Float(j) => Object::make_float(i + j),
-                _ => panic!("Bad argument to Float +: {}", args[0]),
-            },
-            _ => panic!("Bad receiver in method_number_plus: {}", receiver),
-        },
-    )
-}
-
-fn method_number_lt(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    make_method_result(
-        receiver.clone(),
-        match receiver.datum {
-            Datum::Integer(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_boolean(i < j),
-                Datum::Float(j) => Object::make_boolean((i as f64) < j),
-                _ => panic!("Bad argument to Integer <: {}", args[0]),
-            },
-            Datum::Float(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_boolean(i < (j as f64)),
-                Datum::Float(j) => Object::make_boolean(i < j),
-                _ => panic!("Bad argument to Float <: {}", args[0]),
-            },
-            _ => panic!("Bad receiver in method_number_lt: {}", receiver),
-        },
-    )
-}
-
-fn method_number_gt(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    make_method_result(
-        receiver.clone(),
-        match receiver.datum {
-            Datum::Integer(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_boolean(i > j),
-                Datum::Float(j) => Object::make_boolean((i as f64) > j),
-                _ => panic!("Bad argument to Integer >: {}", args[0]),
-            },
-            Datum::Float(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_boolean(i > (j as f64)),
-                Datum::Float(j) => Object::make_boolean(i > j),
-                _ => panic!("Bad argument to Float >: {}", args[0]),
-            },
-            _ => panic!("Bad receiver in method_number_gt: {}", receiver),
-        },
-    )
-}
-
-fn method_number_eq(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
-    assert!(args.len() == 1);
-    make_method_result(
-        receiver.clone(),
-        match receiver.datum {
-            Datum::Integer(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_boolean(i == j),
-                Datum::Float(j) => Object::make_boolean((i as f64) == j),
-                _ => Object::make_boolean(false),
-            },
-            Datum::Float(i) => match args[0].datum {
-                Datum::Integer(j) => Object::make_boolean(i == (j as f64)),
-                Datum::Float(j) => Object::make_boolean(i == j),
-                _ => panic!("Bad argument to Float ==: {}", args[0]),
-            },
-            _ => panic!("Bad receiver in method_number_eq: {}", receiver),
-        },
-    )
-}
-
-fn method_number_to_do(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> Eval {
-    assert!(args.len() == 2);
-    let closure = args[1].closure();
-    match &receiver.datum {
-        Datum::Integer(i) => {
-            let from = *i;
-            let to = args[0].integer();
-            for x in from..=to {
-                let res = closure_apply(
-                    receiver.clone(),
-                    &closure,
-                    &vec![Object::make_integer(x)],
-                    global,
-                );
-                if res.is_return() {
-                    return res;
-                }
-            }
-        }
-        Datum::Float(f) => {
-            let mut x = *f;
-            let end = args[0].float();
-            while x <= end {
-                let res = closure_apply(
-                    receiver.clone(),
-                    &closure,
-                    &vec![Object::make_float(x)],
-                    global,
-                );
-                if res.is_return() {
-                    return res;
-                }
-                x += 1.0;
-            }
-        }
-        _ => panic!("Bad receiver in method_number_to_do: {}", receiver),
-    }
-    make_method_result(receiver.clone(), receiver)
 }
 
 fn method_output_print(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
