@@ -34,8 +34,8 @@ _Isn't this just a bad Smalltalk without any dev environment?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Time spent: 97h
-Estimated remaining: 10h
+Time spent: 100h
+Estimated remaining: 0h
 
 - [x] AST
 - [x] Expression parser
@@ -93,7 +93,7 @@ Estimated remaining: 10h
     ...surprising how _good_ python SumFloats is, and surprising how expensive
        python function calls are!
 - [x] First cut at CI
-- [ ] Read Pharo by Example. 10h
+- [x] Read Pharo by Example. 10h
 
 ### Planned: 0.2.0: The IDE
 
@@ -473,7 +473,7 @@ to what gcc -O0 would produce.
     ```
     @operator left => right
        right value left
-    
+
     @operator left - right
        left sub: right
     ```
