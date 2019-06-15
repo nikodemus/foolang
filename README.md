@@ -503,3 +503,7 @@ to what gcc -O0 would produce.
   Check that value of arg cannot escape: cannot be stored,
   cannot be passed to as non-& arguments. If this is true
   then the object can be stack-allocated safely.
+
+## References
+
+http://projetos.vidageek.net/mirror/mirror/
