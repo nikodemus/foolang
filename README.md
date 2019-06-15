@@ -166,31 +166,22 @@ Estimated remaining: 110h
 - [ ] Class extensions. Est 20h.
 - [ ] Module system. Est 10h.
 
-### Planned: 0.6.0: Useful Class Library
+## References
 
-_What are people using this for? Can you share some success stories?_
+- Smalltalk-80: The Language and Its Implementation
+  http://www.mirandabanda.org/bluebook/bluebook_imp_toc.html
 
-**Goals**: a "batteries included" release, or at least the infrastructure for one.
+- Various browser editor components
+  - Rich text: https://quilljs.com/guides/why-quill/
+  - Code editor: https://ace.c9.io/
+  - Code editor: https://codemirror.net/doc/manual.html
+  - Code editor: https://github.com/Microsoft/monaco-editor
+  - Code editor: https://icecoder.net/
+  - Drawing: http://literallycanvas.com/
 
-Estimated remaining: 120h
+- http://joeduffyblog.com/2016/02/07/the-error-model/
 
-- [ ] Libraries. Est 40h.
-- [ ] Library system (ie. cargo-lookalike). Est 40h.
-- [ ] Tooling for wrapping Rust code. Est 40h
-
-### Planned: 0.7.0: Fix What's Broken
-
-_I'm using this at work to do X!_
-
-**Goals**: After some use by other people than me, identify and fix
-the main issues likely to cause future problems.
-
-### Planned: 1.0.0: Stable Release
-
-_When's the next conference?_
-
-**Goals**: No foreseeable need for breaking changes. (Of course they
-will come!)
+- http://projetos.vidageek.net/mirror/mirror/
 
 ## Declarative Syntax
 
@@ -218,111 +209,32 @@ will come!)
 
 ```
 
-## Refactoring Notes
-
-// Mutex needed because lazy_static! requires Sync, and
-// closures require mutability.
-type Bindings =  HashMap<Identifier,Mutex<Object>>
-// Rc needed because entire lexenv is captured by Closures,
-// which makes lifetimes unpredictable.
-type Lexenv = Rc<LexenvFrame>
-
-  env.eval(&Expr) -> Object
-
-  // env.rs
-  trait Env {
-    fn eval(&self, &Expr) -> Object
-    fn extend(&self, &Bindings) -> Lexenv {
-
-    }
-  }
-
-  impl Env for Lexenv {
-
-  }
-
-  impl Env for GlobalEnv {
-
-  }
-
-  // globalenv.rs
-  struct GlobalEnv {
-
-  }
-
-  impl GlobalEnv {
-
-  }
-
-  // lexenv.rs
-  struct LexenvFrame {
-    bindings: Bindings,
-    parent: Lexenv
-  }
-
-  impl Lexenv {
-
-  }
-
-Need to move things out of
-GlobalEnv is ok
-Not 100% sure about separate Lexenv and GlobalEnv, but it doesn't seem like a real issue.
-
-
-## Parts
-
-### Bootstrap Compiler
-
-Written in Rust.
-
-Goal: specify VM core in foolang:
-
-    "newContext: newMethod on: newSelf
-        stack push: context
-        context = Context new: newMethod on: newSelf with: context args"
-
-    "invoke: method
-        self newContext: method on: receiver"
-
-Quality of generated code unimportant, as long as it works.
-
 ### GC
 
 Simplest thing that could possibly work: mark and sweep on top of malloc and
 free.
 
 Allocation header:
+```
   Bits 00-01: GC marks
   Bits 02-09: number of raw words
   Bits 10-17: number of gc slots
   Bits 18-25: number of weak slots
-  Bits 26-28: no tail / raw tail / weak tail / pointer tail
+  Bits 26-28: no tail / raw tail / gc tail / weak tail
   Bits 29-31: n^2 = tail element width in bytes if raw tail
-
-## References
-
-- Smalltalk-80: The Language and Its Implementation
-  http://www.mirandabanda.org/bluebook/bluebook_imp_toc.html
-
-- Various browser editor components
-  - Rich text: https://quilljs.com/guides/why-quill/
-  - Code editor: https://ace.c9.io/
-  - Code editor: https://codemirror.net/doc/manual.html
-  - Code editor: https://github.com/Microsoft/monaco-editor
-  - Code editor: https://icecoder.net/
-  - Drawing: http://literallycanvas.com/
+```
 
 ## BIG GOAL
 
 class Ackermann
-  m: m<i64> n: n<i64> ^<i64>
+  m: m<u64> n: n<u64> ^<u64>
     m == 0 then: {
       ^n + 1
-    }.
+    }
     n == 0 then: {
       ^Ackermann m: m - 1 n: 1
-    }.
-    ^ Ackermann m: m - 1 n: (Ackermann m: m n: n - 1)
+    }
+    Ackermann m: m - 1 n: (Ackermann m: m n: n - 1)
 
 This should compile into decent native code. Something close enough
 to what gcc -O0 would produce.
@@ -358,8 +270,6 @@ to what gcc -O0 would produce.
       try expr handle: { ... } finally: { ... }
 
       unwind <expr> protect: { }
-
-- http://joeduffyblog.com/2016/02/07/the-error-model/
 
 - Terminology: Words and sigils are both symbols.
 
@@ -440,19 +350,6 @@ to what gcc -O0 would produce.
   even if block have repeat and booleans have ifTrue, etc.
 - Make ${} and $[] a literal json objects
 
-- Stdout problem solution:
-
-  1. I cannot fully fix this given that users can create their own
-     equivalents by using the FD directly. So I should not try.
-
-  2. So there is no reason not to have a System stdout method which
-     returns the stream. That is not the nice way to use it, though,
-     just the medium layer.
-
-  3. For niceness have an actor that provides the global service.
-
-  4. ...initially I can just use System stdout.
-
 - Considering how I'm planning to use files in but have a class browser
   as the editing environment... maybe I should go "full Java" and have
 
@@ -503,7 +400,3 @@ to what gcc -O0 would produce.
   Check that value of arg cannot escape: cannot be stored,
   cannot be passed to as non-& arguments. If this is true
   then the object can be stack-allocated safely.
-
-## References
-
-http://projetos.vidageek.net/mirror/mirror/
