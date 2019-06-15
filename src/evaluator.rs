@@ -94,12 +94,9 @@ lazy_static! {
         assert_eq!(class, CLASS_ARRAY, "Bad classId for Array");
         classes::array::init(&mut env, &class, &meta);
 
-        let (class, _) = env.add_builtin_class("Boolean");
+        let (class, meta) = env.add_builtin_class("Boolean");
         assert_eq!(class, CLASS_BOOLEAN, "Bad classId for Boolean");
-        env.classes.add_builtin(&class, "ifTrue:", classes::boolean::method_iftrue);
-        env.classes.add_builtin(&class, "ifFalse:", classes::boolean::method_iffalse);
-        env.classes.add_builtin(&class, "toString", classes::object::method_tostring);
-        env.classes.add_builtin(&class, "==", classes::object::method_eq);
+        classes::boolean::init(&mut env, &class, &meta);
 
         let (class, _) = env.add_builtin_class("Character");
         assert_eq!(class, CLASS_CHARACTER, "Bad classId for Character");
