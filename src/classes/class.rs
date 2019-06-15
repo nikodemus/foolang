@@ -1,5 +1,15 @@
+use crate::classes;
 use crate::evaluator::{make_method_result, Eval, GlobalEnv, MethodImpl};
-use crate::objects::{Datum, Object};
+use crate::objects::{ClassId, Datum, Object};
+
+pub fn init(env: &mut GlobalEnv, class: &ClassId, _meta: &ClassId) {
+    env.classes
+        .add_builtin(&class, "nane", classes::class::method_name);
+    env.classes
+        .add_builtin(&class, "toString", classes::object::method_tostring);
+    env.classes
+        .add_builtin(&class, "==", classes::object::method_eq);
+}
 
 pub fn method_createinstance(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
     assert!(args.len() == 1);
@@ -21,4 +31,10 @@ pub fn method_help(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> E
         _ => panic!("Bad argument to help:!"),
     }
     make_method_result(receiver, Object::make_string("No help available."))
+}
+
+pub fn method_name(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {
+    assert!(args.len() == 0);
+    let class = receiver.class();
+    make_method_result(receiver, Object::into_symbol(class.name.clone()))
 }

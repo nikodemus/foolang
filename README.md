@@ -34,7 +34,7 @@ _...a bad SmallTalk with an environment from the 80s?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Estimated remaining: 88h
+Estimated remaining: 89h
 Time spent: 5h
 
 - Language:
@@ -55,6 +55,7 @@ Time spent: 5h
 - [ ] Wrap a rust web server as foolang object. 5h
 - Bare bones class browser widget: 17h
   - [x] Foolang classes. 1h
+  - [ ] ClassMirror name. 1h
   - [ ] ClassMirror slots. 1h.
   - [ ] ClassMirror methods. 1h.
   - [ ] ClassMirror help. 1h

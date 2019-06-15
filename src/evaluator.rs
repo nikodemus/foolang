@@ -105,8 +105,7 @@ lazy_static! {
 
         let (class, _) = env.add_builtin_class("Class");
         assert_eq!(class, CLASS_CLASS, "Bad classId for Class");
-        env.classes.add_builtin(&class, "toString", classes::object::method_tostring);
-        env.classes.add_builtin(&class, "==", classes::object::method_eq);
+        classes::class::init(&mut env, &class, &meta);
 
         let (class, _) = env.add_builtin_class("Closure");
         assert_eq!(class, CLASS_CLOSURE, "Bad classId for Closure");

@@ -24,3 +24,11 @@ fn foolang_classes() {
         Object::make_boolean(true)
     );
 }
+
+#[test]
+fn foolang_class_name() {
+    assert_eq!(
+        eval_str("(Foolang classes detect: { :class | class name == #String }) name"),
+        Object::make_string("String")
+    );
+}

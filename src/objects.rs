@@ -110,7 +110,10 @@ impl PartialEq for ArrayObject {
 }
 
 impl ArrayObject {
-    pub fn with_slice<T>(&self, f: fn(&[Object]) -> T) -> T {
+    pub fn with_slice<T, F>(&self, f: F) -> T
+    where
+        F: Fn(&[Object]) -> T,
+    {
         let vec = self.lock().unwrap();
         f(&vec[..])
     }
