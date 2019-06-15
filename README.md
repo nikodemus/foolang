@@ -331,63 +331,45 @@ to what gcc -O0 would produce.
 
 ## MMmmmaaaybe
 
-- The more I think about it the more I like the idea of "main" receiving
-  an object that provides the OS interfaces.
-
-  The only question is ergonomics.
-
-  How to support printf-debugging in a random method?
-
-  I have several answers.
+- The more I think about it the more I like the idea of "main" receiving an
+  object that provides the OS interfaces. The only question is ergonomics. How
+  to support printf-debugging in a random method? I have several answers.
 
   1. Dynamic variables.
-
   2. It isn't _that_ hard to pass in a logger.
-
   3. A nice environment means you don't reach for the printf
      in the first place.
 
-  ...but how do agents get those objects? As messages?
+- Smalltalk actually puts a lot of things which might otherwise belong in a
+  control flow class (or exist as first-class constructs) into Object:
 
-  Probably: toplevel agents cannot have them!
+      self handle: [ :exeption | ... ]
+           do [ ... ]
 
-  But if you set up a tree of processes then the capabilities can be
-  passed down.
+  Control flow class:
 
-- ...aha. Smalltalk actually puts a lot of things which might otherwise
-  belong in a control flow class (or exist as first-class constructs)
-  into self:
+      Handler do: { ... }
+              onExeption: { ... }
 
-     self handle: [ :exeption | ... ]
-          do [ ... ]
-
-   Block would be another possible home:
+  Block:
 
       { ... } handle: { ... } finally: { ... }
 
+  First class syntax:
+
+      try expr handle: { ... } finally: { ... }
+
+      unwind <expr> protect: { }
+
 - http://joeduffyblog.com/2016/02/07/the-error-model/
 
-    Conditions vs Errors
-
-    Error kills the agent.
-
-    Conditions are signalled and may have restarts.
-
-
-
-    Optional static analysis, like for everything.
-
-
-
-- Terminology
-
-    Words and sigils are both symbols.
+- Terminology: Words and sigils are both symbols.
 
       foo <-- word
 
-      \*^  <-- sigil
+      ++  <-- sigil
 
-- Syntax
+- Syntax:
 
     Allow newline to replace comma?
 
@@ -402,18 +384,21 @@ to what gcc -O0 would produce.
     Consider binary messages to be syntax level transformations into
     messages.
 
-    ```
-    @operator left => right
-       right value left
+        @binary-operator left => right
+           right value left
 
-    @operator left - right
-       left sub: right
-    ```
+        @binary-operator left - right
+           left sub: right
 
     Because the parser needs to know the precedence anyhow, it seems to
     me that binary operators don't need to be strictly restricted to symbols anyhow.
 
-    @import MyOps::_div_
+        @import MyOps::div
+
+        x div y
+
+- Would be pretty cool if http://asciimath.org/ could be used, at least in
+  comments!
 
 - Could I support chaining for comparison operators?
 

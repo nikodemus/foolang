@@ -7,7 +7,8 @@ about concatenative languages and Erlang.
 As is normal for new languages, Foolang aspires to unrealistic goals:
 
 - **Excellent ergonomics.** Code should be a pleasure to write and
-  easy to read.
+  easy to read. If you didn't figure it out already, this and the
+  "batteries-included" thing are why Python is used.
 - **Competitive performance.** Programs that do not require late binding
   features should perform on par with -O0 compiled C++ programs. (After that
   it's a question of having a serious compiler instead of a halfway decent one.)
