@@ -16,3 +16,11 @@ fn foolang_compiler() {
         Object::make_integer(3)
     );
 }
+
+#[test]
+fn foolang_classes() {
+    assert_eq!(
+        eval_str("Foolang classes size > 10"),
+        Object::make_boolean(true)
+    );
+}

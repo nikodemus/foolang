@@ -273,11 +273,14 @@ impl Object {
             datum: Datum::Array(Arc::new(ArrayObject(Mutex::new(data)))),
         }
     }
-    pub fn vec(&self) -> Vec<Object> {
+    pub fn array(&self) -> Arc<ArrayObject> {
         match &self.datum {
-            Datum::Array(array) => array.lock().unwrap().to_owned(),
+            Datum::Array(array) => array.to_owned(),
             _ => panic!("TypeError: {} is not an Array", self),
         }
+    }
+    pub fn vec(&self) -> Vec<Object> {
+        self.array().lock().unwrap().to_owned()
     }
     // BOOLEAN
     pub fn make_boolean(boolean: bool) -> Object {

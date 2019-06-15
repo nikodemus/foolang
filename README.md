@@ -34,8 +34,8 @@ _...a bad SmallTalk with an environment from the 80s?_
 
 **Non-goals**: performance, fancy extensions, useful class library.
 
-Estimated remaining: 91h
-Time spent: 4h
+Estimated remaining: 88h
+Time spent: 5h
 
 - Language:
   - ~~[ ] Message chaining. 2h~~
@@ -53,9 +53,8 @@ Time spent: 4h
   - [ ] Move sub-object definitions from objects.rs into classes/class.rs. 1h
 - [x] Try out mkdoc for documentation: 1h
 - [ ] Wrap a rust web server as foolang object. 5h
-- Bare bones class browser widget: 20h
-  - [ ] Foolang classes. 1h
-  - [ ] Foolang reflect: class. 1h.
+- Bare bones class browser widget: 17h
+  - [x] Foolang classes. 1h
   - [ ] ClassMirror slots. 1h.
   - [ ] ClassMirror methods. 1h.
   - [ ] ClassMirror help. 1h
@@ -68,7 +67,6 @@ Time spent: 4h
   - [ ] /foolang/list-classes. 1h
   - [ ] /foolang/class/<name> => {name,help,slots,methods,classMethods} 1h
   - [ ] /foolang/method/<class>/<selector> => {name,help,parameters,source} 1h
-  - [ ] ?. 1h
   - [ ] browser.html + js. 5h
 - [ ] Source formatter for class browser. 10h.
 - [ ] Editing in the class browser: 10h

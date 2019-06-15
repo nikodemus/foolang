@@ -27,10 +27,10 @@ type MethodFunc = fn(Object, Vec<Object>, &GlobalEnv) -> Eval;
 type MethodTable = HashMap<String, MethodImpl>;
 
 #[derive(Clone)]
-struct ClassInfo {
-    names: HashMap<String, ClassId>,
-    slots: Vec<Vec<Identifier>>,
-    methods: Vec<MethodTable>,
+pub struct ClassInfo {
+    pub names: HashMap<String, ClassId>,
+    pub slots: Vec<Vec<Identifier>>,
+    pub methods: Vec<MethodTable>,
 }
 
 impl ClassInfo {
@@ -71,7 +71,7 @@ impl ClassInfo {
             }
         }
     }
-    fn add_builtin(&mut self, class: &ClassId, name: &str, f: MethodFunc) {
+    pub fn add_builtin(&mut self, class: &ClassId, name: &str, f: MethodFunc) {
         self.methods[class.0].insert(String::from(name), MethodImpl::Builtin(f));
     }
     fn add_method(&mut self, class: &ClassId, name: &str, f: Method) {
@@ -90,13 +90,9 @@ lazy_static! {
             variables: HashMap::new(),
         };
         // NOTE: Alphabetic order matches objects.rs
-        let (class, _) = env.add_builtin_class("Array");
+        let (class, meta) = env.add_builtin_class("Array");
         assert_eq!(class, CLASS_ARRAY, "Bad classId for Array");
-        env.classes.add_builtin(&class, "==", classes::object::method_eq);
-        env.classes.add_builtin(&class, "do:", classes::array::method_do);
-        env.classes.add_builtin(&class, "inject:into:", classes::array::method_inject_into);
-        env.classes.add_builtin(&class, "push:", classes::array::method_push);
-        env.classes.add_builtin(&class, "toString", classes::object::method_tostring);
+        classes::array::init(&mut env, &class, &meta);
 
         let (class, _) = env.add_builtin_class("Boolean");
         assert_eq!(class, CLASS_BOOLEAN, "Bad classId for Boolean");
@@ -148,9 +144,7 @@ lazy_static! {
 
         let (class, meta) = env.add_builtin_class("Foolang");
         assert_eq!(class, CLASS_FOOLANG);
-        env.classes.add_builtin(&meta, "compiler", classes::foolang::class_method_compiler);
-        env.classes.add_builtin(&class, "toString", classes::object::method_tostring);
-        env.classes.add_builtin(&class, "==", classes::object::method_eq);
+        classes::foolang::init(&mut env, &class, &meta);
 
         let (class, _meta) = env.add_builtin_class("Input");
         assert_eq!(class, CLASS_INPUT);
@@ -221,8 +215,8 @@ lazy_static! {
 
 #[derive(Clone)]
 pub struct GlobalEnv {
-    classes: ClassInfo,
-    variables: HashMap<String, Object>,
+    pub classes: ClassInfo,
+    pub variables: HashMap<String, Object>,
 }
 
 impl GlobalEnv {
