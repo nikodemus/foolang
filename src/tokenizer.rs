@@ -1,16 +1,10 @@
 #[derive(Debug, PartialEq)]
-struct Source {
-    start: usize,
-    end: usize,
-}
-
-#[derive(Debug, PartialEq)]
 enum Token {
-    Comment(Source),
-    Decimal(Source),
+    Comment(String, usize),
+    Decimal(String, usize),
+    String(String, usize),
     /*
     Float(Source),
-    String(Source),
     Symbol(Source),
     Identifier(Source),
     Keyword(Source),
@@ -27,19 +21,36 @@ enum Token {
     */
 }
 
+#[cfg(test)]
+impl Token {
+    fn comment(text: &str, position: usize) -> Token {
+        Token::Comment(String::from(text), position)
+    }
+    fn decimal(text: &str, position: usize) -> Token {
+        Token::Decimal(String::from(text), position)
+    }
+    fn string(text: &str, position: usize) -> Token {
+        Token::String(String::from(text), position)
+    }
+}
+
 #[derive(Debug)]
 struct ParseError {
-    source: Source,
+    position: usize,
     problem: &'static str,
 }
 
 struct Grammar {
     comment: &'static str,
+    string: &'static str,
 }
 
 impl Grammar {
     fn new() -> Grammar {
-        Grammar { comment: "#" }
+        Grammar {
+            comment: "#",
+            string: r#"""#,
+        }
     }
     fn tokenize(&self, input: &mut impl Stream) -> Result<Vec<Token>, ParseError> {
         let mut tokens = Vec::new();
@@ -65,12 +76,13 @@ impl Grammar {
             tokens.push(self.scan_number(input));
             return Ok(true);
         }
+        if input.matches(self.string) {
+            tokens.push(self.scan_string(input));
+            return Ok(true);
+        }
         let position = input.position();
         return Err(ParseError {
-            source: Source {
-                start: position,
-                end: position,
-            },
+            position,
             problem: "Invalid token",
         });
     }
@@ -79,20 +91,29 @@ impl Grammar {
         while !input.at_eol_or_eof() {
             input.skip();
         }
-        Token::Comment(Source {
-            start,
-            end: input.position(),
-        })
+        Token::Comment(input.string_from(start), start)
     }
     fn scan_number(&self, input: &mut impl Stream) -> Token {
         let start = input.position();
         while input.at_digit() {
             input.skip();
         }
-        Token::Decimal(Source {
-            start,
-            end: input.position(),
-        })
+        Token::Decimal(input.string_from(start), start)
+    }
+    fn scan_string(&self, input: &mut impl Stream) -> Token {
+        let start = input.position();
+        loop {
+            input.skip();
+            if input.matches("\\") {
+                input.skip();
+                continue;
+            }
+            if input.matches(self.string) {
+                input.skip();
+                break;
+            }
+        }
+        Token::String(input.string_from(start), start)
     }
 }
 
@@ -106,6 +127,7 @@ trait Stream {
     fn at_whitespace(&self) -> bool;
     fn at_digit(&self) -> bool;
     fn here(&self) -> &str;
+    fn string_from(&self, start: usize) -> String;
 }
 
 struct StringStream {
@@ -147,6 +169,9 @@ impl Stream for StringStream {
             self.position += 1;
         }
     }
+    fn string_from(&self, start: usize) -> String {
+        self.string[start..self.position].to_string()
+    }
     fn skip(&mut self) {
         self.position += 1;
     }
@@ -171,7 +196,12 @@ impl Stream for StringStream {
 fn parse_string(string: String) -> Vec<Token> {
     let grammar = Grammar::new();
     let mut stream = StringStream::new(string);
-    grammar.tokenize(&mut stream).unwrap()
+    match grammar.tokenize(&mut stream) {
+        Ok(tokens) => tokens,
+        Err(ParseError { position, problem }) => {
+            panic!("{}: {}", problem, &stream.string[position..])
+        }
+    }
 }
 
 #[allow(unused)]
@@ -188,10 +218,7 @@ fn test_parse_comment() {
             # bar
             "
         ),
-        vec![
-            Token::Comment(Source { start: 13, end: 18 }),
-            Token::Comment(Source { start: 31, end: 36 }),
-        ]
+        vec![Token::comment("# foo", 13), Token::comment("# bar", 31),]
     );
 }
 
@@ -204,9 +231,18 @@ fn test_parse_decimal() {
             12312
             "
         ),
-        vec![
-            Token::Comment(Source { start: 13, end: 18 }),
-            Token::Decimal(Source { start: 31, end: 36 }),
-        ]
+        vec![Token::comment("# foo", 13), Token::decimal("12312", 31),]
+    );
+}
+
+#[test]
+fn test_parse_string() {
+    assert_eq!(
+        parse_str(
+            r#"
+            "this is a \"test\" with\nnewline"
+            "#
+        ),
+        vec![Token::string(r#""this is a \"test\" with\nnewline""#, 13)]
     );
 }
