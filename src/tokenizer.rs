@@ -8,11 +8,11 @@ enum Token {
     Keyword(String, usize),
     Identifier(String, usize),
     Selector(String, usize),
+    ChainOperator(String, usize),
     /*
     Float(Source),
-    SequenceOperator(Source),
     CascadeOperator(Source),
-    ChainOperator(Source)
+    SequenceOperator(Source)
     OpenBlock(Source),
     CloseBlock(Source),
     OpenExpr(Source),
@@ -43,6 +43,9 @@ impl Token {
     fn selector(text: &str, position: usize) -> Token {
         Token::Selector(String::from(text), position)
     }
+    fn chain_operator(text: &str, position: usize) -> Token {
+        Token::ChainOperator(String::from(text), position)
+    }
 }
 
 #[derive(Debug)]
@@ -54,6 +57,7 @@ struct ParseError {
 struct Grammar {
     comment: &'static str,
     string: &'static str,
+    chain_operator: Regex,
     keyword: Regex,
     identifier: Regex,
     selector: Regex,
@@ -63,7 +67,9 @@ impl Grammar {
     fn new() -> Grammar {
         Grammar {
             comment: "#",
-            string: r#"""#,
+            string: "\"",
+            // FIXME: I kind of hate that whitespace termination is not required for everything.
+            chain_operator: Regex::new(r"\A--").unwrap(),
             keyword: Regex::new(r"\A[_a-zA-Z][_a-zA-Z0-9]*:").unwrap(),
             identifier: Regex::new(r"\A[_a-zA-Z][_a-zA-Z0-9]*").unwrap(),
             selector: Regex::new(r"\A\$[_a-zA-Z][_a-zA-Z0-9]*(:([_a-zA-Z]+[0-9]*:)*)?").unwrap(),
@@ -95,6 +101,10 @@ impl Grammar {
         }
         if input.matches(self.string) {
             tokens.push(self.scan_string(input));
+            return Ok(true);
+        }
+        if input.re_matches(&self.chain_operator) {
+            tokens.push(self.scan_chain_operator(input));
             return Ok(true);
         }
         // NOTE: It is important that keyword test is before
@@ -147,6 +157,10 @@ impl Grammar {
             }
         }
         Token::String(input.string_from(start), start)
+    }
+    fn scan_chain_operator(&self, input: &mut impl Stream) -> Token {
+        let start = input.position();
+        Token::ChainOperator(input.re_scan(&self.chain_operator), start)
     }
     fn scan_keyword(&self, input: &mut impl Stream) -> Token {
         let start = input.position();
@@ -357,5 +371,17 @@ fn test_parse_selector() {
             "#
         ),
         vec![Token::selector("$foo:bar:", 13)]
+    );
+}
+
+#[test]
+fn test_parse_chain() {
+    assert_eq!(
+        parse_str(
+            r#"
+            --
+            "#
+        ),
+        vec![Token::chain_operator("--", 13)]
     );
 }
