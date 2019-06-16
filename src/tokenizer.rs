@@ -5,11 +5,11 @@ enum Token {
     Comment(String, usize),
     Decimal(String, usize),
     String(String, usize),
+    Keyword(String, usize),
     Identifier(String, usize),
     /*
     Float(Source),
     Symbol(Source),
-    Keyword(Source),
     SequenceOperator(Source),
     CascadeOperator(Source),
     ChainOperator(Source)
@@ -37,6 +37,9 @@ impl Token {
     fn identifier(text: &str, position: usize) -> Token {
         Token::Identifier(String::from(text), position)
     }
+    fn keyword(text: &str, position: usize) -> Token {
+        Token::Keyword(String::from(text), position)
+    }
 }
 
 #[derive(Debug)]
@@ -48,6 +51,7 @@ struct ParseError {
 struct Grammar {
     comment: &'static str,
     string: &'static str,
+    keyword: Regex,
     identifier: Regex,
 }
 
@@ -56,6 +60,7 @@ impl Grammar {
         Grammar {
             comment: "#",
             string: r#"""#,
+            keyword: Regex::new(r"\A[_a-zA-Z][_a-zA-Z0-9]*:").unwrap(),
             identifier: Regex::new(r"\A[_a-zA-Z][_a-zA-Z0-9]*").unwrap(),
         }
     }
@@ -87,6 +92,14 @@ impl Grammar {
             tokens.push(self.scan_string(input));
             return Ok(true);
         }
+        // NOTE: It is important that keyword test is before
+        // identifier!
+        if input.re_matches(&self.keyword) {
+            tokens.push(self.scan_keyword(input));
+            return Ok(true);
+        }
+        // NOTE: It is important that keyword test is before
+        // identifier!
         if input.re_matches(&self.identifier) {
             tokens.push(self.scan_identifier(input));
             return Ok(true);
@@ -125,6 +138,10 @@ impl Grammar {
             }
         }
         Token::String(input.string_from(start), start)
+    }
+    fn scan_keyword(&self, input: &mut impl Stream) -> Token {
+        let start = input.position();
+        Token::Keyword(input.re_scan(&self.keyword), start)
     }
     fn scan_identifier(&self, input: &mut impl Stream) -> Token {
         let start = input.position();
@@ -279,7 +296,7 @@ fn test_parse_string() {
 }
 
 #[test]
-fn test_parse_identidier() {
+fn test_parse_identifier() {
     assert_eq!(
         parse_str(
             r#"
@@ -287,5 +304,17 @@ fn test_parse_identidier() {
             "#
         ),
         vec![Token::identifier("_fooBar", 13)]
+    );
+}
+
+#[test]
+fn test_parse_keyword() {
+    assert_eq!(
+        parse_str(
+            r#"
+            _fooBar:
+            "#
+        ),
+        vec![Token::keyword("_fooBar:", 13)]
     );
 }
