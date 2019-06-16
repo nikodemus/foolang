@@ -1,12 +1,14 @@
+use regex::Regex;
+
 #[derive(Debug, PartialEq)]
 enum Token {
     Comment(String, usize),
     Decimal(String, usize),
     String(String, usize),
+    Identifier(String, usize),
     /*
     Float(Source),
     Symbol(Source),
-    Identifier(Source),
     Keyword(Source),
     SequenceOperator(Source),
     CascadeOperator(Source),
@@ -32,6 +34,9 @@ impl Token {
     fn string(text: &str, position: usize) -> Token {
         Token::String(String::from(text), position)
     }
+    fn identifier(text: &str, position: usize) -> Token {
+        Token::Identifier(String::from(text), position)
+    }
 }
 
 #[derive(Debug)]
@@ -43,6 +48,7 @@ struct ParseError {
 struct Grammar {
     comment: &'static str,
     string: &'static str,
+    identifier: Regex,
 }
 
 impl Grammar {
@@ -50,6 +56,7 @@ impl Grammar {
         Grammar {
             comment: "#",
             string: r#"""#,
+            identifier: Regex::new(r"\A[_a-zA-Z][_a-zA-Z0-9]*").unwrap(),
         }
     }
     fn tokenize(&self, input: &mut impl Stream) -> Result<Vec<Token>, ParseError> {
@@ -78,6 +85,10 @@ impl Grammar {
         }
         if input.matches(self.string) {
             tokens.push(self.scan_string(input));
+            return Ok(true);
+        }
+        if input.re_matches(&self.identifier) {
+            tokens.push(self.scan_identifier(input));
             return Ok(true);
         }
         let position = input.position();
@@ -115,10 +126,16 @@ impl Grammar {
         }
         Token::String(input.string_from(start), start)
     }
+    fn scan_identifier(&self, input: &mut impl Stream) -> Token {
+        let start = input.position();
+        Token::Identifier(input.re_scan(&self.identifier), start)
+    }
 }
 
 trait Stream {
     fn matches(&self, needle: &str) -> bool;
+    fn re_matches(&self, re: &Regex) -> bool;
+    fn re_scan(&mut self, re: &Regex) -> String;
     fn position(&self) -> usize;
     fn at_eol_or_eof(&self) -> bool;
     fn at_eof(&self) -> bool;
@@ -151,6 +168,20 @@ impl Stream for StringStream {
             &self.string[self.position..i] == needle
         } else {
             false
+        }
+    }
+    fn re_matches(&self, re: &Regex) -> bool {
+        re.is_match(&self.string[self.position..])
+    }
+    fn re_scan(&mut self, re: &Regex) -> String {
+        let start = self.position;
+        match re.find(&self.string[start..]) {
+            Some(m) => {
+                assert!(m.start() == 0);
+                self.position += m.end();
+                self.string_from(start)
+            }
+            None => panic!("No match for {} at {}!", re, &self.string[self.position..]),
         }
     }
     fn position(&self) -> usize {
@@ -244,5 +275,17 @@ fn test_parse_string() {
             "#
         ),
         vec![Token::string(r#""this is a \"test\" with\nnewline""#, 13)]
+    );
+}
+
+#[test]
+fn test_parse_identidier() {
+    assert_eq!(
+        parse_str(
+            r#"
+            _fooBar
+            "#
+        ),
+        vec![Token::identifier("_fooBar", 13)]
     );
 }
