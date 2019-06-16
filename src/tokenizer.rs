@@ -7,9 +7,9 @@ enum Token {
     String(String, usize),
     Keyword(String, usize),
     Identifier(String, usize),
+    Selector(String, usize),
     /*
     Float(Source),
-    Symbol(Source),
     SequenceOperator(Source),
     CascadeOperator(Source),
     ChainOperator(Source)
@@ -40,6 +40,9 @@ impl Token {
     fn keyword(text: &str, position: usize) -> Token {
         Token::Keyword(String::from(text), position)
     }
+    fn selector(text: &str, position: usize) -> Token {
+        Token::Selector(String::from(text), position)
+    }
 }
 
 #[derive(Debug)]
@@ -53,6 +56,7 @@ struct Grammar {
     string: &'static str,
     keyword: Regex,
     identifier: Regex,
+    selector: Regex,
 }
 
 impl Grammar {
@@ -62,6 +66,7 @@ impl Grammar {
             string: r#"""#,
             keyword: Regex::new(r"\A[_a-zA-Z][_a-zA-Z0-9]*:").unwrap(),
             identifier: Regex::new(r"\A[_a-zA-Z][_a-zA-Z0-9]*").unwrap(),
+            selector: Regex::new(r"\A\$[_a-zA-Z][_a-zA-Z0-9]*(:([_a-zA-Z]+[0-9]*:)*)?").unwrap(),
         }
     }
     fn tokenize(&self, input: &mut impl Stream) -> Result<Vec<Token>, ParseError> {
@@ -102,6 +107,10 @@ impl Grammar {
         // identifier!
         if input.re_matches(&self.identifier) {
             tokens.push(self.scan_identifier(input));
+            return Ok(true);
+        }
+        if input.re_matches(&self.selector) {
+            tokens.push(self.scan_selector(input));
             return Ok(true);
         }
         let position = input.position();
@@ -146,6 +155,10 @@ impl Grammar {
     fn scan_identifier(&self, input: &mut impl Stream) -> Token {
         let start = input.position();
         Token::Identifier(input.re_scan(&self.identifier), start)
+    }
+    fn scan_selector(&self, input: &mut impl Stream) -> Token {
+        let start = input.position();
+        Token::Selector(input.re_scan(&self.selector), start)
     }
 }
 
@@ -316,5 +329,33 @@ fn test_parse_keyword() {
             "#
         ),
         vec![Token::keyword("_fooBar:", 13)]
+    );
+}
+
+#[test]
+fn test_parse_selector() {
+    assert_eq!(
+        parse_str(
+            r#"
+            $foo
+            "#
+        ),
+        vec![Token::selector("$foo", 13)]
+    );
+    assert_eq!(
+        parse_str(
+            r#"
+            $foo:
+            "#
+        ),
+        vec![Token::selector("$foo:", 13)]
+    );
+    assert_eq!(
+        parse_str(
+            r#"
+            $foo:bar:
+            "#
+        ),
+        vec![Token::selector("$foo:bar:", 13)]
     );
 }
