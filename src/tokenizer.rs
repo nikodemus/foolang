@@ -9,10 +9,10 @@ enum Token {
     Identifier(String, usize),
     Selector(String, usize),
     ChainOperator(String, usize),
+    SeqOperator(String, usize),
     /*
     Float(Source),
     CascadeOperator(Source),
-    SequenceOperator(Source)
     OpenBlock(Source),
     CloseBlock(Source),
     OpenExpr(Source),
@@ -46,6 +46,9 @@ impl Token {
     fn chain_operator(text: &str, position: usize) -> Token {
         Token::ChainOperator(String::from(text), position)
     }
+    fn seq_operator(text: &str, position: usize) -> Token {
+        Token::SeqOperator(String::from(text), position)
+    }
 }
 
 #[derive(Debug)]
@@ -57,6 +60,7 @@ struct ParseError {
 struct Grammar {
     comment: &'static str,
     string: &'static str,
+    seq_operator: Regex,
     chain_operator: Regex,
     keyword: Regex,
     identifier: Regex,
@@ -69,6 +73,7 @@ impl Grammar {
             comment: "#",
             string: "\"",
             // FIXME: I kind of hate that whitespace termination is not required for everything.
+            seq_operator: Regex::new(r"\A,").unwrap(),
             chain_operator: Regex::new(r"\A--").unwrap(),
             keyword: Regex::new(r"\A[_a-zA-Z][_a-zA-Z0-9]*:").unwrap(),
             identifier: Regex::new(r"\A[_a-zA-Z][_a-zA-Z0-9]*").unwrap(),
@@ -101,6 +106,10 @@ impl Grammar {
         }
         if input.matches(self.string) {
             tokens.push(self.scan_string(input));
+            return Ok(true);
+        }
+        if input.re_matches(&self.seq_operator) {
+            tokens.push(self.scan_seq_operator(input));
             return Ok(true);
         }
         if input.re_matches(&self.chain_operator) {
@@ -157,6 +166,10 @@ impl Grammar {
             }
         }
         Token::String(input.string_from(start), start)
+    }
+    fn scan_seq_operator(&self, input: &mut impl Stream) -> Token {
+        let start = input.position();
+        Token::SeqOperator(input.re_scan(&self.seq_operator), start)
     }
     fn scan_chain_operator(&self, input: &mut impl Stream) -> Token {
         let start = input.position();
@@ -383,5 +396,17 @@ fn test_parse_chain() {
             "#
         ),
         vec![Token::chain_operator("--", 13)]
+    );
+}
+
+#[test]
+fn test_parse_seq() {
+    assert_eq!(
+        parse_str(
+            r#"
+            ,
+            "#
+        ),
+        vec![Token::seq_operator(",", 13)]
     );
 }
