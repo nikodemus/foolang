@@ -8,11 +8,12 @@ enum Token {
     Keyword(String, usize),
     Identifier(String, usize),
     Selector(String, usize),
-    ChainOperator(String, usize),
-    SeqOperator(String, usize),
+    MiscOperator(String, usize),
+    ChainOperator(usize),
+    SeqOperator(usize),
+    CascadeOperator(usize),
     /*
     Float(Source),
-    CascadeOperator(Source),
     OpenBlock(Source),
     CloseBlock(Source),
     OpenExpr(Source),
@@ -43,12 +44,6 @@ impl Token {
     fn selector(text: &str, position: usize) -> Token {
         Token::Selector(String::from(text), position)
     }
-    fn chain_operator(text: &str, position: usize) -> Token {
-        Token::ChainOperator(String::from(text), position)
-    }
-    fn seq_operator(text: &str, position: usize) -> Token {
-        Token::SeqOperator(String::from(text), position)
-    }
 }
 
 #[derive(Debug)]
@@ -60,8 +55,10 @@ struct ParseError {
 struct Grammar {
     comment: &'static str,
     string: &'static str,
+    misc_operator: Regex,
     seq_operator: Regex,
     chain_operator: Regex,
+    cascade_operator: Regex,
     keyword: Regex,
     identifier: Regex,
     selector: Regex,
@@ -72,9 +69,10 @@ impl Grammar {
         Grammar {
             comment: "#",
             string: "\"",
-            // FIXME: I kind of hate that whitespace termination is not required for everything.
+            cascade_operator: Regex::new(r"\A;").unwrap(),
             seq_operator: Regex::new(r"\A,").unwrap(),
             chain_operator: Regex::new(r"\A--").unwrap(),
+            misc_operator: Regex::new(r"\A[\-+*/=<>]+").unwrap(),
             keyword: Regex::new(r"\A[_a-zA-Z][_a-zA-Z0-9]*:").unwrap(),
             identifier: Regex::new(r"\A[_a-zA-Z][_a-zA-Z0-9]*").unwrap(),
             selector: Regex::new(r"\A\$[_a-zA-Z][_a-zA-Z0-9]*(:([_a-zA-Z]+[0-9]*:)*)?").unwrap(),
@@ -109,27 +107,42 @@ impl Grammar {
             return Ok(true);
         }
         if input.re_matches(&self.seq_operator) {
-            tokens.push(self.scan_seq_operator(input));
+            let (_, pos) = self.scan_re(input, &self.seq_operator);
+            tokens.push(Token::SeqOperator(pos));
             return Ok(true);
         }
         if input.re_matches(&self.chain_operator) {
-            tokens.push(self.scan_chain_operator(input));
+            let (_, pos) = self.scan_re(input, &self.chain_operator);
+            tokens.push(Token::ChainOperator(pos));
+            return Ok(true);
+        }
+        if input.re_matches(&self.cascade_operator) {
+            let (_, pos) = self.scan_re(input, &self.cascade_operator);
+            tokens.push(Token::CascadeOperator(pos));
             return Ok(true);
         }
         // NOTE: It is important that keyword test is before
         // identifier!
         if input.re_matches(&self.keyword) {
-            tokens.push(self.scan_keyword(input));
+            let (string, pos) = self.scan_re(input, &self.keyword);
+            tokens.push(Token::Keyword(string, pos));
             return Ok(true);
         }
         // NOTE: It is important that keyword test is before
         // identifier!
         if input.re_matches(&self.identifier) {
-            tokens.push(self.scan_identifier(input));
+            let (string, pos) = self.scan_re(input, &self.identifier);
+            tokens.push(Token::Identifier(string, pos));
             return Ok(true);
         }
         if input.re_matches(&self.selector) {
-            tokens.push(self.scan_selector(input));
+            let (string, pos) = self.scan_re(input, &self.selector);
+            tokens.push(Token::Selector(string, pos));
+            return Ok(true);
+        }
+        if input.re_matches(&self.misc_operator) {
+            let (string, pos) = self.scan_re(input, &self.misc_operator);
+            tokens.push(Token::MiscOperator(string, pos));
             return Ok(true);
         }
         let position = input.position();
@@ -140,7 +153,7 @@ impl Grammar {
     }
     fn scan_comment(&self, input: &mut impl Stream) -> Token {
         let start = input.position();
-        while !input.at_eol_or_eof() {
+        while !(input.at_eol() || input.at_eof()) {
             input.skip();
         }
         Token::Comment(input.string_from(start), start)
@@ -167,25 +180,10 @@ impl Grammar {
         }
         Token::String(input.string_from(start), start)
     }
-    fn scan_seq_operator(&self, input: &mut impl Stream) -> Token {
+    fn scan_re(&self, input: &mut impl Stream, re: &Regex) -> (String, usize) {
         let start = input.position();
-        Token::SeqOperator(input.re_scan(&self.seq_operator), start)
-    }
-    fn scan_chain_operator(&self, input: &mut impl Stream) -> Token {
-        let start = input.position();
-        Token::ChainOperator(input.re_scan(&self.chain_operator), start)
-    }
-    fn scan_keyword(&self, input: &mut impl Stream) -> Token {
-        let start = input.position();
-        Token::Keyword(input.re_scan(&self.keyword), start)
-    }
-    fn scan_identifier(&self, input: &mut impl Stream) -> Token {
-        let start = input.position();
-        Token::Identifier(input.re_scan(&self.identifier), start)
-    }
-    fn scan_selector(&self, input: &mut impl Stream) -> Token {
-        let start = input.position();
-        Token::Selector(input.re_scan(&self.selector), start)
+        input.re_scan(re);
+        (input.string_from(start), start)
     }
 }
 
@@ -194,13 +192,13 @@ trait Stream {
     fn re_matches(&self, re: &Regex) -> bool;
     fn re_scan(&mut self, re: &Regex) -> String;
     fn position(&self) -> usize;
-    fn at_eol_or_eof(&self) -> bool;
     fn at_eof(&self) -> bool;
+    fn at_eol(&self) -> bool;
     fn try_skip_eol(&mut self) -> ();
     fn skip(&mut self) -> ();
     fn at_whitespace(&self) -> bool;
     fn at_digit(&self) -> bool;
-    fn here(&self) -> &str;
+    fn str(&self) -> &str;
     fn string_from(&self, start: usize) -> String;
 }
 
@@ -247,8 +245,8 @@ impl Stream for StringStream {
     fn at_eof(&self) -> bool {
         self.position == self.string.len()
     }
-    fn at_eol_or_eof(&self) -> bool {
-        self.at_eof() || self.matches("\n") || self.matches("\r\n")
+    fn at_eol(&self) -> bool {
+        self.matches("\n") || self.matches("\r\n")
     }
     fn try_skip_eol(&mut self) {
         if self.matches("\r\n") {
@@ -263,21 +261,21 @@ impl Stream for StringStream {
     fn skip(&mut self) {
         self.position += 1;
     }
-    fn here(&self) -> &str {
+    fn str(&self) -> &str {
         &self.string[self.position..self.position + 1]
     }
     fn at_whitespace(&self) -> bool {
         if self.at_eof() {
             return false;
         }
-        let here = self.here();
+        let here = self.str();
         here == " " || here == "\t" || here == "\r" || here == "\n"
     }
     fn at_digit(&self) -> bool {
         if self.at_eof() {
             return false;
         }
-        self.here().chars().next().unwrap_or('x').is_digit(10)
+        self.str().chars().next().unwrap_or('x').is_digit(10)
     }
 }
 
@@ -352,10 +350,13 @@ fn test_parse_keyword() {
     assert_eq!(
         parse_str(
             r#"
-            _fooBar:
+            _fooBar: quux
             "#
         ),
-        vec![Token::keyword("_fooBar:", 13)]
+        vec![
+            Token::keyword("_fooBar:", 13),
+            Token::identifier("quux", 22),
+        ]
     );
 }
 
@@ -395,7 +396,7 @@ fn test_parse_chain() {
             --
             "#
         ),
-        vec![Token::chain_operator("--", 13)]
+        vec![Token::ChainOperator(13)]
     );
 }
 
@@ -407,6 +408,34 @@ fn test_parse_seq() {
             ,
             "#
         ),
-        vec![Token::seq_operator(",", 13)]
+        vec![Token::SeqOperator(13)]
+    );
+}
+
+#[test]
+fn test_parse_cascade() {
+    assert_eq!(
+        parse_str(
+            r#"
+            ;
+            "#
+        ),
+        vec![Token::CascadeOperator(13)]
+    );
+}
+
+#[test]
+fn test_parse_operator() {
+    assert_eq!(
+        parse_str(
+            r#"
+            foo-bar
+            "#
+        ),
+        vec![
+            Token::identifier("foo", 13),
+            Token::MiscOperator("-".to_string(), 16),
+            Token::identifier("bar", 17)
+        ]
     );
 }

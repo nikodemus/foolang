@@ -61,7 +61,7 @@ _Brackets create arrays at runtime_
 
 _Random sampling for the curious._
 
-Allow also newlines to sequence expressions.
+Maybe also allow newlines to sequence expressions?
 
 Add a chaining operator so that `(Foo bar: x) frob` does not
 need parentheses, but can be written something like

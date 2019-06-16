@@ -10,7 +10,7 @@
       Foolang compiler,
       String new,
       false,
-      false
+      false,
     ]
 
 @method REPL prompt
