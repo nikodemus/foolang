@@ -1,6 +1,7 @@
 use regex::Regex;
-use std::collections::VecDeque;
 
+use std::borrow::ToOwned;
+use std::collections::VecDeque;
 #[derive(Debug, PartialEq)]
 struct ParseError {
     position: usize,
@@ -25,10 +26,8 @@ enum Expr {
     // Explicit receiver for chains means that we can always trivially access
     // the original receiver, instead of having to look for it in a tree of sends.
     Chain(Box<Expr>, Vec<Message>),
-    // For each vector of messages the first message is sent to the expression,
-    // and subsequent messages to result of that message. Next vector starts
-    // from the original expression.
-    // Cascade(Box<Expr>, Vec<Vec<Message>>),
+    // Each vector of messages is a separate chain using the original receiver.
+    Cascade(Box<Expr>, Vec<Vec<Message>>),
 }
 
 impl Expr {
@@ -93,7 +92,7 @@ enum TokenInfo {
     Keyword(String),
     Operator(String),
     Chain(),
-    //    Cascade(),
+    Cascade(),
 }
 
 fn parse_string(string: String) -> Result<Expr, ParseError> {
@@ -107,6 +106,7 @@ fn parse_str(str: &str) -> Result<Expr, ParseError> {
 struct Parser {
     stream: Box<Stream>,
     lookahead: VecDeque<Token>,
+    cascade: Option<Expr>,
     chain_re: Regex,
     cascade_re: Regex,
     decimal_re: Regex,
@@ -120,7 +120,7 @@ impl Parser {
         Parser {
             stream,
             lookahead: VecDeque::new(),
-            //            cascade: Option<Expr>,
+            cascade: None,
             chain_re: Regex::new(r"^--").unwrap(),
             cascade_re: Regex::new(r"^;").unwrap(),
             decimal_re: Regex::new(r"^[0-9]+").unwrap(),
@@ -148,20 +148,17 @@ impl Parser {
         let token = self.consume_token()?;
         use TokenInfo::*;
         match token.info {
-            /*
-            Cascade() => {
-                match self.cascade {
-                    None => Err(ParseError {
-                        position: token.position,
-                        problem: "Malformed cascade"
-                    })
-                    Some(expr) => {
-                        self.cascade = None;
-                        expr
-                    }
+            Cascade() => match &self.cascade {
+                None => Err(ParseError {
+                    position: token.position,
+                    problem: "Malformed cascade",
+                }),
+                Some(expr) => {
+                    let receiver = expr.to_owned();
+                    self.cascade = None;
+                    Ok(receiver)
                 }
             },
-            */
             Constant(literal) => Ok(Expr::Constant(literal)),
             Identifier(name) => Ok(Expr::Variable(name)),
             Eof() => Err(ParseError {
@@ -181,22 +178,37 @@ impl Parser {
         match token.info {
             Identifier(name) => Ok(left.unary(name)),
             Chain() => Ok(left),
-            /*            Cascade() => {
-                // Ensure we have an object to cascade on, re-insert
-                // the cascade token so that we will see it in the prefix
-                // position.
-                if self.cascade == None {
-                    self.cascade = Some(left);
-                }
+            Cascade() => {
+                assert_eq!(self.cascade, None);
+                let mut chains = vec![];
                 self.insert_token(token);
-                match self.parse_expression(precedence) {
-                    Expr::Send(to, selector, message) => {
-                        assert!(*to == left);
-
+                loop {
+                    let next = self.peek_token()?;
+                    if Cascade() != next.info {
+                        break;
+                    }
+                    let position = next.position;
+                    // Need to wrap in cascade in case this is a chain,
+                    // which would then accumulate the cascaded messages.
+                    let mark = Expr::Variable("(cascade)".to_string());
+                    self.cascade = Some(mark.clone());
+                    let chain = self.parse_expression(precedence)?;
+                    match chain {
+                        Expr::Chain(to, messages) => {
+                            assert_eq!(mark, *to);
+                            chains.push(messages);
+                        }
+                        _ => {
+                            println!("Not a chain: {:?}", chain);
+                            return Err(ParseError {
+                                position,
+                                problem: "Invalid cascade",
+                            });
+                        }
                     }
                 }
+                Ok(Expr::Cascade(Box::new(left.clone()), chains))
             }
-            */
             Operator(name) => {
                 let right = self.parse_expression(precedence)?;
                 Ok(left.binary(name, right))
@@ -239,8 +251,9 @@ impl Parser {
         match &token.info {
             // EOF is the only token that can have precedence zero!
             Eof() => 0,
-            Chain() => 1,
-            Keyword(_) => 2,
+            Cascade() => 1,
+            Chain() => 2,
+            Keyword(_) => 3,
             // 10 is fallback for unknown operators
             Operator(op) => match op.as_str() {
                 "=" => 20,
@@ -255,6 +268,7 @@ impl Parser {
                 "/" => 40,
                 _ => 10,
             },
+            // All unary operators
             _ => 100,
         }
     }
@@ -298,10 +312,16 @@ impl Parser {
                 info: Constant(Literal::Decimal(string.parse().unwrap())),
             });
         }
-        if let Some(string) = self.stream.scan(&self.chain_re) {
+        if let Some(_string) = self.stream.scan(&self.chain_re) {
             return Ok(Token {
                 position,
                 info: Chain(),
+            });
+        }
+        if let Some(_string) = self.stream.scan(&self.cascade_re) {
+            return Ok(Token {
+                position,
+                info: Cascade(),
             });
         }
         if let Some(string) = self.stream.scan(&self.operator_re) {
@@ -553,32 +573,22 @@ fn parse_keyword_and_unary_send() {
     );
 }
 
-/*
 #[test]
 fn parse_cascade() {
     assert_eq!(
         // This is not like smalltalk cascade!
         parse_str(
-            "obj
+            "obj zoo
                    ; foo: x bar: y -- zot
                    ; do thing
                    "
         ),
-        Ok(Expr::Send(
-            Box::new(var("obj")),
+        Ok(Expr::Cascade(
+            Box::new(chain(var("obj"), &[unary("zoo")])),
             vec![
-                    Message {
-                        selector: "foo:bar:".to_string(),
-                        arguments: vec![var("x"), var("y")]
-                    },
-                    Message {
-                        selector: "do".to_string(),
-                        arguments: vec![]
-                    }
-                ]
-            ),
-            "thing"
+                vec![keyword("foo:bar:", &[var("x"), var("y")]), unary("zot")],
+                vec![unary("do"), unary("thing"),]
+            ]
         ))
     );
 }
-*/
