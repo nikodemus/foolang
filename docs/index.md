@@ -7,17 +7,15 @@ about concatenative languages and Erlang.
 As is normal for new languages, Foolang aspires to unrealistic goals:
 
 - **Excellent ergonomics.** Code should be a pleasure to write and
-  easy to read. If you didn't figure it out already, this and the
-  "batteries-included" thing are why Python is used.
+  easy to read.
 - **Competitive performance.** Programs that do not require late binding
   features should perform on par with -O0 compiled C++ programs. (After that
   it's a question of having a serious compiler instead of a halfway decent one.)
 - **Dynamic development.** No one wants to wait for the compiler: being
   able to change a single method and immediately see the effect on a running
   program is the way things should work.
-- **Opt-in static analysis.** While the compiler does not require you to
-  prove your code to be correct, you can ask the compiler to prove your
-  code.
+- **Opt-in static analysis.** The compiler does not require you to
+  prove your code correct, but you should be able to ask the compiler to do so.
 
 Foolang will be open source, but is still in early development: this website
 mostly exists to squat on the name.
