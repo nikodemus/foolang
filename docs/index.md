@@ -30,24 +30,54 @@ still going to be a long way from 1.0.
 
 ## Syntax
 
-Syntax starts out with Smalltalk, but drifts out:
+Syntax has clear Smalltalk influence, but has drifted quite far from
+the original.
 
-_Comma sequences expressions_
+1. Binary operators follow usual precedence rules.
+2. Expressions are sequenced using commas/newlines instead of dot.
+3. Bracket are reserved for array creation, blocks use braces.
+4. Blocks and methods by default return the value of last expression.
+5. Explicit chaining operator allows chaining keyword messages
+   without parenthesis.
+6. Cascades are less constrained: the cascaded object can be passed
+   through chains of messages without breaking the cascade.
+
+_Commas and newlines sequence expressions_
 
 ```
 someObject someMessage, anotherObject anotherMessage
 ```
 
+```
+someObject someMessage
+anotherObject anotherMessage
+```
+
 _Braces create blocks_
 
 ```
-collection do: { :elt | output print: elt toString }
+collection do: { elt | output print: elt toString }
 ```
 
 _Brackets create arrays at runtime_
 
 ```
 [1, 1+1, 6/2]
+```
+
+_Doubledash allows arbitrary chaining_
+
+```
+object message: argument -- messageToResult
+```
+
+_Semicolon creates arbitrary cascades with chainining_
+
+```
+expr to create an object
+ ; messageToIt key: word -- chained
+ ; anotherMessage
+nextExpr
 ```
 
 ## Roadmap

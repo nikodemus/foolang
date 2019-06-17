@@ -26,7 +26,33 @@ lessons from concatenative languages to heart.
 
 Timeboxing in releases of 50-200h of work.
 
-### WIP: 0.2.0: The IDE
+### WIP: 0.1.1: Better Parser
+
+- [x] Integers
+- [x] Floats
+- [x] Unary messages
+- [x] Binary messages
+- [x] Keyword messages
+- [x] Chains
+- [x] Cascades
+- [ ] Sequences
+- [ ] Blocks
+- [ ] Arrays
+- [ ] Literal arrays
+- [ ] Parenthesis
+- [ ] # Comments
+- [ ] 'x' Characters
+- [ ] Selectors
+- [ ] Definitions
+- [ ] "foo" Strings
+- [ ] Replace the old parser
+- [ ] Nicer errors (two lines of context, put mark where the error is)
+      001 foo,
+      002 bar, ,quux
+               ^-- Unexpected comma
+      003 zot
+
+### Planned: 0.2.0: The IDE
 
 _...a bad SmallTalk with an environment from the 80s?_
 
