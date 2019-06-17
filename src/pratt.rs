@@ -32,6 +32,7 @@ enum TokenInfo {
     Identifier(String),
     Keyword(String),
     Operator(String),
+    Chain(),
 }
 
 fn parse_string(string: String) -> Result<Expr, ParseError> {
@@ -45,6 +46,7 @@ fn parse_str(str: &str) -> Result<Expr, ParseError> {
 struct Parser {
     stream: Box<Stream>,
     lookahead: VecDeque<Token>,
+    chain_re: Regex,
     decimal_re: Regex,
     operator_re: Regex,
     keyword_re: Regex,
@@ -56,6 +58,7 @@ impl Parser {
         Parser {
             stream,
             lookahead: VecDeque::new(),
+            chain_re: Regex::new(r"^--").unwrap(),
             decimal_re: Regex::new(r"^[0-9]+").unwrap(),
             operator_re: Regex::new(r"^[\-+*/%<>=^|&!\?]+").unwrap(),
             keyword_re: Regex::new(r"^[_a-zA-Z][_a-zA-Z0-9]*:").unwrap(),
@@ -99,6 +102,7 @@ impl Parser {
         use TokenInfo::*;
         match token.info {
             Identifier(name) => Ok(Expr::Send(Box::new(left), name, vec![])),
+            Chain() => Ok(left),
             Operator(name) => {
                 let right = self.parse_expression(precedence)?;
                 Ok(Expr::Send(Box::new(left), name, vec![right]))
@@ -145,22 +149,23 @@ impl Parser {
         match &token.info {
             // EOF is the only token that can have precedence zero!
             Eof() => 0,
-            Keyword(_) => 1,
-            // 2 is fallback for unknown operators
+            Chain() => 1,
+            Keyword(_) => 2,
+            // 10 is fallback for unknown operators
             Operator(op) => match op.as_str() {
-                "=" => 3,
-                "==" => 3,
-                "<" => 3,
-                ">" => 3,
-                "<=" => 3,
-                ">=" => 3,
-                "+" => 4,
-                "-" => 4,
-                "*" => 5,
-                "/" => 5,
-                _ => 2,
+                "=" => 20,
+                "==" => 20,
+                "<" => 20,
+                ">" => 20,
+                "<=" => 20,
+                ">=" => 20,
+                "+" => 30,
+                "-" => 30,
+                "*" => 40,
+                "/" => 40,
+                _ => 10,
             },
-            _ => 10,
+            _ => 100,
         }
     }
     fn consume_token(&mut self) -> Result<Token, ParseError> {
@@ -198,6 +203,12 @@ impl Parser {
             return Ok(Token {
                 position,
                 info: Constant(Literal::Decimal(string.parse().unwrap())),
+            });
+        }
+        if let Some(string) = self.stream.scan(&self.chain_re) {
+            return Ok(Token {
+                position,
+                info: Chain(),
             });
         }
         if let Some(string) = self.stream.scan(&self.operator_re) {
@@ -359,7 +370,27 @@ fn parse_keyword_send() {
     assert_eq!(
         parse_str(" obj key1: arg1 key2: arg2"),
         Ok(send(var("obj"), "key1:key2:", &[var("arg1"), var("arg2")]))
-    )
+    );
+}
+
+#[test]
+fn parse_keyword_chain() {
+    assert_eq!(
+        parse_str(" obj send1: arg1 -- send2: arg2"),
+        Ok(send(
+            send(var("obj"), "send1:", &[var("arg1")]),
+            "send2:",
+            &[var("arg2")]
+        ))
+    );
+}
+
+#[test]
+fn parse_keyword_unary_chain() {
+    assert_eq!(
+        parse_str(" obj send1: arg1 -- bar"),
+        Ok(send(send(var("obj"), "send1:", &[var("arg1")]), "bar", &[]))
+    );
 }
 
 #[test]
@@ -374,7 +405,7 @@ fn parse_keyword_and_binary_send() {
                 send(var("arg2"), "+", &[var("y")])
             ]
         ))
-    )
+    );
 }
 
 #[test]
@@ -389,5 +420,5 @@ fn parse_keyword_and_unary_send() {
                 send(send(var("arg2"), "quux", &[]), "zot", &[]),
             ]
         ))
-    )
+    );
 }
