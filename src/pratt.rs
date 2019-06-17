@@ -22,24 +22,60 @@ struct Message {
 enum Expr {
     Constant(Literal),
     Variable(String),
-    Send(Box<Expr>, Vec<Message>),
+    // Explicit receiver for chains means that we can always trivially access
+    // the original receiver, instead of having to look for it in a tree of sends.
+    Chain(Box<Expr>, Vec<Message>),
+    // For each vector of messages the first message is sent to the expression,
+    // and subsequent messages to result of that message. Next vector starts
+    // from the original expression.
+    // Cascade(Box<Expr>, Vec<Vec<Message>>),
 }
 
 impl Expr {
+    fn unary(mut self, selector: String) -> Self {
+        match &mut self {
+            Expr::Chain(_, ref mut msgs) => {
+                msgs.push(Message {
+                    selector,
+                    arguments: vec![],
+                });
+                self
+            }
+            _ => Expr::send(self, selector, vec![]),
+        }
+    }
+    fn binary(mut self, selector: String, arg: Expr) -> Self {
+        match &mut self {
+            Expr::Chain(_, ref mut msgs) => {
+                msgs.push(Message {
+                    selector,
+                    arguments: vec![arg],
+                });
+                self
+            }
+            _ => Expr::send(self, selector, vec![arg]),
+        }
+    }
+    fn keyword(mut self, selector: String, arguments: Vec<Expr>) -> Self {
+        match &mut self {
+            Expr::Chain(_, ref mut msgs) => {
+                msgs.push(Message {
+                    selector,
+                    arguments,
+                });
+                self
+            }
+            _ => Expr::send(self, selector, arguments),
+        }
+    }
     fn send(object: Expr, selector: String, arguments: Vec<Expr>) -> Expr {
-        Expr::Send(
+        Expr::Chain(
             Box::new(object),
             vec![Message {
                 selector,
                 arguments,
             }],
         )
-    }
-    fn send0(object: Expr, selector: String) -> Expr {
-        Expr::send(object, selector, vec![])
-    }
-    fn send1(object: Expr, selector: String, argument: Expr) -> Expr {
-        Expr::send(object, selector, vec![argument])
     }
 }
 
@@ -57,6 +93,7 @@ enum TokenInfo {
     Keyword(String),
     Operator(String),
     Chain(),
+    //    Cascade(),
 }
 
 fn parse_string(string: String) -> Result<Expr, ParseError> {
@@ -71,6 +108,7 @@ struct Parser {
     stream: Box<Stream>,
     lookahead: VecDeque<Token>,
     chain_re: Regex,
+    cascade_re: Regex,
     decimal_re: Regex,
     operator_re: Regex,
     keyword_re: Regex,
@@ -82,7 +120,9 @@ impl Parser {
         Parser {
             stream,
             lookahead: VecDeque::new(),
+            //            cascade: Option<Expr>,
             chain_re: Regex::new(r"^--").unwrap(),
+            cascade_re: Regex::new(r"^;").unwrap(),
             decimal_re: Regex::new(r"^[0-9]+").unwrap(),
             operator_re: Regex::new(r"^[\-+*/%<>=^|&!\?]+").unwrap(),
             keyword_re: Regex::new(r"^[_a-zA-Z][_a-zA-Z0-9]*:").unwrap(),
@@ -108,12 +148,26 @@ impl Parser {
         let token = self.consume_token()?;
         use TokenInfo::*;
         match token.info {
+            /*
+            Cascade() => {
+                match self.cascade {
+                    None => Err(ParseError {
+                        position: token.position,
+                        problem: "Malformed cascade"
+                    })
+                    Some(expr) => {
+                        self.cascade = None;
+                        expr
+                    }
+                }
+            },
+            */
+            Constant(literal) => Ok(Expr::Constant(literal)),
+            Identifier(name) => Ok(Expr::Variable(name)),
             Eof() => Err(ParseError {
                 position: token.position,
                 problem: "Unexpected end of input",
             }),
-            Constant(literal) => Ok(Expr::Constant(literal)),
-            Identifier(name) => Ok(Expr::Variable(name)),
             _ => Err(ParseError {
                 position: token.position,
                 problem: "Not a value expression",
@@ -125,20 +179,32 @@ impl Parser {
         let precedence = self.token_precedence(&token);
         use TokenInfo::*;
         match token.info {
-            Identifier(name) => Ok(Expr::send0(left, name)),
+            Identifier(name) => Ok(left.unary(name)),
             Chain() => Ok(left),
+            /*            Cascade() => {
+                // Ensure we have an object to cascade on, re-insert
+                // the cascade token so that we will see it in the prefix
+                // position.
+                if self.cascade == None {
+                    self.cascade = Some(left);
+                }
+                self.insert_token(token);
+                match self.parse_expression(precedence) {
+                    Expr::Send(to, selector, message) => {
+                        assert!(*to == left);
+
+                    }
+                }
+            }
+            */
             Operator(name) => {
                 let right = self.parse_expression(precedence)?;
-                Ok(Expr::send1(left, name, right))
+                Ok(left.binary(name, right))
             }
             // FIXME: refactor into a separate function.
             Keyword(name) => {
                 let mut args = vec![];
                 let mut selector = name;
-                // Consider
-                //   object foo: ... bar: ...
-                // Since keyword precedence is N, the argument parse will
-                // stop before consuming the next keyword.
                 loop {
                     args.push(self.parse_expression(precedence)?);
                     if let Token {
@@ -152,7 +218,7 @@ impl Parser {
                         break;
                     }
                 }
-                Ok(Expr::send(left, selector, args))
+                Ok(left.keyword(selector, args))
             }
             Eof() => Err(ParseError {
                 position: token.position,
@@ -197,6 +263,9 @@ impl Parser {
             Some(token) => Ok(token),
             None => self.parse_token(),
         }
+    }
+    fn insert_token(&mut self, token: Token) {
+        self.lookahead.push_front(token)
     }
     // FIXME: Can I get this to return a ref instead? Or should
     // I turn this into a with_peek?
@@ -335,24 +404,32 @@ fn var(name: &str) -> Expr {
 }
 
 #[cfg(test)]
-fn send(object: Expr, selector: &str, arguments: &[Expr]) -> Expr {
-    Expr::Send(
-        Box::new(object),
-        vec![Message {
-            selector: String::from(selector),
-            arguments: arguments.to_vec(),
-        }],
-    )
+fn chain(object: Expr, messages: &[Message]) -> Expr {
+    Expr::Chain(Box::new(object), messages.to_vec())
 }
 
 #[cfg(test)]
-fn send0(object: Expr, selector: &str) -> Expr {
-    send(object, selector, &[])
+fn unary(name: &str) -> Message {
+    Message {
+        selector: name.to_string(),
+        arguments: vec![],
+    }
 }
 
 #[cfg(test)]
-fn send1(object: Expr, selector: &str, argument: Expr) -> Expr {
-    send(object, selector, &[argument])
+fn binary(name: &str, expr: Expr) -> Message {
+    Message {
+        selector: name.to_string(),
+        arguments: vec![expr],
+    }
+}
+
+#[cfg(test)]
+fn keyword(name: &str, exprs: &[Expr]) -> Message {
+    Message {
+        selector: name.to_string(),
+        arguments: exprs.to_vec(),
+    }
 }
 
 #[test]
@@ -369,7 +446,7 @@ fn parse_variable() {
 fn parse_unary_send() {
     assert_eq!(
         parse_str(" abc foo bar "),
-        Ok(send0(send0(var("abc"), "foo"), "bar"))
+        Ok(chain(var("abc"), &[unary("foo"), unary("bar")]))
     );
 }
 
@@ -377,7 +454,7 @@ fn parse_unary_send() {
 fn parse_binary_send() {
     assert_eq!(
         parse_str(" abc + bar "),
-        Ok(send1(var("abc"), "+", var("bar")))
+        Ok(chain(var("abc"), &[binary("+", var("bar"))]))
     );
 }
 
@@ -385,7 +462,10 @@ fn parse_binary_send() {
 fn parse_binary_precedence() {
     assert_eq!(
         parse_str(" abc + bar * quux"),
-        Ok(send1(var("abc"), "+", send1(var("bar"), "*", var("quux"))))
+        Ok(chain(
+            var("abc"),
+            &[binary("+", chain(var("bar"), &[binary("*", var("quux"))]))]
+        ))
     );
 }
 
@@ -393,10 +473,12 @@ fn parse_binary_precedence() {
 fn parse_unary_and_binary_send() {
     assert_eq!(
         parse_str(" abc foo + bar foo2"),
-        Ok(send1(
-            send0(var("abc"), "foo"),
-            "+",
-            send0(var("bar"), "foo2")
+        Ok(chain(
+            var("abc"),
+            &[
+                unary("foo"),
+                binary("+", chain(var("bar"), &[unary("foo2")]))
+            ]
         ))
     );
 }
@@ -405,7 +487,10 @@ fn parse_unary_and_binary_send() {
 fn parse_keyword_send() {
     assert_eq!(
         parse_str(" obj key1: arg1 key2: arg2"),
-        Ok(send(var("obj"), "key1:key2:", &[var("arg1"), var("arg2")]))
+        Ok(chain(
+            var("obj"),
+            &[keyword("key1:key2:", &[var("arg1"), var("arg2")])]
+        ))
     );
 }
 
@@ -413,10 +498,12 @@ fn parse_keyword_send() {
 fn parse_keyword_chain() {
     assert_eq!(
         parse_str(" obj send1: arg1 -- send2: arg2"),
-        Ok(send1(
-            send1(var("obj"), "send1:", var("arg1")),
-            "send2:",
-            var("arg2")
+        Ok(chain(
+            var("obj"),
+            &[
+                keyword("send1:", &[var("arg1")]),
+                keyword("send2:", &[var("arg2")])
+            ]
         ))
     );
 }
@@ -425,7 +512,10 @@ fn parse_keyword_chain() {
 fn parse_keyword_unary_chain() {
     assert_eq!(
         parse_str(" obj send1: arg1 -- bar"),
-        Ok(send0(send1(var("obj"), "send1:", var("arg1")), "bar"))
+        Ok(chain(
+            var("obj"),
+            &[keyword("send1:", &[var("arg1")]), unary("bar")]
+        ))
     );
 }
 
@@ -433,13 +523,15 @@ fn parse_keyword_unary_chain() {
 fn parse_keyword_and_binary_send() {
     assert_eq!(
         parse_str(" obj key1: arg1 + x key2: arg2 + y"),
-        Ok(send(
+        Ok(chain(
             var("obj"),
-            "key1:key2:",
-            &[
-                send1(var("arg1"), "+", var("x")),
-                send1(var("arg2"), "+", var("y"))
-            ]
+            &[keyword(
+                "key1:key2:",
+                &[
+                    chain(var("arg1"), &[binary("+", var("x"))]),
+                    chain(var("arg2"), &[binary("+", var("y"))]),
+                ]
+            )]
         ))
     );
 }
@@ -448,13 +540,45 @@ fn parse_keyword_and_binary_send() {
 fn parse_keyword_and_unary_send() {
     assert_eq!(
         parse_str(" obj key1: arg1 foo bar key2: arg2 quux zot"),
-        Ok(send(
+        Ok(chain(
             var("obj"),
-            "key1:key2:",
-            &[
-                send0(send0(var("arg1"), "foo"), "bar"),
-                send0(send0(var("arg2"), "quux"), "zot"),
-            ]
+            &[keyword(
+                "key1:key2:",
+                &[
+                    chain(var("arg1"), &[unary("foo"), unary("bar")]),
+                    chain(var("arg2"), &[unary("quux"), unary("zot")]),
+                ]
+            )]
         ))
     );
 }
+
+/*
+#[test]
+fn parse_cascade() {
+    assert_eq!(
+        // This is not like smalltalk cascade!
+        parse_str(
+            "obj
+                   ; foo: x bar: y -- zot
+                   ; do thing
+                   "
+        ),
+        Ok(Expr::Send(
+            Box::new(var("obj")),
+            vec![
+                    Message {
+                        selector: "foo:bar:".to_string(),
+                        arguments: vec![var("x"), var("y")]
+                    },
+                    Message {
+                        selector: "do".to_string(),
+                        arguments: vec![]
+                    }
+                ]
+            ),
+            "thing"
+        ))
+    );
+}
+*/
