@@ -2,10 +2,10 @@
 
 First a tokenizer is run on the input stream.
 
-Tokens are:
+Token classes are:
 
-   Constant
    Identifier
+   Sigil
 
 A top-down Pratt-style precedence parser is run on the token stream.
 

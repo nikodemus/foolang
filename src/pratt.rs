@@ -13,10 +13,34 @@ enum Literal {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+struct Message {
+    selector: String,
+    arguments: Vec<Expr>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 enum Expr {
     Constant(Literal),
     Variable(String),
-    Send(Box<Expr>, String, Vec<Expr>),
+    Send(Box<Expr>, Vec<Message>),
+}
+
+impl Expr {
+    fn send(object: Expr, selector: String, arguments: Vec<Expr>) -> Expr {
+        Expr::Send(
+            Box::new(object),
+            vec![Message {
+                selector,
+                arguments,
+            }],
+        )
+    }
+    fn send0(object: Expr, selector: String) -> Expr {
+        Expr::send(object, selector, vec![])
+    }
+    fn send1(object: Expr, selector: String, argument: Expr) -> Expr {
+        Expr::send(object, selector, vec![argument])
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -101,11 +125,11 @@ impl Parser {
         let precedence = self.token_precedence(&token);
         use TokenInfo::*;
         match token.info {
-            Identifier(name) => Ok(Expr::Send(Box::new(left), name, vec![])),
+            Identifier(name) => Ok(Expr::send0(left, name)),
             Chain() => Ok(left),
             Operator(name) => {
                 let right = self.parse_expression(precedence)?;
-                Ok(Expr::Send(Box::new(left), name, vec![right]))
+                Ok(Expr::send1(left, name, right))
             }
             // FIXME: refactor into a separate function.
             Keyword(name) => {
@@ -128,7 +152,7 @@ impl Parser {
                         break;
                     }
                 }
-                Ok(Expr::Send(Box::new(left), selector, args))
+                Ok(Expr::send(left, selector, args))
             }
             Eof() => Err(ParseError {
                 position: token.position,
@@ -306,13 +330,29 @@ fn decimal(value: i64) -> Expr {
 }
 
 #[cfg(test)]
-fn send(object: Expr, selector: &str, arguments: &[Expr]) -> Expr {
-    Expr::Send(Box::new(object), String::from(selector), arguments.to_vec())
+fn var(name: &str) -> Expr {
+    Expr::Variable(name.to_string())
 }
 
 #[cfg(test)]
-fn var(name: &str) -> Expr {
-    Expr::Variable(name.to_string())
+fn send(object: Expr, selector: &str, arguments: &[Expr]) -> Expr {
+    Expr::Send(
+        Box::new(object),
+        vec![Message {
+            selector: String::from(selector),
+            arguments: arguments.to_vec(),
+        }],
+    )
+}
+
+#[cfg(test)]
+fn send0(object: Expr, selector: &str) -> Expr {
+    send(object, selector, &[])
+}
+
+#[cfg(test)]
+fn send1(object: Expr, selector: &str, argument: Expr) -> Expr {
+    send(object, selector, &[argument])
 }
 
 #[test]
@@ -329,7 +369,7 @@ fn parse_variable() {
 fn parse_unary_send() {
     assert_eq!(
         parse_str(" abc foo bar "),
-        Ok(send(send(var("abc"), "foo", &[]), "bar", &[]))
+        Ok(send0(send0(var("abc"), "foo"), "bar"))
     );
 }
 
@@ -337,7 +377,7 @@ fn parse_unary_send() {
 fn parse_binary_send() {
     assert_eq!(
         parse_str(" abc + bar "),
-        Ok(send(var("abc"), "+", &[var("bar")]))
+        Ok(send1(var("abc"), "+", var("bar")))
     );
 }
 
@@ -345,11 +385,7 @@ fn parse_binary_send() {
 fn parse_binary_precedence() {
     assert_eq!(
         parse_str(" abc + bar * quux"),
-        Ok(send(
-            var("abc"),
-            "+",
-            &[send(var("bar"), "*", &[var("quux")])]
-        ))
+        Ok(send1(var("abc"), "+", send1(var("bar"), "*", var("quux"))))
     );
 }
 
@@ -357,10 +393,10 @@ fn parse_binary_precedence() {
 fn parse_unary_and_binary_send() {
     assert_eq!(
         parse_str(" abc foo + bar foo2"),
-        Ok(send(
-            send(var("abc"), "foo", &[]),
+        Ok(send1(
+            send0(var("abc"), "foo"),
             "+",
-            &[send(var("bar"), "foo2", &[])]
+            send0(var("bar"), "foo2")
         ))
     );
 }
@@ -377,10 +413,10 @@ fn parse_keyword_send() {
 fn parse_keyword_chain() {
     assert_eq!(
         parse_str(" obj send1: arg1 -- send2: arg2"),
-        Ok(send(
-            send(var("obj"), "send1:", &[var("arg1")]),
+        Ok(send1(
+            send1(var("obj"), "send1:", var("arg1")),
             "send2:",
-            &[var("arg2")]
+            var("arg2")
         ))
     );
 }
@@ -389,7 +425,7 @@ fn parse_keyword_chain() {
 fn parse_keyword_unary_chain() {
     assert_eq!(
         parse_str(" obj send1: arg1 -- bar"),
-        Ok(send(send(var("obj"), "send1:", &[var("arg1")]), "bar", &[]))
+        Ok(send0(send1(var("obj"), "send1:", var("arg1")), "bar"))
     );
 }
 
@@ -401,8 +437,8 @@ fn parse_keyword_and_binary_send() {
             var("obj"),
             "key1:key2:",
             &[
-                send(var("arg1"), "+", &[var("x")]),
-                send(var("arg2"), "+", &[var("y")])
+                send1(var("arg1"), "+", var("x")),
+                send1(var("arg2"), "+", var("y"))
             ]
         ))
     );
@@ -416,8 +452,8 @@ fn parse_keyword_and_unary_send() {
             var("obj"),
             "key1:key2:",
             &[
-                send(send(var("arg1"), "foo", &[]), "bar", &[]),
-                send(send(var("arg2"), "quux", &[]), "zot", &[]),
+                send0(send0(var("arg1"), "foo"), "bar"),
+                send0(send0(var("arg2"), "quux"), "zot"),
             ]
         ))
     );
