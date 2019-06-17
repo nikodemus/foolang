@@ -1,5 +1,51 @@
 # Parsing Foolang
 
+First a tokenizer is run on the input stream.
+
+Tokens are:
+
+   Constant
+   Identifier
+
+A top-down Pratt-style precedence parser is run on the token stream.
+
+The builtin parser has rules for:
+
+- @class, @classMethod, @method, @constant, @prefix-parser, @infix-parser
+- keyword messages
+- unary messages
+- let
+- blocks
+- arrays
+
+@prefix-parser -
+   with: { parser | parser parseExpression send: #neg }
+
+@prefix-parser (
+   with: { parser |
+
+   }
+
+@infix-parser +
+   precedence: 100
+   with: { left, parser |
+     left send: #add with: [parser parseExpression]
+   }
+
+@infix-parser --
+   precedence: 1
+   with: { left, parser |
+     left
+   }
+
+@infix-syntax 60 left + right
+    left add: right
+
+@prefix-syntax 100 - right
+    right neg
+
+@prefix-syntax 10 if
+
 The initial bootstrap parser was implemented using LALRPOP in Rust.
 
 I'm not too happy with the error reporting, though, and since the

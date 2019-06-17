@@ -184,6 +184,10 @@ Estimated remaining: 110h
 
 - http://projetos.vidageek.net/mirror/mirror/
 
+- http://crockford.com/javascript/tdop/tdop.html
+
+- http://journal.stuffwithstuff.com/2011/02/13/extending-syntax-from-within-a-language/
+
 ## Declarative Syntax
 
 @-prefixes are a workaround for LR conflicts for now.
@@ -241,6 +245,30 @@ This should compile into decent native code. Something close enough
 to what gcc -O0 would produce.
 
 ## MMmmmaaaybe
+
+- Token:
+
+     Literals: 123
+     Names: foo
+     Sigils: non-alpha
+
+    Precedence: function, prefix, unary, binary*, keyword
+
+    expr := literal | variable-ref | compound-expr | '(' expr ')' | expr '--' expr
+
+    compound-expr := prefix-expr | unary-expr | binary-expr | keyword-expr
+
+
+
+- Million dollar question: how are binary operations implemented?
+
+  1. Just messages.
+  2. Translation layer to messages.
+  3. Separate dispatch.
+
+  I kind of like #2. It allows making the second argument the receiver,
+  and provides an implementation mechanism for unary prefixes. (I really want
+  -foo, I think.)
 
 - The more I think about it the more I like the idea of "main" receiving an
   object that provides the OS interfaces. The only question is ergonomics. How

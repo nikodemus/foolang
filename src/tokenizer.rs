@@ -1,6 +1,18 @@
 use regex::Regex;
 
 #[derive(Debug, PartialEq)]
+enum Expr {
+    Constant(Literal),
+
+    Send(Box<Expr>, Selector, Vec<Expr>),
+}
+
+#[derive(Debug, PartialEq)]
+enum Literal {
+    Integer(i64),
+}
+
+#[derive(Debug, PartialEq)]
 enum Token {
     Comment(String, usize),
     Decimal(String, usize),
@@ -82,6 +94,18 @@ impl Grammar {
         let mut tokens = Vec::new();
         while self.parse_token(input, &mut tokens)? {}
         Ok(tokens)
+    }
+    fn parse(&self, tokens: Vec<Token>) -> ast::Expr {
+        let output = Vec::new();
+        let operators = Vec::new();
+        for token in tokens.into_iter() {
+            use Token::*;
+            match token {
+                Decimal(s, _) => output.push(ast::Constant(ast::Literal::Integer(s.parse()))),
+                MiscOperator(s, _) => operators.push(ast::Oper()),
+                _ => panic!("Don't know how to deal with: {}", token),
+            }
+        }
     }
     fn parse_token(
         &self,
@@ -179,11 +203,6 @@ impl Grammar {
             }
         }
         Token::String(input.string_from(start), start)
-    }
-    fn scan_re(&self, input: &mut impl Stream, re: &Regex) -> (String, usize) {
-        let start = input.position();
-        input.re_scan(re);
-        (input.string_from(start), start)
     }
 }
 
