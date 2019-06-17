@@ -31,6 +31,7 @@ enum TokenInfo {
     Constant(Literal),
     Identifier(String),
     Keyword(String),
+    Operator(String),
 }
 
 fn parse_string(string: String) -> Result<Expr, ParseError> {
@@ -45,6 +46,7 @@ struct Parser {
     stream: Box<Stream>,
     lookahead: VecDeque<Token>,
     decimal_re: Regex,
+    operator_re: Regex,
     keyword_re: Regex,
     identifier_re: Regex,
 }
@@ -55,8 +57,9 @@ impl Parser {
             stream,
             lookahead: VecDeque::new(),
             decimal_re: Regex::new(r"^[0-9]+").unwrap(),
-            identifier_re: Regex::new(r"^[_a-zA-Z][_a-zA-Z0-9]*").unwrap(),
+            operator_re: Regex::new(r"^[\-+*/%<>=^|&!\?]+").unwrap(),
             keyword_re: Regex::new(r"^[_a-zA-Z][_a-zA-Z0-9]*:").unwrap(),
+            identifier_re: Regex::new(r"^[_a-zA-Z][_a-zA-Z0-9]*").unwrap(),
         }
     }
     fn parse(&mut self) -> Result<Expr, ParseError> {
@@ -96,6 +99,10 @@ impl Parser {
         use TokenInfo::*;
         match token.info {
             Identifier(name) => Ok(Expr::Send(Box::new(left), name, vec![])),
+            Operator(name) => {
+                let right = self.parse_expression(precedence)?;
+                Ok(Expr::Send(Box::new(left), name, vec![right]))
+            }
             // FIXME: refactor into a separate function.
             Keyword(name) => {
                 let mut args = vec![];
@@ -135,11 +142,25 @@ impl Parser {
     }
     fn token_precedence(&self, token: &Token) -> usize {
         use TokenInfo::*;
-        match token.info {
+        match &token.info {
             // EOF is the only token that can have precedence zero!
             Eof() => 0,
             Keyword(_) => 1,
-            _ => 2,
+            // 2 is fallback for unknown operators
+            Operator(op) => match op.as_str() {
+                "=" => 3,
+                "==" => 3,
+                "<" => 3,
+                ">" => 3,
+                "<=" => 3,
+                ">=" => 3,
+                "+" => 4,
+                "-" => 4,
+                "*" => 5,
+                "/" => 5,
+                _ => 2,
+            },
+            _ => 10,
         }
     }
     fn consume_token(&mut self) -> Result<Token, ParseError> {
@@ -177,6 +198,12 @@ impl Parser {
             return Ok(Token {
                 position,
                 info: Constant(Literal::Decimal(string.parse().unwrap())),
+            });
+        }
+        if let Some(string) = self.stream.scan(&self.operator_re) {
+            return Ok(Token {
+                position,
+                info: Operator(string),
             });
         }
         if let Some(string) = self.stream.scan(&self.keyword_re) {
@@ -296,10 +323,57 @@ fn parse_unary_send() {
 }
 
 #[test]
+fn parse_binary_send() {
+    assert_eq!(
+        parse_str(" abc + bar "),
+        Ok(send(var("abc"), "+", &[var("bar")]))
+    );
+}
+
+#[test]
+fn parse_binary_precedence() {
+    assert_eq!(
+        parse_str(" abc + bar * quux"),
+        Ok(send(
+            var("abc"),
+            "+",
+            &[send(var("bar"), "*", &[var("quux")])]
+        ))
+    );
+}
+
+#[test]
+fn parse_unary_and_binary_send() {
+    assert_eq!(
+        parse_str(" abc foo + bar foo2"),
+        Ok(send(
+            send(var("abc"), "foo", &[]),
+            "+",
+            &[send(var("bar"), "foo2", &[])]
+        ))
+    );
+}
+
+#[test]
 fn parse_keyword_send() {
     assert_eq!(
         parse_str(" obj key1: arg1 key2: arg2"),
         Ok(send(var("obj"), "key1:key2:", &[var("arg1"), var("arg2")]))
+    )
+}
+
+#[test]
+fn parse_keyword_and_binary_send() {
+    assert_eq!(
+        parse_str(" obj key1: arg1 + x key2: arg2 + y"),
+        Ok(send(
+            var("obj"),
+            "key1:key2:",
+            &[
+                send(var("arg1"), "+", &[var("x")]),
+                send(var("arg2"), "+", &[var("y")])
+            ]
+        ))
     )
 }
 
