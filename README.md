@@ -29,13 +29,17 @@ Timeboxing in releases of 50-200h of work.
 ### WIP: 0.1.1: Better Parser
 
 - [x] Integers
-- [x] Floats
+- [ ] Floats
+- [ ] Strings
+- [ ] String interpolation
+- [ ] """ Strings
 - [x] Unary messages
 - [x] Binary messages
 - [x] Keyword messages
 - [x] Chains
 - [x] Cascades
-- [ ] Sequences
+- [x] Sequences
+- [ ] Newline sequences
 - [ ] Blocks
 - [ ] Arrays
 - [ ] Type annotations

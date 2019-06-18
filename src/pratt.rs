@@ -28,6 +28,7 @@ enum Expr {
     Chain(Box<Expr>, Vec<Message>),
     // Each vector of messages is a separate chain using the original receiver.
     Cascade(Box<Expr>, Vec<Vec<Message>>),
+    Sequence(Vec<Expr>),
 }
 
 impl Expr {
@@ -93,6 +94,7 @@ enum TokenInfo {
     Operator(String),
     Chain(),
     Cascade(),
+    Sequence(),
 }
 
 fn parse_string(string: String) -> Result<Expr, ParseError> {
@@ -107,6 +109,7 @@ struct Parser {
     stream: Box<Stream>,
     lookahead: VecDeque<Token>,
     cascade: Option<Expr>,
+    sequence_re: Regex,
     chain_re: Regex,
     cascade_re: Regex,
     decimal_re: Regex,
@@ -121,6 +124,7 @@ impl Parser {
             stream,
             lookahead: VecDeque::new(),
             cascade: None,
+            sequence_re: Regex::new(r"^,").unwrap(),
             chain_re: Regex::new(r"^--").unwrap(),
             cascade_re: Regex::new(r"^;").unwrap(),
             decimal_re: Regex::new(r"^[0-9]+").unwrap(),
@@ -177,6 +181,16 @@ impl Parser {
         use TokenInfo::*;
         match token.info {
             Identifier(name) => Ok(left.unary(name)),
+            Sequence() => {
+                let mut right = self.parse_expression(precedence)?;
+                let mut expressions = vec![left];
+                if let Expr::Sequence(mut right_expressions) = right {
+                    expressions.append(&mut right_expressions);
+                } else {
+                    expressions.push(right);
+                }
+                Ok(Expr::Sequence(expressions))
+            }
             Chain() => Ok(left),
             Cascade() => {
                 assert_eq!(self.cascade, None);
@@ -251,9 +265,10 @@ impl Parser {
         match &token.info {
             // EOF is the only token that can have precedence zero!
             Eof() => 0,
-            Cascade() => 1,
-            Chain() => 2,
-            Keyword(_) => 3,
+            Sequence() => 1,
+            Cascade() => 2,
+            Chain() => 3,
+            Keyword(_) => 4,
             // 10 is fallback for unknown operators
             Operator(op) => match op.as_str() {
                 "=" => 20,
@@ -305,6 +320,12 @@ impl Parser {
                 info: Eof(),
             });
         }
+        if let Some(_) = self.stream.scan(&self.sequence_re) {
+            return Ok(Token {
+                position,
+                info: Sequence(),
+            });
+        }
         if let Some(string) = self.stream.scan(&self.decimal_re) {
             // Asserting termination here would catch 123asd..
             return Ok(Token {
@@ -312,13 +333,13 @@ impl Parser {
                 info: Constant(Literal::Decimal(string.parse().unwrap())),
             });
         }
-        if let Some(_string) = self.stream.scan(&self.chain_re) {
+        if let Some(_) = self.stream.scan(&self.chain_re) {
             return Ok(Token {
                 position,
                 info: Chain(),
             });
         }
-        if let Some(_string) = self.stream.scan(&self.cascade_re) {
+        if let Some(_) = self.stream.scan(&self.cascade_re) {
             return Ok(Token {
                 position,
                 info: Cascade(),
@@ -590,5 +611,16 @@ fn parse_cascade() {
                 vec![unary("do"), unary("thing"),]
             ]
         ))
+    );
+}
+
+#[test]
+fn test_parse_sequence() {
+    assert_eq!(
+        parse_str("foo bar, quux zot"),
+        Ok(Expr::Sequence(vec![
+            chain(var("foo"), &[unary("bar")]),
+            chain(var("quux"), &[unary("zot")])
+        ]))
     );
 }
