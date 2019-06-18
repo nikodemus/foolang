@@ -42,13 +42,15 @@ Timeboxing in releases of 50-200h of work.
 - [x] Newline sequences
 - [x] Blocks
 - [ ] Prefix minus
-- [ ] Let
+- [ ] Let => bind(var, expr, body)
 - [ ] Return
 - [ ] Arrays
 - [ ] Type annotations
 - [ ] Literal arrays
 - [ ] Parenthesis
 - [ ] # Comments
+      Attach end-of-line comments to the previous expression
+      Attach block comments to the next expression
 - [ ] 'x' Characters
 - [ ] Selectors
 - [ ] Definitions
