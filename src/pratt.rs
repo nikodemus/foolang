@@ -29,6 +29,7 @@ enum Expr {
     // Each vector of messages is a separate chain using the original receiver.
     Cascade(Box<Expr>, Vec<Vec<Message>>),
     Sequence(Vec<Expr>),
+    Block(Vec<String>, Box<Expr>),
 }
 
 impl Expr {
@@ -94,8 +95,11 @@ enum TokenInfo {
     Operator(String),
     Chain(),
     Cascade(),
+    // true = comma, false = newline
     Sequence(bool),
-    Newline(),
+    BlockBegin(),
+    BlockEnd(),
+    PositionalParameter(String),
 }
 
 fn parse_string(string: String) -> Result<Expr, ParseError> {
@@ -110,6 +114,9 @@ struct Parser {
     stream: Box<Stream>,
     lookahead: VecDeque<Token>,
     cascade: Option<Expr>,
+    positional_parameter_re: Regex,
+    block_begin_re: Regex,
+    block_end_re: Regex,
     cont_re: Regex,
     sequence_re: Regex,
     chain_re: Regex,
@@ -126,6 +133,9 @@ impl Parser {
             stream,
             lookahead: VecDeque::new(),
             cascade: None,
+            positional_parameter_re: Regex::new(r"^:[_a-zA-Z][_a-zA-z0-9]*").unwrap(),
+            block_begin_re: Regex::new(r"^\{").unwrap(),
+            block_end_re: Regex::new(r"^\}").unwrap(),
             cont_re: Regex::new(r"^\\").unwrap(),
             sequence_re: Regex::new(r"^,").unwrap(),
             chain_re: Regex::new(r"^--").unwrap(),
@@ -165,6 +175,41 @@ impl Parser {
                     Ok(receiver)
                 }
             },
+            BlockBegin() => {
+                let mut args = vec![];
+                loop {
+                    let next = self.peek_token()?;
+                    match next.info {
+                        PositionalParameter(name) => {
+                            args.push(name);
+                            self.consume_token();
+                            continue;
+                        }
+                        Operator(ref op) if "|" == op.as_str() => {
+                            self.consume_token();
+                            break;
+                        }
+                        _ => {}
+                    }
+                    if args.is_empty() {
+                        break;
+                    }
+                    println!("Bad block. Args={:?}, next={:?}", &args, &next);
+                    return Err(ParseError {
+                        position: next.position,
+                        problem: "Malformed block argument",
+                    });
+                }
+                let expr = self.parse_expression(0)?;
+                if let BlockEnd() = self.consume_token()?.info {
+                    Ok(Expr::Block(args, Box::new(expr)))
+                } else {
+                    Err(ParseError {
+                        position: token.position,
+                        problem: "Block not closed",
+                    })
+                }
+            }
             Constant(literal) => Ok(Expr::Constant(literal)),
             Identifier(name) => Ok(Expr::Variable(name)),
             // Leading newline, ignore.
@@ -189,7 +234,7 @@ impl Parser {
         match token.info {
             Identifier(name) => Ok(left.unary(name)),
             Sequence(_) => {
-                let mut right = self.parse_expression(precedence)?;
+                let right = self.parse_expression(precedence)?;
                 let mut expressions = vec![left];
                 if let Expr::Sequence(mut right_expressions) = right {
                     expressions.append(&mut right_expressions);
@@ -257,10 +302,13 @@ impl Parser {
                 position: token.position,
                 problem: "Unexpected end of input",
             }),
-            _ => Err(ParseError {
-                position: token.position,
-                problem: "Not valid in suffix position",
-            }),
+            _ => {
+                println!("BAD: {:?}", token.info);
+                Err(ParseError {
+                    position: token.position,
+                    problem: "Not valid in suffix position",
+                })
+            }
         }
     }
     fn next_precedence(&mut self) -> Result<usize, ParseError> {
@@ -270,8 +318,9 @@ impl Parser {
     fn token_precedence(&self, token: &Token) -> usize {
         use TokenInfo::*;
         match &token.info {
-            // EOF is the only token that can have precedence zero!
             Eof() => 0,
+            BlockBegin() => 0,
+            BlockEnd() => 0,
             Sequence(_) => 1,
             Cascade() => 2,
             Chain() => 3,
@@ -364,6 +413,18 @@ impl Parser {
                 info: Eof(),
             });
         }
+        if let Some(_) = self.stream.scan(&self.block_begin_re) {
+            return Ok(Token {
+                position,
+                info: BlockBegin(),
+            });
+        }
+        if let Some(_) = self.stream.scan(&self.block_end_re) {
+            return Ok(Token {
+                position,
+                info: BlockEnd(),
+            });
+        }
         if let Some(_) = self.stream.scan(&self.sequence_re) {
             return Ok(Token {
                 position,
@@ -387,6 +448,12 @@ impl Parser {
             return Ok(Token {
                 position,
                 info: Cascade(),
+            });
+        }
+        if let Some(string) = self.stream.scan(&self.positional_parameter_re) {
+            return Ok(Token {
+                position,
+                info: PositionalParameter(string[1..].to_string()),
             });
         }
         if let Some(string) = self.stream.scan(&self.operator_re) {
@@ -702,5 +769,27 @@ fn test_parse_sequence() {
             chain(var("zoo"), &[unary("foo"), binary("+", var("barz"))]),
             chain(var("quux"), &[binary("+", var("zot"))])
         ]))
+    );
+}
+
+#[test]
+fn parse_block() {
+    assert_eq!(
+        parse_str("{ a + b }"),
+        Ok(Expr::Block(
+            vec![],
+            Box::new(chain(var("a"), &[binary("+", var("b"))]))
+        ))
+    );
+}
+
+#[test]
+fn parse_block_with_args() {
+    assert_eq!(
+        parse_str("{ :a :b | a + b }"),
+        Ok(Expr::Block(
+            vec!["a".as_string(), "b".as_string()],
+            Box::new(chain(var("a"), &[binary("+", var("b"))]))
+        ))
     );
 }

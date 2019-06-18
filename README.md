@@ -30,9 +30,9 @@ Timeboxing in releases of 50-200h of work.
 
 - [x] Integers
 - [ ] Floats
-- [ ] Strings
-- [ ] String interpolation
+- [ ] "foo" Strings
 - [ ] """ Strings
+- [ ] String interpolation and literal $"strings"
 - [x] Unary messages
 - [x] Binary messages
 - [x] Keyword messages
@@ -40,7 +40,10 @@ Timeboxing in releases of 50-200h of work.
 - [x] Cascades
 - [x] Sequences
 - [x] Newline sequences
-- [ ] Blocks
+- [x] Blocks
+- [ ] Prefix minus
+- [ ] Let
+- [ ] Return
 - [ ] Arrays
 - [ ] Type annotations
 - [ ] Literal arrays
@@ -49,7 +52,6 @@ Timeboxing in releases of 50-200h of work.
 - [ ] 'x' Characters
 - [ ] Selectors
 - [ ] Definitions
-- [ ] "foo" Strings
 - [ ] Replace the old parser
 - [ ] Nicer errors (two lines of context, put mark where the error is)
       001 foo,
