@@ -39,7 +39,7 @@ Timeboxing in releases of 50-200h of work.
 - [x] Chains
 - [x] Cascades
 - [x] Sequences
-- [ ] Newline sequences
+- [x] Newline sequences
 - [ ] Blocks
 - [ ] Arrays
 - [ ] Type annotations

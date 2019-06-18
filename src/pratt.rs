@@ -94,7 +94,8 @@ enum TokenInfo {
     Operator(String),
     Chain(),
     Cascade(),
-    Sequence(),
+    Sequence(bool),
+    Newline(),
 }
 
 fn parse_string(string: String) -> Result<Expr, ParseError> {
@@ -109,6 +110,7 @@ struct Parser {
     stream: Box<Stream>,
     lookahead: VecDeque<Token>,
     cascade: Option<Expr>,
+    cont_re: Regex,
     sequence_re: Regex,
     chain_re: Regex,
     cascade_re: Regex,
@@ -124,6 +126,7 @@ impl Parser {
             stream,
             lookahead: VecDeque::new(),
             cascade: None,
+            cont_re: Regex::new(r"^\\").unwrap(),
             sequence_re: Regex::new(r"^,").unwrap(),
             chain_re: Regex::new(r"^--").unwrap(),
             cascade_re: Regex::new(r"^;").unwrap(),
@@ -135,16 +138,15 @@ impl Parser {
     }
     fn parse(&mut self) -> Result<Expr, ParseError> {
         let res = self.parse_expression(0);
-        println!("parse() => {:?}", &res);
+        // println!("parse() => {:?}", &res);
         res
     }
     fn parse_expression(&mut self, precedence: usize) -> Result<Expr, ParseError> {
         let mut expr = self.parse_prefix()?;
-        println!("parse_prefix() => {:?}", &expr);
+        //println!("parse_prefix() => {:?}", &expr);
         while precedence < self.next_precedence()? {
-            let left = expr.clone();
             expr = self.parse_suffix(expr)?;
-            println!("parse_suffix({:?}) => {:?}", left, &expr);
+            // println!("  parse_suffix() => {:?}", &expr);
         }
         Ok(expr)
     }
@@ -165,14 +167,19 @@ impl Parser {
             },
             Constant(literal) => Ok(Expr::Constant(literal)),
             Identifier(name) => Ok(Expr::Variable(name)),
+            // Leading newline, ignore.
+            Sequence(false) => self.parse_prefix(),
             Eof() => Err(ParseError {
                 position: token.position,
                 problem: "Unexpected end of input",
             }),
-            _ => Err(ParseError {
-                position: token.position,
-                problem: "Not a value expression",
-            }),
+            _ => {
+                println!("PREFIX OOPS: {:?}", token.info);
+                Err(ParseError {
+                    position: token.position,
+                    problem: "Not a value expression",
+                })
+            }
         }
     }
     fn parse_suffix(&mut self, left: Expr) -> Result<Expr, ParseError> {
@@ -181,7 +188,7 @@ impl Parser {
         use TokenInfo::*;
         match token.info {
             Identifier(name) => Ok(left.unary(name)),
-            Sequence() => {
+            Sequence(_) => {
                 let mut right = self.parse_expression(precedence)?;
                 let mut expressions = vec![left];
                 if let Expr::Sequence(mut right_expressions) = right {
@@ -265,7 +272,7 @@ impl Parser {
         match &token.info {
             // EOF is the only token that can have precedence zero!
             Eof() => 0,
-            Sequence() => 1,
+            Sequence(_) => 1,
             Cascade() => 2,
             Chain() => 3,
             Keyword(_) => 4,
@@ -309,11 +316,48 @@ impl Parser {
         }
     }
     fn parse_token(&mut self) -> Result<Token, ParseError> {
+        use TokenInfo::*;
+        let mut position = 0;
+        let mut newline = false;
         while self.stream.at_whitespace() {
+            if !newline && self.stream.at_eol() {
+                position = self.stream.position();
+                newline = true;
+            }
             self.stream.skip();
         }
-        let position = self.stream.position();
-        use TokenInfo::*;
+        if let Some(_) = self.stream.scan(&self.cont_re) {
+            let position = self.stream.position();
+            let next = self.parse_token()?;
+            if let Sequence(false) = next.info {
+                return self.parse_token();
+            } else {
+                return Err(ParseError {
+                    position,
+                    problem: "End-of-line escape not at end of line",
+                });
+            }
+        }
+        if newline {
+            // Lookahead of one token to decide if newline is a separator
+            // or not. Sometimes this inserts a break where one does not below,
+            // but that causes the soft separator to appear in parse_prefix
+            // where we just skip it.
+            let mark = self.stream.position();
+            let next = self.parse_token()?;
+            match &next.info {
+                Constant(_) => {}
+                Identifier(_) => {}
+                Operator(_) => {}
+                _ => return Ok(next),
+            }
+            self.stream.rewind(mark);
+            return Ok(Token {
+                position,
+                info: Sequence(false),
+            });
+        }
+        position = self.stream.position();
         if self.stream.at_eof() {
             return Ok(Token {
                 position,
@@ -323,7 +367,7 @@ impl Parser {
         if let Some(_) = self.stream.scan(&self.sequence_re) {
             return Ok(Token {
                 position,
-                info: Sequence(),
+                info: Sequence(true),
             });
         }
         if let Some(string) = self.stream.scan(&self.decimal_re) {
@@ -373,12 +417,14 @@ impl Parser {
 trait Stream {
     fn position(&self) -> usize;
     fn at_eof(&self) -> bool;
+    fn at_eol(&self) -> bool;
     fn skip(&mut self) -> ();
     fn at_whitespace(&self) -> bool;
     fn str(&self) -> &str;
     fn charstr(&self) -> &str;
     fn string_from(&self, start: usize) -> String;
     fn scan(&mut self, re: &Regex) -> Option<String>;
+    fn rewind(&mut self, position: usize);
 }
 
 struct StringStream {
@@ -396,6 +442,9 @@ impl StringStream {
 }
 
 impl Stream for StringStream {
+    fn rewind(&mut self, position: usize) {
+        self.position = position;
+    }
     fn scan(&mut self, re: &Regex) -> Option<String> {
         let start = self.position();
         match re.find(self.str()) {
@@ -431,6 +480,13 @@ impl Stream for StringStream {
         }
         let here = self.charstr();
         here == " " || here == "\t" || here == "\r" || here == "\n"
+    }
+    fn at_eol(&self) -> bool {
+        if self.at_eof() {
+            return false;
+        }
+        let here = self.str();
+        &here[0..1] == "\n" || (here.len() >= 2 && &here[0..2] == "\r\n")
     }
 }
 
@@ -621,6 +677,30 @@ fn test_parse_sequence() {
         Ok(Expr::Sequence(vec![
             chain(var("foo"), &[unary("bar")]),
             chain(var("quux"), &[unary("zot")])
+        ]))
+    );
+    assert_eq!(
+        parse_str(
+            "
+            foo bar
+            quux zot"
+        ),
+        Ok(Expr::Sequence(vec![
+            chain(var("foo"), &[unary("bar")]),
+            chain(var("quux"), &[unary("zot")])
+        ]))
+    );
+    assert_eq!(
+        parse_str(
+            r"
+            zoo foo +
+              barz
+            quux \
+              + zot"
+        ),
+        Ok(Expr::Sequence(vec![
+            chain(var("zoo"), &[unary("foo"), binary("+", var("barz"))]),
+            chain(var("quux"), &[binary("+", var("zot"))])
         ]))
     );
 }
