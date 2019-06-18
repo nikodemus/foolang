@@ -1,4 +1,4 @@
-# foolang
+# About
 
 Foolang is what happens when former Common Lisp compiler hacker
 starts writing a Smalltalk-like language after thinking a lot
@@ -28,78 +28,288 @@ still going to be a long way from 1.0.
 
 ## Syntax
 
-Syntax has clear Smalltalk influence, but has drifted quite far from
-the original.
+Syntax has Smalltalk influence, but has drifted quite far from it.
 
-1. Binary operators follow usual precedence rules.
-2. Expressions are sequenced using commas/newlines instead of dot.
-3. Bracket are reserved for array creation, blocks use braces.
-4. Blocks and methods by default return the value of last expression.
-5. Explicit chaining operator allows chaining keyword messages
-   without parenthesis.
-6. Cascades are less constrained: the cascaded object can be passed
-   through chains of messages without breaking the cascade.
-
-_Commas and newlines sequence expressions_
+_Comments_
 
 ```
-someObject someMessage, anotherObject anotherMessage
+# Hash-mark starts a line comment.
 ```
 
-```
-someObject someMessage
-anotherObject anotherMessage
-```
-
-_Braces create blocks_
+_Unary messages_
 
 ```
-collection do: { elt | output print: elt toString }
+# Unary messages have the highest precedence and chain themselves
+# naturally. Unary message names can contain letter and numbers
+# and underscores, but must start with a letter.
+object message
+
+object message1 messageToResultOfMessage1
 ```
 
-_Brackets create arrays at runtime_
+_Keyword messages_
 
 ```
-[1, 1+1, 6/2]
+# Keyword messages have a lower precedence. This is the message
+# foo:bar: with arguments x and y. Keyword messages use the same
+# naming rules as unary, with the addition of colon terminating each
+# part.
+object foo: x bar: y
+
+# Because of their lower precedence keyword message arguments can take
+# unary messages without the need for parentheses.
+object foo: x msgToX
+       bar: y msgToY
+
+# Keyword messages can be chained with other messages using the -- operator.
+# If the operator was omitted the messageToResult would be sent to y instead.
+object foo: x bar: y -- messageToResult
 ```
 
-_Doubledash allows arbitrary chaining_
+_Binary messages_
 
 ```
-object message: argument -- messageToResult
+# Binary messages use symbols instead of names and follow usual
+# precedence rules amongs them selves, but bind weaker than unary
+# messages and stronger than keyword messages.
+
+1 + 2 * 3 # => 7
+
+sin pi + 1 # => 1
+
+object foo: x + 1 bar: y + 1
+
+# Chaining operator -- can be also used to chain binary and unary messages
+# without need for parentheses.
+x == y -- assert
 ```
 
-_Semicolon creates arbitrary cascades with chainining_
+_Braces create blocks (closures)_
 
 ```
+collection do: { :elt | output print: elt toString }
+
+# Blocks without parameters respond to the 'value' message.
+# Return value is the last expression evaluated.
+{ 1 + 1 } value # => 1
+
+# Blocks with more parameters take them as unnamed arguments
+# to the value: keyword message.
+{ :x | x + 1 } value: 41 # => 42
+{ :x :y | x + y } value: 21 : 21
+```
+
+_Class definition and instantiation_
+
+```
+# Definition of class Foo with three instance variables: a, b, and c, of which
+# c has the default value of 42.
+@class Foo { a, b, c: 21 + 21 }
+
+# ClassName new returns the default constructor which responds to
+# messages matching instance variable names. Those with defaults can be omitted.
+Foo new a: 1 b: 2
+```
+
+_Methods definition_
+
+```
+# Method on class Foo with selector a:b: and arguments aval and bval.
+# Wrapping the default constructor.
+#
+# Methods return the value of the last expression.
+@classMethod Foo a: aval b: bval {
+    Foo new a: aval b: bval
+}
+
+# Methods a b and c on instances of class Foo, reading instance variables.
+@method Foo a { a }
+@method Foo b { b }
+@method Foo c { c }
+
+# ^ returns the value of the following expression from the method
+# in which it appeared. To be specific: return embedded in a block does
+# not return from the block, but from the method. It is an error to
+# return from a method which has already returned. (There will be
+# compiler support for checking this statically.)
+@method Foo max {
+  a >= b & a >= c then: { ^ a }
+  b >= a & b >= c then: { ^ b }
+  c
+}
+
+# Addition: Foo+Foo, Foo+Number, and Number+Foo.
+#
+# Using Smalltalk-style double-dispatch for now, considering
+# alternatives.
+#
+# ...but for now, as demonstrated, extending existing classes
+# is allowed. However, extension methods
+# - must be instance methods.
+# - cannot access instance variables directly.
+# - cannot replace existing methods.
+# - are primarily associated with the class that provided them,
+#   not the class they extend.
+@method Foo + arg {
+    arg addToFoo: self
+}
+
+@extension Foo
+@method Number addToFoo: foo {
+    foo addToNumber: self
+}
+
+@method Foo addToFoo: foo {
+    Foo a: a + foo a
+        b: b + foo b
+        c: c + foo c  
+}
+
+@method Foo addToNumber: n {
+    Foo a: a + n
+        b: b + n
+        c: c + n
+}
+```
+
+_Unnamed keyword arguments_
+
+```
+# Keyword messages can also be defined without naming the individual arguments.
+# Spaces are significant here!
+@method Foo bar :x :y :z {
+    a * x + b * y + c * z
+}
+
+# Sending the corresponding message, again spaces are significant here!
+foo bar: 1 : 2 : 3
+```
+
+_Local variables, assignment, equality_
+
+```
+# Let creates a local variable binding. Assignment uses :=
+# = is un-overridable identity comparison. == is overridable
+# class specific equality.
+let x := 1
+x := x + 1
+x == 2.0 -- assert: "For numbers == uses numeric equality, so this is ok."
+
+# := is also used to assign to instance variables.
+@method Foo inc {
+    a := a + 1
+    b := b + 1
+    b := c + 1
+}
+```
+
+_Type annotations are either proven to hold or asserted at runtime_
+
+```
+# Values can be annotated
+x::Float + y::Float
+
+# Method return values can be annotated
+@method Foo sum -> Number {
+    a + b + c
+}
+
+# Method parameters can be annotated
+@method Foo a: newa::Number
+            b: newb::Number
+            c: newc::Number
+  -> Foo
+{
+    a := newa
+    b := newb
+    c := newc
+    self
+}
+
+# Local variables can be annotated
+let x::Float := 42.0
+
+# Block parameters can be annotated
+{ :x::Float| x*2.0 }
+```
+
+_Semicolon cascades messages_
+
+```
+# Value that the expression before the first semicolon evaluates
+# to becomes the object on which the cascade is run.
+#
+# The chain of messages following each semicolon starts with the
+# cascade object. If a message returns another value the chain
+# continues with it.
+#
+# Each semicolon in a cascade starts again from the cascade object.
+#
+# Cascade is terminated when the next expression starts. Value of
+# the cascade is the value of the last chain of messages.
 expr to create an object
  ; messageToIt key: word -- chained
  ; anotherMessage
 nextExpr
 ```
 
+_Expressions can be separated by newlines or commas_
+
+```
+# The rules are fairly DWIM:
+# - Newline separates expressions if and only if the expression
+#   on the previous line is syntactically complete and the following
+#   line starts with primary expression.
+#
+# - In practice this means that keyword and binary messages can be split
+#   across lines, but unary messages cannot.
+#
+# - \ at the end of a line indicates that the expression continues on
+#   the next line.
+@method Foo printTo: stream {
+    # Single expression on two lines: 'print:' is not a primary expression
+    # so the newline has no effect.
+    stream
+      print: "<Foo "
+    # Two expressions separated by newlines.
+    stream print: a toString
+    stream print: ", "
+    # Continuation marker needed because toString at the start of
+    # line _could_ be ment as a variable reference.
+    stream print: b \
+      toString
+    # This way of splitting is legal too: 'print:' takes an argument
+    # so the expression is not complete.
+    stream print:
+      ", "
+    # Using a comma we can put multiple expressions on a single line.
+    stream print: c toString, stream print: ">"
+    ^self
+}
+```
+
+_Brackets create arrays at runtime_
+
+```
+# Commas separate the elements.
+[1, 1+1, 6/2]
+
+# Immutable literal arrays are prefixed with $ and can contain
+# only literals.
+$[1, 2, 3]
+```
+
 ## Roadmap
 
-1. Bootstrap evaluator. **done**
-2. Minimal smalltalk-style IDE. **wip**
-3. VM and bytecode compiler.
-4. Native compiler.
+1. Bootstrap evaluator for the core language. **done**
+2. Full syntax support. **wip**
+3. Minimal smalltalk-style IDE.
+4. VM and bytecode compiler.
+5. Native compiler.
 
 ## Design Intentions
 
 _Random sampling for the curious._
-
-Maybe also allow newlines to sequence expressions?
-
-Add a chaining operator so that `(Foo bar: x) frob` does not
-need parentheses, but can be written something like
-`Foo bar: x -- frob`.
-
-Remove colon-prefix from block arguments.
-
-Replace `|x y z|`-style bindings with `let x := 1`.
-
-Return value of last expression from methods and blocks both.
 
 Globals are immutable.
 

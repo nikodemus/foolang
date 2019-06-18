@@ -1,4 +1,4 @@
-site_name: "the Foo programming language"
+site_name: "Foolang"
 
 theme:
   name: 'readable'

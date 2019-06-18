@@ -38,6 +38,7 @@ Timeboxing in releases of 50-200h of work.
 - [ ] Sequences
 - [ ] Blocks
 - [ ] Arrays
+- [ ] Type annotations
 - [ ] Literal arrays
 - [ ] Parenthesis
 - [ ] # Comments
