@@ -222,64 +222,24 @@ impl Parser {
     fn parse_suffix(&mut self, left: Expr) -> Result<Expr, ParseError> {
         let token = self.consume_token()?;
         let precedence = token.precedence();
-        use TokenInfo::*;
         match token.info {
-            Identifier(name) => Ok(left.unary(name)),
-            Sequence(_) => {
-                let right = self.parse_expression(token.precedence())?;
-                let mut expressions = vec![left];
-                if let Expr::Sequence(mut right_expressions) = right {
-                    expressions.append(&mut right_expressions);
-                } else {
-                    expressions.push(right);
-                }
-                Ok(Expr::Sequence(expressions))
-            }
-            Chain() => Ok(left),
-            Cascade() => {
-                assert_eq!(self.cascade, None);
-                let mut chains = vec![];
-                self.insert_token(token);
-                loop {
-                    let next = self.peek_token()?;
-                    if Cascade() != next.info {
-                        break;
-                    }
-                    let position = next.position;
-                    // Need to wrap in cascade in case this is a chain,
-                    // which would then accumulate the cascaded messages.
-                    let mark = Expr::Variable("(cascade)".to_string());
-                    self.cascade = Some(mark.clone());
-                    let chain = self.parse_expression(precedence)?;
-                    match chain {
-                        Expr::Chain(to, messages) => {
-                            assert_eq!(mark, *to);
-                            chains.push(messages);
-                        }
-                        _ => {
-                            println!("Not a chain: {:?}", chain);
-                            return Err(ParseError {
-                                position,
-                                problem: "Invalid cascade",
-                            });
-                        }
-                    }
-                }
-                Ok(Expr::Cascade(Box::new(left.clone()), chains))
-            }
-            Operator(name) => {
+            TokenInfo::Identifier(name) => Ok(left.unary(name)),
+            TokenInfo::Chain() => Ok(left),
+            TokenInfo::Sequence(_) => self.parse_suffix_sequence(left, token),
+            TokenInfo::Cascade() => self.parse_suffix_cascade(left, token),
+            TokenInfo::Operator(name) => {
                 let right = self.parse_expression(precedence)?;
                 Ok(left.binary(name, right))
             }
             // FIXME: refactor into a separate function.
-            Keyword(name) => {
+            TokenInfo::Keyword(name) => {
                 let mut args = vec![];
                 let mut selector = name;
                 loop {
                     args.push(self.parse_expression(precedence)?);
                     if let Token {
                         position: _,
-                        info: Keyword(next),
+                        info: TokenInfo::Keyword(next),
                     } = self.peek_token()?
                     {
                         self.consume_token();
@@ -290,7 +250,7 @@ impl Parser {
                 }
                 Ok(left.keyword(selector, args))
             }
-            Eof() => Err(ParseError {
+            TokenInfo::Eof() => Err(ParseError {
                 position: token.position,
                 problem: "Unexpected end of input",
             }),
@@ -358,6 +318,47 @@ impl Parser {
         };
         let expr = self.parse_expression(token.precedence())?;
         Ok(expr.unary(message.to_string()))
+    }
+    fn parse_suffix_cascade(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
+        assert_eq!(self.cascade, None);
+        let mut chains = vec![];
+        self.insert_token(token.clone());
+        loop {
+            let next = self.peek_token()?;
+            if TokenInfo::Cascade() != next.info {
+                break;
+            }
+            let position = next.position;
+            // Need to wrap in cascade in case this is a chain,
+            // which would then accumulate the cascaded messages.
+            let mark = Expr::Variable("(cascade)".to_string());
+            self.cascade = Some(mark.clone());
+            let chain = self.parse_expression(token.precedence())?;
+            match chain {
+                Expr::Chain(to, messages) => {
+                    assert_eq!(mark, *to);
+                    chains.push(messages);
+                }
+                _ => {
+                    println!("Not a chain: {:?}", chain);
+                    return Err(ParseError {
+                        position,
+                        problem: "Invalid cascade",
+                    });
+                }
+            }
+        }
+        Ok(Expr::Cascade(Box::new(left.clone()), chains))
+    }
+    fn parse_suffix_sequence(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
+        let right = self.parse_expression(token.precedence())?;
+        let mut expressions = vec![left];
+        if let Expr::Sequence(mut right_expressions) = right {
+            expressions.append(&mut right_expressions);
+        } else {
+            expressions.push(right);
+        }
+        Ok(Expr::Sequence(expressions))
     }
     fn next_precedence(&mut self) -> Result<usize, ParseError> {
         Ok(self.peek_token()?.precedence())
