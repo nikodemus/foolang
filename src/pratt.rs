@@ -31,6 +31,7 @@ enum Expr {
     Cascade(Box<Expr>, Vec<Vec<Message>>),
     Sequence(Vec<Expr>),
     Block(Vec<String>, Box<Expr>),
+    Array(Vec<Expr>),
 }
 
 impl Expr {
@@ -103,6 +104,8 @@ enum TokenInfo {
     PositionalParameter(String),
     ParenBegin(),
     ParenEnd(),
+    ArrayBegin(),
+    ArrayEnd(),
 }
 
 impl Token {
@@ -122,6 +125,8 @@ impl Token {
     fn precedence(&self) -> usize {
         match &self.info {
             TokenInfo::Eof() => 0,
+            TokenInfo::ArrayBegin() => 0,
+            TokenInfo::ArrayEnd() => 0,
             TokenInfo::BlockBegin() => 0,
             TokenInfo::BlockEnd() => 0,
             TokenInfo::ParenBegin() => 0,
@@ -163,6 +168,8 @@ struct Parser {
     lookahead: VecDeque<Token>,
     cascade: Option<Expr>,
     positional_parameter_re: Regex,
+    array_begin_re: Regex,
+    array_end_re: Regex,
     block_begin_re: Regex,
     block_end_re: Regex,
     paren_begin_re: Regex,
@@ -185,6 +192,8 @@ impl Parser {
             lookahead: VecDeque::new(),
             cascade: None,
             positional_parameter_re: Regex::new(r"^:[_a-zA-Z][_a-zA-z0-9]*").unwrap(),
+            array_begin_re: Regex::new(r"^\[").unwrap(),
+            array_end_re: Regex::new(r"^\]").unwrap(),
             block_begin_re: Regex::new(r"^\{").unwrap(),
             block_end_re: Regex::new(r"^\}").unwrap(),
             paren_begin_re: Regex::new(r"^\(").unwrap(),
@@ -216,6 +225,7 @@ impl Parser {
             TokenInfo::Constant(literal) => Ok(Expr::Constant(literal)),
             TokenInfo::Identifier(name) => Ok(Expr::Variable(name)),
             TokenInfo::Cascade() => self.parse_prefix_cascade(token),
+            TokenInfo::ArrayBegin() => self.parse_prefix_array(token),
             TokenInfo::BlockBegin() => self.parse_prefix_block(token),
             TokenInfo::ParenBegin() => self.parse_prefix_paren(token),
             TokenInfo::Operator(_) => self.parse_prefix_operator(token),
@@ -237,6 +247,20 @@ impl Parser {
             TokenInfo::Keyword(_) => self.parse_suffix_keyword(left, token),
             TokenInfo::Eof() => token.error("Unexpected end of input"),
             _ => token.error("Not valid in suffix position."),
+        }
+    }
+    fn parse_prefix_array(&mut self, token: Token) -> Result<Expr, ParseError> {
+        let expr = self.parse_expression(token.precedence())?;
+        let next = self.consume_token()?;
+        match next.info {
+            TokenInfo::ArrayEnd() => {
+                println!("array of: {:?}", &expr);
+                match expr {
+                    Expr::Sequence(exprs) => Ok(Expr::Array(exprs)),
+                    _ => Ok(Expr::Array(vec![expr])),
+                }
+            }
+            _ => token.error("Unmatched array start"),
         }
     }
     fn parse_prefix_block(&mut self, token: Token) -> Result<Expr, ParseError> {
@@ -346,7 +370,11 @@ impl Parser {
     }
     fn parse_suffix_sequence(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
         let right = self.parse_expression(token.precedence())?;
-        let mut expressions = vec![left];
+        let mut expressions = if let Expr::Sequence(left_expressions) = left {
+            left_expressions
+        } else {
+            vec![left]
+        };
         if let Expr::Sequence(mut right_expressions) = right {
             expressions.append(&mut right_expressions);
         } else {
@@ -437,6 +465,18 @@ impl Parser {
             return Ok(Token {
                 position,
                 info: ParenEnd(),
+            });
+        }
+        if let Some(_) = self.stream.scan(&self.array_begin_re) {
+            return Ok(Token {
+                position,
+                info: ArrayBegin(),
+            });
+        }
+        if let Some(_) = self.stream.scan(&self.array_end_re) {
+            return Ok(Token {
+                position,
+                info: ArrayEnd(),
             });
         }
         if let Some(_) = self.stream.scan(&self.block_begin_re) {
@@ -849,5 +889,13 @@ fn parse_block_with_args() {
             vec!["a".to_string(), "b".to_string()],
             Box::new(chain(var("a"), &[binary("+", var("b"))]))
         ))
+    );
+}
+
+#[test]
+fn parse_array() {
+    assert_eq!(
+        parse_str("[1,2,3]"),
+        Ok(Expr::Array(vec![decimal(1), decimal(2), decimal(3)]))
     );
 }

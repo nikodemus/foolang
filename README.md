@@ -44,7 +44,7 @@ Timeboxing in releases of 50-200h of work.
 - [x] Prefix minus
 - [ ] Let => bind(var, expr, body)
 - [ ] Return
-- [ ] Arrays
+- [x] Arrays
 - [ ] Type annotations
 - [ ] Literal arrays
 - [x] Parenthesis
