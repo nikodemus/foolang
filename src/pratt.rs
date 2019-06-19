@@ -116,6 +116,33 @@ impl Token {
             problem,
         })
     }
+    fn precedence(&self) -> usize {
+        match &self.info {
+            TokenInfo::Eof() => 0,
+            TokenInfo::BlockBegin() => 0,
+            TokenInfo::BlockEnd() => 0,
+            TokenInfo::Sequence(_) => 1,
+            TokenInfo::Cascade() => 2,
+            TokenInfo::Chain() => 3,
+            TokenInfo::Keyword(_) => 4,
+            // 10 is fallback for unknown operators
+            TokenInfo::Operator(op) => match op.as_str() {
+                "=" => 20,
+                "==" => 20,
+                "<" => 20,
+                ">" => 20,
+                "<=" => 20,
+                ">=" => 20,
+                "+" => 30,
+                "-" => 30,
+                "*" => 40,
+                "/" => 40,
+                _ => 10,
+            },
+            // All unary operators
+            _ => 100,
+        }
+    }
 }
 
 fn parse_string(string: String) -> Result<Expr, ParseError> {
@@ -183,41 +210,7 @@ impl Parser {
         use TokenInfo::*;
         match token.info {
             Cascade() => self.parse_prefix_cascade(token),
-            BlockBegin() => {
-                let mut args = vec![];
-                loop {
-                    let next = self.peek_token()?;
-                    match next.info {
-                        PositionalParameter(name) => {
-                            args.push(name);
-                            self.consume_token();
-                            continue;
-                        }
-                        Operator(ref op) if "|" == op.as_str() => {
-                            self.consume_token();
-                            break;
-                        }
-                        _ => {}
-                    }
-                    if args.is_empty() {
-                        break;
-                    }
-                    println!("Bad block. Args={:?}, next={:?}", &args, &next);
-                    return Err(ParseError {
-                        position: next.position,
-                        problem: "Malformed block argument",
-                    });
-                }
-                let expr = self.parse_expression(0)?;
-                if let BlockEnd() = self.consume_token()?.info {
-                    Ok(Expr::Block(args, Box::new(expr)))
-                } else {
-                    Err(ParseError {
-                        position: token.position,
-                        problem: "Block not closed",
-                    })
-                }
-            }
+            BlockBegin() => self.parse_prefix_block(token),
             Operator(_) => self.parse_prefix_operator(token),
             Constant(literal) => Ok(Expr::Constant(literal)),
             Identifier(name) => Ok(Expr::Variable(name)),
@@ -238,12 +231,12 @@ impl Parser {
     }
     fn parse_suffix(&mut self, left: Expr) -> Result<Expr, ParseError> {
         let token = self.consume_token()?;
-        let precedence = self.token_precedence(&token);
+        let precedence = token.precedence();
         use TokenInfo::*;
         match token.info {
             Identifier(name) => Ok(left.unary(name)),
             Sequence(_) => {
-                let right = self.parse_expression(precedence)?;
+                let right = self.parse_expression(token.precedence())?;
                 let mut expressions = vec![left];
                 if let Expr::Sequence(mut right_expressions) = right {
                     expressions.append(&mut right_expressions);
@@ -320,6 +313,41 @@ impl Parser {
             }
         }
     }
+    fn parse_prefix_block(&mut self, token: Token) -> Result<Expr, ParseError> {
+        let mut args = vec![];
+        loop {
+            let next = self.peek_token()?;
+            match next.info {
+                TokenInfo::PositionalParameter(name) => {
+                    args.push(name);
+                    self.consume_token();
+                    continue;
+                }
+                TokenInfo::Operator(ref op) if "|" == op.as_str() => {
+                    self.consume_token();
+                    break;
+                }
+                _ => {}
+            }
+            if args.is_empty() {
+                break;
+            }
+            println!("Bad block. Args={:?}, next={:?}", &args, &next);
+            return Err(ParseError {
+                position: next.position,
+                problem: "Malformed block argument",
+            });
+        }
+        let expr = self.parse_expression(token.precedence())?;
+        if let TokenInfo::BlockEnd() = self.consume_token()?.info {
+            Ok(Expr::Block(args, Box::new(expr)))
+        } else {
+            Err(ParseError {
+                position: token.position,
+                problem: "Block not closed",
+            })
+        }
+    }
     fn parse_prefix_cascade(&mut self, token: Token) -> Result<Expr, ParseError> {
         match &self.cascade {
             None => Err(ParseError {
@@ -338,40 +366,11 @@ impl Parser {
             "-" => "neg",
             _ => return token.error("Not a prefix operator"),
         };
-        let expr = self.parse_expression(self.token_precedence(&token))?;
+        let expr = self.parse_expression(token.precedence())?;
         Ok(expr.unary(message.to_string()))
     }
     fn next_precedence(&mut self) -> Result<usize, ParseError> {
-        let token = self.peek_token()?;
-        Ok(self.token_precedence(&token))
-    }
-    fn token_precedence(&self, token: &Token) -> usize {
-        use TokenInfo::*;
-        match &token.info {
-            Eof() => 0,
-            BlockBegin() => 0,
-            BlockEnd() => 0,
-            Sequence(_) => 1,
-            Cascade() => 2,
-            Chain() => 3,
-            Keyword(_) => 4,
-            // 10 is fallback for unknown operators
-            Operator(op) => match op.as_str() {
-                "=" => 20,
-                "==" => 20,
-                "<" => 20,
-                ">" => 20,
-                "<=" => 20,
-                ">=" => 20,
-                "+" => 30,
-                "-" => 30,
-                "*" => 40,
-                "/" => 40,
-                _ => 10,
-            },
-            // All unary operators
-            _ => 100,
-        }
+        Ok(self.peek_token()?.precedence())
     }
     fn consume_token(&mut self) -> Result<Token, ParseError> {
         match self.lookahead.pop_front() {
