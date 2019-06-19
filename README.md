@@ -47,7 +47,7 @@ Timeboxing in releases of 50-200h of work.
 - [ ] Arrays
 - [ ] Type annotations
 - [ ] Literal arrays
-- [ ] Parenthesis
+- [x] Parenthesis
 - [ ] # Comments
       Attach end-of-line comments to the previous expression
       Attach block comments to the next expression

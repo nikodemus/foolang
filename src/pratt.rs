@@ -101,6 +101,8 @@ enum TokenInfo {
     BlockBegin(),
     BlockEnd(),
     PositionalParameter(String),
+    ParenBegin(),
+    ParenEnd(),
 }
 
 impl Token {
@@ -122,6 +124,8 @@ impl Token {
             TokenInfo::Eof() => 0,
             TokenInfo::BlockBegin() => 0,
             TokenInfo::BlockEnd() => 0,
+            TokenInfo::ParenBegin() => 0,
+            TokenInfo::ParenEnd() => 0,
             TokenInfo::Sequence(_) => 1,
             TokenInfo::Cascade() => 2,
             TokenInfo::Chain() => 3,
@@ -161,6 +165,8 @@ struct Parser {
     positional_parameter_re: Regex,
     block_begin_re: Regex,
     block_end_re: Regex,
+    paren_begin_re: Regex,
+    paren_end_re: Regex,
     cont_re: Regex,
     sequence_re: Regex,
     chain_re: Regex,
@@ -181,6 +187,8 @@ impl Parser {
             positional_parameter_re: Regex::new(r"^:[_a-zA-Z][_a-zA-z0-9]*").unwrap(),
             block_begin_re: Regex::new(r"^\{").unwrap(),
             block_end_re: Regex::new(r"^\}").unwrap(),
+            paren_begin_re: Regex::new(r"^\(").unwrap(),
+            paren_end_re: Regex::new(r"^\)").unwrap(),
             cont_re: Regex::new(r"^\\").unwrap(),
             sequence_re: Regex::new(r"^,").unwrap(),
             chain_re: Regex::new(r"^--").unwrap(),
@@ -209,6 +217,7 @@ impl Parser {
             TokenInfo::Identifier(name) => Ok(Expr::Variable(name)),
             TokenInfo::Cascade() => self.parse_prefix_cascade(token),
             TokenInfo::BlockBegin() => self.parse_prefix_block(token),
+            TokenInfo::ParenBegin() => self.parse_prefix_paren(token),
             TokenInfo::Operator(_) => self.parse_prefix_operator(token),
             // Leading newline, ignore.
             TokenInfo::Sequence(false) => self.parse_prefix(),
@@ -276,6 +285,14 @@ impl Parser {
         };
         let expr = self.parse_expression(token.precedence())?;
         Ok(expr.unary(message.to_string()))
+    }
+    fn parse_prefix_paren(&mut self, token: Token) -> Result<Expr, ParseError> {
+        let expr = self.parse_expression(token.precedence())?;
+        let next = self.consume_token()?;
+        match next.info {
+            TokenInfo::ParenEnd() => Ok(expr),
+            _ => token.error("Unmatched close parenthesis"),
+        }
     }
     fn parse_suffix_cascade(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
         assert_eq!(self.cascade, None);
@@ -408,6 +425,18 @@ impl Parser {
             return Ok(Token {
                 position,
                 info: Eof(),
+            });
+        }
+        if let Some(_) = self.stream.scan(&self.paren_begin_re) {
+            return Ok(Token {
+                position,
+                info: ParenBegin(),
+            });
+        }
+        if let Some(_) = self.stream.scan(&self.paren_end_re) {
+            return Ok(Token {
+                position,
+                info: ParenEnd(),
             });
         }
         if let Some(_) = self.stream.scan(&self.block_begin_re) {
@@ -647,6 +676,17 @@ fn parse_binary_precedence() {
         Ok(chain(
             var("abc"),
             &[binary("+", chain(var("bar"), &[binary("*", var("quux"))]))]
+        ))
+    );
+}
+
+#[test]
+fn parse_parens() {
+    assert_eq!(
+        parse_str(" abc * (bar + quux)"),
+        Ok(chain(
+            var("abc"),
+            &[binary("*", chain(var("bar"), &[binary("+", var("quux"))]))]
         ))
     );
 }
