@@ -207,26 +207,16 @@ impl Parser {
     }
     fn parse_prefix(&mut self) -> Result<Expr, ParseError> {
         let token = self.consume_token()?;
-        use TokenInfo::*;
         match token.info {
-            Cascade() => self.parse_prefix_cascade(token),
-            BlockBegin() => self.parse_prefix_block(token),
-            Operator(_) => self.parse_prefix_operator(token),
-            Constant(literal) => Ok(Expr::Constant(literal)),
-            Identifier(name) => Ok(Expr::Variable(name)),
+            TokenInfo::Constant(literal) => Ok(Expr::Constant(literal)),
+            TokenInfo::Identifier(name) => Ok(Expr::Variable(name)),
+            TokenInfo::Cascade() => self.parse_prefix_cascade(token),
+            TokenInfo::BlockBegin() => self.parse_prefix_block(token),
+            TokenInfo::Operator(_) => self.parse_prefix_operator(token),
             // Leading newline, ignore.
-            Sequence(false) => self.parse_prefix(),
-            Eof() => Err(ParseError {
-                position: token.position,
-                problem: "Unexpected end of input",
-            }),
-            _ => {
-                println!("PREFIX OOPS: {:?}", token.info);
-                Err(ParseError {
-                    position: token.position,
-                    problem: "Not a value expression",
-                })
-            }
+            TokenInfo::Sequence(false) => self.parse_prefix(),
+            TokenInfo::Eof() => token.error("Unexpected end of input"),
+            _ => token.error("Not a value expression"),
         }
     }
     fn parse_suffix(&mut self, left: Expr) -> Result<Expr, ParseError> {
