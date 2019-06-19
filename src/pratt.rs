@@ -227,10 +227,7 @@ impl Parser {
             TokenInfo::Chain() => Ok(left),
             TokenInfo::Sequence(_) => self.parse_suffix_sequence(left, token),
             TokenInfo::Cascade() => self.parse_suffix_cascade(left, token),
-            TokenInfo::Operator(name) => {
-                let right = self.parse_expression(precedence)?;
-                Ok(left.binary(name, right))
-            }
+            TokenInfo::Operator(_) => self.parse_suffix_operator(left, token),
             // FIXME: refactor into a separate function.
             TokenInfo::Keyword(name) => {
                 let mut args = vec![];
@@ -250,17 +247,8 @@ impl Parser {
                 }
                 Ok(left.keyword(selector, args))
             }
-            TokenInfo::Eof() => Err(ParseError {
-                position: token.position,
-                problem: "Unexpected end of input",
-            }),
-            _ => {
-                println!("BAD: {:?}", token.info);
-                Err(ParseError {
-                    position: token.position,
-                    problem: "Not valid in suffix position",
-                })
-            }
+            TokenInfo::Eof() => token.error("Unexpected end of input"),
+            _ => token.error("Not valid in suffix position."),
         }
     }
     fn parse_prefix_block(&mut self, token: Token) -> Result<Expr, ParseError> {
@@ -349,6 +337,10 @@ impl Parser {
             }
         }
         Ok(Expr::Cascade(Box::new(left.clone()), chains))
+    }
+    fn parse_suffix_operator(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
+        let right = self.parse_expression(token.precedence())?;
+        Ok(left.binary(token.operator().to_string(), right))
     }
     fn parse_suffix_sequence(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
         let right = self.parse_expression(token.precedence())?;
