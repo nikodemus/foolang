@@ -1,21 +1,84 @@
 # Foo The Language
 
-This document reflects the current state of the language.
+Programs consist of definitions including a main program.
 
-Everything is an expression that evaluates to an object.
+Definitions are:
+- Constants
+- Classes
+- Class and instance methods
 
-Everything happens by sending messages to objects.
+Main program consists of a binding for the system object
+and expressions to evaluate.
 
-## Quick Tour
+Expressions are either:
+- Literals
+- Constant references
+- Variable bindings
+- Variable references
+- Variable assignments
+- Message sends
+- Blocks
+- Returns
 
-### Literals
+## Syntax
+
+### Comments
 
 ```
+# This is a comment.
+```
+
+### Integer Literals
+
+_Decimal numbers_
+```
 123
-123.123
-'This is a string'
+```
+
+_Hexadecimal numbers_
+```
+0xFFFFFFFF
+```
+
+_Binary numbers_
+```
+0b01010101
+```
+
+All integer literals additionally allow interleaving of underscore
+characters to make magnitude of large numbers easier to see. 
+
+```
+100_000_000
+
+0xFFFF_FFFF_FFFF_FFFF
+
+0b0101_0101_0101_0101
+```
+
+# Float literals
+
+```
+1.123
+123123
+```
+$"This is a literal string: {} does nothing here."
+
+$"""This is very literal block string."""
+
 \#['literal' 'constant' 'array']
 \#literalSymbol
+```
+
+```
+"This is a string that could be interpolated but is not."
+"""This is a block string that could be interpolated but
+   is not.
+
+   Leading whitespace upto the indentation of the first
+   line is removed.
+
+   "Double quotes" can be embedded without escaping."""
 ```
 
 ### Array constructors
@@ -75,7 +138,7 @@ WIP MARKER
 
 ### Variables
 
-Variable bindings 
+Variable bindings
 
 
 

@@ -165,6 +165,7 @@ impl Parser {
     }
     fn parse_prefix(&mut self) -> Result<Expr, ParseError> {
         let token = self.consume_token()?;
+        let precedence = self.token_precedence(&token);
         use TokenInfo::*;
         match token.info {
             Cascade() => match &self.cascade {
@@ -212,6 +213,19 @@ impl Parser {
                         problem: "Block not closed",
                     })
                 }
+            }
+            Operator(op) => {
+                let message = match op.as_str() {
+                    "-" => "neg",
+                    _ => {
+                        return Err(ParseError {
+                            position: token.position,
+                            problem: "Not a prefix operator",
+                        })
+                    }
+                };
+                let expr = self.parse_expression(precedence)?;
+                Ok(expr.unary(message.to_string()))
             }
             Constant(literal) => Ok(Expr::Constant(literal)),
             Identifier(name) => Ok(Expr::Variable(name)),
@@ -639,6 +653,11 @@ fn parse_binary_send() {
         parse_str(" abc + bar "),
         Ok(chain(var("abc"), &[binary("+", var("bar"))]))
     );
+}
+
+#[test]
+fn parse_unary_prefix() {
+    assert_eq!(parse_str(" -a "), Ok(chain(var("a"), &[unary("neg")])));
 }
 
 #[test]
