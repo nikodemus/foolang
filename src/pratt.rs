@@ -103,6 +103,21 @@ enum TokenInfo {
     PositionalParameter(String),
 }
 
+impl Token {
+    fn operator(&self) -> &str {
+        match &self.info {
+            TokenInfo::Operator(name) => name.as_str(),
+            _ => panic!("Not an operator: {:?}", self),
+        }
+    }
+    fn error(self, problem: &'static str) -> Result<Expr, ParseError> {
+        Err(ParseError {
+            position: self.position,
+            problem,
+        })
+    }
+}
+
 fn parse_string(string: String) -> Result<Expr, ParseError> {
     Parser::new(Box::new(StringStream::new(string))).parse()
 }
@@ -165,20 +180,9 @@ impl Parser {
     }
     fn parse_prefix(&mut self) -> Result<Expr, ParseError> {
         let token = self.consume_token()?;
-        let precedence = self.token_precedence(&token);
         use TokenInfo::*;
         match token.info {
-            Cascade() => match &self.cascade {
-                None => Err(ParseError {
-                    position: token.position,
-                    problem: "Malformed cascade",
-                }),
-                Some(expr) => {
-                    let receiver = expr.to_owned();
-                    self.cascade = None;
-                    Ok(receiver)
-                }
-            },
+            Cascade() => self.parse_prefix_cascade(token),
             BlockBegin() => {
                 let mut args = vec![];
                 loop {
@@ -214,19 +218,7 @@ impl Parser {
                     })
                 }
             }
-            Operator(op) => {
-                let message = match op.as_str() {
-                    "-" => "neg",
-                    _ => {
-                        return Err(ParseError {
-                            position: token.position,
-                            problem: "Not a prefix operator",
-                        })
-                    }
-                };
-                let expr = self.parse_expression(precedence)?;
-                Ok(expr.unary(message.to_string()))
-            }
+            Operator(_) => self.parse_prefix_operator(token),
             Constant(literal) => Ok(Expr::Constant(literal)),
             Identifier(name) => Ok(Expr::Variable(name)),
             // Leading newline, ignore.
@@ -327,6 +319,27 @@ impl Parser {
                 })
             }
         }
+    }
+    fn parse_prefix_cascade(&mut self, token: Token) -> Result<Expr, ParseError> {
+        match &self.cascade {
+            None => Err(ParseError {
+                position: token.position,
+                problem: "Malformed cascade",
+            }),
+            Some(expr) => {
+                let receiver = expr.to_owned();
+                self.cascade = None;
+                Ok(receiver)
+            }
+        }
+    }
+    fn parse_prefix_operator(&mut self, token: Token) -> Result<Expr, ParseError> {
+        let message = match token.operator() {
+            "-" => "neg",
+            _ => return token.error("Not a prefix operator"),
+        };
+        let expr = self.parse_expression(self.token_precedence(&token))?;
+        Ok(expr.unary(message.to_string()))
     }
     fn next_precedence(&mut self) -> Result<usize, ParseError> {
         let token = self.peek_token()?;
