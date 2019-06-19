@@ -29,7 +29,7 @@ Timeboxing in releases of 50-200h of work.
 ### WIP: 0.1.1: Better Parser
 
 - [x] Integers
-- [ ] Floats
+- [x] Floats
 - [ ] "foo" Strings
 - [ ] """ Strings
 - [ ] String interpolation and literal $"strings"

@@ -11,6 +11,7 @@ struct ParseError {
 #[derive(Debug, PartialEq, Clone)]
 enum Literal {
     Decimal(i64),
+    Float(f64),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -122,6 +123,7 @@ struct Parser {
     chain_re: Regex,
     cascade_re: Regex,
     decimal_re: Regex,
+    float_re: Regex,
     operator_re: Regex,
     keyword_re: Regex,
     identifier_re: Regex,
@@ -141,6 +143,7 @@ impl Parser {
             chain_re: Regex::new(r"^--").unwrap(),
             cascade_re: Regex::new(r"^;").unwrap(),
             decimal_re: Regex::new(r"^[0-9]+").unwrap(),
+            float_re: Regex::new(r"^[0-9]+\.[0-9]+").unwrap(),
             operator_re: Regex::new(r"^[\-+*/%<>=^|&!\?]+").unwrap(),
             keyword_re: Regex::new(r"^[_a-zA-Z][_a-zA-Z0-9]*:").unwrap(),
             identifier_re: Regex::new(r"^[_a-zA-Z][_a-zA-Z0-9]*").unwrap(),
@@ -431,8 +434,14 @@ impl Parser {
                 info: Sequence(true),
             });
         }
+        // Must be before decimal.
+        if let Some(string) = self.stream.scan(&self.float_re) {
+            return Ok(Token {
+                position,
+                info: Constant(Literal::Float(string.parse().unwrap())),
+            });
+        }
         if let Some(string) = self.stream.scan(&self.decimal_re) {
-            // Asserting termination here would catch 123asd..
             return Ok(Token {
                 position,
                 info: Constant(Literal::Decimal(string.parse().unwrap())),
@@ -563,6 +572,11 @@ fn decimal(value: i64) -> Expr {
 }
 
 #[cfg(test)]
+fn float(value: f64) -> Expr {
+    Expr::Constant(Literal::Float(value))
+}
+
+#[cfg(test)]
 fn var(name: &str) -> Expr {
     Expr::Variable(name.to_string())
 }
@@ -599,6 +613,11 @@ fn keyword(name: &str, exprs: &[Expr]) -> Message {
 #[test]
 fn parse_decimal() {
     assert_eq!(parse_str(" 123 "), Ok(decimal(123)));
+}
+
+#[test]
+fn parse_float() {
+    assert_eq!(parse_str(" 123.123 "), Ok(float(123.123)));
 }
 
 #[test]
@@ -788,7 +807,7 @@ fn parse_block_with_args() {
     assert_eq!(
         parse_str("{ :a :b | a + b }"),
         Ok(Expr::Block(
-            vec!["a".as_string(), "b".as_string()],
+            vec!["a".to_string(), "b".to_string()],
             Box::new(chain(var("a"), &[binary("+", var("b"))]))
         ))
     );
