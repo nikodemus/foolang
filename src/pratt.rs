@@ -104,9 +104,10 @@ enum TokenInfo {
 }
 
 impl Token {
-    fn operator(&self) -> &str {
+    fn name(&self) -> &str {
         match &self.info {
             TokenInfo::Operator(name) => name.as_str(),
+            TokenInfo::Keyword(name) => name.as_str(),
             _ => panic!("Not an operator: {:?}", self),
         }
     }
@@ -192,16 +193,12 @@ impl Parser {
         }
     }
     fn parse(&mut self) -> Result<Expr, ParseError> {
-        let res = self.parse_expression(0);
-        // println!("parse() => {:?}", &res);
-        res
+        self.parse_expression(0)
     }
     fn parse_expression(&mut self, precedence: usize) -> Result<Expr, ParseError> {
         let mut expr = self.parse_prefix()?;
-        //println!("parse_prefix() => {:?}", &expr);
         while precedence < self.next_precedence()? {
             expr = self.parse_suffix(expr)?;
-            // println!("  parse_suffix() => {:?}", &expr);
         }
         Ok(expr)
     }
@@ -221,7 +218,6 @@ impl Parser {
     }
     fn parse_suffix(&mut self, left: Expr) -> Result<Expr, ParseError> {
         let token = self.consume_token()?;
-        let precedence = token.precedence();
         match token.info {
             TokenInfo::Identifier(name) => Ok(left.unary(name)),
             TokenInfo::Chain() => Ok(left),
@@ -229,24 +225,7 @@ impl Parser {
             TokenInfo::Cascade() => self.parse_suffix_cascade(left, token),
             TokenInfo::Operator(_) => self.parse_suffix_operator(left, token),
             // FIXME: refactor into a separate function.
-            TokenInfo::Keyword(name) => {
-                let mut args = vec![];
-                let mut selector = name;
-                loop {
-                    args.push(self.parse_expression(precedence)?);
-                    if let Token {
-                        position: _,
-                        info: TokenInfo::Keyword(next),
-                    } = self.peek_token()?
-                    {
-                        self.consume_token();
-                        selector.push_str(next.as_str());
-                    } else {
-                        break;
-                    }
-                }
-                Ok(left.keyword(selector, args))
-            }
+            TokenInfo::Keyword(_) => self.parse_suffix_keyword(left, token),
             TokenInfo::Eof() => token.error("Unexpected end of input"),
             _ => token.error("Not valid in suffix position."),
         }
@@ -271,27 +250,18 @@ impl Parser {
                 break;
             }
             println!("Bad block. Args={:?}, next={:?}", &args, &next);
-            return Err(ParseError {
-                position: next.position,
-                problem: "Malformed block argument",
-            });
+            return next.error("Malformed block argument");
         }
         let expr = self.parse_expression(token.precedence())?;
         if let TokenInfo::BlockEnd() = self.consume_token()?.info {
             Ok(Expr::Block(args, Box::new(expr)))
         } else {
-            Err(ParseError {
-                position: token.position,
-                problem: "Block not closed",
-            })
+            token.error("Block not closed")
         }
     }
     fn parse_prefix_cascade(&mut self, token: Token) -> Result<Expr, ParseError> {
         match &self.cascade {
-            None => Err(ParseError {
-                position: token.position,
-                problem: "Malformed cascade",
-            }),
+            None => token.error("Malformed cascade"),
             Some(expr) => {
                 let receiver = expr.to_owned();
                 self.cascade = None;
@@ -300,7 +270,7 @@ impl Parser {
         }
     }
     fn parse_prefix_operator(&mut self, token: Token) -> Result<Expr, ParseError> {
-        let message = match token.operator() {
+        let message = match token.name() {
             "-" => "neg",
             _ => return token.error("Not a prefix operator"),
         };
@@ -329,18 +299,33 @@ impl Parser {
                 }
                 _ => {
                     println!("Not a chain: {:?}", chain);
-                    return Err(ParseError {
-                        position,
-                        problem: "Invalid cascade",
-                    });
+                    return next.error("Invalid cascade");
                 }
             }
         }
         Ok(Expr::Cascade(Box::new(left.clone()), chains))
     }
+    fn parse_suffix_keyword(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
+        let mut args = vec![];
+        let mut selector = token.name().to_string();
+        loop {
+            args.push(self.parse_expression(token.precedence())?);
+            if let Token {
+                position: _,
+                info: TokenInfo::Keyword(next),
+            } = self.peek_token()?
+            {
+                self.consume_token();
+                selector.push_str(next.as_str());
+            } else {
+                break;
+            }
+        }
+        Ok(left.keyword(selector, args))
+    }
     fn parse_suffix_operator(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
         let right = self.parse_expression(token.precedence())?;
-        Ok(left.binary(token.operator().to_string(), right))
+        Ok(left.binary(token.name().to_string(), right))
     }
     fn parse_suffix_sequence(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
         let right = self.parse_expression(token.precedence())?;
