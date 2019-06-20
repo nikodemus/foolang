@@ -135,11 +135,12 @@ impl Token {
             TokenInfo::BlockEnd() => 0,
             TokenInfo::ParenBegin() => 0,
             TokenInfo::ParenEnd() => 0,
-            TokenInfo::Assign() => 1,
-            TokenInfo::Sequence(_) => 1,
-            TokenInfo::Cascade() => 2,
-            TokenInfo::Chain() => 3,
-            TokenInfo::Keyword(_) => 4,
+            TokenInfo::Bind() => 1,
+            TokenInfo::Assign() => 2,
+            TokenInfo::Sequence(_) => 2,
+            TokenInfo::Cascade() => 3,
+            TokenInfo::Chain() => 4,
+            TokenInfo::Keyword(_) => 5,
             // 10 is fallback for unknown operators
             TokenInfo::Operator(op) => match op.as_str() {
                 "=" => 20,
@@ -238,7 +239,7 @@ impl Parser {
             TokenInfo::BlockBegin() => self.parse_prefix_block(token),
             TokenInfo::ParenBegin() => self.parse_prefix_paren(token),
             TokenInfo::Operator(_) => self.parse_prefix_operator(token),
-            TokenInfo::Bind(_) => self.parse_prefix_bind(token),
+            TokenInfo::Bind() => self.parse_prefix_bind(token),
             // Leading newline, ignore.
             TokenInfo::Sequence(false) => self.parse_prefix(),
             TokenInfo::Eof() => token.error("Unexpected end of input"),
@@ -250,7 +251,7 @@ impl Parser {
         match token.info {
             TokenInfo::Identifier(name) => Ok(left.unary(name)),
             TokenInfo::Chain() => Ok(left),
-            TokenInfo::Assign(_) => self.parse_suffix_assign(left, token),
+            TokenInfo::Assign() => self.parse_suffix_assign(left, token),
             TokenInfo::Sequence(_) => self.parse_suffix_sequence(left, token),
             TokenInfo::Cascade() => self.parse_suffix_cascade(left, token),
             TokenInfo::Operator(_) => self.parse_suffix_operator(left, token),
@@ -272,16 +273,26 @@ impl Parser {
     }
     fn parse_prefix_bind(&mut self, token: Token) -> Result<Expr, ParseError> {
         let var = self.consume_token()?;
-        if let TokenInfo::Variable(name) = var.info() {
-            let next = self.consume_token()?;
-            if let TokenInfo::Assign() = next.info {
-                Ok(Expr::Bind(
-                    name.to_string(),
-                    self.parse_expression(token.precedence())?,
-                    self.parse_expression(token.precedence())?,
-                ))
+        if let TokenInfo::Identifier(name) = var.info {
+            let assign = self.consume_token()?;
+            if let TokenInfo::Assign() = assign.info {
+                let value = self.parse_expression(assign.precedence())?;
+                println!("let {} := {:?}", name, &value);
+                let seq = self.consume_token()?;
+                if let TokenInfo::Sequence(_) = seq.info {
+                    let body = self.parse_expression(token.precedence())?;
+                    println!("bind body: {:?}", &body);
+                    Ok(Expr::Bind(
+                        name.to_string(),
+                        Box::new(value),
+                        Box::new(body),
+                    ))
+                } else {
+                    println!("Got: {:?}", &seq);
+                    seq.error("Expected sequencing operator")
+                }
             } else {
-                next.error("Expected assignment operator")
+                assign.error("Expected assignment operator")
             }
         } else {
             var.error("Expected variable name")
@@ -340,6 +351,16 @@ impl Parser {
         match next.info {
             TokenInfo::ParenEnd() => Ok(expr),
             _ => token.error("Unmatched close parenthesis"),
+        }
+    }
+    fn parse_suffix_assign(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
+        if let Expr::Variable(name) = left {
+            Ok(Expr::Assign(
+                name,
+                Box::new(self.parse_expression(token.precedence())?),
+            ))
+        } else {
+            token.error("Invalid target for assignment")
         }
     }
     fn parse_suffix_cascade(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
@@ -477,6 +498,18 @@ impl Parser {
             return Ok(Token {
                 position,
                 info: Eof(),
+            });
+        }
+        if let Some(_) = self.stream.scan(&self.bind_re) {
+            return Ok(Token {
+                position,
+                info: Bind(),
+            });
+        }
+        if let Some(_) = self.stream.scan(&self.assign_re) {
+            return Ok(Token {
+                position,
+                info: Assign(),
             });
         }
         if let Some(_) = self.stream.scan(&self.paren_begin_re) {
@@ -921,5 +954,31 @@ fn parse_array() {
     assert_eq!(
         parse_str("[1,2,3]"),
         Ok(Expr::Array(vec![decimal(1), decimal(2), decimal(3)]))
+    );
+}
+
+#[test]
+fn parse_bind() {
+    assert_eq!(
+        parse_str("let x := 42, x foo, x + 1"),
+        Ok(Expr::Bind(
+            "x".to_string(),
+            Box::new(decimal(42)),
+            Box::new(Expr::Sequence(vec![
+                chain(var("x"), &[unary("foo")]),
+                chain(var("x"), &[binary("+", decimal(1))]),
+            ]))
+        ))
+    );
+}
+
+#[test]
+fn parse_assign() {
+    assert_eq!(
+        parse_str("x := 42, x"),
+        Ok(Expr::Sequence(vec![
+            Expr::Assign("x".to_string(), Box::new(decimal(42))),
+            var("x")
+        ]))
     );
 }
