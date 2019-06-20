@@ -32,6 +32,8 @@ enum Expr {
     Sequence(Vec<Expr>),
     Block(Vec<String>, Box<Expr>),
     Array(Vec<Expr>),
+    Bind(String, Box<Expr>, Box<Expr>),
+    Assign(String, Box<Expr>),
 }
 
 impl Expr {
@@ -106,6 +108,8 @@ enum TokenInfo {
     ParenEnd(),
     ArrayBegin(),
     ArrayEnd(),
+    Bind(),
+    Assign(),
 }
 
 impl Token {
@@ -131,6 +135,7 @@ impl Token {
             TokenInfo::BlockEnd() => 0,
             TokenInfo::ParenBegin() => 0,
             TokenInfo::ParenEnd() => 0,
+            TokenInfo::Assign() => 1,
             TokenInfo::Sequence(_) => 1,
             TokenInfo::Cascade() => 2,
             TokenInfo::Chain() => 3,
@@ -167,6 +172,8 @@ struct Parser {
     stream: Box<Stream>,
     lookahead: VecDeque<Token>,
     cascade: Option<Expr>,
+    bind_re: Regex,
+    assign_re: Regex,
     positional_parameter_re: Regex,
     array_begin_re: Regex,
     array_end_re: Regex,
@@ -192,6 +199,8 @@ impl Parser {
             lookahead: VecDeque::new(),
             cascade: None,
             positional_parameter_re: Regex::new(r"^:[_a-zA-Z][_a-zA-z0-9]*").unwrap(),
+            bind_re: Regex::new(r"^let ").unwrap(),
+            assign_re: Regex::new(r"^:=").unwrap(),
             array_begin_re: Regex::new(r"^\[").unwrap(),
             array_end_re: Regex::new(r"^\]").unwrap(),
             block_begin_re: Regex::new(r"^\{").unwrap(),
@@ -229,6 +238,7 @@ impl Parser {
             TokenInfo::BlockBegin() => self.parse_prefix_block(token),
             TokenInfo::ParenBegin() => self.parse_prefix_paren(token),
             TokenInfo::Operator(_) => self.parse_prefix_operator(token),
+            TokenInfo::Bind(_) => self.parse_prefix_bind(token),
             // Leading newline, ignore.
             TokenInfo::Sequence(false) => self.parse_prefix(),
             TokenInfo::Eof() => token.error("Unexpected end of input"),
@@ -240,10 +250,10 @@ impl Parser {
         match token.info {
             TokenInfo::Identifier(name) => Ok(left.unary(name)),
             TokenInfo::Chain() => Ok(left),
+            TokenInfo::Assign(_) => self.parse_suffix_assign(left, token),
             TokenInfo::Sequence(_) => self.parse_suffix_sequence(left, token),
             TokenInfo::Cascade() => self.parse_suffix_cascade(left, token),
             TokenInfo::Operator(_) => self.parse_suffix_operator(left, token),
-            // FIXME: refactor into a separate function.
             TokenInfo::Keyword(_) => self.parse_suffix_keyword(left, token),
             TokenInfo::Eof() => token.error("Unexpected end of input"),
             _ => token.error("Not valid in suffix position."),
@@ -253,14 +263,28 @@ impl Parser {
         let expr = self.parse_expression(token.precedence())?;
         let next = self.consume_token()?;
         match next.info {
-            TokenInfo::ArrayEnd() => {
-                println!("array of: {:?}", &expr);
-                match expr {
-                    Expr::Sequence(exprs) => Ok(Expr::Array(exprs)),
-                    _ => Ok(Expr::Array(vec![expr])),
-                }
-            }
+            TokenInfo::ArrayEnd() => match expr {
+                Expr::Sequence(exprs) => Ok(Expr::Array(exprs)),
+                _ => Ok(Expr::Array(vec![expr])),
+            },
             _ => token.error("Unmatched array start"),
+        }
+    }
+    fn parse_prefix_bind(&mut self, token: Token) -> Result<Expr, ParseError> {
+        let var = self.consume_token()?;
+        if let TokenInfo::Variable(name) = var.info() {
+            let next = self.consume_token()?;
+            if let TokenInfo::Assign() = next.info {
+                Ok(Expr::Bind(
+                    name.to_string(),
+                    self.parse_expression(token.precedence())?,
+                    self.parse_expression(token.precedence())?,
+                ))
+            } else {
+                next.error("Expected assignment operator")
+            }
+        } else {
+            var.error("Expected variable name")
         }
     }
     fn parse_prefix_block(&mut self, token: Token) -> Result<Expr, ParseError> {
