@@ -34,6 +34,7 @@ enum Expr {
     Array(Vec<Expr>),
     Bind(String, Box<Expr>, Box<Expr>),
     Assign(String, Box<Expr>),
+    Return(Box<Expr>),
 }
 
 impl Expr {
@@ -110,6 +111,7 @@ enum TokenInfo {
     ArrayEnd(),
     Bind(),
     Assign(),
+    Return(),
 }
 
 impl Token {
@@ -136,6 +138,7 @@ impl Token {
             TokenInfo::ParenBegin() => 0,
             TokenInfo::ParenEnd() => 0,
             TokenInfo::Bind() => 1,
+            TokenInfo::Return() => 2,
             TokenInfo::Assign() => 2,
             TokenInfo::Sequence(_) => 2,
             TokenInfo::Cascade() => 3,
@@ -173,6 +176,7 @@ struct Parser {
     stream: Box<Stream>,
     lookahead: VecDeque<Token>,
     cascade: Option<Expr>,
+    return_re: Regex,
     bind_re: Regex,
     assign_re: Regex,
     positional_parameter_re: Regex,
@@ -200,6 +204,7 @@ impl Parser {
             lookahead: VecDeque::new(),
             cascade: None,
             positional_parameter_re: Regex::new(r"^:[_a-zA-Z][_a-zA-z0-9]*").unwrap(),
+            return_re: Regex::new("^return ").unwrap(),
             bind_re: Regex::new(r"^let ").unwrap(),
             assign_re: Regex::new(r"^:=").unwrap(),
             array_begin_re: Regex::new(r"^\[").unwrap(),
@@ -234,6 +239,7 @@ impl Parser {
         match token.info {
             TokenInfo::Constant(literal) => Ok(Expr::Constant(literal)),
             TokenInfo::Identifier(name) => Ok(Expr::Variable(name)),
+            TokenInfo::Return() => self.parse_prefix_return(token),
             TokenInfo::Cascade() => self.parse_prefix_cascade(token),
             TokenInfo::ArrayBegin() => self.parse_prefix_array(token),
             TokenInfo::BlockBegin() => self.parse_prefix_block(token),
@@ -352,6 +358,10 @@ impl Parser {
             TokenInfo::ParenEnd() => Ok(expr),
             _ => token.error("Unmatched close parenthesis"),
         }
+    }
+    fn parse_prefix_return(&mut self, token: Token) -> Result<Expr, ParseError> {
+        let value = self.parse_expression(token.precedence())?;
+        Ok(Expr::Return(Box::new(value)))
     }
     fn parse_suffix_assign(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
         if let Expr::Variable(name) = left {
@@ -595,6 +605,12 @@ impl Parser {
             return Ok(Token {
                 position,
                 info: Keyword(string),
+            });
+        }
+        if let Some(_) = self.stream.scan(&self.return_re) {
+            return Ok(Token {
+                position,
+                info: Return(),
             });
         }
         if let Some(string) = self.stream.scan(&self.identifier_re) {
@@ -979,6 +995,17 @@ fn parse_assign() {
         Ok(Expr::Sequence(vec![
             Expr::Assign("x".to_string(), Box::new(decimal(42))),
             var("x")
+        ]))
+    );
+}
+
+#[test]
+fn parse_return() {
+    assert_eq!(
+        parse_str("return 42, 666"),
+        Ok(Expr::Sequence(vec![
+            Expr::Return(Box::new(decimal(42))),
+            decimal(666)
         ]))
     );
 }

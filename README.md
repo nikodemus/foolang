@@ -52,7 +52,7 @@ Timeboxing in releases of 50-200h of work.
       -> We know which instance variables a method requires immediately
          after a parse.
       -> We know if a variable is unbound when @method Foo bar ... is complete.
-- [ ] Return
+- [x] Return
 - [x] Arrays
 - [ ] Type annotations
 - [ ] Literal arrays
