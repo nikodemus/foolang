@@ -10,6 +10,10 @@ lessons from other languages to heart.
 Main purpose of a programming language is expression and communication of
 ideas. If it fails in this nothing else matters.
 
+To my mind this implies certain things:
+
+- Reading order should generally match execution order.
+
 ## Real Computers All The Way Down
 
 Alan Kay is full of wisdom. Here's one thing he said that I keep thinking about:
@@ -96,7 +100,7 @@ Timeboxing in releases of 50-200h of work.
       -> We know if a variable is unbound when @method Foo bar ... is complete.
 - [x] Return
 - [x] Arrays
-- [ ] Type annotations
+- [x] Type annotations
 - [ ] Literal arrays
 - [x] Parenthesis
 - [ ] # Comments

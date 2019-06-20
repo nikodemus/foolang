@@ -1,5 +1,12 @@
 # Foo The Language
 
+Semantically Foolang follows in the footsteps of Self, in that
+programs consist of nothing objects sending messages to each other.
+
+Except whereas in Self that is really true, Foolang backs away
+from the corner a bit: variables and returns are not first class
+values explained in terms of objects.
+
 Programs consist of definitions including a main program.
 
 Definitions are:
