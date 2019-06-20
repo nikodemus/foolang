@@ -3,7 +3,49 @@
 # foolang
 
 Foolang is a Smalltalk-inspired object language that tries to take some
-lessons from concatenative languages to heart.
+lessons from other languages to heart.
+
+## Pleasure to Write, Pleasure to Read
+
+Main purpose of a programming language is expression and communication of
+ideas. If it fails in this nothing else matters.
+
+## Real Computers All The Way Down
+
+Alan Kay is full of wisdom. Here's one thing he said that I keep thinking about:
+
+>  To me, one of the nice things about the semantics of real objects is that
+> they are "real computers all the way down (RCATWD)" -- this always retains
+> the full ability to represent anything. The old way quickly gets to two
+> things that aren't computers -- data and procedures -- and all of a sudden
+> the ability to defer optimizations and particular decisions in favour of
+> behaviours has been lost. In other words, always having real objects always
+> retains the ability to simulate anything you want, and to send it around the
+> planet."
+
+It took me a long time to appreciate this fully. The moment you start thinking
+about invoking methods instead of sending messages you're on the slippery slope
+that will lead you to eventually taking references to methods...
+
+Of course, Turing tells us the all computation is equivalent, but if that was
+the _whole_ truth we'd still be programming in binary.
+
+It's not about power. It's about ease and it's about how the language influences
+your thinking.
+
+## Efficiency
+
+Efficiency is a property of an implementation, not language, but since Foo is
+a one-person show at the moment, the question is: "Can I implement this
+efficiently now, with reasonable effort?"
+
+Success criteria here is matching speed of unoptimized C/C++ for basic
+benchmarks like recursive algorithms, numerics, and instance variable access while
+not being completely embarrassed by memory management overhead.
+
+Arbitrary Foolang code need not hit these targets: only code that has been
+written with efficiency in mind, and accepts C-like constraints on it, such
+as static types and modular arithmetic.
 
 ## Goals & Beliefs & Suspicions
 
