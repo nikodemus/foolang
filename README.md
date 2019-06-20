@@ -213,6 +213,9 @@ Estimated remaining: 110h
 
 ## References
 
+- 1973 - [Top Down Operator Precedence](papers/pratt.pdf) by Vaughan R. Pratt.
+  Foolang uses a Pratt-style parser.
+
 - Smalltalk-80: The Language and Its Implementation
   http://www.mirandabanda.org/bluebook/bluebook_imp_toc.html
 
