@@ -211,10 +211,38 @@ Estimated remaining: 110h
 - [ ] Class extensions. Est 20h.
 - [ ] Module system. Est 10h.
 
+## IDE
+
+I like the way Smalltalk IDE automate code organization.
+
+I don't like the way the question of presentation is entirely removed:
+if two methods are best understood when viewed next to each other then
+that should be the default mode of display.
+
+I think I would like Deuce-like views:
+
+- Selected methods of this class.
+- All methods with this selector.
+- All methods using thise selector.
+- All methods referring to this global.
+- Current method followed by selectors on self it invokes.
+
+Default presentation of a class is an interesting question.
+
+Documented methods first?
+
+Methods grouped by protocol?
+
+Methods mentioned in class docstring first?
+
 ## References
 
 - 1973 - [Top Down Operator Precedence](papers/pratt.pdf) by Vaughan R. Pratt.
-  Foolang uses a Pratt-style parser.
+  > Foolang uses a Pratt-style parser.
+
+- 2007 - [Open, extensible object models](papers/objmodel2.pdf) by Ian Piumarta and
+  Alessandro Warth.
+  > Hugely influential in the design of Foolang.
 
 - Smalltalk-80: The Language and Its Implementation
   http://www.mirandabanda.org/bluebook/bluebook_imp_toc.html
