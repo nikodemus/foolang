@@ -237,15 +237,16 @@ Methods mentioned in class docstring first?
 
 ## References
 
-- 1973 - [Top Down Operator Precedence](papers/pratt.pdf) by Vaughan R. Pratt.
+- 1973 - [Top Down Operator Precedence](papers/pratt.pdf) by Vaughan R. Pratt.  
   _Foolang uses a Pratt-style parser._
 
 - 1993 - [Strongtalk, Typechecking Smalltalk in a Production Environment](papers/strongtalk-typechecking.pdf) by Gilad Brancha and David Griswold.
 
 - 2007 - [Open, extensible object models](papers/objmodel2.pdf) by Ian Piumarta and
-  Alessandro Warth. _Hugely influential in the design of Foolang._
+  Alessandro Warth.  
+  _Hugely influential in the design of Foolang._
 
-- 2008 - [The Fortress Language Specification](papers/fortress-spec.pdf) by various.
+- 2008 - [The Fortress Language Specification](papers/fortress-spec.pdf) by various.  
   _Foolang has quite different design criteria than Fortress, but Fortress
   was an amazing design and well worth learning from._
 
