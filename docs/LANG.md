@@ -46,7 +46,7 @@ _Binary numbers_
 ```
 
 All integer literals additionally allow interleaving of underscore
-characters to make magnitude of large numbers easier to see. 
+characters to make magnitude of large numbers easier to see.
 
 ```
 100_000_000
@@ -56,54 +56,85 @@ characters to make magnitude of large numbers easier to see.
 0b0101_0101_0101_0101
 ```
 
-# Float literals
+### Float Literals
+
+Currently all floats are double-floats.
 
 ```
 1.123
-123123
-```
-$"This is a literal string: {} does nothing here."
-
-$"""This is very literal block string."""
-
-\#['literal' 'constant' 'array']
-\#literalSymbol
+1.0e6
 ```
 
-```
-"This is a string that could be interpolated but is not."
-"""This is a block string that could be interpolated but
-   is not.
-
-   Leading whitespace upto the indentation of the first
-   line is removed.
-
-   "Double quotes" can be embedded without escaping."""
-```
-
-### Array constructors
-
-Where every evaluation of an array literal returns the same array
-object, the array constructor expression creates a new array every
-time.
+### String Literals
 
 ```
-[ constructed . at . runtime ]
+$"Simple string literal. Newlines can be embedded as literals.
+"Doublequotes" are fine, Escape sequences are ignored. To
+embed a doublequote followed by a dollar sign use "$$ instead."$
+
+$"""Block string literal.
+   Whitespace upto start column of string proper is stripped.
+       Further whitespace is preserved.
+   Escape sequences like \n are ignored.
+   "Double quotes" can be used without escaping. To embed
+   a 3 x doublequote followed by a dollar sign use """$$ instead."""$
+```
+
+### String Interpolation
+
+If string interpolation syntax is used without embedding `{}` in the string
+the resulting object is a literal string.
+
+```
+"Hello {user name}! Escape sequences like \n do work.
+Newlines can be embedded too. \" is required to embed a
+doublequote, including the interpolated parts."
+
+"""Block string with interpolation: {"doublequotes" append " are fine!"}
+   Whitespace upto start column of string proper is stripped.
+       Further whitespace is preserved.
+   Escape sequences like \n work too."""
+```
+
+### Selector Literals
+
+Currently parser translates supported operators into selectors with alphanumeric
+names. The plan is to allow user extensions along the same lines.
+
+```
+$unarySelector
+
+$key:word:selector:
+
+$threeArgSelector:::
+```
+
+### Array Literals
+
+```
+$["literal", "constant", "array"]
+```
+
+### Array Constructor
+
+```
+[array, constructed, at, runtime]
 ```
 
 ### Messages
 
-In the following examples both the parenthesized and unparenthesized
-expressions mean the same thing.
-
 *Unary Messages*
 
-Unary message is a single word. Unary messages have the highest
+Unary message is a single word or a prefix symbol. Unary messages have the highest
 precedence.
 
 ```
 object messageOneToObject messageTwoToResultOfMessageOne
+
+-x
 ```
+
+XXX HERE XXX
 
 *Binary Messages*
 

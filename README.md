@@ -44,6 +44,14 @@ Timeboxing in releases of 50-200h of work.
 - [x] Prefix minus
 - [x] Let => bind(var, expr, body)
 - [x] Assign
+- [ ] ? Parse into GlobalVariable, LocalVariable, InstanceVariable, MethodParameter,
+      Uppercase is Global.
+      Locals are know to parser.
+      Method parameters are known to parser.
+      -> Rest are instance variables.
+      -> We know which instance variables a method requires immediately
+         after a parse.
+      -> We know if a variable is unbound when @method Foo bar ... is complete.
 - [ ] Return
 - [x] Arrays
 - [ ] Type annotations
@@ -55,12 +63,12 @@ Timeboxing in releases of 50-200h of work.
 - [ ] 'x' Characters
 - [ ] Selectors
 - [ ] Definitions
-- [ ] Replace the old parser
 - [ ] Nicer errors (two lines of context, put mark where the error is)
       001 foo,
       002 bar, ,quux
                ^-- Unexpected comma
       003 zot
+- [ ] Replace the old parser and support ast changes in evalutor
 
 ### Planned: 0.2.0: The IDE
 
