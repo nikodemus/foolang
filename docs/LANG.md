@@ -121,6 +121,24 @@ $["literal", "constant", "array"]
 [array, constructed, at, runtime]
 ```
 
+### Type Annotations
+
+Annotations can be applied to bindings, values, instance variables,
+and method signatures.
+
+Annotations that the compiler cannot prove are asserted at runtime.
+
+```
+let x <Int> := 42
+
+foo bar <Int> + 1
+
+@class Foo { bar <Int> }
+
+@method Foo bar: x <Int> -> <Int>
+   bar + x
+```
+
 ### Messages
 
 *Unary Messages*
