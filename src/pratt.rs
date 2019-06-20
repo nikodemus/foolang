@@ -35,6 +35,7 @@ enum Expr {
     Bind(String, Box<Expr>, Box<Expr>),
     Assign(String, Box<Expr>),
     Return(Box<Expr>),
+    Type(String, Box<Expr>),
 }
 
 impl Expr {
@@ -98,13 +99,14 @@ enum TokenInfo {
     Identifier(String),
     Keyword(String),
     Operator(String),
+    Type(String),
+    PositionalParameter(String),
+    Sequence(bool),
     Chain(),
     Cascade(),
     // true = comma, false = newline
-    Sequence(bool),
     BlockBegin(),
     BlockEnd(),
-    PositionalParameter(String),
     ParenBegin(),
     ParenEnd(),
     ArrayBegin(),
@@ -119,7 +121,8 @@ impl Token {
         match &self.info {
             TokenInfo::Operator(name) => name.as_str(),
             TokenInfo::Keyword(name) => name.as_str(),
-            _ => panic!("Not an operator: {:?}", self),
+            TokenInfo::Type(name) => name.as_str(),
+            _ => panic!("Token has no name: {:?}", self),
         }
     }
     fn error(self, problem: &'static str) -> Result<Expr, ParseError> {
@@ -176,6 +179,7 @@ struct Parser {
     stream: Box<Stream>,
     lookahead: VecDeque<Token>,
     cascade: Option<Expr>,
+    type_re: Regex,
     return_re: Regex,
     bind_re: Regex,
     assign_re: Regex,
@@ -204,6 +208,7 @@ impl Parser {
             lookahead: VecDeque::new(),
             cascade: None,
             positional_parameter_re: Regex::new(r"^:[_a-zA-Z][_a-zA-z0-9]*").unwrap(),
+            type_re: Regex::new("^<[A-Z][a-zA-Z0-9]*>").unwrap(),
             return_re: Regex::new("^return ").unwrap(),
             bind_re: Regex::new(r"^let ").unwrap(),
             assign_re: Regex::new(r"^:=").unwrap(),
@@ -257,6 +262,7 @@ impl Parser {
         match token.info {
             TokenInfo::Identifier(name) => Ok(left.unary(name)),
             TokenInfo::Chain() => Ok(left),
+            TokenInfo::Type(_) => self.parse_suffix_type(left, token),
             TokenInfo::Assign() => self.parse_suffix_assign(left, token),
             TokenInfo::Sequence(_) => self.parse_suffix_sequence(left, token),
             TokenInfo::Cascade() => self.parse_suffix_cascade(left, token),
@@ -437,6 +443,9 @@ impl Parser {
         }
         Ok(Expr::Sequence(expressions))
     }
+    fn parse_suffix_type(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
+        Ok(Expr::Type(token.name().to_string(), Box::new(left)))
+    }
     fn next_precedence(&mut self) -> Result<usize, ParseError> {
         Ok(self.peek_token()?.precedence())
     }
@@ -508,6 +517,12 @@ impl Parser {
             return Ok(Token {
                 position,
                 info: Eof(),
+            });
+        }
+        if let Some(name) = self.stream.scan(&self.type_re) {
+            return Ok(Token {
+                position,
+                info: Type(name[1..name.len() - 1].to_string()),
             });
         }
         if let Some(_) = self.stream.scan(&self.bind_re) {
@@ -1007,5 +1022,19 @@ fn parse_return() {
             Expr::Return(Box::new(decimal(42))),
             decimal(666)
         ]))
+    );
+}
+
+#[test]
+fn parse_type() {
+    assert_eq!(
+        parse_str("x <Int> + y <Int>"),
+        Ok(chain(
+            Expr::Type("Int".to_string(), Box::new(var("x"))),
+            &[binary(
+                "+",
+                Expr::Type("Int".to_string(), Box::new(var("y")))
+            )]
+        ))
     );
 }
