@@ -101,6 +101,7 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [x] Parenthesis
 - [x] Selectors
 - [x] Nicer errors (two lines of context, put mark where the error is)
+- [x] 'x' Characters
 - [ ] Literal arrays: unlike ST, don't change internal syntax?
 - [ ] { foo: x }
 - [ ] ${ foo: 42 }
@@ -109,7 +110,6 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [ ] $" Strings
 - [ ] $""" Strings
 - [ ] # Comments (attach to expressions)
-- [ ] 'x' Characters
 - [ ] Definitions
 - [ ] Parse into GlobalVariable, LocalVariable, InstanceVariable, MethodParameter,
       BlockParameter

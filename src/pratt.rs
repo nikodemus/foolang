@@ -20,6 +20,7 @@ enum Literal {
     Decimal(i64),
     Float(f64),
     Selector(String),
+    Character(char),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -181,6 +182,7 @@ struct Parser {
     stream: Box<Stream>,
     lookahead: VecDeque<Token>,
     cascade: Option<Expr>,
+    character_re: Regex,
     selector_re: Regex,
     type_re: Regex,
     return_re: Regex,
@@ -213,6 +215,7 @@ impl Parser {
             positional_parameter_re: Regex::new(r"^:[_a-zA-Z][_a-zA-z0-9]*").unwrap(),
             selector_re: Regex::new(r"^\$[_a-zA-Z][_a-zA-Z0-9]*(:[_a-zA-Z][_a-zA-Z0-9]*:)*")
                 .unwrap(),
+            character_re: Regex::new(r"^'.'").unwrap(),
             type_re: Regex::new("^<[A-Z][a-zA-Z0-9]*>").unwrap(),
             return_re: Regex::new("^return ").unwrap(),
             bind_re: Regex::new(r"^let ").unwrap(),
@@ -574,6 +577,19 @@ impl Parser {
                 position,
                 info: Sequence(true),
             });
+        }
+        if let Some(string) = self.stream.scan(&self.character_re) {
+            let mut chars = string.as_str().chars();
+            chars.next();
+            match chars.next() {
+                Some(ch) => {
+                    return Ok(Token {
+                        position,
+                        info: Constant(Literal::Character(ch)),
+                    })
+                }
+                None => return Err(self.error_at(position, "Invalid character")),
+            }
         }
         // Must be before decimal.
         if let Some(string) = self.stream.scan(&self.float_re) {
@@ -1119,5 +1135,13 @@ fn parse_selector() {
             Expr::Constant(Literal::Selector("foo".to_string())),
             Expr::Constant(Literal::Selector("bar:quux:".to_string()))
         ]))
+    );
+}
+
+#[test]
+fn parse_character() {
+    assert_eq!(
+        parse_str("'x'"),
+        Ok(Expr::Constant(Literal::Character('x')))
     );
 }
