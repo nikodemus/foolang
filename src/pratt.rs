@@ -21,6 +21,7 @@ enum Literal {
     Float(f64),
     Selector(String),
     Character(char),
+    String(String),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -182,6 +183,7 @@ struct Parser {
     stream: Box<Stream>,
     lookahead: VecDeque<Token>,
     cascade: Option<Expr>,
+    literal_string_re: Regex,
     character_re: Regex,
     selector_re: Regex,
     type_re: Regex,
@@ -215,6 +217,7 @@ impl Parser {
             positional_parameter_re: Regex::new(r"^:[_a-zA-Z][_a-zA-z0-9]*").unwrap(),
             selector_re: Regex::new(r"^\$[_a-zA-Z][_a-zA-Z0-9]*(:[_a-zA-Z][_a-zA-Z0-9]*:)*")
                 .unwrap(),
+            literal_string_re: Regex::new(r#"^\$""#).unwrap(),
             character_re: Regex::new(r"^'.'").unwrap(),
             type_re: Regex::new("^<[A-Z][a-zA-Z0-9]*>").unwrap(),
             return_re: Regex::new("^return ").unwrap(),
@@ -578,6 +581,9 @@ impl Parser {
                 info: Sequence(true),
             });
         }
+        if let Some(s) = self.stream.scan(&self.literal_string_re) {
+            return self.scan_literal_string(s);
+        }
         if let Some(string) = self.stream.scan(&self.character_re) {
             let mut chars = string.as_str().chars();
             chars.next();
@@ -699,6 +705,37 @@ impl Parser {
             problem,
             context: self.error_context(position, problem),
         }
+    }
+    fn scan_literal_string(&mut self, _: String) -> Result<Token, ParseError> {
+        let start0 = self.stream.position();
+        let mut start = start0;
+        let mut content = String::new();
+        loop {
+            let s = self.stream.str();
+            if s.len() == 0 {
+                return Err(self.error_at(start, "Unterminated string"));
+            }
+            if s.len() >= 2 && &s[..2] == r#""$"# {
+                if s.len() >= 3 && &s[..3] == r#""$$"# {
+                    self.stream.skip();
+                    self.stream.skip();
+                    content.push_str(&self.stream.as_str()[start..self.stream.position()]);
+                    self.stream.skip();
+                    start = self.stream.position();
+                    continue;
+                } else {
+                    break;
+                }
+            }
+            self.stream.skip();
+        }
+        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
+        self.stream.skip();
+        self.stream.skip();
+        Ok(Token {
+            position: start - 2,
+            info: TokenInfo::Constant(Literal::String(content)),
+        })
     }
 }
 
@@ -1143,5 +1180,13 @@ fn parse_character() {
     assert_eq!(
         parse_str("'x'"),
         Ok(Expr::Constant(Literal::Character('x')))
+    );
+}
+
+#[test]
+fn parse_literal_string() {
+    assert_eq!(
+        parse_str(r#" $"foo"$$"$ "#),
+        Ok(Expr::Constant(Literal::String(r#"foo"$"#.to_string())))
     );
 }

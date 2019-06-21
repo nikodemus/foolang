@@ -102,12 +102,12 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [x] Selectors
 - [x] Nicer errors (two lines of context, put mark where the error is)
 - [x] 'x' Characters
+- [x] $" Strings
 - [ ] Literal arrays: unlike ST, don't change internal syntax?
 - [ ] { foo: x }
 - [ ] ${ foo: 42 }
 - [ ] " Strings
 - [ ] """ Strings
-- [ ] $" Strings
 - [ ] $""" Strings
 - [ ] # Comments (attach to expressions)
 - [ ] Definitions
