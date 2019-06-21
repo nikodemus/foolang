@@ -12,7 +12,13 @@ ideas. If it fails in this nothing else matters.
 
 To my mind this implies certain things:
 
-- Reading order should generally match execution order.
+- Syntax should be minimal.
+- The closer the reading order matches the execution order the less
+  context one has to keep in mind.
+- One should be able to read code out loud easily.
+- The less named variables one needs to express oneself clearly the better.
+  Names do add clarity, and they are in general desirable -- but they
+  also impose a cognitive cost and are a barrier to refactoring.
 
 ## Real Computers All The Way Down
 
