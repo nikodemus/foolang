@@ -101,17 +101,14 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [x] Parenthesis
 - [x] Selectors
 - [x] Nicer errors (two lines of context, put mark where the error is)
-          001 foo,
-          002 bar, ,quux
-                   ^-- Unexpected comma
-          003 zot
-- [ ] Literal arrays
-- [ ] "foo" Strings
+- [ ] Literal arrays: unlike ST, don't change internal syntax?
+- [ ] { foo: x }
+- [ ] ${ foo: 42 }
+- [ ] " Strings
 - [ ] """ Strings
-- [ ] String interpolation and literal $"strings"
-- [ ] # Comments
-      Attach end-of-line comments to the previous expression
-      Attach block comments to the next expression
+- [ ] $" Strings
+- [ ] $""" Strings
+- [ ] # Comments (attach to expressions)
 - [ ] 'x' Characters
 - [ ] Definitions
 - [ ] Parse into GlobalVariable, LocalVariable, InstanceVariable, MethodParameter,
