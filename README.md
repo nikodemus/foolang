@@ -84,9 +84,6 @@ Support the full syntax I have in mind, provide reasonable errors.
 
 - [x] Integers
 - [x] Floats
-- [ ] "foo" Strings
-- [ ] """ Strings
-- [ ] String interpolation and literal $"strings"
 - [x] Unary messages
 - [x] Binary messages
 - [x] Keyword messages
@@ -98,31 +95,33 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [x] Prefix minus
 - [x] Let => bind(var, expr, body)
 - [x] Assign
-- [ ] ? Parse into GlobalVariable, LocalVariable, InstanceVariable, MethodParameter,
-      Uppercase is Global.
-      Locals are know to parser.
-      Method parameters are known to parser.
-      -> Rest are instance variables.
-      -> We know which instance variables a method requires immediately
-         after a parse.
-      -> We know if a variable is unbound when @method Foo bar ... is complete.
 - [x] Return
 - [x] Arrays
 - [x] Type annotations
-- [ ] Literal arrays
 - [x] Parenthesis
+- [x] Selectors
+- [x] Nicer errors (two lines of context, put mark where the error is)
+          001 foo,
+          002 bar, ,quux
+                   ^-- Unexpected comma
+          003 zot
+- [ ] Literal arrays
+- [ ] "foo" Strings
+- [ ] """ Strings
+- [ ] String interpolation and literal $"strings"
 - [ ] # Comments
       Attach end-of-line comments to the previous expression
       Attach block comments to the next expression
 - [ ] 'x' Characters
-- [ ] Selectors
 - [ ] Definitions
-- [x] Nicer errors (two lines of context, put mark where the error is)
-      001 foo,
-      002 bar, ,quux
-               ^-- Unexpected comma
-      003 zot
-- [ ] Replace the old parser and support ast changes in evalutor
+- [ ] Parse into GlobalVariable, LocalVariable, InstanceVariable, MethodParameter,
+      BlockParameter
+      - Uppercase is Global.
+      - Locals are know to parser.
+      - Parameters are lexically visible hence knowable to parser.
+      - Ergo: We know which instance variables a method requires immediately
+        after a parse, and if some are undefined.
+- [ ] Replace the old parser and support ast changes in evaluator
 
 ### Planned: 0.2.0: The IDE
 
