@@ -183,6 +183,7 @@ struct Parser {
     stream: Box<Stream>,
     lookahead: VecDeque<Token>,
     cascade: Option<Expr>,
+    literal_block_string_re: Regex,
     literal_string_re: Regex,
     character_re: Regex,
     selector_re: Regex,
@@ -217,6 +218,7 @@ impl Parser {
             positional_parameter_re: Regex::new(r"^:[_a-zA-Z][_a-zA-z0-9]*").unwrap(),
             selector_re: Regex::new(r"^\$[_a-zA-Z][_a-zA-Z0-9]*(:[_a-zA-Z][_a-zA-Z0-9]*:)*")
                 .unwrap(),
+            literal_block_string_re: Regex::new(r#"^\$""""#).unwrap(),
             literal_string_re: Regex::new(r#"^\$""#).unwrap(),
             character_re: Regex::new(r"^'.'").unwrap(),
             type_re: Regex::new("^<[A-Z][a-zA-Z0-9]*>").unwrap(),
@@ -581,6 +583,9 @@ impl Parser {
                 info: Sequence(true),
             });
         }
+        if let Some(s) = self.stream.scan(&self.literal_block_string_re) {
+            return self.scan_literal_block_string(s);
+        }
         if let Some(s) = self.stream.scan(&self.literal_string_re) {
             return self.scan_literal_string(s);
         }
@@ -706,6 +711,51 @@ impl Parser {
             context: self.error_context(position, problem),
         }
     }
+    fn scan_literal_block_string(&mut self, _: String) -> Result<Token, ParseError> {
+        let start0 = self.stream.position();
+        let col = self.stream.column();
+        let mut start = start0;
+        let mut content = String::new();
+        loop {
+            let s = self.stream.str();
+            if s.len() == 0 {
+                return Err(self.error_at(start, "Unterminated string"));
+            }
+            if &s[0..1] == "\n" {
+                content.push_str(&self.stream.as_str()[start..=self.stream.position()]);
+                self.stream.skip();
+                for _ in 0..col {
+                    self.stream.skip();
+                }
+                start = self.stream.position();
+                continue;
+            }
+            if s.len() >= 4 && &s[..4] == r#""""$"# {
+                if s.len() >= 5 && &s[..5] == r#""""$$"# {
+                    self.stream.skip();
+                    self.stream.skip();
+                    self.stream.skip();
+                    self.stream.skip();
+                    content.push_str(&self.stream.as_str()[start..self.stream.position()]);
+                    self.stream.skip();
+                    start = self.stream.position();
+                    continue;
+                } else {
+                    break;
+                }
+            }
+            self.stream.skip();
+        }
+        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
+        self.stream.skip();
+        self.stream.skip();
+        self.stream.skip();
+        self.stream.skip();
+        Ok(Token {
+            position: start - 4,
+            info: TokenInfo::Constant(Literal::String(content)),
+        })
+    }
     fn scan_literal_string(&mut self, _: String) -> Result<Token, ParseError> {
         let start0 = self.stream.position();
         let mut start = start0;
@@ -740,6 +790,7 @@ impl Parser {
 }
 
 trait Stream {
+    fn column(&self) -> usize;
     fn position(&self) -> usize;
     fn at_eof(&self) -> bool;
     fn at_eol(&self) -> bool;
@@ -780,6 +831,15 @@ impl Stream for StringStream {
                 Some(self.string_from(start))
             }
             None => None,
+        }
+    }
+    fn column(&self) -> usize {
+        let mut prev = self.position;
+        loop {
+            if prev == 0 || &self.string[prev..prev + 1] == "\n" {
+                return self.position - prev;
+            }
+            prev -= 1;
         }
     }
     fn position(&self) -> usize {
@@ -1188,5 +1248,16 @@ fn parse_literal_string() {
     assert_eq!(
         parse_str(r#" $"foo"$$"$ "#),
         Ok(Expr::Constant(Literal::String(r#"foo"$"#.to_string())))
+    );
+}
+
+#[test]
+fn parse_literal_block_string() {
+    assert_eq!(
+        parse_str(
+            r#"   $"""foo
+       bar"""$"#
+        ),
+        Ok(Expr::Constant(Literal::String("foo\nbar".to_string())))
     );
 }

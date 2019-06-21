@@ -103,12 +103,12 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [x] Nicer errors (two lines of context, put mark where the error is)
 - [x] 'x' Characters
 - [x] $" Strings
+- [x] $""" Strings
 - [ ] Literal arrays: unlike ST, don't change internal syntax?
 - [ ] { foo: x }
 - [ ] ${ foo: 42 }
 - [ ] " Strings
 - [ ] """ Strings
-- [ ] $""" Strings
 - [ ] # Comments (attach to expressions)
 - [ ] Definitions
 - [ ] Parse into GlobalVariable, LocalVariable, InstanceVariable, MethodParameter,
