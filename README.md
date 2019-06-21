@@ -74,6 +74,8 @@ Timeboxing in releases of 50-200h of work.
 
 ### WIP: 0.1.1: Better Parser
 
+Support the full syntax I have in mind, provide reasonable errors.
+
 - [x] Integers
 - [x] Floats
 - [ ] "foo" Strings
@@ -109,7 +111,7 @@ Timeboxing in releases of 50-200h of work.
 - [ ] 'x' Characters
 - [ ] Selectors
 - [ ] Definitions
-- [ ] Nicer errors (two lines of context, put mark where the error is)
+- [x] Nicer errors (two lines of context, put mark where the error is)
       001 foo,
       002 bar, ,quux
                ^-- Unexpected comma

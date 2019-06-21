@@ -2,10 +2,17 @@ use regex::Regex;
 
 use std::borrow::ToOwned;
 use std::collections::VecDeque;
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 struct ParseError {
     position: usize,
     problem: &'static str,
+    context: String,
+}
+
+impl std::fmt::Debug for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "ParseError at {}:\n{}", self.position, self.context)
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -124,12 +131,6 @@ impl Token {
             TokenInfo::Type(name) => name.as_str(),
             _ => panic!("Token has no name: {:?}", self),
         }
-    }
-    fn error(self, problem: &'static str) -> Result<Expr, ParseError> {
-        Err(ParseError {
-            position: self.position,
-            problem,
-        })
     }
     fn precedence(&self) -> usize {
         match &self.info {
@@ -253,8 +254,8 @@ impl Parser {
             TokenInfo::Bind() => self.parse_prefix_bind(token),
             // Leading newline, ignore.
             TokenInfo::Sequence(false) => self.parse_prefix(),
-            TokenInfo::Eof() => token.error("Unexpected end of input"),
-            _ => token.error("Not a value expression"),
+            TokenInfo::Eof() => self.error(token, "Unexpected end of input"),
+            _ => self.error(token, "Not a value expression"),
         }
     }
     fn parse_suffix(&mut self, left: Expr) -> Result<Expr, ParseError> {
@@ -268,8 +269,8 @@ impl Parser {
             TokenInfo::Cascade() => self.parse_suffix_cascade(left, token),
             TokenInfo::Operator(_) => self.parse_suffix_operator(left, token),
             TokenInfo::Keyword(_) => self.parse_suffix_keyword(left, token),
-            TokenInfo::Eof() => token.error("Unexpected end of input"),
-            _ => token.error("Not valid in suffix position."),
+            TokenInfo::Eof() => self.error(token, "Unexpected end of input"),
+            _ => self.error(token, "Not valid in suffix position."),
         }
     }
     fn parse_prefix_array(&mut self, token: Token) -> Result<Expr, ParseError> {
@@ -280,7 +281,7 @@ impl Parser {
                 Expr::Sequence(exprs) => Ok(Expr::Array(exprs)),
                 _ => Ok(Expr::Array(vec![expr])),
             },
-            _ => token.error("Unmatched array start"),
+            _ => self.error(token, "Unmatched array start"),
         }
     }
     fn parse_prefix_bind(&mut self, token: Token) -> Result<Expr, ParseError> {
@@ -301,13 +302,13 @@ impl Parser {
                     ))
                 } else {
                     println!("Got: {:?}", &seq);
-                    seq.error("Expected sequencing operator")
+                    self.error(seq, "Expected sequencing operator")
                 }
             } else {
-                assign.error("Expected assignment operator")
+                self.error(assign, "Expected assignment operator")
             }
         } else {
-            var.error("Expected variable name")
+            self.error(var, "Expected variable name")
         }
     }
     fn parse_prefix_block(&mut self, token: Token) -> Result<Expr, ParseError> {
@@ -317,11 +318,11 @@ impl Parser {
             match next.info {
                 TokenInfo::PositionalParameter(name) => {
                     args.push(name);
-                    self.consume_token();
+                    self.consume_token()?;
                     continue;
                 }
                 TokenInfo::Operator(ref op) if "|" == op.as_str() => {
-                    self.consume_token();
+                    self.consume_token()?;
                     break;
                 }
                 _ => {}
@@ -330,18 +331,18 @@ impl Parser {
                 break;
             }
             println!("Bad block. Args={:?}, next={:?}", &args, &next);
-            return next.error("Malformed block argument");
+            return self.error(next, "Malformed block argument");
         }
         let expr = self.parse_expression(token.precedence())?;
         if let TokenInfo::BlockEnd() = self.consume_token()?.info {
             Ok(Expr::Block(args, Box::new(expr)))
         } else {
-            token.error("Block not closed")
+            self.error(token, "Block not closed")
         }
     }
     fn parse_prefix_cascade(&mut self, token: Token) -> Result<Expr, ParseError> {
         match &self.cascade {
-            None => token.error("Malformed cascade"),
+            None => self.error(token, "Malformed cascade"),
             Some(expr) => {
                 let receiver = expr.to_owned();
                 self.cascade = None;
@@ -352,7 +353,7 @@ impl Parser {
     fn parse_prefix_operator(&mut self, token: Token) -> Result<Expr, ParseError> {
         let message = match token.name() {
             "-" => "neg",
-            _ => return token.error("Not a prefix operator"),
+            _ => return self.error(token, "Not a prefix operator"),
         };
         let expr = self.parse_expression(token.precedence())?;
         Ok(expr.unary(message.to_string()))
@@ -362,7 +363,7 @@ impl Parser {
         let next = self.consume_token()?;
         match next.info {
             TokenInfo::ParenEnd() => Ok(expr),
-            _ => token.error("Unmatched close parenthesis"),
+            _ => self.error(token, "Unmatched close parenthesis"),
         }
     }
     fn parse_prefix_return(&mut self, token: Token) -> Result<Expr, ParseError> {
@@ -376,7 +377,7 @@ impl Parser {
                 Box::new(self.parse_expression(token.precedence())?),
             ))
         } else {
-            token.error("Invalid target for assignment")
+            self.error(token, "Invalid target for assignment")
         }
     }
     fn parse_suffix_cascade(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
@@ -388,7 +389,6 @@ impl Parser {
             if TokenInfo::Cascade() != next.info {
                 break;
             }
-            let position = next.position;
             // Need to wrap in cascade in case this is a chain,
             // which would then accumulate the cascaded messages.
             let mark = Expr::Variable("(cascade)".to_string());
@@ -401,7 +401,7 @@ impl Parser {
                 }
                 _ => {
                     println!("Not a chain: {:?}", chain);
-                    return next.error("Invalid cascade");
+                    return self.error(token, "Invalid cascade");
                 }
             }
         }
@@ -417,7 +417,7 @@ impl Parser {
                 info: TokenInfo::Keyword(next),
             } = self.peek_token()?
             {
-                self.consume_token();
+                self.consume_token()?;
                 selector.push_str(next.as_str());
             } else {
                 break;
@@ -487,10 +487,7 @@ impl Parser {
             if let Sequence(false) = next.info {
                 return self.parse_token();
             } else {
-                return Err(ParseError {
-                    position,
-                    problem: "End-of-line escape not at end of line",
-                });
+                return Err(self.error_at(position, "End-of-line escape not at end of line"));
             }
         }
         if newline {
@@ -634,10 +631,53 @@ impl Parser {
                 info: Identifier(string),
             });
         }
-        Err(ParseError {
+        Err(self.error_at(position, "Invalid token"))
+    }
+    fn error(&self, token: Token, problem: &'static str) -> Result<Expr, ParseError> {
+        Err(self.error_at(token.position, problem))
+    }
+    fn error_context(&self, position: usize, problem: &str) -> String {
+        fn append_line(ctx: &mut String, n: usize, line: &str) {
+            if n == 0 {
+                ctx.push_str(format!("    {}\n", line).as_str());
+            } else {
+                ctx.push_str(format!("{:03} {}\n", n, line).as_str());
+            }
+        }
+        let mut context = String::new();
+        let mut prev = "";
+        let mut lineno = 1;
+        let mut start = 0;
+        for line in self.stream.as_str().lines() {
+            if start > position {
+                // Line after the problem -- done.
+                append_line(&mut context, lineno, line);
+                break;
+            }
+            let end = start + line.len();
+            if end > position {
+                // Line with the problem.
+                if prev.len() > 0 {
+                    append_line(&mut context, lineno - 1, prev);
+                }
+                append_line(&mut context, lineno, line);
+                let mut mark = String::from_utf8(vec![b' '; position - start - 1]).unwrap();
+                mark.push_str("^-- ");
+                mark.push_str(problem);
+                append_line(&mut context, 0, mark.as_str());
+            }
+            prev = line;
+            start = end + 1;
+            lineno += 1;
+        }
+        return context;
+    }
+    fn error_at(&self, position: usize, problem: &'static str) -> ParseError {
+        ParseError {
             position,
-            problem: "Invalid token",
-        })
+            problem,
+            context: self.error_context(position, problem),
+        }
     }
 }
 
@@ -649,6 +689,7 @@ trait Stream {
     fn at_whitespace(&self) -> bool;
     fn str(&self) -> &str;
     fn charstr(&self) -> &str;
+    fn as_str(&self) -> &str;
     fn string_from(&self, start: usize) -> String;
     fn scan(&mut self, re: &Regex) -> Option<String>;
     fn rewind(&mut self, position: usize);
@@ -700,6 +741,9 @@ impl Stream for StringStream {
     }
     fn str(&self) -> &str {
         &self.string[self.position..]
+    }
+    fn as_str(&self) -> &str {
+        &self.string[..]
     }
     fn at_whitespace(&self) -> bool {
         if self.at_eof() {
@@ -920,6 +964,29 @@ fn parse_cascade() {
                 vec![unary("do"), unary("thing"),]
             ]
         ))
+    );
+}
+
+#[test]
+fn parse_error_context() {
+    assert_eq!(
+        // This is not like smalltalk cascade!
+        parse_str(
+            "obj zoo
+                   ; foo: x bar!: y -- zot
+                   ; do thing
+                   "
+        ),
+        Err(ParseError {
+            position: 40,
+            problem: "Invalid token",
+            context: "001 obj zoo
+002                    ; foo: x bar!: y -- zot
+                                   ^-- Invalid token
+003                    ; do thing
+"
+            .to_string()
+        })
     );
 }
 
