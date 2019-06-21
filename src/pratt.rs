@@ -19,6 +19,7 @@ impl std::fmt::Debug for ParseError {
 enum Literal {
     Decimal(i64),
     Float(f64),
+    Selector(String),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -180,6 +181,7 @@ struct Parser {
     stream: Box<Stream>,
     lookahead: VecDeque<Token>,
     cascade: Option<Expr>,
+    selector_re: Regex,
     type_re: Regex,
     return_re: Regex,
     bind_re: Regex,
@@ -209,6 +211,8 @@ impl Parser {
             lookahead: VecDeque::new(),
             cascade: None,
             positional_parameter_re: Regex::new(r"^:[_a-zA-Z][_a-zA-z0-9]*").unwrap(),
+            selector_re: Regex::new(r"^\$[_a-zA-Z][_a-zA-Z0-9]*(:[_a-zA-Z][_a-zA-Z0-9]*:)*")
+                .unwrap(),
             type_re: Regex::new("^<[A-Z][a-zA-Z0-9]*>").unwrap(),
             return_re: Regex::new("^return ").unwrap(),
             bind_re: Regex::new(r"^let ").unwrap(),
@@ -290,18 +294,15 @@ impl Parser {
             let assign = self.consume_token()?;
             if let TokenInfo::Assign() = assign.info {
                 let value = self.parse_expression(assign.precedence())?;
-                println!("let {} := {:?}", name, &value);
                 let seq = self.consume_token()?;
                 if let TokenInfo::Sequence(_) = seq.info {
                     let body = self.parse_expression(token.precedence())?;
-                    println!("bind body: {:?}", &body);
                     Ok(Expr::Bind(
                         name.to_string(),
                         Box::new(value),
                         Box::new(body),
                     ))
                 } else {
-                    println!("Got: {:?}", &seq);
                     self.error(seq, "Expected sequencing operator")
                 }
             } else {
@@ -330,7 +331,6 @@ impl Parser {
             if args.is_empty() {
                 break;
             }
-            println!("Bad block. Args={:?}, next={:?}", &args, &next);
             return self.error(next, "Malformed block argument");
         }
         let expr = self.parse_expression(token.precedence())?;
@@ -400,7 +400,6 @@ impl Parser {
                     chains.push(messages);
                 }
                 _ => {
-                    println!("Not a chain: {:?}", chain);
                     return self.error(token, "Invalid cascade");
                 }
             }
@@ -611,6 +610,12 @@ impl Parser {
             return Ok(Token {
                 position,
                 info: Operator(string),
+            });
+        }
+        if let Some(string) = self.stream.scan(&self.selector_re) {
+            return Ok(Token {
+                position,
+                info: Constant(Literal::Selector(string[1..].to_string())),
             });
         }
         if let Some(string) = self.stream.scan(&self.keyword_re) {
@@ -1103,5 +1108,16 @@ fn parse_type() {
                 Expr::Type("Int".to_string(), Box::new(var("y")))
             )]
         ))
+    );
+}
+
+#[test]
+fn parse_selector() {
+    assert_eq!(
+        parse_str("[$foo, $bar:quux:] "),
+        Ok(Expr::Array(vec![
+            Expr::Constant(Literal::Selector("foo".to_string())),
+            Expr::Constant(Literal::Selector("bar:quux:".to_string()))
+        ]))
     );
 }
