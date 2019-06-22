@@ -32,13 +32,8 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [x] 'x' Characters
 - [x] $" Strings
 - [x] $""" Strings
+- [x] " Strings
 - [ ] :::: methods
-- [ ] " Strings
-      Two options for interpolation:
-      1. Tokenize into InterpolationStart ... InterpolationEnd.
-         ...to work a single parse_token would need to be able
-         to generate multiple tokens.
-      2. Tokenize into String, then re-tokenize during parse.
 - [ ] """ Strings
 - [ ] Literal arrays: unlike ST, don't change internal syntax?
 - [ ] { foo: x }

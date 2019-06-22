@@ -128,12 +128,13 @@ enum TokenInfo {
 }
 
 impl Token {
-    fn name(&self) -> &str {
+    fn str(&self) -> &str {
         match &self.info {
             TokenInfo::Operator(name) => name.as_str(),
             TokenInfo::Keyword(name) => name.as_str(),
             TokenInfo::Type(name) => name.as_str(),
-            _ => panic!("Token has no name: {:?}", self),
+            TokenInfo::InterpolatedString(string) => string.as_str(),
+            _ => panic!("Token has no string content: {:?}", self),
         }
     }
     fn precedence(&self) -> usize {
@@ -172,16 +173,23 @@ impl Token {
     }
 }
 
-fn parse_stream(stream: Box<Stream>) -> Result<Expr, ParseError> {
-    Parser::new(stream).parse()
+fn parse_stream(stream: Box<Stream>, allow_incomplete: bool) -> Result<(Expr, usize), ParseError> {
+    Parser::new(stream).parse(allow_incomplete)
 }
 
-fn parse_string(string: String) -> Result<Expr, ParseError> {
-    parse_stream(Box::new(StringStream::new(string)))
+fn parse_string(string: String, allow_incomplete: bool) -> Result<(Expr, usize), ParseError> {
+    parse_stream(Box::new(StringStream::new(string)), allow_incomplete)
 }
 
 fn parse_str(str: &str) -> Result<Expr, ParseError> {
-    parse_string(str.to_string())
+    match parse_string(str.to_string(), false) {
+        Ok((expr, _)) => Ok(expr),
+        Err(err) => Err(err),
+    }
+}
+
+fn partial_parse_str(str: &str) -> Result<(Expr, usize), ParseError> {
+    parse_string(str.to_string(), true)
 }
 
 struct Parser {
@@ -249,8 +257,14 @@ impl Parser {
             identifier_re: Regex::new(r"^[_a-zA-Z][_a-zA-Z0-9]*").unwrap(),
         }
     }
-    fn parse(&mut self) -> Result<Expr, ParseError> {
-        self.parse_expression(0)
+    fn parse(&mut self, allow_incomplete: bool) -> Result<(Expr, usize), ParseError> {
+        let expr = self.parse_expression(0)?;
+        let pos = self.peek_token()?.position;
+        if self.stream.at_eof() || allow_incomplete {
+            Ok((expr, pos))
+        } else {
+            Err(self.error_at(pos, "Incomplete parse"))
+        }
     }
     fn parse_expression(&mut self, precedence: usize) -> Result<Expr, ParseError> {
         let mut expr = self.parse_prefix()?;
@@ -367,30 +381,61 @@ impl Parser {
         }
     }
     fn parse_prefix_interpolated_string(&mut self, token: Token) -> Result<Expr, ParseError> {
-        unimplemented!("interpolated strings");
-        let mut stream = StringStream::new(token.string());
-        let mut expressions = vec![];
-        let mut string = String::new();
-        loop {
-            if stream.at_eof() {
-                break;
+        fn append(expr: Expr, string: &str) -> Expr {
+            if string.is_empty() {
+                return expr;
             }
-            if &stream.charstr() == "{" {
-                let p = stream.position();
-                stream.skip(1);
-                expressions.push(stream.parse()?);
-                if &stream.charstr() != "}" {
-                    return self.error(p, "Unterminated interpolation in string")
+            match expr {
+                Expr::Constant(Literal::String(mut orig)) => {
+                    orig.push_str(string);
+                    Expr::Constant(Literal::String(orig))
                 }
-                match  {
-                    Expr::Constant(Literal::St)
-                }
-                parse_stream(Box::new(stream.clone()));
+                _ => expr.keyword(
+                    "append:".to_string(),
+                    vec![Expr::Constant(Literal::String(string.to_string()))],
+                ),
             }
         }
+        let mut stream = StringStream::new(token.str().to_string());
+        let mut expr = Expr::Constant(Literal::String("".to_string()));
+        let mut start = 0;
+        loop {
+            if stream.at_eof() {
+                expr = append(expr, &stream.as_str()[start..stream.position()]);
+                break;
+            }
+            if stream.charstr() == "{" {
+                expr = append(expr, &stream.as_str()[start..stream.position()]);
+                stream.skip(1);
+                let (part, end) = match partial_parse_str(stream.str()) {
+                    Ok(res) => res,
+                    Err(err) => {
+                        return Err(self.error_at(stream.position() + err.position, err.problem));
+                    }
+                };
+                let pos = stream.position() + end;
+                expr = match expr {
+                    Expr::Constant(Literal::String(ref s)) if s.is_empty() => {
+                        part.unary("toString".to_string())
+                    }
+                    _ => expr.keyword(
+                        "append:".to_string(),
+                        vec![part.unary("toString".to_string())],
+                    ),
+                };
+                stream.seek(pos);
+                if stream.charstr() != "}" {
+                    println!("start: {}, end: {}", start, stream.str());
+                    return Err(self.error_at(start, "Unterminated interpolation"));
+                }
+                start = pos + 1;
+            }
+            stream.skip(1);
+        }
+        Ok(expr)
     }
     fn parse_prefix_operator(&mut self, token: Token) -> Result<Expr, ParseError> {
-        let message = match token.name() {
+        let message = match token.str() {
             "-" => "neg",
             _ => return self.error(token, "Not a prefix operator"),
         };
@@ -447,7 +492,7 @@ impl Parser {
     }
     fn parse_suffix_keyword(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
         let mut args = vec![];
-        let mut selector = token.name().to_string();
+        let mut selector = token.str().to_string();
         loop {
             args.push(self.parse_expression(token.precedence())?);
             if let Token {
@@ -465,7 +510,7 @@ impl Parser {
     }
     fn parse_suffix_operator(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
         let right = self.parse_expression(token.precedence())?;
-        Ok(left.binary(token.name().to_string(), right))
+        Ok(left.binary(token.str().to_string(), right))
     }
     fn parse_suffix_sequence(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
         let right = self.parse_expression(token.precedence())?;
@@ -482,7 +527,7 @@ impl Parser {
         Ok(Expr::Sequence(expressions))
     }
     fn parse_suffix_type(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
-        Ok(Expr::Type(token.name().to_string(), Box::new(left)))
+        Ok(Expr::Type(token.str().to_string(), Box::new(left)))
     }
     fn next_precedence(&mut self) -> Result<usize, ParseError> {
         Ok(self.peek_token()?.precedence())
@@ -541,7 +586,7 @@ impl Parser {
                 Operator(_) => {}
                 _ => return Ok(next),
             }
-            self.stream.rewind(mark);
+            self.stream.seek(mark);
             return Ok(Token {
                 position,
                 info: Sequence(false),
@@ -727,7 +772,14 @@ impl Parser {
                     append_line(&mut context, lineno - 1, prev);
                 }
                 append_line(&mut context, lineno, line);
-                let mut mark = String::from_utf8(vec![b' '; position - start - 1]).unwrap();
+                let span = if position < start + 1 {
+                    0
+                } else {
+                    position - start - 1
+                };
+                // XXX some bug here
+                println!("pos = {}, start = {}", position, start);
+                let mut mark = String::from_utf8(vec![b' '; span]).unwrap();
                 mark.push_str("^-- ");
                 mark.push_str(problem);
                 append_line(&mut context, 0, mark.as_str());
@@ -893,7 +945,7 @@ trait Stream {
     fn as_str(&self) -> &str;
     fn string_from(&self, start: usize) -> String;
     fn scan(&mut self, re: &Regex) -> Option<String>;
-    fn rewind(&mut self, position: usize);
+    fn seek(&mut self, position: usize);
 }
 
 struct StringStream {
@@ -911,7 +963,7 @@ impl StringStream {
 }
 
 impl Stream for StringStream {
-    fn rewind(&mut self, position: usize) {
+    fn seek(&mut self, position: usize) {
         self.position = position;
     }
     fn scan(&mut self, re: &Regex) -> Option<String> {
@@ -1360,5 +1412,40 @@ fn parse_interpolated_string_no_interpolation() {
     assert_eq!(
         parse_str(r#" "foo bar" "#),
         Ok(Expr::Constant(Literal::String("foo bar".to_string())))
+    );
+}
+
+#[test]
+fn parse_interpolated_string_simple_interpolation() {
+    assert_eq!(
+        parse_str(r#" "foo {42} bar" "#),
+        Ok(chain(
+            Expr::Constant(Literal::String("foo ".to_string())),
+            &[
+                keyword("append:", &[chain(decimal(42), &[unary("toString")])]),
+                keyword(
+                    "append:",
+                    &[Expr::Constant(Literal::String(" bar".to_string()))]
+                )
+            ]
+        ))
+    );
+}
+
+#[test]
+fn parse_interpolated_string_head_and_tail() {
+    assert_eq!(
+        parse_str(r#" "{1} bar {2}" "#),
+        Ok(chain(
+            decimal(1),
+            &[
+                unary("toString"),
+                keyword(
+                    "append:",
+                    &[Expr::Constant(Literal::String(" bar ".to_string()))]
+                ),
+                keyword("append:", &[chain(decimal(2), &[unary("toString")])])
+            ]
+        ))
     );
 }
