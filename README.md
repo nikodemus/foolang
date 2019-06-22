@@ -36,6 +36,8 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [ ] " Strings
       Two options for interpolation:
       1. Tokenize into InterpolationStart ... InterpolationEnd.
+         ...to work a single parse_token would need to be able
+         to generate multiple tokens.
       2. Tokenize into String, then re-tokenize during parse.
 - [ ] """ Strings
 - [ ] Literal arrays: unlike ST, don't change internal syntax?
@@ -241,6 +243,9 @@ Methods mentioned in class docstring first?
   was an amazing design and well worth learning from._
 
 ## Notes
+
+- https://github.com/microsoft/mimalloc
+- https://www.microsoft.com/en-us/research/uploads/prod/2019/06/mimalloc-tr-v1.pdf
 
 - Various browser editor components
   - Rich text: https://quilljs.com/guides/why-quill/

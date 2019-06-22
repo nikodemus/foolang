@@ -271,7 +271,7 @@ impl Parser {
             TokenInfo::ParenBegin() => self.parse_prefix_paren(token),
             TokenInfo::Operator(_) => self.parse_prefix_operator(token),
             TokenInfo::Bind() => self.parse_prefix_bind(token),
-            TokenInfo::InterpolatedString(_) => self.parse_prefix_interpolated_string(token)
+            TokenInfo::InterpolatedString(_) => self.parse_prefix_interpolated_string(token),
             // Leading newline, ignore.
             TokenInfo::Sequence(false) => self.parse_prefix(),
             TokenInfo::Eof() => self.error(token, "Unexpected end of input"),
@@ -367,6 +367,7 @@ impl Parser {
         }
     }
     fn parse_prefix_interpolated_string(&mut self, token: Token) -> Result<Expr, ParseError> {
+        unimplemented!("interpolated strings");
         let mut stream = StringStream::new(token.string());
         let mut expressions = vec![];
         let mut string = String::new();
