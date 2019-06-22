@@ -28,7 +28,7 @@ to the standard output prints it followed by a newline.
 _Like all newborn languages, Foolang aspires to unrealistic
 goals._
 
-=== Pleasure to Write, Pleasure to Read ===
+=== Pleasure to Write, Pleasure to Read
 
 Main purpose of a programming language is expression and
 communication of ideas. If it fails in this nothing else
@@ -51,19 +51,20 @@ To my mind this implies certain things:
 
 - Documentation is an integral part of code.
 
-=== Real Computers All The Way Down ===
+=== Real Computers All The Way Down
 
 Alan Kay is full of wisdom. Here's one thing he said that I
 keep thinking about:
 
-> To me, one of the nice things about the semantics of real objects is that
-> they are "real computers all the way down (RCATWD)" -- this always retains
-> the full ability to represent anything. The old way quickly gets to two
-> things that aren't computers -- data and procedures -- and all of a sudden
-> the ability to defer optimizations and particular decisions in favour of
-> behaviours has been lost. In other words, always having real objects always
-> retains the ability to simulate anything you want, and to send it around the
-> planet."
+[quote, Alan Kay, in Computerworld Australia July 2010]
+____
+To me, one of the nice things about the semantics of real objects is that
+they are "real computers all the way down (RCATWD)" -- this always retains
+the full ability to represent anything. The old way quickly gets to two
+things that aren't computers -- data and procedures -- and all of a sudden
+the ability to defer optimizations and particular decisions in favour of
+behaviours has been lost.
+____
 
 It took me a long time to appreciate this fully. The moment
 you start thinking about invoking methods instead of sending
@@ -74,9 +75,10 @@ equivalent, but if that was the _whole_ truth we'd still be
 programming in binary.
 
 It's not about power. It's about ease and it's about how the
-language influences your thinking.
+language influences your thinking, and about the towers
+you end up building.
 
-=== Predictable Performance ===
+=== Sufficient Performance
 
 Performance is a property of an implementation, not
 language, but since Foo is intended to be a
@@ -87,11 +89,6 @@ for basic operations like recursive algorithms, numerics,
 and instance variable access while not being completely
 embarrassed by memory management overhead.
 
-Arbitrary Foolang code need not hit these targets: only code
-that has been written with efficiency in mind, and accepts
-C-like constraints on it, such as static types and modular
-arithmetic.
-
 - Instance variable access should always be just a simple
   memory access.
 
@@ -99,13 +96,13 @@ arithmetic.
   cost about as much as a simple function call.
 
 - Sending a message to an instance implementing a known
-  interface should cost about as much as a virtual function
-  call.
+  interface should cost about as much as C++ a virtual
+  function call.
 
 - Sending a message to an unknown instance should cost
   about as much as a CLOS method call.
 
-=== A Great Environment ===
+=== A Great Environment
 
 Smalltalk-style development environments remain largely
 unmatched by other languages.
@@ -117,10 +114,9 @@ unmatched by other languages.
   they're exploration tools not the final product.
 
 - Modifying live code should be a regular part of
-  developement cycle.
+  development cycle.
 
-- System should support multiple views into the same
-  codebase:
+- Multiple views into the same codebase:
 
   * All/Selected methods of this class.
   * All methods with this selector.
@@ -134,7 +130,7 @@ unmatched by other languages.
   should be on the semantic level: _"Which module does
   this class belong to?"_
 
-=== Safe Package System ===
+=== Safe Package System
 
 Foolang has no _ambient authority_: the main program
 receives a system object which provides access to the
@@ -150,11 +146,9 @@ to the network behind your back because they do not have
 access to it: there is no globally accessible Socket class
 they can instantiate.
 
-If the package wraps a piece of foreign code then the
-package requires access the the _alien_ functionality
-from the system--you won't know exactly what the foreign
-code might do, but at least you know the safeties are
-off.
+Even if the package wraps a piece of foreign code
+which could in principle do anything, the package still
+requires explicit access to the shared object.
 
 === Safe Threading ===
 
