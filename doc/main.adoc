@@ -1,0 +1,391 @@
+= Foolang =
+
+_The Foo Programming Language_
+
+Foolang is a Smalltalk-inspired object language that tries
+to take lessons from Common Lisp, Erlang, Factor, and Rust
+to heart.
+
+WARNING: Foolang is still in early development. Everything
+and anything in this document is subject to change.
+
+== Hello World ==
+
+----
+@main: system     # <1>
+  system output   # <2>
+    println: "Hello World!" # <3>
+----
+<1> `@main:` designates the main program, which receives
+the system object as an argument.
+<2> Sending the `output` message to the system object
+returns the standard output stream.
+<3> Sending the `println:` message with a string argument
+to the standard output prints it followed by a newline.
+
+== Goals ==
+
+_Like all newborn languages, Foolang aspires to unrealistic
+goals._
+
+=== Pleasure to Write, Pleasure to Read ===
+
+Main purpose of a programming language is expression and
+communication of ideas. If it fails in this nothing else
+matters.
+
+To my mind this implies certain things:
+
+- Syntax should be minimal.
+
+- Ideally reading order matches the execution order.
+
+- Expression of mathematical ideas ideally matches the
+  mathematical idiom.
+
+- The less names one needs to express the program clearly,
+  the better.
+
+- While a good live development environment is a must, the
+  code needs to remain readable outside such an environment.
+
+- Documentation is an integral part of code.
+
+=== Real Computers All The Way Down ===
+
+Alan Kay is full of wisdom. Here's one thing he said that I
+keep thinking about:
+
+> To me, one of the nice things about the semantics of real objects is that
+> they are "real computers all the way down (RCATWD)" -- this always retains
+> the full ability to represent anything. The old way quickly gets to two
+> things that aren't computers -- data and procedures -- and all of a sudden
+> the ability to defer optimizations and particular decisions in favour of
+> behaviours has been lost. In other words, always having real objects always
+> retains the ability to simulate anything you want, and to send it around the
+> planet."
+
+It took me a long time to appreciate this fully. The moment
+you start thinking about invoking methods instead of sending
+messages you're on the slippery slope.
+
+Of course, Turing tells us the all computation is
+equivalent, but if that was the _whole_ truth we'd still be
+programming in binary.
+
+It's not about power. It's about ease and it's about how the
+language influences your thinking.
+
+=== Predictable Performance ===
+
+Performance is a property of an implementation, not
+language, but since Foo is intended to be a
+single-implementation language the distinction is moot.
+
+Success criteria is matching speed of _unoptimized_ C
+for basic operations like recursive algorithms, numerics,
+and instance variable access while not being completely
+embarrassed by memory management overhead.
+
+Arbitrary Foolang code need not hit these targets: only code
+that has been written with efficiency in mind, and accepts
+C-like constraints on it, such as static types and modular
+arithmetic.
+
+- Instance variable access should always be just a simple
+  memory access.
+
+- Sending a message to an instance of a known class should
+  cost about as much as a simple function call.
+
+- Sending a message to an instance implementing a known
+  interface should cost about as much as a virtual function
+  call.
+
+- Sending a message to an unknown instance should cost
+  about as much as a CLOS method call.
+
+=== A Great Environment ===
+
+Smalltalk-style development environments remain largely
+unmatched by other languages.
+
+- Code formatter, inspector, debugger, and browser are basic
+  tools of civilization.
+
+- Notebooks are REPLs on steroids, and as such lovely--but
+  they're exploration tools not the final product.
+
+- Modifying live code should be a regular part of
+  developement cycle.
+
+- System should support multiple views into the same
+  codebase:
+
+  * All/Selected methods of this class.
+  * All methods with this selector.
+  * All methods using this selector.
+  * All methods referring to this class or global.
+  * Current method followed by methods it invokes.
+  * Etc...
+
+- Bookkeeping minutiae such as _"Which file do I put this
+  class in?"_ are better left to the system. Human concerns
+  should be on the semantic level: _"Which module does
+  this class belong to?"_
+
+=== Safe Package System ===
+
+Foolang has no _ambient authority_: the main program
+receives a system object which provides access to the
+command-line arguments, environment variables,
+standard IO streams, files, memory, network,
+shared objects, etc...
+
+For other parts of the program to have access to these
+they must be explicitly passed down.
+
+Implementor of a package _cannot_ read files or connect
+to the network behind your back because they do not have
+access to it: there is no globally accessible Socket class
+they can instantiate.
+
+If the package wraps a piece of foreign code then the
+package requires access the the _alien_ functionality
+from the system--you won't know exactly what the foreign
+code might do, but at least you know the safeties are
+off.
+
+=== Safe Threading ===
+
+Foo takes the Erlang approach to concurrency: threads
+are fully isolated from each other and communicate through
+serialized messages.
+
+- GC pauses are per thread, not global.
+- Many forms of deadlocks are simply not present.
+- Threads can be killed with impunity.
+
+In addition to this, to address the needs of scientific
+computation a set of built-in classes and methods to
+provide data parallelism is planned, but the details
+are very fuzzy as of yet.
+
+== Syntax ==
+
+NOTE: Foolang syntax is intended to be extensible by users,
+but details are open.
+
+=== Comments
+
+----
+# This is a comment.
+----
+
+=== Integer Literals
+
+Decimal numbers:: `123`
+
+Hexadecimal numbers:: `0xFFFFFFFF`
+
+Binary numbers:: `0b01010101`
+
+All integer literals additionally allow arbitrary
+interleaving of underscore characters to make magnitude
+and parts of large numbers more obvious.
+
+----
+100_000_000
+
+0xFFFF_FFFF_FFFF_FFFF
+
+0b0101_0101_0101_0101
+----
+
+=== Float Literals
+
+Currently all floats are double-floats.
+
+----
+1.123
+1.0e6
+----
+
+=== String Literals
+
+String literal::
+----
+$"Newlines can be embedded as literals.
+"Doublequotes" are fine, Escape sequences are
+ignored. To embed a doublequote followed by a
+dollar sign use "$$."$
+----
+
+Block string literal::
+----
+$"""Whitespace upto start column of string
+    proper is stripped.
+       Further whitespace is preserved.
+    Escape sequences like \n are ignored.
+    "Double quotes" can be used without
+    escaping. To embed a 3 x doublequote
+    followed by a dollar sign use """$$.
+"""$
+----
+
+=== String Interpolation
+
+`{...}` can be embedded in interpolated strings. The
+code inside the braces can refer to the lexical environment.
+The resulting object is converted to string by sending it
+the `toString` message.
+
+NOTE: If string interpolation syntax is used without
+embedding `{...}` in the string, the resulting object is
+a literal string!
+
+Interpolated string::
+----
+"Hello {user name}!
+
+Escape sequences like \n do work. Newlines can
+be embedded. \" is required to embed a
+doublequote anywhere, including in the
+interpolated parts."
+----
+
+Interpolated block string::
+----
+"""{"doublequotes" append: " are fine!"}
+   Whitespace upto start column of string
+   proper is stripped.
+       Further whitespace is preserved.
+   Escape sequences like \n work too.
+"""
+----
+
+==== Example
+----
+let x := 42
+"X is {x}!"
+----
+is equivalent to:
+----
+let x := 42
+"X is" append: x toString; append: "!"
+----
+
+=== Selector Literals
+
+Unary selectors:: Unary selectors are used for messages
+that take no arguments.
+----
+$alphanumericName123
+----
+
+Keyword selectors:: Keyword selectors are used for messages
+that take one or more arguments. Tailing arguments can be
+left unnamed, represented by only colons. Selectors with
+no named arguments are called n-ary selectors.
+----
+$key1:key2:
+$message:::
+$::
+----
+
+NOTE: A message send using a keyword selector appears
+as `object key1: arg1 key2: arg2`, but the
+_selector_ itself is `$key1:key2:`.
+
+=== Arrays
+
+Array Literals::
+----
+$["literal", "constant", $["nested", "array"]]
+----
+
+Array Constructors::
+----
+[array, constructed, at, runtime]
+----
+
+=== Type Annotations
+
+Annotations can be applied to bindings, expressions,
+instance variables, return values, and arguments.
+
+Annotations that the compiler cannot prove are asserted at
+runtime.
+
+----
+let x <Int> := 42 # <1>
+
+foo bar <Int> + 1 # <2>
+
+@class Foo { slot <Int> } # <3>
+
+@method Foo bar -> <Int> # <4>
+   slot
+
+@method Foo bar: x <Int> # <5>
+   Foo __new__ bar: bar + x
+
+{ x + y } -> <Int> # <6>
+
+{ :z <Int> | x + y + z } # <7>
+----
+<1> Annotating a binding.
+<2> Annotating an expression.
+<3> Annotating an instance variable.
+<4> Annotating a method return value.
+<5> Annotating a method parameter.
+<6> Annotating a block return value.
+<7> Annotating a block parameter.
+
+=== Messages
+
+Unary suffix messages:: Single alphanumeric word following
+the expression it is to be sent to. They have the highest
+precedence of all messages.
+----
+obj messageToObj messageToResult
+----
+
+Keyword messages:: Keyword messages are colon-suffixed
+alphanumeric words, each word followed by an argument.
+A sequence of such keyword/argument pairs is a single
+keyword message. Tailing keyword names can be empty, but then
+require spaces on both sides of the colon. A keyword
+message with only empty names is called n-ary message.
+----
+obj key1: arg1 key2: arg2
+obj message: arg1 : arg2 : arg3
+obj : arg1 : arg2 : arg3
+----
+
+=== Function Calls and Operators
+
+Function calls and operators are syntax sugar on top of
+unary and keyword messages.
+
+Function calls:: N-ary
+messages can be also written in as function calls.
+----
+obj(arg1, arg2, arg3)
+----
+
+Prefix and infix operators:: Operators are non-alphabetic
+sigils converted to unary messages by the parser. They
+follow conventional precedence amongst them selves.
+Prefix binds tightest, infix binds weaker then unary
+messages but stronger than keyword messages.
+----
+-x
+
+1 + 2 * 10 # => 21
+
+obj key1: x + y
+    key2: x - y
+----
+
+NOTE: Alphanumeric infix operators are under consideration.

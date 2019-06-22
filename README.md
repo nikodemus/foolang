@@ -104,11 +104,11 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [x] 'x' Characters
 - [x] $" Strings
 - [x] $""" Strings
+- [ ] " Strings
+- [ ] """ Strings
 - [ ] Literal arrays: unlike ST, don't change internal syntax?
 - [ ] { foo: x }
 - [ ] ${ foo: 42 }
-- [ ] " Strings
-- [ ] """ Strings
 - [ ] # Comments (attach to expressions)
 - [ ] Definitions
 - [ ] Parse into GlobalVariable, LocalVariable, InstanceVariable, MethodParameter,
