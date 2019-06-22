@@ -106,6 +106,7 @@ struct Token {
 enum TokenInfo {
     Eof(),
     Constant(Literal),
+    InterpolatedString(String),
     Identifier(String),
     Keyword(String),
     Operator(String),
@@ -171,8 +172,12 @@ impl Token {
     }
 }
 
+fn parse_stream(stream: Box<Stream>) -> Result<Expr, ParseError> {
+    Parser::new(stream).parse()
+}
+
 fn parse_string(string: String) -> Result<Expr, ParseError> {
-    Parser::new(Box::new(StringStream::new(string))).parse()
+    parse_stream(Box::new(StringStream::new(string)))
 }
 
 fn parse_str(str: &str) -> Result<Expr, ParseError> {
@@ -183,6 +188,7 @@ struct Parser {
     stream: Box<Stream>,
     lookahead: VecDeque<Token>,
     cascade: Option<Expr>,
+    interpolated_string_re: Regex,
     literal_block_string_re: Regex,
     literal_string_re: Regex,
     character_re: Regex,
@@ -220,6 +226,7 @@ impl Parser {
                 .unwrap(),
             literal_block_string_re: Regex::new(r#"^\$""""#).unwrap(),
             literal_string_re: Regex::new(r#"^\$""#).unwrap(),
+            interpolated_string_re: Regex::new(r#"^""#).unwrap(),
             character_re: Regex::new(r"^'.'").unwrap(),
             type_re: Regex::new("^<[A-Z][a-zA-Z0-9]*>").unwrap(),
             return_re: Regex::new("^return ").unwrap(),
@@ -264,6 +271,7 @@ impl Parser {
             TokenInfo::ParenBegin() => self.parse_prefix_paren(token),
             TokenInfo::Operator(_) => self.parse_prefix_operator(token),
             TokenInfo::Bind() => self.parse_prefix_bind(token),
+            TokenInfo::InterpolatedString(_) => self.parse_prefix_interpolated_string(token)
             // Leading newline, ignore.
             TokenInfo::Sequence(false) => self.parse_prefix(),
             TokenInfo::Eof() => self.error(token, "Unexpected end of input"),
@@ -355,6 +363,28 @@ impl Parser {
                 let receiver = expr.to_owned();
                 self.cascade = None;
                 Ok(receiver)
+            }
+        }
+    }
+    fn parse_prefix_interpolated_string(&mut self, token: Token) -> Result<Expr, ParseError> {
+        let mut stream = StringStream::new(token.string());
+        let mut expressions = vec![];
+        let mut string = String::new();
+        loop {
+            if stream.at_eof() {
+                break;
+            }
+            if &stream.charstr() == "{" {
+                let p = stream.position();
+                stream.skip(1);
+                expressions.push(stream.parse()?);
+                if &stream.charstr() != "}" {
+                    return self.error(p, "Unterminated interpolation in string")
+                }
+                match  {
+                    Expr::Constant(Literal::St)
+                }
+                parse_stream(Box::new(stream.clone()));
             }
         }
     }
@@ -486,7 +516,7 @@ impl Parser {
                 position = self.stream.position();
                 newline = true;
             }
-            self.stream.skip();
+            self.stream.skip(1);
         }
         if let Some(_) = self.stream.scan(&self.cont_re) {
             let position = self.stream.position();
@@ -582,6 +612,9 @@ impl Parser {
                 position,
                 info: Sequence(true),
             });
+        }
+        if let Some(s) = self.stream.scan(&self.interpolated_string_re) {
+            return self.scan_interpolated_string(s);
         }
         if let Some(s) = self.stream.scan(&self.literal_block_string_re) {
             return self.scan_literal_block_string(s);
@@ -711,52 +744,49 @@ impl Parser {
             context: self.error_context(position, problem),
         }
     }
-    fn scan_literal_block_string(&mut self, _: String) -> Result<Token, ParseError> {
-        let start0 = self.stream.position();
+    fn scan_literal_block_string(&mut self, quote: String) -> Result<Token, ParseError> {
+        let start0 = self.stream.position() - quote.len();
         let col = self.stream.column();
-        let mut start = start0;
+        let mut start = self.stream.position();
         let mut content = String::new();
         loop {
             let s = self.stream.str();
             if s.len() == 0 {
-                return Err(self.error_at(start, "Unterminated string"));
+                return Err(self.error_at(start0, "Unterminated string"));
             }
             if &s[0..1] == "\n" {
                 content.push_str(&self.stream.as_str()[start..=self.stream.position()]);
-                self.stream.skip();
-                for _ in 0..col {
-                    self.stream.skip();
+                self.stream.skip(col + 1);
+                for _ in 0..col + 1 {
+                    if self.stream.at_whitespace() {
+                        self.stream.skip(1);
+                    } else {
+                        break;
+                    }
                 }
                 start = self.stream.position();
                 continue;
             }
             if s.len() >= 4 && &s[..4] == r#""""$"# {
                 if s.len() >= 5 && &s[..5] == r#""""$$"# {
-                    self.stream.skip();
-                    self.stream.skip();
-                    self.stream.skip();
-                    self.stream.skip();
+                    self.stream.skip(4);
                     content.push_str(&self.stream.as_str()[start..self.stream.position()]);
-                    self.stream.skip();
-                    start = self.stream.position();
+                    start = self.stream.skip(1);
                     continue;
                 } else {
                     break;
                 }
             }
-            self.stream.skip();
+            self.stream.skip(1);
         }
         content.push_str(&self.stream.as_str()[start..self.stream.position()]);
-        self.stream.skip();
-        self.stream.skip();
-        self.stream.skip();
-        self.stream.skip();
+        self.stream.skip(4);
         Ok(Token {
-            position: start - 4,
+            position: start - quote.len(),
             info: TokenInfo::Constant(Literal::String(content)),
         })
     }
-    fn scan_literal_string(&mut self, _: String) -> Result<Token, ParseError> {
+    fn scan_literal_string(&mut self, quote: String) -> Result<Token, ParseError> {
         let start0 = self.stream.position();
         let mut start = start0;
         let mut content = String::new();
@@ -767,24 +797,85 @@ impl Parser {
             }
             if s.len() >= 2 && &s[..2] == r#""$"# {
                 if s.len() >= 3 && &s[..3] == r#""$$"# {
-                    self.stream.skip();
-                    self.stream.skip();
+                    self.stream.skip(2);
                     content.push_str(&self.stream.as_str()[start..self.stream.position()]);
-                    self.stream.skip();
-                    start = self.stream.position();
+                    start = self.stream.skip(1);
                     continue;
                 } else {
                     break;
                 }
             }
-            self.stream.skip();
+            self.stream.skip(1);
         }
         content.push_str(&self.stream.as_str()[start..self.stream.position()]);
-        self.stream.skip();
-        self.stream.skip();
+        self.stream.skip(2);
         Ok(Token {
-            position: start - 2,
+            position: start - quote.len(),
             info: TokenInfo::Constant(Literal::String(content)),
+        })
+    }
+    fn scan_interpolated_string(&mut self, quote: String) -> Result<Token, ParseError> {
+        let start0 = self.stream.position() - quote.len();
+        let mut start = self.stream.position();
+        let mut content = String::new();
+        loop {
+            let s = self.stream.str();
+            if s.len() == 0 {
+                return Err(self.error_at(start0, "Unterminated string"));
+            }
+            if &s[..1] == r#"\"# {
+                if s.len() < 2 {
+                    return Err(self.error_at(start0, "Unterminated string"));
+                }
+                match &s[1..2] {
+                    r#"""# => {
+                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
+                        content.push_str("\"");
+                        start = self.stream.skip(2);
+                        continue;
+                    }
+                    r#"n"# => {
+                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
+                        content.push_str("\n");
+                        start = self.stream.skip(2);
+                        continue;
+                    }
+                    r#"r"# => {
+                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
+                        content.push_str("\r");
+                        start = self.stream.skip(2);
+                        continue;
+                    }
+                    r#"t"# => {
+                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
+                        content.push_str("\t");
+                        start = self.stream.skip(2);
+                        continue;
+                    }
+                    r#"\"# => {
+                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
+                        content.push_str("\\");
+                        start = self.stream.skip(2);
+                        continue;
+                    }
+                    _ => {
+                        return Err(self.error_at(
+                            self.stream.position() + 1,
+                            "Unknown escape sequece in string",
+                        ))
+                    }
+                }
+            }
+            if &s[..1] == r#"""# {
+                break;
+            }
+            self.stream.skip(1);
+        }
+        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
+        self.stream.skip(1);
+        Ok(Token {
+            position: start,
+            info: TokenInfo::InterpolatedString(content),
         })
     }
 }
@@ -794,7 +885,7 @@ trait Stream {
     fn position(&self) -> usize;
     fn at_eof(&self) -> bool;
     fn at_eol(&self) -> bool;
-    fn skip(&mut self) -> ();
+    fn skip(&mut self, n: usize) -> usize;
     fn at_whitespace(&self) -> bool;
     fn str(&self) -> &str;
     fn charstr(&self) -> &str;
@@ -851,8 +942,9 @@ impl Stream for StringStream {
     fn string_from(&self, start: usize) -> String {
         self.string[start..self.position].to_string()
     }
-    fn skip(&mut self) {
-        self.position += 1;
+    fn skip(&mut self, n: usize) -> usize {
+        self.position += n;
+        self.position
     }
     fn charstr(&self) -> &str {
         &self.string[self.position..self.position + 1]
@@ -1259,5 +1351,13 @@ fn parse_literal_block_string() {
        bar"""$"#
         ),
         Ok(Expr::Constant(Literal::String("foo\nbar".to_string())))
+    );
+}
+
+#[test]
+fn parse_interpolated_string_no_interpolation() {
+    assert_eq!(
+        parse_str(r#" "foo bar" "#),
+        Ok(Expr::Constant(Literal::String("foo bar".to_string())))
     );
 }
