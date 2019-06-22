@@ -3,7 +3,7 @@
 _The Foo Programming Language_
 
 Foolang is a Smalltalk-inspired object language that tries
-to take lessons from Common Lisp, Erlang, Factor, and Rust
+to take a few lessons from Common Lisp, Erlang, Factor, and Rust
 to heart.
 
 WARNING: Foolang is still in early development. Everything
@@ -53,9 +53,6 @@ To my mind this implies certain things:
 
 === Real Computers All The Way Down
 
-Alan Kay is full of wisdom. Here's one thing he said that I
-keep thinking about:
-
 [quote, Alan Kay, in Computerworld Australia July 2010]
 ____
 To me, one of the nice things about the semantics of real objects is that
@@ -66,9 +63,10 @@ the ability to defer optimizations and particular decisions in favour of
 behaviours has been lost.
 ____
 
-It took me a long time to appreciate this fully. The moment
-you start thinking about invoking methods instead of sending
-messages you're on the slippery slope.
+It took me a long time to appreciate this properly.
+
+*Objects are not data + procedures, they're entities which
+respond to messages.*
 
 Of course, Turing tells us the all computation is
 equivalent, but if that was the _whole_ truth we'd still be
@@ -84,7 +82,7 @@ Performance is a property of an implementation, not
 language, but since Foo is intended to be a
 single-implementation language the distinction is moot.
 
-Success criteria is matching speed of _unoptimized_ C
+Success criteria is matching speed of _unoptimized_ C or C++
 for basic operations like recursive algorithms, numerics,
 and instance variable access while not being completely
 embarrassed by memory management overhead.
@@ -101,6 +99,11 @@ embarrassed by memory management overhead.
 
 - Sending a message to an unknown instance should cost
   about as much as a CLOS method call.
+
+NOTE: Matching speed of unoptimized C++ should be a matter
+of a decent high-level IR and partial evaluation. Matching
+speed of optimized C++ requires a good modern compiler
+backend and appropriately tuned passes.
 
 === A Great Environment
 
@@ -402,3 +405,23 @@ obj key1: x + y
 ----
 
 NOTE: Alphanumeric infix operators are under consideration.
+
+[glossary]
+== Glossary ==
+
+[glossary]
+[[keyword_message]]keyword message:: A message consisting of a <<keyword selector>>
+and one or more arguments.
+
+[[keyword_selector]]keyword selector:: A <<selector>> consisting
+of one or more keywords.
+
+[[message]]message:: A <<selector>> and one or more argument sent to an
+object. See also: <<unary message>>, <<keyword message>>
+
+[[object]]object:: An entity that can respond to messages.
+
+[[selector]]selector:: An object used to identify a <<message>>.
+
+[[unary_message]]unary message:: A message consisting of nothing but a single
+alphanumeric <<selector>>.
