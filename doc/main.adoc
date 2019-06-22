@@ -291,7 +291,7 @@ NOTE: A message send using a keyword selector appears
 as `object key1: arg1 key2: arg2`, but the
 _selector_ itself is `$key1:key2:`.
 
-=== Arrays
+=== Array Expressions
 
 Array Literals::
 ----
@@ -301,6 +301,25 @@ $["literal", "constant", $["nested", "array"]]
 Array Constructors::
 ----
 [array, constructed, at, runtime]
+----
+
+=== Objects Expressions
+
+Object literals:: Object literals are immutable instances of
+an anonymous class that only respond to the specified unary
+messages with constant values.
+----
+${ foo: 42, bar: 42 } foo # => 42
+----
+
+Object constructors:: Object constructors create immutable
+instances of an anonymous class. They are otherwise like
+object literals, but the expressions associated with selectors
+can refer to the lexical environment, and are evaluated
+when the object is created.
+----
+let x := 21;
+{ foo: x * 2 } foo # => 42
 ----
 
 === Type Annotations
