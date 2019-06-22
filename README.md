@@ -2,78 +2,6 @@
 
 # foolang
 
-Foolang is a Smalltalk-inspired object language that tries to take some
-lessons from other languages to heart.
-
-## Pleasure to Write, Pleasure to Read
-
-Main purpose of a programming language is expression and communication of
-ideas. If it fails in this nothing else matters.
-
-To my mind this implies certain things:
-
-- Syntax should be minimal.
-- The closer the reading order matches the execution order the less
-  context one has to keep in mind.
-- One should be able to read code out loud easily.
-- The less named variables one needs to express oneself clearly the better.
-  Names do add clarity, and they are in general desirable -- but they
-  also impose a cognitive cost and are a barrier to refactoring.
-
-## Real Computers All The Way Down
-
-Alan Kay is full of wisdom. Here's one thing he said that I keep thinking about:
-
->  To me, one of the nice things about the semantics of real objects is that
-> they are "real computers all the way down (RCATWD)" -- this always retains
-> the full ability to represent anything. The old way quickly gets to two
-> things that aren't computers -- data and procedures -- and all of a sudden
-> the ability to defer optimizations and particular decisions in favour of
-> behaviours has been lost. In other words, always having real objects always
-> retains the ability to simulate anything you want, and to send it around the
-> planet."
-
-It took me a long time to appreciate this fully. The moment you start thinking
-about invoking methods instead of sending messages you're on the slippery slope
-that will lead you to eventually taking references to methods...
-
-Of course, Turing tells us the all computation is equivalent, but if that was
-the _whole_ truth we'd still be programming in binary.
-
-It's not about power. It's about ease and it's about how the language influences
-your thinking.
-
-## Efficiency
-
-Efficiency is a property of an implementation, not language, but since Foo is
-a one-person show at the moment, the question is: "Can I implement this
-efficiently now, with reasonable effort?"
-
-Success criteria here is matching speed of unoptimized C/C++ for basic
-benchmarks like recursive algorithms, numerics, and instance variable access while
-not being completely embarrassed by memory management overhead.
-
-Arbitrary Foolang code need not hit these targets: only code that has been
-written with efficiency in mind, and accepts C-like constraints on it, such
-as static types and modular arithmetic.
-
-## Goals & Beliefs & Suspicions
-
-- Messages instead of method invocations is the right metaphor.
-- Code should be read and written left-to-right.
-- The less variables one needs to express oneself clearly, the better.
-- Smalltalk-style environment is still better than anything other
-  languages have to offer.
-- Image based development is not a good idea: focusing on reproduction of
-  state is better than saving state.
-- Stateful notebooks are a good idea, but as an exploration tool, not as
-  a development environment.
-- A well designed language plus a semi-decent compiler should reliably produce
-  code roughly matching the performance of equivalent -O1 compiled C++ code.
-  Factor of 2 is acceptable, factor of 10 is not.
-- A language that doesn't have a good solution for doing multithreading reliably
-  is not a modern general purpose language.
-
 ## Project Plan
 
 Timeboxing in releases of 50-200h of work.
@@ -104,13 +32,15 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [x] 'x' Characters
 - [x] $" Strings
 - [x] $""" Strings
+- [ ] :::: methods 
 - [ ] " Strings
 - [ ] """ Strings
 - [ ] Literal arrays: unlike ST, don't change internal syntax?
 - [ ] { foo: x }
 - [ ] ${ foo: 42 }
-- [ ] # Comments (attach to expressions)
+- [ ] \# Comments (attach to expressions)
 - [ ] Definitions
+- [ ] foo(a, b, c) as alias to foo : a : b : c
 - [ ] Parse into GlobalVariable, LocalVariable, InstanceVariable, MethodParameter,
       BlockParameter
       - Uppercase is Global.
