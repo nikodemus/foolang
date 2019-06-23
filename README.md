@@ -6,7 +6,7 @@
 
 Timeboxing in releases of 50-200h of work.
 
-### WIP: 0.1.1: Better Parser
+### WIP: 0.1.1: Better Parser, Full(ish) Language
 
 Support the full syntax I have in mind, provide reasonable errors.
 
@@ -50,6 +50,8 @@ Support the full syntax I have in mind, provide reasonable errors.
       - Ergo: We know which instance variables a method requires immediately
         after a parse, and if some are undefined.
 - [ ] Replace the old parser and support ast changes in evaluator
+- [ ] Add @main
+- [ ] Change system class to system object
 
 ### Planned: 0.2.0: The IDE
 
@@ -62,19 +64,7 @@ _...a bad SmallTalk with an environment from the 80s?_
 Estimated remaining: 89h
 Time spent: 5h
 
-- Language:
-  - ~~[ ] Message chaining. 2h~~
-    This turned out to be harder than I thought. I'm pretty sure it's
-    parsable, but I'm having trouble getting it right. Seems like something
-    that would be easy to do in a hand-written parser... but I don't think
-    I want to write one just now. OTOH, it would be a "good" opportunity
-    to write Rust and Foo in parallel.
 - Cleanups:
-  - [x] Expressions are sequenced with comma, not dot. 1h
-  - [x] rename Array::each to Array::do. 1h
-  - [x] Fix empty array constructor. 1h
-  - [x] Azure pipeline for Windows and OS X as well.
-  - [x] Move methods from evaluator.rs into classes/class.rs. 1h.
   - [ ] Move sub-object definitions from objects.rs into classes/class.rs. 1h
 - [x] Try out mkdoc for documentation: 1h
 - [ ] Wrap a rust web server as foolang object. 5h
