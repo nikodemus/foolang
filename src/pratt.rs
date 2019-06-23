@@ -933,59 +933,19 @@ impl Parser {
         let mut content = String::new();
         let col = self.stream.column();
         loop {
-            let s = self.stream.str();
-            if s.len() == 0 {
+            if self.stream.at_eof() {
                 return Err(self.error_at(start0, "Unterminated block string"));
             }
-            if &s[..1] == "\n" {
+            if &self.stream.str()[0..1] == "\n" {
                 content.push_str(&self.stream.as_str()[start..=self.stream.position()]);
                 // One for the newline,
                 start = self.stream.skip_whitespace(col + 1);
                 continue;
             }
-            if &s[..1] == r#"\"# {
-                if s.len() < 2 {
-                    return Err(self.error_at(start0, "Unterminated block string"));
-                }
-                match &s[1..2] {
-                    r#"""# => {
-                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
-                        content.push_str("\"");
-                        start = self.stream.skip(2);
-                        continue;
-                    }
-                    r#"n"# => {
-                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
-                        content.push_str("\n");
-                        start = self.stream.skip(2);
-                        continue;
-                    }
-                    r#"r"# => {
-                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
-                        content.push_str("\r");
-                        start = self.stream.skip(2);
-                        continue;
-                    }
-                    r#"t"# => {
-                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
-                        content.push_str("\t");
-                        start = self.stream.skip(2);
-                        continue;
-                    }
-                    r#"\"# => {
-                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
-                        content.push_str("\\");
-                        start = self.stream.skip(2);
-                        continue;
-                    }
-                    _ => {
-                        return Err(self.error_at(
-                            self.stream.position() + 1,
-                            "Unknown escape sequece in block string",
-                        ))
-                    }
-                }
+            if self.scan_string_escape_sequence(start0, &mut content)? {
+                continue;
             }
+            let s = self.stream.str();
             if s.len() >= 3 && &s[..3] == r#"""""# {
                 break;
             }
@@ -997,6 +957,46 @@ impl Parser {
             position: start,
             info: TokenInfo::InterpolatedString(content),
         })
+    }
+    fn scan_string_escape_sequence(
+        &mut self,
+        start: usize,
+        content: &mut String,
+    ) -> Result<bool, ParseError> {
+        let s = self.stream.str();
+        if &s[..1] == r#"\"# {
+            if s.len() < 2 {
+                return Err(self.error_at(start, "Unterminated string"));
+            }
+            content.push_str(&self.stream.as_str()[start..self.stream.position()]);
+            match &s[1..2] {
+                r#"""# => {
+                    content.push_str("\"");
+                }
+                r#"n"# => {
+                    content.push_str("\n");
+                }
+                r#"r"# => {
+                    content.push_str("\r");
+                }
+                r#"t"# => {
+                    content.push_str("\t");
+                }
+                r#"\"# => {
+                    content.push_str("\\");
+                }
+                _ => {
+                    return Err(self.error_at(
+                        self.stream.position(),
+                        "Unknown escape sequece in block string",
+                    ))
+                }
+            }
+            self.stream.skip(2);
+            return Ok(true);
+        } else {
+            return Ok(false);
+        }
     }
 }
 
