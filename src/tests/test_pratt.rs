@@ -461,3 +461,14 @@ fn parse_record() {
         Ok(chain(var("Record"), &[keyword("foo:", &[decimal(42)])]))
     );
 }
+
+#[test]
+fn parse_literal_record() {
+    assert_eq!(
+        parse_str("${ foo: 42 }"),
+        Ok(Expr::Constant(Literal::Record(
+            vec![String::from("foo:")],
+            vec![Literal::Decimal(42)]
+        )))
+    );
+}

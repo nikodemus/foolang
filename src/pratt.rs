@@ -26,6 +26,7 @@ pub enum Literal {
     Selector(String),
     Character(char),
     String(String),
+    Record(Vec<String>, Vec<Literal>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -53,6 +54,18 @@ pub enum Expr {
 }
 
 impl Expr {
+    fn literal(self) -> Literal {
+        match self {
+            Expr::Constant(lit) => lit,
+            _ => panic!("Not a constant: {:?}", self),
+        }
+    }
+    fn is_literal(&self) -> bool {
+        match self {
+            Expr::Constant(_) => true,
+            _ => false,
+        }
+    }
     fn unary(mut self, selector: String) -> Self {
         match &mut self {
             Expr::Chain(_, ref mut msgs) => {
@@ -116,10 +129,10 @@ enum TokenInfo {
     Operator(String),
     Type(String),
     PositionalParameter(String),
+    // true = comma, false = newline
     Sequence(bool),
     Chain(),
     Cascade(),
-    // true = comma, false = newline
     BlockBegin(),
     BlockEnd(),
     ParenBegin(),
@@ -129,6 +142,7 @@ enum TokenInfo {
     Bind(),
     Assign(),
     Return(),
+    LiteralRecordBegin(),
 }
 
 impl Token {
@@ -146,6 +160,7 @@ impl Token {
             TokenInfo::Eof() => 0,
             TokenInfo::ArrayBegin() => 0,
             TokenInfo::ArrayEnd() => 0,
+            TokenInfo::LiteralRecordBegin() => 0,
             TokenInfo::BlockBegin() => 0,
             TokenInfo::BlockEnd() => 0,
             TokenInfo::ParenBegin() => 0,
@@ -204,6 +219,7 @@ struct Parser {
     interpolated_string_re: Regex,
     literal_block_string_re: Regex,
     literal_string_re: Regex,
+    literal_record_re: Regex,
     character_re: Regex,
     selector_re: Regex,
     type_re: Regex,
@@ -237,6 +253,7 @@ impl Parser {
             positional_parameter_re: Regex::new(r"^:[_a-zA-Z][_a-zA-z0-9]*").unwrap(),
             selector_re: Regex::new(r"^\$[_a-zA-Z][_a-zA-Z0-9]*(:[_a-zA-Z][_a-zA-Z0-9]*:)*")
                 .unwrap(),
+            literal_record_re: Regex::new(r#"^\$\{"#).unwrap(),
             literal_block_string_re: Regex::new(r#"^\$""""#).unwrap(),
             literal_string_re: Regex::new(r#"^\$""#).unwrap(),
             interpolated_block_string_re: Regex::new(r#"^""""#).unwrap(),
@@ -287,6 +304,7 @@ impl Parser {
             TokenInfo::Return() => self.parse_prefix_return(token),
             TokenInfo::Cascade() => self.parse_prefix_cascade(token),
             TokenInfo::ArrayBegin() => self.parse_prefix_array(token),
+            TokenInfo::LiteralRecordBegin() => self.parse_prefix_literal_record(token),
             TokenInfo::BlockBegin() => self.parse_prefix_block(token),
             TokenInfo::ParenBegin() => self.parse_prefix_paren(token),
             TokenInfo::Operator(_) => self.parse_prefix_operator(token),
@@ -389,6 +407,46 @@ impl Parser {
             }
         }
     }
+    fn parse_prefix_record_aux(
+        &mut self,
+        require_literal: bool,
+    ) -> Result<(Vec<String>, Vec<Expr>), ParseError> {
+        let mut names = vec![];
+        let mut values = vec![];
+        loop {
+            let key = self.consume_token()?;
+            match key.info {
+                TokenInfo::Keyword(name) => {
+                    names.push(name);
+                }
+                TokenInfo::BlockEnd() => {
+                    break;
+                }
+                _ => {
+                    return Err(self.error_at(key.position, "Not a keyword"));
+                }
+            }
+            let next = self.peek_token()?;
+            // FIXME: hardcoded precedence
+            let expr = self.parse_expression(2)?;
+            if require_literal && !expr.is_literal() {
+                return Err(self.error_at(next.position, "Not a literal"));
+            }
+            values.push(expr);
+            let term = self.consume_token()?;
+            match term.info {
+                TokenInfo::BlockEnd() => break,
+                TokenInfo::Sequence(_) => continue,
+                _ => return Err(self.error_at(term.position, "Malformed record")),
+            }
+        }
+        Ok((names, values))
+    }
+    fn parse_prefix_literal_record(&mut self, _: Token) -> Result<Expr, ParseError> {
+        let (names, values) = self.parse_prefix_record_aux(true)?;
+        let literals = values.into_iter().map(|x| x.literal()).collect();
+        Ok(Expr::Constant(Literal::Record(names, literals)))
+    }
     fn parse_prefix_interpolated_string(&mut self, token: Token) -> Result<Expr, ParseError> {
         fn append(expr: Expr, string: &str) -> Expr {
             if string.is_empty() {
@@ -459,34 +517,11 @@ impl Parser {
         }
     }
     fn parse_prefix_record(&mut self, _: Token) -> Result<Expr, ParseError> {
-        let mut selector = String::new();
-        let mut arguments = vec![];
-        loop {
-            let key = self.consume_token()?;
-            match key.info {
-                TokenInfo::Keyword(name) => {
-                    selector.push_str(name.as_str());
-                }
-                TokenInfo::BlockEnd() => {
-                    break;
-                }
-                _ => {
-                    return self.error(key, "Not a keyword");
-                }
-            }
-            // FIXME: hardcoded precedence
-            arguments.push(self.parse_expression(2)?);
-            let term = self.consume_token()?;
-            match term.info {
-                TokenInfo::BlockEnd() => break,
-                TokenInfo::Sequence(_) => continue,
-                _ => return self.error(term, "Malformed record"),
-            }
-        }
+        let (names, arguments) = self.parse_prefix_record_aux(true)?;
         Ok(Expr::Chain(
             Box::new(Expr::Variable("Record".to_string())),
             vec![Message {
-                selector,
+                selector: names.join(""),
                 arguments,
             }],
         ))
@@ -525,7 +560,7 @@ impl Parser {
                     chains.push(messages);
                 }
                 _ => {
-                    return self.error(token, "Invalid cascade");
+                    return Err(self.error_at(token.position, "Invalid cascade"));
                 }
             }
         }
@@ -711,6 +746,9 @@ impl Parser {
         }
         if let Some(s) = self.stream.scan(&self.literal_string_re) {
             return self.scan_literal_string(s);
+        }
+        if let Some(s) = self.stream.scan(&self.literal_record_re) {
+            return self.scan_literal_record(s);
         }
         if let Some(string) = self.stream.scan(&self.character_re) {
             let mut chars = string.as_str().chars();
@@ -953,6 +991,12 @@ impl Parser {
         Ok(Token {
             position: start,
             info: TokenInfo::InterpolatedString(content),
+        })
+    }
+    fn scan_literal_record(&mut self, open: String) -> Result<Token, ParseError> {
+        Ok(Token {
+            position: self.stream.position() - open.len(),
+            info: TokenInfo::LiteralRecordBegin(),
         })
     }
     fn scan_string_escape_sequence(

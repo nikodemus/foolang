@@ -8,8 +8,8 @@ Timeboxing in releases of 50-200h of work.
 
 ### WIP: 0.2: Better Parser, Full(ish) Language
 
-Time estimated: 118h
-Time spent: 50h
+Time estimated: 117h
+Time spent: 52h
 
 Support the full syntax I have in mind, provide reasonable errors.
 
@@ -38,7 +38,7 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [x] " Strings 1h
 - [x] """ Strings 1h
 - [x] { foo: x } => Record foo: x 1h
-- [ ] ${ foo: x } 1h
+- [x] ${ foo: x } 1h
 - [ ] :::: methods 1h
 - [ ] $:::: selectors 1h
 - [ ] Trailing commas in arrays 1h
