@@ -812,14 +812,8 @@ impl Parser {
             }
             if &s[0..1] == "\n" {
                 content.push_str(&self.stream.as_str()[start..=self.stream.position()]);
-                for _ in 0..col + 1 {
-                    if self.stream.at_whitespace() {
-                        self.stream.skip(1);
-                    } else {
-                        break;
-                    }
-                }
-                start = self.stream.position();
+                // + 1 for the newline we just pushed.
+                start = self.stream.skip_whitespace(col + 1);
                 continue;
             }
             if s.len() >= 4 && &s[..4] == r#""""$"# {
@@ -945,15 +939,8 @@ impl Parser {
             }
             if &s[..1] == "\n" {
                 content.push_str(&self.stream.as_str()[start..=self.stream.position()]);
-                self.stream.skip(1);
-                for _ in 0..col + 1 {
-                    if self.stream.at_whitespace() {
-                        self.stream.skip(1);
-                    } else {
-                        break;
-                    }
-                }
-                start = self.stream.position();
+                // One for the newline,
+                start = self.stream.skip_whitespace(col + 1);
                 continue;
             }
             if &s[..1] == r#"\"# {
@@ -1019,6 +1006,7 @@ trait Stream {
     fn at_eof(&self) -> bool;
     fn at_eol(&self) -> bool;
     fn skip(&mut self, n: usize) -> usize;
+    fn skip_whitespace(&mut self, n: usize) -> usize;
     fn at_whitespace(&self) -> bool;
     fn str(&self) -> &str;
     fn charstr(&self) -> &str;
@@ -1077,6 +1065,16 @@ impl Stream for StringStream {
     }
     fn skip(&mut self, n: usize) -> usize {
         self.position += n;
+        self.position
+    }
+    fn skip_whitespace(&mut self, n: usize) -> usize {
+        for _ in 0..n {
+            if self.at_whitespace() {
+                self.skip(1);
+            } else {
+                break;
+            }
+        }
         self.position
     }
     fn charstr(&self) -> &str {
@@ -1536,10 +1534,10 @@ fn parse_interpolated_block_string() {
         parse_str(
             r#"   """foo
          {42}
-       bar""""#
+      bar""""#
         ),
         Ok(chain(
-            Expr::Constant(Literal::String("foo\n  ".to_string())),
+            Expr::Constant(Literal::String("foo\n   ".to_string())),
             &[
                 keyword("append:", &[chain(decimal(42), &[unary("toString")])]),
                 keyword(
