@@ -202,7 +202,6 @@ fn parse_cascade() {
 #[test]
 fn parse_error_context() {
     assert_eq!(
-        // This is not like smalltalk cascade!
         parse_str(
             "obj zoo
                    ; foo: x bar!: y -- zot
@@ -214,7 +213,7 @@ fn parse_error_context() {
             problem: "Invalid token",
             context: "001 obj zoo
 002                    ; foo: x bar!: y -- zot
-                                   ^-- Invalid token
+                                    ^-- Invalid token
 003                    ; do thing
 "
             .to_string()
@@ -437,5 +436,20 @@ fn parse_interpolated_block_string() {
                 )
             ]
         ))
+    );
+}
+
+#[test]
+fn parse_keyword_error() {
+    assert_eq!(
+        parse_str("x bar: foo: 42"),
+        Err(ParseError {
+            position: 7,
+            problem: "Not a value expression",
+            context: "001 x bar: foo: 42
+           ^-- Not a value expression
+"
+            .to_string()
+        })
     );
 }

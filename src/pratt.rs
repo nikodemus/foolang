@@ -11,7 +11,11 @@ pub struct ParseError {
 
 impl std::fmt::Debug for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "ParseError at {}:\n{}", self.position, self.context)
+        write!(
+            f,
+            "ParseError({}) at {}:\n{}",
+            self.problem, self.position, self.context
+        )
     }
 }
 
@@ -771,17 +775,14 @@ impl Parser {
             }
             let end = start + line.len();
             if end > position {
-                // Line with the problem.
-                if prev.len() > 0 {
+                // Previous line if there is one.
+                if lineno > 1 {
                     append_line(&mut context, lineno - 1, prev);
                 }
+                // Line with the problem.
                 append_line(&mut context, lineno, line);
-                let span = if position < start + 1 {
-                    0
-                } else {
-                    position - start - 1
-                };
-                // XXX some bug here
+                println!("position: {}, start: {}", position, start);
+                let span = position - start;
                 let mut mark = String::from_utf8(vec![b' '; span]).unwrap();
                 mark.push_str("^-- ");
                 mark.push_str(problem);
