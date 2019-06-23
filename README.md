@@ -6,58 +6,73 @@
 
 Timeboxing in releases of 50-200h of work.
 
-### WIP: 0.1.1: Better Parser, Full(ish) Language
+### WIP: 0.2: Better Parser, Full(ish) Language
+
+Time estimated: 118h
+Time spent: 50h
 
 Support the full syntax I have in mind, provide reasonable errors.
 
-- [x] Integers
-- [x] Floats
-- [x] Unary messages
-- [x] Binary messages
-- [x] Keyword messages
-- [x] Chains
-- [x] Cascades
-- [x] Sequences
-- [x] Newline sequences
-- [x] Blocks
-- [x] Prefix minus
-- [x] Let => bind(var, expr, body)
-- [x] Assign
-- [x] Return
-- [x] Arrays
-- [x] Type annotations
-- [x] Parenthesis
-- [x] Selectors
-- [x] Nicer errors (two lines of context, put mark where the error is)
-- [x] 'x' Characters
-- [x] $" Strings
-- [x] $""" Strings
-- [x] " Strings
-- [x] """ Strings
-- [x] { foo: x } => Record foo: x
-- [ ] :::: methods
-- [ ] $:::: selectors
-- [ ] Literal arrays: unlike ST, don't change internal syntax
-- [ ] Trailing commas in arrays
-- [ ] ${ foo: 42 }
-- [ ] \# Comments (attach to expressions)
-- [ ] @class <name> { slot-no-default, slot: default }
-- [ ] @main: <system> <body>
-- [ ] @method <class> <selector>
-- [ ] @classMethod <class> <name>
-- [ ] @constant <name> := <value>
-- [ ] foo(a, b, c) as alias to foo : a : b : c
-- [ ] Parse into GlobalVariable, LocalVariable, InstanceVariable, MethodParameter,
-      BlockParameter
-      - Uppercase is Global.
-      - Locals are know to parser.
-      - Parameters are lexically visible hence knowable to parser.
-      - Ergo: We know which instance variables a method requires immediately
-        after a parse, and if some are undefined.
-- [ ] Replace the old parser and support ast changes in evaluator
-- [ ] Change system class to system object
+- [x] Integers 1h
+- [x] Floats 1h
+- [x] Unary messages 1h
+- [x] Binary messages 1h
+- [x] Keyword messages 1h
+- [x] Chains 5h
+- [x] Cascades 5h
+- [x] Sequences 1h
+- [x] Newline sequences 5h
+- [x] Blocks 1h
+- [x] Prefix minus 1h
+- [x] Let => bind(var, expr, body) 5h
+- [x] Assign 1h
+- [x] Return 1h
+- [x] Arrays 1h
+- [x] Type annotations 1h
+- [x] Parenthesis 1h
+- [x] Selectors 1h
+- [x] Nicer errors (two lines of context, put mark where the error is) 5h
+- [x] 'x' Characters 1h
+- [x] $" Strings 1h
+- [x] $""" Strings 5h
+- [x] " Strings 1h
+- [x] """ Strings 1h
+- [x] { foo: x } => Record foo: x 1h
+- [ ] ${ foo: x } 1h
+- [ ] :::: methods 1h
+- [ ] $:::: selectors 1h
+- [ ] Trailing commas in arrays 1h
+- [ ] $:expr 1h ("once")
+      - `$:{ foo: 42 }` readtime
+      - `$:(Global foo)` loadtime
+      - `$:arg` runtime
+- [ ] \# Comments (attach to expressions) 5h
+- [ ] @interface <Name> { foo -> <Int>, bar: <Int> -> <Int> } 5h
+- [ ] @class <name> { slot-no-default, slot: default } 1h
+- [ ] @class <name> { ... } <tag>... 5h
+      eg. @class Point { x, y }
+             value
+      eg. @class AsciiString {}
+             indexed: Byte
+             implements: String
+- [ ] @main: <system> <body> 1h
+- [ ] @method <class> <selector> 1h
+- [ ] @classMethod <class> <name> 1h
+- [ ] @constant <name> := <value> 1h
+- [ ] @import <namespace> 5h
+      Makes <namespace>.<Name> visible. Imported namespace have lowercase
+      names and are not first class objects!
+- [ ] @import <namespace>.<Name> as: <Alias> 1h
+- [ ] @export <namespace>.<Name> as: <Alias> 1h
+- [ ] Support double-newline as eof after @ for interactive input
+- [ ] foo(a, b, c) as alias to foo : a : b : c 5h
+- [ ] Parse into Global, LocalVariable, InstanceVariable, MethodParameter,
+      BlockParameter 5h
+- [ ] Replace the old parser and support ast changes in evaluator 20h
+- [ ] Change system class to system object 5h
+- [ ] Change ./foo to support @main 1h
 
-### Planned: 0.2.0: The IDE
+### Planned: 0.3.0: The IDE
 
 _...a bad SmallTalk with an environment from the 80s?_
 
@@ -131,7 +146,7 @@ Time spent: 5h
   - [ ] Indexing foo[x] as sugar for at:
   - [ ] Indexing assignment foo[x] := 42 as sugar for at:put:
 
-### Planned: 0.3.0: The Virtual Machine
+### Planned: 0.4.0: The Virtual Machine
 
 _Ok, kind of impressive you're doing all this, but why are you doing this?_
 
@@ -148,7 +163,7 @@ Estimated remaining: 150h.
 - [ ] Self-hosted VM. Est. 40h.
 - [ ] Self-hosted GC. Est. 40h
 
-### Planned: 0.4.0: The Compiler
+### Planned: 0.5.0: The Compiler
 
 _Ok. I can kinda see the point now!_
 
@@ -170,7 +185,7 @@ Estimated remaining: 130h
 - [ ] The Book. Est 20h.
 - [ ] Examples + livestreaming Est 20h.
 
-### Planned: 0.5.0: The Type System
+### Planned: 0.6.0: The Type System
 
 _This is getting interesting!_
 
@@ -185,6 +200,47 @@ Estimated remaining: 110h
 - [ ] Parameteric classes. Est 40h.
 - [ ] Class extensions. Est 20h.
 - [ ] Module system. Est 10h.
+
+## Constant Classes + Inline members = Value Semantics
+
+    @class Point { x <Int>, y <Int> }
+        constant
+        accessors
+    @class Rectangle { p1 <inline:Point>, p2 <inline:Point> }
+    @classMethod Rectangle new
+        self p1: (Point x: 0 y: 0)
+             p2: (Point x: 0 y: 0)
+    @method Rectangle p1
+       p1
+    @method Rectangle left
+       p1 := Point x: (p1 x + 1) y: p1 y
+       p2 := Point x: (p2 x + 1) y: p2 y
+       self
+
+- `p1 x` becomes a direct read.
+- Constructor targeting p1 becomes an assignment
+  Optimize away p1 y := p1 y
+- Returning `p1` allocates a Point
+
+How to support `p1 x: newval`? Since Point is a constant a
+writer doesn't make sense. If Point is a 'value' instead,
+then it makes sense, but then what happens here?
+
+      let box := { value: Point x: 0 y: 0 }
+      let p = box value
+      box value x: p x + 1
+      p x == box value x    
+
+Point/x: cannot make a copy because it doesn't have access
+to the slot holding the value.
+
+(What if it had? Ie. pointer to the location as part of the
+arguments. THAT might work. Non-values don't need to care.
+Values could then do copy-on-write. I still don't like that
+it means semantics depend on the type.)
+
+Record/value cannot make a copy because it doesn't know it
+should.
 
 ## IDE
 
