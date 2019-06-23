@@ -37,13 +37,16 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [x] { foo: x } => Record foo: x
 - [ ] :::: methods
 - [ ] $:::: selectors
-- [ ] Literal arrays: unlike ST, don't change internal syntax?
+- [ ] Literal arrays: unlike ST, don't change internal syntax
 - [ ] Trailing commas in arrays
 - [ ] ${ foo: 42 }
 - [ ] \# Comments (attach to expressions)
-- [ ] Definitions
+- [ ] @class <name> { slot-no-default, slot: default }
+- [ ] @main: <system> <body>
+- [ ] @method <class> <selector>
+- [ ] @classMethod <class> <name>
+- [ ] @constant <name> := <value>
 - [ ] foo(a, b, c) as alias to foo : a : b : c
-- [ ]
 - [ ] Parse into GlobalVariable, LocalVariable, InstanceVariable, MethodParameter,
       BlockParameter
       - Uppercase is Global.
@@ -52,7 +55,6 @@ Support the full syntax I have in mind, provide reasonable errors.
       - Ergo: We know which instance variables a method requires immediately
         after a parse, and if some are undefined.
 - [ ] Replace the old parser and support ast changes in evaluator
-- [ ] Add @main
 - [ ] Change system class to system object
 
 ### Planned: 0.2.0: The IDE
