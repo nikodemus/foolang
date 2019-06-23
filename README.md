@@ -38,10 +38,12 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [ ] $:::: selectors
 - [ ] Literal arrays: unlike ST, don't change internal syntax?
 - [ ] { foo: x }
+      => Record foo: x
 - [ ] ${ foo: 42 }
 - [ ] \# Comments (attach to expressions)
 - [ ] Definitions
 - [ ] foo(a, b, c) as alias to foo : a : b : c
+- [ ]
 - [ ] Parse into GlobalVariable, LocalVariable, InstanceVariable, MethodParameter,
       BlockParameter
       - Uppercase is Global.
