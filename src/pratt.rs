@@ -196,6 +196,7 @@ struct Parser {
     stream: Box<Stream>,
     lookahead: VecDeque<Token>,
     cascade: Option<Expr>,
+    interpolated_block_string_re: Regex,
     interpolated_string_re: Regex,
     literal_block_string_re: Regex,
     literal_string_re: Regex,
@@ -234,6 +235,7 @@ impl Parser {
                 .unwrap(),
             literal_block_string_re: Regex::new(r#"^\$""""#).unwrap(),
             literal_string_re: Regex::new(r#"^\$""#).unwrap(),
+            interpolated_block_string_re: Regex::new(r#"^""""#).unwrap(),
             interpolated_string_re: Regex::new(r#"^""#).unwrap(),
             character_re: Regex::new(r"^'.'").unwrap(),
             type_re: Regex::new("^<[A-Z][a-zA-Z0-9]*>").unwrap(),
@@ -425,7 +427,6 @@ impl Parser {
                 };
                 stream.seek(pos);
                 if stream.charstr() != "}" {
-                    println!("start: {}, end: {}", start, stream.str());
                     return Err(self.error_at(start, "Unterminated interpolation"));
                 }
                 start = pos + 1;
@@ -659,6 +660,9 @@ impl Parser {
                 info: Sequence(true),
             });
         }
+        if let Some(s) = self.stream.scan(&self.interpolated_block_string_re) {
+            return self.scan_interpolated_block_string(s);
+        }
         if let Some(s) = self.stream.scan(&self.interpolated_string_re) {
             return self.scan_interpolated_string(s);
         }
@@ -778,7 +782,6 @@ impl Parser {
                     position - start - 1
                 };
                 // XXX some bug here
-                println!("pos = {}, start = {}", position, start);
                 let mut mark = String::from_utf8(vec![b' '; span]).unwrap();
                 mark.push_str("^-- ");
                 mark.push_str(problem);
@@ -805,11 +808,10 @@ impl Parser {
         loop {
             let s = self.stream.str();
             if s.len() == 0 {
-                return Err(self.error_at(start0, "Unterminated string"));
+                return Err(self.error_at(start0, "Unterminated raw block string"));
             }
             if &s[0..1] == "\n" {
                 content.push_str(&self.stream.as_str()[start..=self.stream.position()]);
-                self.stream.skip(col + 1);
                 for _ in 0..col + 1 {
                     if self.stream.at_whitespace() {
                         self.stream.skip(1);
@@ -925,7 +927,85 @@ impl Parser {
             self.stream.skip(1);
         }
         content.push_str(&self.stream.as_str()[start..self.stream.position()]);
-        self.stream.skip(1);
+        self.stream.skip(quote.len());
+        Ok(Token {
+            position: start,
+            info: TokenInfo::InterpolatedString(content),
+        })
+    }
+    fn scan_interpolated_block_string(&mut self, quote: String) -> Result<Token, ParseError> {
+        let start0 = self.stream.position() - quote.len() + 1;
+        let mut start = self.stream.position();
+        let mut content = String::new();
+        let col = self.stream.column();
+        loop {
+            let s = self.stream.str();
+            if s.len() == 0 {
+                return Err(self.error_at(start0, "Unterminated block string"));
+            }
+            if &s[..1] == "\n" {
+                content.push_str(&self.stream.as_str()[start..=self.stream.position()]);
+                self.stream.skip(1);
+                for _ in 0..col + 1 {
+                    if self.stream.at_whitespace() {
+                        self.stream.skip(1);
+                    } else {
+                        break;
+                    }
+                }
+                start = self.stream.position();
+                continue;
+            }
+            if &s[..1] == r#"\"# {
+                if s.len() < 2 {
+                    return Err(self.error_at(start0, "Unterminated block string"));
+                }
+                match &s[1..2] {
+                    r#"""# => {
+                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
+                        content.push_str("\"");
+                        start = self.stream.skip(2);
+                        continue;
+                    }
+                    r#"n"# => {
+                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
+                        content.push_str("\n");
+                        start = self.stream.skip(2);
+                        continue;
+                    }
+                    r#"r"# => {
+                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
+                        content.push_str("\r");
+                        start = self.stream.skip(2);
+                        continue;
+                    }
+                    r#"t"# => {
+                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
+                        content.push_str("\t");
+                        start = self.stream.skip(2);
+                        continue;
+                    }
+                    r#"\"# => {
+                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
+                        content.push_str("\\");
+                        start = self.stream.skip(2);
+                        continue;
+                    }
+                    _ => {
+                        return Err(self.error_at(
+                            self.stream.position() + 1,
+                            "Unknown escape sequece in block string",
+                        ))
+                    }
+                }
+            }
+            if s.len() >= 3 && &s[..3] == r#"""""# {
+                break;
+            }
+            self.stream.skip(1);
+        }
+        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
+        self.stream.skip(quote.len());
         Ok(Token {
             position: start,
             info: TokenInfo::InterpolatedString(content),
@@ -1445,6 +1525,27 @@ fn parse_interpolated_string_head_and_tail() {
                     &[Expr::Constant(Literal::String(" bar ".to_string()))]
                 ),
                 keyword("append:", &[chain(decimal(2), &[unary("toString")])])
+            ]
+        ))
+    );
+}
+
+#[test]
+fn parse_interpolated_block_string() {
+    assert_eq!(
+        parse_str(
+            r#"   """foo
+         {42}
+       bar""""#
+        ),
+        Ok(chain(
+            Expr::Constant(Literal::String("foo\n  ".to_string())),
+            &[
+                keyword("append:", &[chain(decimal(42), &[unary("toString")])]),
+                keyword(
+                    "append:",
+                    &[Expr::Constant(Literal::String("\nbar".to_string()))]
+                )
             ]
         ))
     );

@@ -33,8 +33,8 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [x] $" Strings
 - [x] $""" Strings
 - [x] " Strings
+- [x] """ Strings
 - [ ] :::: methods
-- [ ] """ Strings
 - [ ] Literal arrays: unlike ST, don't change internal syntax?
 - [ ] { foo: x }
 - [ ] ${ foo: 42 }
