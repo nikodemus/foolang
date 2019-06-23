@@ -1,0 +1,237 @@
+= Foolang Syntax
+
+NOTE: Foolang syntax is intended to be extensible by users,
+but details are open.
+
+== Comments
+
+----
+# This is a comment.
+----
+
+== Integer Literals
+
+Decimal numbers:: `123`
+
+Hexadecimal numbers:: `0xFFFFFFFF`
+
+Binary numbers:: `0b01010101`
+
+All integer literals additionally allow arbitrary
+interleaving of underscore characters to make magnitude
+and parts of large numbers more obvious.
+
+----
+100_000_000
+
+0xFFFF_FFFF_FFFF_FFFF
+
+0b0101_0101_0101_0101
+----
+
+== Float Literals
+
+Currently all floats are double-floats.
+
+----
+1.123
+1.0e6
+----
+
+== String Literals
+
+String literal::
+----
+$"Newlines can be embedded as literals.
+"Doublequotes" are fine, Escape sequences are
+ignored. To embed a doublequote followed by a
+dollar sign use "$$."$
+----
+
+Block string literal::
+----
+$"""Whitespace upto start column of string
+    proper is stripped.
+       Further whitespace is preserved.
+    Escape sequences like \n are ignored.
+    "Double quotes" can be used without
+    escaping. To embed a 3 x doublequote
+    followed by a dollar sign use """$$.
+"""$
+----
+
+== String Interpolation
+
+`{...}` can be embedded in interpolated strings. The
+code inside the braces can refer to the lexical environment.
+The resulting object is converted to string by sending it
+the `toString` message.
+
+NOTE: If string interpolation syntax is used without
+embedding `{...}` in the string, the resulting object is
+a literal string!
+
+Interpolated string::
+----
+"Hello {user name}!
+
+Escape sequences like \n do work. Newlines can
+be embedded. \" is required to embed a
+doublequote anywhere, including in the
+interpolated parts."
+----
+
+Interpolated block string::
+----
+"""{"doublequotes" append: " are fine!"}
+   Whitespace upto start column of string
+   proper is stripped.
+       Further whitespace is preserved.
+   Escape sequences like \n work too.
+"""
+----
+
+=== Example
+----
+let x := 42
+"X is {x}!"
+----
+is equivalent to:
+----
+let x := 42
+"X is" append: x toString; append: "!"
+----
+
+=== Selector Literals
+
+Unary selectors:: Unary selectors are used for messages
+that take no arguments.
+----
+$alphanumericName123
+----
+
+Keyword selectors:: Keyword selectors are used for messages
+that take one or more arguments. Tailing arguments can be
+left unnamed, represented by only colons. Selectors with
+no named arguments are called n-ary selectors.
+----
+$key1:key2:
+$message:::
+$::
+----
+
+NOTE: A message send using a keyword selector appears
+as `object key1: arg1 key2: arg2`, but the
+_selector_ itself is `$key1:key2:`.
+
+== Array Expressions
+
+Array Literals::
+----
+$["literal", "constant", $["nested", "array"]]
+----
+
+Array Constructors::
+----
+[array, constructed, at, runtime]
+----
+
+== Objects Expressions
+
+Object literals:: Object literals are immutable instances of
+an anonymous class that only respond to the specified unary
+messages with constant values.
+----
+${ foo: 42, bar: 42 } foo # => 42
+----
+
+Object constructors:: Object constructors create immutable
+instances of an anonymous class. They are otherwise like
+object literals, but the expressions associated with selectors
+can refer to the lexical environment, and are evaluated
+when the object is created.
+----
+let x := 21;
+{ foo: x * 2 } foo # => 42
+----
+
+== Type Annotations
+
+Annotations can be applied to bindings, expressions,
+instance variables, return values, and arguments.
+
+Annotations that the compiler cannot prove are asserted at
+runtime.
+
+----
+let x <Int> := 42 # <1>
+
+foo bar <Int> + 1 # <2>
+
+@class Foo { slot <Int> } # <3>
+
+@method Foo bar -> <Int> # <4>
+   slot
+
+@method Foo bar: x <Int> # <5>
+   Foo __new__ bar: bar + x
+
+{ x + y } -> <Int> # <6>
+
+{ :z <Int> | x + y + z } # <7>
+----
+<1> Annotating a binding.
+<2> Annotating an expression.
+<3> Annotating an instance variable.
+<4> Annotating a method return value.
+<5> Annotating a method parameter.
+<6> Annotating a block return value.
+<7> Annotating a block parameter.
+
+== Messages
+
+Unary suffix messages:: Single alphanumeric word following
+the expression it is to be sent to. They have the highest
+precedence of all messages.
+----
+obj messageToObj messageToResult
+----
+
+Keyword messages:: Keyword messages are colon-suffixed
+alphanumeric words, each word followed by an argument.
+A sequence of such keyword/argument pairs is a single
+keyword message. Tailing keyword names can be empty, but then
+require spaces on both sides of the colon. A keyword
+message with only empty names is called n-ary message.
+----
+obj key1: arg1 key2: arg2
+obj message: arg1 : arg2 : arg3
+obj : arg1 : arg2 : arg3
+----
+
+== Function Calls and Operators
+
+Function calls and operators are syntax sugar on top of
+unary and keyword messages.
+
+Function calls:: N-ary
+messages can be also written in as function calls.
+----
+obj(arg1, arg2, arg3)
+----
+
+Prefix and infix operators:: Operators are non-alphabetic
+sigils converted to unary messages by the parser. They
+follow conventional precedence amongst them selves.
+Prefix binds tightest, infix binds weaker then unary
+messages but stronger than keyword messages.
+----
+-x
+
+1 + 2 * 10 # => 21
+
+obj key1: x + y
+    key2: x - y
+----
+
+NOTE: Alphanumeric infix operators are under consideration.
