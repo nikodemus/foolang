@@ -453,3 +453,11 @@ fn parse_keyword_error() {
         })
     );
 }
+
+#[test]
+fn parse_record() {
+    assert_eq!(
+        parse_str("{ foo: 42 }"),
+        Ok(chain(var("Record"), &[keyword("foo:", &[decimal(42)])]))
+    );
+}

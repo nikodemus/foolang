@@ -349,6 +349,9 @@ impl Parser {
         }
     }
     fn parse_prefix_block(&mut self, token: Token) -> Result<Expr, ParseError> {
+        if let TokenInfo::Keyword(_) = self.peek_token()?.info {
+            return self.parse_prefix_record(token);
+        }
         let mut args = vec![];
         loop {
             let next = self.peek_token()?;
@@ -454,6 +457,39 @@ impl Parser {
             TokenInfo::ParenEnd() => Ok(expr),
             _ => self.error(token, "Unmatched close parenthesis"),
         }
+    }
+    fn parse_prefix_record(&mut self, _: Token) -> Result<Expr, ParseError> {
+        let mut selector = String::new();
+        let mut arguments = vec![];
+        loop {
+            let key = self.consume_token()?;
+            match key.info {
+                TokenInfo::Keyword(name) => {
+                    selector.push_str(name.as_str());
+                }
+                TokenInfo::BlockEnd() => {
+                    break;
+                }
+                _ => {
+                    return self.error(key, "Not a keyword");
+                }
+            }
+            // FIXME: hardcoded precedence
+            arguments.push(self.parse_expression(2)?);
+            let term = self.consume_token()?;
+            match term.info {
+                TokenInfo::BlockEnd() => break,
+                TokenInfo::Sequence(_) => continue,
+                _ => return self.error(term, "Malformed record"),
+            }
+        }
+        Ok(Expr::Chain(
+            Box::new(Expr::Variable("Record".to_string())),
+            vec![Message {
+                selector,
+                arguments,
+            }],
+        ))
     }
     fn parse_prefix_return(&mut self, token: Token) -> Result<Expr, ParseError> {
         let value = self.parse_expression(token.precedence())?;

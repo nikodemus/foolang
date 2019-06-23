@@ -34,11 +34,11 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [x] $""" Strings
 - [x] " Strings
 - [x] """ Strings
+- [x] { foo: x } => Record foo: x
 - [ ] :::: methods
 - [ ] $:::: selectors
 - [ ] Literal arrays: unlike ST, don't change internal syntax?
-- [ ] { foo: x }
-      => Record foo: x
+- [ ] Trailing commas in arrays
 - [ ] ${ foo: 42 }
 - [ ] \# Comments (attach to expressions)
 - [ ] Definitions
