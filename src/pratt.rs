@@ -868,54 +868,14 @@ impl Parser {
         let mut start = self.stream.position();
         let mut content = String::new();
         loop {
-            let s = self.stream.str();
-            if s.len() == 0 {
+            if self.stream.at_eof() {
                 return Err(self.error_at(start0, "Unterminated string"));
             }
-            if &s[..1] == r#"\"# {
-                if s.len() < 2 {
-                    return Err(self.error_at(start0, "Unterminated string"));
-                }
-                match &s[1..2] {
-                    r#"""# => {
-                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
-                        content.push_str("\"");
-                        start = self.stream.skip(2);
-                        continue;
-                    }
-                    r#"n"# => {
-                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
-                        content.push_str("\n");
-                        start = self.stream.skip(2);
-                        continue;
-                    }
-                    r#"r"# => {
-                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
-                        content.push_str("\r");
-                        start = self.stream.skip(2);
-                        continue;
-                    }
-                    r#"t"# => {
-                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
-                        content.push_str("\t");
-                        start = self.stream.skip(2);
-                        continue;
-                    }
-                    r#"\"# => {
-                        content.push_str(&self.stream.as_str()[start..self.stream.position()]);
-                        content.push_str("\\");
-                        start = self.stream.skip(2);
-                        continue;
-                    }
-                    _ => {
-                        return Err(self.error_at(
-                            self.stream.position() + 1,
-                            "Unknown escape sequece in string",
-                        ))
-                    }
-                }
+            if self.scan_string_escape_sequence(start0, &mut content)? {
+                start = self.stream.position();
+                continue;
             }
-            if &s[..1] == r#"""# {
+            if &self.stream.str()[0..1] == r#"""# {
                 break;
             }
             self.stream.skip(1);
@@ -923,7 +883,7 @@ impl Parser {
         content.push_str(&self.stream.as_str()[start..self.stream.position()]);
         self.stream.skip(quote.len());
         Ok(Token {
-            position: start,
+            position: start0,
             info: TokenInfo::InterpolatedString(content),
         })
     }
@@ -938,11 +898,11 @@ impl Parser {
             }
             if &self.stream.str()[0..1] == "\n" {
                 content.push_str(&self.stream.as_str()[start..=self.stream.position()]);
-                // One for the newline,
                 start = self.stream.skip_whitespace(col + 1);
                 continue;
             }
             if self.scan_string_escape_sequence(start0, &mut content)? {
+                start = self.stream.position();
                 continue;
             }
             let s = self.stream.str();
