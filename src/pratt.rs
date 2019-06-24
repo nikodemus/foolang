@@ -158,8 +158,6 @@ impl Token {
     fn precedence(&self) -> usize {
         match &self.info {
             TokenInfo::Eof() => 0,
-            TokenInfo::ArrayBegin() => 0,
-            TokenInfo::ArrayEnd() => 0,
             TokenInfo::LiteralRecordBegin() => 0,
             TokenInfo::BlockBegin() => 0,
             TokenInfo::BlockEnd() => 0,
@@ -169,6 +167,8 @@ impl Token {
             TokenInfo::Return() => 2,
             TokenInfo::Assign() => 2,
             TokenInfo::Sequence(_) => 2,
+            TokenInfo::ArrayBegin() => 2,
+            TokenInfo::ArrayEnd() => 2,
             TokenInfo::Cascade() => 3,
             TokenInfo::Chain() => 4,
             TokenInfo::Keyword(_) => 5,
@@ -332,15 +332,25 @@ impl Parser {
         }
     }
     fn parse_prefix_array(&mut self, token: Token) -> Result<Expr, ParseError> {
-        let expr = self.parse_expression(token.precedence())?;
-        let next = self.consume_token()?;
-        match next.info {
-            TokenInfo::ArrayEnd() => match expr {
-                Expr::Sequence(exprs) => Ok(Expr::Array(exprs)),
-                _ => Ok(Expr::Array(vec![expr])),
-            },
-            _ => self.error(token, "Unmatched array start"),
+        let mut content = vec![];
+        loop {
+            let next = self.peek_token()?;
+            match next.info {
+                TokenInfo::ArrayEnd() => {
+                    self.consume_token();
+                    break;
+                }
+                _ => {}
+            }
+            content.push(self.parse_expression(token.precedence())?);
+            let next = self.consume_token()?;
+            match next.info {
+                TokenInfo::ArrayEnd() => break,
+                TokenInfo::Sequence(true) => {}
+                _ => return self.error(next, "Malformed array"),
+            }
         }
+        Ok(Expr::Array(content))
     }
     fn parse_prefix_bind(&mut self, token: Token) -> Result<Expr, ParseError> {
         let var = self.consume_token()?;

@@ -8,8 +8,8 @@ Timeboxing in releases of 50-200h of work.
 
 ### WIP: 0.2: Better Parser, Full(ish) Language
 
-Time estimated: 117h
-Time spent: 52h
+Time estimated: 118h
+Time spent: 51h
 
 Support the full syntax I have in mind, provide reasonable errors.
 
@@ -39,9 +39,9 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [x] """ Strings 1h
 - [x] { foo: x } => Record foo: x 1h
 - [x] ${ foo: x } 1h
+- [x] Trailing commas in arrays 1h
 - [ ] :::: methods 1h
 - [ ] $:::: selectors 1h
-- [ ] Trailing commas in arrays 1h
 - [ ] $:expr 1h ("once")
       - `$:{ foo: 42 }` readtime
       - `$:(Global foo)` loadtime
@@ -64,8 +64,8 @@ Support the full syntax I have in mind, provide reasonable errors.
       names and are not first class objects!
 - [ ] @import <namespace>.<Name> as: <Alias> 1h
 - [ ] @export <namespace>.<Name> as: <Alias> 1h
-- [ ] Support double-newline as eof after @ for interactive input
-- [ ] foo(a, b, c) as alias to foo : a : b : c 5h
+- [ ] Support double-newline as eof after @ for interactive input. 1h
+- [ ] foo(a, b, c) as alias to foo : a : b : c. 5h
 - [ ] Parse into Global, LocalVariable, InstanceVariable, MethodParameter,
       BlockParameter 5h
 - [ ] Replace the old parser and support ast changes in evaluator 20h

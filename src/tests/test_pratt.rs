@@ -287,6 +287,14 @@ fn parse_array() {
 }
 
 #[test]
+fn parse_array_trailing_comma() {
+    assert_eq!(
+        parse_str("[1,2,3,]"),
+        Ok(Expr::Array(vec![decimal(1), decimal(2), decimal(3)]))
+    );
+}
+
+#[test]
 fn parse_bind() {
     assert_eq!(
         parse_str("let x := 42, x foo, x + 1"),
