@@ -348,10 +348,11 @@ fn parse_type() {
 #[test]
 fn parse_selector() {
     assert_eq!(
-        parse_str("[$foo, $bar:quux:] "),
+        parse_str("[$foo, $bar:quux:, $:::] "),
         Ok(Expr::Array(vec![
             Expr::Constant(Literal::Selector("foo".to_string())),
-            Expr::Constant(Literal::Selector("bar:quux:".to_string()))
+            Expr::Constant(Literal::Selector("bar:quux:".to_string())),
+            Expr::Constant(Literal::Selector(":::".to_string()))
         ]))
     );
 }

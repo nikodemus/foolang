@@ -221,7 +221,8 @@ struct Parser {
     literal_string_re: Regex,
     literal_record_re: Regex,
     character_re: Regex,
-    selector_re: Regex,
+    unary_selector_re: Regex,
+    keyword_selector_re: Regex,
     type_re: Regex,
     return_re: Regex,
     bind_re: Regex,
@@ -251,8 +252,10 @@ impl Parser {
             lookahead: VecDeque::new(),
             cascade: None,
             positional_parameter_re: Regex::new(r"^:[_a-zA-Z][_a-zA-z0-9]*").unwrap(),
-            selector_re: Regex::new(r"^\$[_a-zA-Z][_a-zA-Z0-9]*(:[_a-zA-Z][_a-zA-Z0-9]*:)*")
-                .unwrap(),
+            unary_selector_re: Regex::new(r"^\$[_a-zA-Z][_a-zA-Z0-9]*").unwrap(),
+            keyword_selector_re: Regex::new(r"^\$(([_a-zA-Z][_a-zA-Z0-9]*)?:)+").unwrap(),
+            keyword_re: Regex::new(r"^([_a-zA-Z][_a-zA-Z0-9]*)?:").unwrap(),
+            identifier_re: Regex::new(r"^[_a-zA-Z][_a-zA-Z0-9]*").unwrap(),
             literal_record_re: Regex::new(r#"^\$\{"#).unwrap(),
             literal_block_string_re: Regex::new(r#"^\$""""#).unwrap(),
             literal_string_re: Regex::new(r#"^\$""#).unwrap(),
@@ -276,8 +279,6 @@ impl Parser {
             decimal_re: Regex::new(r"^[0-9]+").unwrap(),
             float_re: Regex::new(r"^[0-9]+\.[0-9]+").unwrap(),
             operator_re: Regex::new(r"^[\-+*/%<>=^|&!\?]+").unwrap(),
-            keyword_re: Regex::new(r"^([_a-zA-Z][_a-zA-Z0-9]*)*:").unwrap(),
-            identifier_re: Regex::new(r"^[_a-zA-Z][_a-zA-Z0-9]*").unwrap(),
         }
     }
     fn parse(&mut self, allow_incomplete: bool) -> Result<(Expr, usize), ParseError> {
@@ -810,7 +811,14 @@ impl Parser {
                 info: Operator(string),
             });
         }
-        if let Some(string) = self.stream.scan(&self.selector_re) {
+        if let Some(string) = self.stream.scan(&self.keyword_selector_re) {
+            println!("keys: {}", &string);
+            return Ok(Token {
+                position,
+                info: Constant(Literal::Selector(string[1..].to_string())),
+            });
+        }
+        if let Some(string) = self.stream.scan(&self.unary_selector_re) {
             return Ok(Token {
                 position,
                 info: Constant(Literal::Selector(string[1..].to_string())),

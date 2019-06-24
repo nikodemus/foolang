@@ -9,7 +9,7 @@ Timeboxing in releases of 50-200h of work.
 ### WIP: 0.2: Better Parser, Full(ish) Language
 
 Time estimated: 118h
-Time spent: 51h
+Time spent: 55.h
 
 Support the full syntax I have in mind, provide reasonable errors.
 
@@ -41,7 +41,7 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [x] ${ foo: x } 1h
 - [x] Trailing commas in arrays 1h
 - [x] :::: methods 1h
-- [ ] $:::: selectors 1h
+- [x] $:::: selectors 1h
 - [ ] $:expr 1h ("once")
       - `$:{ foo: 42 }` readtime
       - `$:(Global foo)` loadtime
