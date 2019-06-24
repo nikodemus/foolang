@@ -42,13 +42,12 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [x] Trailing commas in arrays 1h
 - [x] :::: methods 1h
 - [x] $:::: selectors 1h
+- [ ] \# Comments (attach to expressions) 5h
 - [ ] foo(a, b, c) as alias to foo : a : b : c. 5h
-- [ ] Support double-newline as eof after @ for interactive input. 1h
 - [ ] $:expr 1h ("once")
       - `$:{ foo: 42 }` readtime
       - `$:(Global foo)` loadtime
       - `$:arg` runtime (static allocation)
-- [ ] \# Comments (attach to expressions) 5h
 - [ ] @interface <Name> { foo -> <Int>, bar: <Int> -> <Int> } 5h
 - [ ] @class <name> { slot-no-default, slot: default } 1h
 - [ ] @class <name> { ... } <tag>... 5h
@@ -67,6 +66,7 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [ ] @import <namespace>.<Name> as: <Alias> 1h
 - [ ] @export <namespace>.<Name> as: <Alias> 1h
 - [ ] Replace the old parser and support ast changes in evaluator 20h
+- [ ] Support double-newline as eof after @ for interactive input. 1h
 - [ ] Change system class to system object 5h
 - [ ] Change ./foo to support @main 1h
 
