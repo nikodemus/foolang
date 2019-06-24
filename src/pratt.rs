@@ -276,7 +276,7 @@ impl Parser {
             decimal_re: Regex::new(r"^[0-9]+").unwrap(),
             float_re: Regex::new(r"^[0-9]+\.[0-9]+").unwrap(),
             operator_re: Regex::new(r"^[\-+*/%<>=^|&!\?]+").unwrap(),
-            keyword_re: Regex::new(r"^[_a-zA-Z][_a-zA-Z0-9]*:").unwrap(),
+            keyword_re: Regex::new(r"^([_a-zA-Z][_a-zA-Z0-9]*)*:").unwrap(),
             identifier_re: Regex::new(r"^[_a-zA-Z][_a-zA-Z0-9]*").unwrap(),
         }
     }
@@ -337,7 +337,7 @@ impl Parser {
             let next = self.peek_token()?;
             match next.info {
                 TokenInfo::ArrayEnd() => {
-                    self.consume_token();
+                    self.consume_token()?;
                     break;
                 }
                 _ => {}

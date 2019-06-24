@@ -204,16 +204,16 @@ fn parse_error_context() {
     assert_eq!(
         parse_str(
             "obj zoo
-                   ; foo: x bar!: y -- zot
+                   ; foo: x bar@: y -- zot
                    ; do thing
                    "
         ),
         Err(ParseError {
-            position: 40,
+            position: 39,
             problem: "Invalid token",
             context: "001 obj zoo
-002                    ; foo: x bar!: y -- zot
-                                    ^-- Invalid token
+002                    ; foo: x bar@: y -- zot
+                                   ^-- Invalid token
 003                    ; do thing
 "
             .to_string()
@@ -478,5 +478,16 @@ fn parse_literal_record() {
             vec![String::from("foo:")],
             vec![Literal::Decimal(42)]
         )))
+    );
+}
+
+#[test]
+fn parse_nary_message() {
+    assert_eq!(
+        parse_str("foo : 1 : 2 : 3"),
+        Ok(chain(
+            var("foo"),
+            &[keyword(":::", &[decimal(1), decimal(2), decimal(3)])]
+        ))
     );
 }

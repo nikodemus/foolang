@@ -40,7 +40,7 @@ Support the full syntax I have in mind, provide reasonable errors.
 - [x] { foo: x } => Record foo: x 1h
 - [x] ${ foo: x } 1h
 - [x] Trailing commas in arrays 1h
-- [ ] :::: methods 1h
+- [x] :::: methods 1h
 - [ ] $:::: selectors 1h
 - [ ] $:expr 1h ("once")
       - `$:{ foo: 42 }` readtime
