@@ -58,7 +58,7 @@ pub enum Expr {
     Sequence(Vec<Expr>),
     Block(usize, Vec<String>, Box<Expr>),
     Array(usize, Vec<Expr>),
-    Bind(String, Box<Expr>, Box<Expr>),
+    Bind(usize, String, Box<Expr>, Box<Expr>),
     Assign(String, Box<Expr>),
     Return(Box<Expr>),
     Type(String, Box<Expr>),
@@ -86,7 +86,8 @@ impl Expr {
             Sequence(exprs) => Sequence(exprs.into_iter().map(Expr::no_position).collect()),
             Block(_, names, body) => Block(0, names, Box::new(body.no_position())),
             Array(_, exprs) => Array(0, exprs.into_iter().map(Expr::no_position).collect()),
-            Bind(name, value, body) => Bind(
+            Bind(_, name, value, body) => Bind(
+                0,
                 name,
                 Box::new(value.no_position()),
                 Box::new(body.no_position()),
@@ -423,6 +424,7 @@ impl Parser {
                 if let TokenInfo::Sequence(_) = seq.info {
                     let body = self.parse_expression(token.precedence())?;
                     Ok(Expr::Bind(
+                        token.position,
                         name.to_string(),
                         Box::new(value),
                         Box::new(body),

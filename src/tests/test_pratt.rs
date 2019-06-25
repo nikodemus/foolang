@@ -321,6 +321,7 @@ fn parse_bind() {
     assert_eq!(
         parse_str("let x := 42, x foo, x + 1"),
         Ok(Expr::Bind(
+            0,
             "x".to_string(),
             Box::new(decimal(42)),
             Box::new(Expr::Sequence(vec![
@@ -583,6 +584,19 @@ fn block_position() {
             3,
             vec![],
             Box::new(Expr::Variable(5, "a".to_string()))
+        ))
+    );
+}
+
+#[test]
+fn bind_position() {
+    assert_eq!(
+        parse_str_with_position("   let x := a, x"),
+        Ok(Expr::Bind(
+            3,
+            "x".to_string(),
+            Box::new(Expr::Variable(12, "a".to_string())),
+            Box::new(Expr::Variable(15, "x".to_string()))
         ))
     );
 }
