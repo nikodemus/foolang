@@ -2,69 +2,6 @@
 
 # foolang
 
-## Value Semantics
-
-    @class Point { x <Int>, y <Int> }
-        accessors
-        value
-    @class Rectangle { p1 <Point>, p2 <Point> }
-    @classMethod Rectangle new
-        self p1: (Point x: 0 y: 0)
-             p2: (Point x: 0 y: 0)
-    @method Rectangle p1
-       p1
-    @method Rectangle left
-       p1 x: (p1 x + 1)
-       p2 x: (p2 x + 1)
-       self
-
-Returning a p1 allocates a fresh copy.
-
-There are effectively two classes: KnownPoint and UnknownPoint.
-
-Rectangle uses KnownPoint which is completely inlined
-into it. Assignment and references are simple and have
-no indirection.
-
-UnknownPoint is a bit tricker:
-
-      let box := Box new: (Point x: 0 y: 0)
-      let p = box value
-      box value x: p x + 1
-      p x == box value x
-
-To support value semantics this should evaluate to false.
-
-Record/value cannot make a copy because it doesn't know it
-should.
-
-UnknownPoint/x: to make a copy it needs access to the location
-where the copy that is being mutated is stored. Then it
-can do copy-on-write.
-
-## IDE
-
-I like the way Smalltalk IDE automate code organization.
-
-I don't like the way the question of presentation is entirely removed:
-if two methods are best understood when viewed next to each other then
-that should be the default mode of display.
-
-I think I would like Deuce-like views:
-
-- Selected methods of this class.
-- All methods with this selector.
-- All methods using thise selector.
-- All methods referring to this global.
-- Current method followed by selectors on self it invokes.
-
-Default presentation of a class is an interesting question.
-
-Documented methods first?
-
-Methods grouped by protocol?
-
-Methods mentioned in class docstring first?
 
 ## References
 
@@ -121,21 +58,6 @@ Methods mentioned in class docstring first?
     ding ding ding
 
 bell ring!
-```
-
-### GC
-
-Simplest thing that could possibly work: mark and sweep on top of malloc and
-free.
-
-Allocation header:
-```
-  Bits 00-01: GC marks
-  Bits 02-09: number of raw words
-  Bits 10-17: number of gc slots
-  Bits 18-25: number of weak slots
-  Bits 26-28: no tail / raw tail / gc tail / weak tail
-  Bits 29-31: n^2 = tail element width in bytes if raw tail
 ```
 
 ## BIG GOAL
