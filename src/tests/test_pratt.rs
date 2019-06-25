@@ -507,6 +507,7 @@ fn parse_comment() {
              expr"
         ),
         Ok(Expr::LeadingComment(
+            0,
             Box::new(var("expr")),
             " Leading comment\n of several lines.".to_string()
         ))
@@ -514,6 +515,7 @@ fn parse_comment() {
     assert_eq!(
         parse_str("expr # Trailing line comment"),
         Ok(Expr::TrailingComment(
+            0,
             Box::new(var("expr")),
             " Trailing line comment".to_string()
         ))
@@ -525,6 +527,7 @@ fn parse_comment() {
              bong bong"
         ),
         Ok(Expr::LeadingComment(
+            0,
             Box::new(Expr::Sequence(vec![
                 chain(var("foo"), &[unary("bar")]),
                 chain(var("bong"), &[unary("bong")])
@@ -541,6 +544,7 @@ fn parse_comment() {
         Ok(Expr::Sequence(vec![
             chain(var("foo"), &[unary("bar")]),
             Expr::LeadingComment(
+                0,
                 Box::new(chain(var("bong"), &[unary("bing")])),
                 " leading comment in middle of sequence".to_string()
             )
@@ -635,6 +639,29 @@ fn type_position() {
             2,
             "Int".to_string(),
             Box::new(Expr::Variable(0, "x".to_string()))
+        ))
+    );
+}
+
+#[test]
+fn comment_position() {
+    assert_eq!(
+        parse_str_with_position(
+            "   # Leading comment
+             expr"
+        ),
+        Ok(Expr::LeadingComment(
+            3,
+            Box::new(Expr::Variable(34, "expr".to_string())),
+            " Leading comment".to_string()
+        ))
+    );
+    assert_eq!(
+        parse_str_with_position(" expr # Trailing line comment"),
+        Ok(Expr::TrailingComment(
+            6,
+            Box::new(Expr::Variable(1, "expr".to_string())),
+            " Trailing line comment".to_string()
         ))
     );
 }

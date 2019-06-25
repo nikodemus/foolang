@@ -62,8 +62,8 @@ pub enum Expr {
     Assign(usize, String, Box<Expr>),
     Return(usize, Box<Expr>),
     Type(usize, String, Box<Expr>),
-    LeadingComment(Box<Expr>, String),
-    TrailingComment(Box<Expr>, String),
+    LeadingComment(usize, Box<Expr>, String),
+    TrailingComment(usize, Box<Expr>, String),
 }
 
 impl Expr {
@@ -95,9 +95,11 @@ impl Expr {
             Assign(_, name, value) => Assign(0, name, Box::new(value.no_position())),
             Return(_, value) => Return(0, Box::new(value.no_position())),
             Type(_, typename, value) => Type(0, typename, Box::new(value.no_position())),
-            LeadingComment(expr, comment) => LeadingComment(Box::new(expr.no_position()), comment),
-            TrailingComment(expr, comment) => {
-                TrailingComment(Box::new(expr.no_position()), comment)
+            LeadingComment(_, expr, comment) => {
+                LeadingComment(0, Box::new(expr.no_position()), comment)
+            }
+            TrailingComment(_, expr, comment) => {
+                TrailingComment(0, Box::new(expr.no_position()), comment)
             }
         }
     }
@@ -495,7 +497,11 @@ impl Parser {
         }
         // FIXME: hardcoded precedence
         let next = self.parse_expression(token.precedence())?;
-        Ok(Expr::LeadingComment(Box::new(next), comment))
+        Ok(Expr::LeadingComment(
+            token.position,
+            Box::new(next),
+            comment,
+        ))
     }
     fn parse_prefix_record_aux(
         &mut self,
@@ -665,6 +671,7 @@ impl Parser {
     }
     fn parse_suffix_comment(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
         Ok(Expr::TrailingComment(
+            token.position,
             Box::new(left),
             token.str().to_string(),
         ))
