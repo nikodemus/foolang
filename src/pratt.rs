@@ -60,7 +60,7 @@ pub enum Expr {
     Array(usize, Vec<Expr>),
     Bind(usize, String, Box<Expr>, Box<Expr>),
     Assign(usize, String, Box<Expr>),
-    Return(Box<Expr>),
+    Return(usize, Box<Expr>),
     Type(String, Box<Expr>),
     LeadingComment(Box<Expr>, String),
     TrailingComment(Box<Expr>, String),
@@ -93,7 +93,7 @@ impl Expr {
                 Box::new(body.no_position()),
             ),
             Assign(_, name, value) => Assign(0, name, Box::new(value.no_position())),
-            Return(value) => Return(Box::new(value.no_position())),
+            Return(_, value) => Return(0, Box::new(value.no_position())),
             Type(typename, value) => Type(typename, Box::new(value.no_position())),
             LeadingComment(expr, comment) => LeadingComment(Box::new(expr.no_position()), comment),
             TrailingComment(expr, comment) => {
@@ -624,7 +624,7 @@ impl Parser {
     }
     fn parse_prefix_return(&mut self, token: Token) -> Result<Expr, ParseError> {
         let value = self.parse_expression(token.precedence())?;
-        Ok(Expr::Return(Box::new(value)))
+        Ok(Expr::Return(token.position, Box::new(value)))
     }
     fn parse_suffix_assign(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
         if let Expr::Variable(pos, name) = left {

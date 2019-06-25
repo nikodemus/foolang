@@ -348,7 +348,7 @@ fn parse_return() {
     assert_eq!(
         parse_str("return 42, 666"),
         Ok(Expr::Sequence(vec![
-            Expr::Return(Box::new(decimal(42))),
+            Expr::Return(0, Box::new(decimal(42))),
             decimal(666)
         ]))
     );
@@ -613,5 +613,16 @@ fn assign_position() {
             ),
             Expr::Variable(12, "x".to_string())
         ]))
+    );
+}
+
+#[test]
+fn return_position() {
+    assert_eq!(
+        parse_str_with_position("   return 42"),
+        Ok(Expr::Return(
+            3,
+            Box::new(Expr::Constant(10, Literal::Decimal(42)))
+        ))
     );
 }
