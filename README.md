@@ -27,6 +27,10 @@
 
 ## Notes
 
+- https://ferd.ca/the-hitchhiker-s-guide-to-the-unexpected.html
+
+- https://ferd.ca/the-zen-of-erlang.html
+
 - https://devblogs.microsoft.com/cbrumme/reliability/
 
 - Benchmarking: https://github.com/sharkdp/hyperfine
