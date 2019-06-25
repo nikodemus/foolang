@@ -51,6 +51,8 @@ pub enum Expr {
     Assign(String, Box<Expr>),
     Return(Box<Expr>),
     Type(String, Box<Expr>),
+    LeadingComment(Box<Expr>, String),
+    TrailingComment(Box<Expr>, String),
 }
 
 impl Expr {
@@ -131,6 +133,7 @@ enum TokenInfo {
     PositionalParameter(String),
     // true = comma, false = newline
     Sequence(bool),
+    Comment(String),
     Chain(),
     Cascade(),
     BlockBegin(),
@@ -151,6 +154,7 @@ impl Token {
             TokenInfo::Operator(name) => name.as_str(),
             TokenInfo::Keyword(name) => name.as_str(),
             TokenInfo::Type(name) => name.as_str(),
+            TokenInfo::Comment(text) => text.as_str(),
             TokenInfo::InterpolatedString(string) => string.as_str(),
             _ => panic!("Token has no string content: {:?}", self),
         }
@@ -163,6 +167,7 @@ impl Token {
             TokenInfo::BlockEnd() => 0,
             TokenInfo::ParenBegin() => 0,
             TokenInfo::ParenEnd() => 0,
+            TokenInfo::Comment(_) => 1,
             TokenInfo::Bind() => 1,
             TokenInfo::Return() => 2,
             TokenInfo::Assign() => 2,
@@ -223,6 +228,7 @@ struct Parser {
     character_re: Regex,
     unary_selector_re: Regex,
     keyword_selector_re: Regex,
+    comment_re: Regex,
     type_re: Regex,
     return_re: Regex,
     bind_re: Regex,
@@ -262,6 +268,7 @@ impl Parser {
             interpolated_block_string_re: Regex::new(r#"^""""#).unwrap(),
             interpolated_string_re: Regex::new(r#"^""#).unwrap(),
             character_re: Regex::new(r"^'.'").unwrap(),
+            comment_re: Regex::new("^#[^\r\n]*").unwrap(),
             type_re: Regex::new("^<[A-Z][a-zA-Z0-9]*>").unwrap(),
             return_re: Regex::new("^return ").unwrap(),
             bind_re: Regex::new(r"^let ").unwrap(),
@@ -311,6 +318,7 @@ impl Parser {
             TokenInfo::Operator(_) => self.parse_prefix_operator(token),
             TokenInfo::Bind() => self.parse_prefix_bind(token),
             TokenInfo::InterpolatedString(_) => self.parse_prefix_interpolated_string(token),
+            TokenInfo::Comment(_) => self.parse_prefix_comment(token),
             // Leading newline, ignore.
             TokenInfo::Sequence(false) => self.parse_prefix(),
             TokenInfo::Eof() => self.error(token, "Unexpected end of input"),
@@ -328,6 +336,7 @@ impl Parser {
             TokenInfo::Cascade() => self.parse_suffix_cascade(left, token),
             TokenInfo::Operator(_) => self.parse_suffix_operator(left, token),
             TokenInfo::Keyword(_) => self.parse_suffix_keyword(left, token),
+            TokenInfo::Comment(_) => self.parse_suffix_comment(left, token),
             TokenInfo::Eof() => self.error(token, "Unexpected end of input"),
             _ => self.error(token, "Not valid in suffix position."),
         }
@@ -417,6 +426,23 @@ impl Parser {
                 Ok(receiver)
             }
         }
+    }
+    fn parse_prefix_comment(&mut self, token: Token) -> Result<Expr, ParseError> {
+        let mut comment = token.str().to_string();
+        loop {
+            assert_eq!(TokenInfo::Sequence(false), self.consume_token()?.info);
+            let next = self.peek_token()?;
+            if let TokenInfo::Comment(text) = next.info {
+                self.consume_token()?;
+                comment.push_str("\n");
+                comment.push_str(text.as_str());
+            } else {
+                break;
+            }
+        }
+        // FIXME: hardcoded precedence
+        let next = self.parse_expression(token.precedence())?;
+        Ok(Expr::LeadingComment(Box::new(next), comment))
     }
     fn parse_prefix_record_aux(
         &mut self,
@@ -577,6 +603,12 @@ impl Parser {
         }
         Ok(Expr::Cascade(Box::new(left.clone()), chains))
     }
+    fn parse_suffix_comment(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
+        Ok(Expr::TrailingComment(
+            Box::new(left),
+            token.str().to_string(),
+        ))
+    }
     fn parse_suffix_keyword(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
         let mut args = vec![];
         let mut selector = token.str().to_string();
@@ -671,6 +703,7 @@ impl Parser {
                 Constant(_) => {}
                 Identifier(_) => {}
                 Operator(_) => {}
+                Comment(_) => {}
                 _ => return Ok(next),
             }
             self.stream.seek(mark);
@@ -684,6 +717,12 @@ impl Parser {
             return Ok(Token {
                 position,
                 info: Eof(),
+            });
+        }
+        if let Some(comment) = self.stream.scan(&self.comment_re) {
+            return Ok(Token {
+                position,
+                info: Comment(comment[1..].to_string()),
             });
         }
         if let Some(name) = self.stream.scan(&self.type_re) {

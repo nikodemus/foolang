@@ -492,3 +492,53 @@ fn parse_nary_message() {
         ))
     );
 }
+
+#[test]
+fn parse_comment() {
+    assert_eq!(
+        parse_str(
+            "# Leading comment
+             # of several lines.
+             expr"
+        ),
+        Ok(Expr::LeadingComment(
+            Box::new(var("expr")),
+            " Leading comment\n of several lines.".to_string()
+        ))
+    );
+    assert_eq!(
+        parse_str("expr # Trailing line comment"),
+        Ok(Expr::TrailingComment(
+            Box::new(var("expr")),
+            " Trailing line comment".to_string()
+        ))
+    );
+    assert_eq!(
+        parse_str(
+            "#Leading comment on sequence
+             foo bar
+             bong bong"
+        ),
+        Ok(Expr::LeadingComment(
+            Box::new(Expr::Sequence(vec![
+                chain(var("foo"), &[unary("bar")]),
+                chain(var("bong"), &[unary("bong")])
+            ])),
+            "Leading comment on sequence".to_string()
+        ))
+    );
+    assert_eq!(
+        parse_str(
+            "foo bar
+             # leading comment in middle of sequence
+             bong bing"
+        ),
+        Ok(Expr::Sequence(vec![
+            chain(var("foo"), &[unary("bar")]),
+            Expr::LeadingComment(
+                Box::new(chain(var("bong"), &[unary("bing")])),
+                " leading comment in middle of sequence".to_string()
+            )
+        ]))
+    );
+}
