@@ -337,7 +337,7 @@ fn parse_assign() {
     assert_eq!(
         parse_str("x := 42, x"),
         Ok(Expr::Sequence(vec![
-            Expr::Assign("x".to_string(), Box::new(decimal(42))),
+            Expr::Assign(0, "x".to_string(), Box::new(decimal(42))),
             var("x")
         ]))
     );
@@ -598,5 +598,20 @@ fn bind_position() {
             Box::new(Expr::Variable(12, "a".to_string())),
             Box::new(Expr::Variable(15, "x".to_string()))
         ))
+    );
+}
+
+#[test]
+fn assign_position() {
+    assert_eq!(
+        parse_str_with_position("   x := 42, x"),
+        Ok(Expr::Sequence(vec![
+            Expr::Assign(
+                3,
+                "x".to_string(),
+                Box::new(Expr::Constant(8, Literal::Decimal(42)))
+            ),
+            Expr::Variable(12, "x".to_string())
+        ]))
     );
 }
