@@ -28,6 +28,10 @@ fn var(name: &str) -> Expr {
     Expr::Variable(0, name.to_string())
 }
 
+fn array(elts: Vec<Expr>) -> Expr {
+    Expr::Array(0, elts)
+}
+
 fn chain(object: Expr, messages: &[Message]) -> Expr {
     Expr::Chain(Box::new(object), messages.to_vec())
 }
@@ -300,7 +304,7 @@ fn parse_block_with_args() {
 fn parse_array() {
     assert_eq!(
         parse_str("[1,2,3]"),
-        Ok(Expr::Array(vec![decimal(1), decimal(2), decimal(3)]))
+        Ok(array(vec![decimal(1), decimal(2), decimal(3)]))
     );
 }
 
@@ -308,7 +312,7 @@ fn parse_array() {
 fn parse_array_trailing_comma() {
     assert_eq!(
         parse_str("[1,2,3,]"),
-        Ok(Expr::Array(vec![decimal(1), decimal(2), decimal(3)]))
+        Ok(array(vec![decimal(1), decimal(2), decimal(3)]))
     );
 }
 
@@ -367,7 +371,7 @@ fn parse_type() {
 fn parse_selector() {
     assert_eq!(
         parse_str("[$foo, $bar:quux:, $:::] "),
-        Ok(Expr::Array(vec![
+        Ok(array(vec![
             selector("foo"),
             selector("bar:quux:"),
             selector(":::"),
@@ -546,11 +550,14 @@ fn parse_comment() {
 #[test]
 fn constant_position() {
     assert_eq!(
-        parse_str_with_position("[1, 2]"),
-        Ok(Expr::Array(vec![
-            Expr::Constant(1, Literal::Decimal(1)),
-            Expr::Constant(4, Literal::Decimal(2))
-        ]))
+        parse_str_with_position("   [1, 2]"),
+        Ok(Expr::Array(
+            3,
+            vec![
+                Expr::Constant(4, Literal::Decimal(1)),
+                Expr::Constant(7, Literal::Decimal(2))
+            ]
+        ))
     );
 }
 
@@ -558,10 +565,13 @@ fn constant_position() {
 fn variable_position() {
     assert_eq!(
         parse_str_with_position("[a, b]"),
-        Ok(Expr::Array(vec![
-            Expr::Variable(1, "a".to_string()),
-            Expr::Variable(4, "b".to_string())
-        ]))
+        Ok(Expr::Array(
+            0,
+            vec![
+                Expr::Variable(1, "a".to_string()),
+                Expr::Variable(4, "b".to_string())
+            ]
+        ))
     );
 }
 

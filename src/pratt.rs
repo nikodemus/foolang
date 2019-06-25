@@ -57,7 +57,7 @@ pub enum Expr {
     Cascade(Box<Expr>, Vec<Vec<Message>>),
     Sequence(Vec<Expr>),
     Block(usize, Vec<String>, Box<Expr>),
-    Array(Vec<Expr>),
+    Array(usize, Vec<Expr>),
     Bind(String, Box<Expr>, Box<Expr>),
     Assign(String, Box<Expr>),
     Return(Box<Expr>),
@@ -85,7 +85,7 @@ impl Expr {
             ),
             Sequence(exprs) => Sequence(exprs.into_iter().map(Expr::no_position).collect()),
             Block(_, names, body) => Block(0, names, Box::new(body.no_position())),
-            Array(exprs) => Array(exprs.into_iter().map(Expr::no_position).collect()),
+            Array(_, exprs) => Array(0, exprs.into_iter().map(Expr::no_position).collect()),
             Bind(name, value, body) => Bind(
                 name,
                 Box::new(value.no_position()),
@@ -411,7 +411,7 @@ impl Parser {
                 _ => return self.error(next, "Malformed array"),
             }
         }
-        Ok(Expr::Array(content))
+        Ok(Expr::Array(token.position, content))
     }
     fn parse_prefix_bind(&mut self, token: Token) -> Result<Expr, ParseError> {
         let var = self.consume_token()?;
