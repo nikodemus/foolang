@@ -1,15 +1,31 @@
-use crate::pratt::{parse_str, Expr, Literal, Message, ParseError};
+use crate::pratt::{parse_str, parse_str_with_position, Expr, Literal, Message, ParseError};
 
 fn decimal(value: i64) -> Expr {
-    Expr::Constant(Literal::Decimal(value))
+    Expr::Constant(0, Literal::Decimal(value))
 }
 
 fn float(value: f64) -> Expr {
-    Expr::Constant(Literal::Float(value))
+    Expr::Constant(0, Literal::Float(value))
+}
+
+fn selector(name: &str) -> Expr {
+    Expr::Constant(0, Literal::Selector(name.to_string()))
+}
+
+fn string(s: &str) -> Expr {
+    Expr::Constant(0, Literal::String(s.to_string()))
+}
+
+fn character(c: char) -> Expr {
+    Expr::Constant(0, Literal::Character(c))
+}
+
+fn lit_record(names: Vec<String>, values: Vec<Literal>) -> Expr {
+    Expr::Constant(0, Literal::Record(names, values))
 }
 
 fn var(name: &str) -> Expr {
-    Expr::Variable(name.to_string())
+    Expr::Variable(0, name.to_string())
 }
 
 fn chain(object: Expr, messages: &[Message]) -> Expr {
@@ -350,27 +366,21 @@ fn parse_selector() {
     assert_eq!(
         parse_str("[$foo, $bar:quux:, $:::] "),
         Ok(Expr::Array(vec![
-            Expr::Constant(Literal::Selector("foo".to_string())),
-            Expr::Constant(Literal::Selector("bar:quux:".to_string())),
-            Expr::Constant(Literal::Selector(":::".to_string()))
+            selector("foo"),
+            selector("bar:quux:"),
+            selector(":::"),
         ]))
     );
 }
 
 #[test]
 fn parse_character() {
-    assert_eq!(
-        parse_str("'x'"),
-        Ok(Expr::Constant(Literal::Character('x')))
-    );
+    assert_eq!(parse_str("'x'"), Ok(character('x')));
 }
 
 #[test]
 fn parse_literal_string() {
-    assert_eq!(
-        parse_str(r#" $"foo"$$"$ "#),
-        Ok(Expr::Constant(Literal::String(r#"foo"$"#.to_string())))
-    );
+    assert_eq!(parse_str(r#" $"foo"$$"$ "#), Ok(string(r#"foo"$"#)));
 }
 
 #[test]
@@ -380,16 +390,13 @@ fn parse_literal_block_string() {
             r#"   $"""foo
        bar"""$"#
         ),
-        Ok(Expr::Constant(Literal::String("foo\nbar".to_string())))
+        Ok(string("foo\nbar"))
     );
 }
 
 #[test]
 fn parse_interpolated_string_no_interpolation() {
-    assert_eq!(
-        parse_str(r#" "foo bar" "#),
-        Ok(Expr::Constant(Literal::String("foo bar".to_string())))
-    );
+    assert_eq!(parse_str(r#" "foo bar" "#), Ok(string("foo bar")));
 }
 
 #[test]
@@ -397,13 +404,10 @@ fn parse_interpolated_string_simple_interpolation() {
     assert_eq!(
         parse_str(r#" "foo {42} bar" "#),
         Ok(chain(
-            Expr::Constant(Literal::String("foo ".to_string())),
+            string("foo "),
             &[
                 keyword("append:", &[chain(decimal(42), &[unary("toString")])]),
-                keyword(
-                    "append:",
-                    &[Expr::Constant(Literal::String(" bar".to_string()))]
-                )
+                keyword("append:", &[string(" bar")])
             ]
         ))
     );
@@ -417,10 +421,7 @@ fn parse_interpolated_string_head_and_tail() {
             decimal(1),
             &[
                 unary("toString"),
-                keyword(
-                    "append:",
-                    &[Expr::Constant(Literal::String(" bar ".to_string()))]
-                ),
+                keyword("append:", &[string(" bar ")]),
                 keyword("append:", &[chain(decimal(2), &[unary("toString")])])
             ]
         ))
@@ -436,13 +437,10 @@ fn parse_interpolated_block_string() {
       bar""""#
         ),
         Ok(chain(
-            Expr::Constant(Literal::String("foo\n   ".to_string())),
+            string("foo\n   "),
             &[
                 keyword("append:", &[chain(decimal(42), &[unary("toString")])]),
-                keyword(
-                    "append:",
-                    &[Expr::Constant(Literal::String("\nbar".to_string()))]
-                )
+                keyword("append:", &[string("\nbar")])
             ]
         ))
     );
@@ -475,10 +473,10 @@ fn parse_record() {
 fn parse_literal_record() {
     assert_eq!(
         parse_str("${ foo: 42 }"),
-        Ok(Expr::Constant(Literal::Record(
+        Ok(lit_record(
             vec![String::from("foo:")],
             vec![Literal::Decimal(42)]
-        )))
+        ))
     );
 }
 
@@ -539,6 +537,28 @@ fn parse_comment() {
                 Box::new(chain(var("bong"), &[unary("bing")])),
                 " leading comment in middle of sequence".to_string()
             )
+        ]))
+    );
+}
+
+#[test]
+fn constant_position() {
+    assert_eq!(
+        parse_str_with_position("[1, 2]"),
+        Ok(Expr::Array(vec![
+            Expr::Constant(1, Literal::Decimal(1)),
+            Expr::Constant(4, Literal::Decimal(2))
+        ]))
+    );
+}
+
+#[test]
+fn variable_position() {
+    assert_eq!(
+        parse_str_with_position("[a, b]"),
+        Ok(Expr::Array(vec![
+            Expr::Variable(1, "a".to_string()),
+            Expr::Variable(4, "b".to_string())
         ]))
     );
 }

@@ -35,10 +35,21 @@ pub struct Message {
     pub arguments: Vec<Expr>,
 }
 
+impl Message {
+    fn no_position(mut self) -> Self {
+        self.arguments = self
+            .arguments
+            .into_iter()
+            .map(|arg| arg.no_position())
+            .collect();
+        self
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
-    Constant(Literal),
-    Variable(String),
+    Constant(usize, Literal),
+    Variable(usize, String),
     // Explicit receiver for chains means that we can always trivially access
     // the original receiver, instead of having to look for it in a tree of sends.
     Chain(Box<Expr>, Vec<Message>),
@@ -56,15 +67,48 @@ pub enum Expr {
 }
 
 impl Expr {
+    fn no_position(self) -> Self {
+        use Expr::*;
+        match self {
+            Constant(_, lit) => Expr::Constant(0, lit.clone()),
+            Variable(_, name) => Expr::Variable(0, name),
+            Chain(expr, messages) => Chain(
+                Box::new(expr.no_position()),
+                messages.into_iter().map(Message::no_position).collect(),
+            ),
+            Cascade(expr, cascade) => Cascade(
+                Box::new(expr.no_position()),
+                cascade
+                    .into_iter()
+                    .map(|chain| chain.into_iter().map(Message::no_position).collect())
+                    .collect(),
+            ),
+            Sequence(exprs) => Sequence(exprs.into_iter().map(Expr::no_position).collect()),
+            Block(names, body) => Block(names, Box::new(body.no_position())),
+            Array(exprs) => Array(exprs.into_iter().map(Expr::no_position).collect()),
+            Bind(name, value, body) => Bind(
+                name,
+                Box::new(value.no_position()),
+                Box::new(body.no_position()),
+            ),
+            Assign(name, value) => Assign(name, Box::new(value.no_position())),
+            Return(value) => Return(Box::new(value.no_position())),
+            Type(typename, value) => Type(typename, Box::new(value.no_position())),
+            LeadingComment(expr, comment) => LeadingComment(Box::new(expr.no_position()), comment),
+            TrailingComment(expr, comment) => {
+                TrailingComment(Box::new(expr.no_position()), comment)
+            }
+        }
+    }
     fn literal(self) -> Literal {
         match self {
-            Expr::Constant(lit) => lit,
+            Expr::Constant(_, lit) => lit,
             _ => panic!("Not a constant: {:?}", self),
         }
     }
     fn is_literal(&self) -> bool {
         match self {
-            Expr::Constant(_) => true,
+            Expr::Constant(_, _) => true,
             _ => false,
         }
     }
@@ -207,6 +251,13 @@ fn parse_string(string: String, allow_incomplete: bool) -> Result<(Expr, usize),
 
 pub fn parse_str(str: &str) -> Result<Expr, ParseError> {
     match parse_string(str.to_string(), false) {
+        Ok((expr, _)) => Ok(expr.no_position()),
+        Err(err) => Err(err),
+    }
+}
+
+pub fn parse_str_with_position(str: &str) -> Result<Expr, ParseError> {
+    match parse_string(str.to_string(), false) {
         Ok((expr, _)) => Ok(expr),
         Err(err) => Err(err),
     }
@@ -307,8 +358,8 @@ impl Parser {
     fn parse_prefix(&mut self) -> Result<Expr, ParseError> {
         let token = self.consume_token()?;
         match token.info {
-            TokenInfo::Constant(literal) => Ok(Expr::Constant(literal)),
-            TokenInfo::Identifier(name) => Ok(Expr::Variable(name)),
+            TokenInfo::Constant(literal) => Ok(Expr::Constant(token.position, literal)),
+            TokenInfo::Identifier(name) => Ok(Expr::Variable(token.position, name)),
             TokenInfo::Return() => self.parse_prefix_return(token),
             TokenInfo::Cascade() => self.parse_prefix_cascade(token),
             TokenInfo::ArrayBegin() => self.parse_prefix_array(token),
@@ -479,37 +530,43 @@ impl Parser {
         }
         Ok((names, values))
     }
-    fn parse_prefix_literal_record(&mut self, _: Token) -> Result<Expr, ParseError> {
+    fn parse_prefix_literal_record(&mut self, token: Token) -> Result<Expr, ParseError> {
         let (names, values) = self.parse_prefix_record_aux(true)?;
         let literals = values.into_iter().map(|x| x.literal()).collect();
-        Ok(Expr::Constant(Literal::Record(names, literals)))
+        Ok(Expr::Constant(
+            token.position,
+            Literal::Record(names, literals),
+        ))
     }
     fn parse_prefix_interpolated_string(&mut self, token: Token) -> Result<Expr, ParseError> {
-        fn append(expr: Expr, string: &str) -> Expr {
-            if string.is_empty() {
+        fn append(mut expr: Expr, source: &str, from: usize, to: usize) -> Expr {
+            if from == to {
                 return expr;
             }
             match expr {
-                Expr::Constant(Literal::String(mut orig)) => {
-                    orig.push_str(string);
-                    Expr::Constant(Literal::String(orig))
+                Expr::Constant(_, Literal::String(ref mut orig)) => {
+                    orig.push_str(&source[from..to]);
+                    expr
                 }
                 _ => expr.keyword(
                     "append:".to_string(),
-                    vec![Expr::Constant(Literal::String(string.to_string()))],
+                    vec![Expr::Constant(
+                        from,
+                        Literal::String((&source[from..to]).to_string()),
+                    )],
                 ),
             }
         }
         let mut stream = StringStream::new(token.str().to_string());
-        let mut expr = Expr::Constant(Literal::String("".to_string()));
+        let mut expr = Expr::Constant(token.position, Literal::String("".to_string()));
         let mut start = 0;
         loop {
             if stream.at_eof() {
-                expr = append(expr, &stream.as_str()[start..stream.position()]);
+                expr = append(expr, &stream.as_str(), start, stream.position());
                 break;
             }
             if stream.charstr() == "{" {
-                expr = append(expr, &stream.as_str()[start..stream.position()]);
+                expr = append(expr, &stream.as_str(), start, stream.position());
                 stream.skip(1);
                 let (part, end) = match partial_parse_str(stream.str()) {
                     Ok(res) => res,
@@ -519,7 +576,7 @@ impl Parser {
                 };
                 let pos = stream.position() + end;
                 expr = match expr {
-                    Expr::Constant(Literal::String(ref s)) if s.is_empty() => {
+                    Expr::Constant(_, Literal::String(ref s)) if s.is_empty() => {
                         part.unary("toString".to_string())
                     }
                     _ => expr.keyword(
@@ -553,10 +610,10 @@ impl Parser {
             _ => self.error(token, "Unmatched close parenthesis"),
         }
     }
-    fn parse_prefix_record(&mut self, _: Token) -> Result<Expr, ParseError> {
+    fn parse_prefix_record(&mut self, token: Token) -> Result<Expr, ParseError> {
         let (names, arguments) = self.parse_prefix_record_aux(true)?;
         Ok(Expr::Chain(
-            Box::new(Expr::Variable("Record".to_string())),
+            Box::new(Expr::Variable(token.position, "Record".to_string())),
             vec![Message {
                 selector: names.join(""),
                 arguments,
@@ -568,7 +625,7 @@ impl Parser {
         Ok(Expr::Return(Box::new(value)))
     }
     fn parse_suffix_assign(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
-        if let Expr::Variable(name) = left {
+        if let Expr::Variable(_, name) = left {
             Ok(Expr::Assign(
                 name,
                 Box::new(self.parse_expression(token.precedence())?),
@@ -588,7 +645,7 @@ impl Parser {
             }
             // Need to wrap in cascade in case this is a chain,
             // which would then accumulate the cascaded messages.
-            let mark = Expr::Variable("(cascade)".to_string());
+            let mark = Expr::Variable(0, "(cascade)".to_string());
             self.cascade = Some(mark.clone());
             let chain = self.parse_expression(token.precedence())?;
             match chain {
