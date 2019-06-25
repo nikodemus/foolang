@@ -56,7 +56,7 @@ pub enum Expr {
     // Each vector of messages is a separate chain using the original receiver.
     Cascade(Box<Expr>, Vec<Vec<Message>>),
     Sequence(Vec<Expr>),
-    Block(Vec<String>, Box<Expr>),
+    Block(usize, Vec<String>, Box<Expr>),
     Array(Vec<Expr>),
     Bind(String, Box<Expr>, Box<Expr>),
     Assign(String, Box<Expr>),
@@ -84,7 +84,7 @@ impl Expr {
                     .collect(),
             ),
             Sequence(exprs) => Sequence(exprs.into_iter().map(Expr::no_position).collect()),
-            Block(names, body) => Block(names, Box::new(body.no_position())),
+            Block(_, names, body) => Block(0, names, Box::new(body.no_position())),
             Array(exprs) => Array(exprs.into_iter().map(Expr::no_position).collect()),
             Bind(name, value, body) => Bind(
                 name,
@@ -463,7 +463,7 @@ impl Parser {
         }
         let expr = self.parse_expression(token.precedence())?;
         if let TokenInfo::BlockEnd() = self.consume_token()?.info {
-            Ok(Expr::Block(args, Box::new(expr)))
+            Ok(Expr::Block(token.position, args, Box::new(expr)))
         } else {
             self.error(token, "Block not closed")
         }

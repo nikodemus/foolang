@@ -277,6 +277,7 @@ fn parse_block() {
     assert_eq!(
         parse_str("{ a + b }"),
         Ok(Expr::Block(
+            0,
             vec![],
             Box::new(chain(var("a"), &[binary("+", var("b"))]))
         ))
@@ -288,6 +289,7 @@ fn parse_block_with_args() {
     assert_eq!(
         parse_str("{ :a :b | a + b }"),
         Ok(Expr::Block(
+            0,
             vec!["a".to_string(), "b".to_string()],
             Box::new(chain(var("a"), &[binary("+", var("b"))]))
         ))
@@ -560,5 +562,17 @@ fn variable_position() {
             Expr::Variable(1, "a".to_string()),
             Expr::Variable(4, "b".to_string())
         ]))
+    );
+}
+
+#[test]
+fn block_position() {
+    assert_eq!(
+        parse_str_with_position("   { a }"),
+        Ok(Expr::Block(
+            3,
+            vec![],
+            Box::new(Expr::Variable(5, "a".to_string()))
+        ))
     );
 }
