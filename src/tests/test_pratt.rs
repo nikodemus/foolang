@@ -359,10 +359,10 @@ fn parse_type() {
     assert_eq!(
         parse_str("x <Int> + y <Int>"),
         Ok(chain(
-            Expr::Type("Int".to_string(), Box::new(var("x"))),
+            Expr::Type(0, "Int".to_string(), Box::new(var("x"))),
             &[binary(
                 "+",
-                Expr::Type("Int".to_string(), Box::new(var("y")))
+                Expr::Type(0, "Int".to_string(), Box::new(var("y")))
             )]
         ))
     );
@@ -623,6 +623,18 @@ fn return_position() {
         Ok(Expr::Return(
             3,
             Box::new(Expr::Constant(10, Literal::Decimal(42)))
+        ))
+    );
+}
+
+#[test]
+fn type_position() {
+    assert_eq!(
+        parse_str_with_position("x <Int>"),
+        Ok(Expr::Type(
+            2,
+            "Int".to_string(),
+            Box::new(Expr::Variable(0, "x".to_string()))
         ))
     );
 }

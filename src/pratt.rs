@@ -61,7 +61,7 @@ pub enum Expr {
     Bind(usize, String, Box<Expr>, Box<Expr>),
     Assign(usize, String, Box<Expr>),
     Return(usize, Box<Expr>),
-    Type(String, Box<Expr>),
+    Type(usize, String, Box<Expr>),
     LeadingComment(Box<Expr>, String),
     TrailingComment(Box<Expr>, String),
 }
@@ -94,7 +94,7 @@ impl Expr {
             ),
             Assign(_, name, value) => Assign(0, name, Box::new(value.no_position())),
             Return(_, value) => Return(0, Box::new(value.no_position())),
-            Type(typename, value) => Type(typename, Box::new(value.no_position())),
+            Type(_, typename, value) => Type(0, typename, Box::new(value.no_position())),
             LeadingComment(expr, comment) => LeadingComment(Box::new(expr.no_position()), comment),
             TrailingComment(expr, comment) => {
                 TrailingComment(Box::new(expr.no_position()), comment)
@@ -706,7 +706,11 @@ impl Parser {
         Ok(Expr::Sequence(expressions))
     }
     fn parse_suffix_type(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
-        Ok(Expr::Type(token.str().to_string(), Box::new(left)))
+        Ok(Expr::Type(
+            token.position,
+            token.str().to_string(),
+            Box::new(left),
+        ))
     }
     fn next_precedence(&mut self) -> Result<usize, ParseError> {
         Ok(self.peek_token()?.precedence())
