@@ -2,7 +2,6 @@
 
 # foolang
 
-
 ## References
 
 - 1973 - [Top Down Operator Precedence](papers/pratt.pdf) by Vaughan R. Pratt. \
