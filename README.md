@@ -2,46 +2,45 @@
 
 # foolang
 
-## Constant Classes + Inline members = Value Semantics
+## Value Semantics
 
     @class Point { x <Int>, y <Int> }
-        constant
         accessors
-    @class Rectangle { p1 <inline:Point>, p2 <inline:Point> }
+        value
+    @class Rectangle { p1 <Point>, p2 <Point> }
     @classMethod Rectangle new
         self p1: (Point x: 0 y: 0)
              p2: (Point x: 0 y: 0)
     @method Rectangle p1
        p1
     @method Rectangle left
-       p1 := Point x: (p1 x + 1) y: p1 y
-       p2 := Point x: (p2 x + 1) y: p2 y
+       p1 x: (p1 x + 1)
+       p2 x: (p2 x + 1)
        self
 
-- `p1 x` becomes a direct read.
-- Constructor targeting p1 becomes an assignment
-  Optimize away p1 y := p1 y
-- Returning `p1` allocates a Point
+Returning a p1 allocates a fresh copy.
 
-How to support `p1 x: newval`? Since Point is a constant a
-writer doesn't make sense. If Point is a 'value' instead,
-then it makes sense, but then what happens here?
+There are effectively two classes: KnownPoint and UnknownPoint.
 
-      let box := { value: Point x: 0 y: 0 }
+Rectangle uses KnownPoint which is completely inlined
+into it. Assignment and references are simple and have
+no indirection.
+
+UnknownPoint is a bit tricker:
+
+      let box := Box new: (Point x: 0 y: 0)
       let p = box value
       box value x: p x + 1
-      p x == box value x    
+      p x == box value x
 
-Point/x: cannot make a copy because it doesn't have access
-to the slot holding the value.
-
-(What if it had? Ie. pointer to the location as part of the
-arguments. THAT might work. Non-values don't need to care.
-Values could then do copy-on-write. I still don't like that
-it means semantics depend on the type.)
+To support value semantics this should evaluate to false.
 
 Record/value cannot make a copy because it doesn't know it
 should.
+
+UnknownPoint/x: to make a copy it needs access to the location
+where the copy that is being mutated is stored. Then it
+can do copy-on-write.
 
 ## IDE
 
@@ -112,30 +111,14 @@ Methods mentioned in class docstring first?
 
 - http://journal.stuffwithstuff.com/2011/02/13/extending-syntax-from-within-a-language/
 
-## Declarative Syntax
-
-@-prefixes are a workaround for LR conflicts for now.
-
-### Example
+### Phrases
 
 ```
-@class Bar [x y z]
-
-@class-method Bar x: xv y: yv z: zv
-    ^self create-instance: [xv . yv . zv]
-
-@method Bar foo: change
-    x := x + change
-
 @phrase ring!
     "No unbound variables allowed! Constants are OK, though."
     ding ding ding
 
-@constant PI := 3.14
-
-@import Quux
-@import foopkg.Foo as: Foofoo
-
+bell ring!
 ```
 
 ### GC
