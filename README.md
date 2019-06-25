@@ -90,6 +90,8 @@ Methods mentioned in class docstring first?
 
 ## Notes
 
+- https://devblogs.microsoft.com/cbrumme/reliability/
+
 - Benchmarking: https://github.com/sharkdp/hyperfine
 
 - https://github.com/microsoft/mimalloc
