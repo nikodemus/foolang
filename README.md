@@ -26,6 +26,8 @@
 
 ## Notes
 
+- http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.127.8460&rep=rep1&type=pdf
+
 - https://ferd.ca/the-hitchhiker-s-guide-to-the-unexpected.html
 
 - https://ferd.ca/the-zen-of-erlang.html

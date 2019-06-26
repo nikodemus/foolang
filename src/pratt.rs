@@ -66,6 +66,7 @@ pub enum Expr {
     TrailingComment(usize, Box<Expr>, String),
     Class(usize, String, Vec<String>, Vec<Option<Expr>>),
     Method(usize, String, String, Vec<String>, Box<Expr>),
+    ClassMethod(usize, String, String, Vec<String>, Box<Expr>),
 }
 
 impl Expr {
@@ -114,6 +115,9 @@ impl Expr {
             ),
             Method(_, class_name, selector, params, body) => {
                 Method(0, class_name, selector, params, body)
+            }
+            ClassMethod(_, class_name, selector, params, body) => {
+                ClassMethod(0, class_name, selector, params, body)
             }
         }
     }
@@ -655,6 +659,7 @@ impl Parser {
         match token.str() {
             "class" => self.parse_toplevel_class(token),
             "method" => self.parse_toplevel_method(token),
+            "classMethod" => self.parse_toplevel_class_method(token),
             _ => return self.error(token, "Unknown toplevel definition"),
         }
     }
@@ -697,11 +702,27 @@ impl Parser {
         }
         Ok(Expr::Class(token.position, name, names, values))
     }
+    fn parse_toplevel_class_method(&mut self, token: Token) -> Result<Expr, ParseError> {
+        let (class, selector, params, body) = self.parse_toplevel_method_aux()?;
+        Ok(Expr::ClassMethod(
+            token.position,
+            class,
+            selector,
+            params,
+            body,
+        ))
+    }
     fn parse_toplevel_method(&mut self, token: Token) -> Result<Expr, ParseError> {
+        let (class, selector, params, body) = self.parse_toplevel_method_aux()?;
+        Ok(Expr::Method(token.position, class, selector, params, body))
+    }
+    fn parse_toplevel_method_aux(
+        &mut self,
+    ) -> Result<(String, String, Vec<String>, Box<Expr>), ParseError> {
         let next = self.consume_token()?;
         let class_name = match next.info {
             TokenInfo::Identifier(name) => name,
-            _ => return self.error(next, "Not a valid method class name"),
+            _ => return Err(self.error_at(next.position, "Not a valid method class name")),
         };
         let next = self.consume_token()?;
         let mut params = vec![];
@@ -715,7 +736,9 @@ impl Parser {
                         TokenInfo::Identifier(name) => {
                             params.push(name);
                         }
-                        _ => return self.error(next, "Not a valid method parameter"),
+                        _ => {
+                            return Err(self.error_at(next.position, "Not a valid method parameter"))
+                        }
                     }
                     let next = self.peek_token()?;
                     match next.info {
@@ -728,16 +751,10 @@ impl Parser {
                 }
                 keys
             }
-            _ => return self.error(next, "Not a valid method selector"),
+            _ => return Err(self.error_at(next.position, "Not a valid method selector")),
         };
         let body = self.parse_expression(0)?;
-        Ok(Expr::Method(
-            token.position,
-            class_name,
-            selector,
-            params,
-            Box::new(body),
-        ))
+        Ok((class_name, selector, params, Box::new(body)))
     }
     fn parse_suffix_assign(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
         if let Expr::Variable(pos, name) = left {

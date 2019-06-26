@@ -2,8 +2,8 @@
 
 _The Foo Programming Language_
 
-Foolang is a Smalltalk-inspired object language that tries
-to take a few lessons from Common Lisp, Erlang, Factor, and Rust
+Foolang is a Smalltalk-inspired language that tries
+to take a lessons from Common Lisp, Erlang, Factor, and Rust
 to heart.
 
 WARNING: Foolang is still in early development. Everything

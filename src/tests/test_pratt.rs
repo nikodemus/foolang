@@ -716,3 +716,41 @@ fn parse_method() {
         ))
     );
 }
+
+#[test]
+fn parse_class_method() {
+    assert_eq!(
+        parse_str_with_position(
+            " @classMethod Foo bar
+                42 quux
+                Zot zot"
+        ),
+        Ok(Expr::ClassMethod(
+            1,
+            "Foo".to_string(),
+            "bar".to_string(),
+            vec![],
+            Box::new(Expr::Sequence(vec![
+                chain(Expr::Constant(38, Literal::Decimal(42)), &[unary("quux")]),
+                chain(Expr::Variable(62, String::from("Zot")), &[unary("zot")])
+            ]))
+        ))
+    );
+    assert_eq!(
+        parse_str_with_position(
+            " @classMethod Foo bar: x quux: y
+                x quux
+                y zot"
+        ),
+        Ok(Expr::ClassMethod(
+            1,
+            "Foo".to_string(),
+            "bar:quux:".to_string(),
+            vec!["x".to_string(), "y".to_string()],
+            Box::new(Expr::Sequence(vec![
+                chain(Expr::Variable(49, String::from("x")), &[unary("quux")]),
+                chain(Expr::Variable(72, String::from("y")), &[unary("zot")])
+            ]))
+        ))
+    );
+}
