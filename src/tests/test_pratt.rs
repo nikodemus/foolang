@@ -665,3 +665,16 @@ fn comment_position() {
         ))
     );
 }
+
+#[test]
+fn parse_class() {
+    assert_eq!(
+        parse_str_with_position("  @class Foo { a, b: 1 }"),
+        Ok(Expr::Class(
+            2,
+            "Foo".to_string(),
+            vec!["a".to_string(), "b".to_string()],
+            vec![None, Some(Expr::Constant(21, Literal::Decimal(1)))]
+        ))
+    );
+}

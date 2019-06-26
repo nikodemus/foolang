@@ -64,6 +64,7 @@ pub enum Expr {
     Type(usize, String, Box<Expr>),
     LeadingComment(usize, Box<Expr>, String),
     TrailingComment(usize, Box<Expr>, String),
+    Class(usize, String, Vec<String>, Vec<Option<Expr>>),
 }
 
 impl Expr {
@@ -101,6 +102,15 @@ impl Expr {
             TrailingComment(_, expr, comment) => {
                 TrailingComment(0, Box::new(expr.no_position()), comment)
             }
+            Class(_, name, names, values) => Class(
+                0,
+                name,
+                names,
+                values
+                    .into_iter()
+                    .map(|x| x.map(|e| e.no_position()))
+                    .collect(),
+            ),
         }
     }
     fn literal(self) -> Literal {
@@ -181,6 +191,7 @@ enum TokenInfo {
     // true = comma, false = newline
     Sequence(bool),
     Comment(String),
+    Toplevel(String),
     Chain(),
     Cascade(),
     BlockBegin(),
@@ -202,6 +213,7 @@ impl Token {
             TokenInfo::Keyword(name) => name.as_str(),
             TokenInfo::Type(name) => name.as_str(),
             TokenInfo::Comment(text) => text.as_str(),
+            TokenInfo::Toplevel(name) => name.as_str(),
             TokenInfo::InterpolatedString(string) => string.as_str(),
             _ => panic!("Token has no string content: {:?}", self),
         }
@@ -274,6 +286,7 @@ struct Parser {
     stream: Box<Stream>,
     lookahead: VecDeque<Token>,
     cascade: Option<Expr>,
+    toplevel_re: Regex,
     interpolated_block_string_re: Regex,
     interpolated_string_re: Regex,
     literal_block_string_re: Regex,
@@ -311,6 +324,7 @@ impl Parser {
             stream,
             lookahead: VecDeque::new(),
             cascade: None,
+            toplevel_re: Regex::new("^@[a-zA-Z]+").unwrap(),
             positional_parameter_re: Regex::new(r"^:[_a-zA-Z][_a-zA-z0-9]*").unwrap(),
             unary_selector_re: Regex::new(r"^\$[_a-zA-Z][_a-zA-Z0-9]*").unwrap(),
             keyword_selector_re: Regex::new(r"^\$(([_a-zA-Z][_a-zA-Z0-9]*)?:)+").unwrap(),
@@ -373,6 +387,7 @@ impl Parser {
             TokenInfo::Bind() => self.parse_prefix_bind(token),
             TokenInfo::InterpolatedString(_) => self.parse_prefix_interpolated_string(token),
             TokenInfo::Comment(_) => self.parse_prefix_comment(token),
+            TokenInfo::Toplevel(_) => self.parse_prefix_toplevel(token),
             // Leading newline, ignore.
             TokenInfo::Sequence(false) => self.parse_prefix(),
             TokenInfo::Eof() => self.error(token, "Unexpected end of input"),
@@ -632,6 +647,51 @@ impl Parser {
         let value = self.parse_expression(token.precedence())?;
         Ok(Expr::Return(token.position, Box::new(value)))
     }
+    fn parse_prefix_toplevel(&mut self, token: Token) -> Result<Expr, ParseError> {
+        match token.str() {
+            "class" => self.parse_toplevel_class(token),
+            _ => return self.error(token, "Unknown toplevel definition"),
+        }
+    }
+    fn parse_toplevel_class(&mut self, token: Token) -> Result<Expr, ParseError> {
+        let next = self.consume_token()?;
+        let name = match next.info {
+            TokenInfo::Identifier(name) => name,
+            _ => return self.error(next, "Not a valid class name"),
+        };
+        let next = self.consume_token()?;
+        match next.info {
+            TokenInfo::BlockBegin() => {}
+            _ => return self.error(next, "Expected instance variable block"),
+        }
+        let mut names = vec![];
+        let mut values = vec![];
+        loop {
+            let next = self.consume_token()?;
+            match next.info {
+                TokenInfo::Identifier(name) => {
+                    names.push(name);
+                    values.push(None);
+                }
+                TokenInfo::Keyword(name) => {
+                    names.push(name[0..name.len() - 1].to_string());
+                    // FIXME: hardcoded
+                    values.push(Some(self.parse_expression(2)?));
+                }
+                TokenInfo::BlockEnd() => break,
+                _ => return self.error(next, "Expected instance variable specification"),
+            }
+            let next = self.consume_token()?;
+            match next.info {
+                TokenInfo::Sequence(true) => continue,
+                TokenInfo::BlockEnd() => break,
+                _ => {
+                    return self.error(next, "Malformed instance variable block");
+                }
+            }
+        }
+        Ok(Expr::Class(token.position, name, names, values))
+    }
     fn parse_suffix_assign(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
         if let Expr::Variable(pos, name) = left {
             Ok(Expr::Assign(
@@ -800,6 +860,12 @@ impl Parser {
             return Ok(Token {
                 position,
                 info: Type(name[1..name.len() - 1].to_string()),
+            });
+        }
+        if let Some(name) = self.stream.scan(&self.toplevel_re) {
+            return Ok(Token {
+                position,
+                info: Toplevel(name[1..].to_string()),
             });
         }
         if let Some(_) = self.stream.scan(&self.bind_re) {
