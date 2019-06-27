@@ -67,6 +67,7 @@ pub enum Expr {
     Class(usize, String, Vec<String>, Vec<Option<Expr>>),
     Method(usize, String, String, Vec<String>, Box<Expr>),
     ClassMethod(usize, String, String, Vec<String>, Box<Expr>),
+    Main(usize, String, Box<Expr>),
 }
 
 impl Expr {
@@ -113,12 +114,21 @@ impl Expr {
                     .map(|x| x.map(|e| e.no_position()))
                     .collect(),
             ),
-            Method(_, class_name, selector, params, body) => {
-                Method(0, class_name, selector, params, body)
-            }
-            ClassMethod(_, class_name, selector, params, body) => {
-                ClassMethod(0, class_name, selector, params, body)
-            }
+            Method(_, class_name, selector, params, body) => Method(
+                0,
+                class_name,
+                selector,
+                params,
+                Box::new(body.no_position()),
+            ),
+            ClassMethod(_, class_name, selector, params, body) => ClassMethod(
+                0,
+                class_name,
+                selector,
+                params,
+                Box::new(body.no_position()),
+            ),
+            Main(_, system, body) => Main(0, system, Box::new(body.no_position())),
         }
     }
     fn literal(self) -> Literal {
@@ -660,6 +670,7 @@ impl Parser {
             "class" => self.parse_toplevel_class(token),
             "method" => self.parse_toplevel_method(token),
             "classMethod" => self.parse_toplevel_class_method(token),
+            "main" => self.parse_toplevel_main(token),
             _ => return self.error(token, "Unknown toplevel definition"),
         }
     }
@@ -701,6 +712,21 @@ impl Parser {
             }
         }
         Ok(Expr::Class(token.position, name, names, values))
+    }
+    fn parse_toplevel_main(&mut self, token: Token) -> Result<Expr, ParseError> {
+        let next = self.consume_token()?;
+        if let TokenInfo::Keyword(name) = next.info {
+            if &name != ":" {
+                return self.error(token, "Malformed @main");
+            }
+        }
+        let next = self.consume_token()?;
+        let system = match next.info {
+            TokenInfo::Identifier(name) => name,
+            _ => return self.error(next, "Expected binding for system object"),
+        };
+        let body = self.parse_expression(0)?;
+        Ok(Expr::Main(token.position, system, Box::new(body)))
     }
     fn parse_toplevel_class_method(&mut self, token: Token) -> Result<Expr, ParseError> {
         let (class, selector, params, body) = self.parse_toplevel_method_aux()?;

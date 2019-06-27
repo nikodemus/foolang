@@ -754,3 +754,21 @@ fn parse_class_method() {
         ))
     );
 }
+
+#[test]
+fn parse_main() {
+    assert_eq!(
+        parse_str(
+            "@main: system
+                Foo run: system output"
+        ),
+        Ok(Expr::Main(
+            0,
+            "system".to_string(),
+            Box::new(chain(
+                var("Foo"),
+                &[keyword("run:", &[chain(var("system"), &[unary("output")])])]
+            ))
+        ))
+    );
+}
