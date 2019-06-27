@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 
 use regex::Regex;
 
-pub use crate::new_ast::{Literal, Message};
+pub use crate::new_ast::{Block, Literal, Message};
 
 #[derive(PartialEq)]
 pub struct ParseError {
@@ -32,7 +32,7 @@ pub enum Expr {
     // Each vector of messages is a separate chain using the original receiver.
     Cascade(Box<Expr>, Vec<Vec<Message>>),
     Sequence(Vec<Expr>),
-    Block(usize, Vec<String>, Box<Expr>),
+    Block(usize, Block),
     Array(usize, Vec<Expr>),
     Bind(usize, String, Box<Expr>, Box<Expr>),
     Assign(usize, String, Box<Expr>),
@@ -64,7 +64,7 @@ impl Expr {
                     .collect(),
             ),
             Sequence(exprs) => Sequence(exprs.into_iter().map(Expr::no_position).collect()),
-            Block(_, names, body) => Block(0, names, Box::new(body.no_position())),
+            Block(_, block) => Block(0, block.no_position()),
             Array(_, exprs) => Array(0, exprs.into_iter().map(Expr::no_position).collect()),
             Bind(_, name, value, body) => Bind(
                 0,
@@ -476,7 +476,13 @@ impl Parser {
         }
         let expr = self.parse_expression(token.precedence())?;
         if let TokenInfo::BlockEnd() = self.consume_token()?.info {
-            Ok(Expr::Block(token.position, args, Box::new(expr)))
+            Ok(Expr::Block(
+                token.position,
+                Block {
+                    parameters: args,
+                    body: Box::new(expr),
+                },
+            ))
         } else {
             self.error(token, "Block not closed")
         }

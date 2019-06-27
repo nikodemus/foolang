@@ -1,4 +1,4 @@
-use crate::pratt::{parse_str, parse_str_with_position, Expr, Literal, Message, ParseError};
+use crate::pratt::{parse_str, parse_str_with_position, Block, Expr, Literal, Message, ParseError};
 
 fn decimal(value: i64) -> Expr {
     Expr::Constant(0, Literal::Decimal(value))
@@ -282,8 +282,10 @@ fn parse_block() {
         parse_str("{ a + b }"),
         Ok(Expr::Block(
             0,
-            vec![],
-            Box::new(chain(var("a"), &[binary("+", var("b"))]))
+            Block {
+                parameters: vec![],
+                body: Box::new(chain(var("a"), &[binary("+", var("b"))])),
+            }
         ))
     );
 }
@@ -294,8 +296,10 @@ fn parse_block_with_args() {
         parse_str("{ :a :b | a + b }"),
         Ok(Expr::Block(
             0,
-            vec!["a".to_string(), "b".to_string()],
-            Box::new(chain(var("a"), &[binary("+", var("b"))]))
+            Block {
+                parameters: vec!["a".to_string(), "b".to_string()],
+                body: Box::new(chain(var("a"), &[binary("+", var("b"))]))
+            }
         ))
     );
 }
@@ -586,8 +590,10 @@ fn block_position() {
         parse_str_with_position("   { a }"),
         Ok(Expr::Block(
             3,
-            vec![],
-            Box::new(Expr::Variable(5, "a".to_string()))
+            Block {
+                parameters: vec![],
+                body: Box::new(Expr::Variable(5, "a".to_string()))
+            }
         ))
     );
 }

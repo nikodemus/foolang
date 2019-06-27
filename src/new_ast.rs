@@ -13,6 +13,19 @@ pub enum Literal {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Block {
+    pub parameters: Vec<String>,
+    pub body: Box<Expr>,
+}
+
+impl Block {
+    pub fn no_position(mut self) -> Self {
+        self.body = Box::new(self.body.no_position());
+        self
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Message {
     pub selector: String,
     pub arguments: Vec<Expr>,
