@@ -1,6 +1,7 @@
 pub mod ast;
 pub mod classes;
 pub mod evaluator;
+pub mod new_ast;
 pub mod objects;
 pub mod parser;
 pub mod pratt;

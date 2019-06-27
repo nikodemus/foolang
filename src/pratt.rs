@@ -1,6 +1,9 @@
-use regex::Regex;
 use std::borrow::ToOwned;
 use std::collections::VecDeque;
+
+use regex::Regex;
+
+pub use crate::new_ast::Literal;
 
 #[derive(PartialEq)]
 pub struct ParseError {
@@ -17,16 +20,6 @@ impl std::fmt::Debug for ParseError {
             self.problem, self.position, self.context
         )
     }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Literal {
-    Decimal(i64),
-    Float(f64),
-    Selector(String),
-    Character(char),
-    String(String),
-    Record(Vec<String>, Vec<Literal>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
