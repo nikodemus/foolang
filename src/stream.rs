@@ -222,6 +222,19 @@ fn scan_keyword() {
 }
 
 #[test]
+fn scan_keywords() {
+    assert_eq!(
+        scan_str(" foo: 42 bar: 123 "),
+        vec![
+            Ok(Token::Keyword((1, 5)))
+            Ok(Token::Number((6, 8)))
+            Ok(Token::Keyword((9, 13)))
+            Ok(Token::Number((14, 17)))
+        ]
+    );
+}
+
+#[test]
 fn scan_keyword2() {
     assert_eq!(scan_str_part(" : "), Ok(Token::Keyword((1, 2))))
 }
