@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 
 use regex::Regex;
 
-pub use crate::new_ast::Literal;
+pub use crate::new_ast::{Literal, Message};
 
 #[derive(PartialEq)]
 pub struct ParseError {
@@ -19,23 +19,6 @@ impl std::fmt::Debug for ParseError {
             "ParseError({}) at {}:\n{}",
             self.problem, self.position, self.context
         )
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Message {
-    pub selector: String,
-    pub arguments: Vec<Expr>,
-}
-
-impl Message {
-    fn no_position(mut self) -> Self {
-        self.arguments = self
-            .arguments
-            .into_iter()
-            .map(|arg| arg.no_position())
-            .collect();
-        self
     }
 }
 
@@ -64,7 +47,7 @@ pub enum Expr {
 }
 
 impl Expr {
-    fn no_position(self) -> Self {
+    pub fn no_position(self) -> Self {
         use Expr::*;
         match self {
             Constant(_, lit) => Expr::Constant(0, lit.clone()),
