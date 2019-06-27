@@ -63,7 +63,9 @@ trait Stream {
             _ => {}
         }
         let alphanumeric = start.1.is_alphanumeric();
-        let mut keyword = start.1 == ':';
+        if start.1 == ':' {
+            return Ok(Token::Keyword((start.0, start.0 + 1)));
+        }
         let mut end = self.getchar()?;
         loop {
             if end.1.is_whitespace() {
@@ -74,7 +76,7 @@ trait Stream {
                 break;
             }
             if end.1 == ':' {
-                keyword = true;
+                return Ok(Token::Keyword((start.0, end.0 + 1)));
             } else if alphanumeric != end.1.is_alphanumeric() {
                 self.unread(end);
                 break;
@@ -85,9 +87,6 @@ trait Stream {
             end = self.getchar()?;
         }
         let span = (start.0, end.0);
-        if keyword {
-            return Ok(Token::Keyword(span));
-        }
         if !alphanumeric {
             if start.0 + 1 == end.0 {
                 match start.1 {
@@ -226,10 +225,19 @@ fn scan_keywords() {
     assert_eq!(
         scan_str(" foo: 42 bar: 123 "),
         vec![
-            Ok(Token::Keyword((1, 5)))
-            Ok(Token::Number((6, 8)))
-            Ok(Token::Keyword((9, 13)))
-            Ok(Token::Number((14, 17)))
+            Ok(Token::Keyword((1, 5))),
+            Ok(Token::Number((6, 8))),
+            Ok(Token::Keyword((9, 13))),
+            Ok(Token::Number((14, 17))),
+        ]
+    );
+    assert_eq!(
+        scan_str(" foo:42 bar:123 "),
+        vec![
+            Ok(Token::Keyword((1, 5))),
+            Ok(Token::Number((5, 7))),
+            Ok(Token::Keyword((8, 12))),
+            Ok(Token::Number((12, 15))),
         ]
     );
 }
@@ -237,11 +245,6 @@ fn scan_keywords() {
 #[test]
 fn scan_keyword2() {
     assert_eq!(scan_str_part(" : "), Ok(Token::Keyword((1, 2))))
-}
-
-#[test]
-fn scan_keyword3() {
-    assert_eq!(scan_str_part(" ::: "), Ok(Token::Keyword((1, 4))))
 }
 
 #[test]
