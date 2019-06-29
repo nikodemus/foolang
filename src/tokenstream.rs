@@ -129,6 +129,7 @@ impl<'a> TokenStream<'a> {
             '<' => return self.scan_annotation_or_sigil(start.0),
             _ => {}
         }
+        let numeric = start.1.is_numeric();
         let alphanumeric = start.1.is_alphanumeric();
         if start.1 == ':' {
             return Ok(Token::Keyword(start.0..start.0 + 1));
@@ -144,7 +145,10 @@ impl<'a> TokenStream<'a> {
             }
             if end.1 == ':' {
                 return Ok(Token::Keyword(start.0..end.0 + 1));
-            } else if alphanumeric != end.1.is_alphanumeric() {
+            }
+            if (!numeric || (end.1 != '.' && end.1 != '_'))
+                && alphanumeric != end.1.is_alphanumeric()
+            {
                 self.unread(end);
                 break;
             }
@@ -287,8 +291,13 @@ fn scan_global_id2() {
 }
 
 #[test]
-fn scan_decimal() {
+fn scan_number1() {
     assert_eq!(scan_str_part(" 1xx "), Ok(Token::Number(1..4)))
+}
+
+#[test]
+fn scan_number2() {
+    assert_eq!(scan_str_part(" 1.0 "), Ok(Token::Number(1..4)))
 }
 
 #[test]
