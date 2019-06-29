@@ -16,6 +16,7 @@ impl Env {
             Literal::Decimal(value) => Ok(Object::make_integer(value)),
             Literal::Hexadecimal(value) => Ok(Object::make_integer(value)),
             Literal::Binary(value) => Ok(Object::make_integer(value)),
+            Literal::Float(value) => Ok(Object::make_float(value)),
         }
     }
 }
@@ -29,6 +30,10 @@ fn integer(value: i64) -> Object {
     Object::make_integer(value)
 }
 
+fn float(value: f64) -> Object {
+    Object::make_float(value)
+}
+
 #[test]
 fn eval_decimal() {
     assert_eq!(eval_str("123"), Ok(integer(123)));
@@ -40,8 +45,8 @@ fn eval_bad_decimal() {
         eval_str("1x3"),
         Err(SyntaxError {
             span: 0..3,
-            problem: "Malformed integer",
-            context: concat!("001 1x3\n", "    ^^^ Malformed integer\n").to_string()
+            problem: "Malformed number",
+            context: concat!("001 1x3\n", "    ^^^ Malformed number\n").to_string()
         })
     );
 }
@@ -76,6 +81,23 @@ fn eval_bad_binary() {
             span: 0..5,
             problem: "Malformed binary number",
             context: concat!("001 0b123\n", "    ^^^^^ Malformed binary number\n").to_string()
+        })
+    );
+}
+
+#[test]
+fn eval_float() {
+    assert_eq!(eval_str("1.2"), Ok(float(1.2)));
+}
+
+#[test]
+fn eval_bad_float() {
+    assert_eq!(
+        eval_str("1.2.3"),
+        Err(SyntaxError {
+            span: 0..5,
+            problem: "Malformed number",
+            context: concat!("001 1.2.3\n", "    ^^^^^ Malformed number\n").to_string()
         })
     );
 }
