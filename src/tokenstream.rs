@@ -24,11 +24,60 @@ pub enum Token {
 pub struct SyntaxError {
     pub span: Span,
     pub problem: &'static str,
+    pub context: String,
 }
 
 impl SyntaxError {
     pub fn new(span: Span, problem: &'static str) -> SyntaxError {
-        SyntaxError { span, problem }
+        SyntaxError {
+            span,
+            problem,
+            context: String::new(),
+        }
+    }
+    fn append_context_line(&mut self, lineno: usize, line: &str) {
+        if lineno == 0 {
+            self.context.push_str(format!("    {}\n", line).as_str());
+        } else {
+            self.context
+                .push_str(format!("{:03} {}\n", lineno, line).as_str());
+        }
+    }
+    pub fn add_context(mut self, source: &str) -> SyntaxError {
+        println!("Add context: {:?} from {:?}", &self.span, source);
+        let mut prev = "";
+        let mut lineno = 1;
+        let mut start = 0;
+        for line in source.lines() {
+            if start >= self.span.end {
+                // Line after the problem -- done.
+                self.append_context_line(lineno, line);
+                break;
+            }
+            let end = start + line.len();
+            if end > self.span.start {
+                // Previous line if there is one.
+                if lineno > 1 {
+                    self.append_context_line(lineno - 1, prev);
+                }
+                println!("got it: {}", line);
+                // Line with the problem.
+                self.append_context_line(lineno, line);
+                let mut mark = String::from_utf8(vec![b' '; self.span.start - start]).unwrap();
+                mark.push_str(
+                    String::from_utf8(vec![b'^'; self.span.end - self.span.start])
+                        .unwrap()
+                        .as_str(),
+                );
+                mark.push_str(" ");
+                mark.push_str(self.problem);
+                self.append_context_line(0, mark.as_str());
+            }
+            prev = line;
+            start = end + 1;
+            lineno += 1;
+        }
+        self
     }
 }
 
@@ -60,6 +109,9 @@ impl<'a> TokenStream<'a> {
             indices: std::cell::RefCell::new(source.char_indices()),
             cache: std::cell::RefCell::new(Vec::new()),
         }
+    }
+    pub fn slice(&self, span: Span) -> &str {
+        &self.source[span]
     }
     pub fn scan(&mut self) -> Result<Token, SyntaxError> {
         let mut start;
