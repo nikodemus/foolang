@@ -14,7 +14,8 @@ impl Env {
     pub fn eval_literal(&self, literal: Literal) -> Result<Object, SyntaxError> {
         match literal {
             Literal::Decimal(value) => Ok(Object::make_integer(value)),
-            Literal::Hex(value) => Ok(Object::make_integer(value)),
+            Literal::Hexadecimal(value) => Ok(Object::make_integer(value)),
+            Literal::Binary(value) => Ok(Object::make_integer(value)),
         }
     }
 }
@@ -56,8 +57,25 @@ fn eval_bad_hex() {
         eval_str("0x1x3"),
         Err(SyntaxError {
             span: 0..5,
-            problem: "Malformed hexadecimal",
-            context: concat!("001 0x1x3\n", "    ^^^^^ Malformed hexadecimal\n").to_string()
+            problem: "Malformed hexadecimal number",
+            context: concat!("001 0x1x3\n", "    ^^^^^ Malformed hexadecimal number\n").to_string()
+        })
+    );
+}
+
+#[test]
+fn eval_binary() {
+    assert_eq!(eval_str("0b101"), Ok(integer(0b101)));
+}
+
+#[test]
+fn eval_bad_binary() {
+    assert_eq!(
+        eval_str("0b123"),
+        Err(SyntaxError {
+            span: 0..5,
+            problem: "Malformed binary number",
+            context: concat!("001 0b123\n", "    ^^^^^ Malformed binary number\n").to_string()
         })
     );
 }
