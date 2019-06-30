@@ -17,7 +17,7 @@ pub enum Token {
     OpenBrace(Span),
     OpenBracket(Span),
     OpenParen(Span),
-    Sigil(Span),
+    Sigil,
 }
 
 #[derive(Debug, PartialEq)]
@@ -184,10 +184,10 @@ impl<'a> TokenStream<'a> {
                     '}' => return Ok(Token::CloseBrace(span)),
                     '[' => return Ok(Token::OpenBracket(span)),
                     ']' => return Ok(Token::CloseBracket(span)),
-                    _ => return Ok(Token::Sigil(span)),
+                    _ => return self.result(Token::Sigil, span),
                 }
             } else {
-                return Ok(Token::Sigil(span));
+                return self.result(Token::Sigil, span);
             }
         }
         if start.1.is_digit(10) {
@@ -230,7 +230,7 @@ impl<'a> TokenStream<'a> {
         let next = self.getchar()?;
         if next.1.is_whitespace() || next.1.is_digit(10) {
             self.unread(next);
-            return Ok(Token::Sigil(start..next.0));
+            return self.result(Token::Sigil, start..next.0);
         }
         loop {
             let next = self.getchar()?;
@@ -282,7 +282,8 @@ fn scan_binary_op() {
     let mut scanner = TokenStream::new(" foo++bar ");
     assert_eq!(scanner.scan(), Ok(Token::LocalId));
     assert_eq!(scanner.slice(scanner.span()), "foo");
-    assert_eq!(scanner.scan(), Ok(Token::Sigil(4..6)));
+    assert_eq!(scanner.scan(), Ok(Token::Sigil));
+    assert_eq!(scanner.slice(scanner.span()), "++");
     assert_eq!(scanner.scan(), Ok(Token::LocalId));
     assert_eq!(scanner.slice(scanner.span()), "bar");
 }
@@ -293,12 +294,13 @@ fn scan_annotations() {
     assert_eq!(scanner.scan(), Ok(Token::LocalId));
     assert_eq!(scanner.slice(scanner.span()), "foo");
     assert_eq!(scanner.scan(), Ok(Token::Annotation));
-    assert_eq!(scanner.span(), 3..8);
-    assert_eq!(scanner.scan(), Ok(Token::Sigil(8..9)));
+    assert_eq!(scanner.slice(scanner.span()), "<Foo>");
+    assert_eq!(scanner.scan(), Ok(Token::Sigil));
+    assert_eq!(scanner.slice(scanner.span()), "+");
     assert_eq!(scanner.scan(), Ok(Token::LocalId));
     assert_eq!(scanner.slice(scanner.span()), "bar");
     assert_eq!(scanner.scan(), Ok(Token::Annotation));
-    assert_eq!(scanner.span(), 12..17);
+    assert_eq!(scanner.slice(scanner.span()), "<Bar>");
 }
 
 #[test]
@@ -327,12 +329,12 @@ fn scan_number2() {
 
 #[test]
 fn scan_sigil() {
-    assert_eq!(scan_str_part(" + "), Ok(Token::Sigil(1..2)))
-}
-
-#[test]
-fn scan_sigil2() {
-    assert_eq!(scan_str_part(" +foo "), Ok(Token::Sigil(1..2)))
+    fn test(mut scanner: TokenStream) {
+        assert_eq!(scanner.scan(), Ok(Token::Sigil));
+        assert_eq!(scanner.slice(scanner.span()), "+");
+    }
+    test(TokenStream::new(" + "));
+    test(TokenStream::new(" +foo "));
 }
 
 #[test]
