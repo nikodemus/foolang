@@ -27,3 +27,5 @@
   (if (eq 'windows-nt system-type)
       "foolang.exe"
     "foolang"))
+
+(provide 'foolang)
