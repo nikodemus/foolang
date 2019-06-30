@@ -14,6 +14,7 @@ pub enum Literal {
 #[derive(Debug, PartialEq)]
 pub enum Expr {
     Constant(Span, Literal),
+    LocalVariable(Span, String),
 }
 
 struct Parser<'a> {
@@ -26,13 +27,21 @@ impl<'a> Parser<'a> {
             tokenstream: TokenStream::new(source),
         }
     }
+
     fn parse(&mut self) -> Result<Expr, SyntaxError> {
         let token = self.tokenstream.scan()?;
         match token {
             Token::Number(span) => self.parse_number(span),
+            Token::LocalId(span) => self.parse_local_variable(span),
             _ => unimplemented!("Don't know how to parse: {:?}", token),
         }
     }
+
+    fn parse_local_variable(&mut self, span: Span) -> Result<Expr, SyntaxError> {
+        let slice = self.tokenstream.slice(span.clone());
+        Ok(Expr::LocalVariable(span, slice.to_string()))
+    }
+
     fn parse_number(&mut self, span: Span) -> Result<Expr, SyntaxError> {
         let slice = self.tokenstream.slice(span.clone());
         if slice.len() > 2 && ("0x" == &slice[0..2] || "0X" == &slice[0..2]) {
@@ -90,6 +99,10 @@ fn float(span: Span, value: f64) -> Expr {
     Expr::Constant(span, Literal::Float(value))
 }
 
+fn var(span: Span, name: &str) -> Expr {
+    Expr::LocalVariable(span, name.to_string())
+}
+
 #[test]
 fn parse_decimal() {
     assert_eq!(parse_str("123"), Ok(decimal(0..3, 123)));
@@ -118,4 +131,9 @@ fn parse_float2() {
 #[test]
 fn parse_float3() {
     assert_eq!(parse_str("2e6"), Ok(float(0..3, 2e6)));
+}
+
+#[test]
+fn parse_var() {
+    assert_eq!(parse_str("foo"), Ok(var(0..3, "foo")));
 }
