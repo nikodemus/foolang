@@ -14,9 +14,7 @@ impl Env {
     }
     pub fn eval_literal(&self, literal: Literal) -> Result<Object, SyntaxError> {
         match literal {
-            Literal::Decimal(value) => Ok(Object::make_integer(value)),
-            Literal::Hexadecimal(value) => Ok(Object::make_integer(value)),
-            Literal::Binary(value) => Ok(Object::make_integer(value)),
+            Literal::Integer(value) => Ok(Object::make_integer(value)),
             Literal::Float(value) => Ok(Object::make_float(value)),
         }
     }

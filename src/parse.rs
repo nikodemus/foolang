@@ -6,9 +6,7 @@ use crate::tokenstream::{Span, Token, TokenStream};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Literal {
-    Decimal(i64),
-    Hexadecimal(i64),
-    Binary(i64),
+    Integer(i64),
     Float(f64),
 }
 
@@ -79,7 +77,7 @@ fn parse_number(parser: &mut Parser) -> Result<Expr, SyntaxError> {
             Ok(i) => i,
             Err(_) => return parser.error("Malformed hexadecimal number"),
         };
-        Ok(Expr::Constant(parser.span(), Literal::Hexadecimal(integer)))
+        Ok(Expr::Constant(parser.span(), Literal::Integer(integer)))
     }
     // Binary case
     else if slice.len() > 2 && ("0b" == &slice[0..2] || "0B" == &slice[0..2]) {
@@ -87,7 +85,7 @@ fn parse_number(parser: &mut Parser) -> Result<Expr, SyntaxError> {
             Ok(i) => i,
             Err(_) => return parser.error("Malformed binary number"),
         };
-        Ok(Expr::Constant(parser.span(), Literal::Binary(integer)))
+        Ok(Expr::Constant(parser.span(), Literal::Integer(integer)))
     }
     // Decimal and float case
     else {
@@ -108,7 +106,7 @@ fn parse_number(parser: &mut Parser) -> Result<Expr, SyntaxError> {
                 }
             }
         }
-        Ok(Expr::Constant(parser.span(), Literal::Decimal(decimal)))
+        Ok(Expr::Constant(parser.span(), Literal::Integer(decimal)))
     }
 }
 
@@ -116,16 +114,8 @@ pub fn parse_str(source: &str) -> Result<Expr, SyntaxError> {
     Parser::new(source).parse()
 }
 
-fn decimal(span: Span, value: i64) -> Expr {
-    Expr::Constant(span, Literal::Decimal(value))
-}
-
-fn hexadecimal(span: Span, value: i64) -> Expr {
-    Expr::Constant(span, Literal::Hexadecimal(value))
-}
-
-fn binary(span: Span, value: i64) -> Expr {
-    Expr::Constant(span, Literal::Binary(value))
+fn int(span: Span, value: i64) -> Expr {
+    Expr::Constant(span, Literal::Integer(value))
 }
 
 fn float(span: Span, value: f64) -> Expr {
@@ -138,17 +128,17 @@ fn var(span: Span, name: &str) -> Expr {
 
 #[test]
 fn parse_decimal() {
-    assert_eq!(parse_str("123"), Ok(decimal(0..3, 123)));
+    assert_eq!(parse_str("123"), Ok(int(0..3, 123)));
 }
 
 #[test]
 fn parse_hexadecimal() {
-    assert_eq!(parse_str("0xFF"), Ok(hexadecimal(0..4, 0xFF)));
+    assert_eq!(parse_str("0xFF"), Ok(int(0..4, 0xFF)));
 }
 
 #[test]
 fn parse_binary() {
-    assert_eq!(parse_str("0b101"), Ok(binary(0..5, 0b101)));
+    assert_eq!(parse_str("0b101"), Ok(int(0..5, 0b101)));
 }
 
 #[test]
