@@ -5,7 +5,7 @@ pub type Span = Range<usize>;
 #[derive(Debug, PartialEq)]
 pub enum Token {
     Annotation,
-    Character(Span),
+    Character,
     CloseBrace(Span),
     CloseBracket(Span),
     CloseParen(Span),
@@ -241,7 +241,7 @@ impl<'a> TokenStream<'a> {
         if quote != '\'' {
             return Err(SyntaxError::new(start..end, "Malformed character literal"));
         }
-        Ok(Token::Character(start..end + 1))
+        self.result(Token::Character, start..end + 1)
     }
 }
 
@@ -254,8 +254,12 @@ fn scan_eof() {
 
 #[test]
 fn scan_char() {
-    assert_eq!(scan_str_part(" 'x' "), Ok(Token::Character(1..4)));
-    assert_eq!(scan_str_part("'x'"), Ok(Token::Character(0..3)));
+    let mut scanner = TokenStream::new(" 'x' ");
+    assert_eq!(scanner.scan(), Ok(Token::Character));
+    assert_eq!(scanner.span(), 1..4);
+    let mut scanner = TokenStream::new("'x'");
+    assert_eq!(scanner.scan(), Ok(Token::Character));
+    assert_eq!(scanner.span(), 0..3);
 }
 
 #[test]
