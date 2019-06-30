@@ -12,7 +12,7 @@ pub enum Token {
     Eof,
     Keyword,
     Number,
-    GlobalId(Span),
+    GlobalId,
     LocalId,
     OpenBrace(Span),
     OpenBracket(Span),
@@ -194,7 +194,7 @@ impl<'a> TokenStream<'a> {
             return self.result(Token::Number, span);
         }
         if start.1.is_uppercase() {
-            Ok(Token::GlobalId(span))
+            self.result(Token::GlobalId, span)
         } else {
             self.result(Token::LocalId, span)
         }
@@ -303,12 +303,12 @@ fn scan_annotations() {
 
 #[test]
 fn scan_global_id() {
-    assert_eq!(scan_str_part(" Fo1 "), Ok(Token::GlobalId(1..4)));
-}
-
-#[test]
-fn scan_global_id2() {
-    assert_eq!(scan_str_part(" Fo1+ "), Ok(Token::GlobalId(1..4)));
+    fn test(mut scanner: TokenStream) {
+        assert_eq!(scanner.scan(), Ok(Token::GlobalId));
+        assert_eq!(scanner.slice(scanner.span()), "Fo1");
+    }
+    test(TokenStream::new(" Fo1 "));
+    test(TokenStream::new(" Fo1+ "));
 }
 
 #[test]
