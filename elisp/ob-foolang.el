@@ -49,30 +49,13 @@
 (require 'ob-comint)
 (require 'ob-eval)
 ;; possibly require modes required for your language
+(require 'foolang)
 
 ;; optionally define a file extension for this language
 (add-to-list 'org-babel-tangle-lang-exts '("foolang" . "foo"))
 
 ;; optionally declare default header arguments for this language
 (defvar org-babel-default-header-args:foolang '())
-
-(defun foolang-serialize (x &optional nested)
-  (cond ((numberp x)
-         x)
-        ((stringp x)
-         (format "'%s'" x))
-        ((consp x)
-         (format "%s[%s]"
-                 (if nested "" "#")
-                 (apply 'concat (mapcar (lambda (x)
-                                   (format "%s," (foolang-serialize x t)))
-                                        x))))
-        ((null x)
-         "false")
-        ((eq t x)
-         "true")
-        (t
-         (error "Don't know how to serialize for foolang: %s" x))))
 
 ;; This function expands the body of a source code block by doing
 ;; things like prepending argument definitions to the body, it should
@@ -91,7 +74,7 @@
                                body
                                (apply 'concat
                                       (mapcar (lambda (pair) (format " value: %s"
-                                                                     (foolang-serialize (cdr pair))))
+                                                                     (foolang-print (cdr pair))))
                                               vars)))
                      body)))
       (message "wrapped: %s" wrapped)
@@ -121,35 +104,20 @@
 (defun org-babel-execute:foolang (body params)
   "Execute a block of Foolang code with org-babel.
 This function is called by `org-babel-execute-src-block'"
+  (let ((params (org-babel-process-params params)))
   (with-temp-buffer
     (call-process (executable-find foolang-executable)
                   nil t nil "--eval"
-                  (org-babel-expand-body:foolang
-                   body (org-babel-process-params params)))
-    (buffer-string)))
+                  (org-babel-expand-body:foolang body params))
+    (ecase (cdr (assoc :result-type params))
+      (value (foolang-read (buffer-string)))
+      (output (buffer-string))))))
 
 ;; This function should be used to assign any variables in params in
 ;; the context of the session environment.
 (defun org-babel-prep-session:foolang (session params)
   "Prepare SESSION according to the header arguments specified in PARAMS."
   )
-
-(defun org-babel-foolang-var-to-foolang (var)
-  "Convert an elisp var into a string of foolang source code
-specifying a var of the same value."
-  (format "%S" var))
-
-(defun org-babel-foolang-table-or-string (results)
-  "If the results look like a table, then convert them into an
-Emacs-lisp table, otherwise return the results as a string."
-  )
-
-(defun org-babel-foolang-initiate-session (&optional session)
-  "If there is not a current inferior-process-buffer in SESSION then create.
-Return the initialized session."
-  (message "Session: %s" session)
-  (unless (string= session "none")
-    ))
 
 (provide 'ob-foolang)
 ;;; ob-foolang.el ends here
