@@ -13,7 +13,7 @@ pub enum Token {
     Keyword,
     Number,
     GlobalId(Span),
-    LocalId(Span),
+    LocalId,
     OpenBrace(Span),
     OpenBracket(Span),
     OpenParen(Span),
@@ -196,7 +196,7 @@ impl<'a> TokenStream<'a> {
         if start.1.is_uppercase() {
             Ok(Token::GlobalId(span))
         } else {
-            Ok(Token::LocalId(span))
+            self.result(Token::LocalId, span)
         }
     }
     fn len(&self) -> usize {
@@ -268,35 +268,35 @@ fn scan_char() {
 
 #[test]
 fn scan_local_id() {
-    assert_eq!(scan_str_part(" fo1 "), Ok(Token::LocalId(1..4)));
-    assert_eq!(scan_str_part("fo1"), Ok(Token::LocalId(0..3)));
-}
-
-#[test]
-fn scan_local_id2() {
-    assert_eq!(scan_str_part(" fo1+ "), Ok(Token::LocalId(1..4)));
+    fn test(mut scanner: TokenStream) {
+        assert_eq!(scanner.scan(), Ok(Token::LocalId));
+        assert_eq!(scanner.slice(scanner.span()), "fo1");
+    }
+    test(TokenStream::new(" fo1 "));
+    test(TokenStream::new("fo1"));
+    test(TokenStream::new(" fo1+ "));
 }
 
 #[test]
 fn scan_binary_op() {
-    assert_eq!(
-        scan_str(" foo++bar "),
-        vec![
-            Ok(Token::LocalId(1..4)),
-            Ok(Token::Sigil(4..6)),
-            Ok(Token::LocalId(6..9)),
-        ]
-    )
+    let mut scanner = TokenStream::new(" foo++bar ");
+    assert_eq!(scanner.scan(), Ok(Token::LocalId));
+    assert_eq!(scanner.slice(scanner.span()), "foo");
+    assert_eq!(scanner.scan(), Ok(Token::Sigil(4..6)));
+    assert_eq!(scanner.scan(), Ok(Token::LocalId));
+    assert_eq!(scanner.slice(scanner.span()), "bar");
 }
 
 #[test]
 fn scan_annotations() {
     let mut scanner = TokenStream::new("foo<Foo>+bar<Bar>");
-    assert_eq!(scanner.scan(), Ok(Token::LocalId(0..3)));
+    assert_eq!(scanner.scan(), Ok(Token::LocalId));
+    assert_eq!(scanner.slice(scanner.span()), "foo");
     assert_eq!(scanner.scan(), Ok(Token::Annotation));
     assert_eq!(scanner.span(), 3..8);
     assert_eq!(scanner.scan(), Ok(Token::Sigil(8..9)));
-    assert_eq!(scanner.scan(), Ok(Token::LocalId(9..12)));
+    assert_eq!(scanner.scan(), Ok(Token::LocalId));
+    assert_eq!(scanner.slice(scanner.span()), "bar");
     assert_eq!(scanner.scan(), Ok(Token::Annotation));
     assert_eq!(scanner.span(), 12..17);
 }

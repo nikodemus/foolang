@@ -32,7 +32,7 @@ impl<'a> Parser<'a> {
         let token = self.tokenstream.scan()?;
         match token {
             Token::Number => self.parse_number(),
-            Token::LocalId(span) => self.parse_local_variable(span),
+            Token::LocalId => self.parse_local_variable(),
             _ => unimplemented!("Don't know how to parse: {:?}", token),
         }
     }
@@ -45,9 +45,9 @@ impl<'a> Parser<'a> {
         self.tokenstream.error(problem)
     }
 
-    fn parse_local_variable(&mut self, span: Span) -> Result<Expr, SyntaxError> {
-        let slice = self.tokenstream.slice(span.clone());
-        Ok(Expr::LocalVariable(span, slice.to_string()))
+    fn parse_local_variable(&mut self) -> Result<Expr, SyntaxError> {
+        let slice = self.tokenstream.slice(self.span());
+        Ok(Expr::LocalVariable(self.span(), slice.to_string()))
     }
 
     fn parse_number(&mut self) -> Result<Expr, SyntaxError> {
