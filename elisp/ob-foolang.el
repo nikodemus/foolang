@@ -61,9 +61,24 @@
 ;; be called by the `org-babel-execute:foolang' function below.
 (defun org-babel-expand-body:foolang (body params)
   "Expand BODY according to PARAMS, return the expanded body."
-  (ecase (cdr (assoc :result-type params))
-    (value (format "System stdout print: (%s) toString" body))
-    (output body)))
+  (let (vars)
+    (dolist (pair params)
+      (when (eq :var (car pair))
+        (push (cdr pair) vars)))
+    (let ((wrapped (if vars
+                       (format "{ %s| %s }%s"
+                               (apply 'concat
+                                      (mapcar (lambda (pair) (format ":%s " (car pair)))
+                                                   vars))
+                               body
+                               (apply 'concat
+                                      (mapcar (lambda (pair) (format " value: %s" (cdr pair)))
+                                              vars)))
+                     body)))
+      (message "wrapped: %s" wrapped)
+      (ecase (cdr (assoc :result-type params))
+        (value (format "System stdout print: (%s) toString" wrapped))
+        (output wrapped)))))
 
 ;; This is the main function which is called to evaluate a code
 ;; block.
