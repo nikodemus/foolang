@@ -56,6 +56,24 @@
 ;; optionally declare default header arguments for this language
 (defvar org-babel-default-header-args:foolang '())
 
+(defun foolang-serialize (x &optional nested)
+  (cond ((numberp x)
+         x)
+        ((stringp x)
+         (format "'%s'" x))
+        ((consp x)
+         (format "%s[%s]"
+                 (if nested "" "#")
+                 (apply 'concat (mapcar (lambda (x)
+                                   (format "%s," (foolang-serialize x t)))
+                                        x))))
+        ((null x)
+         "false")
+        ((eq t x)
+         "true")
+        (t
+         (error "Don't know how to serialize for foolang: %s" x))))
+
 ;; This function expands the body of a source code block by doing
 ;; things like prepending argument definitions to the body, it should
 ;; be called by the `org-babel-execute:foolang' function below.
@@ -72,7 +90,8 @@
                                                    vars))
                                body
                                (apply 'concat
-                                      (mapcar (lambda (pair) (format " value: %s" (cdr pair)))
+                                      (mapcar (lambda (pair) (format " value: %s"
+                                                                     (foolang-serialize (cdr pair))))
                                               vars)))
                      body)))
       (message "wrapped: %s" wrapped)
