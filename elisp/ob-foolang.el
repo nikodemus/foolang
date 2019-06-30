@@ -59,9 +59,11 @@
 ;; This function expands the body of a source code block by doing
 ;; things like prepending argument definitions to the body, it should
 ;; be called by the `org-babel-execute:foolang' function below.
-(defun org-babel-expand-body:foolang (body)
+(defun org-babel-expand-body:foolang (body params)
   "Expand BODY according to PARAMS, return the expanded body."
-  (format "System stdout print: (%s) toString" body))
+  (ecase (cdr (assoc :result-type params))
+    (value (format "System stdout print: (%s) toString" body))
+    (output body)))
 
 ;; This is the main function which is called to evaluate a code
 ;; block.
@@ -89,7 +91,7 @@ This function is called by `org-babel-execute-src-block'"
     (call-process (executable-find foolang-executable)
                   nil t nil "--eval"
                   (org-babel-expand-body:foolang
-                   body))
+                   body (org-babel-process-params params)))
     (buffer-string)))
 
 ;; This function should be used to assign any variables in params in
