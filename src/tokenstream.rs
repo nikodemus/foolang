@@ -6,17 +6,13 @@ pub type Span = Range<usize>;
 pub enum Token {
     Annotation,
     Character,
-    CloseBrace(Span),
-    CloseBracket(Span),
-    CloseParen(Span),
+    CloseDelimiter,
     Eof,
     Keyword,
     Number,
     GlobalId,
     LocalId,
-    OpenBrace(Span),
-    OpenBracket(Span),
-    OpenParen(Span),
+    OpenDelimiter,
     Sigil,
 }
 
@@ -81,7 +77,17 @@ impl SyntaxError {
     }
 }
 
-const DELIMITERS: [char; 6] = ['(', ')', '{', '}', '[', ']'];
+fn is_open_delimiter(c: char) -> bool {
+    c == '(' || c == '[' || c == '{'
+}
+
+fn is_close_delimiter(c: char) -> bool {
+    c == ')' || c == ']' || c == '}'
+}
+
+fn is_delimiter(c: char) -> bool {
+    is_open_delimiter(c) || is_close_delimiter(c)
+}
 
 pub fn scan_str_part(s: &str) -> Result<Token, SyntaxError> {
     TokenStream::new(s).scan()
@@ -169,7 +175,7 @@ impl<'a> TokenStream<'a> {
                 self.unread(end);
                 break;
             }
-            if DELIMITERS.iter().find(|x| **x == end.1).is_some() {
+            if is_delimiter(end.1) {
                 break;
             }
             end = self.getchar()?;
@@ -177,18 +183,14 @@ impl<'a> TokenStream<'a> {
         let span = start.0..end.0;
         if !alphanumeric {
             if start.0 + 1 == end.0 {
-                match start.1 {
-                    '(' => return Ok(Token::OpenParen(span)),
-                    ')' => return Ok(Token::CloseParen(span)),
-                    '{' => return Ok(Token::OpenBrace(span)),
-                    '}' => return Ok(Token::CloseBrace(span)),
-                    '[' => return Ok(Token::OpenBracket(span)),
-                    ']' => return Ok(Token::CloseBracket(span)),
-                    _ => return self.result(Token::Sigil, span),
+                if is_open_delimiter(start.1) {
+                    return self.result(Token::OpenDelimiter, span);
                 }
-            } else {
-                return self.result(Token::Sigil, span);
+                if is_close_delimiter(start.1) {
+                    return self.result(Token::CloseDelimiter, span);
+                }
             }
+            return self.result(Token::Sigil, span);
         }
         if start.1.is_digit(10) {
             return self.result(Token::Number, span);
@@ -372,30 +374,42 @@ fn scan_keyword2() {
 
 #[test]
 fn scan_open_paren() {
-    assert_eq!(scan_str_part(" ((  "), Ok(Token::OpenParen(1..2)))
+    let mut scanner = TokenStream::new(" ((  ");
+    assert_eq!(scanner.scan(), Ok(Token::OpenDelimiter));
+    assert_eq!(scanner.slice(scanner.span()), "(");
 }
 
 #[test]
 fn scan_close_paren() {
-    assert_eq!(scan_str_part(" )) "), Ok(Token::CloseParen(1..2)))
+    let mut scanner = TokenStream::new(" ))  ");
+    assert_eq!(scanner.scan(), Ok(Token::CloseDelimiter));
+    assert_eq!(scanner.slice(scanner.span()), ")");
 }
 
 #[test]
 fn scan_open_brace() {
-    assert_eq!(scan_str_part(" {{ "), Ok(Token::OpenBrace(1..2)))
+    let mut scanner = TokenStream::new(" {{  ");
+    assert_eq!(scanner.scan(), Ok(Token::OpenDelimiter));
+    assert_eq!(scanner.slice(scanner.span()), "{");
 }
 
 #[test]
 fn scan_close_brace() {
-    assert_eq!(scan_str_part(" }} "), Ok(Token::CloseBrace(1..2)))
+    let mut scanner = TokenStream::new(" }}  ");
+    assert_eq!(scanner.scan(), Ok(Token::CloseDelimiter));
+    assert_eq!(scanner.slice(scanner.span()), "}");
 }
 
 #[test]
 fn scan_open_bracket() {
-    assert_eq!(scan_str_part(" [[ "), Ok(Token::OpenBracket(1..2)))
+    let mut scanner = TokenStream::new(" [[  ");
+    assert_eq!(scanner.scan(), Ok(Token::OpenDelimiter));
+    assert_eq!(scanner.slice(scanner.span()), "[");
 }
 
 #[test]
 fn scan_close_bracket() {
-    assert_eq!(scan_str_part(" ]] "), Ok(Token::CloseBracket(1..2)))
+    let mut scanner = TokenStream::new(" ]]  ");
+    assert_eq!(scanner.scan(), Ok(Token::CloseDelimiter));
+    assert_eq!(scanner.slice(scanner.span()), "]");
 }
