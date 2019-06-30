@@ -11,7 +11,7 @@ pub enum Token {
     CloseParen(Span),
     Eof,
     Keyword,
-    Number(Span),
+    Number,
     GlobalId(Span),
     LocalId(Span),
     OpenBrace(Span),
@@ -121,6 +121,10 @@ impl<'a> TokenStream<'a> {
         self.span.clone()
     }
 
+    pub fn error<T>(&self, problem: &'static str) -> Result<T, SyntaxError> {
+        Err(SyntaxError::new(self.span(), problem))
+    }
+
     fn result(&mut self, token: Token, span: Span) -> Result<Token, SyntaxError> {
         self.span = span;
         Ok(token)
@@ -187,7 +191,7 @@ impl<'a> TokenStream<'a> {
             }
         }
         if start.1.is_digit(10) {
-            return Ok(Token::Number(span));
+            return self.result(Token::Number, span);
         }
         if start.1.is_uppercase() {
             Ok(Token::GlobalId(span))
@@ -309,12 +313,16 @@ fn scan_global_id2() {
 
 #[test]
 fn scan_number1() {
-    assert_eq!(scan_str_part(" 1xx "), Ok(Token::Number(1..4)))
+    let mut scanner = TokenStream::new(" 1xx ");
+    assert_eq!(scanner.scan(), Ok(Token::Number));
+    assert_eq!(scanner.slice(scanner.span()), "1xx");
 }
 
 #[test]
 fn scan_number2() {
-    assert_eq!(scan_str_part(" 1.0 "), Ok(Token::Number(1..4)))
+    let mut scanner = TokenStream::new(" 1.0 ");
+    assert_eq!(scanner.scan(), Ok(Token::Number));
+    assert_eq!(scanner.slice(scanner.span()), "1.0");
 }
 
 #[test]
@@ -332,10 +340,12 @@ fn scan_keywords() {
     let mut scanner = TokenStream::new(" foo: 42 bar: 123 ");
     assert_eq!(scanner.scan(), Ok(Token::Keyword));
     assert_eq!(scanner.span(), 1..5);
-    assert_eq!(scanner.scan(), Ok(Token::Number(6..8)));
+    assert_eq!(scanner.scan(), Ok(Token::Number));
+    assert_eq!(scanner.slice(scanner.span()), "42");
     assert_eq!(scanner.scan(), Ok(Token::Keyword));
     assert_eq!(scanner.span(), 9..13);
-    assert_eq!(scanner.scan(), Ok(Token::Number(14..17)));
+    assert_eq!(scanner.scan(), Ok(Token::Number));
+    assert_eq!(scanner.slice(scanner.span()), "123");
 }
 
 #[test]
@@ -343,10 +353,12 @@ fn scan_bound_keywords() {
     let mut scanner = TokenStream::new(" foo:42 bar:123 ");
     assert_eq!(scanner.scan(), Ok(Token::Keyword));
     assert_eq!(scanner.slice(scanner.span()), "foo:");
-    assert_eq!(scanner.scan(), Ok(Token::Number(5..7)));
+    assert_eq!(scanner.scan(), Ok(Token::Number));
+    assert_eq!(scanner.slice(scanner.span()), "42");
     assert_eq!(scanner.scan(), Ok(Token::Keyword));
     assert_eq!(scanner.slice(scanner.span()), "bar:");
-    assert_eq!(scanner.scan(), Ok(Token::Number(12..15)));
+    assert_eq!(scanner.scan(), Ok(Token::Number));
+    assert_eq!(scanner.slice(scanner.span()), "123");
 }
 
 #[test]
