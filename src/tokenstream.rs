@@ -119,8 +119,12 @@ impl<'a> TokenStream<'a> {
         }
     }
 
-    pub fn slice(&self, span: Span) -> &str {
-        &self.source[span]
+    pub fn slice(&self) -> &str {
+        &self.source[self.span()]
+    }
+
+    pub fn tokenstring(&self) -> String {
+        self.slice().to_string()
     }
 
     pub fn span(&self) -> Span {
@@ -272,7 +276,7 @@ fn scan_char() {
 fn scan_local_id() {
     fn test(mut scanner: TokenStream) {
         assert_eq!(scanner.scan(), Ok(Token::LocalId));
-        assert_eq!(scanner.slice(scanner.span()), "fo1");
+        assert_eq!(scanner.slice(), "fo1");
     }
     test(TokenStream::new(" fo1 "));
     test(TokenStream::new("fo1"));
@@ -283,33 +287,33 @@ fn scan_local_id() {
 fn scan_binary_op() {
     let mut scanner = TokenStream::new(" foo++bar ");
     assert_eq!(scanner.scan(), Ok(Token::LocalId));
-    assert_eq!(scanner.slice(scanner.span()), "foo");
+    assert_eq!(scanner.slice(), "foo");
     assert_eq!(scanner.scan(), Ok(Token::Sigil));
-    assert_eq!(scanner.slice(scanner.span()), "++");
+    assert_eq!(scanner.slice(), "++");
     assert_eq!(scanner.scan(), Ok(Token::LocalId));
-    assert_eq!(scanner.slice(scanner.span()), "bar");
+    assert_eq!(scanner.slice(), "bar");
 }
 
 #[test]
 fn scan_annotations() {
     let mut scanner = TokenStream::new("foo<Foo>+bar<Bar>");
     assert_eq!(scanner.scan(), Ok(Token::LocalId));
-    assert_eq!(scanner.slice(scanner.span()), "foo");
+    assert_eq!(scanner.slice(), "foo");
     assert_eq!(scanner.scan(), Ok(Token::Annotation));
-    assert_eq!(scanner.slice(scanner.span()), "<Foo>");
+    assert_eq!(scanner.slice(), "<Foo>");
     assert_eq!(scanner.scan(), Ok(Token::Sigil));
-    assert_eq!(scanner.slice(scanner.span()), "+");
+    assert_eq!(scanner.slice(), "+");
     assert_eq!(scanner.scan(), Ok(Token::LocalId));
-    assert_eq!(scanner.slice(scanner.span()), "bar");
+    assert_eq!(scanner.slice(), "bar");
     assert_eq!(scanner.scan(), Ok(Token::Annotation));
-    assert_eq!(scanner.slice(scanner.span()), "<Bar>");
+    assert_eq!(scanner.slice(), "<Bar>");
 }
 
 #[test]
 fn scan_global_id() {
     fn test(mut scanner: TokenStream) {
         assert_eq!(scanner.scan(), Ok(Token::GlobalId));
-        assert_eq!(scanner.slice(scanner.span()), "Fo1");
+        assert_eq!(scanner.slice(), "Fo1");
     }
     test(TokenStream::new(" Fo1 "));
     test(TokenStream::new(" Fo1+ "));
@@ -319,21 +323,21 @@ fn scan_global_id() {
 fn scan_number1() {
     let mut scanner = TokenStream::new(" 1xx ");
     assert_eq!(scanner.scan(), Ok(Token::Number));
-    assert_eq!(scanner.slice(scanner.span()), "1xx");
+    assert_eq!(scanner.slice(), "1xx");
 }
 
 #[test]
 fn scan_number2() {
     let mut scanner = TokenStream::new(" 1.0 ");
     assert_eq!(scanner.scan(), Ok(Token::Number));
-    assert_eq!(scanner.slice(scanner.span()), "1.0");
+    assert_eq!(scanner.slice(), "1.0");
 }
 
 #[test]
 fn scan_sigil() {
     fn test(mut scanner: TokenStream) {
         assert_eq!(scanner.scan(), Ok(Token::Sigil));
-        assert_eq!(scanner.slice(scanner.span()), "+");
+        assert_eq!(scanner.slice(), "+");
     }
     test(TokenStream::new(" + "));
     test(TokenStream::new(" +foo "));
@@ -345,71 +349,71 @@ fn scan_keywords() {
     assert_eq!(scanner.scan(), Ok(Token::Keyword));
     assert_eq!(scanner.span(), 1..5);
     assert_eq!(scanner.scan(), Ok(Token::Number));
-    assert_eq!(scanner.slice(scanner.span()), "42");
+    assert_eq!(scanner.slice(), "42");
     assert_eq!(scanner.scan(), Ok(Token::Keyword));
     assert_eq!(scanner.span(), 9..13);
     assert_eq!(scanner.scan(), Ok(Token::Number));
-    assert_eq!(scanner.slice(scanner.span()), "123");
+    assert_eq!(scanner.slice(), "123");
 }
 
 #[test]
 fn scan_bound_keywords() {
     let mut scanner = TokenStream::new(" foo:42 bar:123 ");
     assert_eq!(scanner.scan(), Ok(Token::Keyword));
-    assert_eq!(scanner.slice(scanner.span()), "foo:");
+    assert_eq!(scanner.slice(), "foo:");
     assert_eq!(scanner.scan(), Ok(Token::Number));
-    assert_eq!(scanner.slice(scanner.span()), "42");
+    assert_eq!(scanner.slice(), "42");
     assert_eq!(scanner.scan(), Ok(Token::Keyword));
-    assert_eq!(scanner.slice(scanner.span()), "bar:");
+    assert_eq!(scanner.slice(), "bar:");
     assert_eq!(scanner.scan(), Ok(Token::Number));
-    assert_eq!(scanner.slice(scanner.span()), "123");
+    assert_eq!(scanner.slice(), "123");
 }
 
 #[test]
 fn scan_keyword2() {
     let mut scanner = TokenStream::new(" : ");
     assert_eq!(scanner.scan(), Ok(Token::Keyword));
-    assert_eq!(scanner.slice(scanner.span()), ":")
+    assert_eq!(scanner.slice(), ":")
 }
 
 #[test]
 fn scan_open_paren() {
     let mut scanner = TokenStream::new(" ((  ");
     assert_eq!(scanner.scan(), Ok(Token::OpenDelimiter));
-    assert_eq!(scanner.slice(scanner.span()), "(");
+    assert_eq!(scanner.slice(), "(");
 }
 
 #[test]
 fn scan_close_paren() {
     let mut scanner = TokenStream::new(" ))  ");
     assert_eq!(scanner.scan(), Ok(Token::CloseDelimiter));
-    assert_eq!(scanner.slice(scanner.span()), ")");
+    assert_eq!(scanner.slice(), ")");
 }
 
 #[test]
 fn scan_open_brace() {
     let mut scanner = TokenStream::new(" {{  ");
     assert_eq!(scanner.scan(), Ok(Token::OpenDelimiter));
-    assert_eq!(scanner.slice(scanner.span()), "{");
+    assert_eq!(scanner.slice(), "{");
 }
 
 #[test]
 fn scan_close_brace() {
     let mut scanner = TokenStream::new(" }}  ");
     assert_eq!(scanner.scan(), Ok(Token::CloseDelimiter));
-    assert_eq!(scanner.slice(scanner.span()), "}");
+    assert_eq!(scanner.slice(), "}");
 }
 
 #[test]
 fn scan_open_bracket() {
     let mut scanner = TokenStream::new(" [[  ");
     assert_eq!(scanner.scan(), Ok(Token::OpenDelimiter));
-    assert_eq!(scanner.slice(scanner.span()), "[");
+    assert_eq!(scanner.slice(), "[");
 }
 
 #[test]
 fn scan_close_bracket() {
     let mut scanner = TokenStream::new(" ]]  ");
     assert_eq!(scanner.scan(), Ok(Token::CloseDelimiter));
-    assert_eq!(scanner.slice(scanner.span()), "]");
+    assert_eq!(scanner.slice(), "]");
 }

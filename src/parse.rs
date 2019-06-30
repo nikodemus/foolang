@@ -46,12 +46,14 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_local_variable(&mut self) -> Result<Expr, SyntaxError> {
-        let slice = self.tokenstream.slice(self.span());
-        Ok(Expr::LocalVariable(self.span(), slice.to_string()))
+        Ok(Expr::LocalVariable(
+            self.span(),
+            self.tokenstream.tokenstring(),
+        ))
     }
 
     fn parse_number(&mut self) -> Result<Expr, SyntaxError> {
-        let slice = self.tokenstream.slice(self.span());
+        let slice = self.tokenstream.slice();
         // Hexadecimal case
         if slice.len() > 2 && ("0x" == &slice[0..2] || "0X" == &slice[0..2]) {
             let integer = match i64::from_str_radix(&slice[2..], 16) {
