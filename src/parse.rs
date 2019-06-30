@@ -64,6 +64,7 @@ fn make_prefix_parsers() -> ParserTable {
     let mut prefix_parsers: ParserTable = HashMap::new();
     prefix_parsers.insert(Token::LocalId, parse_local_variable);
     prefix_parsers.insert(Token::Number, parse_number);
+    prefix_parsers
 }
 
 fn parse_local_variable(parser: &mut Parser) -> Result<Expr, SyntaxError> {

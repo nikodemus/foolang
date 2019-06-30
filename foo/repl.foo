@@ -1,11 +1,17 @@
-@class REPL {
-    input,
-    output,
-    compiler: Foolang compiler,
-    text: String new,
-    value: False,
-    eof: False
-}
+@class REPL [input output compiler text value eof]
+
+@class-method REPL run
+    self new run
+
+@class-method REPL new
+    ^self createInstance: [
+      System stdin,
+      System stdout,
+      Foolang compiler,
+      String new,
+      false,
+      false,
+    ]
 
 @method REPL prompt
     output print: '> '; flush
