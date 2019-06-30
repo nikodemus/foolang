@@ -86,7 +86,7 @@ fn is_close_delimiter(c: char) -> bool {
 }
 
 fn is_delimiter(c: char) -> bool {
-    is_open_delimiter(c) || is_close_delimiter(c)
+    is_open_delimiter(c) || is_close_delimiter(c) || c.is_whitespace()
 }
 
 pub fn scan_str_part(s: &str) -> Result<Token, SyntaxError> {
@@ -163,7 +163,7 @@ impl<'a> TokenStream<'a> {
         }
         let mut end = self.getchar()?;
         loop {
-            if end.1.is_whitespace() {
+            if is_delimiter(end.1) {
                 break;
             }
             if self.at_eof() {
@@ -177,9 +177,6 @@ impl<'a> TokenStream<'a> {
                 && alphanumeric != end.1.is_alphanumeric()
             {
                 self.unread(end);
-                break;
-            }
-            if is_delimiter(end.1) {
                 break;
             }
             end = self.getchar()?;
@@ -233,16 +230,22 @@ impl<'a> TokenStream<'a> {
             .ok_or(SyntaxError::new(self.len()..self.len(), "Unexpected EOF"))
     }
     fn scan_annotation_or_sigil(&mut self, start: usize) -> Result<Token, SyntaxError> {
-        let next = self.getchar()?;
-        if next.1.is_whitespace() || next.1.is_digit(10) {
-            self.unread(next);
-            return self.result(Token::Sigil, start..next.0);
+        let mut next = self.getchar()?;
+        // Annotations always start with alphanumeric characters.
+        if next.1.is_alphabetic() {
+            loop {
+                next = self.getchar()?;
+                if next.1 == '>' {
+                    return self.result(Token::Annotation, start..next.0 + 1);
+                }
+            }
         }
         loop {
-            let next = self.getchar()?;
-            if next.1 == '>' {
-                return self.result(Token::Annotation, start..next.0 + 1);
+            if is_delimiter(next.1) || next.1.is_digit(10) {
+                self.unread(next);
+                return self.result(Token::Sigil, start..next.0);
             }
+            next = self.getchar()?;
         }
     }
     fn scan_character(&mut self, start: usize) -> Result<Token, SyntaxError> {
@@ -307,6 +310,13 @@ fn scan_annotations() {
     assert_eq!(scanner.slice(), "bar");
     assert_eq!(scanner.scan(), Ok(Token::Annotation));
     assert_eq!(scanner.slice(), "<Bar>");
+}
+
+#[test]
+fn scan_lte() {
+    let mut scanner = TokenStream::new(" <= ");
+    assert_eq!(scanner.scan(), Ok(Token::Sigil));
+    assert_eq!(scanner.slice(), "<=");
 }
 
 #[test]
