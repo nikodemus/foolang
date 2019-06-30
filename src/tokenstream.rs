@@ -123,6 +123,10 @@ impl<'a> TokenStream<'a> {
         &self.source[self.span()]
     }
 
+    pub fn slice_at(&self, span: Span) -> &str {
+        &self.source[span]
+    }
+
     pub fn tokenstring(&self) -> String {
         self.slice().to_string()
     }
@@ -131,13 +135,30 @@ impl<'a> TokenStream<'a> {
         self.span.clone()
     }
 
+    pub fn error_at<T>(&self, span: Span, problem: &'static str) -> Result<T, SyntaxError> {
+        Err(SyntaxError::new(span, problem))
+    }
+
     pub fn error<T>(&self, problem: &'static str) -> Result<T, SyntaxError> {
-        Err(SyntaxError::new(self.span(), problem))
+        self.error_at(self.span(), problem)
     }
 
     fn result(&mut self, token: Token, span: Span) -> Result<Token, SyntaxError> {
         self.span = span;
         Ok(token)
+    }
+
+    pub fn lookahead(&mut self) -> Result<(Token, Span), SyntaxError> {
+        // There has got to be a better way... (Doing this in parser?)
+        let indices = self.indices.clone();
+        let cache = self.cache.clone();
+        let span = self.span.clone();
+        let lookahead_token = self.scan()?;
+        let lookahead_span = self.span.clone();
+        self.indices = indices;
+        self.cache = cache;
+        self.span = span;
+        Ok((lookahead_token, lookahead_span))
     }
 
     pub fn scan(&mut self) -> Result<Token, SyntaxError> {

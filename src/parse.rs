@@ -16,28 +16,65 @@ pub enum Expr {
     LocalVariable(Span, String),
 }
 
-type ParserFunction = fn(&mut Parser) -> Result<Expr, SyntaxError>;
+type PrefixParser = fn(&mut Parser) -> Result<Expr, SyntaxError>;
+type PrefixTable = HashMap<Token, PrefixParser>;
 
-type ParserTable = HashMap<Token, ParserFunction>;
+type SuffixParser = fn(&mut Parser, Expr) -> Result<Expr, SyntaxError>;
+type SuffixTable = HashMap<Token, SuffixParser>;
+
+type PrecedenceFunction = fn(&Parser, Span) -> Result<usize, SyntaxError>;
+type PrecedenceTable = HashMap<Token, PrecedenceFunction>;
 
 struct Parser<'a> {
     tokenstream: TokenStream<'a>,
-    prefix_parsers: ParserTable,
+    prefix_table: PrefixTable,
+    suffix_table: SuffixTable,
+    precedence_table: PrecedenceTable,
 }
 
 impl<'a> Parser<'a> {
-    fn new(source: &'a str) -> Parser<'a> {
+    pub fn new(source: &'a str) -> Parser<'a> {
         Parser {
-            prefix_parsers: make_prefix_parsers(),
+            prefix_table: make_prefix_table(),
+            suffix_table: make_suffix_table(),
+            precedence_table: make_precedence_table(),
             tokenstream: TokenStream::new(source),
         }
     }
 
-    fn parse(&mut self) -> Result<Expr, SyntaxError> {
+    pub fn parse(&mut self) -> Result<Expr, SyntaxError> {
+        self.parse_expr(0)
+    }
+
+    fn parse_expr(&mut self, precedence: usize) -> Result<Expr, SyntaxError> {
+        let mut expr = self.parse_prefix()?;
+        while precedence < self.precedence()? {
+            expr = self.parse_suffix(expr)?;
+        }
+        Ok(expr)
+    }
+
+    fn parse_prefix(&mut self) -> Result<Expr, SyntaxError> {
         let token = self.tokenstream.scan()?;
-        match self.prefix_parsers.get(&token) {
-            Some(parser) => return parser(self),
+        match self.prefix_table.get(&token) {
+            Some(parser) => parser(self),
             None => unimplemented!("Don't know how to parse {:?} in prefix position.", token),
+        }
+    }
+
+    fn parse_suffix(&mut self, expr: Expr) -> Result<Expr, SyntaxError> {
+        let token = self.tokenstream.scan()?;
+        match self.suffix_table.get(&token) {
+            Some(parser) => parser(self, expr),
+            None => unimplemented!("Don't know how to parse {:?} in suffix position.", token),
+        }
+    }
+
+    fn precedence(&mut self) -> Result<usize, SyntaxError> {
+        let (token, span) = self.tokenstream.lookahead()?;
+        match self.precedence_table.get(&token) {
+            Some(func) => func(self, span),
+            None => unimplemented!("No precedence defined for {:?}", token),
         }
     }
 
@@ -49,20 +86,50 @@ impl<'a> Parser<'a> {
         self.tokenstream.slice()
     }
 
+    pub fn slice_at(&self, span: Span) -> &str {
+        self.tokenstream.slice_at(span)
+    }
+
     pub fn tokenstring(&self) -> String {
         self.tokenstream.tokenstring()
     }
 
-    pub fn error(&self, problem: &'static str) -> Result<Expr, SyntaxError> {
+    pub fn error<T>(&self, problem: &'static str) -> Result<T, SyntaxError> {
         self.tokenstream.error(problem)
+    }
+
+    pub fn error_at<T>(&self, span: Span, problem: &'static str) -> Result<T, SyntaxError> {
+        self.tokenstream.error_at(span, problem)
     }
 }
 
-fn make_prefix_parsers() -> ParserTable {
-    let mut prefix_parsers: ParserTable = HashMap::new();
-    prefix_parsers.insert(Token::LocalId, parse_local_variable);
-    prefix_parsers.insert(Token::Number, parse_number);
-    prefix_parsers
+fn make_prefix_table() -> PrefixTable {
+    let mut table: PrefixTable = HashMap::new();
+    table.insert(Token::LocalId, parse_local_variable);
+    table.insert(Token::Number, parse_number);
+    table
+}
+
+fn make_suffix_table() -> SuffixTable {
+    let mut table: SuffixTable = HashMap::new();
+    table
+}
+
+fn make_precedence_table() -> PrecedenceTable {
+    let mut table: PrecedenceTable = HashMap::new();
+    table.insert(Token::Eof, precedence_0);
+    table.insert(Token::Sigil, precedence_sigil);
+    table
+}
+
+fn precedence_0(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
+    Ok(0)
+}
+
+fn precedence_sigil(parser: &Parser, span: Span) -> Result<usize, SyntaxError> {
+    match parser.slice_at(span.clone()) {
+        _ => parser.error_at(span, "Unknown sigil"),
+    }
 }
 
 fn parse_local_variable(parser: &mut Parser) -> Result<Expr, SyntaxError> {
