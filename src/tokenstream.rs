@@ -9,7 +9,7 @@ pub enum Token {
     CloseBrace(Span),
     CloseBracket(Span),
     CloseParen(Span),
-    Eof(Span),
+    Eof,
     Keyword(Span),
     Number(Span),
     GlobalId(Span),
@@ -100,6 +100,7 @@ pub struct TokenStream<'a> {
     source: &'a str,
     indices: std::cell::RefCell<std::str::CharIndices<'a>>,
     cache: std::cell::RefCell<Vec<(usize, char)>>,
+    span: Span,
 }
 
 impl<'a> TokenStream<'a> {
@@ -108,16 +109,28 @@ impl<'a> TokenStream<'a> {
             source,
             indices: std::cell::RefCell::new(source.char_indices()),
             cache: std::cell::RefCell::new(Vec::new()),
+            span: 0..0,
         }
     }
+
     pub fn slice(&self, span: Span) -> &str {
         &self.source[span]
     }
+
+    pub fn span(&self) -> Span {
+        self.span.clone()
+    }
+
+    fn result(&mut self, token: Token, span: Span) -> Result<Token, SyntaxError> {
+        self.span = span;
+        Ok(token)
+    }
+
     pub fn scan(&mut self) -> Result<Token, SyntaxError> {
         let mut start;
         loop {
             if self.at_eof() {
-                return Ok(Token::Eof(self.len()..self.len()));
+                return self.result(Token::Eof, self.len()..self.len());
             }
             start = self.getchar()?;
             if !start.1.is_whitespace() {
@@ -234,7 +247,9 @@ impl<'a> TokenStream<'a> {
 
 #[test]
 fn scan_eof() {
-    assert_eq!(scan_str_part("   "), Ok(Token::Eof(3..3)));
+    let mut scanner = TokenStream::new("   ");
+    assert_eq!(scanner.scan(), Ok(Token::Eof));
+    assert_eq!(scanner.span(), 3..3);
 }
 
 #[test]
