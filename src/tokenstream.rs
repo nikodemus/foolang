@@ -4,7 +4,7 @@ pub type Span = Range<usize>;
 
 #[derive(Debug, PartialEq)]
 pub enum Token {
-    Annotation(Span),
+    Annotation,
     Character(Span),
     CloseBrace(Span),
     CloseBracket(Span),
@@ -231,7 +231,7 @@ impl<'a> TokenStream<'a> {
         loop {
             let next = self.getchar()?;
             if next.1 == '>' {
-                return Ok(Token::Annotation(start..next.0 + 1));
+                return self.result(Token::Annotation, start..next.0 + 1);
             }
         }
     }
@@ -283,16 +283,14 @@ fn scan_binary_op() {
 
 #[test]
 fn scan_annotations() {
-    assert_eq!(
-        scan_str("foo<Foo>+bar<Bar>"),
-        vec![
-            Ok(Token::LocalId(0..3)),
-            Ok(Token::Annotation(3..8)),
-            Ok(Token::Sigil(8..9)),
-            Ok(Token::LocalId(9..12)),
-            Ok(Token::Annotation(12..17)),
-        ]
-    )
+    let mut scanner = TokenStream::new("foo<Foo>+bar<Bar>");
+    assert_eq!(scanner.scan(), Ok(Token::LocalId(0..3)));
+    assert_eq!(scanner.scan(), Ok(Token::Annotation));
+    assert_eq!(scanner.span(), 3..8);
+    assert_eq!(scanner.scan(), Ok(Token::Sigil(8..9)));
+    assert_eq!(scanner.scan(), Ok(Token::LocalId(9..12)));
+    assert_eq!(scanner.scan(), Ok(Token::Annotation));
+    assert_eq!(scanner.span(), 12..17);
 }
 
 #[test]
