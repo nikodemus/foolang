@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 
 pub use crate::tokenstream::SyntaxError;
@@ -17,80 +18,96 @@ pub enum Expr {
     LocalVariable(Span, String),
 }
 
+type ParserFunction = fn(&mut Parser) -> Result<Expr, SyntaxError>;
+
+type ParserTable = HashMap<Token, ParserFunction>;
+
 struct Parser<'a> {
     tokenstream: TokenStream<'a>,
+    prefix_parsers: ParserTable,
 }
 
 impl<'a> Parser<'a> {
     fn new(source: &'a str) -> Parser<'a> {
         Parser {
+            prefix_parsers: make_prefix_parsers(),
             tokenstream: TokenStream::new(source),
         }
     }
 
     fn parse(&mut self) -> Result<Expr, SyntaxError> {
         let token = self.tokenstream.scan()?;
-        match token {
-            Token::Number => self.parse_number(),
-            Token::LocalId => self.parse_local_variable(),
-            _ => unimplemented!("Don't know how to parse: {:?}", token),
+        match self.prefix_parsers.get(&token) {
+            Some(parser) => return parser(self),
+            None => unimplemented!("Don't know how to parse {:?} in prefix position.", token),
         }
     }
 
-    fn span(&self) -> Span {
+    pub fn span(&self) -> Span {
         self.tokenstream.span()
     }
 
-    fn error(&self, problem: &'static str) -> Result<Expr, SyntaxError> {
+    pub fn slice(&self) -> &str {
+        self.tokenstream.slice()
+    }
+
+    pub fn tokenstring(&self) -> String {
+        self.tokenstream.tokenstring()
+    }
+
+    pub fn error(&self, problem: &'static str) -> Result<Expr, SyntaxError> {
         self.tokenstream.error(problem)
     }
+}
 
-    fn parse_local_variable(&mut self) -> Result<Expr, SyntaxError> {
-        Ok(Expr::LocalVariable(
-            self.span(),
-            self.tokenstream.tokenstring(),
-        ))
+fn make_prefix_parsers() -> ParserTable {
+    let mut prefix_parsers: ParserTable = HashMap::new();
+    prefix_parsers.insert(Token::LocalId, parse_local_variable);
+    prefix_parsers.insert(Token::Number, parse_number);
+}
+
+fn parse_local_variable(parser: &mut Parser) -> Result<Expr, SyntaxError> {
+    Ok(Expr::LocalVariable(parser.span(), parser.tokenstring()))
+}
+
+fn parse_number(parser: &mut Parser) -> Result<Expr, SyntaxError> {
+    let slice = parser.slice();
+    // Hexadecimal case
+    if slice.len() > 2 && ("0x" == &slice[0..2] || "0X" == &slice[0..2]) {
+        let integer = match i64::from_str_radix(&slice[2..], 16) {
+            Ok(i) => i,
+            Err(_) => return parser.error("Malformed hexadecimal number"),
+        };
+        Ok(Expr::Constant(parser.span(), Literal::Hexadecimal(integer)))
     }
-
-    fn parse_number(&mut self) -> Result<Expr, SyntaxError> {
-        let slice = self.tokenstream.slice();
-        // Hexadecimal case
-        if slice.len() > 2 && ("0x" == &slice[0..2] || "0X" == &slice[0..2]) {
-            let integer = match i64::from_str_radix(&slice[2..], 16) {
-                Ok(i) => i,
-                Err(_) => return self.error("Malformed hexadecimal number"),
-            };
-            Ok(Expr::Constant(self.span(), Literal::Hexadecimal(integer)))
-        }
-        // Binary case
-        else if slice.len() > 2 && ("0b" == &slice[0..2] || "0B" == &slice[0..2]) {
-            let integer = match i64::from_str_radix(&slice[2..], 2) {
-                Ok(i) => i,
-                Err(_) => return self.error("Malformed binary number"),
-            };
-            Ok(Expr::Constant(self.span(), Literal::Binary(integer)))
-        }
-        // Decimal and float case
-        else {
-            let mut decimal: i64 = 0;
-            for byte in slice.bytes() {
-                if byte < 128 {
-                    let c = byte as char;
-                    if c == '_' {
-                        continue;
-                    }
-                    if c.is_digit(10) {
-                        decimal = decimal * 10 + c.to_digit(10).unwrap() as i64;
-                    } else {
-                        match f64::from_str(slice) {
-                            Ok(f) => return Ok(Expr::Constant(self.span(), Literal::Float(f))),
-                            Err(_) => return self.error("Malformed number"),
-                        }
+    // Binary case
+    else if slice.len() > 2 && ("0b" == &slice[0..2] || "0B" == &slice[0..2]) {
+        let integer = match i64::from_str_radix(&slice[2..], 2) {
+            Ok(i) => i,
+            Err(_) => return parser.error("Malformed binary number"),
+        };
+        Ok(Expr::Constant(parser.span(), Literal::Binary(integer)))
+    }
+    // Decimal and float case
+    else {
+        let mut decimal: i64 = 0;
+        for byte in slice.bytes() {
+            if byte < 128 {
+                let c = byte as char;
+                if c == '_' {
+                    continue;
+                }
+                if c.is_digit(10) {
+                    decimal = decimal * 10 + c.to_digit(10).unwrap() as i64;
+                } else {
+                    match f64::from_str(slice) {
+                        Ok(f) => return Ok(Expr::Constant(parser.span(), Literal::Float(f))),
+                        Err(_) => return parser.error("Malformed number"),
                     }
                 }
             }
-            Ok(Expr::Constant(self.span(), Literal::Decimal(decimal)))
         }
+        Ok(Expr::Constant(parser.span(), Literal::Decimal(decimal)))
     }
 }
 

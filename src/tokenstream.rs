@@ -2,7 +2,7 @@ use std::ops::Range;
 
 pub type Span = Range<usize>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum Token {
     Annotation,
     Character,
