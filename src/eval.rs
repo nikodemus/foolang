@@ -8,8 +8,10 @@ impl Env {
     }
     pub fn eval(&mut self, expr: Expr) -> Result<Object, SyntaxError> {
         match expr {
+            Expr::Binary(..) => unimplemented!("TODO: eval Binary"),
             Expr::Constant(_, literal) => self.eval_literal(literal),
-            Expr::LocalVariable(..) => unimplemented!("TODO: LocalVariable"),
+            Expr::Send(..) => unimplemented!("TODO: eval Send"),
+            Expr::Variable(..) => unimplemented!("TODO: eval Variable"),
         }
     }
     pub fn eval_literal(&self, literal: Literal) -> Result<Object, SyntaxError> {

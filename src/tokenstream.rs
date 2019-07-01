@@ -2,7 +2,7 @@ use std::ops::Range;
 
 pub type Span = Range<usize>;
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum Token {
     Annotation,
     Character,
@@ -35,8 +35,7 @@ impl SyntaxError {
         if lineno == 0 {
             self.context.push_str(format!("    {}\n", line).as_str());
         } else {
-            self.context
-                .push_str(format!("{:03} {}\n", lineno, line).as_str());
+            self.context.push_str(format!("{:03} {}\n", lineno, line).as_str());
         }
     }
     pub fn add_context(mut self, source: &str) -> SyntaxError {
