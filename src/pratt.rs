@@ -14,11 +14,7 @@ pub struct ParseError {
 
 impl std::fmt::Debug for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "ParseError({}) at {}:\n{}",
-            self.problem, self.position, self.context
-        )
+        write!(f, "ParseError({}) at {}:\n{}", self.problem, self.position, self.context)
     }
 }
 
@@ -66,12 +62,9 @@ impl Expr {
             Sequence(exprs) => Sequence(exprs.into_iter().map(Expr::no_position).collect()),
             Block(_, block) => Block(0, block.no_position()),
             Array(_, exprs) => Array(0, exprs.into_iter().map(Expr::no_position).collect()),
-            Bind(_, name, value, body) => Bind(
-                0,
-                name,
-                Box::new(value.no_position()),
-                Box::new(body.no_position()),
-            ),
+            Bind(_, name, value, body) => {
+                Bind(0, name, Box::new(value.no_position()), Box::new(body.no_position()))
+            }
             Assign(_, name, value) => Assign(0, name, Box::new(value.no_position())),
             Return(_, value) => Return(0, Box::new(value.no_position())),
             Type(_, typename, value) => Type(0, typename, Box::new(value.no_position())),
@@ -85,25 +78,14 @@ impl Expr {
                 0,
                 name,
                 names,
-                values
-                    .into_iter()
-                    .map(|x| x.map(|e| e.no_position()))
-                    .collect(),
+                values.into_iter().map(|x| x.map(|e| e.no_position())).collect(),
             ),
-            Method(_, class_name, selector, params, body) => Method(
-                0,
-                class_name,
-                selector,
-                params,
-                Box::new(body.no_position()),
-            ),
-            ClassMethod(_, class_name, selector, params, body) => ClassMethod(
-                0,
-                class_name,
-                selector,
-                params,
-                Box::new(body.no_position()),
-            ),
+            Method(_, class_name, selector, params, body) => {
+                Method(0, class_name, selector, params, Box::new(body.no_position()))
+            }
+            ClassMethod(_, class_name, selector, params, body) => {
+                ClassMethod(0, class_name, selector, params, Box::new(body.no_position()))
+            }
             Main(_, system, body) => Main(0, system, Box::new(body.no_position())),
         }
     }
@@ -512,11 +494,7 @@ impl Parser {
         }
         // FIXME: hardcoded precedence
         let next = self.parse_expression(token.precedence())?;
-        Ok(Expr::LeadingComment(
-            token.position,
-            Box::new(next),
-            comment,
-        ))
+        Ok(Expr::LeadingComment(token.position, Box::new(next), comment))
     }
     fn parse_prefix_record_aux(
         &mut self,
@@ -556,10 +534,7 @@ impl Parser {
     fn parse_prefix_literal_record(&mut self, token: Token) -> Result<Expr, ParseError> {
         let (names, values) = self.parse_prefix_record_aux(true)?;
         let literals = values.into_iter().map(|x| x.literal()).collect();
-        Ok(Expr::Constant(
-            token.position,
-            Literal::Record(names, literals),
-        ))
+        Ok(Expr::Constant(token.position, Literal::Record(names, literals)))
     }
     fn parse_prefix_interpolated_string(&mut self, token: Token) -> Result<Expr, ParseError> {
         fn append(mut expr: Expr, source: &str, from: usize, to: usize) -> Expr {
@@ -573,10 +548,7 @@ impl Parser {
                 }
                 _ => expr.keyword(
                     "append:".to_string(),
-                    vec![Expr::Constant(
-                        from,
-                        Literal::String((&source[from..to]).to_string()),
-                    )],
+                    vec![Expr::Constant(from, Literal::String((&source[from..to]).to_string()))],
                 ),
             }
         }
@@ -602,10 +574,8 @@ impl Parser {
                     Expr::Constant(_, Literal::String(ref s)) if s.is_empty() => {
                         part.unary("toString".to_string())
                     }
-                    _ => expr.keyword(
-                        "append:".to_string(),
-                        vec![part.unary("toString".to_string())],
-                    ),
+                    _ => expr
+                        .keyword("append:".to_string(), vec![part.unary("toString".to_string())]),
                 };
                 stream.seek(pos);
                 if stream.charstr() != "}" {
@@ -712,13 +682,7 @@ impl Parser {
     }
     fn parse_toplevel_class_method(&mut self, token: Token) -> Result<Expr, ParseError> {
         let (class, selector, params, body) = self.parse_toplevel_method_aux()?;
-        Ok(Expr::ClassMethod(
-            token.position,
-            class,
-            selector,
-            params,
-            body,
-        ))
+        Ok(Expr::ClassMethod(token.position, class, selector, params, body))
     }
     fn parse_toplevel_method(&mut self, token: Token) -> Result<Expr, ParseError> {
         let (class, selector, params, body) = self.parse_toplevel_method_aux()?;
@@ -766,11 +730,7 @@ impl Parser {
     }
     fn parse_suffix_assign(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
         if let Expr::Variable(pos, name) = left {
-            Ok(Expr::Assign(
-                pos,
-                name,
-                Box::new(self.parse_expression(token.precedence())?),
-            ))
+            Ok(Expr::Assign(pos, name, Box::new(self.parse_expression(token.precedence())?)))
         } else {
             self.error(token, "Invalid target for assignment")
         }
@@ -802,11 +762,7 @@ impl Parser {
         Ok(Expr::Cascade(Box::new(left.clone()), chains))
     }
     fn parse_suffix_comment(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
-        Ok(Expr::TrailingComment(
-            token.position,
-            Box::new(left),
-            token.str().to_string(),
-        ))
+        Ok(Expr::TrailingComment(token.position, Box::new(left), token.str().to_string()))
     }
     fn parse_suffix_keyword(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
         let mut args = vec![];
@@ -845,11 +801,7 @@ impl Parser {
         Ok(Expr::Sequence(expressions))
     }
     fn parse_suffix_type(&mut self, left: Expr, token: Token) -> Result<Expr, ParseError> {
-        Ok(Expr::Type(
-            token.position,
-            token.str().to_string(),
-            Box::new(left),
-        ))
+        Ok(Expr::Type(token.position, token.str().to_string(), Box::new(left)))
     }
     fn next_precedence(&mut self) -> Result<usize, ParseError> {
         Ok(self.peek_token()?.precedence())

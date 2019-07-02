@@ -8,18 +8,12 @@ fn block_0_value() {
 
 #[test]
 fn block_1_value() {
-    assert_eq!(
-        eval_str("{ :a | a + 1 } value: 41"),
-        Object::make_integer(42)
-    );
+    assert_eq!(eval_str("{ :a | a + 1 } value: 41"), Object::make_integer(42));
 }
 
 #[test]
 fn block_2_value() {
-    assert_eq!(
-        eval_str("{ :a :b | b * a + 2 } value: 20 value: 2"),
-        Object::make_integer(42)
-    );
+    assert_eq!(eval_str("{ :a :b | b * a + 2 } value: 20 value: 2"), Object::make_integer(42));
 }
 
 #[test]

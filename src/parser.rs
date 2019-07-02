@@ -34,10 +34,7 @@ pub fn parse_instance_method(s: &str) -> ast::MethodDescription {
     match syntax::InstanceMethodParser::new().parse(s) {
         Ok(e) => e,
         Err(e) => {
-            panic!(format!(
-                "Could not parse instance method: {}\nError: {}",
-                s, e
-            ));
+            panic!(format!("Could not parse instance method: {}\nError: {}", s, e));
         }
     }
 }

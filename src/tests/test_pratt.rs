@@ -74,18 +74,12 @@ fn parse_variable() {
 
 #[test]
 fn parse_unary_send() {
-    assert_eq!(
-        parse_str(" abc foo bar "),
-        Ok(chain(var("abc"), &[unary("foo"), unary("bar")]))
-    );
+    assert_eq!(parse_str(" abc foo bar "), Ok(chain(var("abc"), &[unary("foo"), unary("bar")])));
 }
 
 #[test]
 fn parse_binary_send() {
-    assert_eq!(
-        parse_str(" abc + bar "),
-        Ok(chain(var("abc"), &[binary("+", var("bar"))]))
-    );
+    assert_eq!(parse_str(" abc + bar "), Ok(chain(var("abc"), &[binary("+", var("bar"))])));
 }
 
 #[test]
@@ -97,10 +91,7 @@ fn parse_unary_prefix() {
 fn parse_binary_precedence() {
     assert_eq!(
         parse_str(" abc + bar * quux"),
-        Ok(chain(
-            var("abc"),
-            &[binary("+", chain(var("bar"), &[binary("*", var("quux"))]))]
-        ))
+        Ok(chain(var("abc"), &[binary("+", chain(var("bar"), &[binary("*", var("quux"))]))]))
     );
 }
 
@@ -108,10 +99,7 @@ fn parse_binary_precedence() {
 fn parse_parens() {
     assert_eq!(
         parse_str(" abc * (bar + quux)"),
-        Ok(chain(
-            var("abc"),
-            &[binary("*", chain(var("bar"), &[binary("+", var("quux"))]))]
-        ))
+        Ok(chain(var("abc"), &[binary("*", chain(var("bar"), &[binary("+", var("quux"))]))]))
     );
 }
 
@@ -119,13 +107,7 @@ fn parse_parens() {
 fn parse_unary_and_binary_send() {
     assert_eq!(
         parse_str(" abc foo + bar foo2"),
-        Ok(chain(
-            var("abc"),
-            &[
-                unary("foo"),
-                binary("+", chain(var("bar"), &[unary("foo2")]))
-            ]
-        ))
+        Ok(chain(var("abc"), &[unary("foo"), binary("+", chain(var("bar"), &[unary("foo2")]))]))
     );
 }
 
@@ -133,10 +115,7 @@ fn parse_unary_and_binary_send() {
 fn parse_keyword_send() {
     assert_eq!(
         parse_str(" obj key1: arg1 key2: arg2"),
-        Ok(chain(
-            var("obj"),
-            &[keyword("key1:key2:", &[var("arg1"), var("arg2")])]
-        ))
+        Ok(chain(var("obj"), &[keyword("key1:key2:", &[var("arg1"), var("arg2")])]))
     );
 }
 
@@ -146,10 +125,7 @@ fn parse_keyword_chain() {
         parse_str(" obj send1: arg1 -- send2: arg2"),
         Ok(chain(
             var("obj"),
-            &[
-                keyword("send1:", &[var("arg1")]),
-                keyword("send2:", &[var("arg2")])
-            ]
+            &[keyword("send1:", &[var("arg1")]), keyword("send2:", &[var("arg2")])]
         ))
     );
 }
@@ -158,10 +134,7 @@ fn parse_keyword_chain() {
 fn parse_keyword_unary_chain() {
     assert_eq!(
         parse_str(" obj send1: arg1 -- bar"),
-        Ok(chain(
-            var("obj"),
-            &[keyword("send1:", &[var("arg1")]), unary("bar")]
-        ))
+        Ok(chain(var("obj"), &[keyword("send1:", &[var("arg1")]), unary("bar")]))
     );
 }
 
@@ -306,18 +279,12 @@ fn parse_block_with_args() {
 
 #[test]
 fn parse_array() {
-    assert_eq!(
-        parse_str("[1,2,3]"),
-        Ok(array(vec![decimal(1), decimal(2), decimal(3)]))
-    );
+    assert_eq!(parse_str("[1,2,3]"), Ok(array(vec![decimal(1), decimal(2), decimal(3)])));
 }
 
 #[test]
 fn parse_array_trailing_comma() {
-    assert_eq!(
-        parse_str("[1,2,3,]"),
-        Ok(array(vec![decimal(1), decimal(2), decimal(3)]))
-    );
+    assert_eq!(parse_str("[1,2,3,]"), Ok(array(vec![decimal(1), decimal(2), decimal(3)])));
 }
 
 #[test]
@@ -340,10 +307,7 @@ fn parse_bind() {
 fn parse_assign() {
     assert_eq!(
         parse_str("x := 42, x"),
-        Ok(Expr::Sequence(vec![
-            Expr::Assign(0, "x".to_string(), Box::new(decimal(42))),
-            var("x")
-        ]))
+        Ok(Expr::Sequence(vec![Expr::Assign(0, "x".to_string(), Box::new(decimal(42))), var("x")]))
     );
 }
 
@@ -351,10 +315,7 @@ fn parse_assign() {
 fn parse_return() {
     assert_eq!(
         parse_str("return 42, 666"),
-        Ok(Expr::Sequence(vec![
-            Expr::Return(0, Box::new(decimal(42))),
-            decimal(666)
-        ]))
+        Ok(Expr::Sequence(vec![Expr::Return(0, Box::new(decimal(42))), decimal(666)]))
     );
 }
 
@@ -364,10 +325,7 @@ fn parse_type() {
         parse_str("x <Int> + y <Int>"),
         Ok(chain(
             Expr::Type(0, "Int".to_string(), Box::new(var("x"))),
-            &[binary(
-                "+",
-                Expr::Type(0, "Int".to_string(), Box::new(var("y")))
-            )]
+            &[binary("+", Expr::Type(0, "Int".to_string(), Box::new(var("y"))))]
         ))
     );
 }
@@ -376,11 +334,7 @@ fn parse_type() {
 fn parse_selector() {
     assert_eq!(
         parse_str("[$foo, $bar:quux:, $:::] "),
-        Ok(array(vec![
-            selector("foo"),
-            selector("bar:quux:"),
-            selector(":::"),
-        ]))
+        Ok(array(vec![selector("foo"), selector("bar:quux:"), selector(":::"),]))
     );
 }
 
@@ -484,10 +438,7 @@ fn parse_record() {
 fn parse_literal_record() {
     assert_eq!(
         parse_str("${ foo: 42 }"),
-        Ok(lit_record(
-            vec![String::from("foo:")],
-            vec![Literal::Decimal(42)]
-        ))
+        Ok(lit_record(vec![String::from("foo:")], vec![Literal::Decimal(42)]))
     );
 }
 
@@ -495,10 +446,7 @@ fn parse_literal_record() {
 fn parse_nary_message() {
     assert_eq!(
         parse_str("foo : 1 : 2 : 3"),
-        Ok(chain(
-            var("foo"),
-            &[keyword(":::", &[decimal(1), decimal(2), decimal(3)])]
-        ))
+        Ok(chain(var("foo"), &[keyword(":::", &[decimal(1), decimal(2), decimal(3)])]))
     );
 }
 
@@ -518,11 +466,7 @@ fn parse_comment() {
     );
     assert_eq!(
         parse_str("expr # Trailing line comment"),
-        Ok(Expr::TrailingComment(
-            0,
-            Box::new(var("expr")),
-            " Trailing line comment".to_string()
-        ))
+        Ok(Expr::TrailingComment(0, Box::new(var("expr")), " Trailing line comment".to_string()))
     );
     assert_eq!(
         parse_str(
@@ -562,10 +506,7 @@ fn constant_position() {
         parse_str_with_position("   [1, 2]"),
         Ok(Expr::Array(
             3,
-            vec![
-                Expr::Constant(4, Literal::Decimal(1)),
-                Expr::Constant(7, Literal::Decimal(2))
-            ]
+            vec![Expr::Constant(4, Literal::Decimal(1)), Expr::Constant(7, Literal::Decimal(2))]
         ))
     );
 }
@@ -576,10 +517,7 @@ fn variable_position() {
         parse_str_with_position("[a, b]"),
         Ok(Expr::Array(
             0,
-            vec![
-                Expr::Variable(1, "a".to_string()),
-                Expr::Variable(4, "b".to_string())
-            ]
+            vec![Expr::Variable(1, "a".to_string()), Expr::Variable(4, "b".to_string())]
         ))
     );
 }
@@ -616,11 +554,7 @@ fn assign_position() {
     assert_eq!(
         parse_str_with_position("   x := 42, x"),
         Ok(Expr::Sequence(vec![
-            Expr::Assign(
-                3,
-                "x".to_string(),
-                Box::new(Expr::Constant(8, Literal::Decimal(42)))
-            ),
+            Expr::Assign(3, "x".to_string(), Box::new(Expr::Constant(8, Literal::Decimal(42)))),
             Expr::Variable(12, "x".to_string())
         ]))
     );
@@ -630,10 +564,7 @@ fn assign_position() {
 fn return_position() {
     assert_eq!(
         parse_str_with_position("   return 42"),
-        Ok(Expr::Return(
-            3,
-            Box::new(Expr::Constant(10, Literal::Decimal(42)))
-        ))
+        Ok(Expr::Return(3, Box::new(Expr::Constant(10, Literal::Decimal(42)))))
     );
 }
 
@@ -641,11 +572,7 @@ fn return_position() {
 fn type_position() {
     assert_eq!(
         parse_str_with_position("x <Int>"),
-        Ok(Expr::Type(
-            2,
-            "Int".to_string(),
-            Box::new(Expr::Variable(0, "x".to_string()))
-        ))
+        Ok(Expr::Type(2, "Int".to_string(), Box::new(Expr::Variable(0, "x".to_string()))))
     );
 }
 

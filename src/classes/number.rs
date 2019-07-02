@@ -156,12 +156,8 @@ pub fn method_to_do(receiver: Object, args: Vec<Object>, global: &GlobalEnv) -> 
             let mut x = *f;
             let end = args[0].float();
             while x <= end {
-                let res = closure_apply(
-                    receiver.clone(),
-                    &closure,
-                    &vec![Object::make_float(x)],
-                    global,
-                );
+                let res =
+                    closure_apply(receiver.clone(), &closure, &vec![Object::make_float(x)], global);
                 if res.is_return() {
                     return res;
                 }

@@ -38,10 +38,7 @@ fn array_trailing_comma() {
 #[test]
 fn array_eq() {
     assert_eq!(eval_str("[1,2,3] == [1, 2, 3]"), make_false());
-    assert_eq!(
-        eval_str("{ :arr | arr == arr } value: [1,2,3]"),
-        make_true()
-    )
+    assert_eq!(eval_str("{ :arr | arr == arr } value: [1,2,3]"), make_true())
 }
 
 #[test]

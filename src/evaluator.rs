@@ -51,11 +51,7 @@ impl ClassInfo {
                 return name.to_owned();
             }
         }
-        panic!(
-            "ClassId not in names?! id={}, size={}",
-            class.0,
-            self.methods.len()
-        );
+        panic!("ClassId not in names?! id={}, size={}", class.0, self.methods.len());
     }
     fn find_method(&self, class: &ClassId, name: &str) -> MethodImpl {
         match self.methods[class.0].get(name) {
@@ -223,9 +219,7 @@ impl GlobalEnv {
         self.classes.find_method(classid, name)
     }
     fn find_slot(&self, class: &ClassId, name: &str) -> Option<usize> {
-        self.classes.slots[class.0]
-            .iter()
-            .position(|id| &id.0 == name)
+        self.classes.slots[class.0].iter().position(|id| &id.0 == name)
     }
     fn add_builtin_class(&mut self, name: &str) -> (ClassId, ClassId) {
         if self.variables.contains_key(name) {
@@ -236,8 +230,7 @@ impl GlobalEnv {
         let metaid = self.classes.add_class(&metaname, vec![]);
         let id = self.classes.add_class(name, vec![]);
         let class = Object::make_class(metaid.clone(), id.clone(), name);
-        self.classes
-            .add_builtin(&metaid, "help:", classes::class::method_help);
+        self.classes.add_builtin(&metaid, "help:", classes::class::method_help);
         self.variables.insert(name.to_string(), class);
         (id, metaid)
     }
@@ -250,13 +243,8 @@ impl GlobalEnv {
         let metaid = self.classes.add_class(&metaname, vec![]);
         let id = self.classes.add_class(name, slots.clone());
         let class = Object::make_class(metaid.clone(), id.clone(), name);
-        self.classes
-            .add_builtin(&metaid, "help:", classes::class::method_help);
-        self.classes.add_builtin(
-            &metaid,
-            "createInstance:",
-            classes::class::method_createinstance,
-        );
+        self.classes.add_builtin(&metaid, "help:", classes::class::method_help);
+        self.classes.add_builtin(&metaid, "createInstance:", classes::class::method_createinstance);
         self.variables.insert(name.to_string(), class);
     }
     fn send(
@@ -266,53 +254,52 @@ impl GlobalEnv {
         args: Vec<Object>,
         env: &Lexenv,
     ) -> Eval {
-        self.classes
-            .find_method(&receiver.class, &selector.0)
-            .invoke(receiver, args, env, self)
+        self.classes.find_method(&receiver.class, &selector.0).invoke(receiver, args, env, self)
     }
     pub fn load_file(&mut self, fname: &str) {
-        self.load(parse_program(
-            fs::read_to_string(fname)
-                .expect("Could not load file.")
-                .as_str(),
-        ))
+        self.load(parse_program(fs::read_to_string(fname).expect("Could not load file.").as_str()))
     }
     pub fn eval_str(&self, text: &str) -> Object {
         self.eval(parse_expr(text))
     }
     pub fn load_definition(&mut self, definition: Definition) -> Object {
         match definition {
-            Definition::Class(ClassDescription { name, slots }) => {
+            Definition::Class(ClassDescription {
+                name,
+                slots,
+            }) => {
                 self.add_class(&name.0, slots);
                 Object::make_symbol(&name.0)
             }
-            Definition::InstanceMethod(MethodDescription { class, method }) => {
-                match self.variables.get(&class.0) {
-                    Some(Object {
-                        class: _,
-                        datum: Datum::Class(classobj),
-                    }) => {
-                        let mname = method.selector.0.clone();
-                        self.classes.add_method(&classobj.id, &mname, method);
-                        Object::make_symbol(&mname)
-                    }
-                    None => panic!("Cannot install method in unknown class: {}", class.0),
-                    _ => panic!("Cannot install methods in non-class objects."),
+            Definition::InstanceMethod(MethodDescription {
+                class,
+                method,
+            }) => match self.variables.get(&class.0) {
+                Some(Object {
+                    class: _,
+                    datum: Datum::Class(classobj),
+                }) => {
+                    let mname = method.selector.0.clone();
+                    self.classes.add_method(&classobj.id, &mname, method);
+                    Object::make_symbol(&mname)
                 }
-            }
-            Definition::ClassMethod(MethodDescription { class, method }) => {
-                match self.variables.get(&class.0) {
-                    Some(Object {
-                        class: classid,
-                        datum: _,
-                    }) => {
-                        let mname = method.selector.0.clone();
-                        self.classes.add_method(&classid, &mname, method);
-                        Object::make_symbol(&mname)
-                    }
-                    None => panic!("Cannot install class-method in unknown class: {}", class.0),
+                None => panic!("Cannot install method in unknown class: {}", class.0),
+                _ => panic!("Cannot install methods in non-class objects."),
+            },
+            Definition::ClassMethod(MethodDescription {
+                class,
+                method,
+            }) => match self.variables.get(&class.0) {
+                Some(Object {
+                    class: classid,
+                    datum: _,
+                }) => {
+                    let mname = method.selector.0.clone();
+                    self.classes.add_method(&classid, &mname, method);
+                    Object::make_symbol(&mname)
                 }
-            }
+                None => panic!("Cannot install class-method in unknown class: {}", class.0),
+            },
         }
     }
     pub fn load(&mut self, program: Vec<Definition>) {
@@ -626,9 +613,7 @@ pub fn closure_apply(
     global: &GlobalEnv,
 ) -> Eval {
     let mut result = receiver.clone();
-    let env = closure
-        .env
-        .extend(&closure.block.temporaries, &closure.block.parameters, args);
+    let env = closure.env.extend(&closure.block.temporaries, &closure.block.parameters, args);
     for stm in closure.block.statements.iter() {
         let res = eval_in_env(stm.to_owned(), &env, global);
         if res.is_return() {
@@ -654,7 +639,10 @@ fn eval_cascade(receiver: Object, cascade: Vec<Message>, env: &Lexenv, global: &
     let mut value = receiver.clone();
     for thing in cascade.iter() {
         let res = match thing {
-            Message { selector, args } => {
+            Message {
+                selector,
+                args,
+            } => {
                 let mut vals = Vec::new();
                 for exp in args.iter() {
                     let val = match eval_in_env(exp.to_owned(), env, global) {

@@ -3,12 +3,9 @@ use crate::evaluator::{make_method_result, Eval, GlobalEnv, MethodImpl};
 use crate::objects::{ClassId, Datum, Object};
 
 pub fn init(env: &mut GlobalEnv, class: &ClassId, _meta: &ClassId) {
-    env.classes
-        .add_builtin(&class, "nane", classes::class::method_name);
-    env.classes
-        .add_builtin(&class, "toString", classes::object::method_tostring);
-    env.classes
-        .add_builtin(&class, "==", classes::object::method_eq);
+    env.classes.add_builtin(&class, "nane", classes::class::method_name);
+    env.classes.add_builtin(&class, "toString", classes::object::method_tostring);
+    env.classes.add_builtin(&class, "==", classes::object::method_eq);
 }
 
 pub fn method_createinstance(receiver: Object, args: Vec<Object>, _: &GlobalEnv) -> Eval {

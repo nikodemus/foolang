@@ -59,11 +59,9 @@ impl fmt::Display for Object {
             Datum::Output(_output) => write!(f, "#<Output>"),
             Datum::Input(_input) => write!(f, "#<Input>"),
             Datum::Compiler(_input) => write!(f, "#<Compiler>"),
-            Datum::TimeInfo(t) => write!(
-                f,
-                "#<TimeInfo user: {}, system: {}, real: {}>",
-                t.user, t.system, t.real
-            ),
+            Datum::TimeInfo(t) => {
+                write!(f, "#<TimeInfo user: {}, system: {}, real: {}>", t.user, t.system, t.real)
+            }
         }
     }
 }

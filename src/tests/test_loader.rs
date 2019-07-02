@@ -21,22 +21,10 @@ fn load_empty_class_and_class_methods() {
     );
     let mut env = GlobalEnv::new();
     env.load(prog);
-    assert_eq!(
-        env.eval(parse_expr("Truth theAnswer")),
-        Object::make_integer(42)
-    );
-    assert_eq!(
-        env.eval(parse_expr("Truth whatItMeans")),
-        Object::make_integer(42)
-    );
-    assert_eq!(
-        env.eval(parse_expr("Truth whatItMeansReally")),
-        Object::make_integer(42)
-    );
-    assert_eq!(
-        env.eval(parse_expr("Falsehood theAnswer")),
-        Object::make_integer(13)
-    );
+    assert_eq!(env.eval(parse_expr("Truth theAnswer")), Object::make_integer(42));
+    assert_eq!(env.eval(parse_expr("Truth whatItMeans")), Object::make_integer(42));
+    assert_eq!(env.eval(parse_expr("Truth whatItMeansReally")), Object::make_integer(42));
+    assert_eq!(env.eval(parse_expr("Falsehood theAnswer")), Object::make_integer(13));
     assert_eq!(
         env.eval(parse_expr("Truth help: #theAnswer")),
         Object::make_string("...to life, universe, and everything!")
@@ -60,9 +48,7 @@ fn load_box() {
     let mut env = GlobalEnv::new();
     env.load(prog);
     assert_eq!(
-        env.eval(parse_expr(
-            "{ |x| x := Box new: 40, x value: 2 + x value, x value } value"
-        )),
+        env.eval(parse_expr("{ |x| x := Box new: 40, x value: 2 + x value, x value } value")),
         Object::make_integer(42)
     );
 }

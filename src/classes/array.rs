@@ -54,12 +54,8 @@ pub fn method_inject_into(receiver: Object, args: Vec<Object>, global: &GlobalEn
     array.with_slice(|slice| {
         let mut value = args[0].to_owned();
         for elt in slice.iter() {
-            let res = closure_apply(
-                receiver.clone(),
-                &closure,
-                &vec![value, elt.to_owned()],
-                global,
-            );
+            let res =
+                closure_apply(receiver.clone(), &closure, &vec![value, elt.to_owned()], global);
             if res.is_return() {
                 return res;
             } else {

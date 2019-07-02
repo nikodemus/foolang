@@ -9,10 +9,7 @@ fn eval_character() {
 
 #[test]
 fn eval_symbol() {
-    assert_eq!(
-        eval(parse_expr("#foo:bar:")),
-        Object::make_symbol("foo:bar:")
-    );
+    assert_eq!(eval(parse_expr("#foo:bar:")), Object::make_symbol("foo:bar:"));
 }
 
 #[test]
@@ -29,28 +26,19 @@ fn eval_array() {
 
 #[test]
 fn eval_assign() {
-    assert_eq!(
-        eval(parse_expr("{ |x| x := 1 + 41, x } value")),
-        Object::make_integer(42)
-    )
+    assert_eq!(eval(parse_expr("{ |x| x := 1 + 41, x } value")), Object::make_integer(42))
 }
 
 #[test]
 fn eval_unary() {
     assert_eq!(eval(parse_expr("123 neg")), Object::make_integer(-123));
-    assert_eq!(
-        eval(parse_expr("123.123 neg")),
-        Object::make_float(-123.123)
-    );
+    assert_eq!(eval(parse_expr("123.123 neg")), Object::make_float(-123.123));
 }
 
 #[test]
 fn eval_binary() {
     assert_eq!(eval(parse_expr("100 + 23 - 1")), Object::make_integer(122));
-    assert_eq!(
-        eval(parse_expr("100 + 23.32 - 2")),
-        Object::make_float(121.32)
-    );
+    assert_eq!(eval(parse_expr("100 + 23.32 - 2")), Object::make_float(121.32));
 }
 
 #[test]
@@ -60,10 +48,7 @@ fn eval_keyword() {
 
 #[test]
 fn eval_global() {
-    assert_eq!(
-        eval(parse_expr("PI")),
-        Object::make_float(std::f64::consts::PI)
-    );
+    assert_eq!(eval(parse_expr("PI")), Object::make_float(std::f64::consts::PI));
 }
 
 #[test]

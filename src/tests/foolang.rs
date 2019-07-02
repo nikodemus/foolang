@@ -3,26 +3,14 @@ use crate::objects::Object;
 
 #[test]
 fn foolang_compiler() {
-    assert_eq!(
-        eval_str("Foolang compiler tryParse: '1 +'"),
-        Object::make_boolean(false)
-    );
-    assert_eq!(
-        eval_str("Foolang compiler tryParse: '1 + 2'"),
-        Object::make_boolean(true)
-    );
-    assert_eq!(
-        eval_str("Foolang compiler tryParse: '1 + 2'; evaluate"),
-        Object::make_integer(3)
-    );
+    assert_eq!(eval_str("Foolang compiler tryParse: '1 +'"), Object::make_boolean(false));
+    assert_eq!(eval_str("Foolang compiler tryParse: '1 + 2'"), Object::make_boolean(true));
+    assert_eq!(eval_str("Foolang compiler tryParse: '1 + 2'; evaluate"), Object::make_integer(3));
 }
 
 #[test]
 fn foolang_classes() {
-    assert_eq!(
-        eval_str("Foolang classes size > 10"),
-        Object::make_boolean(true)
-    );
+    assert_eq!(eval_str("Foolang classes size > 10"), Object::make_boolean(true));
 }
 
 #[test]

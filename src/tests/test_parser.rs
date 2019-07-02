@@ -27,14 +27,8 @@ fn parse_literals() {
     assert_eq!(parse_expr("42"), integer(42));
     assert_eq!(parse_expr("12.23"), float(12.23));
     assert_eq!(parse_expr("$x"), Expr::Constant(Literal::Character(s("x"))));
-    assert_eq!(
-        parse_expr("#foo:bar:"),
-        Expr::Constant(Literal::Symbol(s("foo:bar:")))
-    );
-    assert_eq!(
-        parse_expr("'bleep''bloop'"),
-        Expr::Constant(Literal::String(s("bleep''bloop")))
-    );
+    assert_eq!(parse_expr("#foo:bar:"), Expr::Constant(Literal::Symbol(s("foo:bar:"))));
+    assert_eq!(parse_expr("'bleep''bloop'"), Expr::Constant(Literal::String(s("bleep''bloop"))));
     assert_eq!(
         parse_expr("#[321, 34.5, $$, _foobar:quux:zot:, 'string', [level2]]"),
         Expr::Constant(Literal::Array(vec![
@@ -62,20 +56,12 @@ fn parse_unary() {
 fn parse_binary() {
     assert_eq!(
         parse_expr("a + b"),
-        Expr::Send(
-            Box::new(variable("a")),
-            identifier("+"),
-            vec![variable("b")]
-        )
+        Expr::Send(Box::new(variable("a")), identifier("+"), vec![variable("b")])
     );
     assert_eq!(
         parse_expr("a + b ** c"),
         Expr::Send(
-            Box::new(Expr::Send(
-                Box::new(variable("a")),
-                identifier("+"),
-                vec![variable("b")]
-            )),
+            Box::new(Expr::Send(Box::new(variable("a")), identifier("+"), vec![variable("b")])),
             identifier("**"),
             vec![variable("c")]
         )
@@ -138,11 +124,7 @@ fn parse_block() {
         Expr::Block(ast::Block {
             parameters: vec![],
             temporaries: vec![],
-            statements: vec![Expr::Send(
-                Box::new(variable("foo")),
-                identifier("bar"),
-                vec![]
-            )]
+            statements: vec![Expr::Send(Box::new(variable("foo")), identifier("bar"), vec![])]
         })
     );
     assert_eq!(
@@ -161,11 +143,7 @@ fn parse_block() {
         Expr::Block(ast::Block {
             parameters: vec![identifier("a")],
             temporaries: vec![],
-            statements: vec![Expr::Send(
-                Box::new(variable("foo")),
-                identifier("bar"),
-                vec![]
-            )]
+            statements: vec![Expr::Send(Box::new(variable("foo")), identifier("bar"), vec![])]
         })
     );
     assert_eq!(
@@ -185,11 +163,7 @@ fn parse_block() {
             parameters: vec![identifier("a")],
             temporaries: vec![],
             statements: vec![
-                Expr::Send(
-                    Box::new(variable("foo")),
-                    identifier("+"),
-                    vec![variable("bar")]
-                ),
+                Expr::Send(Box::new(variable("foo")), identifier("+"), vec![variable("bar")]),
                 variable("quux")
             ]
         })
@@ -228,11 +202,7 @@ fn parse_binary_cascade() {
     assert_eq!(
         parse_expr("a + b; + c"),
         Expr::Cascade(
-            Box::new(Expr::Send(
-                Box::new(variable("a")),
-                identifier("+"),
-                vec![variable("b")]
-            )),
+            Box::new(Expr::Send(Box::new(variable("a")), identifier("+"), vec![variable("b")])),
             vec![Message {
                 selector: identifier("+"),
                 args: vec![variable("c")]
@@ -242,11 +212,7 @@ fn parse_binary_cascade() {
     assert_eq!(
         parse_expr("1 + 3; + 41"),
         Expr::Cascade(
-            Box::new(Expr::Send(
-                Box::new(integer(1)),
-                identifier("+"),
-                vec![integer(3)]
-            )),
+            Box::new(Expr::Send(Box::new(integer(1)), identifier("+"), vec![integer(3)])),
             vec![Message {
                 selector: identifier("+"),
                 args: vec![integer(41)]
@@ -300,11 +266,7 @@ fn parse_unary_method() {
             parameters: vec![],
             temporaries: vec![],
             docstring: None,
-            statements: vec![Expr::Send(
-                Box::new(variable("bar")),
-                identifier("quux"),
-                vec![]
-            )]
+            statements: vec![Expr::Send(Box::new(variable("bar")), identifier("quux"), vec![])]
         }
     );
     assert_eq!(
@@ -317,11 +279,7 @@ fn parse_unary_method() {
             statements: vec![
                 Expr::Assign(
                     identifier("x"),
-                    Box::new(Expr::Send(
-                        Box::new(variable("bar")),
-                        identifier("quux"),
-                        vec![]
-                    ))
+                    Box::new(Expr::Send(Box::new(variable("bar")), identifier("quux"), vec![]))
                 ),
                 Expr::Return(Box::new(Expr::Send(
                     Box::new(variable("x")),
@@ -363,11 +321,7 @@ fn parse_keyword_method() {
             statements: vec![
                 Expr::Send(Box::new(variable("x")), identifier("frob"), vec![]),
                 Expr::Send(
-                    Box::new(Expr::Send(
-                        Box::new(variable("y")),
-                        identifier("blarg"),
-                        vec![]
-                    )),
+                    Box::new(Expr::Send(Box::new(variable("y")), identifier("blarg"), vec![])),
                     identifier("ding:"),
                     vec![variable("x")]
                 )

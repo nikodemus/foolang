@@ -33,11 +33,7 @@ pub struct Message {
 
 impl Message {
     pub fn no_position(mut self) -> Self {
-        self.arguments = self
-            .arguments
-            .into_iter()
-            .map(|arg| arg.no_position())
-            .collect();
+        self.arguments = self.arguments.into_iter().map(|arg| arg.no_position()).collect();
         self
     }
 }

@@ -1,3 +1,4 @@
+use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::str::FromStr;
 
@@ -23,35 +24,49 @@ type SuffixParser = fn(&mut Parser, Expr) -> Result<Expr, SyntaxError>;
 type PrecedenceFunction = fn(&Parser, Span) -> Result<usize, SyntaxError>;
 
 struct Syntax {
-    token: Token,
     parse_prefix: PrefixParser,
     parse_suffix: SuffixParser,
     precedence: PrecedenceFunction,
 }
 
+struct Operator {
+    prefix_selector: Option<String>,
+    suffix_selector: Option<String>,
+    precedence: usize,
+}
+
 type SyntaxTable = HashMap<Token, Syntax>;
+type OperatorTable = HashMap<String, Operator>;
 
 struct Parser<'a> {
     tokenstream: TokenStream<'a>,
     syntax_table: SyntaxTable,
+    operator_table: OperatorTable,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(source: &'a str) -> Parser<'a> {
         Parser {
             syntax_table: make_syntax_table(),
+            operator_table: make_operator_table(),
             tokenstream: TokenStream::new(source),
         }
     }
 
     pub fn parse(&mut self) -> Result<Expr, SyntaxError> {
+        println!("parse()");
         self.parse_expr(0)
     }
 
-    fn parse_expr(&mut self, precedence: usize) -> Result<Expr, SyntaxError> {
+    pub fn parse_expr(&mut self, precedence: usize) -> Result<Expr, SyntaxError> {
+        println!("  parse_expr()");
+        println!("    parse_expr() prefix after @ {}", self.slice());
         let mut expr = self.parse_prefix()?;
+        println!("    parse_expr() prefix to @ {}", self.slice());
         while precedence < self.precedence()? {
+            println!("    parse_expr() suffix after @ {}", self.slice());
             expr = self.parse_suffix(expr)?;
+            println!("    parse_expr() suffix to @ {}", self.slice());
         }
         Ok(expr)
     }
@@ -108,15 +123,14 @@ impl<'a> Parser<'a> {
 impl Syntax {
     fn define(
         table: &mut SyntaxTable,
-        token: Token,
+        key: Token,
         parse_prefix: PrefixParser,
         parse_suffix: SuffixParser,
         precedence: PrecedenceFunction,
     ) {
         table.insert(
-            token,
+            key,
             Syntax {
-                token,
                 parse_prefix,
                 parse_suffix,
                 precedence,
@@ -133,8 +147,51 @@ fn make_syntax_table() -> SyntaxTable {
 
     def(t, Number, number_prefix, invalid_suffix, precedence_invalid);
     def(t, LocalId, identifier_prefix, identifier_suffix, precedence_1000);
-    def(t, Sigil, sigil_prefix, sigil_suffix, precedence_sigil_10_to_100);
+    def(t, Operator, operator_prefix, operator_suffix, operator_precedence_10_to_100);
     def(t, Eof, invalid_prefix, invalid_suffix, precedence_0);
+
+    table
+}
+
+impl Operator {
+    fn define(
+        table: &mut OperatorTable,
+        key: &str,
+        prefix_selector: &str,
+        suffix_selector: &str,
+        precedence: usize,
+    ) {
+        assert!(key.len() > 0);
+        assert!(10 <= precedence);
+        assert!(precedence <= 100);
+        table.insert(
+            key.to_string(),
+            Operator {
+                prefix_selector: if prefix_selector.is_empty() {
+                    None
+                } else {
+                    Some(prefix_selector.to_string())
+                },
+                suffix_selector: if suffix_selector.is_empty() {
+                    None
+                } else {
+                    Some(suffix_selector.to_string())
+                },
+                precedence,
+            },
+        );
+    }
+}
+
+fn make_operator_table() -> OperatorTable {
+    let mut table: OperatorTable = HashMap::new();
+    let t = &mut table;
+    let def = Operator::define;
+
+    def(t, "*", "", "mul:", 50);
+    def(t, "/", "", "div:", 40);
+    def(t, "+", "", "add:", 30);
+    def(t, "-", "neg", "sub:", 30);
 
     table
 }
@@ -146,12 +203,6 @@ fn precedence_invalid(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
 
 fn precedence_1000(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
     Ok(1000)
-}
-
-fn precedence_sigil_10_to_100(parser: &Parser, span: Span) -> Result<usize, SyntaxError> {
-    match parser.slice_at(span.clone()) {
-        _ => parser.error_at(span, "Unknown sigil"),
-    }
 }
 
 fn precedence_0(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
@@ -215,16 +266,39 @@ fn number_prefix(parser: &mut Parser) -> Result<Expr, SyntaxError> {
     }
 }
 
-fn sigil_prefix(parser: &mut Parser) -> Result<Expr, SyntaxError> {
-    match parser.slice() {
-        _ => parser.error("Invalid operation in prefix position"),
-    }
+fn operator_precedence_10_to_100(parser: &Parser, span: Span) -> Result<usize, SyntaxError> {
+    println!("    precedence for {}", parser.slice_at(span.clone()));
+    let precedence = match parser.operator_table.get(parser.slice_at(span.clone())) {
+        Some(operator) => operator.precedence,
+        None => return parser.error_at(span, "Unknown operator"),
+    };
+    Ok(precedence)
 }
 
-fn sigil_suffix(parser: &mut Parser, _left: Expr) -> Result<Expr, SyntaxError> {
-    match parser.slice() {
-        _ => parser.error("Unknown sigil"),
-    }
+fn operator_prefix(parser: &mut Parser) -> Result<Expr, SyntaxError> {
+    let span = parser.span();
+    println!("prefix operator: {}", parser.slice());
+    let selector = match parser.operator_table.get(parser.slice()) {
+        Some(operator) => match operator.prefix_selector {
+            Some(ref selector) => selector.to_owned(),
+            None => return parser.error("Not a prefix operator"),
+        },
+        None => return parser.error("Unknown operator"),
+    };
+    Ok(Expr::Send(span, Box::new(parser.parse()?), selector, vec![]))
+}
+
+fn operator_suffix(parser: &mut Parser, left: Expr) -> Result<Expr, SyntaxError> {
+    let span = parser.span();
+    println!("suffix operator: {}", parser.slice());
+    let (precedence, selector) = match parser.operator_table.get(parser.slice()) {
+        Some(operator) => match operator.suffix_selector {
+            Some(ref selector) => (operator.precedence, selector.to_owned()),
+            None => return parser.error("Not a binary operator"),
+        },
+        None => return parser.error("Unknown operator"),
+    };
+    Ok(Expr::Send(span, Box::new(left), selector, vec![parser.parse_expr(precedence)?]))
 }
 
 /// Tests and tools
@@ -285,7 +359,29 @@ fn parse_var() {
 }
 
 #[test]
-fn parse_sigils() {
+fn parse_var2() {
+    assert_eq!(parse_str(" c"), Ok(var(1..2, "c")));
+}
+
+/*
+parse()
+  parse_expr()
+    parse_expr() prefix after @
+    parse_expr() prefix to @ a
+    precedence for +
+    parse_expr() suffix after @ a
+suffix operator: +
+  parse_expr()
+    parse_expr() prefix after @ +
+    parse_expr() prefix to @ b
+    precedence for *
+    parse_expr() suffix after @ b
+suffix operator: *
+  parse_expr()
+    parse_expr() prefix after @ *
+ */
+#[test]
+fn parse_operators() {
     assert_eq!(
         parse_str("a + b * c"),
         Ok(binary(2..3, "+", var(0..1, "a"), binary(6..7, "*", var(4..5, "b"), var(8..9, "c"))))
