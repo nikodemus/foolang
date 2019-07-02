@@ -5,22 +5,16 @@ use std::process::Command; // Run programs // Used for writing assertions
 #[test]
 fn stdout_print_no_flush() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("--eval")
-        .arg("System stdout print: 'hello world!'; newline; print: 'boing!'");
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("hello world!\n"));
+    cmd.arg("--eval").arg("System stdout print: 'hello world!'; newline; print: 'boing!'");
+    cmd.assert().success().stdout(predicate::str::contains("hello world!\n"));
     Ok(())
 }
 
 #[test]
 fn stdout_print_flush() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("--eval")
-        .arg("System stdout print: 'hello world!'; newline; print: 'boing!'; flush");
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::ends_with("hello world!\nboing!"));
+    cmd.arg("--eval").arg("System stdout print: 'hello world!'; newline; print: 'boing!'; flush");
+    cmd.assert().success().stdout(predicate::str::ends_with("hello world!\nboing!"));
     Ok(())
 }
 
@@ -49,10 +43,7 @@ fn stdin_readline() -> Result<(), Box<std::error::Error>> {
 #[test]
 fn repl() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("--load")
-        .arg("foo/repl.foo")
-        .arg("--eval")
-        .arg("REPL run");
+    cmd.arg("--load").arg("foo/repl.foo").arg("--eval").arg("REPL run");
     cmd.with_stdin()
         // The repl is currently a tad aggressive about newlines...
         // Should sniff @ at the beginning and require an empty line
@@ -74,10 +65,7 @@ fn repl() -> Result<(), Box<std::error::Error>> {
 #[ignore] // takes a bit long, and will take longer as more are added
 fn benchmarks() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("--load")
-        .arg("foo/benchmarks.foo")
-        .arg("--eval")
-        .arg("Benchmarks all run");
+    cmd.arg("--load").arg("foo/benchmarks.foo").arg("--eval").arg("Benchmarks all run");
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("EmptyLoop:"))
