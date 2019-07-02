@@ -16,11 +16,17 @@ pub enum Token {
     Operator,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub struct SyntaxError {
     pub span: Span,
     pub problem: &'static str,
     pub context: String,
+}
+
+impl std::fmt::Debug for SyntaxError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "SyntaxError({:?} at {:?}):\n{}", self.problem, self.span, self.context)
+    }
 }
 
 impl SyntaxError {

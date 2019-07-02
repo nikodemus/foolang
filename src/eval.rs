@@ -8,6 +8,7 @@ impl Env {
     }
     pub fn eval(&mut self, expr: Expr) -> Result<Object, SyntaxError> {
         match expr {
+            Expr::Bind(..) => unimplemented!("TODO: eval Bind"), //
             Expr::Constant(_, literal) => self.eval_literal(literal),
             Expr::Send(..) => unimplemented!("TODO: eval Send"),
             Expr::Variable(..) => unimplemented!("TODO: eval Variable"),
@@ -22,7 +23,7 @@ impl Env {
 }
 
 fn eval_str(source: &str) -> Result<Object, SyntaxError> {
-    let expr = parse_str(source).map_err(|e| e.add_context(source))?;
+    let expr = parse_str(source)?;
     Env::new().eval(expr).map_err(|e| e.add_context(source))
 }
 

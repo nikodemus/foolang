@@ -2,6 +2,136 @@
 
 # foolang
 
+## Syntax notes
+
+- Use -> for chaining instead of --
+
+- Canonicalize multipart keyword messages by stable-sorting the keys.
+  (Evaluatior order stays.)
+
+- Possible conflict in record comprehensition syntax: Well, dict comprehension maybe. 
+
+   Consider:
+
+   staff select: {_senior} -- inject: Dictionary new into: { |senior, dict| 
+       dict put: senior at: senior name
+   }
+
+   Dictionary select: {_ senior} from: staff
+              key: {_ name} value: {_}
+
+   ^-- these also don't deal with multiple dimensions nicely
+
+   Rendered as:
+
+       { employee name: employee | employee <- staff, employee senior }
+
+   Cannot tell that this is a comprehension very easily.
+
+       { employee name => employee | employee <- staff, employee senior }
+
+   Is clearer, but Json-compatible literals are just awfully nice.
+
+   Wat about
+
+       { (employee name): employee | employee <- staff, employee senior }
+
+   Alternatively I could reserve => for cases where the names are not literal,
+   and for literal string or selector keys.
+
+       { foo: 42 } => record
+
+       { "foo bar": 42 } => dict
+
+       { (foo): 42 } => dict (evalute foo)
+
+   Or
+
+       { foo => 32 } as record
+
+   Because consider: records are really literal objects. I would kind of like
+   have the option to delegate, have inline methods, etc.
+
+   { 
+       foo => 1
+
+       bar: x => (
+         old = _slot
+         _slot += x
+         old 
+       ),
+
+       _slot = 42
+   }
+
+   {
+      doesNotUnderstand: selector with: args => {
+         log write: selector
+         object perform: selector with: args
+      }
+   }
+
+
+- I really miss question mark as part of message syntax. Look at the "senior"
+  above. It would be so much better as senior?
+
+  
+
+- Using words to define operators. Maybe `x _max_ y` or `x \max y`. Either would
+  also be nice syntax for entering unicode operators.
+
+- Extending pratt parsing to do non-transitive precedence?
+
+  1. Instead of passing around precedence and comparing it numerically
+     pass around precedence object and use that.
+
+  2. Precedence classes like Arithmetic > Comparison > Logical
+     are non-transitive.
+
+  3. Precedence groups within classes are transitive and either
+     left-associative, non-associative, or composing-associtive.
+
+     x > y < z is an example of a composing-associative group with
+     the composing operator &&.
+
+     => tmp := none, (x > (tmp := y)) && (tmp < z)
+
+  4. Precedence groups are organized into rows. Operators on the same row
+     are at the same precedence. Operators at higher rows are at higher
+     precedence.
+
+  5. Each row has an implicit "before" and "after" extension slot. Things
+     in the before slot are higher than the row but not lower than the
+     higher rows. Things in the after slot are lower than the row but not
+     higher than lower rows.
+
+  @precedenceCLass Arithmetic
+     before: Comparison
+  
+  @precedenceClass Comparison
+     before: Logical
+
+  @precedenceClass Logical
+
+  @associativeGroup[Arithmetic]
+     [\arrow]
+     [*, /]
+     [+, -]
+
+  @associativeGroup[Arithmetic]
+     [<<, >>]
+     [|, &, \xor]
+
+  @binaryOperator[Arithmeric before: *] ^
+
+  So ^ relates to all other arithmetic operators except \arrow.
+
+  @method[Integer] ^ x
+     x == 0 then: { return 1 }
+     x == 1 then: { return self }
+     self * self ^ (x-1)
+  
+  
 ## References
 
 - 1973 - [Top Down Operator Precedence](papers/pratt.pdf) by Vaughan R. Pratt. \
@@ -265,3 +395,28 @@ to what gcc -O0 would produce.
   Check that value of arg cannot escape: cannot be stored,
   cannot be passed to as non-& arguments. If this is true
   then the object can be stack-allocated safely.
+
+- Allow using _underscored_ words to define operators: `x _max_ y` is pretty nice.
+
+- Allow using \escaped to denote unicode symbols with user-defined aliases:
+
+     a \xor b
+
+- Allow globals providing complex operations to have unicode renderings:
+
+     Sigma over: 1...10 do: {|n| (n + 1) / n }
+
+                          10   n + 1
+  should be rendered as SIGMA --------
+                         n=1     n
+
+  ...though I submit that the fikkiw reads better:
+
+
+     1...10 -- sum: {|n| (n+1) / n }
+
+
+  The editor will render them pretty.
+
+- Can I make |a| do the right thing? Ie. a magnitude
+
