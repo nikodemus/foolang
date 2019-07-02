@@ -180,13 +180,22 @@ impl<'a> TokenStream<'a> {
         if start.1 == ':' {
             return self.result(Token::Keyword, start.0..start.0 + 1);
         }
-        let mut end = self.getchar()?;
+        if is_open_delimiter(start.1) {
+            return self.result(Token::OpenDelimiter, start.0..start.0 + 1);
+        }
+        if is_close_delimiter(start.1) {
+            return self.result(Token::CloseDelimiter, start.0..start.0 + 1);
+        }
+        let mut end = start.clone();
         loop {
-            if is_delimiter(end.1) {
-                break;
-            }
             if self.at_eof() {
                 end.0 = self.len();
+                break;
+            }
+
+            end = self.getchar()?;
+
+            if is_delimiter(end.1) {
                 break;
             }
             if end.1 == ':' {
@@ -198,18 +207,9 @@ impl<'a> TokenStream<'a> {
                 self.unread(end);
                 break;
             }
-            end = self.getchar()?;
         }
         let span = start.0..end.0;
         if !alphanumeric {
-            if start.0 + 1 == end.0 {
-                if is_open_delimiter(start.1) {
-                    return self.result(Token::OpenDelimiter, span);
-                }
-                if is_close_delimiter(start.1) {
-                    return self.result(Token::CloseDelimiter, span);
-                }
-            }
             return self.result(Token::Sigil, span);
         }
         if start.1.is_digit(10) {
@@ -296,13 +296,14 @@ fn scan_char() {
 
 #[test]
 fn scan_local_id() {
-    fn test(mut scanner: TokenStream) {
+    fn test(mut scanner: TokenStream, want: &str) {
         assert_eq!(scanner.scan(), Ok(Token::LocalId));
-        assert_eq!(scanner.slice(), "fo1");
+        assert_eq!(scanner.slice(), want);
     }
-    test(TokenStream::new(" fo1 "));
-    test(TokenStream::new("fo1"));
-    test(TokenStream::new(" fo1+ "));
+    test(TokenStream::new(" f"), "f");
+    test(TokenStream::new(" fo1 "), "fo1");
+    test(TokenStream::new("fo1"), "fo1");
+    test(TokenStream::new(" fo1+ "), "fo1");
 }
 
 #[test]
