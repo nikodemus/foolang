@@ -39,7 +39,6 @@ impl SyntaxError {
         }
     }
     pub fn add_context(mut self, source: &str) -> SyntaxError {
-        println!("Add context: {:?} from {:?}", &self.span, source);
         let mut prev = "";
         let mut lineno = 1;
         let mut start = 0;
