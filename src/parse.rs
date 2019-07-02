@@ -15,7 +15,6 @@ pub enum Literal {
 pub enum Expr {
     Constant(Span, Literal),
     Variable(Span, String),
-    Binary(Span, String, Box<Expr>, Box<Expr>),
     Send(Span, Box<Expr>, String, Vec<Expr>),
 }
 
@@ -54,19 +53,13 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse(&mut self) -> Result<Expr, SyntaxError> {
-        println!("parse()");
         self.parse_expr(0)
     }
 
     pub fn parse_expr(&mut self, precedence: usize) -> Result<Expr, SyntaxError> {
-        println!("  parse_expr()");
-        println!("    parse_expr() prefix after @ {}", self.slice());
         let mut expr = self.parse_prefix()?;
-        println!("    parse_expr() prefix to @ {}", self.slice());
         while precedence < self.precedence()? {
-            println!("    parse_expr() suffix after @ {}", self.slice());
             expr = self.parse_suffix(expr)?;
-            println!("    parse_expr() suffix to @ {}", self.slice());
         }
         Ok(expr)
     }
@@ -267,7 +260,6 @@ fn number_prefix(parser: &mut Parser) -> Result<Expr, SyntaxError> {
 }
 
 fn operator_precedence_10_to_100(parser: &Parser, span: Span) -> Result<usize, SyntaxError> {
-    println!("    precedence for {}", parser.slice_at(span.clone()));
     let precedence = match parser.operator_table.get(parser.slice_at(span.clone())) {
         Some(operator) => operator.precedence,
         None => return parser.error_at(span, "Unknown operator"),
@@ -277,7 +269,6 @@ fn operator_precedence_10_to_100(parser: &Parser, span: Span) -> Result<usize, S
 
 fn operator_prefix(parser: &mut Parser) -> Result<Expr, SyntaxError> {
     let span = parser.span();
-    println!("prefix operator: {}", parser.slice());
     let selector = match parser.operator_table.get(parser.slice()) {
         Some(operator) => match operator.prefix_selector {
             Some(ref selector) => selector.to_owned(),
@@ -290,7 +281,6 @@ fn operator_prefix(parser: &mut Parser) -> Result<Expr, SyntaxError> {
 
 fn operator_suffix(parser: &mut Parser, left: Expr) -> Result<Expr, SyntaxError> {
     let span = parser.span();
-    println!("suffix operator: {}", parser.slice());
     let (precedence, selector) = match parser.operator_table.get(parser.slice()) {
         Some(operator) => match operator.suffix_selector {
             Some(ref selector) => (operator.precedence, selector.to_owned()),
@@ -320,7 +310,7 @@ fn var(span: Span, name: &str) -> Expr {
 }
 
 fn binary(span: Span, name: &str, left: Expr, right: Expr) -> Expr {
-    Expr::Binary(span, name.to_string(), Box::new(left), Box::new(right))
+    Expr::Send(span, Box::new(left), name.to_string(), vec![right])
 }
 
 #[test]
@@ -363,27 +353,24 @@ fn parse_var2() {
     assert_eq!(parse_str(" c"), Ok(var(1..2, "c")));
 }
 
-/*
-parse()
-  parse_expr()
-    parse_expr() prefix after @
-    parse_expr() prefix to @ a
-    precedence for +
-    parse_expr() suffix after @ a
-suffix operator: +
-  parse_expr()
-    parse_expr() prefix after @ +
-    parse_expr() prefix to @ b
-    precedence for *
-    parse_expr() suffix after @ b
-suffix operator: *
-  parse_expr()
-    parse_expr() prefix after @ *
- */
 #[test]
 fn parse_operators() {
     assert_eq!(
         parse_str("a + b * c"),
-        Ok(binary(2..3, "+", var(0..1, "a"), binary(6..7, "*", var(4..5, "b"), var(8..9, "c"))))
+        Ok(binary(
+            2..3,
+            "add:",
+            var(0..1, "a"),
+            binary(6..7, "mul:", var(4..5, "b"), var(8..9, "c"))
+        ))
+    );
+    assert_eq!(
+        parse_str("a * b + c"),
+        Ok(binary(
+            6..7,
+            "add:",
+            binary(2..3, "mul:", var(0..1, "a"), var(4..5, "b")),
+            var(8..9, "c")
+        ))
     );
 }

@@ -13,7 +13,7 @@ pub enum Token {
     GlobalId,
     LocalId,
     OpenDelimiter,
-    Sigil,
+    Operator,
 }
 
 #[derive(Debug, PartialEq)]
@@ -172,7 +172,7 @@ impl<'a> TokenStream<'a> {
         }
         match start.1 {
             '\'' => return self.scan_character(start.0),
-            '<' => return self.scan_annotation_or_sigil(start.0),
+            '<' => return self.scan_annotation_or_operator(start.0),
             _ => {}
         }
         let numeric = start.1.is_numeric();
@@ -210,7 +210,7 @@ impl<'a> TokenStream<'a> {
         }
         let span = start.0..end.0;
         if !alphanumeric {
-            return self.result(Token::Sigil, span);
+            return self.result(Token::Operator, span);
         }
         if start.1.is_digit(10) {
             return self.result(Token::Number, span);
@@ -248,7 +248,7 @@ impl<'a> TokenStream<'a> {
             .next()
             .ok_or(SyntaxError::new(self.len()..self.len(), "Unexpected EOF"))
     }
-    fn scan_annotation_or_sigil(&mut self, start: usize) -> Result<Token, SyntaxError> {
+    fn scan_annotation_or_operator(&mut self, start: usize) -> Result<Token, SyntaxError> {
         let mut next = self.getchar()?;
         // Annotations always start with alphanumeric characters.
         if next.1.is_alphabetic() {
@@ -262,7 +262,7 @@ impl<'a> TokenStream<'a> {
         loop {
             if is_delimiter(next.1) || next.1.is_digit(10) {
                 self.unread(next);
-                return self.result(Token::Sigil, start..next.0);
+                return self.result(Token::Operator, start..next.0);
             }
             next = self.getchar()?;
         }
@@ -311,7 +311,7 @@ fn scan_binary_op() {
     let mut scanner = TokenStream::new(" foo++bar ");
     assert_eq!(scanner.scan(), Ok(Token::LocalId));
     assert_eq!(scanner.slice(), "foo");
-    assert_eq!(scanner.scan(), Ok(Token::Sigil));
+    assert_eq!(scanner.scan(), Ok(Token::Operator));
     assert_eq!(scanner.slice(), "++");
     assert_eq!(scanner.scan(), Ok(Token::LocalId));
     assert_eq!(scanner.slice(), "bar");
@@ -324,7 +324,7 @@ fn scan_annotations() {
     assert_eq!(scanner.slice(), "foo");
     assert_eq!(scanner.scan(), Ok(Token::Annotation));
     assert_eq!(scanner.slice(), "<Foo>");
-    assert_eq!(scanner.scan(), Ok(Token::Sigil));
+    assert_eq!(scanner.scan(), Ok(Token::Operator));
     assert_eq!(scanner.slice(), "+");
     assert_eq!(scanner.scan(), Ok(Token::LocalId));
     assert_eq!(scanner.slice(), "bar");
@@ -335,7 +335,7 @@ fn scan_annotations() {
 #[test]
 fn scan_lte() {
     let mut scanner = TokenStream::new(" <= ");
-    assert_eq!(scanner.scan(), Ok(Token::Sigil));
+    assert_eq!(scanner.scan(), Ok(Token::Operator));
     assert_eq!(scanner.slice(), "<=");
 }
 
@@ -364,9 +364,9 @@ fn scan_number2() {
 }
 
 #[test]
-fn scan_sigil() {
+fn scan_operator() {
     fn test(mut scanner: TokenStream) {
-        assert_eq!(scanner.scan(), Ok(Token::Sigil));
+        assert_eq!(scanner.scan(), Ok(Token::Operator));
         assert_eq!(scanner.slice(), "+");
     }
     test(TokenStream::new(" + "));
