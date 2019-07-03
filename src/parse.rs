@@ -476,11 +476,10 @@ fn parse_sequence() {
     );
 }
 
-#[ignore]
 #[test]
 fn parse_let() {
     assert_eq!(
         parse_str("let x = 21 + 21, x"),
-        Ok(bind("x", binary(8..10, "add:", int(9..11, 21), int(14..16, 21)), var(17..18, "x")))
+        Ok(bind("x", binary(11..12, "+", int(8..10, 21), int(13..15, 21)), var(17..18, "x")))
     );
 }
