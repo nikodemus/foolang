@@ -1,4 +1,4 @@
-use std::borrow::ToOwned;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::Into;
 use std::str::FromStr;
@@ -21,8 +21,8 @@ pub enum Expr {
     Seq(Vec<Expr>),
 }
 
-type PrefixParser = fn(&mut Parser) -> Result<Expr, SyntaxError>;
-type SuffixParser = fn(&mut Parser, Expr, PrecedenceFunction) -> Result<Expr, SyntaxError>;
+type PrefixParser = fn(&Parser) -> Result<Expr, SyntaxError>;
+type SuffixParser = fn(&Parser, Expr, PrecedenceFunction) -> Result<Expr, SyntaxError>;
 type PrecedenceFunction = fn(&Parser, Span) -> Result<usize, SyntaxError>;
 
 #[derive(Clone)]
@@ -35,7 +35,8 @@ type TokenTable = HashMap<Token, Syntax>;
 type NameTable = HashMap<String, Syntax>;
 
 struct Parser<'a> {
-    tokenstream: TokenStream<'a>,
+    source: &'a str,
+    tokenstream: RefCell<TokenStream<'a>>,
     token_table: TokenTable,
     name_table: NameTable,
 }
@@ -43,9 +44,10 @@ struct Parser<'a> {
 impl<'a> Parser<'a> {
     pub fn new(source: &'a str) -> Parser<'a> {
         Parser {
+            source,
             token_table: make_token_table(),
             name_table: make_name_table(),
-            tokenstream: TokenStream::new(source),
+            tokenstream: RefCell::new(TokenStream::new(source)),
         }
     }
 
@@ -53,7 +55,7 @@ impl<'a> Parser<'a> {
         self.parse_expr(0)
     }
 
-    pub fn parse_expr(&mut self, precedence: usize) -> Result<Expr, SyntaxError> {
+    pub fn parse_expr(&self, precedence: usize) -> Result<Expr, SyntaxError> {
         let mut expr = self.parse_prefix()?;
         while precedence < self.precedence()? {
             expr = self.parse_suffix(expr)?;
@@ -61,95 +63,94 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn parse_prefix(&mut self) -> Result<Expr, SyntaxError> {
-        let token = self.tokenstream.scan()?;
+    fn parse_prefix(&self) -> Result<Expr, SyntaxError> {
+        let token = self.scan()?;
         match self.token_table.get(&token) {
-            Some(syntax) => {
-                let syntax = syntax.to_owned();
-                self.parse_prefix_syntax(syntax)
-            }
+            Some(syntax) => self.parse_prefix_syntax(syntax),
             None => unimplemented!("Don't know how to parse {:?} in prefix position.", token),
         }
     }
 
-    fn parse_suffix(&mut self, left: Expr) -> Result<Expr, SyntaxError> {
-        let token = self.tokenstream.scan()?;
+    fn parse_suffix(&self, left: Expr) -> Result<Expr, SyntaxError> {
+        let token = self.scan()?;
         match self.token_table.get(&token) {
-            Some(syntax) => {
-                let syntax = syntax.to_owned();
-                self.parse_suffix_syntax(syntax, left)
-            }
+            Some(syntax) => self.parse_suffix_syntax(syntax, left),
             None => unimplemented!("Don't know how to parse {:?} in suffix position.", token),
         }
     }
 
-    fn precedence(&mut self) -> Result<usize, SyntaxError> {
-        let (token, span) = self.tokenstream.lookahead()?;
-        match self.token_table.get(&token).to_owned() {
-            Some(syntax) => {
-                let syntax = syntax.to_owned();
-                self.syntax_precedence(syntax, span)
-            }
+    fn precedence(&self) -> Result<usize, SyntaxError> {
+        let (token, span) = self.lookahead()?;
+        match self.token_table.get(&token) {
+            Some(syntax) => self.syntax_precedence(syntax, span),
             None => unimplemented!("No precedence defined for {:?}", token),
         }
     }
 
-    fn parse_prefix_syntax(&mut self, syntax: Syntax) -> Result<Expr, SyntaxError> {
+    fn parse_prefix_syntax(&self, syntax: &Syntax) -> Result<Expr, SyntaxError> {
         match syntax {
             Syntax::General(prefix, _, _) => prefix(self),
-            Syntax::Operator(is_prefix, _, _) if is_prefix => {
+            Syntax::Operator(is_prefix, _, _) if *is_prefix => {
                 let operator = self.tokenstring();
-                Ok(Expr::Send(self.span(), operator, Box::new(self.parse()?), vec![]))
+                Ok(Expr::Send(self.span(), operator, Box::new(self.parse_expr(0)?), vec![]))
             }
             _ => self.error("Expected value or prefix operator"),
         }
     }
 
-    fn parse_suffix_syntax(&mut self, syntax: Syntax, left: Expr) -> Result<Expr, SyntaxError> {
+    fn parse_suffix_syntax(&self, syntax: &Syntax, left: Expr) -> Result<Expr, SyntaxError> {
         match syntax {
-            Syntax::General(_, suffix, precedence) => suffix(self, left, precedence),
-            Syntax::Operator(_, is_binary, precedence) if is_binary => {
+            Syntax::General(_, suffix, precedence) => suffix(self, left, *precedence),
+            Syntax::Operator(_, is_binary, precedence) if *is_binary => {
                 let operator = self.tokenstring();
                 Ok(Expr::Send(
                     self.span(),
                     operator,
                     Box::new(left),
-                    vec![self.parse_expr(precedence)?],
+                    vec![self.parse_expr(*precedence)?],
                 ))
             }
             _ => self.error("I don't understand"),
         }
     }
 
-    fn syntax_precedence(&self, syntax: Syntax, span: Span) -> Result<usize, SyntaxError> {
+    fn syntax_precedence(&self, syntax: &Syntax, span: Span) -> Result<usize, SyntaxError> {
         match syntax {
             Syntax::General(_, _, precedence) => precedence(self, span),
-            Syntax::Operator(_, _, precedence) => Ok(precedence),
+            Syntax::Operator(_, _, precedence) => Ok(*precedence),
         }
     }
 
+    pub fn lookahead(&self) -> Result<(Token, Span), SyntaxError> {
+        self.tokenstream.borrow_mut().lookahead()
+    }
+
+    pub fn scan(&self) -> Result<Token, SyntaxError> {
+        self.tokenstream.borrow_mut().scan()
+    }
+
     pub fn span(&self) -> Span {
-        self.tokenstream.span()
+        self.tokenstream.borrow().span()
     }
 
     pub fn slice(&self) -> &str {
-        self.tokenstream.slice()
+        &self.source[self.span()]
     }
 
     pub fn slice_at(&self, span: Span) -> &str {
-        self.tokenstream.slice_at(span)
+        &self.source[span]
     }
 
     pub fn tokenstring(&self) -> String {
-        self.tokenstream.tokenstring()
+        self.tokenstream.borrow().tokenstring()
     }
 
     pub fn error<T>(&self, problem: &'static str) -> Result<T, SyntaxError> {
-        self.tokenstream.error(problem)
+        self.tokenstream.borrow().error(problem)
     }
 
     pub fn error_at<T>(&self, span: Span, problem: &'static str) -> Result<T, SyntaxError> {
-        self.tokenstream.error_at(span, problem)
+        self.tokenstream.borrow().error_at(span, problem)
     }
 }
 
@@ -218,45 +219,35 @@ fn precedence_0(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
     Ok(0)
 }
 
-fn invalid_prefix(parser: &mut Parser) -> Result<Expr, SyntaxError> {
+fn invalid_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     parser.error("Not valid in value position")
 }
 
-fn invalid_suffix(
-    parser: &mut Parser,
-    _: Expr,
-    _: PrecedenceFunction,
-) -> Result<Expr, SyntaxError> {
+fn invalid_suffix(parser: &Parser, _: Expr, _: PrecedenceFunction) -> Result<Expr, SyntaxError> {
     parser.error("Not valid in operator position")
 }
 
 fn identifier_precedence(parser: &Parser, span: Span) -> Result<usize, SyntaxError> {
     match parser.name_table.get(parser.slice_at(span.clone())) {
-        Some(syntax) => parser.syntax_precedence(syntax.to_owned(), span),
+        Some(syntax) => parser.syntax_precedence(syntax, span),
         None => return Ok(1000), // unary messages
     }
 }
 
-fn identifier_prefix(parser: &mut Parser) -> Result<Expr, SyntaxError> {
+fn identifier_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     match parser.name_table.get(parser.slice()) {
-        Some(syntax) => {
-            let syntax = syntax.to_owned();
-            parser.parse_prefix_syntax(syntax)
-        }
+        Some(syntax) => parser.parse_prefix_syntax(syntax),
         None => return Ok(Expr::Variable(parser.span(), parser.tokenstring())),
     }
 }
 
 fn identifier_suffix(
-    parser: &mut Parser,
+    parser: &Parser,
     left: Expr,
     _: PrecedenceFunction,
 ) -> Result<Expr, SyntaxError> {
     match parser.name_table.get(parser.slice()) {
-        Some(syntax) => {
-            let syntax = syntax.to_owned();
-            parser.parse_suffix_syntax(syntax.to_owned(), left)
-        }
+        Some(syntax) => parser.parse_suffix_syntax(syntax, left),
         None => {
             // Unary message
             Ok(Expr::Send(parser.span(), parser.tokenstring(), Box::new(left), vec![]))
@@ -267,40 +258,31 @@ fn identifier_suffix(
 fn operator_precedence(parser: &Parser, span: Span) -> Result<usize, SyntaxError> {
     let slice = parser.slice_at(span.clone());
     match parser.name_table.get(slice) {
-        Some(syntax) => {
-            let syntax = syntax.to_owned();
-            parser.syntax_precedence(syntax, span)
-        }
+        Some(syntax) => parser.syntax_precedence(syntax, span),
         None => parser.error_at(span, "Unknown operator"),
     }
 }
 
-fn operator_prefix(parser: &mut Parser) -> Result<Expr, SyntaxError> {
+fn operator_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     match parser.name_table.get(parser.slice()) {
-        Some(syntax) => {
-            let syntax = syntax.to_owned();
-            parser.parse_prefix_syntax(syntax)
-        }
+        Some(syntax) => parser.parse_prefix_syntax(syntax),
         None => parser.error("Unknown operator"),
     }
 }
 
 fn operator_suffix(
-    parser: &mut Parser,
+    parser: &Parser,
     left: Expr,
     _: PrecedenceFunction,
 ) -> Result<Expr, SyntaxError> {
     match parser.name_table.get(parser.slice()) {
-        Some(syntax) => {
-            let syntax = syntax.to_owned();
-            parser.parse_suffix_syntax(syntax, left)
-        }
+        Some(syntax) => parser.parse_suffix_syntax(syntax, left),
         None => parser.error("Unknown operator"),
     }
 }
 
 fn comma_suffix(
-    parser: &mut Parser,
+    parser: &Parser,
     left: Expr,
     precedence: PrecedenceFunction,
 ) -> Result<Expr, SyntaxError> {
@@ -318,26 +300,26 @@ fn comma_suffix(
     Ok(Expr::Seq(exprs))
 }
 
-fn let_prefix(parser: &mut Parser) -> Result<Expr, SyntaxError> {
-    if Token::LocalId != parser.tokenstream.scan()? {
+fn let_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
+    if Token::LocalId != parser.scan()? {
         return parser.error("Expected variable name after let");
     }
     let name = parser.slice().to_string();
-    let next = parser.tokenstream.scan()?;
+    let next = parser.scan()?;
     if Token::Operator != next || "=" != parser.slice() {
         return parser.error("Expected = in let");
     }
     // FIXME: hardcoded!
     let value = parser.parse_expr(1)?;
-    let next = parser.tokenstream.scan()?;
+    let next = parser.scan()?;
     if Token::Operator != next {
         return parser.error("Expected separator after let");
     }
-    let body = parser.parse()?;
+    let body = parser.parse_expr(0)?;
     Ok(Expr::Bind(name, Box::new(value), Box::new(body)))
 }
 
-fn number_prefix(parser: &mut Parser) -> Result<Expr, SyntaxError> {
+fn number_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     let slice = parser.slice();
     // Hexadecimal case
     if slice.len() > 2 && ("0x" == &slice[0..2] || "0X" == &slice[0..2]) {
