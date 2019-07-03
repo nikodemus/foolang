@@ -22,7 +22,7 @@ pub enum Expr {
 }
 
 type PrefixParser = fn(&mut Parser) -> Result<Expr, SyntaxError>;
-type SuffixParser = fn(&mut Parser, Expr) -> Result<Expr, SyntaxError>;
+type SuffixParser = fn(&mut Parser, Expr, PrecedenceFunction) -> Result<Expr, SyntaxError>;
 type PrecedenceFunction = fn(&Parser, Span) -> Result<usize, SyntaxError>;
 
 #[derive(Clone)]
@@ -107,7 +107,7 @@ impl<'a> Parser<'a> {
 
     fn parse_suffix_syntax(&mut self, syntax: Syntax, left: Expr) -> Result<Expr, SyntaxError> {
         match syntax {
-            Syntax::General(_, suffix, _) => suffix(self, left),
+            Syntax::General(_, suffix, precedence) => suffix(self, left, precedence),
             Syntax::Operator(_, is_binary, precedence) if is_binary => {
                 let operator = self.tokenstring();
                 Ok(Expr::Send(
@@ -195,6 +195,7 @@ fn make_name_table() -> NameTable {
     let t = &mut table;
 
     Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, ",", invalid_prefix, comma_suffix, precedence_1);
 
     Syntax::op(t, "*", false, true, 50);
     Syntax::op(t, "/", false, true, 40);
@@ -209,6 +210,10 @@ fn precedence_invalid(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
     Ok(1001)
 }
 
+fn precedence_1(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
+    Ok(1)
+}
+
 fn precedence_0(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
     Ok(0)
 }
@@ -217,7 +222,11 @@ fn invalid_prefix(parser: &mut Parser) -> Result<Expr, SyntaxError> {
     parser.error("Not valid in value position")
 }
 
-fn invalid_suffix(parser: &mut Parser, _: Expr) -> Result<Expr, SyntaxError> {
+fn invalid_suffix(
+    parser: &mut Parser,
+    _: Expr,
+    _: PrecedenceFunction,
+) -> Result<Expr, SyntaxError> {
     parser.error("Not valid in operator position")
 }
 
@@ -238,7 +247,11 @@ fn identifier_prefix(parser: &mut Parser) -> Result<Expr, SyntaxError> {
     }
 }
 
-fn identifier_suffix(parser: &mut Parser, left: Expr) -> Result<Expr, SyntaxError> {
+fn identifier_suffix(
+    parser: &mut Parser,
+    left: Expr,
+    _: PrecedenceFunction,
+) -> Result<Expr, SyntaxError> {
     match parser.name_table.get(parser.slice()) {
         Some(syntax) => {
             let syntax = syntax.to_owned();
@@ -249,6 +262,60 @@ fn identifier_suffix(parser: &mut Parser, left: Expr) -> Result<Expr, SyntaxErro
             Ok(Expr::Send(parser.span(), parser.tokenstring(), Box::new(left), vec![]))
         }
     }
+}
+
+fn operator_precedence(parser: &Parser, span: Span) -> Result<usize, SyntaxError> {
+    let slice = parser.slice_at(span.clone());
+    match parser.name_table.get(slice) {
+        Some(syntax) => {
+            let syntax = syntax.to_owned();
+            parser.syntax_precedence(syntax, span)
+        }
+        None => parser.error_at(span, "Unknown operator"),
+    }
+}
+
+fn operator_prefix(parser: &mut Parser) -> Result<Expr, SyntaxError> {
+    match parser.name_table.get(parser.slice()) {
+        Some(syntax) => {
+            let syntax = syntax.to_owned();
+            parser.parse_prefix_syntax(syntax)
+        }
+        None => parser.error("Unknown operator"),
+    }
+}
+
+fn operator_suffix(
+    parser: &mut Parser,
+    left: Expr,
+    _: PrecedenceFunction,
+) -> Result<Expr, SyntaxError> {
+    match parser.name_table.get(parser.slice()) {
+        Some(syntax) => {
+            let syntax = syntax.to_owned();
+            parser.parse_suffix_syntax(syntax, left)
+        }
+        None => parser.error("Unknown operator"),
+    }
+}
+
+fn comma_suffix(
+    parser: &mut Parser,
+    left: Expr,
+    precedence: PrecedenceFunction,
+) -> Result<Expr, SyntaxError> {
+    let mut exprs = if let Expr::Seq(left_exprs) = left {
+        left_exprs
+    } else {
+        vec![left]
+    };
+    let right = parser.parse_expr(precedence(parser, parser.span())?)?;
+    if let Expr::Seq(mut right_exprs) = right {
+        exprs.append(&mut right_exprs);
+    } else {
+        exprs.push(right);
+    }
+    Ok(Expr::Seq(exprs))
 }
 
 fn let_prefix(parser: &mut Parser) -> Result<Expr, SyntaxError> {
@@ -308,37 +375,6 @@ fn number_prefix(parser: &mut Parser) -> Result<Expr, SyntaxError> {
             }
         }
         Ok(Expr::Constant(parser.span(), Literal::Integer(decimal)))
-    }
-}
-
-fn operator_precedence(parser: &Parser, span: Span) -> Result<usize, SyntaxError> {
-    let slice = parser.slice_at(span.clone());
-    match parser.name_table.get(slice) {
-        Some(syntax) => {
-            let syntax = syntax.to_owned();
-            parser.syntax_precedence(syntax, span)
-        }
-        None => parser.error_at(span, "Unknown operator"),
-    }
-}
-
-fn operator_prefix(parser: &mut Parser) -> Result<Expr, SyntaxError> {
-    match parser.name_table.get(parser.slice()) {
-        Some(syntax) => {
-            let syntax = syntax.to_owned();
-            parser.parse_prefix_syntax(syntax)
-        }
-        None => parser.error("Unknown operator"),
-    }
-}
-
-fn operator_suffix(parser: &mut Parser, left: Expr) -> Result<Expr, SyntaxError> {
-    match parser.name_table.get(parser.slice()) {
-        Some(syntax) => {
-            let syntax = syntax.to_owned();
-            parser.parse_suffix_syntax(syntax, left)
-        }
-        None => parser.error("Unknown operator"),
     }
 }
 
