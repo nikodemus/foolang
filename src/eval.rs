@@ -11,6 +11,7 @@ impl Env {
             Expr::Bind(..) => unimplemented!("TODO: eval Bind"), //
             Expr::Constant(_, literal) => self.eval_literal(literal),
             Expr::Send(..) => unimplemented!("TODO: eval Send"),
+            Expr::Seq(..) => unimplemented!("TODO: eval Seq"),
             Expr::Variable(..) => unimplemented!("TODO: eval Variable"),
         }
     }
