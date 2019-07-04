@@ -2,6 +2,19 @@
 
 # foolang
 
+## Principles
+
+1. Ergonomics. Code should be a pleasure to write and easy to read.
+
+2. Safety. No memory errors. No race conditions. No ambient authority.
+
+3. Performance. Code with annotated interface types should run on par
+   with -O0 compiled C++.
+
+4. Don't summon anything bigger than your head. Foolang is currently
+   a one-person effort, so design has to take implementability into
+   consideration.
+
 ## Syntax notes
 
 - Use -> for chaining instead of --
@@ -9,18 +22,108 @@
 - Canonicalize multipart keyword messages by stable-sorting the keys.
   (Evaluatior order stays.)
 
-- Possible conflict in record comprehensition syntax: Well, dict comprehension maybe. 
+- Possible conflict in record comprehensition syntax: Well, dict
+  comprehension maybe.
 
-   Consider:
+  Consider:
 
-   staff select: {_senior} -- inject: Dictionary new into: { |senior, dict| 
-       dict put: senior at: senior name
-   }
+      staff select: {_senior} -> inject: Dictionary new into: { |senior, dict| 
+        dict put: senior at: senior name
+      }
 
-   Dictionary select: {_ senior} from: staff
-              key: {_ name} value: {_}
+      @method[Iterable] select: block
+        self inject: self collector into: { |elt, collector|
+            block value: elt -> then: { collector add: elt }
+            collector
+        }
 
-   ^-- these also don't deal with multiple dimensions nicely
+      @method[Iterable] inject: collector int: block
+        let x := collector
+        self do: { |elt| x := (block value: elt value: x) }
+        x
+
+      If the compiler sees these three, what can it do?
+
+      First inline the select:
+
+        { |self,block|
+          self inject: self collector into: { |elt, collector|
+              block value: elt -> then: { collector add: elt }
+              collector
+          } value: staff value: block
+
+      Then inline the block:
+
+        { |self|
+          self inject: self collector into: { |elt, collector|
+              {_ senior} value: elt -> then: { collector add: elt }
+          collector } value: staff
+
+       Again:
+
+        { |self|
+          self inject: self collector into: { |elt, collector|
+              elt senior -> then: { collector add: elt }
+          collector } value: staff
+
+       Inline staff:
+
+          staff inject: staff collector into: { |elt, collector|
+              elt senior -> then: { collector add: elt }
+          collector }
+
+       Inline inject:
+
+          { |self,collector,block|
+            let x := collector
+            self do: { |elt| x := block(value, x) }
+            x } value: staff
+                value: staff collector
+                value: { |elt, collector|
+                         elt senior -> then: { collector add: elt }
+                         collector }
+
+       Inline staff:
+
+          { |collector,block|
+            let x := collector
+            staff do: { |elt| x := block(value, x) }
+            x } value: staff collector
+                value: { |elt, collector|
+                         elt senior -> then: { collector add: elt }
+                         collector }
+
+       Inline block:
+
+          { |collector|
+            let x := collector
+            staff do: { |elt| 
+                         x := { |elt, collector|
+                                elt senior -> then: { collector add: elt }
+                                collector } value: elt value: x }
+            x } value: staff collector
+
+        Inline elt & x
+
+          (let x := staff collector
+           staff do: { |elt| 
+                         x := (elt senior -> then: { x add: elt },  x)
+                     }
+           x)
+
+
+      So... I think St-style iterators can be optimized OK, as long
+      as we understand the types.
+
+      ^-- these don't deal with multiple dimensions nicely, which one of
+          the reasons comprehensions are cool.
+
+      For iterators: [as, bs, cs]
+          where: { |a,b,c| a*a == (b*b + c*c) }
+          collect: { |a,b,c| [a,b,c] }
+
+      ...is not terrible, though.
+
 
    Rendered as:
 

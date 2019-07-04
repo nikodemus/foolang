@@ -1,44 +1,110 @@
-use crate::objects::Object;
-use crate::parse::{parse_str, Expr, Literal, SyntaxError};
-struct Env {}
+use std::borrow::ToOwned;
+use std::collections::HashMap;
+use std::rc::Rc;
 
-impl Env {
-    pub fn new() -> Env {
-        Env {}
+use crate::objects2::{Builtins, Object};
+use crate::parse::{parse_str, Expr, Literal, SyntaxError};
+
+struct Env<'a> {
+    builtins: &'a Builtins,
+    frame: Rc<Frame>,
+}
+
+struct Frame {
+    local: HashMap<String, Object>,
+    parent: Option<Rc<Frame>>,
+}
+
+impl<'a> Env<'a> {
+    pub fn new(builtins: &Builtins) -> Env {
+        Env::from_parts(builtins, HashMap::new(), None)
     }
-    pub fn eval(&mut self, expr: Expr) -> Result<Object, SyntaxError> {
+
+    pub fn eval(&self, expr: &Expr) -> Result<Object, SyntaxError> {
         match expr {
-            Expr::Bind(..) => unimplemented!("TODO: eval Bind"), //
+            Expr::Bind(name, value, body) => self.eval_bind(name, value, body),
             Expr::Constant(_, literal) => self.eval_literal(literal),
-            Expr::Send(..) => unimplemented!("TODO: eval Send"),
+            Expr::Send(_, selector, receiver, args) => self.eval_send(selector, receiver, args),
             Expr::Seq(..) => unimplemented!("TODO: eval Seq"),
-            Expr::Variable(..) => unimplemented!("TODO: eval Variable"),
+            Expr::Variable(_, name) => self.eval_variable(name),
         }
     }
-    pub fn eval_literal(&self, literal: Literal) -> Result<Object, SyntaxError> {
+
+    fn from_parts(
+        builtins: &'a Builtins,
+        local: HashMap<String, Object>,
+        parent: Option<Rc<Frame>>,
+    ) -> Env<'a> {
+        Env {
+            builtins,
+            frame: Rc::new(Frame {
+                local,
+                parent,
+            }),
+        }
+    }
+
+    fn bind(&self, name: &String, value: Object) -> Env {
+        let mut local = HashMap::new();
+        local.insert(name.to_owned(), value);
+        Env::from_parts(self.builtins, local, Some(Rc::clone(&self.frame)))
+    }
+
+    fn eval_bind(&self, name: &String, value: &Expr, body: &Expr) -> Result<Object, SyntaxError> {
+        self.bind(name, self.eval(value)?).eval(body)
+    }
+
+    fn eval_literal(&self, literal: &Literal) -> Result<Object, SyntaxError> {
         match literal {
-            Literal::Integer(value) => Ok(Object::make_integer(value)),
-            Literal::Float(value) => Ok(Object::make_float(value)),
+            Literal::Integer(value) => Ok(self.builtins.make_integer(*value)),
+            Literal::Float(value) => Ok(self.builtins.make_float(*value)),
+        }
+    }
+
+    fn eval_send(
+        &self,
+        selector: &String,
+        receiver: &Box<Expr>,
+        args: &Vec<Expr>,
+    ) -> Result<Object, SyntaxError> {
+        let receiver = self.eval(receiver)?;
+        let mut values = Vec::new();
+        for arg in args {
+            values.push(self.eval(arg)?);
+        }
+        let args: Vec<&Object> = values.iter().collect();
+        receiver.send(selector.as_str(), &args[..], &self.builtins)
+    }
+
+    fn eval_variable(&self, name: &String) -> Result<Object, SyntaxError> {
+        let mut frame = &self.frame;
+        loop {
+            match frame.local.get(name) {
+                Some(value) => return Ok(value.to_owned()),
+                None => match &frame.parent {
+                    Some(parent_frame) => {
+                        frame = parent_frame;
+                    }
+                    None => panic!("Unbound variable: {}", name),
+                },
+            }
         }
     }
 }
 
 fn eval_str(source: &str) -> Result<Object, SyntaxError> {
+    let builtins = Builtins::new();
     let expr = parse_str(source)?;
-    Env::new().eval(expr).map_err(|e| e.add_context(source))
+    Env::new(&builtins).eval(&expr).map_err(|e| e.add_context(source))
 }
 
-fn integer(value: i64) -> Object {
-    Object::make_integer(value)
-}
-
-fn float(value: f64) -> Object {
-    Object::make_float(value)
+fn eval_ok(source: &str) -> Object {
+    eval_str(source).unwrap()
 }
 
 #[test]
 fn eval_decimal() {
-    assert_eq!(eval_str("123"), Ok(integer(123)));
+    assert_eq!(eval_ok("123").integer(), 123);
 }
 
 #[test]
@@ -55,7 +121,7 @@ fn eval_bad_decimal() {
 
 #[test]
 fn eval_hex() {
-    assert_eq!(eval_str("0xFFFF"), Ok(integer(0xFFFF)));
+    assert_eq!(eval_ok("0xFFFF").integer(), 0xFFFF);
 }
 
 #[test]
@@ -72,7 +138,7 @@ fn eval_bad_hex() {
 
 #[test]
 fn eval_binary() {
-    assert_eq!(eval_str("0b101"), Ok(integer(0b101)));
+    assert_eq!(eval_ok("0b101").integer(), 0b101);
 }
 
 #[test]
@@ -89,7 +155,7 @@ fn eval_bad_binary() {
 
 #[test]
 fn eval_float() {
-    assert_eq!(eval_str("1.2"), Ok(float(1.2)));
+    assert_eq!(eval_ok("1.2").float(), 1.2);
 }
 
 #[test]
@@ -102,4 +168,109 @@ fn eval_bad_float() {
             context: concat!("001 1.2.3\n", "    ^^^^^ Malformed number\n").to_string()
         })
     );
+}
+
+#[test]
+fn eval_let1() {
+    assert_eq!(eval_ok("let x = 42, x").integer(), 42);
+}
+
+#[test]
+fn eval_let2() {
+    assert_eq!(eval_ok("let x = 1, let x = 42, x").integer(), 42);
+}
+
+#[test]
+fn eval_let3() {
+    assert_eq!(eval_ok("let x = 42, let y = 1, x").integer(), 42);
+}
+
+#[test]
+fn eval_arith1() {
+    assert_eq!(eval_ok("1 + 1").integer(), 2);
+}
+
+#[test]
+fn eval_arith2() {
+    assert_eq!(eval_ok("1 + 1 * 2").integer(), 3);
+}
+
+#[test]
+fn eval_div1() {
+    assert_eq!(eval_ok("10 / 5").integer(), 2);
+}
+
+#[test]
+fn eval_div2() {
+    assert_eq!(eval_ok("10.0 / 5.0").float(), 2.0);
+}
+
+#[test]
+fn eval_div3() {
+    assert_eq!(eval_ok("10.0 / 5").float(), 2.0);
+}
+
+#[test]
+fn eval_div4() {
+    assert_eq!(eval_ok("10 / 5.0").float(), 2.0);
+}
+
+#[test]
+fn eval_sub1() {
+    assert_eq!(eval_ok("10 - 5").integer(), 5);
+}
+
+#[test]
+fn eval_sub2() {
+    assert_eq!(eval_ok("10.0 - 5.0").float(), 5.0);
+}
+
+#[test]
+fn eval_sub3() {
+    assert_eq!(eval_ok("10.0 - 5").float(), 5.0);
+}
+
+#[test]
+fn eval_sub4() {
+    assert_eq!(eval_ok("10 - 5.0").float(), 5.0);
+}
+
+#[test]
+fn eval_add1() {
+    assert_eq!(eval_ok("10 + 5").integer(), 15);
+}
+
+#[test]
+fn eval_add2() {
+    assert_eq!(eval_ok("10.0 + 5.0").float(), 15.0);
+}
+
+#[test]
+fn eval_add3() {
+    assert_eq!(eval_ok("10.0 + 5").float(), 15.0);
+}
+
+#[test]
+fn eval_add4() {
+    assert_eq!(eval_ok("10 + 5.0").float(), 15.0);
+}
+
+#[test]
+fn eval_mul1() {
+    assert_eq!(eval_ok("10 * 5").integer(), 50);
+}
+
+#[test]
+fn eval_mul2() {
+    assert_eq!(eval_ok("10.0 * 5.0").float(), 50.0);
+}
+
+#[test]
+fn eval_mul3() {
+    assert_eq!(eval_ok("10.0 * 5").float(), 50.0);
+}
+
+#[test]
+fn eval_mul4() {
+    assert_eq!(eval_ok("10 * 5.0").float(), 50.0);
 }
