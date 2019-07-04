@@ -90,14 +90,14 @@ impl Object {
     pub fn float(&self) -> f64 {
         match self.datum {
             Datum::Float(f) => f,
-            _ => panic!("BUG: {:?} is not a Float", self),
+            _ => panic!("BUG: {} is not a Float", self),
         }
     }
 
     pub fn integer(&self) -> i64 {
         match self.datum {
             Datum::Integer(i) => i,
-            _ => panic!("BUG: {:?} is not an Integer", self),
+            _ => panic!("BUG: {} is not an Integer", self),
         }
     }
 

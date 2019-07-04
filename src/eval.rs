@@ -312,3 +312,24 @@ fn eval_mul4() {
 fn eval_assign() {
     assert_eq!(eval_ok("let x = 1, x = x + 1, let y = x, y").integer(), 2);
 }
+
+#[test]
+fn eval_int_as_int() {
+    assert_eq!(eval_ok("42 asInteger").integer(), 42);
+}
+
+#[test]
+fn eval_float_as_float() {
+    assert_eq!(eval_ok("42.3 asFloat").float(), 42.3);
+}
+
+#[test]
+fn eval_int_as_float() {
+    assert_eq!(eval_ok("42 asFloat").float(), 42.0);
+}
+
+#[test]
+fn eval_float_as_int() {
+    assert_eq!(eval_ok("42.1 asInteger").integer(), 42);
+    assert_eq!(eval_ok("41.9 asInteger").integer(), 42);
+}
