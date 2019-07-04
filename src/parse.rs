@@ -1,3 +1,4 @@
+use std::borrow::ToOwned;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::Into;
@@ -14,11 +15,41 @@ pub enum Literal {
 
 #[derive(Debug, PartialEq)]
 pub enum Expr {
-    Constant(Span, Literal),
-    Variable(Span, String),
+    Assign(String, Box<Expr>),
+    Const(Span, Literal),
+    Var(Span, String),
     Bind(String, Box<Expr>, Box<Expr>),
     Send(Span, String, Box<Expr>, Vec<Expr>),
     Seq(Vec<Expr>),
+}
+
+impl Expr {
+    fn is_var(&self) -> bool {
+        match self {
+            Expr::Var(..) => true,
+            _ => false,
+        }
+    }
+
+    fn name(&self) -> String {
+        match self {
+            Expr::Var(_, name) => name.to_owned(),
+            _ => panic!("BUG: cannot extract name from {:?}", self),
+        }
+    }
+
+    fn span(&self) -> Span {
+        use Expr::*;
+        let span = match self {
+            Assign(_, right) => return right.span(),
+            Const(span, ..) => span,
+            Var(span, ..) => span,
+            Send(span, ..) => span,
+            Bind(_, _, body) => return body.span(),
+            Seq(exprs) => return exprs[exprs.len() - 1].span(),
+        };
+        span.to_owned()
+    }
 }
 
 type PrefixParser = fn(&Parser) -> Result<Expr, SyntaxError>;
@@ -196,7 +227,8 @@ fn make_name_table() -> NameTable {
     let t = &mut table;
 
     Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, ",", invalid_prefix, comma_suffix, precedence_1);
+    Syntax::def(t, ",", invalid_prefix, sequence_suffix, precedence_1);
+    Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_2);
 
     Syntax::op(t, "*", false, true, 50);
     Syntax::op(t, "/", false, true, 40);
@@ -209,6 +241,10 @@ fn make_name_table() -> NameTable {
 fn precedence_invalid(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
     // To guarantee it aways gets parsed.
     Ok(1001)
+}
+
+fn precedence_2(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
+    Ok(2)
 }
 
 fn precedence_1(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
@@ -237,7 +273,7 @@ fn identifier_precedence(parser: &Parser, span: Span) -> Result<usize, SyntaxErr
 fn identifier_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     match parser.name_table.get(parser.slice()) {
         Some(syntax) => parser.parse_prefix_syntax(syntax),
-        None => return Ok(Expr::Variable(parser.span(), parser.tokenstring())),
+        None => return Ok(Expr::Var(parser.span(), parser.tokenstring())),
     }
 }
 
@@ -281,7 +317,19 @@ fn operator_suffix(
     }
 }
 
-fn comma_suffix(
+fn assign_suffix(
+    parser: &Parser,
+    left: Expr,
+    precedence: PrecedenceFunction,
+) -> Result<Expr, SyntaxError> {
+    if !left.is_var() {
+        return parser.error_at(left.span(), "Cannot assign to this");
+    }
+    let right = parser.parse_expr(precedence(parser, parser.span())?)?;
+    Ok(Expr::Assign(left.name(), Box::new(right)))
+}
+
+fn sequence_suffix(
     parser: &Parser,
     left: Expr,
     precedence: PrecedenceFunction,
@@ -327,7 +375,7 @@ fn number_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
             Ok(i) => i,
             Err(_) => return parser.error("Malformed hexadecimal number"),
         };
-        Ok(Expr::Constant(parser.span(), Literal::Integer(integer)))
+        Ok(Expr::Const(parser.span(), Literal::Integer(integer)))
     }
     // Binary case
     else if slice.len() > 2 && ("0b" == &slice[0..2] || "0B" == &slice[0..2]) {
@@ -335,7 +383,7 @@ fn number_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
             Ok(i) => i,
             Err(_) => return parser.error("Malformed binary number"),
         };
-        Ok(Expr::Constant(parser.span(), Literal::Integer(integer)))
+        Ok(Expr::Const(parser.span(), Literal::Integer(integer)))
     }
     // Decimal and float case
     else {
@@ -350,13 +398,13 @@ fn number_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
                     decimal = decimal * 10 + c.to_digit(10).unwrap() as i64;
                 } else {
                     match f64::from_str(slice) {
-                        Ok(f) => return Ok(Expr::Constant(parser.span(), Literal::Float(f))),
+                        Ok(f) => return Ok(Expr::Const(parser.span(), Literal::Float(f))),
                         Err(_) => return parser.error("Malformed number"),
                     }
                 }
             }
         }
-        Ok(Expr::Constant(parser.span(), Literal::Integer(decimal)))
+        Ok(Expr::Const(parser.span(), Literal::Integer(decimal)))
     }
 }
 
@@ -367,15 +415,15 @@ pub fn parse_str(source: &str) -> Result<Expr, SyntaxError> {
 }
 
 fn int(span: Span, value: i64) -> Expr {
-    Expr::Constant(span, Literal::Integer(value))
+    Expr::Const(span, Literal::Integer(value))
 }
 
 fn float(span: Span, value: f64) -> Expr {
-    Expr::Constant(span, Literal::Float(value))
+    Expr::Const(span, Literal::Float(value))
 }
 
 fn var(span: Span, name: &str) -> Expr {
-    Expr::Variable(span, name.to_string())
+    Expr::Var(span, name.to_string())
 }
 
 fn unary(span: Span, name: &str, left: Expr) -> Expr {

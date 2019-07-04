@@ -1,4 +1,5 @@
 use std::borrow::ToOwned;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -11,7 +12,7 @@ struct Env<'a> {
 }
 
 struct Frame {
-    local: HashMap<String, Object>,
+    local: RefCell<HashMap<String, Object>>,
     parent: Option<Rc<Frame>>,
 }
 
@@ -22,11 +23,12 @@ impl<'a> Env<'a> {
 
     pub fn eval(&self, expr: &Expr) -> Result<Object, SyntaxError> {
         match expr {
+            Expr::Assign(left, right) => self.eval_assign(left, right),
             Expr::Bind(name, value, body) => self.eval_bind(name, value, body),
-            Expr::Constant(_, literal) => self.eval_literal(literal),
+            Expr::Const(_, literal) => self.eval_literal(literal),
             Expr::Send(_, selector, receiver, args) => self.eval_send(selector, receiver, args),
-            Expr::Seq(..) => unimplemented!("TODO: eval Seq"),
-            Expr::Variable(_, name) => self.eval_variable(name),
+            Expr::Seq(exprs) => self.eval_seq(exprs),
+            Expr::Var(_, name) => self.eval_variable(name),
         }
     }
 
@@ -38,7 +40,7 @@ impl<'a> Env<'a> {
         Env {
             builtins,
             frame: Rc::new(Frame {
-                local,
+                local: RefCell::new(local),
                 parent,
             }),
         }
@@ -48,6 +50,28 @@ impl<'a> Env<'a> {
         let mut local = HashMap::new();
         local.insert(name.to_owned(), value);
         Env::from_parts(self.builtins, local, Some(Rc::clone(&self.frame)))
+    }
+
+    fn eval_assign(&self, name: &String, right: &Box<Expr>) -> Result<Object, SyntaxError> {
+        let value = self.eval(right)?;
+
+        let mut frame = &self.frame;
+        loop {
+            match frame.local.borrow_mut().get_mut(name) {
+                Some(place) => {
+                    *place = value.clone();
+                    return Ok(value);
+                }
+                None => match &frame.parent {
+                    Some(parent_frame) => {
+                        frame = parent_frame;
+                    }
+                    // FIXME: Should be an exception, but a panic -- or better yet,
+                    // a syntax-error at parse time...
+                    None => panic!("Unbound variable in assignment: {}", name),
+                },
+            }
+        }
     }
 
     fn eval_bind(&self, name: &String, value: &Expr, body: &Expr) -> Result<Object, SyntaxError> {
@@ -76,10 +100,19 @@ impl<'a> Env<'a> {
         receiver.send(selector.as_str(), &args[..], &self.builtins)
     }
 
+    fn eval_seq(&self, exprs: &Vec<Expr>) -> Result<Object, SyntaxError> {
+        // FIXME: false or nothing
+        let mut result = self.builtins.make_integer(0);
+        for expr in exprs {
+            result = self.eval(expr)?
+        }
+        Ok(result)
+    }
+
     fn eval_variable(&self, name: &String) -> Result<Object, SyntaxError> {
         let mut frame = &self.frame;
         loop {
-            match frame.local.get(name) {
+            match frame.local.borrow().get(name) {
                 Some(value) => return Ok(value.to_owned()),
                 None => match &frame.parent {
                     Some(parent_frame) => {
@@ -273,4 +306,9 @@ fn eval_mul3() {
 #[test]
 fn eval_mul4() {
     assert_eq!(eval_ok("10 * 5.0").float(), 50.0);
+}
+
+#[test]
+fn eval_assign() {
+    assert_eq!(eval_ok("let x = 1, x = x + 1, let y = x, y").integer(), 2);
 }
