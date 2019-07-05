@@ -345,7 +345,7 @@ fn keyword_suffix(
     let start = parser.span();
     loop {
         args.push(parser.parse_expr(precedence)?);
-        let (token, span) = parser.lookahead()?;
+        let (token, _span) = parser.lookahead()?;
         if token == Token::Keyword {
             parser.scan()?;
             selector.push_str(parser.slice());
@@ -463,6 +463,10 @@ fn binary(span: Span, name: &str, left: Expr, right: Expr) -> Expr {
     Expr::Send(span, name.to_string(), Box::new(left), vec![right])
 }
 
+fn keyword(span: Span, name: &str, left: Expr, args: Vec<Expr>) -> Expr {
+    Expr::Send(span, name.to_string(), Box::new(left), args)
+}
+
 fn bind(name: &str, value: Expr, body: Expr) -> Expr {
     Expr::Bind(name.to_string(), Box::new(value), Box::new(body))
 }
@@ -540,5 +544,16 @@ fn parse_let() {
     assert_eq!(
         parse_str("let x = 21 + 21, x"),
         Ok(bind("x", binary(11..12, "+", int(8..10, 21), int(13..15, 21)), var(17..18, "x")))
+    );
+}
+
+#[test]
+fn parse_keyword() {
+    assert_eq!(
+        parse_str("foo x: 1 y: 2, bar"),
+        Ok(seq(vec![
+            keyword(4..13, "x:y:", var(0..3, "foo"), vec![int(7..8, 1), int(12..13, 2)]),
+            var(15..18, "bar")
+        ]))
     );
 }
