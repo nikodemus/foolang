@@ -7,14 +7,17 @@ and Fortress.
 
 Status: bootstrap evaluator implementation in progress.
 
+## Hello World
+
+    @main: system
+      system output println: "Hello world!"
+
 ## Design Principles
 
 1. Ergonomics: Code should be a pleasure to write and easy to read.
-   Any language has a learning curve, but a well designed language has
-   a short one. (Assuming concepts are familiar beforehand.)
 
 2. Safety: No memory errors. No race conditions. No ambient authority.
-   Support for building fault-tolerant applications.
+   Fault-tolerant applications.
 
 3. Performance: Code with type annotations should run on par with -O0
    compiled C++.
@@ -23,21 +26,16 @@ Status: bootstrap evaluator implementation in progress.
    a one-person effort, so design has to take implementability into
    consideration.
 
-## Features
+## Core Features
 
 - Everything is an object, and semantics are descibed by sending
   messages to objects.
 
-  Foolang isn't fanatically pure about this: there are syntactic and
-  runtime behaviours constructs which do not have corresponding
-  objects.
-
 - Smalltalkish development environment, where code lives in files, not
   an image.
 
-- Supervised processes. Foolang implements Erlang-style supervisor
-  trees for fault tolerance. Foolang processes are fully isolated
-  from each other just like in Erlang.
+- Supervised processes and isolated heaps for Erlang-style
+  fault-tolerence.
 
 - Syntactic extensibility. Users can define new operators and other
   syntax extensions.
