@@ -14,6 +14,7 @@ pub enum Token {
     LocalId,
     OpenDelimiter,
     Operator,
+    Toplevel,
 }
 
 #[derive(PartialEq)]
@@ -178,6 +179,7 @@ impl<'a> TokenStream<'a> {
         match start.1 {
             '\'' => return self.scan_character(start.0),
             '<' => return self.scan_annotation_or_operator(start.0),
+            '@' => return self.scan_toplevel_or_operator(start.0),
             _ => {}
         }
         let numeric = start.1.is_numeric();
@@ -253,9 +255,10 @@ impl<'a> TokenStream<'a> {
             .next()
             .ok_or(SyntaxError::new(self.len()..self.len(), "Unexpected EOF"))
     }
+
     fn scan_annotation_or_operator(&mut self, start: usize) -> Result<Token, SyntaxError> {
         let mut next = self.getchar()?;
-        // Annotations always start with alphanumeric characters.
+        // Annotations always start with alphabetic characters.
         if next.1.is_alphabetic() {
             loop {
                 next = self.getchar()?;
@@ -272,6 +275,7 @@ impl<'a> TokenStream<'a> {
             next = self.getchar()?;
         }
     }
+
     fn scan_character(&mut self, start: usize) -> Result<Token, SyntaxError> {
         self.getchar()?;
         let (end, quote) = self.getchar()?;
@@ -279,6 +283,27 @@ impl<'a> TokenStream<'a> {
             return Err(SyntaxError::new(start..end, "Malformed character literal"));
         }
         self.result(Token::Character, start..end + 1)
+    }
+
+    fn scan_toplevel_or_operator(&mut self, start: usize) -> Result<Token, SyntaxError> {
+        let mut next = self.getchar()?;
+        // Toplevels consist only of alphabetic characters.
+        if next.1.is_alphabetic() {
+            loop {
+                next = self.getchar()?;
+                if !next.1.is_alphabetic() {
+                    self.unread(next);
+                    return self.result(Token::Toplevel, start..next.0);
+                }
+            }
+        }
+        loop {
+            if is_delimiter(next.1) || next.1.is_digit(10) {
+                self.unread(next);
+                return self.result(Token::Operator, start..next.0);
+            }
+            next = self.getchar()?;
+        }
     }
 }
 
@@ -451,4 +476,11 @@ fn scan_close_bracket() {
     let mut scanner = TokenStream::new(" ]]  ");
     assert_eq!(scanner.scan(), Ok(Token::CloseDelimiter));
     assert_eq!(scanner.slice(), "]");
+}
+
+#[test]
+fn scan_toplevel() {
+    let mut scanner = TokenStream::new(" @foo ");
+    assert_eq!(scanner.scan(), Ok(Token::Toplevel));
+    assert_eq!(scanner.slice(), "@foo");
 }
