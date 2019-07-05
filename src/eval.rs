@@ -27,6 +27,9 @@ impl<'a> Env<'a> {
             Expr::Assign(left, right) => self.eval_assign(left, right),
             Expr::Bind(name, value, body) => self.eval_bind(name, value, body),
             Expr::Block(_, params, body) => self.eval_block(params, body),
+            Expr::ClassDefinition(_, name, instance_variables) => {
+                self.eval_class_definition(name, instance_variables)
+            }
             Expr::Const(_, literal) => self.eval_literal(literal),
             Expr::Send(_, selector, receiver, args) => self.eval_send(selector, receiver, args),
             Expr::Seq(exprs) => self.eval_seq(exprs),
@@ -82,6 +85,14 @@ impl<'a> Env<'a> {
 
     fn eval_block(&self, params: &Vec<String>, body: &Expr) -> Result<Object, SyntaxError> {
         Ok(self.builtins.make_closure(Rc::clone(&self.frame), params.to_owned(), body.to_owned()))
+    }
+
+    fn eval_class_definition(
+        &self,
+        name: &String,
+        instance_variables: &Vec<(String, Option<Expr>)>,
+    ) -> Result<Object, SyntaxError> {
+        unimplemented!("Env::eval_class_definition")
     }
 
     fn eval_literal(&self, literal: &Literal) -> Result<Object, SyntaxError> {

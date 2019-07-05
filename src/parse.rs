@@ -18,6 +18,7 @@ pub enum Expr {
     Assign(String, Box<Expr>),
     Bind(String, Box<Expr>, Box<Expr>),
     Block(Span, Vec<String>, Box<Expr>),
+    ClassDefinition(Span, String, Vec<(String, Option<Expr>)>),
     Const(Span, Literal),
     Send(Span, String, Box<Expr>, Vec<Expr>),
     Seq(Vec<Expr>),
@@ -45,6 +46,7 @@ impl Expr {
             Assign(_, right) => return right.span(),
             Bind(_, _, body) => return body.span(),
             Block(span, ..) => span,
+            ClassDefinition(span, ..) => span,
             Const(span, ..) => span,
             Send(span, ..) => span,
             Seq(exprs) => return exprs[exprs.len() - 1].span(),
@@ -220,7 +222,9 @@ fn make_token_table() -> TokenTable {
     Syntax::def(t, LocalId, identifier_prefix, identifier_suffix, identifier_precedence);
     Syntax::def(t, Operator, operator_prefix, operator_suffix, operator_precedence);
     Syntax::def(t, Keyword, invalid_prefix, keyword_suffix, precedence_5);
-    // Why have OpenDelimiter instead of making them operators?
+    // Why have Toplevel instead of making them identifiers?
+    Syntax::def(t, Toplevel, toplevel_prefix, invalid_suffix, precedence_0);
+    // Why have OpenDelimiter and CloseDelimiter instead of making them operators?
     Syntax::def(t, OpenDelimiter, delimiter_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, CloseDelimiter, invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, Eof, invalid_prefix, invalid_suffix, precedence_0);
@@ -235,8 +239,8 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ",", invalid_prefix, sequence_suffix, precedence_1);
     Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_2);
-
     Syntax::def(t, "{", block_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "@class", class_prefix, invalid_suffix, precedence_0);
 
     Syntax::op(t, "*", false, true, 50);
     Syntax::op(t, "/", false, true, 40);
@@ -421,6 +425,41 @@ fn block_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     }
 }
 
+fn class_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
+    let start = parser.span().start;
+    let class_name = match parser.scan()? {
+        Token::GlobalId => parser.tokenstring(),
+        Token::LocalId => return parser.error("Class names must start with a capital letter"),
+        _ => return parser.error("Expected class name"),
+    };
+    match parser.scan()? {
+        Token::OpenDelimiter if parser.slice() == "{" => {}
+        _ => return parser.error("Expected { to open instance variable block"),
+    }
+    let mut instance_variables = Vec::new();
+    loop {
+        let token = parser.scan()?;
+        let tokenstring = parser.tokenstring();
+        match token {
+            Token::LocalId => {
+                instance_variables.push((tokenstring, None));
+            }
+            Token::Keyword => {
+                // FIXME: Hardcoded: needs to be the same as sequence precedence.
+                instance_variables.push((tokenstring, Some(parser.parse_expr(1)?)))
+            }
+            Token::CloseDelimiter if parser.slice() == "}" => {
+                break;
+            }
+            Token::Operator if parser.slice() == "," => {
+                continue;
+            }
+            _ => return parser.error("Invalid instance variable specification"),
+        }
+    }
+    Ok(Expr::ClassDefinition(start..parser.span().end, class_name, instance_variables))
+}
+
 fn let_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     if Token::LocalId != parser.scan()? {
         return parser.error("Expected variable name after let");
@@ -481,6 +520,13 @@ fn number_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     }
 }
 
+fn toplevel_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
+    match parser.name_table.get(parser.slice()) {
+        Some(syntax) => parser.parse_prefix_syntax(syntax),
+        None => parser.error("Unknown toplevel definition"),
+    }
+}
+
 /// Tests and tools
 
 pub fn parse_str(source: &str) -> Result<Expr, SyntaxError> {
@@ -521,6 +567,14 @@ fn block(span: Span, params: Vec<&str>, body: Expr) -> Expr {
 
 fn seq(exprs: Vec<Expr>) -> Expr {
     Expr::Seq(exprs)
+}
+
+fn class(span: Span, name: &str, instance_variables: Vec<(&str, Option<Expr>)>) -> Expr {
+    Expr::ClassDefinition(
+        span,
+        name.to_string(),
+        instance_variables.into_iter().map(|(n, d)| (n.to_string(), d)).collect(),
+    )
 }
 
 #[test]
@@ -623,5 +677,13 @@ fn parse_block_args() {
             vec!["x"],
             keyword(11..17, "bar:", var(7..10, "foo"), vec![var(16..17, "x")])
         ))
+    );
+}
+
+#[test]
+fn parse_class() {
+    assert_eq!(
+        parse_str("@class Point { x, y }"),
+        Ok(class(0..21, "Point", vec![("x", None), ("y", None)]))
     );
 }
