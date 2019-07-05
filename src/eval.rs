@@ -90,9 +90,15 @@ impl<'a> Env<'a> {
     fn eval_class_definition(
         &self,
         name: &String,
-        instance_variables: &Vec<(String, Option<Expr>)>,
+        instance_variables: &Vec<String>,
     ) -> Result<Object, SyntaxError> {
-        unimplemented!("Env::eval_class_definition")
+        if self.frame.parent.is_some() {
+            // FIXME: Should be an error, not a panic
+            panic!("Class definition not at toplevel! ({})", name);
+        }
+        let class = self.builtins.make_class(name, instance_variables);
+        self.builtins.globals.borrow_mut().insert(name.to_string(), class.clone());
+        Ok(class)
     }
 
     fn eval_literal(&self, literal: &Literal) -> Result<Object, SyntaxError> {
@@ -395,4 +401,11 @@ fn eval_closure3() {
         .integer(),
         3
     );
+}
+
+#[test]
+fn eval_class1() {
+    let class = eval_ok("@class Point { x, y }").class();
+    assert_eq!(class.instance_vtable.name, "Point");
+    assert_eq!(class.instance_variables, vec!["x".to_string(), "y".to_string()]);
 }

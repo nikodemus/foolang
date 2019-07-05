@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
@@ -14,14 +15,14 @@ type MethodFunction = fn(&Object, &[&Object], &Builtins) -> Value;
 
 #[derive(Clone)]
 pub struct Vtable {
-    class: String,
-    methods: HashMap<String, MethodFunction>,
+    pub name: String,
+    pub methods: HashMap<String, MethodFunction>,
 }
 
 impl Vtable {
     pub fn new(class: &str) -> Vtable {
         Vtable {
-            class: class.to_string(),
+            name: class.to_string(),
             methods: HashMap::new(),
         }
     }
@@ -37,7 +38,7 @@ impl Vtable {
 
 impl fmt::Debug for Vtable {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Vtable[{}]", self.class)
+        write!(f, "Vtable[{}]", self.name)
     }
 }
 
@@ -64,13 +65,21 @@ pub struct Closure {
 pub enum Datum {
     Integer(i64),
     Float(f64),
+    Class(Rc<Class>),
     Closure(Rc<Closure>),
+}
+
+#[derive(PartialEq)]
+pub struct Class {
+    pub instance_vtable: Rc<Vtable>,
+    pub instance_variables: Vec<String>,
 }
 
 pub struct Builtins {
     closure_vtable: Rc<Vtable>,
     float_vtable: Rc<Vtable>,
     integer_vtable: Rc<Vtable>,
+    pub globals: RefCell<HashMap<String, Object>>,
 }
 
 impl Builtins {
@@ -79,6 +88,19 @@ impl Builtins {
             closure_vtable: Rc::new(classes::closure2::vtable()),
             float_vtable: Rc::new(classes::float2::vtable()),
             integer_vtable: Rc::new(classes::integer2::vtable()),
+            globals: RefCell::new(HashMap::new()),
+        }
+    }
+
+    pub fn make_class(&self, name: &str, instance_variables: &[String]) -> Object {
+        let mut vtable_name = "class ".to_string();
+        vtable_name.push_str(name);
+        Object {
+            vtable: Rc::new(Vtable::new(vtable_name.as_str())),
+            datum: Datum::Class(Rc::new(Class {
+                instance_vtable: Rc::new(Vtable::new(name)),
+                instance_variables: instance_variables.iter().map(|x| x.to_owned()).collect(),
+            })),
         }
     }
 
@@ -109,6 +131,13 @@ impl Builtins {
 }
 
 impl Object {
+    pub fn class(&self) -> Rc<Class> {
+        match &self.datum {
+            Datum::Class(class) => Rc::clone(class),
+            _ => panic!("BUG: {} is not a Class", self),
+        }
+    }
+
     pub fn float(&self) -> f64 {
         match self.datum {
             Datum::Float(f) => f,
@@ -150,7 +179,8 @@ impl fmt::Display for Object {
                     write!(f, "{}", x)
                 }
             }
-            Datum::Closure(x) => write!(f, "$<Closure {:?}>", x.params),
+            Datum::Closure(x) => write!(f, "$<closure {:?}>", x.params),
+            Datum::Class(_) => write!(f, "$<{}>", self.vtable.name),
         }
     }
 }
@@ -167,6 +197,7 @@ impl fmt::Debug for Object {
                 }
             }
             Datum::Closure(x) => write!(f, "{:?}", *x),
+            Datum::Class(_) => write!(f, "{}", self.vtable.name),
         }
     }
 }

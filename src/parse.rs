@@ -18,7 +18,7 @@ pub enum Expr {
     Assign(String, Box<Expr>),
     Bind(String, Box<Expr>, Box<Expr>),
     Block(Span, Vec<String>, Box<Expr>),
-    ClassDefinition(Span, String, Vec<(String, Option<Expr>)>),
+    ClassDefinition(Span, String, Vec<String>),
     Const(Span, Literal),
     Send(Span, String, Box<Expr>, Vec<Expr>),
     Seq(Vec<Expr>),
@@ -442,11 +442,7 @@ fn class_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
         let tokenstring = parser.tokenstring();
         match token {
             Token::LocalId => {
-                instance_variables.push((tokenstring, None));
-            }
-            Token::Keyword => {
-                // FIXME: Hardcoded: needs to be the same as sequence precedence.
-                instance_variables.push((tokenstring, Some(parser.parse_expr(1)?)))
+                instance_variables.push(tokenstring);
             }
             Token::CloseDelimiter if parser.slice() == "}" => {
                 break;
@@ -569,11 +565,11 @@ fn seq(exprs: Vec<Expr>) -> Expr {
     Expr::Seq(exprs)
 }
 
-fn class(span: Span, name: &str, instance_variables: Vec<(&str, Option<Expr>)>) -> Expr {
+fn class(span: Span, name: &str, instance_variables: Vec<&str>) -> Expr {
     Expr::ClassDefinition(
         span,
         name.to_string(),
-        instance_variables.into_iter().map(|(n, d)| (n.to_string(), d)).collect(),
+        instance_variables.into_iter().map(|n| n.to_string()).collect(),
     )
 }
 
@@ -682,8 +678,5 @@ fn parse_block_args() {
 
 #[test]
 fn parse_class() {
-    assert_eq!(
-        parse_str("@class Point { x, y }"),
-        Ok(class(0..21, "Point", vec![("x", None), ("y", None)]))
-    );
+    assert_eq!(parse_str("@class Point { x, y }"), Ok(class(0..21, "Point", vec!["x", "y"])));
 }
