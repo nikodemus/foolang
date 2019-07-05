@@ -13,7 +13,7 @@ pub enum Literal {
     Float(f64),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Assign(String, Box<Expr>),
     Bind(String, Box<Expr>, Box<Expr>),

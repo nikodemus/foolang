@@ -2,6 +2,7 @@ pub mod array;
 pub mod boolean;
 pub mod class;
 pub mod closure;
+pub mod closure2;
 pub mod compiler;
 pub mod float2;
 pub mod foolang;

@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 
-use crate::parse::SyntaxError;
+use crate::eval::Frame;
+use crate::parse::{Expr, SyntaxError};
 
 use crate::classes;
 
@@ -46,19 +47,28 @@ impl PartialEq for Vtable {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 pub struct Object {
-    pub vtable: Rc<Vtable>,
-    pub datum: Datum,
+    vtable: Rc<Vtable>,
+    datum: Datum,
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Closure {
+    pub env: Rc<Frame>,
+    pub params: Vec<String>,
+    pub body: Expr,
+}
+
+#[derive(PartialEq, Clone)]
 pub enum Datum {
     Integer(i64),
     Float(f64),
+    Closure(Rc<Closure>),
 }
 
 pub struct Builtins {
+    closure_vtable: Rc<Vtable>,
     float_vtable: Rc<Vtable>,
     integer_vtable: Rc<Vtable>,
 }
@@ -66,6 +76,7 @@ pub struct Builtins {
 impl Builtins {
     pub fn new() -> Builtins {
         Builtins {
+            closure_vtable: Rc::new(classes::closure2::vtable()),
             float_vtable: Rc::new(classes::float2::vtable()),
             integer_vtable: Rc::new(classes::integer2::vtable()),
         }
@@ -82,6 +93,17 @@ impl Builtins {
         Object {
             vtable: Rc::clone(&self.integer_vtable),
             datum: Datum::Integer(x),
+        }
+    }
+
+    pub fn make_closure(&self, frame: Rc<Frame>, params: Vec<String>, body: Expr) -> Object {
+        Object {
+            vtable: Rc::clone(&self.closure_vtable),
+            datum: Datum::Closure(Rc::new(Closure {
+                env: frame,
+                params,
+                body,
+            })),
         }
     }
 }
@@ -101,6 +123,13 @@ impl Object {
         }
     }
 
+    pub fn closure(&self) -> Rc<Closure> {
+        match &self.datum {
+            Datum::Closure(c) => Rc::clone(c),
+            _ => panic!("BUG: {} is not a Closure", self),
+        }
+    }
+
     pub fn send(&self, message: &str, args: &[&Object], builtins: &Builtins) -> Value {
         println!("debug: {} {} {:?}", self, message, args);
         match self.vtable.get(message) {
@@ -112,7 +141,7 @@ impl Object {
 
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.datum {
+        match &self.datum {
             Datum::Integer(x) => write!(f, "{}", x),
             Datum::Float(x) => {
                 if x - x.floor() == 0.0 {
@@ -121,6 +150,23 @@ impl fmt::Display for Object {
                     write!(f, "{}", x)
                 }
             }
+            Datum::Closure(x) => write!(f, "$<Closure {:?}>", x.params),
+        }
+    }
+}
+
+impl fmt::Debug for Object {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self.datum {
+            Datum::Integer(x) => write!(f, "{}", x),
+            Datum::Float(x) => {
+                if x - x.floor() == 0.0 {
+                    write!(f, "{}.0", x)
+                } else {
+                    write!(f, "{}", x)
+                }
+            }
+            Datum::Closure(x) => write!(f, "{:?}", *x),
         }
     }
 }

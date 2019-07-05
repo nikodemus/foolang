@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::objects2::{Builtins, Object};
+use crate::objects2::{Builtins, Object, Value};
 use crate::parse::{parse_str, Expr, Literal, SyntaxError};
 
 struct Env<'a> {
@@ -11,7 +11,8 @@ struct Env<'a> {
     frame: Rc<Frame>,
 }
 
-struct Frame {
+#[derive(PartialEq, Debug)]
+pub struct Frame {
     local: RefCell<HashMap<String, Object>>,
     parent: Option<Rc<Frame>>,
 }
@@ -80,7 +81,7 @@ impl<'a> Env<'a> {
     }
 
     fn eval_block(&self, params: &Vec<String>, body: &Expr) -> Result<Object, SyntaxError> {
-        unimplemented!("Env::eval_block")
+        Ok(self.builtins.make_closure(Rc::clone(&self.frame), params.to_owned(), body.to_owned()))
     }
 
     fn eval_literal(&self, literal: &Literal) -> Result<Object, SyntaxError> {
@@ -128,6 +129,20 @@ impl<'a> Env<'a> {
             }
         }
     }
+}
+
+pub fn apply(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Value {
+    let closure = receiver.closure();
+    // KLUDGE: I'm blind. I would think that iterating over args with IntoIterator
+    // would give me an iterator over &Object, but I get &&Object -- so to_owned x 2.
+    let locals: HashMap<String, Object> = closure
+        .params
+        .iter()
+        .map(String::clone)
+        .zip(args.into_iter().map(|obj| obj.to_owned().to_owned()))
+        .collect();
+    let env = Env::from_parts(builtins, locals, Some(Rc::clone(&closure.env)));
+    env.eval(&closure.body)
 }
 
 fn eval_str(source: &str) -> Result<Object, SyntaxError> {
@@ -347,4 +362,26 @@ fn eval_unary() {
 #[test]
 fn eval_keyword() {
     assert_eq!(eval_ok("15 gcd: 100").integer(), 5);
+}
+
+#[test]
+fn eval_closure1() {
+    assert_eq!(eval_ok("let x = 41, { x + 1 } value").integer(), 42);
+}
+
+#[test]
+fn eval_closure2() {
+    assert_eq!(eval_ok("let x = 41, { |y| x + y } value: 1").integer(), 42);
+}
+
+#[test]
+fn eval_closure3() {
+    assert_eq!(
+        eval_ok(
+            "let thunk = { let counter = 0, { counter = counter + 1, counter } } value,
+                        thunk value + thunk value"
+        )
+        .integer(),
+        3
+    );
 }
