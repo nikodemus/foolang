@@ -2,18 +2,36 @@
 
 # foolang
 
-## Principles
+A Smalltalk-inspired object language that liberally cribs from Erlang.
 
-1. Ergonomics. Code should be a pleasure to write and easy to read.
+## Design Principles
 
-2. Safety. No memory errors. No race conditions. No ambient authority.
+1. Ergonomics: Code should be a pleasure to write and easy to read.
+   Any language has a learning curve, but a well designed language has
+   a short one. (Assuming concepts are familiar beforehand.)
 
-3. Performance. Code with annotated interface types should run on par
-   with -O0 compiled C++.
+2. Safety: No memory errors. No race conditions. No ambient authority.
+   Support for building fault-tolerant applications.
+
+3. Performance: Code with type annotations should run on par with -O0
+   compiled C++.
 
 4. Don't summon anything bigger than your head. Foolang is currently
    a one-person effort, so design has to take implementability into
    consideration.
+
+## Features
+
+- Everything is an object, semantics are fully descibed by sending
+  messages to objects.
+
+  Foolang isn't fanatically pure about this: there are syntactic and
+  runtime behaviours constructs which do not have corresponding
+  objects.
+
+- Supervised processes. Foolang implements Erlang-style supervisor
+  trees for fault tolerance. Foolang processes are fully isolated
+  from each other just like in Erlang.
 
 ## Syntax notes
 
