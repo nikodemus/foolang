@@ -1,0 +1,24 @@
+<!doctype html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="lib/codemirror.css">
+  <link rel="stylesheet" href="lib/idea.css">
+  <link rel="stylesheet" href="foo.css">
+</head>
+<body>
+  <script src="lib/codemirror.js"></script>
+  <script src="foo.js"></script>
+  <p>This is Foolang 0.0 playground. Enter code into the editor, then
+  press Ctrl-Enter to evaluate it.
+  </p>
+  <div id="transcript"></div>
+  <div>
+    <textarea rows="10" cols="80" id="editor">
+@main: system
+   system output println: "Hello world!"       
+    </textarea>
+    <button onclick="evaluateEditor()">Evaluate</button>
+  </div>
+  <script>
+    fooSetup("transcript", "editor")
+  </script>
