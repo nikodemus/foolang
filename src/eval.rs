@@ -333,3 +333,13 @@ fn eval_float_as_int() {
     assert_eq!(eval_ok("42.1 asInteger").integer(), 42);
     assert_eq!(eval_ok("41.9 asInteger").integer(), 42);
 }
+
+#[test]
+fn eval_unary() {
+    assert_eq!(eval_ok("42 asFloat asInteger").integer(), 42);
+}
+
+#[test]
+fn eval_keyword() {
+    assert_eq!(eval_ok("15 gcd: 100").integer(), 5);
+}

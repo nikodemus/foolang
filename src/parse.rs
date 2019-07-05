@@ -217,6 +217,7 @@ fn make_token_table() -> TokenTable {
     Syntax::def(t, Number, number_prefix, invalid_suffix, precedence_invalid);
     Syntax::def(t, LocalId, identifier_prefix, identifier_suffix, identifier_precedence);
     Syntax::def(t, Operator, operator_prefix, operator_suffix, operator_precedence);
+    Syntax::def(t, Keyword, invalid_prefix, keyword_suffix, precedence_5);
     Syntax::def(t, Eof, invalid_prefix, invalid_suffix, precedence_0);
 
     table
@@ -241,6 +242,10 @@ fn make_name_table() -> NameTable {
 fn precedence_invalid(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
     // To guarantee it aways gets parsed.
     Ok(1001)
+}
+
+fn precedence_5(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
+    Ok(2)
 }
 
 fn precedence_2(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
@@ -327,6 +332,30 @@ fn assign_suffix(
     }
     let right = parser.parse_expr(precedence(parser, parser.span())?)?;
     Ok(Expr::Assign(left.name(), Box::new(right)))
+}
+
+fn keyword_suffix(
+    parser: &Parser,
+    left: Expr,
+    precedence: PrecedenceFunction,
+) -> Result<Expr, SyntaxError> {
+    let precedence = precedence(parser, parser.span())?;
+    let mut selector = parser.tokenstring();
+    let mut args = vec![];
+    let start = parser.span();
+    loop {
+        args.push(parser.parse_expr(precedence)?);
+        let (token, span) = parser.lookahead()?;
+        if token == Token::Keyword {
+            parser.scan()?;
+            selector.push_str(parser.slice());
+        } else {
+            break;
+        }
+    }
+    // FIXME: Potential multiline span is probably going to cause
+    // trouble in error reporting...
+    Ok(Expr::Send(start.start..parser.span().end, selector, Box::new(left), args))
 }
 
 fn sequence_suffix(

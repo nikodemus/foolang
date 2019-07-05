@@ -9,6 +9,8 @@ pub fn vtable() -> Vtable {
     vt.def("divInteger:", integer_div_integer);
     vt.def("mulInteger:", integer_mul_integer);
     vt.def("subInteger:", integer_sub_integer);
+    // INCIDENTAL
+    vt.def("gcd:", integer_gcd);
     // DERIVED
     vt.def("+", integer_add);
     vt.def("/", integer_div);
@@ -48,6 +50,12 @@ fn integer_mul_integer(receiver: &Object, args: &[&Object], builtins: &Builtins)
 
 fn integer_sub_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Value {
     let res = args[0].integer() - receiver.integer();
+    Ok(builtins.make_integer(res))
+}
+
+fn integer_gcd(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Value {
+    // FIXME: Panics if argument is not an integer.
+    let res = num::integer::gcd(receiver.integer(), args[0].integer());
     Ok(builtins.make_integer(res))
 }
 
