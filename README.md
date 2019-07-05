@@ -2,7 +2,10 @@
 
 # foolang
 
-A Smalltalk-inspired object language that liberally cribs from Erlang.
+A Smalltalk-inspired object language that liberally cribs from Erlang
+and Fortress.
+
+Status: bootstrap evaluator implementation in progress.
 
 ## Design Principles
 
@@ -22,16 +25,22 @@ A Smalltalk-inspired object language that liberally cribs from Erlang.
 
 ## Features
 
-- Everything is an object, semantics are fully descibed by sending
+- Everything is an object, and semantics are descibed by sending
   messages to objects.
 
   Foolang isn't fanatically pure about this: there are syntactic and
   runtime behaviours constructs which do not have corresponding
   objects.
 
+- Smalltalkish development environment, where code lives in files, not
+  an image.
+
 - Supervised processes. Foolang implements Erlang-style supervisor
   trees for fault tolerance. Foolang processes are fully isolated
   from each other just like in Erlang.
+
+- Syntactic extensibility. Users can define new operators and other
+  syntax extensions.
 
 ## Syntax notes
 
