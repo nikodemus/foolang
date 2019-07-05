@@ -16,11 +16,12 @@ pub enum Literal {
 #[derive(Debug, PartialEq)]
 pub enum Expr {
     Assign(String, Box<Expr>),
-    Const(Span, Literal),
-    Var(Span, String),
     Bind(String, Box<Expr>, Box<Expr>),
+    Block(Span, Vec<String>, Box<Expr>),
+    Const(Span, Literal),
     Send(Span, String, Box<Expr>, Vec<Expr>),
     Seq(Vec<Expr>),
+    Var(Span, String),
 }
 
 impl Expr {
@@ -42,11 +43,12 @@ impl Expr {
         use Expr::*;
         let span = match self {
             Assign(_, right) => return right.span(),
-            Const(span, ..) => span,
-            Var(span, ..) => span,
-            Send(span, ..) => span,
             Bind(_, _, body) => return body.span(),
+            Block(span, ..) => span,
+            Const(span, ..) => span,
+            Send(span, ..) => span,
             Seq(exprs) => return exprs[exprs.len() - 1].span(),
+            Var(span, ..) => span,
         };
         span.to_owned()
     }
@@ -218,6 +220,9 @@ fn make_token_table() -> TokenTable {
     Syntax::def(t, LocalId, identifier_prefix, identifier_suffix, identifier_precedence);
     Syntax::def(t, Operator, operator_prefix, operator_suffix, operator_precedence);
     Syntax::def(t, Keyword, invalid_prefix, keyword_suffix, precedence_5);
+    // Why have OpenDelimiter instead of making them operators?
+    Syntax::def(t, OpenDelimiter, delimiter_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, CloseDelimiter, invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, Eof, invalid_prefix, invalid_suffix, precedence_0);
 
     table
@@ -230,6 +235,8 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ",", invalid_prefix, sequence_suffix, precedence_1);
     Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_2);
+
+    Syntax::def(t, "{", block_prefix, invalid_suffix, precedence_0);
 
     Syntax::op(t, "*", false, true, 50);
     Syntax::op(t, "/", false, true, 40);
@@ -266,6 +273,13 @@ fn invalid_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
 
 fn invalid_suffix(parser: &Parser, _: Expr, _: PrecedenceFunction) -> Result<Expr, SyntaxError> {
     parser.error("Not valid in operator position")
+}
+
+fn delimiter_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
+    match parser.name_table.get(parser.slice()) {
+        Some(syntax) => parser.parse_prefix_syntax(syntax),
+        None => parser.error("Unknown delimiter"),
+    }
 }
 
 fn identifier_precedence(parser: &Parser, span: Span) -> Result<usize, SyntaxError> {
@@ -377,6 +391,36 @@ fn sequence_suffix(
     Ok(Expr::Seq(exprs))
 }
 
+fn block_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
+    let start = parser.span();
+    let (token, span) = parser.lookahead()?;
+    let mut params = vec![];
+    if token == Token::Operator && parser.slice_at(span) == "|" {
+        parser.scan()?;
+        loop {
+            let token = parser.scan()?;
+            if token == Token::LocalId {
+                params.push(parser.tokenstring());
+                continue;
+            }
+            if token == Token::Operator && parser.slice() == "|" {
+                break;
+            }
+            return parser.error("Not valid as block parameter");
+        }
+    }
+    let body = parser.parse_expr(0)?;
+    let end = parser.scan()?;
+    // FIXME: hardcoded {
+    // Would be nice to be able to swap between [] and {} and
+    // keep this function same,
+    if end == Token::CloseDelimiter && parser.slice() == "}" {
+        Ok(Expr::Block(start.start..parser.span().end, params, Box::new(body)))
+    } else {
+        parser.error("Expected } as block terminator")
+    }
+}
+
 fn let_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     if Token::LocalId != parser.scan()? {
         return parser.error("Expected variable name after let");
@@ -471,6 +515,10 @@ fn bind(name: &str, value: Expr, body: Expr) -> Expr {
     Expr::Bind(name.to_string(), Box::new(value), Box::new(body))
 }
 
+fn block(span: Span, params: Vec<&str>, body: Expr) -> Expr {
+    Expr::Block(span, params.into_iter().map(String::from).collect(), Box::new(body))
+}
+
 fn seq(exprs: Vec<Expr>) -> Expr {
     Expr::Seq(exprs)
 }
@@ -555,5 +603,25 @@ fn parse_keyword() {
             keyword(4..13, "x:y:", var(0..3, "foo"), vec![int(7..8, 1), int(12..13, 2)]),
             var(15..18, "bar")
         ]))
+    );
+}
+
+#[test]
+fn parse_block_no_args() {
+    assert_eq!(
+        parse_str(" { foo bar } "),
+        Ok(block(1..12, vec![], unary(7..10, "bar", var(3..6, "foo"))))
+    );
+}
+
+#[test]
+fn parse_block_args() {
+    assert_eq!(
+        parse_str(" { |x| foo bar: x } "),
+        Ok(block(
+            1..19,
+            vec!["x"],
+            keyword(11..17, "bar:", var(7..10, "foo"), vec![var(16..17, "x")])
+        ))
     );
 }

@@ -17,6 +17,9 @@
 
 ## Syntax notes
 
+- | would be really useful as just syntax. ...but it _is_ also really convenient
+  the second you start twiddling bits.
+
 - Use -> for chaining instead of --
 
 - Canonicalize multipart keyword messages by stable-sorting the keys.

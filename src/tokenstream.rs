@@ -60,7 +60,6 @@ impl SyntaxError {
                 if lineno > 1 {
                     self.append_context_line(lineno - 1, prev);
                 }
-                println!("got it: {}", line);
                 // Line with the problem.
                 self.append_context_line(lineno, line);
                 let mut mark = String::from_utf8(vec![b' '; self.span.start - start]).unwrap();

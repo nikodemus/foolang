@@ -25,6 +25,7 @@ impl<'a> Env<'a> {
         match expr {
             Expr::Assign(left, right) => self.eval_assign(left, right),
             Expr::Bind(name, value, body) => self.eval_bind(name, value, body),
+            Expr::Block(_, params, body) => self.eval_block(params, body),
             Expr::Const(_, literal) => self.eval_literal(literal),
             Expr::Send(_, selector, receiver, args) => self.eval_send(selector, receiver, args),
             Expr::Seq(exprs) => self.eval_seq(exprs),
@@ -76,6 +77,10 @@ impl<'a> Env<'a> {
 
     fn eval_bind(&self, name: &String, value: &Expr, body: &Expr) -> Result<Object, SyntaxError> {
         self.bind(name, self.eval(value)?).eval(body)
+    }
+
+    fn eval_block(&self, params: &Vec<String>, body: &Expr) -> Result<Object, SyntaxError> {
+        unimplemented!("Env::eval_block")
     }
 
     fn eval_literal(&self, literal: &Literal) -> Result<Object, SyntaxError> {
