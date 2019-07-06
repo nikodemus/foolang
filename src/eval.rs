@@ -104,7 +104,10 @@ impl<'a> Env<'a> {
     }
 
     fn eval_global(&self, global: &Global) -> Result<Object, SyntaxError> {
-        unimplemented!("eval_global")
+        match self.builtins.globals.borrow().get(&global.name) {
+            Some(obj) => Ok(obj.clone()),
+            None => Err(SyntaxError::new(global.span.clone(), "Undefined global")),
+        }
     }
 
     fn eval_literal(&self, literal: &Literal) -> Result<Object, SyntaxError> {
@@ -416,10 +419,15 @@ fn eval_class1() {
     assert_eq!(class.instance_variables, vec!["x".to_string(), "y".to_string()]);
 }
 
-#[ignore]
 #[test]
 fn eval_global1() {
-    let class = eval_ok("Integer").class();
-    assert_eq!(class.instance_vtable.name, "Integer");
-    assert_eq!(class.instance_variables, Vec::<String>::new());
+    assert_eq!(
+        eval_str("DoesNotExist"),
+        Err(SyntaxError {
+            span: 0..12,
+            problem: "Undefined global",
+            context: concat!("001 DoesNotExist\n", "    ^^^^^^^^^^^^ Undefined global\n")
+                .to_string()
+        })
+    );
 }

@@ -15,8 +15,8 @@ pub enum Literal {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Global {
-    span: Span,
-    name: String,
+    pub span: Span,
+    pub name: String,
 }
 
 impl Global {
