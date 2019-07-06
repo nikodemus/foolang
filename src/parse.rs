@@ -20,6 +20,7 @@ pub enum Expr {
     Block(Span, Vec<String>, Box<Expr>),
     ClassDefinition(Span, String, Vec<String>),
     Const(Span, Literal),
+    Global(Span, String),
     Send(Span, String, Box<Expr>, Vec<Expr>),
     Seq(Vec<Expr>),
     Var(Span, String),
@@ -48,6 +49,7 @@ impl Expr {
             Block(span, ..) => span,
             ClassDefinition(span, ..) => span,
             Const(span, ..) => span,
+            Global(span, ..) => span,
             Send(span, ..) => span,
             Seq(exprs) => return exprs[exprs.len() - 1].span(),
             Var(span, ..) => span,
@@ -221,7 +223,6 @@ fn make_token_table() -> TokenTable {
     Syntax::def(t, Number, number_prefix, invalid_suffix, precedence_invalid);
     // We could really do the decision between local and global here
     Syntax::def(t, Identifier, identifier_prefix, identifier_suffix, identifier_precedence);
-    // Syntax::def(t, GlobalId, global_prefix, identifier_suffix, identifier_precedence);
     Syntax::def(t, Operator, operator_prefix, operator_suffix, operator_precedence);
     Syntax::def(t, Keyword, invalid_prefix, keyword_suffix, precedence_5);
     // Why have OpenDelimiter and CloseDelimiter instead of making them operators?
@@ -301,6 +302,10 @@ fn identifier_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
             let c = name.chars().next().expect("BUG: empty identifier");
             if c == '@' {
                 return parser.error("Unknown toplevel definition");
+            }
+            if c.is_uppercase() {
+                // FIXME: not all languages have uppercase
+                return Ok(Expr::Global(parser.span(), parser.tokenstring()));
             }
             return Ok(Expr::Var(parser.span(), parser.tokenstring()));
         }
@@ -435,8 +440,14 @@ fn block_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
 fn class_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     let start = parser.span().start;
     let class_name = match parser.scan()? {
-        Token::GlobalId => parser.tokenstring(),
-        Token::Identifier => return parser.error("Class names must start with a capital letter"),
+        Token::Identifier => {
+            if parser.slice().chars().next().expect("BUG: empty identifier").is_uppercase() {
+                parser.tokenstring()
+            } else {
+                // FIXME: Not all languages use capital letters
+                return parser.error("Class names must start with an uppercase letter");
+            }
+        }
         _ => return parser.error("Expected class name"),
     };
     match parser.scan()? {

@@ -23,17 +23,19 @@ impl<'a> Env<'a> {
     }
 
     pub fn eval(&self, expr: &Expr) -> Result<Object, SyntaxError> {
+        use Expr::*;
         match expr {
-            Expr::Assign(left, right) => self.eval_assign(left, right),
-            Expr::Bind(name, value, body) => self.eval_bind(name, value, body),
-            Expr::Block(_, params, body) => self.eval_block(params, body),
-            Expr::ClassDefinition(_, name, instance_variables) => {
+            Assign(left, right) => self.eval_assign(left, right),
+            Bind(name, value, body) => self.eval_bind(name, value, body),
+            Block(_, params, body) => self.eval_block(params, body),
+            ClassDefinition(_, name, instance_variables) => {
                 self.eval_class_definition(name, instance_variables)
             }
-            Expr::Const(_, literal) => self.eval_literal(literal),
-            Expr::Send(_, selector, receiver, args) => self.eval_send(selector, receiver, args),
-            Expr::Seq(exprs) => self.eval_seq(exprs),
-            Expr::Var(_, name) => self.eval_variable(name),
+            Const(_, literal) => self.eval_literal(literal),
+            Global(..) => self.eval_global(expr),
+            Send(_, selector, receiver, args) => self.eval_send(selector, receiver, args),
+            Seq(exprs) => self.eval_seq(exprs),
+            Var(_, name) => self.eval_variable(name),
         }
     }
 
@@ -99,6 +101,10 @@ impl<'a> Env<'a> {
         let class = self.builtins.make_class(name, instance_variables);
         self.builtins.globals.borrow_mut().insert(name.to_string(), class.clone());
         Ok(class)
+    }
+
+    fn eval_global(&self, global: &Expr) -> Result<Object, SyntaxError> {
+        unimplemented!("eval_global")
     }
 
     fn eval_literal(&self, literal: &Literal) -> Result<Object, SyntaxError> {

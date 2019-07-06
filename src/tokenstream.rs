@@ -10,7 +10,6 @@ pub enum Token {
     Eof,
     Keyword,
     Number,
-    GlobalId,
     Identifier,
     OpenDelimiter,
     Operator,
@@ -221,11 +220,7 @@ impl<'a> TokenStream<'a> {
         if start.1.is_digit(10) {
             return self.result(Token::Number, span);
         }
-        if start.1.is_uppercase() {
-            self.result(Token::GlobalId, span)
-        } else {
-            self.result(Token::Identifier, span)
-        }
+        self.result(Token::Identifier, span)
     }
     fn len(&self) -> usize {
         self.source.len()
@@ -325,15 +320,27 @@ fn scan_char() {
 }
 
 #[test]
-fn scan_local_id() {
-    fn test(mut scanner: TokenStream, want: &str) {
+fn scan_identifier() {
+    fn test(source: &str, want: &str) {
+        let mut scanner = TokenStream::new(source);
         assert_eq!(scanner.scan(), Ok(Token::Identifier));
         assert_eq!(scanner.slice(), want);
     }
-    test(TokenStream::new(" f"), "f");
-    test(TokenStream::new(" fo1 "), "fo1");
-    test(TokenStream::new("fo1"), "fo1");
-    test(TokenStream::new(" fo1+ "), "fo1");
+    test("f", "f");
+    test(" f ", "f");
+    test(" fo1o ", "fo1o");
+    test("fo1o", "fo1o");
+    test(" fo1o+ ", "fo1o");
+    test(" fo1+o ", "fo1");
+
+    test("F", "F");
+    test(" F ", "F");
+    test(" Fo1o ", "Fo1o");
+    test("Fo1o", "Fo1o");
+    test(" Fo1o+ ", "Fo1o");
+    test(" Fo1+O ", "Fo1");
+
+    test(" @foo ", "@foo");
 }
 
 #[test]
@@ -367,16 +374,6 @@ fn scan_lte() {
     let mut scanner = TokenStream::new(" <= ");
     assert_eq!(scanner.scan(), Ok(Token::Operator));
     assert_eq!(scanner.slice(), "<=");
-}
-
-#[test]
-fn scan_global_id() {
-    fn test(mut scanner: TokenStream) {
-        assert_eq!(scanner.scan(), Ok(Token::GlobalId));
-        assert_eq!(scanner.slice(), "Fo1");
-    }
-    test(TokenStream::new(" Fo1 "));
-    test(TokenStream::new(" Fo1+ "));
 }
 
 #[test]
@@ -476,11 +473,4 @@ fn scan_close_bracket() {
     let mut scanner = TokenStream::new(" ]]  ");
     assert_eq!(scanner.scan(), Ok(Token::CloseDelimiter));
     assert_eq!(scanner.slice(), "]");
-}
-
-#[test]
-fn scan_toplevel() {
-    let mut scanner = TokenStream::new(" @foo ");
-    assert_eq!(scanner.scan(), Ok(Token::Identifier));
-    assert_eq!(scanner.slice(), "@foo");
 }
