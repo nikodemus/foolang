@@ -3,8 +3,9 @@ use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 
+use crate::eval;
 use crate::eval::Frame;
-use crate::parse::{Expr, MethodDefinition, SyntaxError};
+use crate::parse::{ClassDefinition, Expr, SyntaxError};
 
 use crate::classes;
 
@@ -13,10 +14,14 @@ pub type Value = Result<Object, SyntaxError>;
 
 type MethodFunction = fn(&Object, &[&Object], &Builtins) -> Value;
 
-#[derive(Clone)]
+pub enum Method {
+    Primitive(MethodFunction),
+    Interpreter(Closure),
+}
+
 pub struct Vtable {
     pub name: String,
-    pub methods: HashMap<String, MethodFunction>,
+    pub methods: HashMap<String, Method>,
 }
 
 impl Vtable {
@@ -28,10 +33,22 @@ impl Vtable {
     }
 
     pub fn def(&mut self, name: &str, method: MethodFunction) {
-        self.methods.insert(name.to_string(), method);
+        self.methods.insert(name.to_string(), Method::Primitive(method));
     }
 
-    pub fn get(&self, name: &str) -> Option<&MethodFunction> {
+    pub fn add(&mut self, selector: &str, method: Closure) {
+        self.methods.insert(selector.to_string(), Method::Interpreter(method));
+    }
+
+    pub fn selectors(&self) -> Vec<String> {
+        let mut selectors = vec![];
+        for key in self.methods.keys() {
+            selectors.push(key.clone());
+        }
+        selectors
+    }
+
+    pub fn get(&self, name: &str) -> Option<&Method> {
         self.methods.get(name)
     }
 }
@@ -56,7 +73,7 @@ pub struct Object {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Closure {
-    pub env: Rc<Frame>,
+    pub env: Option<Rc<Frame>>,
     pub params: Vec<String>,
     pub body: Expr,
 }
@@ -124,14 +141,14 @@ impl Builtins {
         }
     }
 
-    pub fn make_class(&self, name: &str, instance_variables: &[String]) -> Object {
+    pub fn make_class(&self, classdef: &ClassDefinition) -> Object {
         let mut vtable_name = "class ".to_string();
-        vtable_name.push_str(name);
+        vtable_name.push_str(&classdef.name);
         let mut class_vtable = Vtable::new(vtable_name.as_str());
-        class_vtable.def(&ctor_selector(instance_variables), generic_ctor);
-        let mut instance_vtable = Vtable::new(name);
+        class_vtable.def(&ctor_selector(&classdef.instance_variables), generic_ctor);
+        let mut instance_vtable = Vtable::new(&classdef.name);
         let mut offset = -1;
-        for name in instance_variables {
+        for name in &classdef.instance_variables {
             offset += 1;
             if &name[0..1] == "_" {
                 continue;
@@ -144,11 +161,19 @@ impl Builtins {
                 _ => unimplemented!("Support for > 4 instance variables"),
             }
         }
+        for method in &classdef.methods {
+            instance_vtable
+                .add(&method.selector, self.make_method_function(&method.parameters, &method.body));
+        }
         Object {
             vtable: Rc::new(class_vtable),
             datum: Datum::Class(Rc::new(Class {
                 instance_vtable: Rc::new(instance_vtable),
-                instance_variables: instance_variables.iter().map(|x| x.to_string()).collect(),
+                instance_variables: classdef
+                    .instance_variables
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect(),
             })),
         }
     }
@@ -171,10 +196,20 @@ impl Builtins {
         Object {
             vtable: Rc::clone(&self.closure_vtable),
             datum: Datum::Closure(Rc::new(Closure {
-                env: frame,
+                env: Some(frame),
                 params,
                 body,
             })),
+        }
+    }
+
+    pub fn make_method_function(&self, params: &[String], body: &Expr) -> Closure {
+        let mut params: Vec<String> = params.iter().map(|x| x.to_owned()).collect();
+        params.push("self".to_string());
+        Closure {
+            env: None,
+            params,
+            body: body.to_owned(),
         }
     }
 }
@@ -218,8 +253,14 @@ impl Object {
     pub fn send(&self, message: &str, args: &[&Object], builtins: &Builtins) -> Value {
         println!("debug: {} {} {:?}", self, message, args);
         match self.vtable.get(message) {
-            Some(method) => method(self, args, builtins),
-            None => unimplemented!("{} doesNotUnderstand {} {:?}", self, message, args),
+            Some(Method::Primitive(method)) => method(self, args, builtins),
+            Some(Method::Interpreter(closure)) => {
+                eval::apply_with_extra_args(closure, args, &[self], builtins)
+            }
+            None => {
+                println!("debug: available methods: {:?}", &self.vtable.selectors());
+                unimplemented!("{} doesNotUnderstand {} {:?}", self, message, args);
+            }
         }
     }
 }

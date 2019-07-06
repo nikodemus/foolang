@@ -279,18 +279,24 @@ impl<'a> TokenStream<'a> {
 
     fn scan_toplevel_or_operator(&mut self, start: usize) -> Result<Token, SyntaxError> {
         let mut next = self.getchar()?;
-        // Toplevels consist only of alphabetic characters.
+        // Toplevels consist only of alphabetic characters after the
+        // @, and are considered identifiers.
         if next.1.is_alphabetic() {
             loop {
+                if self.at_eof() {
+                    return self.result(Token::Identifier, start..next.0 + 1);
+                }
                 next = self.getchar()?;
                 if !next.1.is_alphabetic() {
                     self.unread(next);
-                    // Toplevels are identifiers
                     return self.result(Token::Identifier, start..next.0);
                 }
             }
         }
         loop {
+            if self.at_eof() {
+                return self.result(Token::Operator, start..next.0 + 1);
+            }
             if is_delimiter(next.1) || next.1.is_digit(10) {
                 self.unread(next);
                 return self.result(Token::Operator, start..next.0);
@@ -339,6 +345,7 @@ fn scan_identifier() {
     test(" Fo1+O ", "Fo1");
 
     test(" @foo ", "@foo");
+    test("@foo", "@foo");
 }
 
 #[test]

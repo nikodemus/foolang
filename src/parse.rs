@@ -43,14 +43,19 @@ pub struct MethodDefinition {
 }
 
 impl ClassDefinition {
-    fn expr(span: Span, name: String, instance_variables: Vec<String>) -> Expr {
-        Expr::ClassDefinition(ClassDefinition {
+    fn new(span: Span, name: String, instance_variables: Vec<String>) -> ClassDefinition {
+        ClassDefinition {
             span,
             name,
             instance_variables,
             methods: Vec::new(),
-        })
+        }
     }
+
+    fn expr(span: Span, name: String, instance_variables: Vec<String>) -> Expr {
+        Expr::ClassDefinition(ClassDefinition::new(span, name, instance_variables))
+    }
+
     fn add_method(&mut self, method: MethodDefinition) {
         self.methods.push(method);
     }
@@ -120,13 +125,6 @@ impl Expr {
     fn is_var(&self) -> bool {
         match self {
             Expr::Var(..) => true,
-            _ => false,
-        }
-    }
-
-    fn is_class_definition(&self) -> bool {
-        match self {
-            Expr::ClassDefinition(..) => true,
             _ => false,
         }
     }
@@ -362,7 +360,8 @@ fn make_name_table() -> NameTable {
     let t = &mut table;
 
     Syntax::def(t, "@class", class_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "method", invalid_prefix, method_suffix, precedence_1);
+    Syntax::def(t, "method", invalid_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "@end", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ",", invalid_prefix, sequence_suffix, precedence_1);
     Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_2);
@@ -520,15 +519,9 @@ fn keyword_suffix(
     Ok(Expr::Send(start.start..parser.span().end, selector, Box::new(left), args))
 }
 
-fn method_suffix(
-    parser: &Parser,
-    mut class: Expr,
-    _precedence: PrecedenceFunction,
-) -> Result<Expr, SyntaxError> {
-    if !class.is_class_definition() {
-        return parser.error("@method outside class context");
-    }
-    // FIXME: span is the span of the @method
+fn parse_method(parser: &Parser, class: &mut ClassDefinition) -> Result<(), SyntaxError> {
+    assert_eq!(parser.slice(), "method");
+    // FIXME: span is the span of the method-marker
     let span = parser.span();
     let mut selector = String::new();
     let mut parameters = Vec::new();
@@ -559,7 +552,7 @@ fn method_suffix(
     // variables.
     let body = parser.parse_expr(0)?;
     class.add_method(MethodDefinition::new(span, selector, parameters, body));
-    Ok(class)
+    Ok(())
 }
 
 fn sequence_suffix(
@@ -647,7 +640,19 @@ fn class_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
             _ => return parser.error("Invalid instance variable specification"),
         }
     }
-    Ok(ClassDefinition::expr(span, class_name, instance_variables))
+    let mut class = ClassDefinition::new(span, class_name, instance_variables);
+    loop {
+        let next = parser.scan()?;
+        if next == Token::Identifier && parser.slice() == "@end" {
+            break;
+        }
+        if next == Token::Identifier && parser.slice() == "method" {
+            parse_method(parser, &mut class)?;
+            continue;
+        }
+        return parser.error("Expected method or @end");
+    }
+    Ok(Expr::ClassDefinition(class))
 }
 
 fn let_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
@@ -874,12 +879,31 @@ fn parse_block_args() {
 
 #[test]
 fn parse_class() {
-    assert_eq!(parse_str("@class Point { x, y }"), Ok(class(0..6, "Point", vec!["x", "y"])));
+    assert_eq!(parse_str("@class Point { x, y } @end"), Ok(class(0..6, "Point", vec!["x", "y"])));
 }
 
 #[test]
-fn parse_method() {
+fn parse_method1() {
     let mut class = class(0..6, "Foo", vec![]);
     class.add_method(method(14..20, "bar", vec![], int(25..27, 42)));
-    assert_eq!(parse_str("@class Foo {} method bar 42"), Ok(class));
+    assert_eq!(parse_str("@class Foo {} method bar 42 @end"), Ok(class));
+}
+
+#[test]
+fn parse_method2() {
+    let mut class = class(18..24, "Foo", vec![]);
+    class.add_method(method(53..59, "foo", vec![], unary(93..96, "bar", var(88..92, "self"))));
+    class.add_method(method(118..124, "bar", vec![], int(153..155, 42)));
+    assert_eq!(
+        parse_str(
+            "
+                 @class Foo {}
+                     method foo
+                        self bar
+                     method bar
+                        42
+                 @end"
+        ),
+        Ok(class)
+    );
 }

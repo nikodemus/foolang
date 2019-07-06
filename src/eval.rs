@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::objects2::{Builtins, Object, Value};
+use crate::objects2::{Builtins, Closure, Object, Value};
 use crate::parse::{
     parse_str, Assign, ClassDefinition, Expr, Global, Literal, Parser, SyntaxError, Var,
 };
@@ -102,7 +102,7 @@ impl<'a> Env<'a> {
             ));
         }
         let name = &definition.name;
-        let class = self.builtins.make_class(name, &definition.instance_variables);
+        let class = self.builtins.make_class(definition);
         self.builtins.globals.borrow_mut().insert(name.to_string(), class.clone());
         Ok(class)
     }
@@ -161,17 +161,29 @@ impl<'a> Env<'a> {
     }
 }
 
-pub fn apply(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Value {
-    let closure = receiver.closure();
+pub fn apply(closure: &Object, args: &[&Object], builtins: &Builtins) -> Value {
+    apply_with_extra_args(&closure.closure(), args, &[], builtins)
+}
+
+pub fn apply_with_extra_args(
+    closure: &Closure,
+    args: &[&Object],
+    extra: &[&Object],
+    builtins: &Builtins,
+) -> Value {
     // KLUDGE: I'm blind. I would think that iterating over args with IntoIterator
     // would give me an iterator over &Object, but I get &&Object -- so to_owned x 2.
     let locals: HashMap<String, Object> = closure
         .params
         .iter()
         .map(String::clone)
-        .zip(args.into_iter().map(|obj| obj.to_owned().to_owned()))
+        .zip(args.into_iter().chain(extra.into_iter()).map(|obj| obj.to_owned().to_owned()))
         .collect();
-    let env = Env::from_parts(builtins, locals, Some(Rc::clone(&closure.env)));
+    let myframe = match &closure.env {
+        Some(frame) => Some(Rc::clone(&frame)),
+        None => None,
+    };
+    let env = Env::from_parts(builtins, locals, myframe);
     env.eval(&closure.body)
 }
 
@@ -185,9 +197,16 @@ fn eval_all(builtins: &Builtins, source: &str) -> Result<Object, SyntaxError> {
     let env = Env::new(builtins);
     let mut parser = Parser::new(source);
     loop {
-        let res = env.eval(&mut parser.parse()?)?;
+        let expr = match parser.parse() {
+            Err(err) => return Err(err.add_context(source)),
+            Ok(expr) => expr,
+        };
+        let object = match env.eval(&expr) {
+            Err(err) => return Err(err.add_context(source)),
+            Ok(object) => object,
+        };
         if parser.at_eof() {
-            return Ok(res);
+            return Ok(object);
         }
     }
 }
@@ -462,12 +481,12 @@ fn eval_closure3() {
 #[test]
 fn eval_class_not_toplevel() {
     assert_eq!(
-        eval_str("let x = 42, @class Point { x, y }"),
+        eval_str("let x = 42, @class Point { x, y } @end"),
         Err(SyntaxError {
             span: 12..18,
             problem: "Class definition not at toplevel",
             context: concat!(
-                "001 let x = 42, @class Point { x, y }\n",
+                "001 let x = 42, @class Point { x, y } @end\n",
                 "                ^^^^^^ Class definition not at toplevel\n"
             )
             .to_string()
@@ -477,7 +496,7 @@ fn eval_class_not_toplevel() {
 
 #[test]
 fn eval_class1() {
-    let class = eval_ok("@class Point { x, y }").class();
+    let class = eval_ok("@class Point { x, y } @end").class();
     assert_eq!(class.instance_vtable.name, "Point");
     assert_eq!(class.instance_variables, vec!["x".to_string(), "y".to_string()]);
 }
@@ -505,8 +524,8 @@ fn eval_global2() {
 #[test]
 fn eval_new_instance() {
     let builtins = Builtins::new();
-    match eval_all(&builtins, "@class Point { x, y }, Point x: 1 y: 2") {
-        Err(e) => panic!("OOPS: {:?}", e),
+    match eval_all(&builtins, "@class Point { x, y } @end, Point x: 1 y: 2") {
+        Err(e) => panic!("Test OOPS: {:?}", e),
         Ok(object) => {
             assert_eq!(object.send("x", &[], &builtins), Ok(builtins.make_integer(1)));
             assert_eq!(object.send("y", &[], &builtins), Ok(builtins.make_integer(2)));
@@ -514,12 +533,37 @@ fn eval_new_instance() {
     }
 }
 
-#[ignore]
 #[test]
-fn eval_instance_method() {
+fn eval_instance_method1() {
     let builtins = Builtins::new();
-    match eval_all(&builtins, "@class Foo { dummy } method bar 311, Foo dummy: 0") {
-        Err(e) => panic!("OOPS: {:?}", e),
+    match eval_all(
+        &builtins,
+        "@class Foo { dummy }
+            method bar 311
+         @end,
+         Foo dummy: 0",
+    ) {
+        Err(e) => panic!("Test OOPS: {:?}", e),
+        Ok(object) => {
+            assert_eq!(object.send("bar", &[], &builtins), Ok(builtins.make_integer(311)));
+        }
+    }
+}
+
+#[test]
+fn eval_instance_method2() {
+    let builtins = Builtins::new();
+    match eval_all(
+        &builtins,
+        "@class Foo { dummy }
+            method foo
+               self bar
+            method bar
+               311
+         @end,
+         Foo dummy: 0",
+    ) {
+        Err(e) => panic!("Test OOPS: {:?}", e),
         Ok(object) => {
             assert_eq!(object.send("bar", &[], &builtins), Ok(builtins.make_integer(311)));
         }
