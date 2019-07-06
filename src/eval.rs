@@ -409,3 +409,11 @@ fn eval_class1() {
     assert_eq!(class.instance_vtable.name, "Point");
     assert_eq!(class.instance_variables, vec!["x".to_string(), "y".to_string()]);
 }
+
+#[ignore]
+#[test]
+fn eval_global1() {
+    let class = eval_ok("Integer").class();
+    assert_eq!(class.instance_vtable.name, "Integer");
+    assert_eq!(class.instance_variables, Vec::<String>::new());
+}

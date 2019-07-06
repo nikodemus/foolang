@@ -219,7 +219,9 @@ fn make_token_table() -> TokenTable {
     use Token::*;
 
     Syntax::def(t, Number, number_prefix, invalid_suffix, precedence_invalid);
+    // We could really do the decision between local and global here
     Syntax::def(t, LocalId, identifier_prefix, identifier_suffix, identifier_precedence);
+    // Syntax::def(t, GlobalId, global_prefix, identifier_suffix, identifier_precedence);
     Syntax::def(t, Operator, operator_prefix, operator_suffix, operator_precedence);
     Syntax::def(t, Keyword, invalid_prefix, keyword_suffix, precedence_5);
     // Why have Toplevel instead of making them identifiers?
