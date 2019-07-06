@@ -7,12 +7,6 @@ use std::str::FromStr;
 pub use crate::tokenstream::SyntaxError;
 use crate::tokenstream::{Span, Token, TokenStream};
 
-#[derive(Debug, PartialEq, Copy, Clone)]
-pub enum Literal {
-    Integer(i64),
-    Float(f64),
-}
-
 #[derive(Debug, PartialEq, Clone)]
 pub struct Assign {
     pub span: Span,
@@ -31,6 +25,23 @@ impl Assign {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct ClassDefinition {
+    pub span: Span,
+    pub name: String,
+    pub instance_variables: Vec<String>,
+}
+
+impl ClassDefinition {
+    fn expr(span: Span, name: String, instance_variables: Vec<String>) -> Expr {
+        Expr::ClassDefinition(ClassDefinition {
+            span,
+            name,
+            instance_variables,
+        })
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Global {
     pub span: Span,
     pub name: String,
@@ -43,6 +54,12 @@ impl Global {
             name,
         })
     }
+}
+
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum Literal {
+    Integer(i64),
+    Float(f64),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -65,7 +82,7 @@ pub enum Expr {
     Assign(Assign),
     Bind(String, Box<Expr>, Box<Expr>),
     Block(Span, Vec<String>, Box<Expr>),
-    ClassDefinition(Span, String, Vec<String>),
+    ClassDefinition(ClassDefinition),
     Const(Span, Literal),
     Global(Global),
     Send(Span, String, Box<Expr>, Vec<Expr>),
@@ -94,7 +111,7 @@ impl Expr {
             Assign(assign) => &assign.span,
             Bind(_, _, body) => return body.span(),
             Block(span, ..) => span,
-            ClassDefinition(span, ..) => span,
+            ClassDefinition(definition) => &definition.span,
             Const(span, ..) => span,
             Global(global) => &global.span,
             Send(span, ..) => span,
@@ -479,7 +496,9 @@ fn block_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
 }
 
 fn class_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
-    let start = parser.span().start;
+    // FIXME: span is the span of the @class, but maybe it would be better if these
+    // had all their own spans.
+    let span = parser.span();
     let class_name = match parser.scan()? {
         Token::Identifier => {
             if parser.slice().chars().next().expect("BUG: empty identifier").is_uppercase() {
@@ -512,7 +531,7 @@ fn class_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
             _ => return parser.error("Invalid instance variable specification"),
         }
     }
-    Ok(Expr::ClassDefinition(start..parser.span().end, class_name, instance_variables))
+    Ok(ClassDefinition::expr(span, class_name, instance_variables))
 }
 
 fn let_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
@@ -618,7 +637,7 @@ fn seq(exprs: Vec<Expr>) -> Expr {
 }
 
 fn class(span: Span, name: &str, instance_variables: Vec<&str>) -> Expr {
-    Expr::ClassDefinition(
+    ClassDefinition::expr(
         span,
         name.to_string(),
         instance_variables.into_iter().map(|n| n.to_string()).collect(),
@@ -730,5 +749,5 @@ fn parse_block_args() {
 
 #[test]
 fn parse_class() {
-    assert_eq!(parse_str("@class Point { x, y }"), Ok(class(0..21, "Point", vec!["x", "y"])));
+    assert_eq!(parse_str("@class Point { x, y }"), Ok(class(0..6, "Point", vec!["x", "y"])));
 }

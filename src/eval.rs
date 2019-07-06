@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::objects2::{Builtins, Object, Value};
-use crate::parse::{parse_str, Assign, Expr, Global, Literal, SyntaxError, Var};
+use crate::parse::{parse_str, Assign, ClassDefinition, Expr, Global, Literal, SyntaxError, Var};
 
 struct Env<'a> {
     builtins: &'a Builtins,
@@ -28,9 +28,7 @@ impl<'a> Env<'a> {
             Assign(assign) => self.eval_assign(assign),
             Bind(name, value, body) => self.eval_bind(name, value, body),
             Block(_, params, body) => self.eval_block(params, body),
-            ClassDefinition(_, name, instance_variables) => {
-                self.eval_class_definition(name, instance_variables)
-            }
+            ClassDefinition(definition) => self.eval_class_definition(definition),
             Const(_, literal) => self.eval_literal(literal),
             Global(global) => self.eval_global(global),
             Send(_, selector, receiver, args) => self.eval_send(selector, receiver, args),
@@ -94,16 +92,15 @@ impl<'a> Env<'a> {
         Ok(self.builtins.make_closure(Rc::clone(&self.frame), params.to_owned(), body.to_owned()))
     }
 
-    fn eval_class_definition(
-        &self,
-        name: &String,
-        instance_variables: &Vec<String>,
-    ) -> Result<Object, SyntaxError> {
+    fn eval_class_definition(&self, definition: &ClassDefinition) -> Result<Object, SyntaxError> {
         if self.frame.parent.is_some() {
-            // FIXME: Should be an error, not a panic
-            panic!("Class definition not at toplevel! ({})", name);
+            return Err(SyntaxError::new(
+                definition.span.clone(),
+                "Class definition not at toplevel",
+            ));
         }
-        let class = self.builtins.make_class(name, instance_variables);
+        let name = &definition.name;
+        let class = self.builtins.make_class(name, &definition.instance_variables);
         self.builtins.globals.borrow_mut().insert(name.to_string(), class.clone());
         Ok(class)
     }
@@ -446,6 +443,22 @@ fn eval_closure3() {
         )
         .integer(),
         3
+    );
+}
+
+#[test]
+fn eval_class_not_toplevel() {
+    assert_eq!(
+        eval_str("let x = 42, @class Point { x, y }"),
+        Err(SyntaxError {
+            span: 12..18,
+            problem: "Class definition not at toplevel",
+            context: concat!(
+                "001 let x = 42, @class Point { x, y }\n",
+                "                ^^^^^^ Class definition not at toplevel\n"
+            )
+            .to_string()
+        })
     );
 }
 
