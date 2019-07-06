@@ -220,12 +220,10 @@ fn make_token_table() -> TokenTable {
 
     Syntax::def(t, Number, number_prefix, invalid_suffix, precedence_invalid);
     // We could really do the decision between local and global here
-    Syntax::def(t, LocalId, identifier_prefix, identifier_suffix, identifier_precedence);
+    Syntax::def(t, Identifier, identifier_prefix, identifier_suffix, identifier_precedence);
     // Syntax::def(t, GlobalId, global_prefix, identifier_suffix, identifier_precedence);
     Syntax::def(t, Operator, operator_prefix, operator_suffix, operator_precedence);
     Syntax::def(t, Keyword, invalid_prefix, keyword_suffix, precedence_5);
-    // Why have Toplevel instead of making them identifiers?
-    Syntax::def(t, Toplevel, toplevel_prefix, invalid_suffix, precedence_0);
     // Why have OpenDelimiter and CloseDelimiter instead of making them operators?
     Syntax::def(t, OpenDelimiter, delimiter_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, CloseDelimiter, invalid_prefix, invalid_suffix, precedence_0);
@@ -296,9 +294,16 @@ fn identifier_precedence(parser: &Parser, span: Span) -> Result<usize, SyntaxErr
 }
 
 fn identifier_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
-    match parser.name_table.get(parser.slice()) {
+    let name = parser.slice();
+    match parser.name_table.get(name) {
         Some(syntax) => parser.parse_prefix_syntax(syntax),
-        None => return Ok(Expr::Var(parser.span(), parser.tokenstring())),
+        None => {
+            let c = name.chars().next().expect("BUG: empty identifier");
+            if c == '@' {
+                return parser.error("Unknown toplevel definition");
+            }
+            return Ok(Expr::Var(parser.span(), parser.tokenstring()));
+        }
     }
 }
 
@@ -405,7 +410,7 @@ fn block_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
         parser.scan()?;
         loop {
             let token = parser.scan()?;
-            if token == Token::LocalId {
+            if token == Token::Identifier {
                 params.push(parser.tokenstring());
                 continue;
             }
@@ -431,7 +436,7 @@ fn class_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     let start = parser.span().start;
     let class_name = match parser.scan()? {
         Token::GlobalId => parser.tokenstring(),
-        Token::LocalId => return parser.error("Class names must start with a capital letter"),
+        Token::Identifier => return parser.error("Class names must start with a capital letter"),
         _ => return parser.error("Expected class name"),
     };
     match parser.scan()? {
@@ -443,7 +448,7 @@ fn class_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
         let token = parser.scan()?;
         let tokenstring = parser.tokenstring();
         match token {
-            Token::LocalId => {
+            Token::Identifier => {
                 instance_variables.push(tokenstring);
             }
             Token::CloseDelimiter if parser.slice() == "}" => {
@@ -459,7 +464,7 @@ fn class_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
 }
 
 fn let_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
-    if Token::LocalId != parser.scan()? {
+    if Token::Identifier != parser.scan()? {
         return parser.error("Expected variable name after let");
     }
     let name = parser.slice().to_string();
@@ -515,13 +520,6 @@ fn number_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
             }
         }
         Ok(Expr::Const(parser.span(), Literal::Integer(decimal)))
-    }
-}
-
-fn toplevel_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
-    match parser.name_table.get(parser.slice()) {
-        Some(syntax) => parser.parse_prefix_syntax(syntax),
-        None => parser.error("Unknown toplevel definition"),
     }
 }
 

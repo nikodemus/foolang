@@ -11,10 +11,9 @@ pub enum Token {
     Keyword,
     Number,
     GlobalId,
-    LocalId,
+    Identifier,
     OpenDelimiter,
     Operator,
-    Toplevel,
 }
 
 #[derive(PartialEq)]
@@ -225,7 +224,7 @@ impl<'a> TokenStream<'a> {
         if start.1.is_uppercase() {
             self.result(Token::GlobalId, span)
         } else {
-            self.result(Token::LocalId, span)
+            self.result(Token::Identifier, span)
         }
     }
     fn len(&self) -> usize {
@@ -293,7 +292,8 @@ impl<'a> TokenStream<'a> {
                 next = self.getchar()?;
                 if !next.1.is_alphabetic() {
                     self.unread(next);
-                    return self.result(Token::Toplevel, start..next.0);
+                    // Toplevels are identifiers
+                    return self.result(Token::Identifier, start..next.0);
                 }
             }
         }
@@ -327,7 +327,7 @@ fn scan_char() {
 #[test]
 fn scan_local_id() {
     fn test(mut scanner: TokenStream, want: &str) {
-        assert_eq!(scanner.scan(), Ok(Token::LocalId));
+        assert_eq!(scanner.scan(), Ok(Token::Identifier));
         assert_eq!(scanner.slice(), want);
     }
     test(TokenStream::new(" f"), "f");
@@ -339,24 +339,24 @@ fn scan_local_id() {
 #[test]
 fn scan_binary_op() {
     let mut scanner = TokenStream::new(" foo++bar ");
-    assert_eq!(scanner.scan(), Ok(Token::LocalId));
+    assert_eq!(scanner.scan(), Ok(Token::Identifier));
     assert_eq!(scanner.slice(), "foo");
     assert_eq!(scanner.scan(), Ok(Token::Operator));
     assert_eq!(scanner.slice(), "++");
-    assert_eq!(scanner.scan(), Ok(Token::LocalId));
+    assert_eq!(scanner.scan(), Ok(Token::Identifier));
     assert_eq!(scanner.slice(), "bar");
 }
 
 #[test]
 fn scan_annotations() {
     let mut scanner = TokenStream::new("foo<Foo>+bar<Bar>");
-    assert_eq!(scanner.scan(), Ok(Token::LocalId));
+    assert_eq!(scanner.scan(), Ok(Token::Identifier));
     assert_eq!(scanner.slice(), "foo");
     assert_eq!(scanner.scan(), Ok(Token::Annotation));
     assert_eq!(scanner.slice(), "<Foo>");
     assert_eq!(scanner.scan(), Ok(Token::Operator));
     assert_eq!(scanner.slice(), "+");
-    assert_eq!(scanner.scan(), Ok(Token::LocalId));
+    assert_eq!(scanner.scan(), Ok(Token::Identifier));
     assert_eq!(scanner.slice(), "bar");
     assert_eq!(scanner.scan(), Ok(Token::Annotation));
     assert_eq!(scanner.slice(), "<Bar>");
@@ -481,6 +481,6 @@ fn scan_close_bracket() {
 #[test]
 fn scan_toplevel() {
     let mut scanner = TokenStream::new(" @foo ");
-    assert_eq!(scanner.scan(), Ok(Token::Toplevel));
+    assert_eq!(scanner.scan(), Ok(Token::Identifier));
     assert_eq!(scanner.slice(), "@foo");
 }
