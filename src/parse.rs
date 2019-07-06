@@ -7,6 +7,8 @@ use std::str::FromStr;
 pub use crate::tokenstream::SyntaxError;
 use crate::tokenstream::{Span, Token, TokenStream};
 
+// FIXME: Do these really need clone, if so, why?
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Assign {
     pub span: Span,
@@ -29,6 +31,15 @@ pub struct ClassDefinition {
     pub span: Span,
     pub name: String,
     pub instance_variables: Vec<String>,
+    pub methods: Vec<MethodDefinition>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct MethodDefinition {
+    pub span: Span,
+    pub selector: String,
+    pub parameters: Vec<String>,
+    pub body: Box<Expr>,
 }
 
 impl ClassDefinition {
@@ -37,7 +48,22 @@ impl ClassDefinition {
             span,
             name,
             instance_variables,
+            methods: Vec::new(),
         })
+    }
+    fn add_method(&mut self, method: MethodDefinition) {
+        self.methods.push(method);
+    }
+}
+
+impl MethodDefinition {
+    fn new(span: Span, selector: String, parameters: Vec<String>, body: Expr) -> MethodDefinition {
+        MethodDefinition {
+            span,
+            selector,
+            parameters,
+            body: Box::new(body),
+        }
     }
 }
 
@@ -95,6 +121,20 @@ impl Expr {
         match self {
             Expr::Var(..) => true,
             _ => false,
+        }
+    }
+
+    fn is_class_definition(&self) -> bool {
+        match self {
+            Expr::ClassDefinition(..) => true,
+            _ => false,
+        }
+    }
+
+    fn add_method(&mut self, method: MethodDefinition) {
+        match self {
+            Expr::ClassDefinition(class) => class.add_method(method),
+            _ => panic!("BUG: trying to add a method to {:?}", self),
         }
     }
 
@@ -158,10 +198,26 @@ impl<'a> Parser<'a> {
 
     pub fn parse_expr(&self, precedence: usize) -> Result<Expr, SyntaxError> {
         let mut expr = self.parse_prefix()?;
-        while precedence < self.precedence()? {
-            expr = self.parse_suffix(expr)?;
+        let debug = false;
+        if debug {
+            println!("prefix: {:?}", &expr);
         }
-        Ok(expr)
+        while precedence < self.precedence()? {
+            if debug {
+                println!("  {} < {}", precedence, self.precedence()?);
+            }
+            expr = self.parse_suffix(expr)?;
+            if debug {
+                println!("  => {:?}", &expr);
+            }
+        }
+        if debug {
+            println!("  NOT {} < {}", precedence, self.precedence()?);
+        }
+        if debug {
+            println!("  next: {:?}", self.lookahead()?);
+        }
+        return Ok(expr);
     }
 
     fn parse_prefix(&self) -> Result<Expr, SyntaxError> {
@@ -306,6 +362,7 @@ fn make_name_table() -> NameTable {
     let t = &mut table;
 
     Syntax::def(t, "@class", class_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "method", invalid_prefix, method_suffix, precedence_1);
     Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ",", invalid_prefix, sequence_suffix, precedence_1);
     Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_2);
@@ -380,9 +437,18 @@ fn identifier_suffix(
     left: Expr,
     _: PrecedenceFunction,
 ) -> Result<Expr, SyntaxError> {
-    match parser.name_table.get(parser.slice()) {
+    let name = parser.slice();
+    match parser.name_table.get(name) {
         Some(syntax) => parser.parse_suffix_syntax(syntax, left),
         None => {
+            let c = name.chars().next().expect("BUG: empty identifier");
+            if c == '@' {
+                return parser.error("Unknown toplevel definition");
+            }
+            if c.is_uppercase() {
+                // FIXME: not all languages have uppercase
+                return parser.error("Invalid message name (must be lowercase)");
+            }
             // Unary message
             Ok(Expr::Send(parser.span(), parser.tokenstring(), Box::new(left), vec![]))
         }
@@ -452,6 +518,48 @@ fn keyword_suffix(
     // FIXME: Potential multiline span is probably going to cause
     // trouble in error reporting...
     Ok(Expr::Send(start.start..parser.span().end, selector, Box::new(left), args))
+}
+
+fn method_suffix(
+    parser: &Parser,
+    mut class: Expr,
+    _precedence: PrecedenceFunction,
+) -> Result<Expr, SyntaxError> {
+    if !class.is_class_definition() {
+        return parser.error("@method outside class context");
+    }
+    // FIXME: span is the span of the @method
+    let span = parser.span();
+    let mut selector = String::new();
+    let mut parameters = Vec::new();
+    loop {
+        match parser.scan()? {
+            Token::Identifier | Token::Operator => {
+                assert!(selector.is_empty());
+                assert!(parameters.is_empty());
+                selector = parser.tokenstring();
+                break;
+            }
+            Token::Keyword => {
+                selector.push_str(parser.slice());
+                if let Token::Identifier = parser.scan()? {
+                    parameters.push(parser.tokenstring());
+                } else {
+                    return parser.error("Expected keyword selector parameter");
+                }
+            }
+            _ => return parser.error("Expected method selector"),
+        }
+        match parser.lookahead()? {
+            (Token::Keyword, _) => continue,
+            _ => break,
+        }
+    }
+    // FIXME: This is the place where I could inform parser about instance
+    // variables.
+    let body = parser.parse_expr(0)?;
+    class.add_method(MethodDefinition::new(span, selector, parameters, body));
+    Ok(class)
 }
 
 fn sequence_suffix(
@@ -652,6 +760,15 @@ fn class(span: Span, name: &str, instance_variables: Vec<&str>) -> Expr {
     )
 }
 
+fn method(span: Span, selector: &str, parameters: Vec<&str>, body: Expr) -> MethodDefinition {
+    MethodDefinition::new(
+        span,
+        selector.to_string(),
+        parameters.iter().map(|n| n.to_string()).collect(),
+        body,
+    )
+}
+
 #[test]
 fn parse_decimal() {
     assert_eq!(parse_str("123"), Ok(int(0..3, 123)));
@@ -758,4 +875,11 @@ fn parse_block_args() {
 #[test]
 fn parse_class() {
     assert_eq!(parse_str("@class Point { x, y }"), Ok(class(0..6, "Point", vec!["x", "y"])));
+}
+
+#[test]
+fn parse_method() {
+    let mut class = class(0..6, "Foo", vec![]);
+    class.add_method(method(14..20, "bar", vec![], int(25..27, 42)));
+    assert_eq!(parse_str("@class Foo {} method bar 42"), Ok(class));
 }
