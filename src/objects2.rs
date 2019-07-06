@@ -4,7 +4,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::eval::Frame;
-use crate::parse::{Expr, SyntaxError};
+use crate::parse::{Expr, MethodDefinition, SyntaxError};
 
 use crate::classes;
 

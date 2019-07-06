@@ -506,13 +506,22 @@ fn eval_global2() {
 fn eval_new_instance() {
     let builtins = Builtins::new();
     match eval_all(&builtins, "@class Point { x, y }, Point x: 1 y: 2") {
-        Err(e) => {
-            println!("OOPS: {:?}", e);
-            assert!(false);
-        }
+        Err(e) => panic!("OOPS: {:?}", e),
         Ok(object) => {
             assert_eq!(object.send("x", &[], &builtins), Ok(builtins.make_integer(1)));
             assert_eq!(object.send("y", &[], &builtins), Ok(builtins.make_integer(2)));
+        }
+    }
+}
+
+#[ignore]
+#[test]
+fn eval_instance_method() {
+    let builtins = Builtins::new();
+    match eval_all(&builtins, "@class Foo { dummy } method bar 311, Foo dummy: 0") {
+        Err(e) => panic!("OOPS: {:?}", e),
+        Ok(object) => {
+            assert_eq!(object.send("bar", &[], &builtins), Ok(builtins.make_integer(311)));
         }
     }
 }
