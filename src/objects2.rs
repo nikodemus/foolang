@@ -17,6 +17,7 @@ type MethodFunction = fn(&Object, &[&Object], &Builtins) -> Value;
 pub enum Method {
     Primitive(MethodFunction),
     Interpreter(Closure),
+    Reader(usize),
 }
 
 pub struct Vtable {
@@ -36,8 +37,12 @@ impl Vtable {
         self.methods.insert(name.to_string(), Method::Primitive(method));
     }
 
-    pub fn add(&mut self, selector: &str, method: Closure) {
+    pub fn add_method(&mut self, selector: &str, method: Closure) {
         self.methods.insert(selector.to_string(), Method::Interpreter(method));
+    }
+
+    pub fn add_reader(&mut self, selector: &str, index: usize) {
+        self.methods.insert(selector.to_string(), Method::Reader(index));
     }
 
     pub fn selectors(&self) -> Vec<String> {
@@ -147,23 +152,19 @@ impl Builtins {
         let mut class_vtable = Vtable::new(vtable_name.as_str());
         class_vtable.def(&ctor_selector(&classdef.instance_variables), generic_ctor);
         let mut instance_vtable = Vtable::new(&classdef.name);
-        let mut offset = -1;
+        let mut index = 0;
         for name in &classdef.instance_variables {
-            offset += 1;
+            index += 1;
             if &name[0..1] == "_" {
                 continue;
             }
-            match offset {
-                0 => instance_vtable.def(&name, generic_reader_0),
-                1 => instance_vtable.def(&name, generic_reader_1),
-                2 => instance_vtable.def(&name, generic_reader_2),
-                3 => instance_vtable.def(&name, generic_reader_3),
-                _ => unimplemented!("Support for > 4 instance variables"),
-            }
+            instance_vtable.add_reader(&name, index - 1);
         }
         for method in &classdef.methods {
-            instance_vtable
-                .add(&method.selector, self.make_method_function(&method.parameters, &method.body));
+            instance_vtable.add_method(
+                &method.selector,
+                self.make_method_function(&method.parameters, &method.body),
+            );
         }
         Object {
             vtable: Rc::new(class_vtable),
@@ -257,6 +258,7 @@ impl Object {
             Some(Method::Interpreter(closure)) => {
                 eval::apply_with_extra_args(closure, args, &[self], builtins)
             }
+            Some(Method::Reader(index)) => read_instance_variable(self, *index),
             None => {
                 println!("debug: available methods: {:?}", &self.vtable.selectors());
                 unimplemented!("{} doesNotUnderstand {} {:?}", self, message, args);
@@ -320,22 +322,7 @@ fn generic_ctor(receiver: &Object, args: &[&Object], _builtins: &Builtins) -> Va
     })
 }
 
-fn generic_reader_0(receiver: &Object, _args: &[&Object], _builtins: &Builtins) -> Value {
+fn read_instance_variable(receiver: &Object, index: usize) -> Value {
     let instance = receiver.instance();
-    Ok(instance.instance_variables[0].to_owned())
-}
-
-fn generic_reader_1(receiver: &Object, _args: &[&Object], _builtins: &Builtins) -> Value {
-    let instance = receiver.instance();
-    Ok(instance.instance_variables[1].to_owned())
-}
-
-fn generic_reader_2(receiver: &Object, _args: &[&Object], _builtins: &Builtins) -> Value {
-    let instance = receiver.instance();
-    Ok(instance.instance_variables[2].to_owned())
-}
-
-fn generic_reader_3(receiver: &Object, _args: &[&Object], _builtins: &Builtins) -> Value {
-    let instance = receiver.instance();
-    Ok(instance.instance_variables[3].to_owned())
+    Ok(instance.instance_variables[index].to_owned())
 }
