@@ -431,3 +431,10 @@ fn eval_global1() {
         })
     );
 }
+
+#[test]
+fn eval_global2() {
+    let class = eval_ok("Integer").class();
+    assert_eq!(class.instance_vtable.name, "Integer");
+    assert_eq!(class.instance_variables, Vec::<String>::new());
+}

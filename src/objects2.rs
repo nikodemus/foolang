@@ -84,11 +84,37 @@ pub struct Builtins {
 
 impl Builtins {
     pub fn new() -> Builtins {
+        let mut globals = HashMap::new();
+
+        let integer_vtable = Rc::new(classes::integer2::vtable());
+        globals.insert(
+            "Integer".to_string(),
+            Object {
+                vtable: Rc::new(Vtable::new("class Integer")),
+                datum: Datum::Class(Rc::new(Class {
+                    instance_vtable: Rc::clone(&integer_vtable),
+                    instance_variables: vec![],
+                })),
+            },
+        );
+
+        let float_vtable = Rc::new(classes::float2::vtable());
+        globals.insert(
+            "Float".to_string(),
+            Object {
+                vtable: Rc::new(Vtable::new("class Float")),
+                datum: Datum::Class(Rc::new(Class {
+                    instance_vtable: Rc::clone(&float_vtable),
+                    instance_variables: vec![],
+                })),
+            },
+        );
+
         Builtins {
             closure_vtable: Rc::new(classes::closure2::vtable()),
-            float_vtable: Rc::new(classes::float2::vtable()),
-            integer_vtable: Rc::new(classes::integer2::vtable()),
-            globals: RefCell::new(HashMap::new()),
+            float_vtable,
+            integer_vtable,
+            globals: RefCell::new(globals),
         }
     }
 
