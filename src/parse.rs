@@ -14,13 +14,28 @@ pub enum Literal {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Global {
+    span: Span,
+    name: String,
+}
+
+impl Global {
+    fn expr(span: Span, name: String) -> Expr {
+        Expr::Global(Global {
+            span,
+            name,
+        })
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Assign(String, Box<Expr>),
     Bind(String, Box<Expr>, Box<Expr>),
     Block(Span, Vec<String>, Box<Expr>),
     ClassDefinition(Span, String, Vec<String>),
     Const(Span, Literal),
-    Global(Span, String),
+    Global(Global),
     Send(Span, String, Box<Expr>, Vec<Expr>),
     Seq(Vec<Expr>),
     Var(Span, String),
@@ -49,7 +64,7 @@ impl Expr {
             Block(span, ..) => span,
             ClassDefinition(span, ..) => span,
             Const(span, ..) => span,
-            Global(span, ..) => span,
+            Global(global) => &global.span,
             Send(span, ..) => span,
             Seq(exprs) => return exprs[exprs.len() - 1].span(),
             Var(span, ..) => span,
@@ -233,10 +248,10 @@ fn make_name_table() -> NameTable {
     let mut table: NameTable = HashMap::new();
     let t = &mut table;
 
+    Syntax::def(t, "@class", class_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ",", invalid_prefix, sequence_suffix, precedence_1);
     Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_2);
-    Syntax::def(t, "@class", class_prefix, invalid_suffix, precedence_0);
 
     Syntax::def(t, "{", block_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "}", invalid_prefix, invalid_suffix, precedence_0);
@@ -278,13 +293,6 @@ fn invalid_suffix(parser: &Parser, _: Expr, _: PrecedenceFunction) -> Result<Exp
     parser.error("Not valid in operator position")
 }
 
-fn delimiter_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
-    match parser.name_table.get(parser.slice()) {
-        Some(syntax) => parser.parse_prefix_syntax(syntax),
-        None => parser.error("Unknown delimiter"),
-    }
-}
-
 fn identifier_precedence(parser: &Parser, span: Span) -> Result<usize, SyntaxError> {
     match parser.name_table.get(parser.slice_at(span.clone())) {
         Some(syntax) => parser.syntax_precedence(syntax, span),
@@ -303,7 +311,7 @@ fn identifier_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
             }
             if c.is_uppercase() {
                 // FIXME: not all languages have uppercase
-                return Ok(Expr::Global(parser.span(), parser.tokenstring()));
+                return Ok(Global::expr(parser.span(), parser.tokenstring()));
             }
             return Ok(Expr::Var(parser.span(), parser.tokenstring()));
         }

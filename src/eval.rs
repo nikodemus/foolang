@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::objects2::{Builtins, Object, Value};
-use crate::parse::{parse_str, Expr, Literal, SyntaxError};
+use crate::parse::{parse_str, Expr, Global, Literal, SyntaxError};
 
 struct Env<'a> {
     builtins: &'a Builtins,
@@ -32,7 +32,7 @@ impl<'a> Env<'a> {
                 self.eval_class_definition(name, instance_variables)
             }
             Const(_, literal) => self.eval_literal(literal),
-            Global(..) => self.eval_global(expr),
+            Global(global) => self.eval_global(global),
             Send(_, selector, receiver, args) => self.eval_send(selector, receiver, args),
             Seq(exprs) => self.eval_seq(exprs),
             Var(_, name) => self.eval_variable(name),
@@ -103,7 +103,7 @@ impl<'a> Env<'a> {
         Ok(class)
     }
 
-    fn eval_global(&self, global: &Expr) -> Result<Object, SyntaxError> {
+    fn eval_global(&self, global: &Global) -> Result<Object, SyntaxError> {
         unimplemented!("eval_global")
     }
 
