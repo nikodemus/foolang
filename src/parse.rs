@@ -32,6 +32,7 @@ pub struct ClassDefinition {
     pub name: String,
     pub instance_variables: Vec<String>,
     pub methods: Vec<MethodDefinition>,
+    default_constructor: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -49,6 +50,7 @@ impl ClassDefinition {
             name,
             instance_variables,
             methods: Vec::new(),
+            default_constructor: None,
         }
     }
 
@@ -58,6 +60,22 @@ impl ClassDefinition {
 
     fn add_method(&mut self, method: MethodDefinition) {
         self.methods.push(method);
+    }
+
+    pub fn constructor(&self) -> String {
+        if self.instance_variables.is_empty() {
+            match &self.default_constructor {
+                Some(ctor) => ctor.to_string(),
+                None => "new".to_string(),
+            }
+        } else {
+            let mut selector = String::new();
+            for var in &self.instance_variables {
+                selector.push_str(var);
+                selector.push_str(":");
+            }
+            selector
+        }
     }
 }
 
@@ -361,6 +379,7 @@ fn make_name_table() -> NameTable {
 
     Syntax::def(t, "@class", class_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "method", invalid_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "defaultConstructor", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "@end", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ",", invalid_prefix, sequence_suffix, precedence_1);
@@ -640,6 +659,7 @@ fn class_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
             _ => return parser.error("Invalid instance variable specification"),
         }
     }
+    let size = instance_variables.len();
     let mut class = ClassDefinition::new(span, class_name, instance_variables);
     loop {
         let next = parser.scan()?;
@@ -648,6 +668,20 @@ fn class_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
         }
         if next == Token::Identifier && parser.slice() == "method" {
             parse_method(parser, &mut class)?;
+            continue;
+        }
+        if next == Token::Identifier && parser.slice() == "defaultConstructor" {
+            let ctor = parser.scan()?;
+            if ctor == Token::Identifier {
+                if size > 0 {
+                    return parser
+                        .error("Class has instance variables: no default constructor available");
+                }
+                if class.default_constructor.is_some() {
+                    return parser.error("Multiple default constructors specified");
+                }
+                class.default_constructor = Some(parser.tokenstring());
+            }
             continue;
         }
         return parser.error("Expected method or @end");

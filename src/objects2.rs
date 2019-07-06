@@ -150,7 +150,7 @@ impl Builtins {
         let mut vtable_name = "class ".to_string();
         vtable_name.push_str(&classdef.name);
         let mut class_vtable = Vtable::new(vtable_name.as_str());
-        class_vtable.def(&ctor_selector(&classdef.instance_variables), generic_ctor);
+        class_vtable.def(&classdef.constructor(), generic_ctor);
         let mut instance_vtable = Vtable::new(&classdef.name);
         let mut index = 0;
         for name in &classdef.instance_variables {
@@ -300,19 +300,6 @@ impl fmt::Debug for Object {
             Datum::Class(_) => write!(f, "{}", self.vtable.name),
             Datum::Instance(_) => write!(f, "{}", self.vtable.name),
         }
-    }
-}
-
-fn ctor_selector(instance_variables: &[String]) -> String {
-    if instance_variables.is_empty() {
-        return "new".to_string();
-    } else {
-        let mut selector = String::new();
-        for var in instance_variables {
-            selector.push_str(var);
-            selector.push_str(":");
-        }
-        selector
     }
 }
 

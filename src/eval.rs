@@ -522,13 +522,24 @@ fn eval_global2() {
 }
 
 #[test]
-fn eval_new_instance() {
+fn eval_new_instance1() {
     let builtins = Builtins::new();
     match eval_all(&builtins, "@class Point { x, y } @end, Point x: 1 y: 2") {
         Err(e) => panic!("Test OOPS: {:?}", e),
         Ok(object) => {
             assert_eq!(object.send("x", &[], &builtins), Ok(builtins.make_integer(1)));
             assert_eq!(object.send("y", &[], &builtins), Ok(builtins.make_integer(2)));
+        }
+    }
+}
+
+#[test]
+fn eval_new_instance2() {
+    let builtins = Builtins::new();
+    match eval_all(&builtins, "@class Oh {} method no 42 defaultConstructor noes @end, Oh noes") {
+        Err(e) => panic!("Test OOPS: {:?}", e),
+        Ok(object) => {
+            assert_eq!(object.send("no", &[], &builtins), Ok(builtins.make_integer(42)));
         }
     }
 }
