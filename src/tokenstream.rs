@@ -6,12 +6,10 @@ pub type Span = Range<usize>;
 pub enum Token {
     Annotation,
     Character,
-    CloseDelimiter,
     Eof,
     Keyword,
     Number,
     Identifier,
-    OpenDelimiter,
     Operator,
 }
 
@@ -186,10 +184,10 @@ impl<'a> TokenStream<'a> {
             return self.result(Token::Keyword, start.0..start.0 + 1);
         }
         if is_open_delimiter(start.1) {
-            return self.result(Token::OpenDelimiter, start.0..start.0 + 1);
+            return self.result(Token::Operator, start.0..start.0 + 1);
         }
         if is_close_delimiter(start.1) {
-            return self.result(Token::CloseDelimiter, start.0..start.0 + 1);
+            return self.result(Token::Operator, start.0..start.0 + 1);
         }
         let mut end = start.clone();
         loop {
@@ -436,41 +434,41 @@ fn scan_keyword2() {
 #[test]
 fn scan_open_paren() {
     let mut scanner = TokenStream::new(" ((  ");
-    assert_eq!(scanner.scan(), Ok(Token::OpenDelimiter));
+    assert_eq!(scanner.scan(), Ok(Token::Operator));
     assert_eq!(scanner.slice(), "(");
 }
 
 #[test]
 fn scan_close_paren() {
     let mut scanner = TokenStream::new(" ))  ");
-    assert_eq!(scanner.scan(), Ok(Token::CloseDelimiter));
+    assert_eq!(scanner.scan(), Ok(Token::Operator));
     assert_eq!(scanner.slice(), ")");
 }
 
 #[test]
 fn scan_open_brace() {
     let mut scanner = TokenStream::new(" {{  ");
-    assert_eq!(scanner.scan(), Ok(Token::OpenDelimiter));
+    assert_eq!(scanner.scan(), Ok(Token::Operator));
     assert_eq!(scanner.slice(), "{");
 }
 
 #[test]
 fn scan_close_brace() {
     let mut scanner = TokenStream::new(" }}  ");
-    assert_eq!(scanner.scan(), Ok(Token::CloseDelimiter));
+    assert_eq!(scanner.scan(), Ok(Token::Operator));
     assert_eq!(scanner.slice(), "}");
 }
 
 #[test]
 fn scan_open_bracket() {
     let mut scanner = TokenStream::new(" [[  ");
-    assert_eq!(scanner.scan(), Ok(Token::OpenDelimiter));
+    assert_eq!(scanner.scan(), Ok(Token::Operator));
     assert_eq!(scanner.slice(), "[");
 }
 
 #[test]
 fn scan_close_bracket() {
     let mut scanner = TokenStream::new(" ]]  ");
-    assert_eq!(scanner.scan(), Ok(Token::CloseDelimiter));
+    assert_eq!(scanner.scan(), Ok(Token::Operator));
     assert_eq!(scanner.slice(), "]");
 }

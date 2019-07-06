@@ -221,13 +221,9 @@ fn make_token_table() -> TokenTable {
     use Token::*;
 
     Syntax::def(t, Number, number_prefix, invalid_suffix, precedence_invalid);
-    // We could really do the decision between local and global here
     Syntax::def(t, Identifier, identifier_prefix, identifier_suffix, identifier_precedence);
     Syntax::def(t, Operator, operator_prefix, operator_suffix, operator_precedence);
     Syntax::def(t, Keyword, invalid_prefix, keyword_suffix, precedence_5);
-    // Why have OpenDelimiter and CloseDelimiter instead of making them operators?
-    Syntax::def(t, OpenDelimiter, delimiter_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, CloseDelimiter, invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, Eof, invalid_prefix, invalid_suffix, precedence_0);
 
     table
@@ -240,8 +236,10 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ",", invalid_prefix, sequence_suffix, precedence_1);
     Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_2);
-    Syntax::def(t, "{", block_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "@class", class_prefix, invalid_suffix, precedence_0);
+
+    Syntax::def(t, "{", block_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "}", invalid_prefix, invalid_suffix, precedence_0);
 
     Syntax::op(t, "*", false, true, 50);
     Syntax::op(t, "/", false, true, 40);
@@ -430,7 +428,7 @@ fn block_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     // FIXME: hardcoded {
     // Would be nice to be able to swap between [] and {} and
     // keep this function same,
-    if end == Token::CloseDelimiter && parser.slice() == "}" {
+    if end == Token::Operator && parser.slice() == "}" {
         Ok(Expr::Block(start.start..parser.span().end, params, Box::new(body)))
     } else {
         parser.error("Expected } as block terminator")
@@ -451,7 +449,7 @@ fn class_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
         _ => return parser.error("Expected class name"),
     };
     match parser.scan()? {
-        Token::OpenDelimiter if parser.slice() == "{" => {}
+        Token::Operator if parser.slice() == "{" => {}
         _ => return parser.error("Expected { to open instance variable block"),
     }
     let mut instance_variables = Vec::new();
@@ -462,7 +460,7 @@ fn class_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
             Token::Identifier => {
                 instance_variables.push(tokenstring);
             }
-            Token::CloseDelimiter if parser.slice() == "}" => {
+            Token::Operator if parser.slice() == "}" => {
                 break;
             }
             Token::Operator if parser.slice() == "," => {
