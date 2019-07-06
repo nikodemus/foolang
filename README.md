@@ -5,7 +5,7 @@
 A Smalltalk-inspired object language that liberally cribs from Erlang
 and Fortress.
 
-Status: bootstrap evaluator implementation in progress.
+**Status**: bootstrap evaluator implementation in progress.
 
 ## Hello World
 
