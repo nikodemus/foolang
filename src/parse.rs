@@ -29,6 +29,21 @@ impl Global {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Var {
+    pub span: Span,
+    pub name: String,
+}
+
+impl Var {
+    fn expr(span: Span, name: String) -> Expr {
+        Expr::Var(Var {
+            span,
+            name,
+        })
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Assign(String, Box<Expr>),
     Bind(String, Box<Expr>, Box<Expr>),
@@ -38,7 +53,7 @@ pub enum Expr {
     Global(Global),
     Send(Span, String, Box<Expr>, Vec<Expr>),
     Seq(Vec<Expr>),
-    Var(Span, String),
+    Var(Var),
 }
 
 impl Expr {
@@ -51,7 +66,7 @@ impl Expr {
 
     fn name(&self) -> String {
         match self {
-            Expr::Var(_, name) => name.to_owned(),
+            Expr::Var(var) => var.name.to_owned(),
             _ => panic!("BUG: cannot extract name from {:?}", self),
         }
     }
@@ -67,7 +82,7 @@ impl Expr {
             Global(global) => &global.span,
             Send(span, ..) => span,
             Seq(exprs) => return exprs[exprs.len() - 1].span(),
-            Var(span, ..) => span,
+            Var(var) => &var.span,
         };
         span.to_owned()
     }
@@ -313,7 +328,7 @@ fn identifier_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
                 // FIXME: not all languages have uppercase
                 return Ok(Global::expr(parser.span(), parser.tokenstring()));
             }
-            return Ok(Expr::Var(parser.span(), parser.tokenstring()));
+            return Ok(Var::expr(parser.span(), parser.tokenstring()));
         }
     }
 }
@@ -555,7 +570,7 @@ fn float(span: Span, value: f64) -> Expr {
 }
 
 fn var(span: Span, name: &str) -> Expr {
-    Expr::Var(span, name.to_string())
+    Var::expr(span, name.to_string())
 }
 
 fn unary(span: Span, name: &str, left: Expr) -> Expr {

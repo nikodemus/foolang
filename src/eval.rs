@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::objects2::{Builtins, Object, Value};
-use crate::parse::{parse_str, Expr, Global, Literal, SyntaxError};
+use crate::parse::{parse_str, Expr, Global, Literal, SyntaxError, Var};
 
 struct Env<'a> {
     builtins: &'a Builtins,
@@ -35,7 +35,7 @@ impl<'a> Env<'a> {
             Global(global) => self.eval_global(global),
             Send(_, selector, receiver, args) => self.eval_send(selector, receiver, args),
             Seq(exprs) => self.eval_seq(exprs),
-            Var(_, name) => self.eval_variable(name),
+            Var(var) => self.eval_var(var),
         }
     }
 
@@ -141,16 +141,16 @@ impl<'a> Env<'a> {
         Ok(result)
     }
 
-    fn eval_variable(&self, name: &String) -> Result<Object, SyntaxError> {
+    fn eval_var(&self, var: &Var) -> Result<Object, SyntaxError> {
         let mut frame = &self.frame;
         loop {
-            match frame.local.borrow().get(name) {
+            match frame.local.borrow().get(&var.name) {
                 Some(value) => return Ok(value.to_owned()),
                 None => match &frame.parent {
                     Some(parent_frame) => {
                         frame = parent_frame;
                     }
-                    None => panic!("Unbound variable: {}", name),
+                    None => return Err(SyntaxError::new(var.span.clone(), "Unbound variable")),
                 },
             }
         }
@@ -388,6 +388,22 @@ fn eval_unary() {
 #[test]
 fn eval_keyword() {
     assert_eq!(eval_ok("15 gcd: 100").integer(), 5);
+}
+
+#[test]
+fn eval_unbound() {
+    assert_eq!(
+        eval_str("let foo = 41, foo + bar"),
+        Err(SyntaxError {
+            span: 20..23,
+            problem: "Unbound variable",
+            context: concat!(
+                "001 let foo = 41, foo + bar\n",
+                "                        ^^^ Unbound variable\n"
+            )
+            .to_string()
+        })
+    );
 }
 
 #[test]
