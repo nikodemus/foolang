@@ -4,7 +4,9 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::objects2::{Builtins, Object, Value};
-use crate::parse::{parse_str, Assign, ClassDefinition, Expr, Global, Literal, SyntaxError, Var};
+use crate::parse::{
+    parse_str, Assign, ClassDefinition, Expr, Global, Literal, Parser, SyntaxError, Var,
+};
 
 struct Env<'a> {
     builtins: &'a Builtins,
@@ -177,6 +179,17 @@ fn eval_str(source: &str) -> Result<Object, SyntaxError> {
     let builtins = Builtins::new();
     let expr = parse_str(source)?;
     Env::new(&builtins).eval(&expr).map_err(|e| e.add_context(source))
+}
+
+fn eval_all(builtins: &Builtins, source: &str) -> Result<Object, SyntaxError> {
+    let env = Env::new(builtins);
+    let mut parser = Parser::new(source);
+    loop {
+        let res = env.eval(&mut parser.parse()?)?;
+        if parser.at_eof() {
+            return Ok(res);
+        }
+    }
 }
 
 fn eval_ok(source: &str) -> Object {
@@ -487,4 +500,19 @@ fn eval_global2() {
     let class = eval_ok("Integer").class();
     assert_eq!(class.instance_vtable.name, "Integer");
     assert_eq!(class.instance_variables, Vec::<String>::new());
+}
+
+#[test]
+fn eval_new_instance() {
+    let builtins = Builtins::new();
+    match eval_all(&builtins, "@class Point { x, y }, Point x: 1 y: 2") {
+        Err(e) => {
+            println!("OOPS: {:?}", e);
+            assert!(false);
+        }
+        Ok(object) => {
+            assert_eq!(object.send("x", &[], &builtins), Ok(builtins.make_integer(1)));
+            assert_eq!(object.send("y", &[], &builtins), Ok(builtins.make_integer(2)));
+        }
+    }
 }

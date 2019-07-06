@@ -135,7 +135,7 @@ enum Syntax {
 type TokenTable = HashMap<Token, Syntax>;
 type NameTable = HashMap<String, Syntax>;
 
-struct Parser<'a> {
+pub struct Parser<'a> {
     source: &'a str,
     tokenstream: RefCell<TokenStream<'a>>,
     token_table: TokenTable,
@@ -228,6 +228,14 @@ impl<'a> Parser<'a> {
 
     pub fn scan(&self) -> Result<Token, SyntaxError> {
         self.tokenstream.borrow_mut().scan()
+    }
+
+    pub fn at_eof(&self) -> bool {
+        if let Ok((Token::Eof, _)) = self.lookahead() {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     pub fn span(&self) -> Span {

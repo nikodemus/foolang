@@ -61,18 +61,24 @@ pub struct Closure {
     pub body: Expr,
 }
 
+#[derive(PartialEq)]
+pub struct Class {
+    pub instance_vtable: Rc<Vtable>,
+    pub instance_variables: Vec<String>,
+}
+
+#[derive(PartialEq)]
+pub struct Instance {
+    pub instance_variables: Vec<Object>,
+}
+
 #[derive(PartialEq, Clone)]
 pub enum Datum {
     Integer(i64),
     Float(f64),
     Class(Rc<Class>),
     Closure(Rc<Closure>),
-}
-
-#[derive(PartialEq)]
-pub struct Class {
-    pub instance_vtable: Rc<Vtable>,
-    pub instance_variables: Vec<String>,
+    Instance(Rc<Instance>),
 }
 
 pub struct Builtins {
@@ -121,11 +127,28 @@ impl Builtins {
     pub fn make_class(&self, name: &str, instance_variables: &[String]) -> Object {
         let mut vtable_name = "class ".to_string();
         vtable_name.push_str(name);
+        let mut class_vtable = Vtable::new(vtable_name.as_str());
+        class_vtable.def(&ctor_selector(instance_variables), generic_ctor);
+        let mut instance_vtable = Vtable::new(name);
+        let mut offset = -1;
+        for name in instance_variables {
+            offset += 1;
+            if &name[0..1] == "_" {
+                continue;
+            }
+            match offset {
+                0 => instance_vtable.def(&name, generic_reader_0),
+                1 => instance_vtable.def(&name, generic_reader_1),
+                2 => instance_vtable.def(&name, generic_reader_2),
+                3 => instance_vtable.def(&name, generic_reader_3),
+                _ => unimplemented!("Support for > 4 instance variables"),
+            }
+        }
         Object {
-            vtable: Rc::new(Vtable::new(vtable_name.as_str())),
+            vtable: Rc::new(class_vtable),
             datum: Datum::Class(Rc::new(Class {
-                instance_vtable: Rc::new(Vtable::new(name)),
-                instance_variables: instance_variables.iter().map(|x| x.to_owned()).collect(),
+                instance_vtable: Rc::new(instance_vtable),
+                instance_variables: instance_variables.iter().map(|x| x.to_string()).collect(),
             })),
         }
     }
@@ -171,6 +194,13 @@ impl Object {
         }
     }
 
+    pub fn instance(&self) -> Rc<Instance> {
+        match &self.datum {
+            Datum::Instance(instance) => Rc::clone(instance),
+            _ => panic!("BUG: {} is not an instance", self),
+        }
+    }
+
     pub fn integer(&self) -> i64 {
         match self.datum {
             Datum::Integer(i) => i,
@@ -189,7 +219,7 @@ impl Object {
         println!("debug: {} {} {:?}", self, message, args);
         match self.vtable.get(message) {
             Some(method) => method(self, args, builtins),
-            None => unimplemented!("Object::send() message not understood"),
+            None => unimplemented!("{} doesNotUnderstand {} {:?}", self, message, args),
         }
     }
 }
@@ -207,6 +237,7 @@ impl fmt::Display for Object {
             }
             Datum::Closure(x) => write!(f, "$<closure {:?}>", x.params),
             Datum::Class(_) => write!(f, "$<{}>", self.vtable.name),
+            Datum::Instance(_) => write!(f, "$<instance {}>", self.vtable.name),
         }
     }
 }
@@ -224,6 +255,46 @@ impl fmt::Debug for Object {
             }
             Datum::Closure(x) => write!(f, "{:?}", *x),
             Datum::Class(_) => write!(f, "{}", self.vtable.name),
+            Datum::Instance(_) => write!(f, "{}", self.vtable.name),
         }
     }
+}
+
+fn ctor_selector(instance_variables: &[String]) -> String {
+    let mut selector = String::new();
+    for var in instance_variables {
+        selector.push_str(var);
+        selector.push_str(":");
+    }
+    selector
+}
+
+fn generic_ctor(receiver: &Object, args: &[&Object], _builtins: &Builtins) -> Value {
+    let class = receiver.class();
+    Ok(Object {
+        vtable: Rc::clone(&class.instance_vtable),
+        datum: Datum::Instance(Rc::new(Instance {
+            instance_variables: args.iter().map(|x| (*x).to_owned()).collect(),
+        })),
+    })
+}
+
+fn generic_reader_0(receiver: &Object, _args: &[&Object], _builtins: &Builtins) -> Value {
+    let instance = receiver.instance();
+    Ok(instance.instance_variables[0].to_owned())
+}
+
+fn generic_reader_1(receiver: &Object, _args: &[&Object], _builtins: &Builtins) -> Value {
+    let instance = receiver.instance();
+    Ok(instance.instance_variables[1].to_owned())
+}
+
+fn generic_reader_2(receiver: &Object, _args: &[&Object], _builtins: &Builtins) -> Value {
+    let instance = receiver.instance();
+    Ok(instance.instance_variables[2].to_owned())
+}
+
+fn generic_reader_3(receiver: &Object, _args: &[&Object], _builtins: &Builtins) -> Value {
+    let instance = receiver.instance();
+    Ok(instance.instance_variables[3].to_owned())
 }
