@@ -538,10 +538,10 @@ fn eval_instance_method1() {
     let builtins = Builtins::new();
     match eval_all(
         &builtins,
-        "@class Foo { dummy }
+        "@class Foo {}
             method bar 311
          @end,
-         Foo dummy: 0",
+         Foo new",
     ) {
         Err(e) => panic!("Test OOPS: {:?}", e),
         Ok(object) => {
@@ -555,13 +555,13 @@ fn eval_instance_method2() {
     let builtins = Builtins::new();
     match eval_all(
         &builtins,
-        "@class Foo { dummy }
+        "@class Foo {}
             method foo
                self bar
             method bar
                311
          @end,
-         Foo dummy: 0",
+         Foo new",
     ) {
         Err(e) => panic!("Test OOPS: {:?}", e),
         Ok(object) => {

@@ -304,12 +304,16 @@ impl fmt::Debug for Object {
 }
 
 fn ctor_selector(instance_variables: &[String]) -> String {
-    let mut selector = String::new();
-    for var in instance_variables {
-        selector.push_str(var);
-        selector.push_str(":");
+    if instance_variables.is_empty() {
+        return "new".to_string();
+    } else {
+        let mut selector = String::new();
+        for var in instance_variables {
+            selector.push_str(var);
+            selector.push_str(":");
+        }
+        selector
     }
-    selector
 }
 
 fn generic_ctor(receiver: &Object, args: &[&Object], _builtins: &Builtins) -> Value {
