@@ -14,6 +14,23 @@ pub enum Literal {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Assign {
+    pub span: Span,
+    pub name: String,
+    pub value: Box<Expr>,
+}
+
+impl Assign {
+    fn expr(span: Span, name: String, value: Expr) -> Expr {
+        Expr::Assign(Assign {
+            span,
+            name,
+            value: Box::new(value),
+        })
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Global {
     pub span: Span,
     pub name: String,
@@ -45,7 +62,7 @@ impl Var {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
-    Assign(String, Box<Expr>),
+    Assign(Assign),
     Bind(String, Box<Expr>, Box<Expr>),
     Block(Span, Vec<String>, Box<Expr>),
     ClassDefinition(Span, String, Vec<String>),
@@ -74,7 +91,7 @@ impl Expr {
     fn span(&self) -> Span {
         use Expr::*;
         let span = match self {
-            Assign(_, right) => return right.span(),
+            Assign(assign) => &assign.span,
             Bind(_, _, body) => return body.span(),
             Block(span, ..) => span,
             ClassDefinition(span, ..) => span,
@@ -382,7 +399,10 @@ fn assign_suffix(
         return parser.error_at(left.span(), "Cannot assign to this");
     }
     let right = parser.parse_expr(precedence(parser, parser.span())?)?;
-    Ok(Expr::Assign(left.name(), Box::new(right)))
+    // We use the name we're assigning to as the span.
+    // FIXME: Maybe this is a sign that we should actually store a Var with it's own span
+    // in the Assign, then assign could have the span for just the operator?
+    Ok(Assign::expr(left.span(), left.name(), right))
 }
 
 fn keyword_suffix(

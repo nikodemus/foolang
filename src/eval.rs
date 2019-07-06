@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::objects2::{Builtins, Object, Value};
-use crate::parse::{parse_str, Expr, Global, Literal, SyntaxError, Var};
+use crate::parse::{parse_str, Assign, Expr, Global, Literal, SyntaxError, Var};
 
 struct Env<'a> {
     builtins: &'a Builtins,
@@ -25,7 +25,7 @@ impl<'a> Env<'a> {
     pub fn eval(&self, expr: &Expr) -> Result<Object, SyntaxError> {
         use Expr::*;
         match expr {
-            Assign(left, right) => self.eval_assign(left, right),
+            Assign(assign) => self.eval_assign(assign),
             Bind(name, value, body) => self.eval_bind(name, value, body),
             Block(_, params, body) => self.eval_block(params, body),
             ClassDefinition(_, name, instance_variables) => {
@@ -59,9 +59,11 @@ impl<'a> Env<'a> {
         Env::from_parts(self.builtins, local, Some(Rc::clone(&self.frame)))
     }
 
-    fn eval_assign(&self, name: &String, right: &Box<Expr>) -> Result<Object, SyntaxError> {
-        let value = self.eval(right)?;
-
+    fn eval_assign(&self, assign: &Assign) -> Result<Object, SyntaxError> {
+        let name = &assign.name;
+        // Value needs to be evaluated before we go looking for the binding,
+        // so that the scope of our mutable borrow from the frame is safe.
+        let value = self.eval(&assign.value)?;
         let mut frame = &self.frame;
         loop {
             match frame.local.borrow_mut().get_mut(name) {
@@ -73,9 +75,12 @@ impl<'a> Env<'a> {
                     Some(parent_frame) => {
                         frame = parent_frame;
                     }
-                    // FIXME: Should be an exception, but a panic -- or better yet,
-                    // a syntax-error at parse time...
-                    None => panic!("Unbound variable in assignment: {}", name),
+                    None => {
+                        return Err(SyntaxError::new(
+                            assign.span.clone(),
+                            "Cannot assign to an unbound variable",
+                        ))
+                    }
                 },
             }
         }
@@ -355,8 +360,24 @@ fn eval_mul4() {
 }
 
 #[test]
-fn eval_assign() {
+fn eval_assign1() {
     assert_eq!(eval_ok("let x = 1, x = x + 1, let y = x, y").integer(), 2);
+}
+
+#[test]
+fn eval_assign_unbound() {
+    assert_eq!(
+        eval_str("let x = 1, z = x + 1, let y = x, y"),
+        Err(SyntaxError {
+            span: 11..12,
+            problem: "Cannot assign to an unbound variable",
+            context: concat!(
+                "001 let x = 1, z = x + 1, let y = x, y\n",
+                "               ^ Cannot assign to an unbound variable\n"
+            )
+            .to_string()
+        })
+    );
 }
 
 #[test]
