@@ -42,116 +42,33 @@ and Fortress.
 
 ## Syntax notes
 
-- | would be really useful as just syntax. ...but it _is_ also really convenient
-  the second you start twiddling bits.
+- I really miss question mark as part of message syntax. It's so nice
+  and obvious for unary tests. is-prefix gets old fast.
+
+- '|' would be really useful as just syntax. ...but it _is_ also
+  really convenient the second you start twiddling bits.
 
 - Use -> for chaining instead of --
 
 - Canonicalize multipart keyword messages by stable-sorting the keys.
   (Evaluatior order stays.)
 
-- Possible conflict in record comprehensition syntax: Well, dict
-  comprehension maybe.
+- "Object-oriented" comprehensions are a bit awkward for multiple dimensions.
+  Something like:
+
+      For iterators: [as, bs, cs]
+          where: { |a,b,c| a*a == (b*b + c*c) }
+          collect: { |a,b,c| [a,b,c] }
+
+  maybe?
+
+- Possible conflict with possible dict/record comprehensition syntax:
 
   Consider:
 
       staff select: {_senior} -> inject: Dictionary new into: { |senior, dict| 
         dict put: senior at: senior name
       }
-
-      @method[Iterable] select: block
-        self inject: self collector into: { |elt, collector|
-            block value: elt -> then: { collector add: elt }
-            collector
-        }
-
-      @method[Iterable] inject: collector int: block
-        let x := collector
-        self do: { |elt| x := (block value: elt value: x) }
-        x
-
-      If the compiler sees these three, what can it do?
-
-      First inline the select:
-
-        { |self,block|
-          self inject: self collector into: { |elt, collector|
-              block value: elt -> then: { collector add: elt }
-              collector
-          } value: staff value: block
-
-      Then inline the block:
-
-        { |self|
-          self inject: self collector into: { |elt, collector|
-              {_ senior} value: elt -> then: { collector add: elt }
-          collector } value: staff
-
-       Again:
-
-        { |self|
-          self inject: self collector into: { |elt, collector|
-              elt senior -> then: { collector add: elt }
-          collector } value: staff
-
-       Inline staff:
-
-          staff inject: staff collector into: { |elt, collector|
-              elt senior -> then: { collector add: elt }
-          collector }
-
-       Inline inject:
-
-          { |self,collector,block|
-            let x := collector
-            self do: { |elt| x := block(value, x) }
-            x } value: staff
-                value: staff collector
-                value: { |elt, collector|
-                         elt senior -> then: { collector add: elt }
-                         collector }
-
-       Inline staff:
-
-          { |collector,block|
-            let x := collector
-            staff do: { |elt| x := block(value, x) }
-            x } value: staff collector
-                value: { |elt, collector|
-                         elt senior -> then: { collector add: elt }
-                         collector }
-
-       Inline block:
-
-          { |collector|
-            let x := collector
-            staff do: { |elt| 
-                         x := { |elt, collector|
-                                elt senior -> then: { collector add: elt }
-                                collector } value: elt value: x }
-            x } value: staff collector
-
-        Inline elt & x
-
-          (let x := staff collector
-           staff do: { |elt| 
-                         x := (elt senior -> then: { x add: elt },  x)
-                     }
-           x)
-
-
-      So... I think St-style iterators can be optimized OK, as long
-      as we understand the types.
-
-      ^-- these don't deal with multiple dimensions nicely, which one of
-          the reasons comprehensions are cool.
-
-      For iterators: [as, bs, cs]
-          where: { |a,b,c| a*a == (b*b + c*c) }
-          collect: { |a,b,c| [a,b,c] }
-
-      ...is not terrible, though.
-
 
    Rendered as:
 
@@ -161,7 +78,7 @@ and Fortress.
 
        { employee name => employee | employee <- staff, employee senior }
 
-   Is clearer, but Json-compatible literals are just awfully nice.
+   Is clearer, but Json-compatible literals are just awfully nice. (Not required, though.)
 
    Wat about
 
@@ -183,30 +100,22 @@ and Fortress.
    Because consider: records are really literal objects. I would kind of like
    have the option to delegate, have inline methods, etc.
 
-   { 
-       foo => 1
+       { 
+           foo => 1
+           bar: x => (
+             old = _slot
+             _slot += x
+             old 
+           ),
+           _slot = 42
+       }
 
-       bar: x => (
-         old = _slot
-         _slot += x
-         old 
-       ),
-
-       _slot = 42
-   }
-
-   {
-      doesNotUnderstand: selector with: args => {
-         log write: selector
-         object perform: selector with: args
-      }
-   }
-
-
-- I really miss question mark as part of message syntax. Look at the "senior"
-  above. It would be so much better as senior?
-
-  
+       {
+          doesNotUnderstand: selector with: args => {
+             log write: selector
+             object perform: selector with: args
+          }
+       }
 
 - Using words to define operators. Maybe `x _max_ y` or `x \max y`. Either would
   also be nice syntax for entering unicode operators.
@@ -236,33 +145,32 @@ and Fortress.
      higher rows. Things in the after slot are lower than the row but not
      higher than lower rows.
 
-  @precedenceCLass Arithmetic
-     before: Comparison
+      @precedenceCLass Arithmetic
+         before: Comparison
   
-  @precedenceClass Comparison
-     before: Logical
+      @precedenceClass Comparison
+         before: Logical
 
-  @precedenceClass Logical
+      @precedenceClass Logical
 
-  @associativeGroup[Arithmetic]
-     [\arrow]
-     [*, /]
-     [+, -]
+      @associativeGroup[Arithmetic]
+         [\arrow]
+         [*, /]
+         [+, -]
 
-  @associativeGroup[Arithmetic]
-     [<<, >>]
-     [|, &, \xor]
+      @associativeGroup[Arithmetic]
+         [<<, >>]
+         [|, &, \xor]
 
-  @binaryOperator[Arithmeric before: *] ^
+      @binaryOperator[Arithmeric before: *] ^
 
-  So ^ relates to all other arithmetic operators except \arrow.
+   So ^ relates to all other arithmetic operators except \arrow.
 
-  @method[Integer] ^ x
-     x == 0 then: { return 1 }
-     x == 1 then: { return self }
-     self * self ^ (x-1)
-  
-  
+      @extend[Integer] ^ x
+         x == 0 then: { return 1 }
+         x == 1 then: { return self }
+         self * self ^ (x-1)
+
 ## References
 
 - 1973 - [Top Down Operator Precedence](papers/pratt.pdf) by Vaughan R. Pratt. \
@@ -328,53 +236,32 @@ bell ring!
 
 ## BIG GOAL
 
-class Ackermann
-  m: m<u64> n: n<u64> ^<u64>
+```
+@class Ackermann {}
+  method m: m<u64> n: n<u64> -> <u64>
     m == 0 then: {
-      ^n + 1
+      return n + 1
     }
     n == 0 then: {
-      ^Ackermann m: m - 1 n: 1
+      return Ackermann m: m - 1 n: 1
     }
     Ackermann m: m - 1 n: (Ackermann m: m n: n - 1)
+```
 
-This should compile into decent native code. Something close enough
-to what gcc -O0 would produce.
+This should compile into decent native code. Something close enough to
+what gcc -O0 would produce.
 
 ## MMmmmaaaybe
-
-- Token:
-
-     Literals: 123
-     Names: foo
-     Sigils: non-alpha
-
-    Precedence: function, prefix, unary, binary*, keyword
-
-    expr := literal | variable-ref | compound-expr | '(' expr ')' | expr '--' expr
-
-    compound-expr := prefix-expr | unary-expr | binary-expr | keyword-expr
-
-
 
 - Million dollar question: how are binary operations implemented?
 
   1. Just messages.
-  2. Translation layer to messages.
-  3. Separate dispatch.
+  2. Toplevel generic functions.
 
-  I kind of like #2. It allows making the second argument the receiver,
-  and provides an implementation mechanism for unary prefixes. (I really want
-  -foo, I think.)
-
-- The more I think about it the more I like the idea of "main" receiving an
-  object that provides the OS interfaces. The only question is ergonomics. How
-  to support printf-debugging in a random method? I have several answers.
-
-  1. Dynamic variables.
-  2. It isn't _that_ hard to pass in a logger.
-  3. A nice environment means you don't reach for the printf
-     in the first place.
+  I will go with messages for now: inlining should be able to get good-enough
+  speed out of double-dispatch, and fast-pathing "simple dispatch" inlining
+  (ie. simply sending another message with re-arranged receiver and arguments
+  seems pretty simple)
 
 - Smalltalk actually puts a lot of things which might otherwise belong in a
   control flow class (or exist as first-class constructs) into Object:
@@ -384,8 +271,7 @@ to what gcc -O0 would produce.
 
   Control flow class:
 
-      Handler do: { ... }
-              onExeption: { ... }
+      Try do: { ... } or: { ... }
 
   Block:
 
