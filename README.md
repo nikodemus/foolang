@@ -31,8 +31,8 @@ Status: bootstrap evaluator implementation in progress.
 - Everything is an object, and semantics are descibed by sending
   messages to objects.
 
-- Smalltalkish development environment, where code lives in files, not
-  an image.
+- Smalltalkish development environment -- except code lives in files
+  where it belongs, not in an image.
 
 - Supervised processes and isolated heaps for Erlang-style
   fault-tolerence.
