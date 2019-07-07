@@ -1,8 +1,35 @@
 use clap::{App, Arg};
 use foolang::evaluator::GlobalEnv;
 use foolang::time::TimeInfo;
-use rouille::{post_input, try_or_400};
+use rouille::{match_assets, post_input, session, try_or_400, Request, Response};
 use webbrowser;
+
+fn handle_request(request: &Request, env: &GlobalEnv, verbose: bool) -> Response {
+    session::session(request, "SID", 3600, |session| {
+        if request.method() == "GET" {
+            let res = match_assets(&request, "ide");
+            if verbose {
+                println!(
+                    "GET {} {} => {}",
+                    session.id(),
+                    request.url(),
+                    if res.is_success() {
+                        "ok"
+                    } else {
+                        "FAILED"
+                    }
+                );
+            }
+            res.with_no_cache()
+        } else if request.method() == "POST" {
+            println!("POST {}", session.id());
+            let input = try_or_400!(post_input!(request, { source: String }));
+            Response::text(format!("{}", env.eval_str(input.source.as_str()))).with_no_cache()
+        } else {
+            Response::empty_404()
+        }
+    })
+}
 
 fn main() {
     TimeInfo::init();
@@ -39,27 +66,7 @@ fn main() {
             println!("Could not open browser!");
         }
         rouille::start_server("127.0.0.1:8000", move |request| {
-            if request.method() == "GET" {
-                let res = rouille::match_assets(&request, "ide");
-                if verbose {
-                    println!(
-                        "GET {} => {}",
-                        request.url(),
-                        if res.is_success() {
-                            "ok"
-                        } else {
-                            "FAILED"
-                        }
-                    );
-                }
-                res.with_no_cache()
-            } else if request.method() == "POST" {
-                let input = try_or_400!(post_input!(request, { source: String }));
-                rouille::Response::text(format!("{}", env.eval_str(input.source.as_str())))
-                    .with_no_cache()
-            } else {
-                rouille::Response::empty_404()
-            }
+            handle_request(request, &env, verbose)
         });
     }
     //env.load_file("foo/playground.foo");
