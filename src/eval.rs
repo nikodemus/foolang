@@ -13,15 +13,22 @@ struct Env<'a> {
     frame: Rc<Frame>,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct Frame {
-    local: RefCell<HashMap<String, Object>>,
-    parent: Option<Rc<Frame>>,
+    pub local: RefCell<HashMap<String, Object>>,
+    pub parent: Option<Rc<Frame>>,
+    pub method: Option<Rc<Frame>>,
+}
+
+impl PartialEq for Frame {
+    fn eq(&self, other: &Self) -> bool {
+        self as *const _ == other as *const _
+    }
 }
 
 impl<'a> Env<'a> {
     pub fn new(builtins: &Builtins) -> Env {
-        Env::from_parts(builtins, HashMap::new(), None)
+        Env::from_parts(builtins, HashMap::new(), None, false)
     }
 
     pub fn eval(&self, expr: &Expr) -> Eval {
@@ -44,20 +51,39 @@ impl<'a> Env<'a> {
         builtins: &'a Builtins,
         local: HashMap<String, Object>,
         parent: Option<Rc<Frame>>,
+        method: bool,
     ) -> Env<'a> {
+        // KLUDGE: This is as simple as I can make this without making
+        // a circular thing requiring weak pointers, which in turn would
+        // complex in a different way...
+        let parent_method = match &parent {
+            None => None,
+            Some(frame) => frame.parent.as_ref().map(Rc::clone),
+        };
+        let base_frame = Rc::new(Frame {
+            local: RefCell::new(local),
+            parent,
+            method: parent_method,
+        });
+        let frame = if method {
+            Rc::new(Frame {
+                local: RefCell::new(HashMap::new()),
+                parent: Some(Rc::clone(&base_frame)),
+                method: Some(Rc::clone(&base_frame)),
+            })
+        } else {
+            base_frame
+        };
         Env {
             builtins,
-            frame: Rc::new(Frame {
-                local: RefCell::new(local),
-                parent,
-            }),
+            frame,
         }
     }
 
     fn bind(&self, name: &String, value: Object) -> Env {
         let mut local = HashMap::new();
         local.insert(name.to_owned(), value);
-        Env::from_parts(self.builtins, local, Some(Rc::clone(&self.frame)))
+        Env::from_parts(self.builtins, local, Some(Rc::clone(&self.frame)), false)
     }
 
     fn eval_assign(&self, assign: &Assign) -> Eval {
@@ -123,7 +149,12 @@ impl<'a> Env<'a> {
     }
 
     fn eval_return(&self, ret: &Return) -> Eval {
-        Unwind::return_from(&self.frame.parent, self.eval(&ret.value)?)
+        match &self.frame.method {
+            None => {
+                Unwind::exception(SyntaxError::new(ret.span.clone(), "No method to return from"))
+            }
+            Some(frame) => Unwind::return_from(Rc::clone(frame), self.eval(&ret.value)?),
+        }
     }
 
     fn eval_send(&self, selector: &String, receiver: &Box<Expr>, args: &Vec<Expr>) -> Eval {
@@ -167,7 +198,7 @@ impl<'a> Env<'a> {
 }
 
 pub fn apply(closure: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    apply_with_extra_args(&closure.closure(), args, &[], builtins)
+    apply_with_extra_args(&closure.closure(), args, &[], builtins, false)
 }
 
 pub fn apply_with_extra_args(
@@ -175,6 +206,7 @@ pub fn apply_with_extra_args(
     args: &[&Object],
     extra: &[&Object],
     builtins: &Builtins,
+    method: bool,
 ) -> Eval {
     // KLUDGE: I'm blind. I would think that iterating over args with IntoIterator
     // would give me an iterator over &Object, but I get &&Object -- so to_owned x 2.
@@ -184,16 +216,13 @@ pub fn apply_with_extra_args(
         .map(String::clone)
         .zip(args.into_iter().chain(extra.into_iter()).map(|obj| obj.to_owned().to_owned()))
         .collect();
-    let myframe = match &closure.env {
-        Some(frame) => Some(Rc::clone(&frame)),
-        None => None,
-    };
-    let env = Env::from_parts(builtins, locals, myframe);
+    let parent = closure.env.as_ref().map(|x| Rc::clone(x));
+    let env = Env::from_parts(builtins, locals, parent, method);
     match env.eval(&closure.body) {
         Ok(value) => Ok(value),
         Err(Unwind::Exception(e)) => Err(Unwind::Exception(e)),
         Err(Unwind::ReturnFrom(frame, value)) => {
-            if &frame == &closure.env {
+            if Some(&frame) == env.frame.parent.as_ref() {
                 Ok(value)
             } else {
                 Err(Unwind::ReturnFrom(frame, value))
@@ -589,7 +618,7 @@ fn eval_instance_method2() {
 }
 
 #[test]
-fn eval_return_returns() {
+fn test_return_returns() {
     let (obj, builtins) = eval_builtins(
         "@class Foo {}
             method foo
@@ -599,4 +628,42 @@ fn eval_return_returns() {
          Foo new foo",
     );
     assert_eq!(obj, builtins.make_integer(1));
+}
+
+#[test]
+fn test_return_from_method_block() {
+    let (obj, builtins) = eval_builtins(
+        "@class Foo {}
+            method test
+                self boo: { return 42 },
+                31
+            method boo: blk
+                blk value
+         @end,
+         Foo new test
+        ",
+    );
+    assert_eq!(obj, builtins.make_integer(42));
+}
+
+#[test]
+fn test_return_from_deep_block_to_middle() {
+    let (object, builtins) = eval_builtins(
+        "@class Foo {}
+            method test
+               return 1 + let x = 41, self test0: x
+            method test0: x
+               self test1: { return x },
+               return 100
+            method test1: blk
+               self test2: blk,
+               return 1000
+            method test2: blk
+               blk value,
+               return 10000
+         @end,
+         Foo new test
+        ",
+    );
+    assert_eq!(object, builtins.make_integer(42));
 }

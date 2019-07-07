@@ -12,15 +12,15 @@ use crate::classes;
 #[derive(Debug, PartialEq)]
 pub enum Unwind {
     Exception(SyntaxError),
-    ReturnFrom(Option<Rc<Frame>>, Object),
+    ReturnFrom(Rc<Frame>, Object),
 }
 
 impl Unwind {
     pub fn exception<T>(error: SyntaxError) -> Result<T, Unwind> {
         Err(Unwind::Exception(error))
     }
-    pub fn return_from<T>(frame: &Option<Rc<Frame>>, value: Object) -> Result<T, Unwind> {
-        Err(Unwind::ReturnFrom((*frame).clone(), value))
+    pub fn return_from<T>(frame: Rc<Frame>, value: Object) -> Result<T, Unwind> {
+        Err(Unwind::ReturnFrom(frame, value))
     }
     pub fn add_context(self, source: &str) -> Unwind {
         match self {
@@ -272,15 +272,15 @@ impl Object {
     }
 
     pub fn send(&self, message: &str, args: &[&Object], builtins: &Builtins) -> Eval {
-        println!("debug: {} {} {:?}", self, message, args);
+        // println!("debug: {} {} {:?}", self, message, args);
         match self.vtable.get(message) {
             Some(Method::Primitive(method)) => method(self, args, builtins),
             Some(Method::Interpreter(closure)) => {
-                eval::apply_with_extra_args(closure, args, &[self], builtins)
+                eval::apply_with_extra_args(closure, args, &[self], builtins, true)
             }
             Some(Method::Reader(index)) => read_instance_variable(self, *index),
             None => {
-                println!("debug: available methods: {:?}", &self.vtable.selectors());
+                // println!("debug: available methods: {:?}", &self.vtable.selectors());
                 unimplemented!("{} doesNotUnderstand {} {:?}", self, message, args);
             }
         }
@@ -316,7 +316,7 @@ impl fmt::Debug for Object {
                     write!(f, "{}", x)
                 }
             }
-            Datum::Closure(x) => write!(f, "{:?}", *x),
+            Datum::Closure(x) => write!(f, "Closure({:?})", x.env),
             Datum::Class(_) => write!(f, "{}", self.vtable.name),
             Datum::Instance(_) => write!(f, "{}", self.vtable.name),
         }
