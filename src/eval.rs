@@ -216,6 +216,14 @@ fn eval_all(builtins: &Builtins, source: &str) -> Result<Object, SyntaxError> {
     }
 }
 
+fn eval_builtins(source: &str) -> (Object, Builtins) {
+    let builtins = Builtins::new();
+    match eval_all(&builtins, source) {
+        Err(err) => panic!("UNEXPECTED ERROR:\n{:?}", err),
+        Ok(obj) => (obj, builtins),
+    }
+}
+
 fn eval_ok(source: &str) -> Object {
     eval_str(source).unwrap()
 }
@@ -528,49 +536,37 @@ fn eval_global2() {
 
 #[test]
 fn eval_new_instance1() {
-    let builtins = Builtins::new();
-    match eval_all(&builtins, "@class Point { x, y } @end, Point x: 1 y: 2") {
-        Err(e) => panic!("Test OOPS: {:?}", e),
-        Ok(object) => {
-            assert_eq!(object.send("x", &[], &builtins), Ok(builtins.make_integer(1)));
-            assert_eq!(object.send("y", &[], &builtins), Ok(builtins.make_integer(2)));
-        }
-    }
+    let (object, builtins) = eval_builtins("@class Point { x, y } @end, Point x: 1 y: 2");
+    assert_eq!(object.send("x", &[], &builtins), Ok(builtins.make_integer(1)));
+    assert_eq!(object.send("y", &[], &builtins), Ok(builtins.make_integer(2)));
 }
 
 #[test]
 fn eval_new_instance2() {
-    let builtins = Builtins::new();
-    match eval_all(&builtins, "@class Oh {} method no 42 defaultConstructor noes @end, Oh noes") {
-        Err(e) => panic!("Test OOPS: {:?}", e),
-        Ok(object) => {
-            assert_eq!(object.send("no", &[], &builtins), Ok(builtins.make_integer(42)));
-        }
-    }
+    let (object, builtins) = eval_builtins(
+        "@class Oh {}
+            method no 42
+            defaultConstructor noes
+         @end,
+         Oh noes",
+    );
+    assert_eq!(object.send("no", &[], &builtins), Ok(builtins.make_integer(42)));
 }
 
 #[test]
 fn eval_instance_method1() {
-    let builtins = Builtins::new();
-    match eval_all(
-        &builtins,
+    let (object, builtins) = eval_builtins(
         "@class Foo {}
             method bar 311
          @end,
          Foo new",
-    ) {
-        Err(e) => panic!("Test OOPS: {:?}", e),
-        Ok(object) => {
-            assert_eq!(object.send("bar", &[], &builtins), Ok(builtins.make_integer(311)));
-        }
-    }
+    );
+    assert_eq!(object.send("bar", &[], &builtins), Ok(builtins.make_integer(311)));
 }
 
 #[test]
 fn eval_instance_method2() {
-    let builtins = Builtins::new();
-    match eval_all(
-        &builtins,
+    let (object, builtins) = eval_builtins(
         "@class Foo {}
             method foo
                self bar
@@ -578,10 +574,20 @@ fn eval_instance_method2() {
                311
          @end,
          Foo new",
-    ) {
-        Err(e) => panic!("Test OOPS: {:?}", e),
-        Ok(object) => {
-            assert_eq!(object.send("bar", &[], &builtins), Ok(builtins.make_integer(311)));
-        }
-    }
+    );
+    assert_eq!(object.send("bar", &[], &builtins), Ok(builtins.make_integer(311)));
+}
+
+#[ignore]
+#[test]
+fn eval_return_returns() {
+    let (obj, builtins) = eval_builtins(
+        "@class Foo {}
+            method foo
+               return 1
+               2
+         @end,
+         Foo new foo",
+    );
+    assert_eq!(obj, builtins.make_integer(1));
 }
