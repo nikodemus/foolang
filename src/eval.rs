@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use crate::objects2::{Builtins, Closure, Object, Value};
 use crate::parse::{
-    parse_str, Assign, ClassDefinition, Expr, Global, Literal, Parser, SyntaxError, Var,
+    parse_str, Assign, ClassDefinition, Expr, Global, Literal, Parser, Return, SyntaxError, Var,
 };
 
 struct Env<'a> {
@@ -33,6 +33,7 @@ impl<'a> Env<'a> {
             ClassDefinition(definition) => self.eval_class_definition(definition),
             Const(_, literal) => self.eval_literal(literal),
             Global(global) => self.eval_global(global),
+            Return(ret) => self.eval_return(ret),
             Send(_, selector, receiver, args) => self.eval_send(selector, receiver, args),
             Seq(exprs) => self.eval_seq(exprs),
             Var(var) => self.eval_var(var),
@@ -119,6 +120,10 @@ impl<'a> Env<'a> {
             Literal::Integer(value) => Ok(self.builtins.make_integer(*value)),
             Literal::Float(value) => Ok(self.builtins.make_float(*value)),
         }
+    }
+
+    fn eval_return(&self, ret: &Return) -> Result<Object, SyntaxError> {
+        unimplemented!("eval_return")
     }
 
     fn eval_send(

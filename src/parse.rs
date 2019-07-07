@@ -112,6 +112,21 @@ pub enum Literal {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Return {
+    pub span: Span,
+    pub value: Box<Expr>,
+}
+
+impl Return {
+    fn expr(span: Span, value: Expr) -> Expr {
+        Expr::Return(Return {
+            span,
+            value: Box::new(value),
+        })
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Var {
     pub span: Span,
     pub name: String,
@@ -137,6 +152,7 @@ pub enum Expr {
     Send(Span, String, Box<Expr>, Vec<Expr>),
     Seq(Vec<Expr>),
     Var(Var),
+    Return(Return),
 }
 
 impl Expr {
@@ -171,6 +187,7 @@ impl Expr {
             Const(span, ..) => span,
             Global(global) => &global.span,
             Send(span, ..) => span,
+            Return(ret) => &ret.span,
             Seq(exprs) => return exprs[exprs.len() - 1].span(),
             Var(var) => &var.span,
         };
@@ -377,6 +394,7 @@ fn make_name_table() -> NameTable {
     let mut table: NameTable = HashMap::new();
     let t = &mut table;
 
+    Syntax::def(t, "return", return_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "@class", class_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "method", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "defaultConstructor", invalid_prefix, invalid_suffix, precedence_0);
@@ -749,6 +767,10 @@ fn number_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     }
 }
 
+fn return_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
+    Ok(Return::expr(parser.span(), parser.parse_expr(0)?))
+}
+
 /// Tests and tools
 
 pub fn parse_str(source: &str) -> Result<Expr, SyntaxError> {
@@ -940,4 +962,9 @@ fn parse_method2() {
         ),
         Ok(class)
     );
+}
+
+#[test]
+fn parse_return1() {
+    assert_eq!(parse_str("return 12"), Ok(Return::expr(0..6, int(7..9, 12))));
 }
