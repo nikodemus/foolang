@@ -1,4 +1,4 @@
-use crate::objects2::{Builtins, Object, Value, Vtable};
+use crate::objects2::{Builtins, Eval, Object, Vtable};
 
 pub fn vtable() -> Vtable {
     let mut vt = Vtable::new("Integer");
@@ -25,35 +25,35 @@ pub fn vtable() -> Vtable {
 
 // FUNDAMENTAL METHODS
 
-fn integer_as_integer(receiver: &Object, _args: &[&Object], _builtins: &Builtins) -> Value {
+fn integer_as_integer(receiver: &Object, _args: &[&Object], _builtins: &Builtins) -> Eval {
     Ok(receiver.to_owned())
 }
 
-fn integer_as_float(receiver: &Object, _args: &[&Object], builtins: &Builtins) -> Value {
+fn integer_as_float(receiver: &Object, _args: &[&Object], builtins: &Builtins) -> Eval {
     Ok(builtins.make_float(receiver.integer() as f64))
 }
 
-fn integer_add_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Value {
+fn integer_add_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
     let res = args[0].integer() + receiver.integer();
     Ok(builtins.make_integer(res))
 }
 
-fn integer_div_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Value {
+fn integer_div_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
     let res = args[0].integer() / receiver.integer();
     Ok(builtins.make_integer(res))
 }
 
-fn integer_mul_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Value {
+fn integer_mul_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
     let res = args[0].integer() * receiver.integer();
     Ok(builtins.make_integer(res))
 }
 
-fn integer_sub_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Value {
+fn integer_sub_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
     let res = args[0].integer() - receiver.integer();
     Ok(builtins.make_integer(res))
 }
 
-fn integer_gcd(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Value {
+fn integer_gcd(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
     // FIXME: Panics if argument is not an integer.
     let res = num::integer::gcd(receiver.integer(), args[0].integer());
     Ok(builtins.make_integer(res))
@@ -61,34 +61,34 @@ fn integer_gcd(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Valu
 
 // DERIVED METHODS
 
-fn integer_add(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Value {
+fn integer_add(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
     args[0].send("addInteger:", &[receiver], builtins)
 }
 
-fn integer_div(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Value {
+fn integer_div(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
     args[0].send("divInteger:", &[receiver], builtins)
 }
 
-fn integer_mul(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Value {
+fn integer_mul(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
     args[0].send("mulInteger:", &[receiver], builtins)
 }
 
-fn integer_sub(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Value {
+fn integer_sub(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
     args[0].send("subInteger:", &[receiver], builtins)
 }
 
-fn integer_add_float(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Value {
+fn integer_add_float(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
     receiver.send("asFloat", &[], builtins)?.send("addFloat:", args, builtins)
 }
 
-fn integer_div_float(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Value {
+fn integer_div_float(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
     receiver.send("asFloat", &[], builtins)?.send("divFloat:", args, builtins)
 }
 
-fn integer_mul_float(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Value {
+fn integer_mul_float(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
     receiver.send("asFloat", &[], builtins)?.send("mulFloat:", args, builtins)
 }
 
-fn integer_sub_float(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Value {
+fn integer_sub_float(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
     receiver.send("asFloat", &[], builtins)?.send("subFloat:", args, builtins)
 }

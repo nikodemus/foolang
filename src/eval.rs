@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::objects2::{Builtins, Closure, Object, Value};
+use crate::objects2::{Builtins, Closure, Eval, Object, Unwind};
 use crate::parse::{
     parse_str, Assign, ClassDefinition, Expr, Global, Literal, Parser, Return, SyntaxError, Var,
 };
@@ -24,7 +24,7 @@ impl<'a> Env<'a> {
         Env::from_parts(builtins, HashMap::new(), None)
     }
 
-    pub fn eval(&self, expr: &Expr) -> Result<Object, SyntaxError> {
+    pub fn eval(&self, expr: &Expr) -> Eval {
         use Expr::*;
         match expr {
             Assign(assign) => self.eval_assign(assign),
@@ -60,7 +60,7 @@ impl<'a> Env<'a> {
         Env::from_parts(self.builtins, local, Some(Rc::clone(&self.frame)))
     }
 
-    fn eval_assign(&self, assign: &Assign) -> Result<Object, SyntaxError> {
+    fn eval_assign(&self, assign: &Assign) -> Eval {
         let name = &assign.name;
         // Value needs to be evaluated before we go looking for the binding,
         // so that the scope of our mutable borrow from the frame is safe.
@@ -77,7 +77,7 @@ impl<'a> Env<'a> {
                         frame = parent_frame;
                     }
                     None => {
-                        return Err(SyntaxError::new(
+                        return Unwind::exception(SyntaxError::new(
                             assign.span.clone(),
                             "Cannot assign to an unbound variable",
                         ))
@@ -87,17 +87,17 @@ impl<'a> Env<'a> {
         }
     }
 
-    fn eval_bind(&self, name: &String, value: &Expr, body: &Expr) -> Result<Object, SyntaxError> {
+    fn eval_bind(&self, name: &String, value: &Expr, body: &Expr) -> Eval {
         self.bind(name, self.eval(value)?).eval(body)
     }
 
-    fn eval_block(&self, params: &Vec<String>, body: &Expr) -> Result<Object, SyntaxError> {
+    fn eval_block(&self, params: &Vec<String>, body: &Expr) -> Eval {
         Ok(self.builtins.make_closure(Rc::clone(&self.frame), params.to_owned(), body.to_owned()))
     }
 
-    fn eval_class_definition(&self, definition: &ClassDefinition) -> Result<Object, SyntaxError> {
+    fn eval_class_definition(&self, definition: &ClassDefinition) -> Eval {
         if self.frame.parent.is_some() {
-            return Err(SyntaxError::new(
+            return Unwind::exception(SyntaxError::new(
                 definition.span.clone(),
                 "Class definition not at toplevel",
             ));
@@ -108,30 +108,25 @@ impl<'a> Env<'a> {
         Ok(class)
     }
 
-    fn eval_global(&self, global: &Global) -> Result<Object, SyntaxError> {
+    fn eval_global(&self, global: &Global) -> Eval {
         match self.builtins.globals.borrow().get(&global.name) {
             Some(obj) => Ok(obj.clone()),
-            None => Err(SyntaxError::new(global.span.clone(), "Undefined global")),
+            None => Unwind::exception(SyntaxError::new(global.span.clone(), "Undefined global")),
         }
     }
 
-    fn eval_literal(&self, literal: &Literal) -> Result<Object, SyntaxError> {
+    fn eval_literal(&self, literal: &Literal) -> Eval {
         match literal {
             Literal::Integer(value) => Ok(self.builtins.make_integer(*value)),
             Literal::Float(value) => Ok(self.builtins.make_float(*value)),
         }
     }
 
-    fn eval_return(&self, ret: &Return) -> Result<Object, SyntaxError> {
+    fn eval_return(&self, ret: &Return) -> Eval {
         unimplemented!("eval_return")
     }
 
-    fn eval_send(
-        &self,
-        selector: &String,
-        receiver: &Box<Expr>,
-        args: &Vec<Expr>,
-    ) -> Result<Object, SyntaxError> {
+    fn eval_send(&self, selector: &String, receiver: &Box<Expr>, args: &Vec<Expr>) -> Eval {
         let receiver = self.eval(receiver)?;
         let mut values = Vec::new();
         for arg in args {
@@ -141,7 +136,7 @@ impl<'a> Env<'a> {
         receiver.send(selector.as_str(), &args[..], &self.builtins)
     }
 
-    fn eval_seq(&self, exprs: &Vec<Expr>) -> Result<Object, SyntaxError> {
+    fn eval_seq(&self, exprs: &Vec<Expr>) -> Eval {
         // FIXME: false or nothing
         let mut result = self.builtins.make_integer(0);
         for expr in exprs {
@@ -150,7 +145,7 @@ impl<'a> Env<'a> {
         Ok(result)
     }
 
-    fn eval_var(&self, var: &Var) -> Result<Object, SyntaxError> {
+    fn eval_var(&self, var: &Var) -> Eval {
         let mut frame = &self.frame;
         loop {
             match frame.local.borrow().get(&var.name) {
@@ -159,14 +154,19 @@ impl<'a> Env<'a> {
                     Some(parent_frame) => {
                         frame = parent_frame;
                     }
-                    None => return Err(SyntaxError::new(var.span.clone(), "Unbound variable")),
+                    None => {
+                        return Unwind::exception(SyntaxError::new(
+                            var.span.clone(),
+                            "Unbound variable",
+                        ))
+                    }
                 },
             }
         }
     }
 }
 
-pub fn apply(closure: &Object, args: &[&Object], builtins: &Builtins) -> Value {
+pub fn apply(closure: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
     apply_with_extra_args(&closure.closure(), args, &[], builtins)
 }
 
@@ -175,7 +175,7 @@ pub fn apply_with_extra_args(
     args: &[&Object],
     extra: &[&Object],
     builtins: &Builtins,
-) -> Value {
+) -> Eval {
     // KLUDGE: I'm blind. I would think that iterating over args with IntoIterator
     // would give me an iterator over &Object, but I get &&Object -- so to_owned x 2.
     let locals: HashMap<String, Object> = closure
@@ -192,13 +192,13 @@ pub fn apply_with_extra_args(
     env.eval(&closure.body)
 }
 
-fn eval_str(source: &str) -> Result<Object, SyntaxError> {
+fn eval_str(source: &str) -> Eval {
     let builtins = Builtins::new();
     let expr = parse_str(source)?;
     Env::new(&builtins).eval(&expr).map_err(|e| e.add_context(source))
 }
 
-fn eval_all(builtins: &Builtins, source: &str) -> Result<Object, SyntaxError> {
+fn eval_all(builtins: &Builtins, source: &str) -> Eval {
     let env = Env::new(builtins);
     let mut parser = Parser::new(source);
     loop {
@@ -219,7 +219,7 @@ fn eval_all(builtins: &Builtins, source: &str) -> Result<Object, SyntaxError> {
 fn eval_builtins(source: &str) -> (Object, Builtins) {
     let builtins = Builtins::new();
     match eval_all(&builtins, source) {
-        Err(err) => panic!("UNEXPECTED ERROR:\n{:?}", err),
+        Err(err) => panic!("Unexpected exception:\n{:?}", err),
         Ok(obj) => (obj, builtins),
     }
 }
@@ -237,7 +237,7 @@ fn eval_decimal() {
 fn eval_bad_decimal() {
     assert_eq!(
         eval_str("1x3"),
-        Err(SyntaxError {
+        Unwind::exception(SyntaxError {
             span: 0..3,
             problem: "Malformed number",
             context: concat!("001 1x3\n", "    ^^^ Malformed number\n").to_string()
@@ -254,7 +254,7 @@ fn eval_hex() {
 fn eval_bad_hex() {
     assert_eq!(
         eval_str("0x1x3"),
-        Err(SyntaxError {
+        Unwind::exception(SyntaxError {
             span: 0..5,
             problem: "Malformed hexadecimal number",
             context: concat!("001 0x1x3\n", "    ^^^^^ Malformed hexadecimal number\n").to_string()
@@ -271,7 +271,7 @@ fn eval_binary() {
 fn eval_bad_binary() {
     assert_eq!(
         eval_str("0b123"),
-        Err(SyntaxError {
+        Unwind::exception(SyntaxError {
             span: 0..5,
             problem: "Malformed binary number",
             context: concat!("001 0b123\n", "    ^^^^^ Malformed binary number\n").to_string()
@@ -288,7 +288,7 @@ fn eval_float() {
 fn eval_bad_float() {
     assert_eq!(
         eval_str("1.2.3"),
-        Err(SyntaxError {
+        Unwind::exception(SyntaxError {
             span: 0..5,
             problem: "Malformed number",
             context: concat!("001 1.2.3\n", "    ^^^^^ Malformed number\n").to_string()
@@ -410,7 +410,7 @@ fn eval_assign1() {
 fn eval_assign_unbound() {
     assert_eq!(
         eval_str("let x = 1, z = x + 1, let y = x, y"),
-        Err(SyntaxError {
+        Unwind::exception(SyntaxError {
             span: 11..12,
             problem: "Cannot assign to an unbound variable",
             context: concat!(
@@ -457,7 +457,7 @@ fn eval_keyword() {
 fn eval_unbound() {
     assert_eq!(
         eval_str("let foo = 41, foo + bar"),
-        Err(SyntaxError {
+        Unwind::exception(SyntaxError {
             span: 20..23,
             problem: "Unbound variable",
             context: concat!(
@@ -495,7 +495,7 @@ fn eval_closure3() {
 fn eval_class_not_toplevel() {
     assert_eq!(
         eval_str("let x = 42, @class Point { x, y } @end"),
-        Err(SyntaxError {
+        Unwind::exception(SyntaxError {
             span: 12..18,
             problem: "Class definition not at toplevel",
             context: concat!(
@@ -518,7 +518,7 @@ fn eval_class1() {
 fn eval_global1() {
     assert_eq!(
         eval_str("DoesNotExist"),
-        Err(SyntaxError {
+        Unwind::exception(SyntaxError {
             span: 0..12,
             problem: "Undefined global",
             context: concat!("001 DoesNotExist\n", "    ^^^^^^^^^^^^ Undefined global\n")
@@ -584,7 +584,7 @@ fn eval_return_returns() {
     let (obj, builtins) = eval_builtins(
         "@class Foo {}
             method foo
-               return 1
+               return 1,
                2
          @end,
          Foo new foo",

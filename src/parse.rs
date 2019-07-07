@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::convert::Into;
 use std::str::FromStr;
 
+use crate::objects2::Unwind;
 pub use crate::tokenstream::SyntaxError;
 use crate::tokenstream::{Span, Token, TokenStream};
 
@@ -195,9 +196,9 @@ impl Expr {
     }
 }
 
-type PrefixParser = fn(&Parser) -> Result<Expr, SyntaxError>;
-type SuffixParser = fn(&Parser, Expr, PrecedenceFunction) -> Result<Expr, SyntaxError>;
-type PrecedenceFunction = fn(&Parser, Span) -> Result<usize, SyntaxError>;
+type PrefixParser = fn(&Parser) -> Result<Expr, Unwind>;
+type SuffixParser = fn(&Parser, Expr, PrecedenceFunction) -> Result<Expr, Unwind>;
+type PrecedenceFunction = fn(&Parser, Span) -> Result<usize, Unwind>;
 
 #[derive(Clone)]
 enum Syntax {
@@ -225,11 +226,11 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> Result<Expr, SyntaxError> {
+    pub fn parse(&mut self) -> Result<Expr, Unwind> {
         self.parse_expr(0)
     }
 
-    pub fn parse_expr(&self, precedence: usize) -> Result<Expr, SyntaxError> {
+    pub fn parse_expr(&self, precedence: usize) -> Result<Expr, Unwind> {
         let mut expr = self.parse_prefix()?;
         let debug = false;
         if debug {
@@ -253,7 +254,7 @@ impl<'a> Parser<'a> {
         return Ok(expr);
     }
 
-    fn parse_prefix(&self) -> Result<Expr, SyntaxError> {
+    fn parse_prefix(&self) -> Result<Expr, Unwind> {
         let token = self.scan()?;
         match self.token_table.get(&token) {
             Some(syntax) => self.parse_prefix_syntax(syntax),
@@ -261,7 +262,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_suffix(&self, left: Expr) -> Result<Expr, SyntaxError> {
+    fn parse_suffix(&self, left: Expr) -> Result<Expr, Unwind> {
         let token = self.scan()?;
         match self.token_table.get(&token) {
             Some(syntax) => self.parse_suffix_syntax(syntax, left),
@@ -269,7 +270,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn precedence(&self) -> Result<usize, SyntaxError> {
+    fn precedence(&self) -> Result<usize, Unwind> {
         let (token, span) = self.lookahead()?;
         match self.token_table.get(&token) {
             Some(syntax) => self.syntax_precedence(syntax, span),
@@ -277,7 +278,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_prefix_syntax(&self, syntax: &Syntax) -> Result<Expr, SyntaxError> {
+    fn parse_prefix_syntax(&self, syntax: &Syntax) -> Result<Expr, Unwind> {
         match syntax {
             Syntax::General(prefix, _, _) => prefix(self),
             Syntax::Operator(is_prefix, _, _) if *is_prefix => {
@@ -288,7 +289,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_suffix_syntax(&self, syntax: &Syntax, left: Expr) -> Result<Expr, SyntaxError> {
+    fn parse_suffix_syntax(&self, syntax: &Syntax, left: Expr) -> Result<Expr, Unwind> {
         match syntax {
             Syntax::General(_, suffix, precedence) => suffix(self, left, *precedence),
             Syntax::Operator(_, is_binary, precedence) if *is_binary => {
@@ -304,18 +305,18 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn syntax_precedence(&self, syntax: &Syntax, span: Span) -> Result<usize, SyntaxError> {
+    fn syntax_precedence(&self, syntax: &Syntax, span: Span) -> Result<usize, Unwind> {
         match syntax {
             Syntax::General(_, _, precedence) => precedence(self, span),
             Syntax::Operator(_, _, precedence) => Ok(*precedence),
         }
     }
 
-    pub fn lookahead(&self) -> Result<(Token, Span), SyntaxError> {
+    pub fn lookahead(&self) -> Result<(Token, Span), Unwind> {
         self.tokenstream.borrow_mut().lookahead()
     }
 
-    pub fn scan(&self) -> Result<Token, SyntaxError> {
+    pub fn scan(&self) -> Result<Token, Unwind> {
         self.tokenstream.borrow_mut().scan()
     }
 
@@ -343,11 +344,11 @@ impl<'a> Parser<'a> {
         self.tokenstream.borrow().tokenstring()
     }
 
-    pub fn error<T>(&self, problem: &'static str) -> Result<T, SyntaxError> {
+    pub fn error<T>(&self, problem: &'static str) -> Result<T, Unwind> {
         self.tokenstream.borrow().error(problem)
     }
 
-    pub fn error_at<T>(&self, span: Span, problem: &'static str) -> Result<T, SyntaxError> {
+    pub fn error_at<T>(&self, span: Span, problem: &'static str) -> Result<T, Unwind> {
         self.tokenstream.borrow().error_at(span, problem)
     }
 }
@@ -394,12 +395,12 @@ fn make_name_table() -> NameTable {
     let mut table: NameTable = HashMap::new();
     let t = &mut table;
 
-    Syntax::def(t, "return", return_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "@class", class_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "method", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "defaultConstructor", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "@end", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "return", return_prefix, invalid_suffix, precedence_1);
     Syntax::def(t, ",", invalid_prefix, sequence_suffix, precedence_1);
     Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_2);
 
@@ -414,43 +415,43 @@ fn make_name_table() -> NameTable {
     table
 }
 
-fn precedence_invalid(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
+fn precedence_invalid(_: &Parser, _: Span) -> Result<usize, Unwind> {
     // To guarantee it aways gets parsed.
     Ok(1001)
 }
 
-fn precedence_5(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
+fn precedence_5(_: &Parser, _: Span) -> Result<usize, Unwind> {
     Ok(2)
 }
 
-fn precedence_2(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
+fn precedence_2(_: &Parser, _: Span) -> Result<usize, Unwind> {
     Ok(2)
 }
 
-fn precedence_1(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
+fn precedence_1(_: &Parser, _: Span) -> Result<usize, Unwind> {
     Ok(1)
 }
 
-fn precedence_0(_: &Parser, _: Span) -> Result<usize, SyntaxError> {
+fn precedence_0(_: &Parser, _: Span) -> Result<usize, Unwind> {
     Ok(0)
 }
 
-fn invalid_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
+fn invalid_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     parser.error("Not valid in value position")
 }
 
-fn invalid_suffix(parser: &Parser, _: Expr, _: PrecedenceFunction) -> Result<Expr, SyntaxError> {
+fn invalid_suffix(parser: &Parser, _: Expr, _: PrecedenceFunction) -> Result<Expr, Unwind> {
     parser.error("Not valid in operator position")
 }
 
-fn identifier_precedence(parser: &Parser, span: Span) -> Result<usize, SyntaxError> {
+fn identifier_precedence(parser: &Parser, span: Span) -> Result<usize, Unwind> {
     match parser.name_table.get(parser.slice_at(span.clone())) {
         Some(syntax) => parser.syntax_precedence(syntax, span),
         None => return Ok(1000), // unary messages
     }
 }
 
-fn identifier_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
+fn identifier_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     let name = parser.slice();
     match parser.name_table.get(name) {
         Some(syntax) => parser.parse_prefix_syntax(syntax),
@@ -468,11 +469,7 @@ fn identifier_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     }
 }
 
-fn identifier_suffix(
-    parser: &Parser,
-    left: Expr,
-    _: PrecedenceFunction,
-) -> Result<Expr, SyntaxError> {
+fn identifier_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Result<Expr, Unwind> {
     let name = parser.slice();
     match parser.name_table.get(name) {
         Some(syntax) => parser.parse_suffix_syntax(syntax, left),
@@ -491,7 +488,7 @@ fn identifier_suffix(
     }
 }
 
-fn operator_precedence(parser: &Parser, span: Span) -> Result<usize, SyntaxError> {
+fn operator_precedence(parser: &Parser, span: Span) -> Result<usize, Unwind> {
     let slice = parser.slice_at(span.clone());
     match parser.name_table.get(slice) {
         Some(syntax) => parser.syntax_precedence(syntax, span),
@@ -499,18 +496,14 @@ fn operator_precedence(parser: &Parser, span: Span) -> Result<usize, SyntaxError
     }
 }
 
-fn operator_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
+fn operator_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     match parser.name_table.get(parser.slice()) {
         Some(syntax) => parser.parse_prefix_syntax(syntax),
         None => parser.error("Unknown operator"),
     }
 }
 
-fn operator_suffix(
-    parser: &Parser,
-    left: Expr,
-    _: PrecedenceFunction,
-) -> Result<Expr, SyntaxError> {
+fn operator_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Result<Expr, Unwind> {
     match parser.name_table.get(parser.slice()) {
         Some(syntax) => parser.parse_suffix_syntax(syntax, left),
         None => parser.error("Unknown operator"),
@@ -521,7 +514,7 @@ fn assign_suffix(
     parser: &Parser,
     left: Expr,
     precedence: PrecedenceFunction,
-) -> Result<Expr, SyntaxError> {
+) -> Result<Expr, Unwind> {
     if !left.is_var() {
         return parser.error_at(left.span(), "Cannot assign to this");
     }
@@ -536,7 +529,7 @@ fn keyword_suffix(
     parser: &Parser,
     left: Expr,
     precedence: PrecedenceFunction,
-) -> Result<Expr, SyntaxError> {
+) -> Result<Expr, Unwind> {
     let precedence = precedence(parser, parser.span())?;
     let mut selector = parser.tokenstring();
     let mut args = vec![];
@@ -556,7 +549,7 @@ fn keyword_suffix(
     Ok(Expr::Send(start.start..parser.span().end, selector, Box::new(left), args))
 }
 
-fn parse_method(parser: &Parser, class: &mut ClassDefinition) -> Result<(), SyntaxError> {
+fn parse_method(parser: &Parser, class: &mut ClassDefinition) -> Result<(), Unwind> {
     assert_eq!(parser.slice(), "method");
     // FIXME: span is the span of the method-marker
     let span = parser.span();
@@ -596,7 +589,7 @@ fn sequence_suffix(
     parser: &Parser,
     left: Expr,
     precedence: PrecedenceFunction,
-) -> Result<Expr, SyntaxError> {
+) -> Result<Expr, Unwind> {
     let mut exprs = if let Expr::Seq(left_exprs) = left {
         left_exprs
     } else {
@@ -611,7 +604,7 @@ fn sequence_suffix(
     Ok(Expr::Seq(exprs))
 }
 
-fn block_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
+fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     let start = parser.span();
     let (token, span) = parser.lookahead()?;
     let mut params = vec![];
@@ -641,7 +634,7 @@ fn block_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     }
 }
 
-fn class_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
+fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     // FIXME: span is the span of the @class, but maybe it would be better if these
     // had all their own spans.
     let span = parser.span();
@@ -707,7 +700,7 @@ fn class_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     Ok(Expr::ClassDefinition(class))
 }
 
-fn let_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
+fn let_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     if Token::Identifier != parser.scan()? {
         return parser.error("Expected variable name after let");
     }
@@ -726,7 +719,7 @@ fn let_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     Ok(Expr::Bind(name, Box::new(value), Box::new(body)))
 }
 
-fn number_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
+fn number_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     let slice = parser.slice();
     // Hexadecimal case
     if slice.len() > 2 && ("0x" == &slice[0..2] || "0X" == &slice[0..2]) {
@@ -767,13 +760,13 @@ fn number_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
     }
 }
 
-fn return_prefix(parser: &Parser) -> Result<Expr, SyntaxError> {
+fn return_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     Ok(Return::expr(parser.span(), parser.parse_expr(0)?))
 }
 
 /// Tests and tools
 
-pub fn parse_str(source: &str) -> Result<Expr, SyntaxError> {
+pub fn parse_str(source: &str) -> Result<Expr, Unwind> {
     Parser::new(source).parse().map_err(|e| e.add_context(source))
 }
 

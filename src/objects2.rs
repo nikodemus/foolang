@@ -9,10 +9,25 @@ use crate::parse::{ClassDefinition, Expr, SyntaxError};
 
 use crate::classes;
 
-// This will change into ControlFlow (Exception, ReturnTo)
-pub type Value = Result<Object, SyntaxError>;
+#[derive(Debug, PartialEq)]
+pub enum Unwind {
+    Exception(SyntaxError),
+}
 
-type MethodFunction = fn(&Object, &[&Object], &Builtins) -> Value;
+impl Unwind {
+    pub fn exception<T>(error: SyntaxError) -> Result<T, Unwind> {
+        Err(Unwind::Exception(error))
+    }
+    pub fn add_context(self, source: &str) -> Unwind {
+        match self {
+            Unwind::Exception(error) => Unwind::Exception(error.add_context(source)),
+        }
+    }
+}
+
+pub type Eval = Result<Object, Unwind>;
+
+type MethodFunction = fn(&Object, &[&Object], &Builtins) -> Eval;
 
 pub enum Method {
     Primitive(MethodFunction),
@@ -251,7 +266,7 @@ impl Object {
         }
     }
 
-    pub fn send(&self, message: &str, args: &[&Object], builtins: &Builtins) -> Value {
+    pub fn send(&self, message: &str, args: &[&Object], builtins: &Builtins) -> Eval {
         println!("debug: {} {} {:?}", self, message, args);
         match self.vtable.get(message) {
             Some(Method::Primitive(method)) => method(self, args, builtins),
@@ -303,7 +318,7 @@ impl fmt::Debug for Object {
     }
 }
 
-fn generic_ctor(receiver: &Object, args: &[&Object], _builtins: &Builtins) -> Value {
+fn generic_ctor(receiver: &Object, args: &[&Object], _builtins: &Builtins) -> Eval {
     let class = receiver.class();
     Ok(Object {
         vtable: Rc::clone(&class.instance_vtable),
@@ -313,7 +328,7 @@ fn generic_ctor(receiver: &Object, args: &[&Object], _builtins: &Builtins) -> Va
     })
 }
 
-fn read_instance_variable(receiver: &Object, index: usize) -> Value {
+fn read_instance_variable(receiver: &Object, index: usize) -> Eval {
     let instance = receiver.instance();
     Ok(instance.instance_variables[index].to_owned())
 }

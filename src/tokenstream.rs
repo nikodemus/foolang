@@ -1,5 +1,7 @@
 use std::ops::Range;
 
+use crate::objects2::Unwind;
+
 pub type Span = Range<usize>;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
@@ -89,11 +91,11 @@ fn is_delimiter(c: char) -> bool {
     is_open_delimiter(c) || is_close_delimiter(c) || c.is_whitespace()
 }
 
-pub fn scan_str_part(s: &str) -> Result<Token, SyntaxError> {
+pub fn scan_str_part(s: &str) -> Result<Token, Unwind> {
     TokenStream::new(s).scan()
 }
 
-pub fn scan_str(s: &str) -> Vec<Result<Token, SyntaxError>> {
+pub fn scan_str(s: &str) -> Vec<Result<Token, Unwind>> {
     let mut stream = TokenStream::new(s);
     let mut result = vec![];
     while !stream.at_eof() {
@@ -135,20 +137,20 @@ impl<'a> TokenStream<'a> {
         self.span.clone()
     }
 
-    pub fn error_at<T>(&self, span: Span, problem: &'static str) -> Result<T, SyntaxError> {
-        Err(SyntaxError::new(span, problem))
+    pub fn error_at<T>(&self, span: Span, problem: &'static str) -> Result<T, Unwind> {
+        Unwind::exception(SyntaxError::new(span, problem))
     }
 
-    pub fn error<T>(&self, problem: &'static str) -> Result<T, SyntaxError> {
+    pub fn error<T>(&self, problem: &'static str) -> Result<T, Unwind> {
         self.error_at(self.span(), problem)
     }
 
-    fn result(&mut self, token: Token, span: Span) -> Result<Token, SyntaxError> {
+    fn result(&mut self, token: Token, span: Span) -> Result<Token, Unwind> {
         self.span = span;
         Ok(token)
     }
 
-    pub fn lookahead(&mut self) -> Result<(Token, Span), SyntaxError> {
+    pub fn lookahead(&mut self) -> Result<(Token, Span), Unwind> {
         // There has got to be a better way... (Doing this in parser?)
         let indices = self.indices.clone();
         let cache = self.cache.clone();
@@ -161,7 +163,7 @@ impl<'a> TokenStream<'a> {
         Ok((lookahead_token, lookahead_span))
     }
 
-    pub fn scan(&mut self) -> Result<Token, SyntaxError> {
+    pub fn scan(&mut self) -> Result<Token, Unwind> {
         let mut start;
         loop {
             if self.at_eof() {
@@ -238,17 +240,17 @@ impl<'a> TokenStream<'a> {
     fn unread(&mut self, result: (usize, char)) {
         self.cache.borrow_mut().push(result)
     }
-    fn getchar(&mut self) -> Result<(usize, char), SyntaxError> {
+    fn getchar(&mut self) -> Result<(usize, char), Unwind> {
         if let Some(cached) = self.cache.borrow_mut().pop() {
             return Ok(cached);
         }
         self.indices
             .borrow_mut()
             .next()
-            .ok_or(SyntaxError::new(self.len()..self.len(), "Unexpected EOF"))
+            .ok_or(Unwind::Exception(SyntaxError::new(self.len()..self.len(), "Unexpected EOF")))
     }
 
-    fn scan_annotation_or_operator(&mut self, start: usize) -> Result<Token, SyntaxError> {
+    fn scan_annotation_or_operator(&mut self, start: usize) -> Result<Token, Unwind> {
         let mut next = self.getchar()?;
         // Annotations always start with alphabetic characters.
         if next.1.is_alphabetic() {
@@ -268,16 +270,16 @@ impl<'a> TokenStream<'a> {
         }
     }
 
-    fn scan_character(&mut self, start: usize) -> Result<Token, SyntaxError> {
+    fn scan_character(&mut self, start: usize) -> Result<Token, Unwind> {
         self.getchar()?;
         let (end, quote) = self.getchar()?;
         if quote != '\'' {
-            return Err(SyntaxError::new(start..end, "Malformed character literal"));
+            return Unwind::exception(SyntaxError::new(start..end, "Malformed character literal"));
         }
         self.result(Token::Character, start..end + 1)
     }
 
-    fn scan_toplevel_or_operator(&mut self, start: usize) -> Result<Token, SyntaxError> {
+    fn scan_toplevel_or_operator(&mut self, start: usize) -> Result<Token, Unwind> {
         let mut next = self.getchar()?;
         // Toplevels consist only of alphabetic characters after the
         // @, and are considered identifiers.
