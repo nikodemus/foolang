@@ -123,7 +123,7 @@ impl<'a> Env<'a> {
     }
 
     fn eval_return(&self, ret: &Return) -> Eval {
-        unimplemented!("eval_return")
+        Unwind::return_from(&self.frame.parent, self.eval(&ret.value)?)
     }
 
     fn eval_send(&self, selector: &String, receiver: &Box<Expr>, args: &Vec<Expr>) -> Eval {
@@ -140,7 +140,7 @@ impl<'a> Env<'a> {
         // FIXME: false or nothing
         let mut result = self.builtins.make_integer(0);
         for expr in exprs {
-            result = self.eval(expr)?
+            result = self.eval(expr)?;
         }
         Ok(result)
     }
@@ -189,7 +189,17 @@ pub fn apply_with_extra_args(
         None => None,
     };
     let env = Env::from_parts(builtins, locals, myframe);
-    env.eval(&closure.body)
+    match env.eval(&closure.body) {
+        Ok(value) => Ok(value),
+        Err(Unwind::Exception(e)) => Err(Unwind::Exception(e)),
+        Err(Unwind::ReturnFrom(frame, value)) => {
+            if &frame == &closure.env {
+                Ok(value)
+            } else {
+                Err(Unwind::ReturnFrom(frame, value))
+            }
+        }
+    }
 }
 
 fn eval_str(source: &str) -> Eval {
@@ -578,7 +588,6 @@ fn eval_instance_method2() {
     assert_eq!(object.send("bar", &[], &builtins), Ok(builtins.make_integer(311)));
 }
 
-#[ignore]
 #[test]
 fn eval_return_returns() {
     let (obj, builtins) = eval_builtins(

@@ -391,6 +391,10 @@ fn make_token_table() -> TokenTable {
     table
 }
 
+// KLUDGE: couple of places which don't have convenient access to the table
+// need this.
+const SEQ_PRECEDENCE: usize = 1;
+
 fn make_name_table() -> NameTable {
     let mut table: NameTable = HashMap::new();
     let t = &mut table;
@@ -400,7 +404,7 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, "defaultConstructor", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "@end", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "return", return_prefix, invalid_suffix, precedence_1);
+    Syntax::def(t, "return", return_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ",", invalid_prefix, sequence_suffix, precedence_1);
     Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_2);
 
@@ -709,8 +713,7 @@ fn let_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     if Token::Operator != next || "=" != parser.slice() {
         return parser.error("Expected = in let");
     }
-    // FIXME: hardcoded!
-    let value = parser.parse_expr(1)?;
+    let value = parser.parse_expr(SEQ_PRECEDENCE)?;
     let next = parser.scan()?;
     if Token::Operator != next {
         return parser.error("Expected separator after let");
@@ -761,7 +764,7 @@ fn number_prefix(parser: &Parser) -> Result<Expr, Unwind> {
 }
 
 fn return_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    Ok(Return::expr(parser.span(), parser.parse_expr(0)?))
+    Ok(Return::expr(parser.span(), parser.parse_expr(SEQ_PRECEDENCE)?))
 }
 
 /// Tests and tools

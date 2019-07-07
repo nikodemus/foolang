@@ -12,15 +12,20 @@ use crate::classes;
 #[derive(Debug, PartialEq)]
 pub enum Unwind {
     Exception(SyntaxError),
+    ReturnFrom(Option<Rc<Frame>>, Object),
 }
 
 impl Unwind {
     pub fn exception<T>(error: SyntaxError) -> Result<T, Unwind> {
         Err(Unwind::Exception(error))
     }
+    pub fn return_from<T>(frame: &Option<Rc<Frame>>, value: Object) -> Result<T, Unwind> {
+        Err(Unwind::ReturnFrom((*frame).clone(), value))
+    }
     pub fn add_context(self, source: &str) -> Unwind {
         match self {
             Unwind::Exception(error) => Unwind::Exception(error.add_context(source)),
+            _ => self,
         }
     }
 }
