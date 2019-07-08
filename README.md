@@ -2,8 +2,8 @@
 
 # foolang
 
-A Smalltalk-inspired object language that liberally cribs from Erlang
-and Fortress.
+A Smalltalk-inspired object language that liberally cribs from Common Lisp,
+Erlang and Fortress.
 
 **Status**: bootstrap evaluator implementation in progress.
 
@@ -14,6 +14,8 @@ and Fortress.
 
 ## Design Principles
 
+In order of priority:
+
 1. Ergonomics: Code should be a pleasure to write and easy to read.
 
 2. Safety: No memory errors. No race conditions. No ambient authority.
@@ -22,9 +24,11 @@ and Fortress.
 3. Performance: Code with type annotations should run on par with -O0
    compiled C++.
 
-4. Don't summon anything bigger than your head. Foolang is currently
-   a one-person effort, so design has to take implementability into
-   consideration.
+4. Uniformity: Built-in code should not be priviledged over user code.
+
+Finally, there is an absolute requirement of implementability: Foolang is ment
+to be a real language, not a pipe dream, but it is also a one-person effort at
+the moment. So: "Don't summon anything bigger than your head."
 
 ## Core Features
 
@@ -40,10 +44,24 @@ and Fortress.
 - Syntactic extensibility. Users can define new operators and other
   syntax extensions.
 
+## Implementation Plan
+
+1. WIP: Bootstrap evaluator written in Rust, supporting the full language.
+
+2. TODO: Self-hosted (plus Javascript, etc) web-IDE.
+
+3. TODO: Self-hosted Foolang to Rust compiler (possibly for a subset.)
+
+4. TODO: Self-hosted Foolang to bytecode compiler, VM, and GC (compiled to Rust).
+
+5. TODO: Self-hosted JIT and AOT native compiler. (LLVM or Cranelift as backend.)
+
 ## Syntax notes
 
 - I really miss question mark as part of message syntax. It's so nice
   and obvious for unary tests. is-prefix gets old fast.
+
+- Forth's "everything is delimited by whitespace" is _really_ powerful.
 
 - '|' would be really useful as just syntax. ...but it _is_ also
   really convenient the second you start twiddling bits.
