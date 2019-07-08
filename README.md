@@ -5,6 +5,14 @@
 A Smalltalk-inspired object language that liberally cribs from Common Lisp,
 Erlang and Fortress.
 
+Like all new languages it has somewhat unrealistic aspirations:
+
+- Elegance of Smalltalk.
+- Performace of C++.
+- Convenience of Python.
+- Fault tolerance of Erlang.
+- Extensibility of Common Lisp.
+
 **Status**: bootstrap evaluator implementation in progress.
 
 ## Hello World
@@ -44,6 +52,13 @@ the moment. So: "Don't summon anything bigger than your head."
 - Syntactic extensibility. Users can define new operators and other
   syntax extensions.
 
+- Dynamic bindings in addition to lexical ones provide ability to
+  implement things like context oriented programming and exception
+  mechanisms as libraries.
+
+- No ambient authority: third-party libraries don't have access to your
+  filesystem and network unless you give it to them.
+
 ## Implementation Plan
 
 1. WIP: Bootstrap evaluator written in Rust, supporting the full language.
@@ -58,8 +73,47 @@ the moment. So: "Don't summon anything bigger than your head."
 
 ## Syntax notes
 
+- I quite like the idea of making "reserved words" uppercase keywords:
+
+       Class: Foo { zot = 42 }
+         constructor quux
+         method bar: y
+            Let x = zot + y
+            Return: x
+         end
+      end
+
+  It is reasonably unobtrusive, and allows for extensibility. It also
+  makes it obvious for both humans and machines.
+
+  Then reserve another syntactic class for user-level syntax extensions:
+
+       $withDatabase { }
+
+       withDatabase! { }
+
+       !withDatabase { }
+  
+       !Cond:
+          maybe => then
+
+    
+       Cond!
+          maybe => then
+
+    
+       !Cond:
+          maybe => then
+
+  ...or maybe allow users to implement Foo: things as well? Just impose
+  import rules.
+
+  That works.
+
 - I really miss question mark as part of message syntax. It's so nice
   and obvious for unary tests. is-prefix gets old fast.
+
+  Bang is nice too.
 
 - Forth's "everything is delimited by whitespace" is _really_ powerful.
 
@@ -461,5 +515,3 @@ what gcc -O0 would produce.
   (2) non-incremental GC could use mincore + MADV_WILLNEED to try to order operations
       to avoid blocking on faults. ...then again, just keeping a stack and staying on
       the same page trying to work linearly should get there too.
-
-      
