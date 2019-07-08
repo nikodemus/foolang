@@ -455,3 +455,11 @@ what gcc -O0 would produce.
 
 - Can I make |a| do the right thing? Ie. a magnitude
 
+- How to use mincore to guide GC?
+  (1) incremental GC could use mincore to find out if a page is available before
+      hitting it.
+  (2) non-incremental GC could use mincore + MADV_WILLNEED to try to order operations
+      to avoid blocking on faults. ...then again, just keeping a stack and staying on
+      the same page trying to work linearly should get there too.
+
+      
