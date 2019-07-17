@@ -17,7 +17,7 @@ Like all new languages it has somewhat unrealistic aspirations:
 
 ## Hello World
 
-    @main: system
+    main: system
       system output println: "Hello world!"
 
 ## Design Principles
@@ -32,7 +32,7 @@ In order of priority:
 3. Performance: Code with type annotations should run on par with -O0
    compiled C++.
 
-4. Uniformity: Built-in code should not be priviledged over user code.
+4. Uniformity: Built-in code should not be privileged over user code.
 
 Finally, there is an absolute requirement of implementability: Foolang is ment
 to be a real language, not a pipe dream, but it is also a one-person effort at
@@ -71,7 +71,39 @@ the moment. So: "Don't summon anything bigger than your head."
 
 5. TODO: Self-hosted JIT and AOT native compiler. (LLVM or Cranelift as backend.)
 
-## Syntax notes
+## Syntax
+
+Foolang is expression oriented: every expression has a value.
+
+**Comments**
+
+Line comments are prefixed with `--`:
+
+    -- This is a comment
+
+If -- occurs again on the same line it ends the comment.
+
+    receiver aMessage -- this is a comment -- anotherMessage
+
+End of line comments describing the value the line evaluates to are
+conventionally prefixed with `-->`2, but syntactically this is just a line
+comment that starts with a greater-than sign:
+
+    x = y + z --> sum of x and y
+
+Block comments are surrounded by lines that contain only `---`:
+
+    ---
+    x = y + z
+    x aMessage
+    x anotherMessage
+    ---
+
+
+**Literals***
+
+    --
+
 
 - I quite like the idea of making "reserved words" uppercase keywords:
 
