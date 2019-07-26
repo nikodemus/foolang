@@ -1,0 +1,187 @@
+[
+    {
+        "note": "This file containts tokenization test data for Foolang",
+        "note": "Each test is an array containing and input string and its tokenization",
+        "note": "Objects are ignored and can be used as comments."
+    },
+    {
+        "Rule 1": "EOF"
+    },
+    [
+        "", [["EOF"]]
+    ],
+    {
+        "Rule 2": "Whitespace"
+    },
+    [
+        "\n", [["NEWLINE"], ["EOF"]] 
+    ],
+    [
+        "  \n \n ", [["NEWLINE"], ["EOF"]] 
+    ],
+    {
+        "Rule 3": "Special characters"
+    },
+    [
+        " (( ", [["SPECIAL", "("],["SPECIAL", "("],["EOF"]]
+    ],
+    [
+        " )) ", [["SPECIAL", ")"],["SPECIAL", ")"],["EOF"]]
+    ],
+    [
+        " [[ ", [["SPECIAL", "["],["SPECIAL", "["],["EOF"]]
+    ],
+    [
+        " ]] ", [["SPECIAL", "]"],["SPECIAL", "]"],["EOF"]]
+    ],
+    [
+        " {{ ", [["SPECIAL", "{"],["SPECIAL", "{"],["EOF"]]
+    ],
+    [
+        " }} ", [["SPECIAL", "}"],["SPECIAL", "}"],["EOF"]]
+    ],
+    [
+        " $ ", [["SPECIAL", "$"],["EOF"]]
+    ],
+    [
+        " # ", [["SPECIAL", "#"],["EOF"]]
+    ],
+    [
+        " , ", [["SPECIAL", ","],["EOF"]]
+    ],
+    [
+        " ; ", [["SPECIAL", ";"],["EOF"]]
+    ],
+    {
+        "Rule 4": "Numbers"
+    },
+    {
+        "Rule 4.1": "Hex integers"
+    },
+    [
+        "0xdead_beef", [["HEX_INTEGER", "0xdead_beef"],["EOF"]]
+    ],
+    [
+        "0Xdead_beef", [["HEX_INTEGER", "0Xdead_beef"],["EOF"]]
+    ],
+    {
+        "Rule 4.2": "Binary integers"
+    },
+    [
+        "0b01_10", [["BIN_INTEGER", "0b01_10"],["EOF"]]
+    ],
+    [
+        "0B01_10", [["BIN_INTEGER", "0B01_10"],["EOF"]]
+    ],
+    {
+        "Rule 4.4": "Double and single floats"
+    },
+    [
+        "123.123e", [["DOUBLE_FLOAT", "123.123e"],["EOF"]]
+    ],
+    [
+        "123.123E", [["DOUBLE_FLOAT", "123.123E"],["EOF"]]
+    ],
+    [
+        "123.123e123", [["DOUBLE_FLOAT", "123.123e123"],["EOF"]]
+    ],
+    [
+        "123.123e+1", [["DOUBLE_FLOAT", "123.123e+1"],["EOF"]]
+    ],
+    [
+        "123.123e-1", [["DOUBLE_FLOAT", "123.123e-1"],["EOF"]]
+    ],
+    [
+        "123.123f", [["SINGLE_FLOAT", "123.123f"],["EOF"]]
+    ],
+    [
+        "123.123F", [["SINGLE_FLOAT", "123.123F"],["EOF"]]
+    ],
+    [
+        "123.123f123", [["SINGLE_FLOAT", "123.123f123"],["EOF"]]
+    ],
+    [
+        "123.123f+1", [["SINGLE_FLOAT", "123.123f+1"],["EOF"]]
+    ],
+    [
+        "123.123f-1", [["SINGLE_FLOAT", "123.123f-1"],["EOF"]]
+    ],
+    {
+        "Rule 4.5": "Double floats and decimal integers"
+    },
+    [
+        "123_123.123_123", [["DOUBLE_FLOAT", "123_123.123_123"],["EOF"]]
+    ],
+    [
+        "123_123", [["DEC_INTEGER", "123_123"],["EOF"]]
+    ],
+    {
+        "Rule 5": "Block comments"
+    },
+    [
+        " ---foo---bar", [["BLOCK_COMMENT", "---foo---"],["WORD","bar"],["EOF"]]
+    ],
+    [
+        " ---\nfoo\n---\nbar", [["BLOCK_COMMENT", "---\nfoo\n---"],["NEWLINE"],
+                                ["WORD","bar"],["EOF"]]
+    ],
+    {
+        "Rule 6": "Line comments"
+    },
+    [
+        "foo -- bar \n quux", [["WORD", "foo"],["COMMENT", "-- bar "],["NEWLINE"],
+                               ["WORD", "quux"],["EOF"]]
+    ],
+    {
+        "Rule 7": "Block strings"
+    },
+    [
+        "x \"\"\"Block\\\"\"\"_\"\"\" y",
+        [["WORD", "x"],["BLOCK_STRING", "\"\"\"Block\\\"\"\"_\"\"\""],["WORD","y"],["EOF"]]
+    ],
+    {
+        "Rule 8": "String"
+    },
+    [
+        "x \"foo\\\"bar\" y", [["WORD", "x"],["STRING","\"foo\\\"bar\""],["WORD","y"],["EOF"]]
+    ],
+    {
+        "Rule 9": "Word or keyword"
+    },
+    [
+        "  foo bar", [["WORD", "foo"],["WORD", "bar"],["EOF"]]
+    ],
+    [
+        "Foo ", [["WORD", "Foo"],["EOF"]]
+    ],
+    [
+        "foo: bar", [["KEYWORD", "foo:"],["WORD", "bar"],["EOF"]]
+    ],
+    [
+        "foo:bar", [["KEYWORD", "foo:"],["WORD", "bar"],["EOF"]]
+    ],
+    {
+        "Rule 10": "Sigils"
+    },
+    [
+        "-foo", [["SIGIL", "-"],["WORD", "foo"],["EOF"]]
+    ],
+    [
+        "foo :: bar", [["WORD", "foo"],["SIGIL", "::"],["WORD", "bar"],["EOF"]]
+    ],
+    [
+        "foo::bar", [["WORD", "foo"],["SIGIL", "::"],["WORD", "bar"],["EOF"]]
+    ],
+    [
+        " a ++ b ", [["WORD", "a"],["SIGIL", "++"],["WORD", "b"],["EOF"]]
+    ],
+    [
+        " a+b ", [["WORD", "a"],["SIGIL", "+"],["WORD", "b"],["EOF"]]
+    ],
+    {
+        "Misc tests": "..."
+    },
+    [
+        "-123", [["SIGIL","-"],["DEC_INTEGER","123"],["EOF"]]
+    ]
+]

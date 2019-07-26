@@ -9,21 +9,41 @@
 
  3. If at a special character, consume it and return SPECIAL.
 
- 4. If at a numeric character, consume until terminating character and return NUMBER.
+ 4. If at a digit character, consume it. Then continue as below,
+    returning the appropriate type of number token.
 
- 5. If at --- consume until ---- and return BLOCK_COMMENT.
+    NOTE: It is a syntax error if a number parsed according to
+          following rules is followed by a word character.
+
+    NOTE: Below when consuming digits, also consume underscore.
+
+    4.1. If at x or X, consume hexadecimal digits and return HEX_INTEGER.
+
+    4.2. If at b or B, consume binary digits and return BIN_INTEGER.
+
+    4.3. Consume decimal digits. If then at dot, consume, then
+         following consume decimal digits.
+
+    4.4. If at e or f, consume. If at + or -, consume. Consume decimal
+         digits. For e return DOUBLE_FLOAT, for f return SINGLE_FLOAT.
+
+    4.5. If consumed a dot earlier, return DOUBLE_FLOAT, otherwise
+         DEC_INTEGER.
+
+ 5. If at --- consume until --- and return BLOCK_COMMENT.
 
  6. If at -- consume to end of line and return COMMENT.
 
- 7. If at """ consume until """ and return BLOCK_STRING.
+ 7. If at """ consume until non-escaped """ and return BLOCK_STRING.
 
- 8. If at " consume until " and return STRING.
+ 8. If at " consume until non-escaped " and return STRING.
 
- 9. If at a word character, consume the word. If the word is
-    immediately followed by a single colon and whitespace, consume the
-    colon and return KEYWORD, otherwise return WORD.
+ 9. If at a word character, until eof or non-word character. If the
+    word is immediately followed by a single colon (ie. not double)
+    and whitespace, consume the colon and return KEYWORD, otherwise
+    return WORD.
 
-10. At a sigil character, consume the sigil and return SIGIL.
+10. At a sigil character, consume sigil characters and return SIGIL.
 
 ## Special Characters
 
@@ -36,13 +56,12 @@
 
 ## Word characters
 
-- Alphabetic characters (including subscripts and superscripts)
-- Numeric characters
+- Alphanumeric characters (including subscripts and superscripts)
 - Underscore
 
 ## Sigil characters
 
-Non-alphabetic characters that are not special characters.
+Non-word characters that are not terminating characters.
 
 ## Notes
 
@@ -57,3 +76,18 @@ Non-alphabetic characters that are not special characters.
         syntax: foolang_v1
 
   can cause the parser to change the scanner into different mode.
+
+- Annotations:
+
+        foo::File <finalize>
+
+  => Type(InstanceVariable("foo"), Global("File")) | SIGIL(<) WORD(finalize) SIGIL(>)
+
+  To have SIGIL(<) work as postfix, it need cannot be applied to operators.
+  That's OK as far as limitations go, I guess.
+
+  Then SIGIL(<) parser will see that it is unbalanced to right, which means it is an
+  annotation and not a less-than operator.
+
+  Then it consumes until SIGIL(>) and checks that that was unbalanced to left.
+
