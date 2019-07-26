@@ -26,3 +26,4 @@ winapi = "*"
 [dev-dependencies]
 assert_cmd = "*"
 predicates = "*"
+serde_json = "*"

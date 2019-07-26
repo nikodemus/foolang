@@ -1,0 +1,34 @@
+[
+    {
+        "note": "This file containts tokenization test data for Foolang"},
+    {
+        "note": "Each test is an input string followed by its tokenization"
+    },
+    [
+        "foo bar", [["Identifier", "foo"],["Identifier", "bar"]]
+    ],
+    [
+        "Foo ", [["Identifier", "Foo"]]
+    ],
+    [
+        "foo: bar", [["Keyword", "foo:"],["Identifier", "bar"]]
+    ],
+    [
+        " (( ", [["Operator", "("],["Operator", "("]]
+    ],
+    [
+        " )) ", [["Operator", ")"],["Operator", ")"]]
+    ],
+    [
+        " [[ ", [["Operator", "["],["Operator", "["]]
+    ],
+    [
+        " ]] ", [["Operator", "]"],["Operator", "]"]]
+    ],
+    [
+        " {{ ", [["Operator", "{"],["Operator", "{"]]
+    ],
+    [
+        " }} ", [["Operator", "}"],["Operator", "}"]]
+    ]
+]

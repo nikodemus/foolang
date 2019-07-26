@@ -15,6 +15,20 @@ pub enum Token {
     Operator,
 }
 
+impl Token {
+    fn name(&self) -> &'static str {
+        match self {
+            Token::Annotation => "Annotation",
+            Token::Character => "Character",
+            Token::Eof => "Eof",
+            Token::Keyword => "Keyword",
+            Token::Number => "Number",
+            Token::Identifier => "Identifier",
+            Token::Operator => "Operator",
+        }
+    }
+}
+
 #[derive(PartialEq)]
 pub struct SyntaxError {
     pub span: Span,
@@ -441,43 +455,27 @@ fn scan_keyword2() {
 }
 
 #[test]
-fn scan_open_paren() {
-    let mut scanner = TokenStream::new(" ((  ");
-    assert_eq!(scanner.scan(), Ok(Token::Operator));
-    assert_eq!(scanner.slice(), "(");
-}
-
-#[test]
-fn scan_close_paren() {
-    let mut scanner = TokenStream::new(" ))  ");
-    assert_eq!(scanner.scan(), Ok(Token::Operator));
-    assert_eq!(scanner.slice(), ")");
-}
-
-#[test]
-fn scan_open_brace() {
-    let mut scanner = TokenStream::new(" {{  ");
-    assert_eq!(scanner.scan(), Ok(Token::Operator));
-    assert_eq!(scanner.slice(), "{");
-}
-
-#[test]
-fn scan_close_brace() {
-    let mut scanner = TokenStream::new(" }}  ");
-    assert_eq!(scanner.scan(), Ok(Token::Operator));
-    assert_eq!(scanner.slice(), "}");
-}
-
-#[test]
-fn scan_open_bracket() {
-    let mut scanner = TokenStream::new(" [[  ");
-    assert_eq!(scanner.scan(), Ok(Token::Operator));
-    assert_eq!(scanner.slice(), "[");
-}
-
-#[test]
-fn scan_close_bracket() {
-    let mut scanner = TokenStream::new(" ]]  ");
-    assert_eq!(scanner.scan(), Ok(Token::Operator));
-    assert_eq!(scanner.slice(), "]");
+fn run_test_vectors() {
+    use serde_json;
+    use std::fs;
+    let tests = fs::read_to_string("tokenization_tests.json")
+        .expect("Could not read tokenization_tests.json");
+    let tests: serde_json::Value = serde_json::from_str(tests.as_str()).unwrap();
+    let tests = tests.as_array().unwrap();
+    // Non-arrays in the test vector are comments.
+    for test in tests.into_iter().map(|x| x.as_array()).filter(|x| x.is_some()).map(|x| x.unwrap())
+    {
+        let mut scanner = TokenStream::new(test[0].as_str().unwrap());
+        for expected in test[1].as_array().unwrap().into_iter().map(|x| x.as_array().unwrap()) {
+            let token = scanner.scan().unwrap();
+            let wanted = expected[0].as_str().unwrap();
+            if wanted != token.name() {
+                panic!("Scanning {} failed.\nToken {}, wanted {}", test[0], token.name(), wanted);
+            }
+            let wanted = expected[1].as_str().unwrap();
+            if wanted != scanner.slice() {
+                panic!("Scanning {} failed.\nSlice {}, wanted {}", test[0], token.name(), wanted);
+            }
+        }
+    }
 }
