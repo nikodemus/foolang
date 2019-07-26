@@ -23,34 +23,34 @@
         "Rule 3": "Special characters"
     },
     [
-        " (( ", [["SPECIAL", "("],["SPECIAL", "("],["EOF"]]
+        " (( ", [["SIGIL", "("],["SIGIL", "("],["EOF"]]
     ],
     [
-        " )) ", [["SPECIAL", ")"],["SPECIAL", ")"],["EOF"]]
+        " )) ", [["SIGIL", ")"],["SIGIL", ")"],["EOF"]]
     ],
     [
-        " [[ ", [["SPECIAL", "["],["SPECIAL", "["],["EOF"]]
+        " [[ ", [["SIGIL", "["],["SIGIL", "["],["EOF"]]
     ],
     [
-        " ]] ", [["SPECIAL", "]"],["SPECIAL", "]"],["EOF"]]
+        " ]] ", [["SIGIL", "]"],["SIGIL", "]"],["EOF"]]
     ],
     [
-        " {{ ", [["SPECIAL", "{"],["SPECIAL", "{"],["EOF"]]
+        " {{ ", [["SIGIL", "{"],["SIGIL", "{"],["EOF"]]
     ],
     [
-        " }} ", [["SPECIAL", "}"],["SPECIAL", "}"],["EOF"]]
+        " }} ", [["SIGIL", "}"],["SIGIL", "}"],["EOF"]]
     ],
     [
-        " $ ", [["SPECIAL", "$"],["EOF"]]
+        " $ ", [["SIGIL", "$"],["EOF"]]
     ],
     [
-        " # ", [["SPECIAL", "#"],["EOF"]]
+        " # ", [["SIGIL", "#"],["EOF"]]
     ],
     [
-        " , ", [["SPECIAL", ","],["EOF"]]
+        " , ", [["SIGIL", ","],["EOF"]]
     ],
     [
-        " ; ", [["SPECIAL", ";"],["EOF"]]
+        " ; ", [["SIGIL", ";"],["EOF"]]
     ],
     {
         "Rule 4": "Numbers"

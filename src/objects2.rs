@@ -5,7 +5,8 @@ use std::rc::Rc;
 
 use crate::eval;
 use crate::eval::Frame;
-use crate::parse::{ClassDefinition, Expr, SyntaxError};
+use crate::parse::{ClassDefinition, Expr};
+use crate::tokenstream::SyntaxError;
 
 use crate::classes;
 

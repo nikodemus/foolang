@@ -12,23 +12,23 @@
  4. If at a digit character, consume it. Then continue as below,
     returning the appropriate type of number token.
 
-    NOTE: It is a syntax error if a number parsed according to
-          following rules is followed by a word character.
+    NOTE: These rules will produce malformed numbers if such exist
+          in the source, such as 123foo.
 
-    NOTE: Below when consuming digits, also consume underscore.
+    4.1. If at x or X, consume word characters, return HEX_INTEGER.
 
-    4.1. If at x or X, consume hexadecimal digits and return HEX_INTEGER.
+    4.2. If at b or B, consume word characters, return BIN_INTEGER.
 
-    4.2. If at b or B, consume binary digits and return BIN_INTEGER.
+    4.3. Consume decimal digits and underscore. If then at dot,
+         consume, then consume following decimal digits and
+         underscore.
 
-    4.3. Consume decimal digits. If then at dot, consume, then
-         following consume decimal digits.
+    4.4. If at e or f, consume. If at + or -, consume. Consume word
+         characters. For e return DOUBLE_FLOAT, for f return
+         SINGLE_FLOAT.
 
-    4.4. If at e or f, consume. If at + or -, consume. Consume decimal
-         digits. For e return DOUBLE_FLOAT, for f return SINGLE_FLOAT.
-
-    4.5. If consumed a dot earlier, return DOUBLE_FLOAT, otherwise
-         DEC_INTEGER.
+    4.5. Consume word characters. If consumed a dot earlier, return
+         DOUBLE_FLOAT, otherwise DEC_INTEGER.
 
  5. If at --- consume until --- and return BLOCK_COMMENT.
 
@@ -44,6 +44,11 @@
     return WORD.
 
 10. At a sigil character, consume sigil characters and return SIGIL.
+
+## Number characters
+
+- Alphanumeric characters
+- Underscore
 
 ## Special Characters
 

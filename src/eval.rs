@@ -5,8 +5,9 @@ use std::rc::Rc;
 
 use crate::objects2::{Builtins, Closure, Eval, Object, Unwind};
 use crate::parse::{
-    parse_str, Assign, ClassDefinition, Expr, Global, Literal, Parser, Return, SyntaxError, Var,
+    parse_str, Assign, ClassDefinition, Expr, Global, Literal, Parser, Return, Var,
 };
+use crate::tokenstream::SyntaxError;
 
 struct Env<'a> {
     builtins: &'a Builtins,
@@ -328,9 +329,9 @@ fn eval_bad_float() {
     assert_eq!(
         eval_str("1.2.3"),
         Unwind::exception(SyntaxError {
-            span: 0..5,
-            problem: "Malformed number",
-            context: concat!("001 1.2.3\n", "    ^^^^^ Malformed number\n").to_string()
+            span: 3..4,
+            problem: "Unknown operator",
+            context: concat!("001 1.2.3\n", "       ^ Unknown operator\n").to_string()
         })
     );
 }
@@ -533,13 +534,13 @@ fn eval_closure3() {
 #[test]
 fn eval_class_not_toplevel() {
     assert_eq!(
-        eval_str("let x = 42, @class Point { x, y } @end"),
+        eval_str("let x = 42, class Point { x, y } end"),
         Unwind::exception(SyntaxError {
-            span: 12..18,
+            span: 12..17,
             problem: "Class definition not at toplevel",
             context: concat!(
-                "001 let x = 42, @class Point { x, y } @end\n",
-                "                ^^^^^^ Class definition not at toplevel\n"
+                "001 let x = 42, class Point { x, y } end\n",
+                "                ^^^^^ Class definition not at toplevel\n"
             )
             .to_string()
         })
@@ -548,7 +549,7 @@ fn eval_class_not_toplevel() {
 
 #[test]
 fn eval_class1() {
-    let class = eval_ok("@class Point { x, y } @end").class();
+    let class = eval_ok("class Point { x, y } end").class();
     assert_eq!(class.instance_vtable.name, "Point");
     assert_eq!(class.instance_variables, vec!["x".to_string(), "y".to_string()]);
 }
@@ -575,7 +576,7 @@ fn eval_global2() {
 
 #[test]
 fn eval_new_instance1() {
-    let (object, builtins) = eval_builtins("@class Point { x, y } @end, Point x: 1 y: 2");
+    let (object, builtins) = eval_builtins("class Point { x, y } end, Point x: 1 y: 2");
     assert_eq!(object.send("x", &[], &builtins), Ok(builtins.make_integer(1)));
     assert_eq!(object.send("y", &[], &builtins), Ok(builtins.make_integer(2)));
 }
@@ -583,10 +584,10 @@ fn eval_new_instance1() {
 #[test]
 fn eval_new_instance2() {
     let (object, builtins) = eval_builtins(
-        "@class Oh {}
+        "class Oh {}
             method no 42
             defaultConstructor noes
-         @end,
+         end,
          Oh noes",
     );
     assert_eq!(object.send("no", &[], &builtins), Ok(builtins.make_integer(42)));
@@ -595,9 +596,9 @@ fn eval_new_instance2() {
 #[test]
 fn eval_instance_method1() {
     let (object, builtins) = eval_builtins(
-        "@class Foo {}
+        "class Foo {}
             method bar 311
-         @end,
+         end,
          Foo new",
     );
     assert_eq!(object.send("bar", &[], &builtins), Ok(builtins.make_integer(311)));
@@ -606,12 +607,12 @@ fn eval_instance_method1() {
 #[test]
 fn eval_instance_method2() {
     let (object, builtins) = eval_builtins(
-        "@class Foo {}
+        "class Foo {}
             method foo
                self bar
             method bar
                311
-         @end,
+         end,
          Foo new",
     );
     assert_eq!(object.send("bar", &[], &builtins), Ok(builtins.make_integer(311)));
@@ -620,11 +621,11 @@ fn eval_instance_method2() {
 #[test]
 fn test_return_returns() {
     let (obj, builtins) = eval_builtins(
-        "@class Foo {}
+        "class Foo {}
             method foo
                return 1,
                2
-         @end,
+         end,
          Foo new foo",
     );
     assert_eq!(obj, builtins.make_integer(1));
@@ -633,13 +634,13 @@ fn test_return_returns() {
 #[test]
 fn test_return_from_method_block() {
     let (obj, builtins) = eval_builtins(
-        "@class Foo {}
+        "class Foo {}
             method test
                 self boo: { return 42 },
                 31
             method boo: blk
                 blk value
-         @end,
+         end,
          Foo new test
         ",
     );
@@ -649,7 +650,7 @@ fn test_return_from_method_block() {
 #[test]
 fn test_return_from_deep_block_to_middle() {
     let (object, builtins) = eval_builtins(
-        "@class Foo {}
+        "class Foo {}
             method test
                return 1 + let x = 41, self test0: x
             method test0: x
@@ -661,7 +662,7 @@ fn test_return_from_deep_block_to_middle() {
             method test2: blk
                blk value,
                return 10000
-         @end,
+         end,
          Foo new test
         ",
     );

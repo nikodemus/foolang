@@ -5,7 +5,6 @@ use std::convert::Into;
 use std::str::FromStr;
 
 use crate::objects2::Unwind;
-pub use crate::tokenstream::SyntaxError;
 use crate::tokenstream::{Span, Token, TokenStream};
 
 // FIXME: Do these really need clone, if so, why?
@@ -209,11 +208,42 @@ enum Syntax {
 type TokenTable = HashMap<Token, Syntax>;
 type NameTable = HashMap<String, Syntax>;
 
+pub struct ParserState<'a> {
+    tokenstream: TokenStream<'a>,
+    lookahead: Option<(Token, Span)>,
+    span: Span,
+}
+
+impl<'a> ParserState<'a> {
+    fn scan(&mut self) -> Result<(Token, Span), Unwind> {
+        let token = self.tokenstream.scan()?;
+        Ok((token, self.tokenstream.span()))
+    }
+
+    fn next_token(&mut self) -> Result<Token, Unwind> {
+        let (token, span) = match self.lookahead.take() {
+            None => self.scan()?,
+            Some(look) => look,
+        };
+        self.span = span;
+        Ok(token)
+    }
+
+    fn lookahead(&mut self) -> Result<(Token, Span), Unwind> {
+        if let Some(look) = &self.lookahead {
+            return Ok(look.clone());
+        }
+        let look = self.scan()?;
+        self.lookahead = Some(look.clone());
+        Ok(look)
+    }
+}
+
 pub struct Parser<'a> {
     source: &'a str,
-    tokenstream: RefCell<TokenStream<'a>>,
     token_table: TokenTable,
     name_table: NameTable,
+    state: RefCell<ParserState<'a>>,
 }
 
 impl<'a> Parser<'a> {
@@ -222,7 +252,11 @@ impl<'a> Parser<'a> {
             source,
             token_table: make_token_table(),
             name_table: make_name_table(),
-            tokenstream: RefCell::new(TokenStream::new(source)),
+            state: RefCell::new(ParserState {
+                tokenstream: TokenStream::new(source),
+                lookahead: None,
+                span: 0..0,
+            }),
         }
     }
 
@@ -255,7 +289,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_prefix(&self) -> Result<Expr, Unwind> {
-        let token = self.scan()?;
+        let token = self.next_token()?;
         match self.token_table.get(&token) {
             Some(syntax) => self.parse_prefix_syntax(syntax),
             None => unimplemented!("Don't know how to parse {:?} in prefix position.", token),
@@ -263,7 +297,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_suffix(&self, left: Expr) -> Result<Expr, Unwind> {
-        let token = self.scan()?;
+        let token = self.next_token()?;
         match self.token_table.get(&token) {
             Some(syntax) => self.parse_suffix_syntax(syntax, left),
             None => unimplemented!("Don't know how to parse {:?} in suffix position.", token),
@@ -313,15 +347,15 @@ impl<'a> Parser<'a> {
     }
 
     pub fn lookahead(&self) -> Result<(Token, Span), Unwind> {
-        self.tokenstream.borrow_mut().lookahead()
+        self.state.borrow_mut().lookahead()
     }
 
-    pub fn scan(&self) -> Result<Token, Unwind> {
-        self.tokenstream.borrow_mut().scan()
+    pub fn next_token(&self) -> Result<Token, Unwind> {
+        self.state.borrow_mut().next_token()
     }
 
     pub fn at_eof(&self) -> bool {
-        if let Ok((Token::Eof, _)) = self.lookahead() {
+        if let Ok((Token::EOF, _)) = self.lookahead() {
             return true;
         } else {
             return false;
@@ -329,7 +363,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn span(&self) -> Span {
-        self.tokenstream.borrow().span()
+        self.state.borrow().span.clone()
     }
 
     pub fn slice(&self) -> &str {
@@ -341,15 +375,15 @@ impl<'a> Parser<'a> {
     }
 
     pub fn tokenstring(&self) -> String {
-        self.tokenstream.borrow().tokenstring()
+        self.state.borrow().tokenstream.tokenstring()
     }
 
     pub fn error<T>(&self, problem: &'static str) -> Result<T, Unwind> {
-        self.tokenstream.borrow().error(problem)
+        self.state.borrow().tokenstream.error(problem)
     }
 
     pub fn error_at<T>(&self, span: Span, problem: &'static str) -> Result<T, Unwind> {
-        self.tokenstream.borrow().error_at(span, problem)
+        self.state.borrow().tokenstream.error_at(span, problem)
     }
 }
 
@@ -382,11 +416,16 @@ fn make_token_table() -> TokenTable {
     let t = &mut table;
     use Token::*;
 
-    Syntax::def(t, Number, number_prefix, invalid_suffix, precedence_invalid);
-    Syntax::def(t, Identifier, identifier_prefix, identifier_suffix, identifier_precedence);
-    Syntax::def(t, Operator, operator_prefix, operator_suffix, operator_precedence);
-    Syntax::def(t, Keyword, invalid_prefix, keyword_suffix, precedence_5);
-    Syntax::def(t, Eof, invalid_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, HEX_INTEGER, number_prefix, invalid_suffix, precedence_invalid);
+    Syntax::def(t, BIN_INTEGER, number_prefix, invalid_suffix, precedence_invalid);
+    Syntax::def(t, DEC_INTEGER, number_prefix, invalid_suffix, precedence_invalid);
+    Syntax::def(t, SINGLE_FLOAT, number_prefix, invalid_suffix, precedence_invalid);
+    Syntax::def(t, DOUBLE_FLOAT, number_prefix, invalid_suffix, precedence_invalid);
+    Syntax::def(t, WORD, identifier_prefix, identifier_suffix, identifier_precedence);
+    Syntax::def(t, SIGIL, operator_prefix, operator_suffix, operator_precedence);
+    Syntax::def(t, KEYWORD, invalid_prefix, keyword_suffix, precedence_5);
+    Syntax::def(t, NEWLINE, newline_prefix, newline_suffix, precedence_1);
+    Syntax::def(t, EOF, invalid_prefix, invalid_suffix, precedence_0);
 
     table
 }
@@ -399,10 +438,10 @@ fn make_name_table() -> NameTable {
     let mut table: NameTable = HashMap::new();
     let t = &mut table;
 
-    Syntax::def(t, "@class", class_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "class", class_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "method", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "defaultConstructor", invalid_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "@end", invalid_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "end", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "return", return_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ",", invalid_prefix, sequence_suffix, precedence_1);
@@ -461,9 +500,6 @@ fn identifier_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         Some(syntax) => parser.parse_prefix_syntax(syntax),
         None => {
             let c = name.chars().next().expect("BUG: empty identifier");
-            if c == '@' {
-                return parser.error("Unknown toplevel definition");
-            }
             if c.is_uppercase() {
                 // FIXME: not all languages have uppercase
                 return Ok(Global::expr(parser.span(), parser.tokenstring()));
@@ -479,9 +515,6 @@ fn identifier_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Resu
         Some(syntax) => parser.parse_suffix_syntax(syntax, left),
         None => {
             let c = name.chars().next().expect("BUG: empty identifier");
-            if c == '@' {
-                return parser.error("Unknown toplevel definition");
-            }
             if c.is_uppercase() {
                 // FIXME: not all languages have uppercase
                 return parser.error("Invalid message name (must be lowercase)");
@@ -541,8 +574,8 @@ fn keyword_suffix(
     loop {
         args.push(parser.parse_expr(precedence)?);
         let (token, _span) = parser.lookahead()?;
-        if token == Token::Keyword {
-            parser.scan()?;
+        if token == Token::KEYWORD {
+            parser.next_token()?;
             selector.push_str(parser.slice());
         } else {
             break;
@@ -560,16 +593,16 @@ fn parse_method(parser: &Parser, class: &mut ClassDefinition) -> Result<(), Unwi
     let mut selector = String::new();
     let mut parameters = Vec::new();
     loop {
-        match parser.scan()? {
-            Token::Identifier | Token::Operator => {
+        match parser.next_token()? {
+            Token::WORD | Token::SIGIL => {
                 assert!(selector.is_empty());
                 assert!(parameters.is_empty());
                 selector = parser.tokenstring();
                 break;
             }
-            Token::Keyword => {
+            Token::KEYWORD => {
                 selector.push_str(parser.slice());
-                if let Token::Identifier = parser.scan()? {
+                if let Token::WORD = parser.next_token()? {
                     parameters.push(parser.tokenstring());
                 } else {
                     return parser.error("Expected keyword selector parameter");
@@ -578,7 +611,7 @@ fn parse_method(parser: &Parser, class: &mut ClassDefinition) -> Result<(), Unwi
             _ => return parser.error("Expected method selector"),
         }
         match parser.lookahead()? {
-            (Token::Keyword, _) => continue,
+            (Token::KEYWORD, _) => continue,
             _ => break,
         }
     }
@@ -612,26 +645,26 @@ fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     let start = parser.span();
     let (token, span) = parser.lookahead()?;
     let mut params = vec![];
-    if token == Token::Operator && parser.slice_at(span) == "|" {
-        parser.scan()?;
+    if token == Token::SIGIL && parser.slice_at(span) == "|" {
+        parser.next_token()?;
         loop {
-            let token = parser.scan()?;
-            if token == Token::Identifier {
+            let token = parser.next_token()?;
+            if token == Token::WORD {
                 params.push(parser.tokenstring());
                 continue;
             }
-            if token == Token::Operator && parser.slice() == "|" {
+            if token == Token::SIGIL && parser.slice() == "|" {
                 break;
             }
             return parser.error("Not valid as block parameter");
         }
     }
     let body = parser.parse_expr(0)?;
-    let end = parser.scan()?;
+    let end = parser.next_token()?;
     // FIXME: hardcoded {
     // Would be nice to be able to swap between [] and {} and
     // keep this function same,
-    if end == Token::Operator && parser.slice() == "}" {
+    if end == Token::SIGIL && parser.slice() == "}" {
         Ok(Expr::Block(start.start..parser.span().end, params, Box::new(body)))
     } else {
         parser.error("Expected } as block terminator")
@@ -639,11 +672,11 @@ fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
 }
 
 fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    // FIXME: span is the span of the @class, but maybe it would be better if these
+    // FIXME: span is the span of the class, but maybe it would be better if these
     // had all their own spans.
     let span = parser.span();
-    let class_name = match parser.scan()? {
-        Token::Identifier => {
+    let class_name = match parser.next_token()? {
+        Token::WORD => {
             if parser.slice().chars().next().expect("BUG: empty identifier").is_uppercase() {
                 parser.tokenstring()
             } else {
@@ -653,22 +686,22 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         }
         _ => return parser.error("Expected class name"),
     };
-    match parser.scan()? {
-        Token::Operator if parser.slice() == "{" => {}
+    match parser.next_token()? {
+        Token::SIGIL if parser.slice() == "{" => {}
         _ => return parser.error("Expected { to open instance variable block"),
     }
     let mut instance_variables = Vec::new();
     loop {
-        let token = parser.scan()?;
+        let token = parser.next_token()?;
         let tokenstring = parser.tokenstring();
         match token {
-            Token::Identifier => {
+            Token::WORD => {
                 instance_variables.push(tokenstring);
             }
-            Token::Operator if parser.slice() == "}" => {
+            Token::SIGIL if parser.slice() == "}" => {
                 break;
             }
-            Token::Operator if parser.slice() == "," => {
+            Token::SIGIL if parser.slice() == "," => {
                 continue;
             }
             _ => return parser.error("Invalid instance variable specification"),
@@ -677,17 +710,20 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     let size = instance_variables.len();
     let mut class = ClassDefinition::new(span, class_name, instance_variables);
     loop {
-        let next = parser.scan()?;
-        if next == Token::Identifier && parser.slice() == "@end" {
+        let next = parser.next_token()?;
+        if next == Token::NEWLINE {
+            continue;
+        }
+        if next == Token::WORD && parser.slice() == "end" {
             break;
         }
-        if next == Token::Identifier && parser.slice() == "method" {
+        if next == Token::WORD && parser.slice() == "method" {
             parse_method(parser, &mut class)?;
             continue;
         }
-        if next == Token::Identifier && parser.slice() == "defaultConstructor" {
-            let ctor = parser.scan()?;
-            if ctor == Token::Identifier {
+        if next == Token::WORD && parser.slice() == "defaultConstructor" {
+            let ctor = parser.next_token()?;
+            if ctor == Token::WORD {
                 if size > 0 {
                     return parser
                         .error("Class has instance variables: no default constructor available");
@@ -699,27 +735,35 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             }
             continue;
         }
-        return parser.error("Expected method or @end");
+        return parser.error("Expected method or end");
     }
     Ok(Expr::ClassDefinition(class))
 }
 
 fn let_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    if Token::Identifier != parser.scan()? {
+    if Token::WORD != parser.next_token()? {
         return parser.error("Expected variable name after let");
     }
     let name = parser.slice().to_string();
-    let next = parser.scan()?;
-    if Token::Operator != next || "=" != parser.slice() {
+    let next = parser.next_token()?;
+    if Token::SIGIL != next || "=" != parser.slice() {
         return parser.error("Expected = in let");
     }
     let value = parser.parse_expr(SEQ_PRECEDENCE)?;
-    let next = parser.scan()?;
-    if Token::Operator != next {
+    let next = parser.next_token()?;
+    if Token::SIGIL != next {
         return parser.error("Expected separator after let");
     }
     let body = parser.parse_expr(0)?;
     Ok(Expr::Bind(name, Box::new(value), Box::new(body)))
+}
+
+fn newline_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+    parser.parse_expr(0)
+}
+
+fn newline_suffix(_: &Parser, left: Expr, _: PrecedenceFunction) -> Result<Expr, Unwind> {
+    Ok(left)
 }
 
 fn number_prefix(parser: &Parser) -> Result<Expr, Unwind> {
@@ -931,30 +975,30 @@ fn parse_block_args() {
 
 #[test]
 fn parse_class() {
-    assert_eq!(parse_str("@class Point { x, y } @end"), Ok(class(0..6, "Point", vec!["x", "y"])));
+    assert_eq!(parse_str("class Point { x, y } end"), Ok(class(0..5, "Point", vec!["x", "y"])));
 }
 
 #[test]
 fn parse_method1() {
-    let mut class = class(0..6, "Foo", vec![]);
-    class.add_method(method(14..20, "bar", vec![], int(25..27, 42)));
-    assert_eq!(parse_str("@class Foo {} method bar 42 @end"), Ok(class));
+    let mut class = class(0..5, "Foo", vec![]);
+    class.add_method(method(13..19, "bar", vec![], int(24..26, 42)));
+    assert_eq!(parse_str("class Foo {} method bar 42 end"), Ok(class));
 }
 
 #[test]
 fn parse_method2() {
-    let mut class = class(18..24, "Foo", vec![]);
-    class.add_method(method(53..59, "foo", vec![], unary(93..96, "bar", var(88..92, "self"))));
-    class.add_method(method(118..124, "bar", vec![], int(153..155, 42)));
+    let mut class = class(18..23, "Foo", vec![]);
+    class.add_method(method(52..58, "foo", vec![], unary(92..95, "bar", var(87..91, "self"))));
+    class.add_method(method(117..123, "bar", vec![], int(152..154, 42)));
     assert_eq!(
         parse_str(
             "
-                 @class Foo {}
+                 class Foo {}
                      method foo
                         self bar
                      method bar
                         42
-                 @end"
+                 end"
         ),
         Ok(class)
     );
