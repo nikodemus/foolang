@@ -25,77 +25,74 @@ identifier := _?[:alphabetic:][:alphanumeric:]*[?!']*?
    - return
    - let
 
-  
+  In value position identifiers which have a case must be local if
+  lowercase and global if uppercase or titlecase.
 
-In value position identifiers which
-  have a case must be local if lowercase and global if uppercase or
-  titlecase.
+        -- local
+        foo
 
-      # local
-      foo
+        -- global
+        Foo
 
-      # global
-      Foo
+        -- either
+        测试
+        _foo
 
-      # either
-      测试
-      _foo
+   Identifiers in operator position are evaluated as unary messages to
+   the value.
 
-       Identifiers in operator position are evaluated as unary
-       messages to the value. 
+        -- message bar to value of foo
+        foo bar
 
-          # message bar to value of foo
-          foo bar
+        -- message 跑 to 测试
+        测试 跑
 
-          # message 跑 to 测试
-          测试 跑
+   Outside development mode messages prefixed with underscore are
+   allowed only to self.
 
-       Outside development mode messages prefixed with
-       underscore are allowed only to self.
+        -- Syntax error outside development mode
+        foo _bar
 
-          # Syntax error outside development mode
-          foo _bar
+        -- Always legal
+        self _bar
 
-          # Always legal
-          self _bar
+sigils := [:non-alphabetic:]+
 
-    sigils := [:non-alphabetic:]+
+   Sigils in value position are evaluated as prefix operators.
+   Prefix operators _must_ precede their arguments without
+   intervening whitespace.
 
-       Sigils in value position are evaluated as prefix operators.
-       Prefix operators _must_ precede their arguments without
-       intervening whitespace.
+   Sigils in operator position are evaluated as postfix or binary
+   operators.
 
-       Sigils in operator position are evaluated as postfix or binary
-       operators.
+   Postfix operators _must_ follow their arguments without intervening
+   whitespace.
 
-       Postfix operators _must_ follow their arguments without intervening
-       whitespace.
+   Binary operators _must_ have balanced whitespace, and whitespace _must_
+   match precedence:
 
-       Binary operators _must_ have balanced whitespace, and whitespace _must_
-       match precedence:
+        -- Legal, precedence matches whitespace
+        x*y + b
 
-           # Legal, precedence matches whitespace
-           x*y + b
+        -- Legal, precedence does not conflict with whitespace
+        x * y + b
 
-           # Legal, precedence does not conflict with whitespace
-           x * y + b
+        -- Illegal, precedence conflicts with whitespace
+        x * y+b
 
-           # Illegal, precedence conflicts with whitespace
-           x * y+b
+   Sigils beginning with . : and = are served for the implementation
 
-       Sigils beginning with . : and = are served for the implementation
+        -- Type annotation
+        foo::Float
 
-           # Type annotation
-           foo::Float
+keyword := _?[:alphabetic:][:alphanumeric:]*: (must be followed by whitespace!)
 
-    keyword := _?[:alphabetic:][:alphanumeric:]*: (must be followed by whitespace!)
+   Keywords in value position are not allowed.
 
-       Keywords in value position are not allowed.
+   Keywords in operator position are parts of keyword messages.
 
-       Keywords in operator position are parts of keyword messages.
-
-         # Message bar:quux: with arguments 1 and 2 to foo
-         foo bar: 1 quux: 2
+        -- Message bar:quux: with arguments 1 and 2 to foo
+        foo bar: 1 quux: 2
 
 The only truly global reserved words are:
 
