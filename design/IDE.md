@@ -41,3 +41,7 @@ just contain:
 
 so that renaming a class (in absence of type annotations)
 requires only renaming the directory.
+
+## Input
+
+I think I would like to foo_1 to generate a subscript and foo2 to generate a superscript.
