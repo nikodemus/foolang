@@ -270,9 +270,9 @@ impl<'a> Parser<'a> {
         if debug {
             println!("prefix: {:?}", &expr);
         }
-        while precedence < self.precedence()? {
+        while precedence < self.next_precedence()? {
             if debug {
-                println!("  {} < {}", precedence, self.precedence()?);
+                println!("  {} < {}", precedence, self.next_precedence()?);
             }
             expr = self.parse_suffix(expr)?;
             if debug {
@@ -280,7 +280,7 @@ impl<'a> Parser<'a> {
             }
         }
         if debug {
-            println!("  NOT {} < {}", precedence, self.precedence()?);
+            println!("  NOT {} < {}", precedence, self.next_precedence()?);
         }
         if debug {
             println!("  next: {:?}", self.lookahead()?);
@@ -304,7 +304,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn precedence(&self) -> Result<usize, Unwind> {
+    fn next_precedence(&self) -> Result<usize, Unwind> {
         let (token, span) = self.lookahead()?;
         match self.token_table.get(&token) {
             Some(syntax) => self.syntax_precedence(syntax, span),
@@ -464,7 +464,7 @@ fn precedence_invalid(_: &Parser, _: Span) -> Result<usize, Unwind> {
 }
 
 fn precedence_5(_: &Parser, _: Span) -> Result<usize, Unwind> {
-    Ok(2)
+    Ok(5)
 }
 
 fn precedence_2(_: &Parser, _: Span) -> Result<usize, Unwind> {
@@ -750,20 +750,27 @@ fn let_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         return parser.error("Expected = in let");
     }
     let value = parser.parse_expr(SEQ_PRECEDENCE)?;
-    let next = parser.next_token()?;
-    if Token::SIGIL != next {
-        return parser.error("Expected separator after let");
+    match parser.next_token()? {
+        Token::SIGIL if parser.slice() == "," => {}
+        Token::NEWLINE => {}
+        _ => return parser.error("Expected separator after let"),
     }
     let body = parser.parse_expr(0)?;
     Ok(Expr::Bind(name, Box::new(value), Box::new(body)))
 }
 
 fn newline_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+    // Leading newlines are ignored.
     parser.parse_expr(0)
 }
 
-fn newline_suffix(_: &Parser, left: Expr, _: PrecedenceFunction) -> Result<Expr, Unwind> {
-    Ok(left)
+fn newline_suffix(parser: &Parser, left: Expr, pre: PrecedenceFunction) -> Result<Expr, Unwind> {
+    // Trailing newlines check precedence of the following expression
+    if SEQ_PRECEDENCE < parser.next_precedence()? {
+        sequence_suffix(parser, left, pre)
+    } else {
+        Ok(left)
+    }
 }
 
 fn number_prefix(parser: &Parser) -> Result<Expr, Unwind> {
@@ -927,7 +934,7 @@ fn parse_operators2() {
 }
 
 #[test]
-fn parse_sequence() {
+fn parse_sequence1() {
     assert_eq!(
         parse_str("foo bar, quux"),
         Ok(seq(vec![unary(4..7, "bar", var(0..3, "foo")), var(9..13, "quux")]))
@@ -935,7 +942,18 @@ fn parse_sequence() {
 }
 
 #[test]
-fn parse_let() {
+fn parse_sequence2() {
+    assert_eq!(
+        parse_str(
+            "foo bar
+             quux"
+        ),
+        Ok(seq(vec![unary(4..7, "bar", var(0..3, "foo")), var(21..25, "quux")]))
+    );
+}
+
+#[test]
+fn parse_let1() {
     assert_eq!(
         parse_str("let x = 21 + 21, x"),
         Ok(bind("x", binary(11..12, "+", int(8..10, 21), int(13..15, 21)), var(17..18, "x")))
@@ -943,12 +961,37 @@ fn parse_let() {
 }
 
 #[test]
-fn parse_keyword() {
+fn parse_let2() {
+    assert_eq!(
+        parse_str(
+            "let x = 21 + 21
+             x"
+        ),
+        Ok(bind("x", binary(11..12, "+", int(8..10, 21), int(13..15, 21)), var(29..30, "x")))
+    );
+}
+
+#[test]
+fn parse_keyword1() {
     assert_eq!(
         parse_str("foo x: 1 y: 2, bar"),
         Ok(seq(vec![
             keyword(4..13, "x:y:", var(0..3, "foo"), vec![int(7..8, 1), int(12..13, 2)]),
             var(15..18, "bar")
+        ]))
+    );
+}
+
+#[test]
+fn parse_keyword2() {
+    assert_eq!(
+        parse_str(
+            "foo x: 1 y: 2
+             bar"
+        ),
+        Ok(seq(vec![
+            keyword(4..13, "x:y:", var(0..3, "foo"), vec![int(7..8, 1), int(12..13, 2)]),
+            var(27..30, "bar")
         ]))
     );
 }
