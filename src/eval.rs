@@ -146,6 +146,7 @@ impl<'a> Env<'a> {
         match literal {
             Literal::Integer(value) => Ok(self.builtins.make_integer(*value)),
             Literal::Float(value) => Ok(self.builtins.make_float(*value)),
+            Literal::String(value) => Ok(self.builtins.make_string(value)),
         }
     }
 
@@ -528,6 +529,19 @@ fn eval_closure3() {
         )
         .integer(),
         3
+    );
+}
+
+#[test]
+fn test_string_append() {
+    assert_eq!(
+        eval_ok(
+            r#"
+                 "foo" append: "bar"
+             "#
+        )
+        .string_as_str(),
+        "foobar"
     );
 }
 

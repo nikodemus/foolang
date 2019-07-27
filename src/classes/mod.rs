@@ -13,5 +13,6 @@ pub mod number;
 pub mod object;
 pub mod output;
 pub mod string;
+pub mod string2;
 pub mod system;
 pub mod timeinfo;

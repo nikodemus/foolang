@@ -105,10 +105,11 @@ impl Global {
     }
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Literal {
     Integer(i64),
     Float(f64),
+    String(String),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -416,13 +417,17 @@ fn make_token_table() -> TokenTable {
     let t = &mut table;
     use Token::*;
 
-    Syntax::def(t, COMMENT, ignore_prefix, ignore_suffix, precedence_1000);
-    Syntax::def(t, BLOCK_COMMENT, ignore_prefix, ignore_suffix, precedence_1000);
+    // Literals should appear in prefix-positions only, hence precedence_invald
     Syntax::def(t, HEX_INTEGER, number_prefix, invalid_suffix, precedence_invalid);
     Syntax::def(t, BIN_INTEGER, number_prefix, invalid_suffix, precedence_invalid);
     Syntax::def(t, DEC_INTEGER, number_prefix, invalid_suffix, precedence_invalid);
     Syntax::def(t, SINGLE_FLOAT, number_prefix, invalid_suffix, precedence_invalid);
     Syntax::def(t, DOUBLE_FLOAT, number_prefix, invalid_suffix, precedence_invalid);
+    Syntax::def(t, STRING, string_prefix, invalid_suffix, precedence_invalid);
+    // Comments
+    Syntax::def(t, COMMENT, ignore_prefix, ignore_suffix, precedence_1000);
+    Syntax::def(t, BLOCK_COMMENT, ignore_prefix, ignore_suffix, precedence_1000);
+    // Others
     Syntax::def(t, WORD, identifier_prefix, identifier_suffix, identifier_precedence);
     Syntax::def(t, SIGIL, operator_prefix, operator_suffix, operator_precedence);
     Syntax::def(t, KEYWORD, invalid_prefix, keyword_suffix, precedence_5);
@@ -826,6 +831,16 @@ fn return_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     Ok(Return::expr(parser.span(), parser.parse_expr(SEQ_PRECEDENCE)?))
 }
 
+fn string_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+    let slice = parser.slice();
+    let mut n = 0;
+    while n < slice.len() && &slice[n..n + 1] == "\"" {
+        n += 1;
+    }
+    let data = &slice[n..slice.len() - n];
+    Ok(Expr::Const(parser.span(), Literal::String(data.to_string())))
+}
+
 /// Tests and tools
 
 pub fn parse_str(source: &str) -> Result<Expr, Unwind> {
@@ -834,6 +849,10 @@ pub fn parse_str(source: &str) -> Result<Expr, Unwind> {
 
 fn int(span: Span, value: i64) -> Expr {
     Expr::Const(span, Literal::Integer(value))
+}
+
+fn string(span: Span, value: &str) -> Expr {
+    Expr::Const(span, Literal::String(value.to_string()))
 }
 
 fn float(span: Span, value: f64) -> Expr {
@@ -1074,4 +1093,9 @@ fn parse_comments() {
         ),
         Ok(seq(vec![unary(33..36, "foo", var(0..3, "foo")), var(161..164, "bar")]))
     );
+}
+
+#[test]
+fn parse_string1() {
+    assert_eq!(parse_str(r#" "foo" "#), Ok(string(1..6, "foo")))
 }

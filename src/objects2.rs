@@ -122,12 +122,14 @@ pub enum Datum {
     Class(Rc<Class>),
     Closure(Rc<Closure>),
     Instance(Rc<Instance>),
+    String(Rc<String>),
 }
 
 pub struct Builtins {
     closure_vtable: Rc<Vtable>,
     float_vtable: Rc<Vtable>,
     integer_vtable: Rc<Vtable>,
+    string_vtable: Rc<Vtable>,
     pub globals: RefCell<HashMap<String, Object>>,
 }
 
@@ -159,10 +161,23 @@ impl Builtins {
             },
         );
 
+        let string_vtable = Rc::new(classes::string2::instance_vtable());
+        globals.insert(
+            "String".to_string(),
+            Object {
+                vtable: Rc::new(classes::string2::class_vtable()),
+                datum: Datum::Class(Rc::new(Class {
+                    instance_vtable: Rc::clone(&string_vtable),
+                    instance_variables: vec![],
+                })),
+            },
+        );
+
         Builtins {
             closure_vtable: Rc::new(classes::closure2::vtable()),
             float_vtable,
             integer_vtable,
+            string_vtable,
             globals: RefCell::new(globals),
         }
     }
@@ -225,6 +240,17 @@ impl Builtins {
         }
     }
 
+    pub fn make_string(&self, string: &str) -> Object {
+        self.into_string(string.to_string())
+    }
+
+    pub fn into_string(&self, string: String) -> Object {
+        Object {
+            vtable: Rc::clone(&self.string_vtable),
+            datum: Datum::String(Rc::new(string)),
+        }
+    }
+
     pub fn make_method_function(&self, params: &[String], body: &Expr) -> Closure {
         let mut params: Vec<String> = params.iter().map(|x| x.to_owned()).collect();
         params.push("self".to_string());
@@ -272,6 +298,20 @@ impl Object {
         }
     }
 
+    pub fn string(&self) -> Rc<String> {
+        match &self.datum {
+            Datum::String(s) => Rc::clone(s),
+            _ => panic!("BUG: {} is not a String", self),
+        }
+    }
+
+    pub fn string_as_str(&self) -> &str {
+        match &self.datum {
+            Datum::String(s) => s.as_str(),
+            _ => panic!("BUG: {} is not a String", self),
+        }
+    }
+
     pub fn send(&self, message: &str, args: &[&Object], builtins: &Builtins) -> Eval {
         // println!("debug: {} {} {:?}", self, message, args);
         match self.vtable.get(message) {
@@ -302,6 +342,7 @@ impl fmt::Display for Object {
             Datum::Closure(x) => write!(f, "$<closure {:?}>", x.params),
             Datum::Class(_) => write!(f, "$<{}>", self.vtable.name),
             Datum::Instance(_) => write!(f, "$<instance {}>", self.vtable.name),
+            Datum::String(s) => write!(f, "{}", s),
         }
     }
 }
@@ -320,6 +361,8 @@ impl fmt::Debug for Object {
             Datum::Closure(x) => write!(f, "Closure({:?})", x.env),
             Datum::Class(_) => write!(f, "{}", self.vtable.name),
             Datum::Instance(_) => write!(f, "{}", self.vtable.name),
+            // FIXME: Escape double-quotes
+            Datum::String(s) => write!(f, "\"{}\"", s),
         }
     }
 }
