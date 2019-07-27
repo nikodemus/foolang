@@ -472,7 +472,7 @@ impl<'a> TokenStream<'a> {
 fn run_test_vectors() {
     use serde_json;
     use std::fs;
-    let tests = fs::read_to_string("tokenization_tests2.json")
+    let tests = fs::read_to_string("tokenization_tests.json")
         .expect("Could not read tokenization_tests.json");
     let tests: serde_json::Value = serde_json::from_str(tests.as_str()).unwrap();
     let tests = tests.as_array().unwrap();
