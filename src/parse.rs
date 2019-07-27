@@ -416,6 +416,8 @@ fn make_token_table() -> TokenTable {
     let t = &mut table;
     use Token::*;
 
+    Syntax::def(t, COMMENT, ignore_prefix, ignore_suffix, precedence_1000);
+    Syntax::def(t, BLOCK_COMMENT, ignore_prefix, ignore_suffix, precedence_1000);
     Syntax::def(t, HEX_INTEGER, number_prefix, invalid_suffix, precedence_invalid);
     Syntax::def(t, BIN_INTEGER, number_prefix, invalid_suffix, precedence_invalid);
     Syntax::def(t, DEC_INTEGER, number_prefix, invalid_suffix, precedence_invalid);
@@ -424,7 +426,7 @@ fn make_token_table() -> TokenTable {
     Syntax::def(t, WORD, identifier_prefix, identifier_suffix, identifier_precedence);
     Syntax::def(t, SIGIL, operator_prefix, operator_suffix, operator_precedence);
     Syntax::def(t, KEYWORD, invalid_prefix, keyword_suffix, precedence_5);
-    Syntax::def(t, NEWLINE, newline_prefix, newline_suffix, precedence_1);
+    Syntax::def(t, NEWLINE, ignore_prefix, newline_suffix, precedence_1);
     Syntax::def(t, EOF, invalid_prefix, invalid_suffix, precedence_0);
 
     table
@@ -461,6 +463,10 @@ fn make_name_table() -> NameTable {
 fn precedence_invalid(_: &Parser, _: Span) -> Result<usize, Unwind> {
     // To guarantee it aways gets parsed.
     Ok(1001)
+}
+
+fn precedence_1000(_: &Parser, _: Span) -> Result<usize, Unwind> {
+    Ok(1000)
 }
 
 fn precedence_5(_: &Parser, _: Span) -> Result<usize, Unwind> {
@@ -759,11 +765,13 @@ fn let_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     Ok(Expr::Bind(name, Box::new(value), Box::new(body)))
 }
 
-fn newline_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    // Leading newlines are ignored.
+fn ignore_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     parser.parse_expr(0)
 }
 
+fn ignore_suffix(_parser: &Parser, left: Expr, _pre: PrecedenceFunction) -> Result<Expr, Unwind> {
+    Ok(left)
+}
 fn newline_suffix(parser: &Parser, left: Expr, pre: PrecedenceFunction) -> Result<Expr, Unwind> {
     // Trailing newlines check precedence of the following expression
     if SEQ_PRECEDENCE < parser.next_precedence()? {
@@ -1050,4 +1058,20 @@ fn parse_method2() {
 #[test]
 fn parse_return1() {
     assert_eq!(parse_str("return 12"), Ok(Return::expr(0..6, int(7..9, 12))));
+}
+
+#[test]
+fn parse_comments() {
+    assert_eq!(
+        parse_str(
+            "foo --- inline block comment --- foo -- Foo it up!
+             ---
+             Multiline
+             block
+             comment
+             ---
+             bar"
+        ),
+        Ok(seq(vec![unary(33..36, "foo", var(0..3, "foo")), var(161..164, "bar")]))
+    );
 }
