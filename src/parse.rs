@@ -833,12 +833,59 @@ fn return_prefix(parser: &Parser) -> Result<Expr, Unwind> {
 
 fn string_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     let slice = parser.slice();
+
+    // Strip quotes
     let mut n = 0;
     while n < slice.len() && &slice[n..n + 1] == "\"" {
         n += 1;
     }
-    let data = &slice[n..slice.len() - n];
-    Ok(Expr::Const(parser.span(), Literal::String(data.to_string())))
+
+    fn interpolate(parser: &Parser, span: Span, n: usize) -> Result<Expr, Unwind> {
+        let data = parser.slice_at(span.clone());
+
+        let p0 = match data.find('{') {
+            None => {
+                // No interpolation.
+                return Ok(Expr::Const(
+                    span.start - n..span.end + n,
+                    Literal::String(data.to_string()),
+                ));
+            }
+            Some(p) => p,
+        };
+        let p1 = match data[p0..].find('}') {
+            None => return parser.error("Unterminated string interpolation."),
+            Some(p) => p + p0,
+        };
+
+        // FIXME: incorrect span from parse_str
+        let interp = Expr::Send(
+            p0 + 1..p1,
+            "toString".to_string(),
+            Box::new(parse_str(&data[p0 + 1..p1])?),
+            vec![],
+        );
+        let left = if p0 > 0 {
+            Expr::Send(
+                p0 + 1..p1,
+                "append:".to_string(),
+                Box::new(Expr::Const(span.start..p0, Literal::String(data[0..p0].to_string()))),
+                vec![interp],
+            )
+        } else {
+            interp
+        };
+
+        if p1 + 1 < span.end {
+            let right = interpolate(parser, span.start + p1 + 1..span.end, n)?;
+            Ok(Expr::Send(p0 + 1..p1, "append:".to_string(), Box::new(left), vec![right]))
+        } else {
+            Ok(left)
+        }
+    }
+
+    let span = parser.span();
+    interpolate(parser, (span.start + n)..(span.end - n), n)
 }
 
 /// Tests and tools

@@ -682,3 +682,14 @@ fn test_return_from_deep_block_to_middle() {
     );
     assert_eq!(object, builtins.make_integer(42));
 }
+
+#[test]
+fn test_string_interpolation1() {
+    let (object, builtins) = eval_builtins(
+        r#"let a = 1
+           let b = 3
+           "{a}.{a+1}.{b}.{b+1}"
+          "#,
+    );
+    assert_eq!(object, builtins.make_string("1.2.3.4"));
+}

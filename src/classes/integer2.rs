@@ -9,6 +9,7 @@ pub fn vtable() -> Vtable {
     vt.def("divInteger:", integer_div_integer);
     vt.def("mulInteger:", integer_mul_integer);
     vt.def("subInteger:", integer_sub_integer);
+    vt.def("toString", integer_to_string);
     // INCIDENTAL
     vt.def("gcd:", integer_gcd);
     // DERIVED
@@ -57,6 +58,10 @@ fn integer_gcd(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval
     // FIXME: Panics if argument is not an integer.
     let res = num::integer::gcd(receiver.integer(), args[0].integer());
     Ok(builtins.make_integer(res))
+}
+
+fn integer_to_string(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+    Ok(builtins.make_string(&receiver.integer().to_string()))
 }
 
 // DERIVED METHODS
