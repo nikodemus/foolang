@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::objects2::{Builtins, Closure, Datum, Eval, Object, Unwind, Vtable};
+use crate::objects2::{Arg, Builtins, Closure, Datum, Eval, Object, Unwind, Vtable};
 use crate::parse::{
     parse_str, Assign, ClassDefinition, Expr, Global, Literal, Parser, Return, Var,
 };
@@ -161,8 +161,18 @@ impl<'a> Env<'a> {
         env.eval(body)
     }
 
-    fn eval_block(&self, params: &Vec<String>, body: &Expr) -> Eval {
-        Ok(self.builtins.make_closure(Rc::clone(&self.frame), params.to_owned(), body.to_owned()))
+    fn eval_block(&self, params: &Vec<Var>, body: &Expr) -> Eval {
+        let mut args = vec![];
+        for p in params {
+            let vt = match &p.typename {
+                None => None,
+                Some(name) => {
+                    Some(self.find_class(name, p.span.clone())?.class().instance_vtable.clone())
+                }
+            };
+            args.push(Arg::new(p.span.clone(), p.name.clone(), vt));
+        }
+        Ok(self.builtins.make_closure(Rc::clone(&self.frame), args, body.to_owned()))
     }
 
     fn eval_class_definition(&self, definition: &ClassDefinition) -> Eval {
@@ -282,16 +292,34 @@ pub fn apply_with_extra_args(
 ) -> Eval {
     // KLUDGE: I'm blind. I would think that iterating over args with IntoIterator
     // would give me an iterator over &Object, but I get &&Object -- so to_owned x 2.
+    let mut locals = HashMap::new();
+    for (arg, obj) in
+        closure.params.iter().zip(args.into_iter().chain(extra.into_iter()).map(|x| x.to_owned()))
+    {
+        let binding = match &arg.vtable {
+            None => Binding::untyped(obj.to_owned()),
+            Some(vtable) => {
+                if vtable != &obj.vtable {
+                    return Unwind::exception(SyntaxError::new(arg.span.clone(), "TypeError"));
+                }
+                Binding::typed(vtable.to_owned(), obj.to_owned())
+            }
+        };
+        locals.insert(arg.name.clone(), binding);
+    }
+    /*
     let locals: HashMap<String, Binding> = closure
-        .params
-        .iter()
-        .map(String::clone)
-        .zip(
-            args.into_iter()
-                .chain(extra.into_iter())
-                .map(|obj| Binding::untyped(obj.to_owned().to_owned())),
-        )
-        .collect();
+       .params
+       .iter()
+       .map(|p| p.name.clone())
+       .zip(
+           args.into_iter()
+               .chain(extra.into_iter())
+               .zip(closure.params)
+               .map(|obj, arg| Binding::new(obj.to_owned().to_owned(), arg.vtable.clone())),
+       )
+       .collect();
+       */
     let parent = closure.env.as_ref().map(|x| Rc::clone(x));
     let env = Env::from_parts(builtins, locals, parent, method);
     match env.eval(&closure.body) {
@@ -812,6 +840,40 @@ fn test_typecheck4() {
             context: concat!(
                 "001 let x::Integer = 42, x = 1.0, x\n",
                 "                             ^^^ TypeError\n"
+            )
+            .to_string()
+        })
+    );
+}
+
+#[test]
+fn test_typecheck5() {
+    assert_eq!(eval_ok("{ |x::Integer| x } value: 41").integer(), 41);
+}
+
+#[test]
+fn test_typecheck6() {
+    assert_eq!(
+        eval_str("{ |x::Integer| x } value: 41.0"),
+        Unwind::exception(SyntaxError {
+            span: 3..4,
+            problem: "TypeError",
+            context: concat!("001 { |x::Integer| x } value: 41.0\n", "       ^ TypeError\n")
+                .to_string()
+        })
+    );
+}
+
+#[test]
+fn test_typecheck7() {
+    assert_eq!(
+        eval_str("{ |y x::Integer| x = y } value: 41.0 value: 42"),
+        Unwind::exception(SyntaxError {
+            span: 21..22,
+            problem: "TypeError",
+            context: concat!(
+                "001 { |y x::Integer| x = y } value: 41.0 value: 42\n",
+                "                         ^ TypeError\n"
             )
             .to_string()
         })

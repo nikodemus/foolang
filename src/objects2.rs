@@ -6,7 +6,7 @@ use std::rc::Rc;
 use crate::eval;
 use crate::eval::Frame;
 use crate::parse::{ClassDefinition, Expr};
-use crate::tokenstream::SyntaxError;
+use crate::tokenstream::{Span, SyntaxError};
 
 use crate::classes;
 
@@ -98,9 +98,26 @@ pub struct Object {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Arg {
+    pub span: Span,
+    pub name: String,
+    pub vtable: Option<Rc<Vtable>>,
+}
+
+impl Arg {
+    pub fn new(span: Span, name: String, vtable: Option<Rc<Vtable>>) -> Arg {
+        Arg {
+            span,
+            name,
+            vtable,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Closure {
     pub env: Option<Rc<Frame>>,
-    pub params: Vec<String>,
+    pub params: Vec<Arg>,
     pub body: Expr,
 }
 
@@ -229,7 +246,7 @@ impl Builtins {
         }
     }
 
-    pub fn make_closure(&self, frame: Rc<Frame>, params: Vec<String>, body: Expr) -> Object {
+    pub fn make_closure(&self, frame: Rc<Frame>, params: Vec<Arg>, body: Expr) -> Object {
         Object {
             vtable: Rc::clone(&self.closure_vtable),
             datum: Datum::Closure(Rc::new(Closure {
@@ -252,11 +269,15 @@ impl Builtins {
     }
 
     pub fn make_method_function(&self, params: &[String], body: &Expr) -> Closure {
-        let mut params: Vec<String> = params.iter().map(|x| x.to_owned()).collect();
-        params.push("self".to_string());
+        let mut args = vec![];
+        for param in params {
+            // FIXME: span
+            args.push(Arg::new(0..0, param.to_owned(), None));
+        }
+        args.push(Arg::new(0..0, "self".to_string(), None));
         Closure {
             env: None,
-            params,
+            params: args,
             body: body.to_owned(),
         }
     }

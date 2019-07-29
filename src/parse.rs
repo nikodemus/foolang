@@ -131,14 +131,23 @@ impl Return {
 pub struct Var {
     pub span: Span,
     pub name: String,
+    pub typename: Option<String>,
 }
 
 impl Var {
-    fn expr(span: Span, name: String) -> Expr {
-        Expr::Var(Var {
+    fn untyped(span: Span, name: String) -> Var {
+        Var {
             span,
             name,
-        })
+            typename: None,
+        }
+    }
+    fn typed(span: Span, name: String, typename: String) -> Var {
+        Var {
+            span,
+            name,
+            typename: Some(typename),
+        }
     }
 }
 
@@ -146,7 +155,7 @@ impl Var {
 pub enum Expr {
     Assign(Assign),
     Bind(String, Option<String>, Box<Expr>, Box<Expr>),
-    Block(Span, Vec<String>, Box<Expr>),
+    Block(Span, Vec<Var>, Box<Expr>),
     ClassDefinition(ClassDefinition),
     Const(Span, Literal),
     Global(Global),
@@ -518,7 +527,7 @@ fn identifier_prefix(parser: &Parser) -> Result<Expr, Unwind> {
                 // FIXME: not all languages have uppercase
                 return Ok(Global::expr(parser.span(), parser.tokenstring()));
             }
-            return Ok(Var::expr(parser.span(), parser.tokenstring()));
+            return Ok(Expr::Var(Var::untyped(parser.span(), parser.tokenstring())));
         }
     }
 }
@@ -675,7 +684,20 @@ fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         loop {
             let token = parser.next_token()?;
             if token == Token::WORD {
-                params.push(parser.tokenstring());
+                let name = parser.tokenstring();
+                let namespan = parser.span();
+                let (token, span) = parser.lookahead()?;
+                let var = if token == Token::SIGIL && parser.slice_at(span) == "::" {
+                    parser.next_token()?;
+                    if let Token::WORD = parser.next_token()? {
+                        Var::typed(namespan, name, parser.tokenstring())
+                    } else {
+                        return parser.error("Invalid type designator");
+                    }
+                } else {
+                    Var::untyped(namespan, name)
+                };
+                params.push(var);
                 continue;
             }
             if token == Token::SIGIL && parser.slice() == "|" {
@@ -944,7 +966,7 @@ fn float(span: Span, value: f64) -> Expr {
 }
 
 fn var(span: Span, name: &str) -> Expr {
-    Var::expr(span, name.to_string())
+    Expr::Var(Var::untyped(span, name.to_string()))
 }
 
 fn unary(span: Span, name: &str, left: Expr) -> Expr {
@@ -968,7 +990,27 @@ fn bind_typed(name: &str, typename: &str, value: Expr, body: Expr) -> Expr {
 }
 
 fn block(span: Span, params: Vec<&str>, body: Expr) -> Expr {
-    Expr::Block(span, params.into_iter().map(String::from).collect(), Box::new(body))
+    let mut p = span.start + 3;
+    let mut blockparams = vec![];
+    for param in params {
+        let start = p;
+        let end = start + param.len();
+        p = end + 2;
+        blockparams.push(Var::untyped(start..end, param.to_string()))
+    }
+    Expr::Block(span, blockparams, Box::new(body))
+}
+
+fn typed_block(span: Span, params: Vec<(&str, &str)>, body: Expr) -> Expr {
+    let mut p = span.start + 3;
+    let mut blockparams = vec![];
+    for param in params {
+        let start = p;
+        let end = start + param.0.len();
+        p = end + 4 + param.1.len();
+        blockparams.push(Var::typed(start..end, param.0.to_string(), param.1.to_string()));
+    }
+    Expr::Block(span, blockparams, Box::new(body))
 }
 
 fn seq(exprs: Vec<Expr>) -> Expr {
@@ -1199,4 +1241,12 @@ fn parse_type_assertions2() {
         parse_str("let x::Integer = 42, x"),
         Ok(bind_typed("x", "Integer", int(17..19, 42), var(21..22, "x")))
     )
+}
+
+#[test]
+fn parse_type_assertions3() {
+    assert_eq!(
+        parse_str("{ |x::Integer| x }"),
+        Ok(typed_block(0..18, vec![("x", "Integer")], var(15..16, "x")))
+    );
 }
