@@ -60,7 +60,7 @@ fn integer_gcd(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval
     Ok(builtins.make_integer(res))
 }
 
-fn integer_to_string(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+fn integer_to_string(receiver: &Object, _args: &[&Object], builtins: &Builtins) -> Eval {
     Ok(builtins.make_string(&receiver.integer().to_string()))
 }
 

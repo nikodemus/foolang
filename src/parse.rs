@@ -145,13 +145,14 @@ impl Var {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Assign(Assign),
-    Bind(String, Box<Expr>, Box<Expr>),
+    Bind(String, Option<String>, Box<Expr>, Box<Expr>),
     Block(Span, Vec<String>, Box<Expr>),
     ClassDefinition(ClassDefinition),
     Const(Span, Literal),
     Global(Global),
     Send(Span, String, Box<Expr>, Vec<Expr>),
     Seq(Vec<Expr>),
+    Typecheck(Span, Box<Expr>, String),
     Var(Var),
     Return(Return),
 }
@@ -178,11 +179,11 @@ impl Expr {
         }
     }
 
-    fn span(&self) -> Span {
+    pub fn span(&self) -> Span {
         use Expr::*;
         let span = match self {
             Assign(assign) => &assign.span,
-            Bind(_, _, body) => return body.span(),
+            Bind(_, _, _, body) => return body.span(),
             Block(span, ..) => span,
             ClassDefinition(definition) => &definition.span,
             Const(span, ..) => span,
@@ -190,6 +191,7 @@ impl Expr {
             Send(span, ..) => span,
             Return(ret) => &ret.span,
             Seq(exprs) => return exprs[exprs.len() - 1].span(),
+            Typecheck(span, ..) => span,
             Var(var) => &var.span,
         };
         span.to_owned()
@@ -453,6 +455,7 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, "return", return_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ",", invalid_prefix, sequence_suffix, precedence_1);
     Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_2);
+    Syntax::def(t, "::", invalid_prefix, typecheck_suffix, precedence_1000);
 
     Syntax::def(t, "{", block_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "}", invalid_prefix, invalid_suffix, precedence_0);
@@ -595,6 +598,17 @@ fn keyword_suffix(
     // FIXME: Potential multiline span is probably going to cause
     // trouble in error reporting...
     Ok(Expr::Send(start.start..parser.span().end, selector, Box::new(left), args))
+}
+
+fn typecheck_suffix(
+    parser: &Parser,
+    left: Expr,
+    _precedence: PrecedenceFunction,
+) -> Result<Expr, Unwind> {
+    match parser.next_token()? {
+        Token::WORD => Ok(Expr::Typecheck(parser.span(), Box::new(left), parser.tokenstring())),
+        _ => parser.error("Invalid type designator"),
+    }
 }
 
 fn parse_method(parser: &Parser, class: &mut ClassDefinition) -> Result<(), Unwind> {
@@ -756,10 +770,29 @@ fn let_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         return parser.error("Expected variable name after let");
     }
     let name = parser.slice().to_string();
-    let next = parser.next_token()?;
-    if Token::SIGIL != next || "=" != parser.slice() {
-        return parser.error("Expected = in let");
+
+    let mut typename = None;
+    loop {
+        let next = parser.next_token()?;
+        match next {
+            Token::SIGIL if parser.slice() == "::" => {
+                // FIXME: refactor into parse_type()
+                if let Token::WORD = parser.next_token()? {
+                    if typename.is_some() {
+                        return parser.error("Multiple type declarations in let");
+                    }
+                    typename = Some(parser.tokenstring());
+                } else {
+                    return parser.error("Invalid type designator");
+                }
+            }
+            Token::SIGIL if parser.slice() == "=" => {
+                break;
+            }
+            _ => return parser.error("Expected = in let"),
+        }
     }
+
     let value = parser.parse_expr(SEQ_PRECEDENCE)?;
     match parser.next_token()? {
         Token::SIGIL if parser.slice() == "," => {}
@@ -767,7 +800,7 @@ fn let_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         _ => return parser.error("Expected separator after let"),
     }
     let body = parser.parse_expr(0)?;
-    Ok(Expr::Bind(name, Box::new(value), Box::new(body)))
+    Ok(Expr::Bind(name, typename, Box::new(value), Box::new(body)))
 }
 
 fn ignore_prefix(parser: &Parser) -> Result<Expr, Unwind> {
@@ -902,6 +935,10 @@ fn string(span: Span, value: &str) -> Expr {
     Expr::Const(span, Literal::String(value.to_string()))
 }
 
+fn typecheck(span: Span, expr: Expr, typename: &str) -> Expr {
+    Expr::Typecheck(span, Box::new(expr), typename.to_string())
+}
+
 fn float(span: Span, value: f64) -> Expr {
     Expr::Const(span, Literal::Float(value))
 }
@@ -923,7 +960,11 @@ fn keyword(span: Span, name: &str, left: Expr, args: Vec<Expr>) -> Expr {
 }
 
 fn bind(name: &str, value: Expr, body: Expr) -> Expr {
-    Expr::Bind(name.to_string(), Box::new(value), Box::new(body))
+    Expr::Bind(name.to_string(), None, Box::new(value), Box::new(body))
+}
+
+fn bind_typed(name: &str, typename: &str, value: Expr, body: Expr) -> Expr {
+    Expr::Bind(name.to_string(), Some(typename.to_string()), Box::new(value), Box::new(body))
 }
 
 fn block(span: Span, params: Vec<&str>, body: Expr) -> Expr {
@@ -1145,4 +1186,17 @@ fn parse_comments() {
 #[test]
 fn parse_string1() {
     assert_eq!(parse_str(r#" "foo" "#), Ok(string(1..6, "foo")))
+}
+
+#[test]
+fn parse_type_assertions1() {
+    assert_eq!(parse_str("foo::String"), Ok(typecheck(5..11, var(0..3, "foo"), "String")))
+}
+
+#[test]
+fn parse_type_assertions2() {
+    assert_eq!(
+        parse_str("let x::Integer = 42, x"),
+        Ok(bind_typed("x", "Integer", int(17..19, 42), var(21..22, "x")))
+    )
 }

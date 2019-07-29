@@ -93,8 +93,8 @@ impl PartialEq for Vtable {
 
 #[derive(PartialEq, Clone)]
 pub struct Object {
-    vtable: Rc<Vtable>,
-    datum: Datum,
+    pub vtable: Rc<Vtable>,
+    pub datum: Datum,
 }
 
 #[derive(Debug, PartialEq, Clone)]

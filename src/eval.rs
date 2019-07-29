@@ -3,11 +3,11 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::objects2::{Builtins, Closure, Eval, Object, Unwind};
+use crate::objects2::{Builtins, Closure, Datum, Eval, Object, Unwind, Vtable};
 use crate::parse::{
     parse_str, Assign, ClassDefinition, Expr, Global, Literal, Parser, Return, Var,
 };
-use crate::tokenstream::SyntaxError;
+use crate::tokenstream::{Span, SyntaxError};
 
 struct Env<'a> {
     builtins: &'a Builtins,
@@ -15,8 +15,38 @@ struct Env<'a> {
 }
 
 #[derive(Debug)]
+pub struct Binding {
+    vtable: Option<Rc<Vtable>>,
+    value: Object,
+}
+
+impl Binding {
+    fn untyped(init: Object) -> Binding {
+        Binding {
+            vtable: None,
+            value: init,
+        }
+    }
+    fn typed(vtable: Rc<Vtable>, init: Object) -> Binding {
+        Binding {
+            vtable: Some(vtable),
+            value: init,
+        }
+    }
+    fn assign(&mut self, value: Object) -> bool {
+        if let Some(vtable) = &self.vtable {
+            if &value.vtable != vtable {
+                return false;
+            }
+        }
+        self.value = value;
+        return true;
+    }
+}
+
+#[derive(Debug)]
 pub struct Frame {
-    pub local: RefCell<HashMap<String, Object>>,
+    pub local: RefCell<HashMap<String, Binding>>,
     pub parent: Option<Rc<Frame>>,
     pub method: Option<Rc<Frame>>,
 }
@@ -36,7 +66,7 @@ impl<'a> Env<'a> {
         use Expr::*;
         match expr {
             Assign(assign) => self.eval_assign(assign),
-            Bind(name, value, body) => self.eval_bind(name, value, body),
+            Bind(name, typename, value, body) => self.eval_bind(name, typename, value, body),
             Block(_, params, body) => self.eval_block(params, body),
             ClassDefinition(definition) => self.eval_class_definition(definition),
             Const(_, literal) => self.eval_literal(literal),
@@ -44,13 +74,14 @@ impl<'a> Env<'a> {
             Return(ret) => self.eval_return(ret),
             Send(_, selector, receiver, args) => self.eval_send(selector, receiver, args),
             Seq(exprs) => self.eval_seq(exprs),
+            Typecheck(_, expr, typename) => self.eval_typecheck(expr, typename),
             Var(var) => self.eval_var(var),
         }
     }
 
     fn from_parts(
         builtins: &'a Builtins,
-        local: HashMap<String, Object>,
+        local: HashMap<String, Binding>,
         parent: Option<Rc<Frame>>,
         method: bool,
     ) -> Env<'a> {
@@ -81,12 +112,6 @@ impl<'a> Env<'a> {
         }
     }
 
-    fn bind(&self, name: &String, value: Object) -> Env {
-        let mut local = HashMap::new();
-        local.insert(name.to_owned(), value);
-        Env::from_parts(self.builtins, local, Some(Rc::clone(&self.frame)), false)
-    }
-
     fn eval_assign(&self, assign: &Assign) -> Eval {
         let name = &assign.name;
         // Value needs to be evaluated before we go looking for the binding,
@@ -95,8 +120,10 @@ impl<'a> Env<'a> {
         let mut frame = &self.frame;
         loop {
             match frame.local.borrow_mut().get_mut(name) {
-                Some(place) => {
-                    *place = value.clone();
+                Some(binding) => {
+                    if !binding.assign(value.clone()) {
+                        return self.type_error(&assign.value);
+                    }
                     return Ok(value);
                 }
                 None => match &frame.parent {
@@ -114,8 +141,24 @@ impl<'a> Env<'a> {
         }
     }
 
-    fn eval_bind(&self, name: &String, value: &Expr, body: &Expr) -> Eval {
-        self.bind(name, self.eval(value)?).eval(body)
+    fn eval_bind(
+        &self,
+        name: &String,
+        typename: &Option<String>,
+        expr: &Expr,
+        body: &Expr,
+    ) -> Eval {
+        let mut local = HashMap::new();
+        let binding = match typename {
+            None => Binding::untyped(self.eval(expr)?),
+            Some(typename) => {
+                let class = self.find_class(typename, expr.span())?.class();
+                Binding::typed(class.instance_vtable.clone(), self.eval_typecheck(expr, typename)?)
+            }
+        };
+        local.insert(name.to_owned(), binding);
+        let env = Env::from_parts(self.builtins, local, Some(Rc::clone(&self.frame)), false);
+        env.eval(body)
     }
 
     fn eval_block(&self, params: &Vec<String>, body: &Expr) -> Eval {
@@ -178,11 +221,38 @@ impl<'a> Env<'a> {
         Ok(result)
     }
 
+    fn find_class(&self, name: &str, span: Span) -> Eval {
+        match self.builtins.globals.borrow().get(name) {
+            None => return Unwind::exception(SyntaxError::new(span, "Unknown class")),
+            Some(global) => match global.datum {
+                Datum::Class(_) => Ok(global.to_owned()),
+                _ => Unwind::exception(SyntaxError::new(span, "Not a class name")),
+            },
+        }
+    }
+
+    fn type_error(&self, expr: &Expr) -> Eval {
+        // FIXME: Get type types into the error message
+        // FIXME: wrong span
+        Unwind::exception(SyntaxError::new(expr.span(), "TypeError"))
+    }
+
+    fn eval_typecheck(&self, expr: &Expr, typename: &str) -> Eval {
+        let value = self.eval(expr)?;
+        // FIXME: Wrong span.
+        let class = self.find_class(typename, expr.span())?.class();
+        if class.instance_vtable == value.vtable {
+            Ok(value)
+        } else {
+            self.type_error(expr)
+        }
+    }
+
     fn eval_var(&self, var: &Var) -> Eval {
         let mut frame = &self.frame;
         loop {
             match frame.local.borrow().get(&var.name) {
-                Some(value) => return Ok(value.to_owned()),
+                Some(binding) => return Ok(binding.value.to_owned()),
                 None => match &frame.parent {
                     Some(parent_frame) => {
                         frame = parent_frame;
@@ -212,11 +282,15 @@ pub fn apply_with_extra_args(
 ) -> Eval {
     // KLUDGE: I'm blind. I would think that iterating over args with IntoIterator
     // would give me an iterator over &Object, but I get &&Object -- so to_owned x 2.
-    let locals: HashMap<String, Object> = closure
+    let locals: HashMap<String, Binding> = closure
         .params
         .iter()
         .map(String::clone)
-        .zip(args.into_iter().chain(extra.into_iter()).map(|obj| obj.to_owned().to_owned()))
+        .zip(
+            args.into_iter()
+                .chain(extra.into_iter())
+                .map(|obj| Binding::untyped(obj.to_owned().to_owned())),
+        )
         .collect();
     let parent = closure.env.as_ref().map(|x| Rc::clone(x));
     let env = Env::from_parts(builtins, locals, parent, method);
@@ -692,4 +766,54 @@ fn test_string_interpolation1() {
           "#,
     );
     assert_eq!(object, builtins.make_string("1.2.3.4"));
+}
+
+#[test]
+fn test_typecheck1() {
+    let (object, builtins) = eval_builtins("123::Integer");
+    assert_eq!(object, builtins.make_integer(123));
+}
+
+#[test]
+fn test_typecheck2() {
+    assert_eq!(
+        eval_str("123::String"),
+        Unwind::exception(SyntaxError {
+            span: 0..3,
+            problem: "TypeError",
+            context: concat!("001 123::String\n", "    ^^^ TypeError\n").to_string(),
+        }),
+    );
+}
+
+#[test]
+fn test_typecheck3() {
+    assert_eq!(
+        eval_str("let x::Integer = 42.0, x"),
+        Unwind::exception(SyntaxError {
+            span: 17..21,
+            problem: "TypeError",
+            context: concat!(
+                "001 let x::Integer = 42.0, x\n",
+                "                     ^^^^ TypeError\n"
+            )
+            .to_string()
+        })
+    );
+}
+
+#[test]
+fn test_typecheck4() {
+    assert_eq!(
+        eval_str("let x::Integer = 42, x = 1.0, x"),
+        Unwind::exception(SyntaxError {
+            span: 25..28,
+            problem: "TypeError",
+            context: concat!(
+                "001 let x::Integer = 42, x = 1.0, x\n",
+                "                             ^^^ TypeError\n"
+            )
+            .to_string()
+        })
+    );
 }
