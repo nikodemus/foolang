@@ -27,6 +27,30 @@ impl Assign {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Var {
+    pub span: Span,
+    pub name: String,
+    pub typename: Option<String>,
+}
+
+impl Var {
+    fn untyped(span: Span, name: String) -> Var {
+        Var {
+            span,
+            name,
+            typename: None,
+        }
+    }
+    fn typed(span: Span, name: String, typename: String) -> Var {
+        Var {
+            span,
+            name,
+            typename: Some(typename),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct ClassDefinition {
     pub span: Span,
     pub name: String,
@@ -39,7 +63,7 @@ pub struct ClassDefinition {
 pub struct MethodDefinition {
     pub span: Span,
     pub selector: String,
-    pub parameters: Vec<String>,
+    pub parameters: Vec<Var>,
     pub body: Box<Expr>,
 }
 
@@ -80,7 +104,7 @@ impl ClassDefinition {
 }
 
 impl MethodDefinition {
-    fn new(span: Span, selector: String, parameters: Vec<String>, body: Expr) -> MethodDefinition {
+    fn new(span: Span, selector: String, parameters: Vec<Var>, body: Expr) -> MethodDefinition {
         MethodDefinition {
             span,
             selector,
@@ -124,30 +148,6 @@ impl Return {
             span,
             value: Box::new(value),
         })
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Var {
-    pub span: Span,
-    pub name: String,
-    pub typename: Option<String>,
-}
-
-impl Var {
-    fn untyped(span: Span, name: String) -> Var {
-        Var {
-            span,
-            name,
-            typename: None,
-        }
-    }
-    fn typed(span: Span, name: String, typename: String) -> Var {
-        Var {
-            span,
-            name,
-            typename: Some(typename),
-        }
     }
 }
 
@@ -637,7 +637,7 @@ fn parse_method(parser: &Parser, class: &mut ClassDefinition) -> Result<(), Unwi
             Token::KEYWORD => {
                 selector.push_str(parser.slice());
                 if let Token::WORD = parser.next_token()? {
-                    parameters.push(parser.tokenstring());
+                    parameters.push(parse_var(parser)?);
                 } else {
                     return parser.error("Expected keyword selector parameter");
                 }
@@ -675,6 +675,22 @@ fn sequence_suffix(
     Ok(Expr::Seq(exprs))
 }
 
+fn parse_var(parser: &Parser) -> Result<Var, Unwind> {
+    let name = parser.tokenstring();
+    let namespan = parser.span();
+    let (token, span) = parser.lookahead()?;
+    if token == Token::SIGIL && parser.slice_at(span) == "::" {
+        parser.next_token()?;
+        if let Token::WORD = parser.next_token()? {
+            Ok(Var::typed(namespan, name, parser.tokenstring()))
+        } else {
+            parser.error("Invalid type designator")
+        }
+    } else {
+        Ok(Var::untyped(namespan, name))
+    }
+}
+
 fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     let start = parser.span();
     let (token, span) = parser.lookahead()?;
@@ -684,20 +700,7 @@ fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         loop {
             let token = parser.next_token()?;
             if token == Token::WORD {
-                let name = parser.tokenstring();
-                let namespan = parser.span();
-                let (token, span) = parser.lookahead()?;
-                let var = if token == Token::SIGIL && parser.slice_at(span) == "::" {
-                    parser.next_token()?;
-                    if let Token::WORD = parser.next_token()? {
-                        Var::typed(namespan, name, parser.tokenstring())
-                    } else {
-                        return parser.error("Invalid type designator");
-                    }
-                } else {
-                    Var::untyped(namespan, name)
-                };
-                params.push(var);
+                params.push(parse_var(parser)?);
                 continue;
             }
             if token == Token::SIGIL && parser.slice() == "|" {
@@ -1029,7 +1032,8 @@ fn method(span: Span, selector: &str, parameters: Vec<&str>, body: Expr) -> Meth
     MethodDefinition::new(
         span,
         selector.to_string(),
-        parameters.iter().map(|n| n.to_string()).collect(),
+        // FIXME: span
+        parameters.iter().map(|name| Var::untyped(0..0, name.to_string())).collect(),
         body,
     )
 }
@@ -1065,7 +1069,7 @@ fn parse_float3() {
 }
 
 #[test]
-fn parse_var() {
+fn parse_var1() {
     assert_eq!(parse_str("foo"), Ok(var(0..3, "foo")));
 }
 

@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::objects2::{Arg, Builtins, Closure, Datum, Eval, Object, Unwind, Vtable};
+use crate::objects2::{Arg, Builtins, Closure, Eval, Object, Unwind, Vtable};
 use crate::parse::{
     parse_str, Assign, ClassDefinition, Expr, Global, Literal, Parser, Return, Var,
 };
@@ -232,13 +232,7 @@ impl<'a> Env<'a> {
     }
 
     fn find_class(&self, name: &str, span: Span) -> Eval {
-        match self.builtins.globals.borrow().get(name) {
-            None => return Unwind::exception(SyntaxError::new(span, "Unknown class")),
-            Some(global) => match global.datum {
-                Datum::Class(_) => Ok(global.to_owned()),
-                _ => Unwind::exception(SyntaxError::new(span, "Not a class name")),
-            },
-        }
+        self.builtins.find_class(name, span)
     }
 
     fn type_error(&self, expr: &Expr) -> Eval {
@@ -874,6 +868,31 @@ fn test_typecheck7() {
             context: concat!(
                 "001 { |y x::Integer| x = y } value: 41.0 value: 42\n",
                 "                         ^ TypeError\n"
+            )
+            .to_string()
+        })
+    );
+}
+
+#[test]
+fn test_typecheck8() {
+    assert_eq!(
+        eval_str(
+            "class Foo {}
+                defaultConstructor foo
+                method zot: x::Integer
+                    x
+             end
+             Foo foo zot: 1.0",
+        ),
+        Unwind::exception(SyntaxError {
+            span: 80..81,
+            problem: "TypeError",
+            context: concat!(
+                "002                 defaultConstructor foo\n",
+                "003                 method zot: x::Integer\n",
+                "                                ^ TypeError\n",
+                "004                     x\n"
             )
             .to_string()
         })

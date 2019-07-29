@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use crate::eval;
 use crate::eval::Frame;
-use crate::parse::{ClassDefinition, Expr};
+use crate::parse::{ClassDefinition, Expr, Var};
 use crate::tokenstream::{Span, SyntaxError};
 
 use crate::classes;
@@ -232,6 +232,16 @@ impl Builtins {
         }
     }
 
+    pub fn find_class(&self, name: &str, span: Span) -> Eval {
+        match self.globals.borrow().get(name) {
+            None => return Unwind::exception(SyntaxError::new(span, "Unknown class")),
+            Some(global) => match global.datum {
+                Datum::Class(_) => Ok(global.to_owned()),
+                _ => Unwind::exception(SyntaxError::new(span, "Not a class name")),
+            },
+        }
+    }
+
     pub fn make_float(&self, x: f64) -> Object {
         Object {
             vtable: Rc::clone(&self.float_vtable),
@@ -268,11 +278,21 @@ impl Builtins {
         }
     }
 
-    pub fn make_method_function(&self, params: &[String], body: &Expr) -> Closure {
+    pub fn make_method_function(&self, params: &[Var], body: &Expr) -> Closure {
         let mut args = vec![];
         for param in params {
-            // FIXME: span
-            args.push(Arg::new(0..0, param.to_owned(), None));
+            let vtable = match &param.typename {
+                None => None,
+                // FIXME: unwrap
+                Some(tn) => Some(
+                    self.find_class(tn, param.span.clone())
+                        .unwrap()
+                        .class()
+                        .instance_vtable
+                        .clone(),
+                ),
+            };
+            args.push(Arg::new(param.span.clone(), param.name.clone(), vtable));
         }
         args.push(Arg::new(0..0, "self".to_string(), None));
         Closure {
