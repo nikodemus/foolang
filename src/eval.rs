@@ -895,3 +895,17 @@ fn test_typecheck8() {
         })
     );
 }
+
+#[test]
+fn test_instance_variable1() {
+    assert_eq!(
+        parse_str(
+            "class Foo { bar }
+               method zot
+                  bar
+             end
+             (Foo bar: 42) zot"
+        ),
+        Ok(int(0..0, 0))
+    );
+}
