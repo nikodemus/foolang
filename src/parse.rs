@@ -466,6 +466,8 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_2);
     Syntax::def(t, "::", invalid_prefix, typecheck_suffix, precedence_1000);
 
+    Syntax::def(t, "(", paren_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, ")", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "{", block_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "}", invalid_prefix, invalid_suffix, precedence_0);
 
@@ -510,6 +512,21 @@ fn invalid_suffix(parser: &Parser, _: Expr, _: PrecedenceFunction) -> Result<Exp
     parser.error("Not valid in operator position")
 }
 
+fn assign_suffix(
+    parser: &Parser,
+    left: Expr,
+    precedence: PrecedenceFunction,
+) -> Result<Expr, Unwind> {
+    if !left.is_var() {
+        return parser.error_at(left.span(), "Cannot assign to this");
+    }
+    let right = parser.parse_expr(precedence(parser, parser.span())?)?;
+    // We use the name we're assigning to as the span.
+    // FIXME: Maybe this is a sign that we should actually store a Var with it's own span
+    // in the Assign, then assign could have the span for just the operator?
+    Ok(Assign::expr(left.span(), left.name(), right))
+}
+
 fn identifier_precedence(parser: &Parser, span: Span) -> Result<usize, Unwind> {
     match parser.name_table.get(parser.slice_at(span.clone())) {
         Some(syntax) => parser.syntax_precedence(syntax, span),
@@ -548,43 +565,6 @@ fn identifier_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Resu
     }
 }
 
-fn operator_precedence(parser: &Parser, span: Span) -> Result<usize, Unwind> {
-    let slice = parser.slice_at(span.clone());
-    match parser.name_table.get(slice) {
-        Some(syntax) => parser.syntax_precedence(syntax, span),
-        None => parser.error_at(span, "Unknown operator"),
-    }
-}
-
-fn operator_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    match parser.name_table.get(parser.slice()) {
-        Some(syntax) => parser.parse_prefix_syntax(syntax),
-        None => parser.error("Unknown operator"),
-    }
-}
-
-fn operator_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Result<Expr, Unwind> {
-    match parser.name_table.get(parser.slice()) {
-        Some(syntax) => parser.parse_suffix_syntax(syntax, left),
-        None => parser.error("Unknown operator"),
-    }
-}
-
-fn assign_suffix(
-    parser: &Parser,
-    left: Expr,
-    precedence: PrecedenceFunction,
-) -> Result<Expr, Unwind> {
-    if !left.is_var() {
-        return parser.error_at(left.span(), "Cannot assign to this");
-    }
-    let right = parser.parse_expr(precedence(parser, parser.span())?)?;
-    // We use the name we're assigning to as the span.
-    // FIXME: Maybe this is a sign that we should actually store a Var with it's own span
-    // in the Assign, then assign could have the span for just the operator?
-    Ok(Assign::expr(left.span(), left.name(), right))
-}
-
 fn keyword_suffix(
     parser: &Parser,
     left: Expr,
@@ -607,6 +587,38 @@ fn keyword_suffix(
     // FIXME: Potential multiline span is probably going to cause
     // trouble in error reporting...
     Ok(Expr::Send(start.start..parser.span().end, selector, Box::new(left), args))
+}
+
+fn operator_precedence(parser: &Parser, span: Span) -> Result<usize, Unwind> {
+    let slice = parser.slice_at(span.clone());
+    match parser.name_table.get(slice) {
+        Some(syntax) => parser.syntax_precedence(syntax, span),
+        None => parser.error_at(span, "Unknown operator"),
+    }
+}
+
+fn operator_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+    match parser.name_table.get(parser.slice()) {
+        Some(syntax) => parser.parse_prefix_syntax(syntax),
+        None => parser.error("Unknown operator"),
+    }
+}
+
+fn operator_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Result<Expr, Unwind> {
+    match parser.name_table.get(parser.slice()) {
+        Some(syntax) => parser.parse_suffix_syntax(syntax, left),
+        None => parser.error("Unknown operator"),
+    }
+}
+
+fn paren_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+    let expr = parser.parse_expr(0)?;
+    let token = parser.next_token()?;
+    if token == Token::SIGIL && parser.slice() == ")" {
+        Ok(expr)
+    } else {
+        parser.error("Expected )")
+    }
 }
 
 fn typecheck_suffix(
@@ -1253,4 +1265,12 @@ fn parse_type_assertions3() {
         parse_str("{ |x::Integer| x }"),
         Ok(typed_block(0..18, vec![("x", "Integer")], var(15..16, "x")))
     );
+}
+
+#[test]
+fn parse_parens() {
+    assert_eq!(
+        parse_str("(a+b)*c"),
+        Ok(binary(5..6, "*", binary(2..3, "+", var(1..2, "a"), var(3..4, "b")), var(6..7, "c")))
+    )
 }

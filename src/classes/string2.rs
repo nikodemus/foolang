@@ -1,0 +1,28 @@
+use crate::objects2::{Builtins, Eval, Object, Vtable};
+
+pub fn instance_vtable() -> Vtable {
+    let mut vt = Vtable::new("String");
+    vt.def("append:", string_append);
+    vt.def("appendToString:", string_append_to_string);
+    vt
+}
+
+pub fn class_vtable() -> Vtable {
+    let mut vt = Vtable::new("class String");
+    vt.def("new", class_string_new);
+    vt
+}
+
+pub fn class_string_new(_receiver: &Object, _args: &[&Object], builtins: &Builtins) -> Eval {
+    Ok(builtins.make_string(""))
+}
+
+pub fn string_append(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+    args[0].send("appendToString:", &[receiver], builtins)
+}
+
+pub fn string_append_to_string(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+    let mut s = args[0].string_as_str().to_string();
+    s.push_str(receiver.string_as_str());
+    Ok(builtins.into_string(s))
+}
