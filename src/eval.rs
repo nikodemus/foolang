@@ -87,15 +87,13 @@ impl Frame {
         }
     }
 
-    fn receiver(&self) -> Eval {
+    fn receiver(&self) -> Option<&Object> {
         match self {
-            Frame::MethodFrame(method_frame) => Ok(method_frame.receiver.clone()),
+            Frame::MethodFrame(method_frame) => Some(&method_frame.receiver),
             Frame::BlockFrame(block_frame) => {
                 match &block_frame.home {
                     // FIXME: None as span
-                    None => {
-                        Unwind::exception(SyntaxError::new(0..0, "self outside method context"))
-                    }
+                    None => None,
                     Some(frame) => frame.receiver(),
                 }
             }
@@ -123,18 +121,12 @@ impl Frame {
         }
     }
 
-    fn get(&self, name: &str) -> Eval {
+    fn get(&self, name: &str) -> Option<Object> {
         match self.args().borrow().get(name) {
-            Some(binding) => return Ok(binding.value.clone()),
+            Some(binding) => return Some(binding.value.clone()),
             None => match self.parent() {
                 Some(parent) => parent.get(name),
-                None => {
-                    return Unwind::exception(SyntaxError::new(
-                        // Correct location set by caller. FIXME: Allow None as span
-                        0..0,
-                        "Unbound variable",
-                    ));
-                }
+                None => None,
             },
         }
     }
@@ -322,9 +314,25 @@ impl<'a> Env<'a> {
 
     fn eval_var(&self, var: &Var) -> Eval {
         if &var.name == "self" {
-            self.frame.receiver().source(&var.span)
+            match self.frame.receiver() {
+                None => Unwind::exception(SyntaxError::new(
+                    var.span.clone(),
+                    "self outside method context",
+                )),
+                Some(receiver) => Ok(receiver.clone()),
+            }
         } else {
-            self.frame.get(&var.name).source(&var.span)
+            match self.frame.get(&var.name) {
+                Some(value) => return Ok(value),
+                None => {
+                    if let Some(receiver) = self.frame.receiver() {
+                        if let Some(slot) = receiver.vtable.slots.get(&var.name) {
+                            return Ok(receiver.instance().instance_variables[slot.index].clone());
+                        }
+                    }
+                }
+            }
+            Unwind::exception(SyntaxError::new(var.span.clone(), "Unbound variable"))
         }
     }
 }
@@ -931,7 +939,6 @@ fn test_typecheck8() {
     );
 }
 
-#[ignore]
 #[test]
 fn test_instance_variable1() {
     assert_eq!(

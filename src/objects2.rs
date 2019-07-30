@@ -55,9 +55,14 @@ pub enum Method {
     Reader(usize),
 }
 
+pub struct Slot {
+    pub index: usize,
+}
+
 pub struct Vtable {
     pub name: String,
     pub methods: HashMap<String, Method>,
+    pub slots: HashMap<String, Slot>,
 }
 
 impl Vtable {
@@ -65,6 +70,7 @@ impl Vtable {
         Vtable {
             name: class.to_string(),
             methods: HashMap::new(),
+            slots: HashMap::new(),
         }
     }
 
@@ -78,6 +84,15 @@ impl Vtable {
 
     pub fn add_reader(&mut self, selector: &str, index: usize) {
         self.methods.insert(selector.to_string(), Method::Reader(index));
+    }
+
+    pub fn add_slot(&mut self, name: &str, index: usize) {
+        self.slots.insert(
+            name.to_string(),
+            Slot {
+                index,
+            },
+        );
     }
 
     pub fn selectors(&self) -> Vec<String> {
@@ -228,6 +243,7 @@ impl Builtins {
         let mut index = 0;
         for name in &classdef.instance_variables {
             index += 1;
+            instance_vtable.add_slot(&name, index - 1);
             if &name[0..1] == "_" {
                 continue;
             }
