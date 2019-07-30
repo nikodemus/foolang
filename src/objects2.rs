@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
@@ -13,14 +14,14 @@ use crate::classes;
 #[derive(Debug, PartialEq)]
 pub enum Unwind {
     Exception(SyntaxError),
-    ReturnFrom(Rc<Frame>, Object),
+    ReturnFrom(Frame, Object),
 }
 
 impl Unwind {
     pub fn exception<T>(error: SyntaxError) -> Result<T, Unwind> {
         Err(Unwind::Exception(error))
     }
-    pub fn return_from<T>(frame: Rc<Frame>, value: Object) -> Result<T, Unwind> {
+    pub fn return_from<T>(frame: Frame, value: Object) -> Result<T, Unwind> {
         Err(Unwind::ReturnFrom(frame, value))
     }
     pub fn add_context(self, source: &str) -> Unwind {
@@ -32,6 +33,19 @@ impl Unwind {
 }
 
 pub type Eval = Result<Object, Unwind>;
+
+pub trait Source {
+    fn source(self, span: &Span) -> Self;
+}
+
+impl Source for Eval {
+    fn source(mut self, span: &Span) -> Self {
+        if let Err(Unwind::Exception(e)) = &mut self {
+            e.span = span.clone();
+        }
+        self
+    }
+}
 
 type MethodFunction = fn(&Object, &[&Object], &Builtins) -> Eval;
 
@@ -116,9 +130,15 @@ impl Arg {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Closure {
-    pub env: Option<Rc<Frame>>,
+    env: Option<Frame>,
     pub params: Vec<Arg>,
     pub body: Expr,
+}
+
+impl Closure {
+    pub fn env(&self) -> Option<Frame> {
+        self.env.clone()
+    }
 }
 
 #[derive(PartialEq)]
@@ -256,7 +276,7 @@ impl Builtins {
         }
     }
 
-    pub fn make_closure(&self, frame: Rc<Frame>, params: Vec<Arg>, body: Expr) -> Object {
+    pub fn make_closure(&self, frame: Frame, params: Vec<Arg>, body: Expr) -> Object {
         Object {
             vtable: Rc::clone(&self.closure_vtable),
             datum: Datum::Closure(Rc::new(Closure {
@@ -294,7 +314,6 @@ impl Builtins {
             };
             args.push(Arg::new(param.span.clone(), param.name.clone(), vtable));
         }
-        args.push(Arg::new(0..0, "self".to_string(), None));
         Closure {
             env: None,
             params: args,
@@ -308,6 +327,13 @@ impl Object {
         match &self.datum {
             Datum::Class(class) => Rc::clone(class),
             _ => panic!("BUG: {} is not a Class", self),
+        }
+    }
+
+    pub fn closure_ref(&self) -> &Closure {
+        match &self.datum {
+            Datum::Closure(c) => c.borrow(),
+            _ => panic!("BUG: {} is not a Closure", self),
         }
     }
 
@@ -332,13 +358,6 @@ impl Object {
         }
     }
 
-    pub fn closure(&self) -> Rc<Closure> {
-        match &self.datum {
-            Datum::Closure(c) => Rc::clone(c),
-            _ => panic!("BUG: {} is not a Closure", self),
-        }
-    }
-
     pub fn string(&self) -> Rc<String> {
         match &self.datum {
             Datum::String(s) => Rc::clone(s),
@@ -357,9 +376,7 @@ impl Object {
         // println!("debug: {} {} {:?}", self, message, args);
         match self.vtable.get(message) {
             Some(Method::Primitive(method)) => method(self, args, builtins),
-            Some(Method::Interpreter(closure)) => {
-                eval::apply_with_extra_args(closure, args, &[self], builtins, true)
-            }
+            Some(Method::Interpreter(closure)) => eval::apply(Some(self), closure, args, builtins),
             Some(Method::Reader(index)) => read_instance_variable(self, *index),
             None => {
                 // println!("debug: available methods: {:?}", &self.vtable.selectors());

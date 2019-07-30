@@ -3,13 +3,146 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::objects2::{Arg, Builtins, Closure, Eval, Object, Unwind, Vtable};
+use crate::objects2::{Arg, Builtins, Closure, Eval, Object, Source, Unwind, Vtable};
 use crate::parse::{Assign, ClassDefinition, Expr, Global, Literal, Parser, Return, Var};
 use crate::tokenstream::{Span, SyntaxError};
 
+#[derive(Debug)]
+pub struct MethodFrame {
+    pub args: RefCell<HashMap<String, Binding>>,
+    pub receiver: Object,
+}
+
+#[derive(Debug)]
+pub struct BlockFrame {
+    pub args: RefCell<HashMap<String, Binding>>,
+    // Innermost lexically enclosing frame
+    pub parent: Option<Frame>,
+    // Lexically enclosing method frame
+    pub home: Option<Frame>,
+}
+
+impl PartialEq for MethodFrame {
+    fn eq(&self, other: &Self) -> bool {
+        self as *const _ == other as *const _
+    }
+}
+
+impl PartialEq for BlockFrame {
+    fn eq(&self, other: &Self) -> bool {
+        self as *const _ == other as *const _
+    }
+}
+
+// FIXME:
+//  Frame {
+//    args:
+//    context: BlockContext | MethodContext
+//  }
+#[derive(Debug, Clone, PartialEq)]
+pub enum Frame {
+    MethodFrame(Rc<MethodFrame>),
+    BlockFrame(Rc<BlockFrame>),
+}
+
+impl Frame {
+    fn new(
+        args: HashMap<String, Binding>,
+        parent: Option<Frame>,
+        receiver: Option<Object>,
+    ) -> Frame {
+        match receiver {
+            None => {
+                let home = match &parent {
+                    None => None,
+                    Some(p) => p.home(),
+                };
+                Frame::BlockFrame(Rc::new(BlockFrame {
+                    args: RefCell::new(args),
+                    parent,
+                    home,
+                }))
+            }
+            Some(receiver) => {
+                assert!(parent.is_none());
+                Frame::MethodFrame(Rc::new(MethodFrame {
+                    args: RefCell::new(args),
+                    receiver,
+                }))
+            }
+        }
+    }
+
+    fn args(&self) -> &RefCell<HashMap<String, Binding>> {
+        match self {
+            Frame::MethodFrame(method_frame) => &method_frame.args,
+            Frame::BlockFrame(block_frame) => &block_frame.args,
+        }
+    }
+
+    fn home(&self) -> Option<Frame> {
+        match self {
+            Frame::MethodFrame(_) => Some(self.clone()),
+            Frame::BlockFrame(block_frame) => block_frame.home.clone(),
+        }
+    }
+
+    fn receiver(&self) -> Eval {
+        match self {
+            Frame::MethodFrame(method_frame) => Ok(method_frame.receiver.clone()),
+            Frame::BlockFrame(block_frame) => {
+                match &block_frame.home {
+                    // FIXME: None as span
+                    None => {
+                        Unwind::exception(SyntaxError::new(0..0, "self outside method context"))
+                    }
+                    Some(frame) => frame.receiver(),
+                }
+            }
+        }
+    }
+
+    fn parent(&self) -> Option<Frame> {
+        match self {
+            Frame::MethodFrame(_) => None,
+            Frame::BlockFrame(block_frame) => block_frame.parent.clone(),
+        }
+    }
+
+    fn set(&self, name: &str, value: Object) -> Eval {
+        match self.args().borrow_mut().get_mut(name) {
+            Some(binding) => binding.assign(value),
+            None => match self.parent() {
+                Some(parent) => parent.set(name, value),
+                None => Unwind::exception(SyntaxError::new(
+                    // Correct location set by caller. FIXME: Allow None as span.
+                    0..0,
+                    "Cannot assign to an unbound variable",
+                )),
+            },
+        }
+    }
+
+    fn get(&self, name: &str) -> Eval {
+        match self.args().borrow().get(name) {
+            Some(binding) => return Ok(binding.value.clone()),
+            None => match self.parent() {
+                Some(parent) => parent.get(name),
+                None => {
+                    return Unwind::exception(SyntaxError::new(
+                        // Correct location set by caller. FIXME: Allow None as span
+                        0..0,
+                        "Unbound variable",
+                    ));
+                }
+            },
+        }
+    }
+}
+
 struct Env<'a> {
     builtins: &'a Builtins,
-    frame: Rc<Frame>,
+    frame: Frame,
 }
 
 #[derive(Debug)]
@@ -31,33 +164,21 @@ impl Binding {
             value: init,
         }
     }
-    fn assign(&mut self, value: Object) -> bool {
+    fn assign(&mut self, value: Object) -> Eval {
         if let Some(vtable) = &self.vtable {
             if &value.vtable != vtable {
-                return false;
+                // Correct location set by caller. FIXME: allow None as span.
+                return Unwind::exception(SyntaxError::new(0..0, "TypeError"));
             }
         }
-        self.value = value;
-        return true;
-    }
-}
-
-#[derive(Debug)]
-pub struct Frame {
-    pub local: RefCell<HashMap<String, Binding>>,
-    pub parent: Option<Rc<Frame>>,
-    pub method: Option<Rc<Frame>>,
-}
-
-impl PartialEq for Frame {
-    fn eq(&self, other: &Self) -> bool {
-        self as *const _ == other as *const _
+        self.value = value.clone();
+        Ok(value)
     }
 }
 
 impl<'a> Env<'a> {
     pub fn new(builtins: &Builtins) -> Env {
-        Env::from_parts(builtins, HashMap::new(), None, false)
+        Env::from_parts(builtins, HashMap::new(), None, None)
     }
 
     pub fn eval(&self, expr: &Expr) -> Eval {
@@ -79,64 +200,18 @@ impl<'a> Env<'a> {
 
     fn from_parts(
         builtins: &'a Builtins,
-        local: HashMap<String, Binding>,
-        parent: Option<Rc<Frame>>,
-        method: bool,
+        args: HashMap<String, Binding>,
+        parent: Option<Frame>,
+        receiver: Option<Object>,
     ) -> Env<'a> {
-        // KLUDGE: This is as simple as I can make this without making
-        // a circular thing requiring weak pointers, which in turn would
-        // complex in a different way...
-        let parent_method = match &parent {
-            None => None,
-            Some(frame) => frame.parent.as_ref().map(Rc::clone),
-        };
-        let base_frame = Rc::new(Frame {
-            local: RefCell::new(local),
-            parent,
-            method: parent_method,
-        });
-        let frame = if method {
-            Rc::new(Frame {
-                local: RefCell::new(HashMap::new()),
-                parent: Some(Rc::clone(&base_frame)),
-                method: Some(Rc::clone(&base_frame)),
-            })
-        } else {
-            base_frame
-        };
         Env {
             builtins,
-            frame,
+            frame: Frame::new(args, parent, receiver),
         }
     }
 
     fn eval_assign(&self, assign: &Assign) -> Eval {
-        let name = &assign.name;
-        // Value needs to be evaluated before we go looking for the binding,
-        // so that the scope of our mutable borrow from the frame is safe.
-        let value = self.eval(&assign.value)?;
-        let mut frame = &self.frame;
-        loop {
-            match frame.local.borrow_mut().get_mut(name) {
-                Some(binding) => {
-                    if !binding.assign(value.clone()) {
-                        return self.type_error(&assign.value);
-                    }
-                    return Ok(value);
-                }
-                None => match &frame.parent {
-                    Some(parent_frame) => {
-                        frame = parent_frame;
-                    }
-                    None => {
-                        return Unwind::exception(SyntaxError::new(
-                            assign.span.clone(),
-                            "Cannot assign to an unbound variable",
-                        ))
-                    }
-                },
-            }
-        }
+        self.frame.set(&assign.name, self.eval(&assign.value)?).source(&assign.span)
     }
 
     fn eval_bind(
@@ -146,7 +221,7 @@ impl<'a> Env<'a> {
         expr: &Expr,
         body: &Expr,
     ) -> Eval {
-        let mut local = HashMap::new();
+        let mut args = HashMap::new();
         let binding = match typename {
             None => Binding::untyped(self.eval(expr)?),
             Some(typename) => {
@@ -154,8 +229,8 @@ impl<'a> Env<'a> {
                 Binding::typed(class.instance_vtable.clone(), self.eval_typecheck(expr, typename)?)
             }
         };
-        local.insert(name.to_owned(), binding);
-        let env = Env::from_parts(self.builtins, local, Some(Rc::clone(&self.frame)), false);
+        args.insert(name.to_owned(), binding);
+        let env = Env::from_parts(self.builtins, args, Some(self.frame.clone()), None);
         env.eval(body)
     }
 
@@ -170,11 +245,12 @@ impl<'a> Env<'a> {
             };
             args.push(Arg::new(p.span.clone(), p.name.clone(), vt));
         }
-        Ok(self.builtins.make_closure(Rc::clone(&self.frame), args, body.to_owned()))
+        Ok(self.builtins.make_closure(self.frame.clone(), args, body.clone()))
     }
 
     fn eval_class_definition(&self, definition: &ClassDefinition) -> Eval {
-        if self.frame.parent.is_some() {
+        // FIXME: allow anonymous classes
+        if self.frame.parent().is_some() {
             return Unwind::exception(SyntaxError::new(
                 definition.span.clone(),
                 "Class definition not at toplevel",
@@ -202,11 +278,11 @@ impl<'a> Env<'a> {
     }
 
     fn eval_return(&self, ret: &Return) -> Eval {
-        match &self.frame.method {
+        match self.frame.home() {
             None => {
                 Unwind::exception(SyntaxError::new(ret.span.clone(), "No method to return from"))
             }
-            Some(frame) => Unwind::return_from(Rc::clone(frame), self.eval(&ret.value)?),
+            Some(frame) => Unwind::return_from(frame, self.eval(&ret.value)?),
         }
     }
 
@@ -233,12 +309,6 @@ impl<'a> Env<'a> {
         self.builtins.find_class(name, span)
     }
 
-    fn type_error(&self, expr: &Expr) -> Eval {
-        // FIXME: Get type types into the error message
-        // FIXME: wrong span
-        Unwind::exception(SyntaxError::new(expr.span(), "TypeError"))
-    }
-
     fn eval_typecheck(&self, expr: &Expr, typename: &str) -> Eval {
         let value = self.eval(expr)?;
         // FIXME: Wrong span.
@@ -246,50 +316,29 @@ impl<'a> Env<'a> {
         if class.instance_vtable == value.vtable {
             Ok(value)
         } else {
-            self.type_error(expr)
+            Unwind::exception(SyntaxError::new(expr.span(), "TypeError"))
         }
     }
 
     fn eval_var(&self, var: &Var) -> Eval {
-        let mut frame = &self.frame;
-        loop {
-            match frame.local.borrow().get(&var.name) {
-                Some(binding) => return Ok(binding.value.to_owned()),
-                None => match &frame.parent {
-                    Some(parent_frame) => {
-                        frame = parent_frame;
-                    }
-                    None => {
-                        return Unwind::exception(SyntaxError::new(
-                            var.span.clone(),
-                            "Unbound variable",
-                        ))
-                    }
-                },
-            }
+        if &var.name == "self" {
+            self.frame.receiver().source(&var.span)
+        } else {
+            self.frame.get(&var.name).source(&var.span)
         }
     }
 }
 
-pub fn apply(closure: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    apply_with_extra_args(&closure.closure(), args, &[], builtins, false)
-}
-
-pub fn apply_with_extra_args(
+pub fn apply(
+    receiver: Option<&Object>,
     closure: &Closure,
-    args: &[&Object],
-    extra: &[&Object],
+    call_args: &[&Object],
     builtins: &Builtins,
-    method: bool,
 ) -> Eval {
-    // KLUDGE: I'm blind. I would think that iterating over args with IntoIterator
-    // would give me an iterator over &Object, but I get &&Object -- so to_owned x 2.
-    let mut locals = HashMap::new();
-    for (arg, obj) in
-        closure.params.iter().zip(args.into_iter().chain(extra.into_iter()).map(|x| x.to_owned()))
-    {
+    let mut args = HashMap::new();
+    for (arg, obj) in closure.params.iter().zip(call_args.into_iter().map(|x| (*x).clone())) {
         let binding = match &arg.vtable {
-            None => Binding::untyped(obj.to_owned()),
+            None => Binding::untyped(obj),
             Some(vtable) => {
                 if vtable != &obj.vtable {
                     return Unwind::exception(SyntaxError::new(arg.span.clone(), "TypeError"));
@@ -297,28 +346,14 @@ pub fn apply_with_extra_args(
                 Binding::typed(vtable.to_owned(), obj.to_owned())
             }
         };
-        locals.insert(arg.name.clone(), binding);
+        args.insert(arg.name.clone(), binding);
     }
-    /*
-    let locals: HashMap<String, Binding> = closure
-       .params
-       .iter()
-       .map(|p| p.name.clone())
-       .zip(
-           args.into_iter()
-               .chain(extra.into_iter())
-               .zip(closure.params)
-               .map(|obj, arg| Binding::new(obj.to_owned().to_owned(), arg.vtable.clone())),
-       )
-       .collect();
-       */
-    let parent = closure.env.as_ref().map(|x| Rc::clone(x));
-    let env = Env::from_parts(builtins, locals, parent, method);
+    let env = Env::from_parts(builtins, args, closure.env(), receiver.map(|x| x.clone()));
     match env.eval(&closure.body) {
         Ok(value) => Ok(value),
         Err(Unwind::Exception(e)) => Err(Unwind::Exception(e)),
         Err(Unwind::ReturnFrom(frame, value)) => {
-            if Some(&frame) == env.frame.parent.as_ref() {
+            if &frame == &env.frame {
                 Ok(value)
             } else {
                 Err(Unwind::ReturnFrom(frame, value))
@@ -826,11 +861,11 @@ fn test_typecheck4() {
     assert_eq!(
         eval_str("let x::Integer = 42, x = 1.0, x"),
         Unwind::exception(SyntaxError {
-            span: 25..28,
+            span: 21..22,
             problem: "TypeError",
             context: concat!(
                 "001 let x::Integer = 42, x = 1.0, x\n",
-                "                             ^^^ TypeError\n"
+                "                         ^ TypeError\n"
             )
             .to_string()
         })
@@ -860,11 +895,11 @@ fn test_typecheck7() {
     assert_eq!(
         eval_str("{ |y x::Integer| x = y } value: 41.0 value: 42"),
         Unwind::exception(SyntaxError {
-            span: 21..22,
+            span: 17..18,
             problem: "TypeError",
             context: concat!(
                 "001 { |y x::Integer| x = y } value: 41.0 value: 42\n",
-                "                         ^ TypeError\n"
+                "                     ^ TypeError\n"
             )
             .to_string()
         })
@@ -896,16 +931,18 @@ fn test_typecheck8() {
     );
 }
 
+#[ignore]
 #[test]
 fn test_instance_variable1() {
     assert_eq!(
-        parse_str(
+        eval_ok(
             "class Foo { bar }
                method zot
                   bar
              end
              (Foo bar: 42) zot"
-        ),
-        Ok(int(0..0, 0))
+        )
+        .integer(),
+        42
     );
 }
