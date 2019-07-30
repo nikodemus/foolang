@@ -3,7 +3,10 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::objects2::{Arg, Builtins, Closure, Eval, Object, Source, Unwind, Vtable};
+use crate::objects2::{
+    read_instance_variable, write_instance_variable, Arg, Builtins, Closure, Eval, Object, Source,
+    Unwind, Vtable,
+};
 use crate::parse::{Assign, ClassDefinition, Expr, Global, Literal, Parser, Return, Var};
 use crate::tokenstream::{Span, SyntaxError};
 
@@ -107,16 +110,12 @@ impl Frame {
         }
     }
 
-    fn set(&self, name: &str, value: Object) -> Eval {
+    fn set(&self, name: &str, value: Object) -> Option<Eval> {
         match self.args().borrow_mut().get_mut(name) {
-            Some(binding) => binding.assign(value),
+            Some(binding) => Some(binding.assign(value)),
             None => match self.parent() {
                 Some(parent) => parent.set(name, value),
-                None => Unwind::exception(SyntaxError::new(
-                    // Correct location set by caller. FIXME: Allow None as span.
-                    0..0,
-                    "Cannot assign to an unbound variable",
-                )),
+                None => None,
             },
         }
     }
@@ -200,10 +199,6 @@ impl<'a> Env<'a> {
             builtins,
             frame: Frame::new(args, parent, receiver),
         }
-    }
-
-    fn eval_assign(&self, assign: &Assign) -> Eval {
-        self.frame.set(&assign.name, self.eval(&assign.value)?).source(&assign.span)
     }
 
     fn eval_bind(
@@ -312,6 +307,24 @@ impl<'a> Env<'a> {
         }
     }
 
+    fn eval_assign(&self, assign: &Assign) -> Eval {
+        let value = self.eval(&assign.value)?;
+        match self.frame.set(&assign.name, value.clone()) {
+            Some(res) => res.source(&assign.span),
+            None => {
+                if let Some(receiver) = self.frame.receiver() {
+                    if let Some(slot) = receiver.vtable.slots.get(&assign.name) {
+                        return write_instance_variable(receiver, slot.index, value);
+                    }
+                }
+                Unwind::exception(SyntaxError::new(
+                    assign.span.clone(),
+                    "Cannot assign to an unbound variable",
+                ))
+            }
+        }
+    }
+
     fn eval_var(&self, var: &Var) -> Eval {
         if &var.name == "self" {
             match self.frame.receiver() {
@@ -327,7 +340,7 @@ impl<'a> Env<'a> {
                 None => {
                     if let Some(receiver) = self.frame.receiver() {
                         if let Some(slot) = receiver.vtable.slots.get(&var.name) {
-                            return Ok(receiver.instance().instance_variables[slot.index].clone());
+                            return read_instance_variable(receiver, slot.index);
                         }
                     }
                 }
@@ -948,6 +961,24 @@ fn test_instance_variable1() {
                   bar
              end
              (Foo bar: 42) zot"
+        )
+        .integer(),
+        42
+    );
+}
+
+#[test]
+fn test_instance_variable2() {
+    assert_eq!(
+        eval_ok(
+            "class Foo { bar }
+               method zit
+                  bar = bar + 1
+                  self
+               method zot
+                  bar
+             end
+             (Foo bar: 41) zit zot"
         )
         .integer(),
         42

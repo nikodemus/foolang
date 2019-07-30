@@ -164,7 +164,7 @@ pub struct Class {
 
 #[derive(PartialEq)]
 pub struct Instance {
-    pub instance_variables: Vec<Object>,
+    pub instance_variables: RefCell<Vec<Object>>,
 }
 
 #[derive(PartialEq, Clone)]
@@ -446,12 +446,19 @@ fn generic_ctor(receiver: &Object, args: &[&Object], _builtins: &Builtins) -> Ev
     Ok(Object {
         vtable: Rc::clone(&class.instance_vtable),
         datum: Datum::Instance(Rc::new(Instance {
-            instance_variables: args.iter().map(|x| (*x).to_owned()).collect(),
+            instance_variables: RefCell::new(args.iter().map(|x| (*x).to_owned()).collect()),
         })),
     })
 }
 
-fn read_instance_variable(receiver: &Object, index: usize) -> Eval {
+pub fn read_instance_variable(receiver: &Object, index: usize) -> Eval {
     let instance = receiver.instance();
-    Ok(instance.instance_variables[index].to_owned())
+    let value = instance.instance_variables.borrow()[index].clone();
+    Ok(value)
+}
+
+pub fn write_instance_variable(receiver: &Object, index: usize, value: Object) -> Eval {
+    let instance = receiver.instance();
+    instance.instance_variables.borrow_mut()[index] = value.clone();
+    Ok(value)
 }
