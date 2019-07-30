@@ -4,9 +4,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::objects2::{Arg, Builtins, Closure, Eval, Object, Unwind, Vtable};
-use crate::parse::{
-    parse_str, Assign, ClassDefinition, Expr, Global, Literal, Parser, Return, Var,
-};
+use crate::parse::{Assign, ClassDefinition, Expr, Global, Literal, Parser, Return, Var};
 use crate::tokenstream::{Span, SyntaxError};
 
 struct Env<'a> {
@@ -329,12 +327,6 @@ pub fn apply_with_extra_args(
     }
 }
 
-fn eval_str(source: &str) -> Eval {
-    let builtins = Builtins::new();
-    let expr = parse_str(source)?;
-    Env::new(&builtins).eval(&expr).map_err(|e| e.add_context(source))
-}
-
 fn eval_all(builtins: &Builtins, source: &str) -> Eval {
     let env = Env::new(builtins);
     let mut parser = Parser::new(source);
@@ -359,6 +351,11 @@ fn eval_builtins(source: &str) -> (Object, Builtins) {
         Err(err) => panic!("Unexpected exception:\n{:?}", err),
         Ok(obj) => (obj, builtins),
     }
+}
+
+fn eval_str(source: &str) -> Eval {
+    let builtins = Builtins::new();
+    eval_all(&builtins, source)
 }
 
 fn eval_ok(source: &str) -> Object {
