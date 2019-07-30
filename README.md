@@ -81,29 +81,38 @@ Line comments are prefixed with `--`:
 
     -- This is a comment
 
-If -- occurs again on the same line it ends the comment.
+Block comments are surrounded by `---`:
 
-    receiver aMessage -- this is a comment -- anotherMessage
+    output println: --- This is a comment --- "Hello!"
+
+    ---
+    This is a comment
+    Still a comment
+    ---
 
 End of line comments describing the value the line evaluates to are
-conventionally prefixed with `-->`2, but syntactically this is just a line
-comment that starts with a greater-than sign:
+conventionally prefixed with `-->`, but syntactically this is just a
+line comment that starts with a greater-than sign:
 
     x = y + z --> sum of x and y
 
-Block comments are surrounded by lines that contain only `---`:
-
-    ---
-    x = y + z
-    x aMessage
-    x anotherMessage
-    ---
-
-
 **Literals***
 
-    --
+Numbers are quite conventional, with _ as allowed readability separators.
+Literal floats are doubles, unless written in the exponential format using
 
+    1_000_000
+    0xDEADBEEF
+    0b011011
+    1.0     -- double
+    1.0e10  -- double
+    1.0f10  -- single
+
+Strings allow interpolations to be embedded:
+
+    "Hello {user name}!"
+
+Litetal 
 
 - I quite like the idea of making "reserved words" uppercase keywords:
 
@@ -115,111 +124,13 @@ Block comments are surrounded by lines that contain only `---`:
          end
       end
 
-  It is reasonably unobtrusive, and allows for extensibility. It also
-  makes it obvious for both humans and machines.
+## Notes
 
-  Then reserve another syntactic class for user-level syntax extensions:
-
-       $withDatabase { }
-
-       withDatabase! { }
-
-       !withDatabase { }
-  
-       !Cond:
-          maybe => then
-
-    
-       Cond!
-          maybe => then
-
-    
-       !Cond:
-          maybe => then
-
-  ...or maybe allow users to implement Foo: things as well? Just impose
-  import rules.
-
-  That works.
-
-- I really miss question mark as part of message syntax. It's so nice
-  and obvious for unary tests. is-prefix gets old fast.
-
-  Bang is nice too.
-
-- Forth's "everything is delimited by whitespace" is _really_ powerful.
-
-- '|' would be really useful as just syntax. ...but it _is_ also
-  really convenient the second you start twiddling bits.
-
-- Use -> for chaining instead of --
-
-- Canonicalize multipart keyword messages by stable-sorting the keys.
-  (Evaluatior order stays.)
-
-- "Object-oriented" comprehensions are a bit awkward for multiple dimensions.
-  Something like:
-
-      For iterators: [as, bs, cs]
+- For iterators: [as, bs, cs]
           where: { |a,b,c| a*a == (b*b + c*c) }
           collect: { |a,b,c| [a,b,c] }
 
   maybe?
-
-- Possible conflict with possible dict/record comprehensition syntax:
-
-  Consider:
-
-      staff select: {_senior} -> inject: Dictionary new into: { |senior, dict| 
-        dict put: senior at: senior name
-      }
-
-   Rendered as:
-
-       { employee name: employee | employee <- staff, employee senior }
-
-   Cannot tell that this is a comprehension very easily.
-
-       { employee name => employee | employee <- staff, employee senior }
-
-   Is clearer, but Json-compatible literals are just awfully nice. (Not required, though.)
-
-   Wat about
-
-       { (employee name): employee | employee <- staff, employee senior }
-
-   Alternatively I could reserve => for cases where the names are not literal,
-   and for literal string or selector keys.
-
-       { foo: 42 } => record
-
-       { "foo bar": 42 } => dict
-
-       { (foo): 42 } => dict (evalute foo)
-
-   Or
-
-       { foo => 32 } as record
-
-   Because consider: records are really literal objects. I would kind of like
-   have the option to delegate, have inline methods, etc.
-
-       { 
-           foo => 1
-           bar: x => (
-             old = _slot
-             _slot += x
-             old 
-           ),
-           _slot = 42
-       }
-
-       {
-          doesNotUnderstand: selector with: args => {
-             log write: selector
-             object perform: selector with: args
-          }
-       }
 
 - Using words to define operators. Maybe `x _max_ y` or `x \max y`. Either would
   also be nice syntax for entering unicode operators.
@@ -249,31 +160,33 @@ Block comments are surrounded by lines that contain only `---`:
      higher rows. Things in the after slot are lower than the row but not
      higher than lower rows.
 
-      @precedenceCLass Arithmetic
+      precedenceClass Arithmetic
          before: Comparison
   
-      @precedenceClass Comparison
+      precedenceClass Comparison
          before: Logical
 
-      @precedenceClass Logical
+      precedenceClass Logical
 
-      @associativeGroup[Arithmetic]
+      associativeGroup[Arithmetic]
          [\arrow]
          [*, /]
          [+, -]
 
-      @associativeGroup[Arithmetic]
+      associativeGroup[Arithmetic]
          [<<, >>]
          [|, &, \xor]
 
-      @binaryOperator[Arithmeric before: *] ^
+      binaryOperator[Arithmeric before: *] ^
 
    So ^ relates to all other arithmetic operators except \arrow.
 
-      @extend[Integer] ^ x
+      extend[Integer] ^ x
          x == 0 then: { return 1 }
          x == 1 then: { return self }
          self * self ^ (x-1)
+
+   ...but this gets the associativity wrong: 2^3^4 == (2^(2^3))
 
 ## References
 
