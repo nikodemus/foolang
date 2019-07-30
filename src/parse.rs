@@ -54,7 +54,7 @@ impl Var {
 pub struct ClassDefinition {
     pub span: Span,
     pub name: String,
-    pub instance_variables: Vec<String>,
+    pub instance_variables: Vec<Var>,
     pub methods: Vec<MethodDefinition>,
     default_constructor: Option<String>,
 }
@@ -68,7 +68,7 @@ pub struct MethodDefinition {
 }
 
 impl ClassDefinition {
-    fn new(span: Span, name: String, instance_variables: Vec<String>) -> ClassDefinition {
+    fn new(span: Span, name: String, instance_variables: Vec<Var>) -> ClassDefinition {
         ClassDefinition {
             span,
             name,
@@ -78,7 +78,7 @@ impl ClassDefinition {
         }
     }
 
-    fn expr(span: Span, name: String, instance_variables: Vec<String>) -> Expr {
+    fn expr(span: Span, name: String, instance_variables: Vec<Var>) -> Expr {
         Expr::ClassDefinition(ClassDefinition::new(span, name, instance_variables))
     }
 
@@ -95,7 +95,7 @@ impl ClassDefinition {
         } else {
             let mut selector = String::new();
             for var in &self.instance_variables {
-                selector.push_str(var);
+                selector.push_str(&var.name);
                 selector.push_str(":");
             }
             selector
@@ -755,10 +755,9 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     let mut instance_variables = Vec::new();
     loop {
         let token = parser.next_token()?;
-        let tokenstring = parser.tokenstring();
         match token {
             Token::WORD => {
-                instance_variables.push(tokenstring);
+                instance_variables.push(parse_var(parser)?);
             }
             Token::SIGIL if parser.slice() == "}" => {
                 break;
@@ -806,28 +805,15 @@ fn let_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     if Token::WORD != parser.next_token()? {
         return parser.error("Expected variable name after let");
     }
-    let name = parser.slice().to_string();
 
-    let mut typename = None;
-    loop {
-        let next = parser.next_token()?;
-        match next {
-            Token::SIGIL if parser.slice() == "::" => {
-                // FIXME: refactor into parse_type()
-                if let Token::WORD = parser.next_token()? {
-                    if typename.is_some() {
-                        return parser.error("Multiple type declarations in let");
-                    }
-                    typename = Some(parser.tokenstring());
-                } else {
-                    return parser.error("Invalid type designator");
-                }
-            }
-            Token::SIGIL if parser.slice() == "=" => {
-                break;
-            }
-            _ => return parser.error("Expected = in let"),
-        }
+    let Var {
+        name,
+        typename,
+        ..
+    } = parse_var(parser)?;
+
+    if !(parser.next_token()? == Token::SIGIL && parser.slice() == "=") {
+        return parser.error("Expected = in let");
     }
 
     let value = parser.parse_expr(SEQ_PRECEDENCE)?;
@@ -1033,11 +1019,13 @@ fn seq(exprs: Vec<Expr>) -> Expr {
 }
 
 fn class(span: Span, name: &str, instance_variables: Vec<&str>) -> Expr {
-    ClassDefinition::expr(
-        span,
-        name.to_string(),
-        instance_variables.into_iter().map(|n| n.to_string()).collect(),
-    )
+    let mut p = span.start + "class ".len() + name.len() + " { ".len();
+    let mut vars = Vec::new();
+    for v in instance_variables {
+        vars.push(Var::untyped(p..p + v.len(), v.to_string()));
+        p += v.len() + ", ".len()
+    }
+    ClassDefinition::expr(span, name.to_string(), vars)
 }
 
 fn method(span: Span, selector: &str, parameters: Vec<&str>, body: Expr) -> MethodDefinition {

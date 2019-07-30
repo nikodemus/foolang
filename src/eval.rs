@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::objects2::{
-    read_instance_variable, write_instance_variable, Arg, Builtins, Closure, Eval, Object, Source,
-    Unwind, Vtable,
+    read_instance_variable, write_instance_variable, Arg, Builtins, Closure, Eval, Object, Slot,
+    Source, Unwind, Vtable,
 };
 use crate::parse::{Assign, ClassDefinition, Expr, Global, Literal, Parser, Return, Var};
 use crate::tokenstream::{Span, SyntaxError};
@@ -244,7 +244,7 @@ impl<'a> Env<'a> {
             ));
         }
         let name = &definition.name;
-        let class = self.builtins.make_class(definition);
+        let class = self.builtins.make_class(definition)?;
         self.builtins.globals.borrow_mut().insert(name.to_string(), class.clone());
         Ok(class)
     }
@@ -314,7 +314,7 @@ impl<'a> Env<'a> {
             None => {
                 if let Some(receiver) = self.frame.receiver() {
                     if let Some(slot) = receiver.vtable.slots.get(&assign.name) {
-                        return write_instance_variable(receiver, slot.index, value);
+                        return write_instance_variable(receiver, slot, value).source(&assign.span);
                     }
                 }
                 Unwind::exception(SyntaxError::new(
@@ -714,7 +714,20 @@ fn eval_class_not_toplevel() {
 fn eval_class1() {
     let class = eval_ok("class Point { x, y } end").class();
     assert_eq!(class.instance_vtable.name, "Point");
-    assert_eq!(class.instance_variables, vec!["x".to_string(), "y".to_string()]);
+    assert_eq!(
+        class.instance_vtable.slots["x"],
+        Slot {
+            index: 0,
+            vtable: None,
+        }
+    );
+    assert_eq!(
+        class.instance_vtable.slots["y"],
+        Slot {
+            index: 1,
+            vtable: None,
+        }
+    );
 }
 
 #[test]
@@ -734,7 +747,7 @@ fn eval_global1() {
 fn eval_global2() {
     let class = eval_ok("Integer").class();
     assert_eq!(class.instance_vtable.name, "Integer");
-    assert_eq!(class.instance_variables, Vec::<String>::new());
+    assert!(class.instance_vtable.slots.is_empty());
 }
 
 #[test]
@@ -982,5 +995,46 @@ fn test_instance_variable2() {
         )
         .integer(),
         42
+    );
+}
+
+#[test]
+fn test_instance_variable3() {
+    assert_eq!(
+        eval_ok(
+            "class Foo { bar::Integer }
+               method foo: x
+                  bar = bar + x
+                  self
+             end
+             ((Foo bar: 41) foo: 1) bar"
+        )
+        .integer(),
+        42
+    );
+}
+
+#[test]
+fn test_instance_variable4() {
+    assert_eq!(
+        eval_str(
+            "class Foo { bar::Integer }
+               method foo: x
+                  bar = bar + x
+                  self
+             end
+             ((Foo bar: 41) foo: 1.0) bar"
+        ),
+        Unwind::exception(SyntaxError {
+            span: 74..77,
+            problem: "TypeError",
+            context: concat!(
+                "002                method foo: x\n",
+                "003                   bar = bar + x\n",
+                "                      ^^^ TypeError\n",
+                "004                   self\n"
+            )
+            .to_string()
+        })
     );
 }

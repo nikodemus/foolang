@@ -55,8 +55,10 @@ pub enum Method {
     Reader(usize),
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Slot {
     pub index: usize,
+    pub vtable: Option<Rc<Vtable>>,
 }
 
 pub struct Vtable {
@@ -86,11 +88,12 @@ impl Vtable {
         self.methods.insert(selector.to_string(), Method::Reader(index));
     }
 
-    pub fn add_slot(&mut self, name: &str, index: usize) {
+    pub fn add_slot(&mut self, name: &str, index: usize, vtable: Option<Rc<Vtable>>) {
         self.slots.insert(
             name.to_string(),
             Slot {
                 index,
+                vtable,
             },
         );
     }
@@ -159,7 +162,6 @@ impl Closure {
 #[derive(PartialEq)]
 pub struct Class {
     pub instance_vtable: Rc<Vtable>,
-    pub instance_variables: Vec<String>,
 }
 
 #[derive(PartialEq)]
@@ -196,7 +198,6 @@ impl Builtins {
                 vtable: Rc::new(Vtable::new("class Integer")),
                 datum: Datum::Class(Rc::new(Class {
                     instance_vtable: Rc::clone(&integer_vtable),
-                    instance_variables: vec![],
                 })),
             },
         );
@@ -208,7 +209,6 @@ impl Builtins {
                 vtable: Rc::new(Vtable::new("class Float")),
                 datum: Datum::Class(Rc::new(Class {
                     instance_vtable: Rc::clone(&float_vtable),
-                    instance_variables: vec![],
                 })),
             },
         );
@@ -220,7 +220,6 @@ impl Builtins {
                 vtable: Rc::new(classes::string2::class_vtable()),
                 datum: Datum::Class(Rc::new(Class {
                     instance_vtable: Rc::clone(&string_vtable),
-                    instance_variables: vec![],
                 })),
             },
         );
@@ -234,20 +233,27 @@ impl Builtins {
         }
     }
 
-    pub fn make_class(&self, classdef: &ClassDefinition) -> Object {
+    pub fn make_class(&self, classdef: &ClassDefinition) -> Eval {
         let mut vtable_name = "class ".to_string();
         vtable_name.push_str(&classdef.name);
         let mut class_vtable = Vtable::new(vtable_name.as_str());
         class_vtable.def(&classdef.constructor(), generic_ctor);
         let mut instance_vtable = Vtable::new(&classdef.name);
         let mut index = 0;
-        for name in &classdef.instance_variables {
+        for var in &classdef.instance_variables {
             index += 1;
-            instance_vtable.add_slot(&name, index - 1);
-            if &name[0..1] == "_" {
+            let vtable = match &var.typename {
+                None => None,
+                Some(typename) => {
+                    let slotclass = self.find_class(typename, var.span.clone())?.class();
+                    Some(slotclass.instance_vtable.clone())
+                }
+            };
+            instance_vtable.add_slot(&var.name, index - 1, vtable);
+            if &var.name[0..1] == "_" {
                 continue;
             }
-            instance_vtable.add_reader(&name, index - 1);
+            instance_vtable.add_reader(&var.name, index - 1);
         }
         for method in &classdef.methods {
             instance_vtable.add_method(
@@ -255,17 +261,12 @@ impl Builtins {
                 self.make_method_function(&method.parameters, &method.body),
             );
         }
-        Object {
+        Ok(Object {
             vtable: Rc::new(class_vtable),
             datum: Datum::Class(Rc::new(Class {
                 instance_vtable: Rc::new(instance_vtable),
-                instance_variables: classdef
-                    .instance_variables
-                    .iter()
-                    .map(|x| x.to_string())
-                    .collect(),
             })),
-        }
+        })
     }
 
     pub fn find_class(&self, name: &str, span: Span) -> Eval {
@@ -457,8 +458,14 @@ pub fn read_instance_variable(receiver: &Object, index: usize) -> Eval {
     Ok(value)
 }
 
-pub fn write_instance_variable(receiver: &Object, index: usize, value: Object) -> Eval {
+pub fn write_instance_variable(receiver: &Object, slot: &Slot, value: Object) -> Eval {
+    if let Some(vtable) = &slot.vtable {
+        if &value.vtable != vtable {
+            // FIXME: None as span
+            return Unwind::exception(SyntaxError::new(0..0, "TypeError"));
+        }
+    }
     let instance = receiver.instance();
-    instance.instance_variables.borrow_mut()[index] = value.clone();
+    instance.instance_variables.borrow_mut()[slot.index] = value.clone();
     Ok(value)
 }
