@@ -5,10 +5,11 @@ use std::rc::Rc;
 
 use crate::objects2::{
     read_instance_variable, write_instance_variable, Arg, Builtins, Closure, Eval, Object, Slot,
-    Source, Unwind, Vtable,
+    Source, Vtable,
 };
 use crate::parse::{Assign, ClassDefinition, Expr, Global, Literal, Parser, Return, Var};
-use crate::tokenstream::{Span, SyntaxError};
+use crate::tokenstream::Span;
+use crate::unwind::{Error, Location, SimpleError, TypeError, Unwind};
 
 #[derive(Debug)]
 pub struct MethodFrame {
@@ -158,8 +159,7 @@ impl Binding {
     fn assign(&mut self, value: Object) -> Eval {
         if let Some(vtable) = &self.vtable {
             if &value.vtable != vtable {
-                // Correct location set by caller. FIXME: allow None as span.
-                return Unwind::exception(SyntaxError::new(0..0, "TypeError"));
+                return Unwind::type_error(value, vtable.name.clone());
             }
         }
         self.value = value.clone();
@@ -238,10 +238,7 @@ impl<'a> Env<'a> {
     fn eval_class_definition(&self, definition: &ClassDefinition) -> Eval {
         // FIXME: allow anonymous classes
         if self.frame.parent().is_some() {
-            return Unwind::exception(SyntaxError::new(
-                definition.span.clone(),
-                "Class definition not at toplevel",
-            ));
+            return Unwind::error_at(definition.span.clone(), "Class definition not at toplevel");
         }
         let name = &definition.name;
         let class = self.builtins.make_class(definition)?;
@@ -252,7 +249,7 @@ impl<'a> Env<'a> {
     fn eval_global(&self, global: &Global) -> Eval {
         match self.builtins.globals.borrow().get(&global.name) {
             Some(obj) => Ok(obj.clone()),
-            None => Unwind::exception(SyntaxError::new(global.span.clone(), "Undefined global")),
+            None => Unwind::error_at(global.span.clone(), "Undefined global"),
         }
     }
 
@@ -266,9 +263,7 @@ impl<'a> Env<'a> {
 
     fn eval_return(&self, ret: &Return) -> Eval {
         match self.frame.home() {
-            None => {
-                Unwind::exception(SyntaxError::new(ret.span.clone(), "No method to return from"))
-            }
+            None => Unwind::error_at(ret.span.clone(), "No method to return from"),
             Some(frame) => Unwind::return_from(frame, self.eval(&ret.value)?),
         }
     }
@@ -303,7 +298,7 @@ impl<'a> Env<'a> {
         if class.instance_vtable == value.vtable {
             Ok(value)
         } else {
-            Unwind::exception(SyntaxError::new(expr.span(), "TypeError"))
+            Unwind::type_error_at(expr.span(), value, class.instance_vtable.name.clone())
         }
     }
 
@@ -317,10 +312,7 @@ impl<'a> Env<'a> {
                         return write_instance_variable(receiver, slot, value).source(&assign.span);
                     }
                 }
-                Unwind::exception(SyntaxError::new(
-                    assign.span.clone(),
-                    "Cannot assign to an unbound variable",
-                ))
+                Unwind::error_at(assign.span.clone(), "Cannot assign to an unbound variable")
             }
         }
     }
@@ -328,10 +320,7 @@ impl<'a> Env<'a> {
     fn eval_var(&self, var: &Var) -> Eval {
         if &var.name == "self" {
             match self.frame.receiver() {
-                None => Unwind::exception(SyntaxError::new(
-                    var.span.clone(),
-                    "self outside method context",
-                )),
+                None => Unwind::error_at(var.span.clone(), "self outside method context"),
                 Some(receiver) => Ok(receiver.clone()),
             }
         } else {
@@ -345,7 +334,7 @@ impl<'a> Env<'a> {
                     }
                 }
             }
-            Unwind::exception(SyntaxError::new(var.span.clone(), "Unbound variable"))
+            Unwind::error_at(var.span.clone(), "Unbound variable")
         }
     }
 }
@@ -362,7 +351,7 @@ pub fn apply(
             None => Binding::untyped(obj),
             Some(vtable) => {
                 if vtable != &obj.vtable {
-                    return Unwind::exception(SyntaxError::new(arg.span.clone(), "TypeError"));
+                    return Unwind::type_error_at(arg.span.clone(), obj, vtable.name.clone());
                 }
                 Binding::typed(vtable.to_owned(), obj.to_owned())
             }
@@ -371,15 +360,9 @@ pub fn apply(
     }
     let env = Env::from_parts(builtins, args, closure.env(), receiver.map(|x| x.clone()));
     match env.eval(&closure.body) {
+        Err(Unwind::ReturnFrom(ref frame, ref value)) if frame == &env.frame => Ok(value.clone()),
         Ok(value) => Ok(value),
-        Err(Unwind::Exception(e)) => Err(Unwind::Exception(e)),
-        Err(Unwind::ReturnFrom(frame, value)) => {
-            if &frame == &env.frame {
-                Ok(value)
-            } else {
-                Err(Unwind::ReturnFrom(frame, value))
-            }
-        }
+        Err(unwind) => Err(unwind),
     }
 }
 
@@ -388,11 +371,15 @@ fn eval_all(builtins: &Builtins, source: &str) -> Eval {
     let mut parser = Parser::new(source);
     loop {
         let expr = match parser.parse() {
-            Err(err) => return Err(err.add_context(source)),
+            Err(unwind) => {
+                return Err(unwind.with_context(source));
+            }
             Ok(expr) => expr,
         };
         let object = match env.eval(&expr) {
-            Err(err) => return Err(err.add_context(source)),
+            Err(unwind) => {
+                return Err(unwind.with_context(source));
+            }
             Ok(object) => object,
         };
         if parser.at_eof() {
@@ -401,11 +388,22 @@ fn eval_all(builtins: &Builtins, source: &str) -> Eval {
     }
 }
 
-fn eval_builtins(source: &str) -> (Object, Builtins) {
+fn eval_obj(source: &str) -> (Object, Builtins) {
     let builtins = Builtins::new();
     match eval_all(&builtins, source) {
-        Err(err) => panic!("Unexpected exception:\n{:?}", err),
+        Err(unwind) => panic!("Unexpected unwind:\n{:?}", unwind),
         Ok(obj) => (obj, builtins),
+    }
+}
+
+fn eval_exception(source: &str) -> (Unwind, Builtins) {
+    let builtins = Builtins::new();
+    match eval_all(&builtins, source) {
+        Err(unwind) => match &unwind {
+            Unwind::Exception(..) => (unwind, builtins),
+            _ => panic!("Expected exception, got: {:?}", unwind),
+        },
+        Ok(value) => panic!("Expected exception, got: {:?}", value),
     }
 }
 
@@ -427,11 +425,15 @@ fn eval_decimal() {
 fn eval_bad_decimal() {
     assert_eq!(
         eval_str("1x3"),
-        Unwind::exception(SyntaxError {
-            span: 0..3,
-            problem: "Malformed number",
-            context: concat!("001 1x3\n", "    ^^^ Malformed number\n").to_string()
-        })
+        Err(Unwind::Exception(
+            Error::SimpleError(SimpleError {
+                what: "Malformed number",
+            }),
+            Location {
+                span: Some(0..3),
+                context: Some(concat!("001 1x3\n", "    ^^^ Malformed number\n").to_string())
+            }
+        ))
     );
 }
 
@@ -444,11 +446,17 @@ fn eval_hex() {
 fn eval_bad_hex() {
     assert_eq!(
         eval_str("0x1x3"),
-        Unwind::exception(SyntaxError {
-            span: 0..5,
-            problem: "Malformed hexadecimal number",
-            context: concat!("001 0x1x3\n", "    ^^^^^ Malformed hexadecimal number\n").to_string()
-        })
+        Err(Unwind::Exception(
+            Error::SimpleError(SimpleError {
+                what: "Malformed hexadecimal number",
+            }),
+            Location {
+                span: Some(0..5),
+                context: Some(
+                    concat!("001 0x1x3\n", "    ^^^^^ Malformed hexadecimal number\n").to_string()
+                )
+            }
+        ))
     );
 }
 
@@ -461,11 +469,17 @@ fn eval_binary() {
 fn eval_bad_binary() {
     assert_eq!(
         eval_str("0b123"),
-        Unwind::exception(SyntaxError {
-            span: 0..5,
-            problem: "Malformed binary number",
-            context: concat!("001 0b123\n", "    ^^^^^ Malformed binary number\n").to_string()
-        })
+        Err(Unwind::Exception(
+            Error::SimpleError(SimpleError {
+                what: "Malformed binary number",
+            }),
+            Location {
+                span: Some(0..5),
+                context: Some(
+                    concat!("001 0b123\n", "    ^^^^^ Malformed binary number\n").to_string()
+                )
+            }
+        ))
     );
 }
 
@@ -478,11 +492,15 @@ fn eval_float() {
 fn eval_bad_float() {
     assert_eq!(
         eval_str("1.2.3"),
-        Unwind::exception(SyntaxError {
-            span: 3..4,
-            problem: "Unknown operator",
-            context: concat!("001 1.2.3\n", "       ^ Unknown operator\n").to_string()
-        })
+        Err(Unwind::Exception(
+            Error::SimpleError(SimpleError {
+                what: "Unknown operator",
+            }),
+            Location {
+                span: Some(3..4),
+                context: Some(concat!("001 1.2.3\n", "       ^ Unknown operator\n").to_string())
+            }
+        ))
     );
 }
 
@@ -600,15 +618,21 @@ fn eval_assign1() {
 fn eval_assign_unbound() {
     assert_eq!(
         eval_str("let x = 1, z = x + 1, let y = x, y"),
-        Unwind::exception(SyntaxError {
-            span: 11..12,
-            problem: "Cannot assign to an unbound variable",
-            context: concat!(
-                "001 let x = 1, z = x + 1, let y = x, y\n",
-                "               ^ Cannot assign to an unbound variable\n"
-            )
-            .to_string()
-        })
+        Err(Unwind::Exception(
+            Error::SimpleError(SimpleError {
+                what: "Cannot assign to an unbound variable",
+            }),
+            Location {
+                span: Some(11..12),
+                context: Some(
+                    concat!(
+                        "001 let x = 1, z = x + 1, let y = x, y\n",
+                        "               ^ Cannot assign to an unbound variable\n"
+                    )
+                    .to_string()
+                )
+            }
+        ))
     );
 }
 
@@ -647,15 +671,21 @@ fn eval_keyword() {
 fn eval_unbound() {
     assert_eq!(
         eval_str("let foo = 41, foo + bar"),
-        Unwind::exception(SyntaxError {
-            span: 20..23,
-            problem: "Unbound variable",
-            context: concat!(
-                "001 let foo = 41, foo + bar\n",
-                "                        ^^^ Unbound variable\n"
-            )
-            .to_string()
-        })
+        Err(Unwind::Exception(
+            Error::SimpleError(SimpleError {
+                what: "Unbound variable",
+            }),
+            Location {
+                span: Some(20..23),
+                context: Some(
+                    concat!(
+                        "001 let foo = 41, foo + bar\n",
+                        "                        ^^^ Unbound variable\n"
+                    )
+                    .to_string()
+                )
+            }
+        ))
     );
 }
 
@@ -698,15 +728,21 @@ fn test_string_append() {
 fn eval_class_not_toplevel() {
     assert_eq!(
         eval_str("let x = 42, class Point { x, y } end"),
-        Unwind::exception(SyntaxError {
-            span: 12..17,
-            problem: "Class definition not at toplevel",
-            context: concat!(
-                "001 let x = 42, class Point { x, y } end\n",
-                "                ^^^^^ Class definition not at toplevel\n"
-            )
-            .to_string()
-        })
+        Err(Unwind::Exception(
+            Error::SimpleError(SimpleError {
+                what: "Class definition not at toplevel",
+            }),
+            Location {
+                span: Some(12..17),
+                context: Some(
+                    concat!(
+                        "001 let x = 42, class Point { x, y } end\n",
+                        "                ^^^^^ Class definition not at toplevel\n"
+                    )
+                    .to_string()
+                )
+            }
+        ))
     );
 }
 
@@ -734,12 +770,18 @@ fn eval_class1() {
 fn eval_global1() {
     assert_eq!(
         eval_str("DoesNotExist"),
-        Unwind::exception(SyntaxError {
-            span: 0..12,
-            problem: "Undefined global",
-            context: concat!("001 DoesNotExist\n", "    ^^^^^^^^^^^^ Undefined global\n")
-                .to_string()
-        })
+        Err(Unwind::Exception(
+            Error::SimpleError(SimpleError {
+                what: "Undefined global",
+            }),
+            Location {
+                span: Some(0..12),
+                context: Some(
+                    concat!("001 DoesNotExist\n", "    ^^^^^^^^^^^^ Undefined global\n")
+                        .to_string()
+                )
+            }
+        ))
     );
 }
 
@@ -752,14 +794,14 @@ fn eval_global2() {
 
 #[test]
 fn eval_new_instance1() {
-    let (object, builtins) = eval_builtins("class Point { x, y } end, Point x: 1 y: 2");
+    let (object, builtins) = eval_obj("class Point { x, y } end, Point x: 1 y: 2");
     assert_eq!(object.send("x", &[], &builtins), Ok(builtins.make_integer(1)));
     assert_eq!(object.send("y", &[], &builtins), Ok(builtins.make_integer(2)));
 }
 
 #[test]
 fn eval_new_instance2() {
-    let (object, builtins) = eval_builtins(
+    let (object, builtins) = eval_obj(
         "class Oh {}
             method no 42
             defaultConstructor noes
@@ -771,7 +813,7 @@ fn eval_new_instance2() {
 
 #[test]
 fn eval_instance_method1() {
-    let (object, builtins) = eval_builtins(
+    let (object, builtins) = eval_obj(
         "class Foo {}
             method bar 311
          end,
@@ -782,7 +824,7 @@ fn eval_instance_method1() {
 
 #[test]
 fn eval_instance_method2() {
-    let (object, builtins) = eval_builtins(
+    let (object, builtins) = eval_obj(
         "class Foo {}
             method foo
                self bar
@@ -796,7 +838,7 @@ fn eval_instance_method2() {
 
 #[test]
 fn test_return_returns() {
-    let (obj, builtins) = eval_builtins(
+    let (obj, builtins) = eval_obj(
         "class Foo {}
             method foo
                return 1,
@@ -809,7 +851,7 @@ fn test_return_returns() {
 
 #[test]
 fn test_return_from_method_block() {
-    let (obj, builtins) = eval_builtins(
+    let (obj, builtins) = eval_obj(
         "class Foo {}
             method test
                 self boo: { return 42 },
@@ -825,7 +867,7 @@ fn test_return_from_method_block() {
 
 #[test]
 fn test_return_from_deep_block_to_middle() {
-    let (object, builtins) = eval_builtins(
+    let (object, builtins) = eval_obj(
         "class Foo {}
             method test
                return 1 + let x = 41, self test0: x
@@ -847,7 +889,7 @@ fn test_return_from_deep_block_to_middle() {
 
 #[test]
 fn test_string_interpolation1() {
-    let (object, builtins) = eval_builtins(
+    let (object, builtins) = eval_obj(
         r#"let a = 1
            let b = 3
            "{a}.{a+1}.{b}.{b+1}"
@@ -858,51 +900,76 @@ fn test_string_interpolation1() {
 
 #[test]
 fn test_typecheck1() {
-    let (object, builtins) = eval_builtins("123::Integer");
+    let (object, builtins) = eval_obj("123::Integer");
     assert_eq!(object, builtins.make_integer(123));
 }
 
 #[test]
 fn test_typecheck2() {
+    let (exception, foo) = eval_exception("123::String");
     assert_eq!(
-        eval_str("123::String"),
-        Unwind::exception(SyntaxError {
-            span: 0..3,
-            problem: "TypeError",
-            context: concat!("001 123::String\n", "    ^^^ TypeError\n").to_string(),
-        }),
+        exception,
+        Unwind::Exception(
+            Error::TypeError(TypeError {
+                value: foo.make_integer(123),
+                expected: "String".to_string()
+            }),
+            Location {
+                span: Some(0..3),
+                context: Some(
+                    concat!("001 123::String\n", "    ^^^ String expected, got: Integer 123\n")
+                        .to_string()
+                ),
+            }
+        )
     );
 }
 
 #[test]
 fn test_typecheck3() {
+    let (exception, foo) = eval_exception("let x::Integer = 42.0, x");
     assert_eq!(
-        eval_str("let x::Integer = 42.0, x"),
-        Unwind::exception(SyntaxError {
-            span: 17..21,
-            problem: "TypeError",
-            context: concat!(
-                "001 let x::Integer = 42.0, x\n",
-                "                     ^^^^ TypeError\n"
-            )
-            .to_string()
-        })
+        exception,
+        Unwind::Exception(
+            Error::TypeError(TypeError {
+                value: foo.make_float(42.0),
+                expected: "Integer".to_string()
+            }),
+            Location {
+                span: Some(17..21),
+                context: Some(
+                    concat!(
+                        "001 let x::Integer = 42.0, x\n",
+                        "                     ^^^^ Integer expected, got: Float 42.0\n"
+                    )
+                    .to_string()
+                )
+            }
+        )
     );
 }
 
 #[test]
 fn test_typecheck4() {
+    let (exception, foo) = eval_exception("let x::Integer = 42, x = 1.0, x");
     assert_eq!(
-        eval_str("let x::Integer = 42, x = 1.0, x"),
-        Unwind::exception(SyntaxError {
-            span: 21..22,
-            problem: "TypeError",
-            context: concat!(
-                "001 let x::Integer = 42, x = 1.0, x\n",
-                "                         ^ TypeError\n"
-            )
-            .to_string()
-        })
+        exception,
+        Unwind::Exception(
+            Error::TypeError(TypeError {
+                value: foo.make_float(1.0),
+                expected: "Integer".to_string()
+            }),
+            Location {
+                span: Some(21..22),
+                context: Some(
+                    concat!(
+                        "001 let x::Integer = 42, x = 1.0, x\n",
+                        "                         ^ Integer expected, got: Float 1.0\n"
+                    )
+                    .to_string()
+                )
+            }
+        )
     );
 }
 
@@ -913,55 +980,82 @@ fn test_typecheck5() {
 
 #[test]
 fn test_typecheck6() {
+    let (exception, foo) = eval_exception("{ |x::Integer| x } value: 41.0");
     assert_eq!(
-        eval_str("{ |x::Integer| x } value: 41.0"),
-        Unwind::exception(SyntaxError {
-            span: 3..4,
-            problem: "TypeError",
-            context: concat!("001 { |x::Integer| x } value: 41.0\n", "       ^ TypeError\n")
-                .to_string()
-        })
+        exception,
+        Unwind::Exception(
+            Error::TypeError(TypeError {
+                value: foo.make_float(41.0),
+                expected: "Integer".to_string()
+            }),
+            Location {
+                span: Some(3..4),
+                context: Some(
+                    concat!(
+                        "001 { |x::Integer| x } value: 41.0\n",
+                        "       ^ Integer expected, got: Float 41.0\n"
+                    )
+                    .to_string()
+                )
+            }
+        )
     );
 }
 
 #[test]
 fn test_typecheck7() {
+    let (exception, foo) = eval_exception("{ |y x::Integer| x = y } value: 41.0 value: 42");
     assert_eq!(
-        eval_str("{ |y x::Integer| x = y } value: 41.0 value: 42"),
-        Unwind::exception(SyntaxError {
-            span: 17..18,
-            problem: "TypeError",
-            context: concat!(
-                "001 { |y x::Integer| x = y } value: 41.0 value: 42\n",
-                "                     ^ TypeError\n"
-            )
-            .to_string()
-        })
+        exception,
+        Unwind::Exception(
+            Error::TypeError(TypeError {
+                value: foo.make_float(41.0),
+                expected: "Integer".to_string()
+            }),
+            Location {
+                span: Some(17..18),
+                context: Some(
+                    concat!(
+                        "001 { |y x::Integer| x = y } value: 41.0 value: 42\n",
+                        "                     ^ Integer expected, got: Float 41.0\n"
+                    )
+                    .to_string()
+                )
+            }
+        )
     );
 }
 
 #[test]
 fn test_typecheck8() {
+    let (exception, foo) = eval_exception(
+        "class Foo {}
+            defaultConstructor foo
+            method zot: x::Integer
+                x
+         end
+         Foo foo zot: 1.0",
+    );
     assert_eq!(
-        eval_str(
-            "class Foo {}
-                defaultConstructor foo
-                method zot: x::Integer
-                    x
-             end
-             Foo foo zot: 1.0",
-        ),
-        Unwind::exception(SyntaxError {
-            span: 80..81,
-            problem: "TypeError",
-            context: concat!(
-                "002                 defaultConstructor foo\n",
-                "003                 method zot: x::Integer\n",
-                "                                ^ TypeError\n",
-                "004                     x\n"
-            )
-            .to_string()
-        })
+        exception,
+        Unwind::Exception(
+            Error::TypeError(TypeError {
+                value: foo.make_float(1.0),
+                expected: "Integer".to_string()
+            }),
+            Location {
+                span: Some(72..73),
+                context: Some(
+                    concat!(
+                        "002             defaultConstructor foo\n",
+                        "003             method zot: x::Integer\n",
+                        "                            ^ Integer expected, got: Float 1.0\n",
+                        "004                 x\n"
+                    )
+                    .to_string()
+                )
+            }
+        )
     );
 }
 
@@ -1016,25 +1110,33 @@ fn test_instance_variable3() {
 
 #[test]
 fn test_instance_variable4() {
+    let (exception, foo) = eval_exception(
+        "class Foo { bar::Integer }
+           method foo: x
+              bar = bar + x
+              self
+         end
+         ((Foo bar: 41) foo: 1.0) bar",
+    );
     assert_eq!(
-        eval_str(
-            "class Foo { bar::Integer }
-               method foo: x
-                  bar = bar + x
-                  self
-             end
-             ((Foo bar: 41) foo: 1.0) bar"
-        ),
-        Unwind::exception(SyntaxError {
-            span: 74..77,
-            problem: "TypeError",
-            context: concat!(
-                "002                method foo: x\n",
-                "003                   bar = bar + x\n",
-                "                      ^^^ TypeError\n",
-                "004                   self\n"
-            )
-            .to_string()
-        })
+        exception,
+        Unwind::Exception(
+            Error::TypeError(TypeError {
+                value: foo.make_float(42.0),
+                expected: "Integer".to_string()
+            }),
+            Location {
+                span: Some(66..69),
+                context: Some(
+                    concat!(
+                        "002            method foo: x\n",
+                        "003               bar = bar + x\n",
+                        "                  ^^^ Integer expected, got: Float 42.0\n",
+                        "004               self\n"
+                    )
+                    .to_string()
+                )
+            }
+        )
     );
 }

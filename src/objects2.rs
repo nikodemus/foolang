@@ -7,30 +7,10 @@ use std::rc::Rc;
 use crate::eval;
 use crate::eval::Frame;
 use crate::parse::{ClassDefinition, Expr, Var};
-use crate::tokenstream::{Span, SyntaxError};
+use crate::tokenstream::Span;
+use crate::unwind::Unwind;
 
 use crate::classes;
-
-#[derive(Debug, PartialEq)]
-pub enum Unwind {
-    Exception(SyntaxError),
-    ReturnFrom(Frame, Object),
-}
-
-impl Unwind {
-    pub fn exception<T>(error: SyntaxError) -> Result<T, Unwind> {
-        Err(Unwind::Exception(error))
-    }
-    pub fn return_from<T>(frame: Frame, value: Object) -> Result<T, Unwind> {
-        Err(Unwind::ReturnFrom(frame, value))
-    }
-    pub fn add_context(self, source: &str) -> Unwind {
-        match self {
-            Unwind::Exception(error) => Unwind::Exception(error.add_context(source)),
-            _ => self,
-        }
-    }
-}
 
 pub type Eval = Result<Object, Unwind>;
 
@@ -40,8 +20,8 @@ pub trait Source {
 
 impl Source for Eval {
     fn source(mut self, span: &Span) -> Self {
-        if let Err(Unwind::Exception(e)) = &mut self {
-            e.span = span.clone();
+        if let Err(unwind) = &mut self {
+            unwind.add_span(span);
         }
         self
     }
@@ -271,10 +251,10 @@ impl Builtins {
 
     pub fn find_class(&self, name: &str, span: Span) -> Eval {
         match self.globals.borrow().get(name) {
-            None => return Unwind::exception(SyntaxError::new(span, "Unknown class")),
+            None => return Unwind::error_at(span, "Unknown class"),
             Some(global) => match global.datum {
                 Datum::Class(_) => Ok(global.to_owned()),
-                _ => Unwind::exception(SyntaxError::new(span, "Not a class name")),
+                _ => Unwind::error_at(span, "Not a class name"),
             },
         }
     }
@@ -461,8 +441,7 @@ pub fn read_instance_variable(receiver: &Object, index: usize) -> Eval {
 pub fn write_instance_variable(receiver: &Object, slot: &Slot, value: Object) -> Eval {
     if let Some(vtable) = &slot.vtable {
         if &value.vtable != vtable {
-            // FIXME: None as span
-            return Unwind::exception(SyntaxError::new(0..0, "TypeError"));
+            return Unwind::type_error(value, vtable.name.clone());
         }
     }
     let instance = receiver.instance();

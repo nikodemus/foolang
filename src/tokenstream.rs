@@ -1,76 +1,8 @@
 use std::ops::Range;
 
-use crate::objects2::Unwind;
+use crate::unwind::Unwind;
 
 pub type Span = Range<usize>;
-
-#[derive(PartialEq)]
-pub struct SyntaxError {
-    pub span: Span,
-    pub problem: &'static str,
-    pub context: String,
-}
-
-impl std::fmt::Debug for SyntaxError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "SyntaxError({:?} at {:?}):\n{}", self.problem, self.span, self.context)
-    }
-}
-
-impl SyntaxError {
-    pub fn new(span: Span, problem: &'static str) -> SyntaxError {
-        SyntaxError {
-            span,
-            problem,
-            context: String::new(),
-        }
-    }
-    fn append_context_line(&mut self, lineno: usize, line: &str) {
-        if lineno == 0 {
-            self.context.push_str(format!("    {}\n", line).as_str());
-        } else {
-            self.context.push_str(format!("{:03} {}\n", lineno, line).as_str());
-        }
-    }
-    pub fn add_context(mut self, source: &str) -> SyntaxError {
-        let mut prev = "";
-        let mut lineno = 1;
-        let mut start = 0;
-        for line in source.lines() {
-            if start >= self.span.end {
-                // Line after the problem -- done.
-                self.append_context_line(lineno, line);
-                break;
-            }
-            let end = start + line.len();
-            if end > self.span.start {
-                // Previous line if there is one.
-                if lineno > 1 {
-                    self.append_context_line(lineno - 1, prev);
-                }
-                // Line with the problem.
-                self.append_context_line(lineno, line);
-                let mut mark = if self.span.start > start {
-                    String::from_utf8(vec![b' '; self.span.start - start]).unwrap()
-                } else {
-                    "".to_string()
-                };
-                mark.push_str(
-                    String::from_utf8(vec![b'^'; self.span.end - self.span.start])
-                        .unwrap()
-                        .as_str(),
-                );
-                mark.push_str(" ");
-                mark.push_str(self.problem);
-                self.append_context_line(0, mark.as_str());
-            }
-            prev = line;
-            start = end + 1;
-            lineno += 1;
-        }
-        self
-    }
-}
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
@@ -152,7 +84,7 @@ impl<'a> TokenStream<'a> {
     }
 
     pub fn error_at<T>(&self, span: Span, problem: &'static str) -> Result<T, Unwind> {
-        Unwind::exception(SyntaxError::new(span, problem))
+        Unwind::error_at(span, problem)
     }
 
     pub fn error<T>(&self, problem: &'static str) -> Result<T, Unwind> {

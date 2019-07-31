@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use std::convert::Into;
 use std::str::FromStr;
 
-use crate::objects2::Unwind;
 use crate::tokenstream::{Span, Token, TokenStream};
+use crate::unwind::Unwind;
 
 // FIXME: Do these really need clone, if so, why?
 
@@ -947,7 +947,7 @@ fn string_prefix(parser: &Parser) -> Result<Expr, Unwind> {
 /// Tests and tools
 
 pub fn parse_str(source: &str) -> Result<Expr, Unwind> {
-    Parser::new(source).parse().map_err(|e| e.add_context(source))
+    Parser::new(source).parse().map_err(|unwind| unwind.with_context(source))
 }
 
 fn int(span: Span, value: i64) -> Expr {
