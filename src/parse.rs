@@ -658,15 +658,23 @@ fn parse_method(parser: &Parser, class: &mut ClassDefinition) -> Result<(), Unwi
     let mut selector = String::new();
     let mut parameters = Vec::new();
     loop {
-        match parser.next_token()? {
-            Token::WORD | Token::SIGIL => {
-                assert!(selector.is_empty());
+        let token = parser.next_token()?;
+        selector.push_str(parser.slice());
+        match token {
+            Token::WORD => {
                 assert!(parameters.is_empty());
-                selector = parser.tokenstring();
+                break;
+            }
+            Token::SIGIL => {
+                assert!(parameters.is_empty());
+                if let Token::WORD = parser.next_token()? {
+                    parameters.push(parse_var(parser)?);
+                } else {
+                    return parser.error("Expected binary selector parameter");
+                }
                 break;
             }
             Token::KEYWORD => {
-                selector.push_str(parser.slice());
                 if let Token::WORD = parser.next_token()? {
                     parameters.push(parse_var(parser)?);
                 } else {
@@ -675,9 +683,10 @@ fn parse_method(parser: &Parser, class: &mut ClassDefinition) -> Result<(), Unwi
             }
             _ => return parser.error("Expected method selector"),
         }
-        match parser.lookahead()? {
-            (Token::KEYWORD, _) => continue,
-            _ => break,
+        if let (Token::KEYWORD, _) = parser.lookahead()? {
+            continue;
+        } else {
+            break;
         }
     }
     // FIXME: This is the place where I could inform parser about instance

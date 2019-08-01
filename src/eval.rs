@@ -842,6 +842,25 @@ fn eval_instance_method2() {
 }
 
 #[test]
+fn eval_instance_method3() {
+    let (object, foo) = eval_obj(
+        "class Foo { value }
+            method + other
+               Foo value: value + other value
+         end
+         class Bar { a, b }
+            method sum
+              a + b
+         end
+         Bar a: (Foo value: 1) b: (Foo value: 10)",
+    );
+    assert_eq!(
+        object.send("sum", &[], &foo).unwrap().send("value", &[], &foo),
+        Ok(foo.make_integer(11))
+    );
+}
+
+#[test]
 fn test_return_returns() {
     let (obj, builtins) = eval_obj(
         "class Foo {}
