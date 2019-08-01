@@ -4,12 +4,17 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::objects2::{
-    read_instance_variable, write_instance_variable, Arg, Builtins, Closure, Eval, Object, Slot,
-    Source, Vtable,
+    read_instance_variable, write_instance_variable, Arg, Builtins, Closure, Eval, Object, Source,
+    Vtable,
 };
 use crate::parse::{Assign, ClassDefinition, Expr, Global, Literal, Parser, Return, Var};
 use crate::tokenstream::Span;
-use crate::unwind::{Error, Location, SimpleError, TypeError, Unwind};
+use crate::unwind::Unwind;
+
+#[cfg(test)]
+use crate::objects2::Slot;
+#[cfg(test)]
+use crate::unwind::{Error, Location, SimpleError, TypeError};
 
 #[derive(Debug)]
 pub struct MethodFrame {
@@ -366,7 +371,7 @@ pub fn apply(
     }
 }
 
-fn eval_all(builtins: &Builtins, source: &str) -> Eval {
+pub fn eval_all(builtins: &Builtins, source: &str) -> Eval {
     let env = Env::new(builtins);
     let mut parser = Parser::new(source);
     loop {

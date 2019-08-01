@@ -36,4 +36,6 @@ pre.code {
     grid-column-start: 2;
     grid-column-end: 3;
     padding: 1em;
+    display: block;
+    white-space: pre;
 }
