@@ -1,6 +1,6 @@
 use std::borrow::ToOwned;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::convert::Into;
 use std::str::FromStr;
 
@@ -222,7 +222,7 @@ type NameTable = HashMap<String, Syntax>;
 
 pub struct ParserState<'a> {
     tokenstream: TokenStream<'a>,
-    lookahead: Option<(Token, Span)>,
+    lookahead: VecDeque<(Token, Span)>,
     span: Span,
 }
 
@@ -233,21 +233,29 @@ impl<'a> ParserState<'a> {
     }
 
     fn next_token(&mut self) -> Result<Token, Unwind> {
-        let (token, span) = match self.lookahead.take() {
-            None => self.scan()?,
-            Some(look) => look,
+        let (token, span) = if self.lookahead.is_empty() {
+            self.scan()?
+        } else {
+            self.lookahead.pop_front().unwrap()
         };
         self.span = span;
         Ok(token)
     }
 
     fn lookahead(&mut self) -> Result<(Token, Span), Unwind> {
-        if let Some(look) = &self.lookahead {
-            return Ok(look.clone());
+        if self.lookahead.is_empty() {
+            let look = self.scan()?;
+            self.lookahead.push_back(look);
         }
-        let look = self.scan()?;
-        self.lookahead = Some(look.clone());
-        Ok(look)
+        Ok(self.lookahead.front().unwrap().clone())
+    }
+
+    fn lookahead2(&mut self) -> Result<((Token, Span), (Token, Span)), Unwind> {
+        while self.lookahead.len() < 2 {
+            let look = self.scan()?;
+            self.lookahead.push_back(look);
+        }
+        Ok((self.lookahead.get(0).unwrap().clone(), self.lookahead.get(1).unwrap().clone()))
     }
 }
 
@@ -266,7 +274,7 @@ impl<'a> Parser<'a> {
             name_table: make_name_table(),
             state: RefCell::new(ParserState {
                 tokenstream: TokenStream::new(source),
-                lookahead: None,
+                lookahead: VecDeque::new(),
                 span: 0..0,
             }),
         }
@@ -360,6 +368,10 @@ impl<'a> Parser<'a> {
 
     pub fn lookahead(&self) -> Result<(Token, Span), Unwind> {
         self.state.borrow_mut().lookahead()
+    }
+
+    pub fn lookahead2(&self) -> Result<((Token, Span), (Token, Span)), Unwind> {
+        self.state.borrow_mut().lookahead2()
     }
 
     pub fn next_token(&self) -> Result<Token, Unwind> {
@@ -576,7 +588,14 @@ fn keyword_suffix(
     let start = parser.span();
     loop {
         args.push(parser.parse_expr(precedence)?);
-        let (token, _span) = parser.lookahead()?;
+        // Two-element lookahead.
+        let ((token1, _), (token2, _)) = parser.lookahead2()?;
+        let token = if token1 == Token::NEWLINE && token2 == Token::KEYWORD {
+            parser.next_token()?;
+            token2
+        } else {
+            token1
+        };
         if token == Token::KEYWORD {
             parser.next_token()?;
             selector.push_str(parser.slice());
@@ -1261,4 +1280,26 @@ fn parse_parens() {
         parse_str("(a+b)*c"),
         Ok(binary(5..6, "*", binary(2..3, "+", var(1..2, "a"), var(3..4, "b")), var(6..7, "c")))
     )
+}
+
+#[test]
+fn parse_newlines1() {
+    assert!(parse_str(
+        "class Point { x, y }
+            method add: point
+               Point x: x + point x
+                     y: y + point y
+         end"
+    )
+    .is_ok());
+}
+
+#[test]
+fn parse_newlines2() {
+    assert!(parse_str(
+        "let p0 = Point x: 1 y: 2
+     let p1 = Point x: 10 y: 100
+     p0 add: p1"
+    )
+    .is_ok());
 }
