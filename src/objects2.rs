@@ -151,15 +151,17 @@ pub struct Instance {
 
 #[derive(PartialEq, Clone)]
 pub enum Datum {
-    Integer(i64),
-    Float(f64),
+    Boolean(bool),
     Class(Rc<Class>),
     Closure(Rc<Closure>),
+    Float(f64),
     Instance(Rc<Instance>),
+    Integer(i64),
     String(Rc<String>),
 }
 
 pub struct Builtins {
+    boolean_vtable: Rc<Vtable>,
     closure_vtable: Rc<Vtable>,
     float_vtable: Rc<Vtable>,
     integer_vtable: Rc<Vtable>,
@@ -170,6 +172,17 @@ pub struct Builtins {
 impl Builtins {
     pub fn new() -> Builtins {
         let mut globals = HashMap::new();
+
+        let boolean_vtable = Rc::new(classes::boolean2::vtable());
+        globals.insert(
+            "Boolean".to_string(),
+            Object {
+                vtable: Rc::new(Vtable::new("class Boolean")),
+                datum: Datum::Class(Rc::new(Class {
+                    instance_vtable: Rc::clone(&boolean_vtable),
+                })),
+            },
+        );
 
         let integer_vtable = Rc::new(classes::integer2::vtable());
         globals.insert(
@@ -204,15 +217,36 @@ impl Builtins {
             },
         );
 
-        Builtins {
+        let foo = Builtins {
+            boolean_vtable,
             closure_vtable: Rc::new(classes::closure2::vtable()),
             float_vtable,
             integer_vtable,
             string_vtable,
             globals: RefCell::new(globals),
+        };
+
+        {
+            let true_object = foo.make_boolean(true);
+            let false_object = foo.make_boolean(false);
+
+            let mut globals = foo.globals.borrow_mut();
+            globals.insert("True".to_string(), true_object);
+            globals.insert("False".to_string(), false_object);
+        }
+
+        foo
+    }
+
+    pub fn make_boolean(&self, x: bool) -> Object {
+        Object {
+            vtable: Rc::clone(&self.boolean_vtable),
+            datum: Datum::Boolean(x),
         }
     }
 
+    // FIXME: inconsistent return type vs other make_foo methods.
+    // Should others be Eval as well?
     pub fn make_class(&self, classdef: &ClassDefinition) -> Eval {
         let mut vtable_name = "class ".to_string();
         vtable_name.push_str(&classdef.name);
@@ -320,6 +354,13 @@ impl Builtins {
 }
 
 impl Object {
+    pub fn boolean(&self) -> bool {
+        match self.datum {
+            Datum::Boolean(value) => value,
+            _ => panic!("BUG: {} is not a Boolean", self),
+        }
+    }
+
     pub fn class(&self) -> Rc<Class> {
         match &self.datum {
             Datum::Class(class) => Rc::clone(class),
@@ -398,6 +439,8 @@ impl fmt::Display for Object {
             Datum::Class(_) => write!(f, "$<{}>", self.vtable.name),
             Datum::Instance(_) => write!(f, "$<instance {}>", self.vtable.name),
             Datum::String(s) => write!(f, "{}", s),
+            Datum::Boolean(true) => write!(f, "True"),
+            Datum::Boolean(false) => write!(f, "False"),
         }
     }
 }
@@ -418,6 +461,7 @@ impl fmt::Debug for Object {
             Datum::Instance(_) => write!(f, "{}", self.vtable.name),
             // FIXME: Escape double-quotes
             Datum::String(s) => write!(f, "\"{}\"", s),
+            _ => write!(f, "{}", self),
         }
     }
 }

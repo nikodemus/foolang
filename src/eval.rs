@@ -1164,3 +1164,27 @@ fn test_instance_variable4() {
         )
     );
 }
+
+#[test]
+fn test_boolean() {
+    assert_eq!(eval_ok("True").boolean(), true);
+    assert_eq!(eval_ok("False").boolean(), false);
+}
+
+#[test]
+fn test_boolean_if_true() {
+    assert_eq!(eval_ok("True ifTrue: { 1 }").integer(), 1);
+    assert_eq!(eval_ok("False ifTrue: { 1 }").boolean(), false);
+}
+
+#[test]
+fn test_boolean_if_false() {
+    assert_eq!(eval_ok("False ifFalse: { 1 }").integer(), 1);
+    assert_eq!(eval_ok("True ifFalse: { 1 }").boolean(), true);
+}
+
+#[test]
+fn test_boolean_if_true_if_false() {
+    assert_eq!(eval_ok("True ifTrue: { 1 } ifFalse: { 2 }").integer(), 1);
+    assert_eq!(eval_ok("False ifTrue: { 1 } ifFalse: { 2 }").integer(), 2);
+}

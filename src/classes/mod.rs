@@ -1,5 +1,6 @@
 pub mod array;
 pub mod boolean;
+pub mod boolean2;
 pub mod class;
 pub mod closure;
 pub mod closure2;
