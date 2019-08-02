@@ -418,7 +418,13 @@ fn eval_str(source: &str) -> Eval {
 }
 
 fn eval_ok(source: &str) -> Object {
-    eval_str(source).unwrap()
+    match eval_str(source) {
+        Ok(obj) => obj,
+        Err(Unwind::Exception(error, location)) => {
+            panic!("Exception in eval_ok: {}:\n{}", error.what(), location.context());
+        }
+        Err(Unwind::ReturnFrom(..)) => panic!("Unexpected return-from in eval_ok"),
+    }
 }
 
 #[test]
@@ -1187,4 +1193,99 @@ fn test_boolean_if_false() {
 fn test_boolean_if_true_if_false() {
     assert_eq!(eval_ok("True ifTrue: { 1 } ifFalse: { 2 }").integer(), 1);
     assert_eq!(eval_ok("False ifTrue: { 1 } ifFalse: { 2 }").integer(), 2);
+}
+
+#[test]
+fn test_closure_while_true() {
+    assert_eq!(
+        eval_ok(
+            "let x = 1
+                 {
+                    x = x * 2
+                    x < 10
+                 } whileTrue
+                 x"
+        )
+        .integer(),
+        16
+    );
+}
+
+#[test]
+fn test_closure_while_false() {
+    assert_eq!(
+        eval_ok(
+            "let x = 1
+                 {
+                    x = x * 2
+                    x > 10
+                 } whileFalse
+                 x"
+        )
+        .integer(),
+        16
+    );
+}
+
+#[test]
+fn test_closure_while_true_closure() {
+    assert_eq!(
+        eval_ok(
+            "let x = 1
+                 {
+                    x = x * 2
+                 } whileTrue: { x < 10 }"
+        )
+        .integer(),
+        16
+    );
+}
+
+#[test]
+fn test_closure_while_false_closure() {
+    assert_eq!(
+        eval_ok(
+            "let x = 1
+                 {
+                    x = x * 2
+                 } whileFalse: { x > 10 }"
+        )
+        .integer(),
+        16
+    );
+}
+
+#[test]
+fn test_integer_eq() {
+    assert_eq!(eval_ok("1 == 2").boolean(), false);
+    assert_eq!(eval_ok("2 == 1").boolean(), false);
+    assert_eq!(eval_ok("1 == 1").boolean(), true);
+}
+
+#[test]
+fn test_integer_lt() {
+    assert_eq!(eval_ok("1 < 2").boolean(), true);
+    assert_eq!(eval_ok("2 < 1").boolean(), false);
+    assert_eq!(eval_ok("1 < 1").boolean(), false);
+}
+
+#[test]
+fn test_integer_lte() {
+    assert_eq!(eval_ok("1 <= 2").boolean(), true);
+    assert_eq!(eval_ok("2 <= 1").boolean(), false);
+    assert_eq!(eval_ok("1 <= 1").boolean(), true);
+}
+
+#[test]
+fn test_integer_gt() {
+    assert_eq!(eval_ok("1 > 2").boolean(), false);
+    assert_eq!(eval_ok("2 > 1").boolean(), true);
+    assert_eq!(eval_ok("1 > 1").boolean(), false);
+}
+
+#[test]
+fn test_integer_gte() {
+    assert_eq!(eval_ok("1 >= 2").boolean(), false);
+    assert_eq!(eval_ok("2 >= 1").boolean(), true);
+    assert_eq!(eval_ok("1 >= 1").boolean(), true);
 }

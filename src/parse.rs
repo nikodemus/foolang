@@ -488,6 +488,12 @@ fn make_name_table() -> NameTable {
     Syntax::op(t, "+", false, true, 30);
     Syntax::op(t, "-", true, true, 30);
 
+    Syntax::op(t, "<", false, true, 10);
+    Syntax::op(t, "<=", false, true, 10);
+    Syntax::op(t, ">", false, true, 10);
+    Syntax::op(t, ">=", false, true, 10);
+    Syntax::op(t, "==", false, true, 10);
+
     table
 }
 

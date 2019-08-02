@@ -7,6 +7,11 @@ pub fn vtable() -> Vtable {
     vt.def("asInteger", integer_as_integer);
     vt.def("addInteger:", integer_add_integer);
     vt.def("divInteger:", integer_div_integer);
+    vt.def("eqInteger:", integer_eq_integer);
+    vt.def("gtInteger:", integer_gt_integer);
+    vt.def("gteInteger:", integer_gte_integer);
+    vt.def("ltInteger:", integer_lt_integer);
+    vt.def("lteInteger:", integer_lte_integer);
     vt.def("mulInteger:", integer_mul_integer);
     vt.def("subInteger:", integer_sub_integer);
     vt.def("toString", integer_to_string);
@@ -15,6 +20,11 @@ pub fn vtable() -> Vtable {
     // DERIVED
     vt.def("+", integer_add);
     vt.def("/", integer_div);
+    vt.def("==", integer_eq);
+    vt.def(">", integer_gt);
+    vt.def(">=", integer_gte);
+    vt.def("<", integer_lt);
+    vt.def("<=", integer_lte);
     vt.def("*", integer_mul);
     vt.def("-", integer_sub);
     vt.def("addFloat:", integer_add_float);
@@ -42,6 +52,31 @@ fn integer_add_integer(receiver: &Object, args: &[&Object], builtins: &Builtins)
 fn integer_div_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
     let res = args[0].integer() / receiver.integer();
     Ok(builtins.make_integer(res))
+}
+
+fn integer_eq_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+    let res = receiver.integer() == args[0].integer();
+    Ok(builtins.make_boolean(res))
+}
+
+fn integer_gt_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+    let res = receiver.integer() > args[0].integer();
+    Ok(builtins.make_boolean(res))
+}
+
+fn integer_gte_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+    let res = receiver.integer() >= args[0].integer();
+    Ok(builtins.make_boolean(res))
+}
+
+fn integer_lt_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+    let res = receiver.integer() < args[0].integer();
+    Ok(builtins.make_boolean(res))
+}
+
+fn integer_lte_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+    let res = receiver.integer() <= args[0].integer();
+    Ok(builtins.make_boolean(res))
 }
 
 fn integer_mul_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
@@ -72,6 +107,26 @@ fn integer_add(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval
 
 fn integer_div(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
     args[0].send("divInteger:", &[receiver], builtins)
+}
+
+fn integer_eq(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+    args[0].send("eqInteger:", &[receiver], builtins)
+}
+
+fn integer_gt(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+    args[0].send("ltInteger:", &[receiver], builtins)
+}
+
+fn integer_gte(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+    args[0].send("lteInteger:", &[receiver], builtins)
+}
+
+fn integer_lt(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+    args[0].send("gtInteger:", &[receiver], builtins)
+}
+
+fn integer_lte(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+    args[0].send("gteInteger:", &[receiver], builtins)
 }
 
 fn integer_mul(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
