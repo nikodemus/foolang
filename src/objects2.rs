@@ -27,7 +27,7 @@ impl Source for Eval {
     }
 }
 
-type MethodFunction = fn(&Object, &[&Object], &Foolang) -> Eval;
+type MethodFunction = fn(&Object, &[Object], &Foolang) -> Eval;
 
 pub enum Method {
     Primitive(MethodFunction),
@@ -410,7 +410,7 @@ impl Object {
         }
     }
 
-    pub fn send(&self, message: &str, args: &[&Object], foo: &Foolang) -> Eval {
+    pub fn send(&self, message: &str, args: &[Object], foo: &Foolang) -> Eval {
         // println!("debug: {} {} {:?}", self, message, args);
         match self.vtable.get(message) {
             Some(Method::Primitive(method)) => method(self, args, foo),
@@ -466,7 +466,7 @@ impl fmt::Debug for Object {
     }
 }
 
-fn generic_ctor(receiver: &Object, args: &[&Object], _foo: &Foolang) -> Eval {
+fn generic_ctor(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
     let class = receiver.class();
     Ok(Object {
         vtable: Rc::clone(&class.instance_vtable),

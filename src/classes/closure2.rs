@@ -17,11 +17,11 @@ pub fn vtable() -> Vtable {
 
 // FUNDAMENTAL METHODS
 
-fn closure_apply(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+fn closure_apply(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     eval::apply(None, receiver.closure_ref(), args, foo)
 }
 
-fn closure_while_true(receiver: &Object, _args: &[&Object], foo: &Foolang) -> Eval {
+fn closure_while_true(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
     let t = foo.make_boolean(true);
     loop {
         let r = eval::apply(None, receiver.closure_ref(), &[], foo)?;
@@ -31,7 +31,7 @@ fn closure_while_true(receiver: &Object, _args: &[&Object], foo: &Foolang) -> Ev
     }
 }
 
-fn closure_while_true_closure(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+fn closure_while_true_closure(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let t = foo.make_boolean(true);
     // FIXME: Should initialize to nil
     let mut r = foo.make_boolean(false);
@@ -44,7 +44,7 @@ fn closure_while_true_closure(receiver: &Object, args: &[&Object], foo: &Foolang
     }
 }
 
-fn closure_while_false(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+fn closure_while_false(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
     let f = foo.make_boolean(false);
     loop {
         let r = eval::apply(None, receiver.closure_ref(), &[], foo)?;
@@ -54,7 +54,7 @@ fn closure_while_false(receiver: &Object, args: &[&Object], foo: &Foolang) -> Ev
     }
 }
 
-fn closure_while_false_closure(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+fn closure_while_false_closure(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let f = foo.make_boolean(false);
     // FIXME: Should initialize to nil
     let mut r = foo.make_boolean(false);

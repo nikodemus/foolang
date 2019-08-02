@@ -10,7 +10,7 @@ pub fn vtable() -> Vtable {
     vt
 }
 
-fn boolean_if_true(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+fn boolean_if_true(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     if receiver.boolean() {
         args[0].send("value", &[], foo)
     } else {
@@ -18,7 +18,7 @@ fn boolean_if_true(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
     }
 }
 
-fn boolean_if_false(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+fn boolean_if_false(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     if receiver.boolean() {
         Ok(receiver.clone())
     } else {
@@ -26,7 +26,7 @@ fn boolean_if_false(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval 
     }
 }
 
-fn boolean_if_true_if_false(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+fn boolean_if_true_if_false(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     if receiver.boolean() {
         args[0].send("value", &[], foo)
     } else {
@@ -34,11 +34,11 @@ fn boolean_if_true_if_false(receiver: &Object, args: &[&Object], foo: &Foolang) 
     }
 }
 
-fn boolean_not(receiver: &Object, _args: &[&Object], foo: &Foolang) -> Eval {
+fn boolean_not(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
     Ok(foo.make_boolean(!receiver.boolean()))
 }
 
-fn boolean_to_string(receiver: &Object, _args: &[&Object], foo: &Foolang) -> Eval {
+fn boolean_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
     if receiver.boolean() {
         Ok(foo.make_string("True"))
     } else {

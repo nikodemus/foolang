@@ -279,8 +279,7 @@ impl<'a> Env<'a> {
         for arg in args {
             values.push(self.eval(arg)?);
         }
-        let args: Vec<&Object> = values.iter().collect();
-        receiver.send(selector.as_str(), &args[..], &self.foo)
+        receiver.send(selector.as_str(), &values[..], &self.foo)
     }
 
     fn eval_seq(&self, exprs: &Vec<Expr>) -> Eval {
@@ -347,7 +346,7 @@ impl<'a> Env<'a> {
 pub fn apply(
     receiver: Option<&Object>,
     closure: &Closure,
-    call_args: &[&Object],
+    call_args: &[Object],
     foo: &Foolang,
 ) -> Eval {
     let mut args = HashMap::new();
