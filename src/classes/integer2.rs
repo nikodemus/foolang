@@ -1,4 +1,4 @@
-use crate::objects2::{Builtins, Eval, Object, Vtable};
+use crate::objects2::{Eval, Foolang, Object, Vtable};
 
 pub fn vtable() -> Vtable {
     let mut vt = Vtable::new("Integer");
@@ -36,119 +36,119 @@ pub fn vtable() -> Vtable {
 
 // FUNDAMENTAL METHODS
 
-fn integer_as_integer(receiver: &Object, _args: &[&Object], _builtins: &Builtins) -> Eval {
+fn integer_as_integer(receiver: &Object, _args: &[&Object], _foo: &Foolang) -> Eval {
     Ok(receiver.to_owned())
 }
 
-fn integer_as_float(receiver: &Object, _args: &[&Object], builtins: &Builtins) -> Eval {
-    Ok(builtins.make_float(receiver.integer() as f64))
+fn integer_as_float(receiver: &Object, _args: &[&Object], foo: &Foolang) -> Eval {
+    Ok(foo.make_float(receiver.integer() as f64))
 }
 
-fn integer_add_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+fn integer_add_integer(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
     let res = args[0].integer() + receiver.integer();
-    Ok(builtins.make_integer(res))
+    Ok(foo.make_integer(res))
 }
 
-fn integer_div_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+fn integer_div_integer(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
     let res = args[0].integer() / receiver.integer();
-    Ok(builtins.make_integer(res))
+    Ok(foo.make_integer(res))
 }
 
-fn integer_eq_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+fn integer_eq_integer(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
     let res = receiver.integer() == args[0].integer();
-    Ok(builtins.make_boolean(res))
+    Ok(foo.make_boolean(res))
 }
 
-fn integer_gt_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+fn integer_gt_integer(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
     let res = receiver.integer() > args[0].integer();
-    Ok(builtins.make_boolean(res))
+    Ok(foo.make_boolean(res))
 }
 
-fn integer_gte_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+fn integer_gte_integer(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
     let res = receiver.integer() >= args[0].integer();
-    Ok(builtins.make_boolean(res))
+    Ok(foo.make_boolean(res))
 }
 
-fn integer_lt_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+fn integer_lt_integer(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
     let res = receiver.integer() < args[0].integer();
-    Ok(builtins.make_boolean(res))
+    Ok(foo.make_boolean(res))
 }
 
-fn integer_lte_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+fn integer_lte_integer(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
     let res = receiver.integer() <= args[0].integer();
-    Ok(builtins.make_boolean(res))
+    Ok(foo.make_boolean(res))
 }
 
-fn integer_mul_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+fn integer_mul_integer(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
     let res = args[0].integer() * receiver.integer();
-    Ok(builtins.make_integer(res))
+    Ok(foo.make_integer(res))
 }
 
-fn integer_sub_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+fn integer_sub_integer(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
     let res = args[0].integer() - receiver.integer();
-    Ok(builtins.make_integer(res))
+    Ok(foo.make_integer(res))
 }
 
-fn integer_gcd(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+fn integer_gcd(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
     // FIXME: Panics if argument is not an integer.
     let res = num::integer::gcd(receiver.integer(), args[0].integer());
-    Ok(builtins.make_integer(res))
+    Ok(foo.make_integer(res))
 }
 
-fn integer_to_string(receiver: &Object, _args: &[&Object], builtins: &Builtins) -> Eval {
-    Ok(builtins.make_string(&receiver.integer().to_string()))
+fn integer_to_string(receiver: &Object, _args: &[&Object], foo: &Foolang) -> Eval {
+    Ok(foo.make_string(&receiver.integer().to_string()))
 }
 
 // DERIVED METHODS
 
-fn integer_add(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    args[0].send("addInteger:", &[receiver], builtins)
+fn integer_add(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    args[0].send("addInteger:", &[receiver], foo)
 }
 
-fn integer_div(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    args[0].send("divInteger:", &[receiver], builtins)
+fn integer_div(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    args[0].send("divInteger:", &[receiver], foo)
 }
 
-fn integer_eq(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    args[0].send("eqInteger:", &[receiver], builtins)
+fn integer_eq(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    args[0].send("eqInteger:", &[receiver], foo)
 }
 
-fn integer_gt(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    args[0].send("ltInteger:", &[receiver], builtins)
+fn integer_gt(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    args[0].send("ltInteger:", &[receiver], foo)
 }
 
-fn integer_gte(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    args[0].send("lteInteger:", &[receiver], builtins)
+fn integer_gte(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    args[0].send("lteInteger:", &[receiver], foo)
 }
 
-fn integer_lt(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    args[0].send("gtInteger:", &[receiver], builtins)
+fn integer_lt(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    args[0].send("gtInteger:", &[receiver], foo)
 }
 
-fn integer_lte(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    args[0].send("gteInteger:", &[receiver], builtins)
+fn integer_lte(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    args[0].send("gteInteger:", &[receiver], foo)
 }
 
-fn integer_mul(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    args[0].send("mulInteger:", &[receiver], builtins)
+fn integer_mul(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    args[0].send("mulInteger:", &[receiver], foo)
 }
 
-fn integer_sub(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    args[0].send("subInteger:", &[receiver], builtins)
+fn integer_sub(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    args[0].send("subInteger:", &[receiver], foo)
 }
 
-fn integer_add_float(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    receiver.send("asFloat", &[], builtins)?.send("addFloat:", args, builtins)
+fn integer_add_float(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    receiver.send("asFloat", &[], foo)?.send("addFloat:", args, foo)
 }
 
-fn integer_div_float(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    receiver.send("asFloat", &[], builtins)?.send("divFloat:", args, builtins)
+fn integer_div_float(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    receiver.send("asFloat", &[], foo)?.send("divFloat:", args, foo)
 }
 
-fn integer_mul_float(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    receiver.send("asFloat", &[], builtins)?.send("mulFloat:", args, builtins)
+fn integer_mul_float(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    receiver.send("asFloat", &[], foo)?.send("mulFloat:", args, foo)
 }
 
-fn integer_sub_float(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    receiver.send("asFloat", &[], builtins)?.send("subFloat:", args, builtins)
+fn integer_sub_float(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    receiver.send("asFloat", &[], foo)?.send("subFloat:", args, foo)
 }

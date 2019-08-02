@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::objects2::{
-    read_instance_variable, write_instance_variable, Arg, Builtins, Closure, Eval, Object, Source,
+    read_instance_variable, write_instance_variable, Arg, Closure, Eval, Foolang, Object, Source,
     Vtable,
 };
 use crate::parse::{Assign, ClassDefinition, Expr, Global, Literal, Parser, Return, Var};
@@ -138,7 +138,7 @@ impl Frame {
 }
 
 struct Env<'a> {
-    builtins: &'a Builtins,
+    foo: &'a Foolang,
     frame: Frame,
 }
 
@@ -173,8 +173,8 @@ impl Binding {
 }
 
 impl<'a> Env<'a> {
-    pub fn new(builtins: &Builtins) -> Env {
-        Env::from_parts(builtins, HashMap::new(), None, None)
+    pub fn new(foo: &Foolang) -> Env {
+        Env::from_parts(foo, HashMap::new(), None, None)
     }
 
     pub fn eval(&self, expr: &Expr) -> Eval {
@@ -195,13 +195,13 @@ impl<'a> Env<'a> {
     }
 
     fn from_parts(
-        builtins: &'a Builtins,
+        foo: &'a Foolang,
         args: HashMap<String, Binding>,
         parent: Option<Frame>,
         receiver: Option<Object>,
     ) -> Env<'a> {
         Env {
-            builtins,
+            foo,
             frame: Frame::new(args, parent, receiver),
         }
     }
@@ -222,7 +222,7 @@ impl<'a> Env<'a> {
             }
         };
         args.insert(name.to_owned(), binding);
-        let env = Env::from_parts(self.builtins, args, Some(self.frame.clone()), None);
+        let env = Env::from_parts(self.foo, args, Some(self.frame.clone()), None);
         env.eval(body)
     }
 
@@ -237,7 +237,7 @@ impl<'a> Env<'a> {
             };
             args.push(Arg::new(p.span.clone(), p.name.clone(), vt));
         }
-        Ok(self.builtins.make_closure(self.frame.clone(), args, body.clone()))
+        Ok(self.foo.make_closure(self.frame.clone(), args, body.clone()))
     }
 
     fn eval_class_definition(&self, definition: &ClassDefinition) -> Eval {
@@ -246,13 +246,13 @@ impl<'a> Env<'a> {
             return Unwind::error_at(definition.span.clone(), "Class definition not at toplevel");
         }
         let name = &definition.name;
-        let class = self.builtins.make_class(definition)?;
-        self.builtins.globals.borrow_mut().insert(name.to_string(), class.clone());
+        let class = self.foo.make_class(definition)?;
+        self.foo.globals.borrow_mut().insert(name.to_string(), class.clone());
         Ok(class)
     }
 
     fn eval_global(&self, global: &Global) -> Eval {
-        match self.builtins.globals.borrow().get(&global.name) {
+        match self.foo.globals.borrow().get(&global.name) {
             Some(obj) => Ok(obj.clone()),
             None => Unwind::error_at(global.span.clone(), "Undefined global"),
         }
@@ -260,9 +260,9 @@ impl<'a> Env<'a> {
 
     fn eval_literal(&self, literal: &Literal) -> Eval {
         match literal {
-            Literal::Integer(value) => Ok(self.builtins.make_integer(*value)),
-            Literal::Float(value) => Ok(self.builtins.make_float(*value)),
-            Literal::String(value) => Ok(self.builtins.make_string(value)),
+            Literal::Integer(value) => Ok(self.foo.make_integer(*value)),
+            Literal::Float(value) => Ok(self.foo.make_float(*value)),
+            Literal::String(value) => Ok(self.foo.make_string(value)),
         }
     }
 
@@ -280,12 +280,12 @@ impl<'a> Env<'a> {
             values.push(self.eval(arg)?);
         }
         let args: Vec<&Object> = values.iter().collect();
-        receiver.send(selector.as_str(), &args[..], &self.builtins)
+        receiver.send(selector.as_str(), &args[..], &self.foo)
     }
 
     fn eval_seq(&self, exprs: &Vec<Expr>) -> Eval {
         // FIXME: false or nothing
-        let mut result = self.builtins.make_integer(0);
+        let mut result = self.foo.make_integer(0);
         for expr in exprs {
             result = self.eval(expr)?;
         }
@@ -293,7 +293,7 @@ impl<'a> Env<'a> {
     }
 
     fn find_class(&self, name: &str, span: Span) -> Eval {
-        self.builtins.find_class(name, span)
+        self.foo.find_class(name, span)
     }
 
     fn eval_typecheck(&self, expr: &Expr, typename: &str) -> Eval {
@@ -348,7 +348,7 @@ pub fn apply(
     receiver: Option<&Object>,
     closure: &Closure,
     call_args: &[&Object],
-    builtins: &Builtins,
+    foo: &Foolang,
 ) -> Eval {
     let mut args = HashMap::new();
     for (arg, obj) in closure.params.iter().zip(call_args.into_iter().map(|x| (*x).clone())) {
@@ -363,7 +363,7 @@ pub fn apply(
         };
         args.insert(arg.name.clone(), binding);
     }
-    let env = Env::from_parts(builtins, args, closure.env(), receiver.map(|x| x.clone()));
+    let env = Env::from_parts(foo, args, closure.env(), receiver.map(|x| x.clone()));
     match env.eval(&closure.body) {
         Err(Unwind::ReturnFrom(ref frame, ref value)) if frame == &env.frame => Ok(value.clone()),
         Ok(value) => Ok(value),
@@ -371,8 +371,8 @@ pub fn apply(
     }
 }
 
-pub fn eval_all(builtins: &Builtins, source: &str) -> Eval {
-    let env = Env::new(builtins);
+pub fn eval_all(foo: &Foolang, source: &str) -> Eval {
+    let env = Env::new(foo);
     let mut parser = Parser::new(source);
     loop {
         let expr = match parser.parse() {
@@ -393,19 +393,19 @@ pub fn eval_all(builtins: &Builtins, source: &str) -> Eval {
     }
 }
 
-fn eval_obj(source: &str) -> (Object, Builtins) {
-    let builtins = Builtins::new();
-    match eval_all(&builtins, source) {
+fn eval_obj(source: &str) -> (Object, Foolang) {
+    let foo = Foolang::new();
+    match eval_all(&foo, source) {
         Err(unwind) => panic!("Unexpected unwind:\n{:?}", unwind),
-        Ok(obj) => (obj, builtins),
+        Ok(obj) => (obj, foo),
     }
 }
 
-fn eval_exception(source: &str) -> (Unwind, Builtins) {
-    let builtins = Builtins::new();
-    match eval_all(&builtins, source) {
+fn eval_exception(source: &str) -> (Unwind, Foolang) {
+    let foo = Foolang::new();
+    match eval_all(&foo, source) {
         Err(unwind) => match &unwind {
-            Unwind::Exception(..) => (unwind, builtins),
+            Unwind::Exception(..) => (unwind, foo),
             _ => panic!("Expected exception, got: {:?}", unwind),
         },
         Ok(value) => panic!("Expected exception, got: {:?}", value),
@@ -413,8 +413,8 @@ fn eval_exception(source: &str) -> (Unwind, Builtins) {
 }
 
 fn eval_str(source: &str) -> Eval {
-    let builtins = Builtins::new();
-    eval_all(&builtins, source)
+    let foo = Foolang::new();
+    eval_all(&foo, source)
 }
 
 fn eval_ok(source: &str) -> Object {
@@ -805,37 +805,37 @@ fn eval_global2() {
 
 #[test]
 fn eval_new_instance1() {
-    let (object, builtins) = eval_obj("class Point { x, y } end, Point x: 1 y: 2");
-    assert_eq!(object.send("x", &[], &builtins), Ok(builtins.make_integer(1)));
-    assert_eq!(object.send("y", &[], &builtins), Ok(builtins.make_integer(2)));
+    let (object, foo) = eval_obj("class Point { x, y } end, Point x: 1 y: 2");
+    assert_eq!(object.send("x", &[], &foo), Ok(foo.make_integer(1)));
+    assert_eq!(object.send("y", &[], &foo), Ok(foo.make_integer(2)));
 }
 
 #[test]
 fn eval_new_instance2() {
-    let (object, builtins) = eval_obj(
+    let (object, foo) = eval_obj(
         "class Oh {}
             method no 42
             defaultConstructor noes
          end,
          Oh noes",
     );
-    assert_eq!(object.send("no", &[], &builtins), Ok(builtins.make_integer(42)));
+    assert_eq!(object.send("no", &[], &foo), Ok(foo.make_integer(42)));
 }
 
 #[test]
 fn eval_instance_method1() {
-    let (object, builtins) = eval_obj(
+    let (object, foo) = eval_obj(
         "class Foo {}
             method bar 311
          end,
          Foo new",
     );
-    assert_eq!(object.send("bar", &[], &builtins), Ok(builtins.make_integer(311)));
+    assert_eq!(object.send("bar", &[], &foo), Ok(foo.make_integer(311)));
 }
 
 #[test]
 fn eval_instance_method2() {
-    let (object, builtins) = eval_obj(
+    let (object, foo) = eval_obj(
         "class Foo {}
             method foo
                self bar
@@ -844,7 +844,7 @@ fn eval_instance_method2() {
          end,
          Foo new",
     );
-    assert_eq!(object.send("bar", &[], &builtins), Ok(builtins.make_integer(311)));
+    assert_eq!(object.send("bar", &[], &foo), Ok(foo.make_integer(311)));
 }
 
 #[test]
@@ -868,7 +868,7 @@ fn eval_instance_method3() {
 
 #[test]
 fn test_return_returns() {
-    let (obj, builtins) = eval_obj(
+    let (obj, foo) = eval_obj(
         "class Foo {}
             method foo
                return 1,
@@ -876,12 +876,12 @@ fn test_return_returns() {
          end,
          Foo new foo",
     );
-    assert_eq!(obj, builtins.make_integer(1));
+    assert_eq!(obj, foo.make_integer(1));
 }
 
 #[test]
 fn test_return_from_method_block() {
-    let (obj, builtins) = eval_obj(
+    let (obj, foo) = eval_obj(
         "class Foo {}
             method test
                 self boo: { return 42 },
@@ -892,12 +892,12 @@ fn test_return_from_method_block() {
          Foo new test
         ",
     );
-    assert_eq!(obj, builtins.make_integer(42));
+    assert_eq!(obj, foo.make_integer(42));
 }
 
 #[test]
 fn test_return_from_deep_block_to_middle() {
-    let (object, builtins) = eval_obj(
+    let (object, foo) = eval_obj(
         "class Foo {}
             method test
                return 1 + let x = 41, self test0: x
@@ -914,24 +914,24 @@ fn test_return_from_deep_block_to_middle() {
          Foo new test
         ",
     );
-    assert_eq!(object, builtins.make_integer(42));
+    assert_eq!(object, foo.make_integer(42));
 }
 
 #[test]
 fn test_string_interpolation1() {
-    let (object, builtins) = eval_obj(
+    let (object, foo) = eval_obj(
         r#"let a = 1
            let b = 3
            "{a}.{a+1}.{b}.{b+1}"
           "#,
     );
-    assert_eq!(object, builtins.make_string("1.2.3.4"));
+    assert_eq!(object, foo.make_string("1.2.3.4"));
 }
 
 #[test]
 fn test_typecheck1() {
-    let (object, builtins) = eval_obj("123::Integer");
-    assert_eq!(object, builtins.make_integer(123));
+    let (object, foo) = eval_obj("123::Integer");
+    assert_eq!(object, foo.make_integer(123));
 }
 
 #[test]

@@ -1,7 +1,7 @@
 use clap::{App, Arg};
 use foolang::eval::eval_all;
 use foolang::evaluator::GlobalEnv;
-use foolang::objects2::Builtins;
+use foolang::objects2::Foolang;
 use foolang::time::TimeInfo;
 use foolang::unwind::Unwind;
 use rouille::{match_assets, post_input, session, try_or_400, Request, Response};
@@ -20,7 +20,7 @@ struct Connection {
 }
 
 impl Connection {
-    fn serve(&self, foo: &Builtins) -> bool {
+    fn serve(&self, foo: &Foolang) -> bool {
         match self.receiver.try_recv() {
             Ok(msg) => {
                 let response = match eval_all(foo, msg.as_str()) {
@@ -63,7 +63,7 @@ impl Server {
         let connections: Arc<Mutex<Vec<Connection>>> = Arc::new(Mutex::new(Vec::new()));
         let connections0 = connections.clone();
         std::thread::spawn(move || loop {
-            let foo = Builtins::new();
+            let foo = Foolang::new();
             loop {
                 std::thread::sleep(std::time::Duration::from_millis(10));
                 connections0.lock().unwrap().retain(|conn| conn.serve(&foo));

@@ -27,7 +27,7 @@ impl Source for Eval {
     }
 }
 
-type MethodFunction = fn(&Object, &[&Object], &Builtins) -> Eval;
+type MethodFunction = fn(&Object, &[&Object], &Foolang) -> Eval;
 
 pub enum Method {
     Primitive(MethodFunction),
@@ -160,7 +160,7 @@ pub enum Datum {
     String(Rc<String>),
 }
 
-pub struct Builtins {
+pub struct Foolang {
     boolean_vtable: Rc<Vtable>,
     closure_vtable: Rc<Vtable>,
     float_vtable: Rc<Vtable>,
@@ -169,8 +169,8 @@ pub struct Builtins {
     pub globals: RefCell<HashMap<String, Object>>,
 }
 
-impl Builtins {
-    pub fn new() -> Builtins {
+impl Foolang {
+    pub fn new() -> Foolang {
         let mut globals = HashMap::new();
 
         let boolean_vtable = Rc::new(classes::boolean2::vtable());
@@ -217,7 +217,7 @@ impl Builtins {
             },
         );
 
-        let foo = Builtins {
+        let foo = Foolang {
             boolean_vtable,
             closure_vtable: Rc::new(classes::closure2::vtable()),
             float_vtable,
@@ -410,11 +410,11 @@ impl Object {
         }
     }
 
-    pub fn send(&self, message: &str, args: &[&Object], builtins: &Builtins) -> Eval {
+    pub fn send(&self, message: &str, args: &[&Object], foo: &Foolang) -> Eval {
         // println!("debug: {} {} {:?}", self, message, args);
         match self.vtable.get(message) {
-            Some(Method::Primitive(method)) => method(self, args, builtins),
-            Some(Method::Interpreter(closure)) => eval::apply(Some(self), closure, args, builtins),
+            Some(Method::Primitive(method)) => method(self, args, foo),
+            Some(Method::Interpreter(closure)) => eval::apply(Some(self), closure, args, foo),
             Some(Method::Reader(index)) => read_instance_variable(self, *index),
             None => {
                 // println!("debug: available methods: {:?}", &self.vtable.selectors());
@@ -466,7 +466,7 @@ impl fmt::Debug for Object {
     }
 }
 
-fn generic_ctor(receiver: &Object, args: &[&Object], _builtins: &Builtins) -> Eval {
+fn generic_ctor(receiver: &Object, args: &[&Object], _foo: &Foolang) -> Eval {
     let class = receiver.class();
     Ok(Object {
         vtable: Rc::clone(&class.instance_vtable),

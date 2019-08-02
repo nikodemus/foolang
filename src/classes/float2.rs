@@ -1,4 +1,4 @@
-use crate::objects2::{Builtins, Eval, Object, Vtable};
+use crate::objects2::{Eval, Foolang, Object, Vtable};
 
 use std::borrow::ToOwned;
 
@@ -25,68 +25,68 @@ pub fn vtable() -> Vtable {
 
 // FUNDAMENTAL METHODS
 
-fn float_as_float(receiver: &Object, _args: &[&Object], _builtins: &Builtins) -> Eval {
+fn float_as_float(receiver: &Object, _args: &[&Object], _foo: &Foolang) -> Eval {
     Ok(receiver.to_owned())
 }
 
-fn float_as_integer(receiver: &Object, _args: &[&Object], builtins: &Builtins) -> Eval {
-    Ok(builtins.make_integer(receiver.float().round() as i64))
+fn float_as_integer(receiver: &Object, _args: &[&Object], foo: &Foolang) -> Eval {
+    Ok(foo.make_integer(receiver.float().round() as i64))
 }
 
-fn float_add_float(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+fn float_add_float(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
     let res = args[0].float() + receiver.float();
-    Ok(builtins.make_float(res))
+    Ok(foo.make_float(res))
 }
 
-fn float_div_float(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+fn float_div_float(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
     let res = args[0].float() / receiver.float();
-    Ok(builtins.make_float(res))
+    Ok(foo.make_float(res))
 }
 
-fn float_mul_float(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+fn float_mul_float(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
     let res = args[0].float() * receiver.float();
-    Ok(builtins.make_float(res))
+    Ok(foo.make_float(res))
 }
 
-fn float_sub_float(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
+fn float_sub_float(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
     let res = args[0].float() - receiver.float();
-    Ok(builtins.make_float(res))
+    Ok(foo.make_float(res))
 }
 
 // DERIVED METHODS
 
-fn float_add(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    args[0].send("addFloat:", &[receiver], builtins)
+fn float_add(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    args[0].send("addFloat:", &[receiver], foo)
 }
 
-fn float_div(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    args[0].send("divFloat:", &[receiver], builtins)
+fn float_div(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    args[0].send("divFloat:", &[receiver], foo)
 }
 
-fn float_mul(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    args[0].send("mulFloat:", &[receiver], builtins)
+fn float_mul(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    args[0].send("mulFloat:", &[receiver], foo)
 }
 
-fn float_sub(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    args[0].send("subFloat:", &[receiver], builtins)
+fn float_sub(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    args[0].send("subFloat:", &[receiver], foo)
 }
 
-fn float_add_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    let float = args[0].send("asFloat", &[], builtins)?;
-    receiver.send("addFloat:", &[&float], builtins)
+fn float_add_integer(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    let float = args[0].send("asFloat", &[], foo)?;
+    receiver.send("addFloat:", &[&float], foo)
 }
 
-fn float_div_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    let float = args[0].send("asFloat", &[], builtins)?;
-    receiver.send("divFloat:", &[&float], builtins)
+fn float_div_integer(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    let float = args[0].send("asFloat", &[], foo)?;
+    receiver.send("divFloat:", &[&float], foo)
 }
 
-fn float_mul_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    let float = args[0].send("asFloat", &[], builtins)?;
-    receiver.send("mulFloat:", &[&float], builtins)
+fn float_mul_integer(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    let float = args[0].send("asFloat", &[], foo)?;
+    receiver.send("mulFloat:", &[&float], foo)
 }
 
-fn float_sub_integer(receiver: &Object, args: &[&Object], builtins: &Builtins) -> Eval {
-    let float = args[0].send("asFloat", &[], builtins)?;
-    receiver.send("subFloat:", &[&float], builtins)
+fn float_sub_integer(receiver: &Object, args: &[&Object], foo: &Foolang) -> Eval {
+    let float = args[0].send("asFloat", &[], foo)?;
+    receiver.send("subFloat:", &[&float], foo)
 }
