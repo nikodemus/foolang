@@ -2,6 +2,7 @@ use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
+use std::io::Write;
 use std::rc::Rc;
 
 use crate::eval;
@@ -149,6 +150,17 @@ pub struct Instance {
     pub instance_variables: RefCell<Vec<Object>>,
 }
 
+pub struct Output {
+    pub name: String,
+    pub stream: RefCell<Box<dyn Write>>,
+}
+
+impl PartialEq for Output {
+    fn eq(&self, other: &Self) -> bool {
+        self as *const _ == other as *const _
+    }
+}
+
 #[derive(PartialEq, Clone)]
 pub enum Datum {
     Boolean(bool),
@@ -157,7 +169,10 @@ pub enum Datum {
     Float(f64),
     Instance(Rc<Instance>),
     Integer(i64),
+    Output(Rc<Output>),
     String(Rc<String>),
+    // XXX: Null?
+    System,
 }
 
 pub struct Foolang {
@@ -165,8 +180,10 @@ pub struct Foolang {
     closure_vtable: Rc<Vtable>,
     float_vtable: Rc<Vtable>,
     integer_vtable: Rc<Vtable>,
+    output_vtable: Rc<Vtable>,
     string_vtable: Rc<Vtable>,
     pub globals: RefCell<HashMap<String, Object>>,
+    pub system: Object,
 }
 
 impl Foolang {
@@ -184,6 +201,17 @@ impl Foolang {
             },
         );
 
+        let float_vtable = Rc::new(classes::float2::vtable());
+        globals.insert(
+            "Float".to_string(),
+            Object {
+                vtable: Rc::new(Vtable::new("class Float")),
+                datum: Datum::Class(Rc::new(Class {
+                    instance_vtable: Rc::clone(&float_vtable),
+                })),
+            },
+        );
+
         let integer_vtable = Rc::new(classes::integer2::vtable());
         globals.insert(
             "Integer".to_string(),
@@ -195,13 +223,13 @@ impl Foolang {
             },
         );
 
-        let float_vtable = Rc::new(classes::float2::vtable());
+        let output_vtable = Rc::new(classes::output2::vtable());
         globals.insert(
-            "Float".to_string(),
+            "Output".to_string(),
             Object {
-                vtable: Rc::new(Vtable::new("class Float")),
+                vtable: Rc::new(Vtable::new("class Output")),
                 datum: Datum::Class(Rc::new(Class {
-                    instance_vtable: Rc::clone(&float_vtable),
+                    instance_vtable: Rc::clone(&output_vtable),
                 })),
             },
         );
@@ -222,8 +250,13 @@ impl Foolang {
             closure_vtable: Rc::new(classes::closure2::vtable()),
             float_vtable,
             integer_vtable,
+            output_vtable,
             string_vtable,
             globals: RefCell::new(globals),
+            system: Object {
+                vtable: Rc::new(classes::system2::vtable()),
+                datum: Datum::System,
+            },
         };
 
         {
@@ -300,13 +333,6 @@ impl Foolang {
         }
     }
 
-    pub fn make_integer(&self, x: i64) -> Object {
-        Object {
-            vtable: Rc::clone(&self.integer_vtable),
-            datum: Datum::Integer(x),
-        }
-    }
-
     pub fn make_closure(&self, frame: Frame, params: Vec<Arg>, body: Expr) -> Object {
         Object {
             vtable: Rc::clone(&self.closure_vtable),
@@ -314,6 +340,23 @@ impl Foolang {
                 env: Some(frame),
                 params,
                 body,
+            })),
+        }
+    }
+
+    pub fn make_integer(&self, x: i64) -> Object {
+        Object {
+            vtable: Rc::clone(&self.integer_vtable),
+            datum: Datum::Integer(x),
+        }
+    }
+
+    pub fn make_output(&self, name: &str, output: Box<dyn Write>) -> Object {
+        Object {
+            vtable: Rc::clone(&self.output_vtable),
+            datum: Datum::Output(Rc::new(Output {
+                name: name.to_string(),
+                stream: RefCell::new(output),
             })),
         }
     }
@@ -396,6 +439,13 @@ impl Object {
         }
     }
 
+    pub fn output(&self) -> Rc<Output> {
+        match &self.datum {
+            Datum::Output(output) => Rc::clone(output),
+            _ => panic!("BUG: {} is not an Output", self),
+        }
+    }
+
     pub fn string(&self) -> Rc<String> {
         match &self.datum {
             Datum::String(s) => Rc::clone(s),
@@ -427,7 +477,10 @@ impl Object {
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.datum {
-            Datum::Integer(x) => write!(f, "{}", x),
+            Datum::Boolean(true) => write!(f, "True"),
+            Datum::Boolean(false) => write!(f, "False"),
+            Datum::Class(_) => write!(f, "#<{}>", self.vtable.name),
+            Datum::Closure(x) => write!(f, "#<closure {:?}>", x.params),
             Datum::Float(x) => {
                 if x - x.floor() == 0.0 {
                     write!(f, "{}.0", x)
@@ -435,12 +488,11 @@ impl fmt::Display for Object {
                     write!(f, "{}", x)
                 }
             }
-            Datum::Closure(x) => write!(f, "$<closure {:?}>", x.params),
-            Datum::Class(_) => write!(f, "$<{}>", self.vtable.name),
-            Datum::Instance(_) => write!(f, "$<instance {}>", self.vtable.name),
+            Datum::Instance(_) => write!(f, "#<instance {}>", self.vtable.name),
+            Datum::Integer(x) => write!(f, "{}", x),
+            Datum::Output(output) => write!(f, "#<Output {}>", &output.name),
             Datum::String(s) => write!(f, "{}", s),
-            Datum::Boolean(true) => write!(f, "True"),
-            Datum::Boolean(false) => write!(f, "False"),
+            Datum::System => write!(f, "#<System>"),
         }
     }
 }
