@@ -137,7 +137,7 @@ impl Frame {
     }
 }
 
-struct Env<'a> {
+pub struct Env<'a> {
     foo: &'a Foolang,
     frame: Frame,
 }

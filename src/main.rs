@@ -112,17 +112,25 @@ fn main() {
             Arg::with_name("expr")
                 .long("eval")
                 .value_name("EXPR")
-                .help("Expression to evaluate")
+                .help("Expression to evaluate (old implementation)")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("file")
                 .long("load")
                 .value_name("FILE")
-                .help("File to load")
+                .help("File to load (old implementation)")
                 .takes_value(true),
         )
-        .arg(Arg::with_name("ide").long("ide").help("Runs the IDE"))
+        .arg(
+            Arg::with_name("program")
+                .index(1)
+                .value_name("PROGRAM")
+                .help("Foolang program to execute, must contain a main.")
+                .takes_value(true)
+                .conflicts_with("ide"),
+        )
+        .arg(Arg::with_name("ide").long("ide").help("Runs the IDE (new implementation)"))
         .arg(Arg::with_name("verbose").long("verbose").help("Provides additional output"))
         .get_matches();
     if let Some(file) = matches.value_of("file") {
@@ -132,6 +140,13 @@ fn main() {
         env.eval_str(expr);
     }
     let verbose = matches.is_present("verbose");
+    if let Some(program) = matches.value_of("program") {
+        let foo = Foolang::new();
+        match foo.run(program) {
+            Ok(_) => {}
+            Err(err) => println!("{}", err),
+        }
+    }
     if matches.is_present("ide") {
         println!("Starting server & browsing to http://127.0.0.1:8000/index.html");
         if webbrowser::open("http://127.0.0.1:8000/index.html").is_err() {

@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::eval::Frame;
 use crate::objects2::Object;
 use crate::tokenstream::Span;
@@ -29,6 +31,17 @@ pub struct TypeError {
 pub struct Location {
     pub span: Option<Span>,
     pub context: Option<String>,
+}
+
+impl fmt::Display for Unwind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Unwind::Exception(error, location) => {
+                write!(f, "ERROR: {}\n{}", error.what(), location.context())
+            }
+            Unwind::ReturnFrom(frame, object) => write!(f, "#<Return {}>", object),
+        }
+    }
 }
 
 impl Unwind {

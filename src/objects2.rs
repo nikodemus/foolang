@@ -6,8 +6,8 @@ use std::io::Write;
 use std::rc::Rc;
 
 use crate::eval;
-use crate::eval::Frame;
-use crate::parse::{ClassDefinition, Expr, Var};
+use crate::eval::{Env, Frame};
+use crate::parse::{ClassDefinition, Expr, Parser, Var};
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
 
@@ -17,6 +17,7 @@ pub type Eval = Result<Object, Unwind>;
 
 pub trait Source {
     fn source(self, span: &Span) -> Self;
+    fn context(self, source: &str) -> Self;
 }
 
 impl Source for Eval {
@@ -25,6 +26,13 @@ impl Source for Eval {
             unwind.add_span(span);
         }
         self
+    }
+    fn context(mut self, context: &str) -> Self {
+        if let Err(unwind) = self {
+            Err(unwind.with_context(context))
+        } else {
+            self
+        }
     }
 }
 
@@ -269,6 +277,24 @@ impl Foolang {
         }
 
         foo
+    }
+
+    pub fn run(&self, fname: &str) -> Result<(), Unwind> {
+        let program = std::fs::read_to_string(fname).expect("Could not load program");
+        let env = Env::new(self);
+        let mut parser = Parser::new(&program);
+        while !parser.at_eof() {
+            let expr = match parser.parse() {
+                Ok(expr) => expr,
+                Err(unwind) => return Err(unwind.with_context(&program)),
+            };
+            env.eval(&expr).context(&program)?;
+        }
+        // FIXME: Bad error "Unknown class" with bogus span.
+        let main = self.find_class("Main", 0..0)?;
+        let instance = main.send("system:", &[self.system.clone()], self).context(&program)?;
+        instance.send("run", &[], self).context(&program)?;
+        Ok(())
     }
 
     pub fn make_boolean(&self, x: bool) -> Object {

@@ -2,6 +2,16 @@ use assert_cmd::prelude::*; // Add methods on commands
 use predicates::prelude::*;
 use std::process::Command; // Run programs // Used for writing assertions
 
+type Test = Result<(), Box<std::error::Error>>;
+
+#[test]
+fn hello() -> Test {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/hello.foo");
+    cmd.assert().success().stdout(predicate::str::contains("Hello world!\n"));
+    Ok(())
+}
+
 #[test]
 fn stdout_print_no_flush() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
