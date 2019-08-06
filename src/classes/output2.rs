@@ -6,8 +6,8 @@ use crate::objects2::{Eval, Foolang, Object, Vtable};
 pub fn vtable() -> Vtable {
     let mut vt = Vtable::new("Output");
     vt.def("newline", output_newline);
-    vt.def("print", output_print);
-    vt.def("println", output_println);
+    vt.def("print:", output_print);
+    vt.def("println:", output_println);
     vt
 }
 
