@@ -1,0 +1,4 @@
+class Main { system }
+  method run
+     system output println: "Hello world!"
+end
