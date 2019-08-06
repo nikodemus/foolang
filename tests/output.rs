@@ -13,7 +13,7 @@ fn hello() -> Test {
 }
 
 #[test]
-fn stdout_print_no_flush() -> Result<(), Box<std::error::Error>> {
+fn old_stdout_print_no_flush() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("--eval").arg("System stdout print: 'hello world!'; newline; print: 'boing!'");
     cmd.assert().success().stdout(predicate::str::contains("hello world!\n"));
@@ -21,7 +21,7 @@ fn stdout_print_no_flush() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn stdout_print_flush() -> Result<(), Box<std::error::Error>> {
+fn old_stdout_print_flush() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("--eval").arg("System stdout print: 'hello world!'; newline; print: 'boing!'; flush");
     cmd.assert().success().stdout(predicate::str::ends_with("hello world!\nboing!"));
@@ -29,7 +29,7 @@ fn stdout_print_flush() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn stdin_readline() -> Result<(), Box<std::error::Error>> {
+fn old_stdin_readline() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("--eval").arg(
         "
@@ -51,7 +51,7 @@ fn stdin_readline() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn repl() -> Result<(), Box<std::error::Error>> {
+fn old_repl() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("--load").arg("foo/repl.foo").arg("--eval").arg("REPL run");
     cmd.with_stdin()
@@ -73,7 +73,7 @@ fn repl() -> Result<(), Box<std::error::Error>> {
 
 #[test]
 #[ignore] // takes a bit long, and will take longer as more are added
-fn benchmarks() -> Result<(), Box<std::error::Error>> {
+fn old_benchmarks() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("--load").arg("foo/benchmarks.foo").arg("--eval").arg("Benchmarks all run");
     cmd.assert()
