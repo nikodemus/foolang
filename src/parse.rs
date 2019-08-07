@@ -131,6 +131,7 @@ impl Global {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Literal {
+    Boolean(bool),
     Integer(i64),
     Float(f64),
     String(String),
@@ -483,6 +484,9 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, "{", block_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "}", invalid_prefix, invalid_suffix, precedence_0);
 
+    Syntax::def(t, "False", false_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "True", true_prefix, invalid_suffix, precedence_0);
+
     Syntax::op(t, "*", false, true, 50);
     Syntax::op(t, "/", false, true, 40);
     Syntax::op(t, "+", false, true, 30);
@@ -543,6 +547,10 @@ fn assign_suffix(
     // FIXME: Maybe this is a sign that we should actually store a Var with it's own span
     // in the Assign, then assign could have the span for just the operator?
     Ok(Assign::expr(left.span(), left.name(), right))
+}
+
+fn false_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+    Ok(Expr::Const(parser.span(), Literal::Boolean(false)))
 }
 
 fn identifier_precedence(parser: &Parser, span: Span) -> Result<usize, Unwind> {
@@ -644,6 +652,10 @@ fn paren_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     } else {
         parser.error("Expected )")
     }
+}
+
+fn true_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+    Ok(Expr::Const(parser.span(), Literal::Boolean(true)))
 }
 
 fn typecheck_suffix(

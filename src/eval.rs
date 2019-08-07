@@ -260,6 +260,7 @@ impl<'a> Env<'a> {
 
     fn eval_literal(&self, literal: &Literal) -> Eval {
         match literal {
+            Literal::Boolean(value) => Ok(self.foo.make_boolean(*value)),
             Literal::Integer(value) => Ok(self.foo.make_integer(*value)),
             Literal::Float(value) => Ok(self.foo.make_float(*value)),
             Literal::String(value) => Ok(self.foo.make_string(value)),
@@ -1287,4 +1288,10 @@ fn test_integer_gte() {
     assert_eq!(eval_ok("1 >= 2").boolean(), false);
     assert_eq!(eval_ok("2 >= 1").boolean(), true);
     assert_eq!(eval_ok("1 >= 1").boolean(), true);
+}
+
+#[test]
+fn test_bools() {
+    assert_eq!(eval_ok("True").boolean(), true);
+    assert_eq!(eval_ok("False").boolean(), false);
 }
