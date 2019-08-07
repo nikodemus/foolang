@@ -5,6 +5,7 @@ pub mod class;
 pub mod closure;
 pub mod closure2;
 pub mod compiler;
+pub mod compiler2;
 pub mod float2;
 pub mod foolang;
 pub mod input;

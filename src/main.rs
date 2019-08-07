@@ -140,9 +140,14 @@ fn main() {
         env.eval_str(expr);
     }
     let verbose = matches.is_present("verbose");
-    if let Some(program) = matches.value_of("program") {
+    if let Some(fname) = matches.value_of("program") {
+        let program = match std::fs::read_to_string(fname) {
+            Ok(prog) => prog,
+            Err(err) => panic!("ERROR: Could not load program: {} ({})", fname, err),
+        };
         let foo = Foolang::new();
-        match foo.run(program) {
+        // FIXME: pass in env and argv to make_system
+        match foo.run(program, foo.make_system()) {
             Ok(_) => {}
             Err(err) => println!("{}", err),
         }

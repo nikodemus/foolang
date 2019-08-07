@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use crate::eval;
 use crate::eval::{Env, Frame};
-use crate::parse::{ClassDefinition, Expr, Parser, Var};
+use crate::parse::{ClassDefinition, Expr, Literal, Parser, Var};
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
 
@@ -27,7 +27,7 @@ impl Source for Eval {
         }
         self
     }
-    fn context(mut self, context: &str) -> Self {
+    fn context(self, context: &str) -> Self {
         if let Err(unwind) = self {
             Err(unwind.with_context(context))
         } else {
@@ -153,6 +153,14 @@ pub struct Class {
     pub instance_vtable: Rc<Vtable>,
 }
 
+// XXX: The interesting thing about this is that it doesn't give
+// access to the global environment... but I actually like that.
+#[derive(PartialEq)]
+pub struct Compiler {
+    pub foolang: Foolang,
+    pub expr: RefCell<Expr>,
+}
+
 #[derive(PartialEq)]
 pub struct Instance {
     pub instance_variables: RefCell<Vec<Object>>,
@@ -174,6 +182,7 @@ pub enum Datum {
     Boolean(bool),
     Class(Rc<Class>),
     Closure(Rc<Closure>),
+    Compiler(Rc<Compiler>),
     Float(f64),
     Instance(Rc<Instance>),
     Integer(i64),
@@ -183,15 +192,16 @@ pub enum Datum {
     System,
 }
 
+#[derive(PartialEq)]
 pub struct Foolang {
     boolean_vtable: Rc<Vtable>,
     closure_vtable: Rc<Vtable>,
+    compiler_vtable: Rc<Vtable>,
     float_vtable: Rc<Vtable>,
     integer_vtable: Rc<Vtable>,
     output_vtable: Rc<Vtable>,
     string_vtable: Rc<Vtable>,
     pub globals: RefCell<HashMap<String, Object>>,
-    pub system: Object,
 }
 
 impl Foolang {
@@ -205,6 +215,17 @@ impl Foolang {
                 vtable: Rc::new(Vtable::new("class Boolean")),
                 datum: Datum::Class(Rc::new(Class {
                     instance_vtable: Rc::clone(&boolean_vtable),
+                })),
+            },
+        );
+
+        let compiler_vtable = Rc::new(classes::compiler2::instance_vtable());
+        globals.insert(
+            "Compiler".to_string(),
+            Object {
+                vtable: Rc::new(classes::compiler2::class_vtable()),
+                datum: Datum::Class(Rc::new(Class {
+                    instance_vtable: Rc::clone(&compiler_vtable),
                 })),
             },
         );
@@ -256,15 +277,12 @@ impl Foolang {
         let foo = Foolang {
             boolean_vtable,
             closure_vtable: Rc::new(classes::closure2::vtable()),
+            compiler_vtable,
             float_vtable,
             integer_vtable,
             output_vtable,
             string_vtable,
             globals: RefCell::new(globals),
-            system: Object {
-                vtable: Rc::new(classes::system2::vtable()),
-                datum: Datum::System,
-            },
         };
 
         {
@@ -279,8 +297,7 @@ impl Foolang {
         foo
     }
 
-    pub fn run(&self, fname: &str) -> Result<(), Unwind> {
-        let program = std::fs::read_to_string(fname).expect("Could not load program");
+    pub fn run(&self, program: String, system: Object) -> Result<(), Unwind> {
         let env = Env::new(self);
         let mut parser = Parser::new(&program);
         while !parser.at_eof() {
@@ -292,9 +309,19 @@ impl Foolang {
         }
         // FIXME: Bad error "Unknown class" with bogus span.
         let main = self.find_class("Main", 0..0)?;
-        let instance = main.send("system:", &[self.system.clone()], self).context(&program)?;
+        let instance = main.send("system:", &[system], self).context(&program)?;
         instance.send("run", &[], self).context(&program)?;
         Ok(())
+    }
+
+    pub fn find_class(&self, name: &str, span: Span) -> Eval {
+        match self.globals.borrow().get(name) {
+            None => return Unwind::error_at(span, "Unknown class"),
+            Some(global) => match global.datum {
+                Datum::Class(_) => Ok(global.to_owned()),
+                _ => Unwind::error_at(span, "Not a class name"),
+            },
+        }
     }
 
     pub fn make_boolean(&self, x: bool) -> Object {
@@ -342,23 +369,6 @@ impl Foolang {
         })
     }
 
-    pub fn find_class(&self, name: &str, span: Span) -> Eval {
-        match self.globals.borrow().get(name) {
-            None => return Unwind::error_at(span, "Unknown class"),
-            Some(global) => match global.datum {
-                Datum::Class(_) => Ok(global.to_owned()),
-                _ => Unwind::error_at(span, "Not a class name"),
-            },
-        }
-    }
-
-    pub fn make_float(&self, x: f64) -> Object {
-        Object {
-            vtable: Rc::clone(&self.float_vtable),
-            datum: Datum::Float(x),
-        }
-    }
-
     pub fn make_closure(&self, frame: Frame, params: Vec<Arg>, body: Expr) -> Object {
         Object {
             vtable: Rc::clone(&self.closure_vtable),
@@ -370,31 +380,27 @@ impl Foolang {
         }
     }
 
-    pub fn make_integer(&self, x: i64) -> Object {
+    pub fn make_compiler(&self) -> Object {
         Object {
-            vtable: Rc::clone(&self.integer_vtable),
-            datum: Datum::Integer(x),
-        }
-    }
-
-    pub fn make_output(&self, name: &str, output: Box<dyn Write>) -> Object {
-        Object {
-            vtable: Rc::clone(&self.output_vtable),
-            datum: Datum::Output(Rc::new(Output {
-                name: name.to_string(),
-                stream: RefCell::new(output),
+            vtable: Rc::clone(&self.compiler_vtable),
+            datum: Datum::Compiler(Rc::new(Compiler {
+                foolang: Foolang::new(),
+                expr: RefCell::new(Expr::Const(0..0, Literal::Boolean(false))),
             })),
         }
     }
 
-    pub fn make_string(&self, string: &str) -> Object {
-        self.into_string(string.to_string())
+    pub fn make_float(&self, x: f64) -> Object {
+        Object {
+            vtable: Rc::clone(&self.float_vtable),
+            datum: Datum::Float(x),
+        }
     }
 
-    pub fn into_string(&self, string: String) -> Object {
+    pub fn make_integer(&self, x: i64) -> Object {
         Object {
-            vtable: Rc::clone(&self.string_vtable),
-            datum: Datum::String(Rc::new(string)),
+            vtable: Rc::clone(&self.integer_vtable),
+            datum: Datum::Integer(x),
         }
     }
 
@@ -420,6 +426,34 @@ impl Foolang {
             body: body.to_owned(),
         }
     }
+
+    pub fn make_output(&self, name: &str, output: Box<dyn Write>) -> Object {
+        Object {
+            vtable: Rc::clone(&self.output_vtable),
+            datum: Datum::Output(Rc::new(Output {
+                name: name.to_string(),
+                stream: RefCell::new(output),
+            })),
+        }
+    }
+
+    pub fn make_string(&self, string: &str) -> Object {
+        self.into_string(string.to_string())
+    }
+
+    pub fn into_string(&self, string: String) -> Object {
+        Object {
+            vtable: Rc::clone(&self.string_vtable),
+            datum: Datum::String(Rc::new(string)),
+        }
+    }
+
+    pub fn make_system(&self) -> Object {
+        Object {
+            vtable: Rc::new(classes::system2::vtable()),
+            datum: Datum::System,
+        }
+    }
 }
 
 impl Object {
@@ -441,6 +475,13 @@ impl Object {
         match &self.datum {
             Datum::Closure(c) => c.borrow(),
             _ => panic!("BUG: {} is not a Closure", self),
+        }
+    }
+
+    pub fn compiler(&self) -> Rc<Compiler> {
+        match &self.datum {
+            Datum::Compiler(compiler) => Rc::clone(compiler),
+            _ => panic!("BUG: {} is not a Compiler", self),
         }
     }
 
@@ -507,6 +548,7 @@ impl fmt::Display for Object {
             Datum::Boolean(false) => write!(f, "False"),
             Datum::Class(_) => write!(f, "#<{}>", self.vtable.name),
             Datum::Closure(x) => write!(f, "#<closure {:?}>", x.params),
+            Datum::Compiler(_) => write!(f, "#<Compiler>"),
             Datum::Float(x) => {
                 if x - x.floor() == 0.0 {
                     write!(f, "{}.0", x)
