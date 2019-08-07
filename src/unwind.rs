@@ -158,6 +158,9 @@ impl Location {
     }
 
     fn add_context(&mut self, source: &str, what: String) {
+        if self.context.is_some() {
+            return;
+        }
         assert!(self.span.is_some());
         assert!(self.context.is_none());
         let mut context = String::new();

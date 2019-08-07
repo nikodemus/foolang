@@ -158,6 +158,7 @@ pub struct Class {
 #[derive(PartialEq)]
 pub struct Compiler {
     pub foolang: Foolang,
+    pub source: RefCell<String>,
     pub expr: RefCell<Expr>,
 }
 
@@ -192,7 +193,7 @@ pub enum Datum {
     System,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub struct Foolang {
     boolean_vtable: Rc<Vtable>,
     closure_vtable: Rc<Vtable>,
@@ -384,7 +385,8 @@ impl Foolang {
         Object {
             vtable: Rc::clone(&self.compiler_vtable),
             datum: Datum::Compiler(Rc::new(Compiler {
-                foolang: Foolang::new(),
+                foolang: self.clone(),
+                source: RefCell::new(String::new()),
                 expr: RefCell::new(Expr::Const(0..0, Literal::Boolean(false))),
             })),
         }

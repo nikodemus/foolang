@@ -1,5 +1,5 @@
 use crate::eval::Env;
-use crate::objects2::{Eval, Foolang, Object, Vtable};
+use crate::objects2::{Eval, Foolang, Object, Source, Vtable};
 use crate::parse::Parser;
 
 pub fn class_vtable() -> Vtable {
@@ -21,8 +21,10 @@ fn class_compiler_new(_receiver: &Object, _args: &[Object], foo: &Foolang) -> Ev
 
 fn compiler_parse(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     // FIXME: This will panic if it doesn't get a string.
-    let mut parser = Parser::new(args[0].string_as_str());
     let compiler = receiver.compiler();
+    let source = args[0].string_as_str();
+    compiler.source.replace(source.to_string());
+    let mut parser = Parser::new(&source);
     compiler.expr.replace(parser.parse()?);
     Ok(receiver.clone())
 }
@@ -32,5 +34,6 @@ fn compiler_evaluate(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval 
     let expr = compiler.expr.borrow();
     // This is the part that constrains the effects inside the compiler.
     let env = Env::new(&compiler.foolang);
-    env.eval(&expr)
+    let source = compiler.source.borrow();
+    env.eval(&expr).context(&source)
 }
