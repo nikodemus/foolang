@@ -456,7 +456,7 @@ fn make_token_table() -> TokenTable {
     Syntax::def(t, SIGIL, operator_prefix, operator_suffix, operator_precedence);
     Syntax::def(t, KEYWORD, invalid_prefix, keyword_suffix, precedence_5);
     Syntax::def(t, NEWLINE, ignore_prefix, newline_suffix, precedence_1);
-    Syntax::def(t, EOF, invalid_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, EOF, eof_prefix, eof_suffix, precedence_0);
 
     table
 }
@@ -547,6 +547,14 @@ fn assign_suffix(
     // FIXME: Maybe this is a sign that we should actually store a Var with it's own span
     // in the Assign, then assign could have the span for just the operator?
     Ok(Assign::expr(left.span(), left.name(), right))
+}
+
+fn eof_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+    parser.error("Unexexted EOF in value position")
+}
+
+fn eof_suffix(parser: &Parser, _: Expr, _: PrecedenceFunction) -> Result<Expr, Unwind> {
+    parser.error("Unexexted EOF in suffix position")
 }
 
 fn false_prefix(parser: &Parser) -> Result<Expr, Unwind> {
