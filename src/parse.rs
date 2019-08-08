@@ -55,8 +55,14 @@ pub struct ClassDefinition {
     pub span: Span,
     pub name: String,
     pub instance_variables: Vec<Var>,
-    pub methods: Vec<MethodDefinition>,
+    pub instance_methods: Vec<MethodDefinition>,
+    pub class_methods: Vec<MethodDefinition>,
     default_constructor: Option<String>,
+}
+
+enum MethodKind {
+    Class,
+    Instance,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -73,7 +79,8 @@ impl ClassDefinition {
             span,
             name,
             instance_variables,
-            methods: Vec::new(),
+            instance_methods: Vec::new(),
+            class_methods: Vec::new(),
             default_constructor: None,
         }
     }
@@ -82,8 +89,11 @@ impl ClassDefinition {
         Expr::ClassDefinition(ClassDefinition::new(span, name, instance_variables))
     }
 
-    fn add_method(&mut self, method: MethodDefinition) {
-        self.methods.push(method);
+    fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
+        match kind {
+            MethodKind::Instance => self.instance_methods.push(method),
+            MethodKind::Class => self.class_methods.push(method),
+        };
     }
 
     pub fn constructor(&self) -> String {
@@ -175,9 +185,9 @@ impl Expr {
         }
     }
 
-    fn add_method(&mut self, method: MethodDefinition) {
+    fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
         match self {
-            Expr::ClassDefinition(class) => class.add_method(method),
+            Expr::ClassDefinition(class) => class.add_method(kind, method),
             _ => panic!("BUG: trying to add a method to {:?}", self),
         }
     }
@@ -677,7 +687,11 @@ fn typecheck_suffix(
     }
 }
 
-fn parse_method(parser: &Parser, class: &mut ClassDefinition) -> Result<(), Unwind> {
+fn parse_method(
+    parser: &Parser,
+    class: &mut ClassDefinition,
+    kind: MethodKind,
+) -> Result<(), Unwind> {
     assert_eq!(parser.slice(), "method");
     // FIXME: span is the span of the method-marker
     let span = parser.span();
@@ -718,7 +732,7 @@ fn parse_method(parser: &Parser, class: &mut ClassDefinition) -> Result<(), Unwi
     // FIXME: This is the place where I could inform parser about instance
     // variables.
     let body = parser.parse_expr(0)?;
-    class.add_method(MethodDefinition::new(span, selector, parameters, body));
+    class.add_method(kind, MethodDefinition::new(span, selector, parameters, body));
     Ok(())
 }
 
@@ -832,8 +846,16 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         if next == Token::WORD && parser.slice() == "end" {
             break;
         }
+        if next == Token::WORD && parser.slice() == "class" {
+            if parser.next_token()? == Token::WORD && parser.slice() == "method" {
+                parse_method(parser, &mut class, MethodKind::Class);
+                continue;
+            } else {
+                return parser.error("Expected class method");
+            }
+        }
         if next == Token::WORD && parser.slice() == "method" {
-            parse_method(parser, &mut class)?;
+            parse_method(parser, &mut class, MethodKind::Instance)?;
             continue;
         }
         if next == Token::WORD && parser.slice() == "defaultConstructor" {
@@ -1239,15 +1261,18 @@ fn parse_class() {
 #[test]
 fn parse_method1() {
     let mut class = class(0..5, "Foo", vec![]);
-    class.add_method(method(13..19, "bar", vec![], int(24..26, 42)));
+    class.add_method(MethodKind::Instance, method(13..19, "bar", vec![], int(24..26, 42)));
     assert_eq!(parse_str("class Foo {} method bar 42 end"), Ok(class));
 }
 
 #[test]
 fn parse_method2() {
     let mut class = class(18..23, "Foo", vec![]);
-    class.add_method(method(52..58, "foo", vec![], unary(92..95, "bar", var(87..91, "self"))));
-    class.add_method(method(117..123, "bar", vec![], int(152..154, 42)));
+    class.add_method(
+        MethodKind::Instance,
+        method(52..58, "foo", vec![], unary(92..95, "bar", var(87..91, "self"))),
+    );
+    class.add_method(MethodKind::Instance, method(117..123, "bar", vec![], int(152..154, 42)));
     assert_eq!(
         parse_str(
             "

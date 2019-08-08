@@ -424,7 +424,13 @@ impl Foolang {
             }
             instance_vtable.add_reader(&var.name, index - 1);
         }
-        for method in &classdef.methods {
+        for method in &classdef.class_methods {
+            class_vtable.add_method(
+                &method.selector,
+                self.make_method_function(&method.parameters, &method.body),
+            );
+        }
+        for method in &classdef.instance_methods {
             instance_vtable.add_method(
                 &method.selector,
                 self.make_method_function(&method.parameters, &method.body),

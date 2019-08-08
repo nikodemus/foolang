@@ -1337,3 +1337,39 @@ fn test_compiler2() {
         Ok(_) => panic!("Class leaked from compiler to parent!"),
     }
 }
+
+#[test]
+fn test_class_method1() {
+    let (class, foo) = eval_obj(
+        "class Foo { a }
+            class method new
+                self a: 42
+            class method foo
+                12
+         end",
+    );
+    assert_eq!(class.send("foo", &[], &foo), Ok(foo.make_integer(12)));
+    assert_eq!(
+        class.send("new", &[], &foo).unwrap().send("a", &[], &foo),
+        Ok(foo.make_integer(42))
+    );
+}
+
+#[test]
+fn test_class_method2() {
+    let (class, foo) = eval_obj(
+        "class Foo { _a }
+            class method new
+                self _a: 42
+            class method foo
+                12
+            method a
+                _a
+         end",
+    );
+    assert_eq!(class.send("foo", &[], &foo), Ok(foo.make_integer(12)));
+    assert_eq!(
+        class.send("new", &[], &foo).unwrap().send("a", &[], &foo),
+        Ok(foo.make_integer(42))
+    );
+}
