@@ -2,6 +2,7 @@ use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
+use std::io::Read;
 use std::io::Write;
 use std::rc::Rc;
 
@@ -162,6 +163,54 @@ pub struct Compiler {
     pub expr: RefCell<Expr>,
 }
 
+pub struct Input {
+    pub name: String,
+    stream: RefCell<Box<dyn Read>>,
+    buffer: RefCell<Vec<u8>>,
+}
+
+impl PartialEq for Input {
+    fn eq(&self, other: &Self) -> bool {
+        self as *const _ == other as *const _
+    }
+}
+
+impl Input {
+    pub fn readline(&self) -> Option<String> {
+        let mut stream = self.stream.borrow_mut();
+        let mut buf = self.buffer.borrow_mut();
+        const LF: u8 = 10;
+        const CR: u8 = 13;
+        loop {
+            // UTF-8 bytes after first always have the high bit set,
+            // so this is safe.
+            if let Some(newline) = buf.iter().position(|x| *x == LF) {
+                // Check for preceding carriage return.
+                let end = if newline > 0 && buf[newline - 1] == CR {
+                    newline - 1
+                } else {
+                    newline
+                };
+                let line =
+                    std::str::from_utf8(&buf[0..end]).expect("Invalid UTF-8 in input").to_string();
+                buf.drain(0..=newline);
+                return Some(line);
+            }
+            buf.reserve(1024);
+            let len = buf.len();
+            let cap = buf.capacity();
+            unsafe {
+                buf.set_len(cap);
+                let n = stream.read(&mut buf[len..]).expect("Could not read from Input");
+                buf.set_len(len + n);
+            }
+            if len == buf.len() {
+                return None; // EOF
+            }
+        }
+    }
+}
+
 #[derive(PartialEq)]
 pub struct Instance {
     pub instance_variables: RefCell<Vec<Object>>,
@@ -185,6 +234,7 @@ pub enum Datum {
     Closure(Rc<Closure>),
     Compiler(Rc<Compiler>),
     Float(f64),
+    Input(Rc<Input>),
     Instance(Rc<Instance>),
     Integer(i64),
     Output(Rc<Output>),
@@ -199,6 +249,7 @@ pub struct Foolang {
     closure_vtable: Rc<Vtable>,
     compiler_vtable: Rc<Vtable>,
     float_vtable: Rc<Vtable>,
+    input_vtable: Rc<Vtable>,
     integer_vtable: Rc<Vtable>,
     output_vtable: Rc<Vtable>,
     string_vtable: Rc<Vtable>,
@@ -238,6 +289,17 @@ impl Foolang {
                 vtable: Rc::new(Vtable::new("class Float")),
                 datum: Datum::Class(Rc::new(Class {
                     instance_vtable: Rc::clone(&float_vtable),
+                })),
+            },
+        );
+
+        let input_vtable = Rc::new(classes::input2::vtable());
+        globals.insert(
+            "Input".to_string(),
+            Object {
+                vtable: Rc::new(Vtable::new("class Input")),
+                datum: Datum::Class(Rc::new(Class {
+                    instance_vtable: Rc::clone(&input_vtable),
                 })),
             },
         );
@@ -391,6 +453,17 @@ impl Foolang {
         }
     }
 
+    pub fn make_input(&self, name: &str, input: Box<dyn Read>) -> Object {
+        Object {
+            vtable: Rc::clone(&self.input_vtable),
+            datum: Datum::Input(Rc::new(Input {
+                name: name.to_string(),
+                stream: RefCell::new(input),
+                buffer: RefCell::new(Vec::new()),
+            })),
+        }
+    }
+
     pub fn make_integer(&self, x: i64) -> Object {
         Object {
             vtable: Rc::clone(&self.integer_vtable),
@@ -486,6 +559,13 @@ impl Object {
         }
     }
 
+    pub fn input(&self) -> Rc<Input> {
+        match &self.datum {
+            Datum::Input(input) => Rc::clone(input),
+            _ => panic!("BUG: {} is not an Input", self),
+        }
+    }
+
     pub fn instance(&self) -> Rc<Instance> {
         match &self.datum {
             Datum::Instance(instance) => Rc::clone(instance),
@@ -550,6 +630,7 @@ impl fmt::Display for Object {
                     write!(f, "{}", x)
                 }
             }
+            Datum::Input(input) => write!(f, "#<Input {}>", &input.name),
             Datum::Instance(_) => write!(f, "#<instance {}>", self.vtable.name),
             Datum::Integer(x) => write!(f, "{}", x),
             Datum::Output(output) => write!(f, "#<Output {}>", &output.name),

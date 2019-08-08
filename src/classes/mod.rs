@@ -9,6 +9,7 @@ pub mod compiler2;
 pub mod float2;
 pub mod foolang;
 pub mod input;
+pub mod input2;
 pub mod integer;
 pub mod integer2;
 pub mod number;
