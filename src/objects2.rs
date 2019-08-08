@@ -280,20 +280,12 @@ impl Foolang {
             closure_vtable: Rc::new(classes::closure2::vtable()),
             compiler_vtable,
             float_vtable,
+            input_vtable,
             integer_vtable,
             output_vtable,
             string_vtable,
             globals: RefCell::new(globals),
         };
-
-        {
-            let true_object = foo.make_boolean(true);
-            let false_object = foo.make_boolean(false);
-
-            let mut globals = foo.globals.borrow_mut();
-            globals.insert("True".to_string(), true_object);
-            globals.insert("False".to_string(), false_object);
-        }
 
         foo
     }
