@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::io::Write;
-
 use crate::objects2::{Eval, Foolang, Object, Vtable};
 
 pub fn vtable() -> Vtable {
@@ -11,31 +8,21 @@ pub fn vtable() -> Vtable {
     vt
 }
 
-fn write(stream: &RefCell<Box<dyn Write>>, string: &str) {
-    let end = string.len();
-    let mut start = 0;
-    let mut out = stream.borrow_mut();
-    while start < end {
-        match out.write(string[start..].as_bytes()) {
-            Ok(n) => start += n,
-            Err(e) => panic!("BUG: unhandled write error: {}", e),
-        }
-    }
-}
-
-fn output_newline(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    write(&receiver.output().stream, "\n");
+fn output_newline(receiver: &Object, _args: &[Object], _foo: &Foolang) -> Eval {
+    receiver.output().write("\n");
     Ok(receiver.clone())
 }
 
-fn output_print(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    write(&receiver.output().stream, args[0].string_as_str());
+fn output_print(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
+    // FIXME: Type-error if not string
+    receiver.output().write(args[0].string_as_str());
     Ok(receiver.clone())
 }
 
-fn output_println(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    let stream = &receiver.output().stream;
-    write(stream, args[0].string_as_str());
-    write(stream, "\n");
+fn output_println(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
+    let output = &receiver.output();
+    // FIXME: Type-error if not string
+    output.write(args[0].string_as_str());
+    output.write("\n");
     Ok(receiver.clone())
 }

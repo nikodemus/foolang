@@ -218,12 +218,26 @@ pub struct Instance {
 
 pub struct Output {
     pub name: String,
-    pub stream: RefCell<Box<dyn Write>>,
+    stream: RefCell<Box<dyn Write>>,
 }
 
 impl PartialEq for Output {
     fn eq(&self, other: &Self) -> bool {
         self as *const _ == other as *const _
+    }
+}
+
+impl Output {
+    pub fn write(&self, string: &str) {
+        let end = string.len();
+        let mut start = 0;
+        let mut out = self.stream.borrow_mut();
+        while start < end {
+            match out.write(string[start..].as_bytes()) {
+                Ok(n) => start += n,
+                Err(e) => panic!("BUG: unhandled write error: {}", e),
+            }
+        }
     }
 }
 
