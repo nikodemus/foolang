@@ -609,7 +609,7 @@ impl Object {
             Some(Method::Reader(index)) => read_instance_variable(self, *index),
             None => {
                 // println!("debug: available methods: {:?}", &self.vtable.selectors());
-                unimplemented!("{} doesNotUnderstand {} {:?}", self, message, args);
+                unimplemented!("{:?} doesNotUnderstand {} {:?}", self, message, args);
             }
         }
     }
