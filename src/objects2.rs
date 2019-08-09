@@ -239,6 +239,10 @@ impl Output {
             }
         }
     }
+    pub fn flush(&self) {
+        let mut out = self.stream.borrow_mut();
+        out.flush().expect("BUG: unhandled flush error");
+    }
 }
 
 #[derive(PartialEq, Clone)]

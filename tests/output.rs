@@ -48,6 +48,23 @@ fn test_abort() -> Result<(), Box<std::error::Error>> {
     Ok(())
 }
 
+#[test]
+fn test_print_no_flush() -> Result<(), Box<std::error::Error>> {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/print_no_flush.foo");
+    cmd.assert().success().stdout("");
+    Ok(())
+}
+
+#[test]
+fn test_print_flush() -> Result<(), Box<std::error::Error>> {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/print_flush.foo");
+    cmd.assert().success().stdout("Foo");
+    Ok(())
+}
+
+#[test]
 fn old_stdout_print_no_flush() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("--eval").arg("System stdout print: 'hello world!'; newline; print: 'boing!'");

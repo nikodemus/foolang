@@ -1,0 +1,5 @@
+class Main { system }
+  method run
+     (system output print: "Foo") flush
+     system exit
+end

@@ -2,10 +2,16 @@ use crate::objects2::{Eval, Foolang, Object, Vtable};
 
 pub fn vtable() -> Vtable {
     let mut vt = Vtable::new("Output");
+    vt.def("flush", output_flush);
     vt.def("newline", output_newline);
     vt.def("print:", output_print);
     vt.def("println:", output_println);
     vt
+}
+
+fn output_flush(receiver: &Object, _args: &[Object], _foo: &Foolang) -> Eval {
+    receiver.output().flush();
+    Ok(receiver.clone())
 }
 
 fn output_newline(receiver: &Object, _args: &[Object], _foo: &Foolang) -> Eval {
