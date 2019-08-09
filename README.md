@@ -5,10 +5,10 @@
 A Smalltalk-inspired object language that liberally cribs from Common Lisp,
 Erlang and Fortress.
 
-Like all new languages it has somewhat unrealistic aspirations:
+Like all new languages it has _somewhat_ unrealistic aspirations:
 
 - Elegance of Smalltalk.
-- Performace of C++.
+- Performance of C++.
 - Convenience of Python.
 - Fault tolerance of Erlang.
 - Extensibility of Common Lisp.
@@ -24,7 +24,7 @@ Like all new languages it has somewhat unrealistic aspirations:
 
 In order of priority:
 
-1. Ergonomics: Code should be a pleasure to write and easy to read.
+1. Ergonomics: Code should be a pleasure to reand and write.
 
 2. Safety: No memory errors. No race conditions. No ambient authority.
    Fault-tolerant applications.
@@ -75,6 +75,15 @@ the moment. So: "Don't summon anything bigger than your head."
 
 Foolang is expression oriented: every expression has a value.
 
+**Reserved Words**
+
+Following words have special meaning:
+
+    is
+    class
+    method
+    end
+
 **Comments**
 
 Line comments are prefixed with `--`:
@@ -100,6 +109,7 @@ line comment that starts with a greater-than sign:
 
 Numbers are quite conventional, with _ as allowed readability separators.
 Literal floats are doubles, unless written in the exponential format using
+"f" as the exponent separator.
 
     1_000_000
     0xDEADBEEF
@@ -112,17 +122,64 @@ Strings allow interpolations to be embedded:
 
     "Hello {user name}!"
 
-Litetal 
+**Messages**
 
-- I quite like the idea of making "reserved words" uppercase keywords:
+Messages are sent by simple concatenation, Smalltalk-style:
 
-       Class: Foo { zot = 42 }
-         constructor quux
-         method bar: y
-            Let x = zot + y
-            Return: x
-         end
-      end
+    -- Message with selector "foo" to object
+    object foo
+
+    -- Message with selector "foo:bar:" and arguments 1 and 2
+    object foo: 1 bar: 2
+
+**Operator Precedence**
+
+Unlike Smalltalk operators have conventional precedence:
+
+    1 + 2 * 3 --> 7
+
+**Local Variables**
+
+Are defined using let:
+
+    let x = 42
+    x * 100 --> 420
+
+**Blocks**
+
+Unlike Smalltalk Foolang uses braces for blocks:
+
+    { 1 + 2 } value --> 3
+
+Blocks can take arguments:
+
+    { :x | x + 2 } value: 40 --> 42
+
+Underscore can be used as an implicit argument in blocks:
+
+    -- Odd numbers from an arry
+    array select: { _ isOdd }
+
+**Class Definitions**
+
+    class Point { x, y }
+       method + other
+          Point x: x + other x
+                y: y + other y
+    end
+
+**Type Annotations**
+
+Double-colon suffix is used for type annotations.
+
+    expression::Type
+
+    let variable::Type = value
+
+    class Foo { instanceVariable::Type }
+       method bar: argument::Type -> ReturnType
+          ...
+    end
 
 ## Notes
 
