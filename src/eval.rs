@@ -1373,3 +1373,19 @@ fn test_class_method2() {
         Ok(foo.make_integer(42))
     );
 }
+
+#[test]
+fn test_boolean_and() {
+    assert_eq!(eval_ok("True and: True").boolean(), true);
+    assert_eq!(eval_ok("False and: True").boolean(), false);
+    assert_eq!(eval_ok("True and: False").boolean(), false);
+    assert_eq!(eval_ok("False and: False").boolean(), false);
+}
+
+#[test]
+fn test_boolean_or() {
+    assert_eq!(eval_ok("True or: True").boolean(), true);
+    assert_eq!(eval_ok("False or: True").boolean(), true);
+    assert_eq!(eval_ok("True or: False").boolean(), true);
+    assert_eq!(eval_ok("False or: False").boolean(), false);
+}
