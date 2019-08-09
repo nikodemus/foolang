@@ -1,0 +1,66 @@
+class REPL
+
+  {
+      _input
+      _output
+      _compiler
+      _atEof
+      _hasError
+      _value
+  }
+
+  class method run: system
+     (self new: system) run
+
+  class method new: system
+     self _input: system input
+          _output: system output
+          _compiler: Compiler new
+          _atEof: False
+          _hasError: False
+          _value: False
+
+  method run
+     output println: 'Foolang 0.2.0'
+     { _atEof } whileFalse: { self readEvalPrint }
+
+  method readEvalPrint
+     { self prompt read; eval; print }
+     onError: { |error| _output println: error }
+
+  method prompt
+     _output print: '> '
+     _output flush
+
+  method read
+     let source = ""
+     {
+         let line = { _input readline } onError: { False }
+         _eof = line is: False
+         _eof ifFalse: {
+           source = source append: line
+           self _tryParse: source
+         }
+     }
+     whileFalse
+
+  method eval
+     _atEof ifFalse: { _value = compiler evaluate }
+
+  method print
+     _atEof ifFalse: { _output println: _value toString }
+
+  method setError: message
+     _output println: message
+     _hasError = True
+
+  method _tryParse: source
+     _compiler parse: source onEof: { return False }
+    True
+
+end
+
+class Main { system }
+  method run
+     REPL run: system
+end
