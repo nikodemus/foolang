@@ -39,7 +39,7 @@ impl fmt::Display for Unwind {
             Unwind::Exception(error, location) => {
                 write!(f, "ERROR: {}\n{}", error.what(), location.context())
             }
-            Unwind::ReturnFrom(frame, object) => write!(f, "#<Return {}>", object),
+            Unwind::ReturnFrom(_, object) => write!(f, "#<Return {}>", object),
         }
     }
 }
