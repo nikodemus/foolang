@@ -848,7 +848,7 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         }
         if next == Token::WORD && parser.slice() == "class" {
             if parser.next_token()? == Token::WORD && parser.slice() == "method" {
-                parse_method(parser, &mut class, MethodKind::Class);
+                parse_method(parser, &mut class, MethodKind::Class)?;
                 continue;
             } else {
                 return parser.error("Expected class method");
