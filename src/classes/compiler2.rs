@@ -19,7 +19,7 @@ fn class_compiler_new(_receiver: &Object, _args: &[Object], foo: &Foolang) -> Ev
     Ok(foo.make_compiler())
 }
 
-fn compiler_parse(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn compiler_parse(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
     // FIXME: This will panic if it doesn't get a string.
     let compiler = receiver.compiler();
     let source = args[0].string_as_str();
@@ -29,7 +29,7 @@ fn compiler_parse(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     Ok(receiver.clone())
 }
 
-fn compiler_evaluate(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn compiler_evaluate(receiver: &Object, _args: &[Object], _foo: &Foolang) -> Eval {
     let compiler = receiver.compiler();
     let expr = compiler.expr.borrow();
     // This is the part that constrains the effects inside the compiler.
