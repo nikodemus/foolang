@@ -25,6 +25,29 @@ fn hello_x() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
+fn test_exit_zero() -> Result<(), Box<std::error::Error>> {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/exit_zero.foo");
+    cmd.assert().success().stdout("");
+    Ok(())
+}
+
+#[test]
+fn test_exit_42() -> Result<(), Box<std::error::Error>> {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/exit_42.foo");
+    cmd.assert().failure().code(42).stdout("");
+    Ok(())
+}
+
+#[test]
+fn test_abort() -> Result<(), Box<std::error::Error>> {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/abort.foo");
+    cmd.assert().failure().stdout("");
+    Ok(())
+}
+
 fn old_stdout_print_no_flush() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("--eval").arg("System stdout print: 'hello world!'; newline; print: 'boing!'");
