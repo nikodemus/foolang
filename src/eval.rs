@@ -185,6 +185,7 @@ impl<'a> Env<'a> {
             Block(_, params, body) => self.eval_block(params, body),
             ClassDefinition(definition) => self.eval_class_definition(definition),
             Const(_, literal) => self.eval_literal(literal),
+            Eq(_, left, right) => self.eval_eq(left, right),
             Global(global) => self.eval_global(global),
             Return(ret) => self.eval_return(ret),
             Send(_, selector, receiver, args) => self.eval_send(selector, receiver, args),
@@ -249,6 +250,14 @@ impl<'a> Env<'a> {
         let class = self.foo.make_class(definition)?;
         self.foo.globals.borrow_mut().insert(name.to_string(), class.clone());
         Ok(class)
+    }
+
+    fn eval_eq(&self, left: &Expr, right: &Expr) -> Eval {
+        if self.eval(left) == self.eval(right) {
+            Ok(self.foo.make_boolean(true))
+        } else {
+            Ok(self.foo.make_boolean(false))
+        }
     }
 
     fn eval_global(&self, global: &Global) -> Eval {
@@ -1388,4 +1397,11 @@ fn test_boolean_or() {
     assert_eq!(eval_ok("False or: True").boolean(), true);
     assert_eq!(eval_ok("True or: False").boolean(), true);
     assert_eq!(eval_ok("False or: False").boolean(), false);
+}
+
+#[test]
+fn test_is() {
+    assert_eq!(eval_ok("42 is True").boolean(), false);
+    assert_eq!(eval_ok("42 is 42.0").boolean(), false);
+    assert_eq!(eval_ok("42 is 42").boolean(), true);
 }

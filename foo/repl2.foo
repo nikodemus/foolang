@@ -36,7 +36,7 @@ class REPL
      let source = ""
      {
          let line = _input readline
-         _eof = line is: False
+         _eof = line is False
          _eof ifFalse: {
            source = source append: line
            self _tryParse: source

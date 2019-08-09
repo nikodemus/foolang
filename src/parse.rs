@@ -169,6 +169,7 @@ pub enum Expr {
     Block(Span, Vec<Var>, Box<Expr>),
     ClassDefinition(ClassDefinition),
     Const(Span, Literal),
+    Eq(Span, Box<Expr>, Box<Expr>),
     Global(Global),
     Send(Span, String, Box<Expr>, Vec<Expr>),
     Seq(Vec<Expr>),
@@ -207,6 +208,7 @@ impl Expr {
             Block(span, ..) => span,
             ClassDefinition(definition) => &definition.span,
             Const(span, ..) => span,
+            Eq(span, ..) => span,
             Global(global) => &global.span,
             Send(span, ..) => span,
             Return(ret) => &ret.span,
@@ -487,6 +489,7 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, "return", return_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ",", invalid_prefix, sequence_suffix, precedence_1);
     Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_2);
+    Syntax::def(t, "is", invalid_prefix, is_suffix, precedence_10);
     Syntax::def(t, "::", invalid_prefix, typecheck_suffix, precedence_1000);
 
     Syntax::def(t, "(", paren_prefix, invalid_suffix, precedence_0);
@@ -518,6 +521,10 @@ fn precedence_invalid(_: &Parser, _: Span) -> Result<usize, Unwind> {
 
 fn precedence_1000(_: &Parser, _: Span) -> Result<usize, Unwind> {
     Ok(1000)
+}
+
+fn precedence_10(_: &Parser, _: Span) -> Result<usize, Unwind> {
+    Ok(10)
 }
 
 fn precedence_5(_: &Parser, _: Span) -> Result<usize, Unwind> {
@@ -607,6 +614,12 @@ fn identifier_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Resu
             Ok(Expr::Send(parser.span(), parser.tokenstring(), Box::new(left), vec![]))
         }
     }
+}
+
+fn is_suffix(parser: &Parser, left: Expr, pre: PrecedenceFunction) -> Result<Expr, Unwind> {
+    let span = parser.span();
+    let right = parser.parse_expr(pre(parser, span.clone())?)?;
+    Ok(Expr::Eq(span, Box::new(left), Box::new(right)))
 }
 
 fn keyword_suffix(
