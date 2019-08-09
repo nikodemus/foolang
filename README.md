@@ -157,8 +157,12 @@ Blocks can take arguments:
 
 Underscore can be used as an implicit argument in blocks:
 
-    -- Odd numbers from an arry
+    -- Odd numbers from an array
+    array select: { :elt | elt isOdd }
+
+    -- Same using the implicit argument
     array select: { _ isOdd }
+    
 
 **Class Definitions**
 
@@ -166,7 +170,13 @@ Underscore can be used as an implicit argument in blocks:
        method + other
           Point x: x + other x
                 y: y + other y
+       method display
+          "#<Point {x,y}>"
     end
+
+    let p0 = Point x: 1 :y 2     --> #<Point 1,2>
+    let p1 = Point x: 100 y: 200 --> #<Point 100,200>
+    let p2 = p0 + p1             --> #<Point 101,202>
 
 **Type Annotations**
 
@@ -180,6 +190,22 @@ Double-colon suffix is used for type annotations.
        method bar: argument::Type -> ReturnType
           ...
     end
+
+**Arrays**
+
+Are constructed using square brackets
+
+    let array = [1, 2, 3]
+
+Can be specialized using the type annotation syntax
+
+    let byteArray = [1, 2, 3] :: [u8]
+
+**Dictionaries**
+
+Are constructed using braces
+
+    let dict = {1: "one", 2: "two"}
 
 ## Notes
 
