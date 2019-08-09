@@ -91,6 +91,10 @@ impl<'a> TokenStream<'a> {
         self.error_at(self.span(), problem)
     }
 
+    pub fn eof_error<T>(&self, problem: &'static str) -> Result<T, Unwind> {
+        Unwind::eof_error_at(self.span(), problem)
+    }
+
     fn result(&mut self, token: Token, span: Span) -> Result<Token, Unwind> {
         self.span = span;
         Ok(token)

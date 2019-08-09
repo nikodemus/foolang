@@ -1,6 +1,7 @@
 use crate::eval::Env;
 use crate::objects2::{Eval, Foolang, Object, Source, Vtable};
 use crate::parse::Parser;
+use crate::unwind::{Error, Unwind};
 
 pub fn class_vtable() -> Vtable {
     let mut vt = Vtable::new("class Compiler");
@@ -10,6 +11,7 @@ pub fn class_vtable() -> Vtable {
 
 pub fn instance_vtable() -> Vtable {
     let mut vt = Vtable::new("Compiler");
+    vt.def("parse:onEof:", compiler_parse_on_eof);
     vt.def("parse:", compiler_parse);
     vt.def("evaluate", compiler_evaluate);
     vt
@@ -19,14 +21,29 @@ fn class_compiler_new(_receiver: &Object, _args: &[Object], foo: &Foolang) -> Ev
     Ok(foo.make_compiler())
 }
 
-fn compiler_parse(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
-    // FIXME: This will panic if it doesn't get a string.
+fn parse_aux(receiver: &Object, source: &Object, handler: Option<&Object>, foo: &Foolang) -> Eval {
+    let mut parser = Parser::new(source.string_as_str());
     let compiler = receiver.compiler();
-    let source = args[0].string_as_str();
+    let expr = match parser.parse() {
+        Ok(expr) => expr,
+        Err(Unwind::Exception(Error::EofError(ref e), ..)) if handler.is_some() => {
+            return handler.unwrap().send("value:", &[foo.into_string(e.what())], foo)
+        }
+        Err(unwind) => return Err(unwind),
+    };
     compiler.source.replace(source.to_string());
-    let mut parser = Parser::new(&source);
-    compiler.expr.replace(parser.parse()?);
+    compiler.expr.replace(expr);
     Ok(receiver.clone())
+}
+
+fn compiler_parse_on_eof(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    // FIXME: This will panic if it doesn't get a string.
+    parse_aux(receiver, &args[0], Some(&args[1]), foo)
+}
+
+fn compiler_parse(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    // FIXME: This will panic if it doesn't get a string.
+    parse_aux(receiver, &args[0], None, foo)
 }
 
 fn compiler_evaluate(receiver: &Object, _args: &[Object], _foo: &Foolang) -> Eval {

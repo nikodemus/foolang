@@ -14,6 +14,7 @@ pub enum Unwind {
 pub enum Error {
     SimpleError(SimpleError),
     TypeError(TypeError),
+    EofError(SimpleError),
 }
 
 #[derive(PartialEq, Debug)]
@@ -64,6 +65,16 @@ impl Unwind {
             Location::new(span),
         ))
     }
+
+    pub fn eof_error_at<T>(span: Span, what: &'static str) -> Result<T, Unwind> {
+        Err(Unwind::Exception(
+            Error::EofError(SimpleError {
+                what,
+            }),
+            Location::new(span),
+        ))
+    }
+
     pub fn error_at<T>(span: Span, what: &'static str) -> Result<T, Unwind> {
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
@@ -72,6 +83,7 @@ impl Unwind {
             Location::new(span),
         ))
     }
+
     pub fn return_from<T>(frame: Frame, value: Object) -> Result<T, Unwind> {
         Err(Unwind::ReturnFrom(frame, value))
     }
@@ -93,18 +105,19 @@ impl Error {
         match self {
             Error::SimpleError(e) => e.what(),
             Error::TypeError(e) => e.what(),
+            Error::EofError(e) => e.what(),
         }
     }
 }
 
 impl SimpleError {
-    fn what(&self) -> String {
+    pub fn what(&self) -> String {
         self.what.to_string()
     }
 }
 
 impl TypeError {
-    fn what(&self) -> String {
+    pub fn what(&self) -> String {
         format!(
             "{} expected, got: {} {}",
             self.expected,

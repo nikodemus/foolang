@@ -1348,6 +1348,20 @@ fn test_compiler2() {
 }
 
 #[test]
+fn test_parse_on_eof() {
+    assert_eq!(
+        eval_ok(
+            r#"
+            let compiler = Compiler new
+            compiler parse: "41 +" onEof: { |err| err }
+         "#
+        )
+        .string_as_str(),
+        "Unexpected EOF in value position"
+    );
+}
+
+#[test]
 fn test_class_method1() {
     let (class, foo) = eval_obj(
         "class Foo { a }

@@ -415,6 +415,10 @@ impl<'a> Parser<'a> {
         self.state.borrow().tokenstream.tokenstring()
     }
 
+    pub fn eof_error<T>(&self, problem: &'static str) -> Result<T, Unwind> {
+        self.state.borrow().tokenstream.eof_error(problem)
+    }
+
     pub fn error<T>(&self, problem: &'static str) -> Result<T, Unwind> {
         self.state.borrow().tokenstream.error(problem)
     }
@@ -567,11 +571,11 @@ fn assign_suffix(
 }
 
 fn eof_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    parser.error("Unexexted EOF in value position")
+    parser.eof_error("Unexpected EOF in value position")
 }
 
 fn eof_suffix(parser: &Parser, _: Expr, _: PrecedenceFunction) -> Result<Expr, Unwind> {
-    parser.error("Unexexted EOF in suffix position")
+    parser.eof_error("Unexpected EOF in suffix position")
 }
 
 fn false_prefix(parser: &Parser) -> Result<Expr, Unwind> {
