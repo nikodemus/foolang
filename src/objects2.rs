@@ -551,77 +551,77 @@ impl Object {
     pub fn boolean(&self) -> bool {
         match self.datum {
             Datum::Boolean(value) => value,
-            _ => panic!("BUG: {} is not a Boolean", self),
+            _ => panic!("BUG: {:?} is not a Boolean", self),
         }
     }
 
     pub fn class(&self) -> Rc<Class> {
         match &self.datum {
             Datum::Class(class) => Rc::clone(class),
-            _ => panic!("BUG: {} is not a Class", self),
+            _ => panic!("BUG: {:?} is not a Class", self),
         }
     }
 
     pub fn closure_ref(&self) -> &Closure {
         match &self.datum {
             Datum::Closure(c) => c.borrow(),
-            _ => panic!("BUG: {} is not a Closure", self),
+            _ => panic!("BUG: {:?} is not a Closure", self),
         }
     }
 
     pub fn compiler(&self) -> Rc<Compiler> {
         match &self.datum {
             Datum::Compiler(compiler) => Rc::clone(compiler),
-            _ => panic!("BUG: {} is not a Compiler", self),
+            _ => panic!("BUG: {:?} is not a Compiler", self),
         }
     }
 
     pub fn float(&self) -> f64 {
         match self.datum {
             Datum::Float(f) => f,
-            _ => panic!("BUG: {} is not a Float", self),
+            _ => panic!("BUG: {:?} is not a Float", self),
         }
     }
 
     pub fn input(&self) -> Rc<Input> {
         match &self.datum {
             Datum::Input(input) => Rc::clone(input),
-            _ => panic!("BUG: {} is not an Input", self),
+            _ => panic!("BUG: {:?} is not an Input", self),
         }
     }
 
     pub fn instance(&self) -> Rc<Instance> {
         match &self.datum {
             Datum::Instance(instance) => Rc::clone(instance),
-            _ => panic!("BUG: {} is not an instance", self),
+            _ => panic!("BUG: {:?} is not an instance", self),
         }
     }
 
     pub fn integer(&self) -> i64 {
         match self.datum {
             Datum::Integer(i) => i,
-            _ => panic!("BUG: {} is not an Integer", self),
+            _ => panic!("BUG: {:?} is not an Integer", self),
         }
     }
 
     pub fn output(&self) -> Rc<Output> {
         match &self.datum {
             Datum::Output(output) => Rc::clone(output),
-            _ => panic!("BUG: {} is not an Output", self),
+            _ => panic!("BUG: {:?} is not an Output", self),
         }
     }
 
     pub fn string(&self) -> Rc<String> {
         match &self.datum {
             Datum::String(s) => Rc::clone(s),
-            _ => panic!("BUG: {} is not a String", self),
+            _ => panic!("BUG: {:?} is not a String", self),
         }
     }
 
     pub fn string_as_str(&self) -> &str {
         match &self.datum {
             Datum::String(s) => s.as_str(),
-            _ => panic!("BUG: {} is not a String", self),
+            _ => panic!("BUG: {:?} is not a String", self),
         }
     }
 
