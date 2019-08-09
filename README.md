@@ -105,7 +105,7 @@ line comment that starts with a greater-than sign:
 
     x = y + z --> sum of x and y
 
-**Literals***
+**Literals**
 
 Numbers are quite conventional, with _ as allowed readability separators.
 Literal floats are doubles, unless written in the exponential format using
