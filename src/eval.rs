@@ -1419,3 +1419,8 @@ fn test_is() {
     assert_eq!(eval_ok("42 is 42.0").boolean(), false);
     assert_eq!(eval_ok("42 is 42").boolean(), true);
 }
+
+#[test]
+fn test_closure_on_error() {
+    assert_eq!(eval_ok("{ undefined } onError: { |err| err }").string_as_str(), "Unbound variable");
+}

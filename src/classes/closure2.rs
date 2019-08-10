@@ -1,9 +1,11 @@
 use crate::eval;
 use crate::objects2::{Eval, Foolang, Object, Vtable};
+use crate::unwind::Unwind;
 
 pub fn vtable() -> Vtable {
     let mut vt = Vtable::new("Closure");
     // FUNDAMENTAL
+    vt.def("onError:", closure_on_error);
     vt.def("value", closure_apply);
     vt.def("value:", closure_apply);
     vt.def("value:value:", closure_apply);
@@ -19,6 +21,15 @@ pub fn vtable() -> Vtable {
 
 fn closure_apply(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     eval::apply(None, receiver.closure_ref(), args, foo)
+}
+
+fn closure_on_error(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let res = eval::apply(None, receiver.closure_ref(), args, foo);
+    if let Err(Unwind::Exception(error, _)) = res {
+        args[0].send("value:", &[foo.into_string(error.what())], foo)
+    } else {
+        res
+    }
 }
 
 fn closure_while_true(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
