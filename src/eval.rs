@@ -389,11 +389,17 @@ pub fn apply(
         args.insert(arg.name.clone(), binding);
     }
     let env = Env::from_parts(foo, args, closure.env(), receiver.map(|x| x.clone()));
-    match env.eval(&closure.body) {
-        Err(Unwind::ReturnFrom(ref frame, ref value)) if frame == &env.frame => Ok(value.clone()),
-        Ok(value) => Ok(value),
-        Err(unwind) => Err(unwind),
+    let result = match env.eval(&closure.body) {
+        Err(Unwind::ReturnFrom(ref frame, ref value)) if frame == &env.frame => value.clone(),
+        Ok(value) => value,
+        Err(unwind) => return Err(unwind),
+    };
+    if let Some(vtable) = &closure.return_vtable {
+        if &result.vtable != vtable {
+            return Unwind::type_error(result, vtable.name.clone()).source(&closure.body.span());
+        }
     }
+    Ok(result)
 }
 
 pub fn eval_all(foo: &Foolang, source: &str) -> Eval {
@@ -1126,6 +1132,39 @@ fn test_typecheck8() {
                         "003             method zot: x::Integer\n",
                         "                            ^ Integer expected, got: Float 1.0\n",
                         "004                 x\n"
+                    )
+                    .to_string()
+                )
+            }
+        )
+    );
+}
+
+#[test]
+fn test_typecheck9() {
+    let (exception, foo) = eval_exception(
+        "class Foo {}
+            defaultConstructor foo
+            method zot: x -> Integer
+                x + 1
+         end
+         Foo foo zot: 1.0",
+    );
+    assert_eq!(
+        exception,
+        Unwind::Exception(
+            Error::TypeError(TypeError {
+                value: foo.make_float(2.0),
+                expected: "Integer".to_string()
+            }),
+            Location {
+                span: Some(101..102),
+                context: Some(
+                    concat!(
+                        "003             method zot: x -> Integer\n",
+                        "004                 x + 1\n",
+                        "                    ^ Integer expected, got: Float 2.0\n",
+                        "005          end\n",
                     )
                     .to_string()
                 )

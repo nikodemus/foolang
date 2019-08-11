@@ -141,6 +141,7 @@ pub struct Closure {
     env: Option<Frame>,
     pub params: Vec<Arg>,
     pub body: Expr,
+    pub return_vtable: Option<Rc<Vtable>>,
 }
 
 impl Closure {
@@ -432,13 +433,13 @@ impl Foolang {
         for method in &classdef.class_methods {
             class_vtable.add_method(
                 &method.selector,
-                self.make_method_function(&method.parameters, &method.body),
+                self.make_method_function(&method.parameters, &method.body, &method.return_type),
             );
         }
         for method in &classdef.instance_methods {
             instance_vtable.add_method(
                 &method.selector,
-                self.make_method_function(&method.parameters, &method.body),
+                self.make_method_function(&method.parameters, &method.body, &method.return_type),
             );
         }
         Ok(Object {
@@ -456,6 +457,7 @@ impl Foolang {
                 env: Some(frame),
                 params,
                 body,
+                return_vtable: None,
             })),
         }
     }
@@ -496,7 +498,12 @@ impl Foolang {
         }
     }
 
-    pub fn make_method_function(&self, params: &[Var], body: &Expr) -> Closure {
+    pub fn make_method_function(
+        &self,
+        params: &[Var],
+        body: &Expr,
+        return_type: &Option<String>,
+    ) -> Closure {
         let mut args = vec![];
         for param in params {
             let vtable = match &param.typename {
@@ -516,6 +523,13 @@ impl Foolang {
             env: None,
             params: args,
             body: body.to_owned(),
+            return_vtable: match return_type {
+                None => None,
+                Some(tn) => Some(
+                    // FIXME: Wrong span
+                    self.find_class(tn, body.span()).unwrap().class().instance_vtable.clone(),
+                ),
+            },
         }
     }
 

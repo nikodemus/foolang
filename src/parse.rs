@@ -110,15 +110,23 @@ pub struct MethodDefinition {
     pub selector: String,
     pub parameters: Vec<Var>,
     pub body: Box<Expr>,
+    pub return_type: Option<String>,
 }
 
 impl MethodDefinition {
-    fn new(span: Span, selector: String, parameters: Vec<Var>, body: Expr) -> MethodDefinition {
+    fn new(
+        span: Span,
+        selector: String,
+        parameters: Vec<Var>,
+        body: Expr,
+        return_type: Option<String>,
+    ) -> MethodDefinition {
         MethodDefinition {
             span,
             selector,
             parameters,
             body: Box::new(body),
+            return_type,
         }
     }
     fn shift_span(&mut self, n: usize) {
@@ -893,7 +901,6 @@ fn parse_method(
     kind: MethodKind,
 ) -> Result<(), Unwind> {
     assert_eq!(parser.slice(), "method");
-    // FIXME: span is the span of the method-marker
     let span = parser.span();
     let mut selector = String::new();
     let mut parameters = Vec::new();
@@ -929,10 +936,17 @@ fn parse_method(
             break;
         }
     }
+    let (token, span2) = parser.lookahead()?;
+    let rtype = if token == Token::SIGIL && parser.slice_at(span2) == "->" {
+        parser.next_token()?;
+        Some(parse_type_designator(parser)?)
+    } else {
+        None
+    };
     // FIXME: This is the place where I could inform parser about instance
     // variables.
     let body = parser.parse_seq()?;
-    class.add_method(kind, MethodDefinition::new(span, selector, parameters, body));
+    class.add_method(kind, MethodDefinition::new(span, selector, parameters, body, rtype));
     Ok(())
 }
 
@@ -955,17 +969,21 @@ fn sequence_suffix(
     Ok(Expr::Seq(exprs))
 }
 
+fn parse_type_designator(parser: &Parser) -> Result<String, Unwind> {
+    if let Token::WORD = parser.next_token()? {
+        Ok(parser.tokenstring())
+    } else {
+        parser.error("Invalid type designator")
+    }
+}
+
 fn parse_var(parser: &Parser) -> Result<Var, Unwind> {
     let name = parser.tokenstring();
     let namespan = parser.span();
     let (token, span) = parser.lookahead()?;
     if token == Token::SIGIL && parser.slice_at(span) == "::" {
         parser.next_token()?;
-        if let Token::WORD = parser.next_token()? {
-            Ok(Var::typed(namespan, name, parser.tokenstring()))
-        } else {
-            parser.error("Invalid type designator")
-        }
+        Ok(Var::typed(namespan, name, parse_type_designator(parser)?))
     } else {
         Ok(Var::untyped(namespan, name))
     }
@@ -1322,6 +1340,7 @@ mod expr_utils {
             // FIXME: span
             parameters.iter().map(|name| Var::untyped(0..0, name.to_string())).collect(),
             body,
+            None,
         )
     }
 
