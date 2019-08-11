@@ -83,7 +83,7 @@ fn test_bad_class() -> Result<(), Box<std::error::Error>> {
 #[test]
 fn repl() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/repl2.foo");
+    cmd.arg("foo/repl.foo");
     cmd.with_stdin()
         .buffer(
             r#"class Point { x, y }

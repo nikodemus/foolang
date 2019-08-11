@@ -1,40 +1,59 @@
-@class REPL [input output compiler text value eof]
+class REPL
 
-@class-method REPL run
-    self new run
+  {
+      _input
+      _output
+      _compiler
+      _atEof
+      _value
+  }
 
-@class-method REPL new
-    ^self createInstance: [
-      System stdin,
-      System stdout,
-      Foolang compiler,
-      String new,
-      false,
-      false,
-    ]
+  class method run: system
+     (self new: system) run
 
-@method REPL prompt
-    output print: '> '; flush
+  class method new: system
+     self _input: system input
+          _output: system output
+          _compiler: Compiler new
+          _atEof: False
+          _value: False
 
-@method REPL read
-    {
-        |line|
-        line := input readline,
-        eof := line == false,
-        eof ifFalse: {
-          text append: line,
-          compiler tryParse: text
-        }
-    }
-    repeatWhileFalse,
-    text clear
+  method run
+     _output println: "Foolang 0.2.0",
+     { _atEof } whileFalse: { self readEvalPrint }
 
-@method REPL eval
-    eof ifFalse: { value := compiler evaluate }
+  method readEvalPrint
+     { self prompt, self read, self eval, self print } onError:
+     { |error context| _output println: error, _output println: context }
 
-@method REPL print
-    eof ifFalse: { output print: value toString; newline }
+  method prompt
+     _output print: "> "
+     _output flush
 
-@method REPL run
-    output print: 'Foolang 0.1.0'; newline,
-   { self prompt; read; eval; print } until: { eof == true }
+  method read
+     let source = ""
+     {
+         let line = _input readline
+         _atEof = line is False
+         _atEof ifFalse: {
+           source = source append: line
+           self _tryParse: source
+         }
+     } whileFalse
+
+  method eval
+     _atEof ifFalse: { _value = _compiler evaluate }
+
+  method print
+     _atEof ifFalse: { _output println: _value toString, _output flush }
+
+  method _tryParse: source
+     _compiler parse: source onEof: { return False },
+    True
+
+end
+
+class Main { system }
+  method run
+     REPL run: system
+end
