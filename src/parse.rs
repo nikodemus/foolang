@@ -593,7 +593,7 @@ fn precedence_10(_: &Parser, _: Span) -> Result<usize, Unwind> {
 }
 
 fn precedence_9(_: &Parser, _: Span) -> Result<usize, Unwind> {
-    Ok(5)
+    Ok(9)
 }
 
 fn precedence_3(_: &Parser, _: Span) -> Result<usize, Unwind> {
