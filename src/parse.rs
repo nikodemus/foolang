@@ -4,6 +4,9 @@ use std::collections::{HashMap, VecDeque};
 use std::convert::Into;
 use std::str::FromStr;
 
+#[cfg(test)]
+use pretty_assertions::assert_eq;
+
 use crate::tokenstream::{Span, Token, TokenStream};
 use crate::unwind::Unwind;
 
@@ -468,7 +471,12 @@ impl<'a> Parser<'a> {
         }
         while precedence < self.next_precedence()? {
             if debug {
-                println!("  parse_expr({}) < {}", precedence, self.next_precedence()?);
+                println!(
+                    "  parse_expr({}) YES < {} for {:?}",
+                    precedence,
+                    self.next_precedence()?,
+                    self.lookahead()?.0
+                );
             }
             expr = self.parse_suffix(expr)?;
             if debug {
@@ -658,21 +666,21 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, "method", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "defaultConstructor", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "end", invalid_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "return", return_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_2);
+    Syntax::def(t, "return", return_prefix, invalid_suffix, precedence_2);
     Syntax::def(t, ",", invalid_prefix, sequence_suffix, precedence_1);
     Syntax::def(t, ";", invalid_prefix, cascade_suffix, precedence_2);
     Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_3);
     Syntax::def(t, "is", invalid_prefix, is_suffix, precedence_10);
     Syntax::def(t, "::", invalid_prefix, typecheck_suffix, precedence_1000);
 
-    Syntax::def(t, "(", paren_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "(", paren_prefix, invalid_suffix, precedence_2);
     Syntax::def(t, ")", invalid_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "{", block_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "{", block_prefix, invalid_suffix, precedence_2);
     Syntax::def(t, "}", invalid_prefix, invalid_suffix, precedence_0);
 
-    Syntax::def(t, "False", false_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "True", true_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "False", false_prefix, invalid_suffix, precedence_2);
+    Syntax::def(t, "True", true_prefix, invalid_suffix, precedence_2);
 
     Syntax::op(t, "*", false, true, 50);
     Syntax::op(t, "/", false, true, 40);
@@ -1144,9 +1152,12 @@ fn ignore_suffix(_parser: &Parser, left: Expr, _pre: PrecedenceFunction) -> Resu
     Ok(left)
 }
 fn newline_suffix(parser: &Parser, left: Expr, pre: PrecedenceFunction) -> Result<Expr, Unwind> {
-    // Trailing newlines check precedence of the following expression
     if SEQ_PRECEDENCE < parser.next_precedence()? {
-        sequence_suffix(parser, left, pre)
+        if let Token::KEYWORD = parser.lookahead()?.0 {
+            parser.parse_suffix(left)
+        } else {
+            sequence_suffix(parser, left, pre)
+        }
     } else {
         Ok(left)
     }
@@ -1308,6 +1319,10 @@ mod expr_utils {
 
     pub fn bind_typed(name: &str, typename: &str, value: Expr, body: Expr) -> Expr {
         Expr::Bind(name.to_string(), Some(typename.to_string()), Box::new(value), Box::new(body))
+    }
+
+    pub fn boolean(span: Span, value: bool) -> Expr {
+        Expr::Const(span, Literal::Boolean(value))
     }
 
     pub fn class(span: Span, name: &str, instance_variables: Vec<&str>) -> Expr {
@@ -1520,7 +1535,7 @@ fn parse_block_args() {
 }
 
 #[test]
-fn parse_class() {
+fn parse_class1() {
     assert_eq!(parse_str("class Point { x, y } end"), Ok(class(0..5, "Point", vec!["x", "y"])));
 }
 
@@ -1550,6 +1565,95 @@ fn parse_method2() {
                  end"
         ),
         Ok(class)
+    );
+}
+
+#[test]
+fn test_parse_newline_bug1() {
+    assert_eq!(
+        parse_str(
+            r#"
+            (
+             1
+             {2}
+            )"#
+        ),
+        Ok(seq(vec![int(28..29, 1), block(43..46, vec![], int(44..45, 2))]))
+    );
+}
+
+#[test]
+fn test_parse_newline_bug2() {
+    assert_eq!(
+        parse_str(
+            r#"
+            (
+             1
+             (2)
+            )"#
+        ),
+        Ok(seq(vec![int(28..29, 1), int(44..45, 2)]))
+    );
+}
+
+#[test]
+fn test_parse_newline_bug3() {
+    assert_eq!(
+        parse_str(
+            r#"
+            (
+             1
+             return 2
+            )"#
+        ),
+        Ok(seq(vec![int(28..29, 1), Return::expr(43..49, int(50..51, 2))]))
+    );
+}
+
+#[test]
+fn test_parse_newline_bug4() {
+    assert_eq!(
+        parse_str(
+            r#"
+            (
+             1
+             let x = 2, x
+            )"#
+        ),
+        Ok(seq(vec![int(28..29, 1), bind("x", int(51..52, 2), var(54..55, "x"))]))
+    );
+}
+
+#[test]
+fn test_parse_newline_bug5() {
+    assert_eq!(
+        parse_str(
+            r#"
+            (
+             1
+             True
+             False
+            )"#
+        ),
+        Ok(seq(vec![int(28..29, 1), boolean(43..47, true), boolean(61..66, false)]))
+    );
+}
+
+#[test]
+fn test_parse_newline_bug6() {
+    assert_eq!(
+        parse_str(
+            r#"
+            (
+             1
+             foo: 2
+            )"#
+        ),
+        Ok(int(28..29, 1).send(Message {
+            span: 43..49,
+            selector: "foo:".to_string(),
+            args: vec![int(48..49, 2)]
+        }))
     );
 }
 
@@ -1629,8 +1733,8 @@ fn parse_newlines1() {
 fn parse_newlines2() {
     assert!(parse_str(
         "let p0 = Point x: 1 y: 2
-     let p1 = Point x: 10 y: 100
-     p0 add: p1"
+         let p1 = Point x: 10 y: 100
+         p0 add: p1"
     )
     .is_ok());
 }

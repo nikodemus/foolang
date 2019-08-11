@@ -19,16 +19,20 @@ class REPL
           _value: False
 
   method run
-     _output println: "Foolang 0.2.0",
+     _output println: "Foolang 0.2.0"
      { _atEof } whileFalse: { self readEvalPrint }
 
   method readEvalPrint
-     { self prompt, self read, self eval, self print } onError:
-     { |error context| _output println: error, _output println: context }
+     { self prompt, self read, self eval, self print }
+     onError: { |error context|
+       _output println: error
+       _output println: context
+     }
 
   method prompt
      _output print: "> "
      _output flush
+     self
 
   method read
      let source = ""
@@ -45,10 +49,13 @@ class REPL
      _atEof ifFalse: { _value = _compiler evaluate }
 
   method print
-     _atEof ifFalse: { _output println: _value toString, _output flush }
+     _atEof ifFalse: {
+        _output println: _value toString
+        _output flush
+     }
 
   method _tryParse: source
-     _compiler parse: source onEof: { return False },
+     _compiler parse: source onEof: { return False }
     True
 
 end
