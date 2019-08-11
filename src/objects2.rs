@@ -388,6 +388,17 @@ impl Foolang {
         Ok(())
     }
 
+    pub fn find_maybe_vtable(
+        &self,
+        name: &Option<String>,
+        span: Span,
+    ) -> Result<Option<Rc<Vtable>>, Unwind> {
+        match name {
+            None => Ok(None),
+            Some(name) => Ok(Some(self.find_class(name, span)?.class().instance_vtable.clone())),
+        }
+    }
+
     pub fn find_class(&self, name: &str, span: Span) -> Eval {
         match self.globals.borrow().get(name) {
             None => return Unwind::error_at(span, "Unknown class"),
@@ -433,13 +444,13 @@ impl Foolang {
         for method in &classdef.class_methods {
             class_vtable.add_method(
                 &method.selector,
-                self.make_method_function(&method.parameters, &method.body, &method.return_type),
+                self.make_method_function(&method.parameters, &method.body, &method.return_type)?,
             );
         }
         for method in &classdef.instance_methods {
             instance_vtable.add_method(
                 &method.selector,
-                self.make_method_function(&method.parameters, &method.body, &method.return_type),
+                self.make_method_function(&method.parameters, &method.body, &method.return_type)?,
             );
         }
         Ok(Object {
@@ -450,16 +461,24 @@ impl Foolang {
         })
     }
 
-    pub fn make_closure(&self, frame: Frame, params: Vec<Arg>, body: Expr) -> Object {
-        Object {
+    pub fn make_closure(
+        &self,
+        frame: Frame,
+        params: Vec<Arg>,
+        body: Expr,
+        rtype: &Option<String>,
+    ) -> Eval {
+        let rtype = self.find_maybe_vtable(rtype, body.span())?;
+        Ok(Object {
             vtable: Rc::clone(&self.closure_vtable),
             datum: Datum::Closure(Rc::new(Closure {
                 env: Some(frame),
                 params,
                 body,
-                return_vtable: None,
+                // FIXME: questionable span
+                return_vtable: rtype,
             })),
-        }
+        })
     }
 
     pub fn make_compiler(&self) -> Object {
@@ -503,34 +522,19 @@ impl Foolang {
         params: &[Var],
         body: &Expr,
         return_type: &Option<String>,
-    ) -> Closure {
+    ) -> Result<Closure, Unwind> {
         let mut args = vec![];
         for param in params {
-            let vtable = match &param.typename {
-                None => None,
-                // FIXME: unwrap
-                Some(tn) => Some(
-                    self.find_class(tn, param.span.clone())
-                        .unwrap()
-                        .class()
-                        .instance_vtable
-                        .clone(),
-                ),
-            };
+            let vtable = self.find_maybe_vtable(&param.typename, param.span.clone())?;
             args.push(Arg::new(param.span.clone(), param.name.clone(), vtable));
         }
-        Closure {
+        Ok(Closure {
             env: None,
             params: args,
             body: body.to_owned(),
-            return_vtable: match return_type {
-                None => None,
-                Some(tn) => Some(
-                    // FIXME: Wrong span
-                    self.find_class(tn, body.span()).unwrap().class().instance_vtable.clone(),
-                ),
-            },
-        }
+            // FIXME: questionable span
+            return_vtable: self.find_maybe_vtable(&return_type, body.span())?,
+        })
     }
 
     pub fn make_output(&self, name: &str, output: Box<dyn Write>) -> Object {

@@ -182,7 +182,7 @@ impl<'a> Env<'a> {
         match expr {
             Assign(assign) => self.eval_assign(assign),
             Bind(name, typename, value, body) => self.eval_bind(name, typename, value, body),
-            Block(_, params, body) => self.eval_block(params, body),
+            Block(_, params, body, rtype) => self.eval_block(params, body, rtype),
             Cascade(receiver, chains) => self.eval_cascade(receiver, chains),
             ClassDefinition(definition) => self.eval_class_definition(definition),
             Const(_, literal) => self.eval_literal(literal),
@@ -228,7 +228,7 @@ impl<'a> Env<'a> {
         env.eval(body)
     }
 
-    fn eval_block(&self, params: &Vec<Var>, body: &Expr) -> Eval {
+    fn eval_block(&self, params: &Vec<Var>, body: &Expr, rtype: &Option<String>) -> Eval {
         let mut args = vec![];
         for p in params {
             let vt = match &p.typename {
@@ -239,7 +239,7 @@ impl<'a> Env<'a> {
             };
             args.push(Arg::new(p.span.clone(), p.name.clone(), vt));
         }
-        Ok(self.foo.make_closure(self.frame.clone(), args, body.clone()))
+        self.foo.make_closure(self.frame.clone(), args, body.clone(), rtype)
     }
 
     fn eval_cascade(&self, receiver: &Box<Expr>, chains: &Vec<Vec<Message>>) -> Eval {
@@ -1165,6 +1165,30 @@ fn test_typecheck9() {
                         "004                 x + 1\n",
                         "                    ^ Integer expected, got: Float 2.0\n",
                         "005          end\n",
+                    )
+                    .to_string()
+                )
+            }
+        )
+    );
+}
+
+#[test]
+fn test_typecheck10() {
+    let (exception, foo) = eval_exception("{|x| -> Integer x + 1} value: 1.0");
+    assert_eq!(
+        exception,
+        Unwind::Exception(
+            Error::TypeError(TypeError {
+                value: foo.make_float(2.0),
+                expected: "Integer".to_string()
+            }),
+            Location {
+                span: Some(16..17),
+                context: Some(
+                    concat!(
+                        "001 {|x| -> Integer x + 1} value: 1.0\n",
+                        "                    ^ Integer expected, got: Float 2.0\n",
                     )
                     .to_string()
                 )

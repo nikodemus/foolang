@@ -209,7 +209,7 @@ pub enum Literal {
 pub enum Expr {
     Assign(Assign),
     Bind(String, Option<String>, Box<Expr>, Box<Expr>),
-    Block(Span, Vec<Var>, Box<Expr>),
+    Block(Span, Vec<Var>, Box<Expr>, Option<String>),
     Cascade(Box<Expr>, Vec<Vec<Message>>),
     Chain(Box<Expr>, Vec<Message>),
     ClassDefinition(ClassDefinition),
@@ -311,7 +311,7 @@ impl Expr {
                 value.shift_span(n);
                 body.shift_span(n);
             }
-            Block(span, vars, body) => {
+            Block(span, vars, body, _rtype) => {
                 span.shift(n);
                 for var in vars {
                     var.span.shift(n);
@@ -1007,13 +1007,20 @@ fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             return parser.error("Not valid as block parameter");
         }
     }
+    let (token, span2) = parser.lookahead()?;
+    let rtype = if token == Token::SIGIL && parser.slice_at(span2) == "->" {
+        parser.next_token()?;
+        Some(parse_type_designator(parser)?)
+    } else {
+        None
+    };
     let body = parser.parse_seq()?;
     let end = parser.next_token()?;
     // FIXME: hardcoded {
     // Would be nice to be able to swap between [] and {} and
     // keep this function same,
     if end == Token::SIGIL && parser.slice() == "}" {
-        Ok(Expr::Block(start.start..parser.span().end, params, Box::new(body)))
+        Ok(Expr::Block(start.start..parser.span().end, params, Box::new(body), rtype))
     } else {
         parser.error("Expected } as block terminator")
     }
@@ -1272,7 +1279,7 @@ mod expr_utils {
             p = end + 2;
             blockparams.push(Var::untyped(start..end, param.to_string()))
         }
-        Expr::Block(span, blockparams, Box::new(body))
+        Expr::Block(span, blockparams, Box::new(body), None)
     }
 
     pub fn block_typed(span: Span, params: Vec<(&str, &str)>, body: Expr) -> Expr {
@@ -1284,7 +1291,7 @@ mod expr_utils {
             p = end + 4 + param.1.len();
             blockparams.push(Var::typed(start..end, param.0.to_string(), param.1.to_string()));
         }
-        Expr::Block(span, blockparams, Box::new(body))
+        Expr::Block(span, blockparams, Box::new(body), None)
     }
 
     pub fn binary(span: Span, name: &str, left: Expr, right: Expr) -> Expr {
