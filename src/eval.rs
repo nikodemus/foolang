@@ -1277,9 +1277,9 @@ fn test_closure_while_true_closure() {
     assert_eq!(
         eval_ok(
             "let x = 1
-                 {
+                 { x < 10 } whileTrue: {
                     x = x * 2
-                 } whileTrue: { x < 10 }"
+                 }"
         )
         .integer(),
         16
@@ -1291,9 +1291,9 @@ fn test_closure_while_false_closure() {
     assert_eq!(
         eval_ok(
             "let x = 1
-                 {
+                 { x > 10 } whileFalse: {
                     x = x * 2
-                 } whileFalse: { x > 10 }"
+                 }"
         )
         .integer(),
         16

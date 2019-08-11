@@ -47,8 +47,8 @@ fn closure_while_true_closure(receiver: &Object, args: &[Object], foo: &Foolang)
     // FIXME: Should initialize to nil
     let mut r = foo.make_boolean(false);
     loop {
-        if eval::apply(None, args[0].closure_ref(), &[], foo)? == t {
-            r = eval::apply(None, receiver.closure_ref(), &[], foo)?;
+        if eval::apply(None, receiver.closure_ref(), &[], foo)? == t {
+            r = eval::apply(None, args[0].closure_ref(), &[], foo)?
         } else {
             return Ok(r);
         }
@@ -70,8 +70,8 @@ fn closure_while_false_closure(receiver: &Object, args: &[Object], foo: &Foolang
     // FIXME: Should initialize to nil
     let mut r = foo.make_boolean(false);
     loop {
-        if eval::apply(None, args[0].closure_ref(), &[], foo)? == f {
-            r = eval::apply(None, receiver.closure_ref(), &[], foo)?;
+        if eval::apply(None, receiver.closure_ref(), &[], foo)? == f {
+            r = eval::apply(None, args[0].closure_ref(), &[], foo)?;
         } else {
             return Ok(r);
         }
