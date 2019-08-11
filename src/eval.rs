@@ -7,7 +7,7 @@ use crate::objects2::{
     read_instance_variable, write_instance_variable, Arg, Closure, Eval, Foolang, Object, Source,
     Vtable,
 };
-use crate::parse::{Assign, ClassDefinition, Expr, Global, Literal, Parser, Return, Var};
+use crate::parse::{Assign, ClassDefinition, Expr, Global, Literal, Message, Parser, Return, Var};
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
 
@@ -183,12 +183,13 @@ impl<'a> Env<'a> {
             Assign(assign) => self.eval_assign(assign),
             Bind(name, typename, value, body) => self.eval_bind(name, typename, value, body),
             Block(_, params, body) => self.eval_block(params, body),
+            Cascade(receiver, chains) => self.eval_cascade(receiver, chains),
             ClassDefinition(definition) => self.eval_class_definition(definition),
             Const(_, literal) => self.eval_literal(literal),
             Eq(_, left, right) => self.eval_eq(left, right),
             Global(global) => self.eval_global(global),
             Return(ret) => self.eval_return(ret),
-            Send(_, selector, receiver, args) => self.eval_send(selector, receiver, args),
+            Chain(receiver, messages) => self.eval_chain(receiver, messages),
             Seq(exprs) => self.eval_seq(exprs),
             Typecheck(_, expr, typename) => self.eval_typecheck(expr, typename),
             Var(var) => self.eval_var(var),
@@ -241,6 +242,15 @@ impl<'a> Env<'a> {
         Ok(self.foo.make_closure(self.frame.clone(), args, body.clone()))
     }
 
+    fn eval_cascade(&self, receiver: &Box<Expr>, chains: &Vec<Vec<Message>>) -> Eval {
+        let receiver = self.eval(receiver)?;
+        let mut res = receiver.clone();
+        for messages in chains {
+            res = self.eval_sends(receiver.clone(), messages)?;
+        }
+        Ok(res)
+    }
+
     fn eval_class_definition(&self, definition: &ClassDefinition) -> Eval {
         // FIXME: allow anonymous classes
         if self.frame.parent().is_some() {
@@ -283,13 +293,19 @@ impl<'a> Env<'a> {
         }
     }
 
-    fn eval_send(&self, selector: &String, receiver: &Box<Expr>, args: &Vec<Expr>) -> Eval {
-        let receiver = self.eval(receiver)?;
-        let mut values = Vec::new();
-        for arg in args {
-            values.push(self.eval(arg)?);
+    fn eval_sends(&self, mut receiver: Object, messages: &Vec<Message>) -> Eval {
+        for message in messages {
+            let mut values = Vec::new();
+            for arg in &message.args {
+                values.push(self.eval(arg)?);
+            }
+            receiver = receiver.send(message.selector.as_str(), &values[..], &self.foo)?
         }
-        receiver.send(selector.as_str(), &values[..], &self.foo)
+        return Ok(receiver);
+    }
+
+    fn eval_chain(&self, receiver: &Box<Expr>, messages: &Vec<Message>) -> Eval {
+        self.eval_sends(self.eval(receiver)?, messages)
     }
 
     fn eval_seq(&self, exprs: &Vec<Expr>) -> Eval {
@@ -542,6 +558,16 @@ fn eval_let3() {
 #[test]
 fn eval_arith1() {
     assert_eq!(eval_ok("1 + 1").integer(), 2);
+}
+
+#[test]
+fn eval_prefix1() {
+    assert_eq!(eval_ok("let x = -42, -x").integer(), 42);
+}
+
+#[test]
+fn eval_prefix2() {
+    assert_eq!(eval_ok("let x = -42.0, -x").float(), 42.0);
 }
 
 #[test]
@@ -1423,4 +1449,24 @@ fn test_is() {
 #[test]
 fn test_closure_on_error() {
     assert_eq!(eval_ok("{ undefined } onError: { |err| err }").string_as_str(), "Unbound variable");
+}
+
+#[test]
+fn test_cascade1() {
+    assert_eq!(eval_ok("1 + 100; + 41 + 1000").integer(), 1142);
+    assert_eq!(
+        eval_ok(
+            "
+          class Foo { a }
+            method neg
+               (a = -a)
+               self
+            method up: by
+               a = a + by
+          end
+          Foo a: 44; neg up: 2; neg; a"
+        )
+        .integer(),
+        42
+    );
 }

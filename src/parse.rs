@@ -27,6 +27,13 @@ impl Assign {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Message {
+    pub span: Span,
+    pub selector: String,
+    pub args: Vec<Expr>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Var {
     pub span: Span,
     pub name: String,
@@ -167,11 +174,12 @@ pub enum Expr {
     Assign(Assign),
     Bind(String, Option<String>, Box<Expr>, Box<Expr>),
     Block(Span, Vec<Var>, Box<Expr>),
+    Chain(Box<Expr>, Vec<Message>),
+    Cascade(Box<Expr>, Vec<Vec<Message>>),
     ClassDefinition(ClassDefinition),
     Const(Span, Literal),
     Eq(Span, Box<Expr>, Box<Expr>),
     Global(Global),
-    Send(Span, String, Box<Expr>, Vec<Expr>),
     Seq(Vec<Expr>),
     Typecheck(Span, Box<Expr>, String),
     Var(Var),
@@ -200,17 +208,60 @@ impl Expr {
         }
     }
 
+    fn is_cascade(&self) -> bool {
+        match self {
+            Expr::Cascade(..) => true,
+            _ => false,
+        }
+    }
+
+    fn to_cascade(self, in_cascade: bool) -> Expr {
+        // If we're already in cascade then self is a Chain whose
+        // receiver is a cascade and we splice the messages into the
+        // cascade, which becomes our receiver.
+        //
+        // Otherwise left becomes the initial receiver of an initially
+        // empty cascade.
+        match self {
+            Expr::Chain(receiver, messages) => {
+                if let Expr::Cascade(cascade_receiver, mut chains) = *receiver {
+                    chains.push(messages);
+                    Expr::Cascade(cascade_receiver, chains)
+                } else {
+                    assert!(in_cascade);
+                    Expr::Cascade(Box::new(Expr::Chain(receiver, messages)), vec![vec![]])
+                }
+            }
+            _ => {
+                assert!(in_cascade);
+                Expr::Cascade(Box::new(self), vec![vec![]])
+            }
+        }
+    }
+
+    fn send(self, message: Message) -> Expr {
+        let (receiver, messages) = match self {
+            Expr::Chain(receiver, mut messages) => {
+                messages.push(message);
+                (receiver, messages)
+            }
+            _ => (Box::new(self), vec![message]),
+        };
+        Expr::Chain(receiver, messages)
+    }
+
     pub fn span(&self) -> Span {
         use Expr::*;
         let span = match self {
             Assign(assign) => &assign.span,
             Bind(_, _, _, body) => return body.span(),
             Block(span, ..) => span,
+            Cascade(left, ..) => return left.span(),
             ClassDefinition(definition) => &definition.span,
             Const(span, ..) => span,
             Eq(span, ..) => span,
             Global(global) => &global.span,
-            Send(span, ..) => span,
+            Chain(left, _) => return left.span(),
             Return(ret) => &ret.span,
             Seq(exprs) => return exprs[exprs.len() - 1].span(),
             Typecheck(span, ..) => span,
@@ -222,6 +273,7 @@ impl Expr {
 
 type PrefixParser = fn(&Parser) -> Result<Expr, Unwind>;
 type SuffixParser = fn(&Parser, Expr, PrecedenceFunction) -> Result<Expr, Unwind>;
+// FIXME: can I remove the span from here?
 type PrecedenceFunction = fn(&Parser, Span) -> Result<usize, Unwind>;
 
 #[derive(Clone)]
@@ -253,6 +305,10 @@ impl<'a> ParserState<'a> {
         };
         self.span = span;
         Ok(token)
+    }
+
+    fn step_back(&mut self, token: Token) {
+        self.lookahead.push_front((token, self.span.clone()))
     }
 
     fn lookahead(&mut self) -> Result<(Token, Span), Unwind> {
@@ -350,7 +406,11 @@ impl<'a> Parser<'a> {
             Syntax::General(prefix, _, _) => prefix(self),
             Syntax::Operator(is_prefix, _, _) if *is_prefix => {
                 let operator = self.tokenstring();
-                Ok(Expr::Send(self.span(), operator, Box::new(self.parse_expr(0)?), vec![]))
+                Ok(self.parse_expr(0)?.send(Message {
+                    span: self.span(),
+                    selector: format!("prefix{}", operator),
+                    args: vec![],
+                }))
             }
             _ => self.error("Expected value or prefix operator"),
         }
@@ -361,12 +421,11 @@ impl<'a> Parser<'a> {
             Syntax::General(_, suffix, precedence) => suffix(self, left, *precedence),
             Syntax::Operator(_, is_binary, precedence) if *is_binary => {
                 let operator = self.tokenstring();
-                Ok(Expr::Send(
-                    self.span(),
-                    operator,
-                    Box::new(left),
-                    vec![self.parse_expr(*precedence)?],
-                ))
+                Ok(left.send(Message {
+                    span: self.span(),
+                    selector: operator,
+                    args: vec![self.parse_expr(*precedence)?],
+                }))
             }
             _ => self.error("I don't understand"),
         }
@@ -470,7 +529,7 @@ fn make_token_table() -> TokenTable {
     // Others
     Syntax::def(t, WORD, identifier_prefix, identifier_suffix, identifier_precedence);
     Syntax::def(t, SIGIL, operator_prefix, operator_suffix, operator_precedence);
-    Syntax::def(t, KEYWORD, invalid_prefix, keyword_suffix, precedence_5);
+    Syntax::def(t, KEYWORD, invalid_prefix, keyword_suffix, precedence_9);
     Syntax::def(t, NEWLINE, ignore_prefix, newline_suffix, precedence_1);
     Syntax::def(t, EOF, eof_prefix, eof_suffix, precedence_0);
 
@@ -492,7 +551,8 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "return", return_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ",", invalid_prefix, sequence_suffix, precedence_1);
-    Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_2);
+    Syntax::def(t, ";", invalid_prefix, cascade_suffix, precedence_2);
+    Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_3);
     Syntax::def(t, "is", invalid_prefix, is_suffix, precedence_10);
     Syntax::def(t, "::", invalid_prefix, typecheck_suffix, precedence_1000);
 
@@ -531,8 +591,12 @@ fn precedence_10(_: &Parser, _: Span) -> Result<usize, Unwind> {
     Ok(10)
 }
 
-fn precedence_5(_: &Parser, _: Span) -> Result<usize, Unwind> {
+fn precedence_9(_: &Parser, _: Span) -> Result<usize, Unwind> {
     Ok(5)
+}
+
+fn precedence_3(_: &Parser, _: Span) -> Result<usize, Unwind> {
+    Ok(2)
 }
 
 fn precedence_2(_: &Parser, _: Span) -> Result<usize, Unwind> {
@@ -568,6 +632,15 @@ fn assign_suffix(
     // FIXME: Maybe this is a sign that we should actually store a Var with it's own span
     // in the Assign, then assign could have the span for just the operator?
     Ok(Assign::expr(left.span(), left.name(), right))
+}
+
+fn cascade_suffix(
+    parser: &Parser,
+    left: Expr,
+    _precedence: PrecedenceFunction,
+) -> Result<Expr, Unwind> {
+    let receiver = left.to_cascade(true);
+    Ok(parser.parse_suffix(receiver)?.to_cascade(false))
 }
 
 fn eof_prefix(parser: &Parser) -> Result<Expr, Unwind> {
@@ -658,7 +731,11 @@ fn keyword_suffix(
     }
     // FIXME: Potential multiline span is probably going to cause
     // trouble in error reporting...
-    Ok(Expr::Send(start.start..parser.span().end, selector, Box::new(left), args))
+    Ok(left.send(Message {
+        span: start.start..parser.span().end,
+        selector,
+        args,
+    }))
 }
 
 fn operator_precedence(parser: &Parser, span: Span) -> Result<usize, Unwind> {
@@ -1012,26 +1089,28 @@ fn string_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         };
 
         // FIXME: incorrect span from parse_str
-        let interp = Expr::Send(
-            p0 + 1..p1,
-            "toString".to_string(),
-            Box::new(parse_str(&data[p0 + 1..p1])?),
-            vec![],
-        );
+        let interp = parse_str(&data[p0 + 1..p1])?.send(Message {
+            span: p0 + 1..p1,
+            selector: "toString".to_string(),
+            args: vec![],
+        });
         let left = if p0 > 0 {
-            Expr::Send(
-                p0 + 1..p1,
-                "append:".to_string(),
-                Box::new(Expr::Const(span.start..p0, Literal::String(data[0..p0].to_string()))),
-                vec![interp],
-            )
+            Expr::Const(span.start..p0, Literal::String(data[0..p0].to_string())).send(Message {
+                span: p0 + 1..p1,
+                selector: "append:".to_string(),
+                args: vec![interp],
+            })
         } else {
             interp
         };
 
         if p1 + 1 < span.end {
             let right = interpolate(parser, span.start + p1 + 1..span.end, n)?;
-            Ok(Expr::Send(p0 + 1..p1, "append:".to_string(), Box::new(left), vec![right]))
+            Ok(left.send(Message {
+                span: p0 + 1..p1,
+                selector: "append:".to_string(),
+                args: vec![right],
+            }))
         } else {
             Ok(left)
         }
@@ -1068,15 +1147,27 @@ fn var(span: Span, name: &str) -> Expr {
 }
 
 fn unary(span: Span, name: &str, left: Expr) -> Expr {
-    Expr::Send(span, name.to_string(), Box::new(left), vec![])
+    left.send(Message {
+        span,
+        selector: name.to_string(),
+        args: vec![],
+    })
 }
 
 fn binary(span: Span, name: &str, left: Expr, right: Expr) -> Expr {
-    Expr::Send(span, name.to_string(), Box::new(left), vec![right])
+    left.send(Message {
+        span,
+        selector: name.to_string(),
+        args: vec![right],
+    })
 }
 
 fn keyword(span: Span, name: &str, left: Expr, args: Vec<Expr>) -> Expr {
-    Expr::Send(span, name.to_string(), Box::new(left), args)
+    left.send(Message {
+        span,
+        selector: name.to_string(),
+        args,
+    })
 }
 
 fn bind(name: &str, value: Expr, body: Expr) -> Expr {
