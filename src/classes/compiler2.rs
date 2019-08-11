@@ -22,14 +22,15 @@ fn class_compiler_new(_receiver: &Object, _args: &[Object], foo: &Foolang) -> Ev
 }
 
 fn parse_aux(receiver: &Object, source: &Object, handler: Option<&Object>, foo: &Foolang) -> Eval {
-    let mut parser = Parser::new(source.string_as_str());
+    let source = source.string_as_str();
+    let mut parser = Parser::new(source);
     let compiler = receiver.compiler();
     let expr = match parser.parse() {
         Ok(expr) => expr,
         Err(Unwind::Exception(Error::EofError(ref e), ..)) if handler.is_some() => {
             return handler.unwrap().send("value:", &[foo.into_string(e.what())], foo)
         }
-        Err(unwind) => return Err(unwind),
+        Err(unwind) => return Err(unwind).context(source),
     };
     compiler.source.replace(source.to_string());
     compiler.expr.replace(expr);

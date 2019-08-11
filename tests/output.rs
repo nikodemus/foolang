@@ -65,6 +65,22 @@ fn test_print_flush() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
+fn test_bad_class() -> Result<(), Box<std::error::Error>> {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/bad_class.foo");
+    cmd.assert().success().stdout(
+        "ERROR: Not valid in value position
+002    method baz
+003      }
+         ^ Not valid in value position
+004 end
+
+",
+    );
+    Ok(())
+}
+
+#[test]
 fn old_stdout_print_no_flush() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("--eval").arg("System stdout print: 'hello world!'; newline; print: 'boing!'");
