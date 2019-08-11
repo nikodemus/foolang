@@ -24,11 +24,11 @@ class REPL
      (_atEof or: _hasError) not
 
   method run
-     output println: 'Foolang 0.2.0'
+     output println: "Foolang 0.2.0"
      { _atEof } whileFalse: { self prompt; read; eval; print }
 
   method prompt
-     _output print: '> '
+     _output print: "> "
      _output flush
 
   method read
