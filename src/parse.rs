@@ -1070,7 +1070,7 @@ fn string_prefix(parser: &Parser) -> Result<Expr, Unwind> {
 
     // Strip quotes
     let mut n = 0;
-    while n < slice.len() && &slice[n..n + 1] == "\"" {
+    while n < slice.len() - n && &slice[n..n + 1] == "\"" {
         n += 1;
     }
 
@@ -1441,6 +1441,11 @@ fn parse_comments() {
 #[test]
 fn parse_string1() {
     assert_eq!(parse_str(r#" "foo" "#), Ok(string(1..6, "foo")))
+}
+
+#[test]
+fn parse_string2() {
+    assert_eq!(parse_str(r#" "" "#), Ok(string(1..3, "")))
 }
 
 #[test]
