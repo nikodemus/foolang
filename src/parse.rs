@@ -256,18 +256,19 @@ impl Expr {
         // Otherwise left becomes the initial receiver of an initially
         // empty cascade.
         match self {
+            Expr::Cascade(..) => self,
             Expr::Chain(receiver, messages) => {
                 if let Expr::Cascade(cascade_receiver, mut chains) = *receiver {
                     chains.push(messages);
                     Expr::Cascade(cascade_receiver, chains)
                 } else {
                     assert!(in_cascade);
-                    Expr::Cascade(Box::new(Expr::Chain(receiver, messages)), vec![vec![]])
+                    Expr::Cascade(Box::new(Expr::Chain(receiver, messages)), vec![])
                 }
             }
             _ => {
                 assert!(in_cascade);
-                Expr::Cascade(Box::new(self), vec![vec![]])
+                Expr::Cascade(Box::new(self), vec![])
             }
         }
     }
@@ -461,38 +462,14 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_expr(&self, precedence: usize) -> Result<Expr, Unwind> {
-        let debug = false;
-        if debug {
-            println!("parse_expr({})...", precedence);
-        }
-        let mut expr = self.parse_prefix()?;
-        if debug {
-            println!("  parse_expr({}) expr = {:?}", precedence, &expr);
-        }
+        self.parse_tail(self.parse_prefix()?, precedence)
+    }
+
+    pub fn parse_tail(&self, mut expr: Expr, precedence: usize) -> Result<Expr, Unwind> {
         while precedence < self.next_precedence()? {
-            if debug {
-                println!(
-                    "  parse_expr({}) YES < {} for {:?}",
-                    precedence,
-                    self.next_precedence()?,
-                    self.lookahead()?.0
-                );
-            }
             expr = self.parse_suffix(expr)?;
-            if debug {
-                println!("  parse_expr({}) expr => {:?}", precedence, &expr);
-            }
         }
-        if debug {
-            println!(
-                "  parse_expr({}) NOT < {} for {:?}",
-                precedence,
-                self.next_precedence()?,
-                self.lookahead()?.0
-            );
-            println!("parse_expr({}) => {:?}", precedence, &expr);
-        }
-        return Ok(expr);
+        Ok(expr)
     }
 
     fn parse_prefix(&self) -> Result<Expr, Unwind> {
@@ -755,10 +732,10 @@ fn assign_suffix(
 fn cascade_suffix(
     parser: &Parser,
     left: Expr,
-    _precedence: PrecedenceFunction,
+    precedence: PrecedenceFunction,
 ) -> Result<Expr, Unwind> {
     let receiver = left.to_cascade(true);
-    Ok(parser.parse_suffix(receiver)?.to_cascade(false))
+    Ok(parser.parse_tail(receiver, precedence(parser, parser.span())?)?.to_cascade(false))
 }
 
 fn eof_prefix(parser: &Parser) -> Result<Expr, Unwind> {
@@ -1755,4 +1732,70 @@ fn parse_newlines3() {
          end"
     )
     .is_ok());
+}
+
+#[test]
+fn test_parse_cascade1() {
+    assert_eq!(
+        parse_str("self foo; ba1 ba2"),
+        Ok(Expr::Cascade(
+            Box::new(var(0..4, "self").send(Message {
+                span: 5..8,
+                selector: "foo".to_string(),
+                args: vec![]
+            })),
+            vec![vec![
+                Message {
+                    span: 10..13,
+                    selector: "ba1".to_string(),
+                    args: vec![]
+                },
+                Message {
+                    span: 14..17,
+                    selector: "ba2".to_string(),
+                    args: vec![]
+                },
+            ]]
+        ))
+    );
+}
+
+#[test]
+fn test_parse_cascade2() {
+    assert_eq!(
+        parse_str("self foo; ba1 ba2; fa1 fa2"),
+        Ok(Expr::Cascade(
+            Box::new(var(0..4, "self").send(Message {
+                span: 5..8,
+                selector: "foo".to_string(),
+                args: vec![]
+            })),
+            vec![
+                vec![
+                    Message {
+                        span: 10..13,
+                        selector: "ba1".to_string(),
+                        args: vec![]
+                    },
+                    Message {
+                        span: 14..17,
+                        selector: "ba2".to_string(),
+                        args: vec![]
+                    },
+                ],
+                vec![
+                    Message {
+                        span: 19..22,
+                        selector: "fa1".to_string(),
+                        args: vec![]
+                    },
+                    Message {
+                        span: 23..26,
+                        selector: "fa2".to_string(),
+                        args: vec![]
+                    },
+                ]
+            ]
+        ))
+    );
 }

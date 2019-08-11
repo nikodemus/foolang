@@ -23,7 +23,7 @@ class REPL
      { _atEof } whileFalse: { self readEvalPrint }
 
   method readEvalPrint
-     { self prompt, self read, self eval, self print }
+     { self; prompt; read; eval; print }
      onError: { |error context|
        _output println: error
        _output println: context
