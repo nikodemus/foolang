@@ -92,6 +92,7 @@ impl ClassDefinition {
         }
     }
 
+    #[cfg(test)]
     fn expr(span: Span, name: String, instance_variables: Vec<Var>) -> Expr {
         Expr::ClassDefinition(ClassDefinition::new(span, name, instance_variables))
     }
@@ -194,6 +195,7 @@ impl Expr {
         }
     }
 
+    #[cfg(test)]
     fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
         match self {
             Expr::ClassDefinition(class) => class.add_method(kind, method),
@@ -205,13 +207,6 @@ impl Expr {
         match self {
             Expr::Var(var) => var.name.to_owned(),
             _ => panic!("BUG: cannot extract name from {:?}", self),
-        }
-    }
-
-    fn is_cascade(&self) -> bool {
-        match self {
-            Expr::Cascade(..) => true,
-            _ => false,
         }
     }
 
@@ -305,10 +300,6 @@ impl<'a> ParserState<'a> {
         };
         self.span = span;
         Ok(token)
-    }
-
-    fn step_back(&mut self, token: Token) {
-        self.lookahead.push_front((token, self.span.clone()))
     }
 
     fn lookahead(&mut self) -> Result<(Token, Span), Unwind> {
@@ -1139,105 +1130,119 @@ pub fn parse_str(source: &str) -> Result<Expr, Unwind> {
     Parser::new(source).parse().map_err(|unwind| unwind.with_context(source))
 }
 
-fn int(span: Span, value: i64) -> Expr {
-    Expr::Const(span, Literal::Integer(value))
-}
+#[cfg(test)]
+mod expr_utils {
 
-fn string(span: Span, value: &str) -> Expr {
-    Expr::Const(span, Literal::String(value.to_string()))
-}
+    use crate::parse::*;
 
-fn typecheck(span: Span, expr: Expr, typename: &str) -> Expr {
-    Expr::Typecheck(span, Box::new(expr), typename.to_string())
-}
-
-fn float(span: Span, value: f64) -> Expr {
-    Expr::Const(span, Literal::Float(value))
-}
-
-fn var(span: Span, name: &str) -> Expr {
-    Expr::Var(Var::untyped(span, name.to_string()))
-}
-
-fn unary(span: Span, name: &str, left: Expr) -> Expr {
-    left.send(Message {
-        span,
-        selector: name.to_string(),
-        args: vec![],
-    })
-}
-
-fn binary(span: Span, name: &str, left: Expr, right: Expr) -> Expr {
-    left.send(Message {
-        span,
-        selector: name.to_string(),
-        args: vec![right],
-    })
-}
-
-fn keyword(span: Span, name: &str, left: Expr, args: Vec<Expr>) -> Expr {
-    left.send(Message {
-        span,
-        selector: name.to_string(),
-        args,
-    })
-}
-
-fn bind(name: &str, value: Expr, body: Expr) -> Expr {
-    Expr::Bind(name.to_string(), None, Box::new(value), Box::new(body))
-}
-
-fn bind_typed(name: &str, typename: &str, value: Expr, body: Expr) -> Expr {
-    Expr::Bind(name.to_string(), Some(typename.to_string()), Box::new(value), Box::new(body))
-}
-
-fn block(span: Span, params: Vec<&str>, body: Expr) -> Expr {
-    let mut p = span.start + 3;
-    let mut blockparams = vec![];
-    for param in params {
-        let start = p;
-        let end = start + param.len();
-        p = end + 2;
-        blockparams.push(Var::untyped(start..end, param.to_string()))
+    pub fn block(span: Span, params: Vec<&str>, body: Expr) -> Expr {
+        let mut p = span.start + 3;
+        let mut blockparams = vec![];
+        for param in params {
+            let start = p;
+            let end = start + param.len();
+            p = end + 2;
+            blockparams.push(Var::untyped(start..end, param.to_string()))
+        }
+        Expr::Block(span, blockparams, Box::new(body))
     }
-    Expr::Block(span, blockparams, Box::new(body))
-}
 
-fn typed_block(span: Span, params: Vec<(&str, &str)>, body: Expr) -> Expr {
-    let mut p = span.start + 3;
-    let mut blockparams = vec![];
-    for param in params {
-        let start = p;
-        let end = start + param.0.len();
-        p = end + 4 + param.1.len();
-        blockparams.push(Var::typed(start..end, param.0.to_string(), param.1.to_string()));
+    pub fn block_typed(span: Span, params: Vec<(&str, &str)>, body: Expr) -> Expr {
+        let mut p = span.start + 3;
+        let mut blockparams = vec![];
+        for param in params {
+            let start = p;
+            let end = start + param.0.len();
+            p = end + 4 + param.1.len();
+            blockparams.push(Var::typed(start..end, param.0.to_string(), param.1.to_string()));
+        }
+        Expr::Block(span, blockparams, Box::new(body))
     }
-    Expr::Block(span, blockparams, Box::new(body))
-}
 
-fn seq(exprs: Vec<Expr>) -> Expr {
-    Expr::Seq(exprs)
-}
-
-fn class(span: Span, name: &str, instance_variables: Vec<&str>) -> Expr {
-    let mut p = span.start + "class ".len() + name.len() + " { ".len();
-    let mut vars = Vec::new();
-    for v in instance_variables {
-        vars.push(Var::untyped(p..p + v.len(), v.to_string()));
-        p += v.len() + ", ".len()
+    pub fn binary(span: Span, name: &str, left: Expr, right: Expr) -> Expr {
+        left.send(Message {
+            span,
+            selector: name.to_string(),
+            args: vec![right],
+        })
     }
-    ClassDefinition::expr(span, name.to_string(), vars)
+
+    pub fn bind(name: &str, value: Expr, body: Expr) -> Expr {
+        Expr::Bind(name.to_string(), None, Box::new(value), Box::new(body))
+    }
+
+    pub fn bind_typed(name: &str, typename: &str, value: Expr, body: Expr) -> Expr {
+        Expr::Bind(name.to_string(), Some(typename.to_string()), Box::new(value), Box::new(body))
+    }
+
+    pub fn class(span: Span, name: &str, instance_variables: Vec<&str>) -> Expr {
+        let mut p = span.start + "class ".len() + name.len() + " { ".len();
+        let mut vars = Vec::new();
+        for v in instance_variables {
+            vars.push(Var::untyped(p..p + v.len(), v.to_string()));
+            p += v.len() + ", ".len()
+        }
+        ClassDefinition::expr(span, name.to_string(), vars)
+    }
+
+    pub fn float(span: Span, value: f64) -> Expr {
+        Expr::Const(span, Literal::Float(value))
+    }
+
+    pub fn int(span: Span, value: i64) -> Expr {
+        Expr::Const(span, Literal::Integer(value))
+    }
+
+    pub fn keyword(span: Span, name: &str, left: Expr, args: Vec<Expr>) -> Expr {
+        left.send(Message {
+            span,
+            selector: name.to_string(),
+            args,
+        })
+    }
+    pub fn method(
+        span: Span,
+        selector: &str,
+        parameters: Vec<&str>,
+        body: Expr,
+    ) -> MethodDefinition {
+        MethodDefinition::new(
+            span,
+            selector.to_string(),
+            // FIXME: span
+            parameters.iter().map(|name| Var::untyped(0..0, name.to_string())).collect(),
+            body,
+        )
+    }
+
+    pub fn seq(exprs: Vec<Expr>) -> Expr {
+        Expr::Seq(exprs)
+    }
+
+    pub fn string(span: Span, value: &str) -> Expr {
+        Expr::Const(span, Literal::String(value.to_string()))
+    }
+
+    pub fn typecheck(span: Span, expr: Expr, typename: &str) -> Expr {
+        Expr::Typecheck(span, Box::new(expr), typename.to_string())
+    }
+
+    pub fn unary(span: Span, name: &str, left: Expr) -> Expr {
+        left.send(Message {
+            span,
+            selector: name.to_string(),
+            args: vec![],
+        })
+    }
+
+    pub fn var(span: Span, name: &str) -> Expr {
+        Expr::Var(Var::untyped(span, name.to_string()))
+    }
+
 }
 
-fn method(span: Span, selector: &str, parameters: Vec<&str>, body: Expr) -> MethodDefinition {
-    MethodDefinition::new(
-        span,
-        selector.to_string(),
-        // FIXME: span
-        parameters.iter().map(|name| Var::untyped(0..0, name.to_string())).collect(),
-        body,
-    )
-}
+#[cfg(test)]
+use expr_utils::*;
 
 #[test]
 fn parse_decimal() {
@@ -1455,7 +1460,7 @@ fn parse_type_assertions2() {
 fn parse_type_assertions3() {
     assert_eq!(
         parse_str("{ |x::Integer| x }"),
-        Ok(typed_block(0..18, vec![("x", "Integer")], var(15..16, "x")))
+        Ok(block_typed(0..18, vec![("x", "Integer")], var(15..16, "x")))
     );
 }
 

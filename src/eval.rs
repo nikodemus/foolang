@@ -418,39 +418,49 @@ pub fn eval_all(foo: &Foolang, source: &str) -> Eval {
     }
 }
 
-fn eval_obj(source: &str) -> (Object, Foolang) {
-    let foo = Foolang::new();
-    match eval_all(&foo, source) {
-        Err(unwind) => panic!("Unexpected unwind:\n{:?}", unwind),
-        Ok(obj) => (obj, foo),
-    }
-}
-
-fn eval_exception(source: &str) -> (Unwind, Foolang) {
-    let foo = Foolang::new();
-    match eval_all(&foo, source) {
-        Err(unwind) => match &unwind {
-            Unwind::Exception(..) => (unwind, foo),
-            _ => panic!("Expected exception, got: {:?}", unwind),
-        },
-        Ok(value) => panic!("Expected exception, got: {:?}", value),
-    }
-}
-
-fn eval_str(source: &str) -> Eval {
+pub fn eval_str(source: &str) -> Eval {
     let foo = Foolang::new();
     eval_all(&foo, source)
 }
 
-fn eval_ok(source: &str) -> Object {
-    match eval_str(source) {
-        Ok(obj) => obj,
-        Err(Unwind::Exception(error, location)) => {
-            panic!("Exception in eval_ok: {}:\n{}", error.what(), location.context());
+#[cfg(test)]
+mod eval_utils {
+
+    use crate::eval::*;
+
+    pub fn eval_exception(source: &str) -> (Unwind, Foolang) {
+        let foo = Foolang::new();
+        match eval_all(&foo, source) {
+            Err(unwind) => match &unwind {
+                Unwind::Exception(..) => (unwind, foo),
+                _ => panic!("Expected exception, got: {:?}", unwind),
+            },
+            Ok(value) => panic!("Expected exception, got: {:?}", value),
         }
-        Err(Unwind::ReturnFrom(..)) => panic!("Unexpected return-from in eval_ok"),
     }
+
+    pub fn eval_obj(source: &str) -> (Object, Foolang) {
+        let foo = Foolang::new();
+        match eval_all(&foo, source) {
+            Err(unwind) => panic!("Unexpected unwind:\n{:?}", unwind),
+            Ok(obj) => (obj, foo),
+        }
+    }
+
+    pub fn eval_ok(source: &str) -> Object {
+        match eval_str(source) {
+            Ok(obj) => obj,
+            Err(Unwind::Exception(error, location)) => {
+                panic!("Exception in eval_ok: {}:\n{}", error.what(), location.context());
+            }
+            Err(Unwind::ReturnFrom(..)) => panic!("Unexpected return-from in eval_ok"),
+        }
+    }
+
 }
+
+#[cfg(test)]
+use eval_utils::*;
 
 #[test]
 fn eval_decimal() {

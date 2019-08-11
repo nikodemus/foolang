@@ -52,7 +52,7 @@ fn float_sub_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     Ok(foo.make_float(res))
 }
 
-fn float_neg(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn float_neg(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
     Ok(foo.make_float(-receiver.float()))
 }
 

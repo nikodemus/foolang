@@ -23,6 +23,7 @@ pub enum Token {
     SIGIL,
 }
 
+#[cfg(test)]
 impl Token {
     fn name(&self) -> String {
         format!("{:?}", self)
