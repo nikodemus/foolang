@@ -915,9 +915,12 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         }
         _ => return parser.error("Expected class name"),
     };
-    match parser.next_token()? {
-        Token::SIGIL if parser.slice() == "{" => {}
-        _ => return parser.error("Expected { to open instance variable block"),
+    loop {
+        match parser.next_token()? {
+            Token::SIGIL if parser.slice() == "{" => break,
+            Token::NEWLINE => continue,
+            _ => return parser.error("Expected { to open instance variable block"),
+        }
     }
     let mut instance_variables = Vec::new();
     loop {
@@ -926,12 +929,9 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             Token::WORD => {
                 instance_variables.push(parse_var(parser)?);
             }
-            Token::SIGIL if parser.slice() == "}" => {
-                break;
-            }
-            Token::SIGIL if parser.slice() == "," => {
-                continue;
-            }
+            Token::SIGIL if parser.slice() == "}" => break,
+            Token::SIGIL if parser.slice() == "," => continue,
+            Token::NEWLINE => continue,
             _ => return parser.error("Invalid instance variable specification"),
         }
     }
@@ -1490,6 +1490,24 @@ fn parse_newlines2() {
         "let p0 = Point x: 1 y: 2
      let p1 = Point x: 10 y: 100
      p0 add: p1"
+    )
+    .is_ok());
+}
+
+#[test]
+fn parse_newlines3() {
+    assert!(parse_str(
+        "class Point
+
+          {
+            x
+            y
+          }
+
+           method add: point
+              Point x: x + point x
+                    y: y + point y
+         end"
     )
     .is_ok());
 }
