@@ -1469,7 +1469,7 @@ fn test_cascade1() {
             "
           class Foo { a }
             method neg
-               (a = -a)
+               a = -a
                self
             method up: by
                a = a + by
