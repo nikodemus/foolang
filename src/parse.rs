@@ -945,6 +945,9 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         if next == Token::WORD && parser.slice() == "end" {
             break;
         }
+        if next == Token::EOF {
+            return parser.eof_error("Unexpected EOF while parsing class: expected method or end");
+        }
         if next == Token::WORD && parser.slice() == "class" {
             if parser.next_token()? == Token::WORD && parser.slice() == "method" {
                 parse_method(parser, &mut class, MethodKind::Class)?;
@@ -996,6 +999,9 @@ fn let_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     match token {
         Token::SIGIL if parser.slice() == "," => {}
         Token::NEWLINE => {}
+        Token::EOF => {
+            return parser.eof_error("Unexpected EOF while parsing let");
+        }
         _ => {
             return parser.error("Expected separator after let");
         }

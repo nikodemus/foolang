@@ -411,6 +411,7 @@ impl Foolang {
         vtable_name.push_str(&classdef.name);
         let mut class_vtable = Vtable::new(vtable_name.as_str());
         class_vtable.def(&classdef.constructor(), generic_ctor);
+        class_vtable.def("toString", generic_to_string);
         let mut instance_vtable = Vtable::new(&classdef.name);
         let mut index = 0;
         for var in &classdef.instance_variables {
@@ -693,6 +694,11 @@ fn generic_ctor(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
             instance_variables: RefCell::new(args.iter().map(|x| (*x).to_owned()).collect()),
         })),
     })
+}
+
+fn generic_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+    let class = receiver.class();
+    Ok(foo.into_string(format!("#<class {}>", &class.instance_vtable.name)))
 }
 
 pub fn read_instance_variable(receiver: &Object, index: usize) -> Eval {

@@ -81,39 +81,31 @@ fn test_bad_class() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn old_stdout_print_no_flush() -> Result<(), Box<std::error::Error>> {
+fn repl() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("--eval").arg("System stdout print: 'hello world!'; newline; print: 'boing!'");
-    cmd.assert().success().stdout(predicate::str::contains("hello world!\n"));
-    Ok(())
-}
-
-#[test]
-fn old_stdout_print_flush() -> Result<(), Box<std::error::Error>> {
-    let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("--eval").arg("System stdout print: 'hello world!'; newline; print: 'boing!'; flush");
-    cmd.assert().success().stdout(predicate::str::ends_with("hello world!\nboing!"));
-    Ok(())
-}
-
-#[test]
-fn old_repl() -> Result<(), Box<std::error::Error>> {
-    let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("--load").arg("foo/repl.foo").arg("--eval").arg("REPL run");
+    cmd.arg("foo/repl2.foo");
     cmd.with_stdin()
-        // The repl is currently a tad aggressive about newlines...
-        // Should sniff @ at the beginning and require an empty line
-        // after, plus throw out the input after an empty line, maybe.
         .buffer(
-            "
-            @class Foo []
-            @class-method Foo a:a b:b ^(a + b) * 2
-            Foo a: 1 b: 20
-        ",
+            r#"class Point { x, y }
+                  method + other
+                     Point x: x + other x
+                           y: y + other y
+                  method toString
+                     "{x}@{y}"
+               end
+               { let p1 = Point x: 1 y: 2,
+                 let p2 = Point x: 100 y: 200,
+                 p1 + p2 } value
+              "#,
         )
         .assert()
         .success()
-        .stdout("Foolang 0.1.0\n> #Foo\n> #a:b:\n> 42\n> ");
+        .stdout(
+            r#"Foolang 0.2.0
+> #<class Point>
+> 101@202
+> "#,
+        );
     Ok(())
 }
 

@@ -21,7 +21,6 @@ class REPL
   method run
      _output println: "Foolang 0.2.0",
      { _atEof } whileFalse: { self readEvalPrint }
-     _output println: _atEof toString
 
   method readEvalPrint
      { self prompt, self read, self eval, self print } onError:
@@ -46,7 +45,7 @@ class REPL
      _atEof ifFalse: { _value = _compiler evaluate }
 
   method print
-     _atEof ifFalse: { _output println: _value toString }
+     _atEof ifFalse: { _output println: _value toString, _output flush }
 
   method _tryParse: source
      _compiler parse: source onEof: { return False },
