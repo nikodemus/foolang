@@ -353,26 +353,36 @@ impl<'a> Parser<'a> {
         self.parse_expr(0)
     }
 
+    pub fn parse_seq(&self) -> Result<Expr, Unwind> {
+        self.parse_expr(0)
+    }
+
     pub fn parse_expr(&self, precedence: usize) -> Result<Expr, Unwind> {
-        let mut expr = self.parse_prefix()?;
         let debug = false;
         if debug {
-            println!("prefix: {:?}", &expr);
+            println!("parse_expr({})...", precedence);
+        }
+        let mut expr = self.parse_prefix()?;
+        if debug {
+            println!("  parse_expr({}) expr = {:?}", precedence, &expr);
         }
         while precedence < self.next_precedence()? {
             if debug {
-                println!("  {} < {}", precedence, self.next_precedence()?);
+                println!("  parse_expr({}) < {}", precedence, self.next_precedence()?);
             }
             expr = self.parse_suffix(expr)?;
             if debug {
-                println!("  => {:?}", &expr);
+                println!("  parse_expr({}) expr => {:?}", precedence, &expr);
             }
         }
         if debug {
-            println!("  NOT {} < {}", precedence, self.next_precedence()?);
-        }
-        if debug {
-            println!("  next: {:?}", self.lookahead()?);
+            println!(
+                "  parse_expr({}) NOT < {} for {:?}",
+                precedence,
+                self.next_precedence()?,
+                self.lookahead()?.0
+            );
+            println!("parse_expr({}) => {:?}", precedence, &expr);
         }
         return Ok(expr);
     }
@@ -406,7 +416,7 @@ impl<'a> Parser<'a> {
             Syntax::General(prefix, _, _) => prefix(self),
             Syntax::Operator(is_prefix, _, _) if *is_prefix => {
                 let operator = self.tokenstring();
-                Ok(self.parse_expr(0)?.send(Message {
+                Ok(self.parse_expr(SEQ_PRECEDENCE)?.send(Message {
                     span: self.span(),
                     selector: format!("prefix{}", operator),
                     args: vec![],
@@ -761,7 +771,7 @@ fn operator_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Result
 }
 
 fn paren_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    let expr = parser.parse_expr(0)?;
+    let expr = parser.parse_seq()?;
     let token = parser.next_token()?;
     if token == Token::SIGIL && parser.slice() == ")" {
         Ok(expr)
@@ -829,7 +839,7 @@ fn parse_method(
     }
     // FIXME: This is the place where I could inform parser about instance
     // variables.
-    let body = parser.parse_expr(0)?;
+    let body = parser.parse_seq()?;
     class.add_method(kind, MethodDefinition::new(span, selector, parameters, body));
     Ok(())
 }
@@ -887,7 +897,7 @@ fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             return parser.error("Not valid as block parameter");
         }
     }
-    let body = parser.parse_expr(0)?;
+    let body = parser.parse_seq()?;
     let end = parser.next_token()?;
     // FIXME: hardcoded {
     // Would be nice to be able to swap between [] and {} and
@@ -991,17 +1001,20 @@ fn let_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     }
 
     let value = parser.parse_expr(SEQ_PRECEDENCE)?;
-    match parser.next_token()? {
+    let token = parser.next_token()?;
+    match token {
         Token::SIGIL if parser.slice() == "," => {}
         Token::NEWLINE => {}
-        _ => return parser.error("Expected separator after let"),
+        _ => {
+            return parser.error("Expected separator after let");
+        }
     }
-    let body = parser.parse_expr(0)?;
+    let body = parser.parse_seq()?;
     Ok(Expr::Bind(name, typename, Box::new(value), Box::new(body)))
 }
 
 fn ignore_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    parser.parse_expr(0)
+    parser.parse_expr(SEQ_PRECEDENCE)
 }
 
 fn ignore_suffix(_parser: &Parser, left: Expr, _pre: PrecedenceFunction) -> Result<Expr, Unwind> {
