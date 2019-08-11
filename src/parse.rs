@@ -7,6 +7,17 @@ use std::str::FromStr;
 use crate::tokenstream::{Span, Token, TokenStream};
 use crate::unwind::Unwind;
 
+trait ShiftSpan {
+    fn shift(&mut self, n: usize);
+}
+
+impl ShiftSpan for Span {
+    fn shift(&mut self, n: usize) {
+        self.start += n;
+        self.end += n;
+    }
+}
+
 // FIXME: Do these really need clone, if so, why?
 
 #[derive(Debug, PartialEq, Clone)]
@@ -27,37 +38,6 @@ impl Assign {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Message {
-    pub span: Span,
-    pub selector: String,
-    pub args: Vec<Expr>,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Var {
-    pub span: Span,
-    pub name: String,
-    pub typename: Option<String>,
-}
-
-impl Var {
-    fn untyped(span: Span, name: String) -> Var {
-        Var {
-            span,
-            name,
-            typename: None,
-        }
-    }
-    fn typed(span: Span, name: String, typename: String) -> Var {
-        Var {
-            span,
-            name,
-            typename: Some(typename),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
 pub struct ClassDefinition {
     pub span: Span,
     pub name: String,
@@ -65,19 +45,6 @@ pub struct ClassDefinition {
     pub instance_methods: Vec<MethodDefinition>,
     pub class_methods: Vec<MethodDefinition>,
     default_constructor: Option<String>,
-}
-
-enum MethodKind {
-    Class,
-    Instance,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct MethodDefinition {
-    pub span: Span,
-    pub selector: String,
-    pub parameters: Vec<Var>,
-    pub body: Box<Expr>,
 }
 
 impl ClassDefinition {
@@ -121,6 +88,30 @@ impl ClassDefinition {
     }
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct Message {
+    pub span: Span,
+    pub selector: String,
+    pub args: Vec<Expr>,
+}
+
+impl Message {
+    fn shift_span(&mut self, n: usize) {
+        self.span.shift(n);
+        for arg in &mut self.args {
+            arg.shift_span(n);
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct MethodDefinition {
+    pub span: Span,
+    pub selector: String,
+    pub parameters: Vec<Var>,
+    pub body: Box<Expr>,
+}
+
 impl MethodDefinition {
     fn new(span: Span, selector: String, parameters: Vec<Var>, body: Expr) -> MethodDefinition {
         MethodDefinition {
@@ -128,6 +119,57 @@ impl MethodDefinition {
             selector,
             parameters,
             body: Box::new(body),
+        }
+    }
+    fn shift_span(&mut self, n: usize) {
+        self.span.shift(n);
+        for var in &mut self.parameters {
+            var.span.shift(n);
+        }
+        self.body.shift_span(n);
+    }
+}
+
+enum MethodKind {
+    Class,
+    Instance,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Return {
+    pub span: Span,
+    pub value: Box<Expr>,
+}
+
+impl Return {
+    fn expr(span: Span, value: Expr) -> Expr {
+        Expr::Return(Return {
+            span,
+            value: Box::new(value),
+        })
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Var {
+    pub span: Span,
+    pub name: String,
+    pub typename: Option<String>,
+}
+
+impl Var {
+    fn untyped(span: Span, name: String) -> Var {
+        Var {
+            span,
+            name,
+            typename: None,
+        }
+    }
+    fn typed(span: Span, name: String, typename: String) -> Var {
+        Var {
+            span,
+            name,
+            typename: Some(typename),
         }
     }
 }
@@ -156,35 +198,20 @@ pub enum Literal {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Return {
-    pub span: Span,
-    pub value: Box<Expr>,
-}
-
-impl Return {
-    fn expr(span: Span, value: Expr) -> Expr {
-        Expr::Return(Return {
-            span,
-            value: Box::new(value),
-        })
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Assign(Assign),
     Bind(String, Option<String>, Box<Expr>, Box<Expr>),
     Block(Span, Vec<Var>, Box<Expr>),
-    Chain(Box<Expr>, Vec<Message>),
     Cascade(Box<Expr>, Vec<Vec<Message>>),
+    Chain(Box<Expr>, Vec<Message>),
     ClassDefinition(ClassDefinition),
     Const(Span, Literal),
     Eq(Span, Box<Expr>, Box<Expr>),
     Global(Global),
+    Return(Return),
     Seq(Vec<Expr>),
     Typecheck(Span, Box<Expr>, String),
     Var(Var),
-    Return(Return),
 }
 
 impl Expr {
@@ -263,6 +290,80 @@ impl Expr {
             Var(var) => &var.span,
         };
         span.to_owned()
+    }
+
+    pub fn shift_span(&mut self, n: usize) {
+        use Expr::*;
+        match self {
+            Assign(assign) => {
+                assign.span.shift(n);
+                assign.value.shift_span(n);
+            }
+            Bind(_name, _type, value, body) => {
+                value.shift_span(n);
+                body.shift_span(n);
+            }
+            Block(span, vars, body) => {
+                span.shift(n);
+                for var in vars {
+                    var.span.shift(n);
+                }
+                body.shift_span(n);
+            }
+            Cascade(receiver, chains) => {
+                receiver.shift_span(n);
+                for chain in chains {
+                    for message in chain {
+                        message.shift_span(n);
+                    }
+                }
+            }
+            ClassDefinition(class) => {
+                class.span.shift(n);
+                for var in &mut class.instance_variables {
+                    var.span.shift(n);
+                }
+                for m in &mut class.instance_methods {
+                    m.shift_span(n);
+                }
+                for m in &mut class.class_methods {
+                    m.shift_span(n);
+                }
+            }
+            Const(span, _literal) => {
+                span.shift(n);
+            }
+            Eq(span, left, right) => {
+                span.shift(n);
+                left.shift_span(n);
+                right.shift_span(n);
+            }
+            Global(global) => {
+                global.span.shift(n);
+            }
+            Chain(receiver, chain) => {
+                receiver.shift_span(n);
+                for message in chain {
+                    message.shift_span(n);
+                }
+            }
+            Return(ret) => {
+                ret.span.shift(n);
+                ret.value.shift_span(n);
+            }
+            Seq(exprs) => {
+                for expr in exprs {
+                    expr.shift_span(n);
+                }
+            }
+            Typecheck(span, expr, _type) => {
+                span.shift(n);
+                expr.shift_span(n);
+            }
+            Var(var) => {
+                var.span.shift(n);
+            }
+        };
     }
 }
 
@@ -1098,8 +1199,10 @@ fn string_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             Some(p) => p + p0,
         };
 
-        // FIXME: incorrect span from parse_str
-        let interp = parse_str(&data[p0 + 1..p1])?.send(Message {
+        // FIXME: errors from parse_str don't show the larger context
+        let mut expr = parse_str(&data[p0 + 1..p1])?;
+        expr.shift_span(span.start);
+        let interp = expr.send(Message {
             span: p0 + 1..p1,
             selector: "toString".to_string(),
             args: vec![],

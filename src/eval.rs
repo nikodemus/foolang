@@ -1480,3 +1480,35 @@ fn test_cascade1() {
         42
     );
 }
+
+#[test]
+fn test_interpolated_error_location() {
+    let (exception, _foo) = eval_exception(
+        r#"
+
+                let x = 42,
+                "{X}"
+
+             "#,
+    );
+    assert_eq!(
+        exception,
+        Unwind::Exception(
+            Error::SimpleError(SimpleError {
+                what: "Undefined global",
+            }),
+            Location {
+                span: Some(47..48),
+                context: Some(
+                    concat!(
+                        "003                 let x = 42,\n",
+                        "004                 \"{X}\"\n",
+                        "                     ^ Undefined global\n",
+                        "005 \n"
+                    )
+                    .to_string()
+                )
+            }
+        )
+    );
+}
