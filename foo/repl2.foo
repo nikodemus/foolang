@@ -5,7 +5,6 @@ class REPL
       _output
       _compiler
       _atEof
-      _hasError
       _value
   }
 
@@ -17,54 +16,40 @@ class REPL
           _output: system output
           _compiler: Compiler new
           _atEof: False
-          _hasError: False
           _value: False
 
-  method ok
-     (_atEof or: _hasError) not
-
   method run
-     output println: "Foolang 0.2.0"
-     { _atEof } whileFalse: { self prompt; read; eval; print }
+     _output println: "Foolang 0.2.0",
+     { _atEof } whileFalse: { self readEvalPrint }
+     _output println: _atEof toString
+
+  method readEvalPrint
+     { self prompt, self read, self eval, self print } onError:
+     { |error context| _output println: error, _output println: context }
 
   method prompt
      _output print: "> "
      _output flush
 
   method read
-     _error = False
      let source = ""
      {
          let line = _input readline
-         _eof = line is False
-         _eof ifFalse: {
+         _atEof = line is False
+         _atEof ifFalse: {
            source = source append: line
            self _tryParse: source
          }
-     }
-     whileFalse
+     } whileFalse
 
   method eval
-     self ok ifTrue: {
-        _value = compiler evalButOnError: { |message|
-            return self setError: message
-        }
-     }
+     _atEof ifFalse: { _value = _compiler evaluate }
 
   method print
-     self ok ifTrue: { _output println: _value toString }
-
-  method setError: message
-     _output println: message
-     _hasError = True
+     _atEof ifFalse: { _output println: _value toString }
 
   method _tryParse: source
-     _compiler parse: source
-        onEof: { return False }
-        onError: { |message|
-           self setError: message
-           return True
-        }
+     _compiler parse: source onEof: { return False },
     True
 
 end
