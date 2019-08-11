@@ -615,7 +615,11 @@ fn identifier_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Resu
                 return parser.error("Invalid message name (must be lowercase)");
             }
             // Unary message
-            Ok(Expr::Send(parser.span(), parser.tokenstring(), Box::new(left), vec![]))
+            Ok(left.send(Message {
+                span: parser.span(),
+                selector: parser.tokenstring(),
+                args: vec![],
+            }))
         }
     }
 }

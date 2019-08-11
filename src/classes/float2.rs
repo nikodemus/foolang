@@ -9,6 +9,7 @@ pub fn vtable() -> Vtable {
     vt.def("divInteger:", float_div_integer);
     vt.def("mulInteger:", float_mul_integer);
     vt.def("subInteger:", float_sub_integer);
+    vt.def("prefix-", float_neg);
     // DERIVED
     vt.def("+", float_add);
     vt.def("/", float_div);
@@ -49,6 +50,10 @@ fn float_mul_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
 fn float_sub_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let res = args[0].float() - receiver.float();
     Ok(foo.make_float(res))
+}
+
+fn float_neg(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    Ok(foo.make_float(-receiver.float()))
 }
 
 // DERIVED METHODS

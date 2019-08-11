@@ -15,6 +15,7 @@ pub fn vtable() -> Vtable {
     vt.def("mulInteger:", integer_mul_integer);
     vt.def("subInteger:", integer_sub_integer);
     vt.def("toString", integer_to_string);
+    vt.def("prefix-", integer_neg);
     // INCIDENTAL
     vt.def("gcd:", integer_gcd);
     // DERIVED
@@ -97,6 +98,10 @@ fn integer_gcd(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
 
 fn integer_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
     Ok(foo.make_string(&receiver.integer().to_string()))
+}
+
+fn integer_neg(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+    Ok(foo.make_integer(-receiver.integer()))
 }
 
 // DERIVED METHODS
