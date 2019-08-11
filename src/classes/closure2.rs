@@ -25,8 +25,12 @@ fn closure_apply(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
 
 fn closure_on_error(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let res = eval::apply(None, receiver.closure_ref(), args, foo);
-    if let Err(Unwind::Exception(error, _)) = res {
-        args[0].send("value:", &[foo.into_string(error.what())], foo)
+    if let Err(Unwind::Exception(error, loc)) = res {
+        args[0].send(
+            "value:",
+            &[foo.into_string(error.what()), foo.into_string(loc.context())],
+            foo,
+        )
     } else {
         res
     }
