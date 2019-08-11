@@ -1199,7 +1199,8 @@ fn string_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             Some(p) => p + p0,
         };
 
-        // FIXME: errors from parse_str don't show the larger context
+        // FIXME: parse errors from parse_str don't show the larger context, and have
+        // incorrect line numbers
         let mut expr = parse_str(&data[p0 + 1..p1])?;
         expr.shift_span(span.start);
         let interp = expr.send(Message {
