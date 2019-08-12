@@ -192,10 +192,10 @@ pub struct Global {
 }
 
 impl Global {
-    fn expr(span: Span, name: String) -> Expr {
+    fn expr(span: Span, name: &str) -> Expr {
         Expr::Global(Global {
             span,
-            name,
+            name: name.to_string(),
         })
     }
 }
@@ -765,7 +765,7 @@ fn identifier_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             let c = name.chars().next().expect("BUG: empty identifier");
             if c.is_uppercase() {
                 // FIXME: not all languages have uppercase
-                return Ok(Global::expr(parser.span(), parser.tokenstring()));
+                return Ok(Global::expr(parser.span(), parser.slice()));
             }
             return Ok(Expr::Var(Var::untyped(parser.span(), parser.tokenstring())));
         }
