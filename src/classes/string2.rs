@@ -4,6 +4,7 @@ pub fn instance_vtable() -> Vtable {
     let mut vt = Vtable::new("String");
     vt.def("append:", string_append);
     vt.def("appendToString:", string_append_to_string);
+    vt.def("newline", string_newline);
     vt.def("toString", string_to_string);
     vt
 }
@@ -25,6 +26,12 @@ fn string_append(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
 fn string_append_to_string(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let mut s = args[0].string_as_str().to_string();
     s.push_str(receiver.string_as_str());
+    Ok(foo.into_string(s))
+}
+
+fn string_newline(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+    let mut s = receiver.string_as_str().to_string();
+    s.push_str("\n");
     Ok(foo.into_string(s))
 }
 

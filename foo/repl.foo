@@ -42,7 +42,7 @@ class REPL
          let line = _input readline
          _atEof = line is False
          _atEof ifFalse: {
-           source = source append: line
+           source = source append: line newline
            self _tryParse: source
          }
      } whileFalse

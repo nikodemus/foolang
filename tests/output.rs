@@ -93,8 +93,8 @@ fn repl() -> Result<(), Box<std::error::Error>> {
                   method toString
                      "{x}@{y}"
                end
-               { let p1 = Point x: 1 y: 2,
-                 let p2 = Point x: 100 y: 200,
+               { let p1 = Point x: 1 y: 2
+                 let p2 = Point x: 100 y: 200
                  p1 + p2 } value
                system output println: "Hi!"
               "#,
