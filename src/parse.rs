@@ -503,8 +503,9 @@ impl<'a> Parser<'a> {
             Syntax::General(prefix, _, _) => prefix(self),
             Syntax::Operator(is_prefix, _, _) if *is_prefix => {
                 let operator = self.tokenstring();
-                Ok(self.parse_expr(SEQ_PRECEDENCE)?.send(Message {
-                    span: self.span(),
+                let span = self.span();
+                Ok(self.parse_expr(PREFIX_PRECEDENCE)?.send(Message {
+                    span,
                     selector: format!("prefix{}", operator),
                     args: vec![],
                 }))
@@ -636,6 +637,7 @@ fn make_token_table() -> TokenTable {
 // KLUDGE: couple of places which don't have convenient access to the table
 // need this.
 const SEQ_PRECEDENCE: usize = 1;
+const PREFIX_PRECEDENCE: usize = 1000;
 
 fn make_name_table() -> NameTable {
     let mut table: NameTable = HashMap::new();
@@ -1442,6 +1444,24 @@ fn parse_operators2() {
     assert_eq!(
         parse_str("a * b + c"),
         Ok(binary(6..7, "+", binary(2..3, "*", var(0..1, "a"), var(4..5, "b")), var(8..9, "c")))
+    );
+}
+
+#[test]
+fn parse_operators3() {
+    assert_eq!(
+        parse_str("-a - b"),
+        Ok(var(1..2, "a")
+            .send(Message {
+                span: 0..1,
+                selector: "prefix-".to_string(),
+                args: vec![]
+            })
+            .send(Message {
+                span: 3..4,
+                selector: "-".to_string(),
+                args: vec![var(5..6, "b")]
+            }))
     );
 }
 

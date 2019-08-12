@@ -1661,7 +1661,7 @@ fn test_interval4() {
     assert_eq!(
         eval_ok(
             "let x = 0
-             1 to: (-6) do: {|i| x = x + i }
+             1 to: -6 do: {|i| x = x + i }
              x"
         )
         .integer(),
