@@ -11,14 +11,33 @@ pub fn class_vtable() -> Vtable {
 
 pub fn instance_vtable() -> Vtable {
     let mut vt = Vtable::new("Compiler");
-    vt.def("parse:onEof:", compiler_parse_on_eof);
-    vt.def("parse:", compiler_parse);
+    vt.def("define:as:", compiler_define_as);
     vt.def("evaluate", compiler_evaluate);
+    vt.def("parse:", compiler_parse);
+    vt.def("parse:onEof:", compiler_parse_on_eof);
     vt
 }
 
 fn class_compiler_new(_receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
     Ok(foo.make_compiler())
+}
+
+fn compiler_evaluate(receiver: &Object, _args: &[Object], _foo: &Foolang) -> Eval {
+    let compiler = receiver.compiler();
+    let expr = compiler.expr.borrow();
+    // This is the part that constrains the effects inside the compiler.
+    let env = Env::new(&compiler.foolang);
+    let source = compiler.source.borrow();
+    env.eval(&expr).context(&source)
+}
+
+fn compiler_define_as(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
+    let compiler = receiver.compiler();
+    let name = args[0].string_as_str();
+    let value = args[1].clone();
+    let mut workspace = compiler.foolang.workspace.borrow_mut();
+    workspace.insert(name.to_string(), value);
+    Ok(receiver.clone())
 }
 
 fn parse_aux(receiver: &Object, source: &Object, handler: Option<&Object>, foo: &Foolang) -> Eval {
@@ -37,21 +56,12 @@ fn parse_aux(receiver: &Object, source: &Object, handler: Option<&Object>, foo: 
     Ok(receiver.clone())
 }
 
-fn compiler_parse_on_eof(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    // FIXME: This will panic if it doesn't get a string.
-    parse_aux(receiver, &args[0], Some(&args[1]), foo)
-}
-
 fn compiler_parse(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     // FIXME: This will panic if it doesn't get a string.
     parse_aux(receiver, &args[0], None, foo)
 }
 
-fn compiler_evaluate(receiver: &Object, _args: &[Object], _foo: &Foolang) -> Eval {
-    let compiler = receiver.compiler();
-    let expr = compiler.expr.borrow();
-    // This is the part that constrains the effects inside the compiler.
-    let env = Env::new(&compiler.foolang);
-    let source = compiler.source.borrow();
-    env.eval(&expr).context(&source)
+fn compiler_parse_on_eof(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    // FIXME: This will panic if it doesn't get a string.
+    parse_aux(receiver, &args[0], Some(&args[1]), foo)
 }

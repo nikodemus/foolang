@@ -273,6 +273,7 @@ pub struct Foolang {
     output_vtable: Rc<Vtable>,
     string_vtable: Rc<Vtable>,
     pub globals: RefCell<HashMap<String, Object>>,
+    pub workspace: RefCell<HashMap<String, Object>>,
 }
 
 impl Foolang {
@@ -366,6 +367,7 @@ impl Foolang {
             output_vtable,
             string_vtable,
             globals: RefCell::new(globals),
+            workspace: RefCell::new(HashMap::new()),
         };
 
         foo
@@ -482,10 +484,12 @@ impl Foolang {
     }
 
     pub fn make_compiler(&self) -> Object {
+        let foolang = self.clone();
+        *foolang.workspace.borrow_mut() = HashMap::new();
         Object {
             vtable: Rc::clone(&self.compiler_vtable),
             datum: Datum::Compiler(Rc::new(Compiler {
-                foolang: self.clone(),
+                foolang,
                 source: RefCell::new(String::new()),
                 expr: RefCell::new(Expr::Const(0..0, Literal::Boolean(false))),
             })),

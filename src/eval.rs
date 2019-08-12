@@ -361,6 +361,12 @@ impl<'a> Env<'a> {
                         if let Some(slot) = receiver.vtable.slots.get(&var.name) {
                             return read_instance_variable(receiver, slot.index);
                         }
+                    } else {
+                        // Not inside a method, so let's check workspace.
+                        // FIXME: Are closures allowed to see into workspace?
+                        if let Some(value) = self.foo.workspace.borrow().get(&var.name) {
+                            return Ok(value.clone());;
+                        }
                     }
                 }
             }

@@ -96,6 +96,7 @@ fn repl() -> Result<(), Box<std::error::Error>> {
                { let p1 = Point x: 1 y: 2,
                  let p2 = Point x: 100 y: 200,
                  p1 + p2 } value
+               system output println: "Hi!"
               "#,
         )
         .assert()
@@ -104,6 +105,8 @@ fn repl() -> Result<(), Box<std::error::Error>> {
             r#"Foolang 0.2.0
 > #<class Point>
 > 101@202
+> Hi!
+#<Output stdout>
 > "#,
         );
     Ok(())

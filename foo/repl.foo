@@ -12,9 +12,11 @@ class REPL
      (self new: system) run
 
   class method new: system
+     let compiler = Compiler new
+     compiler define: "system" as: system
      self _input: system input
           _output: system output
-          _compiler: Compiler new
+          _compiler: compiler
           _atEof: False
           _value: False
 

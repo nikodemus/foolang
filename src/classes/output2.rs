@@ -6,6 +6,7 @@ pub fn vtable() -> Vtable {
     vt.def("newline", output_newline);
     vt.def("print:", output_print);
     vt.def("println:", output_println);
+    vt.def("toString", output_to_string);
     vt
 }
 
@@ -31,4 +32,8 @@ fn output_println(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
     output.write(args[0].string_as_str());
     output.write("\n");
     Ok(receiver.clone())
+}
+
+fn output_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+    Ok(foo.into_string(format!("{}", receiver)))
 }
