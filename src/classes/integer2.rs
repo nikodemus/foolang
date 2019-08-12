@@ -17,6 +17,7 @@ pub fn vtable() -> Vtable {
     vt.def("toString", integer_to_string);
     vt.def("prefix-", integer_neg);
     vt.def("to:", integer_to);
+    vt.def("to:do:", integer_to_do);
     // INCIDENTAL
     vt.def("gcd:", integer_gcd);
     // DERIVED
@@ -106,6 +107,26 @@ fn integer_to(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     // FIXME: Panics if argument is not an integer
     let end = args[0].integer();
     Ok(foo.make_interval(start, end))
+}
+
+fn integer_to_do(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let start = receiver.integer();
+    let end = args[0].integer();
+    let block = args[1].clone();
+    let mut i = start;
+    let step = if start < end {
+        1
+    } else {
+        -1
+    };
+    loop {
+        block.send("value:", &[foo.make_integer(i)], foo)?;
+        if i == end {
+            break;
+        }
+        i += step;
+    }
+    Ok(receiver.clone())
 }
 
 fn integer_neg(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
