@@ -1668,3 +1668,16 @@ fn test_interval4() {
         1 + 0 + -1 + -2 + -3 + -4 + -5 + -6
     );
 }
+
+#[test]
+fn test_integer_times() {
+    assert_eq!(
+        eval_ok(
+            "let x = 1
+             3 times: { x = x + x }
+             x"
+        )
+        .integer(),
+        1 + 1 + 2 + 4
+    )
+}

@@ -18,6 +18,7 @@ pub fn vtable() -> Vtable {
     vt.def("prefix-", integer_neg);
     vt.def("to:", integer_to);
     vt.def("to:do:", integer_to_do);
+    vt.def("times:", integer_times);
     // INCIDENTAL
     vt.def("gcd:", integer_gcd);
     // DERIVED
@@ -98,8 +99,18 @@ fn integer_gcd(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     Ok(foo.make_integer(res))
 }
 
-fn integer_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
-    Ok(foo.make_string(&receiver.integer().to_string()))
+fn integer_neg(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+    Ok(foo.make_integer(-receiver.integer()))
+}
+
+fn integer_times(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let mut start = receiver.integer();
+    let block = args[0].clone();
+    while start > 0 {
+        block.send("value", &[], foo)?;
+        start -= 1;
+    }
+    Ok(receiver.clone())
 }
 
 fn integer_to(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
@@ -129,8 +140,8 @@ fn integer_to_do(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     Ok(receiver.clone())
 }
 
-fn integer_neg(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
-    Ok(foo.make_integer(-receiver.integer()))
+fn integer_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+    Ok(foo.make_string(&receiver.integer().to_string()))
 }
 
 // DERIVED METHODS
