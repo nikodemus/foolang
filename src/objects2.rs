@@ -425,8 +425,9 @@ impl Foolang {
         vtable_name.push_str(&classdef.name);
         let mut class_vtable = Vtable::new(vtable_name.as_str());
         class_vtable.def(&classdef.constructor(), generic_ctor);
-        class_vtable.def("toString", generic_to_string);
+        class_vtable.def("toString", generic_class_to_string);
         let mut instance_vtable = Vtable::new(&classdef.name);
+        instance_vtable.def("toString", generic_instance_to_string);
         let mut index = 0;
         for var in &classdef.instance_variables {
             index += 1;
@@ -718,9 +719,27 @@ fn generic_ctor(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
     })
 }
 
-fn generic_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+fn generic_class_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
     let class = receiver.class();
     Ok(foo.into_string(format!("#<class {}>", &class.instance_vtable.name)))
+}
+
+fn generic_instance_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+    let instance = receiver.instance();
+    let mut info = String::new();
+    for var in instance.instance_variables.borrow().iter() {
+        if info.len() > 50 {
+            info.push_str("...");
+            break;
+        }
+        if info.is_empty() {
+            info.push_str(" ");
+        } else {
+            info.push_str(",");
+        }
+        info.push_str(format!("{:?}", var).as_str());
+    }
+    Ok(foo.into_string(format!("#<{}{}>", &receiver.vtable.name, info)))
 }
 
 pub fn read_instance_variable(receiver: &Object, index: usize) -> Eval {
