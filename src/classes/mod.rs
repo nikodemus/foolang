@@ -12,6 +12,7 @@ pub mod input;
 pub mod input2;
 pub mod integer;
 pub mod integer2;
+pub mod interval2;
 pub mod number;
 pub mod object;
 pub mod output;

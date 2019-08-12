@@ -16,6 +16,7 @@ pub fn vtable() -> Vtable {
     vt.def("subInteger:", integer_sub_integer);
     vt.def("toString", integer_to_string);
     vt.def("prefix-", integer_neg);
+    vt.def("to:", integer_to);
     // INCIDENTAL
     vt.def("gcd:", integer_gcd);
     // DERIVED
@@ -98,6 +99,13 @@ fn integer_gcd(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
 
 fn integer_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
     Ok(foo.make_string(&receiver.integer().to_string()))
+}
+
+fn integer_to(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let start = receiver.integer();
+    // FIXME: Panics if argument is not an integer
+    let end = args[0].integer();
+    Ok(foo.make_interval(start, end))
 }
 
 fn integer_neg(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
