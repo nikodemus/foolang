@@ -1,4 +1,4 @@
-use crate::eval::Env;
+use crate::eval::{Binding, Env};
 use crate::objects2::{Eval, Foolang, Object, Source, Vtable};
 use crate::parse::Parser;
 use crate::unwind::{Error, Unwind};
@@ -35,9 +35,14 @@ fn compiler_define_as(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eva
     let compiler = receiver.compiler();
     let name = args[0].string_as_str();
     let value = args[1].clone();
-    let mut workspace = compiler.foolang.workspace.borrow_mut();
-    workspace.insert(name.to_string(), value);
-    Ok(receiver.clone())
+    match compiler.foolang.workspace {
+        None => Unwind::error("Cannot define: not in workspace"),
+        Some(ref workspace) => {
+            let mut table = workspace.borrow_mut();
+            table.insert(name.to_string(), Binding::untyped(value));
+            Ok(receiver.clone())
+        }
+    }
 }
 
 fn parse_aux(receiver: &Object, source: &Object, handler: Option<&Object>, foo: &Foolang) -> Eval {

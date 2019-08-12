@@ -142,14 +142,14 @@ pub struct Env<'a> {
     frame: Frame,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Binding {
     vtable: Option<Rc<Vtable>>,
-    value: Object,
+    pub value: Object,
 }
 
 impl Binding {
-    fn untyped(init: Object) -> Binding {
+    pub fn untyped(init: Object) -> Binding {
         Binding {
             vtable: None,
             value: init,
@@ -213,9 +213,8 @@ impl<'a> Env<'a> {
         name: &String,
         typename: &Option<String>,
         expr: &Expr,
-        body: &Expr,
+        body: &Option<Box<Expr>>,
     ) -> Eval {
-        let mut args = HashMap::new();
         let binding = match typename {
             None => Binding::untyped(self.eval(expr)?),
             Some(typename) => {
@@ -223,9 +222,33 @@ impl<'a> Env<'a> {
                 Binding::typed(class.instance_vtable.clone(), self.eval_typecheck(expr, typename)?)
             }
         };
-        args.insert(name.to_owned(), binding);
-        let env = Env::from_parts(self.foo, args, Some(self.frame.clone()), None);
-        env.eval(body)
+        let value = match body {
+            None => Err(binding.value.clone()),
+            Some(expr) => Ok(expr),
+        };
+        match self.foo.workspace {
+            Some(ref workspace) if self.frame.receiver().is_none() => {
+                // Toplevel let in workspace
+                {
+                    let mut table = workspace.borrow_mut();
+                    table.insert(name.clone(), binding);
+                }
+                match value {
+                    Ok(expr) => self.eval(expr),
+                    Err(value) => Ok(value),
+                }
+            }
+            _ => {
+                // Lexical
+                let mut args = HashMap::new();
+                args.insert(name.to_owned(), binding);
+                let env = Env::from_parts(self.foo, args, Some(self.frame.clone()), None);
+                match value {
+                    Ok(expr) => env.eval(expr),
+                    Err(value) => Ok(value),
+                }
+            }
+        }
     }
 
     fn eval_block(&self, params: &Vec<Var>, body: &Expr, rtype: &Option<String>) -> Eval {
@@ -341,6 +364,14 @@ impl<'a> Env<'a> {
                     if let Some(slot) = receiver.vtable.slots.get(&assign.name) {
                         return write_instance_variable(receiver, slot, value).source(&assign.span);
                     }
+                } else {
+                    // Not inside a method, so let's check workspace.
+                    // FIXME: Are closures allowed to see into workspace?
+                    if let Some(workspace) = &self.foo.workspace {
+                        if let Some(binding) = workspace.borrow_mut().get_mut(&assign.name) {
+                            return binding.assign(value);
+                        }
+                    }
                 }
                 Unwind::error_at(assign.span.clone(), "Cannot assign to an unbound variable")
             }
@@ -364,8 +395,10 @@ impl<'a> Env<'a> {
                     } else {
                         // Not inside a method, so let's check workspace.
                         // FIXME: Are closures allowed to see into workspace?
-                        if let Some(value) = self.foo.workspace.borrow().get(&var.name) {
-                            return Ok(value.clone());;
+                        if let Some(workspace) = &self.foo.workspace {
+                            if let Some(binding) = workspace.borrow().get(&var.name) {
+                                return Ok(binding.value.clone());;
+                            }
                         }
                     }
                 }

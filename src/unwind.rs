@@ -75,6 +75,15 @@ impl Unwind {
         ))
     }
 
+    pub fn error<T>(what: &'static str) -> Result<T, Unwind> {
+        Err(Unwind::Exception(
+            Error::SimpleError(SimpleError {
+                what,
+            }),
+            Location::none(),
+        ))
+    }
+
     pub fn error_at<T>(span: Span, what: &'static str) -> Result<T, Unwind> {
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
@@ -87,11 +96,13 @@ impl Unwind {
     pub fn return_from<T>(frame: Frame, value: Object) -> Result<T, Unwind> {
         Err(Unwind::ReturnFrom(frame, value))
     }
+
     pub fn add_span(&mut self, span: &Span) {
         if let Unwind::Exception(_, location) = self {
             location.add_span(span)
         }
     }
+
     pub fn with_context(mut self, source: &str) -> Unwind {
         if let Unwind::Exception(error, location) = &mut self {
             location.add_context(source, error.what());

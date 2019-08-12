@@ -211,7 +211,7 @@ pub enum Literal {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Assign(Assign),
-    Bind(String, Option<String>, Box<Expr>, Box<Expr>),
+    Bind(String, Option<String>, Box<Expr>, Option<Box<Expr>>),
     Block(Span, Vec<Var>, Box<Expr>, Option<String>),
     Cascade(Box<Expr>, Vec<Vec<Message>>),
     Chain(Box<Expr>, Vec<Message>),
@@ -288,7 +288,7 @@ impl Expr {
         use Expr::*;
         let span = match self {
             Assign(assign) => &assign.span,
-            Bind(_, _, _, body) => return body.span(),
+            Bind(_, _, expr, ..) => return expr.span(),
             Block(span, ..) => span,
             Cascade(left, ..) => return left.span(),
             ClassDefinition(definition) => &definition.span,
@@ -313,7 +313,9 @@ impl Expr {
             }
             Bind(_name, _type, value, body) => {
                 value.shift_span(n);
-                body.shift_span(n);
+                if let Some(expr) = body {
+                    expr.shift_span(n);
+                }
             }
             Block(span, vars, body, _rtype) => {
                 span.shift(n);
@@ -1006,6 +1008,8 @@ fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     // keep this function same,
     if end == Token::SIGIL && parser.slice() == "}" {
         Ok(Expr::Block(start.start..parser.span().end, params, Box::new(body), rtype))
+    } else if end == Token::EOF {
+        parser.eof_error("Unexpected EOF while pasing a block: expected } as block terminator")
     } else {
         parser.error("Expected } as block terminator")
     }
@@ -1106,19 +1110,27 @@ fn let_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     }
 
     let value = parser.parse_expr(SEQ_PRECEDENCE)?;
-    let token = parser.next_token()?;
-    match token {
-        Token::SIGIL if parser.slice() == "," => {}
-        Token::NEWLINE => {}
-        Token::EOF => {
-            return parser.eof_error("Unexpected EOF while parsing let");
-        }
+    let mut eof = match parser.next_token()? {
+        Token::SIGIL if parser.slice() == "," => false,
+        Token::NEWLINE => false,
+        Token::EOF => true,
         _ => {
             return parser.error("Expected separator after let");
         }
+    };
+    // For REPL niceness:
+    //   > let x = 2
+    //   2
+    if Token::EOF == parser.lookahead()?.0 {
+        parser.next_token()?;
+        eof = true;
     }
-    let body = parser.parse_seq()?;
-    Ok(Expr::Bind(name, typename, Box::new(value), Box::new(body)))
+    let body = if eof {
+        None
+    } else {
+        Some(Box::new(parser.parse_seq()?))
+    };
+    Ok(Expr::Bind(name, typename, Box::new(value), body))
 }
 
 fn ignore_prefix(parser: &Parser) -> Result<Expr, Unwind> {
@@ -1291,11 +1303,16 @@ mod expr_utils {
     }
 
     pub fn bind(name: &str, value: Expr, body: Expr) -> Expr {
-        Expr::Bind(name.to_string(), None, Box::new(value), Box::new(body))
+        Expr::Bind(name.to_string(), None, Box::new(value), Some(Box::new(body)))
     }
 
     pub fn bind_typed(name: &str, typename: &str, value: Expr, body: Expr) -> Expr {
-        Expr::Bind(name.to_string(), Some(typename.to_string()), Box::new(value), Box::new(body))
+        Expr::Bind(
+            name.to_string(),
+            Some(typename.to_string()),
+            Box::new(value),
+            Some(Box::new(body)),
+        )
     }
 
     pub fn boolean(span: Span, value: bool) -> Expr {

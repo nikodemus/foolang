@@ -7,7 +7,7 @@ use std::io::Write;
 use std::rc::Rc;
 
 use crate::eval;
-use crate::eval::{Env, Frame};
+use crate::eval::{Binding, Env, Frame};
 use crate::parse::{ClassDefinition, Expr, Literal, Parser, Var};
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -273,7 +273,7 @@ pub struct Foolang {
     output_vtable: Rc<Vtable>,
     string_vtable: Rc<Vtable>,
     pub globals: RefCell<HashMap<String, Object>>,
-    pub workspace: RefCell<HashMap<String, Object>>,
+    pub workspace: Option<RefCell<HashMap<String, Binding>>>,
 }
 
 impl Foolang {
@@ -367,7 +367,7 @@ impl Foolang {
             output_vtable,
             string_vtable,
             globals: RefCell::new(globals),
-            workspace: RefCell::new(HashMap::new()),
+            workspace: None,
         };
 
         foo
@@ -484,8 +484,8 @@ impl Foolang {
     }
 
     pub fn make_compiler(&self) -> Object {
-        let foolang = self.clone();
-        *foolang.workspace.borrow_mut() = HashMap::new();
+        let mut foolang = self.clone();
+        foolang.workspace = Some(RefCell::new(HashMap::new()));
         Object {
             vtable: Rc::clone(&self.compiler_vtable),
             datum: Datum::Compiler(Rc::new(Compiler {
