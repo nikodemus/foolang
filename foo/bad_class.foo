@@ -1,3 +1,4 @@
+-- This file has CRLF newlines intentionally
 class Foo {}
    method baz
      }

@@ -4,6 +4,35 @@ use crate::eval::Frame;
 use crate::objects2::Object;
 use crate::tokenstream::Span;
 
+trait LineIndices {
+    // FIXME: learn to implement iterators
+    fn line_indices(&self) -> Vec<(usize, &str)>;
+}
+
+impl LineIndices for str {
+    fn line_indices(&self) -> Vec<(usize, &str)> {
+        let mut all = Vec::new();
+        let mut start: usize = 0;
+        while start < self.len() {
+            if let Some(newline0) = self[start..].find("\n") {
+                let newline = newline0 + start;
+                // Check for preceding carriage return.
+                let end = if newline > 0 && &self[newline - 1..newline] == "\r" {
+                    newline - 1
+                } else {
+                    newline
+                };
+                all.push((start, &self[start..end]));
+                start = newline + 1;
+            } else {
+                all.push((start, &self[start..]));
+                start = self.len();
+            }
+        }
+        all
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub enum Unwind {
     Exception(Error, Location),
@@ -190,8 +219,7 @@ impl Location {
         let mut context = String::new();
         let mut prev = "";
         let mut lineno = 1;
-        let mut start = 0;
-        for line in source.lines() {
+        for (start, line) in source.line_indices() {
             if start >= self.end() {
                 // Line after the problem -- done.
                 _append_context_line(&mut context, lineno, line);
@@ -218,7 +246,6 @@ impl Location {
                 _append_context_line(&mut context, 0, mark.as_str());
             }
             prev = line;
-            start = end + 1;
             lineno += 1;
         }
         self.context = Some(context);
