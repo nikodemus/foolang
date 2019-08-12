@@ -70,10 +70,10 @@ fn test_bad_class() -> Result<(), Box<std::error::Error>> {
     cmd.arg("foo/bad_class.foo");
     cmd.assert().success().stdout(
         "ERROR: Not valid in value position
-002    method baz
-003      }
+003    method baz
+004      }
          ^ Not valid in value position
-004 end
+005 end
 
 ",
     );
