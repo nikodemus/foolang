@@ -1698,7 +1698,9 @@ fn test_array_ctor_0() {
     let (obj, _foo) = eval_obj("[]");
     obj.as_vec(move |vec| {
         assert_eq!(vec.len(), 0);
-    });
+        Ok(())
+    })
+    .unwrap();
 }
 
 #[test]
@@ -1707,7 +1709,9 @@ fn test_array_ctor_1() {
     obj.as_vec(move |vec| {
         assert_eq!(vec.len(), 1);
         assert_eq!(vec[0].integer(), 42);
-    });
+        Ok(())
+    })
+    .unwrap();
 }
 
 #[test]
@@ -1718,7 +1722,9 @@ fn test_array_ctor_3() {
         assert_eq!(vec[0].integer(), 31);
         assert_eq!(vec[1].integer(), 42);
         assert_eq!(vec[2].integer(), 53);
-    });
+        Ok(())
+    })
+    .unwrap();
 }
 
 #[test]
@@ -1734,5 +1740,17 @@ fn test_array_push() {
         assert_eq!(vec[0].integer(), -1);
         assert_eq!(vec[1].integer(), 0);
         assert_eq!(vec[2].integer(), 1);
-    });
+        Ok(())
+    })
+    .unwrap();
+}
+
+#[test]
+fn test_array_do() {
+    let (obj, _foo) = eval_obj(
+        "let x = 0
+         [1,2,3] do: {|y| x = x + y}
+         x",
+    );
+    assert_eq!(obj.integer(), 1 + 2 + 3);
 }
