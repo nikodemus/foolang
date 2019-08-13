@@ -24,6 +24,21 @@ impl ShiftSpan for Span {
 // FIXME: Do these really need clone, if so, why?
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Array {
+    pub span: Span,
+    pub data: Vec<Expr>,
+}
+
+impl Array {
+    fn expr(span: Span, data: Vec<Expr>) -> Expr {
+        Expr::Array(Array {
+            span,
+            data,
+        })
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Assign {
     pub span: Span,
     pub name: String,
@@ -210,6 +225,7 @@ pub enum Literal {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
+    Array(Array),
     Assign(Assign),
     Bind(String, Option<String>, Box<Expr>, Option<Box<Expr>>),
     Block(Span, Vec<Var>, Box<Expr>, Option<String>),
@@ -287,6 +303,7 @@ impl Expr {
     pub fn span(&self) -> Span {
         use Expr::*;
         let span = match self {
+            Array(array) => &array.span,
             Assign(assign) => &assign.span,
             Bind(_, _, expr, ..) => return expr.span(),
             Block(span, ..) => span,
@@ -297,6 +314,7 @@ impl Expr {
             Global(global) => &global.span,
             Chain(left, _) => return left.span(),
             Return(ret) => &ret.span,
+            // FIXME: Questionable
             Seq(exprs) => return exprs[exprs.len() - 1].span(),
             Typecheck(span, ..) => span,
             Var(var) => &var.span,
@@ -307,6 +325,12 @@ impl Expr {
     pub fn shift_span(&mut self, n: usize) {
         use Expr::*;
         match self {
+            Array(array) => {
+                array.span.shift(n);
+                for elt in &mut array.data {
+                    elt.shift_span(n);
+                }
+            }
             Assign(assign) => {
                 assign.span.shift(n);
                 assign.value.shift_span(n);
@@ -655,6 +679,9 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, "is", invalid_prefix, is_suffix, precedence_10);
     Syntax::def(t, "::", invalid_prefix, typecheck_suffix, precedence_1000);
 
+    // FIXME: Should opening group sigils use prefix precedence?
+    Syntax::def(t, "[", array_prefix, invalid_suffix, precedence_2);
+    Syntax::def(t, "]", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "(", paren_prefix, invalid_suffix, precedence_2);
     Syntax::def(t, ")", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "{", block_prefix, invalid_suffix, precedence_2);
@@ -716,6 +743,29 @@ fn invalid_prefix(parser: &Parser) -> Result<Expr, Unwind> {
 
 fn invalid_suffix(parser: &Parser, _: Expr, _: PrecedenceFunction) -> Result<Expr, Unwind> {
     parser.error("Not valid in operator position")
+}
+
+fn array_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+    let start = parser.span().start;
+    let (token, next) = parser.lookahead()?;
+    let next_end = next.end;
+    let (span, data) = if token == Token::SIGIL && parser.slice_at(next) == "]" {
+        parser.next_token()?;
+        (start..next_end, vec![])
+    } else {
+        let expr = parser.parse_seq()?;
+        if parser.next_token()? == Token::SIGIL && parser.slice() == "]" {
+            let span = start..parser.span().end;
+            match expr {
+                Expr::Seq(expressions) => (span, expressions),
+                _ => (span, vec![expr]),
+            }
+        } else {
+            // FIXME: EOF
+            return parser.error("Expected ]");
+        }
+    };
+    Ok(Array::expr(span, data))
 }
 
 fn assign_suffix(
@@ -865,6 +915,7 @@ fn paren_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     if token == Token::SIGIL && parser.slice() == ")" {
         Ok(expr)
     } else {
+        // FIXME: EOF
         parser.error("Expected )")
     }
 }
@@ -884,61 +935,6 @@ fn typecheck_suffix(
     }
 }
 
-fn parse_method(
-    parser: &Parser,
-    class: &mut ClassDefinition,
-    kind: MethodKind,
-) -> Result<(), Unwind> {
-    assert_eq!(parser.slice(), "method");
-    let span = parser.span();
-    let mut selector = String::new();
-    let mut parameters = Vec::new();
-    loop {
-        let token = parser.next_token()?;
-        selector.push_str(parser.slice());
-        match token {
-            Token::WORD => {
-                assert!(parameters.is_empty());
-                break;
-            }
-            Token::SIGIL => {
-                assert!(parameters.is_empty());
-                if let Token::WORD = parser.next_token()? {
-                    parameters.push(parse_var(parser)?);
-                } else {
-                    return parser.error("Expected binary selector parameter");
-                }
-                break;
-            }
-            Token::KEYWORD => {
-                if let Token::WORD = parser.next_token()? {
-                    parameters.push(parse_var(parser)?);
-                } else {
-                    return parser.error("Expected keyword selector parameter");
-                }
-            }
-            _ => return parser.error("Expected method selector"),
-        }
-        if let (Token::KEYWORD, _) = parser.lookahead()? {
-            continue;
-        } else {
-            break;
-        }
-    }
-    let (token, span2) = parser.lookahead()?;
-    let rtype = if token == Token::SIGIL && parser.slice_at(span2) == "->" {
-        parser.next_token()?;
-        Some(parse_type_designator(parser)?)
-    } else {
-        None
-    };
-    // FIXME: This is the place where I could inform parser about instance
-    // variables.
-    let body = parser.parse_seq()?;
-    class.add_method(kind, MethodDefinition::new(span, selector, parameters, body, rtype));
-    Ok(())
-}
-
 fn sequence_suffix(
     parser: &Parser,
     left: Expr,
@@ -956,26 +952,6 @@ fn sequence_suffix(
         exprs.push(right);
     }
     Ok(Expr::Seq(exprs))
-}
-
-fn parse_type_designator(parser: &Parser) -> Result<String, Unwind> {
-    if let Token::WORD = parser.next_token()? {
-        Ok(parser.tokenstring())
-    } else {
-        parser.error("Invalid type designator")
-    }
-}
-
-fn parse_var(parser: &Parser) -> Result<Var, Unwind> {
-    let name = parser.tokenstring();
-    let namespan = parser.span();
-    let (token, span) = parser.lookahead()?;
-    if token == Token::SIGIL && parser.slice_at(span) == "::" {
-        parser.next_token()?;
-        Ok(Var::typed(namespan, name, parse_type_designator(parser)?))
-    } else {
-        Ok(Var::untyped(namespan, name))
-    }
 }
 
 fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
@@ -1259,6 +1235,83 @@ fn string_prefix(parser: &Parser) -> Result<Expr, Unwind> {
 
     let span = parser.span();
     interpolate(parser, (span.start + n)..(span.end - n), n)
+}
+
+/// Utils
+
+fn parse_type_designator(parser: &Parser) -> Result<String, Unwind> {
+    if let Token::WORD = parser.next_token()? {
+        Ok(parser.tokenstring())
+    } else {
+        parser.error("Invalid type designator")
+    }
+}
+
+fn parse_var(parser: &Parser) -> Result<Var, Unwind> {
+    let name = parser.tokenstring();
+    let namespan = parser.span();
+    let (token, span) = parser.lookahead()?;
+    if token == Token::SIGIL && parser.slice_at(span) == "::" {
+        parser.next_token()?;
+        Ok(Var::typed(namespan, name, parse_type_designator(parser)?))
+    } else {
+        Ok(Var::untyped(namespan, name))
+    }
+}
+
+fn parse_method(
+    parser: &Parser,
+    class: &mut ClassDefinition,
+    kind: MethodKind,
+) -> Result<(), Unwind> {
+    assert_eq!(parser.slice(), "method");
+    let span = parser.span();
+    let mut selector = String::new();
+    let mut parameters = Vec::new();
+    loop {
+        let token = parser.next_token()?;
+        selector.push_str(parser.slice());
+        match token {
+            Token::WORD => {
+                assert!(parameters.is_empty());
+                break;
+            }
+            Token::SIGIL => {
+                assert!(parameters.is_empty());
+                if let Token::WORD = parser.next_token()? {
+                    parameters.push(parse_var(parser)?);
+                } else {
+                    return parser.error("Expected binary selector parameter");
+                }
+                break;
+            }
+            Token::KEYWORD => {
+                if let Token::WORD = parser.next_token()? {
+                    parameters.push(parse_var(parser)?);
+                } else {
+                    return parser.error("Expected keyword selector parameter");
+                }
+            }
+            _ => return parser.error("Expected method selector"),
+        }
+        if let (Token::KEYWORD, _) = parser.lookahead()? {
+            continue;
+        } else {
+            break;
+        }
+    }
+    let (token, span2) = parser.lookahead()?;
+    let rtype = if token == Token::SIGIL && parser.slice_at(span2) == "->" {
+        parser.next_token()?;
+        Some(parse_type_designator(parser)?)
+    } else {
+        None
+    };
+    // FIXME: This is the place where I could inform parser about instance
+    // variables.
+    let body = parser.parse_seq()?;
+    class.add_method(kind, MethodDefinition::new(span, selector, parameters, body, rtype));
+    Ok(())
 }
 
 /// Tests and tools
@@ -1835,4 +1888,36 @@ fn test_parse_cascade2() {
             ]
         ))
     );
+}
+
+#[test]
+fn test_parse_array0() {
+    assert_eq!(parse_str("[]"), Ok(Array::expr(0..2, vec![])))
+}
+
+#[test]
+fn test_parse_array1() {
+    assert_eq!(parse_str("[1]"), Ok(Array::expr(0..3, vec![int(1..2, 1)])))
+}
+
+#[test]
+fn test_parse_array2() {
+    assert_eq!(
+        parse_str("[1,2,3]"),
+        Ok(Array::expr(0..7, vec![int(1..2, 1), int(3..4, 2), int(5..6, 3)]))
+    )
+}
+
+#[test]
+fn test_parse_array3() {
+    assert_eq!(
+        parse_str(
+            "[
+                1
+                2
+                3
+             ]"
+        ),
+        Ok(Array::expr(0..70, vec![int(18..19, 1), int(36..37, 2), int(54..55, 3)]))
+    )
 }

@@ -7,7 +7,9 @@ use crate::objects2::{
     read_instance_variable, write_instance_variable, Arg, Closure, Eval, Foolang, Object, Source,
     Vtable,
 };
-use crate::parse::{Assign, ClassDefinition, Expr, Global, Literal, Message, Parser, Return, Var};
+use crate::parse::{
+    Array, Assign, ClassDefinition, Expr, Global, Literal, Message, Parser, Return, Var,
+};
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
 
@@ -180,6 +182,7 @@ impl<'a> Env<'a> {
     pub fn eval(&self, expr: &Expr) -> Eval {
         use Expr::*;
         match expr {
+            Array(array) => self.eval_array(array),
             Assign(assign) => self.eval_assign(assign),
             Bind(name, typename, value, body) => self.eval_bind(name, typename, value, body),
             Block(_, params, body, rtype) => self.eval_block(params, body, rtype),
@@ -206,6 +209,10 @@ impl<'a> Env<'a> {
             foo,
             frame: Frame::new(args, parent, receiver),
         }
+    }
+
+    fn eval_array(&self, _array: &Array) -> Eval {
+        unimplemented!("eval_array")
     }
 
     fn eval_bind(
