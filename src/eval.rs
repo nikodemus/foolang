@@ -1720,3 +1720,19 @@ fn test_array_ctor_3() {
         assert_eq!(vec[2].integer(), 53);
     });
 }
+
+#[test]
+fn test_array_push() {
+    let (obj, _foo) = eval_obj(
+        "let a = []
+         a push: -1
+         a push: 0
+         a push: 1",
+    );
+    obj.as_vec(move |vec| {
+        assert_eq!(vec.len(), 3);
+        assert_eq!(vec[0].integer(), -1);
+        assert_eq!(vec[1].integer(), 0);
+        assert_eq!(vec[2].integer(), 1);
+    });
+}

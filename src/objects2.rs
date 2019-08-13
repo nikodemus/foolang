@@ -664,7 +664,7 @@ impl Foolang {
 }
 
 impl Object {
-    pub fn as_vec(&self, fun: fn(RefMut<Vec<Object>>) -> ()) {
+    pub fn as_vec(&self, fun: impl FnOnce(RefMut<Vec<Object>>) -> ()) {
         match &self.datum {
             Datum::Array(array) => fun(array.data.borrow_mut()),
             _ => panic!("BUG: {:?} is not an Array", self),
