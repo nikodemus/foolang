@@ -1,5 +1,5 @@
 use std::borrow::Borrow;
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 use std::collections::HashMap;
 use std::fmt;
 use std::io::Read;
@@ -136,6 +136,45 @@ impl Arg {
     }
 }
 
+#[derive(PartialEq)]
+pub struct Array {
+    pub data: RefCell<Vec<Object>>,
+}
+
+impl fmt::Debug for Array {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let data = self.data.borrow();
+        let mut buf = String::from("[");
+        if !data.is_empty() {
+            buf.push_str(format!("{:?}", &data[0]).as_str());
+            if data.len() > 1 {
+                for elt in &data[1..] {
+                    buf.push_str(format!(", {:?}", elt).as_str());
+                }
+            }
+        }
+        buf.push_str("]");
+        write!(f, "{}", buf)
+    }
+}
+
+impl fmt::Display for Array {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let data = self.data.borrow();
+        let mut buf = String::from("[");
+        if !data.is_empty() {
+            buf.push_str(format!("{}", &data[0]).as_str());
+            if data.len() > 1 {
+                for elt in &data[1..] {
+                    buf.push_str(format!(", {}", elt).as_str());
+                }
+            }
+        }
+        buf.push_str("]");
+        write!(f, "{}", buf)
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Closure {
     env: Option<Frame>,
@@ -254,6 +293,7 @@ impl Output {
 
 #[derive(PartialEq, Clone)]
 pub enum Datum {
+    Array(Rc<Array>),
     Boolean(bool),
     Class(Rc<Class>),
     Closure(Rc<Closure>),
@@ -271,6 +311,7 @@ pub enum Datum {
 
 #[derive(PartialEq, Clone)]
 pub struct Foolang {
+    array_vtable: Rc<Vtable>,
     boolean_vtable: Rc<Vtable>,
     closure_vtable: Rc<Vtable>,
     compiler_vtable: Rc<Vtable>,
@@ -287,6 +328,17 @@ pub struct Foolang {
 impl Foolang {
     pub fn new() -> Foolang {
         let mut globals = HashMap::new();
+
+        let array_vtable = Rc::new(classes::array2::instance_vtable());
+        globals.insert(
+            "Array".to_string(),
+            Object {
+                vtable: Rc::new(classes::array2::class_vtable()),
+                datum: Datum::Class(Rc::new(Class {
+                    instance_vtable: Rc::clone(&array_vtable),
+                })),
+            },
+        );
 
         let boolean_vtable = Rc::new(classes::boolean2::vtable());
         globals.insert(
@@ -377,6 +429,7 @@ impl Foolang {
         );
 
         let foo = Foolang {
+            array_vtable,
             boolean_vtable,
             closure_vtable: Rc::new(classes::closure2::vtable()),
             compiler_vtable,
@@ -428,6 +481,15 @@ impl Foolang {
                 Datum::Class(_) => Ok(global.to_owned()),
                 _ => Unwind::error_at(span, "Not a class name"),
             },
+        }
+    }
+
+    pub fn make_array(&self, data: Vec<Object>) -> Object {
+        Object {
+            vtable: Rc::clone(&self.array_vtable),
+            datum: Datum::Array(Rc::new(Array {
+                data: RefCell::new(data),
+            })),
         }
     }
 
@@ -602,6 +664,13 @@ impl Foolang {
 }
 
 impl Object {
+    pub fn as_vec(&self, fun: fn(RefMut<Vec<Object>>) -> ()) {
+        match &self.datum {
+            Datum::Array(array) => fun(array.data.borrow_mut()),
+            _ => panic!("BUG: {:?} is not an Array", self),
+        }
+    }
+
     pub fn boolean(&self) -> bool {
         match self.datum {
             Datum::Boolean(value) => value,
@@ -703,6 +772,7 @@ impl Object {
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.datum {
+            Datum::Array(array) => write!(f, "{:?}", array),
             Datum::Boolean(true) => write!(f, "True"),
             Datum::Boolean(false) => write!(f, "False"),
             Datum::Class(_) => write!(f, "#<{}>", self.vtable.name),
@@ -731,6 +801,7 @@ impl fmt::Display for Object {
 impl fmt::Debug for Object {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.datum {
+            Datum::Array(array) => write!(f, "{}", array),
             Datum::Integer(x) => write!(f, "{}", x),
             Datum::Float(x) => {
                 if x - x.floor() == 0.0 {

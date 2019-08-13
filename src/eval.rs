@@ -211,8 +211,12 @@ impl<'a> Env<'a> {
         }
     }
 
-    fn eval_array(&self, _array: &Array) -> Eval {
-        unimplemented!("eval_array")
+    fn eval_array(&self, array: &Array) -> Eval {
+        let mut data = Vec::new();
+        for elt in &array.data {
+            data.push(self.eval(elt)?);
+        }
+        Ok(self.foo.make_array(data))
     }
 
     fn eval_bind(
@@ -1687,4 +1691,32 @@ fn test_integer_times() {
         .integer(),
         1 + 1 + 2 + 4
     )
+}
+
+#[test]
+fn test_array_ctor_0() {
+    let (obj, _foo) = eval_obj("[]");
+    obj.as_vec(move |vec| {
+        assert_eq!(vec.len(), 0);
+    });
+}
+
+#[test]
+fn test_array_ctor_1() {
+    let (obj, _foo) = eval_obj("[42]");
+    obj.as_vec(move |vec| {
+        assert_eq!(vec.len(), 1);
+        assert_eq!(vec[0].integer(), 42);
+    });
+}
+
+#[test]
+fn test_array_ctor_3() {
+    let (obj, _foo) = eval_obj("[31,42,53]");
+    obj.as_vec(move |vec| {
+        assert_eq!(vec.len(), 3);
+        assert_eq!(vec[0].integer(), 31);
+        assert_eq!(vec[1].integer(), 42);
+        assert_eq!(vec[2].integer(), 53);
+    });
 }
