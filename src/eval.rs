@@ -1754,3 +1754,9 @@ fn test_array_do() {
     );
     assert_eq!(obj.integer(), 1 + 2 + 3);
 }
+
+#[test]
+fn test_array_inject_into() {
+    let (obj, _foo) = eval_obj("[1,2,3] inject: 0 into: {|sum elt| sum + elt + elt}");
+    assert_eq!(obj.integer(), 1 + 1 + 2 + 2 + 3 + 3);
+}
