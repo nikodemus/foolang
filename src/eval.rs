@@ -1760,3 +1760,35 @@ fn test_array_inject_into() {
     let (obj, _foo) = eval_obj("[1,2,3] inject: 0 into: {|sum elt| sum + elt + elt}");
     assert_eq!(obj.integer(), 1 + 1 + 2 + 2 + 3 + 3);
 }
+
+#[test]
+fn test_clock1() {
+    let res = Foolang::new()
+        .run(
+            "class Main { system }
+                method run
+                  system clock :: Clock toString
+             end",
+        )
+        .unwrap();
+    assert_eq!(res.string_as_str(), "#<Clock>");
+}
+
+#[test]
+fn test_clock2() {
+    // FIXME: This init here smells bad.
+    crate::time::TimeInfo::init();
+    let res = Foolang::new()
+        .run(
+            "class Main { system }
+                method run
+                  let clock = system clock
+                  let t0 = clock time
+                  system sleep: 10
+                  let t1 = clock time
+                  t0 real < t1 real
+             end",
+        )
+        .unwrap();
+    assert_eq!(res.boolean(), true);
+}

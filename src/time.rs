@@ -1,12 +1,24 @@
+use std::ops::Add;
 use std::ops::Sub;
 
 static mut START_TIME: Option<std::time::Instant> = None;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TimeInfo {
     pub user: f64,
     pub system: f64,
     pub real: f64,
+}
+
+impl Add for TimeInfo {
+    type Output = TimeInfo;
+    fn add(self, other: TimeInfo) -> TimeInfo {
+        TimeInfo {
+            user: self.user + other.user,
+            system: self.system + other.system,
+            real: self.real + other.real,
+        }
+    }
 }
 
 impl Sub for TimeInfo {
@@ -20,8 +32,15 @@ impl Sub for TimeInfo {
     }
 }
 
+fn start_time() -> std::time::Instant {
+    match unsafe { START_TIME } {
+        Some(t) => t,
+        None => panic!("TimeInfo not initialized!"),
+    }
+}
+
 fn wallclock() -> f64 {
-    let wall = std::time::Instant::now() - unsafe { START_TIME.unwrap() };
+    let wall = std::time::Instant::now() - start_time();
     (wall.as_secs() as f64) + (wall.subsec_millis() as f64 / 1000.0)
 }
 

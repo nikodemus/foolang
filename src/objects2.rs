@@ -9,6 +9,7 @@ use std::rc::Rc;
 use crate::eval;
 use crate::eval::{Binding, Env, Frame};
 use crate::parse::{ClassDefinition, Expr, Literal, Parser, Var};
+use crate::time::TimeInfo;
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
 
@@ -175,6 +176,22 @@ impl fmt::Display for Array {
     }
 }
 
+#[derive(PartialEq)]
+pub struct Class {
+    pub instance_vtable: Rc<Vtable>,
+}
+
+impl Class {
+    fn object(class_vtable: Vtable, instance_vtable: &Rc<Vtable>) -> Object {
+        Object {
+            vtable: Rc::new(class_vtable),
+            datum: Datum::Class(Rc::new(Class {
+                instance_vtable: Rc::clone(instance_vtable),
+            })),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Closure {
     env: Option<Frame>,
@@ -187,11 +204,6 @@ impl Closure {
     pub fn env(&self) -> Option<Frame> {
         self.env.clone()
     }
-}
-
-#[derive(PartialEq)]
-pub struct Class {
-    pub instance_vtable: Rc<Vtable>,
 }
 
 // XXX: The interesting thing about this is that it doesn't give
@@ -296,6 +308,7 @@ pub enum Datum {
     Array(Rc<Array>),
     Boolean(bool),
     Class(Rc<Class>),
+    Clock,
     Closure(Rc<Closure>),
     Compiler(Rc<Compiler>),
     Float(f64),
@@ -307,12 +320,14 @@ pub enum Datum {
     String(Rc<String>),
     // XXX: Null?
     System,
+    Time(Rc<TimeInfo>),
 }
 
 #[derive(PartialEq, Clone)]
 pub struct Foolang {
     array_vtable: Rc<Vtable>,
     boolean_vtable: Rc<Vtable>,
+    clock_vtable: Rc<Vtable>,
     closure_vtable: Rc<Vtable>,
     compiler_vtable: Rc<Vtable>,
     float_vtable: Rc<Vtable>,
@@ -321,6 +336,7 @@ pub struct Foolang {
     interval_vtable: Rc<Vtable>,
     output_vtable: Rc<Vtable>,
     string_vtable: Rc<Vtable>,
+    time_vtable: Rc<Vtable>,
     pub globals: RefCell<HashMap<String, Object>>,
     pub workspace: Option<RefCell<HashMap<String, Binding>>>,
 }
@@ -332,105 +348,69 @@ impl Foolang {
         let array_vtable = Rc::new(classes::array2::instance_vtable());
         globals.insert(
             "Array".to_string(),
-            Object {
-                vtable: Rc::new(classes::array2::class_vtable()),
-                datum: Datum::Class(Rc::new(Class {
-                    instance_vtable: Rc::clone(&array_vtable),
-                })),
-            },
+            Class::object(classes::array2::class_vtable(), &array_vtable),
         );
 
         let boolean_vtable = Rc::new(classes::boolean2::vtable());
         globals.insert(
             "Boolean".to_string(),
-            Object {
-                vtable: Rc::new(Vtable::new("class Boolean")),
-                datum: Datum::Class(Rc::new(Class {
-                    instance_vtable: Rc::clone(&boolean_vtable),
-                })),
-            },
+            Class::object(Vtable::new("class Boolean"), &boolean_vtable),
+        );
+
+        let clock_vtable = Rc::new(classes::clock2::instance_vtable());
+        globals.insert(
+            "Clock".to_string(),
+            Class::object(classes::clock2::class_vtable(), &clock_vtable),
         );
 
         let compiler_vtable = Rc::new(classes::compiler2::instance_vtable());
         globals.insert(
             "Compiler".to_string(),
-            Object {
-                vtable: Rc::new(classes::compiler2::class_vtable()),
-                datum: Datum::Class(Rc::new(Class {
-                    instance_vtable: Rc::clone(&compiler_vtable),
-                })),
-            },
+            Class::object(classes::compiler2::class_vtable(), &compiler_vtable),
         );
 
         let float_vtable = Rc::new(classes::float2::vtable());
-        globals.insert(
-            "Float".to_string(),
-            Object {
-                vtable: Rc::new(Vtable::new("class Float")),
-                datum: Datum::Class(Rc::new(Class {
-                    instance_vtable: Rc::clone(&float_vtable),
-                })),
-            },
-        );
+        globals
+            .insert("Float".to_string(), Class::object(Vtable::new("class Float"), &float_vtable));
 
         let input_vtable = Rc::new(classes::input2::vtable());
-        globals.insert(
-            "Input".to_string(),
-            Object {
-                vtable: Rc::new(Vtable::new("class Input")),
-                datum: Datum::Class(Rc::new(Class {
-                    instance_vtable: Rc::clone(&input_vtable),
-                })),
-            },
-        );
+        globals
+            .insert("Input".to_string(), Class::object(Vtable::new("class Input"), &input_vtable));
 
         let integer_vtable = Rc::new(classes::integer2::vtable());
         globals.insert(
             "Integer".to_string(),
-            Object {
-                vtable: Rc::new(Vtable::new("class Integer")),
-                datum: Datum::Class(Rc::new(Class {
-                    instance_vtable: Rc::clone(&integer_vtable),
-                })),
-            },
+            Class::object(Vtable::new("class Integer"), &integer_vtable),
         );
 
         let interval_vtable = Rc::new(classes::interval2::vtable());
         globals.insert(
             "Interval".to_string(),
-            Object {
-                vtable: Rc::new(Vtable::new("class Interval")),
-                datum: Datum::Class(Rc::new(Class {
-                    instance_vtable: Rc::clone(&interval_vtable),
-                })),
-            },
+            Class::object(Vtable::new("class Interval"), &interval_vtable),
         );
 
         let output_vtable = Rc::new(classes::output2::vtable());
         globals.insert(
             "Output".to_string(),
-            Object {
-                vtable: Rc::new(Vtable::new("class Output")),
-                datum: Datum::Class(Rc::new(Class {
-                    instance_vtable: Rc::clone(&output_vtable),
-                })),
-            },
+            Class::object(Vtable::new("class Output"), &output_vtable),
         );
 
         let string_vtable = Rc::new(classes::string2::instance_vtable());
         globals.insert(
             "String".to_string(),
-            Object {
-                vtable: Rc::new(classes::string2::class_vtable()),
-                datum: Datum::Class(Rc::new(Class {
-                    instance_vtable: Rc::clone(&string_vtable),
-                })),
-            },
+            Class::object(classes::string2::class_vtable(), &string_vtable),
+        );
+
+        let time_vtable = Rc::new(classes::time2::instance_vtable());
+        globals.insert(
+            "Time".to_string(),
+            Class::object(classes::time2::class_vtable(), &time_vtable),
         );
 
         let foo = Foolang {
             array_vtable,
             boolean_vtable,
+            clock_vtable,
             closure_vtable: Rc::new(classes::closure2::vtable()),
             compiler_vtable,
             float_vtable,
@@ -439,6 +419,7 @@ impl Foolang {
             interval_vtable,
             output_vtable,
             string_vtable,
+            time_vtable,
             globals: RefCell::new(globals),
             workspace: None,
         };
@@ -446,7 +427,8 @@ impl Foolang {
         foo
     }
 
-    pub fn run(&self, program: String, system: Object) -> Result<(), Unwind> {
+    pub fn run(&self, program: &str) -> Eval {
+        let system = self.make_system();
         let env = Env::new(self);
         let mut parser = Parser::new(&program);
         while !parser.at_eof() {
@@ -459,8 +441,7 @@ impl Foolang {
         // FIXME: Bad error "Unknown class" with bogus span.
         let main = self.find_class("Main", 0..0)?;
         let instance = main.send("system:", &[system], self).context(&program)?;
-        instance.send("run", &[], self).context(&program)?;
-        Ok(())
+        Ok(instance.send("run", &[], self).context(&program)?)
     }
 
     pub fn find_maybe_vtable(
@@ -544,6 +525,13 @@ impl Foolang {
                 instance_vtable: Rc::new(instance_vtable),
             })),
         })
+    }
+
+    pub fn make_clock(&self) -> Object {
+        Object {
+            vtable: Rc::clone(&self.clock_vtable),
+            datum: Datum::Clock,
+        }
     }
 
     pub fn make_closure(
@@ -661,6 +649,13 @@ impl Foolang {
             datum: Datum::System,
         }
     }
+
+    pub fn make_time(&self, timeinfo: TimeInfo) -> Object {
+        Object {
+            vtable: Rc::clone(&self.time_vtable),
+            datum: Datum::Time(Rc::new(timeinfo)),
+        }
+    }
 }
 
 impl Object {
@@ -758,6 +753,13 @@ impl Object {
         }
     }
 
+    pub fn time(&self) -> &Rc<TimeInfo> {
+        match &self.datum {
+            Datum::Time(info) => info,
+            _ => panic!("BUG: {:?} is not a Time", self),
+        }
+    }
+
     pub fn send(&self, message: &str, args: &[Object], foo: &Foolang) -> Eval {
         // println!("debug: {} {} {:?}", self, message, args);
         match self.vtable.get(message) {
@@ -779,6 +781,7 @@ impl fmt::Display for Object {
             Datum::Boolean(true) => write!(f, "True"),
             Datum::Boolean(false) => write!(f, "False"),
             Datum::Class(_) => write!(f, "#<{}>", self.vtable.name),
+            Datum::Clock => write!(f, "#<Clock>"),
             Datum::Closure(x) => write!(f, "#<closure {:?}>", x.params),
             Datum::Compiler(_) => write!(f, "#<Compiler>"),
             Datum::Float(x) => {
@@ -797,6 +800,11 @@ impl fmt::Display for Object {
             Datum::Output(output) => write!(f, "#<Output {}>", &output.name),
             Datum::String(s) => write!(f, "{}", s),
             Datum::System => write!(f, "#<System>"),
+            Datum::Time(time) => write!(
+                f,
+                "#<Time real: {}, system: {}, user: {}>",
+                time.real, time.system, time.user
+            ),
         }
     }
 }

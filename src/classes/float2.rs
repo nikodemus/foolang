@@ -4,21 +4,23 @@ pub fn vtable() -> Vtable {
     let mut vt = Vtable::new("Float");
     // FUNDAMENTAL
     vt.def("asFloat", float_as_float);
+    vt.def("addFloat:", float_add_float);
+    vt.def("divFloat:", float_div_float);
+    vt.def("mulFloat:", float_mul_float);
+    vt.def("subFloat:", float_sub_float);
+    vt.def("greaterThanFloat:", float_greater_than_float);
+    vt.def("prefix-", float_neg);
+    // DERIVED
+    vt.def("<", float_less_than);
+    vt.def("+", float_add);
+    vt.def("/", float_div);
+    vt.def("*", float_mul);
+    vt.def("-", float_sub);
     vt.def("asInteger", float_as_integer);
     vt.def("addInteger:", float_add_integer);
     vt.def("divInteger:", float_div_integer);
     vt.def("mulInteger:", float_mul_integer);
     vt.def("subInteger:", float_sub_integer);
-    vt.def("prefix-", float_neg);
-    // DERIVED
-    vt.def("+", float_add);
-    vt.def("/", float_div);
-    vt.def("*", float_mul);
-    vt.def("-", float_sub);
-    vt.def("addFloat:", float_add_float);
-    vt.def("divFloat:", float_div_float);
-    vt.def("mulFloat:", float_mul_float);
-    vt.def("subFloat:", float_sub_float);
     vt
 }
 
@@ -50,6 +52,11 @@ fn float_mul_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
 fn float_sub_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let res = args[0].float() - receiver.float();
     Ok(foo.make_float(res))
+}
+
+fn float_greater_than_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let res = receiver.float() > args[0].float();
+    Ok(foo.make_boolean(res))
 }
 
 fn float_neg(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
@@ -92,4 +99,8 @@ fn float_mul_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval 
 fn float_sub_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let float = args[0].send("asFloat", &[], foo)?;
     receiver.send("subFloat:", &[float], foo)
+}
+
+fn float_less_than(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    args[0].send("greaterThanFloat:", std::slice::from_ref(receiver), foo)
 }

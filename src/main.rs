@@ -146,8 +146,8 @@ fn main() {
             Err(err) => panic!("ERROR: Could not load program: {} ({})", fname, err),
         };
         let foo = Foolang::new();
-        // FIXME: pass in env and argv to make_system
-        match foo.run(program, foo.make_system()) {
+        // FIXME: pass in env and argv to run
+        match foo.run(&program) {
             Ok(_) => {}
             Err(err) => println!("{}", err),
         }
