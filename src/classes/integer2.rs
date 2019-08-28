@@ -1,3 +1,5 @@
+use std::slice;
+
 use crate::objects2::{Eval, Foolang, Object, Vtable};
 
 pub fn vtable() -> Vtable {
@@ -147,39 +149,39 @@ fn integer_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval
 // DERIVED METHODS
 
 fn integer_add(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("addInteger:", &[receiver.clone()], foo)
+    args[0].send("addInteger:", slice::from_ref(receiver), foo)
 }
 
 fn integer_div(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("divInteger:", &[receiver.clone()], foo)
+    args[0].send("divInteger:", slice::from_ref(receiver), foo)
 }
 
 fn integer_eq(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("eqInteger:", &[receiver.clone()], foo)
+    args[0].send("eqInteger:", slice::from_ref(receiver), foo)
 }
 
 fn integer_gt(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("ltInteger:", &[receiver.clone()], foo)
+    args[0].send("ltInteger:", slice::from_ref(receiver), foo)
 }
 
 fn integer_gte(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("lteInteger:", &[receiver.clone()], foo)
+    args[0].send("lteInteger:", slice::from_ref(receiver), foo)
 }
 
 fn integer_lt(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("gtInteger:", &[receiver.clone()], foo)
+    args[0].send("gtInteger:", slice::from_ref(receiver), foo)
 }
 
 fn integer_lte(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("gteInteger:", &[receiver.clone()], foo)
+    args[0].send("gteInteger:", slice::from_ref(receiver), foo)
 }
 
 fn integer_mul(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("mulInteger:", &[receiver.clone()], foo)
+    args[0].send("mulInteger:", slice::from_ref(receiver), foo)
 }
 
 fn integer_sub(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("subInteger:", &[receiver.clone()], foo)
+    args[0].send("subInteger:", slice::from_ref(receiver), foo)
 }
 
 fn integer_add_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {

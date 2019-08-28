@@ -119,10 +119,9 @@ fn repl() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-#[ignore] // takes a bit long, and will take longer as more are added
-fn old_benchmarks() -> Result<(), Box<std::error::Error>> {
+fn benchmarks() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("--load").arg("foo/benchmarks.foo").arg("--eval").arg("Benchmarks all run");
+    cmd.arg("foo/benchmarks.foo");
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("EmptyLoop:"))

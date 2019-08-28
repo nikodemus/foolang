@@ -940,6 +940,10 @@ fn sequence_suffix(
     left: Expr,
     precedence: PrecedenceFunction,
 ) -> Result<Expr, Unwind> {
+    let (token, span) = parser.lookahead()?;
+    if token == Token::SIGIL && parser.slice_at(span) == ";" {
+        return cascade_suffix(parser, left, precedence);
+    }
     let mut exprs = if let Expr::Seq(left_exprs) = left {
         left_exprs
     } else {
@@ -979,7 +983,13 @@ fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     } else {
         None
     };
-    let body = parser.parse_seq()?;
+    let (token, span3) = parser.lookahead()?;
+    let body = if token == Token::SIGIL && parser.slice_at(span3) == "}" {
+        // FIXME: Bogus source location
+        Expr::Const(0..0, Literal::Boolean(false))
+    } else {
+        parser.parse_seq()?
+    };
     let end = parser.next_token()?;
     // FIXME: hardcoded {
     // Would be nice to be able to swap between [] and {} and

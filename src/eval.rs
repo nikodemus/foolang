@@ -1577,6 +1577,10 @@ fn test_closure_on_error() {
 #[test]
 fn test_cascade1() {
     assert_eq!(eval_ok("1 + 100; + 41 + 1000").integer(), 1142);
+}
+
+#[test]
+fn test_cascade2() {
     assert_eq!(
         eval_ok(
             "
@@ -1588,6 +1592,29 @@ fn test_cascade1() {
                a = a + by
           end
           Foo a: 44; neg up: 2; neg; a"
+        )
+        .integer(),
+        42
+    );
+}
+
+#[ignore]
+#[test]
+fn test_cascade3() {
+    assert_eq!(
+        eval_ok(
+            "
+          class Foo { a }
+            method neg
+               a = -a
+               self
+            method up: by
+               a = a + by
+          end
+          Foo a: 44
+          ; neg up: 2
+          ; neg
+          ; a"
         )
         .integer(),
         42
@@ -1791,4 +1818,9 @@ fn test_clock2() {
         )
         .unwrap();
     assert_eq!(res.boolean(), true);
+}
+
+#[test]
+fn test_empty_block() {
+    assert_eq!(eval_ok("{} value").boolean(), false);
 }

@@ -1,3 +1,5 @@
+use std::slice;
+
 use crate::objects2::{Eval, Foolang, Object, Vtable};
 
 pub fn vtable() -> Vtable {
@@ -10,6 +12,7 @@ pub fn vtable() -> Vtable {
     vt.def("subFloat:", float_sub_float);
     vt.def("greaterThanFloat:", float_greater_than_float);
     vt.def("prefix-", float_neg);
+    vt.def("toString", float_to_string);
     // DERIVED
     vt.def("<", float_less_than);
     vt.def("+", float_add);
@@ -63,22 +66,26 @@ fn float_neg(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
     Ok(foo.make_float(-receiver.float()))
 }
 
+fn float_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+    Ok(foo.make_string(&receiver.float().to_string()))
+}
+
 // DERIVED METHODS
 
 fn float_add(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("addFloat:", &[receiver.clone()], foo)
+    args[0].send("addFloat:", slice::from_ref(receiver), foo)
 }
 
 fn float_div(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("divFloat:", &[receiver.clone()], foo)
+    args[0].send("divFloat:", slice::from_ref(receiver), foo)
 }
 
 fn float_mul(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("mulFloat:", &[receiver.clone()], foo)
+    args[0].send("mulFloat:", slice::from_ref(receiver), foo)
 }
 
 fn float_sub(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("subFloat:", &[receiver.clone()], foo)
+    args[0].send("subFloat:", slice::from_ref(receiver), foo)
 }
 
 fn float_add_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {

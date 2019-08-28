@@ -6,8 +6,8 @@ pub fn class_vtable() -> Vtable {
 
 pub fn instance_vtable() -> Vtable {
     let mut vt = Vtable::new("Time");
-    vt.def("addTime", time_add_time);
-    vt.def("subTime", time_sub_time);
+    vt.def("addTime:", time_add_time);
+    vt.def("subTime:", time_sub_time);
     vt.def("-", time_sub);
     vt.def("+", time_add);
     vt.def("real", time_real);

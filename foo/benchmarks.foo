@@ -1,92 +1,125 @@
-@class Benchmarks [benchmarks]
+class Benchmarks { benchmarks output clock }
 
-@class-method Benchmarks all
-    ^self createInstance: [[ Benchmark emptyLoop,
-                             Benchmark factorial,
-                             Benchmark sumFloats,
-                             Benchmark ackermann,
-                             Benchmark fibonacci ]]
+  class method output: output clock: clock full: full
+    self benchmarks: [ Benchmark emptyLoop: full,
+                       Benchmark factorial: full,
+                       Benchmark sumFloats: full,
+                       Benchmark ackermann: full,
+                       Benchmark fibonacci: full ]
+         output: output
+         clock: clock
 
-@method Benchmarks run
-    benchmarks do: { :benchmark |
-        benchmark run report
+  method run
+    benchmarks do: { |benchmark|
+       benchmark
+       ; runWith: clock
+       ; reportTo: output
     }
 
-@class Benchmark [name block userTime systemTime realTime]
+end
 
-@class-method Benchmark new: name is: block
-    ^self createInstance: [name, block, false, false, false]
+class Benchmark { name block userTime systemTime realTime }
 
-@method Benchmark run |info info0 info1 info2|
-    info0 := System timeInfo,
-    info1 := System timeInfo,
-    block value,
-    info2 := System timeInfo,
-    info := (info2 - info1) - (info1 - info0),
-    userTime := info userTime,
-    systemTime := info systemTime,
-    realTime := info realTime
+    class method new: benchmark is: block
+        self name: benchmark
+             block: block
+             userTime: False
+             systemTime: False
+             realTime: False
 
-@method Benchmark report
-    System stdout
-      print: name;
-      print: ': ';
-      print: userTime toString;
-      print: ', ';
-      print: systemTime toString;
-      print: ', ';
-      print: realTime toString;
-      newline,
-    ^self
 
-@class-method Benchmark sumFloats
-    |array|
-    array := [0.0],
-    1.0 to: 150000.0 do: { :n |
-        array push: n
-    },
-    ^Benchmark new: 'SumFloats' is: {
-        array inject: 0.0 into: { :sum :each | sum + each }
-    }
+   method runWith: clock
+    let t0 = clock time
+    let t1 = clock time
+    block value
+    let t2 = clock time
+    let delta = (t2 - t1) - (t1 - t0)
+    userTime = delta user
+    systemTime = delta system
+    realTime = delta real
 
-@class-method Benchmark factorial
-    ^Benchmark new: 'Factorial' is: {
-        1 to: 2000 do: {
-          Factorial of: 20
-        }
-    }
+   method reportTo: output
+      output
+      ; print: name
+      ; print: ": "
+      ; print: userTime toString
+      ; print: ", "
+      ; print: systemTime toString
+      ; print: ", "
+      ; print: realTime toString
+      ; newline
 
-@class-method Benchmark emptyLoop
-    ^Benchmark new: 'EmptyLoop' is: {
-        1 to: 600000 do: {}
-    }
+   class method sumFloats: full
+      let array = []
+      let n = full ifTrue: { 150_000 } ifFalse: { 150 }
+      1 to: n do: { |x| array push: x asFloat }
+      Benchmark new: "SumFloats" is:
+      {
+        array inject: 0.0 into: { |sum each | sum + each }
+      }
 
-@class-method Benchmark ackermann
-    ^Benchmark new: 'Ackermann' is: {
-        1 to: 50 do: { Ackermann m: 3 n: 2 }
-    }
+   class method factorial: full
+      Benchmark new: "Factorial" is: {
+         let res = 0
+         let n = full ifTrue: { 2000 } ifFalse: { 2 }
+         n times: { res = Factorial of: 20 }
+         res
+      }
 
-@class-method Benchmark fibonacci
-    ^Benchmark new: 'Fibonacci' is: {
-        Fibonacci of: 21
-    }
+   class method emptyLoop: full
+      Benchmark new: "EmptyLoop" is: {
+        let n = full ifTrue: { 600_000 } ifFalse: { 600 }
+        n times: {}
+      }
 
-@class Fibonacci []
-@class-method Fibonacci of: n
-    n < 2
-        ifTrue: { ^1 },
-    ^(Fibonacci of: n - 1) + (Fibonacci of: n - 2)
+   class method ackermann: full
+      Benchmark new: "Ackermann" is: {
+         let n = full ifTrue: { 50 } ifFalse: { 1 }
+         n times: { Ackermann m: 3 n: 2 }
+      }
 
-@class Factorial []
-@class-method Factorial of: n
-    n < 2
-        ifTrue: { ^n },
-    ^n * (Factorial of: n - 1)
+   class method fibonacci: full
+      Benchmark new: "Fibonacci" is: {
+         let n = full ifTrue: { 21 } ifFalse: { 5 }
+         Fibonacci of: n
+      }
 
-@class Ackermann []
-@class-method Ackermann m:m n:n
-    m == 0
-        ifTrue: { ^n + 1 },
-    n == 0
-        ifTrue: { ^Ackermann m: m - 1 n: 1 },
-    ^Ackermann m: m - 1 n: (Ackermann m: m n: n - 1)
+end
+
+class Fibonacci {}
+
+   class method of: n
+      n < 2
+        ifTrue: { return 1 },
+     (Fibonacci of: n - 1) + (Fibonacci of: n - 2)
+
+end
+
+class Factorial {}
+
+   class method of: n
+      n < 2
+        ifTrue: { return n },
+      n * (Factorial of: n - 1)
+
+end
+
+class Ackermann {}
+
+   class method m:m n:n
+      m == 0
+        ifTrue: { return n + 1 },
+      n == 0
+        ifTrue: { return Ackermann m: m - 1 n: 1 },
+     Ackermann m: m - 1 n: (Ackermann m: m n: n - 1)
+
+end
+
+class Main { system }
+   method run
+      -- XXX: decide full/short based on command-line
+      let benchmarks = Benchmarks output: system output
+                                  clock: system clock
+                                  full: False
+      benchmarks run
+end
