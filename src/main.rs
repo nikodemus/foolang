@@ -109,13 +109,6 @@ fn main() {
     let matches = App::new("Foolang")
         .version("0.1.0")
         .arg(
-            Arg::with_name("expr")
-                .long("eval")
-                .value_name("EXPR")
-                .help("Expression to evaluate (old implementation)")
-                .takes_value(true),
-        )
-        .arg(
             Arg::with_name("file")
                 .long("load")
                 .value_name("FILE")
@@ -135,9 +128,6 @@ fn main() {
         .get_matches();
     if let Some(file) = matches.value_of("file") {
         env.load_file(file);
-    }
-    if let Some(expr) = matches.value_of("expr") {
-        env.eval_str(expr);
     }
     let verbose = matches.is_present("verbose");
     if let Some(fname) = matches.value_of("program") {
