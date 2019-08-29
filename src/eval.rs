@@ -802,28 +802,6 @@ fn eval_unbound() {
 }
 
 #[test]
-fn eval_closure1() {
-    assert_eq!(eval_ok("let x = 41, { x + 1 } value").integer(), 42);
-}
-
-#[test]
-fn eval_closure2() {
-    assert_eq!(eval_ok("let x = 41, { |y| x + y } value: 1").integer(), 42);
-}
-
-#[test]
-fn eval_closure3() {
-    assert_eq!(
-        eval_ok(
-            "let thunk = { let counter = 0, { counter = counter + 1, counter } } value,
-                        thunk value + thunk value"
-        )
-        .integer(),
-        3
-    );
-}
-
-#[test]
 fn test_string_append() {
     assert_eq!(
         eval_ok(
@@ -1351,66 +1329,6 @@ fn test_boolean_if_false() {
 fn test_boolean_if_true_if_false() {
     assert_eq!(eval_ok("True ifTrue: { 1 } ifFalse: { 2 }").integer(), 1);
     assert_eq!(eval_ok("False ifTrue: { 1 } ifFalse: { 2 }").integer(), 2);
-}
-
-#[test]
-fn test_closure_while_true() {
-    assert_eq!(
-        eval_ok(
-            "let x = 1
-                 {
-                    x = x * 2
-                    x < 10
-                 } whileTrue
-                 x"
-        )
-        .integer(),
-        16
-    );
-}
-
-#[test]
-fn test_closure_while_false() {
-    assert_eq!(
-        eval_ok(
-            "let x = 1
-                 {
-                    x = x * 2
-                    x > 10
-                 } whileFalse
-                 x"
-        )
-        .integer(),
-        16
-    );
-}
-
-#[test]
-fn test_closure_while_true_closure() {
-    assert_eq!(
-        eval_ok(
-            "let x = 1
-                 { x < 10 } whileTrue: {
-                    x = x * 2
-                 }"
-        )
-        .integer(),
-        16
-    );
-}
-
-#[test]
-fn test_closure_while_false_closure() {
-    assert_eq!(
-        eval_ok(
-            "let x = 1
-                 { x > 10 } whileFalse: {
-                    x = x * 2
-                 }"
-        )
-        .integer(),
-        16
-    );
 }
 
 #[test]

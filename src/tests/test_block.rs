@@ -1,124 +1,129 @@
-use crate::evaluator::{eval_str, load_str};
-use crate::objects::Object;
+use crate::eval::utils::eval_ok;
 
 #[test]
-fn block_0_value() {
-    assert_eq!(eval_str("{ 42 } value"), Object::make_integer(42));
+fn test_closure0() {
+    assert_eq!(eval_ok("{} value").boolean(), false);
 }
 
 #[test]
-fn block_1_value() {
-    assert_eq!(eval_str("{ :a | a + 1 } value: 41"), Object::make_integer(42));
+fn test_closure1() {
+    assert_eq!(eval_ok("let x = 41, { x + 1 } value").integer(), 42);
 }
 
 #[test]
-fn block_2_value() {
-    assert_eq!(eval_str("{ :a :b | b * a + 2 } value: 20 value: 2"), Object::make_integer(42));
+fn test_closure2() {
+    assert_eq!(eval_ok("let x = 41, { |y| x + y } value: 1").integer(), 42);
 }
 
 #[test]
-fn block_closure() {
-    let env = load_str(
-        r#"
-        @class F []
-        @class-method F closeOver: value
-           ^{ :x | value + x }
-        @class-method F test
-            ^(self closeOver: 40) value: 2
-    "#,
-    );
-    assert_eq!(env.eval_str("F test"), Object::make_integer(42));
-}
-
-#[test]
-fn block_closure_mutation() {
-    let env = load_str(
-        r#"
-        @class F []
-        @class-method F counter
-           |x| x := 0,
-           ^{ x := x + 1, x }
-        @class-method F test
-            |counter| counter := self counter,
-            ^[counter value, counter value, counter value]
-    "#,
-    );
+fn test_closure3() {
     assert_eq!(
-        env.eval_str("F test"),
-        Object::make_array(&[
-            Object::make_integer(1),
-            Object::make_integer(2),
-            Object::make_integer(3)
-        ])
+        eval_ok(
+            "let thunk = { let x = 0, { x = x + 1, x } } value,
+             thunk value + thunk value"
+        )
+        .integer(),
+        3
     );
 }
 
 #[test]
-fn return_from_method_block() {
-    let env = load_str(
-        r#"
-        @class Foo []
-        @class-method Foo test
-            Foo boo: { ^42 },
-            ^31
-        @class-method Foo boo: blk
-            blk value
-        "#,
-    );
-    assert_eq!(env.eval_str("Foo test"), Object::make_integer(42));
+fn test_closure4() {
+    assert_eq!(eval_ok("{ |a b| b * a + 2 } value: 20 value: 2").integer(), 42);
 }
 
 #[test]
-fn return_from_deep_block_to_middle() {
-    let env = load_str(
-        r#"
-        @class Foo []
-        @class-method Foo test
-            ^1 + (Foo test0: 41)
-        @class-method Foo test0: x
-            Foo test1: { ^x },
-            ^0
-        @class-method Foo test1: blk
-            Foo test2: blk,
-            ^1
-        @class-method Foo test2: blk
-            blk value,
-            ^2
-        "#,
+fn test_closure5() {
+    assert_eq!(
+        eval_ok(
+            "class T {}
+               class method closeOver: value
+                 return { |x | value + x }
+               class method test
+                return (self closeOver: 40) value: 2
+             end
+             T test"
+        )
+        .integer(),
+        42
     );
-    assert_eq!(env.eval_str("Foo test"), Object::make_integer(42));
 }
 
 #[test]
-fn block_repeat() {
-    let env = load_str(
-        r#"
-        @class Foo []
-        @class-method Foo test |x|
-           x := 0,
-           {
-               x > 1000 ifTrue: { ^'lots' },
-               x := x + 1
-           }
-           repeat
-        "#,
+fn test_closure_return() {
+    assert_eq!(
+        eval_ok(
+            "class T {}
+               class method test
+                 self boo: { return 42 },
+                 return 31
+               class method boo: block
+                 block value
+             end
+             T test",
+        )
+        .integer(),
+        42
     );
-    assert_eq!(env.eval_str("Foo test"), Object::make_string("lots"));
 }
 
 #[test]
-fn block_repeatwhilefalse() {
-    let env = load_str(
-        r#"
-        @class Foo []
-        @class-method Foo test |x|
-           x := 0,
-           ^{
-               x := x + 1,
-               x > 1000 ifTrue: { x }
-           }
-           repeatWhileFalse
-        "#,
+fn test_closure_while_true() {
+    assert_eq!(
+        eval_ok(
+            "let x = 1
+             {
+               x = x * 2
+               x < 10
+             } whileTrue
+             
+             x"
+        )
+        .integer(),
+        16
     );
-    assert_eq!(env.eval_str("Foo test"), Object::make_integer(1001));
+}
+
+#[test]
+fn test_closure_while_false() {
+    assert_eq!(
+        eval_ok(
+            "let x = 1
+             {
+                x = x * 2
+                x > 10
+             } whileFalse
+             x"
+        )
+        .integer(),
+        16
+    );
+}
+
+#[test]
+fn test_closure_while_true_closure() {
+    assert_eq!(
+        eval_ok(
+            "let x = 1
+             { x < 10 } whileTrue: {
+               x = x * 2
+             }"
+        )
+        .integer(),
+        16
+    );
+}
+
+#[test]
+fn test_closure_while_false_closure() {
+    assert_eq!(
+        eval_ok(
+            "let x = 1
+                 { x > 10 } whileFalse: {
+                    x = x * 2
+                 }"
+        )
+        .integer(),
+        16
+    );
 }
