@@ -474,13 +474,8 @@ pub fn eval_all(foo: &Foolang, source: &str) -> Eval {
     }
 }
 
-pub fn eval_str(source: &str) -> Eval {
-    let foo = Foolang::new();
-    eval_all(&foo, source)
-}
-
 #[cfg(test)]
-mod eval_utils {
+pub mod utils {
 
     use crate::eval::*;
 
@@ -493,6 +488,11 @@ mod eval_utils {
             },
             Ok(value) => panic!("Expected exception, got: {:?}", value),
         }
+    }
+
+    pub fn eval_str(source: &str) -> Eval {
+        let foo = Foolang::new();
+        eval_all(&foo, source)
     }
 
     pub fn eval_obj(source: &str) -> (Object, Foolang) {
@@ -516,7 +516,7 @@ mod eval_utils {
 }
 
 #[cfg(test)]
-use eval_utils::*;
+use crate::eval::utils::*;
 
 #[test]
 fn eval_decimal() {
@@ -1718,74 +1718,6 @@ fn test_integer_times() {
         .integer(),
         1 + 1 + 2 + 4
     )
-}
-
-#[test]
-fn test_array_ctor_0() {
-    let (obj, _foo) = eval_obj("[]");
-    obj.as_vec(move |vec| {
-        assert_eq!(vec.len(), 0);
-        Ok(())
-    })
-    .unwrap();
-}
-
-#[test]
-fn test_array_ctor_1() {
-    let (obj, _foo) = eval_obj("[42]");
-    obj.as_vec(move |vec| {
-        assert_eq!(vec.len(), 1);
-        assert_eq!(vec[0].integer(), 42);
-        Ok(())
-    })
-    .unwrap();
-}
-
-#[test]
-fn test_array_ctor_3() {
-    let (obj, _foo) = eval_obj("[31,42,53]");
-    obj.as_vec(move |vec| {
-        assert_eq!(vec.len(), 3);
-        assert_eq!(vec[0].integer(), 31);
-        assert_eq!(vec[1].integer(), 42);
-        assert_eq!(vec[2].integer(), 53);
-        Ok(())
-    })
-    .unwrap();
-}
-
-#[test]
-fn test_array_push() {
-    let (obj, _foo) = eval_obj(
-        "let a = []
-         a push: -1
-         a push: 0
-         a push: 1",
-    );
-    obj.as_vec(move |vec| {
-        assert_eq!(vec.len(), 3);
-        assert_eq!(vec[0].integer(), -1);
-        assert_eq!(vec[1].integer(), 0);
-        assert_eq!(vec[2].integer(), 1);
-        Ok(())
-    })
-    .unwrap();
-}
-
-#[test]
-fn test_array_do() {
-    let (obj, _foo) = eval_obj(
-        "let x = 0
-         [1,2,3] do: {|y| x = x + y}
-         x",
-    );
-    assert_eq!(obj.integer(), 1 + 2 + 3);
-}
-
-#[test]
-fn test_array_inject_into() {
-    let (obj, _foo) = eval_obj("[1,2,3] inject: 0 into: {|sum elt| sum + elt + elt}");
-    assert_eq!(obj.integer(), 1 + 1 + 2 + 2 + 3 + 3);
 }
 
 #[test]

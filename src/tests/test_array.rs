@@ -1,71 +1,89 @@
-use crate::evaluator::eval_str;
-use crate::objects::Object;
+use crate::eval::utils::{eval_obj, eval_ok};
 
-fn make_true() -> Object {
-    Object::make_boolean(true)
-}
-
-fn make_false() -> Object {
-    Object::make_boolean(true)
+#[test]
+fn test_array_ctor_0() {
+    let (obj, _foo) = eval_obj("[]");
+    obj.as_vec(move |vec| {
+        assert_eq!(vec.len(), 0);
+        Ok(())
+    })
+    .unwrap();
 }
 
 #[test]
-fn array_empty() {
-    assert_eq!(eval_str("[]"), Object::make_array(&[]));
-    assert_eq!(eval_str("#[]"), Object::make_array(&[]));
+fn test_array_ctor_1() {
+    let (obj, _foo) = eval_obj("[42]");
+    obj.as_vec(move |vec| {
+        assert_eq!(vec.len(), 1);
+        assert_eq!(vec[0].integer(), 42);
+        Ok(())
+    })
+    .unwrap();
 }
 
 #[test]
-fn array_trailing_comma() {
-    assert_eq!(
-        eval_str("[1,2,3,]"),
-        Object::make_array(&[
-            Object::make_integer(1),
-            Object::make_integer(2),
-            Object::make_integer(3),
-        ])
+fn test_array_ctor_2() {
+    let (obj, _foo) = eval_obj("[31,42,53]");
+    obj.as_vec(move |vec| {
+        assert_eq!(vec.len(), 3);
+        assert_eq!(vec[0].integer(), 31);
+        assert_eq!(vec[1].integer(), 42);
+        assert_eq!(vec[2].integer(), 53);
+        Ok(())
+    })
+    .unwrap();
+}
+
+#[test]
+#[ignore] // trailing comma not supported yet
+fn test_array_ctor_3() {
+    let (obj, _foo) = eval_obj("[31,42,53,]");
+    obj.as_vec(move |vec| {
+        assert_eq!(vec.len(), 3);
+        assert_eq!(vec[0].integer(), 31);
+        assert_eq!(vec[1].integer(), 42);
+        assert_eq!(vec[2].integer(), 53);
+        Ok(())
+    })
+    .unwrap();
+}
+
+#[test]
+fn test_array_push() {
+    let (obj, _foo) = eval_obj(
+        "let a = []
+         a push: -1
+         a push: 0
+         a push: 1",
     );
-    assert_eq!(
-        eval_str("#[1,2,3,]"),
-        Object::make_array(&[
-            Object::make_integer(1),
-            Object::make_integer(2),
-            Object::make_integer(3),
-        ])
-    );
+    obj.as_vec(move |vec| {
+        assert_eq!(vec.len(), 3);
+        assert_eq!(vec[0].integer(), -1);
+        assert_eq!(vec[1].integer(), 0);
+        assert_eq!(vec[2].integer(), 1);
+        Ok(())
+    })
+    .unwrap();
 }
 
 #[test]
-fn array_eq() {
-    assert_eq!(eval_str("[1,2,3] == [1, 2, 3]"), make_false());
-    assert_eq!(eval_str("{ :arr | arr == arr } value: [1,2,3]"), make_true())
+fn test_array_do() {
+    let (obj, _foo) = eval_obj(
+        "let x = 0
+         [1,2,3] do: {|y| x = x + y}
+         x",
+    );
+    assert_eq!(obj.integer(), 1 + 2 + 3);
 }
 
 #[test]
-fn array_do() {
-    assert_eq!(
-        eval_str("{ |x| [1, 2, 3] do: { :elt | x := x + elt }, x } value"),
-        Object::make_integer(6)
-    );
+fn test_array_inject_into() {
+    let (obj, _foo) = eval_obj("[1,2,3] inject: 0 into: {|sum elt| sum + elt + elt}");
+    assert_eq!(obj.integer(), 1 + 1 + 2 + 2 + 3 + 3);
 }
 
 #[test]
-fn array_inject_into() {
-    assert_eq!(
-        eval_str("[1, 2, 3] inject: 4 into: { :sum :each | sum + each }"),
-        Object::make_integer(10)
-    );
-}
-
-#[test]
-fn array_push() {
-    assert_eq!(
-        eval_str("{ |x| x := [0], x push: 1, (x push: 2) push: 3 } value"),
-        Object::make_array(&[
-            Object::make_integer(0),
-            Object::make_integer(1),
-            Object::make_integer(2),
-            Object::make_integer(3),
-        ])
-    );
+fn test_array_eq() {
+    assert_eq!(eval_ok("[1,2,3] is [1,2,3]").boolean(), false);
+    assert_eq!(eval_ok("{ |arr| arr is arr } value: [1,2,3]").boolean(), true);
 }

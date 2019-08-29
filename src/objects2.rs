@@ -137,9 +137,14 @@ impl Arg {
     }
 }
 
-#[derive(PartialEq)]
 pub struct Array {
     pub data: RefCell<Vec<Object>>,
+}
+
+impl PartialEq for Array {
+    fn eq(&self, other: &Self) -> bool {
+        self as *const _ == other as *const _
+    }
 }
 
 impl fmt::Debug for Array {
