@@ -1,6 +1,5 @@
 use clap::{App, Arg};
 use foolang::eval::eval_all;
-use foolang::evaluator::GlobalEnv;
 use foolang::objects2::Foolang;
 use foolang::time::TimeInfo;
 use foolang::unwind::Unwind;
@@ -105,16 +104,8 @@ fn handle_request(request: &Request, server: Server, verbose: bool) -> Response 
 
 fn main() {
     TimeInfo::init();
-    let mut env = GlobalEnv::new();
     let matches = App::new("Foolang")
         .version("0.1.0")
-        .arg(
-            Arg::with_name("file")
-                .long("load")
-                .value_name("FILE")
-                .help("File to load (old implementation)")
-                .takes_value(true),
-        )
         .arg(
             Arg::with_name("program")
                 .index(1)
@@ -123,12 +114,9 @@ fn main() {
                 .takes_value(true)
                 .conflicts_with("ide"),
         )
-        .arg(Arg::with_name("ide").long("ide").help("Runs the IDE (new implementation)"))
+        .arg(Arg::with_name("ide").long("ide").help("Runs the IDE"))
         .arg(Arg::with_name("verbose").long("verbose").help("Provides additional output"))
         .get_matches();
-    if let Some(file) = matches.value_of("file") {
-        env.load_file(file);
-    }
     let verbose = matches.is_present("verbose");
     if let Some(fname) = matches.value_of("program") {
         let program = match std::fs::read_to_string(fname) {
@@ -152,6 +140,4 @@ fn main() {
             handle_request(request, server.clone(), verbose)
         });
     }
-    //env.load_file("foo/playground.foo");
-    //env.eval_str("Playground terminal run");
 }
