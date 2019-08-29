@@ -1,27 +1,41 @@
-use crate::evaluator::{eval_str, load_str};
-use crate::objects::Object;
+use crate::eval::utils::eval_ok;
 
 #[test]
-fn eval_true() {
-    assert_eq!(eval_str("true"), Object::make_boolean(true));
+fn test_boolean() {
+    assert_eq!(eval_ok("True").boolean(), true);
+    assert_eq!(eval_ok("False").boolean(), false);
 }
 
 #[test]
-fn eval_false() {
-    assert_eq!(eval_str("false"), Object::make_boolean(false));
+fn test_boolean_if_true() {
+    assert_eq!(eval_ok("True ifTrue: { 1 }").integer(), 1);
+    assert_eq!(eval_ok("False ifTrue: { 1 }").boolean(), false);
 }
 
 #[test]
-fn boolean_iftrue() {
-    let env = load_str(
-        r#"
-        @class Foo []
-        @class-method Foo test: x |y|
-           y := 0,
-           x ifTrue: { y := 1 },
-           ^y
-        "#,
-    );
-    assert_eq!(env.eval_str("Foo test: true"), Object::make_integer(1));
-    assert_eq!(env.eval_str("Foo test: false"), Object::make_integer(0));
+fn test_boolean_if_false() {
+    assert_eq!(eval_ok("False ifFalse: { 1 }").integer(), 1);
+    assert_eq!(eval_ok("True ifFalse: { 1 }").boolean(), true);
+}
+
+#[test]
+fn test_boolean_if_true_if_false() {
+    assert_eq!(eval_ok("True ifTrue: { 1 } ifFalse: { 2 }").integer(), 1);
+    assert_eq!(eval_ok("False ifTrue: { 1 } ifFalse: { 2 }").integer(), 2);
+}
+
+#[test]
+fn test_boolean_and() {
+    assert_eq!(eval_ok("True and: True").boolean(), true);
+    assert_eq!(eval_ok("False and: True").boolean(), false);
+    assert_eq!(eval_ok("True and: False").boolean(), false);
+    assert_eq!(eval_ok("False and: False").boolean(), false);
+}
+
+#[test]
+fn test_boolean_or() {
+    assert_eq!(eval_ok("True or: True").boolean(), true);
+    assert_eq!(eval_ok("False or: True").boolean(), true);
+    assert_eq!(eval_ok("True or: False").boolean(), true);
+    assert_eq!(eval_ok("False or: False").boolean(), false);
 }
