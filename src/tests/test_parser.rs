@@ -1,427 +1,480 @@
-use crate::ast;
-use crate::ast::{Expr, Identifier, Literal, Message, Method};
-use crate::parser::*;
+use crate::parse::utils::*;
+use crate::parse::*;
 
-// helpers
-fn s(s: &str) -> String {
-    s.to_string()
-}
-fn identifier(s: &str) -> Identifier {
-    Identifier(s.to_string())
-}
-
-fn variable(s: &str) -> Expr {
-    Expr::Variable(identifier(s))
-}
-
-fn integer(x: i64) -> Expr {
-    Expr::Constant(Literal::Integer(x))
-}
-
-fn float(x: f64) -> Expr {
-    Expr::Constant(Literal::Float(x))
+#[test]
+fn parse_decimal() {
+    assert_eq!(parse_str("123"), Ok(int(0..3, 123)));
 }
 
 #[test]
-fn parse_literals() {
-    assert_eq!(parse_expr("42"), integer(42));
-    assert_eq!(parse_expr("12.23"), float(12.23));
-    assert_eq!(parse_expr("$x"), Expr::Constant(Literal::Character(s("x"))));
-    assert_eq!(parse_expr("#foo:bar:"), Expr::Constant(Literal::Symbol(s("foo:bar:"))));
-    assert_eq!(parse_expr("'bleep''bloop'"), Expr::Constant(Literal::String(s("bleep''bloop"))));
+fn parse_hexadecimal() {
+    assert_eq!(parse_str("0xFF"), Ok(int(0..4, 0xFF)));
+}
+
+#[test]
+fn parse_binary() {
+    assert_eq!(parse_str("0b101"), Ok(int(0..5, 0b101)));
+}
+
+#[test]
+fn parse_float1() {
+    assert_eq!(parse_str("1.123"), Ok(float(0..5, 1.123)));
+}
+
+#[test]
+fn parse_float2() {
+    assert_eq!(parse_str("1.1e6"), Ok(float(0..5, 1.1e6)));
+}
+
+#[test]
+fn parse_float3() {
+    assert_eq!(parse_str("2e6"), Ok(float(0..3, 2e6)));
+}
+
+#[test]
+fn parse_var1() {
+    assert_eq!(parse_str("foo"), Ok(var(0..3, "foo")));
+}
+
+#[test]
+fn parse_var2() {
+    assert_eq!(parse_str(" c"), Ok(var(1..2, "c")));
+}
+
+#[test]
+fn parse_operators1() {
     assert_eq!(
-        parse_expr("#[321, 34.5, $$, _foobar:quux:zot:, 'string', [level2]]"),
-        Expr::Constant(Literal::Array(vec![
-            Literal::Integer(321),
-            Literal::Float(34.5),
-            Literal::Character("$".to_string()),
-            Literal::Symbol(s("_foobar:quux:zot:")),
-            Literal::String(s("string")),
-            Literal::Array(vec![Literal::Symbol(s("level2"))]),
+        parse_str("a + b * c"),
+        Ok(binary(2..3, "+", var(0..1, "a"), binary(6..7, "*", var(4..5, "b"), var(8..9, "c"))))
+    );
+}
+
+#[test]
+fn parse_operators2() {
+    assert_eq!(
+        parse_str("a * b + c"),
+        Ok(binary(6..7, "+", binary(2..3, "*", var(0..1, "a"), var(4..5, "b")), var(8..9, "c")))
+    );
+}
+
+#[test]
+fn parse_operators3() {
+    assert_eq!(
+        parse_str("-a - b"),
+        Ok(var(1..2, "a")
+            .send(Message {
+                span: 0..1,
+                selector: "prefix-".to_string(),
+                args: vec![]
+            })
+            .send(Message {
+                span: 3..4,
+                selector: "-".to_string(),
+                args: vec![var(5..6, "b")]
+            }))
+    );
+}
+
+#[test]
+fn parse_sequence1() {
+    assert_eq!(
+        parse_str("foo bar, quux"),
+        Ok(seq(vec![unary(4..7, "bar", var(0..3, "foo")), var(9..13, "quux")]))
+    );
+}
+
+#[test]
+fn parse_sequence2() {
+    assert_eq!(
+        parse_str(
+            "foo bar
+             quux"
+        ),
+        Ok(seq(vec![unary(4..7, "bar", var(0..3, "foo")), var(21..25, "quux")]))
+    );
+}
+
+#[test]
+fn parse_let1() {
+    assert_eq!(
+        parse_str("let x = 21 + 21, x"),
+        Ok(bind("x", binary(11..12, "+", int(8..10, 21), int(13..15, 21)), var(17..18, "x")))
+    );
+}
+
+#[test]
+fn parse_let2() {
+    assert_eq!(
+        parse_str(
+            "let x = 21 + 21
+             x"
+        ),
+        Ok(bind("x", binary(11..12, "+", int(8..10, 21), int(13..15, 21)), var(29..30, "x")))
+    );
+}
+
+#[test]
+fn parse_keyword1() {
+    assert_eq!(
+        parse_str("foo x: 1 y: 2, bar"),
+        Ok(seq(vec![
+            keyword(4..13, "x:y:", var(0..3, "foo"), vec![int(7..8, 1), int(12..13, 2)]),
+            var(15..18, "bar")
         ]))
     );
 }
+
 #[test]
-fn parse_variable() {
-    assert_eq!(parse_expr("foo"), variable("foo"));
-}
-#[test]
-fn parse_unary() {
+fn parse_keyword2() {
     assert_eq!(
-        parse_expr("foo bar"),
-        Expr::Send(Box::new(variable("foo")), identifier("bar"), vec![])
-    );
-}
-#[test]
-fn parse_binary() {
-    assert_eq!(
-        parse_expr("a + b"),
-        Expr::Send(Box::new(variable("a")), identifier("+"), vec![variable("b")])
-    );
-    assert_eq!(
-        parse_expr("a + b ** c"),
-        Expr::Send(
-            Box::new(Expr::Send(Box::new(variable("a")), identifier("+"), vec![variable("b")])),
-            identifier("**"),
-            vec![variable("c")]
-        )
-    );
-}
-#[test]
-fn parse_keyword() {
-    assert_eq!(
-        parse_expr("x foo: y bar: z"),
-        Expr::Send(
-            Box::new(variable("x")),
-            identifier("foo:bar:"),
-            vec![variable("y"), variable("z")]
-        )
-    );
-}
-#[test]
-fn parse_assign() {
-    assert_eq!(
-        parse_expr("foo := foo bar quux"),
-        Expr::Assign(
-            Identifier(s("foo")),
-            Box::new(Expr::Send(
-                Box::new(Expr::Send(
-                    Box::new(Expr::Variable(Identifier(s("foo")))),
-                    Identifier(s("bar")),
-                    vec![]
-                )),
-                Identifier(s("quux")),
-                vec![]
-            ))
-        )
+        parse_str(
+            "foo x: 1 y: 2
+             bar"
+        ),
+        Ok(seq(vec![
+            keyword(4..13, "x:y:", var(0..3, "foo"), vec![int(7..8, 1), int(12..13, 2)]),
+            var(27..30, "bar")
+        ]))
     );
 }
 
 #[test]
-fn parse_block_with_temporaries() {
+fn parse_block_no_args() {
     assert_eq!(
-        parse_expr("{ |x| foo }"),
-        Expr::Block(ast::Block {
-            parameters: vec![],
-            temporaries: vec![identifier("x")],
-            statements: vec![variable("foo")]
-        })
+        parse_str(" { foo bar } "),
+        Ok(block(1..12, vec![], unary(7..10, "bar", var(3..6, "foo"))))
     );
 }
 
 #[test]
-fn parse_block() {
+fn parse_block_args() {
     assert_eq!(
-        parse_expr("{ foo }"),
-        Expr::Block(ast::Block {
-            parameters: vec![],
-            temporaries: vec![],
-            statements: vec![variable("foo")]
-        })
-    );
-    assert_eq!(
-        parse_expr("{ foo bar }"),
-        Expr::Block(ast::Block {
-            parameters: vec![],
-            temporaries: vec![],
-            statements: vec![Expr::Send(Box::new(variable("foo")), identifier("bar"), vec![])]
-        })
-    );
-    assert_eq!(
-        parse_expr("{ foo bar, quux }"),
-        Expr::Block(ast::Block {
-            parameters: vec![],
-            temporaries: vec![],
-            statements: vec![
-                Expr::Send(Box::new(variable("foo")), identifier("bar"), vec![]),
-                variable("quux")
-            ]
-        })
-    );
-    assert_eq!(
-        parse_expr("{ :a | foo bar }"),
-        Expr::Block(ast::Block {
-            parameters: vec![identifier("a")],
-            temporaries: vec![],
-            statements: vec![Expr::Send(Box::new(variable("foo")), identifier("bar"), vec![])]
-        })
-    );
-    assert_eq!(
-        parse_expr("{ :a | foo bar, quux }"),
-        Expr::Block(ast::Block {
-            parameters: vec![identifier("a")],
-            temporaries: vec![],
-            statements: vec![
-                Expr::Send(Box::new(variable("foo")), identifier("bar"), vec![]),
-                variable("quux")
-            ]
-        })
-    );
-    assert_eq!(
-        parse_expr("{ :a | foo + bar, quux }"),
-        Expr::Block(ast::Block {
-            parameters: vec![identifier("a")],
-            temporaries: vec![],
-            statements: vec![
-                Expr::Send(Box::new(variable("foo")), identifier("+"), vec![variable("bar")]),
-                variable("quux")
-            ]
-        })
-    );
-    assert_eq!(
-        parse_expr("{ :a | foo with: bar and: a, quux }"),
-        Expr::Block(ast::Block {
-            parameters: vec![identifier("a")],
-            temporaries: vec![],
-            statements: vec![
-                Expr::Send(
-                    Box::new(variable("foo")),
-                    identifier("with:and:"),
-                    vec![variable("bar"), variable("a")]
-                ),
-                variable("quux")
-            ]
-        })
-    );
-    assert_eq!(
-        parse_expr("{ ^Foo new }"),
-        Expr::Block(ast::Block {
-            parameters: vec![],
-            temporaries: vec![],
-            statements: vec![Expr::Return(Box::new(Expr::Send(
-                Box::new(variable("Foo")),
-                identifier("new"),
-                vec![]
-            )))]
-        })
+        parse_str(" { |x| foo bar: x } "),
+        Ok(block(
+            1..19,
+            vec!["x"],
+            keyword(11..17, "bar:", var(7..10, "foo"), vec![var(16..17, "x")])
+        ))
     );
 }
 
 #[test]
-fn parse_binary_cascade() {
-    assert_eq!(
-        parse_expr("a + b; + c"),
-        Expr::Cascade(
-            Box::new(Expr::Send(Box::new(variable("a")), identifier("+"), vec![variable("b")])),
-            vec![Message {
-                selector: identifier("+"),
-                args: vec![variable("c")]
-            }]
-        )
+fn parse_class1() {
+    assert_eq!(parse_str("class Point { x, y } end"), Ok(class(0..5, "Point", vec!["x", "y"])));
+}
+
+#[test]
+fn parse_method1() {
+    let mut class = class(0..5, "Foo", vec![]);
+    class.add_method(MethodKind::Instance, method(13..19, "bar", vec![], int(24..26, 42)));
+    assert_eq!(parse_str("class Foo {} method bar 42 end"), Ok(class));
+}
+
+#[test]
+fn parse_method2() {
+    let mut class = class(18..23, "Foo", vec![]);
+    class.add_method(
+        MethodKind::Instance,
+        method(52..58, "foo", vec![], unary(92..95, "bar", var(87..91, "self"))),
     );
+    class.add_method(MethodKind::Instance, method(117..123, "bar", vec![], int(152..154, 42)));
     assert_eq!(
-        parse_expr("1 + 3; + 41"),
-        Expr::Cascade(
-            Box::new(Expr::Send(Box::new(integer(1)), identifier("+"), vec![integer(3)])),
-            vec![Message {
-                selector: identifier("+"),
-                args: vec![integer(41)]
-            }]
-        )
+        parse_str(
+            "
+                 class Foo {}
+                     method foo
+                        self bar
+                     method bar
+                        42
+                 end"
+        ),
+        Ok(class)
     );
 }
 
 #[test]
-fn parse_keyword_cascade() {
+fn test_parse_newline_bug1() {
     assert_eq!(
-        parse_expr("a b c d; then: e; + f; g; then: h and: j"),
-        Expr::Cascade(
-            Box::new(Expr::Send(
-                Box::new(Expr::Send(
-                    Box::new(Expr::Send(Box::new(variable("a")), identifier("b"), vec![])),
-                    identifier("c"),
-                    vec![]
-                )),
-                identifier("d"),
-                vec![]
-            )),
-            vec![
+        parse_str(
+            r#"
+            (
+             1
+             {2}
+            )"#
+        ),
+        Ok(seq(vec![int(28..29, 1), block(43..46, vec![], int(44..45, 2))]))
+    );
+}
+
+#[test]
+fn test_parse_newline_bug2() {
+    assert_eq!(
+        parse_str(
+            r#"
+            (
+             1
+             (2)
+            )"#
+        ),
+        Ok(seq(vec![int(28..29, 1), int(44..45, 2)]))
+    );
+}
+
+#[test]
+fn test_parse_newline_bug3() {
+    assert_eq!(
+        parse_str(
+            r#"
+            (
+             1
+             return 2
+            )"#
+        ),
+        Ok(seq(vec![int(28..29, 1), Return::expr(43..49, int(50..51, 2))]))
+    );
+}
+
+#[test]
+fn test_parse_newline_bug4() {
+    assert_eq!(
+        parse_str(
+            r#"
+            (
+             1
+             let x = 2, x
+            )"#
+        ),
+        Ok(seq(vec![int(28..29, 1), bind("x", int(51..52, 2), var(54..55, "x"))]))
+    );
+}
+
+#[test]
+fn test_parse_newline_bug5() {
+    assert_eq!(
+        parse_str(
+            r#"
+            (
+             1
+             True
+             False
+            )"#
+        ),
+        Ok(seq(vec![int(28..29, 1), boolean(43..47, true), boolean(61..66, false)]))
+    );
+}
+
+#[test]
+fn test_parse_newline_bug6() {
+    assert_eq!(
+        parse_str(
+            r#"
+            (
+             1
+             foo: 2
+            )"#
+        ),
+        Ok(int(28..29, 1).send(Message {
+            span: 43..49,
+            selector: "foo:".to_string(),
+            args: vec![int(48..49, 2)]
+        }))
+    );
+}
+
+#[test]
+fn parse_return1() {
+    assert_eq!(parse_str("return 12"), Ok(Return::expr(0..6, int(7..9, 12))));
+}
+
+#[test]
+fn parse_comments() {
+    assert_eq!(
+        parse_str(
+            "foo --- inline block comment --- foo -- Foo it up!
+             ---
+             Multiline
+             block
+             comment
+             ---
+             bar"
+        ),
+        Ok(seq(vec![unary(33..36, "foo", var(0..3, "foo")), var(161..164, "bar")]))
+    );
+}
+
+#[test]
+fn parse_string1() {
+    assert_eq!(parse_str(r#" "foo" "#), Ok(string(1..6, "foo")))
+}
+
+#[test]
+fn parse_string2() {
+    assert_eq!(parse_str(r#" "" "#), Ok(string(1..3, "")))
+}
+
+#[test]
+fn parse_type_assertions1() {
+    assert_eq!(parse_str("foo::String"), Ok(typecheck(5..11, var(0..3, "foo"), "String")))
+}
+
+#[test]
+fn parse_type_assertions2() {
+    assert_eq!(
+        parse_str("let x::Integer = 42, x"),
+        Ok(bind_typed("x", "Integer", int(17..19, 42), var(21..22, "x")))
+    )
+}
+
+#[test]
+fn parse_type_assertions3() {
+    assert_eq!(
+        parse_str("{ |x::Integer| x }"),
+        Ok(block_typed(0..18, vec![("x", "Integer")], var(15..16, "x")))
+    );
+}
+
+#[test]
+fn parse_parens() {
+    assert_eq!(
+        parse_str("(a+b)*c"),
+        Ok(binary(5..6, "*", binary(2..3, "+", var(1..2, "a"), var(3..4, "b")), var(6..7, "c")))
+    )
+}
+
+#[test]
+fn parse_newlines1() {
+    assert!(parse_str(
+        "class Point { x, y }
+            method add: point
+               Point x: x + point x
+                     y: y + point y
+         end"
+    )
+    .is_ok());
+}
+
+#[test]
+fn parse_newlines2() {
+    assert!(parse_str(
+        "let p0 = Point x: 1 y: 2
+         let p1 = Point x: 10 y: 100
+         p0 add: p1"
+    )
+    .is_ok());
+}
+
+#[test]
+fn parse_newlines3() {
+    assert!(parse_str(
+        "class Point
+
+          {
+            x
+            y
+          }
+
+           method add: point
+              Point x: x + point x
+                    y: y + point y
+         end"
+    )
+    .is_ok());
+}
+
+#[test]
+fn test_parse_cascade1() {
+    assert_eq!(
+        parse_str("self foo; ba1 ba2"),
+        Ok(Expr::Cascade(
+            Box::new(var(0..4, "self").send(Message {
+                span: 5..8,
+                selector: "foo".to_string(),
+                args: vec![]
+            })),
+            vec![vec![
                 Message {
-                    selector: identifier("then:"),
-                    args: vec![variable("e")]
-                },
-                Message {
-                    selector: identifier("+"),
-                    args: vec![variable("f")]
-                },
-                Message {
-                    selector: identifier("g"),
+                    span: 10..13,
+                    selector: "ba1".to_string(),
                     args: vec![]
                 },
                 Message {
-                    selector: identifier("then:and:"),
-                    args: vec![variable("h"), variable("j")]
+                    span: 14..17,
+                    selector: "ba2".to_string(),
+                    args: vec![]
                 },
+            ]]
+        ))
+    );
+}
+
+#[test]
+fn test_parse_cascade2() {
+    assert_eq!(
+        parse_str("self foo; ba1 ba2; fa1 fa2"),
+        Ok(Expr::Cascade(
+            Box::new(var(0..4, "self").send(Message {
+                span: 5..8,
+                selector: "foo".to_string(),
+                args: vec![]
+            })),
+            vec![
+                vec![
+                    Message {
+                        span: 10..13,
+                        selector: "ba1".to_string(),
+                        args: vec![]
+                    },
+                    Message {
+                        span: 14..17,
+                        selector: "ba2".to_string(),
+                        args: vec![]
+                    },
+                ],
+                vec![
+                    Message {
+                        span: 19..22,
+                        selector: "fa1".to_string(),
+                        args: vec![]
+                    },
+                    Message {
+                        span: 23..26,
+                        selector: "fa2".to_string(),
+                        args: vec![]
+                    },
+                ]
             ]
-        )
+        ))
+    );
+}
+
+#[test]
+fn test_parse_array0() {
+    assert_eq!(parse_str("[]"), Ok(Array::expr(0..2, vec![])))
+}
+
+#[test]
+fn test_parse_array1() {
+    assert_eq!(parse_str("[1]"), Ok(Array::expr(0..3, vec![int(1..2, 1)])))
+}
+
+#[test]
+fn test_parse_array2() {
+    assert_eq!(
+        parse_str("[1,2,3]"),
+        Ok(Array::expr(0..7, vec![int(1..2, 1), int(3..4, 2), int(5..6, 3)]))
     )
 }
 
 #[test]
-fn parse_unary_method() {
+fn test_parse_array3() {
     assert_eq!(
-        parse_method("foo bar quux"),
-        Method {
-            selector: identifier("foo"),
-            parameters: vec![],
-            temporaries: vec![],
-            docstring: None,
-            statements: vec![Expr::Send(Box::new(variable("bar")), identifier("quux"), vec![])]
-        }
-    );
-    assert_eq!(
-        parse_method("foo |x| x := bar quux, ^x zot"),
-        Method {
-            selector: identifier("foo"),
-            parameters: vec![],
-            temporaries: vec![identifier("x")],
-            docstring: None,
-            statements: vec![
-                Expr::Assign(
-                    identifier("x"),
-                    Box::new(Expr::Send(Box::new(variable("bar")), identifier("quux"), vec![]))
-                ),
-                Expr::Return(Box::new(Expr::Send(
-                    Box::new(variable("x")),
-                    identifier("zot"),
-                    vec![]
-                )))
-            ]
-        }
-    );
-}
-
-#[test]
-fn parse_binary_method() {
-    assert_eq!(
-        parse_method(r#"+ x "This adds stuff." ^value + x"#),
-        Method {
-            selector: identifier("+"),
-            parameters: vec![identifier("x")],
-            temporaries: vec![],
-            docstring: Some(String::from("This adds stuff.")),
-            statements: vec![Expr::Return(Box::new(Expr::Send(
-                Box::new(variable("value")),
-                identifier("+"),
-                vec![variable("x")]
-            )))]
-        }
-    );
-}
-
-#[test]
-fn parse_keyword_method() {
-    assert_eq!(
-        parse_method("foo: x with: y x frob, y blarg ding: x"),
-        Method {
-            selector: identifier("foo:with:"),
-            parameters: vec![identifier("x"), identifier("y")],
-            temporaries: vec![],
-            docstring: None,
-            statements: vec![
-                Expr::Send(Box::new(variable("x")), identifier("frob"), vec![]),
-                Expr::Send(
-                    Box::new(Expr::Send(Box::new(variable("y")), identifier("blarg"), vec![])),
-                    identifier("ding:"),
-                    vec![variable("x")]
-                )
-            ]
-        }
+        parse_str(
+            "[
+                1
+                2
+                3
+             ]"
+        ),
+        Ok(Array::expr(0..70, vec![int(18..19, 1), int(36..37, 2), int(54..55, 3)]))
     )
-}
-
-#[test]
-fn parse_array_ctor() {
-    assert_eq!(
-        parse_expr("[1, 2 + 1, 3.1, 4]"),
-        Expr::ArrayCtor(vec![
-            integer(1),
-            Expr::Send(Box::new(integer(2)), identifier("+"), vec![integer(1)]),
-            float(3.1),
-            integer(4)
-        ])
-    );
-}
-
-#[test]
-fn parse_class_description() {
-    assert_eq!(
-        parse_class("@class Foo [x y z]"),
-        ast::ClassDescription {
-            name: identifier("Foo"),
-            slots: vec![identifier("x"), identifier("y"), identifier("z")]
-        }
-    )
-}
-
-#[test]
-fn parse_instance_method_description() {
-    assert_eq!(
-        parse_instance_method("@method Foo a:x b:y ^x + y"),
-        ast::MethodDescription {
-            class: identifier("Foo"),
-            method: ast::Method {
-                selector: identifier("a:b:"),
-                parameters: vec![identifier("x"), identifier("y")],
-                temporaries: vec![],
-                docstring: None,
-                statements: vec![Expr::Return(Box::new(Expr::Send(
-                    Box::new(variable("x")),
-                    identifier("+"),
-                    vec![variable("y")]
-                )))]
-            }
-        }
-    );
-}
-
-#[test]
-fn parse_class_method_description() {
-    assert_eq!(
-        parse_class_method("@class-method Foo a:x b:y ^x + y"),
-        ast::MethodDescription {
-            class: identifier("Foo"),
-            method: ast::Method {
-                selector: identifier("a:b:"),
-                parameters: vec![identifier("x"), identifier("y")],
-                temporaries: vec![],
-                docstring: None,
-                statements: vec![Expr::Return(Box::new(Expr::Send(
-                    Box::new(variable("x")),
-                    identifier("+"),
-                    vec![variable("y")]
-                )))]
-            }
-        }
-    );
-}
-
-#[test]
-fn parse_program1() {
-    let prog = parse_program(
-        "
-        @class Foo []
-        @method Foo theAnswer
-            ^42
-    ",
-    );
-    assert_eq!(
-        prog,
-        vec![
-            ast::Definition::Class(ast::ClassDescription {
-                name: identifier("Foo"),
-                slots: vec![],
-            }),
-            ast::Definition::InstanceMethod(ast::MethodDescription {
-                class: identifier("Foo"),
-                method: ast::Method {
-                    selector: identifier("theAnswer"),
-                    parameters: vec![],
-                    temporaries: vec![],
-                    docstring: None,
-                    statements: vec![Expr::Return(Box::new(Expr::Constant(Literal::Integer(42))))]
-                }
-            })
-        ]
-    );
 }
