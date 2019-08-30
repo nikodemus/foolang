@@ -770,8 +770,19 @@ impl Object {
             Some(Method::Interpreter(closure)) => eval::apply(Some(self), closure, args, foo),
             Some(Method::Reader(index)) => read_instance_variable(self, *index),
             None => {
-                // println!("debug: available methods: {:?}", &self.vtable.selectors());
-                unimplemented!("{:?} doesNotUnderstand {} {:?}", self, message, args);
+                let not_understood = vec![foo.make_string(message), foo.make_array(args.to_vec())];
+                match self.vtable.get("perform:with:") {
+                    Some(Method::Interpreter(closure)) => {
+                        eval::apply(Some(self), closure, &not_understood, foo)
+                    }
+                    Some(Method::Primitive(_method)) => unimplemented!(
+                        "Dispatching to primitive perform:with: {:?} {} {:?}",
+                        self,
+                        message,
+                        args
+                    ),
+                    _ => Unwind::message_error(self, message, args),
+                }
             }
         }
     }

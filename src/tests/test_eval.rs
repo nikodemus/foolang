@@ -643,3 +643,18 @@ fn test_return_from_deep_block_to_middle() {
     );
     assert_eq!(object, foo.make_integer(42));
 }
+
+#[test]
+fn test_not_understood() {
+    assert_eq!(
+        eval_ok(
+            r#"class Foo {}
+                method perform: m with: args
+                   "not understood: {m} args: {args}"
+               end
+               Foo new foo: 1 bar: 2"#
+        )
+        .string_as_str(),
+        "not understood: foo:bar: args: [1, 2]"
+    );
+}

@@ -41,9 +41,18 @@ pub enum Unwind {
 
 #[derive(PartialEq, Debug)]
 pub enum Error {
+    MessageError(MessageError),
     SimpleError(SimpleError),
     TypeError(TypeError),
     EofError(SimpleError),
+}
+
+// FIXME: This might break encapsulation too badly?
+#[derive(PartialEq, Debug)]
+pub struct MessageError {
+    pub message: String,
+    pub receiver: Object,
+    pub arguments: Vec<Object>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -85,6 +94,7 @@ impl Unwind {
             Location::none(),
         ))
     }
+
     pub fn type_error_at<T>(span: Span, value: Object, expected: String) -> Result<T, Unwind> {
         Err(Unwind::Exception(
             Error::TypeError(TypeError {
@@ -92,6 +102,21 @@ impl Unwind {
                 expected,
             }),
             Location::new(span),
+        ))
+    }
+
+    pub fn message_error<T>(
+        receiver: &Object,
+        message: &str,
+        args: &[Object],
+    ) -> Result<T, Unwind> {
+        Err(Unwind::Exception(
+            Error::MessageError(MessageError {
+                receiver: receiver.clone(),
+                message: message.to_string(),
+                arguments: args.to_vec(),
+            }),
+            Location::none(),
         ))
     }
 
@@ -143,10 +168,17 @@ impl Unwind {
 impl Error {
     pub fn what(&self) -> String {
         match self {
+            Error::MessageError(e) => e.what(),
             Error::SimpleError(e) => e.what(),
             Error::TypeError(e) => e.what(),
             Error::EofError(e) => e.what(),
         }
+    }
+}
+
+impl MessageError {
+    pub fn what(&self) -> String {
+        format!("{:?} does not understand: {} {:?}", self.receiver, self.message, self.arguments)
     }
 }
 
@@ -214,7 +246,9 @@ impl Location {
         if self.context.is_some() {
             return;
         }
-        assert!(self.span.is_some());
+        if self.span.is_none() {
+            return;
+        }
         assert!(self.context.is_none());
         let mut context = String::new();
         let mut prev = "";
