@@ -123,3 +123,10 @@ fn test_float_gte() {
     assert_eq!(eval_ok("2.0 >= 1").boolean(), true);
     assert_eq!(eval_ok("1.0 >= 1").boolean(), true);
 }
+
+#[test]
+fn test_float_at_least_at_most() {
+    assert_eq!(eval_ok("1.0 atLeast: 0.0 atMost: 2.0").float(), 1.0);
+    assert_eq!(eval_ok("0.0 atLeast: 1.0 atMost: 2.0").float(), 1.0);
+    assert_eq!(eval_ok("2.0 atLeast: 0.0 atMost: 1.0").float(), 1.0);
+}

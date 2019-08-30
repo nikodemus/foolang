@@ -27,14 +27,15 @@ pub fn vtable() -> Vtable {
     vt.def("/", float_div);
     vt.def("*", float_mul);
     vt.def("-", float_sub);
-    vt.def("asInteger", float_as_integer);
     vt.def("addInteger:", float_add_integer);
+    vt.def("asInteger", float_as_integer);
+    vt.def("atLeast:atMost:", float_at_least_at_most);
+    vt.def("divInteger:", float_div_integer);
     vt.def("equalInteger:", float_equal_integer);
     vt.def("greaterThanInteger:", float_greater_than_integer);
     vt.def("greaterThanOrEqualInteger:", float_greater_than_or_equal_integer);
     vt.def("lessThanInteger:", float_less_than_integer);
     vt.def("lessThanOrEqualInteger:", float_less_than_or_equal_integer);
-    vt.def("divInteger:", float_div_integer);
     vt.def("mulInteger:", float_mul_integer);
     vt.def("subInteger:", float_sub_integer);
     vt
@@ -184,4 +185,17 @@ fn float_less_than_integer(receiver: &Object, args: &[Object], foo: &Foolang) ->
 fn float_less_than_or_equal_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let float = args[0].send("asFloat", &[], foo)?;
     receiver.send("lessThanOrEqualFloat:", &[float], foo)
+}
+
+fn float_at_least_at_most(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let min_value = args[0].send("asFloat", &[], foo)?;
+    let max_value = args[1].send("asFloat", &[], foo)?;
+    let value = receiver.float();
+    if value < min_value.float() {
+        return Ok(min_value);
+    }
+    if value > max_value.float() {
+        return Ok(max_value);
+    }
+    Ok(receiver.clone())
 }
