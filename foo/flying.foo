@@ -12,6 +12,11 @@ class PointMass { forces, mass, position, velocity }
      self _applyForces: time
 end
 
+class Vector {}
+   class method projection: a onto: b
+      ((a dot: b) / (b dot: b)) * b
+end
+
 
 class Plane { model noseDirection upDirection maxLift maxSpeed maxThrottle throttle }
 
