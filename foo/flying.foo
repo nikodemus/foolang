@@ -1,9 +1,8 @@
-class PointMass { position, velocity, mass, forces }
-  method apply: force as: name
-     forces put: force at: name
-
+class PointMass { forces, mass, position, velocity }
   method sumForces
-     force sum: { |force| force value }
+     forces inject: [0.0, 0.0, 0.0] into: { |sum force|
+         sum + force value
+     }
 
   method _applyForces: time
      velocity = velocity + (self sumForces / mass) * time
@@ -14,29 +13,27 @@ class PointMass { position, velocity, mass, forces }
 end
 
 
-class Plane { model noseDirection upDirection maxSpeed maxLift maxThrottle throttle }
+class Plane { model noseDirection upDirection maxLift maxSpeed maxThrottle throttle }
 
    class method mass: mass
                 maxLift: maxLift
                 maxSpeed: maxSpeed
-                maxThrottle: maxThrottle
+                maxThrust: maxThrust
 
-     let model PointMass mass: mass
-                         position: [0.0, 0.0, 0.0]
-                         velocity: [0.0, 0.0, 0.0]
-                         forces: Dictionary new
-
-      model apply: { [0.0, 0.0, -9,81] } as: "gravity"
-      model apply: { self drag } as: "drag"
-      model apply: { self lift } as: "lift"
-      model apply: { self thrust } as: "thrust"
+     let model = PointMass forces: [ { [0.0, 0.0, -9.81] } -- gravity
+                                     { self drag }
+                                     { self lift }
+                                     { self thrust } ]
+                           mass: mass
+                           position: [0.0, 0.0, 0.0]
+                           velocity: [0.0, 0.0, 0.0]
 
       self model: model
            noseDirection: [0.0, 1.0, 0.0]
-           upDirection [0.0, 0.0, 1.0]
+           upDirection: [0.0, 0.0, 1.0]
            maxLift: maxLift
            maxSpeed: maxSpeed
-           maxThrottle: maxThrottle
+           maxThrottle: maxThrust
            throttle: 0.0 
 
    method position
