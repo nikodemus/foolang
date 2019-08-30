@@ -1,6 +1,6 @@
 use clap::{App, Arg};
 use foolang::eval::eval_all;
-use foolang::objects2::Foolang;
+use foolang::objects::Foolang;
 use foolang::time::TimeInfo;
 use foolang::unwind::Unwind;
 use rouille::{match_assets, post_input, session, try_or_400, Request, Response};

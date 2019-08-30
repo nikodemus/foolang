@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::objects2::{
+use crate::objects::{
     read_instance_variable, write_instance_variable, Arg, Closure, Eval, Foolang, Object, Source,
     Vtable,
 };

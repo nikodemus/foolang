@@ -1,5 +1,5 @@
 use crate::eval::{Binding, Env};
-use crate::objects2::{Eval, Foolang, Object, Source, Vtable};
+use crate::objects::{Eval, Foolang, Object, Source, Vtable};
 use crate::parse::Parser;
 use crate::unwind::{Error, Unwind};
 

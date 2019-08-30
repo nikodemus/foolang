@@ -1,6 +1,6 @@
 use std::slice;
 
-use crate::objects2::{Eval, Foolang, Object, Vtable};
+use crate::objects::{Eval, Foolang, Object, Vtable};
 
 pub fn vtable() -> Vtable {
     let mut vt = Vtable::new("Integer");

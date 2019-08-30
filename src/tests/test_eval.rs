@@ -1,5 +1,5 @@
 use crate::eval::utils::{eval_exception, eval_obj, eval_ok, eval_str};
-use crate::objects2::Slot;
+use crate::objects::Slot;
 use crate::unwind::Unwind;
 use crate::unwind::{Error, Location, SimpleError, TypeError};
 

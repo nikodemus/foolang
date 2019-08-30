@@ -1,4 +1,4 @@
-use crate::objects2::Foolang;
+use crate::objects::Foolang;
 
 #[test]
 fn test_clock1() {

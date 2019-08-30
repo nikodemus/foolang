@@ -350,73 +350,71 @@ impl Foolang {
     pub fn new() -> Foolang {
         let mut globals = HashMap::new();
 
-        let array_vtable = Rc::new(classes::array2::instance_vtable());
+        let array_vtable = Rc::new(classes::array::instance_vtable());
         globals.insert(
             "Array".to_string(),
-            Class::object(classes::array2::class_vtable(), &array_vtable),
+            Class::object(classes::array::class_vtable(), &array_vtable),
         );
 
-        let boolean_vtable = Rc::new(classes::boolean2::vtable());
+        let boolean_vtable = Rc::new(classes::boolean::vtable());
         globals.insert(
             "Boolean".to_string(),
             Class::object(Vtable::new("class Boolean"), &boolean_vtable),
         );
 
-        let clock_vtable = Rc::new(classes::clock2::instance_vtable());
+        let clock_vtable = Rc::new(classes::clock::instance_vtable());
         globals.insert(
             "Clock".to_string(),
-            Class::object(classes::clock2::class_vtable(), &clock_vtable),
+            Class::object(classes::clock::class_vtable(), &clock_vtable),
         );
 
-        let compiler_vtable = Rc::new(classes::compiler2::instance_vtable());
+        let compiler_vtable = Rc::new(classes::compiler::instance_vtable());
         globals.insert(
             "Compiler".to_string(),
-            Class::object(classes::compiler2::class_vtable(), &compiler_vtable),
+            Class::object(classes::compiler::class_vtable(), &compiler_vtable),
         );
 
-        let float_vtable = Rc::new(classes::float2::vtable());
+        let float_vtable = Rc::new(classes::float::vtable());
         globals
             .insert("Float".to_string(), Class::object(Vtable::new("class Float"), &float_vtable));
 
-        let input_vtable = Rc::new(classes::input2::vtable());
+        let input_vtable = Rc::new(classes::input::vtable());
         globals
             .insert("Input".to_string(), Class::object(Vtable::new("class Input"), &input_vtable));
 
-        let integer_vtable = Rc::new(classes::integer2::vtable());
+        let integer_vtable = Rc::new(classes::integer::vtable());
         globals.insert(
             "Integer".to_string(),
             Class::object(Vtable::new("class Integer"), &integer_vtable),
         );
 
-        let interval_vtable = Rc::new(classes::interval2::vtable());
+        let interval_vtable = Rc::new(classes::interval::vtable());
         globals.insert(
             "Interval".to_string(),
             Class::object(Vtable::new("class Interval"), &interval_vtable),
         );
 
-        let output_vtable = Rc::new(classes::output2::vtable());
+        let output_vtable = Rc::new(classes::output::vtable());
         globals.insert(
             "Output".to_string(),
             Class::object(Vtable::new("class Output"), &output_vtable),
         );
 
-        let string_vtable = Rc::new(classes::string2::instance_vtable());
+        let string_vtable = Rc::new(classes::string::instance_vtable());
         globals.insert(
             "String".to_string(),
-            Class::object(classes::string2::class_vtable(), &string_vtable),
+            Class::object(classes::string::class_vtable(), &string_vtable),
         );
 
-        let time_vtable = Rc::new(classes::time2::instance_vtable());
-        globals.insert(
-            "Time".to_string(),
-            Class::object(classes::time2::class_vtable(), &time_vtable),
-        );
+        let time_vtable = Rc::new(classes::time::instance_vtable());
+        globals
+            .insert("Time".to_string(), Class::object(classes::time::class_vtable(), &time_vtable));
 
         let foo = Foolang {
             array_vtable,
             boolean_vtable,
             clock_vtable,
-            closure_vtable: Rc::new(classes::closure2::vtable()),
+            closure_vtable: Rc::new(classes::closure::vtable()),
             compiler_vtable,
             float_vtable,
             input_vtable,
@@ -650,7 +648,7 @@ impl Foolang {
 
     pub fn make_system(&self) -> Object {
         Object {
-            vtable: Rc::new(classes::system2::vtable()),
+            vtable: Rc::new(classes::system::vtable()),
             datum: Datum::System,
         }
     }

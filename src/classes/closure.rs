@@ -1,5 +1,5 @@
 use crate::eval;
-use crate::objects2::{Eval, Foolang, Object, Vtable};
+use crate::objects::{Eval, Foolang, Object, Vtable};
 use crate::unwind::Unwind;
 
 pub fn vtable() -> Vtable {

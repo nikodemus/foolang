@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::eval::Frame;
-use crate::objects2::Object;
+use crate::objects::Object;
 use crate::tokenstream::Span;
 
 trait LineIndices {
