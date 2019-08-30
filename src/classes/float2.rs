@@ -11,10 +11,12 @@ pub fn vtable() -> Vtable {
     vt.def("mulFloat:", float_mul_float);
     vt.def("subFloat:", float_sub_float);
     vt.def("greaterThanFloat:", float_greater_than_float);
+    vt.def("lessThanFloat:", float_less_than_float);
     vt.def("prefix-", float_neg);
     vt.def("toString", float_to_string);
     // DERIVED
     vt.def("<", float_less_than);
+    vt.def(">", float_greater_than);
     vt.def("+", float_add);
     vt.def("/", float_div);
     vt.def("*", float_mul);
@@ -59,6 +61,11 @@ fn float_sub_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
 
 fn float_greater_than_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let res = receiver.float() > args[0].float();
+    Ok(foo.make_boolean(res))
+}
+
+fn float_less_than_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let res = receiver.float() < args[0].float();
     Ok(foo.make_boolean(res))
 }
 
@@ -110,4 +117,8 @@ fn float_sub_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval 
 
 fn float_less_than(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     args[0].send("greaterThanFloat:", std::slice::from_ref(receiver), foo)
+}
+
+fn float_greater_than(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    args[0].send("lessThanFloat:", std::slice::from_ref(receiver), foo)
 }
