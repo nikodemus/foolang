@@ -15,8 +15,10 @@ pub fn instance_vtable() -> Vtable {
     vt.def("inject:into:", array_inject_into);
     vt.def("push:", array_push);
     vt.def("toString", array_to_string);
+    vt.def("magnitude", array_magnitude);
     vt.def("mulInteger:", array_mul_integer);
     vt.def("mulFloat:", array_mul_float);
+    vt.def("normalized", array_normalized);
     vt
 }
 
@@ -64,6 +66,22 @@ fn array_add(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
 
 fn array_mul(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     args[0].send("*", std::slice::from_ref(receiver), foo)
+}
+
+fn array_magnitude(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+    receiver.as_vec(|v| {
+        let mut abs = 0.0;
+        for elt in v.iter() {
+            let f = elt.send("asFloat", &[], foo)?.float();
+            abs += f * f;
+        }
+        Ok(foo.make_float(abs.sqrt()))
+    })
+}
+
+fn array_normalized(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+    let reciprocal = foo.make_float(1.0 / receiver.send("magnitude", &[], foo)?.float());
+    receiver.send("*", std::slice::from_ref(&reciprocal), foo)
 }
 
 fn array_mul_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {

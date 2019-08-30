@@ -20,21 +20,27 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrottle throt
                 maxSpeed: maxSpeed
                 maxThrust: maxThrust
 
-     let model = PointMass forces: [ { [0.0, 0.0, -9.81] } -- gravity
-                                     { self drag }
-                                     { self lift }
-                                     { self thrust } ]
+     let forces = []
+
+     let model = PointMass forces: forces
                            mass: mass
                            position: [0.0, 0.0, 0.0]
                            velocity: [0.0, 0.0, 0.0]
 
-      self model: model
-           noseDirection: [0.0, 1.0, 0.0]
-           upDirection: [0.0, 0.0, 1.0]
-           maxLift: maxLift
-           maxSpeed: maxSpeed
-           maxThrottle: maxThrust
-           throttle: 0.0 
+     let plane = self model: model
+                      noseDirection: [0.0, 1.0, 0.0]
+                      upDirection: [0.0, 0.0, 1.0]
+                      maxLift: maxLift
+                      maxSpeed: maxSpeed
+                      maxThrottle: maxThrust
+                      throttle: 0.0
+
+     forces push: { [0.0, 0.0, -9.81] } -- gravity
+     forces push: { plane drag }
+     forces push: { plane lift }
+     forces push: { plane thrust }
+
+     plane
 
    method position
       model position
@@ -52,7 +58,6 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrottle throt
       -- https://en.wikipedia.org/wiki/Drag_coefficient
       -- FIXME: current value is for sphere, should at least interpolate between
       -- different ones for shape
-
       0.47
 
    method drag
