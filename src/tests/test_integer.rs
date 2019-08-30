@@ -118,34 +118,54 @@ fn test_integer_equal() {
     assert_eq!(eval_ok("1 == 2").boolean(), false);
     assert_eq!(eval_ok("2 == 1").boolean(), false);
     assert_eq!(eval_ok("1 == 1").boolean(), true);
+
+    assert_eq!(eval_ok("1 == 1.0").boolean(), true);
+    assert_eq!(eval_ok("1 == 1.1").boolean(), false);
+    assert_eq!(eval_ok("1 == 0.9").boolean(), false);
 }
 
 #[test]
-fn test_integer_lt() {
+fn test_integer_less_than() {
     assert_eq!(eval_ok("1 < 2").boolean(), true);
     assert_eq!(eval_ok("2 < 1").boolean(), false);
     assert_eq!(eval_ok("1 < 1").boolean(), false);
+
+    assert_eq!(eval_ok("1 < 2.0").boolean(), true);
+    assert_eq!(eval_ok("2 < 1.0").boolean(), false);
+    assert_eq!(eval_ok("1 < 1.0").boolean(), false);
 }
 
 #[test]
-fn test_integer_lte() {
+fn test_integer_less_than_or_equal() {
     assert_eq!(eval_ok("1 <= 2").boolean(), true);
     assert_eq!(eval_ok("2 <= 1").boolean(), false);
     assert_eq!(eval_ok("1 <= 1").boolean(), true);
+
+    assert_eq!(eval_ok("1 <= 2.0").boolean(), true);
+    assert_eq!(eval_ok("2 <= 1.0").boolean(), false);
+    assert_eq!(eval_ok("1 <= 1.0").boolean(), true);
 }
 
 #[test]
-fn test_integer_gt() {
+fn test_integer_greater_than() {
     assert_eq!(eval_ok("1 > 2").boolean(), false);
     assert_eq!(eval_ok("2 > 1").boolean(), true);
     assert_eq!(eval_ok("1 > 1").boolean(), false);
+
+    assert_eq!(eval_ok("1 > 2.0").boolean(), false);
+    assert_eq!(eval_ok("2 > 1.0").boolean(), true);
+    assert_eq!(eval_ok("1 > 1.0").boolean(), false);
 }
 
 #[test]
-fn test_integer_gte() {
+fn test_integer_greater_than_or_equal() {
     assert_eq!(eval_ok("1 >= 2").boolean(), false);
     assert_eq!(eval_ok("2 >= 1").boolean(), true);
     assert_eq!(eval_ok("1 >= 1").boolean(), true);
+
+    assert_eq!(eval_ok("1 >= 2.0").boolean(), false);
+    assert_eq!(eval_ok("2 >= 1.0").boolean(), true);
+    assert_eq!(eval_ok("1 >= 1.0").boolean(), true);
 }
 
 #[test]

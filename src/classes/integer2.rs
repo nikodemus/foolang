@@ -9,11 +9,11 @@ pub fn vtable() -> Vtable {
     vt.def("asInteger", integer_as_integer);
     vt.def("addInteger:", integer_add_integer);
     vt.def("divInteger:", integer_div_integer);
-    vt.def("eqInteger:", integer_eq_integer);
-    vt.def("gtInteger:", integer_gt_integer);
-    vt.def("gteInteger:", integer_gte_integer);
-    vt.def("ltInteger:", integer_lt_integer);
-    vt.def("lteInteger:", integer_lte_integer);
+    vt.def("equalInteger:", integer_equal_integer);
+    vt.def("greaterThanInteger:", integer_greater_than_integer);
+    vt.def("greaterThanOrEqualInteger:", integer_greater_than_or_equal_integer);
+    vt.def("lessThanInteger:", integer_less_than_integer);
+    vt.def("lessThanOrEqualInteger:", integer_less_than_or_equal_integer);
     vt.def("mulInteger:", integer_mul_integer);
     vt.def("subInteger:", integer_sub_integer);
     vt.def("toString", integer_to_string);
@@ -26,11 +26,11 @@ pub fn vtable() -> Vtable {
     // DERIVED
     vt.def("+", integer_add);
     vt.def("/", integer_div);
-    vt.def("==", integer_eq);
-    vt.def(">", integer_gt);
-    vt.def(">=", integer_gte);
-    vt.def("<", integer_lt);
-    vt.def("<=", integer_lte);
+    vt.def("==", integer_equal);
+    vt.def(">", integer_greater_than);
+    vt.def(">=", integer_greater_than_or_equal);
+    vt.def("<", integer_less_than);
+    vt.def("<=", integer_less_than_or_equal);
     vt.def("*", integer_mul);
     vt.def("-", integer_sub);
     vt.def("addFloat:", integer_add_float);
@@ -65,27 +65,31 @@ fn integer_div_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eva
     Ok(foo.make_integer(res))
 }
 
-fn integer_eq_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn integer_equal_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let res = receiver.integer() == args[0].integer();
     Ok(foo.make_boolean(res))
 }
 
-fn integer_gt_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn integer_greater_than_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let res = receiver.integer() > args[0].integer();
     Ok(foo.make_boolean(res))
 }
 
-fn integer_gte_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn integer_greater_than_or_equal_integer(
+    receiver: &Object,
+    args: &[Object],
+    foo: &Foolang,
+) -> Eval {
     let res = receiver.integer() >= args[0].integer();
     Ok(foo.make_boolean(res))
 }
 
-fn integer_lt_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn integer_less_than_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let res = receiver.integer() < args[0].integer();
     Ok(foo.make_boolean(res))
 }
 
-fn integer_lte_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn integer_less_than_or_equal_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let res = receiver.integer() <= args[0].integer();
     Ok(foo.make_boolean(res))
 }
@@ -161,24 +165,24 @@ fn integer_div(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     args[0].send("divInteger:", slice::from_ref(receiver), foo)
 }
 
-fn integer_eq(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("eqInteger:", slice::from_ref(receiver), foo)
+fn integer_equal(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    args[0].send("equalInteger:", slice::from_ref(receiver), foo)
 }
 
-fn integer_gt(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("ltInteger:", slice::from_ref(receiver), foo)
+fn integer_greater_than(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    args[0].send("lessThanInteger:", slice::from_ref(receiver), foo)
 }
 
-fn integer_gte(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("lteInteger:", slice::from_ref(receiver), foo)
+fn integer_greater_than_or_equal(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    args[0].send("lessThanOrEqualInteger:", slice::from_ref(receiver), foo)
 }
 
-fn integer_lt(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("gtInteger:", slice::from_ref(receiver), foo)
+fn integer_less_than(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    args[0].send("greaterThanInteger:", slice::from_ref(receiver), foo)
 }
 
-fn integer_lte(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("gteInteger:", slice::from_ref(receiver), foo)
+fn integer_less_than_or_equal(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    args[0].send("greaterThanOrEqualInteger:", slice::from_ref(receiver), foo)
 }
 
 fn integer_mul(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {

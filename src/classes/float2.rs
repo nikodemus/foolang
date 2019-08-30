@@ -29,6 +29,11 @@ pub fn vtable() -> Vtable {
     vt.def("-", float_sub);
     vt.def("asInteger", float_as_integer);
     vt.def("addInteger:", float_add_integer);
+    vt.def("equalInteger:", float_equal_integer);
+    vt.def("greaterThanInteger:", float_greater_than_integer);
+    vt.def("greaterThanOrEqualInteger:", float_greater_than_or_equal_integer);
+    vt.def("lessThanInteger:", float_less_than_integer);
+    vt.def("lessThanOrEqualInteger:", float_less_than_or_equal_integer);
     vt.def("divInteger:", float_div_integer);
     vt.def("mulInteger:", float_mul_integer);
     vt.def("subInteger:", float_sub_integer);
@@ -154,4 +159,29 @@ fn float_greater_than_or_equal(receiver: &Object, args: &[Object], foo: &Foolang
 
 fn float_equal(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     args[0].send("equalFloat:", std::slice::from_ref(receiver), foo)
+}
+
+fn float_equal_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let float = args[0].send("asFloat", &[], foo)?;
+    receiver.send("equalFloat:", &[float], foo)
+}
+
+fn float_greater_than_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let float = args[0].send("asFloat", &[], foo)?;
+    receiver.send("greaterThanFloat:", &[float], foo)
+}
+
+fn float_greater_than_or_equal_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let float = args[0].send("asFloat", &[], foo)?;
+    receiver.send("greaterThanOrEqualFloat:", &[float], foo)
+}
+
+fn float_less_than_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let float = args[0].send("asFloat", &[], foo)?;
+    receiver.send("lessThanFloat:", &[float], foo)
+}
+
+fn float_less_than_or_equal_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let float = args[0].send("asFloat", &[], foo)?;
+    receiver.send("lessThanOrEqualFloat:", &[float], foo)
 }
