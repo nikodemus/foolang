@@ -96,3 +96,10 @@ fn test_float_lte() {
     assert_eq!(eval_ok("2.0 <= 1.0").boolean(), false);
     assert_eq!(eval_ok("1.0 <= 1.0").boolean(), true);
 }
+
+#[test]
+fn test_float_gte() {
+    assert_eq!(eval_ok("1.0 >= 2.0").boolean(), false);
+    assert_eq!(eval_ok("2.0 >= 1.0").boolean(), true);
+    assert_eq!(eval_ok("1.0 >= 1.0").boolean(), true);
+}
