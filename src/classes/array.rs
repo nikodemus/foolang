@@ -10,6 +10,7 @@ pub fn instance_vtable() -> Vtable {
     vt.def("do:", array_do);
     vt.def("inject:into:", array_inject_into);
     vt.def("push:", array_push);
+    vt.def("toString", array_to_string);
     vt
 }
 
@@ -43,4 +44,8 @@ fn array_push(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
         Ok(())
     })?;
     Ok(receiver.clone())
+}
+
+fn array_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+    Ok(foo.into_string(receiver.as_vec(|v| Ok(format!("{:?}", v)))?))
 }

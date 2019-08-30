@@ -87,3 +87,8 @@ fn test_array_eq() {
     assert_eq!(eval_ok("[1,2,3] is [1,2,3]").boolean(), false);
     assert_eq!(eval_ok("{ |arr| arr is arr } value: [1,2,3]").boolean(), true);
 }
+
+#[test]
+fn test_array_to_string() {
+    assert_eq!(eval_ok("[1,2,3] toString").string_as_str(), "[1, 2, 3]");
+}
