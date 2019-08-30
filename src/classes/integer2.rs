@@ -37,6 +37,11 @@ pub fn vtable() -> Vtable {
     vt.def("divFloat:", integer_div_float);
     vt.def("mulFloat:", integer_mul_float);
     vt.def("subFloat:", integer_sub_float);
+    vt.def("equalFloat:", integer_equal_float);
+    vt.def("lessThanFloat:", integer_less_than_float);
+    vt.def("lessThanOrEqualFloat:", integer_less_than_or_equal_float);
+    vt.def("greaterThanFloat:", integer_greater_than_float);
+    vt.def("greaterThanOrEqualFloat:", integer_greater_than_or_equal_float);
     vt
 }
 
@@ -198,4 +203,24 @@ fn integer_mul_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval 
 
 fn integer_sub_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     receiver.send("asFloat", &[], foo)?.send("subFloat:", args, foo)
+}
+
+fn integer_equal_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    receiver.send("asFloat", &[], foo)?.send("equalFloat:", args, foo)
+}
+
+fn integer_greater_than_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    receiver.send("asFloat", &[], foo)?.send("greaterThanFloat:", args, foo)
+}
+
+fn integer_greater_than_or_equal_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    receiver.send("asFloat", &[], foo)?.send("greaterThanOrEqualFloat:", args, foo)
+}
+
+fn integer_less_than_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    receiver.send("asFloat", &[], foo)?.send("lessThanFloat:", args, foo)
+}
+
+fn integer_less_than_or_equal_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    receiver.send("asFloat", &[], foo)?.send("lessThanOrEqualFloat:", args, foo)
 }
