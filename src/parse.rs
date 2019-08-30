@@ -1306,9 +1306,12 @@ fn parse_method(
         }
         if let (Token::KEYWORD, _) = parser.lookahead()? {
             continue;
-        } else {
-            break;
         }
+        if let ((Token::NEWLINE, _), (Token::KEYWORD, _)) = parser.lookahead2()? {
+            parser.next_token()?;
+            continue;
+        }
+        break;
     }
     let (token, span2) = parser.lookahead()?;
     let rtype = if token == Token::SIGIL && parser.slice_at(span2) == "->" {

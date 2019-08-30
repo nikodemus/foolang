@@ -658,3 +658,19 @@ fn test_not_understood() {
         "not understood: foo:bar: args: [1, 2]"
     );
 }
+
+#[test]
+fn test_method_keyword_multiline() {
+    assert_eq!(
+        eval_ok(
+            r#"class Foo {}
+                  class method bar: x
+                               quux: y
+                    x + y
+               end
+               Foo bar: 40 quux: 2"#
+        )
+        .integer(),
+        42
+    );
+}
