@@ -35,7 +35,7 @@ fn test_array_ctor_2() {
 }
 
 #[test]
-#[ignore] // trailing comma not supported yet
+#[should_panic] // trailing comma not supported yet
 fn test_array_ctor_3() {
     let (obj, _foo) = eval_obj("[31,42,53,]");
     obj.as_vec(move |vec| {
