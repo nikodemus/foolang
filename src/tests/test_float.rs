@@ -82,3 +82,10 @@ fn test_float_gt() {
     assert_eq!(eval_ok("2.0 > 1.0").boolean(), true);
     assert_eq!(eval_ok("1.0 > 1.0").boolean(), false);
 }
+
+#[test]
+fn test_float_equals() {
+    assert_eq!(eval_ok("1.0 == 2.0").boolean(), false);
+    assert_eq!(eval_ok("2.0 == 1.0").boolean(), false);
+    assert_eq!(eval_ok("1.0 == 1.0").boolean(), true);
+}
