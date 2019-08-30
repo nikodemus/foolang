@@ -114,7 +114,7 @@ fn test_integer_gcd() {
 }
 
 #[test]
-fn test_integer_eq() {
+fn test_integer_equal() {
     assert_eq!(eval_ok("1 == 2").boolean(), false);
     assert_eq!(eval_ok("2 == 1").boolean(), false);
     assert_eq!(eval_ok("1 == 1").boolean(), true);
