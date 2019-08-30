@@ -7,10 +7,13 @@ pub fn class_vtable() -> Vtable {
 
 pub fn instance_vtable() -> Vtable {
     let mut vt = Vtable::new("Array");
+    vt.def("*", array_mul);
     vt.def("do:", array_do);
     vt.def("inject:into:", array_inject_into);
     vt.def("push:", array_push);
     vt.def("toString", array_to_string);
+    vt.def("mulInteger:", array_mul_integer);
+    vt.def("mulFloat:", array_mul_float);
     vt
 }
 
@@ -35,6 +38,26 @@ fn array_inject_into(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval 
         }
         Ok(inject)
     })
+}
+
+fn array_mul(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    args[0].send("*", std::slice::from_ref(receiver), foo)
+}
+
+fn array_mul_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let mut v = receiver.as_vec(|v| Ok(v.clone()))?;
+    for i in 0..v.len() {
+        v[i] = v[i].send("mulInteger:", args, foo)?;
+    }
+    Ok(foo.into_array(v))
+}
+
+fn array_mul_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let mut v = receiver.as_vec(|v| Ok(v.clone()))?;
+    for i in 0..v.len() {
+        v[i] = v[i].send("mulFloat:", args, foo)?;
+    }
+    Ok(foo.into_array(v))
 }
 
 fn array_push(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {

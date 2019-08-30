@@ -468,7 +468,11 @@ impl Foolang {
         }
     }
 
-    pub fn make_array(&self, data: Vec<Object>) -> Object {
+    pub fn make_array(&self, data: &[Object]) -> Object {
+        self.into_array(data.to_vec())
+    }
+
+    pub fn into_array(&self, data: Vec<Object>) -> Object {
         Object {
             vtable: Rc::clone(&self.array_vtable),
             datum: Datum::Array(Rc::new(Array {
@@ -770,7 +774,7 @@ impl Object {
             Some(Method::Interpreter(closure)) => eval::apply(Some(self), closure, args, foo),
             Some(Method::Reader(index)) => read_instance_variable(self, *index),
             None => {
-                let not_understood = vec![foo.make_string(message), foo.make_array(args.to_vec())];
+                let not_understood = vec![foo.make_string(message), foo.make_array(args)];
                 match self.vtable.get("perform:with:") {
                     Some(Method::Interpreter(closure)) => {
                         eval::apply(Some(self), closure, &not_understood, foo)

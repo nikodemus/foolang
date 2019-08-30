@@ -82,9 +82,9 @@ class Main { system }
                         maxSpeed: 50.0
                         maxThrust: 100.0
       plane throttle: 1.0
-      100 times: {
+      10 times: {
           let p = plane position
-          system output println: "{p at: 1} {p at: 2} {p at: 3}"
+          system output println: p toString
           plane tick: 1.0
       }
 end

@@ -211,7 +211,7 @@ impl<'a> Env<'a> {
         for elt in &array.data {
             data.push(self.eval(elt)?);
         }
-        Ok(self.foo.make_array(data))
+        Ok(self.foo.into_array(data))
     }
 
     fn eval_bind(

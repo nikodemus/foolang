@@ -92,3 +92,10 @@ fn test_array_eq() {
 fn test_array_to_string() {
     assert_eq!(eval_ok("[1,2,3] toString").string_as_str(), "[1, 2, 3]");
 }
+
+#[test]
+fn test_array_mul() {
+    assert_eq!(eval_ok("([0,1,2] * 2) toString").string_as_str(), "[0, 2, 4]");
+    assert_eq!(eval_ok("(2 * [0,1,2]) toString").string_as_str(), "[0, 2, 4]");
+    assert_eq!(eval_ok("(2.0 * [0,1,2]) toString").string_as_str(), "[0.0, 2.0, 4.0]");
+}
