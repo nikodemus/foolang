@@ -127,3 +127,8 @@ fn test_closure_while_false_closure() {
         16
     );
 }
+
+#[test]
+fn test_closure_on_error() {
+    assert_eq!(eval_ok("{ undefined } onError: { |err| err }").string_as_str(), "Unbound variable");
+}
