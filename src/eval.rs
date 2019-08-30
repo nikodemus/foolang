@@ -519,73 +519,6 @@ pub mod utils {
 use crate::eval::utils::*;
 
 #[test]
-fn eval_decimal() {
-    assert_eq!(eval_ok("123").integer(), 123);
-}
-
-#[test]
-fn eval_bad_decimal() {
-    assert_eq!(
-        eval_str("1x3"),
-        Err(Unwind::Exception(
-            Error::SimpleError(SimpleError {
-                what: "Malformed number",
-            }),
-            Location {
-                span: Some(0..3),
-                context: Some(concat!("001 1x3\n", "    ^^^ Malformed number\n").to_string())
-            }
-        ))
-    );
-}
-
-#[test]
-fn eval_hex() {
-    assert_eq!(eval_ok("0xFFFF").integer(), 0xFFFF);
-}
-
-#[test]
-fn eval_bad_hex() {
-    assert_eq!(
-        eval_str("0x1x3"),
-        Err(Unwind::Exception(
-            Error::SimpleError(SimpleError {
-                what: "Malformed hexadecimal number",
-            }),
-            Location {
-                span: Some(0..5),
-                context: Some(
-                    concat!("001 0x1x3\n", "    ^^^^^ Malformed hexadecimal number\n").to_string()
-                )
-            }
-        ))
-    );
-}
-
-#[test]
-fn eval_binary() {
-    assert_eq!(eval_ok("0b101").integer(), 0b101);
-}
-
-#[test]
-fn eval_bad_binary() {
-    assert_eq!(
-        eval_str("0b123"),
-        Err(Unwind::Exception(
-            Error::SimpleError(SimpleError {
-                what: "Malformed binary number",
-            }),
-            Location {
-                span: Some(0..5),
-                context: Some(
-                    concat!("001 0b123\n", "    ^^^^^ Malformed binary number\n").to_string()
-                )
-            }
-        ))
-    );
-}
-
-#[test]
 fn eval_float() {
     assert_eq!(eval_ok("1.2").float(), 1.2);
 }
@@ -622,28 +555,8 @@ fn eval_let3() {
 }
 
 #[test]
-fn eval_arith1() {
-    assert_eq!(eval_ok("1 + 1").integer(), 2);
-}
-
-#[test]
-fn eval_prefix1() {
-    assert_eq!(eval_ok("let x = -42, -x").integer(), 42);
-}
-
-#[test]
 fn eval_prefix2() {
     assert_eq!(eval_ok("let x = -42.0, -x").float(), 42.0);
-}
-
-#[test]
-fn eval_arith2() {
-    assert_eq!(eval_ok("1 + 1 * 2").integer(), 3);
-}
-
-#[test]
-fn eval_div1() {
-    assert_eq!(eval_ok("10 / 5").integer(), 2);
 }
 
 #[test]
@@ -657,16 +570,6 @@ fn eval_div3() {
 }
 
 #[test]
-fn eval_div4() {
-    assert_eq!(eval_ok("10 / 5.0").float(), 2.0);
-}
-
-#[test]
-fn eval_sub1() {
-    assert_eq!(eval_ok("10 - 5").integer(), 5);
-}
-
-#[test]
 fn eval_sub2() {
     assert_eq!(eval_ok("10.0 - 5.0").float(), 5.0);
 }
@@ -674,16 +577,6 @@ fn eval_sub2() {
 #[test]
 fn eval_sub3() {
     assert_eq!(eval_ok("10.0 - 5").float(), 5.0);
-}
-
-#[test]
-fn eval_sub4() {
-    assert_eq!(eval_ok("10 - 5.0").float(), 5.0);
-}
-
-#[test]
-fn eval_add1() {
-    assert_eq!(eval_ok("10 + 5").integer(), 15);
 }
 
 #[test]
@@ -697,16 +590,6 @@ fn eval_add3() {
 }
 
 #[test]
-fn eval_add4() {
-    assert_eq!(eval_ok("10 + 5.0").float(), 15.0);
-}
-
-#[test]
-fn eval_mul1() {
-    assert_eq!(eval_ok("10 * 5").integer(), 50);
-}
-
-#[test]
 fn eval_mul2() {
     assert_eq!(eval_ok("10.0 * 5.0").float(), 50.0);
 }
@@ -714,11 +597,6 @@ fn eval_mul2() {
 #[test]
 fn eval_mul3() {
     assert_eq!(eval_ok("10.0 * 5").float(), 50.0);
-}
-
-#[test]
-fn eval_mul4() {
-    assert_eq!(eval_ok("10 * 5.0").float(), 50.0);
 }
 
 #[test]
@@ -749,18 +627,8 @@ fn eval_assign_unbound() {
 }
 
 #[test]
-fn eval_int_as_int() {
-    assert_eq!(eval_ok("42 asInteger").integer(), 42);
-}
-
-#[test]
 fn eval_float_as_float() {
     assert_eq!(eval_ok("42.3 asFloat").float(), 42.3);
-}
-
-#[test]
-fn eval_int_as_float() {
-    assert_eq!(eval_ok("42 asFloat").float(), 42.0);
 }
 
 #[test]
@@ -772,11 +640,6 @@ fn eval_float_as_int() {
 #[test]
 fn eval_unary() {
     assert_eq!(eval_ok("42 asFloat asInteger").integer(), 42);
-}
-
-#[test]
-fn eval_keyword() {
-    assert_eq!(eval_ok("15 gcd: 100").integer(), 5);
 }
 
 #[test]
@@ -1284,41 +1147,6 @@ fn test_instance_variable4() {
 }
 
 #[test]
-fn test_integer_eq() {
-    assert_eq!(eval_ok("1 == 2").boolean(), false);
-    assert_eq!(eval_ok("2 == 1").boolean(), false);
-    assert_eq!(eval_ok("1 == 1").boolean(), true);
-}
-
-#[test]
-fn test_integer_lt() {
-    assert_eq!(eval_ok("1 < 2").boolean(), true);
-    assert_eq!(eval_ok("2 < 1").boolean(), false);
-    assert_eq!(eval_ok("1 < 1").boolean(), false);
-}
-
-#[test]
-fn test_integer_lte() {
-    assert_eq!(eval_ok("1 <= 2").boolean(), true);
-    assert_eq!(eval_ok("2 <= 1").boolean(), false);
-    assert_eq!(eval_ok("1 <= 1").boolean(), true);
-}
-
-#[test]
-fn test_integer_gt() {
-    assert_eq!(eval_ok("1 > 2").boolean(), false);
-    assert_eq!(eval_ok("2 > 1").boolean(), true);
-    assert_eq!(eval_ok("1 > 1").boolean(), false);
-}
-
-#[test]
-fn test_integer_gte() {
-    assert_eq!(eval_ok("1 >= 2").boolean(), false);
-    assert_eq!(eval_ok("2 >= 1").boolean(), true);
-    assert_eq!(eval_ok("1 >= 1").boolean(), true);
-}
-
-#[test]
 fn test_bools() {
     assert_eq!(eval_ok("True").boolean(), true);
     assert_eq!(eval_ok("False").boolean(), false);
@@ -1527,19 +1355,6 @@ fn test_interval4() {
         .integer(),
         1 + 0 + -1 + -2 + -3 + -4 + -5 + -6
     );
-}
-
-#[test]
-fn test_integer_times() {
-    assert_eq!(
-        eval_ok(
-            "let x = 1
-             3 times: { x = x + x }
-             x"
-        )
-        .integer(),
-        1 + 1 + 2 + 4
-    )
 }
 
 #[test]
