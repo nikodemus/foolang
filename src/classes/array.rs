@@ -1,4 +1,5 @@
 use crate::objects::{Eval, Foolang, Object, Vtable};
+use crate::unwind::Unwind;
 
 pub fn class_vtable() -> Vtable {
     let vt = Vtable::new("class Array");
@@ -8,6 +9,8 @@ pub fn class_vtable() -> Vtable {
 pub fn instance_vtable() -> Vtable {
     let mut vt = Vtable::new("Array");
     vt.def("*", array_mul);
+    vt.def("+", array_add);
+    vt.def("addArray:", array_add_array);
     vt.def("do:", array_do);
     vt.def("inject:into:", array_inject_into);
     vt.def("push:", array_push);
@@ -38,6 +41,25 @@ fn array_inject_into(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval 
         }
         Ok(inject)
     })
+}
+
+fn array_add_array(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let mut a = receiver.as_vec(|v| Ok(v.clone()))?;
+    let n = a.len();
+    args[0].as_vec(move |b| {
+        if n != b.len() {
+            Unwind::error("Cannot add arrays of differing lengths.")
+        } else {
+            for i in 0..n {
+                a[i] = a[i].send("+", std::slice::from_ref(&b[i]), foo)?;
+            }
+            Ok(foo.into_array(a))
+        }
+    })
+}
+
+fn array_add(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    args[0].send("addArray:", std::slice::from_ref(receiver), foo)
 }
 
 fn array_mul(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
