@@ -14,21 +14,36 @@ class PointMass { position, velocity, mass, forces }
 end
 
 
-class Plane { model noseDirection upDirection maxSpeed maxLift }
+class Plane { model noseDirection upDirection maxSpeed maxLift maxThrottle throttle }
 
-   class method position: pos mass: m
-      let model PointMass mass: m
-                          position: pos
-                          velocity: [0.0, 0.0, 0.0]
-                          forces: Dict new
+   class method mass: mass
+                maxLift: maxLift
+                maxSpeed: maxSpeed
+                maxThrottle: maxThrottle
+
+     let model PointMass mass: mass
+                         position: [0.0, 0.0, 0.0]
+                         velocity: [0.0, 0.0, 0.0]
+                         forces: Dictionary new
+
       model apply: { [0.0, 0.0, -9,81] } as: "gravity"
       model apply: { self drag } as: "drag"
       model apply: { self lift } as: "lift"
       model apply: { self thrust } as: "thrust"
+
       self model: model
+           noseDirection: [0.0, 1.0, 0.0]
+           upDirection [0.0, 0.0, 1.0]
+           maxLift: maxLift
+           maxSpeed: maxSpeed
+           maxThrottle: maxThrottle
+           throttle: 0.0 
 
    method position
       model position
+
+   method throttle: new
+      throttle = new atLeast: 0.0 atMost: maxThrottle
 
    method tick: time
       model tick: time
@@ -61,4 +76,18 @@ class Plane { model noseDirection upDirection maxSpeed maxLift }
    method thrust
       noseDirection * (throttle / MaxThrottle) * maxThrust
       
+end
+
+class Main { system }
+   method run
+      let plane = Plane mass: 1000.0
+                        maxLift: 10.0
+                        maxSpeed: 50.0
+                        maxThrust: 100.0
+      plane throttle: 1.0
+      100 times: {
+          let p = plane position
+          system output println: "{p at: 1} {p at: 2} {p at: 3}"
+          plane tick: 1.0
+      }
 end
