@@ -1,0 +1,64 @@
+class PointMass { position, velocity, mass, forces }
+  method apply: force as: name
+     forces put: force at: name
+
+  method sumForces
+     force sum: { |force| force value }
+
+  method _applyForces: time
+     velocity = velocity + (self sumForces / mass) * time
+
+  method tick: time
+     position = position + velocity * time
+     self _applyForces: time
+end
+
+
+class Plane { model noseDirection upDirection maxSpeed maxLift }
+
+   class method position: pos mass: m
+      let model PointMass mass: m
+                          position: pos
+                          velocity: [0.0, 0.0, 0.0]
+                          forces: Dict new
+      model apply: { [0.0, 0.0, -9,81] } as: "gravity"
+      model apply: { self drag } as: "drag"
+      model apply: { self lift } as: "lift"
+      model apply: { self thrust } as: "thrust"
+      self model: model
+
+   method position
+      model position
+
+   method tick: time
+      model tick: time
+
+   method crossSection: v
+      1.0 -- FIXME: a box model should not be too hard to calculate
+
+   method dragCoefficient: v
+      -- https://en.wikipedia.org/wiki/Drag_coefficient
+      -- FIXME: current value is for sphere, should at least interpolate between
+      -- different ones for shape
+
+      0.47
+
+   method drag
+      -- https://en.wikipedia.org/wiki/Drag_equation
+      let velocity = model velocity
+      let direction = velocity normalized
+      let v = velocity magnitude
+      let a = self crossSection: v
+      let c = self dragCoefficient: v
+      let p = 1.269 -- mass density of air at 5C
+      direction * 0.5 * p * v * v * a * c
+
+   method lift
+      -- FIXME: https://www.grc.nasa.gov/WWW/K-12/WindTunnel/Activities/lift_formula.html
+      let airSpeed = (Vector project: model velocity onto: noseDirection) magnitude
+      upDirection * (airSpeed / maxSpeed) * maxLift
+
+   method thrust
+      noseDirection * (throttle / MaxThrottle) * maxThrust
+      
+end
