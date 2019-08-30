@@ -19,7 +19,12 @@ pub fn instance_vtable() -> Vtable {
     vt.def("mulInteger:", array_mul_integer);
     vt.def("mulFloat:", array_mul_float);
     vt.def("normalized", array_normalized);
+    vt.def("at:", array_at);
     vt
+}
+
+fn array_at(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
+    receiver.as_vec(move |vec| Ok(vec[(args[0].integer() - 1) as usize].clone()))
 }
 
 fn array_do(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {

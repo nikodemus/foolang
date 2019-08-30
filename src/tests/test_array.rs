@@ -114,3 +114,8 @@ fn test_array_normalized() {
 fn test_array_magnitude() {
     assert_eq!(eval_ok("[0,2,0] magnitude").float(), 2.0);
 }
+
+#[test]
+fn test_array_at() {
+    assert_eq!(eval_ok("[[1,2] at: 1, [1,2] at: 2] toString").string_as_str(), "[1, 2]");
+}
