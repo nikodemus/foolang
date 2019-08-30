@@ -9,3 +9,4 @@ mod test_integer;
 mod test_interval;
 mod test_parser;
 mod test_string;
+mod test_tokenstream;
