@@ -27,4 +27,4 @@ steps:
   - script: cargo test --all
     displayName: Cargo test
   - script: cargo test -- --ignored
-    displayName: Cargo test large
+    displayName: Cargo test ignored (large)
