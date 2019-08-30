@@ -38,6 +38,7 @@ pub fn vtable() -> Vtable {
     vt.def("lessThanOrEqualInteger:", float_less_than_or_equal_integer);
     vt.def("mulInteger:", float_mul_integer);
     vt.def("subInteger:", float_sub_integer);
+    vt.def("divArray:", float_div_array);
     vt
 }
 
@@ -59,6 +60,10 @@ fn float_add_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
 fn float_div_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let res = args[0].float() / receiver.float();
     Ok(foo.make_float(res))
+}
+
+fn float_div_array(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    args[0].send("divByFloat:", std::slice::from_ref(receiver), foo)
 }
 
 fn float_mul_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {

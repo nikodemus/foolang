@@ -9,8 +9,11 @@ pub fn class_vtable() -> Vtable {
 pub fn instance_vtable() -> Vtable {
     let mut vt = Vtable::new("Array");
     vt.def("*", array_mul);
+    vt.def("/", array_div);
     vt.def("+", array_add);
+    vt.def("-", array_sub);
     vt.def("addArray:", array_add_array);
+    vt.def("subArray:", array_sub_array);
     vt.def("do:", array_do);
     vt.def("inject:into:", array_inject_into);
     vt.def("push:", array_push);
@@ -18,6 +21,7 @@ pub fn instance_vtable() -> Vtable {
     vt.def("magnitude", array_magnitude);
     vt.def("mulInteger:", array_mul_integer);
     vt.def("mulFloat:", array_mul_float);
+    vt.def("divByFloat:", array_div_by_float);
     vt.def("normalized", array_normalized);
     vt.def("at:", array_at);
     vt
@@ -65,12 +69,44 @@ fn array_add_array(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     })
 }
 
+fn array_sub_array(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let mut a = receiver.as_vec(|v| Ok(v.clone()))?;
+    let n = a.len();
+    args[0].as_vec(move |b| {
+        if n != b.len() {
+            Unwind::error("Cannot substract arrays of differing lengths.")
+        } else {
+            for i in 0..n {
+                a[i] = b[i].send("-", std::slice::from_ref(&a[i]), foo)?;
+            }
+            Ok(foo.into_array(a))
+        }
+    })
+}
+
 fn array_add(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     args[0].send("addArray:", std::slice::from_ref(receiver), foo)
 }
 
+fn array_sub(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    args[0].send("subArray:", std::slice::from_ref(receiver), foo)
+}
+
 fn array_mul(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     args[0].send("*", std::slice::from_ref(receiver), foo)
+}
+
+fn array_div(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    args[0].send("divArray:", std::slice::from_ref(receiver), foo)
+}
+
+fn array_div_by_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let mut v = receiver.as_vec(|v| Ok(v.clone()))?;
+    for i in 0..v.len() {
+        let f = v[i].send("asFloat", &[], foo)?;
+        v[i] = args[0].send("divFloat:", &[f], foo)?;
+    }
+    Ok(foo.into_array(v))
 }
 
 fn array_magnitude(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {

@@ -101,8 +101,18 @@ fn test_array_mul() {
 }
 
 #[test]
+fn test_array_div() {
+    assert_eq!(eval_ok("([0,2,4] / 2.0) toString").string_as_str(), "[0.0, 1.0, 2.0]");
+}
+
+#[test]
 fn test_array_add() {
     assert_eq!(eval_ok("([0,1,2] + [1,2,3]) toString").string_as_str(), "[1, 3, 5]");
+}
+
+#[test]
+fn test_array_sub() {
+    assert_eq!(eval_ok("([0,1,2] - [1,2,13]) toString").string_as_str(), "[-1, -1, -11]");
 }
 
 #[test]
