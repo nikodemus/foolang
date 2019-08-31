@@ -194,37 +194,37 @@ fn integer_sub(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
 }
 
 fn integer_add_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    receiver.send("asFloat", &[], foo)?.send("addFloat:", args, foo)
+    integer_as_float(receiver, &[], foo)?.send("addFloat:", args, foo)
 }
 
 fn integer_div_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    receiver.send("asFloat", &[], foo)?.send("divFloat:", args, foo)
+    integer_as_float(receiver, &[], foo)?.send("divFloat:", args, foo)
 }
 
 fn integer_mul_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    receiver.send("asFloat", &[], foo)?.send("mulFloat:", args, foo)
+    integer_as_float(receiver, &[], foo)?.send("mulFloat:", args, foo)
 }
 
 fn integer_sub_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    receiver.send("asFloat", &[], foo)?.send("subFloat:", args, foo)
+    integer_as_float(receiver, &[], foo)?.send("subFloat:", args, foo)
 }
 
 fn integer_equal_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    receiver.send("asFloat", &[], foo)?.send("equalFloat:", args, foo)
+    integer_as_float(receiver, &[], foo)?.send("equalFloat:", args, foo)
 }
 
 fn integer_greater_than_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    receiver.send("asFloat", &[], foo)?.send("greaterThanFloat:", args, foo)
+    integer_as_float(receiver, &[], foo)?.send("greaterThanFloat:", args, foo)
 }
 
 fn integer_greater_than_or_equal_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    receiver.send("asFloat", &[], foo)?.send("greaterThanOrEqualFloat:", args, foo)
+    integer_as_float(receiver, &[], foo)?.send("greaterThanOrEqualFloat:", args, foo)
 }
 
 fn integer_less_than_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    receiver.send("asFloat", &[], foo)?.send("lessThanFloat:", args, foo)
+    integer_as_float(receiver, &[], foo)?.send("lessThanFloat:", args, foo)
 }
 
 fn integer_less_than_or_equal_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    receiver.send("asFloat", &[], foo)?.send("lessThanOrEqualFloat:", args, foo)
+    integer_as_float(receiver, &[], foo)?.send("lessThanOrEqualFloat:", args, foo)
 }

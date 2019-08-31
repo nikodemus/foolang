@@ -129,22 +129,22 @@ fn float_sub(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
 
 fn float_add_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let float = args[0].send("asFloat", &[], foo)?;
-    receiver.send("addFloat:", &[float], foo)
+    float_add_float(receiver, &[float], foo)
 }
 
 fn float_div_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let float = args[0].send("asFloat", &[], foo)?;
-    receiver.send("divFloat:", &[float], foo)
+    float_div_float(receiver, &[float], foo)
 }
 
 fn float_mul_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let float = args[0].send("asFloat", &[], foo)?;
-    receiver.send("mulFloat:", &[float], foo)
+    float_mul_float(receiver, &[float], foo)
 }
 
 fn float_sub_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let float = args[0].send("asFloat", &[], foo)?;
-    receiver.send("subFloat:", &[float], foo)
+    float_sub_float(receiver, &[float], foo)
 }
 
 fn float_less_than(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
@@ -169,27 +169,27 @@ fn float_equal(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
 
 fn float_equal_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let float = args[0].send("asFloat", &[], foo)?;
-    receiver.send("equalFloat:", &[float], foo)
+    float_equal_float(receiver, &[float], foo)
 }
 
 fn float_greater_than_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let float = args[0].send("asFloat", &[], foo)?;
-    receiver.send("greaterThanFloat:", &[float], foo)
+    float_greater_than_float(receiver, &[float], foo)
 }
 
 fn float_greater_than_or_equal_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let float = args[0].send("asFloat", &[], foo)?;
-    receiver.send("greaterThanOrEqualFloat:", &[float], foo)
+    float_greater_than_or_equal_float(receiver, &[float], foo)
 }
 
 fn float_less_than_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let float = args[0].send("asFloat", &[], foo)?;
-    receiver.send("lessThanFloat:", &[float], foo)
+    float_less_than_float(receiver, &[float], foo)
 }
 
 fn float_less_than_or_equal_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     let float = args[0].send("asFloat", &[], foo)?;
-    receiver.send("lessThanOrEqualFloat:", &[float], foo)
+    float_less_than_or_equal_float(receiver, &[float], foo)
 }
 
 fn float_at_least_at_most(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {

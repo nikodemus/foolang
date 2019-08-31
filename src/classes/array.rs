@@ -149,7 +149,7 @@ fn array_norm(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
 
 fn array_normalized(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
     let reciprocal = foo.make_float(1.0 / array_norm(receiver, &[], foo)?.float());
-    receiver.send("*", std::slice::from_ref(&reciprocal), foo)
+    array_mul(receiver, std::slice::from_ref(&reciprocal), foo)
 }
 
 fn array_mul_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
