@@ -1,6 +1,4 @@
-use crate::eval::utils::{eval_ok, eval_str};
-use crate::unwind::Unwind;
-use crate::unwind::{Error, Location, SimpleError};
+use crate::eval::utils::eval_ok;
 
 #[test]
 fn test_float() {
@@ -8,25 +6,9 @@ fn test_float() {
 }
 
 #[test]
-fn test_bad_float() {
-    assert_eq!(
-        eval_str("1.2.3"),
-        Err(Unwind::Exception(
-            Error::SimpleError(SimpleError {
-                what: "Unknown operator",
-            }),
-            Location {
-                span: Some(3..4),
-                context: Some(concat!("001 1.2.3\n", "       ^ Unknown operator\n").to_string())
-            }
-        ))
-    );
-}
-
-#[test]
 fn test_float_prefix() {
-    assert_eq!(eval_ok("let x = -42.0, -x").float(), 42.0);
-    assert_eq!(eval_ok("let x = 42.0, -x").float(), -42.0);
+    assert_eq!(eval_ok("let x = -42.0. -x").float(), 42.0);
+    assert_eq!(eval_ok("let x = 42.0. -x").float(), -42.0);
 }
 
 #[test]

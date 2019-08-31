@@ -8,7 +8,6 @@ pub type Span = Range<usize>;
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum Token {
     EOF,
-    NEWLINE,
     HEX_INTEGER,
     BIN_INTEGER,
     DEC_INTEGER,
@@ -112,23 +111,13 @@ impl<'a> TokenStream<'a> {
             return self.result(Token::EOF, self.len()..self.len());
         }
         //
-        // 2. If at whitespace, consume it. If whitespace contained a
-        //    newline, return NEWLINE, otherwise continue from 1.
+        // 2. If at whitespace, consume it, then continue from 1.
         //
         if self.at_whitespace() {
-            // println!("scan 2: skip whitespace");
-            let mut newline = self.at_newline();
-            let start = self.next();
             while self.at_whitespace() {
-                newline = newline || self.at_newline();
                 self.next();
             }
-            if newline {
-                // println!("=> newline");
-                return self.result(Token::NEWLINE, start..self.pos());
-            } else {
-                return self.scan();
-            }
+            return self.scan();
         }
         //
         // 3. If at a special character, consume it and return SIGIL.
@@ -271,22 +260,30 @@ impl<'a> TokenStream<'a> {
             return self.result(Token::BIN_INTEGER, start..self.pos());
         }
         //
-        // 4.3. Consume decimal digits and underscore. If then at dot,
-        //      consume, then consume following decimal digits and
-        //      underscore.
+        // 4.3. Consume decimal digits and underscore.
         //
         while self.at_digit(10) || self.at_char('_') {
             self.next();
         }
         let dot = self.at_char('.');
         if dot {
+            //
+            // 4.4. If at dot: if followed by whitespace return DEC_INTEGER,
+            //      otherwise consume the dot and the digits plus possible
+            //      underscores.
+            //
+            let p = self.pos();
             self.next();
+            if self.at_whitespace() {
+                self.reset(p);
+                return self.result(Token::DEC_INTEGER, start..self.pos());
+            }
             while self.at_digit(10) || self.at_char('_') {
                 self.next();
             }
         }
         //
-        // 4.4. If at e or f, consume. If at + or -, consume. Consume word
+        // 4.5. If at e or f, consume. If at + or -, consume. Consume word
         //      characters. For e return DOUBLE_FLOAT, for f return
         //      SINGLE_FLOAT.
         //
@@ -307,7 +304,7 @@ impl<'a> TokenStream<'a> {
             }
         }
         //
-        // 4.5. Consume word characters. If consumed a dot earlier, return
+        // 4.6. Consume word characters. If consumed a dot earlier, return
         //      DOUBLE_FLOAT, otherwise DEC_INTEGER.
         //
         while self.at_word() {

@@ -172,8 +172,8 @@ fn test_integer_greater_than_or_equal() {
 fn test_integer_times() {
     assert_eq!(
         eval_ok(
-            "let x = 1
-             3 times: { x = x + x }
+            "let x = 1.
+             3 times: { x = x + x }.
              x"
         )
         .integer(),
@@ -183,6 +183,6 @@ fn test_integer_times() {
 
 #[test]
 fn test_integer_prefix_minus() {
-    assert_eq!(eval_ok("let x = -42, -x").integer(), 42);
-    assert_eq!(eval_ok("let x = 42, -x").integer(), -42);
+    assert_eq!(eval_ok("let x = -42. -x").integer(), 42);
+    assert_eq!(eval_ok("let x = 42. -x").integer(), -42);
 }

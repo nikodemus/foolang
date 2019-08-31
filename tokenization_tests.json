@@ -14,10 +14,10 @@
         "Rule 2": "Whitespace"
     },
     [
-        "\n", [["NEWLINE"], ["EOF"]] 
+        "\n", [["EOF"]] 
     ],
     [
-        "  \n \n ", [["NEWLINE"], ["EOF"]] 
+        "  \n \n ", [["EOF"]] 
     ],
     {
         "Rule 3": "Special characters"
@@ -122,14 +122,14 @@
         " ---foo---bar", [["BLOCK_COMMENT", "---foo---"],["WORD","bar"],["EOF"]]
     ],
     [
-        " ---\nfoo\n---\nbar", [["BLOCK_COMMENT", "---\nfoo\n---"],["NEWLINE"],
+        " ---\nfoo\n---\nbar", [["BLOCK_COMMENT", "---\nfoo\n---"],
                                 ["WORD","bar"],["EOF"]]
     ],
     {
         "Rule 6": "Line comments"
     },
     [
-        "foo -- bar \n quux", [["WORD", "foo"],["COMMENT", "-- bar "],["NEWLINE"],
+        "foo -- bar \n quux", [["WORD", "foo"],["COMMENT", "-- bar "],
                                ["WORD", "quux"],["EOF"]]
     ],
     {

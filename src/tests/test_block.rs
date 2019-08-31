@@ -7,19 +7,19 @@ fn test_closure0() {
 
 #[test]
 fn test_closure1() {
-    assert_eq!(eval_ok("let x = 41, { x + 1 } value").integer(), 42);
+    assert_eq!(eval_ok("let x = 41. { x + 1 } value").integer(), 42);
 }
 
 #[test]
 fn test_closure2() {
-    assert_eq!(eval_ok("let x = 41, { |y| x + y } value: 1").integer(), 42);
+    assert_eq!(eval_ok("let x = 41. { |y| x + y } value: 1").integer(), 42);
 }
 
 #[test]
 fn test_closure3() {
     assert_eq!(
         eval_ok(
-            "let thunk = { let x = 0, { x = x + 1, x } } value,
+            "let thunk = { let x = 0. { x = x + 1. x } } value.
              thunk value + thunk value"
         )
         .integer(),
@@ -41,7 +41,7 @@ fn test_closure5() {
                  return { |x | value + x }
                class method test
                 return (self closeOver: 40) value: 2
-             end
+             end.
              T test"
         )
         .integer(),
@@ -55,11 +55,11 @@ fn test_closure_return() {
         eval_ok(
             "class T {}
                class method test
-                 self boo: { return 42 },
+                 self boo: { return 42 }.
                  return 31
                class method boo: block
                  block value
-             end
+             end.
              T test",
         )
         .integer(),
@@ -71,12 +71,12 @@ fn test_closure_return() {
 fn test_closure_while_true() {
     assert_eq!(
         eval_ok(
-            "let x = 1
+            "let x = 1.
              {
-               x = x * 2
+               x = x * 2.
                x < 10
-             } whileTrue
-             
+             }
+             whileTrue.
              x"
         )
         .integer(),
@@ -88,11 +88,12 @@ fn test_closure_while_true() {
 fn test_closure_while_false() {
     assert_eq!(
         eval_ok(
-            "let x = 1
+            "let x = 1.
              {
-                x = x * 2
+                x = x * 2.
                 x > 10
-             } whileFalse
+             }
+             whileFalse.
              x"
         )
         .integer(),
@@ -104,7 +105,7 @@ fn test_closure_while_false() {
 fn test_closure_while_true_closure() {
     assert_eq!(
         eval_ok(
-            "let x = 1
+            "let x = 1.
              { x < 10 } whileTrue: {
                x = x * 2
              }"
@@ -118,10 +119,10 @@ fn test_closure_while_true_closure() {
 fn test_closure_while_false_closure() {
     assert_eq!(
         eval_ok(
-            "let x = 1
-                 { x > 10 } whileFalse: {
-                    x = x * 2
-                 }"
+            "let x = 1.
+             { x > 10 } whileFalse: {
+                  x = x * 2
+             }"
         )
         .integer(),
         16

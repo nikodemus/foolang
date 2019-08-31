@@ -1,5 +1,5 @@
 class Main { system }
   method run
-     system output println: "What is your name?"
+     system output println: "What is your name?".
      system output println: "Hello {system input readline}!"
 end

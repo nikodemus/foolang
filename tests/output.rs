@@ -86,15 +86,15 @@ fn repl() -> Result<(), Box<std::error::Error>> {
     cmd.arg("foo/repl.foo");
     cmd.with_stdin()
         .buffer(
-            r#"class Point { x, y }
+            r#"class Point { x y }
                   method + other
                      Point x: x + other x
                            y: y + other y
                   method toString
                      "{x}@{y}"
                end
-               { let p1 = Point x: 1 y: 2
-                 let p2 = Point x: 100 y: 200
+               { let p1 = Point x: 1 y: 2.
+                 let p2 = Point x: 100 y: 200.
                  p1 + p2 } value
                system output println: "Hi!"
                let x = 1

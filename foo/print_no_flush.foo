@@ -1,5 +1,5 @@
 class Main { system }
   method run
-     system output print: "Foo"
+     system output print: "Foo".
      system exit
 end

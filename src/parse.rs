@@ -4,9 +4,6 @@ use std::collections::{HashMap, VecDeque};
 use std::convert::Into;
 use std::str::FromStr;
 
-#[cfg(test)]
-use pretty_assertions::assert_eq;
-
 use crate::tokenstream::{Span, Token, TokenStream};
 use crate::unwind::Unwind;
 
@@ -652,7 +649,6 @@ fn make_token_table() -> TokenTable {
     Syntax::def(t, WORD, identifier_prefix, identifier_suffix, identifier_precedence);
     Syntax::def(t, SIGIL, operator_prefix, operator_suffix, operator_precedence);
     Syntax::def(t, KEYWORD, invalid_prefix, keyword_suffix, precedence_9);
-    Syntax::def(t, NEWLINE, ignore_prefix, newline_suffix, precedence_1);
     Syntax::def(t, EOF, eof_prefix, eof_suffix, precedence_0);
 
     table
@@ -673,7 +669,8 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, "end", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_2);
     Syntax::def(t, "return", return_prefix, invalid_suffix, precedence_2);
-    Syntax::def(t, ",", invalid_prefix, sequence_suffix, precedence_1);
+    Syntax::def(t, ".", invalid_prefix, sequence_suffix, precedence_1);
+    Syntax::def(t, ",", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ";", invalid_prefix, cascade_suffix, precedence_2);
     Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_3);
     Syntax::def(t, "is", invalid_prefix, is_suffix, precedence_10);
@@ -753,16 +750,17 @@ fn array_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         parser.next_token()?;
         (start..next_end, vec![])
     } else {
-        let expr = parser.parse_seq()?;
-        if parser.next_token()? == Token::SIGIL && parser.slice() == "]" {
-            let span = start..parser.span().end;
-            match expr {
-                Expr::Seq(expressions) => (span, expressions),
-                _ => (span, vec![expr]),
+        let mut data = vec![];
+        loop {
+            data.push(parser.parse_expr(0)?);
+            let token = parser.next_token()?;
+            if token == Token::SIGIL && parser.slice() == "]" {
+                break (start..parser.span().end, data);
             }
-        } else {
-            // FIXME: EOF
-            return parser.error("Expected ]");
+            if token == Token::SIGIL && parser.slice() == "," {
+                continue;
+            }
+            return parser.error("Expected ] or ,");
         }
     };
     Ok(Array::expr(span, data))
@@ -864,13 +862,7 @@ fn keyword_suffix(
     loop {
         args.push(parser.parse_expr(precedence)?);
         // Two-element lookahead.
-        let ((token1, _), (token2, _)) = parser.lookahead2()?;
-        let token = if token1 == Token::NEWLINE && token2 == Token::KEYWORD {
-            parser.next_token()?;
-            token2
-        } else {
-            token1
-        };
+        let (token, _) = parser.lookahead()?;
         if token == Token::KEYWORD {
             parser.next_token()?;
             selector.push_str(parser.slice());
@@ -1021,7 +1013,6 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     loop {
         match parser.next_token()? {
             Token::SIGIL if parser.slice() == "{" => break,
-            Token::NEWLINE => continue,
             _ => return parser.error("Expected { to open instance variable block"),
         }
     }
@@ -1033,8 +1024,6 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
                 instance_variables.push(parse_var(parser)?);
             }
             Token::SIGIL if parser.slice() == "}" => break,
-            Token::SIGIL if parser.slice() == "," => continue,
-            Token::NEWLINE => continue,
             _ => return parser.error("Invalid instance variable specification"),
         }
     }
@@ -1042,9 +1031,6 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     let mut class = ClassDefinition::new(span, class_name, instance_variables);
     loop {
         let next = parser.next_token()?;
-        if next == Token::NEWLINE {
-            continue;
-        }
         if next == Token::WORD && parser.slice() == "end" {
             break;
         }
@@ -1099,8 +1085,7 @@ fn let_prefix(parser: &Parser) -> Result<Expr, Unwind> {
 
     let value = parser.parse_expr(SEQ_PRECEDENCE)?;
     let mut eof = match parser.next_token()? {
-        Token::SIGIL if parser.slice() == "," => false,
-        Token::NEWLINE => false,
+        Token::SIGIL if parser.slice() == "." => false,
         Token::EOF => true,
         _ => {
             return parser.error("Expected separator after let");
@@ -1127,17 +1112,6 @@ fn ignore_prefix(parser: &Parser) -> Result<Expr, Unwind> {
 
 fn ignore_suffix(_parser: &Parser, left: Expr, _pre: PrecedenceFunction) -> Result<Expr, Unwind> {
     Ok(left)
-}
-fn newline_suffix(parser: &Parser, left: Expr, pre: PrecedenceFunction) -> Result<Expr, Unwind> {
-    if SEQ_PRECEDENCE < parser.next_precedence()? {
-        if let Token::KEYWORD = parser.lookahead()?.0 {
-            parser.parse_suffix(left)
-        } else {
-            sequence_suffix(parser, left, pre)
-        }
-    } else {
-        Ok(left)
-    }
 }
 
 fn number_prefix(parser: &Parser) -> Result<Expr, Unwind> {
@@ -1307,10 +1281,6 @@ fn parse_method(
         if let (Token::KEYWORD, _) = parser.lookahead()? {
             continue;
         }
-        if let ((Token::NEWLINE, _), (Token::KEYWORD, _)) = parser.lookahead2()? {
-            parser.next_token()?;
-            continue;
-        }
         break;
     }
     let (token, span2) = parser.lookahead()?;
@@ -1392,7 +1362,7 @@ pub mod utils {
         let mut vars = Vec::new();
         for v in instance_variables {
             vars.push(Var::untyped(p..p + v.len(), v.to_string()));
-            p += v.len() + ", ".len()
+            p += v.len() + " ".len()
         }
         ClassDefinition::expr(span, name.to_string(), vars)
     }

@@ -6,9 +6,9 @@ class PointMass { forces mass gravity acceleration position velocity debug }
      -- Velocity Verlet integration, should be more accurate than Euler's Method
      -- http://buildnewgames.com/gamephysics/
      -- https://en.wikipedia.org/wiki/Verlet_integration#Velocity_Verlet
-     position = position + velocity * dt + (acceleration * (0.5 * dt * dt))
-     let newAcceleration = self sumForces / mass + gravity
-     velocity = velocity + (newAcceleration + acceleration) * (0.5 * dt)
+     position = position + velocity * dt + (acceleration * (0.5 * dt * dt)).
+     let newAcceleration = self sumForces / mass + gravity.
+     velocity = velocity + (newAcceleration + acceleration) * (0.5 * dt).
      acceleration = newAcceleration
 
   method position: pos
@@ -16,7 +16,7 @@ class PointMass { forces mass gravity acceleration position velocity debug }
 
   method velocity: vel
      velocity = vel
-end
+end.
 
 class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttle debug }
 
@@ -26,7 +26,7 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
                 maxThrust: maxThrust
                 debug: debug
 
-     let forces = []
+     let forces = [].
 
      let model = PointMass forces: forces
                            mass: mass
@@ -34,7 +34,7 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
                            acceleration: [0.0, 0.0, 0.0]
                            position: [0.0, 0.0, 0.0]
                            velocity: [0.0, 0.0, 0.0]
-                           debug: debug
+                           debug: debug.
 
      let plane = self model: model
                       noseDirection: [0.0, 1.0, 0.0]
@@ -43,12 +43,12 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
                       maxSpeed: maxSpeed
                       maxThrust: maxThrust
                       throttle: 0.0
-                      debug: debug
+                      debug: debug.
 
      -- PointMass has built-in gravity
-     forces push: { plane drag }
-     forces push: { plane lift }
-     forces push: { plane thrust }
+     forces push: { plane drag }.
+     forces push: { plane lift }.
+     forces push: { plane thrust }.
 
      plane
 
@@ -62,15 +62,15 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
       throttle = new atLeast: 0.0 atMost: 1.0
 
    method tick: time
-      model tick: time
+      model tick: time.
       self checkGround
 
    method checkGround
       -- Don't allow Z-position to go below zero
-      let pos = model position
+      let pos = model position.
       (pos at: 3) < 0 ifTrue: {
-         model position: [pos at: 1, pos at: 2, 0.0]
-         let vel = model velocity
+         model position: [pos at: 1, pos at: 2, 0.0].
+         let vel = model velocity.
          model velocity: [vel at: 1, vel at: 2, 0.0]
       }
 
@@ -85,26 +85,26 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
       
    method drag
       -- https://en.wikipedia.org/wiki/Drag_equation
-      let velocity = model velocity
-      let speed = velocity norm
-      speed == 0.0 ifTrue: { return [0.0, 0.0, 0.0] }
-      let direction = velocity normalized
-      let a = self crossSection: direction
-      let c = self dragCoefficient: direction
-      let p = 1.269 -- mass density of air at 5C
+      let velocity = model velocity.
+      let speed = velocity norm.
+      speed == 0.0 ifTrue: { return [0.0, 0.0, 0.0] }.
+      let direction = velocity normalized.
+      let a = self crossSection: direction.
+      let c = self dragCoefficient: direction.
+      let p = 1.269. -- mass density of air at 5C
       direction * -0.5 * p * speed * speed * a * c
 
    method lift
       -- FIXME: https://www.grc.nasa.gov/WWW/K-12/WindTunnel/Activities/lift_formula.html
-      let airSpeed = model velocity scalarProjectionOn: noseDirection
-      let lift = (airSpeed / maxSpeed) * maxLift
+      let airSpeed = model velocity scalarProjectionOn: noseDirection.
+      let lift = (airSpeed / maxSpeed) * maxLift.
       upDirection * lift
 
    method thrust
-      let thrust = maxThrust * throttle
+      let thrust = maxThrust * throttle.
       noseDirection * thrust
       
-end
+end.
 
 class Main { system }
    method run
@@ -112,36 +112,36 @@ class Main { system }
                         maxLift: 1200 * 9.81
                         maxSpeed: 27.0
                         maxThrust: 470.0
-                        debug: system output
-      plane throttle: 1.0
-      let takeoff = False
-      let flying = False
-      let t = 0.0
-      let step = 0.02
+                        debug: system output.
+      plane throttle: 1.0.
+      let takeoff = False.
+      let flying = False.
+      let t = 0.0.
+      let step = 0.02.
       { t < 100.0 } whileTrue: {
-                -- system output println: "t: {t} pos: {plane position} speed: {plane velocity}"
-          let height = plane position at: 3
+          -- system output println: "t: {t} pos: {plane position} speed: {plane velocity}"
+          let height = plane position at: 3.
           takeoff ifFalse: {
              height > 0.1 ifTrue: {
-                system output println: "TAKEOFF at {plane position at: 2} meters, t: {t}"
-                takeoff = True
+                system output println: "TAKEOFF at {plane position at: 2} meters, t: {t}".
+                takeoff = True.
                 plane throttle: 0.25
              }
-          }
+          }.
           flying ifTrue: {
              height < 0.01 ifTrue: {
-                system output println: "TOUCHDOWN at {plane position at: 2} meters, t: {t}"
+                system output println: "TOUCHDOWN at {plane position at: 2} meters, t: {t}".
                 return True
              }
           } ifFalse: {
              height > 10.0 ifTrue: {
-                system output println: "LANDING at {plane position at: 2} meters, t: {t}"
-                flying = True
+                system output println: "LANDING at {plane position at: 2} meters, t: {t}".
+                flying = True.
                 plane throttle: 0.0
              }
-          }
-          plane tick: step
+          }.
+          plane tick: step.
           t = t + step
-      }
+      }.
       system output println: "TIMEOUT at {t}s"
 end

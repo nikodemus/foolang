@@ -23,8 +23,8 @@ fn test_string_append() {
 #[test]
 fn test_string_interpolation1() {
     let (object, foo) = eval_obj(
-        r#"let a = 1
-           let b = 3
+        r#"let a = 1.
+           let b = 3.
            "{a}.{a+1}.{b}.{b+1}"
           "#,
     );
@@ -36,7 +36,7 @@ fn test_interpolated_error_location() {
     let (exception, _foo) = eval_exception(
         r#"
 
-                let x = 42,
+                let x = 42.
                 "{X}"
 
              "#,
@@ -51,7 +51,7 @@ fn test_interpolated_error_location() {
                 span: Some(47..48),
                 context: Some(
                     concat!(
-                        "003                 let x = 42,\n",
+                        "003                 let x = 42.\n",
                         "004                 \"{X}\"\n",
                         "                     ^ Undefined global\n",
                         "005 \n"

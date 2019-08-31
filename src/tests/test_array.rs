@@ -51,9 +51,9 @@ fn test_array_ctor_3() {
 #[test]
 fn test_array_push() {
     let (obj, _foo) = eval_obj(
-        "let a = []
-         a push: -1
-         a push: 0
+        "let a = [].
+         a push: -1.
+         a push: 0.
          a push: 1",
     );
     obj.as_vec(move |vec| {
@@ -69,8 +69,8 @@ fn test_array_push() {
 #[test]
 fn test_array_do() {
     let (obj, _foo) = eval_obj(
-        "let x = 0
-         [1,2,3] do: {|y| x = x + y}
+        "let x = 0.
+         [1,2,3] do: {|y| x = x + y}.
          x",
     );
     assert_eq!(obj.integer(), 1 + 2 + 3);
@@ -172,8 +172,8 @@ fn test_array_vector_projection_on() {
 fn test_array_scalar_projection_on() {
     assert_eq!(
         eval_ok(
-            "let v0 = [10, 20, 30]
-             let v1 = [1, 0, 0]
+            "let v0 = [10, 20, 30].
+             let v1 = [1, 0, 0].
              (v0 vectorProjectionOn: v1) norm == (v0 scalarProjectionOn: v1)"
         )
         .boolean(),
@@ -181,8 +181,8 @@ fn test_array_scalar_projection_on() {
     );
     assert_eq!(
         eval_ok(
-            "let v0 = [10, 20, 30]
-             let v1 = [0, 1, 0]
+            "let v0 = [10, 20, 30].
+             let v1 = [0, 1, 0].
              (v0 vectorProjectionOn: v1) norm == (v0 scalarProjectionOn: v1)"
         )
         .boolean(),
@@ -190,8 +190,8 @@ fn test_array_scalar_projection_on() {
     );
     assert_eq!(
         eval_ok(
-            "let v0 = [10, 20, 30]
-             let v1 = [0, 0, 1]
+            "let v0 = [10, 20, 30].
+             let v1 = [0, 0, 1].
              (v0 vectorProjectionOn: v1) norm == (v0 scalarProjectionOn: v1)"
         )
         .boolean(),
@@ -199,8 +199,8 @@ fn test_array_scalar_projection_on() {
     );
     assert_eq!(
         eval_ok(
-            "let v0 = [10, 20, 30]
-             let v1 = [1, 1, 1]
+            "let v0 = [10, 20, 30].
+             let v1 = [1, 1, 1].
              (v0 vectorProjectionOn: v1) norm == (v0 scalarProjectionOn: v1)"
         )
         .boolean(),

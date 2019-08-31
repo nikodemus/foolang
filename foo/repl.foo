@@ -1,3 +1,4 @@
+
 class REPL
 
   {
@@ -12,8 +13,8 @@ class REPL
      (self new: system) run
 
   class method new: system
-     let compiler = Compiler new
-     compiler define: "system" as: system
+     let compiler = Compiler new.
+     compiler define: "system" as: system.
      self _input: system input
           _output: system output
           _compiler: compiler
@@ -21,28 +22,30 @@ class REPL
           _value: False
 
   method run
-     _output println: "Foolang 0.2.0"
+     _output println: "Foolang 0.2.0".
      { _atEof } whileFalse: { self readEvalPrint }
 
   method readEvalPrint
-     { self; prompt; read; eval; print }
+     {
+       self; prompt; read; eval; print
+     }
      onError: { |error context|
-       _output println: error
+       _output println: error.
        _output println: context
      }
 
   method prompt
-     _output print: "> "
-     _output flush
+     _output print: "> ".
+     _output flush.
      self
 
   method read
-     let source = ""
+     let source = "".
      {
-         let line = _input readline
-         _atEof = line is False
+         let line = _input readline.
+         _atEof = line is False.
          _atEof ifFalse: {
-           source = source append: line newline
+           source = source append: line newline.
            self _tryParse: source
          }
      } whileFalse
@@ -52,15 +55,15 @@ class REPL
 
   method print
      _atEof ifFalse: {
-        _output println: _value toString
+        _output println: _value toString.
         _output flush
      }
 
   method _tryParse: source
-     _compiler parse: source onEof: { return False }
+     _compiler parse: source onEof: { return False }.
     True
 
-end
+end.
 
 class Main { system }
   method run

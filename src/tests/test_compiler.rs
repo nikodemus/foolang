@@ -5,8 +5,8 @@ fn test_compiler1() {
     assert_eq!(
         eval_ok(
             r#"
-            let compiler = Compiler new
-            compiler parse: "41 + 1"
+            let compiler = Compiler new.
+            compiler parse: "41 + 1".
             compiler evaluate
          "#
         )
@@ -26,8 +26,8 @@ fn test_compiler2() {
                class Foo { bar }
                  method quux: n
                     bar * n
-               end,
-               let foo = Foo bar: 21
+               end.
+               let foo = Foo bar: 21.
                foo quux: 2
         ",
             )],
@@ -47,7 +47,7 @@ fn test_parse_on_eof() {
     assert_eq!(
         eval_ok(
             r#"
-            let compiler = Compiler new
+            let compiler = Compiler new.
             compiler parse: "41 +" onEof: { |err| err }
          "#
         )

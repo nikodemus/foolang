@@ -4,8 +4,7 @@
 
  1. If at end of file, return EOF.
 
- 2. If at whitespace, consume it. If whitespace contained a newline,
-    return NEWLINE, otherwise continue from 1.
+ 2. If at whitespace, consume it, then continue from 1.
 
  3. If at a special character, consume it and return SPECIAL.
 
@@ -19,15 +18,17 @@
 
     4.2. If at b or B, consume word characters, return BIN_INTEGER.
 
-    4.3. Consume decimal digits and underscore. If then at dot,
-         consume, then consume following decimal digits and
-         underscore.
+    4.3. Consume decimal digits and underscore.
 
-    4.4. If at e or f, consume. If at + or -, consume. Consume word
+    4.4. If at dot: if followed by whitespace return DEC_INTEGER,
+         otherwise consume the dot and the digits plus possible
+         underscores.
+
+    4.5. If at e or f, consume. If at + or -, consume. Consume word
          characters. For e return DOUBLE_FLOAT, for f return
          SINGLE_FLOAT.
 
-    4.5. Consume word characters. If consumed a dot earlier, return
+    4.6. Consume word characters. If consumed a dot earlier, return
          DOUBLE_FLOAT, otherwise DEC_INTEGER.
 
  5. If at --- consume until --- and return BLOCK_COMMENT.

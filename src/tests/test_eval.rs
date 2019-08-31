@@ -3,6 +3,8 @@ use crate::objects::Slot;
 use crate::unwind::Unwind;
 use crate::unwind::{Error, Location, SimpleError, TypeError};
 
+use pretty_assertions::assert_eq;
+
 #[test]
 fn test_is() {
     assert_eq!(eval_ok("42 is True").boolean(), false);
@@ -22,11 +24,11 @@ fn test_cascade2() {
             "
           class Foo { a }
             method neg
-               a = -a
+               a = -a.
                self
             method up: by
                a = a + by
-          end
+          end.
           Foo a: 44; neg up: 2; neg; a"
         )
         .integer(),
@@ -42,11 +44,11 @@ fn test_cascade3() {
             "
           class Foo { a }
             method neg
-               a = -a
+               a = -a.
                self
             method up: by
                a = a + by
-          end
+          end.
           Foo a: 44
           ; neg up: 2
           ; neg
@@ -100,7 +102,7 @@ fn test_instance_variable1() {
             "class Foo { bar }
                method zot
                   bar
-             end
+             end.
              (Foo bar: 42) zot"
         )
         .integer(),
@@ -114,11 +116,11 @@ fn test_instance_variable2() {
         eval_ok(
             "class Foo { bar }
                method zit
-                  bar = bar + 1
+                  bar = bar + 1.
                   self
                method zot
                   bar
-             end
+             end.
              (Foo bar: 41) zit zot"
         )
         .integer(),
@@ -132,9 +134,9 @@ fn test_instance_variable3() {
         eval_ok(
             "class Foo { bar::Integer }
                method foo: x
-                  bar = bar + x
+                  bar = bar + x.
                   self
-             end
+             end.
              ((Foo bar: 41) foo: 1) bar"
         )
         .integer(),
@@ -147,9 +149,9 @@ fn test_instance_variable4() {
     let (exception, foo) = eval_exception(
         "class Foo { bar::Integer }
            method foo: x
-              bar = bar + x
+              bar = bar + x.
               self
-         end
+         end.
          ((Foo bar: 41) foo: 1.0) bar",
     );
     assert_eq!(
@@ -164,7 +166,7 @@ fn test_instance_variable4() {
                 context: Some(
                     concat!(
                         "002            method foo: x\n",
-                        "003               bar = bar + x\n",
+                        "003               bar = bar + x.\n",
                         "                  ^^^ Integer expected, got: Float 42.0\n",
                         "004               self\n"
                     )
@@ -204,7 +206,7 @@ fn test_typecheck2() {
 
 #[test]
 fn test_typecheck3() {
-    let (exception, foo) = eval_exception("let x::Integer = 42.0, x");
+    let (exception, foo) = eval_exception("let x::Integer = 42.0. x");
     assert_eq!(
         exception,
         Unwind::Exception(
@@ -216,7 +218,7 @@ fn test_typecheck3() {
                 span: Some(17..21),
                 context: Some(
                     concat!(
-                        "001 let x::Integer = 42.0, x\n",
+                        "001 let x::Integer = 42.0. x\n",
                         "                     ^^^^ Integer expected, got: Float 42.0\n"
                     )
                     .to_string()
@@ -228,7 +230,7 @@ fn test_typecheck3() {
 
 #[test]
 fn test_typecheck4() {
-    let (exception, foo) = eval_exception("let x::Integer = 42, x = 1.0, x");
+    let (exception, foo) = eval_exception("let x::Integer = 42. x = 1.0. x");
     assert_eq!(
         exception,
         Unwind::Exception(
@@ -240,7 +242,7 @@ fn test_typecheck4() {
                 span: Some(21..22),
                 context: Some(
                     concat!(
-                        "001 let x::Integer = 42, x = 1.0, x\n",
+                        "001 let x::Integer = 42. x = 1.0. x\n",
                         "                         ^ Integer expected, got: Float 1.0\n"
                     )
                     .to_string()
@@ -310,7 +312,7 @@ fn test_typecheck8() {
             defaultConstructor foo
             method zot: x::Integer
                 x
-         end
+         end.
          Foo foo zot: 1.0",
     );
     assert_eq!(
@@ -343,7 +345,7 @@ fn test_typecheck9() {
             defaultConstructor foo
             method zot: x -> Integer
                 x + 1
-         end
+         end.
          Foo foo zot: 1.0",
     );
     assert_eq!(
@@ -360,7 +362,7 @@ fn test_typecheck9() {
                         "003             method zot: x -> Integer\n",
                         "004                 x + 1\n",
                         "                    ^ Integer expected, got: Float 2.0\n",
-                        "005          end\n",
+                        "005          end.\n",
                     )
                     .to_string()
                 )
@@ -395,28 +397,28 @@ fn test_typecheck10() {
 
 #[test]
 fn eval_let1() {
-    assert_eq!(eval_ok("let x = 42, x").integer(), 42);
+    assert_eq!(eval_ok("let x = 42. x").integer(), 42);
 }
 
 #[test]
 fn eval_let2() {
-    assert_eq!(eval_ok("let x = 1, let x = 42, x").integer(), 42);
+    assert_eq!(eval_ok("let x = 1. let x = 42. x").integer(), 42);
 }
 
 #[test]
 fn eval_let3() {
-    assert_eq!(eval_ok("let x = 42, let y = 1, x").integer(), 42);
+    assert_eq!(eval_ok("let x = 42. let y = 1. x").integer(), 42);
 }
 
 #[test]
-fn eval_assign1() {
-    assert_eq!(eval_ok("let x = 1, x = x + 1, let y = x, y").integer(), 2);
+fn test_assign1() {
+    assert_eq!(eval_ok("let x = 1. x = x + 1. let y = x. y").integer(), 2);
 }
 
 #[test]
-fn eval_assign_unbound() {
+fn test_assign_unbound() {
     assert_eq!(
-        eval_str("let x = 1, z = x + 1, let y = x, y"),
+        eval_str("let x = 1. z = x + 1. let y = x. y"),
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
                 what: "Cannot assign to an unbound variable",
@@ -425,7 +427,7 @@ fn eval_assign_unbound() {
                 span: Some(11..12),
                 context: Some(
                     concat!(
-                        "001 let x = 1, z = x + 1, let y = x, y\n",
+                        "001 let x = 1. z = x + 1. let y = x. y\n",
                         "               ^ Cannot assign to an unbound variable\n"
                     )
                     .to_string()
@@ -441,9 +443,9 @@ fn eval_unary() {
 }
 
 #[test]
-fn eval_unbound() {
+fn test_unbound() {
     assert_eq!(
-        eval_str("let foo = 41, foo + bar"),
+        eval_str("let foo = 41. foo + bar"),
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
                 what: "Unbound variable",
@@ -452,7 +454,7 @@ fn eval_unbound() {
                 span: Some(20..23),
                 context: Some(
                     concat!(
-                        "001 let foo = 41, foo + bar\n",
+                        "001 let foo = 41. foo + bar\n",
                         "                        ^^^ Unbound variable\n"
                     )
                     .to_string()
@@ -463,9 +465,9 @@ fn eval_unbound() {
 }
 
 #[test]
-fn eval_class_not_toplevel() {
+fn test_class_not_toplevel() {
     assert_eq!(
-        eval_str("let x = 42, class Point { x, y } end"),
+        eval_str("let x = 42. class Point { x y } end"),
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
                 what: "Class definition not at toplevel",
@@ -474,7 +476,7 @@ fn eval_class_not_toplevel() {
                 span: Some(12..17),
                 context: Some(
                     concat!(
-                        "001 let x = 42, class Point { x, y } end\n",
+                        "001 let x = 42. class Point { x y } end\n",
                         "                ^^^^^ Class definition not at toplevel\n"
                     )
                     .to_string()
@@ -485,8 +487,8 @@ fn eval_class_not_toplevel() {
 }
 
 #[test]
-fn eval_class1() {
-    let class = eval_ok("class Point { x, y } end").class();
+fn test_class1() {
+    let class = eval_ok("class Point { x y } end").class();
     assert_eq!(class.instance_vtable.name, "Point");
     assert_eq!(
         class.instance_vtable.slots["x"],
@@ -531,60 +533,60 @@ fn eval_global2() {
 }
 
 #[test]
-fn eval_new_instance1() {
-    let (object, foo) = eval_obj("class Point { x, y } end, Point x: 1 y: 2");
+fn test_new_instance1() {
+    let (object, foo) = eval_obj("class Point { x y } end. Point x: 1 y: 2");
     assert_eq!(object.send("x", &[], &foo), Ok(foo.make_integer(1)));
     assert_eq!(object.send("y", &[], &foo), Ok(foo.make_integer(2)));
 }
 
 #[test]
-fn eval_new_instance2() {
+fn test_new_instance2() {
     let (object, foo) = eval_obj(
         "class Oh {}
             method no 42
             defaultConstructor noes
-         end,
+         end.
          Oh noes",
     );
     assert_eq!(object.send("no", &[], &foo), Ok(foo.make_integer(42)));
 }
 
 #[test]
-fn eval_instance_method1() {
+fn test_instance_method1() {
     let (object, foo) = eval_obj(
         "class Foo {}
             method bar 311
-         end,
+         end.
          Foo new",
     );
     assert_eq!(object.send("bar", &[], &foo), Ok(foo.make_integer(311)));
 }
 
 #[test]
-fn eval_instance_method2() {
+fn test_instance_method2() {
     let (object, foo) = eval_obj(
         "class Foo {}
             method foo
                self bar
             method bar
                311
-         end,
+         end.
          Foo new",
     );
     assert_eq!(object.send("bar", &[], &foo), Ok(foo.make_integer(311)));
 }
 
 #[test]
-fn eval_instance_method3() {
+fn test_instance_method3() {
     let (object, foo) = eval_obj(
         "class Foo { value }
             method + other
                Foo value: value + other value
-         end
-         class Bar { a, b }
+         end.
+         class Bar { a b }
             method sum
               a + b
-         end
+         end.
          Bar a: (Foo value: 1) b: (Foo value: 10)",
     );
     assert_eq!(
@@ -598,9 +600,9 @@ fn test_return_returns() {
     let (obj, foo) = eval_obj(
         "class Foo {}
             method foo
-               return 1,
+               return 1.
                2
-         end,
+         end.
          Foo new foo",
     );
     assert_eq!(obj, foo.make_integer(1));
@@ -611,11 +613,11 @@ fn test_return_from_method_block() {
     let (obj, foo) = eval_obj(
         "class Foo {}
             method test
-                self boo: { return 42 },
+                self boo: { return 42 }.
                 31
             method boo: blk
                 blk value
-         end,
+         end.
          Foo new test
         ",
     );
@@ -627,17 +629,17 @@ fn test_return_from_deep_block_to_middle() {
     let (object, foo) = eval_obj(
         "class Foo {}
             method test
-               return 1 + let x = 41, self test0: x
+               return 1 + let x = 41. self test0: x
             method test0: x
-               self test1: { return x },
+               self test1: { return x }.
                return 100
             method test1: blk
-               self test2: blk,
+               self test2: blk.
                return 1000
             method test2: blk
-               blk value,
+               blk value.
                return 10000
-         end,
+         end.
          Foo new test
         ",
     );
@@ -651,7 +653,7 @@ fn test_not_understood() {
             r#"class Foo {}
                 method perform: m with: args
                    "not understood: {m} args: {args}"
-               end
+               end.
                Foo new foo: 1 bar: 2"#
         )
         .string_as_str(),
@@ -667,7 +669,7 @@ fn test_method_keyword_multiline() {
                   class method bar: x
                                quux: y
                     x + y
-               end
+               end.
                Foo bar: 40 quux: 2"#
         )
         .integer(),

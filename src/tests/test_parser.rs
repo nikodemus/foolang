@@ -1,6 +1,8 @@
 use crate::parse::utils::*;
 use crate::parse::*;
 
+use pretty_assertions::assert_eq;
+
 #[test]
 fn parse_decimal() {
     assert_eq!(parse_str("123"), Ok(int(0..3, 123)));
@@ -76,47 +78,47 @@ fn parse_operators3() {
 }
 
 #[test]
-fn parse_sequence1() {
+fn test_sequence1() {
     assert_eq!(
-        parse_str("foo bar, quux"),
+        parse_str("foo bar. quux"),
         Ok(seq(vec![unary(4..7, "bar", var(0..3, "foo")), var(9..13, "quux")]))
     );
 }
 
 #[test]
-fn parse_sequence2() {
+fn test_sequence2() {
     assert_eq!(
         parse_str(
-            "foo bar
+            "foo bar.
              quux"
         ),
-        Ok(seq(vec![unary(4..7, "bar", var(0..3, "foo")), var(21..25, "quux")]))
+        Ok(seq(vec![unary(4..7, "bar", var(0..3, "foo")), var(22..26, "quux")]))
     );
 }
 
 #[test]
-fn parse_let1() {
+fn test_let1() {
     assert_eq!(
-        parse_str("let x = 21 + 21, x"),
+        parse_str("let x = 21 + 21. x"),
         Ok(bind("x", binary(11..12, "+", int(8..10, 21), int(13..15, 21)), var(17..18, "x")))
     );
 }
 
 #[test]
-fn parse_let2() {
+fn test_let2() {
     assert_eq!(
         parse_str(
-            "let x = 21 + 21
+            "let x = 21 + 21.
              x"
         ),
-        Ok(bind("x", binary(11..12, "+", int(8..10, 21), int(13..15, 21)), var(29..30, "x")))
+        Ok(bind("x", binary(11..12, "+", int(8..10, 21), int(13..15, 21)), var(30..31, "x")))
     );
 }
 
 #[test]
-fn parse_keyword1() {
+fn test_keyword1() {
     assert_eq!(
-        parse_str("foo x: 1 y: 2, bar"),
+        parse_str("foo x: 1 y: 2. bar"),
         Ok(seq(vec![
             keyword(4..13, "x:y:", var(0..3, "foo"), vec![int(7..8, 1), int(12..13, 2)]),
             var(15..18, "bar")
@@ -125,15 +127,15 @@ fn parse_keyword1() {
 }
 
 #[test]
-fn parse_keyword2() {
+fn test_keyword2() {
     assert_eq!(
         parse_str(
-            "foo x: 1 y: 2
+            "foo x: 1 y: 2.
              bar"
         ),
         Ok(seq(vec![
             keyword(4..13, "x:y:", var(0..3, "foo"), vec![int(7..8, 1), int(12..13, 2)]),
-            var(27..30, "bar")
+            var(28..31, "bar")
         ]))
     );
 }
@@ -159,8 +161,8 @@ fn parse_block_args() {
 }
 
 #[test]
-fn parse_class1() {
-    assert_eq!(parse_str("class Point { x, y } end"), Ok(class(0..5, "Point", vec!["x", "y"])));
+fn test_parse_class1() {
+    assert_eq!(parse_str("class Point { x y } end"), Ok(class(0..5, "Point", vec!["x", "y"])));
 }
 
 #[test]
@@ -193,104 +195,15 @@ fn parse_method2() {
 }
 
 #[test]
-fn test_parse_newline_bug1() {
-    assert_eq!(
-        parse_str(
-            r#"
-            (
-             1
-             {2}
-            )"#
-        ),
-        Ok(seq(vec![int(28..29, 1), block(43..46, vec![], int(44..45, 2))]))
-    );
-}
-
-#[test]
-fn test_parse_newline_bug2() {
-    assert_eq!(
-        parse_str(
-            r#"
-            (
-             1
-             (2)
-            )"#
-        ),
-        Ok(seq(vec![int(28..29, 1), int(44..45, 2)]))
-    );
-}
-
-#[test]
-fn test_parse_newline_bug3() {
-    assert_eq!(
-        parse_str(
-            r#"
-            (
-             1
-             return 2
-            )"#
-        ),
-        Ok(seq(vec![int(28..29, 1), Return::expr(43..49, int(50..51, 2))]))
-    );
-}
-
-#[test]
-fn test_parse_newline_bug4() {
-    assert_eq!(
-        parse_str(
-            r#"
-            (
-             1
-             let x = 2, x
-            )"#
-        ),
-        Ok(seq(vec![int(28..29, 1), bind("x", int(51..52, 2), var(54..55, "x"))]))
-    );
-}
-
-#[test]
-fn test_parse_newline_bug5() {
-    assert_eq!(
-        parse_str(
-            r#"
-            (
-             1
-             True
-             False
-            )"#
-        ),
-        Ok(seq(vec![int(28..29, 1), boolean(43..47, true), boolean(61..66, false)]))
-    );
-}
-
-#[test]
-fn test_parse_newline_bug6() {
-    assert_eq!(
-        parse_str(
-            r#"
-            (
-             1
-             foo: 2
-            )"#
-        ),
-        Ok(int(28..29, 1).send(Message {
-            span: 43..49,
-            selector: "foo:".to_string(),
-            args: vec![int(48..49, 2)]
-        }))
-    );
-}
-
-#[test]
 fn parse_return1() {
     assert_eq!(parse_str("return 12"), Ok(Return::expr(0..6, int(7..9, 12))));
 }
 
 #[test]
-fn parse_comments() {
+fn test_comments1() {
     assert_eq!(
         parse_str(
-            "foo --- inline block comment --- foo -- Foo it up!
+            "foo --- inline block comment --- foo. -- Foo it up!
              ---
              Multiline
              block
@@ -298,7 +211,7 @@ fn parse_comments() {
              ---
              bar"
         ),
-        Ok(seq(vec![unary(33..36, "foo", var(0..3, "foo")), var(161..164, "bar")]))
+        Ok(seq(vec![unary(33..36, "foo", var(0..3, "foo")), var(162..165, "bar")]))
     );
 }
 
@@ -320,7 +233,7 @@ fn parse_type_assertions1() {
 #[test]
 fn parse_type_assertions2() {
     assert_eq!(
-        parse_str("let x::Integer = 42, x"),
+        parse_str("let x::Integer = 42. x"),
         Ok(bind_typed("x", "Integer", int(17..19, 42), var(21..22, "x")))
     )
 }
@@ -342,9 +255,9 @@ fn parse_parens() {
 }
 
 #[test]
-fn parse_newlines1() {
+fn test_newlines1() {
     assert!(parse_str(
-        "class Point { x, y }
+        "class Point { x y }
             method add: point
                Point x: x + point x
                      y: y + point y
@@ -354,17 +267,7 @@ fn parse_newlines1() {
 }
 
 #[test]
-fn parse_newlines2() {
-    assert!(parse_str(
-        "let p0 = Point x: 1 y: 2
-         let p1 = Point x: 10 y: 100
-         p0 add: p1"
-    )
-    .is_ok());
-}
-
-#[test]
-fn parse_newlines3() {
+fn test_newlines2() {
     assert!(parse_str(
         "class Point
 
@@ -470,11 +373,11 @@ fn test_parse_array3() {
     assert_eq!(
         parse_str(
             "[
-                1
-                2
+                1,
+                2,
                 3
              ]"
         ),
-        Ok(Array::expr(0..70, vec![int(18..19, 1), int(36..37, 2), int(54..55, 3)]))
+        Ok(Array::expr(0..72, vec![int(18..19, 1), int(37..38, 2), int(56..57, 3)]))
     )
 }
