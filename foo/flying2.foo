@@ -1,0 +1,131 @@
+---
+Flight simulator.
+---
+
+class PointMass { forces mass position velocity debug }
+  accessor position
+  accessor velocity
+
+  method sumForces
+     forces sum: { _ value }
+  end
+
+  method _applyForces: time
+     velocity = velocity + (self sumForces / mass) * time
+  end
+
+  method tick: time
+     position += velocity * time.
+     self _applyForces: time
+  end
+end
+
+constant ZAxis = 3
+
+constant Epsilon = 0.001
+
+class Plane { physics noseDirection upDirection maxLift maxSpeed maxThrust throttle debug }
+   delegate velocity to: physics
+   delegate position to: physics
+
+   classMethod model: model debug: debug
+
+     let forces = { gravity: { [0.0, 0.0, -9.81] },
+                    drag: None,
+                    lift: None,
+                    thrust: None }.
+
+     let physics = PointMass forces: forces
+                             mass: model mass
+                             position: [0.0, 0.0, 0.0]
+                             velocity: [0.0, 0.0, 0.0]
+                             debug: debug.
+
+     let plane = self physics: physics
+                      noseDirection: [0.0, 1.0, 0.0]
+                      upDirection: [0.0, 0.0, 1.0]
+                      maxLift: model maxLift
+                      maxSpeed: model maxSpeed
+                      maxThrust: model maxThrust
+                      throttle: 0.0
+                      debug: debug.
+
+     forces drag: { plane drag }.
+     forces lift: { plane lift }.
+     forces thrust: { plane thrust }.
+
+     plane
+
+   end
+
+   method throttle: new
+      throttle = new atLeast: 0.0 atMost: 1.0
+   end
+
+   method tick: time
+      physics tick: time.
+      self checkGround
+   end
+
+   method checkGround
+      -- Don't allow Z-position to go below zero, set Z velocity
+      -- to zero when on ground.
+      (self position at: ZAxis) < 0.0
+         ifTrue: { self position put: 0.0 at: ZAxis.
+                   self velocity put: 0.0 at: ZAxis }
+   end
+
+   method crossSection: direction
+      2.0 -- FIXME: a box model should not be too hard to calculate, also: should be parameter
+   end
+
+   method dragCoefficient: direction
+      -- https://en.wikipedia.org/wiki/Drag_coefficient
+      -- FIXME: current value is for sphere, box model might be nice
+      -- FIXME: should really be a parameter
+      0.5
+   end
+
+   method drag
+      -- https://en.wikipedia.org/wiki/Drag_equation
+      let speed = self velocity norm.
+      -- No speed, no drag!
+      speed < Epsilon
+        ifTrue: { return [0.0, 0.0, 0.0] }.
+      let direction = self velocity normalized.
+      let a = self crossSection: direction.
+      let c = self dragCoefficient: direction.
+      let p = 1.269. -- mass density of air at 5C
+      direction * (-0.5 * p * v * v * a * c)
+   end
+
+   method lift
+      -- FIXME: https://www.grc.nasa.gov/WWW/K-12/WindTunnel/Activities/lift_formula.html
+      -- This is completely ad-hock with no modeling currently.
+      let airSpeed = self velocity scalarProjectionOn: noseDirection
+      let lift = (airSpeed / maxSpeed) * maxLift.
+      upDirection * lift
+   end
+
+   method thrust
+      let thrust = maxThrust * throttle.
+      noseDirection * thrust
+   end
+      
+end
+
+constant Cessna = #{ mass: 750.0,
+                     maxLift: 18.0,
+                     maxSpeed: 27.0,
+                     maxThrust: 470 }
+
+class Main { system }
+   method run
+      let plane = Plane model: Cessna debug: system output.
+      plane throttle: 1.0.
+      1000 times: {
+          system output println: "pos: {plane position} speed: {plane velocity}".
+          plane tick: 0.01
+      }
+   end
+end

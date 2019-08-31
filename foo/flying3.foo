@@ -1,0 +1,131 @@
+class Vector {}
+   class method project: a onto: b
+      ((Vector dot: a with: b) / (Vector dot: b with: b)) * b
+   class method dot: a with: b
+      (a at: 1) * (b at: 1) +
+      (a at: 2) * (b at: 2) +
+      (a at: 3) * (b at: 3)
+end
+
+class PointMass { forces mass position velocity debug }
+  method sumForces
+     forces inject: [0.0, 0.0, 0.0] into: { |sum force|
+         sum + force value
+     }
+
+  method _applyForces: time
+     velocity = velocity + (self sumForces / mass) * time
+
+  method tick: time
+     position = position + velocity * time,
+     self _applyForces: time
+
+  method position: pos
+     position = pos
+
+  method velocity: vel
+     velocity = vel
+end
+
+class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttle debug }
+
+   class method mass: mass
+                maxLift: maxLift
+                maxSpeed: maxSpeed
+                maxThrust: maxThrust
+                debug: debug
+
+     let forces = [],
+
+     let model = PointMass forces: forces
+                           mass: mass
+                           position: [0.0, 0.0, 0.0]
+                           velocity: [0.0, 0.0, 0.0]
+                           debug: debug,
+
+     let plane = self model: model
+                      noseDirection: [0.0, 1.0, 0.0]
+                      upDirection: [0.0, 0.0, 1.0]
+                      maxLift: maxLift
+                      maxSpeed: maxSpeed
+                      maxThrust: maxThrust
+                      throttle: 0.0
+                      debug: debug,
+
+     forces push: { [0.0, 0.0, -9.81] }, -- gravity
+     forces push: { plane drag },
+     forces push: { plane lift },
+     forces push: { plane thrust },
+
+     plane
+
+   method position
+      model position
+
+   method velocity
+      model velocity
+
+   method throttle: new
+      throttle = new atLeast: 0.0 atMost: 1.0
+
+   method tick: time
+      model tick: time,
+      self checkGround
+
+   method checkGround
+      -- Don't allow Z-position to go below zero
+      let pos = model position,
+      (pos at: 3) < 0 ifTrue: {
+         model position: [pos at: 1, pos at: 2, 0.0],
+         let vel = model velocity,
+         model velocity: [vel at: 1, vel at: 2, 0.0],
+      }
+
+   method crossSection: v
+      2.0 -- FIXME: a box model should not be too hard to calculate, also: should be parameter
+
+   method dragCoefficient: v
+      -- https://en.wikipedia.org/wiki/Drag_coefficient
+      -- FIXME: current value is for sphere, box model might be nice
+      -- FIXME: should really be a parameter
+      0.5
+      
+   method drag
+      -- https://en.wikipedia.org/wiki/Drag_equation
+      let velocity = model velocity,
+      let v = velocity magnitude,
+      let direction = (v == 0.0 ifTrue: {
+         noseDirection
+      } ifFalse: {
+         velocity normalized
+      }) * -1,
+      let a = self crossSection: v,
+      let c = self dragCoefficient: v,
+      let p = 1.269 -- mass density of air at 5C,
+      direction * 0.5 * p * v * v * a * c
+
+   method lift
+      -- FIXME: https://www.grc.nasa.gov/WWW/K-12/WindTunnel/Activities/lift_formula.html
+      let airSpeed = (Vector project: model velocity onto: noseDirection) magnitude.
+      let lift = (airSpeed / maxSpeed) * maxLift,
+      upDirection * lift
+
+   method thrust
+      let thrust = maxThrust * throttle,
+      noseDirection * thrust
+      
+end
+
+class Main { system }
+   method run
+      let plane = Plane mass: 750.0
+                        maxLift: 18.0
+                        maxSpeed: 27.0
+                        maxThrust: 470.0
+                        debug: system output,
+      plane throttle: 1.0,
+      1000 times: {
+          system output println: "pos: {plane position} speed: {plane velocity}",
+          plane tick: 0.01
+      }
+end
