@@ -129,3 +129,12 @@ fn test_array_magnitude() {
 fn test_array_at() {
     assert_eq!(eval_ok("[[1,2] at: 1, [1,2] at: 2] toString").string_as_str(), "[1, 2]");
 }
+
+#[test]
+fn test_array_sum() {
+    assert_eq!(eval_ok("[1,2,3] sum").integer(), 6);
+    assert_eq!(
+        eval_ok("[{|x| x + 1},{|x| x + 2},{|x| x + 3}] sum: { |b| b value: 1 }").integer(),
+        9
+    );
+}

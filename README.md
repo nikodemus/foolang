@@ -12,8 +12,19 @@ Like all new languages it has _somewhat_ unrealistic aspirations:
 - Convenience of Python.
 - Fault tolerance of Erlang.
 - Extensibility of Common Lisp.
+- Excitement of Logo.
 
 **Status**: bootstrap evaluator implementation in progress.
+
+I want the language and the environment to be engaging and inspiring.
+
+I want someone who last programmed some basic on Commodore 64 over 30
+years ago to feel empowered to do things.
+
+I want experienced programmers to feel comfortable: having the system
+trust them and being able to trust the system.
+
+I want programs written by others to be easy to understand after the fact.
 
 ## Hello World
 

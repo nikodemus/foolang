@@ -13,17 +13,19 @@ pub fn instance_vtable() -> Vtable {
     vt.def("+", array_add);
     vt.def("-", array_sub);
     vt.def("addArray:", array_add_array);
-    vt.def("subArray:", array_sub_array);
+    vt.def("at:", array_at);
+    vt.def("divByFloat:", array_div_by_float);
     vt.def("do:", array_do);
     vt.def("inject:into:", array_inject_into);
-    vt.def("push:", array_push);
-    vt.def("toString", array_to_string);
     vt.def("magnitude", array_magnitude);
-    vt.def("mulInteger:", array_mul_integer);
     vt.def("mulFloat:", array_mul_float);
-    vt.def("divByFloat:", array_div_by_float);
+    vt.def("mulInteger:", array_mul_integer);
     vt.def("normalized", array_normalized);
-    vt.def("at:", array_at);
+    vt.def("push:", array_push);
+    vt.def("subArray:", array_sub_array);
+    vt.def("sum", array_sum);
+    vt.def("sum:", array_sum_arg);
+    vt.def("toString", array_to_string);
     vt
 }
 
@@ -148,6 +150,38 @@ fn array_push(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
         Ok(())
     })?;
     Ok(receiver.clone())
+}
+
+fn array_sum(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+    let mut sum = foo.make_boolean(false);
+    receiver.as_vec(|v| {
+        if v.len() > 0 {
+            sum = v[0].clone();
+            if v.len() > 1 {
+                for elt in v[1..].iter() {
+                    sum = sum.send("+", std::slice::from_ref(elt), foo)?;
+                }
+            }
+        }
+        Ok(sum)
+    })
+}
+
+fn array_sum_arg(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let mut sum = foo.make_boolean(false);
+    let block = &args[0];
+    receiver.as_vec(|v| {
+        if v.len() > 0 {
+            sum = block.send("value:", std::slice::from_ref(&v[0]), foo)?;
+            if v.len() > 1 {
+                for elt in v[1..].iter() {
+                    let val = block.send("value:", std::slice::from_ref(elt), foo)?;
+                    sum = sum.send("+", std::slice::from_ref(&val), foo)?;
+                }
+            }
+        }
+        Ok(sum)
+    })
 }
 
 fn array_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {

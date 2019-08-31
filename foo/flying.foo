@@ -9,9 +9,7 @@ end
 
 class PointMass { forces mass position velocity debug }
   method sumForces
-     forces inject: [0.0, 0.0, 0.0] into: { |sum force|
-         sum + force value
-     }
+     forces sum: { |f| f value }
 
   method _applyForces: time
      velocity = velocity + (self sumForces / mass) * time
