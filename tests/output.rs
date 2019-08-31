@@ -140,6 +140,7 @@ fn flying() -> Result<(), Box<std::error::Error>> {
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("TAKEOFF"))
-        .stdout(predicate::str::contains("SIM END"));
+        .stdout(predicate::str::contains("LANDING"))
+        .stdout(predicate::str::contains("TOUCHDOWN"));
     Ok(())
 }

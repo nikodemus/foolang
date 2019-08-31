@@ -123,23 +123,30 @@ class Main { system }
       let flying = False
       let t = 0.0
       let step = 0.02
-      { t < 40.0 } whileTrue: {
-          system output println: "t: {t} pos: {plane position} speed: {plane velocity}"
+      { t < 100.0 } whileTrue: {
+                -- system output println: "t: {t} pos: {plane position} speed: {plane velocity}"
           let height = plane position at: 3
           takeoff ifFalse: {
              height > 0.1 ifTrue: {
-                system output println: "TAKEOFF at {plane position at: 2} meters"
+                system output println: "TAKEOFF at {plane position at: 2} meters, t: {t}"
                 takeoff = True
+                plane throttle: 0.25
              }
           }
-          flying ifFalse: {
-             height > 15.0 ifTrue: {
-                system output println: "CLEARANCE at {plane position at: 2} meters"
+          flying ifTrue: {
+             height < 0.01 ifTrue: {
+                system output println: "TOUCHDOWN at {plane position at: 2} meters, t: {t}"
+                return True
+             }
+          } ifFalse: {
+             height > 10.0 ifTrue: {
+                system output println: "LANDING at {plane position at: 2} meters, t: {t}"
                 flying = True
+                plane throttle: 0.0
              }
           }
           plane tick: step
           t = t + step
       }
-      system output println: "SIM END at {plane position at: 2} meters, height: {plane position at: 3}, time: {t}"
+      system output println: "TIMEOUT at {t}s"
 end
