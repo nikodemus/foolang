@@ -121,8 +121,9 @@ fn test_array_normalized() {
 }
 
 #[test]
-fn test_array_magnitude() {
-    assert_eq!(eval_ok("[0,2,0] magnitude").float(), 2.0);
+fn test_array_norm() {
+    assert_eq!(eval_ok("[0,2,0] norm").float(), 2.0);
+    assert!(eval_ok("[1,2,3] norm").float() - 3.7417 < 0.0001);
 }
 
 #[test]

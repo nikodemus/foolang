@@ -87,20 +87,17 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
    method drag
       -- https://en.wikipedia.org/wiki/Drag_equation
       let velocity = model velocity
-      let v = velocity magnitude
-      let direction = (v == 0.0 ifTrue: {
-         noseDirection
-      } ifFalse: {
-         velocity normalized
-      }) * -1
-      let a = self crossSection: v
-      let c = self dragCoefficient: v
+      let speed = velocity norm
+      speed == 0.0 ifTrue: { return [0.0, 0.0, 0.0] }
+      let direction = velocity normalized
+      let a = self crossSection: direction
+      let c = self dragCoefficient: direction
       let p = 1.269 -- mass density of air at 5C
-      direction * 0.5 * p * v * v * a * c
+      direction * -0.5 * p * speed * speed * a * c
 
    method lift
       -- FIXME: https://www.grc.nasa.gov/WWW/K-12/WindTunnel/Activities/lift_formula.html
-      let airSpeed = (Vector project: model velocity onto: noseDirection) magnitude
+      let airSpeed = (Vector project: model velocity onto: noseDirection) norm
       let lift = (airSpeed / maxSpeed) * maxLift
       upDirection * lift
 

@@ -18,7 +18,7 @@ pub fn instance_vtable() -> Vtable {
     vt.def("do:", array_do);
     vt.def("dot:", array_dot);
     vt.def("inject:into:", array_inject_into);
-    vt.def("magnitude", array_magnitude);
+    vt.def("norm", array_norm);
     vt.def("mulFloat:", array_mul_float);
     vt.def("mulInteger:", array_mul_integer);
     vt.def("normalized", array_normalized);
@@ -136,7 +136,7 @@ fn array_div_by_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval
     Ok(foo.into_array(v))
 }
 
-fn array_magnitude(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+fn array_norm(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
     receiver.as_vec(|v| {
         let mut abs = 0.0;
         for elt in v.iter() {
@@ -148,7 +148,7 @@ fn array_magnitude(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
 }
 
 fn array_normalized(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
-    let reciprocal = foo.make_float(1.0 / receiver.send("magnitude", &[], foo)?.float());
+    let reciprocal = foo.make_float(1.0 / array_norm(receiver, &[], foo)?.float());
     receiver.send("*", std::slice::from_ref(&reciprocal), foo)
 }
 
