@@ -3,16 +3,18 @@ class Vector {}
       ((a dot: b) / (b dot: b)) * b
 end
 
-class PointMass { forces mass position velocity debug }
+class PointMass { forces mass gravity acceleration position velocity debug }
   method sumForces
      forces sum: { |f| f value }
 
-  method _applyForces: time
-     velocity = velocity + (self sumForces / mass) * time
-
-  method tick: time
-     position = position + velocity * time
-     self _applyForces: time
+  method tick: dt
+     -- Velocity Verlet integration, should be more accurate than Euler's Method
+     -- http://buildnewgames.com/gamephysics/
+     -- https://en.wikipedia.org/wiki/Verlet_integration#Velocity_Verlet
+     position = position + velocity * dt + (acceleration * (0.5 * dt * dt))
+     let newAcceleration = self sumForces / mass + gravity
+     velocity = velocity + (newAcceleration + acceleration) * (0.5 * dt)
+     acceleration = newAcceleration
 
   method position: pos
      position = pos
@@ -33,6 +35,8 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
 
      let model = PointMass forces: forces
                            mass: mass
+                           gravity: [0.0, 0.0, -9.81]
+                           acceleration: [0.0, 0.0, 0.0]
                            position: [0.0, 0.0, 0.0]
                            velocity: [0.0, 0.0, 0.0]
                            debug: debug
@@ -46,7 +50,7 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
                       throttle: 0.0
                       debug: debug
 
-     forces push: { [0.0, 0.0, -9.81] } -- gravity
+     -- PointMass has built-in gravity
      forces push: { plane drag }
      forces push: { plane lift }
      forces push: { plane thrust }
@@ -110,7 +114,7 @@ end
 class Main { system }
    method run
       let plane = Plane mass: 750.0
-                        maxLift: 25.0
+                        maxLift: 1200 * 9.81
                         maxSpeed: 27.0
                         maxThrust: 470.0
                         debug: system output
@@ -118,8 +122,9 @@ class Main { system }
       let takeoff = False
       let flying = False
       let t = 0.0
-      4000 times: {
-          -- system output println: "t: {t} pos: {plane position} speed: {plane velocity}"
+      let step = 0.02
+      { t < 40.0 } whileTrue: {
+          system output println: "t: {t} pos: {plane position} speed: {plane velocity}"
           let height = plane position at: 3
           takeoff ifFalse: {
              height > 0.1 ifTrue: {
@@ -133,8 +138,8 @@ class Main { system }
                 flying = True
              }
           }
-          plane tick: 0.01
-          t = t + 0.01
+          plane tick: step
+          t = t + step
       }
-      system output println: "SIM END at {plane position at: 2} meters, height: {plane position at: 3}"
+      system output println: "SIM END at {plane position at: 2} meters, height: {plane position at: 3}, time: {t}"
 end
