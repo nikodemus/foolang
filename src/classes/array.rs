@@ -23,10 +23,12 @@ pub fn instance_vtable() -> Vtable {
     vt.def("mulInteger:", array_mul_integer);
     vt.def("normalized", array_normalized);
     vt.def("push:", array_push);
+    vt.def("scalarProjectionOn:", array_scalar_projection_on);
     vt.def("subArray:", array_sub_array);
     vt.def("sum", array_sum);
     vt.def("sum:", array_sum_arg);
     vt.def("toString", array_to_string);
+    vt.def("vectorProjectionOn:", array_vector_projection_on);
     vt
 }
 
@@ -177,6 +179,11 @@ fn array_push(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
     Ok(receiver.clone())
 }
 
+fn array_scalar_projection_on(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let ab = array_dot(receiver, args, foo)?;
+    let bn = array_norm(&args[0], &[], foo)?;
+    ab.send("/", &[bn], foo)
+}
 fn array_sum(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
     let mut sum = foo.make_boolean(false);
     receiver.as_vec(|v| {
@@ -211,4 +218,10 @@ fn array_sum_arg(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
 
 fn array_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
     Ok(foo.into_string(receiver.as_vec(|v| Ok(format!("{:?}", v)))?))
+}
+
+fn array_vector_projection_on(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let ab = array_dot(receiver, args, foo)?;
+    let bb = array_dot(&args[0], args, foo)?;
+    ab.send("/", &[bb], foo)?.send("*", args, foo)
 }

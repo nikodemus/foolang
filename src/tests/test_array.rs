@@ -147,3 +147,63 @@ fn test_array_dot() {
     assert_eq!(eval_ok("[1,2,3] dot: [4,5,6]").integer(), 32);
     assert_eq!(eval_ok("[1.0, 2.0, 3.0] dot: [4,5,6]").float(), 32.0);
 }
+
+#[test]
+fn test_array_vector_projection_on() {
+    assert_eq!(
+        eval_ok("([10, 20, 30] vectorProjectionOn: [1, 0, 0]) toString").string_as_str(),
+        "[10, 0, 0]"
+    );
+    assert_eq!(
+        eval_ok("([10, 20, 30] vectorProjectionOn: [0, 1, 0]) toString").string_as_str(),
+        "[0, 20, 0]"
+    );
+    assert_eq!(
+        eval_ok("([10, 20, 30] vectorProjectionOn: [0, 0, 1]) toString").string_as_str(),
+        "[0, 0, 30]"
+    );
+    assert_eq!(
+        eval_ok("([10, 20, 30] vectorProjectionOn: [1, 1, 1]) toString").string_as_str(),
+        "[20, 20, 20]"
+    );
+}
+
+#[test]
+fn test_array_scalar_projection_on() {
+    assert_eq!(
+        eval_ok(
+            "let v0 = [10, 20, 30]
+             let v1 = [1, 0, 0]
+             (v0 vectorProjectionOn: v1) norm == (v0 scalarProjectionOn: v1)"
+        )
+        .boolean(),
+        true
+    );
+    assert_eq!(
+        eval_ok(
+            "let v0 = [10, 20, 30]
+             let v1 = [0, 1, 0]
+             (v0 vectorProjectionOn: v1) norm == (v0 scalarProjectionOn: v1)"
+        )
+        .boolean(),
+        true
+    );
+    assert_eq!(
+        eval_ok(
+            "let v0 = [10, 20, 30]
+             let v1 = [0, 0, 1]
+             (v0 vectorProjectionOn: v1) norm == (v0 scalarProjectionOn: v1)"
+        )
+        .boolean(),
+        true
+    );
+    assert_eq!(
+        eval_ok(
+            "let v0 = [10, 20, 30]
+             let v1 = [1, 1, 1]
+             (v0 vectorProjectionOn: v1) norm == (v0 scalarProjectionOn: v1)"
+        )
+        .boolean(),
+        true
+    );
+}

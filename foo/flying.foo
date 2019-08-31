@@ -1,8 +1,3 @@
-class Vector {}
-   class method project: a onto: b
-      ((a dot: b) / (b dot: b)) * b
-end
-
 class PointMass { forces mass gravity acceleration position velocity debug }
   method sumForces
      forces sum: { |f| f value }
@@ -101,7 +96,7 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
 
    method lift
       -- FIXME: https://www.grc.nasa.gov/WWW/K-12/WindTunnel/Activities/lift_formula.html
-      let airSpeed = (Vector project: model velocity onto: noseDirection) norm
+      let airSpeed = model velocity scalarProjectionOn: noseDirection
       let lift = (airSpeed / maxSpeed) * maxLift
       upDirection * lift
 
