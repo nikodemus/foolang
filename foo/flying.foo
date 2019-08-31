@@ -1,3 +1,12 @@
+class Vector {}
+   class method project: a onto: b
+      ((Vector dot: a with: b) / (Vector dot: b with: b)) * b
+   class method dot: a with: b
+      (a at: 1) * (b at: 1) +
+      (a at: 2) * (b at: 2) +
+      (a at: 3) * (b at: 3)
+end
+
 class PointMass { forces mass position velocity debug }
   method sumForces
      forces inject: [0.0, 0.0, 0.0] into: { |sum force|
@@ -13,17 +22,10 @@ class PointMass { forces mass position velocity debug }
 
   method position: pos
      position = pos
-end
 
-class Vector {}
-   class method project: a onto: b
-      ((Vector dot: a with: b) / (Vector dot: b with: b)) * b
-   class method dot: a with: b
-      (a at: 1) * (b at: 1) +
-      (a at: 2) * (b at: 2) +
-      (a at: 3) * (b at: 3)
+  method velocity: vel
+     velocity = vel
 end
-
 
 class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttle debug }
 
@@ -68,8 +70,16 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
 
    method tick: time
       model tick: time
+      self checkGround
+
+   method checkGround
+      -- Don't allow Z-position to go below zero
       let pos = model position
-      (pos at: 3) < 0 ifTrue: { model position: [pos at: 1, pos at: 2, 0.0] }
+      (pos at: 3) < 0 ifTrue: {
+         model position: [pos at: 1, pos at: 2, 0.0]
+         let vel = model velocity
+         model velocity: [vel at: 1, vel at: 2, 0.0]
+      }
 
    method crossSection: v
       2.0 -- FIXME: a box model should not be too hard to calculate, also: should be parameter
@@ -114,9 +124,8 @@ class Main { system }
                         maxThrust: 470.0
                         debug: system output
       plane throttle: 1.0
-      let last = plane position
       1000 times: {
           system output println: "pos: {plane position} speed: {plane velocity}"
-          plane tick: 1.0
+          plane tick: 0.01
       }
 end
