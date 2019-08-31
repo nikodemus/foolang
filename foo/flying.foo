@@ -1,10 +1,6 @@
 class Vector {}
    class method project: a onto: b
-      ((Vector dot: a with: b) / (Vector dot: b with: b)) * b
-   class method dot: a with: b
-      (a at: 1) * (b at: 1) +
-      (a at: 2) * (b at: 2) +
-      (a at: 3) * (b at: 3)
+      ((a dot: b) / (b dot: b)) * b
 end
 
 class PointMass { forces mass position velocity debug }

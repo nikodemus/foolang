@@ -16,6 +16,7 @@ pub fn instance_vtable() -> Vtable {
     vt.def("at:", array_at);
     vt.def("divByFloat:", array_div_by_float);
     vt.def("do:", array_do);
+    vt.def("dot:", array_dot);
     vt.def("inject:into:", array_inject_into);
     vt.def("magnitude", array_magnitude);
     vt.def("mulFloat:", array_mul_float);
@@ -42,6 +43,30 @@ fn array_do(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
         Ok(())
     })?;
     Ok(receiver.clone())
+}
+
+fn array_dot(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    receiver.as_vec(|a| {
+        args[0].as_vec(|b| {
+            let n = a.len();
+            if n != b.len() {
+                return Unwind::error(
+                    "Cannot compute dot product for arrays of differing lengths.",
+                );
+            }
+            if n == 0 {
+                return Ok(foo.make_integer(0));
+            }
+            let mut sum = a[0].send("*", std::slice::from_ref(&b[0]), foo)?;
+            if n > 1 {
+                for i in 1..n {
+                    sum =
+                        sum.send("+", &[a[i].send("*", std::slice::from_ref(&b[i]), foo)?], foo)?;
+                }
+            }
+            Ok(sum)
+        })
+    })
 }
 
 fn array_inject_into(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
@@ -145,7 +170,7 @@ fn array_mul_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
 
 fn array_push(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
     let elt = args[0].clone();
-    receiver.as_vec(move |mut vec| {
+    receiver.as_mut_vec(move |mut vec| {
         vec.push(elt);
         Ok(())
     })?;

@@ -1,5 +1,5 @@
 use std::borrow::Borrow;
-use std::cell::{RefCell, RefMut};
+use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::fmt;
 use std::io::Read;
@@ -666,12 +666,22 @@ impl Foolang {
 }
 
 impl Object {
-    pub fn as_vec<T>(
+    pub fn as_mut_vec<T>(
         &self,
         fun: impl FnOnce(RefMut<Vec<Object>>) -> Result<T, Unwind>,
     ) -> Result<T, Unwind> {
         match &self.datum {
             Datum::Array(array) => fun(array.data.borrow_mut()),
+            _ => panic!("BUG: {:?} is not an Array", self),
+        }
+    }
+
+    pub fn as_vec<T>(
+        &self,
+        fun: impl FnOnce(Ref<Vec<Object>>) -> Result<T, Unwind>,
+    ) -> Result<T, Unwind> {
+        match &self.datum {
+            Datum::Array(array) => fun(array.data.borrow()),
             _ => panic!("BUG: {:?} is not an Array", self),
         }
     }

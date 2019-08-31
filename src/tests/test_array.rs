@@ -138,3 +138,11 @@ fn test_array_sum() {
         9
     );
 }
+
+#[test]
+fn test_array_dot() {
+    assert_eq!(eval_ok("[] dot: []").integer(), 0);
+    assert_eq!(eval_ok("[2] dot: [4]").integer(), 8);
+    assert_eq!(eval_ok("[1,2,3] dot: [4,5,6]").integer(), 32);
+    assert_eq!(eval_ok("[1.0, 2.0, 3.0] dot: [4,5,6]").float(), 32.0);
+}
