@@ -88,7 +88,7 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
       -- https://en.wikipedia.org/wiki/Drag_coefficient
       -- FIXME: current value is for sphere, box model might be nice
       -- FIXME: should really be a parameter
-      0.5
+      0.47
       
    method drag
       -- https://en.wikipedia.org/wiki/Drag_equation
@@ -119,13 +119,31 @@ end
 class Main { system }
    method run
       let plane = Plane mass: 750.0
-                        maxLift: 18.0
+                        maxLift: 25.0
                         maxSpeed: 27.0
                         maxThrust: 470.0
                         debug: system output
       plane throttle: 1.0
-      1000 times: {
-          system output println: "pos: {plane position} speed: {plane velocity}"
+      let takeoff = False
+      let flying = False
+      let t = 0.0
+      4000 times: {
+          -- system output println: "t: {t} pos: {plane position} speed: {plane velocity}"
+          let height = plane position at: 3
+          takeoff ifFalse: {
+             height > 0.1 ifTrue: {
+                system output println: "TAKEOFF at {plane position at: 2} meters"
+                takeoff = True
+             }
+          }
+          flying ifFalse: {
+             height > 15.0 ifTrue: {
+                system output println: "CLEARANCE at {plane position at: 2} meters"
+                flying = True
+             }
+          }
           plane tick: 0.01
+          t = t + 0.01
       }
+      system output println: "SIM END at {plane position at: 2} meters, height: {plane position at: 3}"
 end

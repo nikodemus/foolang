@@ -131,3 +131,15 @@ fn benchmarks() -> Result<(), Box<std::error::Error>> {
         .stdout(predicate::str::contains("Fibonacci:"));
     Ok(())
 }
+
+#[test]
+#[ignore]
+fn flying() -> Result<(), Box<std::error::Error>> {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/flying.foo");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("TAKEOFF"))
+        .stdout(predicate::str::contains("SIM END"));
+    Ok(())
+}
