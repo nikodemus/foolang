@@ -16,7 +16,7 @@ class Benchmarks { benchmarks output clock }
        ; reportTo: output
     }
 
-end.
+end
 
 class Benchmark { name block userTime systemTime realTime }
 
@@ -84,7 +84,7 @@ class Benchmark { name block userTime systemTime realTime }
          Fibonacci of: n
       }
 
-end.
+end
 
 class Fibonacci {}
 
@@ -93,7 +93,7 @@ class Fibonacci {}
         ifTrue: { return 1 }.
      (Fibonacci of: n - 1) + (Fibonacci of: n - 2)
 
-end.
+end
 
 class Factorial {}
 
@@ -102,7 +102,7 @@ class Factorial {}
         ifTrue: { return n }.
       n * (Factorial of: n - 1)
 
-end.
+end
 
 class Ackermann {}
 
@@ -113,7 +113,7 @@ class Ackermann {}
         ifTrue: { return Ackermann m: m - 1 n: 1 }.
      Ackermann m: m - 1 n: (Ackermann m: m n: n - 1)
 
-end.
+end
 
 class Main { system }
    method run

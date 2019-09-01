@@ -41,7 +41,7 @@ fn test_closure5() {
                  return { |x | value + x }
                class method test
                 return (self closeOver: 40) value: 2
-             end.
+             end
              T test"
         )
         .integer(),
@@ -59,7 +59,7 @@ fn test_closure_return() {
                  return 31
                class method boo: block
                  block value
-             end.
+             end
              T test",
         )
         .integer(),

@@ -26,7 +26,7 @@ fn test_compiler2() {
                class Foo { bar }
                  method quux: n
                     bar * n
-               end.
+               end
                let foo = Foo bar: 21.
                foo quux: 2
         ",

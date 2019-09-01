@@ -28,7 +28,7 @@ fn test_cascade2() {
                self
             method up: by
                a = a + by
-          end.
+          end
           Foo a: 44; neg up: 2; neg; a"
         )
         .integer(),
@@ -48,7 +48,7 @@ fn test_cascade3() {
                self
             method up: by
                a = a + by
-          end.
+          end
           Foo a: 44
           ; neg up: 2
           ; neg
@@ -102,7 +102,7 @@ fn test_instance_variable1() {
             "class Foo { bar }
                method zot
                   bar
-             end.
+             end
              (Foo bar: 42) zot"
         )
         .integer(),
@@ -120,7 +120,7 @@ fn test_instance_variable2() {
                   self
                method zot
                   bar
-             end.
+             end
              (Foo bar: 41) zit zot"
         )
         .integer(),
@@ -136,7 +136,7 @@ fn test_instance_variable3() {
                method foo: x
                   bar = bar + x.
                   self
-             end.
+             end
              ((Foo bar: 41) foo: 1) bar"
         )
         .integer(),
@@ -151,7 +151,7 @@ fn test_instance_variable4() {
            method foo: x
               bar = bar + x.
               self
-         end.
+         end
          ((Foo bar: 41) foo: 1.0) bar",
     );
     assert_eq!(
@@ -312,7 +312,7 @@ fn test_typecheck8() {
             defaultConstructor foo
             method zot: x::Integer
                 x
-         end.
+         end
          Foo foo zot: 1.0",
     );
     assert_eq!(
@@ -345,7 +345,7 @@ fn test_typecheck9() {
             defaultConstructor foo
             method zot: x -> Integer
                 x + 1
-         end.
+         end
          Foo foo zot: 1.0",
     );
     assert_eq!(
@@ -362,7 +362,7 @@ fn test_typecheck9() {
                         "003             method zot: x -> Integer\n",
                         "004                 x + 1\n",
                         "                    ^ Integer expected, got: Float 2.0\n",
-                        "005          end.\n",
+                        "005          end\n",
                     )
                     .to_string()
                 )
@@ -396,17 +396,17 @@ fn test_typecheck10() {
 }
 
 #[test]
-fn eval_let1() {
+fn test_let1() {
     assert_eq!(eval_ok("let x = 42. x").integer(), 42);
 }
 
 #[test]
-fn eval_let2() {
+fn test_let2() {
     assert_eq!(eval_ok("let x = 1. let x = 42. x").integer(), 42);
 }
 
 #[test]
-fn eval_let3() {
+fn test_let3() {
     assert_eq!(eval_ok("let x = 42. let y = 1. x").integer(), 42);
 }
 
@@ -534,7 +534,7 @@ fn eval_global2() {
 
 #[test]
 fn test_new_instance1() {
-    let (object, foo) = eval_obj("class Point { x y } end. Point x: 1 y: 2");
+    let (object, foo) = eval_obj("class Point { x y } end Point x: 1 y: 2");
     assert_eq!(object.send("x", &[], &foo), Ok(foo.make_integer(1)));
     assert_eq!(object.send("y", &[], &foo), Ok(foo.make_integer(2)));
 }
@@ -545,7 +545,7 @@ fn test_new_instance2() {
         "class Oh {}
             method no 42
             defaultConstructor noes
-         end.
+         end
          Oh noes",
     );
     assert_eq!(object.send("no", &[], &foo), Ok(foo.make_integer(42)));
@@ -556,7 +556,7 @@ fn test_instance_method1() {
     let (object, foo) = eval_obj(
         "class Foo {}
             method bar 311
-         end.
+         end
          Foo new",
     );
     assert_eq!(object.send("bar", &[], &foo), Ok(foo.make_integer(311)));
@@ -570,7 +570,7 @@ fn test_instance_method2() {
                self bar
             method bar
                311
-         end.
+         end
          Foo new",
     );
     assert_eq!(object.send("bar", &[], &foo), Ok(foo.make_integer(311)));
@@ -582,11 +582,11 @@ fn test_instance_method3() {
         "class Foo { value }
             method + other
                Foo value: value + other value
-         end.
+         end
          class Bar { a b }
             method sum
               a + b
-         end.
+         end
          Bar a: (Foo value: 1) b: (Foo value: 10)",
     );
     assert_eq!(
@@ -602,7 +602,7 @@ fn test_return_returns() {
             method foo
                return 1.
                2
-         end.
+         end
          Foo new foo",
     );
     assert_eq!(obj, foo.make_integer(1));
@@ -617,7 +617,7 @@ fn test_return_from_method_block() {
                 31
             method boo: blk
                 blk value
-         end.
+         end
          Foo new test
         ",
     );
@@ -639,7 +639,7 @@ fn test_return_from_deep_block_to_middle() {
             method test2: blk
                blk value.
                return 10000
-         end.
+         end
          Foo new test
         ",
     );
@@ -653,7 +653,7 @@ fn test_not_understood() {
             r#"class Foo {}
                 method perform: m with: args
                    "not understood: {m} args: {args}"
-               end.
+               end
                Foo new foo: 1 bar: 2"#
         )
         .string_as_str(),
@@ -669,7 +669,7 @@ fn test_method_keyword_multiline() {
                   class method bar: x
                                quux: y
                     x + y
-               end.
+               end
                Foo bar: 40 quux: 2"#
         )
         .integer(),

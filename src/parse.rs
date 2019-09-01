@@ -246,6 +246,13 @@ impl Expr {
         }
     }
 
+    fn is_class_definition(&self) -> bool {
+        match self {
+            Expr::ClassDefinition(..) => true,
+            _ => false,
+        }
+    }
+
     #[cfg(test)]
     pub fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
         match self {
@@ -481,7 +488,31 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_seq(&self) -> Result<Expr, Unwind> {
-        self.parse_expr(0)
+        let seq = self.parse_expr(1)?;
+        // FIXME: Terrible KLUDGE.
+        //
+        // 1. Class does not consume it's end since we use it to sequence toplevel definitions.
+        // 2. If class appears in a sequence context it will leave the end behind to be
+        //    discovered in a _prefix_ context.
+        //
+        // So we clean it up.
+        //
+        let (token, span) = self.lookahead()?;
+        if token == Token::WORD && self.slice_at(span) == "end" {
+            let is_class_def = if let Expr::Seq(seq) = &seq {
+                seq[seq.len() - 1].is_class_definition()
+            } else {
+                seq.is_class_definition()
+            };
+            if is_class_def {
+                self.next_token()?;
+            }
+        }
+        Ok(seq)
+    }
+
+    pub fn parse_body(&self) -> Result<Expr, Unwind> {
+        self.parse_expr(1)
     }
 
     pub fn parse_expr(&self, precedence: usize) -> Result<Expr, Unwind> {
@@ -656,7 +687,7 @@ fn make_token_table() -> TokenTable {
 
 // KLUDGE: couple of places which don't have convenient access to the table
 // need this.
-const SEQ_PRECEDENCE: usize = 1;
+const SEQ_PRECEDENCE: usize = 2;
 const PREFIX_PRECEDENCE: usize = 1000;
 
 fn make_name_table() -> NameTable {
@@ -664,28 +695,28 @@ fn make_name_table() -> NameTable {
     let t = &mut table;
 
     Syntax::def(t, "class", class_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "method", invalid_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "defaultConstructor", invalid_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "end", invalid_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_2);
-    Syntax::def(t, "return", return_prefix, invalid_suffix, precedence_2);
-    Syntax::def(t, ".", invalid_prefix, sequence_suffix, precedence_1);
     Syntax::def(t, ",", invalid_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, ";", invalid_prefix, cascade_suffix, precedence_2);
-    Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_3);
+    Syntax::def(t, "defaultConstructor", invalid_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "method", invalid_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "end", invalid_prefix, end_suffix, precedence_1);
+    Syntax::def(t, ".", invalid_prefix, sequence_suffix, precedence_2);
+    Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_3);
+    Syntax::def(t, "return", return_prefix, invalid_suffix, precedence_3);
+    Syntax::def(t, ";", invalid_prefix, cascade_suffix, precedence_3);
+    Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_4);
     Syntax::def(t, "is", invalid_prefix, is_suffix, precedence_10);
     Syntax::def(t, "::", invalid_prefix, typecheck_suffix, precedence_1000);
 
     // FIXME: Should opening group sigils use prefix precedence?
-    Syntax::def(t, "[", array_prefix, invalid_suffix, precedence_2);
+    Syntax::def(t, "[", array_prefix, invalid_suffix, precedence_3);
     Syntax::def(t, "]", invalid_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "(", paren_prefix, invalid_suffix, precedence_2);
+    Syntax::def(t, "(", paren_prefix, invalid_suffix, precedence_3);
     Syntax::def(t, ")", invalid_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "{", block_prefix, invalid_suffix, precedence_2);
+    Syntax::def(t, "{", block_prefix, invalid_suffix, precedence_3);
     Syntax::def(t, "}", invalid_prefix, invalid_suffix, precedence_0);
 
-    Syntax::def(t, "False", false_prefix, invalid_suffix, precedence_2);
-    Syntax::def(t, "True", true_prefix, invalid_suffix, precedence_2);
+    Syntax::def(t, "False", false_prefix, invalid_suffix, precedence_3);
+    Syntax::def(t, "True", true_prefix, invalid_suffix, precedence_3);
 
     Syntax::op(t, "*", false, true, 50);
     Syntax::op(t, "/", false, true, 40);
@@ -718,8 +749,12 @@ fn precedence_9(_: &Parser, _: Span) -> Result<usize, Unwind> {
     Ok(9)
 }
 
+fn precedence_4(_: &Parser, _: Span) -> Result<usize, Unwind> {
+    Ok(4)
+}
+
 fn precedence_3(_: &Parser, _: Span) -> Result<usize, Unwind> {
-    Ok(2)
+    Ok(3)
 }
 
 fn precedence_2(_: &Parser, _: Span) -> Result<usize, Unwind> {
@@ -932,15 +967,42 @@ fn sequence_suffix(
     left: Expr,
     precedence: PrecedenceFunction,
 ) -> Result<Expr, Unwind> {
-    let (token, span) = parser.lookahead()?;
-    if token == Token::SIGIL && parser.slice_at(span) == ";" {
-        return cascade_suffix(parser, left, precedence);
-    }
     let mut exprs = if let Expr::Seq(left_exprs) = left {
         left_exprs
     } else {
         vec![left]
     };
+    let right = parser.parse_expr(precedence(parser, parser.span())?)?;
+    if let Expr::Seq(mut right_exprs) = right {
+        exprs.append(&mut right_exprs);
+    } else {
+        exprs.push(right);
+    }
+    Ok(Expr::Seq(exprs))
+}
+
+fn end_suffix(parser: &Parser, left: Expr, precedence: PrecedenceFunction) -> Result<Expr, Unwind> {
+    let mut exprs = if let Expr::Seq(left_exprs) = left {
+        if left_exprs[left_exprs.len() - 1].is_class_definition() {
+            left_exprs
+        } else {
+            return parser.error("Unexpected 'end': not after class definition.");
+        }
+    } else {
+        if left.is_class_definition() {
+            vec![left]
+        } else {
+            return parser.error("Unexpected 'end': not after class definition.");
+        }
+    };
+    let (token, _) = parser.lookahead()?;
+    if token == Token::EOF {
+        if exprs.len() > 1 {
+            return Ok(Expr::Seq(exprs));
+        } else {
+            return Ok(exprs.pop().unwrap());
+        }
+    }
     let right = parser.parse_expr(precedence(parser, parser.span())?)?;
     if let Expr::Seq(mut right_exprs) = right {
         exprs.append(&mut right_exprs);
@@ -1030,10 +1092,11 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     let size = instance_variables.len();
     let mut class = ClassDefinition::new(span, class_name, instance_variables);
     loop {
-        let next = parser.next_token()?;
-        if next == Token::WORD && parser.slice() == "end" {
+        let (next, span2) = parser.lookahead()?;
+        if next == Token::WORD && parser.slice_at(span2) == "end" {
             break;
         }
+        parser.next_token()?;
         if next == Token::EOF {
             return parser.eof_error("Unexpected EOF while parsing class: expected method or end");
         }
@@ -1292,7 +1355,7 @@ fn parse_method(
     };
     // FIXME: This is the place where I could inform parser about instance
     // variables.
-    let body = parser.parse_seq()?;
+    let body = parser.parse_body()?;
     class.add_method(kind, MethodDefinition::new(span, selector, parameters, body, rtype));
     Ok(())
 }

@@ -63,7 +63,7 @@ class REPL
      _compiler parse: source onEof: { return False }.
     True
 
-end.
+end
 
 class Main { system }
   method run
