@@ -1,0 +1,29 @@
+class Main { system }
+   method run
+      let win = system window: "THE TEST".
+      win light: [0, 10, 0].
+      let ground = win cube: [10, 0.2, 10.0].
+      ground color: [0, 1, 0].
+      ground translate: [0, -2.1, 0].
+
+      let box = win cube: [1, 1, 1].
+      box color: [1, 0, 0].
+      box translate: [0, -1.5, 0].
+
+      let shadow = win cube: [1, 0.201, 1].
+      shadow color: [0.1, 0.2, 0.1].
+      shadow translate: [0, -2.1, 0].
+
+      win framerateLimit: 25.
+      let n = 0.
+      let step = 0.01.
+      { win shouldClose } whileFalse: {
+         win render.
+         box translate: [0, step, step].
+         shadow translate: [0, 0, step].
+         n == 100 ifTrue: { step = -step. n = 0. system output println: "REV!" }
+                  ifFalse: { n = n + 1 }
+      }.
+      win close.
+      system output println: "Done!"
+end

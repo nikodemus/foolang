@@ -308,6 +308,26 @@ impl Output {
     }
 }
 
+pub struct Window {
+    pub window: RefCell<kiss3d::window::Window>,
+}
+
+impl PartialEq for Window {
+    fn eq(&self, other: &Self) -> bool {
+        self as *const _ == other as *const _
+    }
+}
+
+pub struct SceneNode {
+    pub node: RefCell<kiss3d::scene::SceneNode>,
+}
+
+impl PartialEq for SceneNode {
+    fn eq(&self, other: &Self) -> bool {
+        self as *const _ == other as *const _
+    }
+}
+
 #[derive(PartialEq, Clone)]
 pub enum Datum {
     Array(Rc<Array>),
@@ -326,6 +346,9 @@ pub enum Datum {
     // XXX: Null?
     System,
     Time(Rc<TimeInfo>),
+    // Kiss3D stuff
+    Window(Rc<Window>),
+    SceneNode(Rc<SceneNode>),
 }
 
 #[derive(PartialEq, Clone)]
@@ -342,6 +365,9 @@ pub struct Foolang {
     output_vtable: Rc<Vtable>,
     string_vtable: Rc<Vtable>,
     time_vtable: Rc<Vtable>,
+    // Kiss3D stuff
+    window_vtable: Rc<Vtable>,
+    scene_node_vtable: Rc<Vtable>,
     pub globals: RefCell<HashMap<String, Object>>,
     pub workspace: Option<RefCell<HashMap<String, Binding>>>,
 }
@@ -410,6 +436,20 @@ impl Foolang {
         globals
             .insert("Time".to_string(), Class::object(classes::time::class_vtable(), &time_vtable));
 
+        // Kiss3D stuff
+
+        let window_vtable = Rc::new(classes::window::instance_vtable());
+        globals.insert(
+            "Window".to_string(),
+            Class::object(classes::window::class_vtable(), &window_vtable),
+        );
+
+        let scene_node_vtable = Rc::new(classes::scene_node::instance_vtable());
+        globals.insert(
+            "SceneNode".to_string(),
+            Class::object(classes::scene_node::class_vtable(), &scene_node_vtable),
+        );
+
         let foo = Foolang {
             array_vtable,
             boolean_vtable,
@@ -423,6 +463,9 @@ impl Foolang {
             output_vtable,
             string_vtable,
             time_vtable,
+            // Kiss3D stuff
+            window_vtable,
+            scene_node_vtable,
             globals: RefCell::new(globals),
             workspace: None,
         };
@@ -663,6 +706,26 @@ impl Foolang {
             datum: Datum::Time(Rc::new(timeinfo)),
         }
     }
+
+    // Kiss3D stuff
+
+    pub fn make_window(&self, window: kiss3d::window::Window) -> Object {
+        Object {
+            vtable: Rc::clone(&self.window_vtable),
+            datum: Datum::Window(Rc::new(Window {
+                window: RefCell::new(window),
+            })),
+        }
+    }
+
+    pub fn make_scene_node(&self, node: kiss3d::scene::SceneNode) -> Object {
+        Object {
+            vtable: Rc::clone(&self.scene_node_vtable),
+            datum: Datum::SceneNode(Rc::new(SceneNode {
+                node: RefCell::new(node),
+            })),
+        }
+    }
 }
 
 impl Object {
@@ -690,6 +753,13 @@ impl Object {
         match self.datum {
             Datum::Boolean(value) => value,
             _ => panic!("BUG: {:?} is not a Boolean", self),
+        }
+    }
+
+    pub fn is_boolean(&self) -> bool {
+        match self.datum {
+            Datum::Boolean(_) => true,
+            _ => false,
         }
     }
 
@@ -777,6 +847,24 @@ impl Object {
         }
     }
 
+    // Kiss3D stuff
+
+    pub fn window(&self) -> &Rc<Window> {
+        match &self.datum {
+            Datum::Window(win) => win,
+            _ => panic!("BUG: {:?} is not a Window", self),
+        }
+    }
+
+    pub fn scene_node(&self) -> &Rc<SceneNode> {
+        match &self.datum {
+            Datum::SceneNode(node) => node,
+            _ => panic!("BUG: {:?} is not a Window", self),
+        }
+    }
+
+    // SEND
+
     pub fn send(&self, message: &str, args: &[Object], foo: &Foolang) -> Eval {
         // println!("debug: {} {} {:?}", self, message, args);
         match self.vtable.get(message) {
@@ -833,6 +921,9 @@ impl fmt::Display for Object {
                 "#<Time real: {}, system: {}, user: {}>",
                 time.real, time.system, time.user
             ),
+            // Kiss3D stuff
+            Datum::Window(_) => write!(f, "#<Window>"),
+            Datum::SceneNode(_) => write!(f, "#<SceneNode>"),
         }
     }
 }

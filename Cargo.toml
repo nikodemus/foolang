@@ -11,6 +11,8 @@ num = "*"
 clap = "*"
 rouille = "*"
 webbrowser = "*"
+kiss3d = "*"
+nalgebra = "*"
 
 [target.'cfg(unix)'.dependencies]
 libc = "*"

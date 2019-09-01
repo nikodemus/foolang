@@ -12,6 +12,7 @@ pub fn vtable() -> Vtable {
     vt.def("output", system_output);
     vt.def("sleep", system_sleep);
     vt.def("sleep:", system_sleep_arg);
+    vt.def("window:", system_window);
     vt
 }
 
@@ -51,4 +52,8 @@ fn system_sleep_arg(_receiver: &Object, args: &[Object], foo: &Foolang) -> Eval 
         thread::sleep(duration);
     }
     Ok(foo.make_boolean(true))
+}
+
+fn system_window(_receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    Ok(foo.make_window(kiss3d::window::Window::new(args[0].string_as_str())))
 }

@@ -1,0 +1,176 @@
+class PointMass { forces mass gravity acceleration position velocity debug }
+  method sumForces
+     forces sum: { |f| f value }
+
+  method tick: dt
+     -- Velocity Verlet integration, should be more accurate than Euler's Method
+     -- http://buildnewgames.com/gamephysics/
+     -- https://en.wikipedia.org/wiki/Verlet_integration#Velocity_Verlet
+     position = position + velocity * dt + (acceleration * (0.5 * dt * dt)).
+     let newAcceleration = self sumForces / mass + gravity.
+     velocity = velocity + (newAcceleration + acceleration) * (0.5 * dt).
+     acceleration = newAcceleration
+
+  method position: pos
+     position = pos
+
+  method velocity: vel
+     velocity = vel
+end
+
+class PlaneGraphics { position plane shadow debug }
+
+   class method position: position window: window debug: debug
+      let plane = window cube: [1, 1, 3].
+      plane color: [1, 0, 0].
+      plane translate: [0, 0.5, 0].
+
+      let shadow = window cube: [1, 0.005, 3].
+      shadow color: [0.1, 0.2, 0.1].
+      self position: [0,0,0] plane: plane shadow: shadow debug: debug
+
+   method update: pos
+      let t = pos - position.
+      position = pos.
+      plane translate: [0, t at: 3, t at: 2].
+      shadow translate: [0, 0, t at: 2]
+
+end
+
+class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttle debug graphics }
+
+   class method mass: mass
+                maxLift: maxLift
+                maxSpeed: maxSpeed
+                maxThrust: maxThrust
+                window: window
+                debug: debug
+
+     let forces = [].
+
+     let model = PointMass forces: forces
+                           mass: mass
+                           gravity: [0.0, 0.0, -9.81]
+                           acceleration: [0.0, 0.0, 0.0]
+                           position: [0.0, 0.0, 0.0]
+                           velocity: [0.0, 0.0, 0.0]
+                           debug: debug.
+
+     let plane = self model: model
+                      noseDirection: [0.0, 1.0, 0.0]
+                      upDirection: [0.0, 0.0, 1.0]
+                      maxLift: maxLift
+                      maxSpeed: maxSpeed
+                      maxThrust: maxThrust
+                      throttle: 0.0
+                      debug: debug
+                      graphics: (PlaneGraphics position: model position window: window debug: debug).
+
+     -- PointMass has built-in gravity
+     forces push: { plane drag }.
+     forces push: { plane lift }.
+     forces push: { plane thrust }.
+
+     plane
+
+   method position
+      model position
+
+   method velocity
+      model velocity
+
+   method throttle: new
+      throttle = new atLeast: 0.0 atMost: 1.0
+
+   method tick: time
+      model tick: time.
+      self checkGround.
+      graphics update: model position
+
+   method checkGround
+      -- Don't allow Z-position to go below zero
+      let pos = model position.
+      (pos at: 3) < 0 ifTrue: {
+         model position put: 0.0 at: 3.
+         model velocity put: 0.0 at: 3
+      }
+
+   method crossSection: v
+      2.0 -- FIXME: a box model should not be too hard to calculate, also: should be parameter
+
+   method dragCoefficient: v
+      -- https://en.wikipedia.org/wiki/Drag_coefficient
+      -- FIXME: current value is for sphere, box model might be nice
+      -- FIXME: should really be a parameter
+      0.47
+      
+   method drag
+      -- https://en.wikipedia.org/wiki/Drag_equation
+      let velocity = model velocity.
+      let speed = velocity norm.
+      speed == 0.0 ifTrue: { return [0.0, 0.0, 0.0] }.
+      let direction = velocity normalized.
+      let a = self crossSection: direction.
+      let c = self dragCoefficient: direction.
+      let p = 1.269. -- mass density of air at 5C
+      direction * -0.5 * p * speed * speed * a * c
+
+   method lift
+      -- FIXME: https://www.grc.nasa.gov/WWW/K-12/WindTunnel/Activities/lift_formula.html
+      let airSpeed = model velocity scalarProjectionOn: noseDirection.
+      let lift = (airSpeed / maxSpeed) * maxLift.
+      upDirection * lift
+
+   method thrust
+      let thrust = maxThrust * throttle.
+      noseDirection * thrust
+      
+end
+
+class Main { system }
+   method run
+      let window = system window: "Flying".
+      window light.
+      let ground = window cube: [100, 0.1, 500].
+      ground color: [0, 1, 0].
+      ground translate: [0, -0.5, 0].
+      let plane = Plane mass: 750.0
+                        maxLift: 2200 * 9.81
+                        maxSpeed: 27.0
+                        maxThrust: 470.0
+                        window: window
+                        debug: system output.
+      plane throttle: 1.0.
+      let takeoff = False.
+      let flying = False.
+      let t = 0.0.
+      let step = 0.02.
+      { t < 100.0 } whileTrue: {
+          -- system output println: "t: {t} pos: {plane position} speed: {plane velocity}".
+          let height = plane position at: 3.
+          takeoff ifFalse: {
+             height > 0.1 ifTrue: {
+                system output println: "TAKEOFF at {plane position at: 2} meters, t: {t}".
+                takeoff = True.
+                plane throttle: 0.25
+             }
+          }.
+          flying ifTrue: {
+             height < 0.01 ifTrue: {
+                system output println: "TOUCHDOWN at {plane position at: 2} meters, t: {t}".
+                return True
+             }
+          } ifFalse: {
+             height > 10.0 ifTrue: {
+                system output println: "LANDING at {plane position at: 2} meters, t: {t}".
+                flying = True.
+                plane throttle: 0.0
+             }
+          }.
+          plane tick: step.
+          t = t + step.
+          window render.
+          window ifShouldClose: { return True }
+      }.
+      system output println: "TIMEOUT at {t}s"
+end
