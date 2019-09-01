@@ -23,6 +23,7 @@ pub fn instance_vtable() -> Vtable {
     vt.def("mulInteger:", array_mul_integer);
     vt.def("normalized", array_normalized);
     vt.def("push:", array_push);
+    vt.def("put:at:", array_put_at);
     vt.def("scalarProjectionOn:", array_scalar_projection_on);
     vt.def("subArray:", array_sub_array);
     vt.def("sum", array_sum);
@@ -177,6 +178,14 @@ fn array_push(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
         Ok(())
     })?;
     Ok(receiver.clone())
+}
+
+fn array_put_at(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
+    let elt = args[0].clone();
+    receiver.as_mut_vec(move |mut vec| {
+        vec[(args[1].integer() - 1) as usize] = elt.clone();
+        Ok(elt)
+    })
 }
 
 fn array_scalar_projection_on(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {

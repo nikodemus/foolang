@@ -69,9 +69,8 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
       -- Don't allow Z-position to go below zero
       let pos = model position.
       (pos at: 3) < 0 ifTrue: {
-         model position: [pos at: 1, pos at: 2, 0.0].
-         let vel = model velocity.
-         model velocity: [vel at: 1, vel at: 2, 0.0]
+         model position put: 0.0 at: 3.
+         model velocity put: 0.0 at: 3
       }
 
    method crossSection: v
