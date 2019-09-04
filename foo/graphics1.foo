@@ -2,6 +2,7 @@ class Main { system }
    method run
       let win = system window: "THE TEST".
       win light: [0, 10, 0].
+
       let ground = win cube: [10, 0.2, 10.0].
       ground color: [0, 1, 0].
       ground translate: [0, -2.1, 0].

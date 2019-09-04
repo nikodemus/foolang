@@ -1,7 +1,9 @@
 use crate::objects::{Eval, Foolang, Object, Vtable};
 use kiss3d;
 
-use nalgebra::Point3;
+use std::path::Path;
+
+use nalgebra::{Point3, Vector3};
 
 pub fn class_vtable() -> Vtable {
     Vtable::new("class Window")
@@ -13,6 +15,7 @@ pub fn instance_vtable() -> Vtable {
     vt.def("close", window_close);
     vt.def("light", window_light);
     vt.def("light:", window_light_arg);
+    vt.def("obj:mtl:scale:", window_obj_mtl_scale);
     vt.def("render", window_render);
     vt.def("framerateLimit:", window_framerate_limit);
     vt.def("ifShouldClose:", window_if_should_close);
@@ -43,6 +46,19 @@ fn window_cube(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
         win.add_cube(x, y, z)
     };
     Ok(foo.make_scene_node(cube))
+}
+
+fn window_obj_mtl_scale(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+    let obj_path = Path::new(args[0].string_as_str());
+    let mtl_path = Path::new(args[1].string_as_str());
+    args[2].as_vec(|vec| {
+        let x = vec[0].send("asFloat", &[], foo)?.float() as f32;
+        let y = vec[1].send("asFloat", &[], foo)?.float() as f32;
+        let z = vec[2].send("asFloat", &[], foo)?.float() as f32;
+        let mut win = receiver.window().window.borrow_mut();
+        let obj = win.add_obj(&obj_path, &mtl_path, Vector3::new(x, y, z));
+        Ok(foo.make_scene_node(obj))
+    })
 }
 
 fn window_light(receiver: &Object, _args: &[Object], _foo: &Foolang) -> Eval {
