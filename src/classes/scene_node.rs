@@ -33,7 +33,7 @@ fn scene_node_color(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
 }
 
 fn scene_node_texture_from(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
-    kiss3d::resource::TextureManager::get_global_manager(|mut manager| {
+    kiss3d::resource::TextureManager::get_global_manager(|manager| {
         let path = Path::new(args[1].string_as_str());
         let texture = manager.add(&path, args[0].string_as_str());
         let mut node = receiver.scene_node().node.borrow_mut();
