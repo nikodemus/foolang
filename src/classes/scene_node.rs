@@ -3,8 +3,6 @@ use std::path::Path;
 
 use nalgebra::Translation3;
 
-use crate::unwind::Unwind;
-
 pub fn class_vtable() -> Vtable {
     Vtable::new("class SceneNode")
 }
