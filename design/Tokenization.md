@@ -39,10 +39,15 @@
 
  8. If at " consume until non-escaped " and return STRING.
 
- 9. If at a word character, until eof or non-word character. If the
-    word is immediately followed by a single colon (ie. not double)
-    and whitespace, consume the colon and return KEYWORD, otherwise
-    return WORD.
+ 9. If at a word character, until eof or non-word character.
+
+    9.1 If the word is immediately followed by a single colon (ie. not double)
+        and whitespace, consume the colon and return KEYWORD.
+
+    9.2 If the word is immediately followed by a dot followed by a word character
+        consume the dot and continue parsing the word at step 9.
+
+    9.3 Otherwise return WORD.
 
 10. At a sigil character, consume sigil characters and return SIGIL.
 

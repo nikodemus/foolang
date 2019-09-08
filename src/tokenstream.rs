@@ -198,29 +198,43 @@ impl<'a> TokenStream<'a> {
             return self.result(Token::STRING, start..self.pos());
         }
         //
-        // 9. If at a word character, until eof or non-word character. If the
-        //    word is immediately followed by a single colon (ie. not double colon),
-        //    consume the colon and return KEYWORD, otherwise
-        //    return WORD.
+        // 9. If at a word character, until eof or non-word character.
         //
         if self.at_word() {
-            // println!("scan 9: word or keyword");
             let start = self.next();
-            while self.at_word() {
-                self.next();
-            }
-            if self.at_char(':') {
-                // println!("scan 9: word followed by colon");
-                let pos = self.next();
-                if self.at_char(':') {
-                    self.reset(pos);
-                } else {
-                    // println!("=> keyword");
-                    return self.result(Token::KEYWORD, start..self.pos());
+            loop {
+                // println!("scan 9: word or keyword");
+                while self.at_word() {
+                    self.next();
                 }
+                // 9.1 If the word is immediately followed by a single
+                //     colon (ie. not double) and whitespace, consume the
+                //     colon and return KEYWORD.
+                if self.at_char(':') {
+                    // println!("scan 9.1: word followed by colon");
+                    let pos = self.next();
+                    if self.at_char(':') {
+                        self.reset(pos);
+                    } else {
+                        // println!("=> keyword");
+                        return self.result(Token::KEYWORD, start..self.pos());
+                    }
+                }
+                // 9.2 If the word is immediately followed by a dot
+                //     followed by a word character consume the dot and
+                //     continue parsing the word at step 9.
+                if self.at_char('.') {
+                    // println!("scan 9.2: word followed by dot");
+                    let pos = self.next();
+                    if self.at_word() {
+                        continue;
+                    } else {
+                        self.reset(pos);
+                    }
+                }
+                // println!("=> word {}", &self.source[start..self.pos()]);
+                return self.result(Token::WORD, start..self.pos());
             }
-            // println!("=> word");
-            return self.result(Token::WORD, start..self.pos());
         }
         //
         // 10. At a sigil character, consume the sigil and return SIGIL.

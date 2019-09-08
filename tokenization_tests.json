@@ -160,6 +160,12 @@
     [
         "foo:bar", [["KEYWORD", "foo:"],["WORD", "bar"],["EOF"]]
     ],
+    [
+        "foo.bar", [["WORD", "foo.bar"],["EOF"]]
+    ],
+    [
+        "foo.bar.quux", [["WORD", "foo.bar.quux"],["EOF"]]
+    ],
     {
         "Rule 10": "Sigils"
     },
@@ -171,6 +177,9 @@
     ],
     [
         "foo::bar", [["WORD", "foo"],["SIGIL", "::"],["WORD", "bar"],["EOF"]]
+    ],
+    [
+        "foo. bar", [["WORD", "foo"],["SIGIL", "."],["WORD", "bar"],["EOF"]]
     ],
     [
         " a ++ b ", [["WORD", "a"],["SIGIL", "++"],["WORD", "b"],["EOF"]]
