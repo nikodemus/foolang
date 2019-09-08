@@ -967,6 +967,13 @@ fn sequence_suffix(
     left: Expr,
     precedence: PrecedenceFunction,
 ) -> Result<Expr, Unwind> {
+    let (token, span) = parser.lookahead()?;
+    let text = parser.slice_at(span);
+    if (token == Token::WORD && (text == "method" || text == "end" || text == "class"))
+        || token == Token::EOF
+    {
+        return Ok(left);
+    }
     let mut exprs = if let Expr::Seq(left_exprs) = left {
         left_exprs
     } else {

@@ -97,6 +97,14 @@ fn test_sequence2() {
 }
 
 #[test]
+fn test_sequence3() {
+    assert_eq!(
+        parse_str("foo bar. quux."),
+        Ok(seq(vec![unary(4..7, "bar", var(0..3, "foo")), var(9..13, "quux")]))
+    );
+}
+
+#[test]
 fn test_let1() {
     assert_eq!(
         parse_str("let x = 21 + 21. x"),
@@ -188,6 +196,28 @@ fn parse_method2() {
                         self bar
                      method bar
                         42
+                 end"
+        ),
+        Ok(class)
+    );
+}
+
+#[test]
+fn parse_method3() {
+    let mut class = class(18..23, "Foo", vec![]);
+    class.add_method(
+        MethodKind::Instance,
+        method(52..58, "foo", vec![], unary(92..95, "bar", var(87..91, "self"))),
+    );
+    class.add_method(MethodKind::Instance, method(118..124, "bar", vec![], int(153..155, 42)));
+    assert_eq!(
+        parse_str(
+            "
+                 class Foo {}
+                     method foo
+                        self bar.
+                     method bar
+                        42.
                  end"
         ),
         Ok(class)
