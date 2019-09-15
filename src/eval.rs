@@ -8,7 +8,7 @@ use crate::objects::{
     Vtable,
 };
 use crate::parse::{
-    Array, Assign, ClassDefinition, Expr, Global, Literal, Message, Parser, Return, Var,
+    Array, Assign, ClassDefinition, Expr, Global, Import, Literal, Message, Parser, Return, Var,
 };
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -186,6 +186,7 @@ impl<'a> Env<'a> {
             Const(_, literal) => self.eval_literal(literal),
             Eq(_, left, right) => self.eval_eq(left, right),
             Global(global) => self.eval_global(global),
+            Import(import) => self.eval_import(import),
             Return(ret) => self.eval_return(ret),
             Chain(receiver, messages) => self.eval_chain(receiver, messages),
             Seq(exprs) => self.eval_seq(exprs),
@@ -313,6 +314,35 @@ impl<'a> Env<'a> {
             Literal::Float(value) => Ok(self.foo.make_float(*value)),
             Literal::String(value) => Ok(self.foo.make_string(value)),
         }
+    }
+
+    fn eval_import(&self, import: &Import) -> Eval {
+        unimplemented!("eval_import")
+        /* Sketch:
+            - import.load_module() is responsible for adding prefixes and such
+              (or eliding them or only bringing in one object, etc)
+
+            let names = import.load_module(self.foo);
+            let value = match &import.body {
+                 None => Const::new(self.foo.make_string(&import.name))
+                 Some(expr) => expr,
+            };
+            match self.foo.workspace {
+              Some(ref workspace) if self.frame.receiver().is_none() => {
+                 // toplevel import in workspace (not module?! how do I know?)
+                 {
+                   let mut table = workspace.borrow_mut();
+                   table.insert_all(names);
+                 }
+                 self.eval(value),
+              }
+              _ => {
+                // Lexical
+                let env = Env::from_parts(self.foo, names, Some(self.frame.clone()), None);
+                env.eval(value)
+              }
+            }
+        */
     }
 
     fn eval_return(&self, ret: &Return) -> Eval {

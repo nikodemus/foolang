@@ -104,6 +104,13 @@ impl ClassDefinition {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Import {
+    pub span: Span,
+    pub name: String,
+    pub body: Box<Expr>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Message {
     pub span: Span,
     pub selector: String,
@@ -232,6 +239,7 @@ pub enum Expr {
     Const(Span, Literal),
     Eq(Span, Box<Expr>, Box<Expr>),
     Global(Global),
+    Import(Import),
     Return(Return),
     Seq(Vec<Expr>),
     Typecheck(Span, Box<Expr>, String),
@@ -317,6 +325,7 @@ impl Expr {
             Eq(span, ..) => span,
             Global(global) => &global.span,
             Chain(left, _) => return left.span(),
+            Import(import) => &import.span,
             Return(ret) => &ret.span,
             // FIXME: Questionable
             Seq(exprs) => return exprs[exprs.len() - 1].span(),
@@ -388,6 +397,10 @@ impl Expr {
                 for message in chain {
                     message.shift_span(n);
                 }
+            }
+            Import(import) => {
+                import.span.shift(n);
+                import.body.shift_span(n);
             }
             Return(ret) => {
                 ret.span.shift(n);
