@@ -15,13 +15,13 @@ use crate::unwind::Unwind;
 
 #[derive(Debug)]
 pub struct MethodFrame {
-    pub args: RefCell<HashMap<String, Binding>>,
+    pub names: RefCell<HashMap<String, Binding>>,
     pub receiver: Object,
 }
 
 #[derive(Debug)]
 pub struct BlockFrame {
-    pub args: RefCell<HashMap<String, Binding>>,
+    pub names: RefCell<HashMap<String, Binding>>,
     // Innermost lexically enclosing frame
     pub parent: Option<Frame>,
     // Lexically enclosing method frame
@@ -42,7 +42,7 @@ impl PartialEq for BlockFrame {
 
 // FIXME:
 //  Frame {
-//    args:
+//    names:
 //    context: BlockContext | MethodContext
 //  }
 #[derive(Debug, Clone, PartialEq)]
@@ -53,7 +53,7 @@ pub enum Frame {
 
 impl Frame {
     fn new(
-        args: HashMap<String, Binding>,
+        names: HashMap<String, Binding>,
         parent: Option<Frame>,
         receiver: Option<Object>,
     ) -> Frame {
@@ -64,7 +64,7 @@ impl Frame {
                     Some(p) => p.home(),
                 };
                 Frame::BlockFrame(Rc::new(BlockFrame {
-                    args: RefCell::new(args),
+                    names: RefCell::new(names),
                     parent,
                     home,
                 }))
@@ -72,17 +72,17 @@ impl Frame {
             Some(receiver) => {
                 assert!(parent.is_none());
                 Frame::MethodFrame(Rc::new(MethodFrame {
-                    args: RefCell::new(args),
+                    names: RefCell::new(names),
                     receiver,
                 }))
             }
         }
     }
 
-    fn args(&self) -> &RefCell<HashMap<String, Binding>> {
+    fn names(&self) -> &RefCell<HashMap<String, Binding>> {
         match self {
-            Frame::MethodFrame(method_frame) => &method_frame.args,
-            Frame::BlockFrame(block_frame) => &block_frame.args,
+            Frame::MethodFrame(method_frame) => &method_frame.names,
+            Frame::BlockFrame(block_frame) => &block_frame.names,
         }
     }
 
@@ -114,7 +114,7 @@ impl Frame {
     }
 
     fn set(&self, name: &str, value: Object) -> Option<Eval> {
-        match self.args().borrow_mut().get_mut(name) {
+        match self.names().borrow_mut().get_mut(name) {
             Some(binding) => Some(binding.assign(value)),
             None => match self.parent() {
                 Some(parent) => parent.set(name, value),
@@ -124,7 +124,7 @@ impl Frame {
     }
 
     fn get(&self, name: &str) -> Option<Object> {
-        match self.args().borrow().get(name) {
+        match self.names().borrow().get(name) {
             Some(binding) => return Some(binding.value.clone()),
             None => match self.parent() {
                 Some(parent) => parent.get(name),
@@ -196,13 +196,13 @@ impl<'a> Env<'a> {
 
     fn from_parts(
         foo: &'a Foolang,
-        args: HashMap<String, Binding>,
+        names: HashMap<String, Binding>,
         parent: Option<Frame>,
         receiver: Option<Object>,
     ) -> Env<'a> {
         Env {
             foo,
-            frame: Frame::new(args, parent, receiver),
+            frame: Frame::new(names, parent, receiver),
         }
     }
 
@@ -246,9 +246,9 @@ impl<'a> Env<'a> {
             }
             _ => {
                 // Lexical
-                let mut args = HashMap::new();
-                args.insert(name.to_owned(), binding);
-                let env = Env::from_parts(self.foo, args, Some(self.frame.clone()), None);
+                let mut names = HashMap::new();
+                names.insert(name.to_owned(), binding);
+                let env = Env::from_parts(self.foo, names, Some(self.frame.clone()), None);
                 match value {
                     Ok(expr) => env.eval(expr),
                     Err(value) => Ok(value),
