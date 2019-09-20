@@ -107,7 +107,7 @@ impl ClassDefinition {
 pub struct Import {
     pub span: Span,
     pub name: String,
-    pub body: Box<Expr>,
+    pub body: Option<Box<Expr>>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -400,7 +400,9 @@ impl Expr {
             }
             Import(import) => {
                 import.span.shift(n);
-                import.body.shift_span(n);
+                if let Some(ref mut body) = import.body {
+                    body.shift_span(n);
+                }
             }
             Return(ret) => {
                 ret.span.shift(n);
@@ -708,6 +710,7 @@ fn make_name_table() -> NameTable {
     let t = &mut table;
 
     Syntax::def(t, "class", class_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "import", import_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ",", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "defaultConstructor", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "method", invalid_prefix, invalid_suffix, precedence_0);
@@ -1074,6 +1077,27 @@ fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         parser.eof_error("Unexpected EOF while pasing a block: expected } as block terminator")
     } else {
         parser.error("Expected } as block terminator")
+    }
+}
+
+fn import_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+    let start = parser.span().start;
+    if Token::WORD == parser.next_token()? {
+        let span = start..parser.span().end;
+        let name = parser.slice().to_string();
+        let body = if Token::EOF == parser.lookahead()?.0 {
+            parser.next_token()?;
+            None
+        } else {
+            Some(Box::new(parser.parse_seq()?))
+        };
+        Ok(Expr::Import(Import {
+            span,
+            name,
+            body,
+        }))
+    } else {
+        return parser.error("Expected module name");
     }
 }
 
