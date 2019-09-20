@@ -473,6 +473,25 @@ impl Foolang {
         foo
     }
 
+    pub fn load_module(&self, name: &str) -> Result<HashMap<String, Binding>, Unwind> {
+        let code = match std::fs::read_to_string(format!("foo/{}.foo", name)) {
+            Ok(code) => code,
+            Err(err) => return Unwind::error("Could not load module"),
+        };
+        let env = Env::new(self);
+        let mut parser = Parser::new(&program);
+        while !parser.at_eof() {
+            let expr = match parser.parse() {
+                Ok(expr) => expr,
+                Err(unwind) => return Err(unwind.with_context(&code)),
+            };
+            match expr {
+                Expr::ClassDefinition(class_definition) => unimplemented!("load_module"),
+            }
+            env.eval(&expr).context(&code)?;
+        }
+    }
+
     pub fn run(&self, program: &str) -> Eval {
         let system = self.make_system();
         let env = Env::new(self);

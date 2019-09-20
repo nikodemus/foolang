@@ -288,6 +288,7 @@ impl<'a> Env<'a> {
         }
         let name = &definition.name;
         let class = self.foo.make_class(definition)?;
+        // FIXME: should be self.globals
         self.foo.globals.borrow_mut().insert(name.to_string(), class.clone());
         Ok(class)
     }
@@ -317,6 +318,7 @@ impl<'a> Env<'a> {
     }
 
     fn eval_import(&self, import: &Import) -> Eval {
+        let names = self.foo.load_module(&import.name)?;
         unimplemented!("eval_import")
         /* Sketch:
             - import.load_module() is responsible for adding prefixes and such
