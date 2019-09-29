@@ -473,6 +473,7 @@ impl Foolang {
         foo
     }
 
+    /*
     pub fn load_module(&self, name: &str) -> Result<HashMap<String, Binding>, Unwind> {
         let code = match std::fs::read_to_string(format!("foo/{}.foo", name)) {
             Ok(code) => code,
@@ -491,6 +492,7 @@ impl Foolang {
             env.eval(&expr).context(&code)?;
         }
     }
+     */
 
     pub fn run(&self, program: &str) -> Eval {
         let system = self.make_system();

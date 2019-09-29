@@ -317,8 +317,8 @@ impl<'a> Env<'a> {
         }
     }
 
-    fn eval_import(&self, import: &Import) -> Eval {
-        let names = self.foo.load_module(&import.name)?;
+    fn eval_import(&self, _import: &Import) -> Eval {
+        // let names = self.foo.load_module(&import.name)?;
         unimplemented!("eval_import")
         /* Sketch:
             - import.load_module() is responsible for adding prefixes and such
