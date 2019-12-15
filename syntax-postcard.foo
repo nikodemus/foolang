@@ -1,0 +1,34 @@
+-- Syntax on a postcard
+
+import foolang.core as: foocore
+
+define Info = "Everything is ok"
+
+class Example { output::Stream }
+
+   method note: message
+      output println: message
+   end
+
+   method with: x::Integer -> [Integer]
+      "Docstring"
+      <pragma: alwaysInline>
+      let s := 0,     -- Mutable binding using :=
+      let n = 0,      -- Immutable binding using =
+      { n < x } whileTrue: {
+         sum := Sum + 1
+      },
+      True & False not & (None isNone)
+        ifFalse: { return "Impossible" } -- returns from method
+        ifTrue: { self note: Info },
+      -- Value of final expression is the implicit return value
+      -- Array constructor followed by type restriction message
+      [x, y, sum] of: Integer
+   end
+
+end
+
+main: system
+   let example = Example output: system output,
+   system exit: (example with: 10)
+end
