@@ -2,8 +2,8 @@
 
 # foolang
 
-A Smalltalk-inspired object language that liberally cribs from Common Lisp,
-Erlang and Fortress.
+A Smalltalk-style object language that liberally cribs from Common
+Lisp, Erlang and Fortress.
 
 Like all new languages it has _somewhat_ unrealistic aspirations:
 
@@ -18,36 +18,43 @@ Like all new languages it has _somewhat_ unrealistic aspirations:
 
 I want the language and the environment to be engaging and inspiring.
 
-I want someone who last programmed some basic on Commodore 64 over 30
+I want someone who last programmed some Basic on Commodore 64 over 30
 years ago to feel empowered to do things.
 
 I want experienced programmers to feel comfortable: having the system
-trust them and being able to trust the system.
+trust them and them being able to trust the system.
 
-I want programs written by others to be easy to understand after the fact.
+I want programs written by others to be easy to understand after the
+fact.
 
 ## Hello World
 
-    main: system
-      system output println: "Hello world!"
+    class Main { system }
+        method run
+            system output println: "Hello world!"
+    end
+
+The plan is to provide a bit of syntax sugar for this, but that's a low
+priority.
 
 ## Design Principles
 
 In order of priority:
 
-1. Ergonomics: Code should be a pleasure to reand and write.
+1. Safety: No memory errors. No race conditions. No ambient authority.
+   No undefined behaviour. Fault-tolerant applications.
 
-2. Safety: No memory errors. No race conditions. No ambient authority.
-   Fault-tolerant applications.
+2. Ergonomics: Code should be a pleasure to read and write.
 
 3. Performance: Code with type annotations should run on par with -O0
-   compiled C++.
+   compiled C or C++.
 
 4. Uniformity: Built-in code should not be privileged over user code.
 
-Finally, there is an absolute requirement of implementability: Foolang is ment
-to be a real language, not a pipe dream, but it is also a one-person effort at
-the moment. So: "Don't summon anything bigger than your head."
+Finally, there is an absolute requirement of implementability: Foolang
+is to be a real language, not a pipe dream, but it is also a
+one-person effort at the moment. So: "Don't summon anything bigger
+than your head."
 
 ## Core Features
 
@@ -90,8 +97,10 @@ Foolang is expression oriented: every expression has a value.
 
 Following words have special meaning:
 
-    is
+    let
+    return
     class
+    define
     method
     end
 
@@ -126,8 +135,8 @@ Literal floats are doubles, unless written in the exponential format using
     0xDEADBEEF
     0b011011
     1.0     -- double
-    1.0e10  -- double
-    1.0f10  -- single
+    1.0e0   -- double
+    1.0f0   -- single
 
 Strings allow interpolations to be embedded:
 
@@ -137,11 +146,22 @@ Strings allow interpolations to be embedded:
 
 Messages are sent by simple concatenation, Smalltalk-style:
 
-    -- Message with selector "foo" to object
+    -- Message with selector "foo" and no arguments to object
     object foo
 
-    -- Message with selector "foo:bar:" and arguments 1 and 2
+    -- Message with selector "foo:bar:" and arguments 1 and 2 to object
     object foo: 1 bar: 2
+
+**Expression Separators**
+
+Expressions are separated form each other with dots, Smalltalk-style:
+
+    -- Message with selector "foo" to objectA, message with selector "bar" to
+    -- objectB. Newline can be elided.
+    objectA foo.
+    objectB bar
+
+A sequence of expressions like this evaluates to the value of the last one.
 
 **Operator Precedence**
 
@@ -151,9 +171,9 @@ Unlike Smalltalk operators have conventional precedence:
 
 **Local Variables**
 
-Are defined using let:
+Defined using let:
 
-    let x = 42
+    let x = 42.
     x * 100 --> 420
 
 **Blocks**
@@ -164,16 +184,17 @@ Unlike Smalltalk Foolang uses braces for blocks:
 
 Blocks can take arguments:
 
-    { :x | x + 2 } value: 40 --> 42
+    { |x| x + 2 } value: 40 --> 42
+
+    { |x, y| x + y } value: 40 value: 2 --> 42
 
 Underscore can be used as an implicit argument in blocks:
 
     -- Odd numbers from an array
-    array select: { :elt | elt isOdd }
+    array select: { |elt| elt isOdd }
 
     -- Same using the implicit argument
     array select: { _ isOdd }
-    
 
 **Class Definitions**
 
@@ -181,8 +202,10 @@ Underscore can be used as an implicit argument in blocks:
        method + other
           Point x: x + other x
                 y: y + other y
+
        method display
           "#<Point {x,y}>"
+
     end
 
     let p0 = Point x: 1 :y 2     --> #<Point 1,2>
@@ -208,9 +231,9 @@ Are constructed using square brackets
 
     let array = [1, 2, 3]
 
-Can be specialized using the type annotation syntax
+Can be specialized using a message
 
-    let byteArray = [1, 2, 3] :: [u8]
+    let byteArray = [1, 2, 3] of: U8
 
 **Dictionaries**
 
@@ -220,11 +243,15 @@ Are constructed using braces
 
 ## Notes
 
-- For iterators: [as, bs, cs]
-          where: { |a,b,c| a*a == (b*b + c*c) }
-          collect: { |a,b,c| [a,b,c] }
+```
+For iterators: [as, bs, cs]
+        where: { |a,b,c| a*a == (b*b + c*c) }
+       collect: { |a,b,c| [a,b,c] }
+```
 
-  maybe?
+maybe?
+
+- before, after, and around methods
 
 - Using words to define operators. Maybe `x _max_ y` or `x \max y`. Either would
   also be nice syntax for entering unicode operators.
@@ -243,7 +270,7 @@ Are constructed using braces
      x > y < z is an example of a composing-associative group with
      the composing operator &&.
 
-     => tmp := none, (x > (tmp := y)) && (tmp < z)
+     => let tmp = y. (x > tmp) && (tmp < z)
 
   4. Precedence groups are organized into rows. Operators on the same row
      are at the same precedence. Operators at higher rows are at higher
