@@ -8,19 +8,17 @@ Users can implement new types of arrays.
 Builtin array types are Vector, Matrix, and NdArray. Builtin types use
 [] syntax as the constructor.
 
+NOTE: Elements of array constructor that evaluate to arrays are
+flattened into the newly created array.
+
 NOTE: Elements of array constructor expressions must be parenthesized
 unless they are constants, variable references, or prefix messages to
 either constants or variable references.
 
-XXX: The parenthetization requirement is probably a leftover from using
-comma to separate statements, and as such not necessary anymore.
-
-NOTE: Elements of array constructor that evaluate to arrays are
-flattened into the newly created array.
-
-XXX: This is super convenient for array manipulation, but there should
-probably be a way to prevent it from happening, to allow construction
-of array of arrays.
+XXX: This may bear reconsideration: this allows using whitespace to
+catenate inside arrays, which is kind of nice... but we could just as
+well use eg. ellipsis to do that. (It also makes commas optional, which
+is a mixed bag.) The syntax is largely stolen from Fortress.
 
 ## Specialization
 

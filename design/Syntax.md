@@ -1,5 +1,7 @@
 # Syntax
 
+## Plan
+
 delimiters := , ; ( ) { } [ ]
 
   these will only ever tokenize to a single character
