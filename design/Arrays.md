@@ -12,20 +12,67 @@ NOTE: Elements of array constructor expressions must be parenthesized
 unless they are constants, variable references, or prefix messages to
 either constants or variable references.
 
+XXX: The parenthetization requirement is probably a leftover from using
+comma to separate statements, and as such not necessary anymore.
+
 NOTE: Elements of array constructor that evaluate to arrays are
 flattened into the newly created array.
 
-XXX: Once things move further along, something like
+XXX: This is super convenient for array manipulation, but there should
+probably be a way to prevent it from happening, to allow construction
+of array of arrays.
+
+## Specialization
+
+Arrays are specialized using a specialization method:
+
+    [1, 2, 3] of: U8
+
+Once things move further along, something like
 
     [::U8 1, 2, 3]
 
-will be used to specify array allocation type. Default will be the
-lowest common denominator that the compiler can derive.
+may be used instead.
 
 XXX: Once I have allocation types for arrays, they will be denoted using a type parameter:
 
     Vector[F64]
     Matrix[U8]
+
+## Indexing & Broadcasting
+
+Indexes start at 1. Rationale: this makes
+
+    1 to: 10
+
+easy to understand and interacts nicely with slicing.
+
+n elements from start:
+
+         array[n from: start]
+
+from start to end
+
+         array[start to: end]
+
+Negative indexes index from the end.
+
+`array[x]` is sugar for array at: x
+
+`array[x] = y` is sugar for array at: x put: y
+
+Both of these go though double-dispatch on the index:
+
+       Array method at: pos
+          pos atArray: self
+       Integer method atArray: array
+          array atIndex: self
+       Array method atArray: array
+          array atIndexes: self
+       Interval method atArray: array
+          array atInterval: self
+
+The corresponding put methods will broadcast as necessary.
 
 ## Vector
 
