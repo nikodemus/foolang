@@ -289,7 +289,7 @@ impl<'a> Env<'a> {
         let name = &definition.name;
         let class = self.foo.make_class(definition)?;
         // FIXME: should be self.globals
-        self.foo.globals.borrow_mut().insert(name.to_string(), class.clone());
+        self.foo.builtins.borrow_mut().insert(name.to_string(), class.clone());
         Ok(class)
     }
 
@@ -302,7 +302,7 @@ impl<'a> Env<'a> {
     }
 
     fn eval_global(&self, global: &Global) -> Eval {
-        match self.foo.globals.borrow().get(&global.name) {
+        match self.foo.builtins.borrow().get(&global.name) {
             Some(obj) => Ok(obj.clone()),
             None => Unwind::error_at(global.span.clone(), "Undefined global"),
         }

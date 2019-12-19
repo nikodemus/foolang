@@ -368,84 +368,84 @@ pub struct Foolang {
     // Kiss3D stuff
     window_vtable: Rc<Vtable>,
     scene_node_vtable: Rc<Vtable>,
-    pub globals: RefCell<HashMap<String, Object>>,
+    pub builtins: RefCell<HashMap<String, Object>>,
     pub workspace: Option<RefCell<HashMap<String, Binding>>>,
 }
 
 impl Foolang {
     pub fn new() -> Foolang {
-        let mut globals = HashMap::new();
+        let mut builtins = HashMap::new();
 
         let array_vtable = Rc::new(classes::array::instance_vtable());
-        globals.insert(
+        builtins.insert(
             "Array".to_string(),
             Class::object(classes::array::class_vtable(), &array_vtable),
         );
 
         let boolean_vtable = Rc::new(classes::boolean::vtable());
-        globals.insert(
+        builtins.insert(
             "Boolean".to_string(),
             Class::object(Vtable::new("class Boolean"), &boolean_vtable),
         );
 
         let clock_vtable = Rc::new(classes::clock::instance_vtable());
-        globals.insert(
+        builtins.insert(
             "Clock".to_string(),
             Class::object(classes::clock::class_vtable(), &clock_vtable),
         );
 
         let compiler_vtable = Rc::new(classes::compiler::instance_vtable());
-        globals.insert(
+        builtins.insert(
             "Compiler".to_string(),
             Class::object(classes::compiler::class_vtable(), &compiler_vtable),
         );
 
         let float_vtable = Rc::new(classes::float::vtable());
-        globals
+        builtins
             .insert("Float".to_string(), Class::object(Vtable::new("class Float"), &float_vtable));
 
         let input_vtable = Rc::new(classes::input::vtable());
-        globals
+        builtins
             .insert("Input".to_string(), Class::object(Vtable::new("class Input"), &input_vtable));
 
         let integer_vtable = Rc::new(classes::integer::vtable());
-        globals.insert(
+        builtins.insert(
             "Integer".to_string(),
             Class::object(Vtable::new("class Integer"), &integer_vtable),
         );
 
         let interval_vtable = Rc::new(classes::interval::vtable());
-        globals.insert(
+        builtins.insert(
             "Interval".to_string(),
             Class::object(Vtable::new("class Interval"), &interval_vtable),
         );
 
         let output_vtable = Rc::new(classes::output::vtable());
-        globals.insert(
+        builtins.insert(
             "Output".to_string(),
             Class::object(Vtable::new("class Output"), &output_vtable),
         );
 
         let string_vtable = Rc::new(classes::string::instance_vtable());
-        globals.insert(
+        builtins.insert(
             "String".to_string(),
             Class::object(classes::string::class_vtable(), &string_vtable),
         );
 
         let time_vtable = Rc::new(classes::time::instance_vtable());
-        globals
+        builtins
             .insert("Time".to_string(), Class::object(classes::time::class_vtable(), &time_vtable));
 
         // Kiss3D stuff
 
         let window_vtable = Rc::new(classes::window::instance_vtable());
-        globals.insert(
+        builtins.insert(
             "Window".to_string(),
             Class::object(classes::window::class_vtable(), &window_vtable),
         );
 
         let scene_node_vtable = Rc::new(classes::scene_node::instance_vtable());
-        globals.insert(
+        builtins.insert(
             "SceneNode".to_string(),
             Class::object(classes::scene_node::class_vtable(), &scene_node_vtable),
         );
@@ -466,7 +466,7 @@ impl Foolang {
             // Kiss3D stuff
             window_vtable,
             scene_node_vtable,
-            globals: RefCell::new(globals),
+            builtins: RefCell::new(builtins),
             workspace: None,
         };
 
@@ -523,10 +523,10 @@ impl Foolang {
     }
 
     pub fn find_class(&self, name: &str, span: Span) -> Eval {
-        match self.globals.borrow().get(name) {
+        match self.builtins.borrow().get(name) {
             None => return Unwind::error_at(span, "Unknown class"),
-            Some(global) => match global.datum {
-                Datum::Class(_) => Ok(global.to_owned()),
+            Some(builtin) => match builtin.datum {
+                Datum::Class(_) => Ok(builtin.to_owned()),
                 _ => Unwind::error_at(span, "Not a class name"),
             },
         }
