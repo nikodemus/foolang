@@ -1,6 +1,8 @@
--- Syntax on a postcard
+---
+Foolang syntax on a postcard
+---
 
-import foolang.core as: foocore
+import Foolang.Core as: Foocore
 
 define Info = "Everything is ok"
 
