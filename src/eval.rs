@@ -186,6 +186,18 @@ impl<'a> Env<'a> {
         }
     }
 
+    pub fn frame(
+        foo: &Foolang,
+        names: HashMap<String, Binding>,
+        parent: Option<Frame>,
+        receiver: Option<Object>,
+    ) -> Env {
+        Env {
+            foo,
+            frame: Frame::new(names, parent, receiver),
+        }
+    }
+
     pub fn eval(&self, expr: &Expr) -> Eval {
         use Expr::*;
         match expr {
@@ -204,18 +216,6 @@ impl<'a> Env<'a> {
             Seq(exprs) => self.eval_seq(exprs),
             Typecheck(_, expr, typename) => self.eval_typecheck(expr, typename),
             Var(var) => self.eval_var(var),
-        }
-    }
-
-    fn from_parts(
-        foo: &'a Foolang,
-        names: HashMap<String, Binding>,
-        parent: Option<Frame>,
-        receiver: Option<Object>,
-    ) -> Env<'a> {
-        Env {
-            foo,
-            frame: Frame::new(names, parent, receiver),
         }
     }
 
@@ -475,7 +475,7 @@ pub fn apply(
         };
         args.insert(arg.name.clone(), binding);
     }
-    let env = Env::from_parts(foo, args, closure.env(), receiver.map(|x| x.clone()));
+    let env = Env::frame(foo, args, closure.env(), receiver.map(|x| x.clone()));
     let result = match env.eval(&closure.body) {
         Err(Unwind::ReturnFrom(ref frame, ref value)) if frame == &env.frame => value.clone(),
         Ok(value) => value,
