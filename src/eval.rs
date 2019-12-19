@@ -52,23 +52,25 @@ pub enum Frame {
 }
 
 impl Frame {
-    fn new(
+    fn for_block(names: HashMap<String, Binding>, parent: Option<Frame>) -> Frame {
+        let home = match &parent {
+            None => None,
+            Some(p) => p.home(),
+        };
+        Frame::BlockFrame(Rc::new(BlockFrame {
+            names: RefCell::new(names),
+            parent,
+            home,
+        }))
+    }
+
+    fn maybe_for_method(
         names: HashMap<String, Binding>,
         parent: Option<Frame>,
         receiver: Option<Object>,
     ) -> Frame {
         match receiver {
-            None => {
-                let home = match &parent {
-                    None => None,
-                    Some(p) => p.home(),
-                };
-                Frame::BlockFrame(Rc::new(BlockFrame {
-                    names: RefCell::new(names),
-                    parent,
-                    home,
-                }))
-            }
+            None => Frame::for_block(names, parent),
             Some(receiver) => {
                 assert!(parent.is_none());
                 Frame::MethodFrame(Rc::new(MethodFrame {
@@ -173,7 +175,7 @@ impl<'a> Env<'a> {
     pub fn new(foo: &Foolang) -> Env {
         Env {
             foo,
-            frame: Frame::new(HashMap::new(), None, None),
+            frame: Frame::for_block(HashMap::new(), None),
         }
     }
 
@@ -182,7 +184,7 @@ impl<'a> Env<'a> {
         names.insert(name.to_owned(), binding);
         Env {
             foo: self.foo,
-            frame: Frame::new(names, Some(self.frame.clone()), None),
+            frame: Frame::for_block(names, Some(self.frame.clone())),
         }
     }
 
@@ -194,7 +196,7 @@ impl<'a> Env<'a> {
     ) -> Env {
         Env {
             foo,
-            frame: Frame::new(names, parent, receiver),
+            frame: Frame::maybe_for_method(names, parent, receiver),
         }
     }
 
