@@ -171,7 +171,19 @@ impl Binding {
 
 impl<'a> Env<'a> {
     pub fn new(foo: &Foolang) -> Env {
-        Env::from_parts(foo, HashMap::new(), None, None)
+        Env {
+            foo,
+            frame: Frame::new(HashMap::new(), None, None),
+        }
+    }
+
+    pub fn bind(&self, name: &String, binding: Binding) -> Env {
+        let mut names = HashMap::new();
+        names.insert(name.to_owned(), binding);
+        Env {
+            foo: self.foo,
+            frame: Frame::new(names, Some(self.frame.clone()), None),
+        }
     }
 
     pub fn eval(&self, expr: &Expr) -> Eval {
@@ -247,9 +259,7 @@ impl<'a> Env<'a> {
             }
             _ => {
                 // Lexical
-                let mut names = HashMap::new();
-                names.insert(name.to_owned(), binding);
-                let env = Env::from_parts(self.foo, names, Some(self.frame.clone()), None);
+                let env = self.bind(name, binding);
                 match value {
                     Ok(expr) => env.eval(expr),
                     Err(value) => Ok(value),
