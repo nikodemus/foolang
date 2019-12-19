@@ -47,7 +47,7 @@ In order of priority:
 2. Ergonomics: Code should be a pleasure to read and write.
 
 3. Performance: Code with type annotations should run on par with -O0
-   compiled C or C++.
+   compiled "equivalent" C or C++.
 
 4. Uniformity: Built-in code should not be privileged over user code.
 
@@ -103,6 +103,7 @@ Following words have special meaning:
     define
     method
     end
+    import
 
 **Comments**
 
@@ -208,6 +209,7 @@ Underscore can be used as an implicit argument in blocks:
 
     end
 
+    -- Implicit constructor using the slot names
     let p0 = Point x: 1 :y 2     --> #<Point 1,2>
     let p1 = Point x: 100 y: 200 --> #<Point 100,200>
     let p2 = p0 + p1             --> #<Point 101,202>
@@ -365,9 +367,10 @@ maybe?
 ### Phrases
 
 ```
-@phrase ring!
+phrase ring!
     "No unbound variables allowed! Constants are OK, though."
     ding ding ding
+end
 
 bell ring!
 ```
@@ -391,67 +394,21 @@ what gcc -O0 would produce.
 
 ## MMmmmaaaybe
 
-- Million dollar question: how are binary operations implemented?
-
-  1. Just messages.
-  2. Toplevel generic functions.
-
-  I will go with messages for now: inlining should be able to get good-enough
-  speed out of double-dispatch, and fast-pathing "simple dispatch" inlining
-  (ie. simply sending another message with re-arranged receiver and arguments
-  seems pretty simple)
-
-- Smalltalk actually puts a lot of things which might otherwise belong in a
-  control flow class (or exist as first-class constructs) into Object:
-
-      self handle: [ :exeption | ... ]
-           do [ ... ]
-
-  Control flow class:
-
-      Try do: { ... } or: { ... }
-
-  Block:
-
-      { ... } handle: { ... } finally: { ... }
-
-  First class syntax:
-
-      try expr handle: { ... } finally: { ... }
-
-      unwind <expr> protect: { }
-
-- Terminology: Words and sigils are both symbols.
-
-      foo <-- word
-
-      ++  <-- sigil
-
-- Syntax:
-
-    Allow newline to replace comma?
-
-    double-colons for namespacing and explicit extensions?
-
-    Module::Class new
-
-    "foo" ext::capitalize
-
 - Binary messages
 
     Consider binary messages to be syntax level transformations into
     messages.
 
-        @binary-operator left => right
+        binaryOperator left => right
            right value left
 
-        @binary-operator left - right
+        binaryOperator left - right
            left sub: right
 
     Because the parser needs to know the precedence anyhow, it seems to
     me that binary operators don't need to be strictly restricted to symbols anyhow.
 
-        @import MyOps::div
+        import MyOps::div
 
         x div y
 
