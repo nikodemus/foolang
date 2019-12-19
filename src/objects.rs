@@ -6,7 +6,6 @@ use std::io::Read;
 use std::io::Write;
 use std::rc::Rc;
 
-use crate::eval;
 use crate::eval::{Binding, Env, Frame};
 use crate::parse::{ClassDefinition, Expr, Literal, Parser, Var};
 use crate::time::TimeInfo;
@@ -38,7 +37,7 @@ impl Source for Eval {
     }
 }
 
-type MethodFunction = fn(&Object, &[Object], &Foolang) -> Eval;
+type MethodFunction = fn(&Object, &[Object], &Env) -> Eval;
 
 pub enum Method {
     Primitive(MethodFunction),
@@ -215,7 +214,7 @@ impl Closure {
 // access to the global environment... but I actually like that.
 #[derive(PartialEq)]
 pub struct Compiler {
-    pub foolang: Foolang,
+    pub env: Env,
     pub source: RefCell<String>,
     pub expr: RefCell<Expr>,
 }
@@ -474,12 +473,12 @@ impl Foolang {
     }
 
     /*
-    pub fn load_module(&self, name: &str) -> Result<HashMap<String, Binding>, Unwind> {
+    pub fn load_module(self, name: &str) -> Result<HashMap<String, Binding>, Unwind> {
         let code = match std::fs::read_to_string(format!("foo/{}.foo", name)) {
             Ok(code) => code,
             Err(err) => return Unwind::error("Could not load module"),
         };
-        let env = Env::new(self);
+        let env = Env::from(self);
         let mut parser = Parser::new(&program);
         while !parser.at_eof() {
             let expr = match parser.parse() {
@@ -494,9 +493,9 @@ impl Foolang {
     }
      */
 
-    pub fn run(&self, program: &str) -> Eval {
+    pub fn run(self, program: &str) -> Eval {
         let system = self.make_system();
-        let env = Env::new(self);
+        let env = Env::from(self);
         let mut parser = Parser::new(&program);
         while !parser.at_eof() {
             let expr = match parser.parse() {
@@ -506,9 +505,9 @@ impl Foolang {
             env.eval(&expr).context(&program)?;
         }
         // FIXME: Bad error "Unknown class" with bogus span.
-        let main = self.find_class("Main", 0..0)?;
-        let instance = main.send("system:", &[system], self).context(&program)?;
-        Ok(instance.send("run", &[], self).context(&program)?)
+        let main = env.foo.find_class("Main", 0..0)?;
+        let instance = main.send("system:", &[system], &env).context(&program)?;
+        Ok(instance.send("run", &[], &env).context(&program)?)
     }
 
     pub fn find_maybe_vtable(
@@ -631,7 +630,7 @@ impl Foolang {
         Object {
             vtable: Rc::clone(&self.compiler_vtable),
             datum: Datum::Compiler(Rc::new(Compiler {
-                foolang,
+                env: Env::from(foolang),
                 source: RefCell::new(String::new()),
                 expr: RefCell::new(Expr::Const(0..0, Literal::Boolean(false))),
             })),
@@ -886,17 +885,17 @@ impl Object {
 
     // SEND
 
-    pub fn send(&self, message: &str, args: &[Object], foo: &Foolang) -> Eval {
+    pub fn send(&self, message: &str, args: &[Object], env: &Env) -> Eval {
         // println!("debug: {} {} {:?}", self, message, args);
         match self.vtable.get(message) {
-            Some(Method::Primitive(method)) => method(self, args, foo),
-            Some(Method::Interpreter(closure)) => eval::apply(Some(self), closure, args, foo),
+            Some(Method::Primitive(method)) => method(self, args, env),
+            Some(Method::Interpreter(closure)) => env.apply(Some(self), closure, args),
             Some(Method::Reader(index)) => read_instance_variable(self, *index),
             None => {
-                let not_understood = vec![foo.make_string(message), foo.make_array(args)];
+                let not_understood = vec![env.foo.make_string(message), env.foo.make_array(args)];
                 match self.vtable.get("perform:with:") {
                     Some(Method::Interpreter(closure)) => {
-                        eval::apply(Some(self), closure, &not_understood, foo)
+                        env.apply(Some(self), closure, &not_understood)
                     }
                     Some(Method::Primitive(_method)) => unimplemented!(
                         "Dispatching to primitive perform:with: {:?} {} {:?}",
@@ -971,7 +970,7 @@ impl fmt::Debug for Object {
     }
 }
 
-fn generic_ctor(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
+fn generic_ctor(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     let class = receiver.class();
     Ok(Object {
         vtable: Rc::clone(&class.instance_vtable),
@@ -981,12 +980,12 @@ fn generic_ctor(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
     })
 }
 
-fn generic_class_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+fn generic_class_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     let class = receiver.class();
-    Ok(foo.into_string(format!("#<class {}>", &class.instance_vtable.name)))
+    Ok(env.foo.into_string(format!("#<class {}>", &class.instance_vtable.name)))
 }
 
-fn generic_instance_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+fn generic_instance_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     let instance = receiver.instance();
     let mut info = String::new();
     for var in instance.instance_variables.borrow().iter() {
@@ -1001,7 +1000,7 @@ fn generic_instance_to_string(receiver: &Object, _args: &[Object], foo: &Foolang
         }
         info.push_str(format!("{:?}", var).as_str());
     }
-    Ok(foo.into_string(format!("#<{}{}>", &receiver.vtable.name, info)))
+    Ok(env.foo.into_string(format!("#<{}{}>", &receiver.vtable.name, info)))
 }
 
 pub fn read_instance_variable(receiver: &Object, index: usize) -> Eval {

@@ -1,6 +1,7 @@
 use std::slice;
 
-use crate::objects::{Eval, Foolang, Object, Vtable};
+use crate::eval::Env;
+use crate::objects::{Eval, Object, Vtable};
 
 pub fn vtable() -> Vtable {
     let mut vt = Vtable::new("Float");
@@ -44,157 +45,157 @@ pub fn vtable() -> Vtable {
 
 // FUNDAMENTAL METHODS
 
-fn float_as_float(receiver: &Object, _args: &[Object], _foo: &Foolang) -> Eval {
+fn float_as_float(receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
     Ok(receiver.clone())
 }
 
-fn float_as_integer(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
-    Ok(foo.make_integer(receiver.float().round() as i64))
+fn float_as_integer(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_integer(receiver.float().round() as i64))
 }
 
-fn float_add_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn float_add_float(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let res = args[0].float() + receiver.float();
-    Ok(foo.make_float(res))
+    Ok(env.foo.make_float(res))
 }
 
-fn float_div_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn float_div_float(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let res = args[0].float() / receiver.float();
-    Ok(foo.make_float(res))
+    Ok(env.foo.make_float(res))
 }
 
-fn float_div_array(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("divByFloat:", std::slice::from_ref(receiver), foo)
+fn float_div_array(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    args[0].send("divByFloat:", std::slice::from_ref(receiver), env)
 }
 
-fn float_mul_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn float_mul_float(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let res = args[0].float() * receiver.float();
-    Ok(foo.make_float(res))
+    Ok(env.foo.make_float(res))
 }
 
-fn float_sub_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn float_sub_float(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let res = args[0].float() - receiver.float();
-    Ok(foo.make_float(res))
+    Ok(env.foo.make_float(res))
 }
 
-fn float_equal_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn float_equal_float(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let res = receiver.float() == args[0].float();
-    Ok(foo.make_boolean(res))
+    Ok(env.foo.make_boolean(res))
 }
 
-fn float_greater_than_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn float_greater_than_float(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let res = receiver.float() > args[0].float();
-    Ok(foo.make_boolean(res))
+    Ok(env.foo.make_boolean(res))
 }
 
-fn float_greater_than_or_equal_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn float_greater_than_or_equal_float(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let res = receiver.float() >= args[0].float();
-    Ok(foo.make_boolean(res))
+    Ok(env.foo.make_boolean(res))
 }
 
-fn float_less_than_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn float_less_than_float(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let res = receiver.float() < args[0].float();
-    Ok(foo.make_boolean(res))
+    Ok(env.foo.make_boolean(res))
 }
 
-fn float_less_than_or_equal_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn float_less_than_or_equal_float(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let res = receiver.float() <= args[0].float();
-    Ok(foo.make_boolean(res))
+    Ok(env.foo.make_boolean(res))
 }
 
-fn float_neg(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
-    Ok(foo.make_float(-receiver.float()))
+fn float_neg(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_float(-receiver.float()))
 }
 
-fn float_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
-    Ok(foo.make_string(&receiver.float().to_string()))
+fn float_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_string(&receiver.float().to_string()))
 }
 
 // DERIVED METHODS
 
-fn float_add(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("addFloat:", slice::from_ref(receiver), foo)
+fn float_add(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    args[0].send("addFloat:", slice::from_ref(receiver), env)
 }
 
-fn float_div(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("divFloat:", slice::from_ref(receiver), foo)
+fn float_div(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    args[0].send("divFloat:", slice::from_ref(receiver), env)
 }
 
-fn float_mul(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("mulFloat:", slice::from_ref(receiver), foo)
+fn float_mul(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    args[0].send("mulFloat:", slice::from_ref(receiver), env)
 }
 
-fn float_sub(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("subFloat:", slice::from_ref(receiver), foo)
+fn float_sub(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    args[0].send("subFloat:", slice::from_ref(receiver), env)
 }
 
-fn float_add_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    let float = args[0].send("asFloat", &[], foo)?;
-    float_add_float(receiver, &[float], foo)
+fn float_add_integer(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let float = args[0].send("asFloat", &[], env)?;
+    float_add_float(receiver, &[float], env)
 }
 
-fn float_div_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    let float = args[0].send("asFloat", &[], foo)?;
-    float_div_float(receiver, &[float], foo)
+fn float_div_integer(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let float = args[0].send("asFloat", &[], env)?;
+    float_div_float(receiver, &[float], env)
 }
 
-fn float_mul_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    let float = args[0].send("asFloat", &[], foo)?;
-    float_mul_float(receiver, &[float], foo)
+fn float_mul_integer(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let float = args[0].send("asFloat", &[], env)?;
+    float_mul_float(receiver, &[float], env)
 }
 
-fn float_sub_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    let float = args[0].send("asFloat", &[], foo)?;
-    float_sub_float(receiver, &[float], foo)
+fn float_sub_integer(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let float = args[0].send("asFloat", &[], env)?;
+    float_sub_float(receiver, &[float], env)
 }
 
-fn float_less_than(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("greaterThanFloat:", std::slice::from_ref(receiver), foo)
+fn float_less_than(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    args[0].send("greaterThanFloat:", std::slice::from_ref(receiver), env)
 }
 
-fn float_less_than_or_equal(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("greaterThanOrEqualFloat:", std::slice::from_ref(receiver), foo)
+fn float_less_than_or_equal(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    args[0].send("greaterThanOrEqualFloat:", std::slice::from_ref(receiver), env)
 }
 
-fn float_greater_than(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("lessThanFloat:", std::slice::from_ref(receiver), foo)
+fn float_greater_than(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    args[0].send("lessThanFloat:", std::slice::from_ref(receiver), env)
 }
 
-fn float_greater_than_or_equal(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("lessThanOrEqualFloat:", std::slice::from_ref(receiver), foo)
+fn float_greater_than_or_equal(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    args[0].send("lessThanOrEqualFloat:", std::slice::from_ref(receiver), env)
 }
 
-fn float_equal(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("equalFloat:", std::slice::from_ref(receiver), foo)
+fn float_equal(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    args[0].send("equalFloat:", std::slice::from_ref(receiver), env)
 }
 
-fn float_equal_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    let float = args[0].send("asFloat", &[], foo)?;
-    float_equal_float(receiver, &[float], foo)
+fn float_equal_integer(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let float = args[0].send("asFloat", &[], env)?;
+    float_equal_float(receiver, &[float], env)
 }
 
-fn float_greater_than_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    let float = args[0].send("asFloat", &[], foo)?;
-    float_greater_than_float(receiver, &[float], foo)
+fn float_greater_than_integer(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let float = args[0].send("asFloat", &[], env)?;
+    float_greater_than_float(receiver, &[float], env)
 }
 
-fn float_greater_than_or_equal_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    let float = args[0].send("asFloat", &[], foo)?;
-    float_greater_than_or_equal_float(receiver, &[float], foo)
+fn float_greater_than_or_equal_integer(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let float = args[0].send("asFloat", &[], env)?;
+    float_greater_than_or_equal_float(receiver, &[float], env)
 }
 
-fn float_less_than_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    let float = args[0].send("asFloat", &[], foo)?;
-    float_less_than_float(receiver, &[float], foo)
+fn float_less_than_integer(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let float = args[0].send("asFloat", &[], env)?;
+    float_less_than_float(receiver, &[float], env)
 }
 
-fn float_less_than_or_equal_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    let float = args[0].send("asFloat", &[], foo)?;
-    float_less_than_or_equal_float(receiver, &[float], foo)
+fn float_less_than_or_equal_integer(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let float = args[0].send("asFloat", &[], env)?;
+    float_less_than_or_equal_float(receiver, &[float], env)
 }
 
-fn float_at_least_at_most(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    let min_value = args[0].send("asFloat", &[], foo)?;
-    let max_value = args[1].send("asFloat", &[], foo)?;
+fn float_at_least_at_most(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let min_value = args[0].send("asFloat", &[], env)?;
+    let max_value = args[1].send("asFloat", &[], env)?;
     let value = receiver.float();
     if value < min_value.float() {
         return Ok(min_value);

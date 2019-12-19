@@ -1,4 +1,5 @@
-use crate::objects::{Eval, Foolang, Object, Vtable};
+use crate::eval::Env;
+use crate::objects::{Eval, Object, Vtable};
 
 pub fn vtable() -> Vtable {
     let mut vt = Vtable::new("Boolean");
@@ -12,54 +13,54 @@ pub fn vtable() -> Vtable {
     vt
 }
 
-fn boolean_and(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn boolean_and(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     if receiver.boolean() && args[0].boolean() {
-        Ok(foo.make_boolean(true))
+        Ok(env.foo.make_boolean(true))
     } else {
-        Ok(foo.make_boolean(false))
+        Ok(env.foo.make_boolean(false))
     }
 }
 
-fn boolean_if_true(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn boolean_if_true(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     if receiver.boolean() {
-        args[0].send("value", &[], foo)
+        args[0].send("value", &[], env)
     } else {
         Ok(receiver.clone())
     }
 }
 
-fn boolean_if_false(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn boolean_if_false(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     if receiver.boolean() {
         Ok(receiver.clone())
     } else {
-        args[0].send("value", &[], foo)
+        args[0].send("value", &[], env)
     }
 }
 
-fn boolean_if_true_if_false(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn boolean_if_true_if_false(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     if receiver.boolean() {
-        args[0].send("value", &[], foo)
+        args[0].send("value", &[], env)
     } else {
-        args[1].send("value", &[], foo)
+        args[1].send("value", &[], env)
     }
 }
 
-fn boolean_not(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
-    Ok(foo.make_boolean(!receiver.boolean()))
+fn boolean_not(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_boolean(!receiver.boolean()))
 }
 
-fn boolean_or(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn boolean_or(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     if receiver.boolean() || args[0].boolean() {
-        Ok(foo.make_boolean(true))
+        Ok(env.foo.make_boolean(true))
     } else {
-        Ok(foo.make_boolean(false))
+        Ok(env.foo.make_boolean(false))
     }
 }
 
-fn boolean_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+fn boolean_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     if receiver.boolean() {
-        Ok(foo.make_string("True"))
+        Ok(env.foo.make_string("True"))
     } else {
-        Ok(foo.make_string("False"))
+        Ok(env.foo.make_string("False"))
     }
 }

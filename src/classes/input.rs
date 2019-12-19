@@ -1,4 +1,5 @@
-use crate::objects::{Eval, Foolang, Object, Vtable};
+use crate::eval::Env;
+use crate::objects::{Eval, Object, Vtable};
 
 pub fn vtable() -> Vtable {
     let mut vt = Vtable::new("Input");
@@ -6,10 +7,10 @@ pub fn vtable() -> Vtable {
     vt
 }
 
-fn input_readline(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+fn input_readline(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     match receiver.input().readline() {
-        Some(line) => Ok(foo.into_string(line)),
+        Some(line) => Ok(env.foo.into_string(line)),
         // FIXME: Nil would make more sense, or a specific EOF object
-        None => Ok(foo.make_boolean(false)),
+        None => Ok(env.foo.make_boolean(false)),
     }
 }

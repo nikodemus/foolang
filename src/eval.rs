@@ -136,9 +136,16 @@ impl Frame {
     }
 }
 
-pub struct Env<'a> {
-    foo: &'a Foolang,
+pub struct Env {
+    pub foo: Rc<Foolang>,
+    globals: Rc<RefCell<HashMap<String, Object>>>,
     frame: Frame,
+}
+
+impl PartialEq for Env {
+    fn eq(&self, other: &Self) -> bool {
+        self as *const _ == other as *const _
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -171,10 +178,19 @@ impl Binding {
     }
 }
 
-impl<'a> Env<'a> {
-    pub fn new(foo: &Foolang) -> Env {
+impl Env {
+    pub fn from(foo: Foolang) -> Env {
         Env {
-            foo,
+            foo: Rc::new(foo),
+            globals: Rc::new(RefCell::new(HashMap::new())),
+            frame: Frame::for_block(HashMap::new(), None),
+        }
+    }
+
+    pub fn new() -> Env {
+        Env {
+            foo: Rc::new(Foolang::new()),
+            globals: Rc::new(RefCell::new(HashMap::new())),
             frame: Frame::for_block(HashMap::new(), None),
         }
     }
@@ -183,21 +199,78 @@ impl<'a> Env<'a> {
         let mut names = HashMap::new();
         names.insert(name.to_owned(), binding);
         Env {
-            foo: self.foo,
+            foo: self.foo.clone(),
+            globals: self.globals.clone(),
             frame: Frame::for_block(names, Some(self.frame.clone())),
         }
     }
 
-    pub fn frame(
-        foo: &Foolang,
+    pub fn new_frame(
+        &self,
         names: HashMap<String, Binding>,
         parent: Option<Frame>,
         receiver: Option<Object>,
     ) -> Env {
         Env {
-            foo,
+            foo: self.foo.clone(),
+            globals: self.globals.clone(),
             frame: Frame::maybe_for_method(names, parent, receiver),
         }
+    }
+
+    pub fn eval_all(&self, source: &str) -> Eval {
+        let mut parser = Parser::new(source);
+        loop {
+            let expr = match parser.parse() {
+                Err(unwind) => {
+                    return Err(unwind.with_context(source));
+                }
+                Ok(expr) => expr,
+            };
+            let object = match self.eval(&expr) {
+                Err(unwind) => {
+                    return Err(unwind.with_context(source));
+                }
+                Ok(object) => object,
+            };
+            if parser.at_eof() {
+                return Ok(object);
+            }
+        }
+    }
+
+    pub fn apply(
+        &self,
+        receiver: Option<&Object>,
+        closure: &Closure,
+        call_args: &[Object],
+    ) -> Eval {
+        let mut args = HashMap::new();
+        for (arg, obj) in closure.params.iter().zip(call_args.into_iter().map(|x| (*x).clone())) {
+            let binding = match &arg.vtable {
+                None => Binding::untyped(obj),
+                Some(vtable) => {
+                    if vtable != &obj.vtable {
+                        return Unwind::type_error_at(arg.span.clone(), obj, vtable.name.clone());
+                    }
+                    Binding::typed(vtable.to_owned(), obj.to_owned())
+                }
+            };
+            args.insert(arg.name.clone(), binding);
+        }
+        let env = self.new_frame(args, closure.env(), receiver.map(|x| x.clone()));
+        let result = match env.eval(&closure.body) {
+            Err(Unwind::ReturnFrom(ref frame, ref value)) if frame == &env.frame => value.clone(),
+            Ok(value) => value,
+            Err(unwind) => return Err(unwind),
+        };
+        if let Some(vtable) = &closure.return_vtable {
+            if &result.vtable != vtable {
+                return Unwind::type_error(result, vtable.name.clone())
+                    .source(&closure.body.span());
+            }
+        }
+        Ok(result)
     }
 
     pub fn eval(&self, expr: &Expr) -> Eval {
@@ -372,7 +445,7 @@ impl<'a> Env<'a> {
             for arg in &message.args {
                 values.push(self.eval(arg)?);
             }
-            receiver = receiver.send(message.selector.as_str(), &values[..], &self.foo)?
+            receiver = receiver.send(message.selector.as_str(), &values[..], &self)?
         }
         return Ok(receiver);
     }
@@ -458,71 +531,16 @@ impl<'a> Env<'a> {
     }
 }
 
-pub fn apply(
-    receiver: Option<&Object>,
-    closure: &Closure,
-    call_args: &[Object],
-    foo: &Foolang,
-) -> Eval {
-    let mut args = HashMap::new();
-    for (arg, obj) in closure.params.iter().zip(call_args.into_iter().map(|x| (*x).clone())) {
-        let binding = match &arg.vtable {
-            None => Binding::untyped(obj),
-            Some(vtable) => {
-                if vtable != &obj.vtable {
-                    return Unwind::type_error_at(arg.span.clone(), obj, vtable.name.clone());
-                }
-                Binding::typed(vtable.to_owned(), obj.to_owned())
-            }
-        };
-        args.insert(arg.name.clone(), binding);
-    }
-    let env = Env::frame(foo, args, closure.env(), receiver.map(|x| x.clone()));
-    let result = match env.eval(&closure.body) {
-        Err(Unwind::ReturnFrom(ref frame, ref value)) if frame == &env.frame => value.clone(),
-        Ok(value) => value,
-        Err(unwind) => return Err(unwind),
-    };
-    if let Some(vtable) = &closure.return_vtable {
-        if &result.vtable != vtable {
-            return Unwind::type_error(result, vtable.name.clone()).source(&closure.body.span());
-        }
-    }
-    Ok(result)
-}
-
-pub fn eval_all(foo: &Foolang, source: &str) -> Eval {
-    let env = Env::new(foo);
-    let mut parser = Parser::new(source);
-    loop {
-        let expr = match parser.parse() {
-            Err(unwind) => {
-                return Err(unwind.with_context(source));
-            }
-            Ok(expr) => expr,
-        };
-        let object = match env.eval(&expr) {
-            Err(unwind) => {
-                return Err(unwind.with_context(source));
-            }
-            Ok(object) => object,
-        };
-        if parser.at_eof() {
-            return Ok(object);
-        }
-    }
-}
-
 #[cfg(test)]
 pub mod utils {
 
     use crate::eval::*;
 
-    pub fn eval_exception(source: &str) -> (Unwind, Foolang) {
-        let foo = Foolang::new();
-        match eval_all(&foo, source) {
+    pub fn eval_exception(source: &str) -> (Unwind, Env) {
+        let env = Env::new();
+        match env.eval_all(source) {
             Err(unwind) => match &unwind {
-                Unwind::Exception(..) => (unwind, foo),
+                Unwind::Exception(..) => (unwind, env),
                 _ => panic!("Expected exception, got: {:?}", unwind),
             },
             Ok(value) => panic!("Expected exception, got: {:?}", value),
@@ -530,15 +548,15 @@ pub mod utils {
     }
 
     pub fn eval_str(source: &str) -> Eval {
-        let foo = Foolang::new();
-        eval_all(&foo, source)
+        let env = Env::new();
+        env.eval_all(source)
     }
 
-    pub fn eval_obj(source: &str) -> (Object, Foolang) {
-        let foo = Foolang::new();
-        match eval_all(&foo, source) {
+    pub fn eval_obj(source: &str) -> (Object, Env) {
+        let env = Env::new();
+        match env.eval_all(source) {
             Err(unwind) => panic!("Unexpected unwind:\n{:?}", unwind),
-            Ok(obj) => (obj, foo),
+            Ok(obj) => (obj, env),
         }
     }
 

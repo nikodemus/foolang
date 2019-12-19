@@ -17,11 +17,11 @@ fn test_compiler1() {
 
 #[test]
 fn test_compiler2() {
-    let (compiler, foo) = eval_obj("Compiler new");
+    let (compiler, env) = eval_obj("Compiler new");
     compiler
         .send(
             "parse:",
-            &[foo.make_string(
+            &[env.foo.make_string(
                 "
                class Foo { bar }
                  method quux: n
@@ -31,12 +31,12 @@ fn test_compiler2() {
                foo quux: 2
         ",
             )],
-            &foo,
+            &env,
         )
         .unwrap();
-    let res = compiler.send("evaluate", &[], &foo).unwrap();
-    assert_eq!(res, foo.make_integer(42));
-    match foo.find_class("Foo", 0..0) {
+    let res = compiler.send("evaluate", &[], &env).unwrap();
+    assert_eq!(res, env.foo.make_integer(42));
+    match env.foo.find_class("Foo", 0..0) {
         Err(_) => {}
         Ok(_) => panic!("Class leaked from compiler to parent!"),
     }

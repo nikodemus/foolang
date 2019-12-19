@@ -1,5 +1,5 @@
 use clap::{App, Arg};
-use foolang::eval::eval_all;
+use foolang::eval::Env;
 use foolang::objects::Foolang;
 use foolang::time::TimeInfo;
 use foolang::unwind::Unwind;
@@ -19,10 +19,10 @@ struct Connection {
 }
 
 impl Connection {
-    fn serve(&self, foo: &Foolang) -> bool {
+    fn serve(&self, env: &Env) -> bool {
         match self.receiver.try_recv() {
             Ok(msg) => {
-                let response = match eval_all(foo, msg.as_str()) {
+                let response = match env.eval_all(msg.as_str()) {
                     Ok(obj) => format!("{}", obj),
                     Err(Unwind::Exception(error, location)) => {
                         format!("ERROR: {}\n\n{}", error.what(), location.context())
@@ -62,10 +62,10 @@ impl Server {
         let connections: Arc<Mutex<Vec<Connection>>> = Arc::new(Mutex::new(Vec::new()));
         let connections0 = connections.clone();
         std::thread::spawn(move || loop {
-            let foo = Foolang::new();
+            let env = Env::new();
             loop {
                 std::thread::sleep(std::time::Duration::from_millis(10));
-                connections0.lock().unwrap().retain(|conn| conn.serve(&foo));
+                connections0.lock().unwrap().retain(|conn| conn.serve(&env));
             }
         });
         Server {

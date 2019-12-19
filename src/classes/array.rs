@@ -1,4 +1,5 @@
-use crate::objects::{Eval, Foolang, Object, Vtable};
+use crate::eval::Env;
+use crate::objects::{Eval, Object, Vtable};
 use crate::unwind::Unwind;
 
 pub fn class_vtable() -> Vtable {
@@ -33,22 +34,22 @@ pub fn instance_vtable() -> Vtable {
     vt
 }
 
-fn array_at(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
+fn array_at(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     receiver.as_vec(move |vec| Ok(vec[(args[0].integer() - 1) as usize].clone()))
 }
 
-fn array_do(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn array_do(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let block = &args[0];
     receiver.as_vec(move |vec| {
         for elt in vec.iter() {
-            block.send("value:", std::slice::from_ref(elt), foo)?;
+            block.send("value:", std::slice::from_ref(elt), env)?;
         }
         Ok(())
     })?;
     Ok(receiver.clone())
 }
 
-fn array_dot(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn array_dot(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     receiver.as_vec(|a| {
         args[0].as_vec(|b| {
             let n = a.len();
@@ -58,13 +59,13 @@ fn array_dot(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
                 );
             }
             if n == 0 {
-                return Ok(foo.make_integer(0));
+                return Ok(env.foo.make_integer(0));
             }
-            let mut sum = a[0].send("*", std::slice::from_ref(&b[0]), foo)?;
+            let mut sum = a[0].send("*", std::slice::from_ref(&b[0]), env)?;
             if n > 1 {
                 for i in 1..n {
                     sum =
-                        sum.send("+", &[a[i].send("*", std::slice::from_ref(&b[i]), foo)?], foo)?;
+                        sum.send("+", &[a[i].send("*", std::slice::from_ref(&b[i]), env)?], env)?;
                 }
             }
             Ok(sum)
@@ -72,19 +73,19 @@ fn array_dot(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     })
 }
 
-fn array_inject_into(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn array_inject_into(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let init = args[0].clone();
     let block = &args[1];
     receiver.as_vec(move |vec| {
         let mut inject = init;
         for elt in vec.iter() {
-            inject = block.send("value:value:", &[inject, elt.clone()], foo)?;
+            inject = block.send("value:value:", &[inject, elt.clone()], env)?;
         }
         Ok(inject)
     })
 }
 
-fn array_add_array(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn array_add_array(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let mut a = receiver.as_vec(|v| Ok(v.clone()))?;
     let n = a.len();
     args[0].as_vec(move |b| {
@@ -92,14 +93,14 @@ fn array_add_array(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
             Unwind::error("Cannot add arrays of differing lengths.")
         } else {
             for i in 0..n {
-                a[i] = a[i].send("+", std::slice::from_ref(&b[i]), foo)?;
+                a[i] = a[i].send("+", std::slice::from_ref(&b[i]), env)?;
             }
-            Ok(foo.into_array(a))
+            Ok(env.foo.into_array(a))
         }
     })
 }
 
-fn array_sub_array(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn array_sub_array(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let mut a = receiver.as_vec(|v| Ok(v.clone()))?;
     let n = a.len();
     args[0].as_vec(move |b| {
@@ -107,71 +108,71 @@ fn array_sub_array(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
             Unwind::error("Cannot substract arrays of differing lengths.")
         } else {
             for i in 0..n {
-                a[i] = b[i].send("-", std::slice::from_ref(&a[i]), foo)?;
+                a[i] = b[i].send("-", std::slice::from_ref(&a[i]), env)?;
             }
-            Ok(foo.into_array(a))
+            Ok(env.foo.into_array(a))
         }
     })
 }
 
-fn array_add(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("addArray:", std::slice::from_ref(receiver), foo)
+fn array_add(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    args[0].send("addArray:", std::slice::from_ref(receiver), env)
 }
 
-fn array_sub(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("subArray:", std::slice::from_ref(receiver), foo)
+fn array_sub(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    args[0].send("subArray:", std::slice::from_ref(receiver), env)
 }
 
-fn array_mul(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("*", std::slice::from_ref(receiver), foo)
+fn array_mul(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    args[0].send("*", std::slice::from_ref(receiver), env)
 }
 
-fn array_div(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    args[0].send("divArray:", std::slice::from_ref(receiver), foo)
+fn array_div(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    args[0].send("divArray:", std::slice::from_ref(receiver), env)
 }
 
-fn array_div_by_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn array_div_by_float(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let mut v = receiver.as_vec(|v| Ok(v.clone()))?;
     for i in 0..v.len() {
-        let f = v[i].send("asFloat", &[], foo)?;
-        v[i] = args[0].send("divFloat:", &[f], foo)?;
+        let f = v[i].send("asFloat", &[], env)?;
+        v[i] = args[0].send("divFloat:", &[f], env)?;
     }
-    Ok(foo.into_array(v))
+    Ok(env.foo.into_array(v))
 }
 
-fn array_norm(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+fn array_norm(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     receiver.as_vec(|v| {
         let mut abs = 0.0;
         for elt in v.iter() {
-            let f = elt.send("asFloat", &[], foo)?.float();
+            let f = elt.send("asFloat", &[], env)?.float();
             abs += f * f;
         }
-        Ok(foo.make_float(abs.sqrt()))
+        Ok(env.foo.make_float(abs.sqrt()))
     })
 }
 
-fn array_normalized(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
-    let reciprocal = foo.make_float(1.0 / array_norm(receiver, &[], foo)?.float());
-    array_mul(receiver, std::slice::from_ref(&reciprocal), foo)
+fn array_normalized(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    let reciprocal = env.foo.make_float(1.0 / array_norm(receiver, &[], env)?.float());
+    array_mul(receiver, std::slice::from_ref(&reciprocal), env)
 }
 
-fn array_mul_integer(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn array_mul_integer(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let mut v = receiver.as_vec(|v| Ok(v.clone()))?;
     for i in 0..v.len() {
-        v[i] = v[i].send("mulInteger:", args, foo)?;
+        v[i] = v[i].send("mulInteger:", args, env)?;
     }
-    Ok(foo.into_array(v))
+    Ok(env.foo.into_array(v))
 }
 
-fn array_mul_float(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn array_mul_float(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let mut v = receiver.as_vec(|v| Ok(v.clone()))?;
     for i in 0..v.len() {
-        v[i] = v[i].send("mulFloat:", args, foo)?;
+        v[i] = v[i].send("mulFloat:", args, env)?;
     }
-    Ok(foo.into_array(v))
+    Ok(env.foo.into_array(v))
 }
 
-fn array_push(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
+fn array_push(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     let elt = args[0].clone();
     receiver.as_mut_vec(move |mut vec| {
         vec.push(elt);
@@ -180,7 +181,7 @@ fn array_push(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
     Ok(receiver.clone())
 }
 
-fn array_put_at(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
+fn array_put_at(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     let elt = args[0].clone();
     receiver.as_mut_vec(move |mut vec| {
         vec[(args[1].integer() - 1) as usize] = elt.clone();
@@ -188,19 +189,19 @@ fn array_put_at(receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
     })
 }
 
-fn array_scalar_projection_on(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    let ab = array_dot(receiver, args, foo)?;
-    let bn = array_norm(&args[0], &[], foo)?;
-    ab.send("/", &[bn], foo)
+fn array_scalar_projection_on(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let ab = array_dot(receiver, args, env)?;
+    let bn = array_norm(&args[0], &[], env)?;
+    ab.send("/", &[bn], env)
 }
-fn array_sum(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
-    let mut sum = foo.make_boolean(false);
+fn array_sum(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    let mut sum = env.foo.make_boolean(false);
     receiver.as_vec(|v| {
         if v.len() > 0 {
             sum = v[0].clone();
             if v.len() > 1 {
                 for elt in v[1..].iter() {
-                    sum = sum.send("+", std::slice::from_ref(elt), foo)?;
+                    sum = sum.send("+", std::slice::from_ref(elt), env)?;
                 }
             }
         }
@@ -208,16 +209,16 @@ fn array_sum(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
     })
 }
 
-fn array_sum_arg(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    let mut sum = foo.make_boolean(false);
+fn array_sum_arg(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let mut sum = env.foo.make_boolean(false);
     let block = &args[0];
     receiver.as_vec(|v| {
         if v.len() > 0 {
-            sum = block.send("value:", std::slice::from_ref(&v[0]), foo)?;
+            sum = block.send("value:", std::slice::from_ref(&v[0]), env)?;
             if v.len() > 1 {
                 for elt in v[1..].iter() {
-                    let val = block.send("value:", std::slice::from_ref(elt), foo)?;
-                    sum = sum.send("+", std::slice::from_ref(&val), foo)?;
+                    let val = block.send("value:", std::slice::from_ref(elt), env)?;
+                    sum = sum.send("+", std::slice::from_ref(&val), env)?;
                 }
             }
         }
@@ -225,12 +226,12 @@ fn array_sum_arg(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
     })
 }
 
-fn array_to_string(receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
-    Ok(foo.into_string(receiver.as_vec(|v| Ok(format!("{:?}", v)))?))
+fn array_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.into_string(receiver.as_vec(|v| Ok(format!("{:?}", v)))?))
 }
 
-fn array_vector_projection_on(receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    let ab = array_dot(receiver, args, foo)?;
-    let bb = array_dot(&args[0], args, foo)?;
-    ab.send("/", &[bb], foo)?.send("*", args, foo)
+fn array_vector_projection_on(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let ab = array_dot(receiver, args, env)?;
+    let bb = array_dot(&args[0], args, env)?;
+    ab.send("/", &[bb], env)?.send("*", args, env)
 }

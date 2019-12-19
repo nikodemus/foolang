@@ -1,6 +1,7 @@
 use std::{thread, time};
 
-use crate::objects::{Eval, Foolang, Object, Vtable};
+use crate::eval::Env;
+use crate::objects::{Eval, Object, Vtable};
 
 pub fn vtable() -> Vtable {
     let mut vt = Vtable::new("System");
@@ -16,44 +17,44 @@ pub fn vtable() -> Vtable {
     vt
 }
 
-fn system_abort(_receiver: &Object, _args: &[Object], _foo: &Foolang) -> Eval {
+fn system_abort(_receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
     std::process::abort()
 }
 
-fn system_clock(_receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
-    Ok(foo.make_clock())
+fn system_clock(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_clock())
 }
 
-fn system_exit(_receiver: &Object, _args: &[Object], _foo: &Foolang) -> Eval {
+fn system_exit(_receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
     std::process::exit(0)
 }
 
-fn system_exit_arg(_receiver: &Object, args: &[Object], _foo: &Foolang) -> Eval {
+fn system_exit_arg(_receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     std::process::exit(args[0].integer() as i32)
 }
 
-fn system_input(_receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
-    Ok(foo.make_input("stdin", Box::new(std::io::stdin())))
+fn system_input(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_input("stdin", Box::new(std::io::stdin())))
 }
 
-fn system_output(_receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
-    Ok(foo.make_output("stdout", Box::new(std::io::stdout())))
+fn system_output(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_output("stdout", Box::new(std::io::stdout())))
 }
 
-fn system_sleep(_receiver: &Object, _args: &[Object], foo: &Foolang) -> Eval {
+fn system_sleep(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     thread::sleep(time::Duration::from_millis(1));
-    Ok(foo.make_boolean(true))
+    Ok(env.foo.make_boolean(true))
 }
 
-fn system_sleep_arg(_receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
+fn system_sleep_arg(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let period = args[0].integer();
     if period > -1 {
         let duration = time::Duration::from_millis(period as u64);
         thread::sleep(duration);
     }
-    Ok(foo.make_boolean(true))
+    Ok(env.foo.make_boolean(true))
 }
 
-fn system_window(_receiver: &Object, args: &[Object], foo: &Foolang) -> Eval {
-    Ok(foo.make_window(kiss3d::window::Window::new(args[0].string_as_str())))
+fn system_window(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_window(kiss3d::window::Window::new(args[0].string_as_str())))
 }

@@ -61,7 +61,7 @@ fn test_cascade3() {
 
 #[test]
 fn test_class_method1() {
-    let (class, foo) = eval_obj(
+    let (class, env) = eval_obj(
         "class Foo { a }
             class method new
                 self a: 42
@@ -69,16 +69,16 @@ fn test_class_method1() {
                 12
          end",
     );
-    assert_eq!(class.send("foo", &[], &foo), Ok(foo.make_integer(12)));
+    assert_eq!(class.send("foo", &[], &env), Ok(env.foo.make_integer(12)));
     assert_eq!(
-        class.send("new", &[], &foo).unwrap().send("a", &[], &foo),
-        Ok(foo.make_integer(42))
+        class.send("new", &[], &env).unwrap().send("a", &[], &env),
+        Ok(env.foo.make_integer(42))
     );
 }
 
 #[test]
 fn test_class_method2() {
-    let (class, foo) = eval_obj(
+    let (class, env) = eval_obj(
         "class Foo { _a }
             class method new
                 self _a: 42
@@ -88,10 +88,10 @@ fn test_class_method2() {
                 _a
          end",
     );
-    assert_eq!(class.send("foo", &[], &foo), Ok(foo.make_integer(12)));
+    assert_eq!(class.send("foo", &[], &env), Ok(env.foo.make_integer(12)));
     assert_eq!(
-        class.send("new", &[], &foo).unwrap().send("a", &[], &foo),
-        Ok(foo.make_integer(42))
+        class.send("new", &[], &env).unwrap().send("a", &[], &env),
+        Ok(env.foo.make_integer(42))
     );
 }
 
@@ -146,7 +146,7 @@ fn test_instance_variable3() {
 
 #[test]
 fn test_instance_variable4() {
-    let (exception, foo) = eval_exception(
+    let (exception, env) = eval_exception(
         "class Foo { bar::Integer }
            method foo: x
               bar = bar + x.
@@ -158,7 +158,7 @@ fn test_instance_variable4() {
         exception,
         Unwind::Exception(
             Error::TypeError(TypeError {
-                value: foo.make_float(42.0),
+                value: env.foo.make_float(42.0),
                 expected: "Integer".to_string()
             }),
             Location {
@@ -179,18 +179,18 @@ fn test_instance_variable4() {
 
 #[test]
 fn test_typecheck1() {
-    let (object, foo) = eval_obj("123::Integer");
-    assert_eq!(object, foo.make_integer(123));
+    let (object, env) = eval_obj("123::Integer");
+    assert_eq!(object, env.foo.make_integer(123));
 }
 
 #[test]
 fn test_typecheck2() {
-    let (exception, foo) = eval_exception("123::String");
+    let (exception, env) = eval_exception("123::String");
     assert_eq!(
         exception,
         Unwind::Exception(
             Error::TypeError(TypeError {
-                value: foo.make_integer(123),
+                value: env.foo.make_integer(123),
                 expected: "String".to_string()
             }),
             Location {
@@ -206,12 +206,12 @@ fn test_typecheck2() {
 
 #[test]
 fn test_typecheck3() {
-    let (exception, foo) = eval_exception("let x::Integer = 42.0. x");
+    let (exception, env) = eval_exception("let x::Integer = 42.0. x");
     assert_eq!(
         exception,
         Unwind::Exception(
             Error::TypeError(TypeError {
-                value: foo.make_float(42.0),
+                value: env.foo.make_float(42.0),
                 expected: "Integer".to_string()
             }),
             Location {
@@ -230,12 +230,12 @@ fn test_typecheck3() {
 
 #[test]
 fn test_typecheck4() {
-    let (exception, foo) = eval_exception("let x::Integer = 42. x = 1.0. x");
+    let (exception, env) = eval_exception("let x::Integer = 42. x = 1.0. x");
     assert_eq!(
         exception,
         Unwind::Exception(
             Error::TypeError(TypeError {
-                value: foo.make_float(1.0),
+                value: env.foo.make_float(1.0),
                 expected: "Integer".to_string()
             }),
             Location {
@@ -259,12 +259,12 @@ fn test_typecheck5() {
 
 #[test]
 fn test_typecheck6() {
-    let (exception, foo) = eval_exception("{ |x::Integer| x } value: 41.0");
+    let (exception, env) = eval_exception("{ |x::Integer| x } value: 41.0");
     assert_eq!(
         exception,
         Unwind::Exception(
             Error::TypeError(TypeError {
-                value: foo.make_float(41.0),
+                value: env.foo.make_float(41.0),
                 expected: "Integer".to_string()
             }),
             Location {
@@ -283,12 +283,12 @@ fn test_typecheck6() {
 
 #[test]
 fn test_typecheck7() {
-    let (exception, foo) = eval_exception("{ |y x::Integer| x = y } value: 41.0 value: 42");
+    let (exception, env) = eval_exception("{ |y x::Integer| x = y } value: 41.0 value: 42");
     assert_eq!(
         exception,
         Unwind::Exception(
             Error::TypeError(TypeError {
-                value: foo.make_float(41.0),
+                value: env.foo.make_float(41.0),
                 expected: "Integer".to_string()
             }),
             Location {
@@ -307,7 +307,7 @@ fn test_typecheck7() {
 
 #[test]
 fn test_typecheck8() {
-    let (exception, foo) = eval_exception(
+    let (exception, env) = eval_exception(
         "class Foo {}
             defaultConstructor foo
             method zot: x::Integer
@@ -319,7 +319,7 @@ fn test_typecheck8() {
         exception,
         Unwind::Exception(
             Error::TypeError(TypeError {
-                value: foo.make_float(1.0),
+                value: env.foo.make_float(1.0),
                 expected: "Integer".to_string()
             }),
             Location {
@@ -340,7 +340,7 @@ fn test_typecheck8() {
 
 #[test]
 fn test_typecheck9() {
-    let (exception, foo) = eval_exception(
+    let (exception, env) = eval_exception(
         "class Foo {}
             defaultConstructor foo
             method zot: x -> Integer
@@ -352,7 +352,7 @@ fn test_typecheck9() {
         exception,
         Unwind::Exception(
             Error::TypeError(TypeError {
-                value: foo.make_float(2.0),
+                value: env.foo.make_float(2.0),
                 expected: "Integer".to_string()
             }),
             Location {
@@ -373,12 +373,12 @@ fn test_typecheck9() {
 
 #[test]
 fn test_typecheck10() {
-    let (exception, foo) = eval_exception("{|x| -> Integer x + 1} value: 1.0");
+    let (exception, env) = eval_exception("{|x| -> Integer x + 1} value: 1.0");
     assert_eq!(
         exception,
         Unwind::Exception(
             Error::TypeError(TypeError {
-                value: foo.make_float(2.0),
+                value: env.foo.make_float(2.0),
                 expected: "Integer".to_string()
             }),
             Location {
@@ -534,37 +534,37 @@ fn eval_global2() {
 
 #[test]
 fn test_new_instance1() {
-    let (object, foo) = eval_obj("class Point { x y } end Point x: 1 y: 2");
-    assert_eq!(object.send("x", &[], &foo), Ok(foo.make_integer(1)));
-    assert_eq!(object.send("y", &[], &foo), Ok(foo.make_integer(2)));
+    let (object, env) = eval_obj("class Point { x y } end Point x: 1 y: 2");
+    assert_eq!(object.send("x", &[], &env), Ok(env.foo.make_integer(1)));
+    assert_eq!(object.send("y", &[], &env), Ok(env.foo.make_integer(2)));
 }
 
 #[test]
 fn test_new_instance2() {
-    let (object, foo) = eval_obj(
+    let (object, env) = eval_obj(
         "class Oh {}
             method no 42
             defaultConstructor noes
          end
          Oh noes",
     );
-    assert_eq!(object.send("no", &[], &foo), Ok(foo.make_integer(42)));
+    assert_eq!(object.send("no", &[], &env), Ok(env.foo.make_integer(42)));
 }
 
 #[test]
 fn test_instance_method1() {
-    let (object, foo) = eval_obj(
+    let (object, env) = eval_obj(
         "class Foo {}
             method bar 311
          end
          Foo new",
     );
-    assert_eq!(object.send("bar", &[], &foo), Ok(foo.make_integer(311)));
+    assert_eq!(object.send("bar", &[], &env), Ok(env.foo.make_integer(311)));
 }
 
 #[test]
 fn test_instance_method2() {
-    let (object, foo) = eval_obj(
+    let (object, env) = eval_obj(
         "class Foo {}
             method foo
                self bar
@@ -573,12 +573,12 @@ fn test_instance_method2() {
          end
          Foo new",
     );
-    assert_eq!(object.send("bar", &[], &foo), Ok(foo.make_integer(311)));
+    assert_eq!(object.send("bar", &[], &env), Ok(env.foo.make_integer(311)));
 }
 
 #[test]
 fn test_instance_method3() {
-    let (object, foo) = eval_obj(
+    let (object, env) = eval_obj(
         "class Foo { value }
             method + other
                Foo value: value + other value
@@ -590,14 +590,14 @@ fn test_instance_method3() {
          Bar a: (Foo value: 1) b: (Foo value: 10)",
     );
     assert_eq!(
-        object.send("sum", &[], &foo).unwrap().send("value", &[], &foo),
-        Ok(foo.make_integer(11))
+        object.send("sum", &[], &env).unwrap().send("value", &[], &env),
+        Ok(env.foo.make_integer(11))
     );
 }
 
 #[test]
 fn test_return_returns() {
-    let (obj, foo) = eval_obj(
+    let (obj, env) = eval_obj(
         "class Foo {}
             method foo
                return 1.
@@ -605,12 +605,12 @@ fn test_return_returns() {
          end
          Foo new foo",
     );
-    assert_eq!(obj, foo.make_integer(1));
+    assert_eq!(obj, env.foo.make_integer(1));
 }
 
 #[test]
 fn test_return_from_method_block() {
-    let (obj, foo) = eval_obj(
+    let (obj, env) = eval_obj(
         "class Foo {}
             method test
                 self boo: { return 42 }.
@@ -621,12 +621,12 @@ fn test_return_from_method_block() {
          Foo new test
         ",
     );
-    assert_eq!(obj, foo.make_integer(42));
+    assert_eq!(obj, env.foo.make_integer(42));
 }
 
 #[test]
 fn test_return_from_deep_block_to_middle() {
-    let (object, foo) = eval_obj(
+    let (object, env) = eval_obj(
         "class Foo {}
             method test
                return 1 + let x = 41. self test0: x
@@ -643,7 +643,7 @@ fn test_return_from_deep_block_to_middle() {
          Foo new test
         ",
     );
-    assert_eq!(object, foo.make_integer(42));
+    assert_eq!(object, env.foo.make_integer(42));
 }
 
 #[test]
