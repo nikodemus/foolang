@@ -422,12 +422,14 @@ impl Env {
         let module = &self.foo.load_module(&import.name)?;
         let symbols = &module.rc.borrow().symbols;
         for (name, _) in symbols.iter() {
-            if self.has_definition(name) {
+            let alias = format!("{}.{}", &import.name, name);
+            if self.has_definition(&alias) {
                 return Unwind::error_at(import.span.clone(), "Name conflict");
             }
         }
         for (name, binding) in symbols.iter() {
-            self.add_binding(name, binding.clone());
+            let alias = format!("{}.{}", &import.name, name);
+            self.add_binding(&alias, binding.clone());
         }
         match import.body {
             None => Ok(self.foo.make_string(&import.name)),

@@ -108,30 +108,30 @@ Whitespace and , are also fully built-in.
 
 Rest of Foolang needs to be imported:
 
-    import foolang.v0.*
+    import: foolang.*
 
 Importing while keeping the package prefix:
 
-    import foolang.v0
+    import: foolang as: foo
 
 Partial imports and aliasing:
 
-    from foolang.v0 import
+    from: foolang.v0 import:
        let
-       return as ret
-    done
+       return as: ret
+    end
 
 Toplevel definitions:
 
     -- Core --
 
-    define Foo = 12
+    define: Foo = 12
 
     -- Sugars --
 
-    define Foo {}
+    define: Foo {}
        method bar 42
-    done
+    end
 
     -- desugars to:
 

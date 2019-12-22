@@ -62,7 +62,8 @@ than your head."
   messages to objects.
 
 - Smalltalkish development environment -- except code lives in files
-  where it belongs, not in an image.
+  where it belongs, not in an image. Usable with your favorite editor,
+  even if the best experience is in the "native" environment.
 
 - Supervised processes and isolated heaps for Erlang-style
   fault-tolerence.
@@ -408,7 +409,7 @@ what gcc -O0 would produce.
     Because the parser needs to know the precedence anyhow, it seems to
     me that binary operators don't need to be strictly restricted to symbols anyhow.
 
-        import MyOps::div
+        import MyOps.div
 
         x div y
 
