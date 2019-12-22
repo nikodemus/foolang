@@ -36,7 +36,7 @@ fn test_compiler2() {
         .unwrap();
     let res = compiler.send("evaluate", &[], &env).unwrap();
     assert_eq!(res, env.foo.make_integer(42));
-    match env.foo.find_class("Foo", 0..0) {
+    match env.find_class("Foo", 0..0) {
         Err(_) => {}
         Ok(_) => panic!("Class leaked from compiler to parent!"),
     }

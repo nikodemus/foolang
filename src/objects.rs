@@ -6,7 +6,7 @@ use std::io::Read;
 use std::io::Write;
 use std::rc::Rc;
 
-use crate::eval::{Binding, Env, Frame};
+use crate::eval::{Binding, Env};
 use crate::parse::{ClassDefinition, Expr, Literal, Parser, Var};
 use crate::time::TimeInfo;
 use crate::tokenstream::Span;
@@ -41,7 +41,7 @@ type MethodFunction = fn(&Object, &[Object], &Env) -> Eval;
 
 pub enum Method {
     Primitive(MethodFunction),
-    Interpreter(Closure),
+    Interpreter(Rc<Closure>),
     Reader(usize),
 }
 
@@ -71,7 +71,7 @@ impl Vtable {
     }
 
     pub fn add_method(&mut self, selector: &str, method: Closure) {
-        self.methods.insert(selector.to_string(), Method::Interpreter(method));
+        self.methods.insert(selector.to_string(), Method::Interpreter(Rc::new(method)));
     }
 
     pub fn add_reader(&mut self, selector: &str, index: usize) {
@@ -198,15 +198,43 @@ impl Class {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Closure {
-    env: Option<Frame>,
+    pub env: Env,
     pub params: Vec<Arg>,
     pub body: Expr,
     pub return_vtable: Option<Rc<Vtable>>,
 }
 
 impl Closure {
-    pub fn env(&self) -> Option<Frame> {
-        self.env.clone()
+    pub fn apply(&self, receiver: Option<&Object>, args: &[Object]) -> Eval {
+        let mut symbols = HashMap::new();
+        for (arg, obj) in self.params.iter().zip(args.into_iter().map(|x| (*x).clone())) {
+            let binding = match &arg.vtable {
+                None => Binding::untyped(obj),
+                Some(vtable) => {
+                    if vtable != &obj.vtable {
+                        return Unwind::type_error_at(arg.span.clone(), obj, vtable.name.clone());
+                    }
+                    Binding::typed(vtable.to_owned(), obj.to_owned())
+                }
+            };
+            symbols.insert(arg.name.clone(), binding);
+        }
+        let env = self.env.extend(symbols, receiver);
+        let ret = env.eval(&self.body);
+        // println!("apply return: {:?}", &ret);
+        let result = match ret {
+            Ok(value) => value,
+            Err(Unwind::ReturnFrom(ref ret_env, ref value)) if ret_env == &env => value.clone(),
+            Err(unwind) => {
+                return Err(unwind);
+            }
+        };
+        if let Some(vtable) = &self.return_vtable {
+            if &result.vtable != vtable {
+                return Unwind::type_error(result, vtable.name.clone()).source(&self.body.span());
+            }
+        }
+        Ok(result)
     }
 }
 
@@ -350,7 +378,7 @@ pub enum Datum {
     SceneNode(Rc<SceneNode>),
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct Foolang {
     array_vtable: Rc<Vtable>,
     boolean_vtable: Rc<Vtable>,
@@ -367,109 +395,52 @@ pub struct Foolang {
     // Kiss3D stuff
     window_vtable: Rc<Vtable>,
     scene_node_vtable: Rc<Vtable>,
-    pub builtins: RefCell<HashMap<String, Object>>,
-    pub workspace: Option<RefCell<HashMap<String, Binding>>>,
 }
 
 impl Foolang {
-    pub fn new() -> Foolang {
-        let mut builtins = HashMap::new();
-
-        let array_vtable = Rc::new(classes::array::instance_vtable());
-        builtins.insert(
-            "Array".to_string(),
-            Class::object(classes::array::class_vtable(), &array_vtable),
+    /// Used to initialize a builtin environment.
+    pub fn init_env(&self, env: &mut Env) {
+        env.define("Array", Class::object(classes::array::class_vtable(), &self.array_vtable));
+        env.define("Boolean", Class::object(Vtable::new("class Boolean"), &self.boolean_vtable));
+        env.define("Clock", Class::object(classes::clock::class_vtable(), &self.clock_vtable));
+        env.define("Closure", Class::object(Vtable::new("class Closure"), &self.closure_vtable));
+        env.define(
+            "Compiler",
+            Class::object(classes::compiler::class_vtable(), &self.compiler_vtable),
         );
-
-        let boolean_vtable = Rc::new(classes::boolean::vtable());
-        builtins.insert(
-            "Boolean".to_string(),
-            Class::object(Vtable::new("class Boolean"), &boolean_vtable),
-        );
-
-        let clock_vtable = Rc::new(classes::clock::instance_vtable());
-        builtins.insert(
-            "Clock".to_string(),
-            Class::object(classes::clock::class_vtable(), &clock_vtable),
-        );
-
-        let compiler_vtable = Rc::new(classes::compiler::instance_vtable());
-        builtins.insert(
-            "Compiler".to_string(),
-            Class::object(classes::compiler::class_vtable(), &compiler_vtable),
-        );
-
-        let float_vtable = Rc::new(classes::float::vtable());
-        builtins
-            .insert("Float".to_string(), Class::object(Vtable::new("class Float"), &float_vtable));
-
-        let input_vtable = Rc::new(classes::input::vtable());
-        builtins
-            .insert("Input".to_string(), Class::object(Vtable::new("class Input"), &input_vtable));
-
-        let integer_vtable = Rc::new(classes::integer::vtable());
-        builtins.insert(
-            "Integer".to_string(),
-            Class::object(Vtable::new("class Integer"), &integer_vtable),
-        );
-
-        let interval_vtable = Rc::new(classes::interval::vtable());
-        builtins.insert(
-            "Interval".to_string(),
-            Class::object(Vtable::new("class Interval"), &interval_vtable),
-        );
-
-        let output_vtable = Rc::new(classes::output::vtable());
-        builtins.insert(
-            "Output".to_string(),
-            Class::object(Vtable::new("class Output"), &output_vtable),
-        );
-
-        let string_vtable = Rc::new(classes::string::instance_vtable());
-        builtins.insert(
-            "String".to_string(),
-            Class::object(classes::string::class_vtable(), &string_vtable),
-        );
-
-        let time_vtable = Rc::new(classes::time::instance_vtable());
-        builtins
-            .insert("Time".to_string(), Class::object(classes::time::class_vtable(), &time_vtable));
-
+        env.define("Float", Class::object(Vtable::new("class Float"), &self.float_vtable));
+        env.define("Input", Class::object(Vtable::new("class Input"), &self.input_vtable));
+        env.define("Integer", Class::object(Vtable::new("class Integer"), &self.integer_vtable));
+        env.define("Interval", Class::object(Vtable::new("class Interval"), &self.interval_vtable));
+        env.define("Output", Class::object(Vtable::new("class Output"), &self.output_vtable));
+        env.define("String", Class::object(classes::string::class_vtable(), &self.string_vtable));
+        env.define("Time", Class::object(classes::time::class_vtable(), &self.time_vtable));
         // Kiss3D stuff
-
-        let window_vtable = Rc::new(classes::window::instance_vtable());
-        builtins.insert(
-            "Window".to_string(),
-            Class::object(classes::window::class_vtable(), &window_vtable),
+        env.define("Window", Class::object(classes::window::class_vtable(), &self.window_vtable));
+        env.define(
+            "SceneNode",
+            Class::object(classes::scene_node::class_vtable(), &self.scene_node_vtable),
         );
+    }
 
-        let scene_node_vtable = Rc::new(classes::scene_node::instance_vtable());
-        builtins.insert(
-            "SceneNode".to_string(),
-            Class::object(classes::scene_node::class_vtable(), &scene_node_vtable),
-        );
-
-        let foo = Foolang {
-            array_vtable,
-            boolean_vtable,
-            clock_vtable,
+    pub fn new() -> Foolang {
+        Foolang {
+            array_vtable: Rc::new(classes::array::instance_vtable()),
+            boolean_vtable: Rc::new(classes::boolean::vtable()),
+            clock_vtable: Rc::new(classes::clock::instance_vtable()),
             closure_vtable: Rc::new(classes::closure::vtable()),
-            compiler_vtable,
-            float_vtable,
-            input_vtable,
-            integer_vtable,
-            interval_vtable,
-            output_vtable,
-            string_vtable,
-            time_vtable,
+            compiler_vtable: Rc::new(classes::compiler::instance_vtable()),
+            float_vtable: Rc::new(classes::float::vtable()),
+            input_vtable: Rc::new(classes::input::vtable()),
+            integer_vtable: Rc::new(classes::integer::vtable()),
+            interval_vtable: Rc::new(classes::interval::vtable()),
+            output_vtable: Rc::new(classes::output::vtable()),
+            string_vtable: Rc::new(classes::string::instance_vtable()),
+            time_vtable: Rc::new(classes::time::instance_vtable()),
             // Kiss3D stuff
-            window_vtable,
-            scene_node_vtable,
-            builtins: RefCell::new(builtins),
-            workspace: None,
-        };
-
-        foo
+            window_vtable: Rc::new(classes::window::instance_vtable()),
+            scene_node_vtable: Rc::new(classes::scene_node::instance_vtable()),
+        }
     }
 
     /*
@@ -505,30 +476,9 @@ impl Foolang {
             env.eval(&expr).context(&program)?;
         }
         // FIXME: Bad error "Unknown class" with bogus span.
-        let main = env.foo.find_class("Main", 0..0)?;
+        let main = env.find_class("Main", 0..0)?;
         let instance = main.send("system:", &[system], &env).context(&program)?;
         Ok(instance.send("run", &[], &env).context(&program)?)
-    }
-
-    pub fn find_maybe_vtable(
-        &self,
-        name: &Option<String>,
-        span: Span,
-    ) -> Result<Option<Rc<Vtable>>, Unwind> {
-        match name {
-            None => Ok(None),
-            Some(name) => Ok(Some(self.find_class(name, span)?.class().instance_vtable.clone())),
-        }
-    }
-
-    pub fn find_class(&self, name: &str, span: Span) -> Eval {
-        match self.builtins.borrow().get(name) {
-            None => return Unwind::error_at(span, "Unknown class"),
-            Some(builtin) => match builtin.datum {
-                Datum::Class(_) => Ok(builtin.to_owned()),
-                _ => Unwind::error_at(span, "Not a class name"),
-            },
-        }
     }
 
     pub fn make_array(&self, data: &[Object]) -> Object {
@@ -553,7 +503,7 @@ impl Foolang {
 
     // FIXME: inconsistent return type vs other make_foo methods.
     // Should others be Eval as well?
-    pub fn make_class(&self, classdef: &ClassDefinition) -> Eval {
+    pub fn make_class(&self, classdef: &ClassDefinition, env: &Env) -> Eval {
         let mut vtable_name = "class ".to_string();
         vtable_name.push_str(&classdef.name);
         let mut class_vtable = Vtable::new(vtable_name.as_str());
@@ -567,7 +517,7 @@ impl Foolang {
             let vtable = match &var.typename {
                 None => None,
                 Some(typename) => {
-                    let slotclass = self.find_class(typename, var.span.clone())?.class();
+                    let slotclass = env.find_class(typename, var.span.clone())?.class();
                     Some(slotclass.instance_vtable.clone())
                 }
             };
@@ -580,13 +530,13 @@ impl Foolang {
         for method in &classdef.class_methods {
             class_vtable.add_method(
                 &method.selector,
-                self.make_method_function(&method.parameters, &method.body, &method.return_type)?,
+                make_method_function(env, &method.parameters, &method.body, &method.return_type)?,
             );
         }
         for method in &classdef.instance_methods {
             instance_vtable.add_method(
                 &method.selector,
-                self.make_method_function(&method.parameters, &method.body, &method.return_type)?,
+                make_method_function(env, &method.parameters, &method.body, &method.return_type)?,
             );
         }
         Ok(Object {
@@ -606,16 +556,16 @@ impl Foolang {
 
     pub fn make_closure(
         &self,
-        frame: Frame,
+        env: Env,
         params: Vec<Arg>,
         body: Expr,
         rtype: &Option<String>,
     ) -> Eval {
-        let rtype = self.find_maybe_vtable(rtype, body.span())?;
+        let rtype = env.find_vtable_if_name(rtype, body.span())?;
         Ok(Object {
             vtable: Rc::clone(&self.closure_vtable),
             datum: Datum::Closure(Rc::new(Closure {
-                env: Some(frame),
+                env,
                 params,
                 body,
                 // FIXME: questionable span
@@ -625,12 +575,10 @@ impl Foolang {
     }
 
     pub fn make_compiler(&self) -> Object {
-        let mut foolang = self.clone();
-        foolang.workspace = Some(RefCell::new(HashMap::new()));
         Object {
             vtable: Rc::clone(&self.compiler_vtable),
             datum: Datum::Compiler(Rc::new(Compiler {
-                env: Env::from(foolang),
+                env: Env::from(self.clone()),
                 source: RefCell::new(String::new()),
                 expr: RefCell::new(Expr::Const(0..0, Literal::Boolean(false))),
             })),
@@ -670,26 +618,6 @@ impl Foolang {
                 end,
             })),
         }
-    }
-
-    pub fn make_method_function(
-        &self,
-        params: &[Var],
-        body: &Expr,
-        return_type: &Option<String>,
-    ) -> Result<Closure, Unwind> {
-        let mut args = vec![];
-        for param in params {
-            let vtable = self.find_maybe_vtable(&param.typename, param.span.clone())?;
-            args.push(Arg::new(param.span.clone(), param.name.clone(), vtable));
-        }
-        Ok(Closure {
-            env: None,
-            params: args,
-            body: body.to_owned(),
-            // FIXME: questionable span
-            return_vtable: self.find_maybe_vtable(&return_type, body.span())?,
-        })
     }
 
     pub fn make_output(&self, name: &str, output: Box<dyn Write>) -> Object {
@@ -889,13 +817,13 @@ impl Object {
         // println!("debug: {} {} {:?}", self, message, args);
         match self.vtable.get(message) {
             Some(Method::Primitive(method)) => method(self, args, env),
-            Some(Method::Interpreter(closure)) => env.apply(Some(self), closure, args),
+            Some(Method::Interpreter(closure)) => closure.apply(Some(self), args),
             Some(Method::Reader(index)) => read_instance_variable(self, *index),
             None => {
                 let not_understood = vec![env.foo.make_string(message), env.foo.make_array(args)];
                 match self.vtable.get("perform:with:") {
                     Some(Method::Interpreter(closure)) => {
-                        env.apply(Some(self), closure, &not_understood)
+                        closure.apply(Some(self), &not_understood)
                     }
                     Some(Method::Primitive(_method)) => unimplemented!(
                         "Dispatching to primitive perform:with: {:?} {} {:?}",
@@ -908,6 +836,26 @@ impl Object {
             }
         }
     }
+}
+
+pub fn make_method_function(
+    env: &Env,
+    params: &[Var],
+    body: &Expr,
+    return_type: &Option<String>,
+) -> Result<Closure, Unwind> {
+    let mut args = vec![];
+    for param in params {
+        let vtable = env.find_vtable_if_name(&param.typename, param.span.clone())?;
+        args.push(Arg::new(param.span.clone(), param.name.clone(), vtable));
+    }
+    Ok(Closure {
+        env: env.clone(),
+        params: args,
+        body: body.to_owned(),
+        // FIXME: questionable span
+        return_vtable: env.find_vtable_if_name(&return_type, body.span())?,
+    })
 }
 
 impl fmt::Display for Object {

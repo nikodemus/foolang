@@ -1,10 +1,10 @@
-use std::borrow::ToOwned;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt;
 use std::rc::Rc;
 
 use crate::objects::{
-    read_instance_variable, write_instance_variable, Arg, Closure, Eval, Foolang, Object, Source,
+    read_instance_variable, write_instance_variable, Arg, Datum, Eval, Foolang, Object, Source,
     Vtable,
 };
 use crate::parse::{
@@ -12,141 +12,6 @@ use crate::parse::{
 };
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
-
-#[derive(Debug)]
-pub struct MethodFrame {
-    pub names: RefCell<HashMap<String, Binding>>,
-    pub receiver: Object,
-}
-
-#[derive(Debug)]
-pub struct BlockFrame {
-    pub names: RefCell<HashMap<String, Binding>>,
-    // Innermost lexically enclosing frame
-    pub parent: Option<Frame>,
-    // Lexically enclosing method frame
-    pub home: Option<Frame>,
-}
-
-impl PartialEq for MethodFrame {
-    fn eq(&self, other: &Self) -> bool {
-        self as *const _ == other as *const _
-    }
-}
-
-impl PartialEq for BlockFrame {
-    fn eq(&self, other: &Self) -> bool {
-        self as *const _ == other as *const _
-    }
-}
-
-// FIXME:
-//  Frame {
-//    names:
-//    context: BlockContext | MethodContext
-//  }
-#[derive(Debug, Clone, PartialEq)]
-pub enum Frame {
-    MethodFrame(Rc<MethodFrame>),
-    BlockFrame(Rc<BlockFrame>),
-}
-
-impl Frame {
-    fn for_block(names: HashMap<String, Binding>, parent: Option<Frame>) -> Frame {
-        let home = match &parent {
-            None => None,
-            Some(p) => p.home(),
-        };
-        Frame::BlockFrame(Rc::new(BlockFrame {
-            names: RefCell::new(names),
-            parent,
-            home,
-        }))
-    }
-
-    fn maybe_for_method(
-        names: HashMap<String, Binding>,
-        parent: Option<Frame>,
-        receiver: Option<Object>,
-    ) -> Frame {
-        match receiver {
-            None => Frame::for_block(names, parent),
-            Some(receiver) => {
-                assert!(parent.is_none());
-                Frame::MethodFrame(Rc::new(MethodFrame {
-                    names: RefCell::new(names),
-                    receiver,
-                }))
-            }
-        }
-    }
-
-    fn names(&self) -> &RefCell<HashMap<String, Binding>> {
-        match self {
-            Frame::MethodFrame(method_frame) => &method_frame.names,
-            Frame::BlockFrame(block_frame) => &block_frame.names,
-        }
-    }
-
-    fn home(&self) -> Option<Frame> {
-        match self {
-            Frame::MethodFrame(_) => Some(self.clone()),
-            Frame::BlockFrame(block_frame) => block_frame.home.clone(),
-        }
-    }
-
-    fn receiver(&self) -> Option<&Object> {
-        match self {
-            Frame::MethodFrame(method_frame) => Some(&method_frame.receiver),
-            Frame::BlockFrame(block_frame) => {
-                match &block_frame.home {
-                    // FIXME: None as span
-                    None => None,
-                    Some(frame) => frame.receiver(),
-                }
-            }
-        }
-    }
-
-    fn parent(&self) -> Option<Frame> {
-        match self {
-            Frame::MethodFrame(_) => None,
-            Frame::BlockFrame(block_frame) => block_frame.parent.clone(),
-        }
-    }
-
-    fn set(&self, name: &str, value: Object) -> Option<Eval> {
-        match self.names().borrow_mut().get_mut(name) {
-            Some(binding) => Some(binding.assign(value)),
-            None => match self.parent() {
-                Some(parent) => parent.set(name, value),
-                None => None,
-            },
-        }
-    }
-
-    fn get(&self, name: &str) -> Option<Object> {
-        match self.names().borrow().get(name) {
-            Some(binding) => return Some(binding.value.clone()),
-            None => match self.parent() {
-                Some(parent) => parent.get(name),
-                None => None,
-            },
-        }
-    }
-}
-
-pub struct Env {
-    pub foo: Rc<Foolang>,
-    globals: Rc<RefCell<HashMap<String, Object>>>,
-    frame: Frame,
-}
-
-impl PartialEq for Env {
-    fn eq(&self, other: &Self) -> bool {
-        self as *const _ == other as *const _
-    }
-}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Binding {
@@ -161,13 +26,13 @@ impl Binding {
             value: init,
         }
     }
-    fn typed(vtable: Rc<Vtable>, init: Object) -> Binding {
+    pub fn typed(vtable: Rc<Vtable>, init: Object) -> Binding {
         Binding {
             vtable: Some(vtable),
             value: init,
         }
     }
-    fn assign(&mut self, value: Object) -> Eval {
+    pub fn assign(&mut self, value: Object) -> Eval {
         if let Some(vtable) = &self.vtable {
             if &value.vtable != vtable {
                 return Unwind::type_error(value, vtable.name.clone());
@@ -178,43 +43,197 @@ impl Binding {
     }
 }
 
+type SymbolTable = HashMap<String, Binding>;
+
+/// Underlying lexical environment: most methods operate on `Env`
+/// instead.
+#[derive(Debug)]
+pub struct EnvImpl {
+    /// For debugging purposes only: number of enclosing scopes.
+    depth: u32,
+    /// Names defined in this scope.
+    symbols: SymbolTable,
+    /// Enclosing lexical environment. None for the toplevel builtin environment.
+    parent: Option<Env>,
+    /// Environment of the outermost lexically enclosing closure. Used to identify
+    /// identify correct frame to return from.
+    home: Option<Env>,
+    /// Current receiver.
+    receiver: Option<Object>,
+}
+
+impl PartialEq for EnvImpl {
+    fn eq(&self, other: &Self) -> bool {
+        self as *const _ == other as *const _
+    }
+}
+
+/// Lexical environment. Exists around `EnvImpl` to provide access to
+/// the `Rc`.
+#[derive(Clone, PartialEq)]
+pub struct Env {
+    /// Underlying environment.
+    rc: Rc<RefCell<EnvImpl>>,
+    /// Vtables for builtin classes.
+    pub foo: Rc<Foolang>,
+}
+
+impl fmt::Debug for Env {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "#<Env {}>", self.rc.borrow().depth)
+    }
+}
+
 impl Env {
-    pub fn from(foo: Foolang) -> Env {
-        Env {
-            foo: Rc::new(foo),
-            globals: Rc::new(RefCell::new(HashMap::new())),
-            frame: Frame::for_block(HashMap::new(), None),
-        }
-    }
-
+    /// Creates a new environment containing only builtins.
     pub fn new() -> Env {
+        Env::from(Foolang::new())
+    }
+    /// Creates a new environment containing only builtins using
+    /// the provided `Foolang` object.
+    pub fn from(foo: Foolang) -> Env {
+        let foo_rc = Rc::new(foo);
+        let mut builtins = Env {
+            rc: Rc::new(RefCell::new(EnvImpl {
+                depth: 0,
+                symbols: HashMap::new(),
+                parent: None,
+                home: None,
+                receiver: None,
+            })),
+            foo: foo_rc.clone(),
+        };
+        foo_rc.init_env(&mut builtins);
         Env {
-            foo: Rc::new(Foolang::new()),
-            globals: Rc::new(RefCell::new(HashMap::new())),
-            frame: Frame::for_block(HashMap::new(), None),
+            rc: Rc::new(RefCell::new(EnvImpl {
+                depth: 1,
+                symbols: HashMap::new(),
+                parent: Some(builtins),
+                home: None,
+                receiver: None,
+            })),
+            foo: foo_rc.clone(),
+        }
+    }
+    /// Returns true iff underlying `EnvImpl` has no parents, implying that
+    /// that this is the builtin environment.
+    fn is_builtin(&self) -> bool {
+        match &self.rc.borrow().parent {
+            Some(_) => false,
+            None => true,
+        }
+    }
+    /// Returns true iff underlying `EnvImpl` has exactly one parent, implying
+    /// that this is a toplevel environment.
+    fn is_toplevel(&self) -> bool {
+        match &self.rc.borrow().parent {
+            Some(env) => env.is_builtin(),
+            None => false,
+        }
+    }
+    /// Returns true iff the specified name is defined in this or parent
+    /// environment.
+    fn has_definition(&self, name: &str) -> bool {
+        let env = self.rc.borrow();
+        if env.symbols.get(name).is_some() {
+            true
+        } else {
+            match &env.parent {
+                None => false,
+                Some(parent_env) => parent_env.has_definition(name),
+            }
+        }
+    }
+    /// Returns the receiver of the underlying `EnvImpl`.
+    fn receiver(&self) -> Option<Object> {
+        let env = self.rc.borrow();
+        match &env.receiver {
+            Some(receiver) => Some(receiver.clone()),
+            None => match &env.parent {
+                Some(parent) => parent.receiver(),
+                None => None,
+            },
+        }
+    }
+    /// Returns the home of the underlying `EnvImpl`.
+    fn home(&self) -> Option<Env> {
+        let env = self.rc.borrow();
+        match &env.home {
+            Some(home) => Some(home.clone()),
+            None => match &env.parent {
+                Some(parent) => parent.home(),
+                None => None,
+            },
+        }
+    }
+    fn parent(&self) -> Env {
+        self.rc.borrow().parent.clone().unwrap()
+    }
+    /// Creates a new environment enclosed by this one, containing one additional
+    /// binding.
+    fn bind(&self, name: &str, binding: Binding) -> Env {
+        let mut symbols = HashMap::new();
+        symbols.insert(String::from(name), binding);
+        Env {
+            rc: Rc::new(RefCell::new(EnvImpl {
+                depth: self.rc.borrow().depth + 1,
+                symbols,
+                parent: Some(self.clone()),
+                home: None,
+                receiver: None,
+            })),
+            foo: self.foo.clone(),
+        }
+    }
+    /// Creates a new environment enclosed by this one, containing
+    /// `symbols`, `receiver`, and `closure` as the home.
+    pub fn extend(&self, symbols: SymbolTable, receiver: Option<&Object>) -> Env {
+        let env = Env {
+            rc: Rc::new(RefCell::new(EnvImpl {
+                depth: self.rc.borrow().depth + 1,
+                symbols,
+                parent: Some(self.clone()),
+                home: self.home(),
+                receiver: receiver.map(|obj| obj.clone()),
+            })),
+            foo: self.foo.clone(),
+        };
+        // If there was no lexically enclosing call environment, then this is the one.
+        if env.rc.borrow().home.is_none() {
+            env.rc.borrow_mut().home = Some(env.clone());
+        };
+        env
+    }
+
+    pub fn define(&self, name: &str, value: Object) {
+        self.rc.borrow_mut().symbols.insert(String::from(name), Binding::untyped(value));
+    }
+
+    pub fn add_binding(&self, name: &str, binding: Binding) -> Env {
+        // println!("add binding: {}", name);
+        self.rc.borrow_mut().symbols.insert(String::from(name), binding);
+        self.clone()
+    }
+
+    pub fn set(&self, name: &str, value: Object) -> Option<Eval> {
+        let mut env = self.rc.borrow_mut();
+        match env.symbols.get_mut(name) {
+            Some(binding) => Some(binding.assign(value)),
+            None => match &env.parent {
+                Some(parent) => parent.set(name, value),
+                None => None,
+            },
         }
     }
 
-    pub fn bind(&self, name: &String, binding: Binding) -> Env {
-        let mut names = HashMap::new();
-        names.insert(name.to_owned(), binding);
-        Env {
-            foo: self.foo.clone(),
-            globals: self.globals.clone(),
-            frame: Frame::for_block(names, Some(self.frame.clone())),
-        }
-    }
-
-    pub fn new_frame(
-        &self,
-        names: HashMap<String, Binding>,
-        parent: Option<Frame>,
-        receiver: Option<Object>,
-    ) -> Env {
-        Env {
-            foo: self.foo.clone(),
-            globals: self.globals.clone(),
-            frame: Frame::maybe_for_method(names, parent, receiver),
+    pub fn get(&self, name: &str) -> Option<Object> {
+        let env = self.rc.borrow();
+        match env.symbols.get(name) {
+            Some(binding) => return Some(binding.value.clone()),
+            None => match &env.parent {
+                Some(parent) => parent.get(name),
+                None => None,
+            },
         }
     }
 
@@ -237,40 +256,6 @@ impl Env {
                 return Ok(object);
             }
         }
-    }
-
-    pub fn apply(
-        &self,
-        receiver: Option<&Object>,
-        closure: &Closure,
-        call_args: &[Object],
-    ) -> Eval {
-        let mut args = HashMap::new();
-        for (arg, obj) in closure.params.iter().zip(call_args.into_iter().map(|x| (*x).clone())) {
-            let binding = match &arg.vtable {
-                None => Binding::untyped(obj),
-                Some(vtable) => {
-                    if vtable != &obj.vtable {
-                        return Unwind::type_error_at(arg.span.clone(), obj, vtable.name.clone());
-                    }
-                    Binding::typed(vtable.to_owned(), obj.to_owned())
-                }
-            };
-            args.insert(arg.name.clone(), binding);
-        }
-        let env = self.new_frame(args, closure.env(), receiver.map(|x| x.clone()));
-        let result = match env.eval(&closure.body) {
-            Err(Unwind::ReturnFrom(ref frame, ref value)) if frame == &env.frame => value.clone(),
-            Ok(value) => value,
-            Err(unwind) => return Err(unwind),
-        };
-        if let Some(vtable) = &closure.return_vtable {
-            if &result.vtable != vtable {
-                return Unwind::type_error(result, vtable.name.clone())
-                    .source(&closure.body.span());
-            }
-        }
-        Ok(result)
     }
 
     pub fn eval(&self, expr: &Expr) -> Eval {
@@ -320,26 +305,17 @@ impl Env {
             None => Err(binding.value.clone()),
             Some(expr) => Ok(expr),
         };
-        match self.foo.workspace {
-            Some(ref workspace) if self.frame.receiver().is_none() => {
-                // Toplevel let in workspace
-                {
-                    let mut table = workspace.borrow_mut();
-                    table.insert(name.clone(), binding);
-                }
-                match value {
-                    Ok(expr) => self.eval(expr),
-                    Err(value) => Ok(value),
-                }
-            }
-            _ => {
-                // Lexical
-                let env = self.bind(name, binding);
-                match value {
-                    Ok(expr) => env.eval(expr),
-                    Err(value) => Ok(value),
-                }
-            }
+        // FIXME: there used to be workspace stuff there to handle 'toplevel lets'.
+        // Lexical
+        let env = if self.is_toplevel() {
+            // FIXME: should check if the toplevel is a "workspace" or not.
+            self.add_binding(name, binding)
+        } else {
+            self.bind(name, binding)
+        };
+        match value {
+            Ok(expr) => env.eval(expr),
+            Err(value) => Ok(value),
         }
     }
 
@@ -354,7 +330,7 @@ impl Env {
             };
             args.push(Arg::new(p.span.clone(), p.name.clone(), vt));
         }
-        self.foo.make_closure(self.frame.clone(), args, body.clone(), rtype)
+        self.foo.make_closure(self.clone(), args, body.clone(), rtype)
     }
 
     fn eval_cascade(&self, receiver: &Box<Expr>, chains: &Vec<Vec<Message>>) -> Eval {
@@ -367,14 +343,18 @@ impl Env {
     }
 
     fn eval_class_definition(&self, definition: &ClassDefinition) -> Eval {
+        // println!("CLASS env: {:?}", self);
         // FIXME: allow anonymous classes
-        if self.frame.parent().is_some() {
+        if !self.is_toplevel() {
+            println!("class not at toplevel, env: {:?}", self);
             return Unwind::error_at(definition.span.clone(), "Class definition not at toplevel");
         }
         let name = &definition.name;
-        let class = self.foo.make_class(definition)?;
-        // FIXME: should be self.globals
-        self.foo.builtins.borrow_mut().insert(name.to_string(), class.clone());
+        if self.has_definition(name) {
+            return Unwind::error_at(definition.span.clone(), "Cannot redefine");
+        }
+        let class = self.foo.make_class(definition, self)?;
+        self.define(name, class.clone());
         Ok(class)
     }
 
@@ -386,9 +366,39 @@ impl Env {
         }
     }
 
+    // FIXME: half duplicates find_global
+    pub fn find_class(&self, name: &str, span: Span) -> Eval {
+        match self.find_global(name) {
+            None => Unwind::error_at(span, "Undefined class"),
+            Some(obj) => match &obj.datum {
+                Datum::Class(_) => Ok(obj),
+                _ => Unwind::error_at(span, "Not a class name"),
+            },
+        }
+    }
+
+    pub fn find_global(&self, name: &str) -> Option<Object> {
+        if self.is_toplevel() {
+            self.get(name)
+        } else {
+            self.parent().find_global(name)
+        }
+    }
+
+    pub fn find_vtable_if_name(
+        &self,
+        name: &Option<String>,
+        span: Span,
+    ) -> Result<Option<Rc<Vtable>>, Unwind> {
+        match name {
+            None => Ok(None),
+            Some(name) => Ok(Some(self.find_class(name, span)?.class().instance_vtable.clone())),
+        }
+    }
+
     fn eval_global(&self, global: &Global) -> Eval {
-        match self.foo.builtins.borrow().get(&global.name) {
-            Some(obj) => Ok(obj.clone()),
+        match self.find_global(&global.name) {
+            Some(obj) => Ok(obj),
             None => Unwind::error_at(global.span.clone(), "Undefined global"),
         }
     }
@@ -433,9 +443,9 @@ impl Env {
     }
 
     fn eval_return(&self, ret: &Return) -> Eval {
-        match self.frame.home() {
-            None => Unwind::error_at(ret.span.clone(), "No method to return from"),
-            Some(frame) => Unwind::return_from(frame, self.eval(&ret.value)?),
+        match self.home() {
+            None => Unwind::error_at(ret.span.clone(), "Nothing to return from"),
+            Some(env) => Unwind::return_from(env, self.eval(&ret.value)?),
         }
     }
 
@@ -463,10 +473,6 @@ impl Env {
         Ok(result)
     }
 
-    fn find_class(&self, name: &str, span: Span) -> Eval {
-        self.foo.find_class(name, span)
-    }
-
     fn eval_typecheck(&self, expr: &Expr, typename: &str) -> Eval {
         let value = self.eval(expr)?;
         // FIXME: Wrong span.
@@ -480,22 +486,16 @@ impl Env {
 
     fn eval_assign(&self, assign: &Assign) -> Eval {
         let value = self.eval(&assign.value)?;
-        match self.frame.set(&assign.name, value.clone()) {
+        match self.set(&assign.name, value.clone()) {
             Some(res) => res.source(&assign.span),
             None => {
-                if let Some(receiver) = self.frame.receiver() {
+                if let Some(receiver) = self.receiver() {
                     if let Some(slot) = receiver.vtable.slots.get(&assign.name) {
-                        return write_instance_variable(receiver, slot, value).source(&assign.span);
-                    }
-                } else {
-                    // Not inside a method, so let's check workspace.
-                    // FIXME: Are closures allowed to see into workspace?
-                    if let Some(workspace) = &self.foo.workspace {
-                        if let Some(binding) = workspace.borrow_mut().get_mut(&assign.name) {
-                            return binding.assign(value);
-                        }
+                        return write_instance_variable(&receiver, slot, value)
+                            .source(&assign.span);
                     }
                 }
+                // FIXME: there used to be a workspace lookup here...
                 Unwind::error_at(assign.span.clone(), "Cannot assign to an unbound variable")
             }
         }
@@ -503,27 +503,26 @@ impl Env {
 
     fn eval_var(&self, var: &Var) -> Eval {
         if &var.name == "self" {
-            match self.frame.receiver() {
+            match self.receiver() {
                 None => Unwind::error_at(var.span.clone(), "self outside method context"),
                 Some(receiver) => Ok(receiver.clone()),
             }
         } else {
-            match self.frame.get(&var.name) {
+            match self.get(&var.name) {
                 Some(value) => return Ok(value),
                 None => {
-                    if let Some(receiver) = self.frame.receiver() {
+                    if let Some(receiver) = self.receiver() {
                         if let Some(slot) = receiver.vtable.slots.get(&var.name) {
-                            return read_instance_variable(receiver, slot.index);
-                        }
-                    } else {
-                        // Not inside a method, so let's check workspace.
-                        // FIXME: Are closures allowed to see into workspace?
-                        if let Some(workspace) = &self.foo.workspace {
-                            if let Some(binding) = workspace.borrow().get(&var.name) {
-                                return Ok(binding.value.clone());;
-                            }
+                            return read_instance_variable(&receiver, slot.index);
                         }
                     }
+                    println!(
+                        "UNBOUND: {:?}\n    ENV: {:?}\n    REC: {:?}",
+                        &var,
+                        self.rc.borrow(),
+                        self.receiver()
+                    );
+                    // FIXME: There used to be workspace handling here
                 }
             }
             Unwind::error_at(var.span.clone(), "Unbound variable")

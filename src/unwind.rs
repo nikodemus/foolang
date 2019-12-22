@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::eval::Frame;
+use crate::eval::Env;
 use crate::objects::Object;
 use crate::tokenstream::Span;
 
@@ -36,7 +36,7 @@ impl LineIndices for str {
 #[derive(PartialEq, Debug)]
 pub enum Unwind {
     Exception(Error, Location),
-    ReturnFrom(Frame, Object),
+    ReturnFrom(Env, Object),
 }
 
 #[derive(PartialEq, Debug)]
@@ -147,8 +147,8 @@ impl Unwind {
         ))
     }
 
-    pub fn return_from<T>(frame: Frame, value: Object) -> Result<T, Unwind> {
-        Err(Unwind::ReturnFrom(frame, value))
+    pub fn return_from<T>(env: Env, value: Object) -> Result<T, Unwind> {
+        Err(Unwind::ReturnFrom(env, value))
     }
 
     pub fn add_span(&mut self, span: &Span) {

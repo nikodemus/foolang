@@ -19,12 +19,12 @@ pub fn vtable() -> Vtable {
 
 // FUNDAMENTAL METHODS
 
-fn closure_apply(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    env.apply(None, receiver.closure_ref(), args)
+fn closure_apply(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
+    receiver.closure_ref().apply(None, args)
 }
 
 fn closure_on_error(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let res = env.apply(None, receiver.closure_ref(), args);
+    let res = receiver.closure_ref().apply(None, args);
     if let Err(Unwind::Exception(error, loc)) = res {
         args[0].send(
             "value:",
@@ -39,7 +39,7 @@ fn closure_on_error(receiver: &Object, args: &[Object], env: &Env) -> Eval {
 fn closure_while_true(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     let t = env.foo.make_boolean(true);
     loop {
-        let r = env.apply(None, receiver.closure_ref(), &[])?;
+        let r = receiver.closure_ref().apply(None, &[])?;
         if t != r {
             return Ok(r);
         }
@@ -51,8 +51,8 @@ fn closure_while_true_closure(receiver: &Object, args: &[Object], env: &Env) -> 
     // FIXME: Should initialize to nil
     let mut r = env.foo.make_boolean(false);
     loop {
-        if env.apply(None, receiver.closure_ref(), &[])? == t {
-            r = env.apply(None, args[0].closure_ref(), &[])?
+        if receiver.closure_ref().apply(None, &[])? == t {
+            r = args[0].closure_ref().apply(None, &[])?
         } else {
             return Ok(r);
         }
@@ -62,7 +62,7 @@ fn closure_while_true_closure(receiver: &Object, args: &[Object], env: &Env) -> 
 fn closure_while_false(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     let f = env.foo.make_boolean(false);
     loop {
-        let r = env.apply(None, receiver.closure_ref(), &[])?;
+        let r = receiver.closure_ref().apply(None, &[])?;
         if r != f {
             return Ok(r);
         }
@@ -74,8 +74,8 @@ fn closure_while_false_closure(receiver: &Object, args: &[Object], env: &Env) ->
     // FIXME: Should initialize to nil
     let mut r = env.foo.make_boolean(false);
     loop {
-        if env.apply(None, receiver.closure_ref(), &[])? == f {
-            r = env.apply(None, args[0].closure_ref(), &[])?;
+        if receiver.closure_ref().apply(None, &[])? == f {
+            r = args[0].closure_ref().apply(None, &[])?;
         } else {
             return Ok(r);
         }

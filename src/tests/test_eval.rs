@@ -467,17 +467,17 @@ fn test_unbound() {
 #[test]
 fn test_class_not_toplevel() {
     assert_eq!(
-        eval_str("let x = 42. class Point { x y } end"),
+        eval_str("{ class Point { x y } end } value"),
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
                 what: "Class definition not at toplevel",
             }),
             Location {
-                span: Some(12..17),
+                span: Some(2..7),
                 context: Some(
                     concat!(
-                        "001 let x = 42. class Point { x y } end\n",
-                        "                ^^^^^ Class definition not at toplevel\n"
+                        "001 { class Point { x y } end } value\n",
+                        "      ^^^^^ Class definition not at toplevel\n"
                     )
                     .to_string()
                 )

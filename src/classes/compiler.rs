@@ -1,4 +1,4 @@
-use crate::eval::{Binding, Env};
+use crate::eval::Env;
 use crate::objects::{Eval, Object, Source, Vtable};
 use crate::parse::Parser;
 use crate::unwind::{Error, Unwind};
@@ -30,17 +30,11 @@ fn compiler_evaluate(receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
 }
 
 fn compiler_define_as(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
-    let compiler = receiver.compiler();
     let name = args[0].string_as_str();
     let value = args[1].clone();
-    match compiler.env.foo.workspace {
-        None => Unwind::error("Cannot define: not in workspace"),
-        Some(ref workspace) => {
-            let mut table = workspace.borrow_mut();
-            table.insert(name.to_string(), Binding::untyped(value));
-            Ok(receiver.clone())
-        }
-    }
+    // FIXME: I used to have explicit workspaces, is this as good?
+    receiver.compiler().env.define(name, value);
+    Ok(receiver.clone())
 }
 
 fn parse_aux(receiver: &Object, source: &Object, handler: Option<&Object>, env: &Env) -> Eval {
