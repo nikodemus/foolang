@@ -412,34 +412,27 @@ impl Env {
         }
     }
 
-    fn eval_import(&self, _import: &Import) -> Eval {
-        // let names = self.foo.load_module(&import.name)?;
-        unimplemented!("eval_import")
-        /* Sketch:
-            - import.load_module() is responsible for adding prefixes and such
-              (or eliding them or only bringing in one object, etc)
-
-            let names = import.load_module(self.foo);
-            let value = match &import.body {
-                 None => Const::new(self.foo.make_string(&import.name))
-                 Some(expr) => expr,
-            };
-            match self.foo.workspace {
-              Some(ref workspace) if self.frame.receiver().is_none() => {
-                 // toplevel import in workspace (not module?! how do I know?)
-                 {
-                   let mut table = workspace.borrow_mut();
-                   table.insert_all(names);
-                 }
-                 self.eval(value),
-              }
-              _ => {
-                // Lexical
-                let env = Env::from_parts(self.foo, names, Some(self.frame.clone()), None);
-                env.eval(value)
-              }
+    fn eval_import(&self, import: &Import) -> Eval {
+        // FIXME: load_module should clone the environment, dropping
+        // unexported things, renaming, adding prefixes, etc.
+        //
+        // FIXME: load_module should return a Module object, probably.
+        //
+        // FIXME: direct imports should be processed here
+        let module = &self.foo.load_module(&import.name)?;
+        let symbols = &module.rc.borrow().symbols;
+        for (name, _) in symbols.iter() {
+            if self.has_definition(name) {
+                return Unwind::error_at(import.span.clone(), "Name conflict");
             }
-        */
+        }
+        for (name, binding) in symbols.iter() {
+            self.add_binding(name, binding.clone());
+        }
+        match import.body {
+            None => Ok(self.foo.make_string(&import.name)),
+            Some(ref expr) => self.eval(expr),
+        }
     }
 
     fn eval_return(&self, ret: &Return) -> Eval {

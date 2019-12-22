@@ -81,6 +81,14 @@ fn test_bad_class() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
+fn test_import_x() -> Result<(), Box<std::error::Error>> {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/import_x.foo");
+    cmd.assert().failure().code(123).stdout("");
+    Ok(())
+}
+
+#[test]
 fn repl() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/repl.foo");
