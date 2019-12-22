@@ -16,7 +16,7 @@ class PointMass { forces mass gravity acceleration position velocity debug }
 
   method velocity: vel
      velocity = vel
-end.
+end
 
 class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttle debug }
 
@@ -103,7 +103,7 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
       let thrust = maxThrust * throttle.
       noseDirection * thrust
       
-end.
+end
 
 class Main { system }
    method run
