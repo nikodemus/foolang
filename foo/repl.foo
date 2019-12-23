@@ -27,11 +27,12 @@ class REPL
 
   method readEvalPrint
      {
-       self; prompt; read; eval; print
+       self prompt read eval print
      }
      onError: { |error context|
-       _output println: error.
-       _output println: context
+        _output
+        ; println: error
+        ; println: context
      }
 
   method prompt
@@ -49,6 +50,7 @@ class REPL
            self _tryParse: source
          }
      } whileFalse
+     
 
   method eval
      _atEof ifFalse: { _value = _compiler evaluate }
