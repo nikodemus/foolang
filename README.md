@@ -13,19 +13,7 @@ Like all new languages it has _somewhat_ unrealistic aspirations:
 - Fault tolerance of Erlang.
 - Extensibility of Common Lisp.
 - Excitement of Logo.
-
-**Status**: bootstrap evaluator implementation in progress.
-
-I want the language and the environment to be engaging and inspiring.
-
-I want someone who last programmed some Basic on Commodore 64 over 30
-years ago to feel empowered to do things.
-
-I want experienced programmers to feel comfortable: having the system
-trust them and them being able to trust the system.
-
-I want programs written by others to be easy to understand after the
-fact.
+- Success of Fortress
 
 ## Hello World
 
@@ -34,8 +22,20 @@ fact.
             system output println: "Hello world!"
     end
 
-The plan is to provide a bit of syntax sugar for this, but that's a low
-priority.
+## Metagoals
+
+- Experienced programmers must feel comfortable: the system trusts
+  them and they can trust the system.
+
+- People who've only ever done "spreadsheet programming", or who last
+  programmed some Basic on Commodore 64 over 30 years ago should feel
+  empowered to do things.
+
+- Programs written by others to be easy to understand after the
+  fact.
+
+- The environment is should be engaging and inspiring and empowering.
+  Not toys, but good and easy to use tools.
 
 ## Design Principles
 
@@ -78,17 +78,37 @@ than your head."
 - No ambient authority: third-party libraries don't have access to your
   filesystem and network unless you give it to them.
 
-## Implementation Plan
+## Implementation Plan & Status
 
-1. WIP: Bootstrap evaluator written in Rust, supporting the full language.
+1. WIP: Bootstrap evaluator written in Rust, supporting the full
+   language, including a web-based IDE.
 
-2. TODO: Self-hosted (plus Javascript, etc) web-IDE.
+2. TODO: Self-hosted Foolang to LLVM assembly compiler (possibly for a
+   subset of Foolang.)
 
-3. TODO: Self-hosted Foolang to Rust compiler (possibly for a subset.)
+   Rationale: Since Foolang is to be an AOT compiled language going
+   from interpreter to compiler very early makes perfect sense.
+   Generating LLVM source files instead of directly interfacing should
+   both make debugging easier and avoid headaches with interfacing to
+   LLVM.
 
-4. TODO: Self-hosted Foolang to bytecode compiler, VM, and GC (compiled to Rust).
+   Option: instead of targeting LLVM assembly generate rust source
+   code instead. Pro: LLVM not needed for bootstrapping, easier to
+   keep using Rust-provided dependencies, can use Rc for GC. Con: Rust
+   may be a painful target.
 
-5. TODO: Self-hosted JIT and AOT native compiler. (LLVM or Cranelift as backend.)
+3. TODO: Self-hosted Foolang to bytecode compiler, VM, and GC
+   (compiled using compiler from step 2.)
+
+   Rationale: Self-hosting GC and VM are perfect battlegrounds to make
+   sure Foolang can support high performance systems programming tasks.
+   VM is required for a nice development experience.
+
+4. TODO: Self-hosted JIT and AOT native compiler. (LLVM backend.)
+
+   Rationale: half the LLVM backend exists already from step #2,
+   slow JIT should not be a huge issue as it is to be mainly a
+   development time facility.
 
 ## Syntax
 
@@ -526,7 +546,7 @@ what gcc -O0 would produce.
   ...though I submit that the fikkiw reads better:
 
 
-     1...10 -- sum: {|n| (n+1) / n }
+     1...10 sum: {|n| (n+1) / n }
 
 
   The editor will render them pretty.
