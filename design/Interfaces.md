@@ -40,5 +40,7 @@ Interface methods can also be used directly:
 
     something Printable.printOn: stream
 
+Most importantly, this is the way to "call superclass methods".
+
 Classes can include interfaces to get their methods without explictly declaring
 they belong to the type, using includes.
