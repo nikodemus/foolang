@@ -267,12 +267,64 @@ Are constructed using braces
 ## Notes
 
 ```
-For iterators: [as, bs, cs]
-        where: { |a,b,c| a*a == (b*b + c*c) }
-       collect: { |a,b,c| [a,b,c] }
+For iterables: [as, bs, cs]
+  where: { |a,b,c| a*a == (b*b + c*c) }
+  collect: { |a,b,c| [a,b,c] }
 ```
 
-maybe?
+- MAYBE a = b --> True iff a is same object as b.
+
+    Rationale: natural because: let a = b. a = b --> True
+               I also think this is a reasonable thing to ask.
+      Against: could be part of Any interface, with default implementation of
+                  Foolang eq: x to: b
+
+- MAYBE a is B --> True iff a is member of type B
+
+    Rationale: don't need to add isString -type methods to umpteen classes
+      Against: reflection territory...
+
+- Distinct IR representation for "trivial" methods:
+
+     method foo: bar
+        bar quux: self
+
+  Ie. ones that just re-arrage self and arguments and dispatch
+  to a new method. This is what double-dispatch looks like, and
+  being able to inline it trivially will make things a LOT faster
+  at compile-time.
+
+- Literate programming?
+
+  mymodule.litfoo:
+
+      This is a description of an algorithm from input to output.
+
+      @algorithm_1: input, output
+      ---
+        input each: { output handleInput: _ }
+      ---
+
+      This is a description of a method.
+
+      @method_foo
+      ---
+        method foo: input
+           let output = Output new
+           @algorithm_1
+           return output
+      ---
+
+      This is a description of a class.
+
+      @@
+      ---
+         class Foo
+            @method_foo
+         end
+      ---
+
+  Kinda nice.
 
 - before, after, and around methods
 
