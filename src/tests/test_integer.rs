@@ -13,7 +13,7 @@ fn test_bad_decimal_integer() {
         eval_str("1x3"),
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
-                what: "Malformed number",
+                what: "Malformed number".to_string(),
             }),
             Location {
                 span: Some(0..3),
@@ -34,7 +34,7 @@ fn test_bad_hex_integer() {
         eval_str("0x1x3"),
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
-                what: "Malformed hexadecimal number",
+                what: "Malformed hexadecimal number".to_string(),
             }),
             Location {
                 span: Some(0..5),
@@ -57,7 +57,7 @@ fn test_bad_binary_integer() {
         eval_str("0b123"),
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
-                what: "Malformed binary number",
+                what: "Malformed binary number".to_string(),
             }),
             Location {
                 span: Some(0..5),

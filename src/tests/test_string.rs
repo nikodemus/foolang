@@ -45,7 +45,7 @@ fn test_interpolated_error_location() {
         exception,
         Unwind::Exception(
             Error::SimpleError(SimpleError {
-                what: "Undefined global",
+                what: "Undefined global".to_string(),
             }),
             Location {
                 span: Some(47..48),

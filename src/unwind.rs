@@ -57,7 +57,7 @@ pub struct MessageError {
 
 #[derive(PartialEq, Debug)]
 pub struct SimpleError {
-    pub what: &'static str,
+    pub what: String,
 }
 
 #[derive(PartialEq, Debug)]
@@ -120,28 +120,28 @@ impl Unwind {
         ))
     }
 
-    pub fn eof_error_at<T>(span: Span, what: &'static str) -> Result<T, Unwind> {
+    pub fn eof_error_at<T>(span: Span, what: &str) -> Result<T, Unwind> {
         Err(Unwind::Exception(
             Error::EofError(SimpleError {
-                what,
+                what: what.to_string(),
             }),
             Location::new(span),
         ))
     }
 
-    pub fn error<T>(what: &'static str) -> Result<T, Unwind> {
+    pub fn error<T>(what: &str) -> Result<T, Unwind> {
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
-                what,
+                what: what.to_string(),
             }),
             Location::none(),
         ))
     }
 
-    pub fn error_at<T>(span: Span, what: &'static str) -> Result<T, Unwind> {
+    pub fn error_at<T>(span: Span, what: &str) -> Result<T, Unwind> {
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
-                what,
+                what: what.to_string(),
             }),
             Location::new(span),
         ))
@@ -184,7 +184,7 @@ impl MessageError {
 
 impl SimpleError {
     pub fn what(&self) -> String {
-        self.what.to_string()
+        self.what.clone()
     }
 }
 

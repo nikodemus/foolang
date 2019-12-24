@@ -106,8 +106,28 @@ impl ClassDefinition {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Import {
     pub span: Span,
-    pub name: String,
+    pub path: String,
+    pub prefix: String,
+    pub name: Option<String>,
     pub body: Option<Box<Expr>>,
+}
+
+impl Import {
+    pub fn expr(
+        span: Span,
+        path: &str,
+        prefix: &str,
+        name: Option<&str>,
+        body: Option<Expr>,
+    ) -> Expr {
+        Expr::Import(Import {
+            span,
+            path: path.to_string(),
+            prefix: prefix.to_string(),
+            name: name.map(|x| x.to_string()),
+            body: body.map(|x| Box::new(x)),
+        })
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -639,15 +659,15 @@ impl<'a> Parser<'a> {
         self.state.borrow().tokenstream.tokenstring()
     }
 
-    pub fn eof_error<T>(&self, problem: &'static str) -> Result<T, Unwind> {
+    pub fn eof_error<T>(&self, problem: &str) -> Result<T, Unwind> {
         self.state.borrow().tokenstream.eof_error(problem)
     }
 
-    pub fn error<T>(&self, problem: &'static str) -> Result<T, Unwind> {
+    pub fn error<T>(&self, problem: &str) -> Result<T, Unwind> {
         self.state.borrow().tokenstream.error(problem)
     }
 
-    pub fn error_at<T>(&self, span: Span, problem: &'static str) -> Result<T, Unwind> {
+    pub fn error_at<T>(&self, span: Span, problem: &str) -> Result<T, Unwind> {
         self.state.borrow().tokenstream.error_at(span, problem)
     }
 }
@@ -1080,19 +1100,68 @@ fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     }
 }
 
+fn dotted_name_at(parser: &Parser, point: usize) -> Result<Option<Span>, Unwind> {
+    let ((token1, span1), (token2, span2)) = parser.lookahead2()?;
+    if !(token1 == Token::SIGIL && parser.slice_at(span1.clone()) == "." && span1.start == point) {
+        return Ok(None);
+    }
+    if !((token2 == Token::WORD || token2 == Token::SIGIL) && span2.start == span1.end) {
+        return Ok(None);
+    }
+    // Dot followed by a word or sigil, no whitespace -- ok!
+    parser.next_token()?;
+    parser.next_token()?;
+    Ok(Some(point..span2.end))
+}
+
 fn import_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     let start = parser.span().start;
     if Token::WORD == parser.next_token()? {
-        let span = start..parser.span().end;
-        let name = parser.slice().to_string();
+        let mut span = start..parser.span().end;
+        let mut spec = parser.slice().to_string();
+        loop {
+            if let Some(more) = dotted_name_at(parser, span.end)? {
+                spec.push_str(parser.slice_at(more.clone()));
+                span = more;
+            } else {
+                break;
+            }
+        }
         let body = if Token::EOF == parser.lookahead()?.0 {
             parser.next_token()?;
             None
         } else {
             Some(Box::new(parser.parse_seq()?))
         };
+        let mut path = String::new();
+        let mut prefix = String::new();
+        let mut name = None;
+        let mut parts = spec.split(".").peekable();
+        while let Some(part) = parts.next() {
+            let uppercase = part.chars().next().unwrap().is_uppercase();
+            if parts.peek().is_some() {
+                if uppercase {
+                    return Unwind::error_at(
+                        start..parser.span().start,
+                        "Illegal import: uppercase module name",
+                    );
+                }
+                path.push_str(part);
+                path.push_str(".");
+            } else {
+                if uppercase {
+                    assert_eq!(Some('.'), path.pop());
+                    name = Some(part.to_string());
+                } else {
+                    path.push_str(part);
+                    prefix.push_str(part);
+                };
+            }
+        }
         Ok(Expr::Import(Import {
             span,
+            path,
+            prefix,
             name,
             body,
         }))

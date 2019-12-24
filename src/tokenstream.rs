@@ -83,15 +83,15 @@ impl<'a> TokenStream<'a> {
         self.current.1
     }
 
-    pub fn error_at<T>(&self, span: Span, problem: &'static str) -> Result<T, Unwind> {
+    pub fn error_at<T>(&self, span: Span, problem: &str) -> Result<T, Unwind> {
         Unwind::error_at(span, problem)
     }
 
-    pub fn error<T>(&self, problem: &'static str) -> Result<T, Unwind> {
+    pub fn error<T>(&self, problem: &str) -> Result<T, Unwind> {
         self.error_at(self.span(), problem)
     }
 
-    pub fn eof_error<T>(&self, problem: &'static str) -> Result<T, Unwind> {
+    pub fn eof_error<T>(&self, problem: &str) -> Result<T, Unwind> {
         Unwind::eof_error_at(self.span(), problem)
     }
 

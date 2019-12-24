@@ -411,3 +411,11 @@ fn test_parse_array3() {
         Ok(Array::expr(0..72, vec![int(18..19, 1), int(37..38, 2), int(56..57, 3)]))
     )
 }
+
+#[test]
+fn test_parse_import1() {
+    assert_eq!(parse_str("import x"), Ok(Import::expr(0..8, "x", "x", None, None)));
+    assert_eq!(parse_str("import x.Y"), Ok(Import::expr(0..10, "x", "", Some("Y"), None)));
+    assert_eq!(parse_str("import x.y.Z"), Ok(Import::expr(0..12, "x.y", "", Some("Z"), None)));
+    assert_eq!(parse_str("import x.y.z"), Ok(Import::expr(0..12, "x.y.z", "z", None, None)));
+}

@@ -413,26 +413,49 @@ impl Env {
     }
 
     fn eval_import(&self, import: &Import) -> Eval {
-        // FIXME: load_module should clone the environment, dropping
-        // unexported things, renaming, adding prefixes, etc.
-        //
-        // FIXME: load_module should return a Module object, probably.
-        //
-        // FIXME: direct imports should be processed here
-        let module = &self.foo.load_module(&import.name)?;
+        let module = &self.foo.load_module(&import.path)?;
         let symbols = &module.rc.borrow().symbols;
-        for (name, _) in symbols.iter() {
-            let alias = format!("{}.{}", &import.name, name);
-            if self.has_definition(&alias) {
-                return Unwind::error_at(import.span.clone(), "Name conflict");
+        match &import.name {
+            None => {
+                // everything, using prefix
+                for (name, _) in symbols.iter() {
+                    let alias = format!("{}.{}", &import.prefix, name);
+                    if self.has_definition(&alias) {
+                        return Unwind::error_at(
+                            import.span.clone(),
+                            &format!("Name conflict: {} already defined", &alias),
+                        );
+                    }
+                }
+                for (name, binding) in symbols.iter() {
+                    let alias = format!("{}.{}", &import.prefix, name);
+                    self.add_binding(&alias, binding.clone());
+                }
+            }
+            Some(name) => {
+                // just this
+                if self.has_definition(&name) {
+                    return Unwind::error_at(
+                        import.span.clone(),
+                        &format!("Name conflict: {} already defined", &name),
+                    );
+                }
+                match symbols.get(name.as_str()) {
+                    None => {
+                        return Unwind::error_at(
+                            import.span.clone(),
+                            &format!("Cannot import {}: not defined in module", &name),
+                        )
+                    }
+                    Some(binding) => {
+                        self.add_binding(&name, binding.clone());
+                    }
+                }
             }
         }
-        for (name, binding) in symbols.iter() {
-            let alias = format!("{}.{}", &import.name, name);
-            self.add_binding(&alias, binding.clone());
-        }
         match import.body {
-            None => Ok(self.foo.make_string(&import.name)),
+            // FIXME: Should be path + name
+            None => Ok(self.foo.make_string(&import.path)),
             Some(ref expr) => self.eval(expr),
         }
     }

@@ -421,7 +421,7 @@ fn test_assign_unbound() {
         eval_str("let x = 1. z = x + 1. let y = x. y"),
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
-                what: "Cannot assign to an unbound variable",
+                what: "Cannot assign to an unbound variable".to_string(),
             }),
             Location {
                 span: Some(11..12),
@@ -448,7 +448,7 @@ fn test_unbound() {
         eval_str("let foo = 41. foo + bar"),
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
-                what: "Unbound variable",
+                what: "Unbound variable".to_string(),
             }),
             Location {
                 span: Some(20..23),
@@ -470,7 +470,7 @@ fn test_class_not_toplevel() {
         eval_str("{ class Point { x y } end } value"),
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
-                what: "Class definition not at toplevel",
+                what: "Class definition not at toplevel".to_string(),
             }),
             Location {
                 span: Some(2..7),
@@ -512,7 +512,7 @@ fn eval_global1() {
         eval_str("DoesNotExist"),
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
-                what: "Undefined global",
+                what: "Undefined global".to_string(),
             }),
             Location {
                 span: Some(0..12),

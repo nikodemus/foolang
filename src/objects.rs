@@ -443,10 +443,11 @@ impl Foolang {
         }
     }
 
-    pub fn load_module(&self, name: &str) -> Result<Env, Unwind> {
-        let code = match std::fs::read_to_string(format!("foo/{}.foo", name)) {
+    pub fn load_module(&self, path: &str) -> Result<Env, Unwind> {
+        let file = format!("foo/{}.foo", path.replace(".", "/"));
+        let code = match std::fs::read_to_string(&file) {
             Ok(code) => code,
-            Err(_err) => return Unwind::error("Could not load module"),
+            Err(_err) => return Unwind::error(&format!("Could not load module from {}", file)),
         };
         let env = Env::from(self.clone());
         let mut parser = Parser::new(&code);
