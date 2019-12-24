@@ -432,6 +432,20 @@ impl Env {
                     self.add_binding(&alias, binding.clone());
                 }
             }
+            Some(name) if name == "*" => {
+                // everything, without prefix
+                for (name, _) in symbols.iter() {
+                    if self.has_definition(&name) {
+                        return Unwind::error_at(
+                            import.span.clone(),
+                            &format!("Name conflict: {} already defined", &name),
+                        );
+                    }
+                }
+                for (name, binding) in symbols.iter() {
+                    self.add_binding(&name, binding.clone());
+                }
+            }
             Some(name) => {
                 // just this
                 if self.has_definition(&name) {

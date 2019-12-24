@@ -96,6 +96,15 @@ fn test_import_x_identity() -> Result<(), Box<std::error::Error>> {
     Ok(())
 }
 
+#[ignore]
+#[test]
+fn test_import_x_star() -> Result<(), Box<std::error::Error>> {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/import_x_star.foo");
+    cmd.assert().failure().code(42).stdout("");
+    Ok(())
+}
+
 #[test]
 fn repl() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;

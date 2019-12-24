@@ -1105,7 +1105,10 @@ fn dotted_name_at(parser: &Parser, point: usize) -> Result<Option<Span>, Unwind>
     if !(token1 == Token::SIGIL && parser.slice_at(span1.clone()) == "." && span1.start == point) {
         return Ok(None);
     }
-    if !((token2 == Token::WORD || token2 == Token::SIGIL) && span2.start == span1.end) {
+    if !(token2 == Token::WORD
+        || (token2 == Token::SIGIL && parser.slice_at(span2.clone()) == "*")
+            && span2.start == span1.end)
+    {
         return Ok(None);
     }
     // Dot followed by a word or sigil, no whitespace -- ok!
@@ -1138,18 +1141,18 @@ fn import_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         let mut name = None;
         let mut parts = spec.split(".").peekable();
         while let Some(part) = parts.next() {
-            let uppercase = part.chars().next().unwrap().is_uppercase();
+            let is_name = part == "*" || part.chars().next().unwrap().is_uppercase();
             if parts.peek().is_some() {
-                if uppercase {
+                if is_name {
                     return Unwind::error_at(
                         start..parser.span().start,
-                        "Illegal import: uppercase module name",
+                        "Illegal import: invalid module name",
                     );
                 }
                 path.push_str(part);
                 path.push_str(".");
             } else {
-                if uppercase {
+                if is_name {
                     assert_eq!(Some('.'), path.pop());
                     name = Some(part.to_string());
                 } else {
@@ -1159,7 +1162,7 @@ fn import_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             }
         }
         Ok(Expr::Import(Import {
-            span,
+            span: start..span.end,
             path,
             prefix,
             name,
