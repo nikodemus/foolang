@@ -435,8 +435,11 @@ impl Env {
         let symbols = &module.rc.borrow().symbols;
         match &import.name {
             None => {
-                // everything, using prefix
+                // everything native to module, using prefix
                 for (name, _) in symbols.iter() {
+                    if name.contains(".") {
+                        continue;
+                    }
                     let alias = format!("{}.{}", &import.prefix, name);
                     if self.has_definition(&alias) {
                         return Unwind::error_at(
@@ -446,6 +449,9 @@ impl Env {
                     }
                 }
                 for (name, binding) in symbols.iter() {
+                    if name.contains(".") {
+                        continue;
+                    }
                     let alias = format!("{}.{}", &import.prefix, name);
                     self.add_binding(&alias, binding.clone());
                 }
@@ -453,6 +459,9 @@ impl Env {
             Some(name) if name == "*" => {
                 // everything, without prefix
                 for (name, _) in symbols.iter() {
+                    if name.contains(".") {
+                        continue;
+                    }
                     if self.has_definition(&name) {
                         return Unwind::error_at(
                             import.span.clone(),
@@ -461,6 +470,9 @@ impl Env {
                     }
                 }
                 for (name, binding) in symbols.iter() {
+                    if name.contains(".") {
+                        continue;
+                    }
                     self.add_binding(&name, binding.clone());
                 }
             }
