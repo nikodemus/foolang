@@ -157,6 +157,9 @@ fn repl() -> Result<(), Box<std::error::Error>> {
                let x = 1
                x = x + 41
                x
+               [let inside = 42. inside + 1]
+               inside
+               [let inside2 = 42. inside2 + 2, inside2]
               "#,
         )
         .assert()
@@ -170,6 +173,15 @@ fn repl() -> Result<(), Box<std::error::Error>> {
 > 1
 > 42
 > 42
+> [43]
+> Unbound variable
+001                inside
+                   ^^^^^^ Unbound variable
+
+> Unbound variable
+001                [let inside2 = 42. inside2 + 2, inside2]
+                                                   ^^^^^^^ Unbound variable
+
 > "#,
         );
     Ok(())

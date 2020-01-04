@@ -169,6 +169,23 @@ impl Env {
     fn parent(&self) -> Env {
         self.rc.borrow().parent.clone().unwrap()
     }
+
+    /// Creates a new environment enclosed by this one, with no additional bindings.
+    /// Used to go from toplevel to not-toplevel.
+    fn enclose(&self) -> Env {
+        let symbols = HashMap::new();
+        Env {
+            rc: Rc::new(RefCell::new(EnvImpl {
+                depth: self.rc.borrow().depth + 1,
+                symbols,
+                parent: Some(self.clone()),
+                home: None,
+                receiver: None,
+            })),
+            foo: self.foo.clone(),
+        }
+    }
+
     /// Creates a new environment enclosed by this one, containing one additional
     /// binding.
     fn bind(&self, name: &str, binding: Binding) -> Env {
@@ -281,8 +298,9 @@ impl Env {
 
     fn eval_array(&self, array: &Array) -> Eval {
         let mut data = Vec::new();
+        let array_env = self.enclose();
         for elt in &array.data {
-            data.push(self.eval(elt)?);
+            data.push(array_env.eval(elt)?);
         }
         Ok(self.foo.into_array(data))
     }
