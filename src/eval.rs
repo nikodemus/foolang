@@ -92,7 +92,7 @@ impl Env {
     /// Creates a new environment containing only builtins using
     /// the provided `Foolang` object.
     pub fn from(foo: Foolang) -> Env {
-        let foo_rc = Rc::new(foo);
+        let foorc = Rc::new(foo);
         let mut builtins = Env {
             rc: Rc::new(RefCell::new(EnvImpl {
                 depth: 0,
@@ -101,9 +101,9 @@ impl Env {
                 home: None,
                 receiver: None,
             })),
-            foo: foo_rc.clone(),
+            foo: foorc.clone(),
         };
-        foo_rc.init_env(&mut builtins);
+        foorc.init_env(&mut builtins);
         Env {
             rc: Rc::new(RefCell::new(EnvImpl {
                 depth: 1,
@@ -112,7 +112,7 @@ impl Env {
                 home: None,
                 receiver: None,
             })),
-            foo: foo_rc.clone(),
+            foo: foorc,
         }
     }
     /// Returns true iff underlying `EnvImpl` has no parents, implying that
@@ -431,7 +431,7 @@ impl Env {
     }
 
     fn eval_import(&self, import: &Import) -> Eval {
-        let module = &self.foo.load_module(&import.path)?;
+        let module = self.foo.load_module(&import.path)?;
         let symbols = &module.rc.borrow().symbols;
         match &import.name {
             None => {

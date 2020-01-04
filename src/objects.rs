@@ -378,7 +378,7 @@ pub enum Datum {
     SceneNode(Rc<SceneNode>),
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Foolang {
     array_vtable: Rc<Vtable>,
     boolean_vtable: Rc<Vtable>,
@@ -395,6 +395,8 @@ pub struct Foolang {
     // Kiss3D stuff
     window_vtable: Rc<Vtable>,
     scene_node_vtable: Rc<Vtable>,
+    /// Used to ensure we load each module only once.
+    modules: Rc<RefCell<HashMap<String, Env>>>,
 }
 
 impl Foolang {
@@ -440,25 +442,9 @@ impl Foolang {
             // Kiss3D stuff
             window_vtable: Rc::new(classes::window::instance_vtable()),
             scene_node_vtable: Rc::new(classes::scene_node::instance_vtable()),
+            // Other
+            modules: Rc::new(RefCell::new(HashMap::new())),
         }
-    }
-
-    pub fn load_module(&self, path: &str) -> Result<Env, Unwind> {
-        let file = format!("foo/{}.foo", path.replace(".", "/"));
-        let code = match std::fs::read_to_string(&file) {
-            Ok(code) => code,
-            Err(_err) => return Unwind::error(&format!("Could not load module from {}", file)),
-        };
-        let env = Env::from(self.clone());
-        let mut parser = Parser::new(&code);
-        while !parser.at_eof() {
-            let expr = match parser.parse() {
-                Ok(expr) => expr,
-                Err(unwind) => return Err(unwind.with_context(&code)),
-            };
-            env.eval(&expr).context(&code)?;
-        }
-        Ok(env)
     }
 
     pub fn run(self, program: &str) -> Eval {
@@ -476,6 +462,32 @@ impl Foolang {
         let main = env.find_class("Main", 0..0)?;
         let instance = main.send("system:", &[system], &env).context(&program)?;
         Ok(instance.send("run", &[], &env).context(&program)?)
+    }
+
+    pub fn load_module(&self, path: &str) -> Result<Env, Unwind> {
+        let file = format!("foo/{}.foo", path.replace(".", "/"));
+        {
+            // For some reason on 1.40 at least borrow() fails to infer type.
+            let modules = self.modules.borrow_mut();
+            if let Some(module) = modules.get(&file) {
+                return Ok(module.clone());
+            }
+        }
+        let code = match std::fs::read_to_string(&file) {
+            Ok(code) => code,
+            Err(_err) => return Unwind::error(&format!("Could not load module from {}", file)),
+        };
+        let env = Env::from(self.clone());
+        let mut parser = Parser::new(&code);
+        while !parser.at_eof() {
+            let expr = match parser.parse() {
+                Ok(expr) => expr,
+                Err(unwind) => return Err(unwind.with_context(&code)),
+            };
+            env.eval(&expr).context(&code)?;
+        }
+        self.modules.borrow_mut().insert(file.clone(), env.clone());
+        Ok(env)
     }
 
     pub fn make_array(&self, data: &[Object]) -> Object {
@@ -575,6 +587,9 @@ impl Foolang {
         Object {
             vtable: Rc::clone(&self.compiler_vtable),
             datum: Datum::Compiler(Rc::new(Compiler {
+                // This makes the objects resulting from Compiler eval
+                // share same vtable instances as the parent, which
+                // seems like the right thing.
                 env: Env::from(self.clone()),
                 source: RefCell::new(String::new()),
                 expr: RefCell::new(Expr::Const(0..0, Literal::Boolean(false))),
