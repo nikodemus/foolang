@@ -126,8 +126,11 @@ fn main() {
         let foo = Foolang::new();
         // FIXME: pass in env and argv to run
         match foo.run(&program) {
-            Ok(_) => {}
-            Err(err) => println!("{}", err),
+            Ok(_) => std::process::exit(0),
+            Err(err) => {
+                println!("{}", err);
+                std::process::exit(1);
+            }
         }
     }
     if matches.is_present("ide") {

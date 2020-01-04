@@ -68,7 +68,7 @@ fn test_print_flush() -> Result<(), Box<std::error::Error>> {
 fn test_bad_class() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/bad_class.foo");
-    cmd.assert().success().stdout(
+    cmd.assert().failure().code(1).stdout(
         "ERROR: Not valid in value position
 003    method baz
 004      }
@@ -100,7 +100,7 @@ fn test_import_x_identity() -> Result<(), Box<std::error::Error>> {
 fn test_array_let() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/array_let.foo");
-    cmd.assert().success().stdout(
+    cmd.assert().failure().code(1).stdout(
         "ERROR: Unbound variable
 002    method run
 003       system output println: [let x = 42. x + x, x]
@@ -116,7 +116,7 @@ fn test_array_let() -> Result<(), Box<std::error::Error>> {
 fn test_array_let2() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/array_let2.foo");
-    cmd.assert().success().stdout(
+    cmd.assert().failure().code(1).stdout(
         "ERROR: Unbound variable
 003       let a = [let x = 42. x, 123].
 004       system output println: x
