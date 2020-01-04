@@ -13,7 +13,9 @@ Like all new languages it has _somewhat_ unrealistic aspirations:
 - Fault tolerance of Erlang.
 - Extensibility of Common Lisp.
 - Excitement of Logo.
-- Success of Fortress
+- Success of Fortress.
+
+Seriously, though: don't expect miracles.
 
 ## Hello World
 
@@ -22,61 +24,60 @@ Like all new languages it has _somewhat_ unrealistic aspirations:
             system output println: "Hello world!"
     end
 
+## Design Priorities
+
+So: "Don't summon anything bigger than your head."
+
+1. Implementability: Not just theoretical implementability, but practical.
+   Foolang is a one person effort at the moment, which is a non-trivial
+   limitation.
+
+2. Safety: No memory errors. No race conditions. No ambient authority.
+   No undefined behaviour. Fault-tolerant applications.
+
+3. Ergonomics: Code should be a pleasure to read and write.
+
+4. Performance: Code with type annotations should run on par with -O0
+   compiled "equivalent" C or C++.
+
+5. Uniformity: Built-in code should not be privileged over user code.
+
 ## Metagoals
 
 - Experienced programmers must feel comfortable: the system trusts
   them and they can trust the system.
 
+- Programs written by others to be easy to understand after the
+  fact.
+
 - People who've only ever done "spreadsheet programming", or who last
   programmed some Basic on Commodore 64 over 30 years ago should feel
   empowered to do things.
 
-- Programs written by others to be easy to understand after the
-  fact.
-
 - The environment is should be engaging and inspiring and empowering.
   Not toys, but good and easy to use tools.
 
-## Design Principles
+## Planned Core Features
 
-In order of priority:
-
-1. Safety: No memory errors. No race conditions. No ambient authority.
-   No undefined behaviour. Fault-tolerant applications.
-
-2. Ergonomics: Code should be a pleasure to read and write.
-
-3. Performance: Code with type annotations should run on par with -O0
-   compiled "equivalent" C or C++.
-
-4. Uniformity: Built-in code should not be privileged over user code.
-
-Finally, there is an absolute requirement of implementability: Foolang
-is to be a real language, not a pipe dream, but it is also a
-one-person effort at the moment. So: "Don't summon anything bigger
-than your head."
-
-## Core Features
-
-- Everything is an object, and semantics are descibed by sending
+- [x] Everything is an object, and semantics are descibed by sending
   messages to objects.
 
-- Smalltalkish development environment -- except code lives in files
+- [x] No ambient authority: third-party libraries don't have access to your
+  filesystem and network unless you give it to them.
+
+- [ ] Smalltalkish development environment -- except code lives in files
   where it belongs, not in an image. Usable with your favorite editor,
   even if the best experience is in the "native" environment.
 
-- Supervised processes and isolated heaps for Erlang-style
+- [ ] Supervised processes and isolated heaps for Erlang-style
   fault-tolerence.
 
-- Syntactic extensibility. Users can define new operators and other
+- [ ] Syntactic extensibility. Users can define new operators and other
   syntax extensions.
 
-- Dynamic bindings in addition to lexical ones provide ability to
+- [ ] Dynamic bindings in addition to lexical ones provide ability to
   implement things like context oriented programming and exception
   mechanisms as libraries.
-
-- No ambient authority: third-party libraries don't have access to your
-  filesystem and network unless you give it to them.
 
 ## Implementation Plan & Status
 
@@ -174,7 +175,7 @@ Messages are sent by simple concatenation, Smalltalk-style:
     -- Message with selector "foo:bar:" and arguments 1 and 2 to object
     object foo: 1 bar: 2
 
-**Expression Separators**
+**Compound Expressions**
 
 Expressions are separated form each other with dots, Smalltalk-style:
 
@@ -183,13 +184,14 @@ Expressions are separated form each other with dots, Smalltalk-style:
     objectA foo.
     objectB bar
 
-A sequence of expressions like this evaluates to the value of the last one.
+A sequence of expressions like this is an expression that evaluates to
+the value of the last subexpression.
 
 **Operator Precedence**
 
 Unlike Smalltalk operators have conventional precedence:
 
-    1 + 2 * 3 --> 7
+    1 + 2 * 3   --> 7
 
 **Local Variables**
 
@@ -208,19 +210,11 @@ Blocks can take arguments:
 
     { |x| x + 2 } value: 40 --> 42
 
-    { |x, y| x + y } value: 40 value: 2 --> 42
-
-Underscore can be used as an implicit argument in blocks:
-
-    -- Odd numbers from an array
-    array select: { |elt| elt isOdd }
-
-    -- Same using the implicit argument
-    array select: { _ isOdd }
+    { |x y| x + y } value: 40 value: 2 --> 42
 
 **Class Definitions**
 
-    class Point { x, y }
+    class Point { x y }
        method + other
           Point x: x + other x
                 y: y + other y
@@ -254,10 +248,6 @@ Are constructed using square brackets
 
     let array = [1, 2, 3]
 
-Can be specialized using a message
-
-    let byteArray = [1, 2, 3] of: U8
-
 **Dictionaries**
 
 Are constructed using braces
@@ -271,6 +261,57 @@ For iterables: [as, bs, cs]
   where: { |a,b,c| a*a == (b*b + c*c) }
   collect: { |a,b,c| [a,b,c] }
 ```
+
+- MAYBE use commas for OPTIONAL keywords:
+
+   ```
+   system output readline, onEof: { return False }
+
+   because (1) names like readlineOnEof: are fugly.
+           (2) a single method like
+
+   method readline, onEof: defaultAtEof, blocking: True
+       ...
+
+   is so much nicer than:
+       readline
+       readlineOnEof:
+       readlineNonBlocking
+       readlineNonBlockingOnEof:
+
+   OTOH, I'll read my ST books first. I kind of suspect that the
+   recommended pattern is:
+
+   system output;
+      nonBlocking
+      onEof: handler
+
+   the only problem is the handler, which is probably going to unwind,
+   and therefore really wants dynamic scope.
+
+   how about making blocks able to invalidate themselves?
+
+   what I _really_ want is
+
+   with system onEof: handler do
+     stuff
+
+   and restore the previous state... which is context oriented!
+
+   or?
+
+      system output with: { _ onEof: handler }
+                    do: { stuff }
+
+   method onEof: block
+      eofHandler = block
+      block onInvalidate: { self }
+
+   ```
+
+- MAYBE should use `[]` for blocks instead. Rectangular blocks suit ST
+  style code, and look much better with square bracket. Problem: what about
+  arrays then?
 
 - MAYBE a = b --> True iff a is same object as b.
 
