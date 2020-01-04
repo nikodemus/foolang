@@ -101,7 +101,7 @@ The only truly global reserved words are:
     import
     from
     as
-    done
+    end
     self
 
 Whitespace and , are also fully built-in.

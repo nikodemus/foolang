@@ -65,9 +65,9 @@ So: "Don't summon anything bigger than your head."
 - [x] No ambient authority: third-party libraries don't have access to your
   filesystem and network unless you give it to them.
 
-- [ ] Smalltalkish development environment -- except code lives in files
-  where it belongs, not in an image. Usable with your favorite editor,
-  even if the best experience is in the "native" environment.
+- [ ] Dynamic bindings in addition to lexical ones provide ability to
+  implement things like context oriented programming and exception
+  mechanisms as libraries.
 
 - [ ] Supervised processes and isolated heaps for Erlang-style
   fault-tolerence.
@@ -75,9 +75,9 @@ So: "Don't summon anything bigger than your head."
 - [ ] Syntactic extensibility. Users can define new operators and other
   syntax extensions.
 
-- [ ] Dynamic bindings in addition to lexical ones provide ability to
-  implement things like context oriented programming and exception
-  mechanisms as libraries.
+- [ ] Smalltalkish development environment -- except code lives in files
+  where it belongs, not in an image. Usable with your favorite editor,
+  even if the best experience is in the "native" environment.
 
 ## Implementation Plan & Status
 
@@ -111,6 +111,51 @@ So: "Don't summon anything bigger than your head."
    slow JIT should not be a huge issue as it is to be mainly a
    development time facility.
 
+## Design Compromises
+
+### No Optional Arguments
+
+Problem: occasionally questionable ergnomics, needing to create multiple
+methods instead of just one:
+
+```
+readChar
+readCharOnEof:
+readCharNonBlocking
+```
+
+etc.
+
+Excuse: not critical right now.
+
+### Unsound Returns
+
+Problem:
+
+```
+class Foo {}
+  class method bad
+     { return 42 }
+  class method bang
+     self bad value
+end
+```
+
+Ie. one can construct blocks that try to return from frames that have
+already returned.
+
+Excuse: having returns inside a block return from the lexically
+enclosing method allows implementing unwinding control structures
+and exception handling in user code. (Esp. when combined with dynamic
+bindings.)
+
+Possible palliative: `<sound-returns>` pragma could ensure that all
+returns are statically known to be safe.
+
+Possible alternatives:
+- Implement exceptions and control flows using magic primitives
+- Error values instead of exceptions
+
 ## Syntax
 
 Foolang is expression oriented: every expression has a value.
@@ -122,7 +167,6 @@ Following words have special meaning:
     let
     return
     class
-    define
     method
     end
     import
