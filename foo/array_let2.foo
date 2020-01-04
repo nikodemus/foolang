@@ -1,0 +1,5 @@
+class Main { system }
+   method run
+      let a = [let x = 42. x, 123].
+      system output println: x
+end

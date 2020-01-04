@@ -96,6 +96,38 @@ fn test_import_x_identity() -> Result<(), Box<std::error::Error>> {
     Ok(())
 }
 
+#[test]
+fn test_array_let() -> Result<(), Box<std::error::Error>> {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/array_let.foo");
+    cmd.assert().success().stdout(
+        "ERROR: Unbound variable
+002    method run
+003       system output println: [let x = 42. x + x, x]
+                                                     ^ Unbound variable
+004 end
+
+",
+    );
+    Ok(())
+}
+
+#[test]
+fn test_array_let2() -> Result<(), Box<std::error::Error>> {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/array_let2.foo");
+    cmd.assert().success().stdout(
+        "ERROR: Unbound variable
+003       let a = [let x = 42. x, 123].
+004       system output println: x
+                                 ^ Unbound variable
+005 end
+
+",
+    );
+    Ok(())
+}
+
 #[ignore]
 #[test]
 fn test_import_x_star() -> Result<(), Box<std::error::Error>> {
