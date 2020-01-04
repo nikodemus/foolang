@@ -548,12 +548,14 @@ impl Env {
                             return read_instance_variable(&receiver, slot.index);
                         }
                     }
+                    /*
                     println!(
                         "UNBOUND: {:?}\n    ENV: {:?}\n    REC: {:?}",
                         &var,
                         self.rc.borrow(),
                         self.receiver()
                     );
+                     */
                     // FIXME: There used to be workspace handling here
                 }
             }
@@ -600,5 +602,4 @@ pub mod utils {
             Err(Unwind::ReturnFrom(..)) => panic!("Unexpected return-from in eval_ok"),
         }
     }
-
 }
