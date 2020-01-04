@@ -128,7 +128,6 @@ fn test_array_let2() -> Result<(), Box<std::error::Error>> {
     Ok(())
 }
 
-#[ignore]
 #[test]
 fn test_import_x_star() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
