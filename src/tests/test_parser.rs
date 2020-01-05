@@ -420,3 +420,12 @@ fn test_parse_import1() {
     assert_eq!(parse_str("import x.y.Z"), Ok(Import::expr(0..12, "x.y", "", Some("Z"), None)));
     assert_eq!(parse_str("import x.y.z"), Ok(Import::expr(0..12, "x.y.z", "z", None, None)));
 }
+
+#[test]
+fn test_parse_import2() {
+    assert_eq!(parse_str("import .x"), Ok(Import::expr(0..9, ".x", "x", None, None)));
+    assert_eq!(parse_str("import .x.Y"), Ok(Import::expr(0..11, ".x", "", Some("Y"), None)));
+    assert_eq!(parse_str("import .x.*"), Ok(Import::expr(0..11, ".x", "", Some("*"), None)));
+    assert_eq!(parse_str("import .x.y.Z"), Ok(Import::expr(0..13, ".x.y", "", Some("Z"), None)));
+    assert_eq!(parse_str("import .x.y.z"), Ok(Import::expr(0..13, ".x.y.z", "z", None, None)));
+}

@@ -2,7 +2,7 @@ use assert_cmd::prelude::*; // Add methods on commands
 use predicates::prelude::*;
 use std::process::Command; // Run programs // Used for writing assertions
 
-type Test = Result<(), Box<std::error::Error>>;
+type Test = Result<(), Box<dyn std::error::Error>>;
 
 #[test]
 fn hello() -> Test {

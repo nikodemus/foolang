@@ -643,6 +643,40 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn dotted_name_at(&self, point: usize, star: bool) -> Result<Option<Span>, Unwind> {
+        let ((token1, span1), (token2, span2)) = self.lookahead2()?;
+        if span1.start != point {
+            return Ok(None);
+        }
+        // Starts at point!
+
+        if (token1 != Token::SIGIL || self.slice_at(span1.clone()) != ".") {
+            return Ok(None);
+        }
+        // Starts with a dot!
+
+        if span1.end != span2.start {
+            return Ok(None);
+        }
+        // Next token follows immediately without intervening whitespace
+
+        if star {
+            if token2 != Token::SIGIL || self.slice_at(span2.clone()) != "*" {
+                return Ok(None);
+            }
+        // Star wanted, next token is a star
+        } else {
+            if token2 != Token::WORD {
+                return Ok(None);
+            }
+            // Star not wanted, Next token is a word
+        }
+
+        self.next_token()?;
+        self.next_token()?;
+        Ok(Some(point..span2.end))
+    }
+
     pub fn span(&self) -> Span {
         self.state.borrow().span.clone()
     }
@@ -1100,36 +1134,24 @@ fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     }
 }
 
-fn dotted_name_at(parser: &Parser, point: usize) -> Result<Option<Span>, Unwind> {
-    let ((token1, span1), (token2, span2)) = parser.lookahead2()?;
-    if !(token1 == Token::SIGIL && parser.slice_at(span1.clone()) == "." && span1.start == point) {
-        return Ok(None);
-    }
-    if !(token2 == Token::WORD
-        || (token2 == Token::SIGIL && parser.slice_at(span2.clone()) == "*")
-            && span2.start == span1.end)
-    {
-        return Ok(None);
-    }
-    // Dot followed by a word or sigil, no whitespace -- ok!
-    parser.next_token()?;
-    parser.next_token()?;
-    Ok(Some(point..span2.end))
-}
-
 fn import_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    let start = parser.span().start;
-    if Token::WORD == parser.next_token()? {
-        let mut span = start..parser.span().end;
-        let mut spec = parser.slice().to_string();
-        loop {
-            if let Some(more) = dotted_name_at(parser, span.end)? {
-                spec.push_str(parser.slice_at(more.clone()));
-                span = more;
-            } else {
-                break;
-            }
+    let import_start = parser.span().start;
+    let (token, name_span) = parser.lookahead()?;
+    let mut spec = String::new();
+    let mut relative = false;
+    if let Some(dotted) = parser.dotted_name_at(name_span.start, false)? {
+        spec.push_str(parser.slice_at(dotted.clone()));
+        relative = true;
+    } else if Token::WORD == token {
+        parser.next_token()?;
+        spec.push_str(parser.slice());
+    }
+    if spec.len() > 0 {
+        // Deal with .*
+        if let Some(star) = parser.dotted_name_at(parser.span().end, true)? {
+            spec.push_str(parser.slice_at(star));
         }
+        let name_end = parser.span().end;
         let body = if Token::EOF == parser.lookahead()?.0 {
             parser.next_token()?;
             None
@@ -1139,13 +1161,19 @@ fn import_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         let mut path = String::new();
         let mut prefix = String::new();
         let mut name = None;
-        let mut parts = spec.split(".").peekable();
+        let mut parts = if relative {
+            path.push_str(".");
+            spec[1..].split(".").peekable()
+        } else {
+            spec.split(".").peekable()
+        };
         while let Some(part) = parts.next() {
+            assert!(!part.is_empty());
             let is_name = part == "*" || part.chars().next().unwrap().is_uppercase();
             if parts.peek().is_some() {
                 if is_name {
                     return Unwind::error_at(
-                        start..parser.span().start,
+                        import_start..parser.span().start,
                         "Illegal import: invalid module name",
                     );
                 }
@@ -1162,14 +1190,14 @@ fn import_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             }
         }
         Ok(Expr::Import(Import {
-            span: start..span.end,
+            span: import_start..name_end,
             path,
             prefix,
             name,
             body,
         }))
     } else {
-        return parser.error("Expected module name");
+        return parser.error_at(name_span, "Expected module name");
     }
 }
 
@@ -1600,5 +1628,4 @@ pub mod utils {
     pub fn var(span: Span, name: &str) -> Expr {
         Expr::Var(Var::untyped(span, name.to_string()))
     }
-
 }
