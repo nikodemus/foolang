@@ -399,8 +399,8 @@ pub struct Foolang {
     scene_node_vtable: Rc<Vtable>,
     /// Used to ensure we load each module only once.
     modules: Rc<RefCell<HashMap<PathBuf, Env>>>,
-    /// Used as module root for toplevel code with foo/ appended.
-    root: PathBuf,
+    /// Map from toplevel module names to their paths
+    roots: HashMap<String, PathBuf>,
 }
 
 impl Foolang {
@@ -429,7 +429,7 @@ impl Foolang {
         );
     }
 
-    pub fn new<P: AsRef<Path>>(root: P) -> Foolang {
+    pub fn new(roots: HashMap<String, PathBuf>) -> Foolang {
         Foolang {
             array_vtable: Rc::new(classes::array::instance_vtable()),
             boolean_vtable: Rc::new(classes::boolean::vtable()),
@@ -448,12 +448,18 @@ impl Foolang {
             scene_node_vtable: Rc::new(classes::scene_node::instance_vtable()),
             // Other
             modules: Rc::new(RefCell::new(HashMap::new())),
-            root: root.as_ref().to_path_buf(),
+            roots,
         }
     }
 
+    pub fn here() -> Foolang {
+        let mut roots = HashMap::new();
+        roots.insert(".".to_string(), std::env::current_dir().unwrap());
+        Foolang::new(roots)
+    }
+
     pub fn root(&self) -> &Path {
-        self.root.as_path()
+        &self.roots["."]
     }
 
     pub fn run(self, program: &str) -> Eval {
@@ -476,8 +482,19 @@ impl Foolang {
     pub fn load_module<P: AsRef<Path>>(&self, path: P) -> Result<Env, Unwind> {
         let mut file = path.as_ref().to_path_buf();
         if file.is_relative() {
-            // FIXME: Should be $FOOPATH or something.
-            file = self.root.join("foo/").join(path);
+            let name = match path.as_ref().components().next() {
+                Some(std::path::Component::Normal(p)) => AsRef::<Path>::as_ref(p).to_str().unwrap(),
+                _ => panic!("Bad module path! {}", path.as_ref().display()),
+            };
+            file = match self.roots.get(name) {
+                Some(p) => p.join(path),
+                None => {
+                    return Unwind::error(&format!(
+                        "Unknown module: {}, --use /path/to/{} missing from command-line?",
+                        name, name
+                    ))
+                }
+            };
         }
         {
             // For some reason on 1.40 at least borrow() fails to infer type.

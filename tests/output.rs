@@ -81,9 +81,19 @@ fn test_bad_class() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
+fn test_import_x_local() -> Result<(), Box<std::error::Error>> {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/import_x_local.foo");
+    cmd.assert().failure().code(123).stdout("");
+    Ok(())
+}
+
+#[test]
 fn test_import_x() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/import_x.foo");
+    cmd.arg("--use");
+    cmd.arg("foo/x.foo");
     cmd.assert().failure().code(123).stdout("");
     Ok(())
 }
@@ -92,7 +102,29 @@ fn test_import_x() -> Result<(), Box<std::error::Error>> {
 fn test_import_x_identity() -> Result<(), Box<std::error::Error>> {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/import_x_Identity.foo");
+    cmd.arg("--use");
+    cmd.arg("foo/x.foo");
     cmd.assert().failure().code(100).stdout("");
+    Ok(())
+}
+
+#[test]
+fn test_import_x_star() -> Result<(), Box<std::error::Error>> {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/import_x_star.foo");
+    cmd.arg("--use");
+    cmd.arg("foo/x.foo");
+    cmd.assert().failure().code(42).stdout("");
+    Ok(())
+}
+
+#[test]
+fn test_import_bar_y() -> Result<(), Box<std::error::Error>> {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/import_bar_y.foo");
+    cmd.arg("--use");
+    cmd.arg("bar");
+    cmd.assert().failure().code(111).stdout("");
     Ok(())
 }
 
@@ -125,14 +157,6 @@ fn test_array_let2() -> Result<(), Box<std::error::Error>> {
 
 ",
     );
-    Ok(())
-}
-
-#[test]
-fn test_import_x_star() -> Result<(), Box<std::error::Error>> {
-    let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/import_x_star.foo");
-    cmd.assert().failure().code(42).stdout("");
     Ok(())
 }
 

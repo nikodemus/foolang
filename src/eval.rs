@@ -85,10 +85,12 @@ impl fmt::Debug for Env {
 }
 
 impl Env {
-    /// Creates a new environment containing only builtins.
+    /// Creates a new environment containing only builtins and the current directory
+    /// as a relative module root.
     pub fn new() -> Env {
-        Env::from(Foolang::new(std::env::current_dir().unwrap().as_path()))
+        Env::from(Foolang::here())
     }
+
     /// Creates a new environment containing only builtins using
     /// the provided `Foolang` object.
     pub fn from(foo: Foolang) -> Env {

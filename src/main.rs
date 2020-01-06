@@ -4,6 +4,8 @@ use foolang::objects::Foolang;
 use foolang::time::TimeInfo;
 use foolang::unwind::Unwind;
 use rouille::{match_assets, post_input, session, try_or_400, Request, Response};
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
 use std::sync::{Arc, Mutex};
 use webbrowser;
@@ -114,16 +116,41 @@ fn main() {
                 .takes_value(true)
                 .conflicts_with("ide"),
         )
+        .arg(
+            Arg::with_name("use")
+                .long("use")
+                .value_name("MODULE")
+                .help("Path to a module to use.")
+                .takes_value(true)
+                .multiple(true),
+        )
         .arg(Arg::with_name("ide").long("ide").help("Runs the IDE"))
         .arg(Arg::with_name("verbose").long("verbose").help("Provides additional output"))
         .get_matches();
     let verbose = matches.is_present("verbose");
+    let mut module_roots: HashMap<String, PathBuf> = HashMap::new();
+    if let Some(values) = matches.values_of("use") {
+        for spec in values {
+            let path = std::fs::canonicalize(Path::new(&spec)).unwrap();
+            let root = path.parent().unwrap();
+            let name = path.file_name().unwrap().to_str().unwrap();
+            if module_roots.contains_key(name) && module_roots[name] != root {
+                panic!("ERROR: module {} specified multiple times with inconsistent paths");
+            }
+            module_roots.insert(name.to_string(), root.to_path_buf());
+        }
+    }
+    module_roots.insert(".".to_string(), std::env::current_dir().unwrap());
     if let Some(fname) = matches.value_of("program") {
+        module_roots.insert(
+            ".".to_string(),
+            std::fs::canonicalize(Path::new(fname).parent().unwrap()).unwrap().to_path_buf(),
+        );
         let program = match std::fs::read_to_string(fname) {
             Ok(prog) => prog,
             Err(err) => panic!("ERROR: Could not load program: {} ({})", fname, err),
         };
-        let foo = Foolang::new(std::env::current_dir().unwrap().as_path());
+        let foo = Foolang::new(module_roots);
         // FIXME: pass in env and argv to run
         match foo.run(&program) {
             Ok(_) => std::process::exit(0),
@@ -138,6 +165,7 @@ fn main() {
         if webbrowser::open("http://127.0.0.1:8000/index.html").is_err() {
             println!("Could not open browser!");
         }
+        // FIXME: Need to pass module_roots here.
         let server = Server::new();
         rouille::start_server("127.0.0.1:8000", move |request| {
             handle_request(request, server.clone(), verbose)
