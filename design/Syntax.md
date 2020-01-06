@@ -181,12 +181,33 @@ Reconsidering object syntax:
 
 Assume [] are taken by blocks.
 
-   { 123 } -> Array
-
-   { 1, 2, 3 } --> Array
-
-   { "foo": 42 } --> Dictionary
-
+    { 123 } -> Array
+    { 1, 2, 3 } --> Array
+    { "foo": 42 } --> Dictionary
+    { x | x}
+ 
 I think the distinction between objects and blocks is welcome.
+
+However,
+
+    array[x]
+
+is _way_ prettier than
+
+    array{x}
+
+What is the reason I cannot use [] for both blocks and arrays?
+
+Consider
+
+    [ foo ]
+
+Is that an array or a block of one element?
+
+I _could_ say that
+
+    [ foo, ]
+
+is the array. ...but I still lose the distinction between arrays and blocks.
 
 
