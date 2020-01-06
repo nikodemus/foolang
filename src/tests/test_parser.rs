@@ -1,5 +1,10 @@
 use crate::parse::utils::*;
 use crate::parse::*;
+use crate::unwind::Unwind;
+
+fn parse_str(source: &str) -> Result<Expr, Unwind> {
+    parse_str_in_path(source, "test/")
+}
 
 use pretty_assertions::assert_eq;
 
@@ -414,18 +419,30 @@ fn test_parse_array3() {
 
 #[test]
 fn test_parse_import1() {
-    assert_eq!(parse_str("import x"), Ok(Import::expr(0..8, "x", "x", None, None)));
-    assert_eq!(parse_str("import x.Y"), Ok(Import::expr(0..10, "x", "", Some("Y"), None)));
-    assert_eq!(parse_str("import x.*"), Ok(Import::expr(0..10, "x", "", Some("*"), None)));
-    assert_eq!(parse_str("import x.y.Z"), Ok(Import::expr(0..12, "x.y", "", Some("Z"), None)));
-    assert_eq!(parse_str("import x.y.z"), Ok(Import::expr(0..12, "x.y.z", "z", None, None)));
+    assert_eq!(parse_str("import x"), Ok(Import::expr(0..8, "x.foo", "x", None, None)));
+    assert_eq!(parse_str("import x.Y"), Ok(Import::expr(0..10, "x.foo", "", Some("Y"), None)));
+    assert_eq!(parse_str("import x.*"), Ok(Import::expr(0..10, "x.foo", "", Some("*"), None)));
+    assert_eq!(parse_str("import x.y.Z"), Ok(Import::expr(0..12, "x/y.foo", "", Some("Z"), None)));
+    assert_eq!(parse_str("import x.y.z"), Ok(Import::expr(0..12, "x/y/z.foo", "z", None, None)));
 }
 
 #[test]
 fn test_parse_import2() {
-    assert_eq!(parse_str("import .x"), Ok(Import::expr(0..9, ".x", "x", None, None)));
-    assert_eq!(parse_str("import .x.Y"), Ok(Import::expr(0..11, ".x", "", Some("Y"), None)));
-    assert_eq!(parse_str("import .x.*"), Ok(Import::expr(0..11, ".x", "", Some("*"), None)));
-    assert_eq!(parse_str("import .x.y.Z"), Ok(Import::expr(0..13, ".x.y", "", Some("Z"), None)));
-    assert_eq!(parse_str("import .x.y.z"), Ok(Import::expr(0..13, ".x.y.z", "z", None, None)));
+    assert_eq!(parse_str("import .x"), Ok(Import::expr(0..9, "test/x.foo", "x", None, None)));
+    assert_eq!(
+        parse_str("import .x.Y"),
+        Ok(Import::expr(0..11, "test/x.foo", "", Some("Y"), None))
+    );
+    assert_eq!(
+        parse_str("import .x.*"),
+        Ok(Import::expr(0..11, "test/x.foo", "", Some("*"), None))
+    );
+    assert_eq!(
+        parse_str("import .x.y.Z"),
+        Ok(Import::expr(0..13, "test/x/y.foo", "", Some("Z"), None))
+    );
+    assert_eq!(
+        parse_str("import .x.y.z"),
+        Ok(Import::expr(0..13, "test/x/y/z.foo", "z", None, None))
+    );
 }

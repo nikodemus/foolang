@@ -87,7 +87,7 @@ impl fmt::Debug for Env {
 impl Env {
     /// Creates a new environment containing only builtins.
     pub fn new() -> Env {
-        Env::from(Foolang::new())
+        Env::from(Foolang::new(std::env::current_dir().unwrap().as_path()))
     }
     /// Creates a new environment containing only builtins using
     /// the provided `Foolang` object.
@@ -255,7 +255,7 @@ impl Env {
     }
 
     pub fn eval_all(&self, source: &str) -> Eval {
-        let mut parser = Parser::new(source);
+        let mut parser = Parser::new(source, self.foo.root());
         loop {
             let expr = match parser.parse() {
                 Err(unwind) => {
@@ -499,7 +499,7 @@ impl Env {
         }
         match import.body {
             // FIXME: Should be path + name
-            None => Ok(self.foo.make_string(&import.path)),
+            None => Ok(self.foo.make_string(&import.path.to_string_lossy())),
             Some(ref expr) => self.eval(expr),
         }
     }

@@ -39,7 +39,7 @@ fn compiler_define_as(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
 
 fn parse_aux(receiver: &Object, source: &Object, handler: Option<&Object>, env: &Env) -> Eval {
     let source = source.string_as_str();
-    let mut parser = Parser::new(source);
+    let mut parser = Parser::new(source, env.foo.root());
     let compiler = receiver.compiler();
     let expr = match parser.parse() {
         Ok(expr) => expr,

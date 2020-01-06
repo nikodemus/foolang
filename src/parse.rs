@@ -2,6 +2,7 @@ use std::borrow::ToOwned;
 use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::convert::Into;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use crate::tokenstream::{Span, Token, TokenStream};
@@ -106,23 +107,23 @@ impl ClassDefinition {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Import {
     pub span: Span,
-    pub path: String,
+    pub path: PathBuf,
     pub prefix: String,
     pub name: Option<String>,
     pub body: Option<Box<Expr>>,
 }
 
 impl Import {
-    pub fn expr(
+    pub fn expr<P: AsRef<Path>>(
         span: Span,
-        path: &str,
+        path: P,
         prefix: &str,
         name: Option<&str>,
         body: Option<Expr>,
     ) -> Expr {
         Expr::Import(Import {
             span,
-            path: path.to_string(),
+            path: path.as_ref().to_path_buf(),
             prefix: prefix.to_string(),
             name: name.map(|x| x.to_string()),
             body: body.map(|x| Box::new(x)),
@@ -502,10 +503,13 @@ pub struct Parser<'a> {
     token_table: TokenTable,
     name_table: NameTable,
     state: RefCell<ParserState<'a>>,
+    // Directory to use for relative imports. Normally the directory of
+    // the source file, but different in REPL, etc.
+    root: PathBuf,
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(source: &'a str) -> Parser<'a> {
+    pub fn new<P: AsRef<Path>>(source: &'a str, root: P) -> Parser<'a> {
         Parser {
             source,
             token_table: make_token_table(),
@@ -515,6 +519,7 @@ impl<'a> Parser<'a> {
                 lookahead: VecDeque::new(),
                 span: 0..0,
             }),
+            root: root.as_ref().to_path_buf(),
         }
     }
 
@@ -1158,11 +1163,11 @@ fn import_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         } else {
             Some(Box::new(parser.parse_seq()?))
         };
-        let mut path = String::new();
+        let mut path = PathBuf::new();
         let mut prefix = String::new();
         let mut name = None;
         let mut parts = if relative {
-            path.push_str(".");
+            path.push(&parser.root);
             spec[1..].split(".").peekable()
         } else {
             spec.split(".").peekable()
@@ -1177,18 +1182,17 @@ fn import_prefix(parser: &Parser) -> Result<Expr, Unwind> {
                         "Illegal import: invalid module name",
                     );
                 }
-                path.push_str(part);
-                path.push_str(".");
+                path.push(part);
             } else {
                 if is_name {
-                    assert_eq!(Some('.'), path.pop());
                     name = Some(part.to_string());
                 } else {
-                    path.push_str(part);
+                    path.push(part);
                     prefix.push_str(part);
                 };
             }
         }
+        path.set_extension("foo");
         Ok(Expr::Import(Import {
             span: import_start..name_end,
             path,
@@ -1395,7 +1399,7 @@ fn string_prefix(parser: &Parser) -> Result<Expr, Unwind> {
 
         // FIXME: parse errors from parse_str don't show the larger context, and have
         // incorrect line numbers
-        let mut expr = parse_str(&data[p0 + 1..p1])?;
+        let mut expr = parse_str_in_path(&data[p0 + 1..p1], &parser.root)?;
         expr.shift_span(span.start);
         let interp = expr.send(Message {
             span: p0 + 1..p1,
@@ -1506,8 +1510,9 @@ fn parse_method(
 
 /// Tests and tools
 
-pub fn parse_str(source: &str) -> Result<Expr, Unwind> {
-    Parser::new(source).parse().map_err(|unwind| unwind.with_context(source))
+pub fn parse_str_in_path<P: AsRef<Path>>(source: &str, root: P) -> Result<Expr, Unwind> {
+    // FIXME: Don't like this parse_str/ path.
+    Parser::new(source, root).parse().map_err(|unwind| unwind.with_context(source))
 }
 
 #[cfg(test)]

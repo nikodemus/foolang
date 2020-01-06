@@ -123,7 +123,7 @@ fn main() {
             Ok(prog) => prog,
             Err(err) => panic!("ERROR: Could not load program: {} ({})", fname, err),
         };
-        let foo = Foolang::new();
+        let foo = Foolang::new(std::env::current_dir().unwrap().as_path());
         // FIXME: pass in env and argv to run
         match foo.run(&program) {
             Ok(_) => std::process::exit(0),

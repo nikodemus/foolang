@@ -1,9 +1,11 @@
 use std::borrow::Borrow;
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
+use std::convert::AsRef;
 use std::fmt;
 use std::io::Read;
 use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use crate::eval::{Binding, Env};
@@ -396,7 +398,9 @@ pub struct Foolang {
     window_vtable: Rc<Vtable>,
     scene_node_vtable: Rc<Vtable>,
     /// Used to ensure we load each module only once.
-    modules: Rc<RefCell<HashMap<String, Env>>>,
+    modules: Rc<RefCell<HashMap<PathBuf, Env>>>,
+    /// Used as module root for toplevel code with foo/ appended.
+    root: PathBuf,
 }
 
 impl Foolang {
@@ -425,7 +429,7 @@ impl Foolang {
         );
     }
 
-    pub fn new() -> Foolang {
+    pub fn new<P: AsRef<Path>>(root: P) -> Foolang {
         Foolang {
             array_vtable: Rc::new(classes::array::instance_vtable()),
             boolean_vtable: Rc::new(classes::boolean::vtable()),
@@ -444,13 +448,18 @@ impl Foolang {
             scene_node_vtable: Rc::new(classes::scene_node::instance_vtable()),
             // Other
             modules: Rc::new(RefCell::new(HashMap::new())),
+            root: root.as_ref().to_path_buf(),
         }
+    }
+
+    pub fn root(&self) -> &Path {
+        self.root.as_path()
     }
 
     pub fn run(self, program: &str) -> Eval {
         let system = self.make_system();
         let env = Env::from(self);
-        let mut parser = Parser::new(&program);
+        let mut parser = Parser::new(&program, env.foo.root());
         while !parser.at_eof() {
             let expr = match parser.parse() {
                 Ok(expr) => expr,
@@ -464,8 +473,12 @@ impl Foolang {
         Ok(instance.send("run", &[], &env).context(&program)?)
     }
 
-    pub fn load_module(&self, path: &str) -> Result<Env, Unwind> {
-        let file = format!("foo/{}.foo", path.replace(".", "/"));
+    pub fn load_module<P: AsRef<Path>>(&self, path: P) -> Result<Env, Unwind> {
+        let mut file = path.as_ref().to_path_buf();
+        if file.is_relative() {
+            // FIXME: Should be $FOOPATH or something.
+            file = self.root.join("foo/").join(path);
+        }
         {
             // For some reason on 1.40 at least borrow() fails to infer type.
             let modules = self.modules.borrow_mut();
@@ -475,10 +488,15 @@ impl Foolang {
         }
         let code = match std::fs::read_to_string(&file) {
             Ok(code) => code,
-            Err(_err) => return Unwind::error(&format!("Could not load module from {}", file)),
+            Err(_err) => {
+                return Unwind::error(&format!(
+                    "Could not load module from {}",
+                    file.to_string_lossy()
+                ))
+            }
         };
         let env = Env::from(self.clone());
-        let mut parser = Parser::new(&code);
+        let mut parser = Parser::new(&code, &file.parent().unwrap());
         while !parser.at_eof() {
             let expr = match parser.parse() {
                 Ok(expr) => expr,

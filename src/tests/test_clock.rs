@@ -2,7 +2,7 @@ use crate::objects::Foolang;
 
 #[test]
 fn test_clock1() {
-    let res = Foolang::new()
+    let res = Foolang::new(std::env::current_dir().unwrap().as_path())
         .run(
             "class Main { system }
                 method run
@@ -17,7 +17,7 @@ fn test_clock1() {
 fn test_clock2() {
     // FIXME: This init here smells bad.
     crate::time::TimeInfo::init();
-    let res = Foolang::new()
+    let res = Foolang::new(std::env::current_dir().unwrap().as_path())
         .run(
             "class Main { system }
                 method run
