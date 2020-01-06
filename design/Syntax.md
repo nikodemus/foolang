@@ -177,3 +177,16 @@ Built-in parser words:
 
         what ( ... ) desugars into.
 
+Reconsidering object syntax:
+
+Assume [] are taken by blocks.
+
+   { 123 } -> Array
+
+   { 1, 2, 3 } --> Array
+
+   { "foo": 42 } --> Dictionary
+
+I think the distinction between objects and blocks is welcome.
+
+

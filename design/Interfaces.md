@@ -8,24 +8,17 @@ interface Scalar
 end
 
 interface Printable
-   required method toString
-   method printOn: stream
-       stream printString: self toString
-   end
+  required method printOn: stream
+  
+  method toString
+      (self printOn: StringStream new) string
 end
-
 
 class Integer { value }
    is Scalar
    is Printable
    ...
 end
-
-class Foo {}
-   includes Printable
-   ...
-end
-
 
 ```
 
