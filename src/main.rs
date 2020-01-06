@@ -1,3 +1,6 @@
+// rouille uses try!, silence deprecation warnins for now
+#![allow(deprecated)]
+
 use clap::{App, Arg};
 use foolang::eval::Env;
 use foolang::objects::Foolang;
