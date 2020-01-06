@@ -655,7 +655,7 @@ impl<'a> Parser<'a> {
         }
         // Starts at point!
 
-        if (token1 != Token::SIGIL || self.slice_at(span1.clone()) != ".") {
+        if token1 != Token::SIGIL || self.slice_at(span1.clone()) != "." {
             return Ok(None);
         }
         // Starts with a dot!
