@@ -1,0 +1,6 @@
+import .x
+
+class Main { system }
+   method run
+      system exit: (x.Identity value: 123)
+end

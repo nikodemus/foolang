@@ -1,0 +1,6 @@
+import bar.y
+
+class Main { system }
+   method run
+      system exit: (y.Identity value: 111)
+end

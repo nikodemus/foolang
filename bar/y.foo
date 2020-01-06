@@ -1,0 +1,4 @@
+class Identity {}
+   class method value: x
+      x
+end
