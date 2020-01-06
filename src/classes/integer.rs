@@ -22,8 +22,6 @@ pub fn vtable() -> Vtable {
     vt.def("to:", integer_to);
     vt.def("to:do:", integer_to_do);
     vt.def("times:", integer_times);
-    // INCIDENTAL
-    vt.def("gcd:", integer_gcd);
     // DERIVED
     vt.def("+", integer_add);
     vt.def("/", integer_div);
@@ -98,12 +96,6 @@ fn integer_mul_integer(receiver: &Object, args: &[Object], env: &Env) -> Eval {
 
 fn integer_sub_integer(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let res = args[0].integer() - receiver.integer();
-    Ok(env.foo.make_integer(res))
-}
-
-fn integer_gcd(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    // FIXME: Panics if argument is not an integer.
-    let res = num::integer::gcd(receiver.integer(), args[0].integer());
     Ok(env.foo.make_integer(res))
 }
 

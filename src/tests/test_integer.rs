@@ -109,11 +109,6 @@ fn test_integer_as_float() {
 }
 
 #[test]
-fn test_integer_gcd() {
-    assert_eq!(eval_ok("15 gcd: 100").integer(), 5);
-}
-
-#[test]
 fn test_integer_equal() {
     assert_eq!(eval_ok("1 == 2").boolean(), false);
     assert_eq!(eval_ok("2 == 1").boolean(), false);
