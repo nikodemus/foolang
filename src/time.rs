@@ -1,6 +1,5 @@
 use std::ops::Add;
 use std::ops::Sub;
-use winapi::shared::minwindef::FILETIME;
 
 static mut START_TIME: Option<std::time::Instant> = None;
 
@@ -45,21 +44,23 @@ fn wallclock() -> f64 {
     (wall.as_secs() as f64) + (wall.subsec_millis() as f64 / 1000.0)
 }
 
-fn filetime_zero() -> FILETIME {
-    FILETIME {
-        dwHighDateTime: 0,
-        dwLowDateTime: 0,
-    }
-}
-
 impl TimeInfo {
     pub fn init() {
         unsafe { START_TIME = Some(std::time::Instant::now()) };
     }
     #[cfg(target_family = "windows")]
     pub fn now() -> TimeInfo {
+        use winapi::shared::minwindef::FILETIME;
         use winapi::um::processthreadsapi::GetCurrentProcess;
         use winapi::um::processthreadsapi::GetProcessTimes;
+
+        fn filetime_zero() -> FILETIME {
+            FILETIME {
+                dwHighDateTime: 0,
+                dwLowDateTime: 0,
+            }
+        }
+
         let (kernel, user) = unsafe {
             let handle = GetCurrentProcess();
             let mut created = filetime_zero();
