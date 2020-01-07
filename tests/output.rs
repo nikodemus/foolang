@@ -13,7 +13,7 @@ fn hello() -> Test {
 }
 
 #[test]
-fn hello_x() -> Result<(), Box<std::error::Error>> {
+fn hello_x() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/hello_x.foo");
     cmd.with_stdin()
@@ -25,7 +25,7 @@ fn hello_x() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn test_exit_zero() -> Result<(), Box<std::error::Error>> {
+fn test_exit_zero() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/exit_zero.foo");
     cmd.assert().success().stdout("");
@@ -33,7 +33,7 @@ fn test_exit_zero() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn test_exit_42() -> Result<(), Box<std::error::Error>> {
+fn test_exit_42() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/exit_42.foo");
     cmd.assert().failure().code(42).stdout("");
@@ -41,7 +41,7 @@ fn test_exit_42() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn test_abort() -> Result<(), Box<std::error::Error>> {
+fn test_abort() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/abort.foo");
     cmd.assert().failure().stdout("");
@@ -49,7 +49,7 @@ fn test_abort() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn test_print_no_flush() -> Result<(), Box<std::error::Error>> {
+fn test_print_no_flush() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/print_no_flush.foo");
     cmd.assert().success().stdout("");
@@ -57,7 +57,7 @@ fn test_print_no_flush() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn test_print_flush() -> Result<(), Box<std::error::Error>> {
+fn test_print_flush() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/print_flush.foo");
     cmd.assert().success().stdout("Foo");
@@ -65,7 +65,7 @@ fn test_print_flush() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn test_bad_class() -> Result<(), Box<std::error::Error>> {
+fn test_bad_class() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/bad_class.foo");
     cmd.assert().failure().code(1).stdout(
@@ -81,7 +81,7 @@ fn test_bad_class() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn test_import_x_local() -> Result<(), Box<std::error::Error>> {
+fn test_import_x_local() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/import_x_local.foo");
     cmd.assert().failure().code(123).stdout("");
@@ -89,7 +89,7 @@ fn test_import_x_local() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn test_import_x() -> Result<(), Box<std::error::Error>> {
+fn test_import_x() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/import_x.foo");
     cmd.arg("--use");
@@ -99,7 +99,7 @@ fn test_import_x() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn test_import_x_identity() -> Result<(), Box<std::error::Error>> {
+fn test_import_x_identity() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/import_x_Identity.foo");
     cmd.arg("--use");
@@ -109,7 +109,7 @@ fn test_import_x_identity() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn test_import_x_star() -> Result<(), Box<std::error::Error>> {
+fn test_import_x_star() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/import_x_star.foo");
     cmd.arg("--use");
@@ -119,7 +119,7 @@ fn test_import_x_star() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn test_import_bar_y() -> Result<(), Box<std::error::Error>> {
+fn test_import_bar_y() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/import_bar_y.foo");
     cmd.arg("--use");
@@ -129,7 +129,7 @@ fn test_import_bar_y() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn test_array_let() -> Result<(), Box<std::error::Error>> {
+fn test_array_let() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/array_let.foo");
     cmd.assert().failure().code(1).stdout(
@@ -145,7 +145,7 @@ fn test_array_let() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn test_array_let2() -> Result<(), Box<std::error::Error>> {
+fn test_array_let2() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/array_let2.foo");
     cmd.assert().failure().code(1).stdout(
@@ -161,7 +161,7 @@ fn test_array_let2() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn repl() -> Result<(), Box<std::error::Error>> {
+fn test_repl() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/repl.foo");
     cmd.with_stdin()
@@ -211,7 +211,7 @@ fn repl() -> Result<(), Box<std::error::Error>> {
 }
 
 #[test]
-fn benchmarks() -> Result<(), Box<std::error::Error>> {
+fn test_benchmarks() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/benchmarks.foo");
     cmd.assert()
@@ -226,7 +226,7 @@ fn benchmarks() -> Result<(), Box<std::error::Error>> {
 
 #[test]
 #[ignore]
-fn flying() -> Result<(), Box<std::error::Error>> {
+fn test_flying() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/flying.foo");
     cmd.assert()
