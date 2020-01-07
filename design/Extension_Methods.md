@@ -1,19 +1,12 @@
 # Extension Methods
 
-Normal methods live in the vtable(s) of the class.
+## Class-Suffixed Selectors
 
-Normal methods can be added post-hoc using reflection -- but that
-implies development mode. This is about disciplined extensions, not
-reflection.
+Extension methods suffixed with the name of a class defined in the
+current module can be added to any existing class.
 
-Extension methods live in per method table that dispatches on the class of the receiver and
-are lexically distinct.
-
-## Double Dispatch implementation
-
-Extension methods for double-dispatch protocols as identified by
-classname suffixed to the selector. They are formally associated with
-that class, not the classes their implementations recide in, and c
+They are formally associated with that class, not the classes their
+implementations recide in:
 
       class Collection
         method at: pos
@@ -28,34 +21,62 @@ that class, not the classes their implementations recide in, and c
         collection atIndexes: self
       end
 
-## Proper extensions
+Modules importing the suffixing class can also define these methods in
+classes they implement.
 
-Extension methods adding new functionalities to existing classes
-are defined using similar toplevel syntax, but are associated with the package
-they are defined in:
+This is sufficient for freely extensible double-dispatch, I believe.
 
-    -- in package pretty
-    method Object pprint
-       ...
+## Module-Prefixed Selectors
+
+Extension methods adding new functionalities to existing classes are
+defined using `extend`, which is like `class` but only allows methods
+that do not use instance variables:
+
+Eg. in file bitwise.foo:
+
+    extend Integer
+       method Integer & other
+          other andInteger: other
     end
 
-    -- in package mypkg
-    import pretty
+The actual selector of extension methods is module.selector, so in the
+above case `bitwise.&`. The prefixed selector is added to all vtables
+which use it's regular counterpart, as an alias for that -- so:
+
+    bitvector1 & bitVector2
+
+works just as before, even if & is actually bitwise.Integer.&.
+
+Those importing the module can use them with the prefix,
+
+    import bitwise
+    1 bitwise.& 2 --> 3
+
+or import the selector itself to use it without prefix:
+
+    import bitwise.&
+    1 & 3 --> 3
+
+XXX: Conflicts with `import foo.*`, which needs to be replaced with
+something else -- or importing selectors needs another syntax.
+
+Prefixed selectors can also be added to locally defined classes,
+allowing same class to support both the vanilla selector and the
+overridden one:
+
+    import bitwise
     class Foo
-       method foo: x
-         x pretty.pprint
+        method bitwise.& other
+          ...
+
+        -- This is the "normal" &, explicit prefix for clarity.
+        method foolang.& other
+          ...
     end
 
-    -- in package otherpkg
-    import pretty.pprint
-    class Foo
-       method foo: x
-         x pprint
-    end
+If `foolang.&` were not explicitly defined, then regular `&` would not
+be defined: extensions forward to vanilla methods, but not the wise versa.
 
-## Interaction with Compiler new and evaluator
-
-If object from another Compiler leak into parent and have extension methods, those methods
-need to be resolved to the correct tables even in an evaluator.
-
-This implies an analysis step or careful co-operation with the parser for evaluator.
+When `bitwise.&` hits `doesNotUnderstand` it gets that instead of `foolang.&`.
+This is so that delegation works properly -- when it finally ends at an
+object that implements either, then aliasing takes care of the rest.
