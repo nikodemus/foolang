@@ -6,49 +6,20 @@ Extension methods are added using toplevel method definitions:
           body
     end
 
-## Class-Suffixed Selectors
-
-Extension methods suffixed with the a name of a class or interface in
-the current module can be added to any existing class or interface.
-(Methods added to interfaces are always optional.)
-
-      class Collection
-        method at: pos
-           pos at.Collection: self
-       end
-
-      method Integer at.Collection: collection
-        collection atIndex: self
-      end
-
-      method Array at.Collection: collection
-        collection atIndices: self
-      end
-
-Modules importing the suffixing class can also define these methods in
-classes they implement -- but they cannot extend existing classes.
-
-These suffixes can never be elided. 'at.Collection' name == "at.Collection"
-
-The use case here is double-dispatch extensions when defining new classes
-that want to dispatch existing classes as arguments.
-
-(No conflicts can occur.)
-
-## Module-Prefixed Selectors
-
-Extension methods explicitly prefixed with the name of the current
+Extension methods are explicitly prefixed with the name of the current
 module can be added to any existing class.
 
-By declaring an extension selector using `extend` the prefix can
-be (optionally) elided, and these selectors become aliases for the
-extended selector.
+By declaring extension selectors using `extension` section the
+prefixes can be elided, and these selectors become aliases for the
+extended selectors.
 
 Eg. in file bitwise.foo:
 
-    extend &
+    extension bitOps
+        & | << >> ~
+    end
 
-    -- Prefix can be elided due to 'extend'
+    -- Prefix can be elided due to 'extension'
     method Integer & other
           other andInteger: self
     end
@@ -78,10 +49,10 @@ Importing a specific selector explicitly allows eliding the prefix:
     import bitwise.andInteger:
     1 andInteger: 2 --> 0
 
-Using importAllExtensions allows eliding the prefix from all declared
-extensions:
+Using importExtension allows eliding the prefix from all methods in
+a declared extension:
 
-    importExtensionsFrom bitwise
+    importExtension bitwise.bitOps
     1 & 2 --> 0
 
 Modules importing the prefix-extension defining module can also define
@@ -110,8 +81,11 @@ Extensions can be chained:
 
 bitwise2.foo:
 
-     import bitwise
-     extend bitwise.&
+     importExtension bitwise.bitOps
+
+     extension bitOps2
+       & | << >> ~
+     end
 
      ---
      Now & in this file is bitwise2.&, and vtables containing
@@ -126,7 +100,9 @@ bitwise2.foo:
          foolang.builtins.BitVectorOr value: self value: other
      end
 
-Therefore after importing `bitwise2.&`
+Then:
+
+    importExtension bitwise2.bitOps2
 
     bitvec1 & bitvec2 --> bitvec
 
@@ -138,42 +114,62 @@ all work:
 
 - the first goes directly to the new extension methods
 - the second find bitwise2.& aliased to bitwise.&
-- the third find bitwise2.& aliased to bitwise.& aliased to default.&
-
-## Notes
-
-The reason why there is no way to import "selectors associated with a
-specific class": if two classes share the same extension both would
-misleadingly be brought in even if only one was requested.
-
-The reason why prefix does not include class, such as in
-`bitwise.Integer.&`: allow implementing multiple classes using the
-same extension in a single module.
+- the third find bitwise2.& aliased to bitwise.& which was already aliased to default.&
 
 ## Use case probing
 
-Module A defines Collection, providing the dispatch method at.Collection.
+Module a:
 
-Module B defines Box
+      extension collectionOps
+         atCollection
+      end
 
-Module C wants to use Box (contents) to address Collection.
+      class Collection
+         method at: pos
+           pos atCollection: self
+      end
+
+      method Integer atCollection: collection
+        collection atIndex: self
+      end
+
+      method Array atCollection: collection
+        collection atIndices: self
+      end
+
+Module a:
+
+      class Box { value }
+      end
+
+Module c wants to use Box value to address Collection.
+
+boxkeys.foo:
+
+    import a.Collection
+    importExtension a.collectionOps
+
+    extension boxkeyOps
+        at atCollection
+    end
+
+    method Collection at: pos
+        pos atCollection: self
+    end
+
+    method Box atCollection: collection
+        collection at: self value
+    end
 
 c.foo:
 
     import a.Collection
-    extend at
-    extend at.Collection
+    importExtension c.boxkeyOps
 
-    -- this is c.at --> c.at.Collection: !
-    -- The latter aliases to at.Collection for existing defs.
-    method Collection at: pos
-        pos at.Collection: self
-    end
+    coll at: box
+    coll at: int
+    coll at: array
 
-    method Box at.Collection: collection
-        collection at: self value
-    end
+all now work as expected.
 
-Now in this file, or elsewhere after `import c.at:` boxes are opened
-when used as collection keys.
-
+Win!
