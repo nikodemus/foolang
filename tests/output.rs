@@ -1,4 +1,5 @@
 use assert_cmd::prelude::*; // Add methods on commands
+use predicates;
 use predicates::prelude::*;
 use std::process::Command; // Run programs // Used for writing assertions
 
@@ -132,7 +133,7 @@ fn test_import_bar_y() -> Test {
 fn test_array_let() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/array_let.foo");
-    cmd.assert().failure().code(1).stdout(
+    cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Unbound variable
 002    method run
 003       system output println: [let x = 42. x + x, x]
@@ -140,7 +141,7 @@ fn test_array_let() -> Test {
 004 end
 
 ",
-    );
+    ));
     Ok(())
 }
 
@@ -148,15 +149,14 @@ fn test_array_let() -> Test {
 fn test_array_let2() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/array_let2.foo");
-    cmd.assert().failure().code(1).stdout(
+    cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Unbound variable
 003       let a = [let x = 42. x, 123].
 004       system output println: x
                                  ^ Unbound variable
 005 end
-
 ",
-    );
+    ));
     Ok(())
 }
 
@@ -187,7 +187,7 @@ fn test_repl() -> Test {
         )
         .assert()
         .success()
-        .stdout(
+        .stdout(predicates::str::contains(
             r#"Foolang 0.2.0
 > #<class Point>
 > 101@202
@@ -206,7 +206,7 @@ fn test_repl() -> Test {
                                                    ^^^^^^^ Unbound variable
 
 > "#,
-        );
+        ));
     Ok(())
 }
 

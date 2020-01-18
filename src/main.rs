@@ -108,7 +108,7 @@ fn handle_request(request: &Request, server: Server, verbose: bool) -> Response 
 }
 
 fn oops(what: String, app: &App) -> ! {
-    println!("ERROR - {}\n---", what);
+    println!("FATAL - {}\n---", what);
     app.clone().print_help().unwrap();
     std::process::exit(1)
 }
