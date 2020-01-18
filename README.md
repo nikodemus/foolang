@@ -2,8 +2,9 @@
 
 # foolang
 
-A Smalltalk-style object language that liberally cribs from Common
-Lisp, Erlang and Fortress.
+A Smalltalk-style object language.
+
+Level of production readiness: zero. This is a toy. Use as such.
 
 Like all new languages it has _somewhat_ unrealistic aspirations:
 
@@ -15,8 +16,6 @@ Like all new languages it has _somewhat_ unrealistic aspirations:
 - Excitement of Logo.
 - Success of Fortress.
 
-Seriously, though: don't expect miracles.
-
 ## Hello World
 
     class Main { system }
@@ -26,11 +25,9 @@ Seriously, though: don't expect miracles.
 
 ## Design Priorities
 
-So: "Don't summon anything bigger than your head."
-
-1. Implementability: Not just theoretical implementability, but practical.
-   Foolang is a one person effort at the moment, which is a non-trivial
-   limitation.
+1. Implementability: Foolang is a one person effort at the moment,
+   which is a non-trivial limitation. "Don't summon anything bigger
+   than your head."
 
 2. Safety: No memory errors. No race conditions. No ambient authority.
    No undefined behaviour. Fault-tolerant applications.
