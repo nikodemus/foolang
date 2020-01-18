@@ -107,9 +107,34 @@ fn handle_request(request: &Request, server: Server, verbose: bool) -> Response 
     })
 }
 
+fn oops(what: String, app: &App) -> ! {
+    println!("ERROR - {}\n---", what);
+    app.clone().print_help().unwrap();
+    std::process::exit(1)
+}
+
+fn find_module_or_abort(spec: &str, app: &App) -> (String, PathBuf) {
+    let path = match std::fs::canonicalize(Path::new(&spec)) {
+        Ok(path) => path,
+        Err(_) => oops(format!("cannot find module: {}", spec), app),
+    };
+    let root = match path.parent() {
+        Some(path) => path.to_path_buf(),
+        None => oops(format!("cannot determine root of module: {}", spec), app),
+    };
+    let name = match path.file_name() {
+        Some(name) => match name.to_str() {
+            Some(name) => name.to_string(),
+            None => oops(format!("module has invalid filename: {}", spec), app),
+        },
+        None => oops(format!("cannot determine name of module: {}", spec), app),
+    };
+    return (name, root);
+}
+
 fn main() {
     TimeInfo::init();
-    let matches = App::new("Foolang")
+    let app = App::new("Foolang")
         .version("0.1.0")
         .arg(
             Arg::with_name("program")
@@ -128,16 +153,14 @@ fn main() {
                 .multiple(true),
         )
         .arg(Arg::with_name("ide").long("ide").help("Runs the IDE"))
-        .arg(Arg::with_name("verbose").long("verbose").help("Provides additional output"))
-        .get_matches();
+        .arg(Arg::with_name("verbose").long("verbose").help("Provides additional output"));
+    let matches = app.clone().get_matches();
     let verbose = matches.is_present("verbose");
     let mut module_roots: HashMap<String, PathBuf> = HashMap::new();
     if let Some(values) = matches.values_of("use") {
         for spec in values {
-            let path = std::fs::canonicalize(Path::new(&spec)).unwrap();
-            let root = path.parent().unwrap();
-            let name = path.file_name().unwrap().to_str().unwrap();
-            if module_roots.contains_key(name) && module_roots[name] != root {
+            let (name, root) = find_module_or_abort(spec, &app);
+            if module_roots.contains_key(&name) && module_roots[&name] != root {
                 panic!("ERROR: module {} specified multiple times with inconsistent paths");
             }
             module_roots.insert(name.to_string(), root.to_path_buf());
@@ -145,22 +168,21 @@ fn main() {
     }
     module_roots.insert(".".to_string(), std::env::current_dir().unwrap());
     if let Some(fname) = matches.value_of("program") {
-        module_roots.insert(
-            ".".to_string(),
-            std::fs::canonicalize(Path::new(fname).parent().unwrap()).unwrap().to_path_buf(),
-        );
+        let (_, root) = find_module_or_abort(fname, &app);
+        module_roots.insert(".".to_string(), root);
         let program = match std::fs::read_to_string(fname) {
             Ok(prog) => prog,
-            Err(err) => panic!("ERROR: Could not load program: {} ({})", fname, err),
+            Err(err) => {
+                println!("ERROR - cannot load program '{}': {}", fname, err);
+                app.clone().print_help().unwrap();
+                std::process::exit(1)
+            }
         };
         let foo = Foolang::new(module_roots);
         // FIXME: pass in env and argv to run
         match foo.run(&program) {
             Ok(_) => std::process::exit(0),
-            Err(err) => {
-                println!("{}", err);
-                std::process::exit(1);
-            }
+            Err(err) => oops(err.to_string(), &app),
         }
     }
     if matches.is_present("ide") {
