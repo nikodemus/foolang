@@ -7,16 +7,17 @@ extend Integer
         x mulInteger: self
     method / x
         x divInteger: self
+
     method == x
         x equalInteger: self
-    method > x
-        x lessThanInteger: self
-    method >= x
-        x lessThanOrEqualInteger: self
     method < x
         x greaterThanInteger: self
+    method > x
+        x lessThanInteger: self
     method <= x
         x greaterThanOrEqualInteger: self
+    method >= x
+        x lessThanOrEqualInteger: self
 
     method addFloat: x
         self asFloat addFloat: x
@@ -37,4 +38,61 @@ extend Integer
         self asFloat lessThanFloat: x
     method lessThanOrEqualFloat: x
         self asFloat lessThanOrEqualFloat: x
+end
+
+extend Float
+    method + x
+        x addFloat: self
+    method - x
+        x subFloat: self
+    method * x
+        x mulFloat: self
+    method / x
+        x divFloat: self
+    
+    method == x
+        x equalFloat: self
+    method < x
+        x greaterThanFloat: self
+    method > x
+        x lessThanFloat: self
+    method <= x
+        x greaterThanOrEqualFloat: self
+    method >= x
+        x lessThanOrEqualFloat: self
+
+    method addInteger: x
+        self addFloat: x asFloat
+    method subInteger: x
+        self subFloat: x asFloat
+    method mulInteger: x
+        self mulFloat: x asFloat
+    method divInteger: x
+        self divFloat: x asFloat
+
+    method asFloat
+        self
+
+    method equalInteger: x
+        self equalFloat: x asFloat
+    method lessThanInteger: x
+        self lessThanFloat: x asFloat
+    method greaterThanInteger: x
+        self greaterThanFloat: x asFloat
+    method lessThanOrEqualInteger: x
+        self lessThanOrEqualFloat: x asFloat
+    method greaterThanOrEqualInteger: x
+        self greaterThanOrEqualFloat: x asFloat
+
+    method atLeast: min atMost: max
+        let min = min asFloat.
+        (self lessThanFloat: min)
+            ifTrue: { return min }.
+        let max = max asFloat.
+        (self greaterThanFloat: max)
+            ifTrue: { return max }.
+        self
+
+    method divArray: a
+        a divByFloat: self
 end
