@@ -1,4 +1,4 @@
 extend Integer
-    method plus: other
+    method + other
         other addInteger: self
 end

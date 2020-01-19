@@ -23,7 +23,6 @@ pub fn vtable() -> Vtable {
     vt.def("to:do:", integer_to_do);
     vt.def("times:", integer_times);
     // DERIVED
-    vt.def("+", integer_add);
     vt.def("/", integer_div);
     vt.def("==", integer_equal);
     vt.def(">", integer_greater_than);
@@ -145,10 +144,6 @@ fn integer_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
 }
 
 // DERIVED METHODS
-
-fn integer_add(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    args[0].send("addInteger:", slice::from_ref(receiver), env)
-}
 
 fn integer_div(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     args[0].send("divInteger:", slice::from_ref(receiver), env)

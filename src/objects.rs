@@ -403,7 +403,7 @@ pub struct Foolang {
     window_vtable: Rc<Vtable>,
     scene_node_vtable: Rc<Vtable>,
     /// Holds the environment constructed by the prelude.
-    prelude: RefCell<Option<Env>>,
+    prelude: Option<Env>,
     /// Used to ensure we load each module only once.
     modules: Rc<RefCell<HashMap<PathBuf, Env>>>,
     /// Map from toplevel module names to their paths
@@ -454,10 +454,11 @@ impl Foolang {
             window_vtable: Rc::new(classes::window::instance_vtable()),
             scene_node_vtable: Rc::new(classes::scene_node::instance_vtable()),
             // Other
-            prelude: RefCell::new(None),
+            prelude: None,
             modules: Rc::new(RefCell::new(HashMap::new())),
             roots,
         }
+        .load_prelude()
     }
 
     pub fn here() -> Foolang {
@@ -516,13 +517,20 @@ impl Foolang {
         Ok(env)
     }
 
+    fn load_prelude(mut self) -> Self {
+        let prelude =
+            self.load_module_into(Path::new("foo/prelude.foo"), Env::from(self.clone())).unwrap();
+        self.prelude = Some(prelude);
+        self
+    }
+
     fn prelude_env(&self) -> Result<Env, Unwind> {
-        if self.prelude.borrow().is_none() {
-            let prelude =
-                self.load_module_into(Path::new("foo/prelude.foo"), Env::from(self.clone()))?;
-            *self.prelude.borrow_mut() = Some(prelude);
+        match &self.prelude {
+            Some(env) => Ok(env.clone()),
+            // This seems a bit messy and not 100% obviously correct. The case is when loading the
+            // prelude itself. Load prelude should maybe instead take a mutable ref to self?
+            None => Ok(Env::from(self.clone())),
         }
-        Ok(self.prelude.borrow().clone().unwrap())
     }
 
     fn load_module_into(&self, file: &Path, env: Env) -> Result<Env, Unwind> {
