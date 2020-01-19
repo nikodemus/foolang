@@ -130,6 +130,16 @@ fn test_import_bar_y() -> Test {
 }
 
 #[test]
+fn test_import_extend() -> Test {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/test_extend.foo");
+    cmd.arg("--use");
+    cmd.arg("foo/prelude.foo");
+    cmd.assert().failure().code(2).stdout("");
+    Ok(())
+}
+
+#[test]
 fn test_array_let() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/array_let.foo");

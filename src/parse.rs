@@ -4,6 +4,7 @@ use std::collections::{HashMap, VecDeque};
 use std::convert::Into;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::string::ToString;
 
 use crate::tokenstream::{Span, Token, TokenStream};
 use crate::unwind::Unwind;
@@ -101,6 +102,32 @@ impl ClassDefinition {
             }
             selector
         }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ClassExtension {
+    pub span: Span,
+    pub name: String,
+    pub instance_methods: Vec<MethodDefinition>,
+    pub class_methods: Vec<MethodDefinition>,
+}
+
+impl ClassExtension {
+    pub fn new(span: Span, name: &str) -> Self {
+        Self {
+            span,
+            name: name.to_string(),
+            instance_methods: Vec::new(),
+            class_methods: Vec::new(),
+        }
+    }
+
+    pub fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
+        match kind {
+            MethodKind::Instance => self.instance_methods.push(method),
+            MethodKind::Class => self.class_methods.push(method),
+        };
     }
 }
 
@@ -257,6 +284,7 @@ pub enum Expr {
     Cascade(Box<Expr>, Vec<Vec<Message>>),
     Chain(Box<Expr>, Vec<Message>),
     ClassDefinition(ClassDefinition),
+    ClassExtension(ClassExtension),
     Const(Span, Literal),
     Eq(Span, Box<Expr>, Box<Expr>),
     Global(Global),
@@ -278,6 +306,14 @@ impl Expr {
     fn is_class_definition(&self) -> bool {
         match self {
             Expr::ClassDefinition(..) => true,
+            _ => false,
+        }
+    }
+
+    fn is_end_expr(&self) -> bool {
+        match self {
+            Expr::ClassDefinition(..) => true,
+            Expr::ClassExtension(..) => true,
             _ => false,
         }
     }
@@ -342,6 +378,7 @@ impl Expr {
             Block(span, ..) => span,
             Cascade(left, ..) => return left.span(),
             ClassDefinition(definition) => &definition.span,
+            ClassExtension(extension) => &extension.span,
             Const(span, ..) => span,
             Eq(span, ..) => span,
             Global(global) => &global.span,
@@ -399,6 +436,15 @@ impl Expr {
                     m.shift_span(n);
                 }
                 for m in &mut class.class_methods {
+                    m.shift_span(n);
+                }
+            }
+            ClassExtension(ext) => {
+                ext.span.shift(n);
+                for m in &mut ext.instance_methods {
+                    m.shift_span(n);
+                }
+                for m in &mut ext.class_methods {
                     m.shift_span(n);
                 }
             }
@@ -769,6 +815,7 @@ fn make_name_table() -> NameTable {
     let t = &mut table;
 
     Syntax::def(t, "class", class_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "extend", extend_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "import", import_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ",", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "defaultConstructor", invalid_prefix, invalid_suffix, precedence_0);
@@ -1065,13 +1112,13 @@ fn sequence_suffix(
 
 fn end_suffix(parser: &Parser, left: Expr, precedence: PrecedenceFunction) -> Result<Expr, Unwind> {
     let mut exprs = if let Expr::Seq(left_exprs) = left {
-        if left_exprs[left_exprs.len() - 1].is_class_definition() {
+        if left_exprs[left_exprs.len() - 1].is_end_expr() {
             left_exprs
         } else {
             return parser.error("Unexpected 'end': not after class definition.");
         }
     } else {
-        if left.is_class_definition() {
+        if left.is_end_expr() {
             vec![left]
         } else {
             return parser.error("Unexpected 'end': not after class definition.");
@@ -1250,14 +1297,14 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         }
         if next == Token::WORD && parser.slice() == "class" {
             if parser.next_token()? == Token::WORD && parser.slice() == "method" {
-                parse_method(parser, &mut class, MethodKind::Class)?;
+                class.add_method(MethodKind::Class, parse_method(parser)?);
                 continue;
             } else {
                 return parser.error("Expected class method");
             }
         }
         if next == Token::WORD && parser.slice() == "method" {
-            parse_method(parser, &mut class, MethodKind::Instance)?;
+            class.add_method(MethodKind::Instance, parse_method(parser)?);
             continue;
         }
         if next == Token::WORD && parser.slice() == "defaultConstructor" {
@@ -1277,6 +1324,50 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         return parser.error("Expected method or end");
     }
     Ok(Expr::ClassDefinition(class))
+}
+
+fn extend_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+    // FIXME: span is the span of the extension, but maybe it would be better if these
+    // had all their own spans.
+    //
+    // FIXME: duplicated class_prefix pretty much.
+    let span = parser.span();
+    let class_name = match parser.next_token()? {
+        Token::WORD => {
+            if parser.slice().chars().next().expect("BUG: empty identifier").is_uppercase() {
+                parser.tokenstring()
+            } else {
+                // FIXME: Not all languages use capital letters
+                return parser.error("Class names must start with an uppercase letter");
+            }
+        }
+        _ => return parser.error("Expected class name"),
+    };
+    let mut class = ClassExtension::new(span, &class_name);
+    loop {
+        let (next, span2) = parser.lookahead()?;
+        if next == Token::WORD && parser.slice_at(span2) == "end" {
+            break;
+        }
+        parser.next_token()?;
+        if next == Token::EOF {
+            return parser.eof_error("Unexpected EOF while parsing class: expected method or end");
+        }
+        if next == Token::WORD && parser.slice() == "class" {
+            if parser.next_token()? == Token::WORD && parser.slice() == "method" {
+                class.add_method(MethodKind::Class, parse_method(parser)?);
+                continue;
+            } else {
+                return parser.error("Expected class method");
+            }
+        }
+        if next == Token::WORD && parser.slice() == "method" {
+            class.add_method(MethodKind::Instance, parse_method(parser)?);
+            continue;
+        }
+        return parser.error("Expected method or end");
+    }
+    Ok(Expr::ClassExtension(class))
 }
 
 fn let_prefix(parser: &Parser) -> Result<Expr, Unwind> {
@@ -1454,11 +1545,7 @@ fn parse_var(parser: &Parser) -> Result<Var, Unwind> {
     }
 }
 
-fn parse_method(
-    parser: &Parser,
-    class: &mut ClassDefinition,
-    kind: MethodKind,
-) -> Result<(), Unwind> {
+fn parse_method(parser: &Parser) -> Result<MethodDefinition, Unwind> {
     assert_eq!(parser.slice(), "method");
     let span = parser.span();
     let mut selector = String::new();
@@ -1504,8 +1591,7 @@ fn parse_method(
     // FIXME: This is the place where I could inform parser about instance
     // variables.
     let body = parser.parse_body()?;
-    class.add_method(kind, MethodDefinition::new(span, selector, parameters, body, rtype));
-    Ok(())
+    Ok(MethodDefinition::new(span, selector, parameters, body, rtype))
 }
 
 /// Tests and tools

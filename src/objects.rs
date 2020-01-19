@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use crate::eval::{Binding, Env};
-use crate::parse::{ClassDefinition, Expr, Literal, Parser, Var};
+use crate::parse::{ClassDefinition, ClassExtension, Expr, Literal, Parser, Var};
 use crate::time::TimeInfo;
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -55,7 +55,7 @@ pub struct Slot {
 
 pub struct Vtable {
     pub name: String,
-    pub methods: HashMap<String, Method>,
+    pub methods: RefCell<HashMap<String, Rc<Method>>>,
     pub slots: HashMap<String, Slot>,
 }
 
@@ -63,21 +63,23 @@ impl Vtable {
     pub fn new(class: &str) -> Vtable {
         Vtable {
             name: class.to_string(),
-            methods: HashMap::new(),
+            methods: RefCell::new(HashMap::new()),
             slots: HashMap::new(),
         }
     }
 
     pub fn def(&mut self, name: &str, method: MethodFunction) {
-        self.methods.insert(name.to_string(), Method::Primitive(method));
+        self.methods.borrow_mut().insert(name.to_string(), Rc::new(Method::Primitive(method)));
     }
 
-    pub fn add_method(&mut self, selector: &str, method: Closure) {
-        self.methods.insert(selector.to_string(), Method::Interpreter(Rc::new(method)));
+    pub fn add_method(&self, selector: &str, method: Closure) {
+        self.methods
+            .borrow_mut()
+            .insert(selector.to_string(), Rc::new(Method::Interpreter(Rc::new(method))));
     }
 
     pub fn add_reader(&mut self, selector: &str, index: usize) {
-        self.methods.insert(selector.to_string(), Method::Reader(index));
+        self.methods.borrow_mut().insert(selector.to_string(), Rc::new(Method::Reader(index)));
     }
 
     pub fn add_slot(&mut self, name: &str, index: usize, vtable: Option<Rc<Vtable>>) {
@@ -92,14 +94,17 @@ impl Vtable {
 
     pub fn selectors(&self) -> Vec<String> {
         let mut selectors = vec![];
-        for key in self.methods.keys() {
+        for key in self.methods.borrow().keys() {
             selectors.push(key.clone());
         }
         selectors
     }
 
-    pub fn get(&self, name: &str) -> Option<&Method> {
-        self.methods.get(name)
+    pub fn get(&self, name: &str) -> Option<Rc<Method>> {
+        match self.methods.borrow().get(name) {
+            Some(m) => Some(m.clone()),
+            None => None,
+        }
     }
 }
 
@@ -765,6 +770,24 @@ impl Object {
         }
     }
 
+    pub fn extend_class(&self, ext: &ClassExtension, env: &Env) -> Eval {
+        let class_vtable = &self.vtable;
+        let instance_vtable = &(self.class().instance_vtable);
+        for method in &ext.class_methods {
+            class_vtable.add_method(
+                &method.selector,
+                make_method_function(env, &method.parameters, &method.body, &method.return_type)?,
+            );
+        }
+        for method in &ext.instance_methods {
+            instance_vtable.add_method(
+                &method.selector,
+                make_method_function(env, &method.parameters, &method.body, &method.return_type)?,
+            );
+        }
+        Ok(self.clone())
+    }
+
     pub fn closure_ref(&self) -> &Closure {
         match &self.datum {
             Datum::Closure(c) => c.borrow(),
@@ -863,22 +886,25 @@ impl Object {
     pub fn send(&self, message: &str, args: &[Object], env: &Env) -> Eval {
         // println!("debug: {} {} {:?}", self, message, args);
         match self.vtable.get(message) {
-            Some(Method::Primitive(method)) => method(self, args, env),
-            Some(Method::Interpreter(closure)) => closure.apply(Some(self), args),
-            Some(Method::Reader(index)) => read_instance_variable(self, *index),
+            Some(m) => match &*m {
+                Method::Primitive(method) => method(self, args, env),
+                Method::Interpreter(closure) => closure.apply(Some(self), args),
+                Method::Reader(index) => read_instance_variable(self, *index),
+            },
             None => {
                 let not_understood = vec![env.foo.make_string(message), env.foo.make_array(args)];
                 match self.vtable.get("perform:with:") {
-                    Some(Method::Interpreter(closure)) => {
-                        closure.apply(Some(self), &not_understood)
-                    }
-                    Some(Method::Primitive(_method)) => unimplemented!(
-                        "Dispatching to primitive perform:with: {:?} {} {:?}",
-                        self,
-                        message,
-                        args
-                    ),
-                    _ => Unwind::message_error(self, message, args),
+                    Some(m) => match &*m {
+                        Method::Primitive(_method) => unimplemented!(
+                            "Dispatching to primitive perform:with: {:?} {} {:?}",
+                            self,
+                            message,
+                            args
+                        ),
+                        Method::Interpreter(closure) => closure.apply(Some(self), &not_understood),
+                        Method::Reader(index) => read_instance_variable(self, *index),
+                    },
+                    None => Unwind::message_error(self, message, args),
                 }
             }
         }

@@ -1,0 +1,6 @@
+import prelude
+
+class Main { system }
+   method run
+       system exit: (1 plus: 1)
+end

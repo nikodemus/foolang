@@ -446,3 +446,10 @@ fn test_parse_import2() {
         Ok(Import::expr(0..13, "test/x/y/z.foo", "z", None, None))
     );
 }
+
+#[test]
+fn test_parse_extend1() {
+    let mut ext = ClassExtension::new(0..6, "Foo");
+    ext.add_method(MethodKind::Instance, method(11..17, "bar", vec![], int(22..24, 42)));
+    assert_eq!(parse_str("extend Foo method bar 42 end"), Ok(Expr::ClassExtension(ext)));
+}

@@ -8,7 +8,8 @@ use crate::objects::{
     Vtable,
 };
 use crate::parse::{
-    Array, Assign, ClassDefinition, Expr, Global, Import, Literal, Message, Parser, Return, Var,
+    Array, Assign, ClassDefinition, ClassExtension, Expr, Global, Import, Literal, Message, Parser,
+    Return, Var,
 };
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -286,6 +287,7 @@ impl Env {
             Block(_, params, body, rtype) => self.eval_block(params, body, rtype),
             Cascade(receiver, chains) => self.eval_cascade(receiver, chains),
             ClassDefinition(definition) => self.eval_class_definition(definition),
+            ClassExtension(extension) => self.eval_class_extension(extension),
             Const(_, literal) => self.eval_literal(literal),
             Eq(_, left, right) => self.eval_eq(left, right),
             Global(global) => self.eval_global(global),
@@ -366,7 +368,6 @@ impl Env {
         // println!("CLASS env: {:?}", self);
         // FIXME: allow anonymous classes
         if !self.is_toplevel() {
-            println!("class not at toplevel, env: {:?}", self);
             return Unwind::error_at(definition.span.clone(), "Class definition not at toplevel");
         }
         let name = &definition.name;
@@ -376,6 +377,14 @@ impl Env {
         let class = self.foo.make_class(definition, self)?;
         self.define(name, class.clone());
         Ok(class)
+    }
+
+    fn eval_class_extension(&self, extension: &ClassExtension) -> Eval {
+        if !self.is_toplevel() {
+            return Unwind::error_at(extension.span.clone(), "Class extension not at toplevel");
+        }
+        let class = self.find_class(&extension.name, extension.span.clone())?;
+        class.extend_class(extension, self)
     }
 
     fn eval_eq(&self, left: &Expr, right: &Expr) -> Eval {

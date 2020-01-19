@@ -1,0 +1,4 @@
+extend Integer
+    method plus: other
+        other addInteger: self
+end
