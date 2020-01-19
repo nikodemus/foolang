@@ -16,6 +16,7 @@ pub fn vtable() -> Vtable {
     vt.def("subFloat:", float_sub_float);
     vt.def("toString", float_to_string);
     vt.def("asInteger", float_as_integer);
+    vt.def("sqrt", float_sqrt);
     vt
 }
 
@@ -76,4 +77,8 @@ fn float_neg(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
 
 fn float_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_string(&receiver.float().to_string()))
+}
+
+fn float_sqrt(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_float(receiver.float().sqrt()))
 }

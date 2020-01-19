@@ -9,44 +9,19 @@ pub fn class_vtable() -> Vtable {
 
 pub fn instance_vtable() -> Vtable {
     let mut vt = Vtable::new("Array");
-    vt.def("*", array_mul);
-    vt.def("/", array_div);
-    vt.def("+", array_add);
-    vt.def("-", array_sub);
     vt.def("addArray:", array_add_array);
     vt.def("at:", array_at);
-    vt.def("divByFloat:", array_div_by_float);
-    vt.def("do:", array_do);
     vt.def("dot:", array_dot);
     vt.def("inject:into:", array_inject_into);
-    vt.def("norm", array_norm);
-    vt.def("mulFloat:", array_mul_float);
-    vt.def("mulInteger:", array_mul_integer);
-    vt.def("normalized", array_normalized);
     vt.def("push:", array_push);
     vt.def("put:at:", array_put_at);
-    vt.def("scalarProjectionOn:", array_scalar_projection_on);
     vt.def("subArray:", array_sub_array);
-    vt.def("sum", array_sum);
-    vt.def("sum:", array_sum_arg);
     vt.def("toString", array_to_string);
-    vt.def("vectorProjectionOn:", array_vector_projection_on);
     vt
 }
 
 fn array_at(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     receiver.as_vec(move |vec| Ok(vec[(args[0].integer() - 1) as usize].clone()))
-}
-
-fn array_do(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let block = &args[0];
-    receiver.as_vec(move |vec| {
-        for elt in vec.iter() {
-            block.send("value:", std::slice::from_ref(elt), env)?;
-        }
-        Ok(())
-    })?;
-    Ok(receiver.clone())
 }
 
 fn array_dot(receiver: &Object, args: &[Object], env: &Env) -> Eval {
@@ -115,63 +90,6 @@ fn array_sub_array(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     })
 }
 
-fn array_add(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    args[0].send("addArray:", std::slice::from_ref(receiver), env)
-}
-
-fn array_sub(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    args[0].send("subArray:", std::slice::from_ref(receiver), env)
-}
-
-fn array_mul(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    args[0].send("*", std::slice::from_ref(receiver), env)
-}
-
-fn array_div(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    args[0].send("divArray:", std::slice::from_ref(receiver), env)
-}
-
-fn array_div_by_float(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let mut v = receiver.as_vec(|v| Ok(v.clone()))?;
-    for i in 0..v.len() {
-        let f = v[i].send("asFloat", &[], env)?;
-        v[i] = args[0].send("divFloat:", &[f], env)?;
-    }
-    Ok(env.foo.into_array(v))
-}
-
-fn array_norm(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    receiver.as_vec(|v| {
-        let mut abs = 0.0;
-        for elt in v.iter() {
-            let f = elt.send("asFloat", &[], env)?.float();
-            abs += f * f;
-        }
-        Ok(env.foo.make_float(abs.sqrt()))
-    })
-}
-
-fn array_normalized(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    let reciprocal = env.foo.make_float(1.0 / array_norm(receiver, &[], env)?.float());
-    array_mul(receiver, std::slice::from_ref(&reciprocal), env)
-}
-
-fn array_mul_integer(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let mut v = receiver.as_vec(|v| Ok(v.clone()))?;
-    for i in 0..v.len() {
-        v[i] = v[i].send("mulInteger:", args, env)?;
-    }
-    Ok(env.foo.into_array(v))
-}
-
-fn array_mul_float(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let mut v = receiver.as_vec(|v| Ok(v.clone()))?;
-    for i in 0..v.len() {
-        v[i] = v[i].send("mulFloat:", args, env)?;
-    }
-    Ok(env.foo.into_array(v))
-}
-
 fn array_push(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     let elt = args[0].clone();
     receiver.as_mut_vec(move |mut vec| {
@@ -189,49 +107,6 @@ fn array_put_at(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     })
 }
 
-fn array_scalar_projection_on(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let ab = array_dot(receiver, args, env)?;
-    let bn = array_norm(&args[0], &[], env)?;
-    ab.send("/", &[bn], env)
-}
-fn array_sum(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    let mut sum = env.foo.make_boolean(false);
-    receiver.as_vec(|v| {
-        if v.len() > 0 {
-            sum = v[0].clone();
-            if v.len() > 1 {
-                for elt in v[1..].iter() {
-                    sum = sum.send("+", std::slice::from_ref(elt), env)?;
-                }
-            }
-        }
-        Ok(sum)
-    })
-}
-
-fn array_sum_arg(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let mut sum = env.foo.make_boolean(false);
-    let block = &args[0];
-    receiver.as_vec(|v| {
-        if v.len() > 0 {
-            sum = block.send("value:", std::slice::from_ref(&v[0]), env)?;
-            if v.len() > 1 {
-                for elt in v[1..].iter() {
-                    let val = block.send("value:", std::slice::from_ref(elt), env)?;
-                    sum = sum.send("+", std::slice::from_ref(&val), env)?;
-                }
-            }
-        }
-        Ok(sum)
-    })
-}
-
 fn array_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.into_string(receiver.as_vec(|v| Ok(format!("{:?}", v)))?))
-}
-
-fn array_vector_projection_on(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let ab = array_dot(receiver, args, env)?;
-    let bb = array_dot(&args[0], args, env)?;
-    ab.send("/", &[bb], env)?.send("*", args, env)
 }

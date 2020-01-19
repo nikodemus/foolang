@@ -98,21 +98,38 @@ fn test_array_mul() {
     assert_eq!(eval_ok("([0,1,2] * 2) toString").string_as_str(), "[0, 2, 4]");
     assert_eq!(eval_ok("(2 * [0,1,2]) toString").string_as_str(), "[0, 2, 4]");
     assert_eq!(eval_ok("(2.0 * [0,1,2]) toString").string_as_str(), "[0.0, 2.0, 4.0]");
+    assert_eq!(eval_ok("([0,1,2] * 2.0) toString").string_as_str(), "[0.0, 2.0, 4.0]");
 }
 
 #[test]
 fn test_array_div() {
+    assert_eq!(eval_ok("([0,2,4] / 2) toString").string_as_str(), "[0, 1, 2]");
     assert_eq!(eval_ok("([0,2,4] / 2.0) toString").string_as_str(), "[0.0, 1.0, 2.0]");
+    assert_eq!(eval_ok("(20 / [1,2,4]) toString").string_as_str(), "[20, 10, 5]");
+    assert_eq!(eval_ok("(20.0 / [1.0,2.0,4.0]) toString").string_as_str(), "[20.0, 10.0, 5.0]");
 }
 
 #[test]
 fn test_array_add() {
     assert_eq!(eval_ok("([0,1,2] + [1,2,3]) toString").string_as_str(), "[1, 3, 5]");
+    assert_eq!(eval_ok("([0,1,2] + 1) toString").string_as_str(), "[1, 2, 3]");
+    assert_eq!(eval_ok("(2 + [0,1,2]) toString").string_as_str(), "[2, 3, 4]");
+    assert_eq!(
+        eval_ok("([0.0,1.0,2.0] + [1.0,2.0,3.0]) toString").string_as_str(),
+        "[1.0, 3.0, 5.0]"
+    );
+    assert_eq!(eval_ok("([0.0,1.0,2.0] + 1.0) toString").string_as_str(), "[1.0, 2.0, 3.0]");
+    assert_eq!(eval_ok("(2.0 + [0.0,1.0,2.0]) toString").string_as_str(), "[2.0, 3.0, 4.0]");
 }
 
 #[test]
 fn test_array_sub() {
     assert_eq!(eval_ok("([0,1,2] - [1,2,13]) toString").string_as_str(), "[-1, -1, -11]");
+    assert_eq!(eval_ok("([0,1,2] - 1) toString").string_as_str(), "[-1, 0, 1]");
+    assert_eq!(eval_ok("(2 - [0,1,2]) toString").string_as_str(), "[2, 1, 0]");
+    assert_eq!(eval_ok("([0,1,2] - [1,2,13]) toString").string_as_str(), "[-1, -1, -11]");
+    assert_eq!(eval_ok("([0.0,1.0,2.0] - 1.0) toString").string_as_str(), "[-1.0, 0.0, 1.0]");
+    assert_eq!(eval_ok("(2.0 - [0.0,1.0,2.0]) toString").string_as_str(), "[2.0, 1.0, 0.0]");
 }
 
 #[test]
