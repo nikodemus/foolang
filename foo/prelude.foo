@@ -1,4 +1,40 @@
 extend Integer
-    method + other
-        other addInteger: self
+    method + x
+        x addInteger: self
+    method - x
+        x subInteger: self
+    method * x
+        x mulInteger: self
+    method / x
+        x divInteger: self
+    method == x
+        x equalInteger: self
+    method > x
+        x lessThanInteger: self
+    method >= x
+        x lessThanOrEqualInteger: self
+    method < x
+        x greaterThanInteger: self
+    method <= x
+        x greaterThanOrEqualInteger: self
+
+    method addFloat: x
+        self asFloat addFloat: x
+    method subFloat: x
+        self asFloat subFloat: x
+    method mulFloat: x
+        self asFloat mulFloat: x
+    method divFloat: x
+        self asFloat divFloat: x
+
+    method equalFloat: x
+        self asFloat equalFloat: x
+    method greaterThanFloat: x
+        self asFloat greaterThanFloat: x
+    method greaterThanOrEqualFloat: x
+        self asFloat greaterThanOrEqualFloat: x
+    method lessThanFloat: x
+        self asFloat lessThanFloat: x
+    method lessThanOrEqualFloat: x
+        self asFloat lessThanOrEqualFloat: x
 end
