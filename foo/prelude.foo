@@ -212,3 +212,10 @@ extend Integer
     method lessThanOrEqualFloat: x
         self asFloat lessThanOrEqualFloat: x
 end
+
+extend Time
+    method + x
+        x addTime: self
+    method - x
+        x subTime: self
+end
