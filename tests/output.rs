@@ -130,11 +130,9 @@ fn test_import_bar_y() -> Test {
 }
 
 #[test]
-fn test_import_extend() -> Test {
+fn test_prelude() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/test_extend.foo");
-    cmd.arg("--use");
-    cmd.arg("foo/prelude.foo");
+    cmd.arg("foo/test_prelude.foo");
     cmd.assert().failure().code(2).stdout("");
     Ok(())
 }

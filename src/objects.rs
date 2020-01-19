@@ -402,6 +402,8 @@ pub struct Foolang {
     // Kiss3D stuff
     window_vtable: Rc<Vtable>,
     scene_node_vtable: Rc<Vtable>,
+    /// Holds the environment constructed by the prelude.
+    prelude: RefCell<Option<Env>>,
     /// Used to ensure we load each module only once.
     modules: Rc<RefCell<HashMap<PathBuf, Env>>>,
     /// Map from toplevel module names to their paths
@@ -452,6 +454,7 @@ impl Foolang {
             window_vtable: Rc::new(classes::window::instance_vtable()),
             scene_node_vtable: Rc::new(classes::scene_node::instance_vtable()),
             // Other
+            prelude: RefCell::new(None),
             modules: Rc::new(RefCell::new(HashMap::new())),
             roots,
         }
@@ -469,7 +472,7 @@ impl Foolang {
 
     pub fn run(self, program: &str) -> Eval {
         let system = self.make_system();
-        let env = Env::from(self);
+        let env = self.prelude_env()?;
         let mut parser = Parser::new(&program, env.foo.root());
         while !parser.at_eof() {
             let expr = match parser.parse() {
@@ -508,7 +511,22 @@ impl Foolang {
                 return Ok(module.clone());
             }
         }
-        let code = match std::fs::read_to_string(&file) {
+        let env = self.load_module_into(&file, self.prelude_env()?)?;
+        self.modules.borrow_mut().insert(file.clone(), env.clone());
+        Ok(env)
+    }
+
+    fn prelude_env(&self) -> Result<Env, Unwind> {
+        if self.prelude.borrow().is_none() {
+            let prelude =
+                self.load_module_into(Path::new("foo/prelude.foo"), Env::from(self.clone()))?;
+            *self.prelude.borrow_mut() = Some(prelude);
+        }
+        Ok(self.prelude.borrow().clone().unwrap())
+    }
+
+    fn load_module_into(&self, file: &Path, env: Env) -> Result<Env, Unwind> {
+        let code = match std::fs::read_to_string(file) {
             Ok(code) => code,
             Err(_err) => {
                 return Unwind::error(&format!(
@@ -517,8 +535,7 @@ impl Foolang {
                 ))
             }
         };
-        let env = Env::from(self.clone());
-        let mut parser = Parser::new(&code, &file.parent().unwrap());
+        let mut parser = Parser::new(&code, file.parent().unwrap());
         while !parser.at_eof() {
             let expr = match parser.parse() {
                 Ok(expr) => expr,
@@ -526,7 +543,6 @@ impl Foolang {
             };
             env.eval(&expr).context(&code)?;
         }
-        self.modules.borrow_mut().insert(file.clone(), env.clone());
         Ok(env)
     }
 
@@ -629,8 +645,9 @@ impl Foolang {
             datum: Datum::Compiler(Rc::new(Compiler {
                 // This makes the objects resulting from Compiler eval
                 // share same vtable instances as the parent, which
-                // seems like the right thing.
-                env: Env::from(self.clone()),
+                // seems like the right thing -- but it would be nice to
+                // be able to specify a different prelude. Meh.
+                env: self.prelude_env().unwrap(),
                 source: RefCell::new(String::new()),
                 expr: RefCell::new(Expr::Const(0..0, Literal::Boolean(false))),
             })),
