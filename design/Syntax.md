@@ -1,5 +1,70 @@
 # Syntax
 
+## Notes
+
+### Three Uses Of Whitespace in Fortress
+
+- Meaning of vertical bar:
+
+    |x|   --> abs
+    a | b --> a or/cat/whatevs b
+
+- Subscripts vs array constructor
+
+- Verifying intent of operator precedence
+
+### My Idea
+
+X is an expression.
+
+SigilF is a non-alphabetic symbol containing no <|> characters.
+SigilB is a non-alphabetic symbol containing only <|> characters.
+SigilG is a non-alphabetic symbol.
+
+Prefix sigils:
+
+    <SigilF>X
+
+    prefix method <SigilF> ...
+
+    -X
+
+    !X
+
+    ~X
+
+Suffix sigils:
+
+    X<SigilF>
+
+    suffix method <SigilF> ...
+
+    X!
+
+    X?
+
+Surround sigils:
+
+    <SigilB-left>X<SigilB-right>
+
+    bracket method <SigilB-left> <SigilB-right> ...
+    
+  These need to be limited to catenations of <|>.
+
+Binary sigils:
+
+    x <sigil> y
+
+    method <sigil> other ...
+    
+Reserve operators ending with = -> makes
+
+    x <anyop>= 1
+
+parsable generally.
+
+PRECEDENCE?
+
 ## Plan
 
 delimiters := , ; ( ) { } [ ]
