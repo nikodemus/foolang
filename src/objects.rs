@@ -445,7 +445,7 @@ impl Foolang {
         );
     }
 
-    pub fn new(roots: HashMap<String, PathBuf>) -> Foolang {
+    pub fn new(prelude: &Path, roots: HashMap<String, PathBuf>) -> Foolang {
         Foolang {
             array_vtable: Rc::new(classes::array::instance_vtable()),
             boolean_vtable: Rc::new(classes::boolean::vtable()),
@@ -467,13 +467,14 @@ impl Foolang {
             modules: Rc::new(RefCell::new(HashMap::new())),
             roots,
         }
-        .load_prelude()
+        .load_prelude(prelude)
     }
 
+    #[cfg(test)]
     pub fn here() -> Foolang {
         let mut roots = HashMap::new();
         roots.insert(".".to_string(), std::env::current_dir().unwrap());
-        Foolang::new(roots)
+        Foolang::new(Path::new("foo/prelude.foo"), roots)
     }
 
     pub fn root(&self) -> &Path {
@@ -526,9 +527,8 @@ impl Foolang {
         Ok(env)
     }
 
-    fn load_prelude(mut self) -> Self {
-        let prelude =
-            self.load_module_into(Path::new("foo/prelude.foo"), Env::from(self.clone())).unwrap();
+    fn load_prelude(mut self, path: &Path) -> Self {
+        let prelude = self.load_module_into(path, Env::from(self.clone())).unwrap();
         self.prelude = Some(prelude);
         self
     }

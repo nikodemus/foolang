@@ -63,11 +63,11 @@ impl Server {
             receiver: rx1,
         }
     }
-    fn new() -> Server {
+    fn new(prelude: PathBuf, module_roots: HashMap<String, PathBuf>) -> Server {
         let connections: Arc<Mutex<Vec<Connection>>> = Arc::new(Mutex::new(Vec::new()));
         let connections0 = connections.clone();
         std::thread::spawn(move || loop {
-            let env = Env::new();
+            let env = Env::from(Foolang::new(&prelude, module_roots));
             loop {
                 std::thread::sleep(std::time::Duration::from_millis(10));
                 connections0.lock().unwrap().retain(|conn| conn.serve(&env));
@@ -152,10 +152,20 @@ fn main() {
                 .takes_value(true)
                 .multiple(true),
         )
+        .arg(
+            Arg::with_name("prelude")
+                .long("prelude")
+                .value_name("PRELUDE")
+                .help("Override standard prelude.")
+                .takes_value(true)
+                .default_value("foo/prelude.foo")
+                .multiple(false),
+        )
         .arg(Arg::with_name("ide").long("ide").help("Runs the IDE"))
         .arg(Arg::with_name("verbose").long("verbose").help("Provides additional output"));
     let matches = app.clone().get_matches();
     let verbose = matches.is_present("verbose");
+    let prelude = Path::new(matches.value_of("prelude").unwrap());
     let mut module_roots: HashMap<String, PathBuf> = HashMap::new();
     if let Some(values) = matches.values_of("use") {
         for spec in values {
@@ -178,7 +188,7 @@ fn main() {
                 std::process::exit(1)
             }
         };
-        let foo = Foolang::new(module_roots);
+        let foo = Foolang::new(prelude, module_roots);
         // FIXME: pass in env and argv to run
         match foo.run(&program) {
             Ok(_) => std::process::exit(0),
@@ -190,8 +200,7 @@ fn main() {
         if webbrowser::open("http://127.0.0.1:8000/index.html").is_err() {
             println!("Could not open browser!");
         }
-        // FIXME: Need to pass module_roots here.
-        let server = Server::new();
+        let server = Server::new(prelude.to_path_buf(), module_roots);
         rouille::start_server("127.0.0.1:8000", move |request| {
             handle_request(request, server.clone(), verbose)
         });

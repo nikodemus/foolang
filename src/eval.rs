@@ -88,6 +88,7 @@ impl fmt::Debug for Env {
 impl Env {
     /// Creates a new environment containing only builtins and the current directory
     /// as a relative module root.
+    #[cfg(test)]
     pub fn new() -> Env {
         Env::from(Foolang::here())
     }
