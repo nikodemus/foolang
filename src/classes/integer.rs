@@ -4,7 +4,6 @@ use crate::objects::{Eval, Object, Vtable};
 pub fn vtable() -> Vtable {
     let mut vt = Vtable::new("Integer");
     vt.def("asFloat", integer_as_float);
-    vt.def("asInteger", integer_as_integer);
     vt.def("addInteger:", integer_add_integer);
     vt.def("divInteger:", integer_div_integer);
     vt.def("equalInteger:", integer_equal_integer);
@@ -20,10 +19,6 @@ pub fn vtable() -> Vtable {
     vt.def("to:do:", integer_to_do);
     vt.def("times:", integer_times);
     vt
-}
-
-fn integer_as_integer(receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
-    Ok(receiver.to_owned())
 }
 
 fn integer_as_float(receiver: &Object, _args: &[Object], env: &Env) -> Eval {

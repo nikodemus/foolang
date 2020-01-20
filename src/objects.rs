@@ -72,10 +72,14 @@ impl Vtable {
         self.methods.borrow_mut().insert(name.to_string(), Rc::new(Method::Primitive(method)));
     }
 
-    pub fn add_method(&self, selector: &str, method: Closure) {
-        self.methods
-            .borrow_mut()
-            .insert(selector.to_string(), Rc::new(Method::Interpreter(Rc::new(method))));
+    pub fn add_method(&self, selector: &str, method: Closure) -> Result<(), Unwind> {
+        let mut methods = self.methods.borrow_mut();
+        if methods.contains_key(selector) {
+            Unwind::error(&format!("Cannot override method {} in {}", selector, self.name))
+        } else {
+            methods.insert(selector.to_string(), Rc::new(Method::Interpreter(Rc::new(method))));
+            Ok(())
+        }
     }
 
     pub fn add_reader(&mut self, selector: &str, index: usize) {
@@ -581,9 +585,7 @@ impl Foolang {
         vtable_name.push_str(&classdef.name);
         let mut class_vtable = Vtable::new(vtable_name.as_str());
         class_vtable.def(&classdef.constructor(), generic_ctor);
-        class_vtable.def("toString", generic_class_to_string);
         let mut instance_vtable = Vtable::new(&classdef.name);
-        instance_vtable.def("toString", generic_instance_to_string);
         let mut index = 0;
         for var in &classdef.instance_variables {
             index += 1;
@@ -604,13 +606,13 @@ impl Foolang {
             class_vtable.add_method(
                 &method.selector,
                 make_method_function(env, &method.parameters, &method.body, &method.return_type)?,
-            );
+            )?;
         }
         for method in &classdef.instance_methods {
             instance_vtable.add_method(
                 &method.selector,
                 make_method_function(env, &method.parameters, &method.body, &method.return_type)?,
-            );
+            )?;
         }
         Ok(Object {
             vtable: Rc::new(class_vtable),
@@ -802,13 +804,13 @@ impl Object {
             class_vtable.add_method(
                 &method.selector,
                 make_method_function(env, &method.parameters, &method.body, &method.return_type)?,
-            );
+            )?;
         }
         for method in &ext.instance_methods {
             instance_vtable.add_method(
                 &method.selector,
                 make_method_function(env, &method.parameters, &method.body, &method.return_type)?,
-            );
+            )?;
         }
         Ok(self.clone())
     }
@@ -908,28 +910,29 @@ impl Object {
 
     // SEND
 
-    pub fn send(&self, message: &str, args: &[Object], env: &Env) -> Eval {
-        // println!("debug: {} {} {:?}", self, message, args);
-        match self.vtable.get(message) {
+    pub fn send(&self, selector: &str, args: &[Object], env: &Env) -> Eval {
+        // println!("debug: {} {} {:?}", self, selector, args);
+        match self.vtable.get(selector) {
             Some(m) => match &*m {
                 Method::Primitive(method) => method(self, args, env),
                 Method::Interpreter(closure) => closure.apply(Some(self), args),
                 Method::Reader(index) => read_instance_variable(self, *index),
             },
+            None if selector == "toString" => generic_to_string(self, args, env),
             None => {
-                let not_understood = vec![env.foo.make_string(message), env.foo.make_array(args)];
+                let not_understood = vec![env.foo.make_string(selector), env.foo.make_array(args)];
                 match self.vtable.get("perform:with:") {
                     Some(m) => match &*m {
                         Method::Primitive(_method) => unimplemented!(
                             "Dispatching to primitive perform:with: {:?} {} {:?}",
                             self,
-                            message,
+                            selector,
                             args
                         ),
                         Method::Interpreter(closure) => closure.apply(Some(self), &not_understood),
                         Method::Reader(index) => read_instance_variable(self, *index),
                     },
-                    None => Unwind::message_error(self, message, args),
+                    None => Unwind::message_error(self, selector, args),
                 }
             }
         }
@@ -1026,27 +1029,29 @@ fn generic_ctor(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     })
 }
 
-fn generic_class_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    let class = receiver.class();
-    Ok(env.foo.into_string(format!("#<class {}>", &class.instance_vtable.name)))
-}
-
-fn generic_instance_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    let instance = receiver.instance();
-    let mut info = String::new();
-    for var in instance.instance_variables.borrow().iter() {
-        if info.len() > 50 {
-            info.push_str("...");
-            break;
+fn generic_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    match &receiver.datum {
+        Datum::Class(class) => {
+            Ok(env.foo.into_string(format!("#<class {}>", &class.instance_vtable.name)))
         }
-        if info.is_empty() {
-            info.push_str(" ");
-        } else {
-            info.push_str(",");
+        Datum::Instance(instance) => {
+            let mut info = String::new();
+            for var in instance.instance_variables.borrow().iter() {
+                if info.len() > 50 {
+                    info.push_str("...");
+                    break;
+                }
+                if info.is_empty() {
+                    info.push_str(" ");
+                } else {
+                    info.push_str(",");
+                }
+                info.push_str(format!("{:?}", var).as_str());
+            }
+            Ok(env.foo.into_string(format!("#<{}{}>", &receiver.vtable.name, info)))
         }
-        info.push_str(format!("{:?}", var).as_str());
+        _ => panic!("INTERNAL ERROR: unexpected object in generic_to_string: {:?}", receiver),
     }
-    Ok(env.foo.into_string(format!("#<{}{}>", &receiver.vtable.name, info)))
 }
 
 pub fn read_instance_variable(receiver: &Object, index: usize) -> Eval {
