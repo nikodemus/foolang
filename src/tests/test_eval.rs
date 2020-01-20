@@ -178,6 +178,98 @@ fn test_instance_variable4() {
 }
 
 #[test]
+fn test_extend1() {
+    assert_eq!(
+        eval_ok(
+            "
+         class Foo {}
+            class method perform: s with: args
+               666
+         end
+         extend Foo
+            method bar
+               42
+         end
+         Foo new bar",
+        )
+        .integer(),
+        42
+    );
+}
+
+#[test]
+fn test_extend2() {
+    assert_eq!(
+        eval_ok(
+            "
+         class Foo {}
+            method perform: s with: args
+               666
+         end
+         extend Foo
+            class method bar
+               42
+         end
+         Foo bar",
+        )
+        .integer(),
+        42
+    );
+}
+
+#[test]
+fn test_extend_exception1() {
+    let (exception, _env) = eval_exception(
+        "class Foo {}
+            method perform: s with: args
+               42
+         end
+         extend Foo
+            method bar
+               666
+         end",
+    );
+    assert_eq!(
+        exception,
+        Unwind::Exception(
+            Error::SimpleError(SimpleError {
+                what: "Cannot extend Foo: instance method 'perform:with:' defined".to_string()
+            }),
+            Location {
+                span: None,
+                context: None
+            }
+        )
+    );
+}
+
+#[test]
+fn test_extend_exception2() {
+    let (exception, _env) = eval_exception(
+        "class Foo {}
+            class method perform: s with: args
+               42
+         end
+         extend Foo
+            class method bar
+               666
+         end",
+    );
+    assert_eq!(
+        exception,
+        Unwind::Exception(
+            Error::SimpleError(SimpleError {
+                what: "Cannot extend class Foo: class method 'perform:with:' defined".to_string()
+            }),
+            Location {
+                span: None,
+                context: None
+            }
+        )
+    );
+}
+
+#[test]
 fn test_typecheck1() {
     let (object, env) = eval_obj("123::Integer");
     assert_eq!(object, env.foo.make_integer(123));

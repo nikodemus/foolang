@@ -73,11 +73,12 @@ impl Vtable {
     }
 
     pub fn add_method(&self, selector: &str, method: Closure) -> Result<(), Unwind> {
-        let mut methods = self.methods.borrow_mut();
-        if methods.contains_key(selector) {
+        if self.has(selector) {
             Unwind::error(&format!("Cannot override method {} in {}", selector, self.name))
         } else {
-            methods.insert(selector.to_string(), Rc::new(Method::Interpreter(Rc::new(method))));
+            self.methods
+                .borrow_mut()
+                .insert(selector.to_string(), Rc::new(Method::Interpreter(Rc::new(method))));
             Ok(())
         }
     }
@@ -109,6 +110,10 @@ impl Vtable {
             Some(m) => Some(m.clone()),
             None => None,
         }
+    }
+
+    pub fn has(&self, name: &str) -> bool {
+        self.methods.borrow().contains_key(name)
     }
 }
 
@@ -799,18 +804,42 @@ impl Object {
 
     pub fn extend_class(&self, ext: &ClassExtension, env: &Env) -> Eval {
         let class_vtable = &self.vtable;
-        let instance_vtable = &(self.class().instance_vtable);
-        for method in &ext.class_methods {
-            class_vtable.add_method(
-                &method.selector,
-                make_method_function(env, &method.parameters, &method.body, &method.return_type)?,
-            )?;
+        if !ext.class_methods.is_empty() && class_vtable.has("perform:with:") {
+            return Unwind::error(&format!(
+                "Cannot extend {}: class method 'perform:with:' defined",
+                &class_vtable.name
+            ));
+        } else {
+            for method in &ext.class_methods {
+                class_vtable.add_method(
+                    &method.selector,
+                    make_method_function(
+                        env,
+                        &method.parameters,
+                        &method.body,
+                        &method.return_type,
+                    )?,
+                )?;
+            }
         }
-        for method in &ext.instance_methods {
-            instance_vtable.add_method(
-                &method.selector,
-                make_method_function(env, &method.parameters, &method.body, &method.return_type)?,
-            )?;
+        let instance_vtable = &(self.class().instance_vtable);
+        if !ext.instance_methods.is_empty() && instance_vtable.has("perform:with:") {
+            return Unwind::error(&format!(
+                "Cannot extend {}: instance method 'perform:with:' defined",
+                &instance_vtable.name
+            ));
+        } else {
+            for method in &ext.instance_methods {
+                instance_vtable.add_method(
+                    &method.selector,
+                    make_method_function(
+                        env,
+                        &method.parameters,
+                        &method.body,
+                        &method.return_type,
+                    )?,
+                )?;
+            }
         }
         Ok(self.clone())
     }
