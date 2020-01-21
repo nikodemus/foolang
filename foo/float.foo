@@ -1,0 +1,66 @@
+extend Float
+    method asFloat
+        self
+
+    method + x
+        x addFloat: self
+    method - x
+        x subFloat: self
+    method * x
+        x mulFloat: self
+    method / x
+        x divFloat: self
+
+    method square
+        self mulFloat: self
+
+    method == x
+        x equalFloat: self
+    method < x
+        x greaterThanFloat: self
+    method > x
+        x lessThanFloat: self
+    method <= x
+        x greaterThanOrEqualFloat: self
+    method >= x
+        x lessThanOrEqualFloat: self
+
+    method addInteger: x
+        self addFloat: x asFloat
+    method subInteger: x
+        self subFloat: x asFloat
+    method mulInteger: x
+        self mulFloat: x asFloat
+    method divInteger: x
+        self divFloat: x asFloat
+
+    method addArray: x
+        x collect: { |elt| elt addFloat: self }
+    method mulArray: x
+        x collect: { |elt| elt mulFloat: self }
+    method subArray: x
+        -- FIXME: Should the arith protocol include reverses mul and sub?
+        x collect: { |elt| elt - self }
+    method divArray: x
+        x collect: { |elt| elt / self }
+
+    method equalInteger: x
+        self equalFloat: x asFloat
+    method lessThanInteger: x
+        self lessThanFloat: x asFloat
+    method greaterThanInteger: x
+        self greaterThanFloat: x asFloat
+    method lessThanOrEqualInteger: x
+        self lessThanOrEqualFloat: x asFloat
+    method greaterThanOrEqualInteger: x
+        self greaterThanOrEqualFloat: x asFloat
+
+    method atLeast: min atMost: max
+        let min = min asFloat.
+        (self lessThanFloat: min)
+            ifTrue: { return min }.
+        let max = max asFloat.
+        (self greaterThanFloat: max)
+            ifTrue: { return max }.
+        self
+end

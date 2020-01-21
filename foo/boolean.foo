@@ -1,0 +1,33 @@
+extend Boolean
+    method and: other::Boolean
+        self
+           ifTrue: { other }
+           ifFalse: { False }
+
+    method or: other::Boolean
+        self
+           ifTrue: { True }
+           ifFalse: { other }
+
+    method not
+        self
+           ifTrue: { False }
+           ifFalse: { True }
+
+    method ifTrue: block
+        self
+           ifTrue: block
+           ifFalse: { False }
+
+    method ifFalse: block
+        self
+           -- FIXME: returning True in the first leg seems strange, but breaks a couple
+           -- of tests. Should either explain the rational or return False.
+           ifTrue: { True }
+           ifFalse: block
+
+    method toString
+        self
+           ifTrue: { "True" }
+           ifFalse: { "False" }
+end

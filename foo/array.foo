@@ -1,0 +1,56 @@
+extend Array
+    method + x
+       x addArray: self
+    method - x
+       x subArray: self
+    method * x
+       x mulArray: self
+    method / x
+       x divArray: self
+
+    method norm
+       (self inject: 0.0 into: { |abs elt| abs + (elt square) }) sqrt
+
+    method normalized
+       let reciprocal = 1.0 / (self norm).
+       self * reciprocal
+
+    method scalarProjectionOn: other
+        (self dot: other) / other norm
+
+    method vectorProjectionOn: other
+        ((self dot: other) / (other dot: other)) * other
+
+    method do: block
+        self inject: False into: { |dummy elt| block value: elt }.
+        self
+
+    method collect: block
+        self inject: [] into: { |res elt| res push: (block value: elt) }
+
+    method sum
+        self inject: 0 into: { |res elt| res + elt }
+
+    method sum: block
+        self inject: 0 into: { |res elt| res + (block value: elt) }
+
+    method addInteger: x
+       self collect: { |elt| elt addInteger: x }
+    method addFloat: x
+       self collect: { |elt| elt addFloat: x }
+
+    method divFloat: x
+       self collect: { |elt| elt divFloat: x }
+    method divInteger: x
+       self collect: { |elt| elt divInteger: x }
+
+    method mulInteger: x
+       self collect: { |elt| elt mulInteger: x }
+    method mulFloat: x
+       self collect: { |elt| elt mulFloat: x }
+
+    method subInteger: x
+       self collect: { |elt| elt subInteger: x }
+    method subFloat: x
+       self collect: { |elt| elt subFloat: x }
+end
