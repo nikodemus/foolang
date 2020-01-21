@@ -136,6 +136,11 @@ pub struct Object {
     pub datum: Datum,
 }
 
+#[derive(PartialEq)]
+pub struct System {
+    pub output: Option<Object>,
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Arg {
     pub span: Span,
@@ -407,7 +412,7 @@ pub enum Datum {
     String(Rc<String>),
     StringOutput(Rc<StringOutput>),
     // XXX: Null?
-    System,
+    System(Rc<System>),
     Time(Rc<TimeInfo>),
     // Kiss3D stuff
     Window(Rc<Window>),
@@ -508,7 +513,7 @@ impl Foolang {
     }
 
     pub fn run(self, program: &str) -> Eval {
-        let system = self.make_system();
+        let system = self.make_system(None);
         let env = self.prelude_env()?;
         let mut parser = Parser::new(&program, env.foo.root());
         while !parser.at_eof() {
@@ -760,10 +765,12 @@ impl Foolang {
         }
     }
 
-    pub fn make_system(&self) -> Object {
+    pub fn make_system(&self, output: Option<Object>) -> Object {
         Object {
             vtable: Rc::new(classes::system::vtable()),
-            datum: Datum::System,
+            datum: Datum::System(Rc::new(System {
+                output,
+            })),
         }
     }
 
@@ -956,6 +963,13 @@ impl Object {
         }
     }
 
+    pub fn system(&self) -> Rc<System> {
+        match &self.datum {
+            Datum::System(s) => Rc::clone(s),
+            _ => panic!("BUG: {:?} is not a System", self),
+        }
+    }
+
     pub fn time(&self) -> &Rc<TimeInfo> {
         match &self.datum {
             Datum::Time(info) => info,
@@ -1056,7 +1070,7 @@ impl fmt::Display for Object {
             Datum::Output(output) => write!(f, "#<Output {}>", &output.name),
             Datum::StringOutput(_output) => write!(f, "#<StringOutput>"),
             Datum::String(s) => write!(f, "{}", s),
-            Datum::System => write!(f, "#<System>"),
+            Datum::System(_) => write!(f, "#<System>"),
             Datum::Time(time) => write!(
                 f,
                 "#<Time real: {}, system: {}, user: {}>",

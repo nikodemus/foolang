@@ -3,7 +3,7 @@
 
 use clap::{App, Arg};
 use foolang::eval::Env;
-use foolang::objects::Foolang;
+use foolang::objects::{Foolang, Object};
 use foolang::time::TimeInfo;
 use foolang::unwind::Unwind;
 use rouille::{match_assets, post_input, session, try_or_400, Request, Response};
@@ -24,11 +24,18 @@ struct Connection {
 }
 
 impl Connection {
-    fn serve(&self, env: &Env) -> bool {
+    fn serve(&self, env: &Env, out: &Object) -> bool {
         match self.receiver.try_recv() {
             Ok(msg) => {
                 let response = match env.eval_all(msg.as_str()) {
-                    Ok(obj) => format!("{}", obj),
+                    Ok(obj) => {
+                        let outs = out.send("content", &[], &env).unwrap().string();
+                        if outs.len() > 0 {
+                            format!("--output--\n{}---end---\n{}", outs, obj)
+                        } else {
+                            format!("{}", obj)
+                        }
+                    }
                     Err(Unwind::Exception(error, location)) => {
                         format!("ERROR: {}\n\n{}", error.what(), location.context())
                     }
@@ -68,10 +75,12 @@ impl Server {
         let connections0 = connections.clone();
         std::thread::spawn(move || loop {
             let env = Env::from(Foolang::new(&prelude, module_roots));
-            env.define("system", env.foo.make_system());
+            let out = env.foo.make_string_output();
+            env.define("system", env.foo.make_system(Some(out.clone())));
+            //sys.send("setOutput:" env.foo.make_string_stream())
             loop {
                 std::thread::sleep(std::time::Duration::from_millis(10));
-                connections0.lock().unwrap().retain(|conn| conn.serve(&env));
+                connections0.lock().unwrap().retain(|conn| conn.serve(&env, &out));
             }
         });
         Server {

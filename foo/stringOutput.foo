@@ -7,6 +7,6 @@ extend StringOutput
         self print: string.
         self newline
     method newline
-        self print: "\n"
+        self print: ("" newline).
         self
 end
