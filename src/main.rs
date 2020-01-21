@@ -68,6 +68,7 @@ impl Server {
         let connections0 = connections.clone();
         std::thread::spawn(move || loop {
             let env = Env::from(Foolang::new(&prelude, module_roots));
+            env.define("system", env.foo.make_system());
             loop {
                 std::thread::sleep(std::time::Duration::from_millis(10));
                 connections0.lock().unwrap().retain(|conn| conn.serve(&env));
