@@ -3,6 +3,7 @@ use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::convert::AsRef;
 use std::fmt;
+use std::fs;
 use std::io::Read;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -552,7 +553,7 @@ impl Foolang {
                 ))
             }
         };
-        let mut parser = Parser::new(&code, file.parent().unwrap());
+        let mut parser = Parser::new(&code, fs::canonicalize(file).unwrap().parent().unwrap());
         while !parser.at_eof() {
             let expr = match parser.parse() {
                 Ok(expr) => expr,
