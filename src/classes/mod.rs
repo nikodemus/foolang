@@ -9,6 +9,7 @@ pub mod integer;
 pub mod interval;
 pub mod output;
 pub mod string;
+pub mod string_output;
 pub mod system;
 pub mod time;
 

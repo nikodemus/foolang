@@ -330,7 +330,7 @@ pub struct Output {
 
 impl PartialEq for Output {
     fn eq(&self, other: &Self) -> bool {
-        self as *const _ == other as *const _
+        std::ptr::eq(self, other)
     }
 }
 
@@ -349,6 +349,24 @@ impl Output {
     pub fn flush(&self) {
         let mut out = self.stream.borrow_mut();
         out.flush().expect("BUG: unhandled flush error");
+    }
+}
+
+pub struct StringOutput {
+    pub contents: RefCell<String>,
+}
+
+impl PartialEq for StringOutput {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self, other)
+    }
+}
+impl StringOutput {
+    pub fn write(&self, text: &str) {
+        self.contents.borrow_mut().push_str(text);
+    }
+    pub fn content(&self) -> String {
+        self.contents.replace(String::new())
     }
 }
 
@@ -387,6 +405,7 @@ pub enum Datum {
     Interval(Rc<Interval>),
     Output(Rc<Output>),
     String(Rc<String>),
+    StringOutput(Rc<StringOutput>),
     // XXX: Null?
     System,
     Time(Rc<TimeInfo>),
@@ -408,6 +427,7 @@ pub struct Foolang {
     interval_vtable: Rc<Vtable>,
     output_vtable: Rc<Vtable>,
     string_vtable: Rc<Vtable>,
+    string_output_vtable: Rc<Vtable>,
     time_vtable: Rc<Vtable>,
     // Kiss3D stuff
     window_vtable: Rc<Vtable>,
@@ -436,6 +456,10 @@ impl Foolang {
         env.define("Integer", Class::object(Vtable::new("class Integer"), &self.integer_vtable));
         env.define("Interval", Class::object(Vtable::new("class Interval"), &self.interval_vtable));
         env.define("Output", Class::object(Vtable::new("class Output"), &self.output_vtable));
+        env.define(
+            "StringOutput",
+            Class::object(classes::string_output::class_vtable(), &self.string_output_vtable),
+        );
         env.define("String", Class::object(classes::string::class_vtable(), &self.string_vtable));
         env.define("Time", Class::object(classes::time::class_vtable(), &self.time_vtable));
         // Kiss3D stuff
@@ -458,6 +482,7 @@ impl Foolang {
             integer_vtable: Rc::new(classes::integer::vtable()),
             interval_vtable: Rc::new(classes::interval::vtable()),
             output_vtable: Rc::new(classes::output::vtable()),
+            string_output_vtable: Rc::new(classes::string_output::instance_vtable()),
             string_vtable: Rc::new(classes::string::instance_vtable()),
             time_vtable: Rc::new(classes::time::instance_vtable()),
             // Kiss3D stuff
@@ -715,6 +740,15 @@ impl Foolang {
         }
     }
 
+    pub fn make_string_output(&self) -> Object {
+        Object {
+            vtable: Rc::clone(&self.string_output_vtable),
+            datum: Datum::StringOutput(Rc::new(StringOutput {
+                contents: RefCell::new(String::new()),
+            })),
+        }
+    }
+
     pub fn make_string(&self, string: &str) -> Object {
         self.into_string(string.to_string())
     }
@@ -901,6 +935,13 @@ impl Object {
         }
     }
 
+    pub fn string_output(&self) -> Rc<StringOutput> {
+        match &self.datum {
+            Datum::StringOutput(output) => Rc::clone(output),
+            _ => panic!("BUG: {:?} is not a StringOutput", self),
+        }
+    }
+
     pub fn string(&self) -> Rc<String> {
         match &self.datum {
             Datum::String(s) => Rc::clone(s),
@@ -1013,6 +1054,7 @@ impl fmt::Display for Object {
                 write!(f, "#<Interval {} to {}>", interval.start, interval.end)
             }
             Datum::Output(output) => write!(f, "#<Output {}>", &output.name),
+            Datum::StringOutput(_output) => write!(f, "#<StringOutput>"),
             Datum::String(s) => write!(f, "{}", s),
             Datum::System => write!(f, "#<System>"),
             Datum::Time(time) => write!(
