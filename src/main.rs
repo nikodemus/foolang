@@ -1,4 +1,4 @@
-// rouille uses try!, silence deprecation warnins for now
+// rouille uses try!, silence deprecation warnings for now
 #![allow(deprecated)]
 
 use clap::{App, Arg};
