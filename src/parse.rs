@@ -303,13 +303,6 @@ impl Expr {
         }
     }
 
-    fn is_class_definition(&self) -> bool {
-        match self {
-            Expr::ClassDefinition(..) => true,
-            _ => false,
-        }
-    }
-
     fn is_end_expr(&self) -> bool {
         match self {
             Expr::ClassDefinition(..) => true,
@@ -577,18 +570,19 @@ impl<'a> Parser<'a> {
         let seq = self.parse_expr(1)?;
         // FIXME: Terrible KLUDGE.
         //
-        // 1. Class does not consume it's end since we use it to sequence toplevel definitions.
-        // 2. If class appears in a sequence context it will leave the end behind to be
-        //    discovered in a _prefix_ context.
+        // 1. Expressions like 'class' and 'extend' do not consume
+        //    their 'end' since we use it to sequence toplevel definitions.
+        // 2. If they appear in a sequence context it will leave the
+        //    end behind to be discovered in a _prefix_ context.
         //
         // So we clean it up.
         //
         let (token, span) = self.lookahead()?;
         if token == Token::WORD && self.slice_at(span) == "end" {
             let is_class_def = if let Expr::Seq(seq) = &seq {
-                seq[seq.len() - 1].is_class_definition()
+                seq[seq.len() - 1].is_end_expr()
             } else {
-                seq.is_class_definition()
+                seq.is_end_expr()
             };
             if is_class_def {
                 self.next_token()?;
