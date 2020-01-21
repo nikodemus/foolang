@@ -63,20 +63,21 @@ pub struct EnvImpl {
     receiver: Option<Object>,
 }
 
-impl PartialEq for EnvImpl {
-    fn eq(&self, other: &Self) -> bool {
-        self as *const _ == other as *const _
-    }
-}
-
 /// Lexical environment. Exists around `EnvImpl` to provide access to
 /// the `Rc`.
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub struct Env {
     /// Underlying environment.
     rc: Rc<RefCell<EnvImpl>>,
     /// Vtables for builtin classes.
     pub foo: Rc<Foolang>,
+}
+
+impl PartialEq for Env {
+    // Two Env are eq if they point to the same RefCell.
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(&*self.rc, &*other.rc)
+    }
 }
 
 impl fmt::Debug for Env {
