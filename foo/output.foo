@@ -2,4 +2,7 @@ extend Output
     method println: string
         self print: string.
         self newline
+    method newline
+        self print: "\n".
+        self
 end
