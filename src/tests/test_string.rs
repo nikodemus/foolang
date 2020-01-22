@@ -8,6 +8,11 @@ fn test_empty_string() {
 }
 
 #[test]
+fn test_escape_string1() {
+    assert_eq!(eval_ok(r#" "\"" "#).string_as_str(), "\"");
+}
+
+#[test]
 fn test_newline_escape_string() {
     assert_eq!(eval_ok(r#" "\n" "#).string_as_str(), "\n");
 }

@@ -186,10 +186,14 @@ impl<'a> TokenStream<'a> {
             // println!("scan 8: string");
             let start = self.consume(r#"""#);
             while !self.at_str(r#"""#) {
-                self.next();
+                // println!("s: '{}'", &self.source[self.pos()..self.pos() + 1]);
                 if self.at_str("\\") {
                     // Since \ consumes two, \" will not match
+                    // println!("q1: '{}'", &self.source[self.pos()..self.pos() + 1]);
                     self.next();
+                    // println!("q2: '{}'", &self.source[self.pos()..self.pos() + 1]);
+                    self.next();
+                } else {
                     self.next();
                 }
             }

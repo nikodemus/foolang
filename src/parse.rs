@@ -1500,6 +1500,7 @@ fn return_prefix(parser: &Parser) -> Result<Expr, Unwind> {
 
 /// Takes care of \n, and such. Terminates on { or end of string.
 fn scan_string_part(parser: &Parser, span: Span) -> Result<Expr, Unwind> {
+    // println!("scan: '{}'", parser.slice_at(span.clone()));
     let mut chars = parser.slice_at(span.clone()).char_indices();
     let mut res = String::new();
     let start = span.start;
@@ -1513,6 +1514,8 @@ fn scan_string_part(parser: &Parser, span: Span) -> Result<Expr, Unwind> {
                         "Literal string ends on escape.",
                     )
                 }
+                Some((_, '"')) => res.push_str("\""),
+                Some((_, '\\')) => res.push_str("\\"),
                 Some((_, 'n')) => res.push_str("\n"),
                 Some((_, 't')) => res.push_str("\t"),
                 Some((_, 'r')) => res.push_str("\r"),
