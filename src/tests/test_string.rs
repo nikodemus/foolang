@@ -8,6 +8,11 @@ fn test_empty_string() {
 }
 
 #[test]
+fn test_newline_escape_string() {
+    assert_eq!(eval_ok(r#" "\n" "#).string_as_str(), "\n");
+}
+
+#[test]
 fn test_string_append() {
     assert_eq!(
         eval_ok(
@@ -48,12 +53,12 @@ fn test_interpolated_error_location() {
                 what: "Undefined global".to_string(),
             }),
             Location {
-                span: Some(47..48),
+                span: Some(48..49),
                 context: Some(
                     concat!(
                         "003                 let x = 42.\n",
                         "004                 \"{X}\"\n",
-                        "                     ^ Undefined global\n",
+                        "                      ^ Undefined global\n",
                         "005 \n"
                     )
                     .to_string()

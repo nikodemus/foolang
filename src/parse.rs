@@ -9,14 +9,23 @@ use std::string::ToString;
 use crate::tokenstream::{Span, Token, TokenStream};
 use crate::unwind::Unwind;
 
-trait ShiftSpan {
-    fn shift(&mut self, n: usize);
+trait TweakSpan {
+    fn tweak(&mut self, shift: usize, extend: isize);
+    fn shift(&mut self, shift: usize);
 }
 
-impl ShiftSpan for Span {
-    fn shift(&mut self, n: usize) {
-        self.start += n;
-        self.end += n;
+impl TweakSpan for Span {
+    fn tweak(&mut self, shift: usize, extend: isize) {
+        self.start += shift;
+        self.end += shift;
+        if extend < 0 {
+            self.start -= (-extend) as usize;
+        } else {
+            self.end += extend as usize;
+        }
+    }
+    fn shift(&mut self, shift: usize) {
+        self.tweak(shift, 0);
     }
 }
 
@@ -166,10 +175,10 @@ pub struct Message {
 }
 
 impl Message {
-    fn shift_span(&mut self, n: usize) {
-        self.span.shift(n);
+    fn tweak_span(&mut self, shift: usize, ext: isize) {
+        self.span.tweak(shift, ext);
         for arg in &mut self.args {
-            arg.shift_span(n);
+            arg.tweak_span(shift, ext);
         }
     }
 }
@@ -199,12 +208,12 @@ impl MethodDefinition {
             return_type,
         }
     }
-    fn shift_span(&mut self, n: usize) {
-        self.span.shift(n);
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.span.tweak(shift, extend);
         for var in &mut self.parameters {
-            var.span.shift(n);
+            var.span.tweak(shift, extend);
         }
-        self.body.shift_span(n);
+        self.body.tweak_span(shift, extend);
     }
 }
 
@@ -386,99 +395,107 @@ impl Expr {
         span.to_owned()
     }
 
-    pub fn shift_span(&mut self, n: usize) {
+    fn shift_span(&mut self, n: usize) {
+        self.tweak_span(n, 0);
+    }
+
+    fn extend_span(&mut self, n: isize) {
+        self.tweak_span(0, n);
+    }
+
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
         use Expr::*;
         match self {
             Array(array) => {
-                array.span.shift(n);
+                array.span.tweak(shift, extend);
                 for elt in &mut array.data {
-                    elt.shift_span(n);
+                    elt.tweak_span(shift, extend);
                 }
             }
             Assign(assign) => {
-                assign.span.shift(n);
-                assign.value.shift_span(n);
+                assign.span.tweak(shift, extend);
+                assign.value.tweak_span(shift, extend);
             }
             Bind(_name, _type, value, body) => {
-                value.shift_span(n);
+                value.tweak_span(shift, extend);
                 if let Some(expr) = body {
-                    expr.shift_span(n);
+                    expr.tweak_span(shift, extend);
                 }
             }
             Block(span, vars, body, _rtype) => {
-                span.shift(n);
+                span.tweak(shift, extend);
                 for var in vars {
-                    var.span.shift(n);
+                    var.span.tweak(shift, extend);
                 }
-                body.shift_span(n);
+                body.tweak_span(shift, extend);
             }
             Cascade(receiver, chains) => {
-                receiver.shift_span(n);
+                receiver.tweak_span(shift, extend);
                 for chain in chains {
                     for message in chain {
-                        message.shift_span(n);
+                        message.tweak_span(shift, extend);
                     }
                 }
             }
             ClassDefinition(class) => {
-                class.span.shift(n);
+                class.span.tweak(shift, extend);
                 for var in &mut class.instance_variables {
-                    var.span.shift(n);
+                    var.span.tweak(shift, extend);
                 }
                 for m in &mut class.instance_methods {
-                    m.shift_span(n);
+                    m.tweak_span(shift, extend);
                 }
                 for m in &mut class.class_methods {
-                    m.shift_span(n);
+                    m.tweak_span(shift, extend);
                 }
             }
             ClassExtension(ext) => {
-                ext.span.shift(n);
+                ext.span.tweak(shift, extend);
                 for m in &mut ext.instance_methods {
-                    m.shift_span(n);
+                    m.tweak_span(shift, extend);
                 }
                 for m in &mut ext.class_methods {
-                    m.shift_span(n);
+                    m.tweak_span(shift, extend);
                 }
             }
             Const(span, _literal) => {
-                span.shift(n);
+                span.tweak(shift, extend);
             }
             Eq(span, left, right) => {
-                span.shift(n);
-                left.shift_span(n);
-                right.shift_span(n);
+                span.tweak(shift, extend);
+                left.tweak_span(shift, extend);
+                right.tweak_span(shift, extend);
             }
             Global(global) => {
-                global.span.shift(n);
+                global.span.tweak(shift, extend);
             }
             Chain(receiver, chain) => {
-                receiver.shift_span(n);
+                receiver.tweak_span(shift, extend);
                 for message in chain {
-                    message.shift_span(n);
+                    message.tweak_span(shift, extend);
                 }
             }
             Import(import) => {
-                import.span.shift(n);
+                import.span.tweak(shift, extend);
                 if let Some(ref mut body) = import.body {
-                    body.shift_span(n);
+                    body.tweak_span(shift, extend);
                 }
             }
             Return(ret) => {
-                ret.span.shift(n);
-                ret.value.shift_span(n);
+                ret.span.tweak(shift, extend);
+                ret.value.tweak_span(shift, extend);
             }
             Seq(exprs) => {
                 for expr in exprs {
-                    expr.shift_span(n);
+                    expr.tweak_span(shift, extend);
                 }
             }
             Typecheck(span, expr, _type) => {
-                span.shift(n);
-                expr.shift_span(n);
+                span.tweak(shift, extend);
+                expr.tweak_span(shift, extend);
             }
             Var(var) => {
-                var.span.shift(n);
+                var.span.tweak(shift, extend);
             }
         };
     }
@@ -564,6 +581,31 @@ impl<'a> Parser<'a> {
 
     pub fn parse(&mut self) -> Result<Expr, Unwind> {
         self.parse_expr(0)
+    }
+
+    pub fn parse_interpolated_block(&self, offset: usize) -> Result<(Expr, usize), Unwind> {
+        let subspan = offset..self.span().end;
+        let subparser = Parser::new(self.slice_at(subspan), &self.root);
+        match subparser.parse_prefix() {
+            Err(unwind) => Err(unwind.shift_span(offset)),
+            Ok(Expr::Block(mut blockspan, vars, body, rtype)) => {
+                blockspan.shift(offset);
+                if !vars.is_empty() {
+                    return Unwind::error_at(blockspan, "Interpolated block has variables.");
+                }
+                if rtype.is_some() {
+                    return Unwind::error_at(blockspan, "Interpolated block has a return type.");
+                }
+                let mut expr = *body;
+                expr.shift_span(offset);
+                return Ok((expr, blockspan.end));
+            }
+            Ok(other) => {
+                let mut errspan = other.span();
+                errspan.shift(offset);
+                return Unwind::error_at(errspan, "Interpolation not a block.");
+            }
+        }
     }
 
     pub fn parse_seq(&self) -> Result<Expr, Unwind> {
@@ -1137,6 +1179,7 @@ fn end_suffix(parser: &Parser, left: Expr, precedence: PrecedenceFunction) -> Re
 
 fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     let start = parser.span();
+    assert_eq!("{", parser.slice());
     let (token, span) = parser.lookahead()?;
     let mut params = vec![];
     if token == Token::SIGIL && parser.slice_at(span) == "|" {
@@ -1455,66 +1498,91 @@ fn return_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     Ok(Return::expr(parser.span(), parser.parse_expr(SEQ_PRECEDENCE)?))
 }
 
+/// Takes care of \n, and such. Terminates on { or end of string.
+fn scan_string_part(parser: &Parser, span: Span) -> Result<Expr, Unwind> {
+    let mut chars = parser.slice_at(span.clone()).char_indices();
+    let mut res = String::new();
+    let start = span.start;
+    loop {
+        match chars.next() {
+            None => return Ok(Expr::Const(span, Literal::String(res))),
+            Some((pos0, '\\')) => match chars.next() {
+                None => {
+                    return Unwind::error_at(
+                        start + pos0..start + pos0 + 1,
+                        "Literal string ends on escape.",
+                    )
+                }
+                Some((_, 'n')) => res.push_str("\n"),
+                Some((_, 't')) => res.push_str("\t"),
+                Some((_, 'r')) => res.push_str("\r"),
+                Some((_, '{')) => res.push_str("{"),
+                Some((pos1, _)) => {
+                    return Unwind::error_at(
+                        start + pos0..start + pos1,
+                        "Unknown escape sequence in literal string.",
+                    )
+                }
+            },
+            Some((pos, '{')) => return Ok(Expr::Const(start..start + pos, Literal::String(res))),
+            Some((_, c)) => res.push(c),
+        }
+    }
+}
+
 fn string_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     let slice = parser.slice();
+    let full = parser.span();
+    let mut span = full.clone();
 
-    // Strip quotes
+    // Strip quotes from ends of span
     let mut n = 0;
     while n < slice.len() - n && &slice[n..n + 1] == "\"" {
         n += 1;
     }
+    span = (span.start + n)..(span.end - n);
 
-    fn interpolate(parser: &Parser, span: Span, n: usize) -> Result<Expr, Unwind> {
-        let data = parser.slice_at(span.clone());
+    // Collect literal and interpolated parts
+    let mut parts = Vec::new();
 
-        let p0 = match data.find('{') {
-            None => {
-                // No interpolation.
-                return Ok(Expr::Const(
-                    span.start - n..span.end + n,
-                    Literal::String(data.to_string()),
-                ));
-            }
-            Some(p) => p,
-        };
-        let p1 = match data[p0..].find('}') {
-            None => return parser.error("Unterminated string interpolation."),
-            Some(p) => p + p0,
-        };
-
-        // FIXME: parse errors from parse_str don't show the larger context, and have
-        // incorrect line numbers
-        let mut expr = parse_str_in_path(&data[p0 + 1..p1], &parser.root)?;
-        expr.shift_span(span.start);
-        let interp = expr.send(Message {
-            span: p0 + 1..p1,
-            selector: "toString".to_string(),
-            args: vec![],
-        });
-        let left = if p0 > 0 {
-            Expr::Const(span.start..p0, Literal::String(data[0..p0].to_string())).send(Message {
-                span: p0 + 1..p1,
-                selector: "append:".to_string(),
-                args: vec![interp],
-            })
+    loop {
+        let literal = scan_string_part(parser, span.clone())?;
+        span = literal.span().end..span.end;
+        parts.push(literal);
+        if span.start < span.end {
+            let (interp, end) = parser.parse_interpolated_block(span.start)?;
+            span = end..span.end;
+            parts.push(interp);
         } else {
-            interp
-        };
-
-        if p1 + 1 < span.end {
-            let right = interpolate(parser, span.start + p1 + 1..span.end, n)?;
-            Ok(left.send(Message {
-                span: p0 + 1..p1,
-                selector: "append:".to_string(),
-                args: vec![right],
-            }))
-        } else {
-            Ok(left)
+            break;
         }
     }
 
-    let span = parser.span();
-    interpolate(parser, (span.start + n)..(span.end - n), n)
+    // Extend first and last part spans to cover the quotes, leaving
+    // the parts reversed for what comes nest.
+    parts[0].extend_span(-(n as isize));
+    parts.reverse();
+    parts[0].extend_span(n as isize);
+
+    // Append them all togather.
+    let mut expr = match parts.pop() {
+        None => return Ok(Expr::Const(span, Literal::String("".to_string()))),
+        Some(part) => part,
+    };
+    while let Some(right) = parts.pop() {
+        let rspan = right.span();
+        expr = expr.send(Message {
+            span: rspan.clone(),
+            selector: "append:".to_string(),
+            args: vec![right.send(Message {
+                span: rspan,
+                selector: "toString".to_string(),
+                args: vec![],
+            })],
+        })
+    }
+
+    Ok(expr)
 }
 
 /// Utils

@@ -157,6 +157,25 @@ impl Unwind {
         }
     }
 
+    pub fn shift_span(self, offset: usize) -> Self {
+        match self {
+            Unwind::Exception(
+                err,
+                Location {
+                    span: Some(s),
+                    context,
+                },
+            ) => Unwind::Exception(
+                err,
+                Location {
+                    span: Some((s.start + offset)..(s.end + offset)),
+                    context,
+                },
+            ),
+            _ => self,
+        }
+    }
+
     pub fn with_context(mut self, source: &str) -> Unwind {
         if let Unwind::Exception(error, location) = &mut self {
             location.add_context(source, error.what());
