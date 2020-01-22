@@ -2,5 +2,6 @@ import .array
 import .boolean
 import .float
 import .integer
+import .output
 import .stringOutput
 import .time

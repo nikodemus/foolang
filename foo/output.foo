@@ -1,0 +1,5 @@
+extend Output
+    method println: string
+        self print: string.
+        self newline
+end
