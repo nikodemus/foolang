@@ -604,13 +604,16 @@ fn eval_global1() {
         eval_str("DoesNotExist"),
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
-                what: "Undefined global".to_string(),
+                what: "Undefined global: DoesNotExist".to_string(),
             }),
             Location {
                 span: Some(0..12),
                 context: Some(
-                    concat!("001 DoesNotExist\n", "    ^^^^^^^^^^^^ Undefined global\n")
-                        .to_string()
+                    concat!(
+                        "001 DoesNotExist\n",
+                        "    ^^^^^^^^^^^^ Undefined global: DoesNotExist\n"
+                    )
+                    .to_string()
                 )
             }
         ))

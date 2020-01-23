@@ -430,7 +430,10 @@ impl Env {
     fn eval_global(&self, global: &Global) -> Eval {
         match self.find_global(&global.name) {
             Some(obj) => Ok(obj),
-            None => Unwind::error_at(global.span.clone(), "Undefined global"),
+            None => Unwind::error_at(
+                global.span.clone(),
+                &format!("Undefined global: {}", &global.name),
+            ),
         }
     }
 
