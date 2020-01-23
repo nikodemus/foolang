@@ -220,15 +220,14 @@ fn test_repl() -> Test {
 > 42
 > 42
 > [43]
-> Unbound variable: inside
+> ERROR: Unbound variable: inside
 001                inside
                    ^^^^^^ Unbound variable: inside
 
-> Unbound variable: inside2
+> ERROR: Unbound variable: inside2
 001                [let inside2 = 42. inside2 + 2, inside2]
                                                    ^^^^^^^ Unbound variable: inside2
-
-> "#,
+"#,
         ));
     Ok(())
 }
