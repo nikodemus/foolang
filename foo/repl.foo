@@ -30,7 +30,7 @@ class REPL
        self; prompt; read; eval; print
      }
      onError: { |error context|
-       _output println: error.
+       _output println: "ERROR: {error}".
        _output println: context
      }
 

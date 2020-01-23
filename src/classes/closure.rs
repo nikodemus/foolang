@@ -24,7 +24,7 @@ fn closure_apply(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
 }
 
 fn closure_on_error(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let res = receiver.closure_ref().apply(None, args);
+    let res = receiver.closure_ref().apply(None, &[]);
     if let Err(Unwind::Exception(error, loc)) = res {
         args[0].send(
             "value:",

@@ -220,6 +220,7 @@ impl Class {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Closure {
+    pub name: String,
     pub env: Env,
     pub params: Vec<Arg>,
     pub body: Expr,
@@ -229,6 +230,18 @@ pub struct Closure {
 impl Closure {
     pub fn apply(&self, receiver: Option<&Object>, args: &[Object]) -> Eval {
         let mut symbols = HashMap::new();
+        if self.params.len() != args.len() {
+            return Unwind::error_at(
+                self.body.span(), // FIXME: call-site would be 1000 x better...
+                &format!(
+                    "Argument count mismatch, {} wanted {}, got {}: {:?}",
+                    &self.name,
+                    self.params.len(),
+                    args.len(),
+                    args,
+                ),
+            );
+        }
         for (arg, obj) in self.params.iter().zip(args.into_iter().map(|x| (*x).clone())) {
             let binding = match &arg.vtable {
                 None => Binding::untyped(obj),
@@ -633,13 +646,25 @@ impl Foolang {
         for method in &classdef.class_methods {
             class_vtable.add_method(
                 &method.selector,
-                make_method_function(env, &method.parameters, &method.body, &method.return_type)?,
+                make_method_function(
+                    env,
+                    format!("{}#{}", &class_vtable.name, &method.selector),
+                    &method.parameters,
+                    &method.body,
+                    &method.return_type,
+                )?,
             )?;
         }
         for method in &classdef.instance_methods {
             instance_vtable.add_method(
                 &method.selector,
-                make_method_function(env, &method.parameters, &method.body, &method.return_type)?,
+                make_method_function(
+                    env,
+                    format!("{}#{}", &instance_vtable.name, &method.selector),
+                    &method.parameters,
+                    &method.body,
+                    &method.return_type,
+                )?,
             )?;
         }
         Ok(Object {
@@ -668,6 +693,7 @@ impl Foolang {
         Ok(Object {
             vtable: Rc::clone(&self.closure_vtable),
             datum: Datum::Closure(Rc::new(Closure {
+                name: "block".to_string(),
                 env,
                 params,
                 body,
@@ -839,6 +865,7 @@ impl Object {
                     &method.selector,
                     make_method_function(
                         env,
+                        format!("{}##{}", &class_vtable.name, &method.selector),
                         &method.parameters,
                         &method.body,
                         &method.return_type,
@@ -858,6 +885,7 @@ impl Object {
                     &method.selector,
                     make_method_function(
                         env,
+                        format!("{}##{}", &instance_vtable.name, &method.selector),
                         &method.parameters,
                         &method.body,
                         &method.return_type,
@@ -1001,6 +1029,7 @@ impl Object {
 
 pub fn make_method_function(
     env: &Env,
+    name: String,
     params: &[Var],
     body: &Expr,
     return_type: &Option<String>,
@@ -1011,6 +1040,7 @@ pub fn make_method_function(
         args.push(Arg::new(param.span.clone(), param.name.clone(), vtable));
     }
     Ok(Closure {
+        name,
         env: env.clone(),
         params: args,
         body: body.to_owned(),
