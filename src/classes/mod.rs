@@ -6,7 +6,6 @@ pub mod compiler;
 pub mod float;
 pub mod input;
 pub mod integer;
-pub mod interval;
 pub mod output;
 pub mod string;
 pub mod string_output;

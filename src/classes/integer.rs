@@ -15,9 +15,6 @@ pub fn vtable() -> Vtable {
     vt.def("subInteger:", integer_sub_integer);
     vt.def("toString", integer_to_string);
     vt.def("prefix-", integer_neg);
-    vt.def("to:", integer_to);
-    vt.def("to:do:", integer_to_do);
-    vt.def("times:", integer_times);
     vt
 }
 
@@ -72,43 +69,6 @@ fn integer_sub_integer(receiver: &Object, args: &[Object], env: &Env) -> Eval {
 
 fn integer_neg(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_integer(-receiver.integer()))
-}
-
-fn integer_times(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let mut start = receiver.integer();
-    let block = args[0].clone();
-    while start > 0 {
-        block.send("value", &[], env)?;
-        start -= 1;
-    }
-    Ok(receiver.clone())
-}
-
-fn integer_to(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let start = receiver.integer();
-    // FIXME: Panics if argument is not an integer
-    let end = args[0].integer();
-    Ok(env.foo.make_interval(start, end))
-}
-
-fn integer_to_do(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let start = receiver.integer();
-    let end = args[0].integer();
-    let block = args[1].clone();
-    let mut i = start;
-    let step = if start < end {
-        1
-    } else {
-        -1
-    };
-    loop {
-        block.send("value:", &[env.foo.make_integer(i)], env)?;
-        if i == end {
-            break;
-        }
-        i += step;
-    }
-    Ok(receiver.clone())
 }
 
 fn integer_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {

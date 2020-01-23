@@ -1,0 +1,17 @@
+class Interval { from to by }
+    method do: block
+       let i = from.
+       { i <= to }
+           whileTrue: { block value: i. i = i + by }.
+       self
+    method size
+       by == 1
+          ifTrue: { 1 + to - from }
+          ifFalse: { (1 + to - from) asInteger / by }
+    method displayOn: stream
+       by == 1
+         ifTrue: { stream print: "#<Interval {from} to: {to}>" }
+         ifFalse: { stream print: "#<Interval {from} to: {to} by: {by}>" }
+    method printOn: stream
+       self displayOn: stream
+end

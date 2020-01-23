@@ -322,12 +322,6 @@ pub struct Instance {
     pub instance_variables: RefCell<Vec<Object>>,
 }
 
-#[derive(PartialEq)]
-pub struct Interval {
-    pub start: i64,
-    pub end: i64,
-}
-
 pub struct Output {
     pub name: String,
     stream: RefCell<Box<dyn Write>>,
@@ -407,7 +401,6 @@ pub enum Datum {
     Input(Rc<Input>),
     Instance(Rc<Instance>),
     Integer(i64),
-    Interval(Rc<Interval>),
     Output(Rc<Output>),
     String(Rc<String>),
     StringOutput(Rc<StringOutput>),
@@ -429,7 +422,6 @@ pub struct Foolang {
     float_vtable: Rc<Vtable>,
     input_vtable: Rc<Vtable>,
     integer_vtable: Rc<Vtable>,
-    interval_vtable: Rc<Vtable>,
     output_vtable: Rc<Vtable>,
     string_vtable: Rc<Vtable>,
     string_output_vtable: Rc<Vtable>,
@@ -459,7 +451,6 @@ impl Foolang {
         env.define("Float", Class::object(Vtable::new("class Float"), &self.float_vtable));
         env.define("Input", Class::object(Vtable::new("class Input"), &self.input_vtable));
         env.define("Integer", Class::object(Vtable::new("class Integer"), &self.integer_vtable));
-        env.define("Interval", Class::object(Vtable::new("class Interval"), &self.interval_vtable));
         env.define("Output", Class::object(Vtable::new("class Output"), &self.output_vtable));
         env.define(
             "StringOutput",
@@ -485,7 +476,6 @@ impl Foolang {
             float_vtable: Rc::new(classes::float::vtable()),
             input_vtable: Rc::new(classes::input::vtable()),
             integer_vtable: Rc::new(classes::integer::vtable()),
-            interval_vtable: Rc::new(classes::interval::vtable()),
             output_vtable: Rc::new(classes::output::vtable()),
             string_output_vtable: Rc::new(classes::string_output::instance_vtable()),
             string_vtable: Rc::new(classes::string::instance_vtable()),
@@ -727,16 +717,6 @@ impl Foolang {
         }
     }
 
-    pub fn make_interval(&self, start: i64, end: i64) -> Object {
-        Object {
-            vtable: Rc::clone(&self.interval_vtable),
-            datum: Datum::Interval(Rc::new(Interval {
-                start,
-                end,
-            })),
-        }
-    }
-
     pub fn make_output(&self, name: &str, output: Box<dyn Write>) -> Object {
         Object {
             vtable: Rc::clone(&self.output_vtable),
@@ -930,13 +910,6 @@ impl Object {
         }
     }
 
-    pub fn interval(&self) -> Rc<Interval> {
-        match &self.datum {
-            Datum::Interval(interval) => Rc::clone(interval),
-            _ => panic!("BUG: {:?} is not an Interval", self),
-        }
-    }
-
     pub fn output(&self) -> Rc<Output> {
         match &self.datum {
             Datum::Output(output) => Rc::clone(output),
@@ -1066,9 +1039,6 @@ impl fmt::Display for Object {
             Datum::Input(input) => write!(f, "#<Input {}>", &input.name),
             Datum::Instance(_) => write!(f, "#<instance {}>", self.vtable.name),
             Datum::Integer(x) => write!(f, "{}", x),
-            Datum::Interval(interval) => {
-                write!(f, "#<Interval {} to {}>", interval.start, interval.end)
-            }
             Datum::Output(output) => write!(f, "#<Output {}>", &output.name),
             Datum::StringOutput(_output) => write!(f, "#<StringOutput>"),
             Datum::String(s) => write!(f, "{}", s),

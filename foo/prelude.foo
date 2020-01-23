@@ -2,6 +2,7 @@ import .array
 import .boolean
 import .float
 import .integer
+import .interval -- FIXME: Need to export too!
 import .output
 import .string
 import .stringOutput
