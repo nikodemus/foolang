@@ -2,6 +2,12 @@ extend Integer
     method asInteger
         self
 
+    method printOn: stream
+        stream writeUTF8: self toString
+
+    method displayOn: stream
+        self printOn: stream
+
     method + x
         x addInteger: self
     method - x

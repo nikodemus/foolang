@@ -2,6 +2,12 @@ extend Float
     method asFloat
         self
 
+    method printOn: stream
+        stream writeUTF8: self toString
+
+    method displayOn: stream
+        self printOn: stream
+
     method + x
         x addFloat: self
     method - x

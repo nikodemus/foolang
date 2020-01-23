@@ -55,7 +55,8 @@ class REPL
 
   method print
      _atEof ifFalse: {
-        _output println: _value toString.
+        _output display: _value.
+        _output newline.
         _output flush
      }
 

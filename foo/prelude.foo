@@ -3,5 +3,6 @@ import .boolean
 import .float
 import .integer
 import .output
+import .string
 import .stringOutput
 import .time

@@ -1,0 +1,24 @@
+extend String
+    method append: other
+       other appendToString: self
+    method newline
+        "\n" appendToString: self
+    method printOn: stream
+        stream writeUTF8: self
+    method _escapeOn: stream
+        [["\"", "\\\""],
+         ["\n", "\\n"],
+         ["\t", "\\t"],
+         ["\r", "\\r"],
+         ["\{", "\\\{"]]
+           do: { |esc|
+                 (self stringEqual: esc first)
+                    ifTrue: { stream writeUTF8: esc second. return stream } }.
+        stream writeUTF8: self
+    method displayOn: stream
+        stream writeUTF8: "\"".
+        self do: { |c| c _escapeOn: stream }.
+        stream writeUTF8: "\""
+    method == other
+        other stringEqual: self
+end

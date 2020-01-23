@@ -14,6 +14,22 @@ extend Array
     method second
        self at: 2
 
+    method _emitOn: stream using: block
+        stream writeUTF8: "[".
+        let first = True.
+        self do: { |x|
+                   first
+                     ifTrue: { first = False }
+                     ifFalse: { stream writeUTF8: ", " }.
+                   block value: x }.
+        stream writeUTF8: "]"
+
+    method displayOn: stream
+        self _emitOn: stream using: { |x| x displayOn: stream }
+
+    method printOn: stream
+        self _emitOn: stream using: { |x| x printOn: stream }
+
     method norm
        (self inject: 0.0 into: { |abs elt| abs + (elt square) }) sqrt
 

@@ -188,19 +188,21 @@ fn test_repl() -> Test {
     cmd.with_stdin()
         .buffer(
             r#"class Point { x y }
+                  class method displayOn: stream
+                     stream print: "<class Point>"
                   method + other
                      Point x: x + other x
                            y: y + other y
-                  method toString
-                     "{x}@{y}"
+                  method displayOn: stream
+                     stream print: "{x}@{y}"
                end
                { let p1 = Point x: 1 y: 2.
                  let p2 = Point x: 100 y: 200.
                  p1 + p2 } value
                system output println: "Hi!"
-               let x = 1
-               x = x + 41
-               x
+               let z = 1
+               z = z + 41
+               z
                [let inside = 42. inside + 1]
                inside
                [let inside2 = 42. inside2 + 2, inside2]
@@ -210,7 +212,7 @@ fn test_repl() -> Test {
         .success()
         .stdout(predicates::str::contains(
             r#"Foolang 0.2.0
-> #<class Point>
+> <class Point>
 > 101@202
 > Hi!
 #<Output stdout>
