@@ -1,3 +1,5 @@
+import .interval.Interval
+
 extend Float
     method asFloat
         self
@@ -7,6 +9,12 @@ extend Float
 
     method displayOn: stream
         self printOn: stream
+
+    method to: other
+       self to: other by: 1.0
+
+    method to: other by: step
+       Interval from: self to: other by: step
 
     method + x
         x addFloat: self
