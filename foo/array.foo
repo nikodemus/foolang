@@ -8,6 +8,12 @@ extend Array
     method / x
        x divArray: self
 
+    method first
+       self at: 1
+
+    method second
+       self at: 2
+
     method norm
        (self inject: 0.0 into: { |abs elt| abs + (elt square) }) sqrt
 
