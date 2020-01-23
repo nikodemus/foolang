@@ -42,6 +42,14 @@ fn test_exit_42() -> Test {
 }
 
 #[test]
+fn test_test() -> Test {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/test.foo");
+    cmd.assert().success();
+    Ok(())
+}
+
+#[test]
 fn test_abort() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/abort.foo");

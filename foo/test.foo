@@ -1,0 +1,62 @@
+class Assert { system fail }
+   class method using: system
+      self system: system fail: False
+   method check: cond on: x onSuccess: success onFailure: failure
+      let res = { cond value: x }
+                    onError: { |e ctx|
+                               system output println: "ERROR: {e}".
+                               failure value }.
+      res
+        ifTrue: success
+        ifFalse: failure
+   method forAll: generator that: cond testing: thing
+      let n = 0.
+      generator
+         do: { |x| self check: cond on: x
+                        onSuccess: { n = n + 1 }
+                        onFailure: { system output
+                                       println: "! {thing} failed on: {x}".
+                                     fail = True.
+                                     return False }}.
+      system output println: "  {thing} ok ({n} assertions)".
+      True
+   method exit
+      system exit: (fail ifTrue: { 1 } ifFalse: { 0 })
+end
+
+class TestArrays {}
+   class method do: block
+      block value: [1, 2, 3, 4].
+      block value: [123, 10293810293, -123, 123].
+      block
+end
+
+class Main { assert }
+    class method system: system
+       self assert: (Assert using: system)
+
+    method run
+       self testIntegers.
+       -- self testArrays.
+       assert exit
+
+    method testIntegers
+       assert forAll: (-100 to: 100)
+              that: { |x| x + x == x * 2 }
+              testing: "integer self addition".
+       assert forAll: (-100 to: 100)
+              that: { |x| x - x == 0 }
+              testing: "integer self substraction".
+       assert forAll: (-100 to: 100)
+              that: { |x| x + 1 == 1 + x }
+              testing: "integer addition commutates"
+
+    method testArrays
+       assert forAll: TestArrays
+              that: { |a|
+                      let x = a copy.
+                      a reverse.
+                      (x == a) not }
+              testing: "array copy"
+
+end
