@@ -540,14 +540,14 @@ fn test_unbound() {
         eval_str("let foo = 41. foo + bar"),
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
-                what: "Unbound variable".to_string(),
+                what: "Unbound variable: bar".to_string(),
             }),
             Location {
                 span: Some(20..23),
                 context: Some(
                     concat!(
                         "001 let foo = 41. foo + bar\n",
-                        "                        ^^^ Unbound variable\n"
+                        "                        ^^^ Unbound variable: bar\n"
                     )
                     .to_string()
                 )

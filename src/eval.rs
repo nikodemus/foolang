@@ -602,7 +602,7 @@ impl Env {
                     // FIXME: There used to be workspace handling here
                 }
             }
-            Unwind::error_at(var.span.clone(), "Unbound variable")
+            Unwind::error_at(var.span.clone(), &format!("Unbound variable: {}", &var.name))
         }
     }
 }

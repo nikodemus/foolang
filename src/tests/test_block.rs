@@ -131,5 +131,8 @@ fn test_closure_while_false_closure() {
 
 #[test]
 fn test_closure_on_error() {
-    assert_eq!(eval_ok("{ undefined } onError: { |err| err }").string_as_str(), "Unbound variable");
+    assert_eq!(
+        eval_ok("{ undefined } onError: { |err| err }").string_as_str(),
+        "Unbound variable: undefined"
+    );
 }

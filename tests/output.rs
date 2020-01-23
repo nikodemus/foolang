@@ -155,10 +155,10 @@ fn test_array_let() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/array_let.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
-        "ERROR: Unbound variable
+        "ERROR: Unbound variable: x
 002    method run
 003       system output println: [let x = 42. x + x, x]
-                                                     ^ Unbound variable
+                                                     ^ Unbound variable: x
 004 end
 
 ",
@@ -171,10 +171,10 @@ fn test_array_let2() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/array_let2.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
-        "ERROR: Unbound variable
+        "ERROR: Unbound variable: x
 003       let a = [let x = 42. x, 123].
 004       system output println: x
-                                 ^ Unbound variable
+                                 ^ Unbound variable: x
 005 end
 ",
     ));
@@ -218,13 +218,13 @@ fn test_repl() -> Test {
 > 42
 > 42
 > [43]
-> Unbound variable
+> Unbound variable: inside
 001                inside
-                   ^^^^^^ Unbound variable
+                   ^^^^^^ Unbound variable: inside
 
-> Unbound variable
+> Unbound variable: inside2
 001                [let inside2 = 42. inside2 + 2, inside2]
-                                                   ^^^^^^^ Unbound variable
+                                                   ^^^^^^^ Unbound variable: inside2
 
 > "#,
         ));
