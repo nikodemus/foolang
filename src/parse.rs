@@ -7,7 +7,7 @@ use std::str::FromStr;
 use std::string::ToString;
 
 use crate::tokenstream::{Span, Token, TokenStream};
-use crate::unwind::Unwind;
+use crate::unwind::{Error, Unwind};
 
 trait TweakSpan {
     fn tweak(&mut self, shift: usize, extend: isize);
@@ -583,13 +583,15 @@ impl<'a> Parser<'a> {
         self.parse_expr(0)
     }
 
-    pub fn parse_interpolated_block(&self, offset: usize) -> Result<(Expr, usize), Unwind> {
-        let subspan = offset..self.span().end;
-        let subparser = Parser::new(self.slice_at(subspan), &self.root);
+    pub fn parse_interpolated_block(&self, span: Span) -> Result<(Expr, usize), Unwind> {
+        let subparser = Parser::new(self.slice_at(span.clone()), &self.root);
         match subparser.parse_prefix() {
-            Err(unwind) => Err(unwind.shift_span(offset)),
+            Err(Unwind::Exception(Error::EofError(_), _)) => {
+                Unwind::error_at(span, "Unterminated string interpolation.")
+            }
+            Err(unwind) => Err(unwind.shift_span(span.start)),
             Ok(Expr::Block(mut blockspan, vars, body, rtype)) => {
-                blockspan.shift(offset);
+                blockspan.shift(span.start);
                 if !vars.is_empty() {
                     return Unwind::error_at(blockspan, "Interpolated block has variables.");
                 }
@@ -597,13 +599,13 @@ impl<'a> Parser<'a> {
                     return Unwind::error_at(blockspan, "Interpolated block has a return type.");
                 }
                 let mut expr = *body;
-                expr.shift_span(offset);
+                expr.shift_span(span.start);
                 return Ok((expr, blockspan.end));
             }
             Ok(other) => {
                 let mut errspan = other.span();
-                errspan.shift(offset);
-                return Unwind::error_at(errspan, "Interpolation not a block.");
+                errspan.shift(span.start);
+                Unwind::error_at(errspan, "Interpolation not a block.")
             }
         }
     }
@@ -1553,7 +1555,7 @@ fn string_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         span = literal.span().end..span.end;
         parts.push(literal);
         if span.start < span.end {
-            let (interp, end) = parser.parse_interpolated_block(span.start)?;
+            let (interp, end) = parser.parse_interpolated_block(span.clone())?;
             span = end..span.end;
             parts.push(interp);
         } else {
