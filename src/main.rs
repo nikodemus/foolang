@@ -74,7 +74,11 @@ impl Server {
         let connections: Arc<Mutex<Vec<Connection>>> = Arc::new(Mutex::new(Vec::new()));
         let connections0 = connections.clone();
         std::thread::spawn(move || loop {
-            let env = Env::from(Foolang::new(&prelude, module_roots));
+            let foo = match Foolang::new(&prelude, module_roots) {
+                Ok(foo) => foo,
+                Err(err) => oops(err.to_string(), None),
+            };
+            let env = Env::from(foo);
             let out = env.foo.make_string_output();
             env.define("system", env.foo.make_system(Some(out.clone())));
             //sys.send("setOutput:" env.foo.make_string_stream())
@@ -117,27 +121,29 @@ fn handle_request(request: &Request, server: Server, verbose: bool) -> Response 
     })
 }
 
-fn oops(what: String, app: &App) -> ! {
+fn oops(what: String, app: Option<&App>) -> ! {
     println!("FATAL - {}\n---", what);
-    app.clone().print_help().unwrap();
+    if app.is_some() {
+        app.unwrap().clone().print_help().unwrap();
+    }
     std::process::exit(1)
 }
 
 fn find_module_or_abort(spec: &str, app: &App) -> (String, PathBuf) {
     let path = match std::fs::canonicalize(Path::new(&spec)) {
         Ok(path) => path,
-        Err(_) => oops(format!("cannot find module: {}", spec), app),
+        Err(_) => oops(format!("cannot find module: {}", spec), Some(app)),
     };
     let root = match path.parent() {
         Some(path) => path.to_path_buf(),
-        None => oops(format!("cannot determine root of module: {}", spec), app),
+        None => oops(format!("cannot determine root of module: {}", spec), Some(app)),
     };
     let name = match path.file_name() {
         Some(name) => match name.to_str() {
             Some(name) => name.to_string(),
-            None => oops(format!("module has invalid filename: {}", spec), app),
+            None => oops(format!("module has invalid filename: {}", spec), Some(app)),
         },
-        None => oops(format!("cannot determine name of module: {}", spec), app),
+        None => oops(format!("cannot determine name of module: {}", spec), Some(app)),
     };
     return (name, root);
 }
@@ -198,11 +204,14 @@ fn main() {
                 std::process::exit(1)
             }
         };
-        let foo = Foolang::new(prelude, module_roots);
+        let foo = match Foolang::new(prelude, module_roots) {
+            Ok(foo) => foo,
+            Err(err) => oops(err.to_string(), Some(&app)),
+        };
         // FIXME: pass in env and argv to run
         match foo.run(&program) {
             Ok(_) => std::process::exit(0),
-            Err(err) => oops(err.to_string(), &app),
+            Err(err) => oops(err.to_string(), Some(&app)),
         }
     }
     if matches.is_present("ide") {

@@ -475,7 +475,7 @@ impl Foolang {
         );
     }
 
-    pub fn new(prelude: &Path, roots: HashMap<String, PathBuf>) -> Foolang {
+    pub fn new(prelude: &Path, roots: HashMap<String, PathBuf>) -> Result<Foolang, Unwind> {
         Foolang {
             array_vtable: Rc::new(classes::array::instance_vtable()),
             boolean_vtable: Rc::new(classes::boolean::vtable()),
@@ -505,7 +505,7 @@ impl Foolang {
     pub fn here() -> Foolang {
         let mut roots = HashMap::new();
         roots.insert(".".to_string(), std::env::current_dir().unwrap());
-        Foolang::new(Path::new("foo/prelude.foo"), roots)
+        Foolang::new(Path::new("foo/prelude.foo"), roots).unwrap()
     }
 
     pub fn root(&self) -> &Path {
@@ -558,10 +558,10 @@ impl Foolang {
         Ok(env)
     }
 
-    fn load_prelude(mut self, path: &Path) -> Self {
-        let prelude = self.load_module_into(path, Env::from(self.clone())).unwrap();
+    fn load_prelude(mut self, path: &Path) -> Result<Foolang, Unwind> {
+        let prelude = self.load_module_into(path, Env::from(self.clone()))?;
         self.prelude = Some(prelude);
-        self
+        Ok(self)
     }
 
     fn prelude_env(&self) -> Result<Env, Unwind> {
@@ -574,6 +574,7 @@ impl Foolang {
     }
 
     fn load_module_into(&self, file: &Path, env: Env) -> Result<Env, Unwind> {
+        // println!("load: {:?}", file);
         let code = match std::fs::read_to_string(file) {
             Ok(code) => code,
             Err(_err) => {
@@ -589,6 +590,7 @@ impl Foolang {
                 Ok(expr) => expr,
                 Err(unwind) => return Err(unwind.with_context(&code)),
             };
+            // println!("expr: {:?}", &expr);
             env.eval(&expr).context(&code)?;
         }
         Ok(env)
