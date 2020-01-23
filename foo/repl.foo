@@ -61,7 +61,7 @@ class REPL
      }
 
   method _tryParse: source
-     _compiler parse: source onEof: { return False }.
+     _compiler parse: source onEof: { |_err| return False }.
     True
 
 end
