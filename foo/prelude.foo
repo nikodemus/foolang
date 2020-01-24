@@ -5,6 +5,7 @@ import .float
 import .integer
 import .interval -- FIXME: Need to export too!
 import .output
+import .random
 import .string
 import .stringOutput
 import .time

@@ -31,6 +31,18 @@ class TestArrays {}
       block
 end
 
+-- Generates signed integers small enough to add without overflowing.
+class SmallIntegers {}
+   class method do: block
+      -- First around zero
+      block value: -1.
+      block value: 0.
+      block value: 1.
+      -- Then random numbers
+      let rng = Random new.
+      100 times: { block value: (rng integer / 2) }
+end
+
 class Main { assert }
     class method system: system
        self assert: (Assert using: system)
@@ -56,13 +68,13 @@ class Main { assert }
               testing: "ByteArray creation and access"
 
     method testIntegers
-       assert forAll: (-100 to: 100)
+       assert forAll: SmallIntegers
               that: { |x| x + x == x * 2 }
               testing: "integer self addition".
-       assert forAll: (-100 to: 100)
+       assert forAll: SmallIntegers
               that: { |x| x - x == 0 }
               testing: "integer self substraction".
-       assert forAll: (-100 to: 100)
+       assert forAll: SmallIntegers
               that: { |x| x + 1 == 1 + x }
               testing: "integer addition commutates"
 

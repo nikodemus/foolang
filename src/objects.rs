@@ -208,9 +208,9 @@ pub struct Class {
 }
 
 impl Class {
-    fn object(class_vtable: Vtable, instance_vtable: &Rc<Vtable>) -> Object {
+    fn object(class_vtable: &Rc<Vtable>, instance_vtable: &Rc<Vtable>) -> Object {
         Object {
-            vtable: Rc::new(class_vtable),
+            vtable: Rc::clone(class_vtable),
             datum: Datum::Class(Rc::new(Class {
                 instance_vtable: Rc::clone(instance_vtable),
             })),
@@ -416,6 +416,7 @@ pub enum Datum {
     Instance(Rc<Instance>),
     Integer(i64),
     Output(Rc<Output>),
+    Random(Rc<classes::random::Random>),
     String(Rc<String>),
     StringOutput(Rc<StringOutput>),
     // XXX: Null?
@@ -428,22 +429,39 @@ pub enum Datum {
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Foolang {
-    array_vtable: Rc<Vtable>,
-    boolean_vtable: Rc<Vtable>,
+    pub array_class_vtable: Rc<Vtable>,
+    pub array_vtable: Rc<Vtable>,
+    pub boolean_class_vtable: Rc<Vtable>,
+    pub boolean_vtable: Rc<Vtable>,
     pub byte_array_vtable: Rc<Vtable>,
-    clock_vtable: Rc<Vtable>,
-    closure_vtable: Rc<Vtable>,
-    compiler_vtable: Rc<Vtable>,
-    float_vtable: Rc<Vtable>,
-    input_vtable: Rc<Vtable>,
-    integer_vtable: Rc<Vtable>,
-    output_vtable: Rc<Vtable>,
-    string_vtable: Rc<Vtable>,
-    string_output_vtable: Rc<Vtable>,
-    time_vtable: Rc<Vtable>,
+    pub byte_array_class_vtable: Rc<Vtable>,
+    pub clock_class_vtable: Rc<Vtable>,
+    pub clock_vtable: Rc<Vtable>,
+    pub closure_class_vtable: Rc<Vtable>,
+    pub closure_vtable: Rc<Vtable>,
+    pub compiler_class_vtable: Rc<Vtable>,
+    pub compiler_vtable: Rc<Vtable>,
+    pub float_class_vtable: Rc<Vtable>,
+    pub float_vtable: Rc<Vtable>,
+    pub input_class_vtable: Rc<Vtable>,
+    pub input_vtable: Rc<Vtable>,
+    pub integer_class_vtable: Rc<Vtable>,
+    pub integer_vtable: Rc<Vtable>,
+    pub output_class_vtable: Rc<Vtable>,
+    pub output_vtable: Rc<Vtable>,
+    pub random_class_vtable: Rc<Vtable>,
+    pub random_vtable: Rc<Vtable>,
+    pub string_class_vtable: Rc<Vtable>,
+    pub string_output_class_vtable: Rc<Vtable>,
+    pub string_output_vtable: Rc<Vtable>,
+    pub string_vtable: Rc<Vtable>,
+    pub time_class_vtable: Rc<Vtable>,
+    pub time_vtable: Rc<Vtable>,
     // Kiss3D stuff
-    window_vtable: Rc<Vtable>,
-    scene_node_vtable: Rc<Vtable>,
+    pub window_vtable: Rc<Vtable>,
+    pub window_class_vtable: Rc<Vtable>,
+    pub scene_node_vtable: Rc<Vtable>,
+    pub scene_node_class_vtable: Rc<Vtable>,
     /// Holds the environment constructed by the prelude.
     prelude: Option<Env>,
     /// Used to ensure we load each module only once.
@@ -455,54 +473,69 @@ pub struct Foolang {
 impl Foolang {
     /// Used to initialize a builtin environment.
     pub fn init_env(&self, env: &mut Env) {
-        env.define("Array", Class::object(classes::array::class_vtable(), &self.array_vtable));
-        env.define("Boolean", Class::object(Vtable::new("class Boolean"), &self.boolean_vtable));
+        env.define("Array", Class::object(&self.array_class_vtable, &self.array_vtable));
+        env.define("Boolean", Class::object(&self.boolean_class_vtable, &self.boolean_vtable));
         env.define(
             "ByteArray",
-            Class::object(classes::byte_array::class_vtable(), &self.byte_array_vtable),
+            Class::object(&self.byte_array_class_vtable, &self.byte_array_vtable),
         );
-        env.define("Clock", Class::object(classes::clock::class_vtable(), &self.clock_vtable));
-        env.define("Closure", Class::object(Vtable::new("class Closure"), &self.closure_vtable));
-        env.define(
-            "Compiler",
-            Class::object(classes::compiler::class_vtable(), &self.compiler_vtable),
-        );
-        env.define("Float", Class::object(Vtable::new("class Float"), &self.float_vtable));
-        env.define("Input", Class::object(Vtable::new("class Input"), &self.input_vtable));
-        env.define("Integer", Class::object(Vtable::new("class Integer"), &self.integer_vtable));
-        env.define("Output", Class::object(Vtable::new("class Output"), &self.output_vtable));
+        env.define("Clock", Class::object(&self.clock_class_vtable, &self.clock_vtable));
+        env.define("Closure", Class::object(&self.closure_class_vtable, &self.closure_vtable));
+        env.define("Compiler", Class::object(&self.compiler_class_vtable, &self.compiler_vtable));
+        env.define("Float", Class::object(&self.float_class_vtable, &self.float_vtable));
+        env.define("Input", Class::object(&self.input_class_vtable, &self.input_vtable));
+        env.define("Integer", Class::object(&self.integer_class_vtable, &self.integer_vtable));
+        env.define("Output", Class::object(&self.output_class_vtable, &self.output_vtable));
+        env.define("Random", Class::object(&self.random_class_vtable, &self.random_vtable));
+        env.define("String", Class::object(&self.string_class_vtable, &self.string_vtable));
         env.define(
             "StringOutput",
-            Class::object(classes::string_output::class_vtable(), &self.string_output_vtable),
+            Class::object(&self.string_output_class_vtable, &self.string_output_vtable),
         );
-        env.define("String", Class::object(classes::string::class_vtable(), &self.string_vtable));
-        env.define("Time", Class::object(classes::time::class_vtable(), &self.time_vtable));
+        env.define("Time", Class::object(&self.time_class_vtable, &self.time_vtable));
         // Kiss3D stuff
-        env.define("Window", Class::object(classes::window::class_vtable(), &self.window_vtable));
+        env.define("Window", Class::object(&self.window_class_vtable, &self.window_vtable));
         env.define(
             "SceneNode",
-            Class::object(classes::scene_node::class_vtable(), &self.scene_node_vtable),
+            Class::object(&self.scene_node_class_vtable, &self.scene_node_vtable),
         );
     }
 
     pub fn new(prelude: &Path, roots: HashMap<String, PathBuf>) -> Result<Foolang, Unwind> {
         Foolang {
+            array_class_vtable: Rc::new(classes::array::class_vtable()),
             array_vtable: Rc::new(classes::array::instance_vtable()),
-            boolean_vtable: Rc::new(classes::boolean::vtable()),
+            boolean_class_vtable: Rc::new(classes::boolean::class_vtable()),
+            boolean_vtable: Rc::new(classes::boolean::instance_vtable()),
+            byte_array_class_vtable: Rc::new(classes::byte_array::class_vtable()),
             byte_array_vtable: Rc::new(classes::byte_array::instance_vtable()),
+            clock_class_vtable: Rc::new(classes::clock::class_vtable()),
             clock_vtable: Rc::new(classes::clock::instance_vtable()),
+            closure_class_vtable: Rc::new(Vtable::new("class Closure")),
             closure_vtable: Rc::new(classes::closure::vtable()),
+            compiler_class_vtable: Rc::new(classes::compiler::class_vtable()),
             compiler_vtable: Rc::new(classes::compiler::instance_vtable()),
+            float_class_vtable: Rc::new(Vtable::new("class Float")),
             float_vtable: Rc::new(classes::float::vtable()),
+            input_class_vtable: Rc::new(Vtable::new("class Input")),
             input_vtable: Rc::new(classes::input::vtable()),
+            integer_class_vtable: Rc::new(Vtable::new("class Integer")),
             integer_vtable: Rc::new(classes::integer::vtable()),
+            output_class_vtable: Rc::new(Vtable::new("class Output")),
             output_vtable: Rc::new(classes::output::vtable()),
+            random_class_vtable: Rc::new(classes::random::class_vtable()),
+            random_vtable: Rc::new(classes::random::instance_vtable()),
+            string_class_vtable: Rc::new(classes::string::class_vtable()),
+            string_output_class_vtable: Rc::new(classes::string_output::class_vtable()),
             string_output_vtable: Rc::new(classes::string_output::instance_vtable()),
             string_vtable: Rc::new(classes::string::instance_vtable()),
+            time_class_vtable: Rc::new(classes::time::class_vtable()),
             time_vtable: Rc::new(classes::time::instance_vtable()),
             // Kiss3D stuff
             window_vtable: Rc::new(classes::window::instance_vtable()),
+            window_class_vtable: Rc::new(classes::window::class_vtable()),
             scene_node_vtable: Rc::new(classes::scene_node::instance_vtable()),
+            scene_node_class_vtable: Rc::new(classes::scene_node::class_vtable()),
             // Other
             prelude: None,
             modules: Rc::new(RefCell::new(HashMap::new())),
@@ -968,6 +1001,19 @@ impl Object {
         }
     }
 
+    pub fn as_u64(&self, ctx: &str) -> Result<u64, Unwind> {
+        match self.datum {
+            Datum::Integer(i) => {
+                if 0 <= i {
+                    Ok(i as u64)
+                } else {
+                    Unwind::error(&format!("{:?} is not an unsigned Integer ({})", &self, &ctx))
+                }
+            }
+            _ => Unwind::error(&format!("{:?} is not an Integer ({})", &self, ctx)),
+        }
+    }
+
     pub fn as_byte_array(&self, ctx: &str) -> Result<&classes::byte_array::ByteArray, Unwind> {
         classes::byte_array::as_byte_array(self, ctx)
     }
@@ -977,6 +1023,10 @@ impl Object {
             Datum::Output(output) => Rc::clone(output),
             _ => panic!("BUG: {:?} is not an Output", self),
         }
+    }
+
+    pub fn as_random(&self, ctx: &str) -> Result<&classes::random::Random, Unwind> {
+        classes::random::as_random(self, ctx)
     }
 
     pub fn string_output(&self) -> Rc<StringOutput> {
@@ -1042,6 +1092,7 @@ impl Object {
             },
             None if selector == "toString" => generic_to_string(self, args, env),
             None => {
+                // println!("known: {:?}", self.vtable.selectors());
                 let not_understood = vec![env.foo.make_string(selector), env.foo.make_array(args)];
                 match self.vtable.get("perform:with:") {
                     Some(m) => match &*m {
@@ -1105,6 +1156,7 @@ impl fmt::Display for Object {
             Datum::Instance(_) => write!(f, "#<instance {}>", self.vtable.name),
             Datum::Integer(x) => write!(f, "{}", x),
             Datum::Output(output) => write!(f, "#<Output {}>", &output.name),
+            Datum::Random(_) => write!(f, "#<Random>"),
             Datum::StringOutput(_output) => write!(f, "#<StringOutput>"),
             Datum::String(s) => write!(f, "{}", s),
             Datum::System(_) => write!(f, "#<System>"),
