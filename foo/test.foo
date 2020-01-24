@@ -43,6 +43,18 @@ class SmallIntegers {}
       100 times: { block value: (rng integer / 2) }
 end
 
+class Floats {}
+   class method do: block
+      block value: -0.0.
+      block value: 0.0.
+      block value: 1.0.
+      block value: -1.0.
+      block value: 0.1.
+      block value: -0.1.
+      let rng = Random new.
+      100 times: { block value: rng float }
+end
+
 class Main { assert }
     class method system: system
        self assert: (Assert using: system)
@@ -50,6 +62,7 @@ class Main { assert }
     method run
        self testByteArrays.
        self testIntegers.
+       self testFloats.
        -- self testArrays.
        assert exit
 
@@ -66,6 +79,11 @@ class Main { assert }
                          and: (new == n)
                          and: (n > 0) }
               testing: "ByteArray creation and access"
+
+    method testFloats
+       assert forAll: Floats
+              that: { |x| x + x == x * 2.0 }
+              testing: "float addition"
 
     method testIntegers
        assert forAll: SmallIntegers
