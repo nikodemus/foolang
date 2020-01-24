@@ -1,7 +1,6 @@
-use assert_cmd::prelude::*; // Add methods on commands
+use assert_cmd::Command;
 use predicates;
 use predicates::prelude::*;
-use std::process::Command; // Run programs // Used for writing assertions
 
 type Test = Result<(), Box<dyn std::error::Error>>;
 
@@ -16,9 +15,8 @@ fn hello() -> Test {
 #[test]
 fn hello_x() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/hello_x.foo");
-    cmd.with_stdin()
-        .buffer("Joe User\nXXXXX")
+    cmd.arg("foo/hello_x.foo")
+        .write_stdin("Joe User\nXXXXX")
         .assert()
         .success()
         .stdout("What is your name?\nHello Joe User!\n");
@@ -192,9 +190,8 @@ fn test_array_let2() -> Test {
 #[test]
 fn test_repl() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/repl.foo");
-    cmd.with_stdin()
-        .buffer(
+    cmd.arg("foo/repl.foo")
+        .write_stdin(
             r#"class Point { x y }
                   class method displayOn: stream
                      stream print: "<class Point>"
