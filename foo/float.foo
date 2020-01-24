@@ -1,5 +1,3 @@
-import .interval.Interval
-
 extend Float
     method asFloat
         self

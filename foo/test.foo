@@ -43,6 +43,18 @@ class SmallIntegers {}
       100 times: { block value: (rng integer / 2) }
 end
 
+class ShortStringSeqs {}
+   class method do: block
+      -- FIXME: actual random generation, please
+      block value: [].
+      block value: [""].
+      block value: ["", ""].
+      block value: ["", "", ""].
+      block value: ["123", "", ""].
+      block value: ["", "123", ""].
+      block value: ["", "", "123"]
+end
+
 class Floats {}
    class method do: block
       block value: -0.0.
@@ -61,9 +73,9 @@ class Main { assert }
 
     method run
        self testByteArrays.
-       self testIntegers.
        self testFloats.
-       -- self testArrays.
+       self testIntegers.
+       self testStringOutput.
        assert exit
 
     method testByteArrays
@@ -96,12 +108,15 @@ class Main { assert }
               that: { |x| x + 1 == 1 + x }
               testing: "integer addition commutates"
 
-    method testArrays
-       assert forAll: TestArrays
-              that: { |a|
-                      let x = a copy.
-                      a reverse.
-                      (x == a) not }
-              testing: "array copy"
+    method testStringOutput
+       assert forAll: ShortStringSeqs
+              that: { |seq|
+                      let out = StringOutput new.
+                      let cmp = "".
+                      seq do: { |s|
+                                 cmp = cmp append: s.
+                                 out print: s }.
+                      cmp == out content }
+             testing: "string output"
 
 end
