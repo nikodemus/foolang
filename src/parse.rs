@@ -580,7 +580,12 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse(&mut self) -> Result<Expr, Unwind> {
-        self.parse_expr(0)
+        let res = self.parse_expr(0)?;
+        if Token::EOF == self.next_token()? {
+            Ok(res)
+        } else {
+            Unwind::error_at(self.span(), "Incomplete parse")
+        }
     }
 
     pub fn parse_interpolated_block(&self, span: Span) -> Result<(Expr, usize), Unwind> {
