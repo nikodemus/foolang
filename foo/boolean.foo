@@ -4,6 +4,16 @@ extend Boolean
            ifTrue: { other }
            ifFalse: { False }
 
+    method and: other1 and: other2
+        self
+           ifTrue: { other1 and: other2 }
+           ifFalse: { False }
+
+    method and: other1 and: other2 and: other3
+        self
+           ifTrue: { other1 and: other2 and: other3 }
+           ifFalse: { False }
+
     method or: other::Boolean
         self
            ifTrue: { True }

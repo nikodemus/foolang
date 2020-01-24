@@ -164,7 +164,7 @@ pub struct Array {
 
 impl PartialEq for Array {
     fn eq(&self, other: &Self) -> bool {
-        self as *const _ == other as *const _
+        std::ptr::eq(self, other)
     }
 }
 
@@ -406,6 +406,7 @@ impl PartialEq for SceneNode {
 pub enum Datum {
     Array(Rc<Array>),
     Boolean(bool),
+    ByteArray(Rc<classes::byte_array::ByteArray>),
     Class(Rc<Class>),
     Clock,
     Closure(Rc<Closure>),
@@ -429,6 +430,7 @@ pub enum Datum {
 pub struct Foolang {
     array_vtable: Rc<Vtable>,
     boolean_vtable: Rc<Vtable>,
+    pub byte_array_vtable: Rc<Vtable>,
     clock_vtable: Rc<Vtable>,
     closure_vtable: Rc<Vtable>,
     compiler_vtable: Rc<Vtable>,
@@ -455,6 +457,10 @@ impl Foolang {
     pub fn init_env(&self, env: &mut Env) {
         env.define("Array", Class::object(classes::array::class_vtable(), &self.array_vtable));
         env.define("Boolean", Class::object(Vtable::new("class Boolean"), &self.boolean_vtable));
+        env.define(
+            "ByteArray",
+            Class::object(classes::byte_array::class_vtable(), &self.byte_array_vtable),
+        );
         env.define("Clock", Class::object(classes::clock::class_vtable(), &self.clock_vtable));
         env.define("Closure", Class::object(Vtable::new("class Closure"), &self.closure_vtable));
         env.define(
@@ -483,6 +489,7 @@ impl Foolang {
         Foolang {
             array_vtable: Rc::new(classes::array::instance_vtable()),
             boolean_vtable: Rc::new(classes::boolean::vtable()),
+            byte_array_vtable: Rc::new(classes::byte_array::instance_vtable()),
             clock_vtable: Rc::new(classes::clock::instance_vtable()),
             closure_vtable: Rc::new(classes::closure::vtable()),
             compiler_vtable: Rc::new(classes::compiler::instance_vtable()),
@@ -938,6 +945,33 @@ impl Object {
         }
     }
 
+    pub fn as_i64(&self, ctx: &str) -> Result<i64, Unwind> {
+        match self.datum {
+            Datum::Integer(i) => Ok(i),
+            _ => Unwind::error(&format!("{:?} is not an Integer ({})", &self, ctx)),
+        }
+    }
+
+    pub fn as_u8(&self, ctx: &str) -> Result<u8, Unwind> {
+        match self.datum {
+            Datum::Integer(i) => {
+                if 0 <= i && i <= 255 {
+                    Ok(i as u8)
+                } else {
+                    Unwind::error(&format!(
+                        "{:?} is not an Integer in range 0-255 ({})",
+                        &self, &ctx
+                    ))
+                }
+            }
+            _ => Unwind::error(&format!("{:?} is not an Integer ({})", &self, ctx)),
+        }
+    }
+
+    pub fn as_byte_array(&self, ctx: &str) -> Result<&classes::byte_array::ByteArray, Unwind> {
+        classes::byte_array::as_byte_array(self, ctx)
+    }
+
     pub fn output(&self) -> Rc<Output> {
         match &self.datum {
             Datum::Output(output) => Rc::clone(output),
@@ -1055,6 +1089,7 @@ impl fmt::Display for Object {
             Datum::Array(array) => write!(f, "{:?}", array),
             Datum::Boolean(true) => write!(f, "True"),
             Datum::Boolean(false) => write!(f, "False"),
+            Datum::ByteArray(byte_array) => write!(f, "{:?}", byte_array),
             Datum::Class(_) => write!(f, "#<{}>", self.vtable.name),
             Datum::Clock => write!(f, "#<Clock>"),
             Datum::Closure(x) => write!(f, "#<closure {:?}>", x.params),
@@ -1138,7 +1173,7 @@ fn generic_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
             }
             Ok(env.foo.into_string(format!("#<{}{}>", &receiver.vtable.name, info)))
         }
-        _ => panic!("INTERNAL ERROR: unexpected object in generic_to_string: {:?}", receiver),
+        _ => Ok(env.foo.into_string(format!("{}", receiver))),
     }
 }
 

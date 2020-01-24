@@ -1,0 +1,4 @@
+extend ByteArray
+   method displayOn: stream
+       stream print: self toString
+end
