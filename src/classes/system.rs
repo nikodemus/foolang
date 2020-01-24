@@ -1,7 +1,10 @@
 use std::{thread, time};
 
+use getrandom;
+
 use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
+use crate::unwind::Unwind;
 
 pub fn vtable() -> Vtable {
     let mut vt = Vtable::new("System");
@@ -12,6 +15,8 @@ pub fn vtable() -> Vtable {
     vt.def("input", system_input);
     vt.def("output", system_output);
     vt.def("output:", system_output_arg);
+    vt.def("random", system_random);
+    vt.def("random:", system_random_arg);
     vt.def("sleep", system_sleep);
     vt.def("sleep:", system_sleep_arg);
     vt.def("window:", system_window);
@@ -47,6 +52,21 @@ fn system_output(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
 
 fn system_output_arg(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_system(Some(args[0].clone())))
+}
+
+fn system_random(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    system_random_arg(receiver, &[env.foo.make_integer(32)], env)
+}
+
+fn system_random_arg(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let bytes = env.get("ByteArray").unwrap().send("new:", args, env)?;
+    {
+        let mut data = bytes.as_byte_array("in System#random internals")?.borrow_mut();
+        if let Err(_) = getrandom::getrandom(&mut data) {
+            return Unwind::error("Operating system could not provide random data.");
+        }
+    }
+    Ok(bytes)
 }
 
 fn system_sleep(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {

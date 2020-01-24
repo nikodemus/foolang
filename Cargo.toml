@@ -13,6 +13,7 @@ rouille = "*"
 webbrowser = "*"
 kiss3d = "*"
 nalgebra = "*"
+getrandom = "*"
 
 [target.'cfg(unix)'.dependencies]
 libc = "*"
