@@ -9,7 +9,7 @@ class REPL
       _value
   }
 
-  class method run: system
+  class method runIn: system
      (self new: system) run
 
   class method new: system
@@ -66,7 +66,7 @@ class REPL
 
 end
 
-class Main { system }
-  method run
-     REPL run: system
+class Main {}
+  class method run: command in: system
+     REPL runIn: system
 end

@@ -2,14 +2,15 @@ use crate::objects::Foolang;
 
 #[test]
 fn test_clock1() {
-    let res = Foolang::here()
-        .run(
-            "class Main { system }
-                method run
-                  system clock :: Clock toString
-             end",
-        )
-        .unwrap();
+    let foo = Foolang::here();
+    let cmd = foo.into_array(vec![]);
+    let res = foo.run(
+        "class Main {}
+             class method run: command in: system
+                 system clock :: Clock toString
+         end",
+        cmd
+    ).unwrap();
     assert_eq!(res.string_as_str(), "#<Clock>");
 }
 
@@ -17,17 +18,18 @@ fn test_clock1() {
 fn test_clock2() {
     // FIXME: This init here smells bad.
     crate::time::TimeInfo::init();
-    let res = Foolang::here()
-        .run(
-            "class Main { system }
-                method run
-                  let clock = system clock.
-                  let t0 = clock time.
-                  system sleep: 10.
-                  let t1 = clock time.
-                  t0 real < t1 real
-             end",
-        )
-        .unwrap();
+    let foo = Foolang::here();
+    let cmd = foo.into_array(vec![]);
+    let res = foo.run(
+        "class Main {}
+             class method run: command in: system
+                 let clock = system clock.
+                 let t0 = clock time.
+                 system sleep: 10.
+                 let t1 = clock time.
+                 t0 real < t1 real
+         end",
+         cmd
+    ).unwrap();
     assert_eq!(res.boolean(), true);
 }

@@ -127,8 +127,8 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
       
 end
 
-class Main { system }
-   method run
+class Main {}
+   class method run: command in: system
       let window = system window: "Flying".
       window light.
       let ground = window cube: [100, 0.1, 500].

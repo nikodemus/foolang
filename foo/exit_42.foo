@@ -1,4 +1,4 @@
-class Main { system }
-  method run
+class Main {}
+  class method run: command in: system
      system exit: 42
 end

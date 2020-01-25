@@ -1,5 +1,5 @@
-class Main { system }
-   method run
+class Main {}
+   class method run: command in: system
       let win = system window: "THE TEST".
       win light: [0, 10, 0].
 

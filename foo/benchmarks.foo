@@ -115,8 +115,8 @@ class Ackermann {}
 
 end
 
-class Main { system }
-   method run
+class Main {}
+   class method run: command in: system
       -- XXX: decide full/short based on command-line
       let benchmarks = Benchmarks output: system output
                                   clock: system clock

@@ -116,8 +116,8 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
       
 end
 
-class Main { system }
-   method run
+class Main {}
+   class method run: command in: system
       let plane = Plane mass: 750.0
                         maxLift: 18.0
                         maxSpeed: 27.0

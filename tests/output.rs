@@ -162,7 +162,7 @@ fn test_array_let() -> Test {
     cmd.arg("foo/array_let.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Unbound variable: x
-002    method run
+002    class method run: command in: system
 003       system output println: [let x = 42. x + x, x]
                                                      ^ Unbound variable: x
 004 end

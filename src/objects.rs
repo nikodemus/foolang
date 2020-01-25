@@ -555,7 +555,7 @@ impl Foolang {
         &self.roots["."]
     }
 
-    pub fn run(self, program: &str) -> Eval {
+    pub fn run(self, program: &str, command: Object) -> Eval {
         let system = self.make_system(None);
         let env = self.prelude_env()?;
         let mut parser = Parser::new(&program, env.foo.root());
@@ -568,8 +568,7 @@ impl Foolang {
         }
         // FIXME: Bad error "Unknown class" with bogus span.
         let main = env.find_class("Main", 0..0)?;
-        let instance = main.send("system:", &[system], &env).context(&program)?;
-        Ok(instance.send("run", &[], &env).context(&program)?)
+        Ok(main.send("run:in:", &[command, system], &env).context(&program)?)
     }
 
     pub fn load_module<P: AsRef<Path>>(&self, path: P) -> Result<Env, Unwind> {

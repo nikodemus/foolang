@@ -1,5 +1,5 @@
-class Main { system }
-   method run
+class Main {}
+   class method run: command in: system
       let a = [let x = 42. x, 123].
       system output println: x
 end

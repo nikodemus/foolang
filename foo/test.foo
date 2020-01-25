@@ -68,10 +68,11 @@ class Floats {}
 end
 
 class Main { assert }
-    class method system: system
-       self assert: (Assert using: system)
+    class method run: cmd in: system
+       let instance = self assert: (Assert using: system).
+       instance test
 
-    method run
+    method test
        self testByteArrays.
        self testFloats.
        self testIntegers.
