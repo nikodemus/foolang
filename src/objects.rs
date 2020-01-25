@@ -1175,7 +1175,7 @@ impl fmt::Display for Object {
 impl fmt::Debug for Object {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.datum {
-            Datum::Array(array) => write!(f, "{}", array),
+            Datum::Array(array) => write!(f, "{:?}", array),
             Datum::Integer(x) => write!(f, "{}", x),
             Datum::Float(x) => {
                 if x - x.floor() == 0.0 {
@@ -1187,8 +1187,7 @@ impl fmt::Debug for Object {
             Datum::Closure(x) => write!(f, "Closure({:?})", x.env),
             Datum::Class(_) => write!(f, "{}", self.vtable.name),
             Datum::Instance(_) => write!(f, "{}", self.vtable.name),
-            // FIXME: Escape double-quotes
-            Datum::String(s) => write!(f, "\"{}\"", s),
+            Datum::String(s) => write!(f, "{:?}", s),
             _ => write!(f, "{}", self),
         }
     }
