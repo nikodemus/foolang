@@ -18,8 +18,8 @@ Like all new languages it has _somewhat_ unrealistic aspirations:
 
 ## Hello World
 
-    class Main { system }
-        method run
+    class Main {}
+        method run: command in: system
             system output println: "Hello world!"
     end
 
