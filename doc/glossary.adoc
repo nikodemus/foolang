@@ -1,12 +1,6 @@
 [glossary]
 = Glossary
 
-[glossary]
-[[keyword_message]]keyword message:: A message consisting of a <<keyword selector>>
-and one or more arguments.
-
-[[keyword_selector]]keyword selector:: A <<selector>> consisting
-of one or more keywords.
 
 [[main_program]]main program:: A <<toplevel element>> identified
 by `@main` which receives the <<system object>> and contains

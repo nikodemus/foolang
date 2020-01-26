@@ -1,0 +1,27 @@
+#+TITLE: Foolang Worklog
+#+AUTHOR: Nikodemus Siivola
+#+DRAWERS: more example
+#+TODO: TODO WIP | DONE LATER
+
+* BACKLOG
+** TODO printing block source code (non-pretty), for error-reporting
+** TODO refactoring classes so objects.rs shrinks a bit
+** TODO Expr accessible as Object
+
+
+** TODO backtraces and error source locations
+** TODO Block#apply: for test running
+** TODO sketch out interface design
+** TODO sketch out dynamic variable design
+* RELEASE GOALS FOR 0.1.0
+** Interfaces
+** Dynamic variables
+** Test framework
+** Nice error reporting
+** Documentation
+Class and method documentation extracted from source.
+On github pages.
+** Syntax v1
+*** Reserved words allowed as selectors
+*** Record / dictionary syntax
+*** Implicit '_' argument

@@ -20,8 +20,6 @@ above?
 
 ```
 supervisor := Supervise permanent: { agent1: Agent1, agent2: Agent2 }
-                        # Using a constant provides error checking unlike
-                        # literal!
                         strategy: OneForOne
                         intensity: 1
                         period: 5
@@ -43,3 +41,6 @@ failures?
    queue, part of which maintenance is going through supervisors.
 
 Handwavy, but good enough.
+
+Really, really, really need to read up on Erlang design an implementation in
+this area.

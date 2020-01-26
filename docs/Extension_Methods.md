@@ -193,10 +193,10 @@ There's space bloat in vtables, but no runtime overhead.
 
   Something like:
 
-    extension boxkeyOps
-        at -> default.at,
-        atCollection -> a.collectionOps.atCollection
-    end
+      extension boxkeyOps
+          at -> default.at,
+          atCollection -> a.collectionOps.atCollection
+      end
 
 - Overall I like the way using names + forwarding seems to make both
   the dynamic and lexical behaviour make sense.

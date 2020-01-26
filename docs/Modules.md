@@ -1,4 +1,4 @@
-# Modules
+# Foolang Modules
 
 Modules are units of import: files and directories of Foolang code.
 

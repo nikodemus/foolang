@@ -1,3 +1,0 @@
-# Reserved Words
-
-...and messages?

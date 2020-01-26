@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Document</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="description" content="Description">
+  <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/css/theme-simple-dark.css">
+  <style>
+    :root {
+        --base-color: #cccccc;
+        --heading-h1-color: var(--base-color);
+        --heading-h1-border-style: none;
+        --heading-h2-border-style: none;
+        --heading-h3-border-style: none;
+        --heading-h2-padding: 0em;
+        --heading-h2-margin: 1.5em 0em 0.5em 0em;
+        --code-block-margin: 1em 3em 1em 0em;
+        --code-block-padding: 1em 3em 1em 3em;
+        --mono-hue: 200;
+        --mono-saturation: 50%;
+        --modular-scale: 1.4;
+        --base-font-size: 16px;
+        --code-font-size: var(--base-font-size);
+        /* --code-theme-background: var(--color3);
+        --sidebar-background: var(--color3);
+        --base-background-color: var(--color2);
+        --base-color: #FFFFFF; */
+    }
+    span.done {
+        color: #00FF00;
+        font-weight: bold;
+        font-size: calc(1.5 * var(--base-font-size));
+    }
+    span.todo {
+        color: #FF0000;
+        font-weight: bold;
+        font-size: calc(1.5 * var(--base-font-size));
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    window.$docsify = {
+        loadSidebar: true,
+    }
+  </script>
+  <script src="//unpkg.com/docsify/lib/docsify.min.js"></script>
+</body>
+</html>

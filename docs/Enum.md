@@ -1,4 +1,4 @@
-# Enum
+# Foolang Enums
 
 Erlang supervisors OneForOne constant made me think.
 

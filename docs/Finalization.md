@@ -12,7 +12,7 @@ Always-finalization is additionally done when the instance variable is
 assigned a new value.
 
 Finalization is done in the same thread as allocation, ie.
-synchronously with GC.
+synchronously with GC. I believe this is ok due to the thread local heaps.
 
 The final part of the finalization specification is the unary message
 to send to the instance variable. If the message causes a non-local

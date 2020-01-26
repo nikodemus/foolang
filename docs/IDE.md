@@ -5,7 +5,7 @@
 Ability to look at the code in different ways:
 
 - All methods of this class.
-- All methods with this selector (in this package / globally)
+- All methods with this selector (in this package / in this application / globally)
 - All methods referencing this selector.
 - Current method followed the methods on self it invokes.
 - Manual selection of methods.
