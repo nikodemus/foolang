@@ -17,7 +17,7 @@
 *** DONE Chain
 *** DONE Const
 *** DONE Eq
-*** TODO Seq
+*** DONE Seq
 *** TODO Typecheck
 ** TODO change Expr into a trait, and Expr objects into Box<dyn Expr>
 ** TODO reserved word for raising an error

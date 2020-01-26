@@ -9,7 +9,7 @@ use crate::objects::{
 };
 use crate::parse::{
     Array, Assign, Bind, Block, Cascade, Chain, ClassDefinition, ClassExtension, Const, Eq, Expr,
-    Global, Import, Literal, Message, Parser, Return, Var,
+    Global, Import, Literal, Message, Parser, Return, Seq, Var,
 };
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -296,7 +296,7 @@ impl Env {
             Import(import) => self.eval_import(import),
             Return(ret) => self.eval_return(ret),
             Chain(chain) => self.eval_chain(chain),
-            Seq(exprs) => self.eval_seq(exprs),
+            Seq(seq) => self.eval_seq(&seq),
             Typecheck(_, expr, typename) => self.eval_typecheck(expr, typename),
             Var(var) => self.eval_var(var),
         }
@@ -535,10 +535,9 @@ impl Env {
         self.eval_sends(self.eval(&chain.receiver)?, &chain.messages)
     }
 
-    fn eval_seq(&self, exprs: &Vec<Expr>) -> Eval {
-        // FIXME: false or nothing
-        let mut result = self.foo.make_integer(0);
-        for expr in exprs {
+    fn eval_seq(&self, seq: &Seq) -> Eval {
+        let mut result = self.foo.make_boolean(false);
+        for expr in &seq.exprs {
             result = self.eval(expr)?;
         }
         Ok(result)

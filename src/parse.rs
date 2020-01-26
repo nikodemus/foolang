@@ -216,6 +216,22 @@ impl Eq {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Seq {
+    pub exprs: Vec<Expr>
+}
+
+impl Seq {
+    fn expr(exprs: Vec<Expr>) -> Expr {
+        Expr::Seq(Seq { exprs })
+    }
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        for expr in &mut self.exprs {
+            expr.tweak_span(shift, extend);
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct ClassDefinition {
     pub span: Span,
     pub name: String,
@@ -451,7 +467,7 @@ pub enum Expr {
     Global(Global),
     Import(Import),
     Return(Return),
-    Seq(Vec<Expr>),
+    Seq(Seq),
     Typecheck(Span, Box<Expr>, String),
     Var(Var),
 }
@@ -539,7 +555,7 @@ impl Expr {
             Import(import) => &import.span,
             Return(ret) => &ret.span,
             // FIXME: Questionable
-            Seq(exprs) => return exprs[exprs.len() - 1].span(),
+            Seq(seq) => return seq.exprs[seq.exprs.len() - 1].span(),
             Typecheck(span, ..) => span,
             Var(var) => &var.span,
         };
@@ -565,6 +581,7 @@ impl Expr {
             Chain(chain) => chain.tweak_span(shift, extend),
             Const(constant) => constant.tweak_span(shift, extend),
             Eq(eq) => eq.tweak_span(shift, extend),
+            Seq(seq) => seq.tweak_span(shift, extend),
             ClassDefinition(class) => {
                 class.span.tweak(shift, extend);
                 for var in &mut class.instance_variables {
@@ -598,11 +615,6 @@ impl Expr {
             Return(ret) => {
                 ret.span.tweak(shift, extend);
                 ret.value.tweak_span(shift, extend);
-            }
-            Seq(exprs) => {
-                for expr in exprs {
-                    expr.tweak_span(shift, extend);
-                }
             }
             Typecheck(span, expr, _type) => {
                 span.tweak(shift, extend);
@@ -743,7 +755,7 @@ impl<'a> Parser<'a> {
         let (token, span) = self.lookahead()?;
         if token == Token::WORD && self.slice_at(span) == "end" {
             let is_class_def = if let Expr::Seq(seq) = &seq {
-                seq[seq.len() - 1].is_end_expr()
+                seq.exprs[seq.exprs.len() - 1].is_end_expr()
             } else {
                 seq.is_end_expr()
             };
@@ -1253,24 +1265,24 @@ fn sequence_suffix(
     {
         return Ok(left);
     }
-    let mut exprs = if let Expr::Seq(left_exprs) = left {
-        left_exprs
+    let mut exprs = if let Expr::Seq(left_seq) = left {
+        left_seq.exprs
     } else {
         vec![left]
     };
     let right = parser.parse_expr(precedence(parser, parser.span())?)?;
-    if let Expr::Seq(mut right_exprs) = right {
-        exprs.append(&mut right_exprs);
+    if let Expr::Seq(mut right_seq) = right {
+        exprs.append(&mut right_seq.exprs);
     } else {
         exprs.push(right);
     }
-    Ok(Expr::Seq(exprs))
+    Ok(Seq::expr(exprs))
 }
 
 fn end_suffix(parser: &Parser, left: Expr, precedence: PrecedenceFunction) -> Result<Expr, Unwind> {
-    let mut exprs = if let Expr::Seq(left_exprs) = left {
-        if left_exprs[left_exprs.len() - 1].is_end_expr() {
-            left_exprs
+    let mut exprs = if let Expr::Seq(left_seq) = left {
+        if left_seq.exprs[left_seq.exprs.len() - 1].is_end_expr() {
+            left_seq.exprs
         } else {
             return parser.error("Unexpected 'end': not after class definition.");
         }
@@ -1284,18 +1296,18 @@ fn end_suffix(parser: &Parser, left: Expr, precedence: PrecedenceFunction) -> Re
     let (token, _) = parser.lookahead()?;
     if token == Token::EOF {
         if exprs.len() > 1 {
-            return Ok(Expr::Seq(exprs));
+            return Ok(Seq::expr(exprs));
         } else {
             return Ok(exprs.pop().unwrap());
         }
     }
     let right = parser.parse_expr(precedence(parser, parser.span())?)?;
-    if let Expr::Seq(mut right_exprs) = right {
-        exprs.append(&mut right_exprs);
+    if let Expr::Seq(mut right_seq) = right {
+        exprs.append(&mut right_seq.exprs);
     } else {
         exprs.push(right);
     }
-    Ok(Expr::Seq(exprs))
+    Ok(Seq::expr(exprs))
 }
 
 fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
@@ -1888,9 +1900,9 @@ pub mod utils {
     }
 
     pub fn seq(exprs: Vec<Expr>) -> Expr {
-        Expr::Seq(exprs)
+        Seq::expr(exprs)
     }
-
+    
     pub fn string(span: Span, value: &str) -> Expr {
         Const::expr(span, Literal::String(value.to_string()))
     }
