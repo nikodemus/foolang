@@ -15,8 +15,8 @@
 *** DONE Block
 *** DONE Cascade
 *** DONE Chain
-*** TODO Const
-*** TODO Eq
+*** DONE Const
+*** DONE Eq
 *** TODO Seq
 *** TODO Typecheck
 ** TODO change Expr into a trait, and Expr objects into Box<dyn Expr>

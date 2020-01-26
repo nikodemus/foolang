@@ -191,6 +191,30 @@ impl Const {
     }
 }
 
+// Span, Box<Expr>, Box<Expr>),
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Eq {
+    pub span: Span,
+    pub left: Box<Expr>,
+    pub right: Box<Expr>,
+}
+
+impl Eq {
+    pub fn expr(span: Span, left: Box<Expr>, right: Box<Expr>) -> Expr {
+        Expr::Eq(Eq {
+            span,
+            left,
+            right,
+        })
+    }
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.span.tweak(shift, extend);
+        self.left.tweak_span(shift, extend);
+        self.right.tweak_span(shift, extend);
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct ClassDefinition {
     pub span: Span,
@@ -423,7 +447,7 @@ pub enum Expr {
     ClassDefinition(ClassDefinition),
     ClassExtension(ClassExtension),
     Const(Const),
-    Eq(Span, Box<Expr>, Box<Expr>),
+    Eq(Eq),
     Global(Global),
     Import(Import),
     Return(Return),
@@ -509,7 +533,7 @@ impl Expr {
             ClassDefinition(definition) => &definition.span,
             ClassExtension(extension) => &extension.span,
             Const(constant) => &constant.span,
-            Eq(span, ..) => span,
+            Eq(eq) => &eq.span,
             Global(global) => &global.span,
             Chain(chain) => return chain.receiver.span(),
             Import(import) => &import.span,
@@ -540,6 +564,7 @@ impl Expr {
             Cascade(cascade) => cascade.tweak_span(shift, extend),
             Chain(chain) => chain.tweak_span(shift, extend),
             Const(constant) => constant.tweak_span(shift, extend),
+            Eq(eq) => eq.tweak_span(shift, extend),
             ClassDefinition(class) => {
                 class.span.tweak(shift, extend);
                 for var in &mut class.instance_variables {
@@ -560,11 +585,6 @@ impl Expr {
                 for m in &mut ext.class_methods {
                     m.tweak_span(shift, extend);
                 }
-            }
-            Eq(span, left, right) => {
-                span.tweak(shift, extend);
-                left.tweak_span(shift, extend);
-                right.tweak_span(shift, extend);
             }
             Global(global) => {
                 global.span.tweak(shift, extend);
@@ -1141,7 +1161,7 @@ fn identifier_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Resu
 fn is_suffix(parser: &Parser, left: Expr, pre: PrecedenceFunction) -> Result<Expr, Unwind> {
     let span = parser.span();
     let right = parser.parse_expr(pre(parser, span.clone())?)?;
-    Ok(Expr::Eq(span, Box::new(left), Box::new(right)))
+    Ok(Eq::expr(span, Box::new(left), Box::new(right)))
 }
 
 fn keyword_suffix(
