@@ -90,7 +90,7 @@ compile-time computation facility similar to Lisp's macros, allowing both
 syntactic convenience and ability to generate code.
 
 <span class="todo">&cross;</span>
-**Type inference**: while since Foolang's typesystem should be considered
+**Type inference**: while Foolang's typesystem should be considered
 weaksouce by today's standards doing basic type inference is critical for
 the intendend functionality.
 

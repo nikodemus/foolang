@@ -9,6 +9,7 @@
 ** DONE rewrite main README.md pointing to docs/ mainly.
 ** DONE cleanup stale branches
 ** DONE LICENSE file
+** DONE rename --ide to --webrepl
 ** WIP LATER change all Expr internals to be structs
 *** DONE Bind
 *** DONE Block
@@ -24,7 +25,6 @@
 ** TODO fix links in bibliography
 ** TODO Dictionary class & syntax
 ** TODO interfaces -> allows default displayOn: and printOn: methods
-** TODO rename --ide to --webrepl
 ** TODO organize foo/ -> foo/lang, foo/tests, foo/examples
 ** LATER method bodies end with a dot
 ** LATER Character class
