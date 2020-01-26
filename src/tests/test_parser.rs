@@ -327,7 +327,7 @@ fn test_newlines2() {
 fn test_parse_cascade1() {
     assert_eq!(
         parse_str("self foo; ba1 ba2"),
-        Ok(Expr::Cascade(
+        Ok(Cascade::expr(
             Box::new(var(0..4, "self").send(Message {
                 span: 5..8,
                 selector: "foo".to_string(),
@@ -353,7 +353,7 @@ fn test_parse_cascade1() {
 fn test_parse_cascade2() {
     assert_eq!(
         parse_str("self foo; ba1 ba2; fa1 fa2"),
-        Ok(Expr::Cascade(
+        Ok(Cascade::expr(
             Box::new(var(0..4, "self").send(Message {
                 span: 5..8,
                 selector: "foo".to_string(),

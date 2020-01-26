@@ -8,8 +8,8 @@ use crate::objects::{
     Vtable,
 };
 use crate::parse::{
-    Array, Assign, Bind, Block, ClassDefinition, ClassExtension, Expr, Global, Import, Literal,
-    Message, Parser, Return, Var,
+    Array, Assign, Bind, Block, Cascade, ClassDefinition, ClassExtension, Expr, Global, Import,
+    Literal, Message, Parser, Return, Var,
 };
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -287,7 +287,7 @@ impl Env {
             Assign(assign) => self.eval_assign(assign),
             Bind(bind) => self.eval_bind(bind),
             Block(block) => self.eval_block(block),
-            Cascade(receiver, chains) => self.eval_cascade(receiver, chains),
+            Cascade(cascade) => self.eval_cascade(cascade),
             ClassDefinition(definition) => self.eval_class_definition(definition),
             ClassExtension(extension) => self.eval_class_extension(extension),
             Const(_, literal) => self.eval_literal(literal),
@@ -350,10 +350,10 @@ impl Env {
         self.foo.make_closure(self.clone(), args, (*block.body).clone(), &block.rtype)
     }
 
-    fn eval_cascade(&self, receiver: &Box<Expr>, chains: &Vec<Vec<Message>>) -> Eval {
-        let receiver = self.eval(receiver)?;
+    fn eval_cascade(&self, cascade: &Cascade) -> Eval {
+        let receiver = self.eval(&cascade.receiver)?;
         let mut res = receiver.clone();
-        for messages in chains {
+        for messages in &cascade.chains {
             res = self.eval_sends(receiver.clone(), messages)?;
         }
         Ok(res)
