@@ -223,9 +223,9 @@ Blocks can take arguments:
 class Point { x y }
    method + other
       Point x: x + other x
-            y: y + other y
+            y: y + other y.
    method displayOn: stream
-      stream print: "#<Point {x,y}>"
+      stream print: "#<Point {x,y}>".
 end
 ```
 

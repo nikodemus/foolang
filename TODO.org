@@ -3,27 +3,28 @@
 #+DRAWERS: more example
 #+TODO: TODO WIP | DONE LATER
 
-* BACKLOG
+* RELEASE 0.1.0
+** WIP one pass over contents of docs/ to collect TODOs here
+** TODO method bodies end with a dot
 ** TODO printing block source code (non-pretty), for error-reporting
-** WIP documentation
-*** TODO one pass over contents of docs/
-- collect missing features mentioned there in here.
-** TODO prefix message definitions
-** TODO refactoring classes so objects.rs shrinks a bit
-** TODO Expr accessible as Object
-
-
+** TODO remove --ide from main.rs
+** TODO document `is`
+** TODO reserved word for raising an error
+** TODO allow comments inside classes (between methods)
+** TODO allow prefix message definitions
+** TODO allow arbitrary binary messages
+** TODO prism syntax highlighting
+** TODO emacs syntax highlighting & indentation
+** TODO vscode syntax highlighting & indentation
 ** TODO backtraces and error source locations
 ** TODO Block#apply: for test running
 ** TODO sketch out interface design
 ** TODO sketch out dynamic variable design
-* RELEASE GOALS FOR 0.1.0
-** Interfaces
-** Dynamic variables
-** Test framework
-** Nice error reporting
-** Documentation on github pages
-** Syntax v1
-*** Reserved words allowed as selectors
-*** Record / dictionary syntax
-*** Implicit '_' argument
+** TODO Character class
+** TODO string and array generators in for ptesting
+** TODO dictionary class
+** TODO record syntax
+** TODO implicit '_' argument in blocks
+** TODO devmode flag to parser to catch private sends
+** TODO array[x] accessors
+** TODO array slicing methods
