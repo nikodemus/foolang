@@ -34,7 +34,7 @@ end
 ## Getting Started
 
 1. Install [Rust](https://www.rust-lang.org/tools/install).
-2. Clone the foolang repository:
+2. Clone the Foolang repository:
    ``` shell
    git clone https://github.com/nikodemus/foolang.git
    ```
