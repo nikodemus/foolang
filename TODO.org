@@ -1,12 +1,23 @@
 #+TITLE: Foolang Worklog
 #+AUTHOR: Nikodemus Siivola
 #+DRAWERS: more example
-#+TODO: TODO WIP | DONE LATER
+#+TODO: TODO WIP | LATER DONE
 
 * Public release 0.1.0
 ** DONE one pass over contents of docs/ to collect TODOs here
 ** DONE allow comments inside classes (between methods)
-** WIP change all Expr internals to be structs
+** TODO rewrite main README.md pointing to docs/ mainly.
+** TODO cleanup stale branches
+** TODO reserved word for raising an error
+** TODO allow prefix message definitions
+** TODO allow arbitrary binary messages
+** TODO fix links in bibliography
+** TODO Dictionary class & syntax
+** TODO interfaces -> allows default displayOn: and printOn: methods
+** TODO rename --ide to --webrepl
+** TODO organize foo/ -> foo/lang, foo/tests, foo/examples
+* Post 0.1.0
+** LATER change all Expr internals to be structs
 *** DONE Bind
 *** TODO Block
 *** TODO Cascade
@@ -15,27 +26,21 @@
 *** TODO Eq
 *** TODO Seq
 *** TODO Typecheck
-** TODO rewrite main README.md pointing to docs/ mainly.
-** TODO method bodies end with a dot
-** TODO printing block source code (non-pretty), for error-reporting
-** TODO remove --ide from main.rs
-** TODO document `is`
-** TODO reserved word for raising an error
-** TODO allow prefix message definitions
-** TODO allow arbitrary binary messages
-** TODO prism syntax highlighting
-** TODO emacs syntax highlighting & indentation
-** TODO vscode syntax highlighting & indentation
-** TODO backtraces and error source locations
-** TODO Block#apply: for test running
-** TODO sketch out interface design
-** TODO sketch out dynamic variable design
-** TODO Character class
-** TODO string and array generators in for ptesting
-** TODO dictionary class
-** TODO record syntax
-** TODO implicit '_' argument in blocks
-** TODO devmode flag to parser to catch private sends
-** TODO array[x] accessors
-** TODO array slicing methods
-** TODO fix links in bibliography
+** LATER method bodies end with a dot
+** LATER Character class
+** LATER record syntax
+** LATER printing block source code (non-pretty), for error-reporting
+** LATER devmode flag to parser to catch private sends
+** LATER emacs syntax highlighting & indentation
+** LATER change string interpolation to use StringOutput
+** LATER error source locations
+** LATER backtraces
+** LATER implicit '_' argument in blocks
+** LATER Block#apply: for test running
+** LATER prism syntax highlighting
+** LATER vscode syntax highlighting & indentation
+** LATER sketch out dynamic variable design
+** LATER string and array generators in for ptesting
+** LATER array[x] accessors
+** LATER array slicing methods
+** LATER document `is`
