@@ -96,7 +96,7 @@ impl Server {
 fn handle_request(request: &Request, server: Server, verbose: bool) -> Response {
     session::session(request, "SID", 3600, |session| {
         if request.method() == "GET" {
-            let res = match_assets(&request, "ide");
+            let res = match_assets(&request, "webrepl");
             if verbose {
                 println!(
                     "GET {} {} => {}",
@@ -158,7 +158,7 @@ fn main() {
                 .value_name("PROGRAM")
                 .help("Foolang program to execute, must contain a main.")
                 .takes_value(true)
-                .conflicts_with("ide"),
+                .conflicts_with("webrepl"),
         )
         .arg(
             Arg::with_name("arg")
@@ -167,7 +167,7 @@ fn main() {
                 .help("Commandline arguments to the Foolang program.")
                 .takes_value(true)
                 .multiple(true)
-                .conflicts_with("ide"),
+                .conflicts_with("webrepl"),
         )
         .arg(
             Arg::with_name("use")
@@ -186,7 +186,7 @@ fn main() {
                 .default_value("foo/prelude.foo")
                 .multiple(false),
         )
-        .arg(Arg::with_name("ide").long("ide").help("Runs the IDE"))
+        .arg(Arg::with_name("webrepl").long("webrepl").help("Runs the web-REPL"))
         .arg(Arg::with_name("verbose").long("verbose").help("Provides additional output"));
     let matches = app.clone().get_matches();
     let verbose = matches.is_present("verbose");
@@ -228,7 +228,7 @@ fn main() {
             Err(err) => oops(err.to_string(), Some(&app)),
         }
     }
-    if matches.is_present("ide") {
+    if matches.is_present("webrepl") {
         println!("Starting server & browsing to http://127.0.0.1:8000/index.html");
         if webbrowser::open("http://127.0.0.1:8000/index.html").is_err() {
             println!("Could not open browser!");
