@@ -3,10 +3,12 @@
 #+DRAWERS: more example
 #+TODO: TODO WIP | LATER DONE
 
-* Public release 0.1.0
+* Public release
 ** DONE one pass over contents of docs/ to collect TODOs here
 ** DONE allow comments inside classes (between methods)
 ** DONE rewrite main README.md pointing to docs/ mainly.
+** DONE cleanup stale branches
+** DONE LICENSE file
 ** WIP LATER change all Expr internals to be structs
 *** DONE Bind
 *** DONE Block
@@ -16,7 +18,6 @@
 *** TODO Eq
 *** TODO Seq
 *** TODO Typecheck
-** TODO cleanup stale branches
 ** TODO reserved word for raising an error
 ** TODO allow prefix message definitions
 ** TODO allow arbitrary binary messages
