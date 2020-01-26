@@ -1,4 +1,4 @@
-# Finalization
+# Foolang Finalization
 
 Finalization is an annotation on an instance variable, and comes in
 two varieties: always and gc.

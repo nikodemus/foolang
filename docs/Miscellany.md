@@ -1,13 +1,130 @@
-# Syntax
+# Foolang Miscellany
 
-## Notes
+## Block vs object syntax
 
-### Three Uses Of Whitespace in Fortress
+Should Foolang should use `[]` for blocks instead? Rectangular blocks suit ST
+style code, and look much better with square bracket. Problem: what about arrays
+then?
+
+OTOH, `{}` is for better and worse what everyone expects blocks to look like.
+
+## is vs equals
+
+- `a = b --> True` iff a is same object as b (currently this is `is`)
+  - Pro: natural because: `let a = b. a = b --> True`
+    I also think this is a reasonable thing to ask.
+  - Con: could be part of Any interface, with default implementation of
+    Foolang eq: x to: b
+
+- `a is B --> True` iff a is member of type B
+   - Pro: don't need to add isString -type methods to umpteen classes
+   - Con: reflection and case-statement territory combined
+
+## Literate Programming
+
+mymodule.litfoo:
+
+```
+This is a description of an algorithm from input to output.
+
+@algorithm_1: input, output
+---
+   input each: { output handleInput: _ }
+---
+
+This is a description of a method.
+
+@method_foo
+---
+method foo: input
+    let output = Output new
+    @algorithm_1
+    return output
+---
+
+This is a description of a class.
+
+@@
+---
+class Foo
+    @method_foo
+end
+---
+```
+
+Hm.
+
+## before, after, and around methods
+
+Yes.
+
+## Extending pratt parsing to do non-transitive precedence?
+
+1. Instead of passing around precedence and comparing it numerically
+   pass around precedence object and use that.
+
+2. Precedence classes like Arithmetic > Comparison > Logical
+   are non-transitive.
+
+3. Precedence groups within classes are transitive and either
+   left-associative, non-associative, or composing-associtive.
+
+   `x > y < z` is an example of a composing-associative group with
+   the composing operator &&.
+
+   `--> let tmp = y. (x > tmp) && (tmp < z)`
+
+4. Precedence groups are organized into rows. Operators on the same row
+   are at the same precedence. Operators at higher rows are at higher
+   precedence.
+
+5. Each row has an implicit "before" and "after" extension slot. Things
+   in the before slot are higher than the row but not lower than the
+   higher rows. Things in the after slot are lower than the row but not
+   higher than lower rows.
+
+   ```
+   precedenceClass Arithmetic
+      before: Comparison
+  
+   precedenceClass Comparison
+      before: Logical
+
+   precedenceClass Logical
+
+   associativeGroup[Arithmetic]
+      [\arrow]
+      [*, /]
+      [+, -]
+
+   associativeGroup[Arithmetic]
+      [<<, >>]
+      [|, &, \xor]
+
+   binaryOperator[Arithmeric before: *] ^
+   ```
+
+   So ^ relates to all other arithmetic operators except \arrow.
+
+   ```
+   extend[Integer] ^ x
+      x == 0 then: { return 1 }
+      x == 1 then: { return self }
+      self * self ^ (x-1)
+   ```
+
+   ...but this gets the associativity wrong: 2^3^4 == (2^(2^3))
+
+   Bleg.
+
+## Three Uses Of Whitespace in Fortress
 
 - Meaning of vertical bar:
 
-       |x|   --> abs
-       a | b --> a or/cat/whatevs b
+  ```
+   |x|   --> abs
+   a | b --> a or/cat/whatevs b
+  ```
 
 - Subscripts vs array constructor
 

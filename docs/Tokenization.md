@@ -1,4 +1,4 @@
-# Tokenization
+# Foolang Tokenization
 
 ## Algorithm
 

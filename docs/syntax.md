@@ -2,17 +2,24 @@
 
 Foolang is expression oriented: every expression has a value.
 
-**Reserved Words**
+## Aesthetic
+
+The syntax tries to minimize the amount of visual noise from puctuation, and be
+easy to read out loud.
+
+## Reserved Words
 
 Following words have special meaning:
 
-    let      extend    return
-    class    import
-    end      method
+    class    extend    method
+    let      import    return
+    end      is
 
 This restricts their use as both messages and as variables.
 
-**Comments**
+All other reserved words except `is` are used in prefix position.
+
+## Comments
 
 Line comments are prefixed with `--`:
 
@@ -38,9 +45,9 @@ prefixed with `--|`.
 
     4 append: 2 --| ERROR: 4 does not understand append: 2
 
-**Literals**
+## Literals
 
-Numbers are quite conventional, with _ as allowed readability separators.
+Numbers are quite conventional, with `_` as allowed readability separator.
 Literal floats are currently always doubles.
 
     1_000_000
@@ -51,22 +58,74 @@ Literal floats are currently always doubles.
 
 Strings allow interpolations to be embedded:
 
-    "Hello {user name}!"
     "The Answer Is: {40 + 2}!"
 
-**Messages**
+The interpolation is evaluated in the current lexical environment.
 
-Messages are sent by simple concatenation, Smalltalk-style:
+Escape sequences usable in strings:
 
-    -- Message with selector "foo" and no arguments to object
+    \n \t \r \{ \" \\
+
+There are currently no character objects: the elements of a multicharacter
+string are single character strings.
+
+## Messages
+
+Messages are sent by simple concatenation, Smalltalk-style.
+
+Unary prefix messages are non-alphabetic:
+
+    -- Unary prefix message with selector "-" to x
+    -x
+
+Binary messages are non-alphabetic:
+
+    -- Binary message with selector "+" and argument y to x.
+    x + y
+
+Unary suffix messages are alphabetic: 
+
+    -- Unary suffix message with selector "foo" and no arguments to object
     object foo
 
-    -- Message with selector "foo:bar:" and arguments 1 and 2 to object
+Keyword messages are alphabetic:
+
+    -- Keyword message with selector "foo:bar:" and arguments 1 and 2 to object
     object foo: 1 bar: 2
+
+Message chaining is also simple concatenation:
+
+    -- Message #1: "foo" to object.
+    -- Message #2: "bar" to response of message #1.
+    -- Message #3: "quux:" with argument 42 to response of message #2.
+    object foo bar quux: 42
+
+There is currently no literal selector syntax.
+
+**Precedence Rules**
+
+Unary prefix messages have the highest precedence.
+
+Unary suffix messages have the second highest precedence.
+
+Binary messages as a group have the third highest precedence. Amongst
+themselves they have conventional precedence unlike in Smalltalk:
+
+1. `*`
+2. `/`
+3. `+ -`
+4. `< <= > >= ==`
+5. All other non-alphabetic message operators.
+
+> Current precedence rules and implementation is a placeholder: Foolang is
+> intended to have non-transitive user-definable operator precedence.
+
+Keyword messages have the lowest precedence.
 
 **Compound Expressions**
 
-Expressions are separated form each other with dots, Smalltalk-style:
+Expressions are separated form each other with full stops ("dots"),
+Smalltalk-style:
 
     -- Message with selector "foo" to objectA, message with selector "bar" to
     -- objectB. Newline can be elided.
@@ -76,20 +135,14 @@ Expressions are separated form each other with dots, Smalltalk-style:
 A sequence of expressions like this is an expression that evaluates to
 the value of the last subexpression.
 
-**Operator Precedence**
-
-Unlike Smalltalk operators have conventional precedence:
-
-    1 + 2 * 3 --> 7
-
 **Local Variables**
 
-Defined using let:
+Local variables are defined using `let`:
 
     let x = 42.
     x * 100 --> 420
 
-Assigned to using equal sign:
+Local variables can be assigned to using `=`:
 
     let x = 42.
     x = x - 2.

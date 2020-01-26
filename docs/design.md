@@ -1,21 +1,99 @@
 # Foolang Design
 
-A collection of design notes. Those no longer bearing any relevance to current
-heading of Foolang tend to get removed, but some of these haven't been revised
-in quite a bit.
+## Design Priorities
+
+1. **Safety**: No memory errors. No race conditions. No ambient authority.
+   No undefined behaviour. Fault-tolerant applications.
+
+2. **Ergonomics**: Code should be a pleasure to read and write.
+
+3. **Performance**: Code with type annotations should run on par with -O0
+   compiled "equivalent" C or C++. As long as the compiler backend doesn't
+   exist this is by necessity based on handwaving: _"that should be easy
+   enough to handle!"_
+
+4. **Uniformity**: Built-in code should not be privileged over user code.
+   This is sometimes called growability: most of the language should
+   be implemented in libraries, not the core.
+
+If one of these is violated, that violation should be driven by a higher
+priority concern.
+
+## Design Compromises
+
+### No Optional Arguments
+
+**Problem**: occasionally questionable ergnomics, needing to create multiple
+methods instead of just one.
+
+**Excuse**: not critical right now, and Smalltalk world doesn't seem to really
+miss them.
+
+One possibility would be to use commas for this:
+
+```
+method readline, onEof: defaultAtEof, blocking: True
+       ...
+```
+
+allowing:
+
+```
+system output readline, onEof: { return False }
+```
+
+### No Variable Argument Methods or Blocks
+
+**Problem**: occasionally questionable ergnomics.
+
+**Excuse**: not critical right now, and neither Smalltalk nor Rust worlds seem
+to really miss them.
+
+### Non-Local Returns Can Be Unsound
+
+**Problem**:
+
+``` foolang
+class Foo {}
+  class method bad
+     { return 42 }
+  class method bang
+     self bad value
+end
+```
+
+
+ie. same as eg. in Common Lisp, one can construct blocks that try to return from
+frames that have already returned.
+
+**Excuse**: having `return` inside a block do a non-local return from the
+lexically enclosing method allows implementing unwinding control structures and
+exception handling in user code. (Esp. when combined with dynamic bindings.)
+
+**Possible palliative**: `<sound-returns>` pragma could ensure that all
+returns are statically known to be safe, and signal a compile-time
+error if not.
+
+**Possible alternatives**:
+- Implement exceptions and control flows using magic primitives
+- Error values instead of exceptions
+
+## Design Notes
+
+A collection of design notes, mostly dealing with unimplemented parts of the
+language. Some of these may be already a bit dated.
 
 - [Arrays](Arrays.md)
 - [Booleans](Booleans.md)
+- [Comprehensions](Comprehensions.md)
 - [Enums](Enums.md)
 - [Extension Methods](Extension_Methods.md)
 - [Finalization](Finalization.md)
 - [Functions](Functions.md)
-- [GC v1](GCv1.md)
 - [IDE](IDE.md)
 - [Interfaces](Interfaces.md)
+- [Miscellany](Miscellany.md)
 - [Modules](Modules.md)
 - [Supervisors](Supervisors.md)
-- [Syntax Notes](SyntaxNotes.md)
 - [Testing](Testing.md)
 - [Tokenization](Tokenization.md)
-- [Value Types](Value_Types.md)

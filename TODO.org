@@ -5,6 +5,10 @@
 
 * BACKLOG
 ** TODO printing block source code (non-pretty), for error-reporting
+** WIP documentation
+*** TODO one pass over contents of docs/
+- collect missing features mentioned there in here.
+** TODO prefix message definitions
 ** TODO refactoring classes so objects.rs shrinks a bit
 ** TODO Expr accessible as Object
 
@@ -18,9 +22,7 @@
 ** Dynamic variables
 ** Test framework
 ** Nice error reporting
-** Documentation
-Class and method documentation extracted from source.
-On github pages.
+** Documentation on github pages
 ** Syntax v1
 *** Reserved words allowed as selectors
 *** Record / dictionary syntax

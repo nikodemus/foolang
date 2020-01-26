@@ -1,4 +1,4 @@
-# Supervisors
+# Foolang Supervisors
 
 Every worker should be supervised.
 

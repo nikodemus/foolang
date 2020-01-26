@@ -1,4 +1,4 @@
-# Extension Methods
+# Foolang Extension Methods
 
 Extension methods are added using toplevel method definitions:
 
