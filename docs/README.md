@@ -31,6 +31,9 @@ end
 
 ## Getting Started
 
+!> Sorry, you can't yet&mdash;the repository is still waiting for a couple
+of final touches like LICENSE files.
+
 1. Install [Rust](https://www.rust-lang.org/tools/install).
 2. Clone the foolang repository:
    ``` shell
