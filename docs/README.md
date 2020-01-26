@@ -1,9 +1,11 @@
-# FOOLANG
+# Foolang
+
+!> This is a toy language implemented by a single person&mdash;use for quiet enjoyment only.
 
 **_The Foo Programming Language_**
 
 Foolang is a Smalltalk-inspired language that, like all new languages,
-has _somewhat_ unrealistic aspirations:
+has what you might generously call _somewhat optimistic aspirations_:
 
 - Elegance and power of Smalltalk
 - Performance of C++
@@ -11,7 +13,7 @@ has _somewhat_ unrealistic aspirations:
 
 **_"Are you there yet?"_**
 
-Hah, not by a long shot. Foolang is nothing but a toy. Treat it as such.
+Hah, not by a long shot.
 
 **_"When are you going to get there?"_**
 
@@ -41,9 +43,9 @@ end
    ```
 4. Read the [syntax](syntax.md#foolang-syntax) document, read the code, play around.
 
-## How Will Foolang Be Different?
+## Features & Status
 
-&nbsp;&nbsp;&nbsp;&nbsp; Done = <span class="done">&check;</span>, todo = <span class="todo">&cross;</span>.
+### Done
 
 <span class="done">&check;</span>
 **No ambient authority**: all OS interfaces must be passed to through dependency
@@ -64,13 +66,15 @@ can be redefined and new classes added while the program is running.
 closures. Currently class definitions and methods can only appear at the
 top level and as such methods are never closures in that sense. 
 
+<span class="done">&check;</span>
+**No inheritance of implementations**: similar to Julia and Rust, concrete
+instantiable classes cannot be inherited from in Foolang.
+
+### Pending
+
 <span class="todo">&cross;</span>
 **Multiple inheritance of interfaces**: interfaces and classes can inherit
 from multiple interfaces.
-
-<span class="todo">&cross;</span>
-**No inheritance of implementations**: similar to Julia and Rust, concrete
-instantiable classes cannot be inherited from in Foolang.
 
 <span class="todo">&cross;</span>
 **Dynamic bindings**: dynamic bindings combined with lexical closures

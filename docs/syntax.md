@@ -5,7 +5,8 @@ Foolang is expression oriented: every expression has a value.
 ## Aesthetic
 
 The syntax tries to minimize the amount of visual noise from puctuation, and be
-easy to read out loud.
+easy to read out loud and understand when read out loud: order of operations
+should match reading order.
 
 ## Reserved Words
 
@@ -38,7 +39,7 @@ End of line comments describing the value the line evaluates to are
 conventionally prefixed with `-->`, but syntactically this is just a
 line comment that starts with a greater-than sign:
 
-    x = y + z --> sum of x and y
+    x = y + z --> sum of y and z
 
 Similarly end of line comments describing an error are conventionally
 prefixed with `--|`.
@@ -100,7 +101,21 @@ Message chaining is also simple concatenation:
     -- Message #3: "quux:" with argument 42 to response of message #2.
     object foo bar quux: 42
 
-There is currently no literal selector syntax.
+Message chains with keyword messages in the middle need parenthesis:
+
+    -- Without the parenthesis "bar" would be sent to 42 and not the
+    -- response of "quux".
+    (object foo quux: 42) bar 
+
+Similarly for chaining multiple keyword messages:
+
+    -- Without the parenthesis this would a single "quux:quux:" message,
+    -- instead of two messages.
+    (object quux: 1) quux: 2
+
+There is currently no literal selector syntax. Using a punctuation character to
+allow chaining keyword messages without parenthesis is being considered, but it
+may be that long chains of messages may be an anti-pattern.
 
 **Precedence Rules**
 
@@ -117,8 +132,8 @@ themselves they have conventional precedence unlike in Smalltalk:
 4. `< <= > >= ==`
 5. All other non-alphabetic message operators.
 
-> Current precedence rules and implementation is a placeholder: Foolang is
-> intended to have non-transitive user-definable operator precedence.
+!> Current precedence rules and implementation is a placeholder: Foolang is
+intended to have non-transitive user-definable operator precedence.
 
 Keyword messages have the lowest precedence.
 
