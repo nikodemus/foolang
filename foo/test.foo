@@ -67,6 +67,15 @@ class Floats {}
       100 times: { block value: rng float }
 end
 
+class Box { value }
+   method *** other
+     self value * other
+   method * other
+     self value * other
+   method + other
+     self value + other
+end
+
 class Main { assert }
     class method run: cmd in: system
        let instance = self assert: (Assert using: system).
@@ -77,7 +86,20 @@ class Main { assert }
        self testFloats.
        self testIntegers.
        self testStringOutput.
+       self testPrecedence.
        assert exit
+
+    method testPrecedence
+       assert forAll: (2 to: 10)
+              that: { |n|
+                      let a1 = n * n + n.
+                      let a2 = (n * n) + n.
+                      let b1 = (Box value: n) *** n + n.
+                      let b2 = n * (n + n).
+                      (a1 == a2)
+                        and: (b1 == b2)
+                        and: (a1 == b1) not }
+              testing: "operator precedence"
 
     method testByteArrays
        assert forAll: (1 to: 10)

@@ -1001,6 +1001,8 @@ fn make_token_table() -> TokenTable {
 const SEQ_PRECEDENCE: usize = 2;
 const PREFIX_PRECEDENCE: usize = 1000;
 
+const UNKNOWN_OPERATOR_SYNTAX: Syntax = Syntax::Operator(false, true, 10);
+
 fn make_name_table() -> NameTable {
     let mut table: NameTable = HashMap::new();
     let t = &mut table;
@@ -1031,16 +1033,30 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, "False", false_prefix, invalid_suffix, precedence_3);
     Syntax::def(t, "True", true_prefix, invalid_suffix, precedence_3);
 
-    Syntax::op(t, "*", false, true, 50);
-    Syntax::op(t, "/", false, true, 40);
-    Syntax::op(t, "+", false, true, 30);
-    Syntax::op(t, "-", true, true, 30);
+    Syntax::op(t, "^", false, true, 100);
 
-    Syntax::op(t, "<", false, true, 10);
-    Syntax::op(t, "<=", false, true, 10);
-    Syntax::op(t, ">", false, true, 10);
-    Syntax::op(t, ">=", false, true, 10);
-    Syntax::op(t, "==", false, true, 10);
+    Syntax::op(t, "*", false, true, 90);
+    Syntax::op(t, "/", false, true, 90);
+    Syntax::op(t, "%", false, true, 90);
+
+    Syntax::op(t, "+", false, true, 80);
+    Syntax::op(t, "-", true, true, 80);
+
+    Syntax::op(t, "<<", false, true, 70);
+    Syntax::op(t, ">>", false, true, 70);
+
+    Syntax::op(t, "&", false, true, 60);
+    Syntax::op(t, "|", false, true, 60);
+
+    Syntax::op(t, "<", false, true, 50);
+    Syntax::op(t, "<=", false, true, 50);
+    Syntax::op(t, ">", false, true, 50);
+    Syntax::op(t, ">=", false, true, 50);
+    Syntax::op(t, "==", false, true, 50);
+    Syntax::op(t, "!=", false, true, 50);
+
+    Syntax::op(t, "&&", false, true, 40);
+    Syntax::op(t, "||", false, true, 30);
 
     table
 }
@@ -1229,24 +1245,20 @@ fn keyword_suffix(
 
 fn operator_precedence(parser: &Parser, span: Span) -> Result<usize, Unwind> {
     let slice = parser.slice_at(span.clone());
-    match parser.name_table.get(slice) {
-        Some(syntax) => parser.syntax_precedence(syntax, span),
-        None => parser.error_at(span, "Unknown operator"),
-    }
+    let syntax = parser.name_table.get(slice).unwrap_or(&UNKNOWN_OPERATOR_SYNTAX);
+    parser.syntax_precedence(syntax, span)
 }
 
 fn operator_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     match parser.name_table.get(parser.slice()) {
         Some(syntax) => parser.parse_prefix_syntax(syntax),
-        None => parser.error("Unknown operator"),
+        None => parser.error("Unknown predix operator"),
     }
 }
 
 fn operator_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Result<Expr, Unwind> {
-    match parser.name_table.get(parser.slice()) {
-        Some(syntax) => parser.parse_suffix_syntax(syntax, left),
-        None => parser.error("Unknown operator"),
-    }
+    let syntax = parser.name_table.get(parser.slice()).unwrap_or(&UNKNOWN_OPERATOR_SYNTAX);
+    parser.parse_suffix_syntax(syntax, left)
 }
 
 fn paren_prefix(parser: &Parser) -> Result<Expr, Unwind> {
