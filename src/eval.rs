@@ -8,8 +8,8 @@ use crate::objects::{
     Vtable,
 };
 use crate::parse::{
-    Array, Assign, ClassDefinition, ClassExtension, Expr, Global, Import, Literal, Message, Parser,
-    Return, Var,
+    Array, Assign, Bind, ClassDefinition, ClassExtension, Expr, Global, Import, Literal, Message,
+    Parser, Return, Var,
 };
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -285,7 +285,7 @@ impl Env {
         match expr {
             Array(array) => self.eval_array(array),
             Assign(assign) => self.eval_assign(assign),
-            Bind(name, typename, value, body) => self.eval_bind(name, typename, value, body),
+            Bind(bind) => self.eval_bind(bind),
             Block(_, params, body, rtype) => self.eval_block(params, body, rtype),
             Cascade(receiver, chains) => self.eval_cascade(receiver, chains),
             ClassDefinition(definition) => self.eval_class_definition(definition),
@@ -311,35 +311,28 @@ impl Env {
         Ok(self.foo.into_array(data))
     }
 
-    fn eval_bind(
-        &self,
-        name: &String,
-        typename: &Option<String>,
-        expr: &Expr,
-        body: &Option<Box<Expr>>,
-    ) -> Eval {
-        let binding = match typename {
-            None => Binding::untyped(self.eval(expr)?),
-            Some(typename) => {
-                let class = self.find_class(typename, expr.span())?.class();
-                Binding::typed(class.instance_vtable.clone(), self.eval_typecheck(expr, typename)?)
+    fn eval_bind(&self, bind: &Bind) -> Eval {
+        let binding = match bind.typename {
+            None => Binding::untyped(self.eval(&bind.value)?),
+            Some(ref typename) => {
+                let class = self.find_class(typename, bind.value.span())?.class();
+                Binding::typed(
+                    class.instance_vtable.clone(),
+                    self.eval_typecheck(&bind.value, typename)?,
+                )
             }
         };
-        let value = match body {
-            None => Err(binding.value.clone()),
-            Some(expr) => Ok(expr),
-        };
+        let tmp = binding.value.clone();
         // FIXME: there used to be workspace stuff there to handle 'toplevel lets'.
-        // Lexical
         let env = if self.is_toplevel() {
             // FIXME: should check if the toplevel is a "workspace" or not.
-            self.add_binding(name, binding)
+            self.add_binding(&bind.name, binding)
         } else {
-            self.bind(name, binding)
+            self.bind(&bind.name, binding)
         };
-        match value {
-            Ok(expr) => env.eval(expr),
-            Err(value) => Ok(value),
+        match &bind.body {
+            None => Ok(tmp),
+            Some(body) => env.eval(&body),
         }
     }
 

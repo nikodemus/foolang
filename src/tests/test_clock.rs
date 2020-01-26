@@ -4,13 +4,15 @@ use crate::objects::Foolang;
 fn test_clock1() {
     let foo = Foolang::here();
     let cmd = foo.into_array(vec![]);
-    let res = foo.run(
-        "class Main {}
+    let res = foo
+        .run(
+            "class Main {}
              class method run: command in: system
                  system clock :: Clock toString
          end",
-        cmd
-    ).unwrap();
+            cmd,
+        )
+        .unwrap();
     assert_eq!(res.string_as_str(), "#<Clock>");
 }
 
@@ -20,8 +22,9 @@ fn test_clock2() {
     crate::time::TimeInfo::init();
     let foo = Foolang::here();
     let cmd = foo.into_array(vec![]);
-    let res = foo.run(
-        "class Main {}
+    let res = foo
+        .run(
+            "class Main {}
              class method run: command in: system
                  let clock = system clock.
                  let t0 = clock time.
@@ -29,7 +32,8 @@ fn test_clock2() {
                  let t1 = clock time.
                  t0 real < t1 real
          end",
-         cmd
-    ).unwrap();
+            cmd,
+        )
+        .unwrap();
     assert_eq!(res.boolean(), true);
 }

@@ -167,7 +167,7 @@ fn main() {
                 .help("Commandline arguments to the Foolang program.")
                 .takes_value(true)
                 .multiple(true)
-                .conflicts_with("ide")
+                .conflicts_with("ide"),
         )
         .arg(
             Arg::with_name("use")
@@ -217,8 +217,11 @@ fn main() {
             Ok(foo) => foo,
             Err(err) => oops(err.to_string(), Some(&app)),
         };
-        let command = foo.into_array(matches.values_of("arg").map_or(
-            vec![], |args| args.map(|arg| foo.make_string(arg)).collect()));
+        let command = foo.into_array(
+            matches
+                .values_of("arg")
+                .map_or(vec![], |args| args.map(|arg| foo.make_string(arg)).collect()),
+        );
         // FIXME: pass in env and argv to run
         match foo.run(&program, command) {
             Ok(_) => std::process::exit(0),

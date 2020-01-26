@@ -192,10 +192,7 @@ fn parse_method2() {
         MethodKind::Instance,
         method(90..96, "foo", vec![], unary(130..133, "bar", var(125..129, "self"))),
     );
-    class.add_method(
-        MethodKind::Instance,
-        method(240..246, "bar", vec![], int(275..277, 42))
-    );
+    class.add_method(MethodKind::Instance, method(240..246, "bar", vec![], int(275..277, 42)));
     assert_eq!(
         parse_str(
             "

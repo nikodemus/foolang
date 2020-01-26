@@ -44,6 +44,12 @@ impl Array {
             data,
         })
     }
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.span.tweak(shift, extend);
+        for elt in &mut self.data {
+            elt.tweak_span(shift, extend);
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -60,6 +66,40 @@ impl Assign {
             name,
             value: Box::new(value),
         })
+    }
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.span.tweak(shift, extend);
+        self.value.tweak_span(shift, extend);
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Bind {
+    pub name: String,
+    pub typename: Option<String>,
+    pub value: Box<Expr>,
+    pub body: Option<Box<Expr>>,
+}
+
+impl Bind {
+    pub fn expr(
+        name: String,
+        typename: Option<String>,
+        value: Box<Expr>,
+        body: Option<Box<Expr>>,
+    ) -> Expr {
+        Expr::Bind(Bind {
+            name,
+            typename,
+            value,
+            body,
+        })
+    }
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.value.tweak_span(shift, extend);
+        if let Some(ref mut expr) = self.body {
+            expr.tweak_span(shift, extend);
+        }
     }
 }
 
@@ -288,7 +328,7 @@ pub enum Literal {
 pub enum Expr {
     Array(Array),
     Assign(Assign),
-    Bind(String, Option<String>, Box<Expr>, Option<Box<Expr>>),
+    Bind(Bind),
     Block(Span, Vec<Var>, Box<Expr>, Option<String>),
     Cascade(Box<Expr>, Vec<Vec<Message>>),
     Chain(Box<Expr>, Vec<Message>),
@@ -376,7 +416,7 @@ impl Expr {
         let span = match self {
             Array(array) => &array.span,
             Assign(assign) => &assign.span,
-            Bind(_, _, expr, ..) => return expr.span(),
+            Bind(bind) => return bind.value.span(),
             Block(span, ..) => span,
             Cascade(left, ..) => return left.span(),
             ClassDefinition(definition) => &definition.span,
@@ -406,22 +446,9 @@ impl Expr {
     fn tweak_span(&mut self, shift: usize, extend: isize) {
         use Expr::*;
         match self {
-            Array(array) => {
-                array.span.tweak(shift, extend);
-                for elt in &mut array.data {
-                    elt.tweak_span(shift, extend);
-                }
-            }
-            Assign(assign) => {
-                assign.span.tweak(shift, extend);
-                assign.value.tweak_span(shift, extend);
-            }
-            Bind(_name, _type, value, body) => {
-                value.tweak_span(shift, extend);
-                if let Some(expr) = body {
-                    expr.tweak_span(shift, extend);
-                }
-            }
+            Array(array) => array.tweak_span(shift, extend),
+            Assign(assign) => assign.tweak_span(shift, extend),
+            Bind(bind) => bind.tweak_span(shift, extend),
             Block(span, vars, body, _rtype) => {
                 span.tweak(shift, extend);
                 for var in vars {
@@ -1447,12 +1474,14 @@ fn let_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         parser.next_token()?;
         eof = true;
     }
+    // FIXME: Should just return false here instead of playing with
+    // an Option for body.
     let body = if eof {
         None
     } else {
         Some(Box::new(parser.parse_seq()?))
     };
-    Ok(Expr::Bind(name, typename, Box::new(value), body))
+    Ok(Bind::expr(name, typename, Box::new(value), body))
 }
 
 fn ignore_prefix(parser: &Parser) -> Result<Expr, Unwind> {
@@ -1714,11 +1743,11 @@ pub mod utils {
     }
 
     pub fn bind(name: &str, value: Expr, body: Expr) -> Expr {
-        Expr::Bind(name.to_string(), None, Box::new(value), Some(Box::new(body)))
+        Bind::expr(name.to_string(), None, Box::new(value), Some(Box::new(body)))
     }
 
     pub fn bind_typed(name: &str, typename: &str, value: Expr, body: Expr) -> Expr {
-        Expr::Bind(
+        Bind::expr(
             name.to_string(),
             Some(typename.to_string()),
             Box::new(value),

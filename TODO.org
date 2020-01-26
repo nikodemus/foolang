@@ -6,6 +6,15 @@
 * Public release 0.1.0
 ** DONE one pass over contents of docs/ to collect TODOs here
 ** DONE allow comments inside classes (between methods)
+** WIP change all Expr internals to be structs
+*** DONE Bind
+*** TODO Block
+*** TODO Cascade
+*** TODO Chain
+*** TODO Const
+*** TODO Eq
+*** TODO Seq
+*** TODO Typecheck
 ** TODO rewrite main README.md pointing to docs/ mainly.
 ** TODO method bodies end with a dot
 ** TODO printing block source code (non-pretty), for error-reporting
