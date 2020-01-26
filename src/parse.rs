@@ -153,6 +153,27 @@ impl Cascade {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Chain {
+    pub receiver: Box<Expr>,
+    pub messages: Vec<Message>,
+}
+
+impl Chain {
+    pub fn expr(receiver: Box<Expr>, messages: Vec<Message>) -> Expr {
+        Expr::Chain(Chain {
+            receiver,
+            messages,
+        })
+    }
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.receiver.tweak_span(shift, extend);
+        for message in &mut self.messages {
+            message.tweak_span(shift, extend);
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct ClassDefinition {
     pub span: Span,
     pub name: String,
@@ -380,7 +401,7 @@ pub enum Expr {
     Bind(Bind),
     Block(Block),
     Cascade(Cascade),
-    Chain(Box<Expr>, Vec<Message>),
+    Chain(Chain),
     ClassDefinition(ClassDefinition),
     ClassExtension(ClassExtension),
     Const(Span, Literal),
@@ -433,13 +454,13 @@ impl Expr {
         // empty cascade.
         match self {
             Expr::Cascade(..) => self,
-            Expr::Chain(receiver, messages) => {
-                if let Expr::Cascade(mut cascade) = *receiver {
-                    cascade.chains.push(messages);
+            Expr::Chain(chain) => {
+                if let Expr::Cascade(mut cascade) = *chain.receiver {
+                    cascade.chains.push(chain.messages);
                     Expr::Cascade(cascade)
                 } else {
                     assert!(in_cascade);
-                    Cascade::expr(Box::new(Expr::Chain(receiver, messages)), vec![])
+                    Cascade::expr(Box::new(Expr::Chain(chain)), vec![])
                 }
             }
             _ => {
@@ -449,15 +470,14 @@ impl Expr {
         }
     }
 
-    pub fn send(self, message: Message) -> Expr {
-        let (receiver, messages) = match self {
-            Expr::Chain(receiver, mut messages) => {
-                messages.push(message);
-                (receiver, messages)
+    pub fn send(mut self, message: Message) -> Expr {
+        match self {
+            Expr::Chain(ref mut chain) => {
+                chain.messages.push(message);
+                self
             }
-            _ => (Box::new(self), vec![message]),
-        };
-        Expr::Chain(receiver, messages)
+            _ => Chain::expr(Box::new(self), vec![message]),
+        }
     }
 
     pub fn span(&self) -> Span {
@@ -473,7 +493,7 @@ impl Expr {
             Const(span, ..) => span,
             Eq(span, ..) => span,
             Global(global) => &global.span,
-            Chain(left, _) => return left.span(),
+            Chain(chain) => return chain.receiver.span(),
             Import(import) => &import.span,
             Return(ret) => &ret.span,
             // FIXME: Questionable
@@ -500,6 +520,7 @@ impl Expr {
             Bind(bind) => bind.tweak_span(shift, extend),
             Block(block) => block.tweak_span(shift, extend),
             Cascade(cascade) => cascade.tweak_span(shift, extend),
+            Chain(chain) => chain.tweak_span(shift, extend),
             ClassDefinition(class) => {
                 class.span.tweak(shift, extend);
                 for var in &mut class.instance_variables {
@@ -531,12 +552,6 @@ impl Expr {
             }
             Global(global) => {
                 global.span.tweak(shift, extend);
-            }
-            Chain(receiver, chain) => {
-                receiver.tweak_span(shift, extend);
-                for message in chain {
-                    message.tweak_span(shift, extend);
-                }
             }
             Import(import) => {
                 import.span.tweak(shift, extend);

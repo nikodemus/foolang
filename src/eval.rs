@@ -8,8 +8,8 @@ use crate::objects::{
     Vtable,
 };
 use crate::parse::{
-    Array, Assign, Bind, Block, Cascade, ClassDefinition, ClassExtension, Expr, Global, Import,
-    Literal, Message, Parser, Return, Var,
+    Array, Assign, Bind, Block, Cascade, Chain, ClassDefinition, ClassExtension, Expr, Global,
+    Import, Literal, Message, Parser, Return, Var,
 };
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -295,7 +295,7 @@ impl Env {
             Global(global) => self.eval_global(global),
             Import(import) => self.eval_import(import),
             Return(ret) => self.eval_return(ret),
-            Chain(receiver, messages) => self.eval_chain(receiver, messages),
+            Chain(chain) => self.eval_chain(chain),
             Seq(exprs) => self.eval_seq(exprs),
             Typecheck(_, expr, typename) => self.eval_typecheck(expr, typename),
             Var(var) => self.eval_var(var),
@@ -531,8 +531,8 @@ impl Env {
         return Ok(receiver);
     }
 
-    fn eval_chain(&self, receiver: &Box<Expr>, messages: &Vec<Message>) -> Eval {
-        self.eval_sends(self.eval(receiver)?, messages)
+    fn eval_chain(&self, chain: &Chain) -> Eval {
+        self.eval_sends(self.eval(&chain.receiver)?, &chain.messages)
     }
 
     fn eval_seq(&self, exprs: &Vec<Expr>) -> Eval {

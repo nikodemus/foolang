@@ -13,8 +13,8 @@
 ** WIP LATER change all Expr internals to be structs
 *** DONE Bind
 *** DONE Block
-*** TODO Cascade
-*** TODO Chain
+*** DONE Cascade
+*** DONE Chain
 *** TODO Const
 *** TODO Eq
 *** TODO Seq
