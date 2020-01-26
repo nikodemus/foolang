@@ -9,7 +9,7 @@ use crate::objects::{
 };
 use crate::parse::{
     Array, Assign, Bind, Block, Cascade, Chain, ClassDefinition, ClassExtension, Const, Eq, Expr,
-    Global, Import, Literal, Message, Parser, Return, Seq, Var,
+    Global, Import, Literal, Message, Parser, Return, Seq, Typecheck, Var,
 };
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -297,7 +297,7 @@ impl Env {
             Return(ret) => self.eval_return(ret),
             Chain(chain) => self.eval_chain(chain),
             Seq(seq) => self.eval_seq(&seq),
-            Typecheck(_, expr, typename) => self.eval_typecheck(expr, typename),
+            Typecheck(typecheck) => self.eval_typecheck(typecheck),
             Var(var) => self.eval_var(var),
         }
     }
@@ -316,9 +316,10 @@ impl Env {
             None => Binding::untyped(self.eval(&bind.value)?),
             Some(ref typename) => {
                 let class = self.find_class(typename, bind.value.span())?.class();
+                // FIXME: make the typecheck explicit
                 Binding::typed(
                     class.instance_vtable.clone(),
-                    self.eval_typecheck(&bind.value, typename)?,
+                    self.do_typecheck(bind.value.span(), &bind.value, typename)?,
                 )
             }
         };
@@ -543,10 +544,13 @@ impl Env {
         Ok(result)
     }
 
-    fn eval_typecheck(&self, expr: &Expr, typename: &str) -> Eval {
+    fn eval_typecheck(&self, typecheck: &Typecheck) -> Eval {
+        self.do_typecheck(typecheck.span.clone(), &typecheck.expr, &typecheck.typename)
+    }
+
+    fn do_typecheck(&self, span: Span, expr: &Expr, typename: &str) -> Eval {
         let value = self.eval(expr)?;
-        // FIXME: Wrong span.
-        let class = self.find_class(typename, expr.span())?.class();
+        let class = self.find_class(typename, span.clone())?.class();
         if class.instance_vtable == value.vtable {
             Ok(value)
         } else {

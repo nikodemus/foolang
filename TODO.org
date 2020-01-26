@@ -10,7 +10,7 @@
 ** DONE cleanup stale branches
 ** DONE LICENSE file
 ** DONE rename --ide to --webrepl
-** WIP LATER change all Expr internals to be structs
+** DONE LATER change all Expr internals to be structs
 *** DONE Bind
 *** DONE Block
 *** DONE Cascade
@@ -18,7 +18,7 @@
 *** DONE Const
 *** DONE Eq
 *** DONE Seq
-*** TODO Typecheck
+*** DONE Typecheck
 ** TODO change Expr into a trait, and Expr objects into Box<dyn Expr>
 ** TODO reserved word for raising an error
 ** TODO allow prefix message definitions

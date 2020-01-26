@@ -217,17 +217,42 @@ impl Eq {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Seq {
-    pub exprs: Vec<Expr>
+    pub exprs: Vec<Expr>,
 }
 
 impl Seq {
     fn expr(exprs: Vec<Expr>) -> Expr {
-        Expr::Seq(Seq { exprs })
+        Expr::Seq(Seq {
+            exprs,
+        })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
         for expr in &mut self.exprs {
             expr.tweak_span(shift, extend);
         }
+    }
+}
+
+// Span, Box<Expr>, String),
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Typecheck {
+    pub span: Span,
+    pub expr: Box<Expr>,
+    pub typename: String,
+}
+
+impl Typecheck {
+    fn expr(span: Span, expr: Box<Expr>, typename: String) -> Expr {
+        Expr::Typecheck(Typecheck {
+            span,
+            expr,
+            typename,
+        })
+    }
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.span.tweak(shift, extend);
+        self.expr.tweak_span(shift, extend);
     }
 }
 
@@ -468,7 +493,7 @@ pub enum Expr {
     Import(Import),
     Return(Return),
     Seq(Seq),
-    Typecheck(Span, Box<Expr>, String),
+    Typecheck(Typecheck),
     Var(Var),
 }
 
@@ -556,7 +581,7 @@ impl Expr {
             Return(ret) => &ret.span,
             // FIXME: Questionable
             Seq(seq) => return seq.exprs[seq.exprs.len() - 1].span(),
-            Typecheck(span, ..) => span,
+            Typecheck(typecheck) => &typecheck.span,
             Var(var) => &var.span,
         };
         span.to_owned()
@@ -582,6 +607,7 @@ impl Expr {
             Const(constant) => constant.tweak_span(shift, extend),
             Eq(eq) => eq.tweak_span(shift, extend),
             Seq(seq) => seq.tweak_span(shift, extend),
+            Typecheck(typecheck) => typecheck.tweak_span(shift, extend),
             ClassDefinition(class) => {
                 class.span.tweak(shift, extend);
                 for var in &mut class.instance_variables {
@@ -615,10 +641,6 @@ impl Expr {
             Return(ret) => {
                 ret.span.tweak(shift, extend);
                 ret.value.tweak_span(shift, extend);
-            }
-            Typecheck(span, expr, _type) => {
-                span.tweak(shift, extend);
-                expr.tweak_span(shift, extend);
             }
             Var(var) => {
                 var.span.tweak(shift, extend);
@@ -1248,7 +1270,7 @@ fn typecheck_suffix(
     _precedence: PrecedenceFunction,
 ) -> Result<Expr, Unwind> {
     match parser.next_token()? {
-        Token::WORD => Ok(Expr::Typecheck(parser.span(), Box::new(left), parser.tokenstring())),
+        Token::WORD => Ok(Typecheck::expr(parser.span(), Box::new(left), parser.tokenstring())),
         _ => parser.error("Invalid type designator"),
     }
 }
@@ -1902,13 +1924,13 @@ pub mod utils {
     pub fn seq(exprs: Vec<Expr>) -> Expr {
         Seq::expr(exprs)
     }
-    
+
     pub fn string(span: Span, value: &str) -> Expr {
         Const::expr(span, Literal::String(value.to_string()))
     }
 
     pub fn typecheck(span: Span, expr: Expr, typename: &str) -> Expr {
-        Expr::Typecheck(span, Box::new(expr), typename.to_string())
+        Typecheck::expr(span, Box::new(expr), typename.to_string())
     }
 
     pub fn unary(span: Span, name: &str, left: Expr) -> Expr {
