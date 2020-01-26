@@ -19,10 +19,12 @@
 *** DONE Eq
 *** DONE Seq
 *** DONE Typecheck
+** TODO allow arbitrary binary messages
+** TODO allow prefix message definitions
+- use %prefix_<selector> as the internal selector
+- "prefix method" to define
 ** TODO change Expr into a trait, and Expr objects into Box<dyn Expr>
 ** TODO reserved word for raising an error
-** TODO allow prefix message definitions
-** TODO allow arbitrary binary messages
 ** TODO fix links in bibliography
 ** TODO Dictionary class & syntax
 ** TODO interfaces -> allows default displayOn: and printOn: methods
