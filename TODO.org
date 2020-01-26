@@ -19,7 +19,7 @@
 * Post 0.1.0
 ** LATER change all Expr internals to be structs
 *** DONE Bind
-*** TODO Block
+*** DONE Block
 *** TODO Cascade
 *** TODO Chain
 *** TODO Const

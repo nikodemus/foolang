@@ -8,8 +8,8 @@ use crate::objects::{
     Vtable,
 };
 use crate::parse::{
-    Array, Assign, Bind, ClassDefinition, ClassExtension, Expr, Global, Import, Literal, Message,
-    Parser, Return, Var,
+    Array, Assign, Bind, Block, ClassDefinition, ClassExtension, Expr, Global, Import, Literal,
+    Message, Parser, Return, Var,
 };
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -286,7 +286,7 @@ impl Env {
             Array(array) => self.eval_array(array),
             Assign(assign) => self.eval_assign(assign),
             Bind(bind) => self.eval_bind(bind),
-            Block(_, params, body, rtype) => self.eval_block(params, body, rtype),
+            Block(block) => self.eval_block(block),
             Cascade(receiver, chains) => self.eval_cascade(receiver, chains),
             ClassDefinition(definition) => self.eval_class_definition(definition),
             ClassExtension(extension) => self.eval_class_extension(extension),
@@ -336,9 +336,9 @@ impl Env {
         }
     }
 
-    fn eval_block(&self, params: &Vec<Var>, body: &Expr, rtype: &Option<String>) -> Eval {
+    fn eval_block(&self, block: &Block) -> Eval {
         let mut args = vec![];
-        for p in params {
+        for p in &block.params {
             let vt = match &p.typename {
                 None => None,
                 Some(name) => {
@@ -347,7 +347,7 @@ impl Env {
             };
             args.push(Arg::new(p.span.clone(), p.name.clone(), vt));
         }
-        self.foo.make_closure(self.clone(), args, body.clone(), rtype)
+        self.foo.make_closure(self.clone(), args, (*block.body).clone(), &block.rtype)
     }
 
     fn eval_cascade(&self, receiver: &Box<Expr>, chains: &Vec<Vec<Message>>) -> Eval {

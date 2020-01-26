@@ -104,6 +104,32 @@ impl Bind {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Block {
+    pub span: Span,
+    pub params: Vec<Var>,
+    pub body: Box<Expr>,
+    pub rtype: Option<String>,
+}
+
+impl Block {
+    pub fn expr(span: Span, params: Vec<Var>, body: Box<Expr>, rtype: Option<String>) -> Expr {
+        Expr::Block(Block {
+            span,
+            params,
+            body,
+            rtype,
+        })
+    }
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.span.tweak(shift, extend);
+        for p in &mut self.params {
+            p.span.tweak(shift, extend);
+        }
+        self.body.tweak_span(shift, extend);
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct ClassDefinition {
     pub span: Span,
     pub name: String,
@@ -329,7 +355,7 @@ pub enum Expr {
     Array(Array),
     Assign(Assign),
     Bind(Bind),
-    Block(Span, Vec<Var>, Box<Expr>, Option<String>),
+    Block(Block),
     Cascade(Box<Expr>, Vec<Vec<Message>>),
     Chain(Box<Expr>, Vec<Message>),
     ClassDefinition(ClassDefinition),
@@ -417,7 +443,7 @@ impl Expr {
             Array(array) => &array.span,
             Assign(assign) => &assign.span,
             Bind(bind) => return bind.value.span(),
-            Block(span, ..) => span,
+            Block(block) => &block.span,
             Cascade(left, ..) => return left.span(),
             ClassDefinition(definition) => &definition.span,
             ClassExtension(extension) => &extension.span,
@@ -449,13 +475,7 @@ impl Expr {
             Array(array) => array.tweak_span(shift, extend),
             Assign(assign) => assign.tweak_span(shift, extend),
             Bind(bind) => bind.tweak_span(shift, extend),
-            Block(span, vars, body, _rtype) => {
-                span.tweak(shift, extend);
-                for var in vars {
-                    var.span.tweak(shift, extend);
-                }
-                body.tweak_span(shift, extend);
-            }
+            Block(block) => block.tweak_span(shift, extend),
             Cascade(receiver, chains) => {
                 receiver.tweak_span(shift, extend);
                 for chain in chains {
@@ -622,17 +642,17 @@ impl<'a> Parser<'a> {
                 Unwind::error_at(span, "Unterminated string interpolation.")
             }
             Err(unwind) => Err(unwind.shift_span(span.start)),
-            Ok(Expr::Block(mut blockspan, vars, body, rtype)) => {
-                blockspan.shift(span.start);
-                if !vars.is_empty() {
-                    return Unwind::error_at(blockspan, "Interpolated block has variables.");
+            Ok(Expr::Block(mut block)) => {
+                block.span.shift(span.start);
+                if !block.params.is_empty() {
+                    return Unwind::error_at(block.span, "Interpolated block has variables.");
                 }
-                if rtype.is_some() {
-                    return Unwind::error_at(blockspan, "Interpolated block has a return type.");
+                if block.rtype.is_some() {
+                    return Unwind::error_at(block.span, "Interpolated block has a return type.");
                 }
-                let mut expr = *body;
+                let mut expr = *block.body;
                 expr.shift_span(span.start);
-                return Ok((expr, blockspan.end));
+                return Ok((expr, block.span.end));
             }
             Ok(other) => {
                 let mut errspan = other.span();
@@ -1249,7 +1269,7 @@ fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     // Would be nice to be able to swap between [] and {} and
     // keep this function same,
     if end == Token::SIGIL && parser.slice() == "}" {
-        Ok(Expr::Block(start.start..parser.span().end, params, Box::new(body), rtype))
+        Ok(Block::expr(start.start..parser.span().end, params, Box::new(body), rtype))
     } else if end == Token::EOF {
         parser.eof_error("Unexpected EOF while pasing a block: expected } as block terminator")
     } else {
@@ -1719,7 +1739,7 @@ pub mod utils {
             p = end + 2;
             blockparams.push(Var::untyped(start..end, param.to_string()))
         }
-        Expr::Block(span, blockparams, Box::new(body), None)
+        Block::expr(span, blockparams, Box::new(body), None)
     }
 
     pub fn block_typed(span: Span, params: Vec<(&str, &str)>, body: Expr) -> Expr {
@@ -1731,7 +1751,7 @@ pub mod utils {
             p = end + 4 + param.1.len();
             blockparams.push(Var::typed(start..end, param.0.to_string(), param.1.to_string()));
         }
-        Expr::Block(span, blockparams, Box::new(body), None)
+        Block::expr(span, blockparams, Box::new(body), None)
     }
 
     pub fn binary(span: Span, name: &str, left: Expr, right: Expr) -> Expr {
