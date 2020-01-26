@@ -3,14 +3,15 @@
 #+DRAWERS: more example
 #+TODO: TODO WIP | DONE LATER
 
-* RELEASE 0.1.0
-** WIP one pass over contents of docs/ to collect TODOs here
+* Public release 0.1.0
+** DONE one pass over contents of docs/ to collect TODOs here
+** DONE allow comments inside classes (between methods)
+** TODO rewrite main README.md pointing to docs/ mainly.
 ** TODO method bodies end with a dot
 ** TODO printing block source code (non-pretty), for error-reporting
 ** TODO remove --ide from main.rs
 ** TODO document `is`
 ** TODO reserved word for raising an error
-** TODO allow comments inside classes (between methods)
 ** TODO allow prefix message definitions
 ** TODO allow arbitrary binary messages
 ** TODO prism syntax highlighting
@@ -28,3 +29,4 @@
 ** TODO devmode flag to parser to catch private sends
 ** TODO array[x] accessors
 ** TODO array slicing methods
+** TODO fix links in bibliography

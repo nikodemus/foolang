@@ -190,15 +190,22 @@ fn parse_method2() {
     let mut class = class(18..23, "Foo", vec![]);
     class.add_method(
         MethodKind::Instance,
-        method(52..58, "foo", vec![], unary(92..95, "bar", var(87..91, "self"))),
+        method(90..96, "foo", vec![], unary(130..133, "bar", var(125..129, "self"))),
     );
-    class.add_method(MethodKind::Instance, method(117..123, "bar", vec![], int(152..154, 42)));
+    class.add_method(
+        MethodKind::Instance,
+        method(240..246, "bar", vec![], int(275..277, 42))
+    );
     assert_eq!(
         parse_str(
             "
                  class Foo {}
+                     -- this is a foo
                      method foo
                         self bar
+                     ---
+                     this is a bar
+                     ---
                      method bar
                         42
                  end"

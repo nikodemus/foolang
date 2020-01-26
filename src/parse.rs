@@ -1365,6 +1365,9 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             }
             continue;
         }
+        if next == Token::COMMENT || next == Token::BLOCK_COMMENT {
+            continue;
+        }
         return parser.error("Expected method or end");
     }
     Ok(Expr::ClassDefinition(class))
