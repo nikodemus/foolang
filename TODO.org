@@ -6,7 +6,16 @@
 * Public release 0.1.0
 ** DONE one pass over contents of docs/ to collect TODOs here
 ** DONE allow comments inside classes (between methods)
-** TODO rewrite main README.md pointing to docs/ mainly.
+** DONE rewrite main README.md pointing to docs/ mainly.
+** WIP LATER change all Expr internals to be structs
+*** DONE Bind
+*** DONE Block
+*** TODO Cascade
+*** TODO Chain
+*** TODO Const
+*** TODO Eq
+*** TODO Seq
+*** TODO Typecheck
 ** TODO cleanup stale branches
 ** TODO reserved word for raising an error
 ** TODO allow prefix message definitions
@@ -16,16 +25,6 @@
 ** TODO interfaces -> allows default displayOn: and printOn: methods
 ** TODO rename --ide to --webrepl
 ** TODO organize foo/ -> foo/lang, foo/tests, foo/examples
-* Post 0.1.0
-** LATER change all Expr internals to be structs
-*** DONE Bind
-*** DONE Block
-*** TODO Cascade
-*** TODO Chain
-*** TODO Const
-*** TODO Eq
-*** TODO Seq
-*** TODO Typecheck
 ** LATER method bodies end with a dot
 ** LATER Character class
 ** LATER record syntax
