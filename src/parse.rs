@@ -174,6 +174,24 @@ impl Chain {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Const {
+    pub span: Span,
+    pub literal: Literal,
+}
+
+impl Const {
+    pub fn expr(span: Span, literal: Literal) -> Expr {
+        Expr::Const(Const {
+            span,
+            literal,
+        })
+    }
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.span.tweak(shift, extend);
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct ClassDefinition {
     pub span: Span,
     pub name: String,
@@ -404,7 +422,7 @@ pub enum Expr {
     Chain(Chain),
     ClassDefinition(ClassDefinition),
     ClassExtension(ClassExtension),
-    Const(Span, Literal),
+    Const(Const),
     Eq(Span, Box<Expr>, Box<Expr>),
     Global(Global),
     Import(Import),
@@ -490,7 +508,7 @@ impl Expr {
             Cascade(cascade) => return cascade.receiver.span(),
             ClassDefinition(definition) => &definition.span,
             ClassExtension(extension) => &extension.span,
-            Const(span, ..) => span,
+            Const(constant) => &constant.span,
             Eq(span, ..) => span,
             Global(global) => &global.span,
             Chain(chain) => return chain.receiver.span(),
@@ -521,6 +539,7 @@ impl Expr {
             Block(block) => block.tweak_span(shift, extend),
             Cascade(cascade) => cascade.tweak_span(shift, extend),
             Chain(chain) => chain.tweak_span(shift, extend),
+            Const(constant) => constant.tweak_span(shift, extend),
             ClassDefinition(class) => {
                 class.span.tweak(shift, extend);
                 for var in &mut class.instance_variables {
@@ -541,9 +560,6 @@ impl Expr {
                 for m in &mut ext.class_methods {
                     m.tweak_span(shift, extend);
                 }
-            }
-            Const(span, _literal) => {
-                span.tweak(shift, extend);
             }
             Eq(span, left, right) => {
                 span.tweak(shift, extend);
@@ -1077,7 +1093,7 @@ fn eof_suffix(parser: &Parser, _: Expr, _: PrecedenceFunction) -> Result<Expr, U
 }
 
 fn false_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    Ok(Expr::Const(parser.span(), Literal::Boolean(false)))
+    Ok(Const::expr(parser.span(), Literal::Boolean(false)))
 }
 
 fn identifier_precedence(parser: &Parser, span: Span) -> Result<usize, Unwind> {
@@ -1191,7 +1207,7 @@ fn paren_prefix(parser: &Parser) -> Result<Expr, Unwind> {
 }
 
 fn true_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    Ok(Expr::Const(parser.span(), Literal::Boolean(true)))
+    Ok(Const::expr(parser.span(), Literal::Boolean(true)))
 }
 
 fn typecheck_suffix(
@@ -1291,7 +1307,7 @@ fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     let (token, span3) = parser.lookahead()?;
     let body = if token == Token::SIGIL && parser.slice_at(span3) == "}" {
         // FIXME: Bogus source location
-        Expr::Const(0..0, Literal::Boolean(false))
+        Const::expr(0..0, Literal::Boolean(false))
     } else {
         parser.parse_seq()?
     };
@@ -1551,7 +1567,7 @@ fn number_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             Ok(i) => i,
             Err(_) => return parser.error("Malformed hexadecimal number"),
         };
-        Ok(Expr::Const(parser.span(), Literal::Integer(integer)))
+        Ok(Const::expr(parser.span(), Literal::Integer(integer)))
     }
     // Binary case
     else if slice.len() > 2 && ("0b" == &slice[0..2] || "0B" == &slice[0..2]) {
@@ -1559,7 +1575,7 @@ fn number_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             Ok(i) => i,
             Err(_) => return parser.error("Malformed binary number"),
         };
-        Ok(Expr::Const(parser.span(), Literal::Integer(integer)))
+        Ok(Const::expr(parser.span(), Literal::Integer(integer)))
     }
     // Decimal and float case
     else {
@@ -1574,13 +1590,13 @@ fn number_prefix(parser: &Parser) -> Result<Expr, Unwind> {
                     decimal = decimal * 10 + c.to_digit(10).unwrap() as i64;
                 } else {
                     match f64::from_str(slice) {
-                        Ok(f) => return Ok(Expr::Const(parser.span(), Literal::Float(f))),
+                        Ok(f) => return Ok(Const::expr(parser.span(), Literal::Float(f))),
                         Err(_) => return parser.error("Malformed number"),
                     }
                 }
             }
         }
-        Ok(Expr::Const(parser.span(), Literal::Integer(decimal)))
+        Ok(Const::expr(parser.span(), Literal::Integer(decimal)))
     }
 }
 
@@ -1596,7 +1612,7 @@ fn scan_string_part(parser: &Parser, span: Span) -> Result<Expr, Unwind> {
     let start = span.start;
     loop {
         match chars.next() {
-            None => return Ok(Expr::Const(span, Literal::String(res))),
+            None => return Ok(Const::expr(span, Literal::String(res))),
             Some((pos0, '\\')) => match chars.next() {
                 None => {
                     return Unwind::error_at(
@@ -1617,7 +1633,7 @@ fn scan_string_part(parser: &Parser, span: Span) -> Result<Expr, Unwind> {
                     )
                 }
             },
-            Some((pos, '{')) => return Ok(Expr::Const(start..start + pos, Literal::String(res))),
+            Some((pos, '{')) => return Ok(Const::expr(start..start + pos, Literal::String(res))),
             Some((_, c)) => res.push(c),
         }
     }
@@ -1659,7 +1675,7 @@ fn string_prefix(parser: &Parser) -> Result<Expr, Unwind> {
 
     // Append them all togather.
     let mut expr = match parts.pop() {
-        None => return Ok(Expr::Const(span, Literal::String("".to_string()))),
+        None => return Ok(Const::expr(span, Literal::String("".to_string()))),
         Some(part) => part,
     };
     while let Some(right) = parts.pop() {
@@ -1807,7 +1823,7 @@ pub mod utils {
     }
 
     pub fn boolean(span: Span, value: bool) -> Expr {
-        Expr::Const(span, Literal::Boolean(value))
+        Const::expr(span, Literal::Boolean(value))
     }
 
     pub fn class(span: Span, name: &str, instance_variables: Vec<&str>) -> Expr {
@@ -1821,11 +1837,11 @@ pub mod utils {
     }
 
     pub fn float(span: Span, value: f64) -> Expr {
-        Expr::Const(span, Literal::Float(value))
+        Const::expr(span, Literal::Float(value))
     }
 
     pub fn int(span: Span, value: i64) -> Expr {
-        Expr::Const(span, Literal::Integer(value))
+        Const::expr(span, Literal::Integer(value))
     }
 
     pub fn keyword(span: Span, name: &str, left: Expr, args: Vec<Expr>) -> Expr {
@@ -1856,7 +1872,7 @@ pub mod utils {
     }
 
     pub fn string(span: Span, value: &str) -> Expr {
-        Expr::Const(span, Literal::String(value.to_string()))
+        Const::expr(span, Literal::String(value.to_string()))
     }
 
     pub fn typecheck(span: Span, expr: Expr, typename: &str) -> Expr {

@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use crate::eval::{Binding, Env};
-use crate::parse::{ClassDefinition, ClassExtension, Expr, Literal, Parser, Var};
+use crate::parse::{ClassDefinition, ClassExtension, Const, Expr, Literal, Parser, Var};
 use crate::time::TimeInfo;
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -752,7 +752,7 @@ impl Foolang {
                 // be able to specify a different prelude. Meh.
                 env: self.prelude_env().unwrap(),
                 source: RefCell::new(String::new()),
-                expr: RefCell::new(Expr::Const(0..0, Literal::Boolean(false))),
+                expr: RefCell::new(Const::expr(0..0, Literal::Boolean(false))),
             })),
         }
     }

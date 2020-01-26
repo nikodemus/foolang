@@ -8,8 +8,8 @@ use crate::objects::{
     Vtable,
 };
 use crate::parse::{
-    Array, Assign, Bind, Block, Cascade, Chain, ClassDefinition, ClassExtension, Expr, Global,
-    Import, Literal, Message, Parser, Return, Var,
+    Array, Assign, Bind, Block, Cascade, Chain, ClassDefinition, ClassExtension, Const, Expr,
+    Global, Import, Literal, Message, Parser, Return, Var,
 };
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -290,7 +290,7 @@ impl Env {
             Cascade(cascade) => self.eval_cascade(cascade),
             ClassDefinition(definition) => self.eval_class_definition(definition),
             ClassExtension(extension) => self.eval_class_extension(extension),
-            Const(_, literal) => self.eval_literal(literal),
+            Const(constant) => self.eval_constant(constant),
             Eq(_, left, right) => self.eval_eq(left, right),
             Global(global) => self.eval_global(global),
             Import(import) => self.eval_import(import),
@@ -430,8 +430,8 @@ impl Env {
         }
     }
 
-    fn eval_literal(&self, literal: &Literal) -> Eval {
-        match literal {
+    fn eval_constant(&self, constant: &Const) -> Eval {
+        match &constant.literal {
             Literal::Boolean(value) => Ok(self.foo.make_boolean(*value)),
             Literal::Integer(value) => Ok(self.foo.make_integer(*value)),
             Literal::Float(value) => Ok(self.foo.make_float(*value)),

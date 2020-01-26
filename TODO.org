@@ -19,6 +19,7 @@
 *** TODO Eq
 *** TODO Seq
 *** TODO Typecheck
+** TODO change Expr into a trait, and Expr objects into Box<dyn Expr>
 ** TODO reserved word for raising an error
 ** TODO allow prefix message definitions
 ** TODO allow arbitrary binary messages
