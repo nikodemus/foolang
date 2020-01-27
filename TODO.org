@@ -20,6 +20,7 @@
 *** DONE Seq
 *** DONE Typecheck
 ** DONE allow arbitrary binary messages
+** DONE emacs syntax highlighting & indentation
 ** TODO allow prefix message definitions
 - use %prefix_<selector> as the internal selector
 - "prefix method" to define
@@ -34,7 +35,6 @@
 ** LATER record syntax
 ** LATER printing block source code (non-pretty), for error-reporting
 ** LATER devmode flag to parser to catch private sends
-** LATER emacs syntax highlighting & indentation
 ** LATER change string interpolation to use StringOutput
 ** LATER error source locations
 ** LATER backtraces

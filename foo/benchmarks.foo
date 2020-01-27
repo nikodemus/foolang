@@ -1,21 +1,20 @@
 class Benchmarks { benchmarks output clock }
 
-  class method output: output clock: clock full: full
-    self benchmarks: [ Benchmark emptyLoop: full,
-                       Benchmark factorial: full,
-                       Benchmark sumFloats: full,
-                       Benchmark ackermann: full,
-                       Benchmark fibonacci: full ]
-         output: output
-         clock: clock
+    class method output: output clock: clock full: full
+        self benchmarks: [ Benchmark emptyLoop: full,
+                           Benchmark factorial: full,
+                           Benchmark sumFloats: full,
+                           Benchmark ackermann: full,
+                           Benchmark fibonacci: full ]
+            output: output
+            clock: clock
 
-  method run
-    benchmarks do: { |benchmark|
-       benchmark
-       ; runWith: clock
-       ; reportTo: output
-    }
-
+    method run
+        benchmarks
+            do: { |benchmark|
+                  benchmark
+                      ; runWith: clock
+                      ; reportTo: output }
 end
 
 class Benchmark { name block userTime systemTime realTime }
@@ -28,98 +27,92 @@ class Benchmark { name block userTime systemTime realTime }
              realTime: False
 
 
-   method runWith: clock
-      let t0 = clock time.
-      let t1 = clock time.
-      block value.
-      let t2 = clock time.
-      let delta = (t2 - t1) - (t1 - t0).
-      userTime = delta user.
-      systemTime = delta system.
-      realTime = delta real
+    method runWith: clock
+        let t0 = clock time.
+        let t1 = clock time.
+        block value.
+        let t2 = clock time.
+        let delta = (t2 - t1) - (t1 - t0).
+        userTime = delta user.
+        systemTime = delta system.
+        realTime = delta real
 
-   method reportTo: output
-      output
-      ; print: name
-      ; print: ": "
-      ; print: userTime toString
-      ; print: ", "
-      ; print: systemTime toString
-      ; print: ", "
-      ; print: realTime toString
-      ; newline
+    method reportTo: output
+        output
+            ; print: name
+            ; print: ": "
+            ; print: userTime toString
+            ; print: ", "
+            ; print: systemTime toString
+            ; print: ", "
+            ; print: realTime toString
+            ; newline
 
-   class method sumFloats: full
-      let array = [].
-      let n = full ifTrue: { 150_000 } ifFalse: { 150 }.
-      1 to: n do: { |x| array push: x asFloat }.
-      Benchmark new: "SumFloats" is:
-      {
-        array inject: 0.0 into: { |sum each | sum + each }
-      }
+    class method sumFloats: full
+        let array = [].
+        let n = full ifTrue: { 150_000 } ifFalse: { 150 }.
+        1 to: n do: { |x| array push: x asFloat }.
+        Benchmark new: "SumFloats"
+            is: { array inject: 0.0 into: { |sum each | sum + each } }
 
-   class method factorial: full
-      Benchmark new: "Factorial" is: {
-         let res = 0.
-         let n = full ifTrue: { 2000 } ifFalse: { 2 }.
-         n times: { res = Factorial of: 20 }.
-         res
-      }
+    class method factorial: full
+        Benchmark new: "Factorial"
+                  is: { let res = 0.
+                        let n = full ifTrue: { 2000 } ifFalse: { 2 }.
+                        n times: { res = Factorial of: 20 }.
+                        res }
 
-   class method emptyLoop: full
-      Benchmark new: "EmptyLoop" is: {
-        let n = full ifTrue: { 600_000 } ifFalse: { 600 }.
-        n times: {}
-      }
+    class method emptyLoop: full
+        Benchmark new: "EmptyLoop"
+                  is: { let n = full ifTrue: { 600_000 } ifFalse: { 600 }.
+                        n times: {} }
 
-   class method ackermann: full
-      Benchmark new: "Ackermann" is: {
-         let n = full ifTrue: { 50 } ifFalse: { 1 }.
-         n times: { Ackermann m: 3 n: 2 }
-      }
+    class method ackermann: full
+        Benchmark new: "Ackermann"
+                  is: { let n = full ifTrue: { 50 } ifFalse: { 1 }.
+                        n times: { Ackermann m: 3 n: 2 } }
 
-   class method fibonacci: full
-      Benchmark new: "Fibonacci" is: {
-         let n = full ifTrue: { 21 } ifFalse: { 5 }.
-         Fibonacci of: n
-      }
+    class method fibonacci: full
+        Benchmark new: "Fibonacci" is: {
+            let n = full ifTrue: { 21 } ifFalse: { 5 }.
+            Fibonacci of: n
+        }
 
 end
 
 class Fibonacci {}
 
-   class method of: n
-      n < 2
-        ifTrue: { return 1 }.
-     (Fibonacci of: n - 1) + (Fibonacci of: n - 2)
-
+    class method of: n
+        n < 2
+            ifTrue: { return 1 }.
+        (Fibonacci of: n - 1) + (Fibonacci of: n - 2)
 end
 
 class Factorial {}
 
-   class method of: n
-      n < 2
-        ifTrue: { return n }.
-      n * (Factorial of: n - 1)
+    class method of: n
+        n < 2
+            ifTrue: { return n }.
+        n * (Factorial of: n - 1)
 
 end
 
 class Ackermann {}
 
-   class method m:m n:n
-      m == 0
-        ifTrue: { return n + 1 }.
-      n == 0
-        ifTrue: { return Ackermann m: m - 1 n: 1 }.
-     Ackermann m: m - 1 n: (Ackermann m: m n: n - 1)
+    class method m:m n:n
+        m == 0
+            ifTrue: { return n + 1 }.
+        n == 0
+            ifTrue: { return Ackermann m: m - 1 n: 1 }.
+        Ackermann m: m - 1 n: (Ackermann m: m n: n - 1)
 
 end
 
 class Main {}
-   class method run: command in: system
-      -- XXX: decide full/short based on command-line
-      let benchmarks = Benchmarks output: system output
-                                  clock: system clock
-                                  full: False.
-      benchmarks run
+    class method run: command in: system
+        -- XXX: decide full/short based on command-line
+        let benchmarks = Benchmarks output: system output
+                                    clock: system clock
+                                    full: False.
+        benchmarks run
 end
