@@ -89,14 +89,6 @@
    (let ((top (car stack)))
      (list (car top) (cdr top) (cdr stack) ctx))))
 
-(def-foolang-indent "exit list expr" (col base stack ctx)
-  (:after
-    (and (foolang--looking-at-nonterminated-expr)
-         (foolang--nesting-decreases-on-line)))
-  (:indent
-   (destructuring-bind (col . base) (pop stack)
-     (list (+ col foolang-indent-offset) base stack ctx))))
-
 (def-foolang-indent "enter list expr. or |...|" (col base stack ctx)
   (:after
     (and (foolang--nesting-increases-on-line)
@@ -210,7 +202,7 @@
 
 ;;;; Indentation engine
 
-(setq foolang--debug-indentation t)
+(setq foolang--debug-indentation nil)
 
 (defun foolang--note (control &rest args)
   (when foolang--debug-indentation
@@ -558,6 +550,26 @@ self _tryParse: source
                 self _tryParse: source
             }
         } whileFalse")
+
+(def-foolang-indent-test "body-indent-12"
+  "
+method readEvalPrint
+{
+-- Cascade just for fun.
+self; prompt; read; eval; print
+}
+onError: { |error context|
+_output println: \"ERROR: {error}\".
+_output println: context }"
+  "
+    method readEvalPrint
+        {
+            -- Cascade just for fun.
+            self; prompt; read; eval; print
+        }
+            onError: { |error context|
+                       _output println: \"ERROR: {error}\".
+                       _output println: context }")
 
 (def-foolang-indent-test "end-indent-1"
   "
