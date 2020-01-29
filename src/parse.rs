@@ -830,7 +830,7 @@ impl<'a> Parser<'a> {
     fn parse_prefix_syntax(&self, syntax: &Syntax) -> Result<Expr, Unwind> {
         match syntax {
             Syntax::General(prefix, _, _) => prefix(self),
-            Syntax::Operator(is_prefix, _, _) if *is_prefix => {
+            Syntax::Operator(_, _, _) => {
                 let operator = self.tokenstring();
                 let span = self.span();
                 Ok(self.parse_expr(PREFIX_PRECEDENCE)?.send(Message {
@@ -839,14 +839,13 @@ impl<'a> Parser<'a> {
                     args: vec![],
                 }))
             }
-            _ => self.error("Expected value or prefix operator"),
         }
     }
 
     fn parse_suffix_syntax(&self, syntax: &Syntax, left: Expr) -> Result<Expr, Unwind> {
         match syntax {
             Syntax::General(_, suffix, precedence) => suffix(self, left, *precedence),
-            Syntax::Operator(_, is_binary, precedence) if *is_binary => {
+            Syntax::Operator(_, _, precedence) => {
                 let operator = self.tokenstring();
                 Ok(left.send(Message {
                     span: self.span(),
@@ -854,7 +853,6 @@ impl<'a> Parser<'a> {
                     args: vec![self.parse_expr(*precedence)?],
                 }))
             }
-            _ => self.error("I don't understand"),
         }
     }
 

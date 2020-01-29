@@ -21,9 +21,7 @@
 *** DONE Typecheck
 ** DONE allow arbitrary binary messages
 ** DONE emacs syntax highlighting & indentation
-** TODO allow prefix message definitions
-- use %prefix_<selector> as the internal selector
-- "prefix method" to define
+** DONE allow prefix message definitions
 ** TODO change Expr into a trait, and Expr objects into Box<dyn Expr>
 ** TODO reserved word for raising an error
 ** TODO fix links in bibliography

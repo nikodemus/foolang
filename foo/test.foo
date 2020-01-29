@@ -68,12 +68,14 @@ class Floats {}
 end
 
 class Box { value }
-   method *** other
-     self value * other
-   method * other
-     self value * other
-   method + other
-     self value + other
+    method *** other
+        self value * other
+    method * other
+        self value * other
+    method + other
+        self value + other
+    method prefix-
+        - (self value)
 end
 
 class Main { assert }
@@ -82,12 +84,20 @@ class Main { assert }
        instance test
 
     method test
-       self testByteArrays.
-       self testFloats.
-       self testIntegers.
-       self testStringOutput.
-       self testPrecedence.
-       assert exit
+        self testByteArrays.
+        self testFloats.
+        self testIntegers.
+        self testStringOutput.
+        self testPrecedence.
+        self testPrefix.
+        assert exit
+
+    method testPrefix
+        assertForAll: (1 to: 10)
+        that: { |n|
+                let b = Box value: n.
+                -n == -b }
+        testing: "custom prefix method"
 
     method testPrecedence
        assert forAll: (2 to: 10)
