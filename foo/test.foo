@@ -93,7 +93,7 @@ class Main { assert }
         assert exit
 
     method testPrefix
-        assertForAll: (1 to: 10)
+        assert forAll: (1 to: 10)
         that: { |n|
                 let b = Box value: n.
                 -n == -b }
