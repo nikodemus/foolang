@@ -10,6 +10,7 @@
   (modify-syntax-entry ?\; "." table)
   (modify-syntax-entry ?. "." table)
   (modify-syntax-entry ?-  ". 12" table)
+  (modify-syntax-entry ?-  "_ 12" table)
   (modify-syntax-entry ?\n ">" table))
 
 ;; Done this way so it can be mutated on the fly for development
@@ -78,6 +79,14 @@
   (:indent
    (list 0 0 nil :toplevel)))
 
+(def-foolang-indent "expr exit list" (col base stack ctx)
+  (:after
+    (and (looking-at ".*\\w")
+         (foolang--nesting-decreases-on-line)))
+  (:indent
+   (let ((top (car stack)))
+     (list (car top) (cdr top) (cdr stack) ctx))))
+
 (def-foolang-indent "expr \\ exit list" (col base stack ctx)
   (:after
     (save-excursion
@@ -114,7 +123,16 @@
 
 (def-foolang-indent "method name" (col base stack ctx)
   (:after
-    (looking-at " *\\(class *\\)?method *\\w+ *$"))
+    (looking-at " *\\(class *\\)?method *\\w+\\s_* *$"))
+  (:indent
+   (list (+ col foolang-indent-offset)
+         (+ col foolang-indent-offset)
+         stack
+         :body)))
+
+(def-foolang-indent "method op arg" (col base stack ctx)
+  (:after
+    (looking-at " *\\(class *\\)?method *\\s_+ +\\w+ *$"))
   (:indent
    (list (+ col foolang-indent-offset)
          (+ col foolang-indent-offset)
@@ -202,7 +220,7 @@
 
 ;;;; Indentation engine
 
-(setq foolang--debug-indentation nil)
+(setq foolang--debug-indentation t)
 
 (defun foolang--note (control &rest args)
   (when foolang--debug-indentation
@@ -306,14 +324,15 @@
     (with-current-buffer (get-buffer "*foolang-indentation*")
       (end-of-buffer)
       (if (equal target result)
-          (progn (message "test %s ok" name)
-                 (insert "ok!"))
+          (progn (insert "ok!")
+                 (message "test %s ok" name))
         (insert "FAILED!\n")
         (insert "WANTED:\n")
         (insert target)
         (insert "\nGOT:\n")
         (insert result)
-        (setq foolang--indentation-test-failures t)))))
+        (setq foolang--indentation-test-failures t)
+        (message "test %s FAILED")))))
 
 (def-foolang-indent-test "class-indent-1"
   "
@@ -400,6 +419,14 @@ x + y"
   "
     method bar: x quux: y
         x + y")
+
+(def-foolang-indent-test "method-indent-5"
+  "
+method prefix-
+-(self value)"
+  "
+    method prefix-
+        -(self value)")
 
 (def-foolang-indent-test "body-indent-1"
   "
@@ -570,6 +597,22 @@ _output println: context }"
             onError: { |error context|
                        _output println: \"ERROR: {error}\".
                        _output println: context }")
+
+(def-foolang-indent-test "body-indent-13"
+  "
+method testPrefix
+assertForAll: (1 to: 10)
+that: { |n|
+let b = Box value: n.
+-n == -b }
+testing: \"custom prefix method\""
+  "
+    method testPrefix
+        assertForAll: (1 to: 10)
+        that: { |n|
+                let b = Box value: n.
+                -n == -b }
+        testing: \"custom prefix method\"")
 
 (def-foolang-indent-test "end-indent-1"
   "
