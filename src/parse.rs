@@ -999,7 +999,7 @@ fn make_token_table() -> TokenTable {
 const SEQ_PRECEDENCE: usize = 2;
 const PREFIX_PRECEDENCE: usize = 1000;
 
-const UNKNOWN_OPERATOR_SYNTAX: Syntax = Syntax::Operator(false, true, 10);
+const UNKNOWN_OPERATOR_SYNTAX: Syntax = Syntax::Operator(true, true, 10);
 
 fn make_name_table() -> NameTable {
     let mut table: NameTable = HashMap::new();
@@ -1248,10 +1248,8 @@ fn operator_precedence(parser: &Parser, span: Span) -> Result<usize, Unwind> {
 }
 
 fn operator_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    match parser.name_table.get(parser.slice()) {
-        Some(syntax) => parser.parse_prefix_syntax(syntax),
-        None => parser.error("Unknown predix operator"),
-    }
+    let syntax = parser.name_table.get(parser.slice()).unwrap_or(&UNKNOWN_OPERATOR_SYNTAX);
+    parser.parse_prefix_syntax(syntax)
 }
 
 fn operator_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Result<Expr, Unwind> {
@@ -1785,16 +1783,24 @@ fn parse_method(parser: &Parser) -> Result<MethodDefinition, Unwind> {
     let span = parser.span();
     let mut selector = String::new();
     let mut parameters = Vec::new();
+    let mut prefix = false;
     loop {
         let token = parser.next_token()?;
         selector.push_str(parser.slice());
         match token {
             Token::WORD => {
                 assert!(parameters.is_empty());
+                if "prefix" == &selector {
+                    prefix = true;
+                    continue;
+                }
                 break;
             }
             Token::SIGIL => {
                 assert!(parameters.is_empty());
+                if prefix {
+                    break;
+                }
                 if let Token::WORD = parser.next_token()? {
                     parameters.push(parse_var(parser)?);
                 } else {

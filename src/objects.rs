@@ -1091,7 +1091,7 @@ impl Object {
             },
             None if selector == "toString" => generic_to_string(self, args, env),
             None => {
-                // println!("known: {:?}", self.vtable.selectors());
+                println!("known: {:?}", self.vtable.selectors());
                 let not_understood = vec![env.foo.make_string(selector), env.foo.make_array(args)];
                 match self.vtable.get("perform:with:") {
                     Some(m) => match &*m {
