@@ -31,7 +31,8 @@
     4.6. Consume word characters. If consumed a dot earlier, return
          DOUBLE_FLOAT, otherwise DEC_INTEGER.
 
- 5. If at --- consume until --- and return BLOCK_COMMENT.
+ 5. If at --- consume until end of file or ---, and return
+    EOF or BLOCK_COMMENT, respectively.
 
  6. If at -- consume to end of line and return COMMENT.
 

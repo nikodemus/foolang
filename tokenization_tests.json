@@ -125,6 +125,9 @@
         " ---\nfoo\n---\nbar", [["BLOCK_COMMENT", "---\nfoo\n---"],
                                 ["WORD","bar"],["EOF"]]
     ],
+    [
+        "---\nfoo\n", [["EOF"]]
+    ],
     {
         "Rule 6": "Line comments"
     },

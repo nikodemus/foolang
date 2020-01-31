@@ -143,7 +143,11 @@ impl<'a> TokenStream<'a> {
             // println!("scan 5: block comment");
             let start = self.consume("---");
             while !self.at_str("---") {
-                self.next();
+                if self.at_eof() {
+                    return self.result(Token::EOF, self.len()..self.len());
+                } else {
+                    self.next();
+                }
             }
             self.consume("---");
             // println!("=> block comment");
