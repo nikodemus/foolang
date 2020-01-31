@@ -1,8 +1,0 @@
-site_name: "Foolang"
-
-theme:
-  name: 'readable'
-  highlightjs: False
-
-extra_css:
-  - 'stylesheets/extra.css'
