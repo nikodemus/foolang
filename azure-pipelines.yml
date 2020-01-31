@@ -28,3 +28,9 @@ steps:
     displayName: Cargo test
   - script: cargo test -- --ignored
     displayName: Cargo test ignored (large)
+  - script: sudo apt install -y emacs && emacs --version
+    displayName: Install Emacs
+    condition: eq( variables['Agent.OS'], 'Linux' )
+  - script: emacs -Q --script elisp/foolang.el
+    displayName: Test foolang.el
+    condition: eq( variables['Agent.OS'], 'Linux' )
