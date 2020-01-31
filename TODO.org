@@ -25,7 +25,13 @@
 ** TODO change Expr into a trait, and Expr objects into Box<dyn Expr>
 ** TODO reserved word for raising an error
 ** TODO fix links in bibliography
-** TODO Dictionary class & syntax
+** WIP Record & Dictionary class & syntax
+*** DONE syntax defined
+*** TODO Dictionary class: new, at:, put:at:, remove:, do:
+*** TODO Record class
+Record of: ["x", "y"] with: [1, 2]
+*** TODO Dictionary parsing and printing
+*** TODO Record parsing and printing
 ** TODO interfaces -> allows default displayOn: and printOn: methods
 ** TODO organize foo/ -> foo/lang, foo/tests, foo/examples
 ** LATER method bodies end with a dot

@@ -217,6 +217,31 @@ Blocks can take arguments:
 { |x y| x + y } value: 40 value: 2 --> 42
 ```
 
+## Records
+
+Records are objects that respond to messages corresponding to their
+fieldnames.
+
+``` foolang
+let value = 2.
+let coords = { x: value, y: value }.
+coords x: 40.
+coords x + coords y --> 42
+```
+
+!> It is likely record will change to immutable-by-default.
+
+## Dictionaries
+
+``` foolang
+let key = "foo".
+let value = "lang".
+let dict = { key -> value }.
+dict at: "foo" --> "lang"
+dict at: "foo" put: "Foolang".
+dict at: "foo" --> "Foolang".
+```
+
 ## Class Definitions
 
 ``` foolang
