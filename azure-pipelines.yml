@@ -5,7 +5,7 @@ strategy:
     mac-stable:
       imageName: 'macos-10.14'
     linux-stable:
-      imageName: 'ubuntu-16.04'
+      imageName: 'ubuntu-18.04'
 
 pool:
   vmImage: '$(imageName)'
@@ -28,7 +28,9 @@ steps:
     displayName: Cargo test
   - script: cargo test -- --ignored
     displayName: Cargo test ignored (large)
-  - script: sudo apt install -y emacs && emacs --version
+  - script: |
+      sudo add-apt-repository -y ppa:kelleyk/emacs
+      sudo apt-get install -y emacs26-nox
     displayName: Install Emacs
     condition: eq( variables['Agent.OS'], 'Linux' )
   - script: emacs -Q --script elisp/foolang.el
