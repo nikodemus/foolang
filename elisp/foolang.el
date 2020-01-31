@@ -22,6 +22,20 @@
   (make-local-variable 'foolang-indent-offset)
   (set (make-local-variable 'indent-line-function) 'foolang-indent-line))
 
+(font-lock-add-keywords
+ 'foolang-mode
+ '(("\\<class\\>" . font-lock-keyword-face)
+   ("\\<end\\>" . font-lock-keyword-face)
+   ("\\<method\\>" . font-lock-keyword-face)
+   ("\\<class\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
+   ("\\<import\\>" . font-lock-keyword-face)
+   ("\\<return\\>" . font-lock-keyword-face)
+   ("\\<is\\>" . font-lock-keyword-face)
+   ("\\<method\\s-+\\(\\w+\\)\\>" 1 font-lock-function-name-face)
+   ("\\<let\\s-+\\(\\w+\\)\\>" 1 font-lock-variable-name-face)
+   ("\\<\\(\\w+\\)\\s-*=" 1 font-lock-variable-name-face)
+   ("\\<\\w+:" . font-lock-function-name-face)))
+
 (add-to-list 'auto-mode-alist '("\\.foo" . foolang-mode))
 
 (defvar foolang-indent-offset 4)
@@ -32,7 +46,7 @@
   `(let ((rule (list
                 (lambda (,ctx) ,@(cdr (assoc :after body)))
                 (lambda (,col ,base ,stack ,ctx) ,@(cdr (assoc :indent body)))))
-        (old (assoc ,name foolang--indent-rules #'equal)))
+        (old (assoc-string ,name foolang--indent-rules)))
      (if old
          (setcdr old rule)
        (push (cons ,name rule) foolang--indent-rules))))
@@ -220,7 +234,7 @@
 
 ;;;; Indentation engine
 
-(setq foolang--debug-indentation t)
+(setq foolang--debug-indentation nil)
 
 (defun foolang--note (control &rest args)
   (when foolang--debug-indentation
@@ -304,6 +318,23 @@
                     (line-number-at-pos))
            (error nil)))))
 
+(defun foolang--nesting-increases-on-line ()
+  (save-excursion
+    (end-of-line)
+    (eql (line-number-at-pos)
+         (condition-case nil
+             (progn (backward-up-list)
+                    (line-number-at-pos))
+           (error nil)))))
+
+(defun foolang--line-length-to-here ()
+  (save-excursion
+    (- (current-column)
+       (progn (back-to-indentation) (current-column)))))
+
+(defun foolang--current-line ()
+  (substring-no-properties (thing-at-point 'line)))
+
 ;;;; Indentation testing
 
 (setq foolang--indentation-test-failures nil)
@@ -317,22 +348,25 @@
     (insert "\n--- " name " ---\n"))
   (lexical-let ((result (with-temp-buffer
                           (foolang-mode)
+                          (setq indent-tabs-mode nil)
                           (insert source)
                           (foolang-indent-all)
                           (end-of-buffer)
                           (buffer-substring-no-properties 1 (point)))))
     (with-current-buffer (get-buffer "*foolang-indentation*")
       (end-of-buffer)
-      (if (equal target result)
+      (if (string= target result)
           (progn (insert "ok!")
                  (message "test %s ok" name))
-        (insert "FAILED!\n")
-        (insert "WANTED:\n")
-        (insert target)
-        (insert "\nGOT:\n")
-        (insert result)
         (setq foolang--indentation-test-failures t)
-        (message "test %s FAILED")))))
+        (let ((p (point)))
+          (insert "FAILED!\n")
+          (insert "WANTED:\n")
+          (insert target)
+          (insert "\nGOT:\n")
+          (insert result)
+          (message "test %s FAILED:\n%s" name
+                   (buffer-substring-no-properties p (point))))))))
 
 (def-foolang-indent-test "class-indent-1"
   "
@@ -627,7 +661,7 @@ end")
 (with-current-buffer "*foolang-indentation*"
   (cond (foolang--indentation-test-failures
          (display-buffer "*foolang-indentation*")
-         (error "Foolang indentation tests failed!"))
+         (user-error "Foolang indentation tests failed!"))
         (t
          (kill-buffer)
          (message "Foolang tests ok!"))))
