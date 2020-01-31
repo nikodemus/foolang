@@ -22,6 +22,20 @@
   (make-local-variable 'foolang-indent-offset)
   (set (make-local-variable 'indent-line-function) 'foolang-indent-line))
 
+(font-lock-add-keywords
+ 'foolang-mode
+ '(("\\<class\\>" . font-lock-keyword-face)
+   ("\\<end\\>" . font-lock-keyword-face)
+   ("\\<method\\>" . font-lock-keyword-face)
+   ("\\<class\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
+   ("\\<import\\>" . font-lock-keyword-face)
+   ("\\<return\\>" . font-lock-keyword-face)
+   ("\\<is\\>" . font-lock-keyword-face)
+   ("\\<method\\s-+\\(\\w+\\)\\>" 1 font-lock-function-name-face)
+   ("\\<let\\s-+\\(\\w+\\)\\>" 1 font-lock-variable-name-face)
+   ("\\<\\(\\w+\\)\\s-*=" 1 font-lock-variable-name-face)
+   ("\\<\\w+:" . font-lock-function-name-face)))
+
 (add-to-list 'auto-mode-alist '("\\.foo" . foolang-mode))
 
 (defvar foolang-indent-offset 4)
