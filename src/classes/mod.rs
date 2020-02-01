@@ -9,6 +9,7 @@ pub mod input;
 pub mod integer;
 pub mod output;
 pub mod random;
+pub mod record;
 pub mod string;
 pub mod string_output;
 pub mod system;

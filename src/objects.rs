@@ -158,50 +158,6 @@ impl Arg {
     }
 }
 
-pub struct Array {
-    pub data: RefCell<Vec<Object>>,
-}
-
-impl PartialEq for Array {
-    fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self, other)
-    }
-}
-
-impl fmt::Debug for Array {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let data = self.data.borrow();
-        let mut buf = String::from("[");
-        if !data.is_empty() {
-            buf.push_str(format!("{:?}", &data[0]).as_str());
-            if data.len() > 1 {
-                for elt in &data[1..] {
-                    buf.push_str(format!(", {:?}", elt).as_str());
-                }
-            }
-        }
-        buf.push_str("]");
-        write!(f, "{}", buf)
-    }
-}
-
-impl fmt::Display for Array {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let data = self.data.borrow();
-        let mut buf = String::from("[");
-        if !data.is_empty() {
-            buf.push_str(format!("{}", &data[0]).as_str());
-            if data.len() > 1 {
-                for elt in &data[1..] {
-                    buf.push_str(format!(", {}", elt).as_str());
-                }
-            }
-        }
-        buf.push_str("]");
-        write!(f, "{}", buf)
-    }
-}
-
 #[derive(PartialEq)]
 pub struct Class {
     pub instance_vtable: Rc<Vtable>,
@@ -404,7 +360,7 @@ impl PartialEq for SceneNode {
 
 #[derive(PartialEq, Clone)]
 pub enum Datum {
-    Array(Rc<Array>),
+    Array(Rc<classes::array::Array>),
     Boolean(bool),
     ByteArray(Rc<classes::byte_array::ByteArray>),
     Class(Rc<Class>),
@@ -417,6 +373,7 @@ pub enum Datum {
     Integer(i64),
     Output(Rc<Output>),
     Random(Rc<classes::random::Random>),
+    Record(Rc<classes::record::Record>),
     String(Rc<String>),
     StringOutput(Rc<StringOutput>),
     // XXX: Null?
@@ -451,6 +408,8 @@ pub struct Foolang {
     pub output_vtable: Rc<Vtable>,
     pub random_class_vtable: Rc<Vtable>,
     pub random_vtable: Rc<Vtable>,
+    pub record_class_vtable: Rc<Vtable>,
+    pub record_vtable: Rc<Vtable>,
     pub string_class_vtable: Rc<Vtable>,
     pub string_output_class_vtable: Rc<Vtable>,
     pub string_output_vtable: Rc<Vtable>,
@@ -487,6 +446,7 @@ impl Foolang {
         env.define("Integer", Class::object(&self.integer_class_vtable, &self.integer_vtable));
         env.define("Output", Class::object(&self.output_class_vtable, &self.output_vtable));
         env.define("Random", Class::object(&self.random_class_vtable, &self.random_vtable));
+        env.define("Record", Class::object(&self.record_class_vtable, &self.record_vtable));
         env.define("String", Class::object(&self.string_class_vtable, &self.string_vtable));
         env.define(
             "StringOutput",
@@ -525,6 +485,8 @@ impl Foolang {
             output_vtable: Rc::new(classes::output::vtable()),
             random_class_vtable: Rc::new(classes::random::class_vtable()),
             random_vtable: Rc::new(classes::random::instance_vtable()),
+            record_class_vtable: Rc::new(classes::record::class_vtable()),
+            record_vtable: Rc::new(classes::record::instance_vtable()),
             string_class_vtable: Rc::new(classes::string::class_vtable()),
             string_output_class_vtable: Rc::new(classes::string_output::class_vtable()),
             string_output_vtable: Rc::new(classes::string_output::instance_vtable()),
@@ -643,12 +605,7 @@ impl Foolang {
     }
 
     pub fn into_array(&self, data: Vec<Object>) -> Object {
-        Object {
-            vtable: Rc::clone(&self.array_vtable),
-            datum: Datum::Array(Rc::new(Array {
-                data: RefCell::new(data),
-            })),
-        }
+        classes::array::into_array(self, data)
     }
 
     pub fn make_boolean(&self, x: bool) -> Object {
@@ -1013,8 +970,20 @@ impl Object {
         }
     }
 
+    pub fn as_array(&self, ctx: &str) -> Result<&classes::array::Array, Unwind> {
+        classes::array::as_array(self, ctx)
+    }
+
     pub fn as_byte_array(&self, ctx: &str) -> Result<&classes::byte_array::ByteArray, Unwind> {
         classes::byte_array::as_byte_array(self, ctx)
+    }
+
+    pub fn as_record(&self, ctx: &str) -> Result<&classes::record::Record, Unwind> {
+        classes::record::as_record(self, ctx)
+    }
+
+    pub fn as_random(&self, ctx: &str) -> Result<&classes::random::Random, Unwind> {
+        classes::random::as_random(self, ctx)
     }
 
     pub fn output(&self) -> Rc<Output> {
@@ -1022,10 +991,6 @@ impl Object {
             Datum::Output(output) => Rc::clone(output),
             _ => panic!("BUG: {:?} is not an Output", self),
         }
-    }
-
-    pub fn as_random(&self, ctx: &str) -> Result<&classes::random::Random, Unwind> {
-        classes::random::as_random(self, ctx)
     }
 
     pub fn string_output(&self) -> Rc<StringOutput> {
@@ -1091,16 +1056,11 @@ impl Object {
             },
             None if selector == "toString" => generic_to_string(self, args, env),
             None => {
-                println!("known: {:?}", self.vtable.selectors());
+                // println!("known: {:?}", self.vtable.selectors());
                 let not_understood = vec![env.foo.make_string(selector), env.foo.make_array(args)];
                 match self.vtable.get("perform:with:") {
                     Some(m) => match &*m {
-                        Method::Primitive(_method) => unimplemented!(
-                            "Dispatching to primitive perform:with: {:?} {} {:?}",
-                            self,
-                            selector,
-                            args
-                        ),
+                        Method::Primitive(method) => method(self, &not_understood, env),
                         Method::Interpreter(closure) => closure.apply(Some(self), &not_understood),
                         Method::Reader(index) => read_instance_variable(self, *index),
                     },
@@ -1156,6 +1116,7 @@ impl fmt::Display for Object {
             Datum::Integer(x) => write!(f, "{}", x),
             Datum::Output(output) => write!(f, "#<Output {}>", &output.name),
             Datum::Random(_) => write!(f, "#<Random>"),
+            Datum::Record(r) => write!(f, "{:?}", r),
             Datum::StringOutput(_output) => write!(f, "#<StringOutput>"),
             Datum::String(s) => write!(f, "{}", s),
             Datum::System(_) => write!(f, "#<System>"),

@@ -1,6 +1,79 @@
+use std::cell::{Ref, RefCell, RefMut};
+use std::fmt;
+use std::rc::Rc;
+
 use crate::eval::Env;
-use crate::objects::{Eval, Object, Vtable};
+use crate::objects::{Datum, Eval, Object, Vtable, Foolang};
 use crate::unwind::Unwind;
+
+pub struct Array {
+    pub data: RefCell<Vec<Object>>,
+}
+
+impl Array {
+    pub fn borrow(&self) -> Ref<Vec<Object>> {
+        self.data.borrow()
+    }
+    pub fn borrow_mut(&self) -> RefMut<Vec<Object>> {
+        self.data.borrow_mut()
+    }
+}
+
+impl PartialEq for Array {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self, other)
+    }
+}
+
+impl fmt::Debug for Array {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let data = self.data.borrow();
+        let mut buf = String::from("[");
+        if !data.is_empty() {
+            buf.push_str(format!("{:?}", &data[0]).as_str());
+            if data.len() > 1 {
+                for elt in &data[1..] {
+                    buf.push_str(format!(", {:?}", elt).as_str());
+                }
+            }
+        }
+        buf.push_str("]");
+        write!(f, "{}", buf)
+    }
+}
+
+impl fmt::Display for Array {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let data = self.data.borrow();
+        let mut buf = String::from("[");
+        if !data.is_empty() {
+            buf.push_str(format!("{}", &data[0]).as_str());
+            if data.len() > 1 {
+                for elt in &data[1..] {
+                    buf.push_str(format!(", {}", elt).as_str());
+                }
+            }
+        }
+        buf.push_str("]");
+        write!(f, "{}", buf)
+    }
+}
+
+pub fn as_array<'a>(obj: &'a Object, ctx: &str) -> Result<&'a Array, Unwind> {
+    match &obj.datum {
+        Datum::Array(ref array) => Ok(array),
+        _ => Unwind::error(&format!("{:?} is not a Array in {}", obj, ctx)),
+    }
+}
+
+pub fn into_array(foolang: &Foolang, data: Vec<Object>) -> Object {
+    Object {
+        vtable: Rc::clone(&foolang.array_vtable),
+        datum: Datum::Array(Rc::new(Array {
+            data: RefCell::new(data),
+        }))
+    }
+}
 
 pub fn class_vtable() -> Vtable {
     let vt = Vtable::new("class Array");

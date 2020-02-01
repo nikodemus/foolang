@@ -1340,11 +1340,43 @@ fn end_suffix(parser: &Parser, left: Expr, precedence: PrecedenceFunction) -> Re
     Ok(Seq::expr(exprs))
 }
 
-fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+fn parse_record(parser: &Parser) -> Result<Expr, Unwind> {
+    let start = parser.span().start;
+    let mut selector = String::new();
+    let mut args = Vec::new();
+    loop {
+        match parser.next_token()? {
+            Token::KEYWORD => {
+                selector.push_str(parser.slice());
+                args.push(parser.parse_expr(0)?);
+                match parser.next_token()? {
+                    Token::SIGIL if "," == parser.slice() => continue,
+                    Token::SIGIL if "}" == parser.slice() => break,
+                    _ => return parser.error("Malformed record")
+                }
+            }
+            Token::SIGIL if "}" == parser.slice() => break,
+            _ => return parser.error("Malformed record")
+        }
+    }
+    let end = parser.span().end;
+    // This kind of indicates I need a more felicitious representation
+    // in order to be able to reliably print back things without converting
+    // {x: 42} to Record x: 42 accidentally. (Or I need to not have this syntax).
+    Ok(Expr::Var(Var::untyped(0..0, "Record".to_string())).send(
+        Message {
+            span: start..end,
+            selector,
+            args
+        })
+    )
+}
+
+fn parse_block(parser: &Parser) -> Result<Expr, Unwind> {
     let start = parser.span();
     assert_eq!("{", parser.slice());
-    let (token, span) = parser.lookahead()?;
     let mut params = vec![];
+    let (token, span) = parser.lookahead()?;
     if token == Token::SIGIL && parser.slice_at(span) == "|" {
         parser.next_token()?;
         loop {
@@ -1383,6 +1415,18 @@ fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         parser.eof_error("Unexpected EOF while pasing a block: expected } as block terminator")
     } else {
         parser.error("Expected } as block terminator")
+    }
+}
+
+fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+    //
+    // { keyword: expr } --> Record
+    //
+    // { ... } -> Block
+    //
+    match parser.lookahead()? {
+        (Token::KEYWORD, _) => return parse_record(parser),
+        _ => return parse_block(parser)
     }
 }
 
