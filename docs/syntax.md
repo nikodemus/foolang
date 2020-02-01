@@ -105,12 +105,12 @@ Unary suffix message with selector `foo` and no arguments to object:
 object foo
 ```
 
-Binary message with selector `+` and argument y to x:
+Binary message with selector `+` and argument `y` to `x`:
 ``` foolang
 x + y
 ```
 
-Keyword message with selector "foo:bar:" and arguments 1 and 2 to object
+Keyword message with selector `foo:bar:` and arguments 1 and 2 to object
 ``` foolang
     object foo: 1 bar: 2
 ```
@@ -229,7 +229,7 @@ coords x: 40.
 coords x + coords y --> 42
 ```
 
-!> It is likely record will change to immutable-by-default.
+!> Records are currently immutable.
 
 ## Dictionaries
 
@@ -241,6 +241,8 @@ dict at: "foo" --> "lang"
 dict at: "foo" put: "Foolang".
 dict at: "foo" --> "Foolang".
 ```
+
+!> Dictionary syntax is not implemented.
 
 ## Class Definitions
 
