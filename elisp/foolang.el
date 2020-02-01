@@ -25,9 +25,11 @@
 (font-lock-add-keywords
  'foolang-mode
  '(("\\<class\\>" . font-lock-keyword-face)
+   ("\\<extend\\>" . font-lock-keyword-face)
    ("\\<end\\>" . font-lock-keyword-face)
    ("\\<method\\>" . font-lock-keyword-face)
    ("\\<class\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
+   ("\\<extend\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
    ("\\<import\\>" . font-lock-keyword-face)
    ("\\<return\\>" . font-lock-keyword-face)
    ("\\<is\\>" . font-lock-keyword-face)
@@ -93,18 +95,35 @@
   (:indent
    (list 0 0 nil :toplevel)))
 
+(def-foolang-indent "expr exit list." (col base stack ctx)
+  (:after
+    (and (looking-at ".*\\w")
+         (foolang--nesting-decreases-on-line)
+         (foolang--looking-at-terminated-line)))
+  (:indent
+   (beginning-of-line)
+   (let (top)
+     (while (foolang--exit-list-on-current-line)
+       (assert stack nil "expr exit list. => stack empty")
+       (setq top (pop stack)))
+     (list (cdr top) (cdr top) stack ctx))))
+
 (def-foolang-indent "expr exit list" (col base stack ctx)
   (:after
     (and (looking-at ".*\\w")
          (foolang--nesting-decreases-on-line)))
   (:indent
-   (let ((top (car stack)))
-     (list (car top) (cdr top) (cdr stack) ctx))))
+   (beginning-of-line)
+   (let (top)
+     (while (foolang--exit-list-on-current-line)
+       (assert stack nil "expr exit list. => stack empty")
+       (setq top (pop stack)))
+     (list (car top) (cdr top) stack ctx))))
 
 (def-foolang-indent "expr \\ exit list" (col base stack ctx)
   (:after
     (save-excursion
-      (when (foolang--looking-at-nonterminated-expr)
+      (when (not (foolang--looking-at-terminated-line))
         (next-line)
         (beginning-of-line)
         (looking-at " *[]})]"))))
@@ -115,13 +134,57 @@
 (def-foolang-indent "enter list expr. or |...|" (col base stack ctx)
   (:after
     (and (foolang--nesting-increases-on-line)
-         (or (foolang--looking-at-terminated-expr)
-             (looking-at ".*|[^|]*|\\s-*$"))))
+         (or (foolang--looking-at-terminated-line)
+             (save-excursion
+               (foolang--end-of-code-on-line)
+               (looking-at "|")))))
   (:indent
    (end-of-line)
    (backward-up-list)
    (let ((p (current-column)))
      (list (+ p 2) (+ p 2)
+           (cons (cons col base) stack)
+           ctx))))
+
+(def-foolang-indent "enter list expr name: expr \\ name:" (col base stack ctx)
+  (:after
+    (and (foolang--nesting-increases-on-line)
+         (not (foolang--looking-at-terminated-line))
+         (save-excursion
+           (when (condition-case nil (progn (down-list) t))
+             (looking-at ".+:\\s-*[^\n:]+\n\\(\n\\|\\s-\\)*\\w+:")))))
+  (:indent
+   (down-list)
+   (let ((p (current-column)))
+     (search-forward ":")
+     (backward-word)
+     (let ((q (current-column)))
+       (list q
+             (+ p 2)
+             (cons (cons col base) stack)
+             ctx)))))
+
+(def-foolang-indent "enter list \\" (col base stack ctx)
+  (:after
+    (save-excursion
+      (foolang--end-of-code-on-line)
+      (looking-at "[[{(]")))
+  (:indent
+   (list (+ col foolang-indent-offset)
+         (+ col foolang-indent-offset)
+         (cons (cons col base) stack)
+         ctx)))
+
+(def-foolang-indent "enter list expr" (col base stack ctx)
+  (:after
+    (and (foolang--nesting-increases-on-line)
+         (not (foolang--looking-at-terminated-line))))
+  (:indent
+   (end-of-line)
+   (backward-up-list)
+   (let ((p (current-column)))
+     (list (+ p 2 foolang-indent-offset)
+           (+ p 2)
            (cons (cons col base) stack)
            ctx))))
 
@@ -184,8 +247,11 @@
 (def-foolang-indent "in-body expr name: expr \\ name:" (col base stack ctx)
   (:after
     (when (eq :body ctx)
-      (and (foolang--looking-at-nonterminated-expr)
-           (looking-at "[^\n]+:\\s-*\\w[^\n:]++\n\\s-*\\w+:"))))
+      (and (not (foolang--looking-at-terminated-line))
+           (foolang--looking-at-keyword-message-eol)
+           (save-excursion
+             (next-line)
+             (foolang--looking-at-keyword-message-bol)))))
   (:indent
    (search-forward ":")
    (backward-word)
@@ -202,22 +268,32 @@
 (def-foolang-indent "; expr \\ ;" (col base stack ctx)
   (:after
     (when (eq :body ctx)
-      (and (foolang--looking-at-nonterminated-expr)
+      (and (not (foolang--looking-at-terminated-line))
            (looking-at "\\s-*;[^\n]*\n\\s-*;"))))
   (:indent
    (list col base stack ctx)))
 
+(def-foolang-indent "let name = expr" (col base stack ctx)
+  (:after
+    (when (eq :body ctx)
+      (and (not (foolang--looking-at-terminated-line))
+           (looking-at "\\s-*let\\s-+\\w+\\s-*=\\s-*\\S-+"))))
+  (:indent
+   (search-forward "=")
+   (let ((p (current-column)))
+     (list (+ (current-column) 1 foolang-indent-offset) base stack ctx))))
+
 (def-foolang-indent "expr" (col base stack ctx)
   (:after
     (when (eq :body ctx)
-      (foolang--looking-at-nonterminated-expr)))
+      (not (foolang--looking-at-terminated-line))))
   (:indent
    (list (+ col foolang-indent-offset) base stack ctx)))
 
 (def-foolang-indent "{ expr." (col base stack ctx)
   (:after
     (when (eq :body ctx)
-      (and (foolang--looking-at-terminated-expr)
+      (and (foolang--looking-at-terminated-line)
            (foolang--nesting-increases-on-line))))
   (:indent
    (end-of-line)
@@ -228,12 +304,14 @@
 (def-foolang-indent "expr." (col base stack ctx)
   (:after
     (when (eq :body ctx)
-      (foolang--looking-at-terminated-expr)))
+      (foolang--looking-at-terminated-line)))
   (:indent
    (list base base stack ctx)))
 
 ;;;; Indentation engine
 
+;; Like this so that I can just C-x C-e here to turn it on.
+(setq foolang--debug-indentation t)
 (setq foolang--debug-indentation nil)
 
 (defun foolang--note (control &rest args)
@@ -279,6 +357,7 @@
 (cl-defun foolang--compute-next-line-indent (col base stack ctx)
   (foolang--note "indent: '%s'" (foolang--current-line))
   (dolist (rule (reverse foolang--indent-rules))
+    (beginning-of-line)
     (if (funcall (second rule) ctx)
       (lexical-let ((indent (funcall (third rule) col base stack ctx)))
         (foolang--note "  => rule '%s' => %s" (first rule) indent)
@@ -302,11 +381,21 @@
 (defun foolang--top-of-buffer ()
   (eql 1 (line-number-at-pos)))
 
-(defun foolang--looking-at-nonterminated-expr ()
-  (looking-at ".*[^\\.,]\\s-*\\(--.*\\)?$"))
+(defun foolang--end-of-code-on-line ()
+  (beginning-of-line)
+  (let ((end (re-search-forward "--" (line-end-position) t)))
+    (if end
+        (goto-char (- end 3))
+      (end-of-line)
+      (when (and (looking-at "\n") (> (current-column) 0))
+        (backward-char))))
+  (while (looking-at "\\s-")
+    (backward-char)))
 
-(defun foolang--looking-at-terminated-expr ()
-  (looking-at ".*[\\.,]\\s-*\\(--.*\\)?$"))
+(defun foolang--looking-at-terminated-line ()
+  (save-excursion
+    (foolang--end-of-code-on-line)
+    (looking-at "[\\.,]")))
 
 (defun foolang--nesting-decreases-on-line ()
   (save-excursion
@@ -335,6 +424,55 @@
 (defun foolang--current-line ()
   (substring-no-properties (thing-at-point 'line)))
 
+(defun foolang--exit-list-on-current-line ()
+  (let* ((line (line-number-at-pos))
+         (p (condition-case nil
+                (save-excursion
+                  (backward-up-list)
+                  (forward-list)
+                  (when (eql line (line-number-at-pos))
+                    (point)))
+              (error nil))))
+    (when p
+      (goto-char p))))
+
+(defun foolang--skip-whitespace-left ()
+  (while (looking-at "[\n\t ]")
+    (backward-char)))
+
+(defun foolang--backward-expr ()
+  (interactive)
+  (foolang--skip-whitespace-left)
+  (while (looking-at ":")
+    (backward-char))
+  (cond ((looking-at "[]})]")
+         (backward-up-list)
+         (backward-char))
+        ((looking-at "\\w")
+         (while (looking-at "\\w")
+           (backward-char)))
+        ((looking-at "\\s_")
+         (while (looking-at "\\s_")
+           (backward-char))))
+  (foolang--skip-whitespace-left))
+
+(cl-defun foolang--looking-at-keyword-message-eol ()
+  (save-excursion
+    (foolang--end-of-code-on-line)
+    (unless (looking-at ":")
+      (let ((line (line-number-at-pos)))
+        (while (and (eql line (line-number-at-pos))
+                    (not (looking-at ":"))
+                    (> (point) 1))
+          (foolang--backward-expr))
+        (and (eql line (line-number-at-pos))
+             (looking-at ":"))))))
+
+(defun foolang--looking-at-keyword-message-bol ()
+  (save-excursion
+    (beginning-of-line)
+    (looking-at "\\s-*\\w+:")))
+
 ;;;; Indentation testing
 
 (setq foolang--indentation-test-failures nil)
@@ -342,31 +480,51 @@
 (with-current-buffer (get-buffer-create "*foolang-indentation*")
   (erase-buffer))
 
+(defun foolang--push-mark-around (old &optional loc nomsg activate)
+  (funcall old loc t activate))
+
+(advice-add 'push-mark :around 'foolang--push-mark-around)
+
 (cl-defmacro def-foolang-indent-test (name source target)
   (with-current-buffer (get-buffer-create "*foolang-indentation*")
     (end-of-buffer)
-    (insert "\n--- " name " ---\n"))
-  (lexical-let ((result (with-temp-buffer
-                          (foolang-mode)
-                          (setq indent-tabs-mode nil)
-                          (insert source)
-                          (foolang-indent-all)
-                          (end-of-buffer)
-                          (buffer-substring-no-properties 1 (point)))))
-    (with-current-buffer (get-buffer "*foolang-indentation*")
-      (end-of-buffer)
-      (if (string= target result)
-          (progn (insert "ok!")
-                 (message "test %s ok" name))
-        (setq foolang--indentation-test-failures t)
-        (let ((p (point)))
+    (let ((start (point)))
+      (insert "\n--- " name " ---\n")
+      (lexical-let ((result (with-temp-buffer
+                              (foolang-mode)
+                              (setq indent-tabs-mode nil)
+                              (insert source)
+                              (foolang-indent-all)
+                              (end-of-buffer)
+                              (buffer-substring-no-properties 1 (point)))))
+        (end-of-buffer)
+        (if (string= target result)
+            (progn (insert "ok!")
+                   (message "test %s ok" name))
+          (setq foolang--indentation-test-failures t)
           (insert "FAILED!\n")
           (insert "WANTED:\n")
           (insert target)
           (insert "\nGOT:\n")
           (insert result)
+          (lexical-let ((same nil))
+            (condition-case nil
+                (dotimes (i (length target))
+                  (if (string= (substring-no-properties target 0 i)
+                               (substring-no-properties result 0 i))
+                      (setq same i)
+                    (insert (format "\nFAIL: %S" i))
+                    (insert (format "\nDifference at %s: %S vs %S\n"
+                                    i (aref target (- i 1)) (aref result (- i 1))))
+                    (return)))
+              (error nil))
+            (insert (format "\nSame until char %s, target len=%s, result len=%s\n"
+                            same (length target) (length result)))
+            (when (and same (> same 0))
+              (insert "Identical part:\n")
+              (insert (substring-no-properties target 0 same))))
           (message "test %s FAILED:\n%s" name
-                   (buffer-substring-no-properties p (point))))))))
+                   (buffer-substring-no-properties start (point))))))))
 
 (def-foolang-indent-test "class-indent-1"
   "
@@ -413,6 +571,22 @@ b }"
   "
 class Foo { a
             b }")
+
+(def-foolang-indent-test "extend-indent-1"
+  "
+extend Foo
+method bar"
+  "
+extend Foo
+    method bar")
+
+(def-foolang-indent-test "extend-indent-2"
+  "
+extend Foo
+class method bar"
+  "
+extend Foo
+    class method bar")
 
 (def-foolang-indent-test "method-indent-1"
   "
@@ -648,6 +822,52 @@ testing: \"custom prefix method\""
                 -n == -b }
         testing: \"custom prefix method\"")
 
+(def-foolang-indent-test "body-indent-14"
+  "
+method check: cond on: x onSuccess: success onFailure: failure
+let res = { cond value: x }
+onError: { |e ctx|
+system output println: \"ERROR: {e}\".
+failure value }.
+res
+ifTrue: success
+ifFalse: failure"
+  "
+    method check: cond on: x onSuccess: success onFailure: failure
+        let res = { cond value: x }
+                      onError: { |e ctx|
+                                 system output println: \"ERROR: {e}\".
+                                 failure value }.
+        res
+            ifTrue: success
+            ifFalse: failure")
+
+(def-foolang-indent-test "body-indent-15"
+  "
+method forAll: generator that: cond testing: thing
+let n = 0.
+generator
+do: { |x| self check: cond on: x
+onSuccess: { n = n + 1 }
+onFailure: { system output
+println: \"! {thing} failed on: {x}\".
+fail = True.
+return False }}.
+system output println: \"  {thing} ok ({n} assertions)\".
+True"
+  "
+    method forAll: generator that: cond testing: thing
+        let n = 0.
+        generator
+            do: { |x| self check: cond on: x
+                           onSuccess: { n = n + 1 }
+                           onFailure: { system output
+                                            println: \"! {thing} failed on: {x}\".
+                                        fail = True.
+                                        return False }}.
+        system output println: \"  {thing} ok ({n} assertions)\".
+        True")
+
 (def-foolang-indent-test "end-indent-1"
   "
 method bar
@@ -657,6 +877,8 @@ end"
     method bar
         42
 end")
+
+(advice-remove 'push-mark 'foolang--push-mark-around)
 
 (with-current-buffer "*foolang-indentation*"
   (cond (foolang--indentation-test-failures
