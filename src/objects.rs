@@ -158,50 +158,6 @@ impl Arg {
     }
 }
 
-pub struct Array {
-    pub data: RefCell<Vec<Object>>,
-}
-
-impl PartialEq for Array {
-    fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self, other)
-    }
-}
-
-impl fmt::Debug for Array {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let data = self.data.borrow();
-        let mut buf = String::from("[");
-        if !data.is_empty() {
-            buf.push_str(format!("{:?}", &data[0]).as_str());
-            if data.len() > 1 {
-                for elt in &data[1..] {
-                    buf.push_str(format!(", {:?}", elt).as_str());
-                }
-            }
-        }
-        buf.push_str("]");
-        write!(f, "{}", buf)
-    }
-}
-
-impl fmt::Display for Array {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let data = self.data.borrow();
-        let mut buf = String::from("[");
-        if !data.is_empty() {
-            buf.push_str(format!("{}", &data[0]).as_str());
-            if data.len() > 1 {
-                for elt in &data[1..] {
-                    buf.push_str(format!(", {}", elt).as_str());
-                }
-            }
-        }
-        buf.push_str("]");
-        write!(f, "{}", buf)
-    }
-}
-
 #[derive(PartialEq)]
 pub struct Class {
     pub instance_vtable: Rc<Vtable>,
@@ -404,7 +360,7 @@ impl PartialEq for SceneNode {
 
 #[derive(PartialEq, Clone)]
 pub enum Datum {
-    Array(Rc<Array>),
+    Array(Rc<classes::array::Array>),
     Boolean(bool),
     ByteArray(Rc<classes::byte_array::ByteArray>),
     Class(Rc<Class>),
@@ -643,12 +599,7 @@ impl Foolang {
     }
 
     pub fn into_array(&self, data: Vec<Object>) -> Object {
-        Object {
-            vtable: Rc::clone(&self.array_vtable),
-            datum: Datum::Array(Rc::new(Array {
-                data: RefCell::new(data),
-            })),
-        }
+        classes::array::into_array(self, data)
     }
 
     pub fn make_boolean(&self, x: bool) -> Object {
@@ -1011,6 +962,10 @@ impl Object {
             }
             _ => Unwind::error(&format!("{:?} is not an Integer ({})", &self, ctx)),
         }
+    }
+
+    pub fn as_array(&self, ctx: &str) -> Result<&classes::array::Array, Unwind> {
+        classes::array::as_array(self, ctx)
     }
 
     pub fn as_byte_array(&self, ctx: &str) -> Result<&classes::byte_array::ByteArray, Unwind> {
