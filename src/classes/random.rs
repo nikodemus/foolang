@@ -1,3 +1,4 @@
+use std::hash::{Hash, Hasher};
 use crate::eval::Env;
 use crate::objects::{Datum, Eval, Object, Vtable};
 use crate::unwind::Unwind;
@@ -23,6 +24,14 @@ impl Random {
 impl PartialEq for Random {
     fn eq(&self, other: &Self) -> bool {
         std::ptr::eq(self, other)
+    }
+}
+
+impl Eq for Random {}
+
+impl Hash for Random {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self, state);
     }
 }
 

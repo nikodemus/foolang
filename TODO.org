@@ -29,12 +29,13 @@ Record x: 42 y: 10
 *** DONE Handle syntax in parser
 ** WIP Dictionaries
 *** DONE define syntax
-*** TODO Dictionary class: new, at:, put:at:, remove:, do:
+*** DONE Dictionary class: new, at:, put:at:, remove:, do:
 *** TODO Handle syntax in parser
 ** TODO change Expr into a trait, and Expr objects into Box<dyn Expr>
+** TODO expose Expr as Object
 ** TODO reserved word for raising an error
 ** TODO fix links in bibliography
-** TODO interfaces -> allows default displayOn: and printOn: methods
+** TODO interfaces -> default displayOn: and printOn: methods, etc
 ** TODO organize foo/ -> foo/lang, foo/tests, foo/examples
 ** TODO cleanups
 *** TODO rename string_as_str to as_str

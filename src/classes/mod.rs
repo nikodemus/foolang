@@ -4,6 +4,7 @@ pub mod byte_array;
 pub mod clock;
 pub mod closure;
 pub mod compiler;
+pub mod dictionary;
 pub mod float;
 pub mod input;
 pub mod integer;

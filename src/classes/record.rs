@@ -1,3 +1,4 @@
+use std::hash::{Hash, Hasher};
 use std::cell::{Ref, RefCell, RefMut};
 use std::fmt;
 use std::rc::Rc;
@@ -6,7 +7,6 @@ use std::collections::HashMap;
 use crate::eval::Env;
 use crate::unwind::Unwind;
 use crate::objects::{Datum, Eval, Object, Vtable};
-
 
 pub struct Record {
     data: RefCell<HashMap<String, Object>>
@@ -24,6 +24,14 @@ impl Record {
 impl PartialEq for Record {
     fn eq(&self, other: &Self) -> bool {
         std::ptr::eq(self, other)
+    }
+}
+
+impl Eq for Record {}
+
+impl Hash for Record {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self, state);
     }
 }
 
