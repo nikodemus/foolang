@@ -22,18 +22,23 @@
 ** DONE allow arbitrary binary messages
 ** DONE emacs syntax highlighting & indentation
 ** DONE allow prefix message definitions
+** DONE Records
+*** DONE define syntax
+*** DONE Record class
+Record x: 42 y: 10
+*** DONE Handle syntax in parser
+** WIP Dictionaries
+*** DONE define syntax
+*** TODO Dictionary class: new, at:, put:at:, remove:, do:
+*** TODO Handle syntax in parser
 ** TODO change Expr into a trait, and Expr objects into Box<dyn Expr>
 ** TODO reserved word for raising an error
 ** TODO fix links in bibliography
-** WIP Record & Dictionary class & syntax
-*** DONE syntax defined
-*** TODO Dictionary class: new, at:, put:at:, remove:, do:
-*** TODO Record class
-Record of: ["x", "y"] with: [1, 2]
-*** TODO Dictionary parsing and printing
-*** TODO Record parsing and printing
 ** TODO interfaces -> allows default displayOn: and printOn: methods
 ** TODO organize foo/ -> foo/lang, foo/tests, foo/examples
+** TODO cleanups
+*** TODO rename string_as_str to as_str
+** LATER indentation at the beginning of an empty line
 ** LATER method bodies end with a dot
 ** LATER Character class
 ** LATER record syntax

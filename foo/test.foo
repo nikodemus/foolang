@@ -22,6 +22,11 @@ class Assert { system fail }
       True
    method exit
       system exit: (fail ifTrue: { 1 } ifFalse: { 0 })
+   method true: block testing: thing
+       block value
+           ifTrue: { system output println: "  {thing} ok" }
+           ifFalse: { fail = True.
+                      system output println: "! {thing} failed" }
 end
 
 class TestArrays {}
@@ -90,7 +95,13 @@ class Main { assert }
         self testStringOutput.
         self testPrecedence.
         self testPrefix.
+        self testRecord.
         assert exit
+
+    method testRecord
+        assert true: { let r = {x: -10, y: 52}.
+                       r x + r y == 42 }
+               testing: "record creation and accessors"
 
     method testPrefix
         assert forAll: (1 to: 10)
