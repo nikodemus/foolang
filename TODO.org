@@ -31,14 +31,33 @@ Record x: 42 y: 10
 *** DONE define syntax
 *** DONE Dictionary class: new, at:, put:at:, remove:, do:
 *** TODO Handle syntax in parser
-** TODO change Expr into a trait, and Expr objects into Box<dyn Expr>
-** TODO expose Expr as Object
-** TODO reserved word for raising an error
-** TODO fix links in bibliography
+** TODO class library documentation
+*** TODO method docstrings: parse, add to methods
+method foo
+    -- Useful for getting an answer.
+    42
+method bar
+    ---
+    Sufficiently complex method to require a longer
+    docstring.
+    ---
+    1
+?
+class Foo {}
+    ---
+    General explanation on how to class and the following methods
+    work.
+    ---
+end
+*** TODO Class#help
 ** TODO interfaces -> default displayOn: and printOn: methods, etc
+** TODO fix links in bibliography
 ** TODO organize foo/ -> foo/lang, foo/tests, foo/examples
-** TODO cleanups
-*** TODO rename string_as_str to as_str
+** TODO reserved word for raising an error
+** LATER cleanups
+*** LATER rename string_as_str to as_str
+** LATER change Expr into a trait, and Expr objects into Box<dyn Expr>
+** LATER expose Expr as Object
 ** LATER indentation at the beginning of an empty line
 ** LATER method bodies end with a dot
 ** LATER Character class
