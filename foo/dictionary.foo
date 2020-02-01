@@ -1,0 +1,4 @@
+extend Dictionary
+    method displayOn: stream
+        stream print: self toString
+end

@@ -1,13 +1,28 @@
+use std::hash::{Hash, Hasher};
 use std::ops::Add;
 use std::ops::Sub;
 
 static mut START_TIME: Option<std::time::Instant> = None;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy)]
 pub struct TimeInfo {
     pub user: f64,
     pub system: f64,
     pub real: f64,
+}
+
+impl PartialEq for TimeInfo {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self, other)
+    }
+}
+
+impl Eq for TimeInfo {}
+
+impl Hash for TimeInfo {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self, state);
+    }
 }
 
 impl Add for TimeInfo {

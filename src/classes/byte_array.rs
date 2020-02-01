@@ -1,3 +1,4 @@
+use std::hash::{Hash, Hasher};
 use std::cell::{Ref, RefCell, RefMut};
 use std::fmt;
 use std::rc::Rc;
@@ -22,6 +23,14 @@ impl ByteArray {
 impl PartialEq for ByteArray {
     fn eq(&self, other: &Self) -> bool {
         std::ptr::eq(self, other)
+    }
+}
+
+impl Eq for ByteArray {}
+
+impl Hash for ByteArray {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self, state);
     }
 }
 

@@ -1,3 +1,4 @@
+use std::hash::{Hash, Hasher};
 use std::borrow::Borrow;
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
@@ -48,7 +49,13 @@ pub enum Method {
     Reader(usize),
 }
 
-#[derive(Debug, PartialEq)]
+impl PartialEq for Method {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self, other)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub struct Slot {
     pub index: usize,
     pub vtable: Option<Rc<Vtable>>,
@@ -126,19 +133,40 @@ impl fmt::Debug for Vtable {
 
 impl PartialEq for Vtable {
     fn eq(&self, other: &Self) -> bool {
-        self as *const _ == other as *const _
+        std::ptr::eq(self, other)
     }
 }
 
-#[derive(PartialEq, Clone)]
+impl Eq for Vtable {}
+
+impl Hash for Vtable {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self, state);
+    }
+}
+
+#[derive(PartialEq, Clone, Eq, Hash)]
 pub struct Object {
     pub vtable: Rc<Vtable>,
     pub datum: Datum,
 }
 
-#[derive(PartialEq)]
 pub struct System {
     pub output: Option<Object>,
+}
+
+impl PartialEq for System {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self, other)
+    }
+}
+
+impl Eq for System {}
+
+impl Hash for System {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self, state);
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -158,9 +186,22 @@ impl Arg {
     }
 }
 
-#[derive(PartialEq)]
 pub struct Class {
     pub instance_vtable: Rc<Vtable>,
+}
+
+impl PartialEq for Class {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self, other)
+    }
+}
+
+impl Eq for Class {}
+
+impl Hash for Class {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self, state);
+    }
 }
 
 impl Class {
@@ -174,13 +215,27 @@ impl Class {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct Closure {
     pub name: String,
     pub env: Env,
     pub params: Vec<Arg>,
     pub body: Expr,
     pub return_vtable: Option<Rc<Vtable>>,
+}
+
+impl PartialEq for Closure {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self, other)
+    }
+}
+
+impl Eq for Closure {}
+
+impl Hash for Closure {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self, state);
+    }
 }
 
 impl Closure {
@@ -229,13 +284,24 @@ impl Closure {
     }
 }
 
-// XXX: The interesting thing about this is that it doesn't give
-// access to the global environment... but I actually like that.
-#[derive(PartialEq)]
 pub struct Compiler {
     pub env: Env,
     pub source: RefCell<String>,
     pub expr: RefCell<Expr>,
+}
+
+impl PartialEq for Compiler {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self, other)
+    }
+}
+
+impl Eq for Compiler {}
+
+impl Hash for Compiler {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self, state);
+    }
 }
 
 pub struct Input {
@@ -246,7 +312,15 @@ pub struct Input {
 
 impl PartialEq for Input {
     fn eq(&self, other: &Self) -> bool {
-        self as *const _ == other as *const _
+        std::ptr::eq(self, other)
+    }
+}
+
+impl Eq for Input {}
+
+impl Hash for Input {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self, state);
     }
 }
 
@@ -286,9 +360,22 @@ impl Input {
     }
 }
 
-#[derive(PartialEq)]
 pub struct Instance {
     pub instance_variables: RefCell<Vec<Object>>,
+}
+
+impl PartialEq for Instance {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self, other)
+    }
+}
+
+impl Eq for Instance {}
+
+impl Hash for Instance {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self, state);
+    }
 }
 
 pub struct Output {
@@ -299,6 +386,14 @@ pub struct Output {
 impl PartialEq for Output {
     fn eq(&self, other: &Self) -> bool {
         std::ptr::eq(self, other)
+    }
+}
+
+impl Eq for Output {}
+
+impl Hash for Output {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self, state);
     }
 }
 
@@ -329,6 +424,15 @@ impl PartialEq for StringOutput {
         std::ptr::eq(self, other)
     }
 }
+
+impl Eq for StringOutput {}
+
+impl Hash for StringOutput {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self, state);
+    }
+}
+
 impl StringOutput {
     pub fn write(&self, text: &str) {
         self.contents.borrow_mut().push_str(text);
@@ -344,7 +448,15 @@ pub struct Window {
 
 impl PartialEq for Window {
     fn eq(&self, other: &Self) -> bool {
-        self as *const _ == other as *const _
+        std::ptr::eq(self, other)
+    }
+}
+
+impl Eq for Window {}
+
+impl Hash for Window {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self, state);
     }
 }
 
@@ -354,7 +466,15 @@ pub struct SceneNode {
 
 impl PartialEq for SceneNode {
     fn eq(&self, other: &Self) -> bool {
-        self as *const _ == other as *const _
+        std::ptr::eq(self, other)
+    }
+}
+
+impl Eq for SceneNode {}
+
+impl Hash for SceneNode {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self, state);
     }
 }
 
@@ -367,6 +487,7 @@ pub enum Datum {
     Clock,
     Closure(Rc<Closure>),
     Compiler(Rc<Compiler>),
+    Dictionary(Rc<classes::dictionary::Dictionary>),
     Float(f64),
     Input(Rc<Input>),
     Instance(Rc<Instance>),
@@ -384,6 +505,39 @@ pub enum Datum {
     SceneNode(Rc<SceneNode>),
 }
 
+impl Eq for Datum {}
+
+impl Hash for Datum {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        use Datum::*;
+        match self {
+            Array(x) => x.hash(state),
+            Boolean(x) => x.hash(state),
+            ByteArray(x) => x.hash(state),
+            Class(x) => x.hash(state),
+            Clock => 42.hash(state),
+            Closure(x) => x.hash(state),
+            Compiler(x) => x.hash(state),
+            Dictionary(x) => x.hash(state),
+            Float(x) => x.to_bits().hash(state),
+            Input(x) => x.hash(state),
+            Instance(x) => x.hash(state),
+            Integer(x) => x.hash(state),
+            Output(x) => x.hash(state),
+            Random(x) => x.hash(state),
+            Record(x) => x.hash(state),
+            String(x) => x.hash(state),
+            StringOutput(x) => x.hash(state),
+            // XXX: Null?
+            System(x) => x.hash(state),
+            Time(x) => x.hash(state),
+            // Kiss3D stuff
+            Window(x) => x.hash(state),
+            SceneNode(x) => x.hash(state),
+        }
+    }
+}
+
 #[derive(PartialEq, Debug, Clone)]
 pub struct Foolang {
     pub array_class_vtable: Rc<Vtable>,
@@ -398,6 +552,8 @@ pub struct Foolang {
     pub closure_vtable: Rc<Vtable>,
     pub compiler_class_vtable: Rc<Vtable>,
     pub compiler_vtable: Rc<Vtable>,
+    pub dictionary_class_vtable: Rc<Vtable>,
+    pub dictionary_vtable: Rc<Vtable>,
     pub float_class_vtable: Rc<Vtable>,
     pub float_vtable: Rc<Vtable>,
     pub input_class_vtable: Rc<Vtable>,
@@ -441,6 +597,7 @@ impl Foolang {
         env.define("Clock", Class::object(&self.clock_class_vtable, &self.clock_vtable));
         env.define("Closure", Class::object(&self.closure_class_vtable, &self.closure_vtable));
         env.define("Compiler", Class::object(&self.compiler_class_vtable, &self.compiler_vtable));
+        env.define("Dictionary", Class::object(&self.dictionary_class_vtable, &self.dictionary_vtable));
         env.define("Float", Class::object(&self.float_class_vtable, &self.float_vtable));
         env.define("Input", Class::object(&self.input_class_vtable, &self.input_vtable));
         env.define("Integer", Class::object(&self.integer_class_vtable, &self.integer_vtable));
@@ -475,6 +632,8 @@ impl Foolang {
             closure_vtable: Rc::new(classes::closure::vtable()),
             compiler_class_vtable: Rc::new(classes::compiler::class_vtable()),
             compiler_vtable: Rc::new(classes::compiler::instance_vtable()),
+            dictionary_class_vtable: Rc::new(classes::dictionary::class_vtable()),
+            dictionary_vtable: Rc::new(classes::dictionary::instance_vtable()),
             float_class_vtable: Rc::new(Vtable::new("class Float")),
             float_vtable: Rc::new(classes::float::vtable()),
             input_class_vtable: Rc::new(Vtable::new("class Input")),
@@ -978,6 +1137,10 @@ impl Object {
         classes::byte_array::as_byte_array(self, ctx)
     }
 
+    pub fn as_dictionary(&self, ctx: &str) -> Result<&classes::dictionary::Dictionary, Unwind> {
+        classes::dictionary::as_dictionary(self, ctx)
+    }
+
     pub fn as_record(&self, ctx: &str) -> Result<&classes::record::Record, Unwind> {
         classes::record::as_record(self, ctx)
     }
@@ -1104,6 +1267,7 @@ impl fmt::Display for Object {
             Datum::Clock => write!(f, "#<Clock>"),
             Datum::Closure(x) => write!(f, "#<closure {:?}>", x.params),
             Datum::Compiler(_) => write!(f, "#<Compiler>"),
+            Datum::Dictionary(_) => write!(f, "#<Dictionary>"),
             Datum::Float(x) => {
                 if x - x.floor() == 0.0 {
                     write!(f, "{}.0", x)

@@ -1,3 +1,4 @@
+use std::hash::{Hash, Hasher};
 use std::cell::{Ref, RefCell, RefMut};
 use std::fmt;
 use std::rc::Rc;
@@ -22,6 +23,14 @@ impl Array {
 impl PartialEq for Array {
     fn eq(&self, other: &Self) -> bool {
         std::ptr::eq(self, other)
+    }
+}
+
+impl Eq for Array {}
+
+impl Hash for Array {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self, state);
     }
 }
 
