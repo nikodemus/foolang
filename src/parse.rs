@@ -2005,3 +2005,19 @@ pub mod utils {
         Expr::Var(Var::untyped(span, name.to_string()))
     }
 }
+
+#[test]
+fn test_tokenstring_after_lookahead() {
+    let parser = Parser::new("foo bar", "dummy");
+    parser.next_token().unwrap();
+    parser.lookahead().unwrap();
+    assert_eq!("foo", &parser.tokenstring());
+}
+
+#[test]
+fn test_tokenstring_after_lookahead2() {
+    let parser = Parser::new("foo bar", "dummy");
+    parser.next_token().unwrap();
+    parser.lookahead2().unwrap();
+    assert_eq!("foo", &parser.tokenstring());
+}
