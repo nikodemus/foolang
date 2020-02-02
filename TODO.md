@@ -47,7 +47,9 @@ __Swamp of undifferentiated action points.__
 
 - [ ] Reflection via mirrors
 - [ ] narrower layout for examples on foolang.org to make it nicer on mobile
-- [ ] cleanup: rename string\_as\_str to as\_str.
+- [ ] cleanups
+  - [ ] rename string\_as\_str to as\_str
+  - [ ] cleanup: pass spans downwards by reference
 - [ ] change Expr into a trait, turn Expr objects into Box<dyn Expr>
 - [ ] expose Expr as Object to Foolang code
 - [ ] electric return in Foolang mode: go to correct indentation immediately
