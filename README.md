@@ -2,7 +2,7 @@
 
 [![Build Status](https://dev.azure.com/nikodemus0619/foolang/_apis/build/status/nikodemus.foolang?branchName=master)](https://dev.azure.com/nikodemus0619/foolang/_build/latest?definitionId=1&branchName=master) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[Main Foolang Website](http://foolang.org)
+The main [Foolang website](https://foolang.org) is https://foolang.org.
 
 ``` foolang
 class Main {}
@@ -10,3 +10,10 @@ class Main {}
         system output println: "Hello world!"
 end
 ```
+
+The project is currently not really set up for contributors, but if this is up
+your alley don't hesitate to get involved.
+
+The [TODO file](TODO.md) should be upto date, so if something there appeals to
+you... _but_ unless the item is super simple and obvious you're probably better
+off first being in touch to make sure we're on the same page.
