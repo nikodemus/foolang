@@ -1,7 +1,7 @@
-use std::hash::{Hash, Hasher};
 use crate::eval::Env;
 use crate::objects::{Datum, Eval, Object, Vtable};
 use crate::unwind::Unwind;
+use std::hash::{Hash, Hasher};
 
 use rand::prelude::*;
 

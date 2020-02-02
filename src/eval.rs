@@ -8,8 +8,8 @@ use crate::objects::{
     Vtable,
 };
 use crate::parse::{
-    Array, Assign, Bind, Block, Cascade, Chain, ClassDefinition, ClassExtension, Const, Eq, Expr,
-    Global, Import, Literal, Message, Parser, Return, Seq, Typecheck, Var,
+    Array, Assign, Bind, Block, Cascade, Chain, ClassDefinition, ClassExtension, Const, Dictionary,
+    Eq, Expr, Global, Import, Literal, Message, Parser, Return, Seq, Typecheck, Var,
 };
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -291,6 +291,7 @@ impl Env {
             ClassDefinition(definition) => self.eval_class_definition(definition),
             ClassExtension(extension) => self.eval_class_extension(extension),
             Const(constant) => self.eval_constant(constant),
+            Dictionary(dictionary) => self.eval_dictionary(dictionary),
             Eq(eq) => self.eval_eq(eq),
             Global(global) => self.eval_global(global),
             Import(import) => self.eval_import(import),
@@ -381,6 +382,10 @@ impl Env {
         }
         let class = self.find_class(&extension.name, extension.span.clone())?;
         class.extend_class(extension, self)
+    }
+
+    fn eval_dictionary(&self, dict: &Dictionary) -> Eval {
+        unimplemented!("eval_dictionary not implemented yet")
     }
 
     fn eval_eq(&self, eq: &Eq) -> Eval {

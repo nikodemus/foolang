@@ -1,15 +1,15 @@
-use std::hash::{Hash, Hasher};
 use std::cell::{Ref, RefCell, RefMut};
-use std::fmt;
-use std::rc::Rc;
 use std::collections::HashMap;
+use std::fmt;
+use std::hash::{Hash, Hasher};
+use std::rc::Rc;
 
 use crate::eval::Env;
-use crate::unwind::Unwind;
 use crate::objects::{Datum, Eval, Object, Vtable};
+use crate::unwind::Unwind;
 
 pub struct Record {
-    data: RefCell<HashMap<String, Object>>
+    data: RefCell<HashMap<String, Object>>,
 }
 
 impl Record {
@@ -80,7 +80,9 @@ fn class_record_perform_with(_receiver: &Object, args: &[Object], env: &Env) -> 
     }
     Ok(Object {
         vtable: env.foo.record_vtable.clone(),
-        datum: Datum::Record(Rc::new(Record { data: RefCell::new(data) }))
+        datum: Datum::Record(Rc::new(Record {
+            data: RefCell::new(data),
+        })),
     })
 }
 
@@ -90,7 +92,7 @@ fn record_perform_with(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     let selector = args[0].string_as_str();
     match data.get(selector) {
         Some(obj) => Ok(obj.clone()),
-        None => Unwind::message_error(receiver, selector, &args[1..2])
+        None => Unwind::message_error(receiver, selector, &args[1..2]),
     }
 }
 

@@ -191,7 +191,23 @@ impl Const {
     }
 }
 
-// Span, Box<Expr>, Box<Expr>),
+#[derive(Debug, PartialEq, Clone)]
+pub struct Dictionary {
+    pub span: Span,
+    pub assoc: Vec<(Expr, Expr)>,
+}
+
+impl Dictionary {
+    pub fn expr(span: Span, assoc: Vec<(Expr, Expr)>) -> Expr {
+        Expr::Dictionary(Dictionary {
+            span,
+            assoc,
+        })
+    }
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.span.tweak(shift, extend);
+    }
+}
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Eq {
@@ -488,6 +504,7 @@ pub enum Expr {
     ClassDefinition(ClassDefinition),
     ClassExtension(ClassExtension),
     Const(Const),
+    Dictionary(Dictionary),
     Eq(Eq),
     Global(Global),
     Import(Import),
@@ -573,6 +590,7 @@ impl Expr {
             Cascade(cascade) => return cascade.receiver.span(),
             ClassDefinition(definition) => &definition.span,
             ClassExtension(extension) => &extension.span,
+            Dictionary(dictionary) => &dictionary.span,
             Const(constant) => &constant.span,
             Eq(eq) => &eq.span,
             Global(global) => &global.span,
@@ -605,6 +623,7 @@ impl Expr {
             Cascade(cascade) => cascade.tweak_span(shift, extend),
             Chain(chain) => chain.tweak_span(shift, extend),
             Const(constant) => constant.tweak_span(shift, extend),
+            Dictionary(dictionary) => dictionary.tweak_span(shift, extend),
             Eq(eq) => eq.tweak_span(shift, extend),
             Seq(seq) => seq.tweak_span(shift, extend),
             Typecheck(typecheck) => typecheck.tweak_span(shift, extend),
@@ -887,6 +906,10 @@ impl<'a> Parser<'a> {
         self.state.borrow().span.clone()
     }
 
+    pub fn slice(&self) -> &str {
+        &self.source[self.span()]
+    }
+
     pub fn at_eof(&self) -> bool {
         if let Ok((Token::EOF, _)) = self.lookahead() {
             return true;
@@ -927,10 +950,6 @@ impl<'a> Parser<'a> {
         self.next_token()?;
         self.next_token()?;
         Ok(Some(point..span2.end))
-    }
-
-    pub fn slice(&self) -> &str {
-        &self.source[self.span()]
     }
 
     pub fn slice_at(&self, span: Span) -> &str {
@@ -1013,6 +1032,7 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, "extend", extend_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "import", import_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ",", invalid_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "->", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "defaultConstructor", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "method", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "end", invalid_prefix, end_suffix, precedence_1);
@@ -1356,30 +1376,63 @@ fn parse_record(parser: &Parser) -> Result<Expr, Unwind> {
                 match parser.next_token()? {
                     Token::SIGIL if "," == parser.slice() => continue,
                     Token::SIGIL if "}" == parser.slice() => break,
-                    _ => return parser.error("Malformed record")
+                    _ => return parser.error("Malformed record"),
                 }
             }
             Token::SIGIL if "}" == parser.slice() => break,
-            _ => return parser.error("Malformed record")
+            _ => return parser.error("Malformed record"),
         }
     }
     let end = parser.span().end;
     // This kind of indicates I need a more felicitious representation
     // in order to be able to reliably print back things without converting
     // {x: 42} to Record x: 42 accidentally. (Or I need to not have this syntax).
-    Ok(Expr::Var(Var::untyped(0..0, "Record".to_string())).send(
-        Message {
-            span: start..end,
-            selector,
-            args
-        })
-    )
+    Ok(Expr::Var(Var::untyped(0..0, "Record".to_string())).send(Message {
+        span: start..end,
+        selector,
+        args,
+    }))
 }
 
-fn parse_block(parser: &Parser) -> Result<Expr, Unwind> {
+fn parse_dictionary(parser: &Parser, start: Span, mut key: Expr) -> Result<Expr, Unwind> {
+    let mut assoc = Vec::new();
+    loop {
+        if "->" != parser.slice() {
+            return parser.error(&format!("Expected ->, got {}", parser.slice()));
+        }
+        assoc.push((key, parser.parse_expr(0)?));
+        match parser.next_token()? {
+            Token::SIGIL if "}" == parser.slice() => {
+                break;
+            }
+            Token::SIGIL if "," == parser.slice() => {
+                match parser.lookahead()? {
+                    // Handle trailing comma
+                    (Token::SIGIL, span) if "}" == parser.slice_at(span.clone()) => {
+                        parser.next_token()?;
+                        break;
+                    }
+                    _ => {
+                        key = parser.parse_expr(0)?;
+                        println!("key: {:?}", &key);
+                        parser.next_token()?;
+                    }
+                }
+            }
+            _ => return parser.error("Expected ',' or '}'"),
+        }
+    }
+    Ok(Dictionary::expr(start.start..parser.span().end, assoc))
+}
+
+fn parse_block_or_dictionary(parser: &Parser) -> Result<Expr, Unwind> {
     let start = parser.span();
     assert_eq!("{", parser.slice());
+    //
+    // Blocks only (if any of this happens, we're in a block)
+    //
     let mut params = vec![];
+    let mut rtype = None;
     let (token, span) = parser.lookahead()?;
     if token == Token::SIGIL && parser.slice_at(span) == "|" {
         parser.next_token()?;
@@ -1395,20 +1448,33 @@ fn parse_block(parser: &Parser) -> Result<Expr, Unwind> {
             return parser.error("Not valid as block parameter");
         }
     }
-    let (token, span2) = parser.lookahead()?;
-    let rtype = if token == Token::SIGIL && parser.slice_at(span2) == "->" {
+    let (token, span) = parser.lookahead()?;
+    if token == Token::SIGIL && parser.slice_at(span) == "->" {
         parser.next_token()?;
-        Some(parse_type_designator(parser)?)
+        rtype = Some(parse_type_designator(parser)?);
+    }
+    //
+    // Moment of truth!
+    //
+    let (token, span) = parser.lookahead()?;
+    let body = if token == Token::SIGIL && parser.slice_at(span.clone()) == "}" {
+        Const::expr(start.start..span.end, Literal::Boolean(false))
     } else {
-        None
+        let expr = parser.parse_seq()?;
+        let (token, span) = parser.lookahead()?;
+        if token == Token::SIGIL && "->" == parser.slice_at(span) {
+            if !params.is_empty() || rtype.is_some() {
+                return parser.error("Neither block nor dictionary");
+            }
+            parser.next_token()?;
+            return parse_dictionary(parser, start, expr);
+        } else {
+            expr
+        }
     };
-    let (token, span3) = parser.lookahead()?;
-    let body = if token == Token::SIGIL && parser.slice_at(span3) == "}" {
-        // FIXME: Bogus source location
-        Const::expr(0..0, Literal::Boolean(false))
-    } else {
-        parser.parse_seq()?
-    };
+    //
+    // If we're still here we're in a block
+    //
     let end = parser.next_token()?;
     // FIXME: hardcoded {
     // Would be nice to be able to swap between [] and {} and
@@ -1424,13 +1490,14 @@ fn parse_block(parser: &Parser) -> Result<Expr, Unwind> {
 
 fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     //
-    // { keyword: expr } --> Record
+    // { keyword: ... } --> Record
     //
-    // { ... } -> Block
+    // Otherwise either Block or Dictionary. Easier to diverge
+    // later than figure out up front.
     //
-    match parser.lookahead()? {
-        (Token::KEYWORD, _) => return parse_record(parser),
-        _ => return parse_block(parser)
+    match parser.lookahead() {
+        Ok((Token::KEYWORD, _)) => parse_record(parser),
+        _ => parse_block_or_dictionary(parser),
     }
 }
 
@@ -2032,10 +2099,7 @@ fn test_parser_error_after_lookahead() {
     parser.next_token().unwrap();
     parser.lookahead().unwrap();
     let err: Result<(), Unwind> = Unwind::error_at(0..3, "oops");
-    assert_eq!(
-        err,
-        parser.error("oops")
-    );
+    assert_eq!(err, parser.error("oops"));
 }
 
 #[test]
@@ -2044,8 +2108,5 @@ fn test_parser_error_after_lookahead2() {
     parser.next_token().unwrap();
     parser.lookahead2().unwrap();
     let err: Result<(), Unwind> = Unwind::error_at(0..3, "oops");
-    assert_eq!(
-        err,
-        parser.error("oops")
-    );
+    assert_eq!(err, parser.error("oops"));
 }

@@ -1,15 +1,15 @@
-use std::hash::{Hash, Hasher};
 use std::cell::{Ref, RefCell, RefMut};
-use std::fmt;
-use std::rc::Rc;
 use std::collections::HashMap;
+use std::fmt;
+use std::hash::{Hash, Hasher};
+use std::rc::Rc;
 
 use crate::eval::Env;
-use crate::unwind::Unwind;
 use crate::objects::{Datum, Eval, Object, Vtable};
+use crate::unwind::Unwind;
 
 pub struct Dictionary {
-    data: RefCell<HashMap<Object, Object>>
+    data: RefCell<HashMap<Object, Object>>,
 }
 
 impl Dictionary {
@@ -75,19 +75,23 @@ fn class_dictionary_new(_receiver: &Object, _args: &[Object], env: &Env) -> Eval
     let data = RefCell::new(HashMap::new());
     Ok(Object {
         vtable: env.foo.dictionary_vtable.clone(),
-        datum: Datum::Dictionary(Rc::new(Dictionary { data }))
+        datum: Datum::Dictionary(Rc::new(Dictionary {
+            data,
+        })),
     })
 }
 
 fn dictionary_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     match receiver.as_dictionary("in Dictionary#at:")?.borrow().get(&args[0]) {
         Some(obj) => Ok(obj.clone()),
-        None => Ok(env.foo.make_boolean(false))
+        None => Ok(env.foo.make_boolean(false)),
     }
 }
 
 fn dictionary_put_at(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
-    receiver.as_dictionary("in Dictionary#put:at:")?.borrow_mut().insert(
-        args[1].clone(), args[0].clone());
+    receiver
+        .as_dictionary("in Dictionary#put:at:")?
+        .borrow_mut()
+        .insert(args[1].clone(), args[0].clone());
     Ok(receiver.clone())
 }
