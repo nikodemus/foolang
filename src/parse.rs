@@ -670,14 +670,14 @@ pub struct ParserState<'a> {
 }
 
 impl<'a> ParserState<'a> {
-    fn scan(&mut self) -> Result<(Token, Span), Unwind> {
+    fn _scan(&mut self) -> Result<(Token, Span), Unwind> {
         let token = self.tokenstream.scan()?;
         Ok((token, self.tokenstream.span()))
     }
 
     fn next_token(&mut self) -> Result<Token, Unwind> {
         let (token, span) = if self.lookahead.is_empty() {
-            self.scan()?
+            self._scan()?
         } else {
             self.lookahead.pop_front().unwrap()
         };
@@ -687,18 +687,22 @@ impl<'a> ParserState<'a> {
 
     fn lookahead(&mut self) -> Result<(Token, Span), Unwind> {
         if self.lookahead.is_empty() {
-            let look = self.scan()?;
+            let look = self._scan()?;
             self.lookahead.push_back(look);
         }
-        Ok(self.lookahead.front().unwrap().clone())
+        Ok(self.lookahead.get(0).unwrap().clone())
     }
 
     fn lookahead2(&mut self) -> Result<((Token, Span), (Token, Span)), Unwind> {
         while self.lookahead.len() < 2 {
-            let look = self.scan()?;
+            let look = self._scan()?;
             self.lookahead.push_back(look);
         }
         Ok((self.lookahead.get(0).unwrap().clone(), self.lookahead.get(1).unwrap().clone()))
+    }
+
+    fn tokenstring(&self) -> String {
+        self.tokenstream.slice_at(self.span.clone()).to_string()
     }
 }
 
@@ -875,6 +879,14 @@ impl<'a> Parser<'a> {
         self.state.borrow_mut().next_token()
     }
 
+    pub fn tokenstring(&self) -> String {
+        self.state.borrow().tokenstring()
+    }
+
+    pub fn span(&self) -> Span {
+        self.state.borrow().span.clone()
+    }
+
     pub fn at_eof(&self) -> bool {
         if let Ok((Token::EOF, _)) = self.lookahead() {
             return true;
@@ -917,20 +929,12 @@ impl<'a> Parser<'a> {
         Ok(Some(point..span2.end))
     }
 
-    pub fn span(&self) -> Span {
-        self.state.borrow().span.clone()
-    }
-
     pub fn slice(&self) -> &str {
         &self.source[self.span()]
     }
 
     pub fn slice_at(&self, span: Span) -> &str {
         &self.source[span]
-    }
-
-    pub fn tokenstring(&self) -> String {
-        self.state.borrow().tokenstream.tokenstring()
     }
 
     pub fn eof_error<T>(&self, problem: &str) -> Result<T, Unwind> {
