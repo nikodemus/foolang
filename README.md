@@ -14,6 +14,7 @@ end
 The project is currently not really set up for contributors, but if this is up
 your alley don't hesitate to get involved.
 
-The [TODO file](TODO.md) should be upto date, so if something there appeals to
-you... _but_ unless the item is super simple and obvious you're probably better
-off first being in touch to make sure we're on the same page.
+Check out [projects](https://github.com/nikodemus/foolang/projects) to see
+what's currently scoped. If something there appeals to you, PRs are super
+welcome&mdash;_but_ unless the item is super simple and obvious you're probably
+better off first being in touch to make sure we're on the same page.
