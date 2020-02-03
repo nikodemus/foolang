@@ -96,19 +96,29 @@ class Main { assert }
         self testPrecedence.
         self testPrefix.
         self testRecord.
+        self testDictionary.
         assert exit
+
+    method testDictionary
+        assert true: { let d = { 1 + 1 + 40 -> "the" append: "Answer" }.
+                       (d at: 42) == "theAnswer" }
+               testing: "dictionary syntax and accessor".
+        assert true: { let d = Dictionary new.
+                       d put: "foo" at: "bar".
+                       (d at: "bar") == "foo" }
+               testing: "dictionary new and put:at:"
 
     method testRecord
         assert true: { let r = {x: -10, y: 52}.
                        r x + r y == 42 }
-               testing: "record creation and accessors"
+               testing: "record creation and accessors".
 
     method testPrefix
         assert forAll: (1 to: 10)
-        that: { |n|
-                let b = Box value: n.
-                -n == -b }
-        testing: "custom prefix method"
+               that: { |n|
+                       let b = Box value: n.
+                       -n == -b }
+               testing: "custom prefix method"
 
     method testPrecedence
        assert forAll: (2 to: 10)

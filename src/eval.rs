@@ -384,8 +384,18 @@ impl Env {
         class.extend_class(extension, self)
     }
 
-    fn eval_dictionary(&self, dict: &Dictionary) -> Eval {
-        unimplemented!("eval_dictionary not implemented yet")
+    fn eval_dictionary(&self, dictionary: &Dictionary) -> Eval {
+        //
+        // We _could_ represent dictionary construction with just messages,
+        // but then we would not be able to print source back from Exprs
+        // felicituously.
+        //
+        // FIXME: bogus span
+        let mut data = HashMap::new();
+        for (k, v) in dictionary.assoc.iter() {
+            data.insert(self.eval(k)?, self.eval(v)?);
+        }
+        Ok(self.foo.into_dictionary(data))
     }
 
     fn eval_eq(&self, eq: &Eq) -> Eval {

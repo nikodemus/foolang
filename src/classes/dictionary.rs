@@ -5,7 +5,7 @@ use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use crate::eval::Env;
-use crate::objects::{Datum, Eval, Object, Vtable};
+use crate::objects::{Datum, Eval, Foolang, Object, Vtable};
 use crate::unwind::Unwind;
 
 pub struct Dictionary {
@@ -62,6 +62,15 @@ pub fn instance_vtable() -> Vtable {
     vt.def("at:", dictionary_at);
     vt.def("put:at:", dictionary_put_at);
     vt
+}
+
+pub fn into_dictionary(foolang: &Foolang, data: HashMap<Object, Object>) -> Object {
+    Object {
+        vtable: Rc::clone(&foolang.dictionary_vtable),
+        datum: Datum::Dictionary(Rc::new(Dictionary {
+            data: RefCell::new(data),
+        })),
+    }
 }
 
 pub fn as_dictionary<'a>(obj: &'a Object, ctx: &str) -> Result<&'a Dictionary, Unwind> {
