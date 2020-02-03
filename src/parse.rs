@@ -942,7 +942,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn error<T>(&self, problem: &str) -> Result<T, Unwind> {
-        self.state.borrow().tokenstream.error(problem)
+        self.state.borrow().tokenstream.error_at(self.span(), problem)
     }
 
     pub fn error_at<T>(&self, span: Span, problem: &str) -> Result<T, Unwind> {
