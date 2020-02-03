@@ -2025,3 +2025,27 @@ fn test_tokenstring_after_lookahead2() {
     parser.lookahead2().unwrap();
     assert_eq!("foo", &parser.tokenstring());
 }
+
+#[test]
+fn test_parser_error_after_lookahead() {
+    let parser = Parser::new("foo bar", "dummy");
+    parser.next_token().unwrap();
+    parser.lookahead().unwrap();
+    let err: Result<(), Unwind> = Unwind::error_at(0..3, "oops");
+    assert_eq!(
+        err,
+        parser.error("oops")
+    );
+}
+
+#[test]
+fn test_parser_error_after_lookahead2() {
+    let parser = Parser::new("foo bar", "dummy");
+    parser.next_token().unwrap();
+    parser.lookahead2().unwrap();
+    let err: Result<(), Unwind> = Unwind::error_at(0..3, "oops");
+    assert_eq!(
+        err,
+        parser.error("oops")
+    );
+}
