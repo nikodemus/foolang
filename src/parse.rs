@@ -942,7 +942,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn error<T>(&self, problem: &str) -> Result<T, Unwind> {
-        self.state.borrow().tokenstream.error(problem)
+        self.state.borrow().tokenstream.error_at(self.span(), problem)
     }
 
     pub fn error_at<T>(&self, span: Span, problem: &str) -> Result<T, Unwind> {
@@ -2024,4 +2024,28 @@ fn test_tokenstring_after_lookahead2() {
     parser.next_token().unwrap();
     parser.lookahead2().unwrap();
     assert_eq!("foo", &parser.tokenstring());
+}
+
+#[test]
+fn test_parser_error_after_lookahead() {
+    let parser = Parser::new("foo bar", "dummy");
+    parser.next_token().unwrap();
+    parser.lookahead().unwrap();
+    let err: Result<(), Unwind> = Unwind::error_at(0..3, "oops");
+    assert_eq!(
+        err,
+        parser.error("oops")
+    );
+}
+
+#[test]
+fn test_parser_error_after_lookahead2() {
+    let parser = Parser::new("foo bar", "dummy");
+    parser.next_token().unwrap();
+    parser.lookahead2().unwrap();
+    let err: Result<(), Unwind> = Unwind::error_at(0..3, "oops");
+    assert_eq!(
+        err,
+        parser.error("oops")
+    );
 }
