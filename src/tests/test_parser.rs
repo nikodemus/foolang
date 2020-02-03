@@ -6,6 +6,13 @@ fn parse_str(source: &str) -> Result<Expr, Unwind> {
     parse_str_in_path(source, "test/")
 }
 
+fn parse_ok(source: &str) -> Expr {
+    match parse_str(source) {
+        Ok(expr) => expr,
+        Err(err) => panic!("COULD NOT PARSE:\n{}\n{}", source, err),
+    }
+}
+
 use pretty_assertions::assert_eq;
 
 #[test]
@@ -456,4 +463,48 @@ fn test_parse_extend1() {
     let mut ext = ClassExtension::new(0..6, "Foo");
     ext.add_method(MethodKind::Instance, method(11..17, "bar", vec![], int(22..24, 42)));
     assert_eq!(parse_str("extend Foo method bar 42 end"), Ok(Expr::ClassExtension(ext)));
+}
+
+#[test]
+fn test_parse_dict1() {
+    assert_eq!(
+        parse_ok(r#"{"key1" -> "val1"}"#),
+        Dictionary::expr(0..18, vec![(string(1..7, "key1"), string(11..17, "val1"))])
+    );
+}
+
+#[test]
+fn test_parse_dict2() {
+    assert_eq!(
+        parse_ok(r#"{"key1" -> "val1",}"#),
+        Dictionary::expr(0..19, vec![(string(1..7, "key1"), string(11..17, "val1"))])
+    );
+}
+
+#[test]
+fn test_parse_dict3() {
+    assert_eq!(
+        parse_ok(r#"{"key1" -> "val1", 2 -> 2.0}"#),
+        Dictionary::expr(
+            0..28,
+            vec![
+                (string(1..7, "key1"), string(11..17, "val1")),
+                (int(19..20, 2), float(24..27, 2.0))
+            ]
+        )
+    );
+}
+
+#[test]
+fn test_parse_dict4() {
+    assert_eq!(
+        parse_ok(r#"{"key1" -> "val1", foo bar -> 2.0}"#),
+        Dictionary::expr(
+            0..34,
+            vec![
+                (string(1..7, "key1"), string(11..17, "val1")),
+                (unary(23..26, "bar", var(19..22, "foo")), float(30..33, 2.0))
+            ]
+        )
+    );
 }

@@ -1,6 +1,6 @@
-use std::hash::{Hash, Hasher};
 use std::cell::{Ref, RefCell, RefMut};
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use crate::eval::Env;

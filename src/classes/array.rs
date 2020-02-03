@@ -1,10 +1,10 @@
-use std::hash::{Hash, Hasher};
 use std::cell::{Ref, RefCell, RefMut};
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use crate::eval::Env;
-use crate::objects::{Datum, Eval, Object, Vtable, Foolang};
+use crate::objects::{Datum, Eval, Foolang, Object, Vtable};
 use crate::unwind::Unwind;
 
 pub struct Array {
@@ -80,7 +80,7 @@ pub fn into_array(foolang: &Foolang, data: Vec<Object>) -> Object {
         vtable: Rc::clone(&foolang.array_vtable),
         datum: Datum::Array(Rc::new(Array {
             data: RefCell::new(data),
-        }))
+        })),
     }
 }
 

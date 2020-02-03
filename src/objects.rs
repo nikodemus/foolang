@@ -1,10 +1,10 @@
-use std::hash::{Hash, Hasher};
 use std::borrow::Borrow;
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::convert::AsRef;
 use std::fmt;
 use std::fs;
+use std::hash::{Hash, Hasher};
 use std::io::Read;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -597,7 +597,10 @@ impl Foolang {
         env.define("Clock", Class::object(&self.clock_class_vtable, &self.clock_vtable));
         env.define("Closure", Class::object(&self.closure_class_vtable, &self.closure_vtable));
         env.define("Compiler", Class::object(&self.compiler_class_vtable, &self.compiler_vtable));
-        env.define("Dictionary", Class::object(&self.dictionary_class_vtable, &self.dictionary_vtable));
+        env.define(
+            "Dictionary",
+            Class::object(&self.dictionary_class_vtable, &self.dictionary_vtable),
+        );
         env.define("Float", Class::object(&self.float_class_vtable, &self.float_vtable));
         env.define("Input", Class::object(&self.input_class_vtable, &self.input_vtable));
         env.define("Integer", Class::object(&self.integer_class_vtable, &self.integer_vtable));
@@ -873,7 +876,11 @@ impl Foolang {
         }
     }
 
-    pub fn make_float(&self, x: f64) -> Object {
+    pub fn into_dictionary(&self, data: HashMap<Object, Object>) -> Object {
+        classes::dictionary::into_dictionary(self, data)
+    }
+
+   pub fn make_float(&self, x: f64) -> Object {
         Object {
             vtable: Rc::clone(&self.float_vtable),
             datum: Datum::Float(x),
