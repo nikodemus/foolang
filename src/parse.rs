@@ -432,6 +432,25 @@ pub enum MethodKind {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Raise {
+    pub span: Span,
+    pub value: Box<Expr>,
+}
+
+impl Raise {
+    pub fn expr(span: Span, value: Expr) -> Expr {
+        Expr::Raise(Raise {
+            span,
+            value: Box::new(value),
+        })
+    }
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.span.tweak(shift, extend);
+        self.value.tweak_span(shift, extend);
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Return {
     pub span: Span,
     pub value: Box<Expr>,
@@ -443,6 +462,10 @@ impl Return {
             span,
             value: Box::new(value),
         })
+    }
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.span.tweak(shift, extend);
+        self.value.tweak_span(shift, extend);
     }
 }
 
@@ -508,6 +531,7 @@ pub enum Expr {
     Eq(Eq),
     Global(Global),
     Import(Import),
+    Raise(Raise),
     Return(Return),
     Seq(Seq),
     Typecheck(Typecheck),
@@ -596,6 +620,7 @@ impl Expr {
             Global(global) => &global.span,
             Chain(chain) => return chain.receiver.span(),
             Import(import) => &import.span,
+            Raise(raise) => &raise.span,
             Return(ret) => &ret.span,
             // FIXME: Questionable
             Seq(seq) => return seq.exprs[seq.exprs.len() - 1].span(),
@@ -626,6 +651,8 @@ impl Expr {
             Dictionary(dictionary) => dictionary.tweak_span(shift, extend),
             Eq(eq) => eq.tweak_span(shift, extend),
             Seq(seq) => seq.tweak_span(shift, extend),
+            Raise(raise) => raise.tweak_span(shift, extend),
+            Return(ret) => ret.tweak_span(shift, extend),
             Typecheck(typecheck) => typecheck.tweak_span(shift, extend),
             ClassDefinition(class) => {
                 class.span.tweak(shift, extend);
@@ -656,10 +683,6 @@ impl Expr {
                 if let Some(ref mut body) = import.body {
                     body.tweak_span(shift, extend);
                 }
-            }
-            Return(ret) => {
-                ret.span.tweak(shift, extend);
-                ret.value.tweak_span(shift, extend);
             }
             Var(var) => {
                 var.span.tweak(shift, extend);
@@ -1039,6 +1062,7 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, ".", invalid_prefix, sequence_suffix, precedence_2);
     Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_3);
     Syntax::def(t, "return", return_prefix, invalid_suffix, precedence_3);
+    Syntax::def(t, "raise", raise_prefix, invalid_suffix, precedence_3);
     Syntax::def(t, ";", invalid_prefix, cascade_suffix, precedence_3);
     Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_4);
     Syntax::def(t, "is", invalid_prefix, is_suffix, precedence_10);
@@ -1779,6 +1803,10 @@ fn number_prefix(parser: &Parser) -> Result<Expr, Unwind> {
 
 fn return_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     Ok(Return::expr(parser.span(), parser.parse_expr(SEQ_PRECEDENCE)?))
+}
+
+fn raise_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+    Ok(Raise::expr(parser.span(), parser.parse_expr(SEQ_PRECEDENCE)?))
 }
 
 /// Takes care of \n, and such. Terminates on { or end of string.

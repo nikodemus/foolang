@@ -31,6 +31,7 @@
    ("\\<class\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
    ("\\<extend\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
    ("\\<import\\>" . font-lock-keyword-face)
+   ("\\<raise\\>" . font-lock-keyword-face)
    ("\\<return\\>" . font-lock-keyword-face)
    ("\\<is\\>" . font-lock-keyword-face)
    ("\\<method\\s-+\\(\\w+\\)\\>" 1 font-lock-function-name-face)
