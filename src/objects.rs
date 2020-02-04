@@ -880,7 +880,7 @@ impl Foolang {
         classes::dictionary::into_dictionary(self, data)
     }
 
-   pub fn make_float(&self, x: f64) -> Object {
+    pub fn make_float(&self, x: f64) -> Object {
         Object {
             vtable: Rc::clone(&self.float_vtable),
             datum: Datum::Float(x),

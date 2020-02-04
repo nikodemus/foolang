@@ -97,7 +97,13 @@ class Main { assert }
         self testPrefix.
         self testRecord.
         self testDictionary.
+        self testRaise.
         assert exit
+
+    method testRaise
+        assert true: { ({ raise "BOOM" } onError: { |e c| e })
+                           == "BOOM" }
+               testing: "raise with string argument"
 
     method testDictionary
         assert true: { let d = { 1 + 1 + 40 -> "the" append: "Answer" }.
