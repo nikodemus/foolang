@@ -398,15 +398,13 @@ pub struct InterfaceDefinition {
 }
 
 impl InterfaceDefinition {
-    pub fn expr(span: Span, name: String) -> Expr {
-        Expr::InterfaceDefinition(
-            InterfaceDefinition {
-                span,
-                name,
-                instance_methods: Vec::new(),
-                class_methods: Vec::new(),
-            }
-        )
+    pub fn new(span: Span, name: &str) -> InterfaceDefinition {
+        InterfaceDefinition {
+            span,
+            name: name.to_string(),
+            instance_methods: Vec::new(),
+            class_methods: Vec::new(),
+        }
     }
 
     fn tweak_span(&mut self, shift: usize, extend: isize) {
@@ -419,7 +417,7 @@ impl InterfaceDefinition {
         }
     }
 
-    fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
+    pub fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
         match kind {
             MethodKind::Instance => self.instance_methods.push(method),
             MethodKind::Class => self.class_methods.push(method),
@@ -602,6 +600,7 @@ impl Expr {
         match self {
             Expr::ClassDefinition(..) => true,
             Expr::ClassExtension(..) => true,
+            Expr::InterfaceDefinition(..) => true,
             _ => false,
         }
     }
@@ -1097,6 +1096,7 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, "class", class_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "extend", extend_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "import", import_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "interface", interface_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ",", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "->", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "defaultConstructor", invalid_prefix, invalid_suffix, precedence_0);
@@ -1632,6 +1632,51 @@ fn import_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     } else {
         return parser.error_at(name_span, "Expected module name");
     }
+}
+
+fn interface_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+    // FIXME: span is the span of the interface, but maybe it would be better if these
+    // had all their own spans.
+    //
+    // FIXME: duplicated extend_prefix pretty much.
+    let span = parser.span();
+    let interface_name = match parser.next_token()? {
+        Token::WORD => {
+            if parser.slice().chars().next().expect("BUG: empty identifier").is_uppercase() {
+                parser.slice()
+            } else {
+                // FIXME: Not all languages use capital letters
+                return parser.error("Interface names must start with an uppercase letter");
+            }
+        }
+        _ => return parser.error("Expected interface name"),
+    };
+    let mut interface = InterfaceDefinition::new(span, interface_name);
+    loop {
+        let (next, span2) = parser.lookahead()?;
+        if next == Token::WORD && parser.slice_at(span2) == "end" {
+            break;
+        }
+        parser.next_token()?;
+        if next == Token::EOF {
+            return parser
+                .eof_error("Unexpected EOF while parsing interface: expected method or end");
+        }
+        if next == Token::WORD && parser.slice() == "interface" {
+            if parser.next_token()? == Token::WORD && parser.slice() == "method" {
+                interface.add_method(MethodKind::Class, parse_method(parser)?);
+                continue;
+            } else {
+                return parser.error("Expected class method");
+            }
+        }
+        if next == Token::WORD && parser.slice() == "method" {
+            interface.add_method(MethodKind::Instance, parse_method(parser)?);
+            continue;
+        }
+        return parser.error("Expected method or end");
+    }
+    Ok(Expr::InterfaceDefinition(interface))
 }
 
 fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {

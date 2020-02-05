@@ -8,9 +8,9 @@ use crate::objects::{
     Vtable,
 };
 use crate::parse::{
-    Array, Assign, Bind, Block, Cascade, Chain, ClassDefinition, ClassExtension,
-    Const, Dictionary, Eq, Expr, Global, Import, InterfaceDefinition, Literal, Message,
-    Parser, Raise, Return, Seq, Typecheck, Var,
+    Array, Assign, Bind, Block, Cascade, Chain, ClassDefinition, ClassExtension, Const, Dictionary,
+    Eq, Expr, Global, Import, InterfaceDefinition, Literal, Message, Parser, Raise, Return, Seq,
+    Typecheck, Var,
 };
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;

@@ -466,6 +466,16 @@ fn test_parse_extend1() {
 }
 
 #[test]
+fn test_parse_interface1() {
+    let mut interface = InterfaceDefinition::new(0..9, "Foo");
+    interface.add_method(MethodKind::Instance, method(14..20, "bar", vec![], int(25..27, 42)));
+    assert_eq!(
+        parse_str("interface Foo method bar 42 end"),
+        Ok(Expr::InterfaceDefinition(interface))
+    );
+}
+
+#[test]
 fn test_parse_dict1() {
     assert_eq!(
         parse_ok(r#"{"key1" -> "val1"}"#),
