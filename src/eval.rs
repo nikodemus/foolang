@@ -8,8 +8,9 @@ use crate::objects::{
     Vtable,
 };
 use crate::parse::{
-    Array, Assign, Bind, Block, Cascade, Chain, ClassDefinition, ClassExtension, Const, Dictionary,
-    Eq, Expr, Global, Import, Literal, Message, Parser, Raise, Return, Seq, Typecheck, Var,
+    Array, Assign, Bind, Block, Cascade, Chain, ClassDefinition, ClassExtension,
+    Const, Dictionary, Eq, Expr, Global, Import, InterfaceDefinition, Literal, Message,
+    Parser, Raise, Return, Seq, Typecheck, Var,
 };
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -295,6 +296,7 @@ impl Env {
             Eq(eq) => self.eval_eq(eq),
             Global(global) => self.eval_global(global),
             Import(import) => self.eval_import(import),
+            InterfaceDefinition(interface) => self.eval_interface(interface),
             Raise(raise) => self.eval_raise(raise),
             Return(ret) => self.eval_return(ret),
             Chain(chain) => self.eval_chain(chain),
@@ -528,6 +530,10 @@ impl Env {
             None => Ok(self.foo.make_string(&import.path.to_string_lossy())),
             Some(ref expr) => self.eval(expr),
         }
+    }
+
+    fn eval_interface(&self, _interface: &InterfaceDefinition) -> Eval {
+        unimplemented!("eval_interface not implemented")
     }
 
     fn eval_raise(&self, raise: &Raise) -> Eval {

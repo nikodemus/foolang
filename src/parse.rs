@@ -294,6 +294,19 @@ impl ClassDefinition {
         }
     }
 
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.span.tweak(shift, extend);
+        for var in &mut self.instance_variables {
+            var.span.tweak(shift, extend);
+        }
+        for m in &mut self.instance_methods {
+            m.tweak_span(shift, extend);
+        }
+        for m in &mut self.class_methods {
+            m.tweak_span(shift, extend);
+        }
+    }
+
     #[cfg(test)]
     pub fn expr(span: Span, name: String, instance_variables: Vec<Var>) -> Expr {
         Expr::ClassDefinition(ClassDefinition::new(span, name, instance_variables))
@@ -373,6 +386,44 @@ impl Import {
             name: name.map(|x| x.to_string()),
             body: body.map(|x| Box::new(x)),
         })
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct InterfaceDefinition {
+    pub span: Span,
+    pub name: String,
+    pub instance_methods: Vec<MethodDefinition>,
+    pub class_methods: Vec<MethodDefinition>,
+}
+
+impl InterfaceDefinition {
+    pub fn expr(span: Span, name: String) -> Expr {
+        Expr::InterfaceDefinition(
+            InterfaceDefinition {
+                span,
+                name,
+                instance_methods: Vec::new(),
+                class_methods: Vec::new(),
+            }
+        )
+    }
+
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.span.tweak(shift, extend);
+        for m in &mut self.instance_methods {
+            m.tweak_span(shift, extend);
+        }
+        for m in &mut self.class_methods {
+            m.tweak_span(shift, extend);
+        }
+    }
+
+    fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
+        match kind {
+            MethodKind::Instance => self.instance_methods.push(method),
+            MethodKind::Class => self.class_methods.push(method),
+        };
     }
 }
 
@@ -531,6 +582,7 @@ pub enum Expr {
     Eq(Eq),
     Global(Global),
     Import(Import),
+    InterfaceDefinition(InterfaceDefinition),
     Raise(Raise),
     Return(Return),
     Seq(Seq),
@@ -620,6 +672,7 @@ impl Expr {
             Global(global) => &global.span,
             Chain(chain) => return chain.receiver.span(),
             Import(import) => &import.span,
+            InterfaceDefinition(interface) => &interface.span,
             Raise(raise) => &raise.span,
             Return(ret) => &ret.span,
             // FIXME: Questionable
@@ -646,26 +699,16 @@ impl Expr {
             Bind(bind) => bind.tweak_span(shift, extend),
             Block(block) => block.tweak_span(shift, extend),
             Cascade(cascade) => cascade.tweak_span(shift, extend),
+            ClassDefinition(class) => class.tweak_span(shift, extend),
             Chain(chain) => chain.tweak_span(shift, extend),
             Const(constant) => constant.tweak_span(shift, extend),
             Dictionary(dictionary) => dictionary.tweak_span(shift, extend),
             Eq(eq) => eq.tweak_span(shift, extend),
+            InterfaceDefinition(interface) => interface.tweak_span(shift, extend),
             Seq(seq) => seq.tweak_span(shift, extend),
             Raise(raise) => raise.tweak_span(shift, extend),
             Return(ret) => ret.tweak_span(shift, extend),
             Typecheck(typecheck) => typecheck.tweak_span(shift, extend),
-            ClassDefinition(class) => {
-                class.span.tweak(shift, extend);
-                for var in &mut class.instance_variables {
-                    var.span.tweak(shift, extend);
-                }
-                for m in &mut class.instance_methods {
-                    m.tweak_span(shift, extend);
-                }
-                for m in &mut class.class_methods {
-                    m.tweak_span(shift, extend);
-                }
-            }
             ClassExtension(ext) => {
                 ext.span.tweak(shift, extend);
                 for m in &mut ext.instance_methods {
