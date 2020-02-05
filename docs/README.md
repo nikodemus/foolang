@@ -50,9 +50,11 @@ end
 ### Done
 
 <span class="done">&check;</span>
-**No ambient authority**: all OS interfaces must be passed to through dependency
-injection, starting from the system object passed to `Main##run:in:`&mdash;there is
-no such thing as a globally accessible `File` or `Socket` class.
+**No ambient authority**: all OS interfaces must be passed through dependency
+injection, starting from the [system object](system.md) passed to
+`Main##run:in:`&mdash;there is no such thing as a globally accessible `File` or
+`Socket` class. (Note: the system object doesn't contain nearly all facilities
+it should yet!)
 
 <span class="done">&check;</span>
 **Optional typing & typechecks**: all expressions can
