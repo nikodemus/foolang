@@ -279,6 +279,7 @@ pub struct ClassDefinition {
     pub instance_variables: Vec<Var>,
     pub instance_methods: Vec<MethodDefinition>,
     pub class_methods: Vec<MethodDefinition>,
+    pub interfaces: Vec<String>,
     default_constructor: Option<String>,
 }
 
@@ -290,6 +291,7 @@ impl ClassDefinition {
             instance_variables,
             instance_methods: Vec::new(),
             class_methods: Vec::new(),
+            interfaces: Vec::new(),
             default_constructor: None,
         }
     }
@@ -310,6 +312,10 @@ impl ClassDefinition {
     #[cfg(test)]
     pub fn expr(span: Span, name: String, instance_variables: Vec<Var>) -> Expr {
         Expr::ClassDefinition(ClassDefinition::new(span, name, instance_variables))
+    }
+
+    fn add_interface(&mut self, name: &str) {
+        self.interfaces.push(name.to_string())
     }
 
     fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
@@ -1756,6 +1762,14 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
                 class.default_constructor = Some(parser.tokenstring());
             }
             continue;
+        }
+        if next == Token::WORD && parser.slice() == "is" {
+            if let Token::WORD = parser.next_token()? {
+                class.add_interface(parser.slice());
+            } else {
+                return parser
+                    .error("Invalid interface name in class");
+            }
         }
         if next == Token::COMMENT || next == Token::BLOCK_COMMENT {
             continue;
