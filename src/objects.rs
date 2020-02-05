@@ -802,25 +802,43 @@ impl Foolang {
             instance_vtable.add_reader(&var.name, index - 1);
         }
         for method in &classdef.class_methods {
+            let body = match &method.body {
+                Some(body) => body,
+                None => {
+                    return Unwind::error_at(
+                        method.span.clone(),
+                        "Partial method definition in class",
+                    );
+                }
+            };
             class_vtable.add_method(
                 &method.selector,
                 make_method_function(
                     env,
                     format!("{}#{}", &class_vtable.name, &method.selector),
                     &method.parameters,
-                    &method.body,
+                    body,
                     &method.return_type,
                 )?,
             )?;
         }
         for method in &classdef.instance_methods {
+            let body = match &method.body {
+                Some(body) => body,
+                None => {
+                    return Unwind::error_at(
+                        method.span.clone(),
+                        "Partial method definition in class",
+                    );
+                }
+            };
             instance_vtable.add_method(
                 &method.selector,
                 make_method_function(
                     env,
                     format!("{}#{}", &instance_vtable.name, &method.selector),
                     &method.parameters,
-                    &method.body,
+                    body,
                     &method.return_type,
                 )?,
             )?;
@@ -1021,19 +1039,27 @@ impl Object {
                 "Cannot extend {}: class method 'perform:with:' defined",
                 &class_vtable.name
             ));
-        } else {
-            for method in &ext.class_methods {
-                class_vtable.add_method(
-                    &method.selector,
-                    make_method_function(
-                        env,
-                        format!("{}##{}", &class_vtable.name, &method.selector),
-                        &method.parameters,
-                        &method.body,
-                        &method.return_type,
-                    )?,
-                )?;
-            }
+        }
+        for method in &ext.class_methods {
+            let body = match &method.body {
+                Some(body) => body,
+                None => {
+                    return Unwind::error_at(
+                        method.span.clone(),
+                        "Partial method definition in extension",
+                    );
+                }
+            };
+            class_vtable.add_method(
+                &method.selector,
+                make_method_function(
+                    env,
+                    format!("{}##{}", &class_vtable.name, &method.selector),
+                    &method.parameters,
+                    body,
+                    &method.return_type,
+                )?,
+            )?;
         }
         let instance_vtable = &(self.class().instance_vtable);
         if !ext.instance_methods.is_empty() && instance_vtable.has("perform:with:") {
@@ -1041,19 +1067,27 @@ impl Object {
                 "Cannot extend {}: instance method 'perform:with:' defined",
                 &instance_vtable.name
             ));
-        } else {
-            for method in &ext.instance_methods {
-                instance_vtable.add_method(
-                    &method.selector,
-                    make_method_function(
-                        env,
-                        format!("{}##{}", &instance_vtable.name, &method.selector),
-                        &method.parameters,
-                        &method.body,
-                        &method.return_type,
-                    )?,
-                )?;
-            }
+        }
+        for method in &ext.instance_methods {
+            let body = match &method.body {
+                Some(body) => body,
+                None => {
+                    return Unwind::error_at(
+                        method.span.clone(),
+                        "Partial method definition in class",
+                    );
+                }
+            };
+            instance_vtable.add_method(
+                &method.selector,
+                make_method_function(
+                    env,
+                    format!("{}##{}", &instance_vtable.name, &method.selector),
+                    &method.parameters,
+                    body,
+                    &method.return_type,
+                )?,
+            )?;
         }
         Ok(self.clone())
     }

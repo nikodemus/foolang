@@ -467,11 +467,22 @@ fn test_parse_extend1() {
 
 #[test]
 fn test_parse_interface1() {
-    let mut interface = InterfaceDefinition::new(0..9, "Foo");
-    interface.add_method(MethodKind::Instance, method(14..20, "bar", vec![], int(25..27, 42)));
+    let mut interface = InterfaceDefinition::new(1..10, "Foo");
+    interface.add_method(MethodKind::Instance, method(19..25, "bar", vec![], int(38..40, 42)));
+    interface.add_method(MethodKind::Instance, method_signature(54..60, "quux", vec![]));
+    interface.add_method(MethodKind::Instance, method(70..76, "zot", vec![], int(89..92, 123)));
     assert_eq!(
-        parse_str("interface Foo method bar 42 end"),
-        Ok(Expr::InterfaceDefinition(interface))
+        parse_ok(
+            "
+interface Foo
+    method bar
+        42
+    required method quux
+    method zot
+        123
+end"
+        ),
+        Expr::InterfaceDefinition(interface)
     );
 }
 

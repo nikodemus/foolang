@@ -13,9 +13,9 @@ should match reading order.
 Following words have special meaning:
 
 ``` foolang
-class   extend  method
+class   extend  method    return
 let     import  raise
-end     is      return
+end     is      required
 ```
 
 This restricts their use as both messages and as variables.

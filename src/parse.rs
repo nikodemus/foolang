@@ -446,7 +446,7 @@ pub struct MethodDefinition {
     pub span: Span,
     pub selector: String,
     pub parameters: Vec<Var>,
-    pub body: Box<Expr>,
+    pub body: Option<Box<Expr>>,
     pub return_type: Option<String>,
 }
 
@@ -455,14 +455,13 @@ impl MethodDefinition {
         span: Span,
         selector: String,
         parameters: Vec<Var>,
-        body: Expr,
         return_type: Option<String>,
     ) -> MethodDefinition {
         MethodDefinition {
             span,
             selector,
             parameters,
-            body: Box::new(body),
+            body: None,
             return_type,
         }
     }
@@ -471,7 +470,10 @@ impl MethodDefinition {
         for var in &mut self.parameters {
             var.span.tweak(shift, extend);
         }
-        self.body.tweak_span(shift, extend);
+        match &mut self.body {
+            Some(ref mut span) => span.tweak_span(shift, extend),
+            _ => (),
+        }
     }
 }
 
@@ -1101,6 +1103,7 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, "->", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "defaultConstructor", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "method", invalid_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "required", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "end", invalid_prefix, end_suffix, precedence_1);
     Syntax::def(t, ".", invalid_prefix, sequence_suffix, precedence_2);
     Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_3);
@@ -1381,7 +1384,8 @@ fn sequence_suffix(
 ) -> Result<Expr, Unwind> {
     let (token, span) = parser.lookahead()?;
     let text = parser.slice_at(span);
-    if (token == Token::WORD && (text == "method" || text == "end" || text == "class"))
+    if (token == Token::WORD
+        && (text == "required" || text == "method" || text == "end" || text == "class"))
         || token == Token::EOF
     {
         return Ok(left);
@@ -1662,7 +1666,7 @@ fn interface_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             return parser
                 .eof_error("Unexpected EOF while parsing interface: expected method or end");
         }
-        if next == Token::WORD && parser.slice() == "interface" {
+        if next == Token::WORD && parser.slice() == "class" {
             if parser.next_token()? == Token::WORD && parser.slice() == "method" {
                 interface.add_method(MethodKind::Class, parse_method(parser)?);
                 continue;
@@ -1672,6 +1676,11 @@ fn interface_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         }
         if next == Token::WORD && parser.slice() == "method" {
             interface.add_method(MethodKind::Instance, parse_method(parser)?);
+            continue;
+        }
+        if next == Token::WORD && parser.slice() == "required" {
+            parser.next_token()?;
+            interface.add_method(MethodKind::Instance, parse_method_signature(parser)?);
             continue;
         }
         return parser.error("Expected method or end");
@@ -2010,6 +2019,14 @@ fn parse_var(parser: &Parser) -> Result<Var, Unwind> {
 }
 
 fn parse_method(parser: &Parser) -> Result<MethodDefinition, Unwind> {
+    let mut method = parse_method_signature(parser)?;
+    // NOTE: This is the place where I could inform parser about instance
+    // variables.
+    method.body = Some(Box::new(parser.parse_body()?));
+    Ok(method)
+}
+
+fn parse_method_signature(parser: &Parser) -> Result<MethodDefinition, Unwind> {
     assert_eq!(parser.slice(), "method");
     let span = parser.span();
     let mut selector = String::new();
@@ -2060,10 +2077,7 @@ fn parse_method(parser: &Parser) -> Result<MethodDefinition, Unwind> {
     } else {
         None
     };
-    // FIXME: This is the place where I could inform parser about instance
-    // variables.
-    let body = parser.parse_body()?;
-    Ok(MethodDefinition::new(span, selector, parameters, body, rtype))
+    Ok(MethodDefinition::new(span, selector, parameters, rtype))
 }
 
 /// Tests and tools
@@ -2158,12 +2172,17 @@ pub mod utils {
         parameters: Vec<&str>,
         body: Expr,
     ) -> MethodDefinition {
+        let mut method = method_signature(span, selector, parameters);
+        method.body = Some(Box::new(body));
+        method
+    }
+
+    pub fn method_signature(span: Span, selector: &str, parameters: Vec<&str>) -> MethodDefinition {
         MethodDefinition::new(
             span,
             selector.to_string(),
             // FIXME: span
             parameters.iter().map(|name| Var::untyped(0..0, name.to_string())).collect(),
-            body,
             None,
         )
     }
