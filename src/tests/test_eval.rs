@@ -580,17 +580,18 @@ fn test_class_not_toplevel() {
 
 #[test]
 fn test_class1() {
-    let class = eval_ok("class Point { x y } end").class();
+    let obj = eval_ok("class Point { x y } end");
+    let class = obj.as_class_ref().unwrap();
     assert_eq!(class.instance_vtable.name, "Point");
     assert_eq!(
-        class.instance_vtable.slots["x"],
+        class.instance_vtable.slots()["x"],
         Slot {
             index: 0,
             vtable: None,
         }
     );
     assert_eq!(
-        class.instance_vtable.slots["y"],
+        class.instance_vtable.slots()["y"],
         Slot {
             index: 1,
             vtable: None,
@@ -622,9 +623,10 @@ fn eval_global1() {
 
 #[test]
 fn eval_global2() {
-    let class = eval_ok("Integer").class();
+    let obj = eval_ok("Integer");
+    let class = obj.as_class_ref().unwrap();
     assert_eq!(class.instance_vtable.name, "Integer");
-    assert!(class.instance_vtable.slots.is_empty());
+    assert!(class.instance_vtable.slots().is_empty());
 }
 
 #[test]

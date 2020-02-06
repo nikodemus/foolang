@@ -52,15 +52,15 @@ impl fmt::Debug for Dictionary {
 }
 
 pub fn class_vtable() -> Vtable {
-    let mut vt = Vtable::new("class Dictionary");
-    vt.def("new", class_dictionary_new);
+    let vt = Vtable::new("class Dictionary");
+    vt.add_primitive_method_or_panic("new", class_dictionary_new);
     vt
 }
 
 pub fn instance_vtable() -> Vtable {
-    let mut vt = Vtable::new("Dictionary");
-    vt.def("at:", dictionary_at);
-    vt.def("put:at:", dictionary_put_at);
+    let vt = Vtable::new("Dictionary");
+    vt.add_primitive_method_or_panic("at:", dictionary_at);
+    vt.add_primitive_method_or_panic("put:at:", dictionary_put_at);
     vt
 }
 

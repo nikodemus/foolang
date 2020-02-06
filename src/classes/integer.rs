@@ -2,19 +2,19 @@ use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
 
 pub fn vtable() -> Vtable {
-    let mut vt = Vtable::new("Integer");
-    vt.def("asFloat", integer_as_float);
-    vt.def("addInteger:", integer_add_integer);
-    vt.def("divInteger:", integer_div_integer);
-    vt.def("equalInteger:", integer_equal_integer);
-    vt.def("greaterThanInteger:", integer_greater_than_integer);
-    vt.def("greaterThanOrEqualInteger:", integer_greater_than_or_equal_integer);
-    vt.def("lessThanInteger:", integer_less_than_integer);
-    vt.def("lessThanOrEqualInteger:", integer_less_than_or_equal_integer);
-    vt.def("mulInteger:", integer_mul_integer);
-    vt.def("subInteger:", integer_sub_integer);
-    vt.def("toString", integer_to_string);
-    vt.def("prefix-", integer_neg);
+    let vt = Vtable::new("Integer");
+    vt.add_primitive_method_or_panic("asFloat", integer_as_float);
+    vt.add_primitive_method_or_panic("addInteger:", integer_add_integer);
+    vt.add_primitive_method_or_panic("divInteger:", integer_div_integer);
+    vt.add_primitive_method_or_panic("equalInteger:", integer_equal_integer);
+    vt.add_primitive_method_or_panic("greaterThanInteger:", integer_greater_than_integer);
+    vt.add_primitive_method_or_panic("greaterThanOrEqualInteger:", integer_greater_than_or_equal_integer);
+    vt.add_primitive_method_or_panic("lessThanInteger:", integer_less_than_integer);
+    vt.add_primitive_method_or_panic("lessThanOrEqualInteger:", integer_less_than_or_equal_integer);
+    vt.add_primitive_method_or_panic("mulInteger:", integer_mul_integer);
+    vt.add_primitive_method_or_panic("subInteger:", integer_sub_integer);
+    vt.add_primitive_method_or_panic("toString", integer_to_string);
+    vt.add_primitive_method_or_panic("prefix-", integer_neg);
     vt
 }
 

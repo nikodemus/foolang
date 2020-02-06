@@ -90,15 +90,15 @@ pub fn class_vtable() -> Vtable {
 }
 
 pub fn instance_vtable() -> Vtable {
-    let mut vt = Vtable::new("Array");
-    vt.def("addArray:", array_add_array);
-    vt.def("at:", array_at);
-    vt.def("dot:", array_dot);
-    vt.def("inject:into:", array_inject_into);
-    vt.def("push:", array_push);
-    vt.def("put:at:", array_put_at);
-    vt.def("subArray:", array_sub_array);
-    vt.def("toString", array_to_string);
+    let vt = Vtable::new("Array");
+    vt.add_primitive_method_or_panic("addArray:", array_add_array);
+    vt.add_primitive_method_or_panic("at:", array_at);
+    vt.add_primitive_method_or_panic("dot:", array_dot);
+    vt.add_primitive_method_or_panic("inject:into:", array_inject_into);
+    vt.add_primitive_method_or_panic("push:", array_push);
+    vt.add_primitive_method_or_panic("put:at:", array_put_at);
+    vt.add_primitive_method_or_panic("subArray:", array_sub_array);
+    vt.add_primitive_method_or_panic("toString", array_to_string);
     vt
 }
 

@@ -11,16 +11,16 @@ pub fn class_vtable() -> Vtable {
 }
 
 pub fn instance_vtable() -> Vtable {
-    let mut vt = Vtable::new("Window");
-    vt.def("cube:", window_cube);
-    vt.def("close", window_close);
-    vt.def("light", window_light);
-    vt.def("light:", window_light_arg);
-    vt.def("obj:mtl:scale:", window_obj_mtl_scale);
-    vt.def("render", window_render);
-    vt.def("framerateLimit:", window_framerate_limit);
-    vt.def("ifShouldClose:", window_if_should_close);
-    vt.def("shouldClose", window_should_close);
+    let vt = Vtable::new("Window");
+    vt.add_primitive_method_or_panic("cube:", window_cube);
+    vt.add_primitive_method_or_panic("close", window_close);
+    vt.add_primitive_method_or_panic("light", window_light);
+    vt.add_primitive_method_or_panic("light:", window_light_arg);
+    vt.add_primitive_method_or_panic("obj:mtl:scale:", window_obj_mtl_scale);
+    vt.add_primitive_method_or_panic("render", window_render);
+    vt.add_primitive_method_or_panic("framerateLimit:", window_framerate_limit);
+    vt.add_primitive_method_or_panic("ifShouldClose:", window_if_should_close);
+    vt.add_primitive_method_or_panic("shouldClose", window_should_close);
     vt
 }
 

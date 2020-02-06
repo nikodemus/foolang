@@ -7,19 +7,19 @@ use crate::objects::{Eval, Object, Vtable};
 use crate::unwind::Unwind;
 
 pub fn vtable() -> Vtable {
-    let mut vt = Vtable::new("System");
-    vt.def("abort", system_abort);
-    vt.def("clock", system_clock);
-    vt.def("exit", system_exit);
-    vt.def("exit:", system_exit_arg);
-    vt.def("input", system_input);
-    vt.def("output", system_output);
-    vt.def("output:", system_output_arg);
-    vt.def("random", system_random);
-    vt.def("random:", system_random_arg);
-    vt.def("sleep", system_sleep);
-    vt.def("sleep:", system_sleep_arg);
-    vt.def("window:", system_window);
+    let vt = Vtable::new("System");
+    vt.add_primitive_method_or_panic("abort", system_abort);
+    vt.add_primitive_method_or_panic("clock", system_clock);
+    vt.add_primitive_method_or_panic("exit", system_exit);
+    vt.add_primitive_method_or_panic("exit:", system_exit_arg);
+    vt.add_primitive_method_or_panic("input", system_input);
+    vt.add_primitive_method_or_panic("output", system_output);
+    vt.add_primitive_method_or_panic("output:", system_output_arg);
+    vt.add_primitive_method_or_panic("random", system_random);
+    vt.add_primitive_method_or_panic("random:", system_random_arg);
+    vt.add_primitive_method_or_panic("sleep", system_sleep);
+    vt.add_primitive_method_or_panic("sleep:", system_sleep_arg);
+    vt.add_primitive_method_or_panic("window:", system_window);
     vt
 }
 

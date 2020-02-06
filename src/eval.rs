@@ -8,9 +8,9 @@ use crate::objects::{
     Vtable,
 };
 use crate::parse::{
-    Array, Assign, Bind, Block, Cascade, Chain, ClassDefinition, ClassExtension, Const, Dictionary,
-    Eq, Expr, Global, Import, InterfaceDefinition, Literal, Message, Parser, Raise, Return, Seq,
-    Typecheck, Var,
+    Array, Assign, Bind, Block, Cascade, Chain, ClassDefinition, ClassExtension,
+    Const, Dictionary, Eq, Expr, Global, Import, InterfaceDefinition, Literal, Message,
+    Parser, Raise, Return, Seq, Typecheck, Var,
 };
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -319,7 +319,8 @@ impl Env {
         let binding = match bind.typename {
             None => Binding::untyped(self.eval(&bind.value)?),
             Some(ref typename) => {
-                let class = self.find_class(typename, bind.value.span())?.class();
+                let obj = self.find_class(typename, bind.value.span())?;
+                let class = obj.as_class_ref()?;
                 // FIXME: make the typecheck explicit
                 Binding::typed(
                     class.instance_vtable.clone(),
@@ -347,7 +348,7 @@ impl Env {
             let vt = match &p.typename {
                 None => None,
                 Some(name) => {
-                    Some(self.find_class(name, p.span.clone())?.class().instance_vtable.clone())
+                    Some(self.find_class(name, p.span.clone())?.as_class_ref()?.instance_vtable.clone())
                 }
             };
             args.push(Arg::new(p.span.clone(), p.name.clone(), vt));
@@ -364,16 +365,28 @@ impl Env {
         Ok(res)
     }
 
+    fn check_toplevel(&self, span: &Span, what: &str) -> Result<(), Unwind> {
+        if !self.is_toplevel() {
+            return Unwind::error_at(span.clone(),
+                                    &format!("{} not at toplevel", what));
+        }
+        Ok(())
+    }
+
+    fn check_not_defined(&self, name: &str, span: &Span, what: &str) -> Result<(), Unwind> {
+        if self.has_definition(name) {
+            return Unwind::error_at(span.clone(),
+                                    &format!("Cannot redefine {}", what));
+        };
+        Ok(())
+    }
+
     fn eval_class_definition(&self, definition: &ClassDefinition) -> Eval {
         // println!("CLASS env: {:?}", self);
         // FIXME: allow anonymous classes
-        if !self.is_toplevel() {
-            return Unwind::error_at(definition.span.clone(), "Class definition not at toplevel");
-        }
+        self.check_toplevel(&definition.span, "Class definition")?;
         let name = &definition.name;
-        if self.has_definition(name) {
-            return Unwind::error_at(definition.span.clone(), "Cannot redefine");
-        }
+        self.check_not_defined(name, &definition.span, "Class")?;
         let class = self.foo.make_class(definition, self)?;
         self.define(name, class.clone());
         Ok(class)
@@ -409,6 +422,23 @@ impl Env {
         }
     }
 
+    // NOTE: The name is correct: vtables stand in for classes right now,
+    // and once we have non-vtable types this will return Option<Type>
+    // instead.
+    pub fn maybe_type(&self, maybe_name: &Option<String>) -> Option<Rc<Vtable>> {
+        match maybe_name {
+            None => return None,
+            Some(name) => {
+                let maybe = self.find_class(name, 0..0);
+                let class = match maybe {
+                    Err(_) => return None,
+                    Ok(ref obj) => obj.as_class_ref().unwrap()
+                };
+                Some(class.instance_vtable.clone())
+            }
+        }
+    }
+
     // FIXME: half duplicates find_global
     pub fn find_class(&self, name: &str, span: Span) -> Eval {
         match self.find_global(name) {
@@ -435,7 +465,7 @@ impl Env {
     ) -> Result<Option<Rc<Vtable>>, Unwind> {
         match name {
             None => Ok(None),
-            Some(name) => Ok(Some(self.find_class(name, span)?.class().instance_vtable.clone())),
+            Some(name) => Ok(Some(self.find_class(name, span)?.as_class_ref()?.instance_vtable.clone())),
         }
     }
 
@@ -532,8 +562,13 @@ impl Env {
         }
     }
 
-    fn eval_interface(&self, _interface: &InterfaceDefinition) -> Eval {
-        unimplemented!("eval_interface not implemented")
+    fn eval_interface(&self, interface: &InterfaceDefinition) -> Eval {
+        self.check_toplevel(&interface.span, "Interface definition")?;
+        let name = &interface.name;
+        self.check_not_defined(&interface.name, &interface.span, "Interface")?;
+        let interface = self.foo.make_interface(interface, self)?;
+        self.define(name, interface.clone());
+        Ok(interface)
     }
 
     fn eval_raise(&self, raise: &Raise) -> Eval {
@@ -576,7 +611,8 @@ impl Env {
 
     fn do_typecheck(&self, span: Span, expr: &Expr, typename: &str) -> Eval {
         let value = self.eval(expr)?;
-        let class = self.find_class(typename, span.clone())?.class();
+        let obj = self.find_class(typename, span.clone())?;
+        let class = obj.as_class_ref()?;
         if class.instance_vtable == value.vtable {
             Ok(value)
         } else {
@@ -590,7 +626,7 @@ impl Env {
             Some(res) => res.source(&assign.span),
             None => {
                 if let Some(receiver) = self.receiver() {
-                    if let Some(slot) = receiver.vtable.slots.get(&assign.name) {
+                    if let Some(slot) = receiver.slots().get(&assign.name) {
                         return write_instance_variable(&receiver, slot, value)
                             .source(&assign.span);
                     }
@@ -612,7 +648,7 @@ impl Env {
                 Some(value) => return Ok(value),
                 None => {
                     if let Some(receiver) = self.receiver() {
-                        if let Some(slot) = receiver.vtable.slots.get(&var.name) {
+                        if let Some(slot) = receiver.slots().get(&var.name) {
                             return read_instance_variable(&receiver, slot.index);
                         }
                     }

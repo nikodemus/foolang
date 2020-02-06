@@ -2,10 +2,10 @@ use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
 
 pub fn vtable() -> Vtable {
-    let mut vt = Vtable::new("Output");
-    vt.def("flush", output_flush);
-    vt.def("writeUTF8:", output_write_utf8);
-    vt.def("toString", output_to_string);
+    let vt = Vtable::new("Output");
+    vt.add_primitive_method_or_panic("flush", output_flush);
+    vt.add_primitive_method_or_panic("writeUTF8:", output_write_utf8);
+    vt.add_primitive_method_or_panic("toString", output_to_string);
     vt
 }
 

@@ -481,6 +481,15 @@ impl MethodDefinition {
             _ => (),
         }
     }
+    pub fn required_body(&self) -> Result<&Expr, Unwind> {
+        match &self.body {
+            Some(body) => Ok(&(*body)),
+            None => {
+                return Unwind::error_at(self.span.clone(),
+                                        "Partial methods not allowed here");
+            }
+        }
+    }
 }
 
 pub enum MethodKind {

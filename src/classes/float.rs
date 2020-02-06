@@ -2,21 +2,21 @@ use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
 
 pub fn vtable() -> Vtable {
-    let mut vt = Vtable::new("Float");
+    let vt = Vtable::new("Float");
     // FUNDAMENTAL
-    vt.def("addFloat:", float_add_float);
-    vt.def("divFloat:", float_div_float);
-    vt.def("equalFloat:", float_equal_float);
-    vt.def("greaterThanFloat:", float_greater_than_float);
-    vt.def("greaterThanOrEqualFloat:", float_greater_than_or_equal_float);
-    vt.def("lessThanFloat:", float_less_than_float);
-    vt.def("lessThanOrEqualFloat:", float_less_than_or_equal_float);
-    vt.def("mulFloat:", float_mul_float);
-    vt.def("prefix-", float_neg);
-    vt.def("subFloat:", float_sub_float);
-    vt.def("toString", float_to_string);
-    vt.def("asInteger", float_as_integer);
-    vt.def("sqrt", float_sqrt);
+    vt.add_primitive_method_or_panic("addFloat:", float_add_float);
+    vt.add_primitive_method_or_panic("divFloat:", float_div_float);
+    vt.add_primitive_method_or_panic("equalFloat:", float_equal_float);
+    vt.add_primitive_method_or_panic("greaterThanFloat:", float_greater_than_float);
+    vt.add_primitive_method_or_panic("greaterThanOrEqualFloat:", float_greater_than_or_equal_float);
+    vt.add_primitive_method_or_panic("lessThanFloat:", float_less_than_float);
+    vt.add_primitive_method_or_panic("lessThanOrEqualFloat:", float_less_than_or_equal_float);
+    vt.add_primitive_method_or_panic("mulFloat:", float_mul_float);
+    vt.add_primitive_method_or_panic("prefix-", float_neg);
+    vt.add_primitive_method_or_panic("subFloat:", float_sub_float);
+    vt.add_primitive_method_or_panic("toString", float_to_string);
+    vt.add_primitive_method_or_panic("asInteger", float_as_integer);
+    vt.add_primitive_method_or_panic("sqrt", float_sqrt);
     vt
 }
 

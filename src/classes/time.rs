@@ -6,12 +6,12 @@ pub fn class_vtable() -> Vtable {
 }
 
 pub fn instance_vtable() -> Vtable {
-    let mut vt = Vtable::new("Time");
-    vt.def("addTime:", time_add_time);
-    vt.def("subTime:", time_sub_time);
-    vt.def("real", time_real);
-    vt.def("system", time_system);
-    vt.def("user", time_user);
+    let vt = Vtable::new("Time");
+    vt.add_primitive_method_or_panic("addTime:", time_add_time);
+    vt.add_primitive_method_or_panic("subTime:", time_sub_time);
+    vt.add_primitive_method_or_panic("real", time_real);
+    vt.add_primitive_method_or_panic("system", time_system);
+    vt.add_primitive_method_or_panic("user", time_user);
     vt
 }
 
