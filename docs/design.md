@@ -91,6 +91,7 @@ language. Some of these may be already a bit dated.
 - [Finalization](Finalization.md)
 - [Functions](Functions.md)
 - [IDE](IDE.md)
+- [IRs](IR.md)
 - [Interfaces](Interfaces.md)
 - [Miscellany](Miscellany.md)
 - [Modules](Modules.md)
