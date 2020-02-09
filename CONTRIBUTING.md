@@ -29,7 +29,7 @@ Roughly:
 - Cleanups to the Rust code are welcome even if not planned, particularly
   if they address some a `FIXME` in the source. Go right ahead.
 - Library code written in Foolang is very welcome even if not planned. For now
-  just stick it under foo/. Go right ahead.
+  just stick it under `foo/`. Go right ahead.
 - Library code written in Rust is less welcome right now: the Kiss3D stuff is
   already causing regrets. An import/plugin architecture for classes written
   in Rust needs to be implemented first. Open an issue first.
