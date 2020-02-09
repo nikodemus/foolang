@@ -439,13 +439,22 @@ impl Env {
         }
     }
 
-    // FIXME: half duplicates find_global
     pub fn find_class(&self, name: &str, span: Span) -> Eval {
         match self.find_global(name) {
             None => Unwind::error_at(span, "Undefined class"),
             Some(obj) => match &obj.datum {
-                Datum::Class(_) => Ok(obj),
+                Datum::Class(ref class) if !class.interface => Ok(obj),
                 _ => Unwind::error_at(span, "Not a class name"),
+            },
+        }
+    }
+
+    pub fn find_interface(&self, name: &str, span: Span) -> Eval {
+        match self.find_global(name) {
+            None => Unwind::error_at(span, "Undefined interface"),
+            Some(obj) => match &obj.datum {
+                Datum::Class(ref class) if class.interface => Ok(obj),
+                _ => Unwind::error_at(span, "Not an interface name"),
             },
         }
     }

@@ -43,6 +43,7 @@ impl Source for Eval {
 
 type MethodFunction = fn(&Object, &[Object], &Env) -> Eval;
 
+#[derive(Clone)]
 pub enum Method {
     Primitive(MethodFunction),
     Interpreter(Rc<Closure>),
@@ -55,6 +56,26 @@ impl PartialEq for Method {
     }
 }
 
+impl Method {
+    fn reader(index: usize) -> Method {
+        Method::Reader(index)
+    }
+    fn primitive(method: MethodFunction) -> Method {
+        Method::Primitive(method)
+    }
+    fn closure(method: &MethodDefinition, env: &Env) -> Result<Method, Unwind> {
+        Ok(Method::Interpreter(
+            Rc::new(make_method_closure(
+                env,
+                &method.selector,
+                &method.parameters,
+                method.required_body()?,
+                &method.return_type
+            )?)
+        ))
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct Slot {
     pub index: usize,
@@ -63,7 +84,7 @@ pub struct Slot {
 
 pub struct Vtable {
     pub name: String,
-    pub methods: RefCell<HashMap<String, Rc<Method>>>,
+    pub methods: RefCell<HashMap<String, Method>>,
     pub slots: RefCell<HashMap<String, Slot>>,
 }
 
@@ -76,35 +97,18 @@ impl Vtable {
         }
     }
 
-    pub fn add_primitive_method(&self, selector: &str, method: MethodFunction) -> Result<(), Unwind> {
+    pub fn add_method(&self, selector: &str, method: Method) -> Result<(), Unwind> {
         if self.has(selector) {
             return Unwind::error(&format!("Cannot override method {} in {}",
                                           selector, &self.name))
         }
-        self.methods
-            .borrow_mut().insert(
-                selector.to_string(), Rc::new(Method::Primitive(method)));
+        self.methods.borrow_mut().insert(selector.to_string(), method);
         Ok(())
     }
 
     pub fn add_primitive_method_or_panic(&self, selector: &str, method: MethodFunction) {
-        self.add_primitive_method(selector, method).expect(
+        self.add_method(selector, Method::primitive(method)).expect(
             &format!("Could not add primitive method: {:?} to {:?}", selector, self));
-    }
-
-    pub fn add_method_closure(&self, selector: &str, method: Closure) -> Result<(), Unwind> {
-        if self.has(selector) {
-            return Unwind::error(&format!("Cannot override method {} in {}",
-                                          selector, &self.name))
-        }
-        self.methods
-            .borrow_mut().insert(
-                selector.to_string(), Rc::new(Method::Interpreter(Rc::new(method))));
-        Ok(())
-    }
-
-    pub fn add_reader(&self, selector: &str, index: usize) {
-        self.methods.borrow_mut().insert(selector.to_string(), Rc::new(Method::Reader(index)));
     }
 
     pub fn add_slot(&self, name: &str, index: usize, vtable: Option<Rc<Vtable>>) {
@@ -121,6 +125,10 @@ impl Vtable {
         self.slots.borrow()
     }
 
+    pub fn methods(&self) -> Ref<HashMap<String, Method>> {
+        self.methods.borrow()
+    }
+
     pub fn selectors(&self) -> Vec<String> {
         let mut selectors = vec![];
         for key in self.methods.borrow().keys() {
@@ -129,7 +137,7 @@ impl Vtable {
         selectors
     }
 
-    pub fn get(&self, name: &str) -> Option<Rc<Method>> {
+    pub fn get(&self, name: &str) -> Option<Method> {
         match self.methods.borrow().get(name) {
             Some(m) => Some(m.clone()),
             None => None,
@@ -821,11 +829,31 @@ impl Foolang {
             class.add_slot(&var.name, i, env.maybe_type(&var.typename))?;
         }
         class.add_primitive_class_method(&def.constructor(), generic_ctor)?;
+        // FIXME: Here "method" means method definition
         for method in &def.class_methods {
             class.add_interpreted_class_method(env, method)?;
         }
         for method in &def.instance_methods {
             class.add_interpreted_instance_method(env, method)?;
+        }
+        // FIXME: ...and here "method" means an actual method object.
+        for name in &def.interfaces {
+            // FIXME: bogus span
+            let obj = env.find_interface(name, 0..0)?;
+            let interface = obj.as_class_ref()?;
+            for (selector, method) in obj.vtable.methods().iter() {
+                if !class.vtable.has(selector) {
+                    // println!("inherited class method {}", selector);
+                    class.vtable.add_method(selector, method.clone())?;
+                }
+            }
+            let instance_vt = &class.as_class_ref()?.instance_vtable;
+            for (selector, method) in interface.instance_vtable.methods().iter() {
+                if !instance_vt.has(selector) {
+                    // println!("inherited instance method {}", selector);
+                    instance_vt.add_method(selector, method.clone())?;
+                }
+            }
         }
         Ok(class)
     }
@@ -1052,6 +1080,10 @@ impl Object {
         self.vtable.slots()
     }
 
+    pub fn methods(&self) -> Ref<HashMap<String, Slot>> {
+        self.vtable.slots()
+    }
+
     pub fn closure_ref(&self) -> &Closure {
         match &self.datum {
             Datum::Closure(c) => c.borrow(),
@@ -1124,45 +1156,26 @@ impl Object {
         }
         class.instance_vtable.add_slot(name, index, vtable);
         if ! name.starts_with("_") {
-            class.instance_vtable.add_reader(name, index);
+            class.instance_vtable.add_method(name, Method::reader(index))?;
         }
         Ok(())
     }
 
     fn add_primitive_class_method(&self, selector: &str, method: MethodFunction) -> Result<(), Unwind> {
         self.as_class_ref()?;
-        &self.vtable.add_primitive_method(selector, method);
+        self.vtable.add_method(selector, Method::primitive(method))?;
         Ok(())
     }
 
     fn add_interpreted_class_method(&self, env: &Env, method: &MethodDefinition) -> Result<(), Unwind> {
         let class = self.as_class_ref()?;
-        self.vtable.add_method_closure(
-            &method.selector,
-            make_method_closure(
-                env,
-                format!("{}##{}", &class.instance_vtable.name, &method.selector),
-                &method.parameters,
-                method.required_body()?,
-                &method.return_type,
-            )?,
-        )?;
+        self.vtable.add_method(&method.selector, Method::closure(method, env)?)?;
         Ok(())
     }
 
     fn add_interpreted_instance_method(&self,  env: &Env, method: &MethodDefinition) -> Result<(), Unwind> {
         let class = self.as_class_ref()?;
-        class.instance_vtable.add_method_closure(
-            &method.selector,
-            make_method_closure(
-                env,
-                format!("{}#{}", &class.instance_vtable.name, &method.selector),
-                &method.parameters,
-                // FIXME: Allow partial methods
-                method.required_body()?,
-                &method.return_type,
-            )?,
-        )?;
+        class.instance_vtable.add_method(&method.selector, Method::closure(method, env)?)?;
         Ok(())
     }
 
@@ -1262,7 +1275,7 @@ impl Object {
     pub fn send(&self, selector: &str, args: &[Object], env: &Env) -> Eval {
         // println!("debug: {} {} {:?}", self, selector, args);
         match self.vtable.get(selector) {
-            Some(m) => match &*m {
+            Some(m) => match &m {
                 Method::Primitive(method) => method(self, args, env),
                 Method::Interpreter(closure) => closure.apply(Some(self), args),
                 Method::Reader(index) => read_instance_variable(self, *index),
@@ -1272,7 +1285,7 @@ impl Object {
                 // println!("known: {:?}", self.vtable.selectors());
                 let not_understood = vec![env.foo.make_string(selector), env.foo.make_array(args)];
                 match self.vtable.get("perform:with:") {
-                    Some(m) => match &*m {
+                    Some(m) => match &m {
                         Method::Primitive(method) => method(self, &not_understood, env),
                         Method::Interpreter(closure) => closure.apply(Some(self), &not_understood),
                         Method::Reader(index) => read_instance_variable(self, *index),
@@ -1286,7 +1299,7 @@ impl Object {
 
 pub fn make_method_closure(
     env: &Env,
-    name: String,
+    name: &str,
     params: &[Var],
     body: &Expr,
     return_type: &Option<String>,
@@ -1297,7 +1310,7 @@ pub fn make_method_closure(
         args.push(Arg::new(param.span.clone(), param.name.clone(), vtable));
     }
     Ok(Closure {
-        name,
+        name: name.to_string(),
         env: env.clone(),
         params: args,
         body: body.to_owned(),

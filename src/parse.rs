@@ -1775,15 +1775,15 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         if next == Token::WORD && parser.slice() == "is" {
             if let Token::WORD = parser.next_token()? {
                 class.add_interface(parser.slice());
-            } else {
-                return parser
-                    .error("Invalid interface name in class");
+                continue;
             }
+            return parser
+                .error("Invalid interface name in class");
         }
         if next == Token::COMMENT || next == Token::BLOCK_COMMENT {
             continue;
         }
-        return parser.error("Expected method or end");
+        return parser.error("Expected method or end while parsing class");
     }
     Ok(Expr::ClassDefinition(class))
 }
