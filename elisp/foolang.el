@@ -43,6 +43,7 @@
 
 (defvar foolang-indent-offset 4)
 
+(defvar foolang--indent-rules)
 (setq foolang--indent-rules nil)
 
 (cl-defmacro def-foolang-indent (name (col base stack ctx) &body body)
@@ -312,6 +313,7 @@
 ;;;; Indentation engine
 
 ;; Like this so that I can just C-x C-e here to turn it on.
+(defvar foolang--debug-indentation)
 (setq foolang--debug-indentation t)
 (setq foolang--debug-indentation nil)
 
@@ -329,9 +331,10 @@
   (foolang--indent-line-number (line-number-at-pos) t))
 
 (defun foolang--indent-line-number (line-number indent-all)
-  (save-excursion
-    (lexical-let ((base (foolang--find-indent-base)))
-      (foolang--indent-to line-number base base nil nil indent-all))))
+  (let ((line-move-visual nil))
+    (save-excursion
+      (lexical-let ((base (foolang--find-indent-base)))
+        (foolang--indent-to line-number base base nil nil indent-all)))))
 
 (defun foolang--find-indent-base ()
   "Search lines up until it find a 'base', meaning
@@ -476,17 +479,16 @@
 
 ;;;; Indentation testing
 
-(setq foolang--indentation-test-failures nil)
+(defvar foolang--indentation-tests)
+(setq foolang--indentation-tests nil)
 
-(with-current-buffer (get-buffer-create "*foolang-indentation*")
-  (erase-buffer))
+(defvar foolang--indentation-test-failures)
+(setq foolang--indentation-test-failures nil)
 
 (defun foolang--push-mark-around (old &optional loc nomsg activate)
   (funcall old loc t activate))
 
-(advice-add 'push-mark :around 'foolang--push-mark-around)
-
-(cl-defmacro def-foolang-indent-test (name source target)
+(defun foolang--run-indentation-test (name source target)
   (with-current-buffer (get-buffer-create "*foolang-indentation*")
     (end-of-buffer)
     (let ((start (point)))
@@ -502,7 +504,7 @@
         (if (string= target result)
             (progn (insert "ok!")
                    (message "test %s ok" name))
-          (setq foolang--indentation-test-failures t)
+          (push name foolang--indentation-test-failures)
           (insert "FAILED!\n")
           (insert "WANTED:\n")
           (insert target)
@@ -526,6 +528,35 @@
               (insert (substring-no-properties target 0 same))))
           (message "test %s FAILED:\n%s" name
                    (buffer-substring-no-properties start (point))))))))
+
+(defun foolang--run-tests ()
+  ;; For now these are all indentation tests. When others are
+  ;; added this should be split into parts.
+  (with-current-buffer (get-buffer-create "*foolang-indentation*")
+    (erase-buffer))
+  (setq foolang--indentation-test-failures nil)
+  (advice-add 'push-mark :around 'foolang--push-mark-around)
+  (unwind-protect
+      (dolist (test foolang--indentation-tests)
+        (apply 'foolang--run-indentation-test test))
+    (advice-remove 'push-mark 'foolang--push-mark-around))
+  (with-current-buffer "*foolang-indentation*"
+    (cond (foolang--indentation-test-failures
+           (display-buffer "*foolang-indentation*")
+           (user-error "Foolang indentation tests failed!"))
+          (t
+           (kill-buffer)
+           (message "Foolang tests ok!")))))
+
+(cl-defmacro def-foolang-indent-test (name source target)
+  `(let* ((name ,name)
+         (test (list ,source ,target))
+         (old (assoc-string name foolang--indentation-tests)))
+     (if old
+         (setcdr old test)
+       (push (cons name test) foolang--indentation-tests))
+     (when foolang--debug-indentation
+       (apply foolang--indentation-test name test))))
 
 (def-foolang-indent-test "class-indent-1"
   "
@@ -879,12 +910,6 @@ end"
         42
 end")
 
-(advice-remove 'push-mark 'foolang--push-mark-around)
+(foolang--run-tests)
 
-(with-current-buffer "*foolang-indentation*"
-  (cond (foolang--indentation-test-failures
-         (display-buffer "*foolang-indentation*")
-         (user-error "Foolang indentation tests failed!"))
-        (t
-         (kill-buffer)
-         (message "Foolang tests ok!"))))
+(provide 'foolang)
