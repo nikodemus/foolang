@@ -329,9 +329,10 @@
   (foolang--indent-line-number (line-number-at-pos) t))
 
 (defun foolang--indent-line-number (line-number indent-all)
-  (save-excursion
-    (lexical-let ((base (foolang--find-indent-base)))
-      (foolang--indent-to line-number base base nil nil indent-all))))
+  (let ((line-move-visual nil))
+    (save-excursion
+      (lexical-let ((base (foolang--find-indent-base)))
+        (foolang--indent-to line-number base base nil nil indent-all)))))
 
 (defun foolang--find-indent-base ()
   "Search lines up until it find a 'base', meaning
