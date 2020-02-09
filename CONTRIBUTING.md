@@ -13,7 +13,7 @@ But a caveat!
 So far this has been a one-person project. So most of the issues are rather
 terse, just enough for one, but not necessarily descriptive for others.
 
-So unless the issue is reasonably explicit about what it emans, it's probably a
+So unless the issue is reasonably explicit about what it means, it's probably a
 best to ask "What's the idea here?" first.
 
 Perusing the [design documents](https://foolang.org/#/design) on the website
