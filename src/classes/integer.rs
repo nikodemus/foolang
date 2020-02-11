@@ -8,7 +8,10 @@ pub fn vtable() -> Vtable {
     vt.add_primitive_method_or_panic("divInteger:", integer_div_integer);
     vt.add_primitive_method_or_panic("equalInteger:", integer_equal_integer);
     vt.add_primitive_method_or_panic("greaterThanInteger:", integer_greater_than_integer);
-    vt.add_primitive_method_or_panic("greaterThanOrEqualInteger:", integer_greater_than_or_equal_integer);
+    vt.add_primitive_method_or_panic(
+        "greaterThanOrEqualInteger:",
+        integer_greater_than_or_equal_integer,
+    );
     vt.add_primitive_method_or_panic("lessThanInteger:", integer_less_than_integer);
     vt.add_primitive_method_or_panic("lessThanOrEqualInteger:", integer_less_than_or_equal_integer);
     vt.add_primitive_method_or_panic("mulInteger:", integer_mul_integer);

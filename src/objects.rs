@@ -11,7 +11,10 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use crate::eval::{Binding, Env};
-use crate::parse::{ClassDefinition, ClassExtension, Const, Expr, InterfaceDefinition, MethodDefinition, Literal, Parser, Var};
+use crate::parse::{
+    ClassDefinition, ClassExtension, Const, Expr, InterfaceDefinition, Literal, MethodDefinition,
+    Parser, Var,
+};
 use crate::time::TimeInfo;
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -48,6 +51,11 @@ pub enum Method {
     Primitive(MethodFunction),
     Interpreter(Rc<Closure>),
     Reader(usize),
+    // FIXME: Instead there should probably be a MethodSignature: then
+    // required methods aren't methods, but signatures.
+    //
+    // That does require splitting Interfaces from Class, though.
+    Required,
 }
 
 impl PartialEq for Method {
@@ -64,15 +72,16 @@ impl Method {
         Method::Primitive(method)
     }
     fn closure(method: &MethodDefinition, env: &Env) -> Result<Method, Unwind> {
-        Ok(Method::Interpreter(
-            Rc::new(make_method_closure(
-                env,
-                &method.selector,
-                &method.parameters,
-                method.required_body()?,
-                &method.return_type
-            )?)
-        ))
+        Ok(Method::Interpreter(Rc::new(make_method_closure(
+            env,
+            &method.selector,
+            &method.parameters,
+            method.required_body()?,
+            &method.return_type,
+        )?)))
+    }
+    fn required() -> Method {
+        Method::Required
     }
 }
 
@@ -99,16 +108,15 @@ impl Vtable {
 
     pub fn add_method(&self, selector: &str, method: Method) -> Result<(), Unwind> {
         if self.has(selector) {
-            return Unwind::error(&format!("Cannot override method {} in {}",
-                                          selector, &self.name))
+            return Unwind::error(&format!("Cannot override method {} in {}", selector, &self.name));
         }
         self.methods.borrow_mut().insert(selector.to_string(), method);
         Ok(())
     }
 
     pub fn add_primitive_method_or_panic(&self, selector: &str, method: MethodFunction) {
-        self.add_method(selector, Method::primitive(method)).expect(
-            &format!("Could not add primitive method: {:?} to {:?}", selector, self));
+        self.add_method(selector, Method::primitive(method))
+            .expect(&format!("Could not add primitive method: {:?} to {:?}", selector, self));
     }
 
     pub fn add_slot(&self, name: &str, index: usize, vtable: Option<Rc<Vtable>>) {
@@ -235,8 +243,8 @@ impl Class {
             vtable: Rc::new(Vtable::new(&format!("class {}", name))),
             datum: Datum::Class(Rc::new(Class {
                 instance_vtable: Rc::new(Vtable::new(name)),
-                interface: false
-            }))
+                interface: false,
+            })),
         }
     }
     fn new_interface(name: &str) -> Object {
@@ -244,8 +252,8 @@ impl Class {
             vtable: Rc::new(Vtable::new(&format!("interface {}", name))),
             datum: Datum::Class(Rc::new(Class {
                 instance_vtable: Rc::new(Vtable::new(name)),
-                interface: true
-            }))
+                interface: true,
+            })),
         }
     }
     fn object(class_vtable: &Rc<Vtable>, instance_vtable: &Rc<Vtable>) -> Object {
@@ -866,6 +874,9 @@ impl Foolang {
         for method in &def.instance_methods {
             interface.add_interpreted_instance_method(env, method)?;
         }
+        for method in &def.required_methods {
+            interface.add_required_method(method)?;
+        }
         Ok(interface)
     }
 
@@ -1046,9 +1057,7 @@ impl Object {
     pub fn as_class_ref(&self) -> Result<&Class, Unwind> {
         match &self.datum {
             Datum::Class(class) => Ok(class.as_ref()),
-            _ => Unwind::error(&format!(
-                "{} is not a Class or Interface",
-            self))
+            _ => Unwind::error(&format!("{} is not a Class or Interface", self)),
         }
     }
 
@@ -1063,8 +1072,7 @@ impl Object {
             self.add_interpreted_class_method(env, method)?;
         }
         let class = self.as_class_ref()?;
-        if !ext.instance_methods.is_empty() &&
-            class.instance_vtable.has("perform:with:") {
+        if !ext.instance_methods.is_empty() && class.instance_vtable.has("perform:with:") {
             return Unwind::error(&format!(
                 "Cannot extend {}: instance method 'perform:with:' defined",
                 class.instance_vtable.name
@@ -1149,33 +1157,56 @@ impl Object {
         }
     }
 
-    fn add_slot(&mut self, name: &str, index: usize, vtable: Option<Rc<Vtable>>) -> Result<(), Unwind> {
+    fn add_slot(
+        &mut self,
+        name: &str,
+        index: usize,
+        vtable: Option<Rc<Vtable>>,
+    ) -> Result<(), Unwind> {
         let class = self.as_class_ref()?;
         if class.interface {
             return Unwind::error("BUG: Cannot add slot to an interface");
         }
         class.instance_vtable.add_slot(name, index, vtable);
-        if ! name.starts_with("_") {
+        if !name.starts_with("_") {
             class.instance_vtable.add_method(name, Method::reader(index))?;
         }
         Ok(())
     }
 
-    fn add_primitive_class_method(&self, selector: &str, method: MethodFunction) -> Result<(), Unwind> {
+    fn add_primitive_class_method(
+        &self,
+        selector: &str,
+        method: MethodFunction,
+    ) -> Result<(), Unwind> {
         self.as_class_ref()?;
         self.vtable.add_method(selector, Method::primitive(method))?;
         Ok(())
     }
 
-    fn add_interpreted_class_method(&self, env: &Env, method: &MethodDefinition) -> Result<(), Unwind> {
-        let class = self.as_class_ref()?;
+    fn add_interpreted_class_method(
+        &self,
+        env: &Env,
+        method: &MethodDefinition,
+    ) -> Result<(), Unwind> {
+        self.as_class_ref()?;
         self.vtable.add_method(&method.selector, Method::closure(method, env)?)?;
         Ok(())
     }
 
-    fn add_interpreted_instance_method(&self,  env: &Env, method: &MethodDefinition) -> Result<(), Unwind> {
+    fn add_interpreted_instance_method(
+        &self,
+        env: &Env,
+        method: &MethodDefinition,
+    ) -> Result<(), Unwind> {
         let class = self.as_class_ref()?;
         class.instance_vtable.add_method(&method.selector, Method::closure(method, env)?)?;
+        Ok(())
+    }
+
+    fn add_required_method(&self, method: &MethodDefinition) -> Result<(), Unwind> {
+        let class = self.as_class_ref()?;
+        class.instance_vtable.add_method(&method.selector, Method::required())?;
         Ok(())
     }
 
@@ -1279,6 +1310,9 @@ impl Object {
                 Method::Primitive(method) => method(self, args, env),
                 Method::Interpreter(closure) => closure.apply(Some(self), args),
                 Method::Reader(index) => read_instance_variable(self, *index),
+                Method::Required => {
+                    Unwind::error(&format!("Required method '{}' unimplemented", selector))
+                }
             },
             None if selector == "toString" => generic_to_string(self, args, env),
             None => {
@@ -1289,6 +1323,9 @@ impl Object {
                         Method::Primitive(method) => method(self, &not_understood, env),
                         Method::Interpreter(closure) => closure.apply(Some(self), &not_understood),
                         Method::Reader(index) => read_instance_variable(self, *index),
+                        Method::Required => {
+                            Unwind::error(&format!("Required method '{}' unimplemented", selector))
+                        }
                     },
                     None => Unwind::message_error(self, selector, args),
                 }

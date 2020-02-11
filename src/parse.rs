@@ -322,6 +322,7 @@ impl ClassDefinition {
         match kind {
             MethodKind::Instance => self.instance_methods.push(method),
             MethodKind::Class => self.class_methods.push(method),
+            _ => panic!("Cannot add {:?} to a ClassDefinition", kind),
         };
     }
 
@@ -364,6 +365,7 @@ impl ClassExtension {
         match kind {
             MethodKind::Instance => self.instance_methods.push(method),
             MethodKind::Class => self.class_methods.push(method),
+            _ => panic!("Cannot add {:?} to a ClassExtension", kind),
         };
     }
 }
@@ -401,6 +403,7 @@ pub struct InterfaceDefinition {
     pub name: String,
     pub instance_methods: Vec<MethodDefinition>,
     pub class_methods: Vec<MethodDefinition>,
+    pub required_methods: Vec<MethodDefinition>,
 }
 
 impl InterfaceDefinition {
@@ -410,6 +413,7 @@ impl InterfaceDefinition {
             name: name.to_string(),
             instance_methods: Vec::new(),
             class_methods: Vec::new(),
+            required_methods: Vec::new(),
         }
     }
 
@@ -427,6 +431,7 @@ impl InterfaceDefinition {
         match kind {
             MethodKind::Instance => self.instance_methods.push(method),
             MethodKind::Class => self.class_methods.push(method),
+            MethodKind::Required => self.required_methods.push(method),
         };
     }
 }
@@ -485,16 +490,17 @@ impl MethodDefinition {
         match &self.body {
             Some(body) => Ok(&(*body)),
             None => {
-                return Unwind::error_at(self.span.clone(),
-                                        "Partial methods not allowed here");
+                return Unwind::error_at(self.span.clone(), "Partial methods not allowed here");
             }
         }
     }
 }
 
+#[derive(Debug)]
 pub enum MethodKind {
     Class,
     Instance,
+    Required,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -1695,7 +1701,7 @@ fn interface_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         }
         if next == Token::WORD && parser.slice() == "required" {
             parser.next_token()?;
-            interface.add_method(MethodKind::Instance, parse_method_signature(parser)?);
+            interface.add_method(MethodKind::Required, parse_method_signature(parser)?);
             continue;
         }
         return parser.error("Expected method or end");
@@ -1777,8 +1783,7 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
                 class.add_interface(parser.slice());
                 continue;
             }
-            return parser
-                .error("Invalid interface name in class");
+            return parser.error("Invalid interface name in class");
         }
         if next == Token::COMMENT || next == Token::BLOCK_COMMENT {
             continue;

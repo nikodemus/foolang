@@ -469,8 +469,8 @@ fn test_parse_extend1() {
 fn test_parse_interface1() {
     let mut interface = InterfaceDefinition::new(1..10, "Foo");
     interface.add_method(MethodKind::Instance, method(19..25, "bar", vec![], int(38..40, 42)));
-    interface.add_method(MethodKind::Instance, method_signature(54..60, "quux", vec![]));
     interface.add_method(MethodKind::Instance, method(70..76, "zot", vec![], int(89..92, 123)));
+    interface.add_method(MethodKind::Required, method_signature(54..60, "quux", vec![]));
     assert_eq!(
         parse_ok(
             "

@@ -8,9 +8,9 @@ use crate::objects::{
     Vtable,
 };
 use crate::parse::{
-    Array, Assign, Bind, Block, Cascade, Chain, ClassDefinition, ClassExtension,
-    Const, Dictionary, Eq, Expr, Global, Import, InterfaceDefinition, Literal, Message,
-    Parser, Raise, Return, Seq, Typecheck, Var,
+    Array, Assign, Bind, Block, Cascade, Chain, ClassDefinition, ClassExtension, Const, Dictionary,
+    Eq, Expr, Global, Import, InterfaceDefinition, Literal, Message, Parser, Raise, Return, Seq,
+    Typecheck, Var,
 };
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -347,9 +347,9 @@ impl Env {
         for p in &block.params {
             let vt = match &p.typename {
                 None => None,
-                Some(name) => {
-                    Some(self.find_class(name, p.span.clone())?.as_class_ref()?.instance_vtable.clone())
-                }
+                Some(name) => Some(
+                    self.find_class(name, p.span.clone())?.as_class_ref()?.instance_vtable.clone(),
+                ),
             };
             args.push(Arg::new(p.span.clone(), p.name.clone(), vt));
         }
@@ -367,16 +367,14 @@ impl Env {
 
     fn check_toplevel(&self, span: &Span, what: &str) -> Result<(), Unwind> {
         if !self.is_toplevel() {
-            return Unwind::error_at(span.clone(),
-                                    &format!("{} not at toplevel", what));
+            return Unwind::error_at(span.clone(), &format!("{} not at toplevel", what));
         }
         Ok(())
     }
 
     fn check_not_defined(&self, name: &str, span: &Span, what: &str) -> Result<(), Unwind> {
         if self.has_definition(name) {
-            return Unwind::error_at(span.clone(),
-                                    &format!("Cannot redefine {}", what));
+            return Unwind::error_at(span.clone(), &format!("Cannot redefine {}", what));
         };
         Ok(())
     }
@@ -432,7 +430,7 @@ impl Env {
                 let maybe = self.find_class(name, 0..0);
                 let class = match maybe {
                     Err(_) => return None,
-                    Ok(ref obj) => obj.as_class_ref().unwrap()
+                    Ok(ref obj) => obj.as_class_ref().unwrap(),
                 };
                 Some(class.instance_vtable.clone())
             }
@@ -474,7 +472,9 @@ impl Env {
     ) -> Result<Option<Rc<Vtable>>, Unwind> {
         match name {
             None => Ok(None),
-            Some(name) => Ok(Some(self.find_class(name, span)?.as_class_ref()?.instance_vtable.clone())),
+            Some(name) => {
+                Ok(Some(self.find_class(name, span)?.as_class_ref()?.instance_vtable.clone()))
+            }
         }
     }
 
