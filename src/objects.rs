@@ -108,7 +108,10 @@ impl Vtable {
 
     pub fn add_method(&self, selector: &str, method: Method) -> Result<(), Unwind> {
         if self.has(selector) {
-            return Unwind::error(&format!("Cannot override method {} in {}", selector, &self.name));
+            return Unwind::error(&format!(
+                "Cannot override method {} in {}",
+                selector, &self.name
+            ));
         }
         self.methods.borrow_mut().insert(selector.to_string(), method);
         Ok(())
