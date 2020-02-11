@@ -745,8 +745,7 @@ impl Foolang {
             };
             env.eval(&expr).context(&program)?;
         }
-        // FIXME: Bad error "Unknown class" with bogus span.
-        let main = env.find_class("Main", 0..0)?;
+        let main = env.find_global_or_unwind("Main")?;
         Ok(main.send("run:in:", &[command, system], &env).context(&program)?)
     }
 
@@ -849,15 +848,14 @@ impl Foolang {
         }
         // FIXME: ...and here "method" means an actual method object.
         for name in &def.interfaces {
-            // FIXME: bogus span
-            let obj = env.find_interface(name, 0..0)?;
-            let interface = obj.as_class_ref()?;
+            let obj = env.find_global_or_unwind(name)?;
             for (selector, method) in obj.vtable.methods().iter() {
                 if !class.vtable.has(selector) {
                     // println!("inherited class method {}", selector);
                     class.vtable.add_method(selector, method.clone())?;
                 }
             }
+            let interface = env.find_interface(name)?;
             let instance_vt = &class.as_class_ref()?.instance_vtable;
             for (selector, method) in interface.instance_vtable.methods().iter() {
                 if !instance_vt.has(selector) {
@@ -897,7 +895,7 @@ impl Foolang {
         body: Expr,
         rtype: &Option<String>,
     ) -> Eval {
-        let rtype = env.find_vtable_if_name(rtype, body.span())?;
+        let rtype = env.find_vtable_if_name(rtype)?;
         Ok(Object {
             vtable: Rc::clone(&self.closure_vtable),
             datum: Datum::Closure(Rc::new(Closure {
@@ -1346,7 +1344,7 @@ pub fn make_method_closure(
 ) -> Result<Closure, Unwind> {
     let mut args = vec![];
     for param in params {
-        let vtable = env.find_vtable_if_name(&param.typename, param.span.clone())?;
+        let vtable = env.find_vtable_if_name(&param.typename)?;
         args.push(Arg::new(param.span.clone(), param.name.clone(), vtable));
     }
     Ok(Closure {
@@ -1355,7 +1353,7 @@ pub fn make_method_closure(
         params: args,
         body: body.to_owned(),
         // FIXME: questionable span
-        return_vtable: env.find_vtable_if_name(&return_type, body.span())?,
+        return_vtable: env.find_vtable_if_name(&return_type)?,
     })
 }
 

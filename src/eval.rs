@@ -4,8 +4,8 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::objects::{
-    read_instance_variable, write_instance_variable, Arg, Datum, Eval, Foolang, Object, Source,
-    Vtable,
+    read_instance_variable, write_instance_variable, Arg, Class, Datum, Eval, Foolang, Object,
+    Source, Vtable,
 };
 use crate::parse::{
     Array, Assign, Bind, Block, Cascade, Chain, ClassDefinition, ClassExtension, Const, Dictionary,
@@ -319,12 +319,11 @@ impl Env {
         let binding = match bind.typename {
             None => Binding::untyped(self.eval(&bind.value)?),
             Some(ref typename) => {
-                let obj = self.find_class(typename, bind.value.span())?;
-                let class = obj.as_class_ref()?;
+                let class = self.find_class(typename)?;
                 // FIXME: make the typecheck explicit
                 Binding::typed(
                     class.instance_vtable.clone(),
-                    self.do_typecheck(bind.value.span(), &bind.value, typename)?,
+                    self.do_typecheck(&bind.value, typename)?,
                 )
             }
         };
@@ -347,9 +346,7 @@ impl Env {
         for p in &block.params {
             let vt = match &p.typename {
                 None => None,
-                Some(name) => Some(
-                    self.find_class(name, p.span.clone())?.as_class_ref()?.instance_vtable.clone(),
-                ),
+                Some(name) => Some(self.find_class(name)?.instance_vtable.clone()),
             };
             args.push(Arg::new(p.span.clone(), p.name.clone(), vt));
         }
@@ -394,7 +391,7 @@ impl Env {
         if !self.is_toplevel() {
             return Unwind::error_at(extension.span.clone(), "Class extension not at toplevel");
         }
-        let class = self.find_class(&extension.name, extension.span.clone())?;
+        let class = self.find_global_or_unwind(&extension.name)?;
         class.extend_class(extension, self)
     }
 
@@ -427,32 +424,31 @@ impl Env {
         match maybe_name {
             None => return None,
             Some(name) => {
-                let maybe = self.find_class(name, 0..0);
-                let class = match maybe {
+                let class = match self.find_class(name) {
                     Err(_) => return None,
-                    Ok(ref obj) => obj.as_class_ref().unwrap(),
+                    Ok(class) => class,
                 };
                 Some(class.instance_vtable.clone())
             }
         }
     }
 
-    pub fn find_class(&self, name: &str, span: Span) -> Eval {
+    pub fn find_class(&self, name: &str) -> Result<Rc<Class>, Unwind> {
         match self.find_global(name) {
-            None => Unwind::error_at(span, "Undefined class"),
+            None => Unwind::error(&format!("Undefined class: {}", name)),
             Some(obj) => match &obj.datum {
-                Datum::Class(ref class) if !class.interface => Ok(obj),
-                _ => Unwind::error_at(span, "Not a class name"),
+                Datum::Class(ref class) if !class.interface => Ok(class.clone()),
+                _ => Unwind::error(&format!("Interface, not class: {}", name)),
             },
         }
     }
 
-    pub fn find_interface(&self, name: &str, span: Span) -> Eval {
+    pub fn find_interface(&self, name: &str) -> Result<Rc<Class>, Unwind> {
         match self.find_global(name) {
-            None => Unwind::error_at(span, "Undefined interface"),
+            None => Unwind::error(&format!("Undefined interface: {}", name)),
             Some(obj) => match &obj.datum {
-                Datum::Class(ref class) if class.interface => Ok(obj),
-                _ => Unwind::error_at(span, "Not an interface name"),
+                Datum::Class(ref class) if class.interface => Ok(class.clone()),
+                _ => Unwind::error(&format!("Class, not interface: {}", name)),
             },
         }
     }
@@ -465,27 +461,25 @@ impl Env {
         }
     }
 
-    pub fn find_vtable_if_name(
-        &self,
-        name: &Option<String>,
-        span: Span,
-    ) -> Result<Option<Rc<Vtable>>, Unwind> {
+    pub fn find_global_or_unwind(&self, name: &str) -> Eval {
+        match self.find_global(name) {
+            Some(obj) => Ok(obj),
+            None => Unwind::error(&format!("Undefined global: {}", name)),
+        }
+    }
+
+    pub fn find_vtable_if_name(&self, name: &Option<String>) -> Result<Option<Rc<Vtable>>, Unwind> {
         match name {
             None => Ok(None),
-            Some(name) => {
-                Ok(Some(self.find_class(name, span)?.as_class_ref()?.instance_vtable.clone()))
-            }
+            Some(name) => Ok(Some(self.find_class(name)?.instance_vtable.clone())),
         }
     }
 
     fn eval_global(&self, global: &Global) -> Eval {
-        match self.find_global(&global.name) {
-            Some(obj) => Ok(obj),
-            None => Unwind::error_at(
-                global.span.clone(),
-                &format!("Undefined global: {}", &global.name),
-            ),
-        }
+        self.find_global_or_unwind(&global.name).map_err(|mut err| {
+            err.add_span(&global.span);
+            err
+        })
     }
 
     fn eval_constant(&self, constant: &Const) -> Eval {
@@ -615,13 +609,12 @@ impl Env {
     }
 
     fn eval_typecheck(&self, typecheck: &Typecheck) -> Eval {
-        self.do_typecheck(typecheck.span.clone(), &typecheck.expr, &typecheck.typename)
+        self.do_typecheck(&typecheck.expr, &typecheck.typename)
     }
 
-    fn do_typecheck(&self, span: Span, expr: &Expr, typename: &str) -> Eval {
+    fn do_typecheck(&self, expr: &Expr, typename: &str) -> Eval {
         let value = self.eval(expr)?;
-        let obj = self.find_class(typename, span.clone())?;
-        let class = obj.as_class_ref()?;
+        let class = self.find_class(typename)?;
         if class.instance_vtable == value.vtable {
             Ok(value)
         } else {
