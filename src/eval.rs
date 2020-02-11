@@ -343,14 +343,18 @@ impl Env {
 
     fn eval_block(&self, block: &Block) -> Eval {
         let mut args = vec![];
+        let mut parameter_types = vec![];
         for p in &block.params {
-            let vt = match &p.typename {
-                None => None,
-                Some(name) => Some(self.find_class(name)?.instance_vtable.clone()),
-            };
-            args.push(Arg::new(p.span.clone(), p.name.clone(), vt));
+            args.push(Arg::new(p.span.clone(), p.name.clone()));
+            parameter_types.push(&p.typename);
         }
-        self.foo.make_closure(self.clone(), args, (*block.body).clone(), &block.rtype)
+        self.foo.make_closure(
+            self.clone(),
+            args,
+            (*block.body).clone(),
+            parameter_types,
+            &block.rtype,
+        )
     }
 
     fn eval_cascade(&self, cascade: &Cascade) -> Eval {
@@ -420,6 +424,8 @@ impl Env {
     // NOTE: The name is correct: vtables stand in for classes right now,
     // and once we have non-vtable types this will return Option<Type>
     // instead.
+    //
+    // FIXME: near identical to find_vtable_if_name
     pub fn maybe_type(&self, maybe_name: &Option<String>) -> Option<Rc<Vtable>> {
         match maybe_name {
             None => return None,
@@ -430,6 +436,14 @@ impl Env {
                 };
                 Some(class.instance_vtable.clone())
             }
+        }
+    }
+
+    // FIXME: near identical to maybe_type.
+    pub fn find_vtable_if_name(&self, name: &Option<String>) -> Result<Option<Rc<Vtable>>, Unwind> {
+        match name {
+            None => Ok(None),
+            Some(name) => Ok(Some(self.find_class(name)?.instance_vtable.clone())),
         }
     }
 
@@ -465,13 +479,6 @@ impl Env {
         match self.find_global(name) {
             Some(obj) => Ok(obj),
             None => Unwind::error(&format!("Undefined global: {}", name)),
-        }
-    }
-
-    pub fn find_vtable_if_name(&self, name: &Option<String>) -> Result<Option<Rc<Vtable>>, Unwind> {
-        match name {
-            None => Ok(None),
-            Some(name) => Ok(Some(self.find_class(name)?.instance_vtable.clone())),
         }
     }
 

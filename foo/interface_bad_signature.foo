@@ -1,0 +1,9 @@
+interface I
+    required method quux -> Integer
+end
+
+class C {}
+    is I
+    method quux
+        42
+end

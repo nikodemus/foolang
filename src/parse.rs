@@ -452,6 +452,7 @@ impl Message {
     }
 }
 
+// FIXME: split into signature and method
 #[derive(Debug, PartialEq, Clone)]
 pub struct MethodDefinition {
     pub span: Span,

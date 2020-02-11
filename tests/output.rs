@@ -88,6 +88,39 @@ fn test_bad_class() -> Test {
 }
 
 #[test]
+fn test_interface_unimplemented() -> Test {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/interface_unimplemented.foo");
+    cmd.assert()
+        .failure()
+        .code(1)
+        .stdout(predicates::str::contains("ERROR: C#quux unimplemented, required by interface I"));
+    Ok(())
+}
+
+#[test]
+fn test_interface_bad_signature() -> Test {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/interface_bad_signature.foo");
+    cmd.assert().failure().code(1).stdout(predicates::str::contains(
+        "ERROR: C#quux is () -> Any, interface I specifies () -> Integer",
+    ));
+    Ok(())
+}
+
+#[test]
+fn test_interface_ok() -> Test {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/interface_ok.foo");
+    cmd.assert()
+        .success()
+        .stdout(predicates::str::contains("foo = C#foo"))
+        .stdout(predicates::str::contains("bar = I#bar"))
+        .stdout(predicates::str::contains("quux = 42"));
+    Ok(())
+}
+
+#[test]
 fn test_import_x_local() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/import_x_local.foo");

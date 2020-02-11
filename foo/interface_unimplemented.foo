@@ -1,0 +1,11 @@
+interface I
+    method foo
+        "I#foo"
+    method bar
+        "I#bar"
+    required method quux -> Integer
+end
+
+class C {}
+    is I
+end

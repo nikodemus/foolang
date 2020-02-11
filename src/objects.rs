@@ -46,16 +46,44 @@ impl Source for Eval {
 
 type MethodFunction = fn(&Object, &[Object], &Env) -> Eval;
 
+#[derive(PartialEq, Clone, Debug)]
+pub struct Signature {
+    parameter_types: Vec<Option<Rc<Vtable>>>,
+    return_type: Option<Rc<Vtable>>,
+}
+
+impl fmt::Display for Signature {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "(")?;
+        let mut first = true;
+        for t in &self.parameter_types {
+            if first {
+                first = false;
+            } else {
+                write!(f, ", ")?;
+            }
+            match t {
+                Some(vt) => write!(f, "{}", &vt.name)?,
+                None => write!(f, "Any")?,
+            }
+        }
+        write!(f, ") -> ")?;
+        match &self.return_type {
+            Some(vt) => write!(f, "{}", &vt.name)?,
+            None => write!(f, "Any")?,
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone)]
 pub enum Method {
     Primitive(MethodFunction),
     Interpreter(Rc<Closure>),
     Reader(usize),
-    // FIXME: Instead there should probably be a MethodSignature: then
-    // required methods aren't methods, but signatures.
-    //
-    // That does require splitting Interfaces from Class, though.
-    Required,
+    // FIXME: split Interface from Class, give Interface a vec
+    // of required signature.
+    Required(Signature),
 }
 
 impl PartialEq for Method {
@@ -80,8 +108,23 @@ impl Method {
             &method.return_type,
         )?)))
     }
-    fn required() -> Method {
-        Method::Required
+    fn required(signature: Signature) -> Method {
+        Method::Required(signature)
+    }
+    fn is_required(&self) -> bool {
+        match self {
+            Method::Required(_) => true,
+            _ => false,
+        }
+    }
+    fn signature(&self) -> Result<&Signature, Unwind> {
+        match self {
+            Method::Required(ref s) => Ok(s),
+            Method::Interpreter(ref c) => Ok(&c.signature),
+            // FIXME: Both should
+            Method::Primitive(_) => Unwind::error("Primitive method has no signature"),
+            Method::Reader(_) => Unwind::error("Reader method has no signature"),
+        }
     }
 }
 
@@ -148,6 +191,7 @@ impl Vtable {
         selectors
     }
 
+    // FIXME: Could I return a reference instead?
     pub fn get(&self, name: &str) -> Option<Method> {
         match self.methods.borrow().get(name) {
             Some(m) => Some(m.clone()),
@@ -208,15 +252,13 @@ impl Hash for System {
 pub struct Arg {
     pub span: Span,
     pub name: String,
-    pub vtable: Option<Rc<Vtable>>,
 }
 
 impl Arg {
-    pub fn new(span: Span, name: String, vtable: Option<Rc<Vtable>>) -> Arg {
+    pub fn new(span: Span, name: String) -> Arg {
         Arg {
             span,
             name,
-            vtable,
         }
     }
 }
@@ -276,7 +318,7 @@ pub struct Closure {
     pub env: Env,
     pub params: Vec<Arg>,
     pub body: Expr,
-    pub return_vtable: Option<Rc<Vtable>>,
+    pub signature: Signature,
 }
 
 impl PartialEq for Closure {
@@ -308,10 +350,15 @@ impl Closure {
                 ),
             );
         }
-        for (arg, obj) in self.params.iter().zip(args.into_iter().map(|x| (*x).clone())) {
-            let binding = match &arg.vtable {
+        for ((arg, vt), obj) in self
+            .params
+            .iter()
+            .zip(&self.signature.parameter_types)
+            .zip(args.into_iter().map(|x| (*x).clone()))
+        {
+            let binding = match vt {
                 None => Binding::untyped(obj),
-                Some(vtable) => {
+                Some(ref vtable) => {
                     if vtable != &obj.vtable {
                         return Unwind::type_error_at(arg.span.clone(), obj, vtable.name.clone());
                     }
@@ -330,7 +377,7 @@ impl Closure {
                 return Err(unwind);
             }
         };
-        if let Some(vtable) = &self.return_vtable {
+        if let Some(vtable) = &self.signature.return_type {
             if &result.vtable != vtable {
                 return Unwind::type_error(result, vtable.name.clone()).source(&self.body.span());
             }
@@ -858,9 +905,33 @@ impl Foolang {
             let interface = env.find_interface(name)?;
             let instance_vt = &class.as_class_ref()?.instance_vtable;
             for (selector, method) in interface.instance_vtable.methods().iter() {
-                if !instance_vt.has(selector) {
-                    // println!("inherited instance method {}", selector);
-                    instance_vt.add_method(selector, method.clone())?;
+                let signature = method.signature()?;
+                let required = method.is_required();
+                match instance_vt.get(selector) {
+                    Some(Method::Interpreter(ref closure)) => {
+                        if &closure.signature != signature {
+                            return Unwind::error(
+                                &format!(
+                                    "{}#{} is {}, interface {} specifies {}",
+                                    &def.name, selector, &closure.signature, name, signature
+                                ))
+                        }
+                    },
+                    Some(_) => {
+                        return Unwind::error(
+                            &format!(
+                                "{}#{} is an interface method, non-vanilla implementations not supporte yet",
+                                &def.name, selector
+                            )
+                        )
+                    }
+                    None if required => return Unwind::error(
+                            &format!("{}#{} unimplemented, required by interface {}",
+                                     &def.name, selector, name)
+                    ),
+                    None => {
+                        instance_vt.add_method(selector, method.clone())?;
+                    }
                 }
             }
         }
@@ -876,7 +947,7 @@ impl Foolang {
             interface.add_interpreted_instance_method(env, method)?;
         }
         for method in &def.required_methods {
-            interface.add_required_method(method)?;
+            interface.add_required_method(env, method)?;
         }
         Ok(interface)
     }
@@ -893,9 +964,14 @@ impl Foolang {
         env: Env,
         params: Vec<Arg>,
         body: Expr,
-        rtype: &Option<String>,
+        parameter_type_names: Vec<&Option<String>>,
+        return_type_name: &Option<String>,
     ) -> Eval {
-        let rtype = env.find_vtable_if_name(rtype)?;
+        let mut parameter_types = vec![];
+        for name in parameter_type_names {
+            parameter_types.push(env.find_vtable_if_name(name)?);
+        }
+        let return_type = env.find_vtable_if_name(return_type_name)?;
         Ok(Object {
             vtable: Rc::clone(&self.closure_vtable),
             datum: Datum::Closure(Rc::new(Closure {
@@ -903,8 +979,10 @@ impl Foolang {
                 env,
                 params,
                 body,
-                // FIXME: questionable span
-                return_vtable: rtype,
+                signature: Signature {
+                    parameter_types,
+                    return_type,
+                },
             })),
         })
     }
@@ -1205,9 +1283,19 @@ impl Object {
         Ok(())
     }
 
-    fn add_required_method(&self, method: &MethodDefinition) -> Result<(), Unwind> {
+    fn add_required_method(&self, env: &Env, method: &MethodDefinition) -> Result<(), Unwind> {
         let class = self.as_class_ref()?;
-        class.instance_vtable.add_method(&method.selector, Method::required())?;
+        let mut parameter_types = vec![];
+        for p in &method.parameters {
+            parameter_types.push(env.find_vtable_if_name(&p.typename)?);
+        }
+        class.instance_vtable.add_method(
+            &method.selector,
+            Method::required(Signature {
+                parameter_types,
+                return_type: env.find_vtable_if_name(&method.return_type)?,
+            }),
+        )?;
         Ok(())
     }
 
@@ -1311,7 +1399,7 @@ impl Object {
                 Method::Primitive(method) => method(self, args, env),
                 Method::Interpreter(closure) => closure.apply(Some(self), args),
                 Method::Reader(index) => read_instance_variable(self, *index),
-                Method::Required => {
+                Method::Required(_) => {
                     Unwind::error(&format!("Required method '{}' unimplemented", selector))
                 }
             },
@@ -1324,7 +1412,7 @@ impl Object {
                         Method::Primitive(method) => method(self, &not_understood, env),
                         Method::Interpreter(closure) => closure.apply(Some(self), &not_understood),
                         Method::Reader(index) => read_instance_variable(self, *index),
-                        Method::Required => {
+                        Method::Required(_) => {
                             Unwind::error(&format!("Required method '{}' unimplemented", selector))
                         }
                     },
@@ -1343,17 +1431,20 @@ pub fn make_method_closure(
     return_type: &Option<String>,
 ) -> Result<Closure, Unwind> {
     let mut args = vec![];
+    let mut parameter_types = vec![];
     for param in params {
-        let vtable = env.find_vtable_if_name(&param.typename)?;
-        args.push(Arg::new(param.span.clone(), param.name.clone(), vtable));
+        args.push(Arg::new(param.span.clone(), param.name.clone()));
+        parameter_types.push(env.find_vtable_if_name(&param.typename)?);
     }
     Ok(Closure {
         name: name.to_string(),
         env: env.clone(),
         params: args,
         body: body.to_owned(),
-        // FIXME: questionable span
-        return_vtable: env.find_vtable_if_name(&return_type)?,
+        signature: Signature {
+            parameter_types,
+            return_type: env.find_vtable_if_name(&return_type)?,
+        },
     })
 }
 

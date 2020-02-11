@@ -1,0 +1,23 @@
+interface I
+    method foo
+        "I#foo"
+    method bar
+        "I#bar"
+    required method quux -> Integer
+end
+
+class C {}
+    is I
+    method foo
+        "C#foo"
+    method quux -> Integer
+        42
+end
+
+class Main {}
+    class method run: command in: system
+        let c = C new.
+        system output println: "foo = {c foo}".
+        system output println: "bar = {c bar}".
+        system output println: "quux = {c quux}".
+end
