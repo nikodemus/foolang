@@ -1,5 +1,12 @@
 # Foolang IRs
 
+``` mermaid
+graph LR;
+    mg1[MG];
+    mg2[MG];
+    Source-->|parse|ST-->|analyze|mg1-->|optimize|mg2-->|lower|LR;
+```
+
 ## ST, Syntax Tree
 
 Concrete representation of the parsed program.
@@ -14,9 +21,9 @@ Goals:
 
 Current `Expr` in `parse.rs` isn't quite this, but will be. 
 
-## MT, Message Tree
+## MG, Message Graph
 
-Abstract representation of the program in pure message send form.
+Abstract representation of the program in message send form.
 
 Goals:
 - Initially Generated in a single pass from FST, but can be further processed.
@@ -24,7 +31,8 @@ Goals:
 - Accurate dependency information: when current FMT depends on known 
   definitions of other classes, this dependency is is known so that
   changes can trigger deopt & reopt.
-- Accurate variable names for source variables. 
+- Accurate variable names for source variables.
+- Variable references and types fully resolved.
 - Interpretable: the self-evaluator operates on this, probably.
 - Suitable for partial evalution to resolve sends to known classes,
   eliminate unnecessary typechecks, inline blocks, etc. 
