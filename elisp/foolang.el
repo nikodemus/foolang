@@ -26,10 +26,12 @@
  'foolang-mode
  '(("\\<class\\>" . font-lock-keyword-face)
    ("\\<extend\\>" . font-lock-keyword-face)
+   ("\\<interface\\>" . font-lock-keyword-face)
    ("\\<end\\>" . font-lock-keyword-face)
    ("\\<method\\>" . font-lock-keyword-face)
    ("\\<class\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
    ("\\<extend\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
+   ("\\<interface\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
    ("\\<import\\>" . font-lock-keyword-face)
    ("\\<raise\\>" . font-lock-keyword-face)
    ("\\<return\\>" . font-lock-keyword-face)
