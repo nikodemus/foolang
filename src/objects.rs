@@ -1270,10 +1270,12 @@ impl Object {
                         ));
                     }
                 }
-                Some(_) => return Unwind::error(&format!(
+                Some(_) => {
+                    return Unwind::error(&format!(
                     "{}#{} is an interface method, non-vanilla implementations not supporte yet",
                     class_name, selector
-                )),
+                ))
+                }
                 None if required => {
                     return Unwind::error(&format!(
                         "{}#{} unimplemented, required by interface {}",
