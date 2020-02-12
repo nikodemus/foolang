@@ -1110,11 +1110,11 @@ impl Object {
 
     pub fn typecheck(&self, typevt: &Rc<Vtable>) -> Eval {
         if typevt == &self.vtable {
-            return Ok(self.clone())
+            return Ok(self.clone());
         }
         for vt in self.vtable.interfaces().iter() {
             if typevt == vt {
-                return Ok(self.clone())
+                return Ok(self.clone());
             }
         }
         return Unwind::type_error(self.clone(), typevt.name.clone());
@@ -1243,11 +1243,7 @@ impl Object {
         Ok(())
     }
 
-    fn add_interface(
-        &self,
-        env: &Env,
-        name: &str,
-    ) -> Result<(), Unwind> {
+    fn add_interface(&self, env: &Env, name: &str) -> Result<(), Unwind> {
         let class = self.as_class_ref()?;
         let class_name = &class.instance_vtable.name;
         // Add interface class methods
@@ -1268,25 +1264,22 @@ impl Object {
             match instance_vt.get(selector) {
                 Some(Method::Interpreter(ref closure)) => {
                     if &closure.signature != signature {
-                        return Unwind::error(
-                            &format!(
-                                "{}#{} is {}, interface {} specifies {}",
-                                class_name, selector, &closure.signature, name, signature
-                            ))
+                        return Unwind::error(&format!(
+                            "{}#{} is {}, interface {} specifies {}",
+                            class_name, selector, &closure.signature, name, signature
+                        ));
                     }
-                },
-                Some(_) => {
-                    return Unwind::error(
-                        &format!(
-                            "{}#{} is an interface method, non-vanilla implementations not supporte yet",
-                            class_name, selector
-                        )
-                    )
                 }
-                None if required => return Unwind::error(
-                    &format!("{}#{} unimplemented, required by interface {}",
-                             class_name, selector, name)
-                ),
+                Some(_) => return Unwind::error(&format!(
+                    "{}#{} is an interface method, non-vanilla implementations not supporte yet",
+                    class_name, selector
+                )),
+                None if required => {
+                    return Unwind::error(&format!(
+                        "{}#{} unimplemented, required by interface {}",
+                        class_name, selector, name
+                    ))
+                }
                 None => {
                     instance_vt.add_method(selector, method.clone())?;
                 }
@@ -1470,7 +1463,6 @@ pub fn make_method_closure(
             Some(name) => parameter_types.push(Some(env.find_type(name)?)),
             None => parameter_types.push(None),
         }
-
     }
     Ok(Closure {
         name: name.to_string(),
