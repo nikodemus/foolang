@@ -8,6 +8,8 @@
   <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
   <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/css/theme-simple-dark.css">
+  <link rel="stylesheet"
+        href="//cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.css">
   <style>
     :root {
         --base-color: #cccccc;
@@ -37,17 +39,36 @@
         font-weight: bold;
         font-size: calc(1.5 * var(--base-font-size));
     }
+    span.edgeLabel {
+        color: var(--base-color) !important;
+        background-color: var(--base-background-color) !important;
+    }
   </style>
 </head>
 <body>
   <div id="app"></div>
+  <script src="//cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
   <script>
+    var figure = 0;
+    mermaid.initialize({ startOnLoad: false, theme: "forest" });
     window.$docsify = {
         auto2top: true,
         loadNavbar: true,
         maxLevel: 2,
         noCompileLinks: ["/papers/.*"],
         repo: "nikodemus/foolang",
+        markdown: {
+            renderer: {
+                code: function(code, lang) {
+                    if (lang === "mermaid") {
+                        return (
+                            '<div class="mermaid">' + mermaid.render('mermaid-svg-' + figure++, code) + "</div>"
+                        );
+                    }
+                    return this.origin.code.apply(this, arguments);
+                }
+            }
+        }
     }
   </script>
   <script src="//unpkg.com/docsify/lib/docsify.min.js"></script>
