@@ -101,6 +101,24 @@
          stack
          ctx)))
 
+(def-foolang-indent "extend Name" (col base stack ctx)
+  (:after
+    (looking-at " *extend\\s-+[A-Z]+\\s-*$"))
+  (:indent
+   (list (+ col foolang-indent-offset)
+         base
+         stack
+         ctx)))
+
+(def-foolang-indent "interface Name" (col base stack ctx)
+  (:after
+    (looking-at " *interface\\s-+[A-Z]+\\s-*$"))
+  (:indent
+   (list (+ col foolang-indent-offset)
+         base
+         stack
+         ctx)))
+
 (def-foolang-indent "class Name { slot" (col base stack ctx)
   (:after
     (looking-at " *class\\s-+[A-Z]+\\s-*{\\s-*\\w+$"))
@@ -395,6 +413,7 @@
   (beginning-of-line)
   (cond ((foolang--looking-at-method) foolang-indent-offset)
         ((foolang--looking-at-class) 0)
+        ((foolang--looking-at-extend) 0)
         ((foolang--looking-at-interface) 0)
         ((foolang--top-of-buffer) 0)))
 
@@ -403,6 +422,9 @@
 
 (defun foolang--looking-at-class ()
   (looking-at " *class [A-Z]"))
+
+(defun foolang--looking-at-extend ()
+  (looking-at " *extend [A-Z]"))
 
 (defun foolang--looking-at-interface ()
   (looking-at " *interface [A-Z]"))
@@ -660,6 +682,14 @@ class method bar"
   "
 extend Foo
     class method bar")
+
+(def-foolang-indent-test "extend-indent-3"
+  "
+extend Foo
+is Bar"
+  "
+extend Foo
+    is Bar")
 
 (def-foolang-indent-test "method-indent-1"
   "
