@@ -151,7 +151,7 @@ fn find_module_or_abort(spec: &str, app: &App) -> (String, PathBuf) {
 fn main() {
     TimeInfo::init();
     let app = App::new("Foolang")
-        .version("0.1.0")
+        .version(env!("CARGO_PKG_VERSION"))
         .arg(
             Arg::with_name("program")
                 .index(1)

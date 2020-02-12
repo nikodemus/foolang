@@ -1,6 +1,6 @@
 [package]
 name = "foolang"
-version = "0.2.0"
+version = "0.0.0"
 authors = ["Nikodemus Siivola <nikodemus@random-state.net>"]
 edition = "2018"
 default-run = "foolang"
