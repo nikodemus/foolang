@@ -1,0 +1,17 @@
+interface I
+end
+
+class YesI {}
+    is I
+end
+
+class NotI {}
+end
+
+class Main {}
+    class method test: x::I
+        True
+    class method run: cmd in: system
+        system output println: "YesI: {self test: YesI new}".
+        system output println: "NotI: {self test: NotI new}"
+end

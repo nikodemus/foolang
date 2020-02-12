@@ -138,6 +138,7 @@ pub struct Vtable {
     pub name: String,
     pub methods: RefCell<HashMap<String, Method>>,
     pub slots: RefCell<HashMap<String, Slot>>,
+    pub interfaces: RefCell<Vec<Rc<Vtable>>>,
 }
 
 impl Vtable {
@@ -146,7 +147,12 @@ impl Vtable {
             name: class.to_string(),
             methods: RefCell::new(HashMap::new()),
             slots: RefCell::new(HashMap::new()),
+            interfaces: RefCell::new(Vec::new()),
         }
+    }
+
+    pub fn add_interface(&self, vt: &Rc<Vtable>) {
+        self.interfaces.borrow_mut().push(vt.clone());
     }
 
     pub fn add_method(&self, selector: &str, method: Method) -> Result<(), Unwind> {
@@ -181,6 +187,10 @@ impl Vtable {
 
     pub fn methods(&self) -> Ref<HashMap<String, Method>> {
         self.methods.borrow()
+    }
+
+    pub fn interfaces(&self) -> Ref<Vec<Rc<Vtable>>> {
+        self.interfaces.borrow()
     }
 
     pub fn selectors(&self) -> Vec<String> {
@@ -359,10 +369,8 @@ impl Closure {
             let binding = match vt {
                 None => Binding::untyped(obj),
                 Some(ref vtable) => {
-                    if vtable != &obj.vtable {
-                        return Unwind::type_error_at(arg.span.clone(), obj, vtable.name.clone());
-                    }
-                    Binding::typed(vtable.to_owned(), obj.to_owned())
+                    let value = obj.typecheck(vtable).source(&arg.span)?;
+                    Binding::typed(vtable.to_owned(), value)
                 }
             };
             symbols.insert(arg.name.clone(), binding);
@@ -378,9 +386,7 @@ impl Closure {
             }
         };
         if let Some(vtable) = &self.signature.return_type {
-            if &result.vtable != vtable {
-                return Unwind::type_error(result, vtable.name.clone()).source(&self.body.span());
-            }
+            result.typecheck(vtable).source(&self.body.span())?;
         }
         Ok(result)
     }
@@ -895,45 +901,7 @@ impl Foolang {
         }
         // FIXME: ...and here "method" means an actual method object.
         for name in &def.interfaces {
-            let obj = env.find_global_or_unwind(name)?;
-            for (selector, method) in obj.vtable.methods().iter() {
-                if !class.vtable.has(selector) {
-                    // println!("inherited class method {}", selector);
-                    class.vtable.add_method(selector, method.clone())?;
-                }
-            }
-            let interface = env.find_interface(name)?;
-            let instance_vt = &class.as_class_ref()?.instance_vtable;
-            for (selector, method) in interface.instance_vtable.methods().iter() {
-                let signature = method.signature()?;
-                let required = method.is_required();
-                match instance_vt.get(selector) {
-                    Some(Method::Interpreter(ref closure)) => {
-                        if &closure.signature != signature {
-                            return Unwind::error(
-                                &format!(
-                                    "{}#{} is {}, interface {} specifies {}",
-                                    &def.name, selector, &closure.signature, name, signature
-                                ))
-                        }
-                    },
-                    Some(_) => {
-                        return Unwind::error(
-                            &format!(
-                                "{}#{} is an interface method, non-vanilla implementations not supporte yet",
-                                &def.name, selector
-                            )
-                        )
-                    }
-                    None if required => return Unwind::error(
-                            &format!("{}#{} unimplemented, required by interface {}",
-                                     &def.name, selector, name)
-                    ),
-                    None => {
-                        instance_vt.add_method(selector, method.clone())?;
-                    }
-                }
-            }
+            class.add_interface(env, name)?;
         }
         Ok(class)
     }
@@ -1140,6 +1108,18 @@ impl Object {
         }
     }
 
+    pub fn typecheck(&self, typevt: &Rc<Vtable>) -> Eval {
+        if typevt == &self.vtable {
+            return Ok(self.clone())
+        }
+        for vt in self.vtable.interfaces().iter() {
+            if typevt == vt {
+                return Ok(self.clone())
+            }
+        }
+        return Unwind::type_error(self.clone(), typevt.name.clone());
+    }
+
     pub fn extend_class(&self, ext: &ClassExtension, env: &Env) -> Eval {
         if !ext.class_methods.is_empty() && self.vtable.has("perform:with:") {
             return Unwind::error(&format!(
@@ -1260,6 +1240,58 @@ impl Object {
     ) -> Result<(), Unwind> {
         self.as_class_ref()?;
         self.vtable.add_method(selector, Method::primitive(method))?;
+        Ok(())
+    }
+
+    fn add_interface(
+        &self,
+        env: &Env,
+        name: &str,
+    ) -> Result<(), Unwind> {
+        let class = self.as_class_ref()?;
+        let class_name = &class.instance_vtable.name;
+        // Add interface class methods
+        let interface_obj = env.find_global_or_unwind(name)?;
+        let interface = interface_obj.as_class_ref()?;
+        for (selector, method) in interface_obj.vtable.methods().iter() {
+            if !self.vtable.has(selector) {
+                self.vtable.add_method(selector, method.clone())?;
+            }
+        }
+        // Add interface to instance vtable
+        let instance_vt = &class.instance_vtable;
+        instance_vt.add_interface(&interface.instance_vtable);
+        // Add interface instance methods
+        for (selector, method) in interface.instance_vtable.methods().iter() {
+            let signature = method.signature()?;
+            let required = method.is_required();
+            match instance_vt.get(selector) {
+                Some(Method::Interpreter(ref closure)) => {
+                    if &closure.signature != signature {
+                        return Unwind::error(
+                            &format!(
+                                "{}#{} is {}, interface {} specifies {}",
+                                class_name, selector, &closure.signature, name, signature
+                            ))
+                    }
+                },
+                Some(_) => {
+                    return Unwind::error(
+                        &format!(
+                            "{}#{} is an interface method, non-vanilla implementations not supporte yet",
+                            class_name, selector
+                        )
+                    )
+                }
+                None if required => return Unwind::error(
+                    &format!("{}#{} unimplemented, required by interface {}",
+                             class_name, selector, name)
+                ),
+                None => {
+                    instance_vt.add_method(selector, method.clone())?;
+                }
+            }
+        }
         Ok(())
     }
 
@@ -1434,7 +1466,11 @@ pub fn make_method_closure(
     let mut parameter_types = vec![];
     for param in params {
         args.push(Arg::new(param.span.clone(), param.name.clone()));
-        parameter_types.push(env.find_vtable_if_name(&param.typename)?);
+        match &param.typename {
+            Some(name) => parameter_types.push(Some(env.find_type(name)?)),
+            None => parameter_types.push(None),
+        }
+
     }
     Ok(Closure {
         name: name.to_string(),
@@ -1552,9 +1588,7 @@ pub fn read_instance_variable(receiver: &Object, index: usize) -> Eval {
 
 pub fn write_instance_variable(receiver: &Object, slot: &Slot, value: Object) -> Eval {
     if let Some(vtable) = &slot.vtable {
-        if &value.vtable != vtable {
-            return Unwind::type_error(value, vtable.name.clone());
-        }
+        value.typecheck(vtable)?;
     }
     let instance = receiver.instance();
     instance.instance_variables.borrow_mut()[slot.index] = value.clone();

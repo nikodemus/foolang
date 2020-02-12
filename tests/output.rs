@@ -121,6 +121,17 @@ fn test_interface_ok() -> Test {
 }
 
 #[test]
+fn test_interface_typecheck() -> Test {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/interface_typecheck.foo");
+    cmd.assert()
+        .failure()
+        .stdout(predicates::str::contains("YesI: True"))
+        .stdout(predicates::str::contains("FATAL - ERROR: I expected, got: NotI"));
+    Ok(())
+}
+
+#[test]
 fn test_import_x_local() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/import_x_local.foo");

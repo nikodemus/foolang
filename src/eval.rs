@@ -36,9 +36,7 @@ impl Binding {
     }
     pub fn assign(&mut self, value: Object) -> Eval {
         if let Some(vtable) = &self.vtable {
-            if &value.vtable != vtable {
-                return Unwind::type_error(value, vtable.name.clone());
-            }
+            value.typecheck(vtable)?;
         }
         self.value = value.clone();
         Ok(value)
@@ -316,15 +314,14 @@ impl Env {
     }
 
     fn eval_bind(&self, bind: &Bind) -> Eval {
+        let value = self.eval(&bind.value)?;
         let binding = match bind.typename {
-            None => Binding::untyped(self.eval(&bind.value)?),
+            None => Binding::untyped(value),
             Some(ref typename) => {
-                let class = self.find_class(typename)?;
+                let vt = self.find_type(typename)?;
+                value.typecheck(&vt).source(&bind.value.span())?;
                 // FIXME: make the typecheck explicit
-                Binding::typed(
-                    class.instance_vtable.clone(),
-                    self.do_typecheck(&bind.value, typename)?,
-                )
+                Binding::typed(vt, value)
             }
         };
         let tmp = binding.value.clone();
@@ -447,12 +444,23 @@ impl Env {
         }
     }
 
+    pub fn find_type(&self, name: &str) -> Result<Rc<Vtable>, Unwind> {
+        match self.find_global(name) {
+            None => Unwind::error(&format!("Undefined type: {}", name)),
+            Some(obj) => match &obj.datum {
+                Datum::Class(ref class) => Ok(class.instance_vtable.clone()),
+                _ => Unwind::error(&format!("Not a type: {}", name)),
+            },
+        }
+    }
+
     pub fn find_class(&self, name: &str) -> Result<Rc<Class>, Unwind> {
         match self.find_global(name) {
             None => Unwind::error(&format!("Undefined class: {}", name)),
             Some(obj) => match &obj.datum {
                 Datum::Class(ref class) if !class.interface => Ok(class.clone()),
-                _ => Unwind::error(&format!("Interface, not class: {}", name)),
+                _ => panic!("Interface, not class: {}", name),
+                //_ => Unwind::error(&format!("Interface, not class: {}", name)),
             },
         }
     }
@@ -483,10 +491,7 @@ impl Env {
     }
 
     fn eval_global(&self, global: &Global) -> Eval {
-        self.find_global_or_unwind(&global.name).map_err(|mut err| {
-            err.add_span(&global.span);
-            err
-        })
+        self.find_global_or_unwind(&global.name).source(&global.span)
     }
 
     fn eval_constant(&self, constant: &Const) -> Eval {
@@ -616,17 +621,10 @@ impl Env {
     }
 
     fn eval_typecheck(&self, typecheck: &Typecheck) -> Eval {
-        self.do_typecheck(&typecheck.expr, &typecheck.typename)
-    }
-
-    fn do_typecheck(&self, expr: &Expr, typename: &str) -> Eval {
+        let expr = &typecheck.expr;
         let value = self.eval(expr)?;
-        let class = self.find_class(typename)?;
-        if class.instance_vtable == value.vtable {
-            Ok(value)
-        } else {
-            Unwind::type_error_at(expr.span(), value, class.instance_vtable.name.clone())
-        }
+        value.typecheck(&self.find_type(&typecheck.typename)?).source(&expr.span())?;
+        Ok(value)
     }
 
     fn eval_assign(&self, assign: &Assign) -> Eval {
