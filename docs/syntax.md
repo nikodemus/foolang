@@ -288,6 +288,13 @@ end
 let block = { |arg::Type| ... } -> ReturnType
 ```
 
+Intersection types can be expressed by chaining assertions:
+
+``` foolang
+-- Asserts that `x` is both T and K
+x::T::K
+```
+
 ## Arrays
 
 Are constructed using square brackets
