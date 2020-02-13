@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 use std::cell::{Ref, RefCell, RefMut};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::AsRef;
 use std::fmt;
 use std::fs;
@@ -138,7 +138,7 @@ pub struct Vtable {
     pub name: String,
     pub methods: RefCell<HashMap<String, Method>>,
     pub slots: RefCell<HashMap<String, Slot>>,
-    pub interfaces: RefCell<Vec<Rc<Vtable>>>,
+    pub interfaces: RefCell<HashSet<Rc<Vtable>>>,
 }
 
 impl Vtable {
@@ -147,12 +147,16 @@ impl Vtable {
             name: class.to_string(),
             methods: RefCell::new(HashMap::new()),
             slots: RefCell::new(HashMap::new()),
-            interfaces: RefCell::new(Vec::new()),
+            interfaces: RefCell::new(HashSet::new()),
         }
     }
 
     pub fn add_interface(&self, vt: &Rc<Vtable>) {
-        self.interfaces.borrow_mut().push(vt.clone());
+        let mut interfaces = self.interfaces.borrow_mut();
+        for inherited in vt.interfaces.borrow().iter() {
+            interfaces.insert(inherited.clone());
+        }
+        interfaces.insert(vt.clone());
     }
 
     pub fn add_method(&self, selector: &str, method: Method) -> Result<(), Unwind> {
@@ -189,7 +193,7 @@ impl Vtable {
         self.methods.borrow()
     }
 
-    pub fn interfaces(&self) -> Ref<Vec<Rc<Vtable>>> {
+    pub fn interfaces(&self) -> Ref<HashSet<Rc<Vtable>>> {
         self.interfaces.borrow()
     }
 

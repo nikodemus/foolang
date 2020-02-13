@@ -20,11 +20,11 @@ class C {}
 end
 
 class Main {}
-    class method foo: x
-        x foo
-    class method bar: x
-        x bar
-    class method quux: x
+    class method foo: x::I0
+        x::I::C foo
+    class method bar: x::I1
+        x::I::C bar
+    class method quux: x::I
         x quux
     class method run: cmd in: sys
         let c = C new.
