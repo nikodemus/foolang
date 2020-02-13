@@ -1,4 +1,8 @@
+import .collection.*
+
 extend Array
+    is Collection
+
     method + x
        x addArray: self
     method - x

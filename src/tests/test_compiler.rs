@@ -23,11 +23,11 @@ fn test_compiler2() {
             "parse:",
             &[env.foo.make_string(
                 "
-               class Foo { bar }
+               class Foox { bar }
                  method quux: n
                     bar * n
                end
-               let foo = Foo bar: 21.
+               let foo = Foox bar: 21.
                foo quux: 2
         ",
             )],
@@ -36,7 +36,7 @@ fn test_compiler2() {
         .unwrap();
     let res = compiler.send("evaluate", &[], &env).unwrap();
     assert_eq!(res, env.foo.make_integer(42));
-    match env.find_global_or_unwind("Foo") {
+    match env.find_global_or_unwind("Foox") {
         Err(_) => {}
         Ok(_) => panic!("Class leaked from compiler to parent!"),
     }

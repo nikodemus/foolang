@@ -10,7 +10,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use crate::eval::{Binding, Env};
+use crate::eval::{Binding, Env, EnvRef};
 use crate::parse::{
     ClassDefinition, ClassExtension, Const, Expr, InterfaceDefinition, Literal, MethodDefinition,
     Parser, Var,
@@ -380,7 +380,9 @@ impl Closure {
         // println!("apply return: {:?}", &ret);
         let result = match ret {
             Ok(value) => value,
-            Err(Unwind::ReturnFrom(ref ret_env, ref value)) if ret_env == &env => value.clone(),
+            Err(Unwind::ReturnFrom(ref ret_env, ref value)) if ret_env == &env.env_ref => {
+                value.clone()
+            }
             Err(unwind) => {
                 return Err(unwind);
             }
@@ -685,8 +687,8 @@ pub struct Foolang {
     pub window_class_vtable: Rc<Vtable>,
     pub scene_node_vtable: Rc<Vtable>,
     pub scene_node_class_vtable: Rc<Vtable>,
-    /// Holds the environment constructed by the prelude.
-    prelude: Option<Env>,
+    /// Holds the toplevel builtin environment, including prelude.
+    builtin_env_ref: EnvRef,
     /// Used to ensure we load each module only once.
     modules: Rc<RefCell<HashMap<PathBuf, Env>>>,
     /// Map from toplevel module names to their paths
@@ -695,7 +697,9 @@ pub struct Foolang {
 
 impl Foolang {
     /// Used to initialize a builtin environment.
-    pub fn init_env(&self, env: &mut Env) {
+    pub fn init_builtins(self) -> Self {
+        // println!("INIT_ENV");
+        let env = &self.builtin_env_ref;
         env.define("Array", Class::object(&self.array_class_vtable, &self.array_vtable));
         env.define("Boolean", Class::object(&self.boolean_class_vtable, &self.boolean_vtable));
         env.define(
@@ -727,6 +731,8 @@ impl Foolang {
             "SceneNode",
             Class::object(&self.scene_node_class_vtable, &self.scene_node_vtable),
         );
+        // println!("INIT OK");
+        self
     }
 
     pub fn new(prelude: &Path, roots: HashMap<String, PathBuf>) -> Result<Foolang, Unwind> {
@@ -769,10 +775,11 @@ impl Foolang {
             scene_node_vtable: Rc::new(classes::scene_node::instance_vtable()),
             scene_node_class_vtable: Rc::new(classes::scene_node::class_vtable()),
             // Other
-            prelude: None,
+            builtin_env_ref: EnvRef::new(),
             modules: Rc::new(RefCell::new(HashMap::new())),
             roots,
         }
+        .init_builtins()
         .load_prelude(prelude)
     }
 
@@ -789,7 +796,7 @@ impl Foolang {
 
     pub fn run(self, program: &str, command: Object) -> Eval {
         let system = self.make_system(None);
-        let env = self.prelude_env()?;
+        let env = self.builtin_env();
         let mut parser = Parser::new(&program, env.foo.root());
         while !parser.at_eof() {
             let expr = match parser.parse() {
@@ -826,23 +833,28 @@ impl Foolang {
                 return Ok(module.clone());
             }
         }
-        let env = self.load_module_into(&file, self.prelude_env()?)?;
+        let env = self.load_module_into(&file, self.builtin_env())?;
         self.modules.borrow_mut().insert(file.clone(), env.clone());
         Ok(env)
     }
 
-    fn load_prelude(mut self, path: &Path) -> Result<Foolang, Unwind> {
-        let prelude = self.load_module_into(path, Env::from(self.clone()))?;
-        self.prelude = Some(prelude);
+    fn load_prelude(self, path: &Path) -> Result<Foolang, Unwind> {
+        let env = self.builtin_env();
+        self.load_module_into(path, env)?;
         Ok(self)
     }
 
-    fn prelude_env(&self) -> Result<Env, Unwind> {
-        match &self.prelude {
-            Some(env) => Ok(env.clone()),
-            // This seems a bit messy and not 100% obviously correct. The case is when loading the
-            // prelude itself. Load prelude should maybe instead take a mutable ref to self?
-            None => Ok(Env::from(self.clone())),
+    pub fn toplevel_env(&self) -> Env {
+        Env {
+            env_ref: self.builtin_env_ref.enclose(),
+            foo: Rc::new(self.clone()),
+        }
+    }
+
+    fn builtin_env(&self) -> Env {
+        Env {
+            env_ref: self.builtin_env_ref.clone(),
+            foo: Rc::new(self.clone()),
         }
     }
 
@@ -889,7 +901,7 @@ impl Foolang {
     pub fn make_class(&self, def: &ClassDefinition, env: &Env) -> Eval {
         let mut class = Class::new_class(&def.name);
         for (i, var) in def.instance_variables.iter().enumerate() {
-            class.add_slot(&var.name, i, env.maybe_type(&var.typename))?;
+            class.add_slot(&var.name, i, env.maybe_type(&var.typename)?)?;
         }
         class.add_primitive_class_method(&def.constructor(), generic_ctor)?;
         // FIXME: Here "method" means method definition
@@ -937,9 +949,9 @@ impl Foolang {
     ) -> Eval {
         let mut parameter_types = vec![];
         for name in parameter_type_names {
-            parameter_types.push(env.find_vtable_if_name(name)?);
+            parameter_types.push(env.maybe_type(name)?);
         }
-        let return_type = env.find_vtable_if_name(return_type_name)?;
+        let return_type = env.maybe_type(return_type_name)?;
         Ok(Object {
             vtable: Rc::clone(&self.closure_vtable),
             datum: Datum::Closure(Rc::new(Closure {
@@ -963,7 +975,7 @@ impl Foolang {
                 // share same vtable instances as the parent, which
                 // seems like the right thing -- but it would be nice to
                 // be able to specify a different prelude. Meh.
-                env: self.prelude_env().unwrap(),
+                env: self.toplevel_env(),
                 source: RefCell::new(String::new()),
                 expr: RefCell::new(Const::expr(0..0, Literal::Boolean(false))),
             })),
@@ -1140,6 +1152,9 @@ impl Object {
         for method in &ext.instance_methods {
             self.add_interpreted_instance_method(env, method)?;
         }
+        for name in &ext.interfaces {
+            self.add_interface(env, name)?;
+        }
         Ok(self.clone())
     }
 
@@ -1314,13 +1329,13 @@ impl Object {
         let class = self.as_class_ref()?;
         let mut parameter_types = vec![];
         for p in &method.parameters {
-            parameter_types.push(env.find_vtable_if_name(&p.typename)?);
+            parameter_types.push(env.maybe_type(&p.typename)?);
         }
         class.instance_vtable.add_method(
             &method.selector,
             Method::required(Signature {
                 parameter_types,
-                return_type: env.find_vtable_if_name(&method.return_type)?,
+                return_type: env.maybe_type(&method.return_type)?,
             }),
         )?;
         Ok(())
@@ -1473,7 +1488,7 @@ pub fn make_method_closure(
         body: body.to_owned(),
         signature: Signature {
             parameter_types,
-            return_type: env.find_vtable_if_name(&return_type)?,
+            return_type: env.maybe_type(&return_type)?,
         },
     })
 }

@@ -349,6 +349,7 @@ pub struct ClassExtension {
     pub name: String,
     pub instance_methods: Vec<MethodDefinition>,
     pub class_methods: Vec<MethodDefinition>,
+    pub interfaces: Vec<String>,
 }
 
 impl ClassExtension {
@@ -358,7 +359,12 @@ impl ClassExtension {
             name: name.to_string(),
             instance_methods: Vec::new(),
             class_methods: Vec::new(),
+            interfaces: Vec::new(),
         }
+    }
+
+    fn add_interface(&mut self, name: &str) {
+        self.interfaces.push(name.to_string())
     }
 
     pub fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
@@ -1832,6 +1838,13 @@ fn extend_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         if next == Token::WORD && parser.slice() == "method" {
             class.add_method(MethodKind::Instance, parse_method(parser)?);
             continue;
+        }
+        if next == Token::WORD && parser.slice() == "is" {
+            if let Token::WORD = parser.next_token()? {
+                class.add_interface(parser.slice());
+                continue;
+            }
+            return parser.error("Invalid interface name in extend");
         }
         return parser.error("Expected method or end");
     }
