@@ -71,14 +71,14 @@ top level and as such methods are never closures in that sense.
 <span class="done">&check;</span>
 **Multiple inheritance of interfaces**: classes can inherit from multiple
 interfaces, which can both provide default implementations for methods, and
-require other methods to be implemented by the class. Foolang interfaces are
-fairly similar to traits. (See [Schärli2003](bibliography.md#scharli2003).)
+require other methods to be implemented by the class. Interfaces can also
+inherit from other interfaces. Foolang interfaces are fairly similar to traits,
+but do not yet support explicit conflict resolution. (See
+[Schärli2003](bibliography.md#scharli2003).)
 
 <span class="done">&check;</span>
-**No inheritance of implementations**: similar to Julia and Rust, concrete
-instantiable classes cannot be inherited from in Foolang. This both drives
-refactoring towards the abstract, and allows for static resolution of
-methods when the concrete class is known.
+**No inheritance of implementations**: similarly to Julia and Rust, concrete
+instantiable classes cannot be inherited from in Foolang.
 
 ### Pending
 
