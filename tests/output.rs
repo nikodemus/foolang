@@ -132,6 +132,18 @@ fn test_interface_typecheck() -> Test {
 }
 
 #[test]
+fn test_interface_inheritance() -> Test {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/interface_inheritance.foo");
+    cmd.assert()
+        .success()
+        .stdout(predicates::str::contains("foo: 0 => I0 ok"))
+        .stdout(predicates::str::contains("bar: 1 => I1 ok"))
+        .stdout(predicates::str::contains("quux: 2 => I ok"));
+    Ok(())
+}
+
+#[test]
 fn test_import_x_local() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/import_x_local.foo");

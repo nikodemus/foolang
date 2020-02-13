@@ -904,14 +904,12 @@ impl Foolang {
             class.add_slot(&var.name, i, env.maybe_type(&var.typename)?)?;
         }
         class.add_primitive_class_method(&def.constructor(), generic_ctor)?;
-        // FIXME: Here "method" means method definition
         for method in &def.class_methods {
             class.add_interpreted_class_method(env, method)?;
         }
         for method in &def.instance_methods {
             class.add_interpreted_instance_method(env, method)?;
         }
-        // FIXME: ...and here "method" means an actual method object.
         for name in &def.interfaces {
             class.add_interface(env, name)?;
         }
@@ -928,6 +926,9 @@ impl Foolang {
         }
         for method in &def.required_methods {
             interface.add_required_method(env, method)?;
+        }
+        for name in &def.interfaces {
+            interface.add_interface(env, name)?;
         }
         Ok(interface)
     }

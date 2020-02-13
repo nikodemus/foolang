@@ -410,6 +410,7 @@ pub struct InterfaceDefinition {
     pub instance_methods: Vec<MethodDefinition>,
     pub class_methods: Vec<MethodDefinition>,
     pub required_methods: Vec<MethodDefinition>,
+    pub interfaces: Vec<String>,
 }
 
 impl InterfaceDefinition {
@@ -420,6 +421,7 @@ impl InterfaceDefinition {
             instance_methods: Vec::new(),
             class_methods: Vec::new(),
             required_methods: Vec::new(),
+            interfaces: Vec::new(),
         }
     }
 
@@ -439,6 +441,10 @@ impl InterfaceDefinition {
             MethodKind::Class => self.class_methods.push(method),
             MethodKind::Required => self.required_methods.push(method),
         };
+    }
+
+    fn add_interface(&mut self, name: &str) {
+        self.interfaces.push(name.to_string())
     }
 }
 
@@ -1710,6 +1716,13 @@ fn interface_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             parser.next_token()?;
             interface.add_method(MethodKind::Required, parse_method_signature(parser)?);
             continue;
+        }
+        if next == Token::WORD && parser.slice() == "is" {
+            if let Token::WORD = parser.next_token()? {
+                interface.add_interface(parser.slice());
+                continue;
+            }
+            return parser.error("Invalid inherited interface name in interface");
         }
         return parser.error("Expected method or end");
     }
