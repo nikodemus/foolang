@@ -65,7 +65,7 @@ it's here more for future reference than anything else.
   Programming](https://heim.ifi.uio.no/~trygver/1989/1989.10.1-LiterateProgrammingOOPSLA.pdf)
   
 - 1993 - [Strongtalk, Typechecking Smalltalk in a Production
-  Environment](http://laputan.org/pub/papers/Strongtalk-OOPSLA-93.pdf) by Gilad Brancha and David
+  Environment](http://laputan.org/pub/papers/Strongtalk-OOPSLA-93.pdf) by Gilad Bracha and David
   Griswold.
 
 <a id="scharli2003"></a>
@@ -74,3 +74,8 @@ it's here more for future reference than anything else.
   by Nathanael Schärli, Stéphane Ducasse, Oscar Nierstrasz, and Andrew P. Black.
   _Foolang interfaces are modeled after this paper, and the missing parts are
   probably going to happen in due time._
+
+- 2004 - [Mirrors: Design Principles for Meta-level Facilities of
+  Object-Oriented Programming Languages](https://bracha.org/mirrors.pdf) by
+  Gilad Bracha and David Ungar. _Foolang does not yet support reflection, but
+  when it does it will be use a mirror-based design._
