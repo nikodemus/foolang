@@ -2,19 +2,19 @@ use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
 
 pub fn instance_vtable() -> Vtable {
-    let mut vt = Vtable::new("String");
-    vt.def("appendToString:", string_append_to_string);
-    vt.def("toString", string_to_string);
-    vt.def("size", string_size);
-    vt.def("do:", string_do);
-    vt.def("at:", string_at);
-    vt.def("stringEqual:", string_equal);
+    let vt = Vtable::new("String");
+    vt.add_primitive_method_or_panic("appendToString:", string_append_to_string);
+    vt.add_primitive_method_or_panic("toString", string_to_string);
+    vt.add_primitive_method_or_panic("size", string_size);
+    vt.add_primitive_method_or_panic("do:", string_do);
+    vt.add_primitive_method_or_panic("at:", string_at);
+    vt.add_primitive_method_or_panic("stringEqual:", string_equal);
     vt
 }
 
 pub fn class_vtable() -> Vtable {
-    let mut vt = Vtable::new("class String");
-    vt.def("new", class_string_new);
+    let vt = Vtable::new("class String");
+    vt.add_primitive_method_or_panic("new", class_string_new);
     vt
 }
 

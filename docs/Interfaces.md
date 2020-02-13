@@ -1,4 +1,21 @@
-# Interfaces
+# Foolang Interfaces
+
+## Desiderate
+
+- Interfaces can provide default implementations
+- Interfaces can inherit each other
+- Interfaces can be used as types
+- Interfaces can require implementations of specific methods
+- Interfaces can specify types
+
+## Open Questions
+
+What about class methods?
+
+While it may make sense for there to be Interface##method, it doesnt'
+really feel right for that to imply that there is also Class##method, does it?
+
+## Example
 
 ```
 interface Scalar

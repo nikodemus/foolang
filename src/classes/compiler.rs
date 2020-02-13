@@ -4,17 +4,17 @@ use crate::parse::Parser;
 use crate::unwind::{Error, Unwind};
 
 pub fn class_vtable() -> Vtable {
-    let mut vt = Vtable::new("class Compiler");
-    vt.def("new", class_compiler_new);
+    let vt = Vtable::new("class Compiler");
+    vt.add_primitive_method_or_panic("new", class_compiler_new);
     vt
 }
 
 pub fn instance_vtable() -> Vtable {
-    let mut vt = Vtable::new("Compiler");
-    vt.def("define:as:", compiler_define_as);
-    vt.def("evaluate", compiler_evaluate);
-    vt.def("parse:", compiler_parse);
-    vt.def("parse:onEof:", compiler_parse_on_eof);
+    let vt = Vtable::new("Compiler");
+    vt.add_primitive_method_or_panic("define:as:", compiler_define_as);
+    vt.add_primitive_method_or_panic("evaluate", compiler_evaluate);
+    vt.add_primitive_method_or_panic("parse:", compiler_parse);
+    vt.add_primitive_method_or_panic("parse:onEof:", compiler_parse_on_eof);
     vt
 }
 

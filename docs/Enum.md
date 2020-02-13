@@ -18,13 +18,18 @@ gets old really fast.
 
 So something like:
 
-    flag SupervisorOption { OneForOne, AllForOne, OneForAll, AllForAll }
+    enum SupervisorOption { OneForOne, AllForOne, OneForAll, AllForAll }
        -- toString is implicit
-       method forAll
-          self = OneForAll OR self = AllForAll
+       method isForAll
+          { self is OneForAll } or: { self is AllForAll }
     end
 
-seens useful.
+seens useful, plus:
+
+    extend OneForOne
+       method kill
+          ...
+    end
 
 The classic C-use cases aren't pointless either:
 
@@ -33,3 +38,4 @@ The classic C-use cases aren't pointless either:
        -- allows: Stdin value
     end
 
+Then again, this seems all like a convenience, not actually required.

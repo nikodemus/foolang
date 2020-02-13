@@ -2,8 +2,8 @@ use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
 
 pub fn instance_vtable() -> Vtable {
-    let mut vt = Vtable::new("Boolean");
-    vt.def("ifTrue:ifFalse:", boolean_if_true_if_false);
+    let vt = Vtable::new("Boolean");
+    vt.add_primitive_method_or_panic("ifTrue:ifFalse:", boolean_if_true_if_false);
     vt
 }
 

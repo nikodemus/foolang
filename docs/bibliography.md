@@ -49,7 +49,7 @@ it's here more for future reference than anything else.
   printer](https://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf)
   by Philip Wadler. _A lovely pretty-printing algorith._
 
-## Smalltalk
+## Smalltalk & Object Language Design
 
 - 1981 - [Design Principles Behind
   Smalltalk](http://stephane.ducasse.free.fr/FreeBooks/BlueBookHughes/Design%20Principles%20Behind%20Smalltalk.pdf)
@@ -67,3 +67,10 @@ it's here more for future reference than anything else.
 - 1993 - [Strongtalk, Typechecking Smalltalk in a Production
   Environment](http://laputan.org/pub/papers/Strongtalk-OOPSLA-93.pdf) by Gilad Brancha and David
   Griswold.
+
+<a id="scharli2003"></a>
+- 2003 - [Traits: Composable Units of
+  Behaviour](http://scg.unibe.ch/archive/papers/Scha03aTraits.pdf)
+  by Nathanael Schärli, Stéphane Ducasse, Oscar Nierstrasz, and Andrew P. Black.
+  _Foolang interfaces are modeled after this paper, and the missing parts are
+  probably going to happen in due time._

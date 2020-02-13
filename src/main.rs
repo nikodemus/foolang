@@ -78,7 +78,7 @@ impl Server {
                 Ok(foo) => foo,
                 Err(err) => oops(err.to_string(), None),
             };
-            let env = Env::from(foo);
+            let env = foo.toplevel_env();
             let out = env.foo.make_string_output();
             env.define("system", env.foo.make_system(Some(out.clone())));
             //sys.send("setOutput:" env.foo.make_string_stream())

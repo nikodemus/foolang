@@ -36,17 +36,17 @@ impl Hash for Random {
 }
 
 pub fn instance_vtable() -> Vtable {
-    let mut vt = Vtable::new("Random");
-    vt.def("integer", random_integer);
-    vt.def("float", random_float);
-    vt.def("boolean", random_boolean);
+    let vt = Vtable::new("Random");
+    vt.add_primitive_method_or_panic("integer", random_integer);
+    vt.add_primitive_method_or_panic("float", random_float);
+    vt.add_primitive_method_or_panic("boolean", random_boolean);
     vt
 }
 
 pub fn class_vtable() -> Vtable {
-    let mut vt = Vtable::new("class Random");
-    vt.def("new", class_random_new);
-    vt.def("new:", class_random_new_arg);
+    let vt = Vtable::new("class Random");
+    vt.add_primitive_method_or_panic("new", class_random_new);
+    vt.add_primitive_method_or_panic("new:", class_random_new_arg);
     vt
 }
 

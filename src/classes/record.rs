@@ -52,15 +52,15 @@ impl fmt::Debug for Record {
 }
 
 pub fn class_vtable() -> Vtable {
-    let mut vt = Vtable::new("class Record");
-    vt.def("perform:with:", class_record_perform_with);
+    let vt = Vtable::new("class Record");
+    vt.add_primitive_method_or_panic("perform:with:", class_record_perform_with);
     vt
 }
 
 pub fn instance_vtable() -> Vtable {
-    let mut vt = Vtable::new("Record");
-    vt.def("perform:with:", record_perform_with);
-    vt.def("displayOn:", record_display_on);
+    let vt = Vtable::new("Record");
+    vt.add_primitive_method_or_panic("perform:with:", record_perform_with);
+    vt.add_primitive_method_or_panic("displayOn:", record_display_on);
     vt
 }
 

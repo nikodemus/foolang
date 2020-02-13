@@ -3,17 +3,17 @@ use crate::objects::{Eval, Object, Vtable};
 use crate::unwind::Unwind;
 
 pub fn vtable() -> Vtable {
-    let mut vt = Vtable::new("Closure");
+    let vt = Vtable::new("Closure");
     // FUNDAMENTAL
-    vt.def("onError:", closure_on_error);
-    vt.def("value", closure_apply);
-    vt.def("value:", closure_apply);
-    vt.def("value:value:", closure_apply);
-    vt.def("value:value:value:", closure_apply);
-    vt.def("whileTrue:", closure_while_true_closure);
-    vt.def("whileFalse:", closure_while_false_closure);
-    vt.def("whileTrue", closure_while_true);
-    vt.def("whileFalse", closure_while_false);
+    vt.add_primitive_method_or_panic("onError:", closure_on_error);
+    vt.add_primitive_method_or_panic("value", closure_apply);
+    vt.add_primitive_method_or_panic("value:", closure_apply);
+    vt.add_primitive_method_or_panic("value:value:", closure_apply);
+    vt.add_primitive_method_or_panic("value:value:value:", closure_apply);
+    vt.add_primitive_method_or_panic("whileTrue:", closure_while_true_closure);
+    vt.add_primitive_method_or_panic("whileFalse:", closure_while_false_closure);
+    vt.add_primitive_method_or_panic("whileTrue", closure_while_true);
+    vt.add_primitive_method_or_panic("whileFalse", closure_while_false);
     vt
 }
 

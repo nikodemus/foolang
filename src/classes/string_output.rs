@@ -2,15 +2,15 @@ use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
 
 pub fn instance_vtable() -> Vtable {
-    let mut vt = Vtable::new("StringOutput");
-    vt.def("print:", string_output_print);
-    vt.def("content", string_output_content);
+    let vt = Vtable::new("StringOutput");
+    vt.add_primitive_method_or_panic("print:", string_output_print);
+    vt.add_primitive_method_or_panic("content", string_output_content);
     vt
 }
 
 pub fn class_vtable() -> Vtable {
-    let mut vt = Vtable::new("class StringOutput");
-    vt.def("new", class_string_output_new);
+    let vt = Vtable::new("class StringOutput");
+    vt.add_primitive_method_or_panic("new", class_string_output_new);
     vt
 }
 

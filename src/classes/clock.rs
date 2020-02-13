@@ -7,9 +7,9 @@ pub fn class_vtable() -> Vtable {
 }
 
 pub fn instance_vtable() -> Vtable {
-    let mut vt = Vtable::new("Clock");
-    vt.def("time", clock_time);
-    vt.def("toString", clock_to_string);
+    let vt = Vtable::new("Clock");
+    vt.add_primitive_method_or_panic("time", clock_time);
+    vt.add_primitive_method_or_panic("toString", clock_to_string);
     vt
 }
 

@@ -279,6 +279,7 @@ pub struct ClassDefinition {
     pub instance_variables: Vec<Var>,
     pub instance_methods: Vec<MethodDefinition>,
     pub class_methods: Vec<MethodDefinition>,
+    pub interfaces: Vec<String>,
     default_constructor: Option<String>,
 }
 
@@ -290,7 +291,21 @@ impl ClassDefinition {
             instance_variables,
             instance_methods: Vec::new(),
             class_methods: Vec::new(),
+            interfaces: Vec::new(),
             default_constructor: None,
+        }
+    }
+
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.span.tweak(shift, extend);
+        for var in &mut self.instance_variables {
+            var.span.tweak(shift, extend);
+        }
+        for m in &mut self.instance_methods {
+            m.tweak_span(shift, extend);
+        }
+        for m in &mut self.class_methods {
+            m.tweak_span(shift, extend);
         }
     }
 
@@ -299,10 +314,15 @@ impl ClassDefinition {
         Expr::ClassDefinition(ClassDefinition::new(span, name, instance_variables))
     }
 
+    fn add_interface(&mut self, name: &str) {
+        self.interfaces.push(name.to_string())
+    }
+
     fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
         match kind {
             MethodKind::Instance => self.instance_methods.push(method),
             MethodKind::Class => self.class_methods.push(method),
+            _ => panic!("Cannot add {:?} to a ClassDefinition", kind),
         };
     }
 
@@ -329,6 +349,7 @@ pub struct ClassExtension {
     pub name: String,
     pub instance_methods: Vec<MethodDefinition>,
     pub class_methods: Vec<MethodDefinition>,
+    pub interfaces: Vec<String>,
 }
 
 impl ClassExtension {
@@ -338,13 +359,19 @@ impl ClassExtension {
             name: name.to_string(),
             instance_methods: Vec::new(),
             class_methods: Vec::new(),
+            interfaces: Vec::new(),
         }
+    }
+
+    fn add_interface(&mut self, name: &str) {
+        self.interfaces.push(name.to_string())
     }
 
     pub fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
         match kind {
             MethodKind::Instance => self.instance_methods.push(method),
             MethodKind::Class => self.class_methods.push(method),
+            _ => panic!("Cannot add {:?} to a ClassExtension", kind),
         };
     }
 }
@@ -377,6 +404,51 @@ impl Import {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct InterfaceDefinition {
+    pub span: Span,
+    pub name: String,
+    pub instance_methods: Vec<MethodDefinition>,
+    pub class_methods: Vec<MethodDefinition>,
+    pub required_methods: Vec<MethodDefinition>,
+    pub interfaces: Vec<String>,
+}
+
+impl InterfaceDefinition {
+    pub fn new(span: Span, name: &str) -> InterfaceDefinition {
+        InterfaceDefinition {
+            span,
+            name: name.to_string(),
+            instance_methods: Vec::new(),
+            class_methods: Vec::new(),
+            required_methods: Vec::new(),
+            interfaces: Vec::new(),
+        }
+    }
+
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.span.tweak(shift, extend);
+        for m in &mut self.instance_methods {
+            m.tweak_span(shift, extend);
+        }
+        for m in &mut self.class_methods {
+            m.tweak_span(shift, extend);
+        }
+    }
+
+    pub fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
+        match kind {
+            MethodKind::Instance => self.instance_methods.push(method),
+            MethodKind::Class => self.class_methods.push(method),
+            MethodKind::Required => self.required_methods.push(method),
+        };
+    }
+
+    fn add_interface(&mut self, name: &str) {
+        self.interfaces.push(name.to_string())
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Message {
     pub span: Span,
     pub selector: String,
@@ -392,12 +464,13 @@ impl Message {
     }
 }
 
+// FIXME: split into signature and method
 #[derive(Debug, PartialEq, Clone)]
 pub struct MethodDefinition {
     pub span: Span,
     pub selector: String,
     pub parameters: Vec<Var>,
-    pub body: Box<Expr>,
+    pub body: Option<Box<Expr>>,
     pub return_type: Option<String>,
 }
 
@@ -406,14 +479,13 @@ impl MethodDefinition {
         span: Span,
         selector: String,
         parameters: Vec<Var>,
-        body: Expr,
         return_type: Option<String>,
     ) -> MethodDefinition {
         MethodDefinition {
             span,
             selector,
             parameters,
-            body: Box::new(body),
+            body: None,
             return_type,
         }
     }
@@ -422,13 +494,26 @@ impl MethodDefinition {
         for var in &mut self.parameters {
             var.span.tweak(shift, extend);
         }
-        self.body.tweak_span(shift, extend);
+        match &mut self.body {
+            Some(ref mut span) => span.tweak_span(shift, extend),
+            _ => (),
+        }
+    }
+    pub fn required_body(&self) -> Result<&Expr, Unwind> {
+        match &self.body {
+            Some(body) => Ok(&(*body)),
+            None => {
+                return Unwind::error_at(self.span.clone(), "Partial methods not allowed here");
+            }
+        }
     }
 }
 
+#[derive(Debug)]
 pub enum MethodKind {
     Class,
     Instance,
+    Required,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -531,6 +616,7 @@ pub enum Expr {
     Eq(Eq),
     Global(Global),
     Import(Import),
+    InterfaceDefinition(InterfaceDefinition),
     Raise(Raise),
     Return(Return),
     Seq(Seq),
@@ -550,6 +636,7 @@ impl Expr {
         match self {
             Expr::ClassDefinition(..) => true,
             Expr::ClassExtension(..) => true,
+            Expr::InterfaceDefinition(..) => true,
             _ => false,
         }
     }
@@ -620,6 +707,7 @@ impl Expr {
             Global(global) => &global.span,
             Chain(chain) => return chain.receiver.span(),
             Import(import) => &import.span,
+            InterfaceDefinition(interface) => &interface.span,
             Raise(raise) => &raise.span,
             Return(ret) => &ret.span,
             // FIXME: Questionable
@@ -646,26 +734,16 @@ impl Expr {
             Bind(bind) => bind.tweak_span(shift, extend),
             Block(block) => block.tweak_span(shift, extend),
             Cascade(cascade) => cascade.tweak_span(shift, extend),
+            ClassDefinition(class) => class.tweak_span(shift, extend),
             Chain(chain) => chain.tweak_span(shift, extend),
             Const(constant) => constant.tweak_span(shift, extend),
             Dictionary(dictionary) => dictionary.tweak_span(shift, extend),
             Eq(eq) => eq.tweak_span(shift, extend),
+            InterfaceDefinition(interface) => interface.tweak_span(shift, extend),
             Seq(seq) => seq.tweak_span(shift, extend),
             Raise(raise) => raise.tweak_span(shift, extend),
             Return(ret) => ret.tweak_span(shift, extend),
             Typecheck(typecheck) => typecheck.tweak_span(shift, extend),
-            ClassDefinition(class) => {
-                class.span.tweak(shift, extend);
-                for var in &mut class.instance_variables {
-                    var.span.tweak(shift, extend);
-                }
-                for m in &mut class.instance_methods {
-                    m.tweak_span(shift, extend);
-                }
-                for m in &mut class.class_methods {
-                    m.tweak_span(shift, extend);
-                }
-            }
             ClassExtension(ext) => {
                 ext.span.tweak(shift, extend);
                 for m in &mut ext.instance_methods {
@@ -1054,10 +1132,12 @@ fn make_name_table() -> NameTable {
     Syntax::def(t, "class", class_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "extend", extend_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "import", import_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "interface", interface_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, ",", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "->", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "defaultConstructor", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "method", invalid_prefix, invalid_suffix, precedence_0);
+    Syntax::def(t, "required", invalid_prefix, invalid_suffix, precedence_0);
     Syntax::def(t, "end", invalid_prefix, end_suffix, precedence_1);
     Syntax::def(t, ".", invalid_prefix, sequence_suffix, precedence_2);
     Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_3);
@@ -1338,7 +1418,8 @@ fn sequence_suffix(
 ) -> Result<Expr, Unwind> {
     let (token, span) = parser.lookahead()?;
     let text = parser.slice_at(span);
-    if (token == Token::WORD && (text == "method" || text == "end" || text == "class"))
+    if (token == Token::WORD
+        && (text == "required" || text == "method" || text == "end" || text == "class"))
         || token == Token::EOF
     {
         return Ok(left);
@@ -1591,6 +1672,63 @@ fn import_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     }
 }
 
+fn interface_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+    // FIXME: span is the span of the interface, but maybe it would be better if these
+    // had all their own spans.
+    //
+    // FIXME: duplicated extend_prefix pretty much.
+    let span = parser.span();
+    let interface_name = match parser.next_token()? {
+        Token::WORD => {
+            if parser.slice().chars().next().expect("BUG: empty identifier").is_uppercase() {
+                parser.slice()
+            } else {
+                // FIXME: Not all languages use capital letters
+                return parser.error("Interface names must start with an uppercase letter");
+            }
+        }
+        _ => return parser.error("Expected interface name"),
+    };
+    let mut interface = InterfaceDefinition::new(span, interface_name);
+    loop {
+        let (next, span2) = parser.lookahead()?;
+        if next == Token::WORD && parser.slice_at(span2) == "end" {
+            break;
+        }
+        parser.next_token()?;
+        if next == Token::EOF {
+            return parser
+                .eof_error("Unexpected EOF while parsing interface: expected method or end");
+        }
+        if next == Token::WORD && parser.slice() == "class" {
+            if parser.next_token()? == Token::WORD && parser.slice() == "method" {
+                interface.add_method(MethodKind::Class, parse_method(parser)?);
+                continue;
+            } else {
+                return parser.error("Expected class method");
+            }
+        }
+        if next == Token::WORD && parser.slice() == "method" {
+            interface.add_method(MethodKind::Instance, parse_method(parser)?);
+            continue;
+        }
+        if next == Token::WORD && parser.slice() == "required" {
+            parser.next_token()?;
+            interface.add_method(MethodKind::Required, parse_method_signature(parser)?);
+            continue;
+        }
+        if next == Token::WORD && parser.slice() == "is" {
+            if let Token::WORD = parser.next_token()? {
+                interface.add_interface(parser.slice());
+                continue;
+            }
+            return parser.error("Invalid inherited interface name in interface");
+        }
+        return parser.error("Expected method or end");
+    }
+    Ok(Expr::InterfaceDefinition(interface))
+}
+
 fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     // FIXME: span is the span of the class, but maybe it would be better if these
     // had all their own spans.
@@ -1660,10 +1798,17 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             }
             continue;
         }
+        if next == Token::WORD && parser.slice() == "is" {
+            if let Token::WORD = parser.next_token()? {
+                class.add_interface(parser.slice());
+                continue;
+            }
+            return parser.error("Invalid interface name in class");
+        }
         if next == Token::COMMENT || next == Token::BLOCK_COMMENT {
             continue;
         }
-        return parser.error("Expected method or end");
+        return parser.error("Expected method or end while parsing class");
     }
     Ok(Expr::ClassDefinition(class))
 }
@@ -1706,6 +1851,13 @@ fn extend_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         if next == Token::WORD && parser.slice() == "method" {
             class.add_method(MethodKind::Instance, parse_method(parser)?);
             continue;
+        }
+        if next == Token::WORD && parser.slice() == "is" {
+            if let Token::WORD = parser.next_token()? {
+                class.add_interface(parser.slice());
+                continue;
+            }
+            return parser.error("Invalid interface name in extend");
         }
         return parser.error("Expected method or end");
     }
@@ -1922,6 +2074,14 @@ fn parse_var(parser: &Parser) -> Result<Var, Unwind> {
 }
 
 fn parse_method(parser: &Parser) -> Result<MethodDefinition, Unwind> {
+    let mut method = parse_method_signature(parser)?;
+    // NOTE: This is the place where I could inform parser about instance
+    // variables.
+    method.body = Some(Box::new(parser.parse_body()?));
+    Ok(method)
+}
+
+fn parse_method_signature(parser: &Parser) -> Result<MethodDefinition, Unwind> {
     assert_eq!(parser.slice(), "method");
     let span = parser.span();
     let mut selector = String::new();
@@ -1972,10 +2132,7 @@ fn parse_method(parser: &Parser) -> Result<MethodDefinition, Unwind> {
     } else {
         None
     };
-    // FIXME: This is the place where I could inform parser about instance
-    // variables.
-    let body = parser.parse_body()?;
-    Ok(MethodDefinition::new(span, selector, parameters, body, rtype))
+    Ok(MethodDefinition::new(span, selector, parameters, rtype))
 }
 
 /// Tests and tools
@@ -2070,12 +2227,17 @@ pub mod utils {
         parameters: Vec<&str>,
         body: Expr,
     ) -> MethodDefinition {
+        let mut method = method_signature(span, selector, parameters);
+        method.body = Some(Box::new(body));
+        method
+    }
+
+    pub fn method_signature(span: Span, selector: &str, parameters: Vec<&str>) -> MethodDefinition {
         MethodDefinition::new(
             span,
             selector.to_string(),
             // FIXME: span
             parameters.iter().map(|name| Var::untyped(0..0, name.to_string())).collect(),
-            body,
             None,
         )
     }

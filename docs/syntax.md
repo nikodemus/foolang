@@ -13,9 +13,9 @@ should match reading order.
 Following words have special meaning:
 
 ``` foolang
-class   extend  method
+class   extend  method    return
 let     import  raise
-end     is      return
+end     is      required
 ```
 
 This restricts their use as both messages and as variables.
@@ -286,6 +286,13 @@ class Foo { slot::Type }
 end
 
 let block = { |arg::Type| ... } -> ReturnType
+```
+
+Intersection types can be expressed by chaining assertions:
+
+``` foolang
+-- Asserts that `x` is both T and K
+x::T::K
 ```
 
 ## Arrays

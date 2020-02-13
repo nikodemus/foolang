@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::eval::Env;
+use crate::eval::EnvRef;
 use crate::objects::Object;
 use crate::tokenstream::Span;
 
@@ -36,7 +36,7 @@ impl LineIndices for str {
 #[derive(PartialEq, Debug)]
 pub enum Unwind {
     Exception(Error, Location),
-    ReturnFrom(Env, Object),
+    ReturnFrom(EnvRef, Object),
 }
 
 #[derive(PartialEq, Debug)]
@@ -147,7 +147,7 @@ impl Unwind {
         ))
     }
 
-    pub fn return_from<T>(env: Env, value: Object) -> Result<T, Unwind> {
+    pub fn return_from<T>(env: EnvRef, value: Object) -> Result<T, Unwind> {
         Err(Unwind::ReturnFrom(env, value))
     }
 

@@ -10,10 +10,10 @@ pub fn class_vtable() -> Vtable {
 }
 
 pub fn instance_vtable() -> Vtable {
-    let mut vt = Vtable::new("SceneNode");
-    vt.def("color:", scene_node_color);
-    vt.def("texture:from:", scene_node_texture_from);
-    vt.def("translate:", scene_node_translate);
+    let vt = Vtable::new("SceneNode");
+    vt.add_primitive_method_or_panic("color:", scene_node_color);
+    vt.add_primitive_method_or_panic("texture:from:", scene_node_texture_from);
+    vt.add_primitive_method_or_panic("translate:", scene_node_translate);
     vt
 }
 

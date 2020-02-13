@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 use std::cell::{Ref, RefCell, RefMut};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::AsRef;
 use std::fmt;
 use std::fs;
@@ -10,8 +10,11 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use crate::eval::{Binding, Env};
-use crate::parse::{ClassDefinition, ClassExtension, Const, Expr, Literal, Parser, Var};
+use crate::eval::{Binding, Env, EnvRef};
+use crate::parse::{
+    ClassDefinition, ClassExtension, Const, Expr, InterfaceDefinition, Literal, MethodDefinition,
+    Parser, Var,
+};
 use crate::time::TimeInfo;
 use crate::tokenstream::Span;
 use crate::unwind::Unwind;
@@ -43,15 +46,85 @@ impl Source for Eval {
 
 type MethodFunction = fn(&Object, &[Object], &Env) -> Eval;
 
+#[derive(PartialEq, Clone, Debug)]
+pub struct Signature {
+    parameter_types: Vec<Option<Rc<Vtable>>>,
+    return_type: Option<Rc<Vtable>>,
+}
+
+impl fmt::Display for Signature {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "(")?;
+        let mut first = true;
+        for t in &self.parameter_types {
+            if first {
+                first = false;
+            } else {
+                write!(f, ", ")?;
+            }
+            match t {
+                Some(vt) => write!(f, "{}", &vt.name)?,
+                None => write!(f, "Any")?,
+            }
+        }
+        write!(f, ") -> ")?;
+        match &self.return_type {
+            Some(vt) => write!(f, "{}", &vt.name)?,
+            None => write!(f, "Any")?,
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone)]
 pub enum Method {
     Primitive(MethodFunction),
     Interpreter(Rc<Closure>),
     Reader(usize),
+    // FIXME: split Interface from Class, give Interface a vec
+    // of required signature.
+    Required(Signature),
 }
 
 impl PartialEq for Method {
     fn eq(&self, other: &Self) -> bool {
         std::ptr::eq(self, other)
+    }
+}
+
+impl Method {
+    fn reader(index: usize) -> Method {
+        Method::Reader(index)
+    }
+    fn primitive(method: MethodFunction) -> Method {
+        Method::Primitive(method)
+    }
+    fn closure(method: &MethodDefinition, env: &Env) -> Result<Method, Unwind> {
+        Ok(Method::Interpreter(Rc::new(make_method_closure(
+            env,
+            &method.selector,
+            &method.parameters,
+            method.required_body()?,
+            &method.return_type,
+        )?)))
+    }
+    fn required(signature: Signature) -> Method {
+        Method::Required(signature)
+    }
+    fn is_required(&self) -> bool {
+        match self {
+            Method::Required(_) => true,
+            _ => false,
+        }
+    }
+    fn signature(&self) -> Result<&Signature, Unwind> {
+        match self {
+            Method::Required(ref s) => Ok(s),
+            Method::Interpreter(ref c) => Ok(&c.signature),
+            // FIXME: Both should
+            Method::Primitive(_) => Unwind::error("Primitive method has no signature"),
+            Method::Reader(_) => Unwind::error("Reader method has no signature"),
+        }
     }
 }
 
@@ -63,8 +136,9 @@ pub struct Slot {
 
 pub struct Vtable {
     pub name: String,
-    pub methods: RefCell<HashMap<String, Rc<Method>>>,
-    pub slots: HashMap<String, Slot>,
+    pub methods: RefCell<HashMap<String, Method>>,
+    pub slots: RefCell<HashMap<String, Slot>>,
+    pub interfaces: RefCell<HashSet<Rc<Vtable>>>,
 }
 
 impl Vtable {
@@ -72,37 +146,55 @@ impl Vtable {
         Vtable {
             name: class.to_string(),
             methods: RefCell::new(HashMap::new()),
-            slots: HashMap::new(),
+            slots: RefCell::new(HashMap::new()),
+            interfaces: RefCell::new(HashSet::new()),
         }
     }
 
-    pub fn def(&mut self, name: &str, method: MethodFunction) {
-        self.methods.borrow_mut().insert(name.to_string(), Rc::new(Method::Primitive(method)));
+    pub fn add_interface(&self, vt: &Rc<Vtable>) {
+        let mut interfaces = self.interfaces.borrow_mut();
+        for inherited in vt.interfaces.borrow().iter() {
+            interfaces.insert(inherited.clone());
+        }
+        interfaces.insert(vt.clone());
     }
 
-    pub fn add_method(&self, selector: &str, method: Closure) -> Result<(), Unwind> {
+    pub fn add_method(&self, selector: &str, method: Method) -> Result<(), Unwind> {
         if self.has(selector) {
-            Unwind::error(&format!("Cannot override method {} in {}", selector, self.name))
-        } else {
-            self.methods
-                .borrow_mut()
-                .insert(selector.to_string(), Rc::new(Method::Interpreter(Rc::new(method))));
-            Ok(())
+            return Unwind::error(&format!(
+                "Cannot override method {} in {}",
+                selector, &self.name
+            ));
         }
+        self.methods.borrow_mut().insert(selector.to_string(), method);
+        Ok(())
     }
 
-    pub fn add_reader(&mut self, selector: &str, index: usize) {
-        self.methods.borrow_mut().insert(selector.to_string(), Rc::new(Method::Reader(index)));
+    pub fn add_primitive_method_or_panic(&self, selector: &str, method: MethodFunction) {
+        self.add_method(selector, Method::primitive(method))
+            .expect(&format!("Could not add primitive method: {:?} to {:?}", selector, self));
     }
 
-    pub fn add_slot(&mut self, name: &str, index: usize, vtable: Option<Rc<Vtable>>) {
-        self.slots.insert(
+    pub fn add_slot(&self, name: &str, index: usize, vtable: Option<Rc<Vtable>>) {
+        self.slots.borrow_mut().insert(
             name.to_string(),
             Slot {
                 index,
                 vtable,
             },
         );
+    }
+
+    pub fn slots(&self) -> Ref<HashMap<String, Slot>> {
+        self.slots.borrow()
+    }
+
+    pub fn methods(&self) -> Ref<HashMap<String, Method>> {
+        self.methods.borrow()
+    }
+
+    pub fn interfaces(&self) -> Ref<HashSet<Rc<Vtable>>> {
+        self.interfaces.borrow()
     }
 
     pub fn selectors(&self) -> Vec<String> {
@@ -113,7 +205,8 @@ impl Vtable {
         selectors
     }
 
-    pub fn get(&self, name: &str) -> Option<Rc<Method>> {
+    // FIXME: Could I return a reference instead?
+    pub fn get(&self, name: &str) -> Option<Method> {
         match self.methods.borrow().get(name) {
             Some(m) => Some(m.clone()),
             None => None,
@@ -173,21 +266,20 @@ impl Hash for System {
 pub struct Arg {
     pub span: Span,
     pub name: String,
-    pub vtable: Option<Rc<Vtable>>,
 }
 
 impl Arg {
-    pub fn new(span: Span, name: String, vtable: Option<Rc<Vtable>>) -> Arg {
+    pub fn new(span: Span, name: String) -> Arg {
         Arg {
             span,
             name,
-            vtable,
         }
     }
 }
 
 pub struct Class {
     pub instance_vtable: Rc<Vtable>,
+    pub interface: bool,
 }
 
 impl PartialEq for Class {
@@ -205,11 +297,30 @@ impl Hash for Class {
 }
 
 impl Class {
+    fn new_class(name: &str) -> Object {
+        Object {
+            vtable: Rc::new(Vtable::new(&format!("class {}", name))),
+            datum: Datum::Class(Rc::new(Class {
+                instance_vtable: Rc::new(Vtable::new(name)),
+                interface: false,
+            })),
+        }
+    }
+    fn new_interface(name: &str) -> Object {
+        Object {
+            vtable: Rc::new(Vtable::new(&format!("interface {}", name))),
+            datum: Datum::Class(Rc::new(Class {
+                instance_vtable: Rc::new(Vtable::new(name)),
+                interface: true,
+            })),
+        }
+    }
     fn object(class_vtable: &Rc<Vtable>, instance_vtable: &Rc<Vtable>) -> Object {
         Object {
             vtable: Rc::clone(class_vtable),
             datum: Datum::Class(Rc::new(Class {
                 instance_vtable: Rc::clone(instance_vtable),
+                interface: false,
             })),
         }
     }
@@ -221,7 +332,7 @@ pub struct Closure {
     pub env: Env,
     pub params: Vec<Arg>,
     pub body: Expr,
-    pub return_vtable: Option<Rc<Vtable>>,
+    pub signature: Signature,
 }
 
 impl PartialEq for Closure {
@@ -253,14 +364,17 @@ impl Closure {
                 ),
             );
         }
-        for (arg, obj) in self.params.iter().zip(args.into_iter().map(|x| (*x).clone())) {
-            let binding = match &arg.vtable {
+        for ((arg, vt), obj) in self
+            .params
+            .iter()
+            .zip(&self.signature.parameter_types)
+            .zip(args.into_iter().map(|x| (*x).clone()))
+        {
+            let binding = match vt {
                 None => Binding::untyped(obj),
-                Some(vtable) => {
-                    if vtable != &obj.vtable {
-                        return Unwind::type_error_at(arg.span.clone(), obj, vtable.name.clone());
-                    }
-                    Binding::typed(vtable.to_owned(), obj.to_owned())
+                Some(ref vtable) => {
+                    let value = obj.typecheck(vtable).source(&arg.span)?;
+                    Binding::typed(vtable.to_owned(), value)
                 }
             };
             symbols.insert(arg.name.clone(), binding);
@@ -270,15 +384,15 @@ impl Closure {
         // println!("apply return: {:?}", &ret);
         let result = match ret {
             Ok(value) => value,
-            Err(Unwind::ReturnFrom(ref ret_env, ref value)) if ret_env == &env => value.clone(),
+            Err(Unwind::ReturnFrom(ref ret_env, ref value)) if ret_env == &env.env_ref => {
+                value.clone()
+            }
             Err(unwind) => {
                 return Err(unwind);
             }
         };
-        if let Some(vtable) = &self.return_vtable {
-            if &result.vtable != vtable {
-                return Unwind::type_error(result, vtable.name.clone()).source(&self.body.span());
-            }
+        if let Some(vtable) = &self.signature.return_type {
+            result.typecheck(vtable).source(&self.body.span())?;
         }
         Ok(result)
     }
@@ -577,8 +691,8 @@ pub struct Foolang {
     pub window_class_vtable: Rc<Vtable>,
     pub scene_node_vtable: Rc<Vtable>,
     pub scene_node_class_vtable: Rc<Vtable>,
-    /// Holds the environment constructed by the prelude.
-    prelude: Option<Env>,
+    /// Holds the toplevel builtin environment, including prelude.
+    builtin_env_ref: EnvRef,
     /// Used to ensure we load each module only once.
     modules: Rc<RefCell<HashMap<PathBuf, Env>>>,
     /// Map from toplevel module names to their paths
@@ -587,7 +701,9 @@ pub struct Foolang {
 
 impl Foolang {
     /// Used to initialize a builtin environment.
-    pub fn init_env(&self, env: &mut Env) {
+    pub fn init_builtins(self) -> Self {
+        // println!("INIT_ENV");
+        let env = &self.builtin_env_ref;
         env.define("Array", Class::object(&self.array_class_vtable, &self.array_vtable));
         env.define("Boolean", Class::object(&self.boolean_class_vtable, &self.boolean_vtable));
         env.define(
@@ -619,6 +735,8 @@ impl Foolang {
             "SceneNode",
             Class::object(&self.scene_node_class_vtable, &self.scene_node_vtable),
         );
+        // println!("INIT OK");
+        self
     }
 
     pub fn new(prelude: &Path, roots: HashMap<String, PathBuf>) -> Result<Foolang, Unwind> {
@@ -661,10 +779,11 @@ impl Foolang {
             scene_node_vtable: Rc::new(classes::scene_node::instance_vtable()),
             scene_node_class_vtable: Rc::new(classes::scene_node::class_vtable()),
             // Other
-            prelude: None,
+            builtin_env_ref: EnvRef::new(),
             modules: Rc::new(RefCell::new(HashMap::new())),
             roots,
         }
+        .init_builtins()
         .load_prelude(prelude)
     }
 
@@ -681,7 +800,7 @@ impl Foolang {
 
     pub fn run(self, program: &str, command: Object) -> Eval {
         let system = self.make_system(None);
-        let env = self.prelude_env()?;
+        let env = self.builtin_env();
         let mut parser = Parser::new(&program, env.foo.root());
         while !parser.at_eof() {
             let expr = match parser.parse() {
@@ -690,8 +809,7 @@ impl Foolang {
             };
             env.eval(&expr).context(&program)?;
         }
-        // FIXME: Bad error "Unknown class" with bogus span.
-        let main = env.find_class("Main", 0..0)?;
+        let main = env.find_global_or_unwind("Main")?;
         Ok(main.send("run:in:", &[command, system], &env).context(&program)?)
     }
 
@@ -719,23 +837,28 @@ impl Foolang {
                 return Ok(module.clone());
             }
         }
-        let env = self.load_module_into(&file, self.prelude_env()?)?;
+        let env = self.load_module_into(&file, self.builtin_env())?;
         self.modules.borrow_mut().insert(file.clone(), env.clone());
         Ok(env)
     }
 
-    fn load_prelude(mut self, path: &Path) -> Result<Foolang, Unwind> {
-        let prelude = self.load_module_into(path, Env::from(self.clone()))?;
-        self.prelude = Some(prelude);
+    fn load_prelude(self, path: &Path) -> Result<Foolang, Unwind> {
+        let env = self.builtin_env();
+        self.load_module_into(path, env)?;
         Ok(self)
     }
 
-    fn prelude_env(&self) -> Result<Env, Unwind> {
-        match &self.prelude {
-            Some(env) => Ok(env.clone()),
-            // This seems a bit messy and not 100% obviously correct. The case is when loading the
-            // prelude itself. Load prelude should maybe instead take a mutable ref to self?
-            None => Ok(Env::from(self.clone())),
+    pub fn toplevel_env(&self) -> Env {
+        Env {
+            env_ref: self.builtin_env_ref.enclose(),
+            foo: Rc::new(self.clone()),
+        }
+    }
+
+    fn builtin_env(&self) -> Env {
+        Env {
+            env_ref: self.builtin_env_ref.clone(),
+            foo: Rc::new(self.clone()),
         }
     }
 
@@ -779,58 +902,39 @@ impl Foolang {
 
     // FIXME: inconsistent return type vs other make_foo methods.
     // Should others be Eval as well?
-    pub fn make_class(&self, classdef: &ClassDefinition, env: &Env) -> Eval {
-        let mut vtable_name = "class ".to_string();
-        vtable_name.push_str(&classdef.name);
-        let mut class_vtable = Vtable::new(vtable_name.as_str());
-        class_vtable.def(&classdef.constructor(), generic_ctor);
-        let mut instance_vtable = Vtable::new(&classdef.name);
-        let mut index = 0;
-        for var in &classdef.instance_variables {
-            index += 1;
-            let vtable = match &var.typename {
-                None => None,
-                Some(typename) => {
-                    let slotclass = env.find_class(typename, var.span.clone())?.class();
-                    Some(slotclass.instance_vtable.clone())
-                }
-            };
-            instance_vtable.add_slot(&var.name, index - 1, vtable);
-            if &var.name[0..1] == "_" {
-                continue;
-            }
-            instance_vtable.add_reader(&var.name, index - 1);
+    pub fn make_class(&self, def: &ClassDefinition, env: &Env) -> Eval {
+        let mut class = Class::new_class(&def.name);
+        for (i, var) in def.instance_variables.iter().enumerate() {
+            class.add_slot(&var.name, i, env.maybe_type(&var.typename)?)?;
         }
-        for method in &classdef.class_methods {
-            class_vtable.add_method(
-                &method.selector,
-                make_method_function(
-                    env,
-                    format!("{}#{}", &class_vtable.name, &method.selector),
-                    &method.parameters,
-                    &method.body,
-                    &method.return_type,
-                )?,
-            )?;
+        class.add_primitive_class_method(&def.constructor(), generic_ctor)?;
+        for method in &def.class_methods {
+            class.add_interpreted_class_method(env, method)?;
         }
-        for method in &classdef.instance_methods {
-            instance_vtable.add_method(
-                &method.selector,
-                make_method_function(
-                    env,
-                    format!("{}#{}", &instance_vtable.name, &method.selector),
-                    &method.parameters,
-                    &method.body,
-                    &method.return_type,
-                )?,
-            )?;
+        for method in &def.instance_methods {
+            class.add_interpreted_instance_method(env, method)?;
         }
-        Ok(Object {
-            vtable: Rc::new(class_vtable),
-            datum: Datum::Class(Rc::new(Class {
-                instance_vtable: Rc::new(instance_vtable),
-            })),
-        })
+        for name in &def.interfaces {
+            class.add_interface(env, name)?;
+        }
+        Ok(class)
+    }
+
+    pub fn make_interface(&self, def: &InterfaceDefinition, env: &Env) -> Eval {
+        let interface = Class::new_interface(&def.name);
+        for method in &def.class_methods {
+            interface.add_interpreted_class_method(env, method)?;
+        }
+        for method in &def.instance_methods {
+            interface.add_interpreted_instance_method(env, method)?;
+        }
+        for method in &def.required_methods {
+            interface.add_required_method(env, method)?;
+        }
+        for name in &def.interfaces {
+            interface.add_interface(env, name)?;
+        }
+        Ok(interface)
     }
 
     pub fn make_clock(&self) -> Object {
@@ -845,9 +949,14 @@ impl Foolang {
         env: Env,
         params: Vec<Arg>,
         body: Expr,
-        rtype: &Option<String>,
+        parameter_type_names: Vec<&Option<String>>,
+        return_type_name: &Option<String>,
     ) -> Eval {
-        let rtype = env.find_vtable_if_name(rtype, body.span())?;
+        let mut parameter_types = vec![];
+        for name in parameter_type_names {
+            parameter_types.push(env.maybe_type(name)?);
+        }
+        let return_type = env.maybe_type(return_type_name)?;
         Ok(Object {
             vtable: Rc::clone(&self.closure_vtable),
             datum: Datum::Closure(Rc::new(Closure {
@@ -855,8 +964,10 @@ impl Foolang {
                 env,
                 params,
                 body,
-                // FIXME: questionable span
-                return_vtable: rtype,
+                signature: Signature {
+                    parameter_types,
+                    return_type,
+                },
             })),
         })
     }
@@ -869,7 +980,7 @@ impl Foolang {
                 // share same vtable instances as the parent, which
                 // seems like the right thing -- but it would be nice to
                 // be able to specify a different prelude. Meh.
-                env: self.prelude_env().unwrap(),
+                env: self.toplevel_env(),
                 source: RefCell::new(String::new()),
                 expr: RefCell::new(Const::expr(0..0, Literal::Boolean(false))),
             })),
@@ -1007,55 +1118,57 @@ impl Object {
         }
     }
 
-    pub fn class(&self) -> Rc<Class> {
+    pub fn as_class_ref(&self) -> Result<&Class, Unwind> {
         match &self.datum {
-            Datum::Class(class) => Rc::clone(class),
-            _ => panic!("BUG: {:?} is not a Class", self),
+            Datum::Class(class) => Ok(class.as_ref()),
+            _ => Unwind::error(&format!("{} is not a Class or Interface", self)),
         }
     }
 
+    pub fn typecheck(&self, typevt: &Rc<Vtable>) -> Eval {
+        if typevt == &self.vtable {
+            return Ok(self.clone());
+        }
+        for vt in self.vtable.interfaces().iter() {
+            if typevt == vt {
+                return Ok(self.clone());
+            }
+        }
+        return Unwind::type_error(self.clone(), typevt.name.clone());
+    }
+
     pub fn extend_class(&self, ext: &ClassExtension, env: &Env) -> Eval {
-        let class_vtable = &self.vtable;
-        if !ext.class_methods.is_empty() && class_vtable.has("perform:with:") {
+        if !ext.class_methods.is_empty() && self.vtable.has("perform:with:") {
             return Unwind::error(&format!(
                 "Cannot extend {}: class method 'perform:with:' defined",
-                &class_vtable.name
+                &self.vtable.name
             ));
-        } else {
-            for method in &ext.class_methods {
-                class_vtable.add_method(
-                    &method.selector,
-                    make_method_function(
-                        env,
-                        format!("{}##{}", &class_vtable.name, &method.selector),
-                        &method.parameters,
-                        &method.body,
-                        &method.return_type,
-                    )?,
-                )?;
-            }
         }
-        let instance_vtable = &(self.class().instance_vtable);
-        if !ext.instance_methods.is_empty() && instance_vtable.has("perform:with:") {
+        for method in &ext.class_methods {
+            self.add_interpreted_class_method(env, method)?;
+        }
+        let class = self.as_class_ref()?;
+        if !ext.instance_methods.is_empty() && class.instance_vtable.has("perform:with:") {
             return Unwind::error(&format!(
                 "Cannot extend {}: instance method 'perform:with:' defined",
-                &instance_vtable.name
+                class.instance_vtable.name
             ));
-        } else {
-            for method in &ext.instance_methods {
-                instance_vtable.add_method(
-                    &method.selector,
-                    make_method_function(
-                        env,
-                        format!("{}##{}", &instance_vtable.name, &method.selector),
-                        &method.parameters,
-                        &method.body,
-                        &method.return_type,
-                    )?,
-                )?;
-            }
+        }
+        for method in &ext.instance_methods {
+            self.add_interpreted_instance_method(env, method)?;
+        }
+        for name in &ext.interfaces {
+            self.add_interface(env, name)?;
         }
         Ok(self.clone())
+    }
+
+    pub fn slots(&self) -> Ref<HashMap<String, Slot>> {
+        self.vtable.slots()
+    }
+
+    pub fn methods(&self) -> Ref<HashMap<String, Slot>> {
+        self.vtable.slots()
     }
 
     pub fn closure_ref(&self) -> &Closure {
@@ -1121,6 +1234,116 @@ impl Object {
             }
             _ => Unwind::error(&format!("{:?} is not an Integer ({})", &self, ctx)),
         }
+    }
+
+    fn add_slot(
+        &mut self,
+        name: &str,
+        index: usize,
+        vtable: Option<Rc<Vtable>>,
+    ) -> Result<(), Unwind> {
+        let class = self.as_class_ref()?;
+        if class.interface {
+            return Unwind::error("BUG: Cannot add slot to an interface");
+        }
+        class.instance_vtable.add_slot(name, index, vtable);
+        if !name.starts_with("_") {
+            class.instance_vtable.add_method(name, Method::reader(index))?;
+        }
+        Ok(())
+    }
+
+    fn add_primitive_class_method(
+        &self,
+        selector: &str,
+        method: MethodFunction,
+    ) -> Result<(), Unwind> {
+        self.as_class_ref()?;
+        self.vtable.add_method(selector, Method::primitive(method))?;
+        Ok(())
+    }
+
+    fn add_interface(&self, env: &Env, name: &str) -> Result<(), Unwind> {
+        let class = self.as_class_ref()?;
+        let class_name = &class.instance_vtable.name;
+        // Add interface class methods
+        let interface_obj = env.find_global_or_unwind(name)?;
+        let interface = interface_obj.as_class_ref()?;
+        for (selector, method) in interface_obj.vtable.methods().iter() {
+            if !self.vtable.has(selector) {
+                self.vtable.add_method(selector, method.clone())?;
+            }
+        }
+        // Add interface to instance vtable
+        let instance_vt = &class.instance_vtable;
+        instance_vt.add_interface(&interface.instance_vtable);
+        // Add interface instance methods
+        for (selector, method) in interface.instance_vtable.methods().iter() {
+            let signature = method.signature()?;
+            let required = method.is_required();
+            match instance_vt.get(selector) {
+                Some(Method::Interpreter(ref closure)) => {
+                    if &closure.signature != signature {
+                        return Unwind::error(&format!(
+                            "{}#{} is {}, interface {} specifies {}",
+                            class_name, selector, &closure.signature, name, signature
+                        ));
+                    }
+                }
+                Some(_) => {
+                    return Unwind::error(&format!(
+                    "{}#{} is an interface method, non-vanilla implementations not supporte yet",
+                    class_name, selector
+                ))
+                }
+                None if required => {
+                    return Unwind::error(&format!(
+                        "{}#{} unimplemented, required by interface {}",
+                        class_name, selector, name
+                    ))
+                }
+                None => {
+                    instance_vt.add_method(selector, method.clone())?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn add_interpreted_class_method(
+        &self,
+        env: &Env,
+        method: &MethodDefinition,
+    ) -> Result<(), Unwind> {
+        self.as_class_ref()?;
+        self.vtable.add_method(&method.selector, Method::closure(method, env)?)?;
+        Ok(())
+    }
+
+    fn add_interpreted_instance_method(
+        &self,
+        env: &Env,
+        method: &MethodDefinition,
+    ) -> Result<(), Unwind> {
+        let class = self.as_class_ref()?;
+        class.instance_vtable.add_method(&method.selector, Method::closure(method, env)?)?;
+        Ok(())
+    }
+
+    fn add_required_method(&self, env: &Env, method: &MethodDefinition) -> Result<(), Unwind> {
+        let class = self.as_class_ref()?;
+        let mut parameter_types = vec![];
+        for p in &method.parameters {
+            parameter_types.push(env.maybe_type(&p.typename)?);
+        }
+        class.instance_vtable.add_method(
+            &method.selector,
+            Method::required(Signature {
+                parameter_types,
+                return_type: env.maybe_type(&method.return_type)?,
+            }),
+        )?;
+        Ok(())
     }
 
     pub fn as_u64(&self, ctx: &str) -> Result<u64, Unwind> {
@@ -1219,20 +1442,26 @@ impl Object {
     pub fn send(&self, selector: &str, args: &[Object], env: &Env) -> Eval {
         // println!("debug: {} {} {:?}", self, selector, args);
         match self.vtable.get(selector) {
-            Some(m) => match &*m {
+            Some(m) => match &m {
                 Method::Primitive(method) => method(self, args, env),
                 Method::Interpreter(closure) => closure.apply(Some(self), args),
                 Method::Reader(index) => read_instance_variable(self, *index),
+                Method::Required(_) => {
+                    Unwind::error(&format!("Required method '{}' unimplemented", selector))
+                }
             },
             None if selector == "toString" => generic_to_string(self, args, env),
             None => {
                 // println!("known: {:?}", self.vtable.selectors());
                 let not_understood = vec![env.foo.make_string(selector), env.foo.make_array(args)];
                 match self.vtable.get("perform:with:") {
-                    Some(m) => match &*m {
+                    Some(m) => match &m {
                         Method::Primitive(method) => method(self, &not_understood, env),
                         Method::Interpreter(closure) => closure.apply(Some(self), &not_understood),
                         Method::Reader(index) => read_instance_variable(self, *index),
+                        Method::Required(_) => {
+                            Unwind::error(&format!("Required method '{}' unimplemented", selector))
+                        }
                     },
                     None => Unwind::message_error(self, selector, args),
                 }
@@ -1241,25 +1470,31 @@ impl Object {
     }
 }
 
-pub fn make_method_function(
+pub fn make_method_closure(
     env: &Env,
-    name: String,
+    name: &str,
     params: &[Var],
     body: &Expr,
     return_type: &Option<String>,
 ) -> Result<Closure, Unwind> {
     let mut args = vec![];
+    let mut parameter_types = vec![];
     for param in params {
-        let vtable = env.find_vtable_if_name(&param.typename, param.span.clone())?;
-        args.push(Arg::new(param.span.clone(), param.name.clone(), vtable));
+        args.push(Arg::new(param.span.clone(), param.name.clone()));
+        match &param.typename {
+            Some(name) => parameter_types.push(Some(env.find_type(name)?)),
+            None => parameter_types.push(None),
+        }
     }
     Ok(Closure {
-        name,
+        name: name.to_string(),
         env: env.clone(),
         params: args,
         body: body.to_owned(),
-        // FIXME: questionable span
-        return_vtable: env.find_vtable_if_name(&return_type, body.span())?,
+        signature: Signature {
+            parameter_types,
+            return_type: env.maybe_type(&return_type)?,
+        },
     })
 }
 
@@ -1325,7 +1560,7 @@ impl fmt::Debug for Object {
 }
 
 fn generic_ctor(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
-    let class = receiver.class();
+    let class = receiver.as_class_ref()?;
     Ok(Object {
         vtable: Rc::clone(&class.instance_vtable),
         datum: Datum::Instance(Rc::new(Instance {
@@ -1367,9 +1602,7 @@ pub fn read_instance_variable(receiver: &Object, index: usize) -> Eval {
 
 pub fn write_instance_variable(receiver: &Object, slot: &Slot, value: Object) -> Eval {
     if let Some(vtable) = &slot.vtable {
-        if &value.vtable != vtable {
-            return Unwind::type_error(value, vtable.name.clone());
-        }
+        value.typecheck(vtable)?;
     }
     let instance = receiver.instance();
     instance.instance_variables.borrow_mut()[slot.index] = value.clone();

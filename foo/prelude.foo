@@ -1,10 +1,11 @@
+import .collection
 import .array
 import .boolean
 import .byteArray
 import .dictionary
 import .float
 import .integer
-import .interval -- FIXME: Need to export too!
+import .interval
 import .output
 import .random
 import .string

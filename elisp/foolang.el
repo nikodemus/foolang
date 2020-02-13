@@ -2,7 +2,8 @@
 
 (require 'cl)
 
-(defconst foolang-syntax-table (make-syntax-table))
+(defvar foolang-syntax-table)
+(setq foolang-syntax-table (make-syntax-table))
 
 (defun foolang-init-syntax-table (table)
   (modify-syntax-entry ?_ "w" table)
@@ -26,10 +27,12 @@
  'foolang-mode
  '(("\\<class\\>" . font-lock-keyword-face)
    ("\\<extend\\>" . font-lock-keyword-face)
+   ("\\<interface\\>" . font-lock-keyword-face)
    ("\\<end\\>" . font-lock-keyword-face)
    ("\\<method\\>" . font-lock-keyword-face)
    ("\\<class\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
    ("\\<extend\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
+   ("\\<interface\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
    ("\\<import\\>" . font-lock-keyword-face)
    ("\\<raise\\>" . font-lock-keyword-face)
    ("\\<return\\>" . font-lock-keyword-face)
@@ -70,6 +73,15 @@
          stack
          :class)))
 
+(def-foolang-indent "interface" (col base stack ctx)
+  (:after
+    (looking-at " *interface\\s-*$"))
+  (:indent
+   (list (* 2 foolang-indent-offset)
+         (* 2 foolang-indent-offset)
+         stack
+         :class)))
+
 (def-foolang-indent "class Name {" (col base stack ctx)
   (:after
     (looking-at " *class\\s-+[A-Z]+\\s-*{\\s-*$"))
@@ -79,6 +91,33 @@
          (cons (cons foolang-indent-offset foolang-indent-offset)
                stack)
          :slots)))
+
+(def-foolang-indent "class Name {...}" (col base stack ctx)
+  (:after
+    (looking-at " *class\\s-+[A-Z]+\\s-*{.*}\\s-*$"))
+  (:indent
+   (list (+ col foolang-indent-offset)
+         base
+         stack
+         ctx)))
+
+(def-foolang-indent "extend Name" (col base stack ctx)
+  (:after
+    (looking-at " *extend\\s-+[A-Z]+\\s-*$"))
+  (:indent
+   (list (+ col foolang-indent-offset)
+         base
+         stack
+         ctx)))
+
+(def-foolang-indent "interface Name" (col base stack ctx)
+  (:after
+    (looking-at " *interface\\s-+[A-Z]+\\s-*$"))
+  (:indent
+   (list (+ col foolang-indent-offset)
+         base
+         stack
+         ctx)))
 
 (def-foolang-indent "class Name { slot" (col base stack ctx)
   (:after
@@ -374,6 +413,8 @@
   (beginning-of-line)
   (cond ((foolang--looking-at-method) foolang-indent-offset)
         ((foolang--looking-at-class) 0)
+        ((foolang--looking-at-extend) 0)
+        ((foolang--looking-at-interface) 0)
         ((foolang--top-of-buffer) 0)))
 
 (defun foolang--looking-at-method ()
@@ -381,6 +422,12 @@
 
 (defun foolang--looking-at-class ()
   (looking-at " *class [A-Z]"))
+
+(defun foolang--looking-at-extend ()
+  (looking-at " *extend [A-Z]"))
+
+(defun foolang--looking-at-interface ()
+  (looking-at " *interface [A-Z]"))
 
 (defun foolang--top-of-buffer ()
   (eql 1 (line-number-at-pos)))
@@ -556,7 +603,7 @@
          (setcdr old test)
        (push (cons name test) foolang--indentation-tests))
      (when foolang--debug-indentation
-       (apply foolang--indentation-test name test))))
+       (apply 'foolang--run-indentation-test name test))))
 
 (def-foolang-indent-test "class-indent-1"
   "
@@ -604,6 +651,22 @@ b }"
 class Foo { a
             b }")
 
+(def-foolang-indent-test "class-indent-7"
+  "
+class Foo { a }
+is"
+  "
+class Foo { a }
+    is")
+
+(def-foolang-indent-test "interface-indent-1"
+  "
+interface Foo
+method bar"
+  "
+interface Foo
+    method bar")
+
 (def-foolang-indent-test "extend-indent-1"
   "
 extend Foo
@@ -619,6 +682,14 @@ class method bar"
   "
 extend Foo
     class method bar")
+
+(def-foolang-indent-test "extend-indent-3"
+  "
+extend Foo
+is Bar"
+  "
+extend Foo
+    is Bar")
 
 (def-foolang-indent-test "method-indent-1"
   "
