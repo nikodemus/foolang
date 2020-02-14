@@ -296,4 +296,17 @@ upwards. `add:` method adds to the end.
 
 ## Map
 
+Map collections provide mappings from one object to another. Often also called
+dictionaries, tables, or hashtables.
+
+- **required method** `at:` _key_ `ifNone:` _block_ \
+  Returns the object associated with _key_ in the receiver, or exceutes the
+  _block_ returning its value if no such object exists.
+
+- **required method** `at:` _key_ `put:` _object_ \
+  Associates _object_ with _key_ in the receiver. If an older association
+  already existed, it is replaced.
+
 ## Interval
+
+Interval represents a range of numbers, plus an step size.
