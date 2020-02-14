@@ -26,8 +26,6 @@
         --modular-scale: 1.4;
         --base-font-size: 16px;
         --code-font-size: var(--base-font-size);
-        --docsify-example-panels-left-panel-width : 50%;
-        --docsify-example-panels-right-panel-width : 50%;
     }
     span.done {
         color: #00FF00;
@@ -50,7 +48,10 @@
   <script src="//cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
   <script>
     var figure = 0;
-    mermaid.initialize({ startOnLoad: false, theme: "forest" });
+    mermaid.initialize({
+        startOnLoad: false,
+        theme: "forest",
+    });
     window.$docsify = {
         auto2top: true,
         loadNavbar: true,
