@@ -1,47 +1,60 @@
 # Foolang Iterators
 
 !> Sketching out the interfaces. Does not match what is currently implemented.
+Would also like to disentangle this into purely functional and side-effectful
+parts.
+
+!> Not super fond of minor inconsistencies in naming: `select:` but `indexIf:`,
+etc.
+
+!> Would also like a method of operating on slices, reflecting the changes
+back to original. Would make `(x from: start to: end) rotateLeft: n` work
+like magic.
+
+!> Need better documentation structure to be able to define things like
+"violating bounds causes an exception to be raised" without needing to
+repeat them over and over again.
 
 ``` mermaid
 graph TD
-    iterable(["Iterable&nbsp;"])
+    _iterable(["Iterable&nbsp;"])
 
-    collection(["Collection&nbsp;"])
-    interval(["Interval&nbsp;"])
+    _collection(["Collection&nbsp;"])
+    _interval(["Interval&nbsp;"])
 
-    generator["Generator"]
+    _generator["Generator"]
 
-    set([Set])
-    ordered([Ordered])
-    map([Map])
+    _set([Set])
+    _ordered([Ordered])
+    _map([Map])
 
-    intervalf64["IntervalF64&nbsp;"]
-    intervali64["IntervalI64&nbsp;"]
+    _intervalf64["IntervalF64&nbsp;"]
+    _intervali64["IntervalI64&nbsp;"]
 
-    hashset[HashSet]
-    orderedset[OrderedSet]
-    list[List]
-    hashmap[HashMap]
-    orderedmap[OrderedMap]
+    _hashset[HashSet]
+    _orderedset[OrderedSet]
+    _list[List]
+    _hashmap[HashMap]
+    _orderedmap[OrderedMap]
 
-    iterable-->collection
-    iterable-->interval
-    iterable-->generator
+    _iterable-->_collection
+    _iterable-->_interval
+    _iterable-->_generator
 
-    interval-->intervalf64
-    interval-->intervali64
+    _interval-->_intervalf64
+    _interval-->_intervali64
 
-    collection-->set
-    collection-->ordered
-    collection-->map
+    _collection-->_set
+    _collection-->_ordered
+    _collection-->_map
 
-    set-->hashset
-    set-->orderedset
-    ordered-->orderedset
-    ordered-->list
-    ordered-->orderedmap
-    map-->orderedmap
-    map-->hashmap
+    _set-->_hashset
+    _set-->_orderedset
+    _ordered-->_orderedset
+    _ordered-->_list
+    _ordered-->_orderedmap
+    _map-->_orderedmap
+    _map-->_hashmap
 
 ```
 
@@ -114,7 +127,8 @@ A finite collection of objects, allowing addition of new elements.
      sized to hold the specified number of objects.
 
 - **required method** `add:` _object_ \
-  Adds a new object to the collection.
+  Adds a new object to the collection. Size of the collection typically
+  increases by one as a result.
 
   ---
 
@@ -137,6 +151,9 @@ A finite collection of objects, allowing addition of new elements.
 - **method** `allSatisfy:` _block_ \
   Returns true if _block_ is true for all objects in the receiver,
   false otherwise.
+
+- **method** `addAll:` _iterable_ \
+  Add all objects in the _iterable_ to the receiver.
 
 - **method** `anySatisfy:` _block_ \
   Returns true if _block_ is true for at least one object in the receiver,
@@ -173,7 +190,109 @@ A finite collection of objects, allowing addition of new elements.
 
 ## Set
 
-## Order
+Sets are collections which contain each object only once: adding the same object
+multiple times to a set is same as adding it once.
+
+!> This seems a bit awkward. All of these could in principle be supported by any
+collection. It's just that sets are designed to make these operations efficient
+and maintain the invariant.
+
+- **method** `intersection:` _iterable_ \
+  Returns a fresh set of the same species as the receiver containing
+  those objects in the receiver that also appear in the _iterable_.
+
+- **method** `difference:` _iterable_ \
+  Returns a fresh set of the same species as the receiver containing
+  those objects in the receiver that do not appear in the _iterable_.
+
+- **method** `union:` _iterable_ \
+  Returns a fresh set of the same species as the receiver containing
+  objects in the receiver and those of the _iterable_.
+
+## Ordered
+
+Ordered collections allow accessing their members by integer indexes from 1 to
+size of the collection. Iteration order of an Ordered collection is from index 1
+upwards. `add:` method adds to the end.
+
+- **required method** `at:` _index_ \
+  Returns the object at the specified _index_ in the receiver. Raises an exception
+  if the _index_ is less than one or greater than size of the receiver.
+
+- **required method** `at:` _index_ `put:` _object_ \
+  Puts the _object_ at the specified _index_ in the receiver. Raises an
+  exception if the index is less than one or greater than size of the
+  receiver.
+
+- **required method** `removeFirst` \
+  Returns first element in the receiver, and removes it.
+
+- **required method** `removeLast` \
+  Returns last element in the receiver, and removes it.
+
+- **method** `from:` _start_ `to:` _end_ \
+  Returns a new ordered collection of
+  the same species containing elements from _start_ to _end_. Raises an
+  exception if either _start_ or _end_ is less than one or greater than size of
+  the receiver.
+
+  _XXX: a lot of methods should probably have variants prefixed with `from:to:`,
+  along the lines of `from: i to: j select: test`._
+
+- **method** `from:` _start_ `to:` _end_ `replaceFrom:` _iterable_
+  Replaces elements of the receiver from _start_ to _end_ with elements from
+  _iterable_. Raises an exception is _iterable_ is exhausted before specified
+  range has been replaced.
+
+  _XXX: or maybe the answer is to have slices/iterators that allow mutation:
+  `(seq from: start to: end) replaceFrom: other`. This is also very close
+  to the slicing and broadcasing protocol I was thinking about for arrays:
+  `seq at: (start to: end) put: replacement` -- but needs a bit of finesses
+  to be able to communicate `replaceFrom:` vs `replaceWith:` type operations._
+
+- **method** `from:` _start_ `to:` _end_ `replaceWith:` _object_
+  Replaces elements of the receiver from _start_ to _end_ with _object_.
+
+- **method** `index:` _object_ \
+  Returns first position of _object_ in the receiver. Raises an exception
+  if _object_ is not in receiver.
+
+  _XXX: should there be also `indexes:`?_
+
+- **method** `index:` _object_ `ifNone:` _block_ \
+  Returns first position of _object_ in the receiver. Executes _block_
+  if _object_ is not in receiver, and returns its value.
+
+- **method** `indexIf:` _block_ \
+  Returns position of first _object_ in the receiver for which _block_
+  returns true. Raises an exception if _object_ is not in receiver.
+
+- **method** `indexIf:` _block_ `ifNone:` _noneBlock_ \
+  Returns position of first _object_ in the receiver for which _block_ returns
+  true. Executes _noneBlock_ if _object_ is not in receiver, and returns its value.
+
+- **method** `reverse` \
+  Reverses the receiver in place.
+
+- **method** `reversed` \
+  Returns copy of the receiver, in reverse order in reverse order.
+
+- **method** `rotateLeft:` _n_
+  Rotates elements of receiver left _n_ times.
+
+- **method** `rotateRight:` _n_
+  Rotates elements of receiver right _n_ times.
+
+- **method** `sort:` _block_ \
+  Sorts the receiver using _block_ as comparator: _block_ is called
+  with two objects from the receiver in time, and should return true
+  if the first element belong before second one.
+
+- **method** `sorted:` _block_ \
+  Returns a new ordered collection of the same
+  species as the receiver, using _block_ as comparator: _block_ is called with
+  two objects from the receiver in time, and should return true if the first
+  element belong before second one.
 
 ## Map
 
