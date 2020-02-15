@@ -9,5 +9,5 @@ import .lang.interval
 import .lang.output
 import .lang.random
 import .lang.string
-import .stringOutput
+import .lang.stringOutput
 import .time
