@@ -197,7 +197,7 @@ fn test_import_bar_y() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/tests/test_import_bar_y.foo");
     cmd.arg("--use");
-    cmd.arg("bar");
+    cmd.arg("foo/tests/bar");
     cmd.assert().failure().code(111).stdout("");
     Ok(())
 }
