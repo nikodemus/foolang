@@ -1,4 +1,4 @@
-import .interval.Interval
+import .lang.interval.Interval
 
 extend Integer
     method asInteger

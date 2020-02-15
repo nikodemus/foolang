@@ -5,7 +5,7 @@ import .lang.collection
 import .lang.dictionary
 import .lang.float
 import .integer
-import .interval
+import .lang.interval
 import .output
 import .random
 import .string
