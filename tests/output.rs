@@ -58,7 +58,7 @@ fn test_abort() -> Test {
 #[test]
 fn test_print_no_flush() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/print_no_flush.foo");
+    cmd.arg("foo/tests/test_print_no_flush.foo");
     cmd.assert().success().stdout("");
     Ok(())
 }
