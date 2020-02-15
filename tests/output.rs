@@ -90,7 +90,7 @@ fn test_bad_class() -> Test {
 #[test]
 fn test_interface_unimplemented() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/interface_unimplemented.foo");
+    cmd.arg("foo/tests/test_interface_unimplemented.foo");
     cmd.assert()
         .failure()
         .code(1)
