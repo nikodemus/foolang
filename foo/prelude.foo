@@ -2,7 +2,7 @@ import .lang.array
 import .lang.boolean
 import .lang.byteArray
 import .lang.collection
-import .dictionary
+import .lang.dictionary
 import .float
 import .integer
 import .interval
