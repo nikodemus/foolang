@@ -4,7 +4,7 @@ import .lang.byteArray
 import .lang.collection
 import .lang.dictionary
 import .lang.float
-import .integer
+import .lang.integer
 import .lang.interval
 import .output
 import .random
