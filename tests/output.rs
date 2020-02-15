@@ -204,7 +204,7 @@ fn test_prelude2() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/test_prelude.foo");
     cmd.arg("--prelude");
-    cmd.arg("foo/empty.foo");
+    cmd.arg("foo/tests/empty.foo");
     cmd.assert()
         .failure()
         .code(1)
