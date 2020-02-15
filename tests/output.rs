@@ -13,9 +13,9 @@ fn example_hello() -> Test {
 }
 
 #[test]
-fn hello_x() -> Test {
+fn example_hello_x() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/hello_x.foo")
+    cmd.arg("foo/examples/hello_x.foo")
         .write_stdin("Joe User\nXXXXX")
         .assert()
         .success()
