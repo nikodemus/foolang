@@ -74,7 +74,7 @@ fn test_print_flush() -> Test {
 #[test]
 fn test_bad_class() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/bad_class.foo");
+    cmd.arg("foo/tests/test_bad_class.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Not valid in value position
 003    method baz
