@@ -3,7 +3,7 @@ import .lang.boolean
 import .lang.byteArray
 import .lang.collection
 import .lang.dictionary
-import .float
+import .lang.float
 import .integer
 import .interval
 import .output
