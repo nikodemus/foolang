@@ -213,9 +213,9 @@ fn test_prelude2() -> Test {
 }
 
 #[test]
-fn test_array_let() -> Test {
+fn test_array_let1() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/array_let.foo");
+    cmd.arg("foo/tests/test_array_let1.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Unbound variable: x
 002    class method run: command in: system
