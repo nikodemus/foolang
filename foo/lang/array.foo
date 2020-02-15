@@ -1,4 +1,4 @@
-import .collection.*
+import .collection.Collection
 
 extend Array
     is Collection

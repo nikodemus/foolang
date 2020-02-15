@@ -5,17 +5,17 @@ use predicates::prelude::*;
 type Test = Result<(), Box<dyn std::error::Error>>;
 
 #[test]
-fn hello() -> Test {
+fn example_hello() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/hello.foo");
+    cmd.arg("foo/examples/hello.foo");
     cmd.assert().success().stdout("Hello world!\n");
     Ok(())
 }
 
 #[test]
-fn hello_x() -> Test {
+fn example_hello_x() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/hello_x.foo")
+    cmd.arg("foo/examples/hello_x.foo")
         .write_stdin("Joe User\nXXXXX")
         .assert()
         .success()
@@ -26,7 +26,7 @@ fn hello_x() -> Test {
 #[test]
 fn test_exit_zero() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/exit_zero.foo");
+    cmd.arg("foo/tests/test_exit_zero.foo");
     cmd.assert().success().stdout("");
     Ok(())
 }
@@ -34,7 +34,7 @@ fn test_exit_zero() -> Test {
 #[test]
 fn test_exit_42() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/exit_42.foo");
+    cmd.arg("foo/tests/test_exit_42.foo");
     cmd.assert().failure().code(42).stdout("");
     Ok(())
 }
@@ -42,7 +42,7 @@ fn test_exit_42() -> Test {
 #[test]
 fn test_test() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/test.foo");
+    cmd.arg("foo/tests/test.foo");
     cmd.assert().success();
     Ok(())
 }
@@ -50,7 +50,7 @@ fn test_test() -> Test {
 #[test]
 fn test_abort() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/abort.foo");
+    cmd.arg("foo/tests/test_abort.foo");
     cmd.assert().failure().stdout("");
     Ok(())
 }
@@ -58,7 +58,7 @@ fn test_abort() -> Test {
 #[test]
 fn test_print_no_flush() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/print_no_flush.foo");
+    cmd.arg("foo/tests/test_print_no_flush.foo");
     cmd.assert().success().stdout("");
     Ok(())
 }
@@ -66,7 +66,7 @@ fn test_print_no_flush() -> Test {
 #[test]
 fn test_print_flush() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/print_flush.foo");
+    cmd.arg("foo/tests/test_print_flush.foo");
     cmd.assert().success().stdout("Foo");
     Ok(())
 }
@@ -74,7 +74,7 @@ fn test_print_flush() -> Test {
 #[test]
 fn test_bad_class() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/bad_class.foo");
+    cmd.arg("foo/tests/test_bad_class.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Not valid in value position
 003    method baz
@@ -90,7 +90,7 @@ fn test_bad_class() -> Test {
 #[test]
 fn test_interface_unimplemented() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/interface_unimplemented.foo");
+    cmd.arg("foo/tests/test_interface_unimplemented.foo");
     cmd.assert()
         .failure()
         .code(1)
@@ -101,7 +101,7 @@ fn test_interface_unimplemented() -> Test {
 #[test]
 fn test_interface_bad_signature() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/interface_bad_signature.foo");
+    cmd.arg("foo/tests/test_interface_bad_signature.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: C#quux is () -> Any, interface I specifies () -> Integer",
     ));
@@ -111,7 +111,7 @@ fn test_interface_bad_signature() -> Test {
 #[test]
 fn test_interface_ok() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/interface_ok.foo");
+    cmd.arg("foo/tests/test_interface_ok.foo");
     cmd.assert()
         .success()
         .stdout(predicates::str::contains("foo = C#foo"))
@@ -123,7 +123,7 @@ fn test_interface_ok() -> Test {
 #[test]
 fn test_interface_typecheck() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/interface_typecheck.foo");
+    cmd.arg("foo/tests/test_interface_typecheck.foo");
     cmd.assert()
         .failure()
         .stdout(predicates::str::contains("YesI: True"))
@@ -134,7 +134,7 @@ fn test_interface_typecheck() -> Test {
 #[test]
 fn test_interface_inheritance() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/interface_inheritance.foo");
+    cmd.arg("foo/tests/test_interface_inheritance.foo");
     cmd.assert()
         .success()
         .stdout(predicates::str::contains("foo: 0 => I0 ok"))
@@ -146,7 +146,7 @@ fn test_interface_inheritance() -> Test {
 #[test]
 fn test_import_x_local() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/import_x_local.foo");
+    cmd.arg("foo/tests/test_import_x_local.foo");
     cmd.assert().failure().code(123).stdout("");
     Ok(())
 }
@@ -154,19 +154,30 @@ fn test_import_x_local() -> Test {
 #[test]
 fn test_import_x() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/import_x.foo");
+    cmd.arg("foo/tests/test_import_x.foo");
     cmd.arg("--use");
-    cmd.arg("foo/x.foo");
+    cmd.arg("foo/tests/x.foo");
     cmd.assert().failure().code(123).stdout("");
+    Ok(())
+}
+
+#[test]
+fn test_import_x_no_use_no_local() -> Test {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/tests/test_import_x.foo");
+    cmd.assert()
+        .failure()
+        .code(1)
+        .stdout(predicates::str::contains("FATAL - ERROR: Unknown module: x.foo"));
     Ok(())
 }
 
 #[test]
 fn test_import_x_identity() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/import_x_Identity.foo");
+    cmd.arg("foo/tests/test_import_x_Identity.foo");
     cmd.arg("--use");
-    cmd.arg("foo/x.foo");
+    cmd.arg("foo/tests/x.foo");
     cmd.assert().failure().code(100).stdout("");
     Ok(())
 }
@@ -174,9 +185,9 @@ fn test_import_x_identity() -> Test {
 #[test]
 fn test_import_x_star() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/import_x_star.foo");
+    cmd.arg("foo/tests/test_import_x_star.foo");
     cmd.arg("--use");
-    cmd.arg("foo/x.foo");
+    cmd.arg("foo/tests/x.foo");
     cmd.assert().failure().code(42).stdout("");
     Ok(())
 }
@@ -184,7 +195,7 @@ fn test_import_x_star() -> Test {
 #[test]
 fn test_import_bar_y() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/import_bar_y.foo");
+    cmd.arg("foo/tests/test_import_bar_y.foo");
     cmd.arg("--use");
     cmd.arg("bar");
     cmd.assert().failure().code(111).stdout("");
@@ -194,7 +205,7 @@ fn test_import_bar_y() -> Test {
 #[test]
 fn test_prelude1() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/test_prelude.foo");
+    cmd.arg("foo/tests/test_prelude.foo");
     cmd.assert().failure().code(2).stdout("");
     Ok(())
 }
@@ -202,9 +213,9 @@ fn test_prelude1() -> Test {
 #[test]
 fn test_prelude2() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/test_prelude.foo");
+    cmd.arg("foo/tests/test_prelude.foo");
     cmd.arg("--prelude");
-    cmd.arg("foo/empty.foo");
+    cmd.arg("foo/tests/empty.foo");
     cmd.assert()
         .failure()
         .code(1)
@@ -213,9 +224,9 @@ fn test_prelude2() -> Test {
 }
 
 #[test]
-fn test_array_let() -> Test {
+fn test_array_let1() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/array_let.foo");
+    cmd.arg("foo/tests/test_array_let1.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Unbound variable: x
 002    class method run: command in: system
@@ -231,7 +242,7 @@ fn test_array_let() -> Test {
 #[test]
 fn test_array_let2() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/array_let2.foo");
+    cmd.arg("foo/tests/test_array_let2.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Unbound variable: x
 003       let a = [let x = 42. x, 123].
@@ -296,7 +307,7 @@ fn test_repl() -> Test {
 #[test]
 fn test_benchmarks() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/benchmarks.foo");
+    cmd.arg("foo/tests/test_benchmarks.foo");
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("EmptyLoop:"))
@@ -309,9 +320,9 @@ fn test_benchmarks() -> Test {
 
 #[test]
 #[ignore]
-fn test_flying() -> Test {
+fn example_flying() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/flying.foo");
+    cmd.arg("foo/examples/flying.foo");
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("TAKEOFF"))

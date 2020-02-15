@@ -14,3 +14,15 @@ end
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for information on how to contribute.
 You'll be the first, so it'll be interesting to see how that works out!
+
+Repository organization:
+
+```
+docs/      Markdown files for the https://foolang.org website
+elisp/     Emacs mode for Foolang
+foo/       Foolang code, including prelude, tests, and examples
+src/       Rust code for the bootstrap interpreter
+tests/     Rust code for integreation tests
+webrepl/   HTML and Javascript for the webrepl, includes CodeMirror which is
+             why github thinks this is a javascript repo...
+```
