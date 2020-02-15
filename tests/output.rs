@@ -165,8 +165,10 @@ fn test_import_x() -> Test {
 fn test_import_x_no_use_no_local() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/tests/test_import_x.foo");
-    cmd.assert().failure().code(1).stdout(
-        predicates::str::contains("FATAL - ERROR: Unknown module: x.foo"));
+    cmd.assert()
+        .failure()
+        .code(1)
+        .stdout(predicates::str::contains("FATAL - ERROR: Unknown module: x.foo"));
     Ok(())
 }
 
