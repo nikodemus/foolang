@@ -318,9 +318,9 @@ fn test_benchmarks() -> Test {
 
 #[test]
 #[ignore]
-fn test_flying() -> Test {
+fn example_flying() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/flying.foo");
+    cmd.arg("foo/examples/flying.foo");
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("TAKEOFF"))
