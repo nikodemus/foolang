@@ -134,7 +134,7 @@ fn test_interface_typecheck() -> Test {
 #[test]
 fn test_interface_inheritance() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/interface_inheritance.foo");
+    cmd.arg("foo/tests/test_interface_inheritance.foo");
     cmd.assert()
         .success()
         .stdout(predicates::str::contains("foo: 0 => I0 ok"))
