@@ -16,24 +16,24 @@ name = "foo"
 path = "src/main.rs"
 
 [dependencies]
-regex = "1"
-lazy_static = "*"
-clap = "*"
-rouille = "*"
-webbrowser = "*"
-kiss3d = "*"
-nalgebra = "*"
-getrandom = "*"
-rand = "0.7.3"
+regex = "1.*.*"
+lazy_static = "1.*.*"
+clap = "2.*.*"
+rouille = "3.*.*"
+webbrowser = "0.5.*"
+kiss3d = "0.22.*"
+nalgebra = "0.19.*"
+getrandom = "0.1.*"
+rand = "0.7.*"
 
 [target.'cfg(unix)'.dependencies]
-libc = "*"
+libc = "0.2.*"
 
 [target.'cfg(windows)'.dependencies]
-winapi = "*"
+winapi = "0.3.*"
 
 [dev-dependencies]
-assert_cmd = "*"
-predicates = "*"
-serde_json = "*"
-pretty_assertions = "0.6.1"
+assert_cmd = "0.12.*"
+predicates = "1.*.*"
+serde_json = "1.*.*"
+pretty_assertions = "0.6.*"
