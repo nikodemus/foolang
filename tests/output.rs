@@ -164,7 +164,7 @@ fn test_import_x() -> Test {
 #[test]
 fn test_import_x_identity() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/import_x_Identity.foo");
+    cmd.arg("foo/tests/test_import_x_Identity.foo");
     cmd.arg("--use");
     cmd.arg("foo/x.foo");
     cmd.assert().failure().code(100).stdout("");
