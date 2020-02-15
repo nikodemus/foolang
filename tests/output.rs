@@ -146,7 +146,7 @@ fn test_interface_inheritance() -> Test {
 #[test]
 fn test_import_x_local() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/import_x_local.foo");
+    cmd.arg("foo/tests/test_import_x_local.foo");
     cmd.assert().failure().code(123).stdout("");
     Ok(())
 }
@@ -156,8 +156,17 @@ fn test_import_x() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/tests/test_import_x.foo");
     cmd.arg("--use");
-    cmd.arg("foo/x.foo");
+    cmd.arg("foo/tests/x.foo");
     cmd.assert().failure().code(123).stdout("");
+    Ok(())
+}
+
+#[test]
+fn test_import_x_no_use_no_local() -> Test {
+    let mut cmd = Command::cargo_bin("foolang")?;
+    cmd.arg("foo/tests/test_import_x.foo");
+    cmd.assert().failure().code(1).stdout(
+        predicates::str::contains("FATAL - ERROR: Unknown module: x.foo"));
     Ok(())
 }
 
@@ -166,7 +175,7 @@ fn test_import_x_identity() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/tests/test_import_x_Identity.foo");
     cmd.arg("--use");
-    cmd.arg("foo/x.foo");
+    cmd.arg("foo/tests/x.foo");
     cmd.assert().failure().code(100).stdout("");
     Ok(())
 }
@@ -176,7 +185,7 @@ fn test_import_x_star() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/tests/test_import_x_star.foo");
     cmd.arg("--use");
-    cmd.arg("foo/x.foo");
+    cmd.arg("foo/tests/x.foo");
     cmd.assert().failure().code(42).stdout("");
     Ok(())
 }
