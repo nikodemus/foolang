@@ -50,7 +50,7 @@ fn test_test() -> Test {
 #[test]
 fn test_abort() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/abort.foo");
+    cmd.arg("foo/tests/test_abort.foo");
     cmd.assert().failure().stdout("");
     Ok(())
 }
