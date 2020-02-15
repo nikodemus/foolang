@@ -9,7 +9,11 @@ documentation = "https://foolang.org"
 repository = "https://github.com/nikodemus/foolang"
 keywords = ["foolang", "language"]
 edition = "2018"
-default-run = "foolang"
+default-run = "foo"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 
 [dependencies]
 regex = "1"
