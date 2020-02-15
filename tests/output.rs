@@ -34,7 +34,7 @@ fn test_exit_zero() -> Test {
 #[test]
 fn test_exit_42() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/exit_42.foo");
+    cmd.arg("foo/tests/test_exit_42.foo");
     cmd.assert().failure().code(42).stdout("");
     Ok(())
 }
