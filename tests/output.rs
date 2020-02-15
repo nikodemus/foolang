@@ -111,7 +111,7 @@ fn test_interface_bad_signature() -> Test {
 #[test]
 fn test_interface_ok() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/interface_ok.foo");
+    cmd.arg("foo/tests/test_interface_ok.foo");
     cmd.assert()
         .success()
         .stdout(predicates::str::contains("foo = C#foo"))
