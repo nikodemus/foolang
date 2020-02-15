@@ -19,6 +19,28 @@
 If one of these is violated, that violation should be driven by a higher
 priority concern.
 
+## Design Notes
+
+A collection of design notes, mostly dealing with unimplemented parts of the
+language. Some of these may be already a bit dated.
+
+- [Arrays](Arrays.md)
+- [Booleans](Booleans.md)
+- [Comprehensions](Comprehensions.md)
+- [Iterators](iterators.md)
+- [Enums](Enums.md)
+- [Extension Methods](Extension_Methods.md)
+- [Finalization](Finalization.md)
+- [Functions](Functions.md)
+- [IDE](IDE.md)
+- [IRs](IR.md)
+- [Interfaces](Interfaces.md)
+- [Miscellany](Miscellany.md)
+- [Modules](Modules.md)
+- [Supervisors](Supervisors.md)
+- [Testing](Testing.md)
+- [Tokenization](Tokenization.md)
+
 ## Design Compromises
 
 ### No Optional Arguments
@@ -77,24 +99,3 @@ error if not.
 **Possible alternatives**:
 - Implement exceptions and control flows using magic primitives
 - Error values instead of exceptions
-
-## Design Notes
-
-A collection of design notes, mostly dealing with unimplemented parts of the
-language. Some of these may be already a bit dated.
-
-- [Arrays](Arrays.md)
-- [Booleans](Booleans.md)
-- [Comprehensions](Comprehensions.md)
-- [Enums](Enums.md)
-- [Extension Methods](Extension_Methods.md)
-- [Finalization](Finalization.md)
-- [Functions](Functions.md)
-- [IDE](IDE.md)
-- [IRs](IR.md)
-- [Interfaces](Interfaces.md)
-- [Miscellany](Miscellany.md)
-- [Modules](Modules.md)
-- [Supervisors](Supervisors.md)
-- [Testing](Testing.md)
-- [Tokenization](Tokenization.md)
