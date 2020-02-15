@@ -296,7 +296,7 @@ fn test_repl() -> Test {
 #[test]
 fn test_benchmarks() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/benchmarks.foo");
+    cmd.arg("foo/tests/test_benchmarks.foo");
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("EmptyLoop:"))
