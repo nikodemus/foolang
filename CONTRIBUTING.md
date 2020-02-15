@@ -27,7 +27,7 @@ it sucks to work on something and then later learn that it's not wanted.
 Roughly:
 
 - Cleanups to the Rust code are welcome even if not planned, particularly
-  if they address some a `FIXME` in the source. Go right ahead.
+  if they address a `FIXME` in the source. Go right ahead.
 - Library code written in Foolang is very welcome even if not planned. For now
   just stick it under `foo/`. Go right ahead.
 - Library code written in Rust is less welcome right now: the Kiss3D stuff is
@@ -53,4 +53,6 @@ Roughly:
   - descriptive first line, preferably identifying the component being worked on
   - body explains the why or the how as appropriate
   - before submitting a pull request clear out egregious noise commits if
-    possible: no "fix", "oops", "whitespace", "more fixes" commits please.
+    possible: preference is to have no "fix", "oops", "whitespace", "more fixes"
+    commits. (Squash your entire PR to one commit explaining the whole if that's
+    what seems best.)
