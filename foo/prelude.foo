@@ -1,7 +1,7 @@
-import .lang.collection
-import .array
+import .lang.array
 import .boolean
 import .byteArray
+import .lang.collection
 import .dictionary
 import .float
 import .integer

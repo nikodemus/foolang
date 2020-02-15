@@ -1,4 +1,4 @@
-import .lang.collection.Collection
+import .collection.Collection
 
 extend Array
     is Collection
