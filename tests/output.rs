@@ -5,9 +5,9 @@ use predicates::prelude::*;
 type Test = Result<(), Box<dyn std::error::Error>>;
 
 #[test]
-fn hello() -> Test {
+fn example_hello() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/hello.foo");
+    cmd.arg("foo/examples/hello.foo");
     cmd.assert().success().stdout("Hello world!\n");
     Ok(())
 }
