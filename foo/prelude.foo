@@ -1,5 +1,5 @@
 import .lang.array
-import .boolean
+import .lang.boolean
 import .byteArray
 import .lang.collection
 import .dictionary
