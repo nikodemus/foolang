@@ -1,33 +1,4 @@
-class Assert { system fail }
-   class method using: system
-      self system: system fail: False
-   method check: cond on: x onSuccess: success onFailure: failure
-      let res = { cond value: x }
-                    onError: { |e ctx|
-                               system output println: "ERROR: {e}".
-                               failure value }.
-      res
-        ifTrue: success
-        ifFalse: failure
-   method forAll: generator that: cond testing: thing
-      let n = 0.
-      generator
-         do: { |x| self check: cond on: x
-                        onSuccess: { n = n + 1 }
-                        onFailure: { system output
-                                       println: "! {thing} failed on: {x}".
-                                     fail = True.
-                                     return False }}.
-      system output println: "  {thing} ok ({n} assertions)".
-      True
-   method exit
-      system exit: (fail ifTrue: { 1 } ifFalse: { 0 })
-   method true: block testing: thing
-       block value
-           ifTrue: { system output println: "  {thing} ok" }
-           ifFalse: { fail = True.
-                      system output println: "! {thing} failed" }
-end
+import lib.assert.Assert
 
 class TestArrays {}
    class method do: block
@@ -38,14 +9,14 @@ end
 
 -- Generates signed integers small enough to add without overflowing.
 class SmallIntegers {}
-   class method do: block
-      -- First around zero
-      block value: -1.
-      block value: 0.
-      block value: 1.
-      -- Then random numbers
-      let rng = Random new.
-      100 times: { block value: (rng integer / 2) }
+    class method do: block
+        -- First around zero
+        block value: -1.
+        block value: 0.
+        block value: 1.
+        -- Then random numbers
+        let rng = Random new.
+        100 times: { block value: (rng integer / 2) }
 end
 
 class ShortStringSeqs {}
@@ -85,8 +56,9 @@ end
 
 class Main { assert }
     class method run: cmd in: system
-       let instance = self assert: (Assert using: system).
-       instance test
+       let instance = self assert: (Assert reportingTo: system output).
+        instance test.
+        system exit: instance assert exitCode
 
     method test
         self testByteArrays.
@@ -98,7 +70,6 @@ class Main { assert }
         self testRecord.
         self testDictionary.
         self testRaise.
-        assert exit
 
     method testRaise
         assert true: { ({ raise "BOOM" } onError: { |e c| e })
