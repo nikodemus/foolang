@@ -1,0 +1,104 @@
+class NoInput {}
+end
+
+class TestSuccess { case input }
+    method reportOn: output
+        -- No problem, nothing to report
+        output
+end
+
+class TestFailure { case input }
+    method reportOn: output
+        input is NoInput
+            ifTrue: { output println: "! FAILURE in {case name}" }
+            ifFalse: { output println: "! FAILURE in {case name} on {input}" }
+end
+
+class TestError { case input what }
+    method reportOn: output
+        input is NoInput
+            ifTrue: { output println: "! ERROR in {case name}: {what}" }
+            ifFalse: { output println: "! ERROR in {case name} on {input}: {what}" }
+end
+
+class TestCase { name condition successCount failureCount errorCount }
+    class method name: name condition: condition
+        self
+            name: name
+            condition: condition
+            successCount: 0
+            failureCount: 0
+            errorCount: 0
+
+    method failed
+        failureCount + errorCount > 0
+
+    method summarizeOn: output
+        self failed
+            ifTrue: { self summarizeFailureOn: output }
+            ifFalse: { self summarizeSuccessOn: output }
+
+    method summarizeSuccessOn: output
+        output println: "  {name}: {successCount} tests ok"
+
+    method summarizeFailureOn: output
+        output println: "--{name}: {failureCount} failures, {errorCount} errors, {successCount} successes".
+
+    method try
+        let ok = { condition value }
+                     onError: { |error ctx|
+                                return self errorOn: NoInput
+                                            what: error }.
+        ok
+            ifTrue: { self successOn: NoInput }
+            ifFalse: { self failureOn: NoInput }
+
+    method tryOn: input
+        let ok = { condition value: input }
+                     onError: { |error ctx|
+                                return self errorOn: input
+                                            what: error }.
+        ok
+            ifTrue: { self successOn: input }
+            ifFalse: { self failureOn: input }
+
+    method successOn: input
+        successCount = successCount + 1.
+        TestSuccess case: self input: input
+    method failureOn: input
+        failureCount = failureCount + 1.
+        TestFailure case: self input: input
+    method errorOn: input what: error
+        errorCount = errorCount + 1.
+        TestError case: self input: input what: error
+end
+
+class Assert { output failed }
+
+    class method reportingTo: output
+        self output: output failed: False
+
+    method report: testResult
+        testResult reportOn: output
+
+    method summarize: testCase
+        testCase summarizeOn: output
+
+    method forAll: inputs that: condition testing: thing
+        let test = TestCase name: thing condition: condition.
+        inputs do: { |input| self report: (test tryOn: input) }.
+        self summarize: test.
+        failed = failed or: test failed
+
+    method exitCode
+        failed
+            ifTrue: { 1 }
+            ifFalse: { 0 }
+
+    method true: condition testing: thing
+        let test = TestCase name: thing condition: condition.
+        self report: test try.
+        self summarize: test.
+        failed = failed or: test failed
+
+end

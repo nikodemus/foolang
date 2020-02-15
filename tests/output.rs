@@ -43,6 +43,7 @@ fn test_exit_42() -> Test {
 fn test_test() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
     cmd.arg("foo/tests/test.foo");
+    cmd.arg("--use=foo/lib");
     cmd.assert().success();
     Ok(())
 }
