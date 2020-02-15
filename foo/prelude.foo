@@ -10,4 +10,4 @@ import .lang.output
 import .lang.random
 import .lang.string
 import .lang.stringOutput
-import .time
+import .lang.time
