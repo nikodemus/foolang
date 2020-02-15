@@ -154,7 +154,7 @@ fn test_import_x_local() -> Test {
 #[test]
 fn test_import_x() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/import_x.foo");
+    cmd.arg("foo/tests/test_import_x.foo");
     cmd.arg("--use");
     cmd.arg("foo/x.foo");
     cmd.assert().failure().code(123).stdout("");
