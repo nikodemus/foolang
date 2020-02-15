@@ -101,7 +101,7 @@ fn test_interface_unimplemented() -> Test {
 #[test]
 fn test_interface_bad_signature() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/interface_bad_signature.foo");
+    cmd.arg("foo/tests/test_interface_bad_signature.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: C#quux is () -> Any, interface I specifies () -> Integer",
     ));
