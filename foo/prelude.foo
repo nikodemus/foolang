@@ -7,7 +7,7 @@ import .lang.float
 import .lang.integer
 import .lang.interval
 import .lang.output
-import .random
+import .lang.random
 import .string
 import .stringOutput
 import .time
