@@ -123,7 +123,7 @@ fn test_interface_ok() -> Test {
 #[test]
 fn test_interface_typecheck() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/interface_typecheck.foo");
+    cmd.arg("foo/tests/test_interface_typecheck.foo");
     cmd.assert()
         .failure()
         .stdout(predicates::str::contains("YesI: True"))
