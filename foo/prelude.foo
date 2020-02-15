@@ -1,4 +1,4 @@
-import .collection
+import .lang.collection
 import .array
 import .boolean
 import .byteArray
