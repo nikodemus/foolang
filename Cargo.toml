@@ -10,6 +10,7 @@ repository = "https://github.com/nikodemus/foolang"
 keywords = ["foolang", "language"]
 edition = "2018"
 default-run = "foo"
+exclude = ["papers/*"]
 
 [[bin]]
 name = "foo"
