@@ -231,7 +231,7 @@ fn test_array_let1() -> Test {
 #[test]
 fn test_array_let2() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/array_let2.foo");
+    cmd.arg("foo/tests/test_array_let2.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Unbound variable: x
 003       let a = [let x = 42. x, 123].
