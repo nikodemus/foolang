@@ -203,7 +203,7 @@ fn test_import_bar_y() -> Test {
 #[test]
 fn test_prelude1() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/test_prelude.foo");
+    cmd.arg("foo/tests/test_prelude.foo");
     cmd.assert().failure().code(2).stdout("");
     Ok(())
 }
@@ -211,7 +211,7 @@ fn test_prelude1() -> Test {
 #[test]
 fn test_prelude2() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/test_prelude.foo");
+    cmd.arg("foo/tests/test_prelude.foo");
     cmd.arg("--prelude");
     cmd.arg("foo/tests/empty.foo");
     cmd.assert()
