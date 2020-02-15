@@ -5,12 +5,11 @@ authors = ["Nikodemus Siivola <nikodemus@random-state.net>"]
 license = "MIT"
 description = "Foolang is a Smalltalk-inspired toy language."
 homepage = "https://foolang.org"
-documentation = "https://foolang.org"
 repository = "https://github.com/nikodemus/foolang"
 keywords = ["foolang", "language"]
 edition = "2018"
 default-run = "foo"
-exclude = ["papers/*"]
+exclude = ["docs/papers/*"]
 
 [[bin]]
 name = "foo"
