@@ -26,7 +26,7 @@ fn hello_x() -> Test {
 #[test]
 fn test_exit_zero() -> Test {
     let mut cmd = Command::cargo_bin("foolang")?;
-    cmd.arg("foo/exit_zero.foo");
+    cmd.arg("foo/tests/test_exit_zero.foo");
     cmd.assert().success().stdout("");
     Ok(())
 }
