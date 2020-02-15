@@ -1,6 +1,6 @@
 import .lang.array
 import .lang.boolean
-import .byteArray
+import .lang.byteArray
 import .lang.collection
 import .dictionary
 import .float
