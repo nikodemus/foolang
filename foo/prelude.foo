@@ -8,6 +8,6 @@ import .lang.integer
 import .lang.interval
 import .lang.output
 import .lang.random
-import .string
+import .lang.string
 import .stringOutput
 import .time
