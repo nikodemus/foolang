@@ -44,6 +44,12 @@ it's here more for future reference than anything else.
   various. _Foolang has quite different design criteria than Fortress, but
   Fortress was an amazing design and well worth learning from._
 
+- 2017 - [Pony Language](https://www.ponylang.io/)
+  _Pony's rejection of ambient authority is where Foolang got the bug. Lots of
+  interesting stuff going in Pony! Foolang's more dynamic paradigm rules a lot
+  of Pony's coolness out, though. If you're looking for a super interesting
+  non-toy language you might want to check out Pony._
+
 ## Method Dispatch
 
 - 2001 - [Efficient Implementation of Java
