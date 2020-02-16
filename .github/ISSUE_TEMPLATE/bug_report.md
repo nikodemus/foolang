@@ -1,8 +1,8 @@
 ---
 name: Bug report
-about: Submitting bugs
-title: Short and clear description of the bug
-labels: ''
+about: Language, library, and tooling issues, including docs and foolang.el
+title: Short and clear title for the bug
+labels: 'triage'
 assignees: ''
 
 ---

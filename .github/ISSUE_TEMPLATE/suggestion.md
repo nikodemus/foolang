@@ -1,7 +1,7 @@
 ---
 name: Suggestion
 about: Suggest an idea for Foolang
-title: ''
+title: 'Short and clear title for the idea'
 labels: triage
 assignees: ''
 
