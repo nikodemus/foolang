@@ -2,8 +2,8 @@
 
 ## Design Priorities
 
-1. **Safety**: No memory errors. No race conditions. No ambient authority.
-   No undefined behaviour. Fault-tolerant applications.
+1. **Safety**: No memory errors. No race conditions, kinda. No ambient
+   authority. No undefined behaviour. Fault-tolerant applications.
 
 2. **Ergonomics**: Code should be a pleasure to read and write.
 
@@ -18,6 +18,11 @@
 
 If one of these is violated, that violation should be driven by a higher
 priority concern.
+
+!> **Race conditions**: that's not actually true _in general_ &emdash; Foolang
+only gives you freedom from race conditions relating to object state. You can
+still create filesystem races and have actors that are badly behaved unless they
+receive messages in specific order, etc.
 
 ## Design Notes
 
