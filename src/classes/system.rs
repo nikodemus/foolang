@@ -2,6 +2,7 @@ use std::{thread, time};
 
 use getrandom;
 
+use crate::classes;
 use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
 use crate::unwind::Unwind;
@@ -12,6 +13,7 @@ pub fn vtable() -> Vtable {
     vt.add_primitive_method_or_panic("clock", system_clock);
     vt.add_primitive_method_or_panic("exit", system_exit);
     vt.add_primitive_method_or_panic("exit:", system_exit_arg);
+    vt.add_primitive_method_or_panic("files", system_files);
     vt.add_primitive_method_or_panic("input", system_input);
     vt.add_primitive_method_or_panic("output", system_output);
     vt.add_primitive_method_or_panic("output:", system_output_arg);
@@ -37,6 +39,10 @@ fn system_exit(_receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
 
 fn system_exit_arg(_receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     std::process::exit(args[0].integer() as i32)
+}
+
+fn system_files(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(classes::filepath::make_root_filepath(env))
 }
 
 fn system_input(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {

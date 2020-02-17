@@ -40,4 +40,7 @@ extend Boolean
         self
            ifTrue: { "True" }
            ifFalse: { "False" }
+
+    method displayOn: stream
+        stream print: self toString
 end

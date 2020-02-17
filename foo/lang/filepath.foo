@@ -1,0 +1,4 @@
+extend FilePath
+    method displayOn: stream
+        stream print: self toString
+end
