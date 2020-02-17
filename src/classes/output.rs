@@ -1,7 +1,7 @@
 use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
 
-pub fn vtable() -> Vtable {
+pub fn instance_vtable() -> Vtable {
     let vt = Vtable::new("Output");
     vt.add_primitive_method_or_panic("flush", output_flush);
     vt.add_primitive_method_or_panic("writeUTF8:", output_write_utf8);
