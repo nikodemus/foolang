@@ -504,17 +504,26 @@
            (backward-char)))
         ((looking-at "\\s_")
          (while (looking-at "\\s_")
-           (backward-char))))
+           (backward-char)))
+        ((and (looking-at "\"") (not (char-equal ?\ (char-before))))
+         ;; KLUDGE: Need to move out of the quote before I can do backward-sexp
+         ;; ...clearly the way I structured this is a bad fit for rest of emacs.
+         ;; ...FIXME.
+         (forward-char)
+         (backward-sexp)
+         (backward-char)))
   (foolang--skip-whitespace-left))
 
 (cl-defun foolang--looking-at-keyword-message-eol ()
   (save-excursion
     (foolang--end-of-code-on-line)
     (unless (looking-at ":")
-      (let ((line (line-number-at-pos)))
+      (let ((line (line-number-at-pos))
+            (p nil))
         (while (and (eql line (line-number-at-pos))
                     (not (looking-at ":"))
-                    (> (point) 1))
+                    (not (eql p (point))))
+          (setq p (point))
           (foolang--backward-expr))
         (and (eql line (line-number-at-pos))
              (looking-at ":"))))))
@@ -970,6 +979,20 @@ True"
                                         return False }}.
         system output println: \"  {thing} ok ({n} assertions)\".
         True")
+
+(def-foolang-indent-test "body-indent-16"
+  "
+method testFilePath
+let pathX = files path: \"X\".
+assert raises: { files path: \"..\" }
+error: \"Cannot extend #<FilePath (root)> with ..\"
+testing:"
+  "
+    method testFilePath
+        let pathX = files path: \"X\".
+        assert raises: { files path: \"..\" }
+               error: \"Cannot extend #<FilePath (root)> with ..\"
+               testing:")
 
 (def-foolang-indent-test "end-indent-1"
   "
