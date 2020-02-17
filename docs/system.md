@@ -67,6 +67,9 @@ at the point and below.
 Existence of _FilePath_ object does not mean that the corresponding file
 or directory exists.
 
+!> Symlinks in the filesystem can provide access to parts outside the
+_FilePath_.
+
 !> Initially _FilePath_ provides full permissions, but subsequently there
 will be ways to limit it to read-only operations, write-only operations,
 checking timestamps, etc.
@@ -78,10 +81,15 @@ it settles down.
   Returns a new _FilePath_ object representing the _pathname_ relative
   to the receiver. Using `..` in pathnames is not allowed.
 
-- **method** `status`
-  Returns a _Record_ describing the status of the current filepath, similar
-  to the `stat()` system call.
+- **method** `exists`
+  Returns true if the receiver designates a filesystem resource that exists.
+  !> On Windows the Foolang root filepath describes a level above drives,
+  meaning `exists` will return false for it!
 
-- **method** `status:` _pathname_
-  Returns a _Record_ describing the status of the filepath described by
-  _pathname_ relative to current filepath, similar to `stat()` system call.
+- **method** `isDirectory`
+  Returns true if the receiver designates a directory that exists in the filesystem.
+  !> On Windows the Foolang root filepath describes a level above drives,
+  meaning `isDirectory` will return false for it!
+
+- **method** `isFile`
+  Returns true if the receiver designates a file that exists in the filesystem.

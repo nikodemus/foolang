@@ -602,6 +602,7 @@ pub enum Datum {
     Closure(Rc<Closure>),
     Compiler(Rc<Compiler>),
     Dictionary(Rc<classes::dictionary::Dictionary>),
+    FilePath(Rc<classes::filepath::FilePath>),
     Float(f64),
     Input(Rc<Input>),
     Instance(Rc<Instance>),
@@ -633,6 +634,7 @@ impl Hash for Datum {
             Closure(x) => x.hash(state),
             Compiler(x) => x.hash(state),
             Dictionary(x) => x.hash(state),
+            FilePath(x) => x.hash(state),
             Float(x) => x.to_bits().hash(state),
             Input(x) => x.hash(state),
             Instance(x) => x.hash(state),
@@ -668,6 +670,8 @@ pub struct Foolang {
     pub compiler_vtable: Rc<Vtable>,
     pub dictionary_class_vtable: Rc<Vtable>,
     pub dictionary_vtable: Rc<Vtable>,
+    pub filepath_class_vtable: Rc<Vtable>,
+    pub filepath_vtable: Rc<Vtable>,
     pub float_class_vtable: Rc<Vtable>,
     pub float_vtable: Rc<Vtable>,
     pub input_class_vtable: Rc<Vtable>,
@@ -717,6 +721,7 @@ impl Foolang {
             "Dictionary",
             Class::object(&self.dictionary_class_vtable, &self.dictionary_vtable),
         );
+        env.define("FilePath", Class::object(&self.filepath_class_vtable, &self.filepath_vtable));
         env.define("Float", Class::object(&self.float_class_vtable, &self.float_vtable));
         env.define("Input", Class::object(&self.input_class_vtable, &self.input_vtable));
         env.define("Integer", Class::object(&self.integer_class_vtable, &self.integer_vtable));
@@ -755,6 +760,8 @@ impl Foolang {
             compiler_vtable: Rc::new(classes::compiler::instance_vtable()),
             dictionary_class_vtable: Rc::new(classes::dictionary::class_vtable()),
             dictionary_vtable: Rc::new(classes::dictionary::instance_vtable()),
+            filepath_class_vtable: Rc::new(classes::filepath::class_vtable()),
+            filepath_vtable: Rc::new(classes::filepath::instance_vtable()),
             float_class_vtable: Rc::new(Vtable::new("class Float")),
             float_vtable: Rc::new(classes::float::vtable()),
             input_class_vtable: Rc::new(Vtable::new("class Input")),
@@ -1371,6 +1378,10 @@ impl Object {
         classes::dictionary::as_dictionary(self, ctx)
     }
 
+    pub fn as_filepath(&self, ctx: &str) -> Result<&classes::filepath::FilePath, Unwind> {
+        classes::filepath::as_filepath(self, ctx)
+    }
+
     pub fn as_record(&self, ctx: &str) -> Result<&classes::record::Record, Unwind> {
         classes::record::as_record(self, ctx)
     }
@@ -1510,6 +1521,7 @@ impl fmt::Display for Object {
             Datum::Closure(x) => write!(f, "#<closure {:?}>", x.params),
             Datum::Compiler(_) => write!(f, "#<Compiler>"),
             Datum::Dictionary(_) => write!(f, "#<Dictionary>"),
+            Datum::FilePath(x) => write!(f, "{:?}", x),
             Datum::Float(x) => {
                 if x - x.floor() == 0.0 {
                     write!(f, "{}.0", x)
