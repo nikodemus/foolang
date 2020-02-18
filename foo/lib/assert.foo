@@ -44,8 +44,8 @@ class TestCase { name condition successCount failureCount errorCount }
     method summarizeFailureOn: output
         output println: "--{name}: {failureCount} failures, {errorCount} errors, {successCount} successes".
 
-    method try
-        let ok = { condition value }
+    method expect: result
+        let ok = { result is (condition value) }
                      onError: { |error ctx|
                                 return self errorOn: NoInput
                                             what: error }.
@@ -55,9 +55,9 @@ class TestCase { name condition successCount failureCount errorCount }
 
     method tryOn: input
         let ok = { condition value: input }
-                     onError: { |error ctx|
-                                return self errorOn: input
-                                            what: error }.
+                         onError: { |error ctx|
+                                    return self errorOn: input
+                                                what: error }.
         ok
             ifTrue: { self successOn: input }
             ifFalse: { self failureOn: input }
@@ -97,7 +97,13 @@ class Assert { output failed }
 
     method true: condition testing: thing
         let test = TestCase name: thing condition: condition.
-        self report: test try.
+        self report: (test expect: True).
+        self summarize: test.
+        failed = failed or: test failed
+
+    method false: condition testing: thing
+        let test = TestCase name: thing condition: condition.
+        self report: (test expect: False).
         self summarize: test.
         failed = failed or: test failed
 
