@@ -1,20 +1,13 @@
-import .interval.Interval
+import .number.Number
 
 extend Integer
+    is Number
+
     method asInteger
         self
 
-    method printOn: stream
-        stream writeUTF8: self toString
-
-    method displayOn: stream
-        self printOn: stream
-
     method to: other
         self to: other by: 1
-
-    method to: other by: step
-        Interval from: self to: other by: step
 
     method to: other do: block
         let i = self.
@@ -59,15 +52,6 @@ extend Integer
         self asFloat mulFloat: x
     method divFloat: x
         self asFloat divFloat: x
-
-    method addArray: x
-        x collect: { |elt| elt addInteger: self }
-    method mulArray: x
-        x collect: { |elt| elt mulInteger: self }
-    method subArray: x
-        x collect: { |elt| elt - self }
-    method divArray: x
-        x collect: { |elt| elt / self }
 
     method equalFloat: x
         self asFloat equalFloat: x

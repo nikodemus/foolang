@@ -1,18 +1,13 @@
+import .number.Number
+
 extend Float
+    is Number
+
     method asFloat
         self
 
-    method printOn: stream
-        stream writeUTF8: self toString
-
-    method displayOn: stream
-        self printOn: stream
-
     method to: other
        self to: other by: 1.0
-
-    method to: other by: step
-       Interval from: self to: other by: step
 
     method + x
         x addFloat: self
@@ -22,9 +17,6 @@ extend Float
         x mulFloat: self
     method / x
         x divFloat: self
-
-    method square
-        self mulFloat: self
 
     method == x
         x equalFloat: self
@@ -45,16 +37,6 @@ extend Float
         self mulFloat: x asFloat
     method divInteger: x
         self divFloat: x asFloat
-
-    method addArray: x
-        x collect: { |elt| elt addFloat: self }
-    method mulArray: x
-        x collect: { |elt| elt mulFloat: self }
-    method subArray: x
-        -- FIXME: Should the arith protocol include reverses mul and sub?
-        x collect: { |elt| elt - self }
-    method divArray: x
-        x collect: { |elt| elt / self }
 
     method equalInteger: x
         self equalFloat: x asFloat
