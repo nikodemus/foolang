@@ -54,9 +54,10 @@ class Box { value }
         - (self value)
 end
 
-class Main { assert }
+class Main { assert system }
     class method run: cmd in: system
-       let instance = self assert: (Assert reportingTo: system output).
+        let instance = self assert: (Assert reportingTo: system output)
+                            system: system.
         instance test.
         system exit: instance assert exitCode
 
@@ -70,6 +71,30 @@ class Main { assert }
         self testRecord.
         self testDictionary.
         self testRaise.
+        self testFilePath
+
+    method testFilePath
+        let dir = system currentDirectory.
+        assert true: { dir exists }
+               testing: "currentDirectory exists".
+        assert true: { dir isDirectory }
+               testing: "currentDirectory is directory".
+        assert false: { dir isFile }
+               testing: "currentDirectory is not a file".
+        let none = dir path: "does-not-exists".
+        assert false: { none exists }
+               testing: "nonexistent file does not exist".
+        assert false: { none isDirectory }
+               testing: "nonexistent file is not a directory".
+        assert false: { none isFile }
+               testing: "nonexistent file is not a file".
+        let readme = dir path: "README.md".
+        assert true: { readme exists }
+               testing: "readme exists".
+        assert true: { readme isFile }
+               testing: "readme is a file".
+        assert false: { readme isDirectory }
+               testing: "readme is not a directory"
 
     method testRaise
         assert true: { ({ raise "BOOM" } onError: { |e c| e })

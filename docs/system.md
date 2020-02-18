@@ -22,16 +22,19 @@ returning a `Random` object.
 - **method** `clock` \
   Returns a _Clock_.
 
+- **method** `currentDirectory` \
+  Returns a _FilePath_ object providing access to files in the current
+  directory. See also: `files`.
+
 - **method** `exit` \
   Exits the current process with exit code 0.
 
 - **method** `exit:` _code_ \
   Exits the current process with the specified _code_.
 
-- **method** `files`
-  Returns a _FilePath_ object providing access to files. If `foo` executable
-  was run with a `--files-root` argument, access is limited to this point
-  and below.
+- **method** `files` \
+  Returns a _FilePath_ object providing access to files in the entire
+  filesystem. See also: `currentDirectory`.
 
 - **method** `input` \
   Returns the standard input as an _Input_.
@@ -77,19 +80,19 @@ checking timestamps, etc.
 !> This area is definitely going to go through a few iterations before
 it settles down.
 
-- **method** `path:` _pathname_
+- **method** `path:` _pathname_ \
   Returns a new _FilePath_ object representing the _pathname_ relative
   to the receiver. Using `..` in pathnames is not allowed.
 
-- **method** `exists`
+- **method** `exists` \
   Returns true if the receiver designates a filesystem resource that exists.
   !> On Windows the Foolang root filepath describes a level above drives,
   meaning `exists` will return false for it!
 
-- **method** `isDirectory`
+- **method** `isDirectory` \
   Returns true if the receiver designates a directory that exists in the filesystem.
   !> On Windows the Foolang root filepath describes a level above drives,
   meaning `isDirectory` will return false for it!
 
-- **method** `isFile`
+- **method** `isFile` \
   Returns true if the receiver designates a file that exists in the filesystem.

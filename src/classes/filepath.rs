@@ -23,10 +23,17 @@ impl fmt::Debug for FilePath {
     }
 }
 
-pub fn make_root_filepath(env: &Env) -> Object {
+pub fn make_current_directory_filepath(env: &Env) -> Eval {
+    match std::env::current_dir() {
+        Ok(p) => Ok(into_filepath(p, env)),
+        Err(e) => Unwind::error(&format!("Could not determine current directory: {}", e)),
+    }
+}
+
+pub fn make_root_filepath(env: &Env) -> Eval {
     // NOTE: A bit of strangeness. We use relative path as the root
     // to get around Windows vs Unix differences.
-    into_filepath(PathBuf::from(""), env)
+    Ok(into_filepath(PathBuf::from(""), env))
 }
 
 pub fn as_filepath<'a>(obj: &'a Object, ctx: &str) -> Result<&'a FilePath, Unwind> {
