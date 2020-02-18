@@ -1,2 +1,7 @@
 interface Collection
+    method checkSize: collection
+        let size = self size.
+        size == collection size
+            ifTrue: { size }
+            ifFalse: { raise "Collection size mismatch" }
 end

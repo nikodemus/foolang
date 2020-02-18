@@ -1,4 +1,5 @@
 - [Home](/)
 - [Syntax](syntax.md)
+- [Reference](reference.md)
 - [Design](design.md)
 - [Bibliography](bibliography.md)
