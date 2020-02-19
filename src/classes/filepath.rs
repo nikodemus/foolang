@@ -49,10 +49,11 @@ pub fn class_vtable() -> Vtable {
 
 pub fn instance_vtable() -> Vtable {
     let vt = Vtable::new("FilePath");
-    vt.add_primitive_method_or_panic("path:", filepath_path);
     vt.add_primitive_method_or_panic("exists", filepath_exists);
+    vt.add_primitive_method_or_panic("file", filepath_file);
     vt.add_primitive_method_or_panic("isDirectory", filepath_is_directory);
     vt.add_primitive_method_or_panic("isFile", filepath_is_file);
+    vt.add_primitive_method_or_panic("path:", filepath_path);
     vt
 }
 
@@ -63,6 +64,22 @@ fn into_filepath(path: PathBuf, env: &Env) -> Object {
             path,
         })),
     }
+}
+
+fn filepath_exists(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_boolean(receiver.as_filepath("in FilePath#exists")?.path.exists()))
+}
+
+fn filepath_file(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(crate::classes::file::make_file(&receiver.as_filepath("in FilePath#file")?.path, env))
+}
+
+fn filepath_is_directory(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_boolean(receiver.as_filepath("in FilePath#isDirectory")?.path.is_dir()))
+}
+
+fn filepath_is_file(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_boolean(receiver.as_filepath("in FilePath#isFile")?.path.is_file()))
 }
 
 fn filepath_path(receiver: &Object, args: &[Object], env: &Env) -> Eval {
@@ -80,16 +97,4 @@ fn filepath_path(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     } else {
         Unwind::error(&format!("Cannot extend {:?} with {:?}", filepath, more))
     }
-}
-
-fn filepath_exists(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    Ok(env.foo.make_boolean(receiver.as_filepath("in FilePath#exists")?.path.exists()))
-}
-
-fn filepath_is_directory(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    Ok(env.foo.make_boolean(receiver.as_filepath("in FilePath#isDirectory")?.path.is_dir()))
-}
-
-fn filepath_is_file(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    Ok(env.foo.make_boolean(receiver.as_filepath("in FilePath#isFile")?.path.is_file()))
 }

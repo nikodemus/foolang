@@ -3,6 +3,7 @@ import .lang.boolean
 import .lang.byteArray
 import .lang.collection
 import .lang.dictionary
+import .lang.file
 import .lang.filepath
 import .lang.float
 import .lang.integer

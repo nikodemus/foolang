@@ -1,4 +1,10 @@
 extend FilePath
+    method forAppend
+        self file forAppend
+    method forRead
+        self file forRead
+    method forWrite
+        self file forWrite
     method displayOn: stream
         stream print: self toString
 end

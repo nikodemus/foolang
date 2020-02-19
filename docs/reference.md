@@ -123,6 +123,42 @@ To gain access to a _Clock_ use [System#clock](#method-clock).
 
 Returns a [Time](#time) object representing current time.
 
+## File
+
+#### **method** `forAppend` -> _File_
+
+Returns a fresh file similar to receiver, with append-mode set. Overrides
+a previous `forWrite`.
+
+#### **method** `forRead` -> _File_
+
+Returns a fresh file similar to receiver, with read-mode set. Overrides
+a previous `forAppend`.
+
+#### **method** `forWrite` -> _File_
+
+Returns a fresh file similar to receiver, with write-mode set. Overrides
+
+#### **method** `isAppend` -> _Boolean_
+
+Returns true if the receiver has append-mode set.
+
+#### **method** `isRead` -> _Boolean_
+
+Returns true if the receiver has read-mode set.
+
+#### **method** `isTruncate` -> _Boolean_
+
+Returns true if the receiver has truncate-mode set.
+
+#### **method** `isWrite` -> _Boolean_
+
+Returns true if the receiver has write-mode set.
+
+#### **method** `truncateExisting` -> _File_
+
+Returns a fresh file similar to receiver, with truncate-mode set.
+
 ## FilePath
 
 Object representing a point in the filesystem and permission to operate
@@ -133,6 +169,25 @@ or directory exists.
 
 !> Symlinks in the filesystem can provide access to parts outside the
 _FilePath_.
+
+#### **method** `file` -> _File_
+
+Returns a [File](#file) associated with the receiver, with open mode unset.
+
+#### **method** `forAppend` -> _File_
+
+Returns a [File](#file) associated with the receiver, ready to be opened in
+append-mode.
+
+#### **method** `forRead` -> _File_
+
+Returns a [File](#file) associated with the receiver, ready to be opened in
+read-mode.
+
+#### **method** `forWrite` -> _File_
+
+Returns a [File](#file) associated with the receiver, ready to be opened in
+write-mode.
 
 #### **method** `path:` _pathname_ -> _FilePath_
 

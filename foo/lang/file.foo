@@ -1,0 +1,4 @@
+extend File
+    method displayOn: stream
+        stream print: self toString
+end
