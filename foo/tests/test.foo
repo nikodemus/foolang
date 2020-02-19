@@ -63,6 +63,7 @@ class Main { assert system }
 
     method test
         Closure runTests: assert.
+        FileStream runTests: assert in: system.
         self testIs.
         self testByteArrays.
         self testFloats.
