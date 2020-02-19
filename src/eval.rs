@@ -497,7 +497,7 @@ impl Env {
     }
 
     fn eval_eq(&self, eq: &Eq) -> Eval {
-        if self.eval(&eq.left) == self.eval(&eq.right) {
+        if self.eval(&eq.left)? == self.eval(&eq.right)? {
             Ok(self.foo.make_boolean(true))
         } else {
             Ok(self.foo.make_boolean(false))
