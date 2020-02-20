@@ -604,6 +604,7 @@ pub enum Datum {
     Dictionary(Rc<classes::dictionary::Dictionary>),
     File(Rc<classes::file::File>),
     FilePath(Rc<classes::filepath::FilePath>),
+    FileStream(Rc<classes::filestream::FileStream>),
     Float(f64),
     Input(Rc<Input>),
     Instance(Rc<Instance>),
@@ -637,6 +638,7 @@ impl Hash for Datum {
             Dictionary(x) => x.hash(state),
             File(x) => x.hash(state),
             FilePath(x) => x.hash(state),
+            FileStream(x) => x.hash(state),
             Float(x) => x.to_bits().hash(state),
             Input(x) => x.hash(state),
             Instance(x) => x.hash(state),
@@ -676,6 +678,8 @@ pub struct Foolang {
     pub file_vtable: Rc<Vtable>,
     pub filepath_class_vtable: Rc<Vtable>,
     pub filepath_vtable: Rc<Vtable>,
+    pub filestream_class_vtable: Rc<Vtable>,
+    pub filestream_vtable: Rc<Vtable>,
     pub float_class_vtable: Rc<Vtable>,
     pub float_vtable: Rc<Vtable>,
     pub input_class_vtable: Rc<Vtable>,
@@ -727,6 +731,10 @@ impl Foolang {
         );
         env.define("File", Class::object(&self.file_class_vtable, &self.file_vtable));
         env.define("FilePath", Class::object(&self.filepath_class_vtable, &self.filepath_vtable));
+        env.define(
+            "FileStream",
+            Class::object(&self.filestream_class_vtable, &self.filestream_vtable),
+        );
         env.define("Float", Class::object(&self.float_class_vtable, &self.float_vtable));
         env.define("Input", Class::object(&self.input_class_vtable, &self.input_vtable));
         env.define("Integer", Class::object(&self.integer_class_vtable, &self.integer_vtable));
@@ -769,6 +777,8 @@ impl Foolang {
             file_vtable: Rc::new(classes::file::instance_vtable()),
             filepath_class_vtable: Rc::new(classes::filepath::class_vtable()),
             filepath_vtable: Rc::new(classes::filepath::instance_vtable()),
+            filestream_class_vtable: Rc::new(classes::filestream::class_vtable()),
+            filestream_vtable: Rc::new(classes::filestream::instance_vtable()),
             float_class_vtable: Rc::new(Vtable::new("class Float")),
             float_vtable: Rc::new(classes::float::vtable()),
             input_class_vtable: Rc::new(Vtable::new("class Input")),
@@ -1534,6 +1544,7 @@ impl fmt::Display for Object {
             Datum::Dictionary(_) => write!(f, "#<Dictionary>"),
             Datum::File(x) => std::fmt::Debug::fmt(x, f),
             Datum::FilePath(x) => write!(f, "{:?}", x),
+            Datum::FileStream(x) => std::fmt::Debug::fmt(x, f),
             Datum::Float(x) => {
                 if x - x.floor() == 0.0 {
                     write!(f, "{}.0", x)

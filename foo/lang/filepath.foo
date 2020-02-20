@@ -1,10 +1,14 @@
 extend FilePath
+    method displayOn: stream
+        stream print: self toString
     method forAppend
         self file forAppend
     method forRead
         self file forRead
     method forWrite
         self file forWrite
-    method displayOn: stream
-        stream print: self toString
+    method readString
+        self forRead open: { |f| f readString }
+    method readString: path
+        (self path: path) readString
 end

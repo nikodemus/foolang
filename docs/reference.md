@@ -182,6 +182,29 @@ result is true.
 
 ## File
 
+#### **method** `create` -> _FileStream_
+
+Creates a new file and opens it for IO in the specified mode, and returns the
+resulting [FileStream](#filestream). Raises an exception if the file already
+exists, or directory does not have the required permissions.
+
+#### **method** `create:` _block_
+
+Returns result of executing the _block_ with the [FileSteam](#filestream)
+resulting from sending `create` to the receiver, and ensures that the stream is
+closed after block completes even if an exception is raised.
+
+#### **method** `createOrOpen` -> _FileStream_
+
+If the specified file does not exist, behaves like `create`, otherwise
+behaves like `open`.
+
+#### **method** `createOrOpen:` _block_
+
+Returns result of executing the _block_ with the [FileSteam](#filestream)
+resulting from sending `createOrOpen` to the receiver, and ensures that the
+stream is closed after block completes even if an exception is raised.
+
 #### **method** `forAppend` -> _File_
 
 Returns a fresh file similar to receiver, with append-mode set. Overrides
@@ -189,12 +212,12 @@ a previous `forWrite`.
 
 #### **method** `forRead` -> _File_
 
-Returns a fresh file similar to receiver, with read-mode set. Overrides
-a previous `forAppend`.
+Returns a fresh file similar to receiver, with read-mode set.
 
 #### **method** `forWrite` -> _File_
 
 Returns a fresh file similar to receiver, with write-mode set. Overrides
+a previous `forAppend`.
 
 #### **method** `isAppend` -> _Boolean_
 
@@ -212,9 +235,22 @@ Returns true if the receiver has truncate-mode set.
 
 Returns true if the receiver has write-mode set.
 
+#### **method** `open` -> _FileStream_.
+
+Opens an existing file in specified mode, and returns the resulting
+[FileStream](#filestream). Raises an exception if the file does not
+exist, or is not a file with the required permissions.
+
+#### **method** `open:` _block_
+
+Returns result of executing the _block_ with the [FileSteam](#filestream)
+resulting from sending `open` to the receiver, and ensures that the stream is
+closed after block completes even if an exception is raised.
+
 #### **method** `truncateExisting` -> _File_
 
-Returns a fresh file similar to receiver, with truncate-mode set.
+Returns a fresh file similar to receiver, with truncate-mode set. Note: existing
+files are truncated on open only if write-mode is set.
 
 ## FilePath
 
@@ -227,6 +263,10 @@ or directory exists.
 !> Symlinks in the filesystem can provide access to parts outside the
 _FilePath_.
 
+#### **method** `exists`
+
+Returns true if the receiver designates a filesystem resource that exists.
+
 #### **method** `file` -> _File_
 
 Returns a [File](#file) associated with the receiver, with open mode unset.
@@ -234,26 +274,17 @@ Returns a [File](#file) associated with the receiver, with open mode unset.
 #### **method** `forAppend` -> _File_
 
 Returns a [File](#file) associated with the receiver, ready to be opened in
-append-mode.
+append-mode. Convenience around `self file forAppend`.
 
 #### **method** `forRead` -> _File_
 
 Returns a [File](#file) associated with the receiver, ready to be opened in
-read-mode.
+read-mode. Convenience around `self file forRead`.
 
 #### **method** `forWrite` -> _File_
 
 Returns a [File](#file) associated with the receiver, ready to be opened in
-write-mode.
-
-#### **method** `path:` _pathname_ -> _FilePath_
-
-Returns a new _FilePath_ object representing the _pathname_ relative
-to the receiver. Using `..` in pathnames is not allowed.
-
-#### **method** `exists`
-
-Returns true if the receiver designates a filesystem resource that exists.
+write-mode. Convenience around `self file forWrite`.
 
 #### **method** `isDirectory`
 
@@ -262,6 +293,46 @@ Returns true if the receiver designates a directory that exists in the filesyste
 #### **method** `isFile`
 
 Returns true if the receiver designates a file that exists in the filesystem.
+
+#### **method** `path:` _pathname_ -> _FilePath_
+
+Returns a new _FilePath_ object representing the _pathname_ relative
+to the receiver. Using `..` in pathnames is not allowed.
+
+#### **method** `readString` -> _String_
+
+Returns contents of the file designated by the receiver as a _String_.
+
+#### **method** `readString:` _pathname_ -> __String_
+
+Returns the contents of the file designated by _pathname_ relative to the
+receiver as a _String_.
+
+## FileStream
+
+- `offset`
+- `offsetFromEnd:` _relativeOffset_
+- `offsetFromHere:` _relativeOffset_
+- `offset:` _absoluteOffset_
+- `size`
+- `resize:`
+- `readByte`
+- `writeByte:` _byte_
+- `isOpen`
+- `isClosed`
+- `readString:` _size_
+- `writeString:` _string_
+- `read:` _size_ `bytesInto:` _byteArray_ `at:` _index_
+- `write:` _size_ `bytesFrom:` _byteArray_ `at:` _index_
+
+#### **method** `close` -> _Boolean_
+
+Closes the stream if it is currently open. Returns true if the stream was
+open, false if it was already closed.
+
+#### **method** `readString` -> _String_
+
+Returns remaining contents of the receiver as a _String_.
 
 ## System
 

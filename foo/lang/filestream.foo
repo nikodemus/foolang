@@ -1,0 +1,17 @@
+extend FileStream
+    method displayOn: stream
+        stream print: self toString
+
+    class method runTests: assert in: system
+        let foopath = system currentDirectory path: "foo/tests/foo.txt".
+        let foodata = "This file just says 'foo' for test purposes.\n".
+        assert true: { foopath isFile }
+               testing: "sanity check before FileStream test".
+        assert true: { foodata is (foopath readString) }
+               testing: "FilePath#readString".
+        assert true: { let s = foopath forRead open.
+                       s close.
+                       { s readString. False } onError: { |e c| True } }
+               testing: "cannot read from closed filestream"
+
+end

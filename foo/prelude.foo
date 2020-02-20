@@ -6,6 +6,7 @@ import .lang.collection
 import .lang.dictionary
 import .lang.file
 import .lang.filepath
+import .lang.filestream
 import .lang.float
 import .lang.integer
 import .lang.interval

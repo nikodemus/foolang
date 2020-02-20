@@ -7,6 +7,7 @@ pub mod compiler;
 pub mod dictionary;
 pub mod file;
 pub mod filepath;
+pub mod filestream;
 pub mod float;
 pub mod input;
 pub mod integer;

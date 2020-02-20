@@ -29,6 +29,14 @@ impl File {
             datum: Datum::File(Rc::new(self)),
         }
     }
+    fn open_options(&self) -> OpenOptions {
+        let mut opts = OpenOptions::new();
+        opts.read(self.read)
+            .truncate(self.truncate)
+            .write(self.write_mode == WriteMode::Write)
+            .append(self.write_mode == WriteMode::Append);
+        opts
+    }
 }
 
 impl Eq for File {}
@@ -72,6 +80,8 @@ pub fn class_vtable() -> Vtable {
 
 pub fn instance_vtable() -> Vtable {
     let vt = Vtable::new("File");
+    vt.add_primitive_method_or_panic("create", file_create);
+    vt.add_primitive_method_or_panic("createOrOpen", file_create_or_open);
     vt.add_primitive_method_or_panic("forAppend", file_for_append);
     vt.add_primitive_method_or_panic("forRead", file_for_read);
     vt.add_primitive_method_or_panic("forWrite", file_for_write);
@@ -79,6 +89,7 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("isRead", file_is_read);
     vt.add_primitive_method_or_panic("isTruncate", file_is_truncate);
     vt.add_primitive_method_or_panic("isWrite", file_is_write);
+    vt.add_primitive_method_or_panic("open", file_open);
     vt.add_primitive_method_or_panic("truncateExisting", file_truncate_existing);
     vt
 }
@@ -93,8 +104,38 @@ pub fn make_file(path: &Path, env: &Env) -> Object {
     .object(env)
 }
 
+fn file_create(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    let file = receiver.as_file("File#create")?;
+    let open_file = match file.open_options().create_new(true).open(&file.path) {
+        Ok(f) => f,
+        Err(e) => {
+            return Unwind::error(&format!(
+                "Could not create file: {:?} ({:?})",
+                &file.path,
+                e.kind()
+            ))
+        }
+    };
+    Ok(crate::classes::filestream::make_filestream(&file.path, open_file, env))
+}
+
+fn file_create_or_open(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    let file = receiver.as_file("File#createOrOpen")?;
+    let open_file = match file.open_options().create(true).open(&file.path) {
+        Ok(f) => f,
+        Err(e) => {
+            return Unwind::error(&format!(
+                "Could not createOrOpen file: {:?} ({:?})",
+                &file.path,
+                e.kind()
+            ))
+        }
+    };
+    Ok(crate::classes::filestream::make_filestream(&file.path, open_file, env))
+}
+
 fn file_for_append(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    let file = receiver.as_file("in File#forAppend")?;
+    let file = receiver.as_file("File#forAppend")?;
     Ok(File {
         path: file.path.clone(),
         read: file.read,
@@ -105,7 +146,7 @@ fn file_for_append(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
 }
 
 fn file_for_read(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    let file = receiver.as_file("in File#forRead")?;
+    let file = receiver.as_file("File#forRead")?;
     Ok(File {
         path: file.path.clone(),
         read: true,
@@ -116,7 +157,7 @@ fn file_for_read(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
 }
 
 fn file_for_write(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    let file = receiver.as_file("in File#forWrite")?;
+    let file = receiver.as_file("File#forWrite")?;
     Ok(File {
         path: file.path.clone(),
         read: file.read,
@@ -127,23 +168,38 @@ fn file_for_write(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
 }
 
 fn file_is_append(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    Ok(env.foo.make_boolean(receiver.as_file("in File#isAppend")?.write_mode == WriteMode::Append))
+    Ok(env.foo.make_boolean(receiver.as_file("File#isAppend")?.write_mode == WriteMode::Append))
 }
 
 fn file_is_read(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    Ok(env.foo.make_boolean(receiver.as_file("in File#isRead")?.read))
+    Ok(env.foo.make_boolean(receiver.as_file("File#isRead")?.read))
 }
 
 fn file_is_truncate(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    Ok(env.foo.make_boolean(receiver.as_file("in File#isTruncate")?.truncate))
+    Ok(env.foo.make_boolean(receiver.as_file("File#isTruncate")?.truncate))
 }
 
 fn file_is_write(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    Ok(env.foo.make_boolean(receiver.as_file("in File#isWrite")?.write_mode == WriteMode::Write))
+    Ok(env.foo.make_boolean(receiver.as_file("File#isWrite")?.write_mode == WriteMode::Write))
+}
+
+fn file_open(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    let file = receiver.as_file("File#open")?;
+    let open_file = match file.open_options().open(&file.path) {
+        Ok(f) => f,
+        Err(e) => {
+            return Unwind::error(&format!(
+                "Could not open file: {:?} ({:?})",
+                &file.path,
+                e.kind()
+            ))
+        }
+    };
+    Ok(crate::classes::filestream::make_filestream(&file.path, open_file, env))
 }
 
 fn file_truncate_existing(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    let file = receiver.as_file("in File#truncateExisting")?;
+    let file = receiver.as_file("File#truncateExisting")?;
     Ok(File {
         path: file.path.clone(),
         read: file.read,
