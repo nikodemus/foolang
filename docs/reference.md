@@ -330,6 +330,14 @@ receiver as a _String_.
 Closes the stream if it is currently open. Returns true if the stream was
 open, false if it was already closed.
 
+#### **method** `isClosed` -> _Boolean_
+
+Returns true if the receiver has been closed.
+
+#### **method** `isOpen` -> _Boolean_
+
+Returns true if the receiver is open (has not been closed.)
+
 #### **method** `readString` -> _String_
 
 Returns remaining contents of the receiver as a _String_.

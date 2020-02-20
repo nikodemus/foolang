@@ -58,6 +58,7 @@ pub fn class_vtable() -> Vtable {
 pub fn instance_vtable() -> Vtable {
     let vt = Vtable::new("FileStream");
     vt.add_primitive_method_or_panic("close", filestream_close);
+    vt.add_primitive_method_or_panic("isClosed", filestream_is_closed);
     vt.add_primitive_method_or_panic("readString", filestream_read_string);
     vt
 }
@@ -75,6 +76,12 @@ pub fn make_filestream(path: &Path, file: File, env: &Env) -> Object {
 fn filestream_close(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_boolean(
         receiver.as_filestream("FileStream#close")?.file.borrow_mut().take().is_some(),
+    ))
+}
+
+fn filestream_is_closed(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_boolean(
+        receiver.as_filestream("FileStream#close")?.file.borrow().is_none(),
     ))
 }
 

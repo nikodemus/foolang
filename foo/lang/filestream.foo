@@ -2,6 +2,9 @@ extend FileStream
     method displayOn: stream
         stream print: self toString
 
+    method isOpen
+        self isClosed not
+
     class method runTests: assert in: system
         let foopath = system currentDirectory path: "foo/tests/foo.txt".
         let foodata = "This file just says 'foo' for test purposes.\n".
@@ -12,6 +15,13 @@ extend FileStream
         assert true: { let s = foopath forRead open.
                        s close.
                        { s readString. False } onError: { |e c| True } }
-               testing: "cannot read from closed filestream"
-
+               testing: "cannot read from closed filestream".
+        assert true: { foopath forRead open: { |f| f isOpen } }
+               testing: "FileStream#isOpen (true)".
+        assert false: { (foopath forRead open: { |f| f }) isOpen }
+               testing: "FileStream#isOpen (false)".
+        assert false: { foopath forRead open: { |f| f isClosed } }
+               testing: "FileStream#isClosed (false)".
+        assert true: { (foopath forRead open: { |f| f }) isClosed }
+               testing: "FileStream#isClosed (true)"
 end
