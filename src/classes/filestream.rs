@@ -6,9 +6,9 @@ use std::rc::Rc;
 use crate::eval::Env;
 use crate::objects::{Datum, Eval, Object, Vtable};
 use crate::unwind::Unwind;
-use std::io::Read;
+use std::io::{Read, Seek, SeekFrom};
 
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 use std::hash::{Hash, Hasher};
 
 use std::fs::File;
@@ -16,6 +16,18 @@ use std::fs::File;
 pub struct FileStream {
     path: PathBuf,
     file: RefCell<Option<File>>,
+}
+
+impl FileStream {
+    fn borrow_open(&self, ctx: &str) -> Result<RefMut<File>, Unwind> {
+        let f = self.file.borrow_mut();
+        if f.is_none() {
+            Unwind::error(&format!("Cannot {} a closed FileStream: {:?}",
+                                   ctx, self))
+        } else {
+            Ok(RefMut::map(f, |opt| opt.as_mut().unwrap()))
+        }
+    }
 }
 
 impl PartialEq for FileStream {
@@ -59,6 +71,7 @@ pub fn instance_vtable() -> Vtable {
     let vt = Vtable::new("FileStream");
     vt.add_primitive_method_or_panic("close", filestream_close);
     vt.add_primitive_method_or_panic("isClosed", filestream_is_closed);
+    vt.add_primitive_method_or_panic("offset", filestream_offset);
     vt.add_primitive_method_or_panic("readString", filestream_read_string);
     vt
 }
@@ -85,24 +98,27 @@ fn filestream_is_closed(receiver: &Object, _args: &[Object], env: &Env) -> Eval 
     ))
 }
 
-fn filestream_read_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    let fileref = receiver.as_filestream("FileStream#readString")?.file.borrow_mut();
-    let mut file = match &*fileref {
-        Some(f) => f,
-        None => {
-            return Unwind::error(&format!("Cannot read from a closed FileStream: {:?}", receiver))
-        }
+fn filestream_offset(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    let mut fileref = receiver.as_filestream("FileStream#offfset")?.borrow_open("deterine offset for")?;
+    let pos = match fileref.seek(SeekFrom::Current(0)) {
+        Ok(pos) => pos,
+        Err(e) => return Unwind::error(
+            &format!("Could not determine current offset for {:?} ({:?})",
+                     receiver,
+                     e.kind()))
     };
+    Ok(env.foo.make_integer(pos as i64))
+}
+
+fn filestream_read_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    let mut fileref = receiver.as_filestream("FileStream#readString")?.borrow_open("read string from")?;
     let mut s = String::new();
-    match file.read_to_string(&mut s) {
-        Err(e) => {
-            return Unwind::error(&format!(
-                "Could not readString from {:?} ({:?})",
-                receiver,
-                e.kind()
-            ))
-        }
-        _ => {}
+    if let Err(e) = fileref.read_to_string(&mut s) {
+        return Unwind::error(&format!(
+            "Could not readString from {:?} ({:?})",
+            receiver,
+            e.kind()
+        ))
     }
     Ok(env.foo.into_string(s))
 }

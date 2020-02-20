@@ -310,7 +310,6 @@ receiver as a _String_.
 
 ## FileStream
 
-- `offset`
 - `offsetFromEnd:` _relativeOffset_
 - `offsetFromHere:` _relativeOffset_
 - `offset:` _absoluteOffset_
@@ -337,6 +336,10 @@ Returns true if the receiver has been closed.
 #### **method** `isOpen` -> _Boolean_
 
 Returns true if the receiver is open (has not been closed.)
+
+#### **method** `offset` -> _Integer_
+
+Returns current offset from the beginning of the file.
 
 #### **method** `readString` -> _String_
 

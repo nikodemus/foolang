@@ -23,5 +23,11 @@ extend FileStream
         assert false: { foopath forRead open: { |f| f isClosed } }
                testing: "FileStream#isClosed (false)".
         assert true: { (foopath forRead open: { |f| f }) isClosed }
-               testing: "FileStream#isClosed (true)"
+               testing: "FileStream#isClosed (true)".
+        assert that: { foopath forRead open: { |f| f offset } } is: 0
+               testing: "FileStream#offset (0)".
+        assert that: { foopath forRead
+                           open:  { |f| f readString. f offset } }
+               is: 45
+               testing: "FileStream#offset (45)"
 end
