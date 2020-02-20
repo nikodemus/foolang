@@ -1,4 +1,4 @@
-class NoInput {}
+class Nothing {}
 end
 
 class TestSuccess { case input }
@@ -7,16 +7,20 @@ class TestSuccess { case input }
         output
 end
 
-class TestFailure { case input }
+class TestFailure { case input expected result }
     method reportOn: output
-        input is NoInput
-            ifTrue: { output println: "! FAILURE in {case name}" }
-            ifFalse: { output println: "! FAILURE in {case name} on {input}" }
+        let valueMessage = input is Nothing
+                               ifTrue: { "" }
+                               ifFalse: { " on {input}" }.
+        let resultMessage = expected is Nothing
+                                ifTrue: { "" }
+                                ifFalse: { ", expected {expected}, got {result}" }.
+        output println: "! FAILURE in {case name}{valueMessage}{resultMessage}"
 end
 
 class TestError { case input what }
     method reportOn: output
-        input is NoInput
+        input is Nothing
             ifTrue: { output println: "! ERROR in {case name}: {what}" }
             ifFalse: { output println: "! ERROR in {case name} on {input}: {what}" }
 end
@@ -44,14 +48,16 @@ class TestCase { name condition successCount failureCount errorCount }
     method summarizeFailureOn: output
         output println: "--{name}: {failureCount} failures, {errorCount} errors, {successCount} successes".
 
-    method expect: result
-        let ok = { result is (condition value) }
-                     onError: { |error ctx|
-                                return self errorOn: NoInput
-                                            what: error }.
-        ok
-            ifTrue: { self successOn: NoInput }
-            ifFalse: { self failureOn: NoInput }
+    method expect: expected
+        let actual = { condition value }
+                         onError: { |error ctx|
+                                    return self errorOn: Nothing
+                                                what: error }.
+        actual is expected
+            ifTrue: { self successOn: Nothing }
+            ifFalse: { self failureOn: Nothing
+                            expected: expected
+                            result: actual }
 
     method tryOn: input
         let ok = { condition value: input }
@@ -66,8 +72,10 @@ class TestCase { name condition successCount failureCount errorCount }
         successCount = successCount + 1.
         TestSuccess case: self input: input
     method failureOn: input
+        self failureOn: input expected: Nothing result: Nothing
+    method failureOn: input expected: expected result: result
         failureCount = failureCount + 1.
-        TestFailure case: self input: input
+        TestFailure case: self input: input expected: expected result: result
     method errorOn: input what: error
         errorCount = errorCount + 1.
         TestError case: self input: input what: error
@@ -95,16 +103,16 @@ class Assert { output failed }
             ifTrue: { 1 }
             ifFalse: { 0 }
 
-    method true: condition testing: thing
+    method that: condition is: value testing: thing
         let test = TestCase name: thing condition: condition.
-        self report: (test expect: True).
+        self report: (test expect: value).
         self summarize: test.
         failed = failed or: test failed
 
+    method true: condition testing: thing
+        self that: condition is: True testing: thing
+
     method false: condition testing: thing
-        let test = TestCase name: thing condition: condition.
-        self report: (test expect: False).
-        self summarize: test.
-        failed = failed or: test failed
+        self that: condition is: False testing: thing
 
 end
