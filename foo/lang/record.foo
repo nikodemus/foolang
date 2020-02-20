@@ -1,0 +1,7 @@
+class TestRecord {}
+    class method runTests: assert
+        assert that: { let r = {x: -10, y: 52}.
+                       r x + r y }
+               is: 42
+               testing: "Record syntax and accessors".
+end

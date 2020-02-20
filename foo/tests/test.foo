@@ -62,67 +62,24 @@ class Main { assert system }
         system exit: instance assert exitCode
 
     method test
-        Closure runTests: assert.
-        FileStream runTests: assert in: system.
+        [
+            ByteArray,
+            Closure,
+            Dictionary,
+            TestRecord
+        ] do: { |each| each runTests: assert }.
+        [
+            File,
+            FilePath,
+            FileStream
+        ] do: { |each| each runTests: assert in: system }.
         self testIs.
-        self testByteArrays.
         self testFloats.
         self testIntegers.
         self testStringOutput.
         self testPrecedence.
         self testPrefix.
-        self testRecord.
-        self testDictionary.
-        self testRaise.
-        self testFilePath.
-        self testFile
-
-    method testFile
-        let file = system currentDirectory file.
-        assert false: { file isAppend }
-               testing: "FilePath#file creates file without append".
-        assert false: { file isRead }
-               testing: "FilePath#file creates file without read".
-        assert false: { file isTruncate }
-               testing: "FilePath#file creates file without truncate".
-        assert false: { file isWrite }
-               testing: "FilePath#file creates file without write".
-        let readfile = file forRead.
-        assert true: { readfile isRead }
-               testing: "File#forRead sets read".
-        assert false: { readfile isAppend }
-               testing: "File#forRead does not set append".
-        assert false: { readfile isTruncate }
-               testing: "File#forRead does not set truncate".
-        assert false: { readfile isWrite }
-               testing: "File#forRead does not set write".
-        let writefile = file forWrite.
-        assert true: { writefile isWrite }
-               testing: "File#forWrite sets write".
-        assert false: { writefile isAppend }
-               testing: "File#forWrite does not set append".
-        assert false: { writefile isRead }
-               testing: "File#forWrite does not set read".
-        assert false: { writefile isTruncate }
-               testing: "File#forWrite does not set truncate".
-        let appendfile = file forAppend.
-        assert true: { appendfile isAppend }
-               testing: "File#forAppend sets append".
-        assert false: { appendfile isRead }
-               testing: "File#forAppend does not set read".
-        assert false: { appendfile isTruncate }
-               testing: "File#forAppend does not set truncate".
-        assert false: { appendfile isWrite }
-               testing: "File#forWrite does not set write".
-        let truncatefile = file truncateExisting.
-        assert true: { truncatefile isTruncate }
-               testing: "File#truncateExisting sets truncate".
-        assert false: { truncatefile isAppend }
-               testing: "File#truncateExisting does not set append".
-        assert false: { truncatefile isRead }
-               testing: "File#truncateExisting does not set read".
-        assert false: { truncatefile isWrite }
-               testing: "File#forWrite does not set write"
+        self testRaise
 
     method testIs
         assert true: { 1 is 1 } testing: "integer 'is' integer (match)".
@@ -135,47 +92,10 @@ class Main { assert system }
         assert true: { { 42 is (raise "Oops"). False } onError: { |e c| True } }
                testing: "'is' propagates errors from right"
 
-    method testFilePath
-        let dir = system currentDirectory.
-        assert true: { dir exists }
-               testing: "currentDirectory exists".
-        assert true: { dir isDirectory }
-               testing: "currentDirectory is directory".
-        assert false: { dir isFile }
-               testing: "currentDirectory is not a file".
-        let none = dir path: "does-not-exists".
-        assert false: { none exists }
-               testing: "nonexistent file does not exist".
-        assert false: { none isDirectory }
-               testing: "nonexistent file is not a directory".
-        assert false: { none isFile }
-               testing: "nonexistent file is not a file".
-        let readme = dir path: "README.md".
-        assert true: { readme exists }
-               testing: "readme exists".
-        assert true: { readme isFile }
-               testing: "readme is a file".
-        assert false: { readme isDirectory }
-               testing: "readme is not a directory"
-
     method testRaise
         assert true: { ({ raise "BOOM" } onError: { |e c| e })
                            == "BOOM" }
                testing: "raise with string argument"
-
-    method testDictionary
-        assert true: { let d = { 1 + 1 + 40 -> "the" append: "Answer" }.
-                       (d at: 42) == "theAnswer" }
-               testing: "dictionary syntax and accessor".
-        assert true: { let d = Dictionary new.
-                       d put: "foo" at: "bar".
-                       (d at: "bar") == "foo" }
-               testing: "dictionary new and put:at:"
-
-    method testRecord
-        assert true: { let r = {x: -10, y: 52}.
-                       r x + r y == 42 }
-               testing: "record creation and accessors".
 
     method testPrefix
         assert forAll: (1 to: 10)
@@ -195,20 +115,6 @@ class Main { assert system }
                         and: (b1 == b2)
                         and: (a1 == b1) not }
               testing: "operator precedence"
-
-    method testByteArrays
-       assert forAll: (1 to: 10)
-              that: { |n|
-                      let bytes = ByteArray new: n.
-                      let p = n / 2 + 1.
-                      let old = bytes at: p.
-                      bytes put: n at: p.
-                      let new = bytes at: p.
-                      (bytes size == n)
-                         and: (old == 0)
-                         and: (new == n)
-                         and: (n > 0) }
-              testing: "ByteArray creation and access"
 
     method testFloats
        assert forAll: Floats

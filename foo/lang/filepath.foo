@@ -11,4 +11,29 @@ extend FilePath
         self forRead open: { |f| f readString }
     method readString: path
         (self path: path) readString
+
+    class method runTests: assert in: system
+        -- Assumes the repository root as the current directory
+        let dir = system currentDirectory.
+        assert true: { dir exists }
+               testing: "currentDirectory exists".
+        assert true: { dir isDirectory }
+               testing: "currentDirectory is directory".
+        assert false: { dir isFile }
+               testing: "currentDirectory is not a file".
+        let none = dir path: "does-not-exists".
+        assert false: { none exists }
+               testing: "nonexistent file does not exist".
+        assert false: { none isDirectory }
+               testing: "nonexistent file is not a directory".
+        assert false: { none isFile }
+               testing: "nonexistent file is not a file".
+        let readme = dir path: "README.md".
+        assert true: { readme exists }
+               testing: "readme exists".
+        assert true: { readme isFile }
+               testing: "readme is a file".
+        assert false: { readme isDirectory }
+               testing: "readme is not a directory"
+
 end

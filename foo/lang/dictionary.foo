@@ -1,4 +1,14 @@
 extend Dictionary
     method displayOn: stream
         stream print: self toString
+    class method runTests: assert
+        assert that: { let d = { 1 + 1 + 40 -> "the" append: "Answer" }.
+                       (d at: 42) }
+               is: "theAnswer"
+               testing: "Dictionary syntax".
+        assert that: { let d = Dictionary new.
+                       d put: "foo" at: "bar".
+                       (d at: "bar") }
+               is: "foo"
+               testing: "Dictionary#put:at: and #at:"
 end

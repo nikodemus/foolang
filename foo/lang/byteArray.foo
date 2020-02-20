@@ -1,4 +1,17 @@
 extend ByteArray
-   method displayOn: stream
-       stream print: self toString
+    method displayOn: stream
+        stream print: self toString
+    class method runTests: assert
+        assert forAll: (1 to: 10)
+               that: { |n|
+                       let bytes = ByteArray new: n.
+                       let p = n / 2 + 1.
+                       let old = bytes at: p.
+                       bytes put: n at: p.
+                       let new = bytes at: p.
+                       (bytes size == n)
+                           and: (old == 0)
+                           and: (new == n)
+                           and: (n > 0) }
+               testing: "ByteArray creation and access"
 end

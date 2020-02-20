@@ -12,6 +12,7 @@ import .lang.integer
 import .lang.interval
 import .lang.output
 import .lang.random
+import .lang.record
 import .lang.string
 import .lang.stringOutput
 import .lang.time
