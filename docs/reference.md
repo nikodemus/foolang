@@ -312,7 +312,6 @@ receiver as a _String_.
 
 - `offsetFromEnd:` _relativeOffset_
 - `offsetFromHere:` _relativeOffset_
-- `offset:` _absoluteOffset_
 - `size`
 - `resize:`
 - `readByte`
@@ -340,6 +339,10 @@ Returns true if the receiver is open (has not been closed.)
 #### **method** `offset` -> _Integer_
 
 Returns current offset from the beginning of the file.
+
+#### **method** `offset:` _absoluteOffset_ -> _Integer_
+
+Sets and return offset from the beginning of the file.
 
 #### **method** `readString` -> _String_
 
