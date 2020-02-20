@@ -33,5 +33,16 @@ extend FileStream
         assert that: { foopath forRead
                            open: { |f| f offset: 5. f readString } }
                is: "file just says 'foo' for test purposes.\n"
-               testing: "FileStream#offset:"
+               testing: "FileStream#offset:".
+        assert that: { foopath forRead
+                           open: { |f| f offsetFromEnd: -10. f readString } }
+               is: "purposes.\n"
+               testing: "FileStream#offsetFromEnd:".
+        assert that: { foopath forRead
+                           open: { |f|
+                                   f offsetFromEnd: -10.
+                                   f offsetFromHere: -5.
+                                   f readString } }
+               is: "test purposes.\n"
+               testing: "FileStream#offsetFromHere:"
 end
