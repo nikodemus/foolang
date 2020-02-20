@@ -22,8 +22,7 @@ impl FileStream {
     fn borrow_open(&self, ctx: &str) -> Result<RefMut<File>, Unwind> {
         let f = self.file.borrow_mut();
         if f.is_none() {
-            Unwind::error(&format!("Cannot {} a closed FileStream: {:?}",
-                                   ctx, self))
+            Unwind::error(&format!("Cannot {} a closed FileStream: {:?}", ctx, self))
         } else {
             Ok(RefMut::map(f, |opt| opt.as_mut().unwrap()))
         }
@@ -96,68 +95,83 @@ fn filestream_close(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
 }
 
 fn filestream_is_closed(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    Ok(env.foo.make_boolean(
-        receiver.as_filestream("FileStream#close")?.file.borrow().is_none(),
-    ))
+    Ok(env.foo.make_boolean(receiver.as_filestream("FileStream#close")?.file.borrow().is_none()))
 }
 
 fn filestream_offset(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    let mut fileref = receiver.as_filestream("FileStream#offset")?.borrow_open("deterine offset for")?;
+    let mut fileref =
+        receiver.as_filestream("FileStream#offset")?.borrow_open("deterine offset for")?;
     let pos = match fileref.seek(SeekFrom::Current(0)) {
         Ok(pos) => pos,
-        Err(e) => return Unwind::error(
-            &format!("Could not determine current offset for {:?} ({:?})",
-                     receiver,
-                     e.kind()))
+        Err(e) => {
+            return Unwind::error(&format!(
+                "Could not determine current offset for {:?} ({:?})",
+                receiver,
+                e.kind()
+            ))
+        }
     };
     Ok(env.foo.make_integer(pos as i64))
 }
 
 fn filestream_offset_arg(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let mut fileref = receiver.as_filestream("FileStream#offset:")?.borrow_open("set offset for")?;
+    let mut fileref =
+        receiver.as_filestream("FileStream#offset:")?.borrow_open("set offset for")?;
     let pos = match fileref.seek(SeekFrom::Start(args[0].integer() as u64)) {
         Ok(pos) => pos,
-        Err(e) => return Unwind::error(
-            &format!("Could not set offset for {:?} ({:?})",
-                     receiver,
-                     e.kind()))
+        Err(e) => {
+            return Unwind::error(&format!(
+                "Could not set offset for {:?} ({:?})",
+                receiver,
+                e.kind()
+            ))
+        }
     };
     Ok(env.foo.make_integer(pos as i64))
 }
 
 fn filestream_offset_from_end(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let mut fileref = receiver.as_filestream("FileStream#offsetFromEnd:")?.borrow_open("set offset for")?;
+    let mut fileref =
+        receiver.as_filestream("FileStream#offsetFromEnd:")?.borrow_open("set offset for")?;
     let pos = match fileref.seek(SeekFrom::End(args[0].integer())) {
         Ok(pos) => pos,
-        Err(e) => return Unwind::error(
-            &format!("Could not set offset for {:?} ({:?})",
-                     receiver,
-                     e.kind()))
+        Err(e) => {
+            return Unwind::error(&format!(
+                "Could not set offset for {:?} ({:?})",
+                receiver,
+                e.kind()
+            ))
+        }
     };
     Ok(env.foo.make_integer(pos as i64))
 }
 
 fn filestream_offset_from_here(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let mut fileref = receiver.as_filestream("FileStream#offsetFromHere:")?.borrow_open("set offset for")?;
+    let mut fileref =
+        receiver.as_filestream("FileStream#offsetFromHere:")?.borrow_open("set offset for")?;
     let pos = match fileref.seek(SeekFrom::Current(args[0].integer())) {
         Ok(pos) => pos,
-        Err(e) => return Unwind::error(
-            &format!("Could not set offset for {:?} ({:?})",
-                     receiver,
-                     e.kind()))
+        Err(e) => {
+            return Unwind::error(&format!(
+                "Could not set offset for {:?} ({:?})",
+                receiver,
+                e.kind()
+            ))
+        }
     };
     Ok(env.foo.make_integer(pos as i64))
 }
 
 fn filestream_read_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    let mut fileref = receiver.as_filestream("FileStream#readString")?.borrow_open("read string from")?;
+    let mut fileref =
+        receiver.as_filestream("FileStream#readString")?.borrow_open("read string from")?;
     let mut s = String::new();
     if let Err(e) = fileref.read_to_string(&mut s) {
         return Unwind::error(&format!(
             "Could not readString from {:?} ({:?})",
             receiver,
             e.kind()
-        ))
+        ));
     }
     Ok(env.foo.into_string(s))
 }
