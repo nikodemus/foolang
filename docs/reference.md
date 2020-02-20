@@ -123,6 +123,63 @@ To gain access to a _Clock_ use [System#clock](#method-clock).
 
 Returns a [Time](#time) object representing current time.
 
+## Closure
+
+!> Will be renamed `Block`, probably.
+
+#### **method** `finally:` _cleanup_
+
+Executes the receiver and returns the resulting value, arranging cleanup to be
+executed after the receiver even if the receiver raises an exception.
+
+#### **method** `onError:` _handler_
+
+Executes the receiver and returns the resulting value, unless the receiver
+raises an exception, in which case the _handler_ is executed with the
+exception and context, its value is returned instead.
+
+#### **method** `value`
+
+Executes the receiver and returns the resulting value
+
+#### **method** `value:` _argument_
+
+Executes the receiver with _argument_ and returns the resulting value.
+
+#### **method** `value:` _argument1_ `value:` _argument2_
+
+Executes the receiver with _argument1_ and _argument2_ and returns the resulting
+value.
+
+#### **method** `value:` _argument1_ `value:` _argument2_ `value:` _argument3_
+
+Executes the receiver with _argument1_, _argument2_, and _argument3_ and returns
+the resulting value.
+
+#### **method** `with:` _value_
+
+Executes the receiver with _value_ and returns the resulting value, arranging
+`close` method to be sent to the _value_ after receiver even if the receiver
+raises an exception.
+
+#### **method** `whileFalse`
+
+Executes the receiver repeatedly as long as the result is false.
+
+#### **method** `whileFalse:` _body_
+
+Executes the receiver and the _body_ repeatedly, as long as the receiver
+result is false.
+
+#### **method** `whileTrue`
+
+Executes the receiver repeatedly as long as the result is true.
+
+#### **method** `whileTrue:` _bodyBlock_
+
+Executes the receiver and the _body_ repeatedly, as long as the receiver
+result is true.
+
 ## File
 
 #### **method** `forAppend` -> _File_

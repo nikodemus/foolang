@@ -62,6 +62,7 @@ class Main { assert system }
         system exit: instance assert exitCode
 
     method test
+        Closure runTests: assert.
         self testIs.
         self testByteArrays.
         self testFloats.

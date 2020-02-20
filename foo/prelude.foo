@@ -1,6 +1,7 @@
 import .lang.array
 import .lang.boolean
 import .lang.byteArray
+import .lang.closure
 import .lang.collection
 import .lang.dictionary
 import .lang.file

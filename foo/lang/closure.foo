@@ -1,0 +1,29 @@
+extend Closure
+
+    method whileTrue
+        { self value } whileTrue: {}.
+
+    method whileFalse
+        { self value } whileFalse: {}
+
+    method whileFalse: bodyBlock
+        { self value not } whileTrue: bodyBlock
+
+    method with: value
+        -- Deserves a better verb than close, should probably
+        -- steal python's __enter__ and __exit__ style names.
+        -- and protocol.
+        { self value: value } finally: { value close }
+
+    class method runTests: assert
+        assert true: { 1 == { 1 } value }
+               testing: "Closure#value".
+        assert true: { { raise "Foo". False }
+                           onError: { |e c| True } }
+               testing: "Closure#onError".
+        assert true: { let flag = False.
+                       { { raise "Foo". False }
+                             finally: { flag = True } }
+                       onError: { |c e| flag } }
+                testing: "Closure#finally"
+end
