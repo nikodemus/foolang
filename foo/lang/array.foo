@@ -25,6 +25,16 @@ extend Array
     method second
        self at: 2
 
+    method == other
+        let size = self size.
+        size is other size
+            ifFalse: { return False }.
+        1 to: size
+          do: { |i|
+                (self at: i) == (other at: i)
+                    ifFalse: { return False } }.
+        True
+
     method do: block
         1 to: self size
           do: { |i| block value: (self at: i) }.
@@ -125,4 +135,18 @@ extend Array
        self collect: { |elt| elt subInteger: x }
     method subFloat: x
        self collect: { |elt| elt subFloat: x }
+end
+
+class TestArray {}
+    class method testEquality: assert
+        assert true: { [1, 2, 3] == [1, 2, 3] }
+               testing: "Array#== (true 1)".
+        assert true: { [1, 2, [3, 4]] == [1, 2, [3, 4]] }
+               testing: "Array#== (true 2)".
+        assert false: { [1, 2, 4] == [1, 2, 3] }
+               testing: "Array#== (false 1)".
+        assert false: { [1, 2, 3, 4] == [1, 2, 3] }
+               testing: "Array#== (false 2)"
+    class method runTests: assert
+        self testEquality: assert
 end

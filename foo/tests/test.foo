@@ -1,12 +1,5 @@
 import lib.assert.Assert
 
-class TestArrays {}
-   class method do: block
-      block value: [1, 2, 3, 4].
-      block value: [123, 10293810293, -123, 123].
-      block
-end
-
 -- Generates signed integers small enough to add without overflowing.
 class SmallIntegers {}
     class method do: block
@@ -66,6 +59,7 @@ class Main { assert system }
             ByteArray,
             Closure,
             Dictionary,
+            TestArray,
             TestRecord
         ] do: { |each| each runTests: assert }.
         [
