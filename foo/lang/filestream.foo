@@ -20,6 +20,18 @@ class TestFileStream { assert dir foopath foodata }
                        { s readString. False } onError: { |e c| True } }
                testing: "FileStream#readString (closed)".
 
+    method testResize
+        let newpath = dir path: "TestFileStream-testResize.tmp".
+        let newdata = "This is a temporary file for testing.\n".
+        -- Clean up first
+        newpath ifExists: { newpath deleteFile }.
+        newpath forWrite create: { |f| f writeString: newdata }.
+        assert true: { newpath forRead forWrite
+                           open: { |f|
+                                   [ f size, f resize: 4. f size, f readString ]
+                                       == [ 38, 4, "This" ] } }
+               testing: "FileStream#resize:"
+
     method testIsOpen
         assert true: { foopath forRead open: { |f| f isOpen } }
                testing: "FileStream#isOpen (true)".
@@ -88,6 +100,7 @@ class TestFileStream { assert dir foopath foodata }
         tests testIsClosed.
         tests testOffset.
         tests testOffsetFromEnd.
+        tests testResize.
         tests testSize.
         tests testWriteString
 
