@@ -315,7 +315,6 @@ receiver as a _String_.
 
 ## FileStream
 
-- `size`
 - `resize:`
 - `readByte`
 - `writeByte:` _byte_
@@ -347,17 +346,21 @@ Returns current offset from the beginning of the file.
 
 Sets and returns offset from the beginning of the file.
 
-#### **method** `offsetFromEnd:` _relativeOffset_ -> Integer
+#### **method** `offsetFromEnd:` _relativeOffset_ -> _Integer_
 
 Sets and returns offset from the end of the file.
 
-#### **method** `offsetFromHere:` _relativeOffset_ -> Integer
+#### **method** `offsetFromHere:` _relativeOffset_ -> _Integer_
 
 Sets and returns offset relative to current position.
 
 #### **method** `readString` -> _String_
 
 Returns remaining contents of the receiver as a _String_.
+
+#### **method** `size` -> _Integer_
+
+Returns the total size of the underlying file in bytes.
 
 ## System
 

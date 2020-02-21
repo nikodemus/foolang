@@ -5,6 +5,10 @@ extend FileStream
     method isOpen
         self isClosed not
 
+    method size
+        let pos = self offset.
+        { self offsetFromEnd: 0 } finally: { self offset: pos }
+
     class method runTests: assert in: system
         let foopath = system currentDirectory path: "foo/tests/foo.txt".
         let foodata = "This file just says 'foo' for test purposes.\n".
@@ -44,5 +48,9 @@ extend FileStream
                                    f offsetFromHere: -5.
                                    f readString } }
                is: "test purposes.\n"
-               testing: "FileStream#offsetFromHere:"
+               testing: "FileStream#offsetFromHere:".
+        assert true: { let res = foopath forRead
+                                    open: { |f| [f size, f offset] }.
+                       res == [45, 0] }
+               testing: "FileStream#size"
 end
