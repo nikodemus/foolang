@@ -23,6 +23,4 @@ elisp/     Emacs mode for Foolang
 foo/       Foolang code, including prelude, tests, and examples
 src/       Rust code for the bootstrap interpreter
 tests/     Rust code for integration tests
-webrepl/   HTML and Javascript for the webrepl, includes CodeMirror which is
-             why github thinks this is a javascript repo...
-```
+webrepl/   HTML and Javascript for the webrepl
