@@ -1,17 +1,14 @@
+use std::cell::{RefCell, RefMut};
 use std::fmt;
+use std::fs::File;
+use std::hash::{Hash, Hasher};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
-
 use std::rc::Rc;
 
 use crate::eval::Env;
 use crate::objects::{Datum, Eval, Object, Vtable};
 use crate::unwind::Unwind;
-use std::io::{Read, Seek, SeekFrom};
-
-use std::cell::{RefCell, RefMut};
-use std::hash::{Hash, Hasher};
-
-use std::fs::File;
 
 pub struct FileStream {
     path: PathBuf,
@@ -22,7 +19,7 @@ impl FileStream {
     fn borrow_open(&self, ctx: &str) -> Result<RefMut<File>, Unwind> {
         let f = self.file.borrow_mut();
         if f.is_none() {
-            Unwind::error(&format!("Cannot {} a closed FileStream: {:?}", ctx, self))
+            Unwind::error(&format!("Sent {} to a closed FileStream: {:?}", ctx, self))
         } else {
             Ok(RefMut::map(f, |opt| opt.as_mut().unwrap()))
         }
@@ -75,6 +72,7 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("offsetFromEnd:", filestream_offset_from_end);
     vt.add_primitive_method_or_panic("offsetFromHere:", filestream_offset_from_here);
     vt.add_primitive_method_or_panic("readString", filestream_read_string);
+    vt.add_primitive_method_or_panic("writeString:", filestream_write_string);
     vt
 }
 
@@ -99,8 +97,7 @@ fn filestream_is_closed(receiver: &Object, _args: &[Object], env: &Env) -> Eval 
 }
 
 fn filestream_offset(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    let mut fileref =
-        receiver.as_filestream("FileStream#offset")?.borrow_open("deterine offset for")?;
+    let mut fileref = receiver.as_filestream("FileStream#offset")?.borrow_open("#offset")?;
     let pos = match fileref.seek(SeekFrom::Current(0)) {
         Ok(pos) => pos,
         Err(e) => {
@@ -115,8 +112,7 @@ fn filestream_offset(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
 }
 
 fn filestream_offset_arg(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let mut fileref =
-        receiver.as_filestream("FileStream#offset:")?.borrow_open("set offset for")?;
+    let mut fileref = receiver.as_filestream("FileStream#offset:")?.borrow_open("#offset:")?;
     let pos = match fileref.seek(SeekFrom::Start(args[0].integer() as u64)) {
         Ok(pos) => pos,
         Err(e) => {
@@ -132,7 +128,7 @@ fn filestream_offset_arg(receiver: &Object, args: &[Object], env: &Env) -> Eval 
 
 fn filestream_offset_from_end(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let mut fileref =
-        receiver.as_filestream("FileStream#offsetFromEnd:")?.borrow_open("set offset for")?;
+        receiver.as_filestream("FileStream#offsetFromEnd:")?.borrow_open("#offsetFromEnd:")?;
     let pos = match fileref.seek(SeekFrom::End(args[0].integer())) {
         Ok(pos) => pos,
         Err(e) => {
@@ -148,7 +144,7 @@ fn filestream_offset_from_end(receiver: &Object, args: &[Object], env: &Env) -> 
 
 fn filestream_offset_from_here(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let mut fileref =
-        receiver.as_filestream("FileStream#offsetFromHere:")?.borrow_open("set offset for")?;
+        receiver.as_filestream("FileStream#offsetFromHere:")?.borrow_open("#offsetFromHere:")?;
     let pos = match fileref.seek(SeekFrom::Current(args[0].integer())) {
         Ok(pos) => pos,
         Err(e) => {
@@ -164,7 +160,7 @@ fn filestream_offset_from_here(receiver: &Object, args: &[Object], env: &Env) ->
 
 fn filestream_read_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     let mut fileref =
-        receiver.as_filestream("FileStream#readString")?.borrow_open("read string from")?;
+        receiver.as_filestream("FileStream#readString")?.borrow_open("#readString")?;
     let mut s = String::new();
     if let Err(e) = fileref.read_to_string(&mut s) {
         return Unwind::error(&format!(
@@ -174,4 +170,25 @@ fn filestream_read_string(receiver: &Object, _args: &[Object], env: &Env) -> Eva
         ));
     }
     Ok(env.foo.into_string(s))
+}
+
+fn filestream_write_string(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let s = args[0].as_str()?;
+    let mut fileref =
+        receiver.as_filestream("FileStream#writeString:")?.borrow_open("#writeString:")?;
+    let end = s.len();
+    let mut start = 0;
+    while start < end {
+        match fileref.write(s[start..].as_bytes()) {
+            Ok(n) => start += n,
+            Err(e) => {
+                return Unwind::error(&format!(
+                    "Error during #writeString to {:?} ({:?})",
+                    receiver,
+                    e.kind()
+                ))
+            }
+        }
+    }
+    Ok(env.foo.make_integer(end as i64))
 }

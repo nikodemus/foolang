@@ -110,7 +110,7 @@ fn file_create(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
         Ok(f) => f,
         Err(e) => {
             return Unwind::error(&format!(
-                "Could not create file: {:?} ({:?})",
+                "Could not create file: {:?} ({:?}), did you want createOrOpen?",
                 &file.path,
                 e.kind()
             ))
@@ -189,7 +189,7 @@ fn file_open(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
         Ok(f) => f,
         Err(e) => {
             return Unwind::error(&format!(
-                "Could not open file: {:?} ({:?})",
+                "Could not open file: {:?} ({:?}), did you want #createOrOpen?",
                 &file.path,
                 e.kind()
             ))

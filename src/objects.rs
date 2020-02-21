@@ -1439,6 +1439,13 @@ impl Object {
         }
     }
 
+    pub fn as_str(&self) -> Result<&str, Unwind> {
+        match &self.datum {
+            Datum::String(s) => Ok(s.as_str()),
+            _ => Unwind::error(&format!("{:?} is not a String", self)),
+        }
+    }
+
     pub fn system(&self) -> Rc<System> {
         match &self.datum {
             Datum::System(s) => Rc::clone(s),
