@@ -29,6 +29,11 @@ Returns a fresh array representing the division of receiver by _value_.
 Numbers are broadcasted across the elements, arrays apply the operation
 element-wise.
 
+#### **method** `==` _other_
+
+Returns true if _other_ has the same size and elements as the receiver when
+compared using `==`. (Depends on `size` and `at:` methods of _other_.)
+
 #### **method** `at:` _index_
 
 Returns element of receiver at _index_. Raises an exception if _index_ is
