@@ -4,7 +4,7 @@ extend String
     method newline
         "\n" appendToString: self
     method printOn: stream
-        stream writeUTF8: self
+        stream writeString: self
     method _escapeOn: stream
         [["\"", "\\\""],
          ["\n", "\\n"],
@@ -13,12 +13,12 @@ extend String
          ["\{", "\\\{"]]
            do: { |esc|
                  (self stringEqual: esc first)
-                    ifTrue: { stream writeUTF8: esc second. return stream } }.
-        stream writeUTF8: self
+                    ifTrue: { stream writeString: esc second. return stream } }.
+        stream writeString: self
     method displayOn: stream
-        stream writeUTF8: "\"".
+        stream writeString: "\"".
         self do: { |c| c _escapeOn: stream }.
-        stream writeUTF8: "\""
+        stream writeString: "\""
     method == other
         other stringEqual: self
 end

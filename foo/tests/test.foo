@@ -64,8 +64,8 @@ class Main { assert system }
         ] do: { |each| each runTests: assert }.
         [
             File,
-            FilePath,
-            FileStream
+            TestFilePath,
+            TestFileStream
         ] do: { |each| each runTests: assert in: system }.
         self testIs.
         self testFloats.

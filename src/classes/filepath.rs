@@ -49,6 +49,7 @@ pub fn class_vtable() -> Vtable {
 
 pub fn instance_vtable() -> Vtable {
     let vt = Vtable::new("FilePath");
+    vt.add_primitive_method_or_panic("deleteFile", filepath_delete_file);
     vt.add_primitive_method_or_panic("exists", filepath_exists);
     vt.add_primitive_method_or_panic("file", filepath_file);
     vt.add_primitive_method_or_panic("isDirectory", filepath_is_directory);
@@ -63,6 +64,13 @@ fn into_filepath(path: PathBuf, env: &Env) -> Object {
         datum: Datum::FilePath(Rc::new(FilePath {
             path,
         })),
+    }
+}
+
+fn filepath_delete_file(receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
+    match std::fs::remove_file(&receiver.as_filepath("in FilePath#deleteFile")?.path) {
+        Ok(()) => Ok(receiver.clone()),
+        Err(e) => Unwind::error(&format!("Could not delete {:?} ({:?})", receiver, e.kind())),
     }
 }
 

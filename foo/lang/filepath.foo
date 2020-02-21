@@ -11,29 +11,57 @@ extend FilePath
         self forRead open: { |f| f readString }
     method readString: path
         (self path: path) readString
+    method ifExists: block
+        self exists ifTrue: block
+end
+
+class TestFilePath { assert dir none file }
+    method testExists
+        assert true: { dir exists }
+               testing: "FilePath#exists (dir)".
+        assert false: { none exists }
+               testing: "FilePath#exists (none)".
+        assert true: { file exists }
+               testing: "FilePath#exists (file)"
+
+    method testIsDirectory
+        assert true: { dir isDirectory }
+               testing: "FilePath#isDirectory (dir)".
+        assert false: { none isDirectory }
+               testing: "FilePath#isDirectory (none)".
+        assert false: { file isDirectory }
+               testing: "FilePath#isDirectory (file)"
+
+    method testIsFile
+        assert false: { dir isFile }
+               testing: "FilePath#isFile (dir)".
+        assert false: { none isFile }
+               testing: "FilePath#isFile (none)".
+        assert true: { file isFile }
+               testing: "FilePath#isFile (file)".
+
+    method testDeleteFile
+        let tmpfile = dir path: "FilePath-testDeleteFile.tmp".
+        -- Try to clean up first.
+        tmpfile ifExists: { tmpfile deleteFile }.
+        assert false: { tmpfile exists }
+               testing: "FilePath#deleteFile (pre1)".
+        tmpfile forWrite create: { |f| f writeString: "foo" }.
+        assert true: { tmpfile exists }
+               testing: "FilePath#deleteFile (pre2)".
+        tmpfile deleteFile.
+        assert false: { tmpfile exists }
+               testing: "FilePath#deleteFile (post)"
 
     class method runTests: assert in: system
         -- Assumes the repository root as the current directory
-        let dir = system currentDirectory.
-        assert true: { dir exists }
-               testing: "currentDirectory exists".
-        assert true: { dir isDirectory }
-               testing: "currentDirectory is directory".
-        assert false: { dir isFile }
-               testing: "currentDirectory is not a file".
-        let none = dir path: "does-not-exists".
-        assert false: { none exists }
-               testing: "nonexistent file does not exist".
-        assert false: { none isDirectory }
-               testing: "nonexistent file is not a directory".
-        assert false: { none isFile }
-               testing: "nonexistent file is not a file".
-        let readme = dir path: "README.md".
-        assert true: { readme exists }
-               testing: "readme exists".
-        assert true: { readme isFile }
-               testing: "readme is a file".
-        assert false: { readme isDirectory }
-               testing: "readme is not a directory"
+        let tests = self assert: assert
+                         dir: system currentDirectory
+                         none: (system currentDirectory path: "does-not-exists")
+                         file: (system currentDirectory path: "README.md").
+        tests testDeleteFile.
+        tests testExists.
+        tests testIsDirectory.
+        tests testIsFile
 
 end

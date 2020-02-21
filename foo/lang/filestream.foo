@@ -8,40 +8,51 @@ extend FileStream
     method size
         let pos = self offset.
         { self offsetFromEnd: 0 } finally: { self offset: pos }
+end
 
-    class method runTests: assert in: system
-        let foopath = system currentDirectory path: "foo/tests/foo.txt".
-        let foodata = "This file just says 'foo' for test purposes.\n".
-        assert true: { foopath isFile }
-               testing: "sanity check before FileStream test".
-        assert true: { foodata is (foopath readString) }
-               testing: "FilePath#readString".
+class TestFileStream { assert dir foopath foodata }
+
+    method testReadString
+        assert true: { foodata is (foopath forRead open readString) }
+               testing: "FileStream#readString (ok)".
         assert true: { let s = foopath forRead open.
                        s close.
                        { s readString. False } onError: { |e c| True } }
-               testing: "cannot read from closed filestream".
+               testing: "FileStream#readString (closed)".
+
+    method testIsOpen
         assert true: { foopath forRead open: { |f| f isOpen } }
                testing: "FileStream#isOpen (true)".
         assert false: { (foopath forRead open: { |f| f }) isOpen }
-               testing: "FileStream#isOpen (false)".
+               testing: "FileStream#isOpen (false)"
+
+    method testIsClosed
         assert false: { foopath forRead open: { |f| f isClosed } }
                testing: "FileStream#isClosed (false)".
         assert true: { (foopath forRead open: { |f| f }) isClosed }
-               testing: "FileStream#isClosed (true)".
+               testing: "FileStream#isClosed (true)"
+
+    method testOffset
         assert that: { foopath forRead open: { |f| f offset } } is: 0
                testing: "FileStream#offset (0)".
         assert that: { foopath forRead
                            open:  { |f| f readString. f offset } }
                is: 45
-               testing: "FileStream#offset (45)".
+               testing: "FileStream#offset (45)"
+
+    method testOffsetSet
         assert that: { foopath forRead
                            open: { |f| f offset: 5. f readString } }
                is: "file just says 'foo' for test purposes.\n"
-               testing: "FileStream#offset:".
+               testing: "FileStream#offset:"
+
+    method testOffsetFromEnd
         assert that: { foopath forRead
                            open: { |f| f offsetFromEnd: -10. f readString } }
                is: "purposes.\n"
-               testing: "FileStream#offsetFromEnd:".
+               testing: "FileStream#offsetFromEnd:"
+
+    method testSize
         assert that: { foopath forRead
                            open: { |f|
                                    f offsetFromEnd: -10.
@@ -53,4 +64,31 @@ extend FileStream
                                     open: { |f| [f size, f offset] }.
                        res == [45, 0] }
                testing: "FileStream#size"
+
+    method testWriteString
+        let newpath = dir path: "TestFileStream-testWriteString.tmp".
+        let newdata = "This is a temporary file for testing.\n".
+        -- Clean up first
+        newpath ifExists: { newpath deleteFile }.
+        assert false: { newpath exists }
+               testing: "FileStream#writeString: (pre)".
+        newpath forWrite create: { |f| f writeString: newdata }.
+        assert that: { newpath readString }
+               is: newdata
+               testing: "FileStream#writeString: (post)".
+        newpath deleteFile
+
+    class method runTests: assert in: system
+        let tests = self assert: assert
+                         dir: system currentDirectory
+                         foopath: (system currentDirectory path: "foo/tests/foo.txt")
+                         foodata: "This file just says 'foo' for test purposes.\n".
+        tests testReadString.
+        tests testIsOpen.
+        tests testIsClosed.
+        tests testOffset.
+        tests testOffsetFromEnd.
+        tests testSize.
+        tests testWriteString
+
 end

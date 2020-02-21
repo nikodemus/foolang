@@ -268,6 +268,11 @@ or directory exists.
 !> Symlinks in the filesystem can provide access to parts outside the
 _FilePath_.
 
+#### **method** `deleteFile`
+
+Deletes the file designated by the receiver. Raises and exception if the
+path does not exist or is not a file.
+
 #### **method** `exists`
 
 Returns true if the receiver designates a filesystem resource that exists.
@@ -290,6 +295,10 @@ read-mode. Convenience around `self file forRead`.
 
 Returns a [File](#file) associated with the receiver, ready to be opened in
 write-mode. Convenience around `self file forWrite`.
+
+#### **method** `ifExists:` _block_
+
+Executes _block_ if the path designated by the receiver exists.
 
 #### **method** `isDirectory`
 
@@ -321,7 +330,6 @@ receiver as a _String_.
 - `isOpen`
 - `isClosed`
 - `readString:` _size_
-- `writeString:` _string_
 - `read:` _size_ `bytesInto:` _byteArray_ `at:` _index_
 - `write:` _size_ `bytesFrom:` _byteArray_ `at:` _index_
 
@@ -361,6 +369,10 @@ Returns remaining contents of the receiver as a _String_.
 #### **method** `size` -> _Integer_
 
 Returns the total size of the underlying file in bytes.
+
+#### **method** `writeString:` _string_
+
+Writes the string to the receiver at current offset, as UTF8.
 
 ## System
 
