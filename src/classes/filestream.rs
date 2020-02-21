@@ -72,6 +72,7 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("offsetFromEnd:", filestream_offset_from_end);
     vt.add_primitive_method_or_panic("offsetFromHere:", filestream_offset_from_here);
     vt.add_primitive_method_or_panic("readString", filestream_read_string);
+    vt.add_primitive_method_or_panic("resize:", filestream_resize);
     vt.add_primitive_method_or_panic("writeString:", filestream_write_string);
     vt
 }
@@ -170,6 +171,17 @@ fn filestream_read_string(receiver: &Object, _args: &[Object], env: &Env) -> Eva
         ));
     }
     Ok(env.foo.into_string(s))
+}
+
+fn filestream_resize(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
+    let fileref = receiver.as_filestream("FileStream#resize:")?.borrow_open("#resize:")?;
+    match fileref.set_len(args[0].integer() as u64) {
+        Ok(_) => (),
+        Err(e) => {
+            return Unwind::error(&format!("Could not resize {:?} ({:?})", receiver, e.kind()))
+        }
+    };
+    Ok(receiver.clone())
 }
 
 fn filestream_write_string(receiver: &Object, args: &[Object], env: &Env) -> Eval {
