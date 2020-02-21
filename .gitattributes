@@ -1,4 +1,2 @@
 # Disable eol-normalization
 * -text
-# Linguist setup for Github statistics
-webrepl/lib/* linguist-vendored
