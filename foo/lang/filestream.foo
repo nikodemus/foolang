@@ -23,14 +23,61 @@ class TestFileStream { assert dir foopath foodata }
     method testResize
         let newpath = dir path: "TestFileStream-testResize.tmp".
         let newdata = "This is a temporary file for testing.\n".
-        -- Clean up first
-        newpath ifExists: { newpath deleteFile }.
-        newpath forWrite create: { |f| f writeString: newdata }.
+        newpath forWrite truncateExisting
+            createOrOpen: { |f| f writeString: newdata }.
         assert true: { newpath forRead forWrite
                            open: { |f|
                                    [ f size, f resize: 4. f size, f readString ]
                                        == [ 38, 4, "This" ] } }
-               testing: "FileStream#resize:"
+               testing: "FileStream#resize:".
+        newpath deleteFile
+
+    method testTryReadBytesIntoAt
+        let newpath = dir path: "TestFileStream-testTryReadBytesIntoAt.tmp".
+        let newdata = "\r\n\r\n".
+        newpath forWrite truncateExisting
+            createOrOpen: { |f| f writeString: newdata }.
+        let buf = ByteArray new: 6.
+        buf put: 101 at: 1.
+        buf put: 106 at: 6.
+        assert that: { newpath forRead
+                           open: { |f| f tryRead: 4 bytesInto: buf at: 2 } }
+               is: 4
+               testing: "FileStream#tryRead:bytesInto:at: (return)".
+        assert that: { [101, 13, 10, 13, 10, 106] }
+               equals: buf
+               testing: "FileStream#tryRead:bytesInto:at: (data)".
+        assert that: { newpath forRead
+                           open: { |f| f tryRead: 6 bytesInto: buf at: 1 } }
+               is: 4
+               testing: "FileStream#tryRead:bytesInto:at: (short return)".
+        assert that: { [13, 10, 13, 10, 10, 106] }
+               equals: buf
+               testing: "FileStream#tryRead:bytesInto:at: (short data)".
+        newpath deleteFile
+
+    method testTryWriteBytesFromAt
+        let newpath = dir path: "TestFileStream-testTryWriteBytesFromAt.tmp".
+        let bytes = ByteArray new: 12.
+        1 to: bytes size
+          do: { |i| bytes put: i at: i }.
+        assert that: { newpath forWrite truncateExisting
+                           createOrOpen: { |f|
+                                           f
+                                               tryWrite: 10
+                                               bytesFrom: bytes
+                                               at: 2 } }
+               is: 10
+               testing: "FileStream#tryWrite:bytesFrom:at: (return)".
+        let data = ByteArray new: 12.
+        assert that: { newpath forRead
+                           open: { |f| f tryRead: data size bytesInto: data at: 1 } }
+               is: 10
+               testing: "FileStream#tryWrite:bytesFrom:at: (wrote length)".
+        assert that: { [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 0] }
+               equals: data
+               testing: "FileStream#tryWrite:bytesFrom:at: (wrote data)".
+        newpath deleteFile
 
     method testIsOpen
         assert true: { foopath forRead open: { |f| f isOpen } }
@@ -101,6 +148,8 @@ class TestFileStream { assert dir foopath foodata }
         tests testOffset.
         tests testOffsetFromEnd.
         tests testResize.
+        tests testTryReadBytesIntoAt.
+        tests testTryWriteBytesFromAt.
         tests testSize.
         tests testWriteString
 

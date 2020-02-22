@@ -2,7 +2,7 @@ use std::cell::{RefCell, RefMut};
 use std::fmt;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{ErrorKind, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -73,6 +73,8 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("offsetFromHere:", filestream_offset_from_here);
     vt.add_primitive_method_or_panic("readString", filestream_read_string);
     vt.add_primitive_method_or_panic("resize:", filestream_resize);
+    vt.add_primitive_method_or_panic("tryRead:bytesInto:at:", filestream_try_read_bytes_into_at);
+    vt.add_primitive_method_or_panic("tryWrite:bytesFrom:at:", filestream_try_write_bytes_from_at);
     vt.add_primitive_method_or_panic("writeString:", filestream_write_string);
     vt
 }
@@ -182,6 +184,67 @@ fn filestream_resize(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
         }
     };
     Ok(receiver.clone())
+}
+
+fn filestream_try_read_bytes_into_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let mut fileref = receiver
+        .as_filestream("FileStream#tryRead:bytesInto:at:")?
+        .borrow_open("#tryRead:bytesInto:at:")?;
+    let mut want = args[0].integer() as usize;
+    let mut byte_array = args[1].as_byte_array("FileStream#tryRead:bytesInto:at:")?.borrow_mut();
+    let mut at = (args[2].integer() - 1) as usize;
+    let mut total = 0;
+    loop {
+        let got = match fileref.read(&mut byte_array[at..at + want]) {
+            Ok(got) => got,
+            Err(e) if e.kind() == ErrorKind::Interrupted => continue,
+            Err(e) => {
+                return Unwind::error(&format!(
+                    "Error while reading from {:?} ({:?})",
+                    receiver,
+                    e.kind()
+                ))
+            }
+        };
+        total += got;
+        if got == want || got == 0 {
+            break;
+        }
+        at += got;
+        want -= got;
+    }
+    Ok(env.foo.make_integer(total as i64))
+}
+
+fn filestream_try_write_bytes_from_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let mut fileref = receiver
+        .as_filestream("FileStream#tryWrite:bytesFrom:at:")?
+        .borrow_open("#tryWrite:bytesFrom:at:")?;
+    let mut want = args[0].integer() as usize;
+    let mut byte_array = args[1].as_byte_array("FileStream#tryRead:bytesInto:at:")?.borrow_mut();
+    let mut at = (args[2].integer() - 1) as usize;
+    let mut total = 0;
+    loop {
+        println!("size: {}, want: {}, at: {}, at+want: {}", byte_array.len(), want, at, at + want);
+        let did = match fileref.write(&mut byte_array[at..at + want]) {
+            Ok(did) => did,
+            Err(e) if e.kind() == ErrorKind::Interrupted => continue,
+            Err(e) => {
+                return Unwind::error(&format!(
+                    "Error while writing to {:?} ({:?})",
+                    receiver,
+                    e.kind()
+                ))
+            }
+        };
+        total += did;
+        if did == want || did == 0 {
+            break;
+        }
+        at += did;
+        want -= did;
+    }
+    Ok(env.foo.make_integer(total as i64))
 }
 
 fn filestream_write_string(receiver: &Object, args: &[Object], env: &Env) -> Eval {

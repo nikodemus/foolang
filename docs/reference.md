@@ -362,6 +362,29 @@ Sets and returns offset from the end of the file.
 
 Sets and returns offset relative to current position.
 
+#### **method** `tryRead:` _numberOf_ `bytesInto:` _byteArray_ `at:` _index_ -> _Integer_
+
+Reads at most specified _numberOf_ bytes from receiver into _byteArray_ starting
+at the  specified _index_ in the _byteArray_.
+
+Returns the number of bytes actually read, which may be less than the requested
+number if end of file is reached before.
+
+!> This and `tryWrite:bytesFrom:at:` below are currently uncomfortable halfway
+houses. They're not high-level interfaces guaranteed to raise an exception if
+the expected operation was not completed. They're not low level interfaces
+guaranteed to perform at most one OS level operation. A breakdown along `tryFoo`
+being a low-level operation doing a single read/write, and `foo` being the
+high-level operation guaranteed to complete would probably work better.
+
+#### **method** `tryWrite:` _numberOf_ `bytesFrom:` _byteArray_ `at:` _index_ -> _Integer_
+
+Writes at most specified _numberOf_ bytes to receiver from _byteArray_ starting
+at the  specified _index_ in the _byteArray_.
+
+Returns the number of bytes actually written, which may be less than the
+requested if the receiver is not able to accept more bytes.
+
 #### **method** `readString` -> _String_
 
 Returns remaining contents of the receiver as a _String_.
