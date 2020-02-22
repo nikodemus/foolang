@@ -48,12 +48,12 @@ class TestCase { name condition successCount failureCount errorCount }
     method summarizeFailureOn: output
         output println: "--{name}: {failureCount} failures, {errorCount} errors, {successCount} successes".
 
-    method expect: expected
+    method expect: expected using: block
         let actual = { condition value }
                          onError: { |error ctx|
                                     return self errorOn: Nothing
                                                 what: error }.
-        actual is expected
+        (block value: actual value: expected)
             ifTrue: { self successOn: Nothing }
             ifFalse: { self failureOn: Nothing
                             expected: expected
@@ -103,11 +103,25 @@ class Assert { output failed }
             ifTrue: { 1 }
             ifFalse: { 0 }
 
-    method that: condition is: value testing: thing
+    method that: condition matches: value using: block testing: thing
         let test = TestCase name: thing condition: condition.
-        self report: (test expect: value).
+        self report: (test expect: value using: block).
         self summarize: test.
         failed = failed or: test failed
+
+    method that: condition is: value testing: thing
+        self
+            that: condition
+            matches: value
+            using: { |actual expected| actual is expected }
+            testing: thing
+
+    method that: condition equals: value testing: thing
+        self
+            that: condition
+            matches: value
+            using: { |actual expected| actual == expected }
+            testing: thing
 
     method true: condition testing: thing
         self that: condition is: True testing: thing
