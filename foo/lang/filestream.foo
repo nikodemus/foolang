@@ -5,12 +5,31 @@ extend FileStream
     method isOpen
         self isClosed not
 
+    method readBytes
+        let n = self size - self offset.
+        let bytes = ByteArray new: n.
+        let got = self tryRead: n bytesInto: bytes at: 1.
+        got == n
+            ifFalse: { raise "Could not #readBytes from {self} upto end of file" }.
+        bytes
+
     method size
         let pos = self offset.
         { self offsetFromEnd: 0 } finally: { self offset: pos }
 end
 
 class TestFileStream { assert dir foopath foodata }
+
+    method testReadBytes
+        let newpath = dir path: "TestFileStream-testReadBytes.tmp".
+        let newdata = "\r\r\n\n".
+        newpath forWrite truncateExisting
+            createOrOpen: { |f| f writeString: newdata }.
+        assert that: { newpath forRead
+                           open: { |f| f readBytes } }
+               equals: [13, 13, 10, 10]
+               testing: "FileStream#readBytes".
+        newpath deleteFile
 
     method testReadString
         assert true: { foodata is (foopath forRead open readString) }
@@ -142,6 +161,7 @@ class TestFileStream { assert dir foopath foodata }
                          dir: system currentDirectory
                          foopath: (system currentDirectory path: "foo/tests/foo.txt")
                          foodata: "This file just says 'foo' for test purposes.\n".
+        tests testReadBytes.
         tests testReadString.
         tests testIsOpen.
         tests testIsClosed.

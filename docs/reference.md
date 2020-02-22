@@ -362,6 +362,11 @@ Sets and returns offset from the end of the file.
 
 Sets and returns offset relative to current position.
 
+#### **method** `readBytes` -> _ByteArray_
+
+Reads all data from receiver (starting at current offset) into a _ByteArray_
+and returns that.
+
 #### **method** `tryRead:` _numberOf_ `bytesInto:` _byteArray_ `at:` _index_ -> _Integer_
 
 Reads at most specified _numberOf_ bytes from receiver into _byteArray_ starting
