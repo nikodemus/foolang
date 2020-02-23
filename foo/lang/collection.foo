@@ -1,7 +1,61 @@
 interface Collection
+
+    method == other
+        let size = self size.
+        size is other size
+            ifFalse: { return False }.
+        1 to: size
+          do: { |i|
+                (self at: i) == (other at: i)
+                    ifFalse: { return False } }.
+        True
+
     method checkSize: collection
         let size = self size.
         size == collection size
             ifTrue: { size }
             ifFalse: { raise "Collection size mismatch" }
+
+    method first
+       self at: 1
+
+    method second
+       self at: 2
+
+    method do: block
+        1 to: self size
+          do: { |i| block value: (self at: i) }.
+        self
+
+    method with: sequence do: block
+        let size = self checkSize: sequence.
+        1 to: size
+          do: { |i|
+                block value: (self at: i) value: (sequence at: i) }.
+        self
+
+    method inject: value into: block
+        let result = value.
+        self do: { |elt| result = (block value: result value: elt) }.
+        result
+
+    method with: sequence inject: value into: block
+        let result = value.
+        self with: sequence
+             do: { |a b|
+                   result = (block value: result value: a value: b) }.
+        result
+
+    method sum
+        self inject: 0 into: { |res elt| res + elt }
+
+    method sum: block
+        self inject: 0 into: { |res elt| res + (block value: elt) }
+
+    method with: array sum: block
+        self
+            with: array
+            inject: 0
+            into: { |res a b|
+                    res + (block value: a value: b) }
 end

@@ -192,7 +192,12 @@ fn filestream_try_read_bytes_into_at(receiver: &Object, args: &[Object], env: &E
         .borrow_open("#tryRead:bytesInto:at:")?;
     let mut want = args[0].integer() as usize;
     let mut byte_array = args[1].as_byte_array("FileStream#tryRead:bytesInto:at:")?.borrow_mut();
-    let mut at = (args[2].integer() - 1) as usize;
+    let at_arg = args[2].integer();
+    let mut at = if at_arg > 0 && at_arg as usize <= byte_array.len() {
+        (at_arg - 1) as usize
+    } else {
+        return Unwind::error(&format!("{} is not valid array index", at_arg));
+    };
     let mut total = 0;
     loop {
         let got = match fileref.read(&mut byte_array[at..at + want]) {
@@ -222,7 +227,12 @@ fn filestream_try_write_bytes_from_at(receiver: &Object, args: &[Object], env: &
         .borrow_open("#tryWrite:bytesFrom:at:")?;
     let mut want = args[0].integer() as usize;
     let mut byte_array = args[1].as_byte_array("FileStream#tryRead:bytesInto:at:")?.borrow_mut();
-    let mut at = (args[2].integer() - 1) as usize;
+    let at_arg = args[2].integer();
+    let mut at = if at_arg > 0 && at_arg as usize <= byte_array.len() {
+        (at_arg - 1) as usize
+    } else {
+        return Unwind::error(&format!("{} is not valid array index", at_arg));
+    };
     let mut total = 0;
     loop {
         println!("size: {}, want: {}, at: {}, at+want: {}", byte_array.len(), want, at, at + want);

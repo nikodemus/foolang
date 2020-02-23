@@ -1,6 +1,11 @@
+import .collection.Collection
+
 extend ByteArray
+    is Collection
+
     method displayOn: stream
         stream print: self toString
+
     class method runTests: assert
         assert forAll: (1 to: 10)
                that: { |n|
