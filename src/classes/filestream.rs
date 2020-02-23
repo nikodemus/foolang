@@ -66,6 +66,7 @@ pub fn class_vtable() -> Vtable {
 pub fn instance_vtable() -> Vtable {
     let vt = Vtable::new("FileStream");
     vt.add_primitive_method_or_panic("close", filestream_close);
+    vt.add_primitive_method_or_panic("flush", filestream_flush);
     vt.add_primitive_method_or_panic("isClosed", filestream_is_closed);
     vt.add_primitive_method_or_panic("offset", filestream_offset);
     vt.add_primitive_method_or_panic("offset:", filestream_offset_arg);
@@ -73,8 +74,14 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("offsetFromHere:", filestream_offset_from_here);
     vt.add_primitive_method_or_panic("readString", filestream_read_string);
     vt.add_primitive_method_or_panic("resize:", filestream_resize);
-    vt.add_primitive_method_or_panic("tryRead:bytesInto:at:", filestream_try_read_bytes_into_at);
-    vt.add_primitive_method_or_panic("tryWrite:bytesFrom:at:", filestream_try_write_bytes_from_at);
+    vt.add_primitive_method_or_panic(
+        "tryReadOnce:bytesInto:at:",
+        filestream_try_read_once_bytes_into_at,
+    );
+    vt.add_primitive_method_or_panic(
+        "tryWriteOnce:bytesFrom:at:",
+        filestream_try_write_once_bytes_from_at,
+    );
     vt.add_primitive_method_or_panic("writeString:", filestream_write_string);
     vt
 }
@@ -93,6 +100,13 @@ fn filestream_close(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_boolean(
         receiver.as_filestream("FileStream#close")?.file.borrow_mut().take().is_some(),
     ))
+}
+
+fn filestream_flush(receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
+    if let Err(e) = receiver.as_filestream("FileStream#close")?.borrow_open("#flush")?.flush() {
+        return Unwind::error(&format!("Error flushing {:?} ({:?})", receiver, e.kind()));
+    }
+    Ok(receiver.clone())
 }
 
 fn filestream_is_closed(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
@@ -186,22 +200,40 @@ fn filestream_resize(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     Ok(receiver.clone())
 }
 
-fn filestream_try_read_bytes_into_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+fn filestream_try_read_once_bytes_into_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let mut fileref = receiver
-        .as_filestream("FileStream#tryRead:bytesInto:at:")?
-        .borrow_open("#tryRead:bytesInto:at:")?;
-    let mut want = args[0].integer() as usize;
-    let mut byte_array = args[1].as_byte_array("FileStream#tryRead:bytesInto:at:")?.borrow_mut();
+        .as_filestream("FileStream#tryReadOnce:bytesInto:at:")?
+        .borrow_open("#tryReadOnce:bytesInto:at:")?;
+
+    let want_arg = args[0].integer();
+    let want = if want_arg >= 0 {
+        want_arg as usize
+    } else {
+        return Unwind::error(&format!("{} is not a valid number of bytes to read", want_arg));
+    };
+
     let at_arg = args[2].integer();
-    let mut at = if at_arg > 0 && at_arg as usize <= byte_array.len() {
+    let at = if at_arg > 0 {
         (at_arg - 1) as usize
     } else {
-        return Unwind::error(&format!("{} is not valid array index", at_arg));
+        return Unwind::error(&format!("{} in not a valid array index", at_arg));
     };
-    let mut total = 0;
+
+    let mut byte_array =
+        args[1].as_byte_array("FileStream#tryReadOnce:bytesInto:at:")?.borrow_mut();
+
+    if want + at > byte_array.len() {
+        return Unwind::error(&format!(
+            "ByteArray too short: {} bytes starting at {} specified, size is {}",
+            want,
+            at_arg,
+            byte_array.len()
+        ));
+    }
+
     loop {
-        let got = match fileref.read(&mut byte_array[at..at + want]) {
-            Ok(got) => got,
+        match fileref.read(&mut byte_array[at..at + want]) {
+            Ok(got) => return Ok(env.foo.make_integer(got as i64)),
             Err(e) if e.kind() == ErrorKind::Interrupted => continue,
             Err(e) => {
                 return Unwind::error(&format!(
@@ -211,33 +243,43 @@ fn filestream_try_read_bytes_into_at(receiver: &Object, args: &[Object], env: &E
                 ))
             }
         };
-        total += got;
-        if got == want || got == 0 {
-            break;
-        }
-        at += got;
-        want -= got;
     }
-    Ok(env.foo.make_integer(total as i64))
 }
 
-fn filestream_try_write_bytes_from_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+fn filestream_try_write_once_bytes_from_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let mut fileref = receiver
-        .as_filestream("FileStream#tryWrite:bytesFrom:at:")?
-        .borrow_open("#tryWrite:bytesFrom:at:")?;
-    let mut want = args[0].integer() as usize;
-    let mut byte_array = args[1].as_byte_array("FileStream#tryRead:bytesInto:at:")?.borrow_mut();
+        .as_filestream("FileStream#tryWriteOnce:bytesFrom:at:")?
+        .borrow_open("#tryWriteOnce:bytesFrom:at:")?;
+
+    let want_arg = args[0].integer();
+    let want = if want_arg >= 0 {
+        want_arg as usize
+    } else {
+        return Unwind::error(&format!("{} is not a valid number of bytes to write", want_arg));
+    };
+
     let at_arg = args[2].integer();
-    let mut at = if at_arg > 0 && at_arg as usize <= byte_array.len() {
+    let at = if at_arg > 0 {
         (at_arg - 1) as usize
     } else {
-        return Unwind::error(&format!("{} is not valid array index", at_arg));
+        return Unwind::error(&format!("{} in not a valid array index", at_arg));
     };
-    let mut total = 0;
+
+    let mut byte_array =
+        args[1].as_byte_array("FileStream#tryWriteOnce:bytesFrom:at:")?.borrow_mut();
+
+    if want + at > byte_array.len() {
+        return Unwind::error(&format!(
+            "ByteArray too short: {} bytes starting at {} specified, size is {}",
+            want,
+            at_arg,
+            byte_array.len()
+        ));
+    }
+
     loop {
-        println!("size: {}, want: {}, at: {}, at+want: {}", byte_array.len(), want, at, at + want);
-        let did = match fileref.write(&mut byte_array[at..at + want]) {
-            Ok(did) => did,
+        match fileref.write(&mut byte_array[at..at + want]) {
+            Ok(did) => return Ok(env.foo.make_integer(did as i64)),
             Err(e) if e.kind() == ErrorKind::Interrupted => continue,
             Err(e) => {
                 return Unwind::error(&format!(
@@ -246,15 +288,8 @@ fn filestream_try_write_bytes_from_at(receiver: &Object, args: &[Object], env: &
                     e.kind()
                 ))
             }
-        };
-        total += did;
-        if did == want || did == 0 {
-            break;
         }
-        at += did;
-        want -= did;
     }
-    Ok(env.foo.make_integer(total as i64))
 }
 
 fn filestream_write_string(receiver: &Object, args: &[Object], env: &Env) -> Eval {

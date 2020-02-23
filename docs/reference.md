@@ -324,19 +324,14 @@ receiver as a _String_.
 
 ## FileStream
 
-- `resize:`
-- `readByte`
-- `writeByte:` _byte_
-- `isOpen`
-- `isClosed`
-- `readString:` _size_
-- `read:` _size_ `bytesInto:` _byteArray_ `at:` _index_
-- `write:` _size_ `bytesFrom:` _byteArray_ `at:` _index_
-
 #### **method** `close` -> _Boolean_
 
 Closes the stream if it is currently open. Returns true if the stream was
 open, false if it was already closed.
+
+#### **method** `flush` -> _FileStream_
+
+Flushes the stream, ensuring internally buffered data reach their destination.
 
 #### **method** `isClosed` -> _Boolean_
 
@@ -364,31 +359,14 @@ Sets and returns offset relative to current position.
 
 #### **method** `readBytes` -> _ByteArray_
 
-Reads all data from receiver (starting at current offset) into a _ByteArray_
-and returns that.
+Returns all data from receiver (starting at current offset) as a _ByteArray_.
 
-#### **method** `tryRead:` _numberOf_ `bytesInto:` _byteArray_ `at:` _index_ -> _Integer_
+#### **method** `read:` _numberOf_ `bytesInto:` _byteArray_ `at:` _index_ -> _Integer_
 
-Reads at most specified _numberOf_ bytes from receiver into _byteArray_ starting
-at the  specified _index_ in the _byteArray_.
+Reads exactly the specified _numberOf_ bytes from receiver into _byteArray_
+starting at the specified _index_ in the _byteArray_.
 
-Returns the number of bytes actually read, which may be less than the requested
-number if end of file is reached before.
-
-!> This and `tryWrite:bytesFrom:at:` below are currently uncomfortable halfway
-houses. They're not high-level interfaces guaranteed to raise an exception if
-the expected operation was not completed. They're not low level interfaces
-guaranteed to perform at most one OS level operation. A breakdown along `tryFoo`
-being a low-level operation doing a single read/write, and `foo` being the
-high-level operation guaranteed to complete would probably work better.
-
-#### **method** `tryWrite:` _numberOf_ `bytesFrom:` _byteArray_ `at:` _index_ -> _Integer_
-
-Writes at most specified _numberOf_ bytes to receiver from _byteArray_ starting
-at the  specified _index_ in the _byteArray_.
-
-Returns the number of bytes actually written, which may be less than the
-requested if the receiver is not able to accept more bytes.
+If unable to read the specified number of bytes for any reason, raises an exception.
 
 #### **method** `readString` -> _String_
 
@@ -397,6 +375,61 @@ Returns remaining contents of the receiver as a _String_.
 #### **method** `size` -> _Integer_
 
 Returns the total size of the underlying file in bytes.
+
+#### **method** `tryRead:` _numberOf_ `bytesInto:` _byteArray_ `at:` _index_ -> _Integer_
+
+Reads at most specified _numberOf_ bytes from receiver into _byteArray_ starting
+at the specified _index_ in the _byteArray_.
+
+Returns the number of bytes actually read, which may be less than the requested
+number if end of file is reached before.
+
+#### **method** `tryReadOnce:` _numberOf_ `bytesInto:` _byteArray_ `at:` _index_ -> _Integer_
+
+Reads at most specified _numberOf_ bytes from receiver into _byteArray_ starting
+at the specified _index_ in the _byteArray_, and returns the number of bytes
+actually read.
+
+Assuming more than zero bytes were requested, returning zero from this method
+indicates that end of file has been reached.
+
+Normally performs exactly one OS-level read operation. (An interrupted read that
+produced no data will be restarted automatically do distinguish it from reaching
+end of file.)
+
+Raises an exception in other cases where no data can be read.
+
+#### **method** `tryWrite:` _numberOf_ `bytesFrom:` _byteArray_ `at:` _index_ -> _Integer_
+
+Writes at most specified _numberOf_ bytes from _byteArray_ into receiver, starting
+at the specified _index_ in the _byteArray_.
+
+Returns the number of bytes actually written, which may be less than the requested
+number if the file is unable to accept all data for some reason.
+
+Raises an exception if no data could be written.
+
+#### **method** `tryWriteOnce:` _numberOf_ `bytesFrom:` _byteArray_ `at:` _index_ -> _Integer_
+
+Writes at most specified _numberOf_ bytes from _byteArray_ into receiver, starting
+at the specified _index_ in the _byteArray_, and returns the number of bytes
+actually written.
+
+Normally performs exactly one OS-level write operation. (An interrupted write
+that consumed no data will be restarted automatically.)
+
+Raises an exception in other cases if no data can be written.
+
+#### **method** `write` _numberOf_ `bytesFrom:` _byteArray_ `at:` _index_ -> _Integer_
+
+Writes exactly the specified _numberOf_ bytes from _byteArray_ into receiver,
+starting at the specified _index_ in the _byteArray_.
+
+If unable to write the specified number of bytes for any reason, raises an exception.
+
+#### **method** `writeBytes:` _bytes_
+
+Writes the _bytes_ to the receiver at the current offset.
 
 #### **method** `writeString:` _string_
 
