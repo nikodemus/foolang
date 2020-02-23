@@ -13,9 +13,52 @@ extend FileStream
             ifFalse: { raise "Could not #readBytes from {self} upto end of file" }.
         bytes
 
+    method read: n bytesInto: buffer at: index
+        let got = self tryRead: n bytesInto: buffer at: index.
+        got == n
+            ifTrue: { return n }
+            ifFalse: { raise "Could not read {n} bytes from {self}." }
+
+    method tryRead: n bytesInto: buffer at: index
+        let total = 0.
+        { n > 0 }
+            whileTrue: { let did = self
+                                       tryReadOnce: n
+                                       bytesInto: buffer
+                                       at: index.
+                         did == 0
+                             ifTrue: { return total }.
+                         total = total + did.
+                         n = n - did.
+                         index = index + did }.
+        total
+
+    method write: n bytesFrom: buffer at: index
+        let did = self tryWrite: n bytesFrom: buffer at: index.
+        did == n
+            ifTrue: { return n }
+            ifFalse: { raise "Could not write {n} bytes to {self}." }
+
+    method tryWrite: n bytesFrom: buffer at: index
+        let total = 0.
+        { n > 0 }
+            whileTrue: { let did = self
+                                       tryWriteOnce: n
+                                       bytesFrom: buffer
+                                       at: index.
+                         did == 0
+                             ifTrue: { return total }.
+                         total = total + did.
+                         n = n - did.
+                         index = index + did }.
+        total
+
     method size
         let pos = self offset.
         { self offsetFromEnd: 0 } finally: { self offset: pos }
+
+    method writeBytes: bytes
+        self write: bytes size bytesFrom: bytes at: 1
 end
 
 class TestFileStream { assert dir foopath foodata }
