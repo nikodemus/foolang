@@ -19,7 +19,7 @@
 If one of these is violated, that violation should be driven by a higher
 priority concern.
 
-!> **Race conditions**: that's not actually true _in general_ &emdash; Foolang
+!> **Race conditions**: that's not actually true in general &mdash; Foolang
 only gives you freedom from race conditions relating to object state. You can
 still create filesystem races and have actors that are badly behaved unless they
 receive messages in specific order, etc.
