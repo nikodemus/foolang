@@ -26,8 +26,14 @@ receive messages in specific order, etc.
 
 ## Design Notes
 
-A collection of design notes, mostly dealing with unimplemented parts of the
-language. Some of these may be already a bit dated.
+Reorganization of design notes into more coherent and future proof form
+in in progress, this is the current status:
+
+- [001 - Design Notes: Why and How](design/001-design-notes-why-and-how.md)
+
+### Old Design Notes
+
+Most of the notes haven't been migrated yet:
 
 - [Arrays](Arrays.md)
 - [Booleans](Booleans.md)
