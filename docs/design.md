@@ -19,15 +19,23 @@
 If one of these is violated, that violation should be driven by a higher
 priority concern.
 
-!> **Race conditions**: that's not actually true _in general_ &emdash; Foolang
+!> **Race conditions**: that's not actually true in general &mdash; Foolang
 only gives you freedom from race conditions relating to object state. You can
 still create filesystem races and have actors that are badly behaved unless they
 receive messages in specific order, etc.
 
 ## Design Notes
 
-A collection of design notes, mostly dealing with unimplemented parts of the
-language. Some of these may be already a bit dated.
+Reorganization of design notes into more coherent and future proof form
+in in progress, this is the current status:
+
+- [001 - Design Notes: Why and How](design/001-design-notes-why-and-how.md)
+- [002 - No Class Inheritance](design/002-no-class-inheritance.md)
+- [WIP - Tower of Babel](design/wip-tower-of-babel.md)
+
+### Old Design Notes
+
+Most of the notes haven't been migrated yet:
 
 - [Arrays](Arrays.md)
 - [Booleans](Booleans.md)

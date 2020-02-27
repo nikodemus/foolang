@@ -39,8 +39,13 @@
         font-size: calc(1.5 * var(--base-font-size));
     }
     span.edgeLabel {
+        /* Hack to make mermaid edge labels work against colored background. */
         color: var(--base-color) !important;
         background-color: var(--base-background-color) !important;
+    }
+    .mermaid {
+        /* Hack to make longer labels fit inside the boxes. */
+        font-size: calc(0.9 * var(--base-font-size)) !important;
     }
   </style>
 </head>
