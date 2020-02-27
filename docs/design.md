@@ -31,6 +31,7 @@ in in progress, this is the current status:
 
 - [001 - Design Notes: Why and How](design/001-design-notes-why-and-how.md)
 - [002 - No Class Inheritance](design/002-no-class-inheritance.md)
+- [WIP - Tower of Babel](design/wip-tower-of-babel.md)
 
 ### Old Design Notes
 
