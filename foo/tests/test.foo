@@ -1,4 +1,5 @@
 import lib.assert.Assert
+import lib.si.SI_Tests
 
 -- Generates signed integers small enough to add without overflowing.
 class SmallIntegers {}
@@ -60,7 +61,8 @@ class Main { assert system }
             Closure,
             Dictionary,
             TestArray,
-            TestRecord
+            TestRecord,
+            SI_Tests
         ] do: { |each| each runTests: assert }.
         [
             File,

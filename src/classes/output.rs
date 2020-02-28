@@ -1,6 +1,12 @@
 use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
 
+pub fn class_vtable() -> Vtable {
+    let vt = Vtable::new("class Output");
+    vt.add_primitive_method_or_panic("debug", class_output_debug);
+    vt
+}
+
 pub fn instance_vtable() -> Vtable {
     let vt = Vtable::new("Output");
     vt.add_primitive_method_or_panic("flush", output_flush);
@@ -12,6 +18,10 @@ pub fn instance_vtable() -> Vtable {
 fn output_flush(receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
     receiver.output().flush();
     Ok(receiver.clone())
+}
+
+fn class_output_debug(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_output("debug", Box::new(std::io::stderr())))
 }
 
 fn output_write_string(receiver: &Object, args: &[Object], _env: &Env) -> Eval {

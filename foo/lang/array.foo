@@ -19,6 +19,12 @@ extend Array
     method printOn: stream
         self _emitOn: stream using: { |x| x printOn: stream }
 
+    method concat: other
+        let new = Array withCapacity: self size + other size.
+        self do: { |elt| new push: elt }.
+        other do: { |elt| new push: elt }.
+        new
+
     method collect: block
         let size = self size.
         let result = Array withCapacity: size.
@@ -34,6 +40,13 @@ extend Array
           do: { |i|
                 result push: (block value: (self at: i)  value: (array at: i)) }.
         result
+
+    method select: block
+        let selection = Array withCapacity: 4.
+        self do: { |elt|
+                   (block value: elt) is True
+                       ifTrue: { selection push: elt } }.
+        selection
 
     method + x
         x broadcast: {|a b| a + b} to: self

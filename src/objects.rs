@@ -785,7 +785,7 @@ impl Foolang {
             input_vtable: Rc::new(classes::input::vtable()),
             integer_class_vtable: Rc::new(Vtable::new("class Integer")),
             integer_vtable: Rc::new(classes::integer::vtable()),
-            output_class_vtable: Rc::new(Vtable::new("class Output")),
+            output_class_vtable: Rc::new(classes::output::class_vtable()),
             output_vtable: Rc::new(classes::output::instance_vtable()),
             random_class_vtable: Rc::new(classes::random::class_vtable()),
             random_vtable: Rc::new(classes::random::instance_vtable()),
@@ -1592,7 +1592,7 @@ impl fmt::Debug for Object {
                     write!(f, "{}", x)
                 }
             }
-            Datum::Closure(x) => write!(f, "Closure({:?})", x.env),
+            Datum::Closure(x) => write!(f, "#<Closure {:?}>", x.params),
             Datum::Class(_) => write!(f, "{}", self.vtable.name),
             Datum::Instance(_) => write!(f, "{}", self.vtable.name),
             Datum::String(s) => write!(f, "{:?}", s),
