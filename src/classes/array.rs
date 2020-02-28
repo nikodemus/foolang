@@ -1,4 +1,5 @@
 use std::cell::{Ref, RefCell, RefMut};
+use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
@@ -96,6 +97,8 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("pop", array_pop);
     vt.add_primitive_method_or_panic("push:", array_push);
     vt.add_primitive_method_or_panic("put:at:", array_put_at);
+    vt.add_primitive_method_or_panic("sort", array_sort);
+    vt.add_primitive_method_or_panic("sort:", array_sort_arg);
     vt.add_primitive_method_or_panic("size", array_size);
     vt
 }
@@ -136,4 +139,40 @@ fn array_put_at(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
 
 fn array_size(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     receiver.as_vec(|vec| Ok(env.foo.make_integer(vec.len() as i64)))
+}
+
+fn array_sort(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    // FIXME: Swallows errors from comparison!
+    let t = Ok(env.foo.make_boolean(true));
+    receiver.as_mut_vec(move |mut vec| {
+        vec.sort_by(|a, b| {
+            if a.send("<", std::slice::from_ref(b), env) == t {
+                Ordering::Less
+            } else if b.send("<", std::slice::from_ref(a), env) == t {
+                Ordering::Greater
+            } else {
+                Ordering::Equal
+            }
+        });
+        Ok(())
+    })?;
+    Ok(receiver.clone())
+}
+
+fn array_sort_arg(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    // FIXME: Swallows errors from comparison!
+    let t = Ok(env.foo.make_boolean(true));
+    receiver.as_mut_vec(move |mut vec| {
+        vec.sort_by(|a, b| {
+            if args[0].send("value:value:", &[a.clone(), b.clone()], env) == t {
+                Ordering::Less
+            } else if args[0].send("value:value:", &[b.clone(), a.clone()], env) == t {
+                Ordering::Greater
+            } else {
+                Ordering::Equal
+            }
+        });
+        Ok(())
+    })?;
+    Ok(receiver.clone())
 }

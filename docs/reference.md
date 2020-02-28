@@ -55,6 +55,10 @@ operations.
 Returns a fresh array same size as the receiver, collecting results of executing
 _block_ with each element of the receiver. See also: `with:collect:`.
 
+#### **method** `concat:` _array_
+
+Returns concatenation of receiver and the _array_.
+
 #### **method** `displayOn:` _stream_
 
 Displays the receiver on _stream_, sending the `displayOn:` message to
@@ -101,9 +105,29 @@ Returns the scalar projection of receiver on _array_.
 Returns the second element of the receiver. Raises an exception if the
 receiver has size < 2.
 
+#### **method** `select:` _block_
+
+Returns an array containing those elements of the receiver for which _block_
+returns true.
+
 #### **method** `size`
 
 Returns the number of elements in the array.
+
+#### **method** `sort`
+
+Sorts the array in place into ascending order using `<`. 
+
+!> Errors from `<` are currently mishandled: they are ignored and cause
+elements to compare equal.
+
+#### **method** `sort:` _sortBlock_
+
+Sorts the array in place into ascending order using _sortBlock_ as comparator:
+it should return true if first argument is less than second argument.
+
+!> Errors from _sortBlock_ are currently mishandled: they are ignored and cause
+elements to compare equal.
 
 #### **method** `vectorProjection:` _otherArray_
 
