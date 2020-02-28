@@ -1,0 +1,798 @@
+---
+A quick partial SI units implementation
+
+Buggy for sure.
+
+Language Notes:
+- Cannot send half the message to prefix due to case restriction, same with 1 A.
+- Cannot refer to the class's type in class's own method declarations
+- Syntax highlighting of block comments does not work
+- Prefix class is a good example of something that should be generated from a
+  table.
+- Interpreter requires types to be defined before declarations using them can be
+  loaded
+- Extending an interface doesn't extend implementing classes, hence SI_Number hack
+- In-class comments still broken
+- Able to define interface methods that use class slots
+- Empty lines sometimes mess up indentation
+
+Implementation Notes:
+- For more accuracy SI_Values should probably carry base with them, so
+  operations in could be done closer to 0-1 range.
+- Conventional compound units with their own names, like Joule not handled (Printing & entering at least, but also representation)
+- Should fall back to fully general compound units only if there is no conventional unit that matches
+---
+
+import .assert.Assert
+
+class Prefix {}
+    class method displaySpecs
+        [
+            {base: 1e24, prefix: "Y"},
+            {base: 1e21, prefix: "Z"},
+            {base: 1e18, prefix: "E"},
+            {base: 1e15, prefix: "P"},
+            {base: 1e12, prefix: "T"},
+            {base: 1e9, prefix: "G"},
+            {base: 1e6, prefix: "M"},
+            {base: 1e3, prefix: "k"},
+            {base: 1e0, prefix: ""},
+            {base: 1e-3, prefix: "m"},
+            {base: 1e-6, prefix: "u"}, -- should be Greek micro
+            {base: 1e-9, prefix: "n"},
+            {base: 1e-12, prefix: "p"},
+            {base: 1e-15, prefix: "f"},
+            {base: 1e-18, prefix: "a"},
+            {base: 1e-21, prefix: "z"}
+        ]
+    class method display: value on: stream
+        let spec = self displaySpecs
+                       find: { |spec| value >= spec base }
+                       ifNone: { {base: 1e-24, prefix: "y"} }.
+        stream print: "{value / spec base} {spec prefix}"
+
+    class method yocto
+        1e-24
+    class method y
+        self yocto
+
+    class method zepto
+        1e-21
+    class method z
+        self zepto
+
+    class method atto
+        1e-18
+    class method a
+        self atto
+
+    class method femto
+        1e-15
+    class method f
+        self femto
+
+    class method pico
+        1e-12
+    class method p
+        self pico
+
+    class method nano
+        1e-9
+    class method n
+        self nano
+
+    class method micro
+        1e-6
+    class method u
+        self micro
+
+    class method milli
+        1e-3
+    class method m
+        self milli
+
+    class method centi
+        1e-2
+    class method c
+        self centi
+
+    class method deci
+        1e-1
+    class method d
+        self deci
+
+    class method deka
+        1e0
+    class method da
+        self deka
+
+    class method hecto
+        1e2
+    class method h
+        self hecto
+
+    class method kilo
+        1e3
+    class method k
+        self kilo
+
+    class method mega
+        1e6
+    class method M
+        self mega
+
+    class method giga
+        1e9
+    class method G
+        self giga
+
+    class method tera
+        1e12
+    class method T
+        self tera
+
+    class method peta
+        1e15
+    class method P
+        self peta
+
+    class method exa
+        1e18
+    class method E
+        self exa
+
+    class method Z
+        self zetta
+    class method zetta
+        1e21
+
+    class method yotta
+        1e24
+    class method Y
+        self yotta
+end
+
+interface SI_Unit
+    required method displayOn: stream
+
+    method display: value on: stream
+        Prefix display: value on: stream.
+        self displayOn: stream
+
+    method displayUsing: type on: stream
+        -- Implementing classes provide call this with appropriate
+        -- 'type' argument from displayOn:
+
+        let power = self power.
+        power == 0
+            -- Someone managed to construct one without an actual dimension
+            ifTrue: { return False }.
+        stream print: type.
+        power == 1
+            -- No need to print any power if one
+            ifTrue: { return False }.
+
+        --
+        -- FIXME: The code below is written like this in order to print out
+        -- using unicode superscript characters, but I had trouble getting
+        -- right bits into the file. Change back to superscripts without ^-prefix
+        -- as soon as 'Character-name' or \u{code} or something works.
+        --
+        stream print: "^".
+        self power < 0
+            -- Print the sign and flip it positive
+            ifTrue: { stream print: "-".
+                      power = -power }.
+        let superscripts = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].
+        let tmp = StringOutput new.
+        { power > 0 }
+            whileTrue: { let high = power / 10.
+                         let low = power - high.
+                         power = high.
+                         tmp print: (superscripts at: low + 1) }.
+        stream print: tmp content.
+        False
+
+    method * right
+       right unitProduct: self
+
+    method / right
+       right unitDivision: self
+
+    method == right
+        -- Compound unit overrides this, but this is enough for base units
+        (self species) is (right species) and: self power == right power
+
+    method isCompound
+        False
+
+    method unitProduct: left
+        self species is left species
+            ifTrue: { self species power: (left power + self power) }
+            ifFalse: { CompoundUnit of: left multipliedBy: self }
+
+    method unitDivision: left
+        self species is left species
+            ifTrue: { self species power: (left power - self power) }
+            ifFalse: { CompoundUnit of: left dividedBy: self }
+
+    method powersInto: powers by: mul
+        let species = self species.
+        let n = (powers has: species)
+                    ifTrue: { powers at: species }
+                    ifFalse: { 0 }.
+        powers put: n + (mul * self power) at: species
+end
+
+class Meters { power::Integer }
+    is SI_Unit
+    method displayOn: stream
+        self displayUsing: "m" on: stream
+    method species
+       Meters
+end
+
+class Seconds { power::Integer }
+    is SI_Unit
+    method displayOn: stream
+        self displayUsing: "s" on: stream
+    method species
+        Seconds
+end
+
+class Moles { power::Integer }
+    is SI_Unit
+    method displayOn: stream
+        self displayUsing: "mol" on: stream
+    method species
+        Moles
+end
+
+class Amperes { power::Integer }
+    is SI_Unit
+    method displayOn: stream
+        self displayUsing: "A" on: stream
+    method species
+        Amperes
+end
+
+class Kelvins { power::Integer }
+    is SI_Unit
+    method displayOn: stream
+        self displayUsing: "K" on: stream
+    method species
+        Kelvins
+end
+
+class Candelas { power::Integer }
+    is SI_Unit
+    method displayOn: stream
+        self displayUsing: "cd" on: stream
+    method species
+        Candelas
+end
+
+-- The SI unit is actually kilograms, but this integrates to the
+-- prefix system better. Causes occasionally idiosyncratic printing, though.
+class Grams { power::Integer }
+    is SI_Unit
+    method displayOn: stream
+        self displayUsing: "g" on: stream
+    method species
+        Grams
+end
+
+class CompoundUnit { units }
+    is SI_Unit
+
+    class method of: left multipliedBy: right
+        let powers = Dictionary new.
+        left powersInto: powers by: 1.
+        right powersInto: powers by: 1.
+        self fromPowers: powers
+
+    class method of: left dividedBy: right
+        let powers = Dictionary new.
+        left powersInto: powers by: 1.
+        right powersInto: powers by: -1.
+        self fromPowers: powers
+
+    class method fromPowers: powers
+        let units = [].
+        powers doKeys: { |species|
+                         let power = powers at: species.
+                         power is 0
+                             ifFalse: { units push: (species power: power) } }.
+        units sort: { |a b| a power > b power }.
+        units size is 1
+            ifTrue: { units first }
+            ifFalse: { CompoundUnit units: units }
+
+    method powersInto: powers by: mul
+        units do: { |unit| unit powersInto: powers by: mul }
+
+    method isCompound
+        True
+
+    method == other
+        other isCompound
+            ifFalse: { return False }.
+        let n = other units size.
+        n == units size
+            ifFalse: { return False }.
+        -- This is slooow, should store as a Set at the very least
+        let powers = Dictionary new.
+        other units do: { |unit| powers put: unit power at: unit species }.
+        units do: { |unit|
+                    (powers has: unit species)
+                        ifTrue: { unit power == (powers at: unit species)
+                                      ifFalse: { return False }.
+                                  n = n - 1 }
+                        ifFalse: { return False } }.
+        n is 0
+
+    method power
+        units ifEmpty: { 0 } ifNotEmpty: { 1 }
+
+    method displayPositivePowersOn: stream
+        let many = positive size > 1.
+        many
+            ifTrue: { stream print: "(" }.
+        many
+            ifTrue: { stream print: ")" }.
+        nothing
+            ifTrue: { streeam print: "1" }
+
+    method displayNegativePowersOn: stream
+        let nothing = True.
+        (units select: { |unit| unit power < 0 })
+            do: { |unit|
+                  nothing
+                      ifTrue: { nothing = False.
+                                stream print: "/" }
+                      ifFalse: { stream print: " "}.
+                  unit displayOn: stream }.
+        nothing
+            ifTrue: { streeam print: "1" }
+
+    method displayOn: stream
+        let positive = units select: { |unit| unit power > 0 }.
+        let negative = units select: { |unit| unit power < 0 }.
+        positive ifEmpty: { stream print: "1" }.
+        let enclosePositive = False. -- positive size > 1 and: negative size > 0.
+        enclosePositive
+            ifTrue: { stream print: "(" }.
+        positive
+            do: { |unit| unit displayOn: stream }
+            interleaving: { stream print: " " }.
+        enclosePositive
+            ifTrue: { stream print: ")" }.
+        negative
+            ifEmpty: { return self }
+            ifNotEmpty: { stream print: "/" }.
+        let encloseNegative = negative size > 1.
+        encloseNegative
+            ifTrue: { stream print: "(" }.
+        negative
+            do: { |unit| (unit species power: - (unit power)) displayOn: stream }
+            interleaving: { stream print: " " }.
+        encloseNegative
+            ifTrue: { stream print: ")" }.
+        self
+
+    method species
+        self
+end
+
+class SI { value::Float _unit::SI_Unit }
+
+    class method meters: value
+        SI value: value unit: (Meters power: 1)
+
+    class method seconds: value
+        SI value: value unit: (Seconds power: 1)
+
+    class method moles: value
+        SI value: value unit: (Moles power: 1)
+
+    class method amperes: value
+        SI value: value unit: (Amperes power: 1)
+
+    class method kelvins: value
+        SI value: value unit: (Kelvins power: 1)
+
+    class method candelas: value
+        SI value: value unit: (Candelas power: 1)
+
+    class method grams: value
+        SI value: value unit: (Grams power: 1)
+
+    class method value: value unit: unit
+        -- Dimensionless number, unit has been divided out
+        unit power is 0
+            ifTrue: { value }
+            ifFalse: { SI value: value _unit: unit }
+
+    method unit
+        _unit
+
+    method checkUnit: right operation: op
+        self unit == right unit
+            ifFalse: { raise "Invalid operation: {self} {op} {right}" }
+
+    method == right
+        self checkUnit: right operation: "==".
+        self value == right value
+
+    method < right
+        self checkUnit: right operation: "<".
+        self value < right value
+
+    method <= right
+        self checkUnit: right operation: "<=".
+        self value <= right value
+
+    method >= right
+        self checkUnit: right operation: ">=".
+        self value >= right value
+
+    method > right
+        self checkUnit: right operation: ">".
+        self value > right value
+
+    method + right
+        self checkUnit: right operation: "+".
+        SI value: self value + right value unit: self unit
+
+    method - right
+        self checkUnit: right operation: "-".
+        SI value: self value - right value unit: self unit
+
+    method * right
+        right mulSI: self
+
+    method / right
+        right divSI: self
+
+    method mulSI: left
+        SI value: left value * self value unit: (left unit * self unit)
+
+    method divSI: left
+        SI value: left value / self value unit: (left unit / self unit)
+
+    method mulFloat: left
+        SI value: left * self value unit: self unit
+
+    method mulInteger: left
+        self mulFloat: left asFloat
+
+    method divFloat: left
+        let unit = self unit.
+        SI value: left / self value unit: (unit species power: - (unit power))
+
+    method divInteger: left
+        self divFloat: left asFloat
+
+    method displayOn: stream
+        self unit display: self value on: stream
+    method toString
+        let stream = StringOutput new.
+        self displayOn: stream.
+        stream content
+end
+
+interface SI_Number
+    method mm
+        SI meters: Prefix m * self
+    method m
+        SI meters: self asFloat
+    method km
+        SI meters: Prefix k * self
+
+    method ns
+        SI seconds: Prefix n * self
+    method ms
+        SI seconds: Prefix m * self
+    method s
+        SI seconds: self asFloat
+
+    method mol
+        SI moles: self asFloat
+    method mmol
+        SI moles: Prefix m * self
+
+    method A
+        SI amperes: self asFloat
+    method mA
+        SI amperes: Prefix m * self
+
+    method K
+        SI kelvins: self asFloat
+
+    method cd
+        SI candelas: self asFloat
+
+    method mg
+        SI grams: Prefix m * self
+    method g
+        SI grams: self asFloat
+    method kg
+        SI grams: Prefix k * self
+
+    method mulSI: left
+        SI value: left value * self asFloat unit: left unit
+    method divSI: left
+        SI value: left value / self asFloat unit: left unit
+end
+
+extend Integer
+    is SI_Number
+end
+
+extend Float
+    is SI_Number
+end
+
+class SI_Tests { assert }
+    class method runTests: assert
+        (self assert: assert) runTests
+
+    method runTests
+        self testBaseUnitArithmetic.
+        self testBaseUnitComparisons.
+        self testBaseUnitPrinting.
+        self testCompoundUnitArithmetic.
+        self testCompoundUnitComparisons.
+        self testCompoundUnitPrinting.
+
+    method baseUnits
+        [Meters, Seconds, Moles, Amperes, Kelvins, Candelas, Grams]
+
+    method testBaseUnitArithmetic
+        self testBaseUnitMultiplication.
+        self testBaseUnitDivision.
+        self testBaseUnitAddition.
+        self testBaseUnitSubstraction.
+
+    method testBaseUnitMultiplication
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       let b = SI value: 2.0 unit: unit.
+                       a * b == (SI value: 20.0 unit: (unitType power: 2)) }
+               testing: "baseUnit * baseUunit".
+
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       a * 2.0 == (SI value: 20.0 unit: unit) }
+               testing: "baseUnit * float".
+
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       2.0 * a == (SI value: 20.0 unit: unit) }
+               testing: "float * baseUnit".
+
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       a * 2 == (SI value: 20.0 unit: unit) }
+               testing: "baseUnit * integer".
+
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       2 * a == (SI value: 20.0 unit: unit) }
+               testing: "integer * baseUnit".
+
+    method testBaseUnitDivision
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       let b = SI value: 2.0 unit: unit.
+                       a / b == 5.0 }
+               testing: "baseUnit / baseUunit".
+
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       a / 2.0 == (SI value: 5.0 unit: unit) }
+               testing: "baseUnit / float".
+
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let b = SI value: 2.0 unit: unit.
+                       10.0 / b == (SI value: 5.0 unit: (unitType power: -1)) }
+               testing: "float / baseUnit".
+
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       a / 2 == (SI value: 5.0 unit: unit) }
+               testing: "baseUnit / integer".
+
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let b = SI value: 2.0 unit: unit.
+                       10 / b == (SI value: 5.0 unit: (unitType power: -1)) }
+               testing: "integer / baseUnit".
+
+    method testBaseUnitAddition
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       let b = SI value: 2.0 unit: unit.
+                       a + b == (SI value: 12.0 unit: unit) }
+               testing: "baseUnit + baseUunit".
+
+    method testBaseUnitSubstraction
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       let b = SI value: 2.0 unit: unit.
+                       a - b == (SI value: 8.0 unit: unit) }
+               testing: "baseUnit - baseUunit".
+
+    method testBaseUnitComparisons
+        -- test >
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       let b = SI value: 2.0 unit: unit.
+                       a > b }
+               testing: "baseUnit > baseUunit (true)".
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       let b = SI value: 2.0 unit: unit.
+                       (b > a) not }
+               testing: "baseUnit > baseUunit (false)".
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       (a > a) not }
+               testing: "baseUnit > baseUunit (eq)".
+        -- test <
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       let b = SI value: 2.0 unit: unit.
+                       b < a }
+               testing: "baseUnit < baseUunit (true)".
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       let b = SI value: 2.0 unit: unit.
+                       (a < b) not }
+               testing: "baseUnit < baseUunit (false)".
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       (a < a) not }
+               testing: "baseUnit < baseUunit (eq)".
+        -- test <=
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       let b = SI value: 2.0 unit: unit.
+                       b <= a }
+               testing: "baseUnit <= baseUunit (true)".
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       let b = SI value: 2.0 unit: unit.
+                       (a <= b) not }
+               testing: "baseUnit <= baseUunit (false)".
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       a <= a }
+               testing: "baseUnit <= baseUunit (eq)".
+        -- test >=
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       let b = SI value: 2.0 unit: unit.
+                       a >= b }
+               testing: "baseUnit >= baseUunit (true)".
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       let b = SI value: 2.0 unit: unit.
+                       (b >= a) not }
+               testing: "baseUnit >= baseUunit (false)".
+        assert forAll: self baseUnits
+               that: { |unitType|
+                       let unit = unitType power: 1.
+                       let a = SI value: 10.0 unit: unit.
+                       a >= a }
+               testing: "baseUnit >= baseUunit (eq)".
+
+    method testBaseUnitPrinting
+        assert that: { "{10 m * 100}" }
+               is: "1 km"
+               testing: "print 1 km".
+        assert that: { "{10 km * 100 m}" }
+               is: "1 Mm^2"
+               testing: "print 1 Mm^2".
+        assert that: { "{1 / (10 mm * 100)}" }
+               is: "1 m^-1"
+               testing: "print 1 m^-1".
+        assert that: { "{100 mA + 900 mA}" }
+               is: "1 A"
+               testing: "print 1 A".
+        assert that: { "{10 cd * 100}" }
+               is: "1 kcd"
+               testing: "print 1 kcd".
+
+    method testCompoundUnitArithmetic
+        assert that: { 1 km / 2 ms }
+               equals: (SI value: 500000.0 unit: (CompoundUnit units: [(Meters power: 1), (Seconds power: -1)]))
+               testing: "unit1 / unit2".
+        assert that: { (1 km / 2 ms) / (5 m / 1 s) }
+               equals: 100000.0
+               testing: "(unit1 / unit2) / (unit1 / unit2)".
+        assert that: { 1 km * 2 ms }
+               equals: (SI value: 2.0 unit: (CompoundUnit units: [(Meters power: 1), (Seconds power: 1)]))
+               testing: "unit1 * unit2".
+        assert that: { (1 km / 2 ms) * 0.1 }
+               equals: (SI value: 50000.0 unit: (CompoundUnit units: [(Meters power: 1), (Seconds power: -1)]))
+               testing: "compoundUnit * float".
+        assert that: { 0.1 * (1 km / 2 ms) }
+               equals: (SI value: 50000.0 unit: (CompoundUnit units: [(Meters power: 1), (Seconds power: -1)]))
+               testing: "float * compoundUnit".
+
+    method testCompoundUnitComparisons
+        assert true: { 1 km / 1 s > 1 m / 1 s }
+               testing: "compoundUnit > compoundUnit (true)".
+        assert false: { 1 mm / 1 s > 1 km / 1 s }
+               testing: "compoundUnit > compoundUnit (false)".
+        assert true: { 1 mm / 1 s < 1 m / 1 s }
+               testing: "compoundUnit < compoundUnit (true)".
+        assert false: { 1 km / 1 s < 1 m / 1 s }
+               testing: "compoundUnit < compoundUnit (false)".
+
+    method testCompoundUnitPrinting
+        assert that: { "{1 km / 1 ms}" }
+               is: "1 Mm/s"
+               testing: "printing 1 Mm/s".
+        assert that: { "{1 cd / 1000 mA / (1 s * 1 s)}" }
+               is: "1 cd/(A s^2)"
+               testing: "printing 1 cd/(A s^2)".
+end
+
+class Demo {}
+    class method run: _ in: system
+        let output = system output.
+        -- Demo
+        output println: "{10 mol / 1000}".
+        output println: "{10 mA / 0.1 s}".
+        output println: "{10 m * (5 m + 5 m)}".
+        output println: "{10 * 10 m * 10 m}".
+        output println: "{10 m * 10 m / 10}".
+        output println: "{(1 m * 1 kg * 1 m) / (1 s * 1 kg * 1 m * 1 s)}"
+end
