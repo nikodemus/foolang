@@ -22,6 +22,32 @@ interface Collection
     method second
        self at: 2
 
+    method ifEmpty: block
+        self size is 0
+            ifTrue: block
+
+    method ifEmpty: block ifNotEmpty: notBlock
+        self size is 0
+            ifTrue: block
+            ifFalse: notBlock
+
+    method find: block
+        self find: block ifNone: { False }
+
+    method find: block ifNone: noneBlock
+        self do: { |elt|
+                   (block value: elt) is True
+                       ifTrue: { return elt } }.
+        noneBlock value
+
+    method do: block interleaving: interBlock
+        let first = True.
+        self do: { |elt|
+                   first
+                       ifTrue: { first = False }
+                       ifFalse: { interBlock value }.
+                   block value: elt }
+
     method do: block
         1 to: self size
           do: { |i| block value: (self at: i) }.

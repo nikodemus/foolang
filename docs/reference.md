@@ -69,6 +69,11 @@ individual elements.
 Executes _block_ with each element of the receiver, returns receiver. See also:
 `with:do:`.
 
+#### **method** `do:` _block_ `interleaving:` _interBlock_
+
+Executes _block_ with each element of the receiver, and _interBlock_ between
+each execution of _block_. Returns receiver.
+
 #### **method** `dot:` _array_
 
 Dot product of receiver and _array_.
@@ -77,6 +82,26 @@ Dot product of receiver and _array_.
 
 Returns the first element of the receiver. Raises an exception of the receiver is
 empty.
+
+#### **method** `find:` _block_
+
+Returns the first element of the receiver for which _block_ returns true,
+false otherwise.
+
+#### **method** `find:` _block_ `ifNone:` _noneBlock_
+
+Returns the first element of the receiver for which _block_ returns true,
+or the value of _noneBlock_ if no element matched.
+
+#### **method** `ifEmpty:` _block_
+
+Executes _block_ if the collection is empty, and returns its value. Otherwise
+returns false.
+
+#### **method** `ifEmpty:` _block_ `ifNotEmpty:` _notBlock_
+
+Executes _block_ if the collection is empty, and returns its value. Otherwise
+executes _notBlock_ and returns its value.
 
 #### **method** `norm`
 
