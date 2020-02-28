@@ -60,7 +60,10 @@ pub fn class_vtable() -> Vtable {
 pub fn instance_vtable() -> Vtable {
     let vt = Vtable::new("Dictionary");
     vt.add_primitive_method_or_panic("at:", dictionary_at);
+    vt.add_primitive_method_or_panic("doKeys:", dictionary_do_keys);
+    vt.add_primitive_method_or_panic("has:", dictionary_has);
     vt.add_primitive_method_or_panic("put:at:", dictionary_put_at);
+    vt.add_primitive_method_or_panic("size", dictionary_size);
     vt
 }
 
@@ -97,10 +100,27 @@ fn dictionary_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     }
 }
 
+fn dictionary_do_keys(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    for (k, _) in receiver.as_dictionary("Dictionary#doKeys:")?.borrow().iter() {
+        args[0].send("value:", std::slice::from_ref(k), env)?;
+    }
+    Ok(receiver.clone())
+}
+
+fn dictionary_has(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    Ok(env
+        .foo
+        .make_boolean(receiver.as_dictionary("Dictionary#has:")?.borrow().get(&args[0]).is_some()))
+}
+
 fn dictionary_put_at(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     receiver
         .as_dictionary("in Dictionary#put:at:")?
         .borrow_mut()
         .insert(args[1].clone(), args[0].clone());
     Ok(receiver.clone())
+}
+
+fn dictionary_size(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_integer(receiver.as_dictionary("Dictionary#size")?.borrow().len() as i64))
 }
