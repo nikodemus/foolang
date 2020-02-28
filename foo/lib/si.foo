@@ -3,24 +3,16 @@ A quick partial SI units implementation
 
 Buggy for sure.
 
-Language Notes:
-- Cannot send half the message to prefix due to case restriction, same with 1 A.
-- Cannot refer to the class's type in class's own method declarations
-- Syntax highlighting of block comments does not work
-- Prefix class is a good example of something that should be generated from a
-  table.
-- Interpreter requires types to be defined before declarations using them can be
-  loaded
-- Extending an interface doesn't extend implementing classes, hence SI_Number hack
-- In-class comments still broken
-- Able to define interface methods that use class slots
-- Empty lines sometimes mess up indentation
-
 Implementation Notes:
 - For more accuracy SI_Values should probably carry base with them, so
   operations in could be done closer to 0-1 range.
-- Conventional compound units with their own names, like Joule not handled (Printing & entering at least, but also representation)
-- Should fall back to fully general compound units only if there is no conventional unit that matches
+- Conventional compound units with their own names, like Joule not handled.
+  Should deal with printing & entering values.
+- Would be nice of units were types: x::Meters^2
+- Would be nice to have specialized representations for commonplace units
+  to avoid the fully general symbolic units -- ideally representing even the
+  exponents by the vtable for common cases, so unit values would just be floats
+  with special vtables and types -- which would allow the compiler to reason about them.
 ---
 
 import .assert.Assert
