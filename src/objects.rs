@@ -1592,7 +1592,7 @@ impl fmt::Debug for Object {
                     write!(f, "{}", x)
                 }
             }
-            Datum::Closure(x) => write!(f, "Closure({:?})", x.env),
+            Datum::Closure(x) => write!(f, "#<Closure {:?}>", x.params),
             Datum::Class(_) => write!(f, "{}", self.vtable.name),
             Datum::Instance(_) => write!(f, "{}", self.vtable.name),
             Datum::String(s) => write!(f, "{:?}", s),
