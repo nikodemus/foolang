@@ -5,12 +5,8 @@ extend Array
 
     method _emitOn: stream using: block
         stream print: "[".
-        let first = True.
-        self do: { |x|
-                   first
-                     ifTrue: { first = False }
-                     ifFalse: { stream print: ", " }.
-                   block value: x }.
+        self do: { |x| block value: x }
+             interleaving: { stream print: ", " }.
         stream print: "]"
 
     method displayOn: stream
