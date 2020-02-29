@@ -1730,11 +1730,13 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     let span = parser.span();
     let class_name = match parser.next_token()? {
         Token::WORD => {
-            if parser.slice().chars().next().expect("BUG: empty identifier").is_uppercase() {
+            let next = parser.slice().chars().next().expect("BUG: empty identifier");
+            if next.is_uppercase() || next == '_' {
                 parser.tokenstring()
             } else {
                 // FIXME: Not all languages use capital letters
-                return parser.error("Class names must start with an uppercase letter");
+                return parser
+                    .error("Class names must start with an uppercase letter or underscore");
             }
         }
         _ => return parser.error("Expected class name"),
