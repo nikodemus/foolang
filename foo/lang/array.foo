@@ -49,6 +49,13 @@ extend Array
                        ifTrue: { selection push: elt } }.
         selection
 
+    method reject: block
+        let selection = Array withCapacity: 4.
+        self do: { |elt|
+                   (block value: elt) is True
+                       ifFalse: { selection push: elt } }.
+        selection
+
     method sorted
         self copy sort
 

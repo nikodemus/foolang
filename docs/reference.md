@@ -125,6 +125,11 @@ elements.
 
 Increses the size of the array by one, adding _object_ as the new last element.
 
+#### **method** `reject:` _block_
+
+Returns an array containing those elements of the receiver for which _block_
+did not return true.
+
 #### **method** `scalarProjection:` _array_
 
 Returns the scalar projection of receiver on _array_.
