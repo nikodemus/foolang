@@ -17,6 +17,7 @@
 
 **History**:
 - 2020-02-25: initial version by nikodemus
+- 2020-02-29: added optional implementation status parenthetical to status field
 
 ## Problem Description
 
@@ -59,7 +60,8 @@ Each proposal should have the following fields:
 - **Title**: unique, readable, descriptive, and pithy. Humor is fine, it
   makes things more memorable.
 
-- **Status**: One of: _WIP_, _ADOPTED_, _DROPPED_, or _RETIRED_.
+- **Status**: One of: _WIP_, _ADOPTED_, _DROPPED_, or _RETIRED_, and
+  an optional parenthetical comment on current implementation status.
 
 - **Identifier**: for _WIP_ notes `wip-` followed by a unique lowercase
   hyphenation of the title. For notes in later statutes the `wip-` is replaced

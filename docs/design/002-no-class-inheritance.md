@@ -1,6 +1,6 @@
 # No Class Inheritance
 
-**Status**: ADOPTED
+**Status**: ADOPTED (implemented)
 
 **Identifier**: 002-no-class-inheritance.md 
 
