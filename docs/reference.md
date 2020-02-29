@@ -193,10 +193,37 @@ Returns a [Time](#time) object representing current time.
 
 !> Will be renamed `Block`, probably.
 
+#### **method** `ascending`
+
+Assumes that the receiver is a single-argument block that returns a value to be
+used as sort key. Converts this into a comparison block that can be used with
+`#sort:` methods to sort in ascending order. See also: `descending`.
+
+Example:
+``` foolang
+["aa", "a", "aaa"] sort: { |s| s size } ascending --> ["a", "aa", "aaa"]
+```
+
+#### **method** `descending`
+
+Assumes that the receiver is a single-argument block that returns a value to be
+used as sort key. Converts this into a comparison block that can be used with
+`#sort:` methods to sort in descending order. See also: `ascending`.
+
+Example:
+``` foolang
+["aa", "a", "aaa"] sort: { |s| s size } descending --> ["aaa", "aa", "a"]
+```
+
 #### **method** `finally:` _cleanup_
 
 Executes the receiver and returns the resulting value, arranging cleanup to be
 executed after the receiver even if the receiver raises an exception.
+
+#### **method** `loop`
+
+Executes the receiver repeatedly forever, or until the receiver uwinds through
+a return or exception.
 
 #### **method** `onError:` _handler_
 
