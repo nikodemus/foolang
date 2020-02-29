@@ -33,6 +33,11 @@ extend Array
                 result push: (block value: (self at: i)) }.
         result
 
+    method copy
+        let copy = Array withCapacity: self size.
+        self do: { |elt| copy push: elt }.
+        copy
+
     method with: array collect: block
         let size = self checkSize: array.
         let result = Array withCapacity: size.
@@ -47,6 +52,47 @@ extend Array
                    (block value: elt) is True
                        ifTrue: { selection push: elt } }.
         selection
+
+    method sorted
+        self copy sort
+
+    method sorted: block
+        self copy sort: block
+
+    method sort
+        self sort: { |a b| a < b }
+
+    method sort: block
+        -- Unfortunate a straigthforward rust-side wrapper for Vec::sort_by()
+        -- cannot propagate errors from the comparison function, so instead
+        -- here's a quick and dirty quicksort. O(N^2) worst case, since I
+        -- was too lazy to do the center pivot.
+        self _quicksort: 1 to: self size by: block.
+
+    method _quicksort: left to: right by: block
+        left < right
+            ifTrue: { let p = self _partition: left to: right by: block.
+                      self _quicksort: left to: p - 1 by: block.
+                      self _quicksort: p + 1 to: right by: block }.
+        self
+
+    method _partition: left to: right by: block
+        let pivot = self at: right.
+        let i = left.
+        left to: right
+                 do: { |j|
+                       let x = self at: j.
+                       (block value: x value: pivot)
+                           ifTrue: { self swap: i with: j.
+                                     i = i + 1 } }.
+        self swap: i with: right.
+        i
+
+    method swap: i with: j
+        let tmp = self at: i.
+        self put: (self at: j) at: i.
+        self put: tmp at: j.
+        self
 
     method + x
         x broadcast: {|a b| a + b} to: self
@@ -107,6 +153,33 @@ class TestArray {}
                testing: "Array#== (false 1)".
         assert false: { [1, 2, 3, 4] == [1, 2, 3] }
                testing: "Array#== (false 2)"
+    class method testSort: assert
+        assert that: { [] sort }
+               equals: []
+               testing: "sort, empty".
+        assert that: { [1] sort }
+               equals: [1]
+               testing: "sort, singular".
+        assert that: { [1, 1] sort }
+               equals: [1, 1]
+               testing: "sort, two identical".
+        assert that: { [1, 2] sort }
+               equals: [1, 2]
+               testing: "sort, two in order".
+        assert that: { [2, 1] sort }
+               equals: [1, 2]
+               testing: "sort, two in reverse order".
+        assert that: { [1, 2, 3] sort }
+               equals: [1, 2, 3]
+               testing: "sort, three in order".
+        assert that: { [3, 2, 1] sort }
+               equals: [1, 2, 3]
+               testing: "sort, three in reverse order".
+        assert that: { [9, 2, 1, 8, 7, 3, 5, 4, 6, 0] sort }
+               equals: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+               testing: "sort, ten".
     class method runTests: assert
-        self testEquality: assert
+        self testEquality: assert.
+        self testSort: assert
+
 end

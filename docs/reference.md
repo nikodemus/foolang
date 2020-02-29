@@ -59,6 +59,10 @@ _block_ with each element of the receiver. See also: `with:collect:`.
 
 Returns concatenation of receiver and the _array_.
 
+#### **method** `copy`
+
+Returns a shallow copy of the receiver.
+
 #### **method** `displayOn:` _stream_
 
 Displays the receiver on _stream_, sending the `displayOn:` message to
@@ -141,18 +145,26 @@ Returns the number of elements in the array.
 
 #### **method** `sort`
 
-Sorts the array in place into ascending order using `<`. 
-
-!> Errors from `<` are currently mishandled: they are ignored and cause
-elements to compare equal.
+Sorts the array in place into ascending, order using `<`. Returns the receiver.
 
 #### **method** `sort:` _sortBlock_
 
-Sorts the array in place into ascending order using _sortBlock_ as comparator:
-it should return true if first argument is less than second argument.
+Sorts the array in place into using _sortBlock_ as comparator: it should return
+true if first argument should be placed before the second argument. Returns the
+receiver.
 
-!> Errors from _sortBlock_ are currently mishandled: they are ignored and cause
-elements to compare equal.
+#### **method** `sorted`
+
+Returns a sorted copy of the array in ascending, order using `<`.
+
+#### **method** `sorted:` _sortBlock_
+
+Returns a sorted copy of the using _sortBlock_ as comparator: it should return
+true if first argument should be placed before the second argument.
+
+#### **method** `swap:` _index1_ `with:` _index2_
+
+Swaps the receiver's elements at _index1_ and _index2_. Returns the receiver.
 
 #### **method** `vectorProjection:` _otherArray_
 
