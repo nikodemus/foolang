@@ -63,6 +63,10 @@ Returns concatenation of receiver and the _array_.
 
 Returns a shallow copy of the receiver.
 
+#### **method** `count:` _block_
+
+Returns the number of elements in the receiver for which the _block_ returns true.
+
 #### **method** `displayOn:` _stream_
 
 Displays the receiver on _stream_, sending the `displayOn:` message to

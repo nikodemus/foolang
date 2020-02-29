@@ -34,6 +34,14 @@ extend Array
         self do: { |elt| copy push: elt }.
         copy
 
+    method count: block
+        let n = 0.
+        1 to: size
+          do: { |i|
+                (block value: (self at: i))
+                    ifTrue: { n = n + 1 } }.
+        n
+
     method with: array collect: block
         let size = self checkSize: array.
         let result = Array withCapacity: size.
