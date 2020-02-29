@@ -19,6 +19,9 @@ extend Boolean
            ifTrue: { True }
            ifFalse: { other }
 
+    method == other
+        self is other
+
     method not
         self
            ifTrue: { False }
