@@ -9,21 +9,116 @@ extend Closure
     method whileFalse: bodyBlock
         { self value not } whileTrue: bodyBlock
 
+    method loop
+        { True } whileTrue: self
+
     method with: value
         -- Deserves a better verb than close, should probably
         -- steal python's __enter__ and __exit__ style names.
         -- and protocol.
         { self value: value } finally: { value close }
 
+    method ascending
+        { |a b| (self value: a) < (self value: b) }
+
+    method descending
+        { |a b| (self value: a) > (self value: b) }
+
+end
+
+-- For testing Closure#with:
+class _Closable { closed }
+    method close
+        closed = True
+end
+
+class TestClosure { assert }
+
     class method runTests: assert
+        (self assert: assert) runTests
+
+    method runTests
+        self
+            ; testApplication
+            ; testOnError
+            ; testFinally
+            ; testWhileTrue
+            ; testWhileFalse
+            ; testWith
+            ; testAscending
+            ; testDescending
+
+    method testApplication
         assert true: { 1 == { 1 } value }
                testing: "Closure#value".
+
+    method testOnError
         assert true: { { raise "Foo". False }
                            onError: { |e c| True } }
-               testing: "Closure#onError".
+        testing: "Closure#onError".
+
+    method testFinally
         assert true: { let flag = False.
                        { { raise "Foo". False }
                              finally: { flag = True } }
                        onError: { |c e| flag } }
                 testing: "Closure#finally"
+
+    method testWhileTrue
+        let a = 0.
+        assert that: { { a < 10 } whileTrue: { a = a + 1 }. a }
+               is: 10
+               testing: "Closure#whileTrue:".
+        let b = 0.
+        assert that: { { b = b + 1. b < 10 } whileTrue. b }
+               is: 10
+               testing: "Closure#whileTrue".
+
+    method testWhileFalse
+        let a = 0.
+        assert that: { { a == 10 } whileFalse: { a = a + 1 }. a }
+               is: 10
+               testing: "Closure#whileFalse:".
+        let b = 0.
+        assert that: { { b = b + 1. b == 10 } whileFalse. b }
+               is: 10
+               testing: "Closure#whileFalse".
+
+    method auxTextLoop
+        let a = 0.
+        { a = a + 1. a == 10 ifTrue: { return a } } loop
+
+    method testLoop
+        let a = 0.
+        assert that: { auxTestLoop }
+               is: 10
+               testing: "Closure#loop"
+
+    method testWith
+        assert false: { (_Closable closed: False) closed }
+               testing: "Closure#with: (sanity check)".
+        assert that: { let obj = _Closable closed: False.
+                       let res = { |arg| 42 } with: obj.
+                       [obj closed, res] }
+               equals: [True, 42]
+               testing: "Closure#with: (normal)".
+        assert that: { let obj = _Closable closed: False.
+                       let res = { { |arg| raise "Bang" } with: obj }
+                                     onError: { |e c| 104 }.
+                       [obj closed, res] }
+               equals: [True, 104]
+               testing: "Closure:with: (unwind)".
+
+    method testAscending
+        assert that: { ["a", "aaaa", "aa", "", "aaa"]
+                           sort: { |array| array size } ascending }
+               equals: ["", "a", "aa", "aaa", "aaaa"]
+               testing: "Closure:#ascending".
+
+    method testDescending
+        assert that: { ["a", "aaaa", "aa", "", "aaa"]
+                           sort: { |array| array size } descending }
+               equals: ["aaaa", "aaa", "aa", "a", ""]
+               testing: "Closure:#descending".
+
 end

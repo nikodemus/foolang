@@ -58,9 +58,9 @@ class Main { assert system }
     method test
         [
             ByteArray,
-            Closure,
             Dictionary,
             TestArray,
+            TestClosure,
             TestRecord,
             SI_Tests
         ] do: { |each| each runTests: assert }.

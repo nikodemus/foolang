@@ -22,6 +22,9 @@ interface Collection
     method second
        self at: 2
 
+    method last
+        self at: self size
+
     method ifEmpty: block
         self size is 0
             ifTrue: block
