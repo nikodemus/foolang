@@ -27,6 +27,9 @@ it's here more for future reference than anything else.
   Programs](https://web.archive.org/web/20200301140324/https://www.instantiations.com/vast/files/archive/Smalltalk-Solutions97/SSDCL1.HTM)
   by Allen Wirfs-Brock. _A short paper on merits of declarative models._
 
+- 1997 - [Smalltalk ANSI Standard
+  (draft)](https://web.archive.org/web/20200301135851/http://www.math.sfedu.ru/smalltalk/standard/index.html.en)
+
 <a id="scharli2003"></a>
 - 2003 - [Traits: Composable Units of
   Behaviour](http://scg.unibe.ch/archive/papers/Scha03aTraits.pdf)

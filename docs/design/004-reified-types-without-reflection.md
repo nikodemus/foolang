@@ -8,8 +8,9 @@
 - WIP - [Tower of Babel](design/wip-tower-of-babel.md)
 
 **Prior Art**:
-- [Mirrors: Design Principles for Meta-level Facilities of Object-Oriented
-  Programming Languages](https://bracha.org/mirrors.pdf), by Bracha and Ungar.
+- 2004 - [Mirrors: Design Principles for Meta-level Facilities of
+  Object-Oriented Programming Languages](https://bracha.org/mirrors.pdf) by
+  Gilad Bracha and David Ungar.
 
 **History**:
 - 2020-03-01: initial version by Nikodemus
