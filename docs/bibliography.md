@@ -23,6 +23,9 @@ it's here more for future reference than anything else.
   Environment](http://laputan.org/pub/papers/Strongtalk-OOPSLA-93.pdf) by Gilad Bracha and David
   Griswold.
 
+- 1993 - [The Early History of
+  Smalltalk](http://worrydream.com/EarlyHistoryOfSmalltalk/) by Alan Kay.
+
 - 1996 - [A Declarative Model for Defining Smalltalk Programs (OOPSLA'96
   paper)](http://wirfs-brock.com/allen/files/papers/oopsladcl.pdf), by Allen
   Wirfs-Brock, Juanita Ewing, Harold Williams, Brian Wilkerson. See also the
@@ -49,7 +52,8 @@ it's here more for future reference than anything else.
 - 2005 - [The Implementation of Lua 5.0](https://www.lua.org/doc/jucs05.pdf) by
   Roberto Ierusalimschy, Luiz Henrique de Figueiredo, and Waldemar Celes. 
   _While goals of Lua are radically different from Foolang, the careful matching
-  of Lua's goals and implementation strategies is noteworthy._
+  of Lua's goals and implementation strategies is noteworthy, as is the design
+  of the virtual machine.__
 
 - 2008 - [The Fortress Language Specification](http://www.ccs.neu.edu/home/samth/fortress-spec.pdf) by
   various. _Foolang has quite different design criteria than Fortress, but
@@ -60,6 +64,9 @@ it's here more for future reference than anything else.
   interesting stuff going in Pony! Foolang's more dynamic paradigm rules a lot
   of Pony's coolness out, though. If you're looking for a super interesting
   non-toy language you might want to check out Pony._
+
+- 2017 - [Lunar Programming Language](http://users.rcn.com/david-moon/Lunar/) by
+  David Moon.
 
 ## Method Dispatch
 
