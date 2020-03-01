@@ -33,6 +33,7 @@ in in progress, this is the current status:
 - 002 - [No Class Inheritance](design/002-no-class-inheritance.md)
 - 003 - [Sorting Floats](design/003-sorting-floats.md)
 - 004 - [Reified Types Without Reflection](design/004-reified-types-without-reflection.md)
+- 005 - [Program Definition and Refinement](design/005-program-definition-and-refinement.md)
 - WIP - [Tower of Babel](design/wip-tower-of-babel.md)
 
 ### Old Design Notes
