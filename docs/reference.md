@@ -63,6 +63,10 @@ Returns concatenation of receiver and the _array_.
 
 Returns a shallow copy of the receiver.
 
+#### **method** `count:` _block_
+
+Returns the number of elements in the receiver for which the _block_ returns true.
+
 #### **method** `displayOn:` _stream_
 
 Displays the receiver on _stream_, sending the `displayOn:` message to
@@ -124,6 +128,11 @@ elements.
 #### **method** `push:` _object_
 
 Increses the size of the array by one, adding _object_ as the new last element.
+
+#### **method** `reject:` _block_
+
+Returns an array containing those elements of the receiver for which _block_
+did not return true.
 
 #### **method** `scalarProjection:` _array_
 

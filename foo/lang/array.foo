@@ -34,6 +34,14 @@ extend Array
         self do: { |elt| copy push: elt }.
         copy
 
+    method count: block
+        let n = 0.
+        1 to: size
+          do: { |i|
+                (block value: (self at: i))
+                    ifTrue: { n = n + 1 } }.
+        n
+
     method with: array collect: block
         let size = self checkSize: array.
         let result = Array withCapacity: size.
@@ -47,6 +55,13 @@ extend Array
         self do: { |elt|
                    (block value: elt) is True
                        ifTrue: { selection push: elt } }.
+        selection
+
+    method reject: block
+        let selection = Array withCapacity: 4.
+        self do: { |elt|
+                   (block value: elt) is True
+                       ifFalse: { selection push: elt } }.
         selection
 
     method sorted
