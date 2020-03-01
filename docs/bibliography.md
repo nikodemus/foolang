@@ -23,6 +23,10 @@ it's here more for future reference than anything else.
   Environment](http://laputan.org/pub/papers/Strongtalk-OOPSLA-93.pdf) by Gilad Bracha and David
   Griswold.
 
+- 1997 - [A Declarative Model for Defining Smalltalk
+  Programs](https://web.archive.org/web/20200301140324/https://www.instantiations.com/vast/files/archive/Smalltalk-Solutions97/SSDCL1.HTM)
+  by Allen Wirfs-Brock. _A short paper on merits of declarative models._
+
 <a id="scharli2003"></a>
 - 2003 - [Traits: Composable Units of
   Behaviour](http://scg.unibe.ch/archive/papers/Scha03aTraits.pdf)
