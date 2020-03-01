@@ -1,6 +1,6 @@
 # Unique and Descriptive Title 
 
-**Status**: WIP (not implemente)
+**Status**: WIP (not implemented)
 
 **Identifier**: wip-unique-and-descriptive-title
 

@@ -5,13 +5,15 @@
 **Identifier**: wip-twower-of-babel
 
 **References**:
-- [002 - No Class Inheritance](design/002-no-class-inheritance.md)
+- 002 - [No Class Inheritance](design/002-no-class-inheritance.md)
+- 004 - [Reified Types Without Reflection](design/004-reified-types-without-reflection.md)
 
 **Prior Art**:
 - [Spec-ulation](https://github.com/matthiasn/talk-transcripts/blob/master/Hickey_Rich/Spec_ulation.md), talk by Rich Hickey
 
 **History**:
-- 2020-02-25: initial version by nikodemus
+- 2020-02-25: initial version by Nikodemus
+- 2020-03-01: updated with reference to _Reified Types Without Reflection_ by Nikodemus
 
 ## Problem Description
 
@@ -153,10 +155,7 @@ The "new methods become available" aspect is effectively same as [4. Adding a
 method to a concrete class](#_4-adding-a-method-to-a-concrete-class), so: _NICE_
 or _SUBTLE CONFLICT RISK_ depending on inheritance and wildcard dispatch.
 
-The "member of a new type" aspect depends on if object's abstract type can be
-tested without relying on type errors or reflection (including ). If type can be
-tested it is _BREAKING CHANGE_ since there are so many ways dependent code could
-assume things that are no longer true, eg:
+The "member of a new type" aspect is a _BREAKING CHANGE_, eg:
 
 - A tree a is implemented as collections containing other collections
   or objects of class X or Y (which are not collections).
@@ -164,12 +163,9 @@ assume things that are no longer true, eg:
   either recurses or does the visit.
 - Class X becomes a collection, and tree visiting code stops working.
 
-Note: Testing the concrete type for identity is non-problematic. Only asking "is
-this object a collection" is what causes trouble.
-
-Note: The "member of a new type" aspect is non-problematic if the type itself is
-new, ie. if it did not exist previously, regardless of ability to test abstract
-types.
+However, if the newly implemented interface itself is new as well, the
+change becomes _SAFE_. Therefore refactoring a class by moving some of its
+methods into a new interface is _SAFE_.
 
 #### 15. Implementing an interface in an abstract interface
 
@@ -177,8 +173,10 @@ The "new methods become available" aspect is effectively same as [5. Adding a
 provided method to an abstract
 interface](#_5-adding-a-provided-method-to-an-abstract-interface), so: a _SUBTLE CONFLICT RISK_.
 
-The "member of a new type" aspect works similarly to : a _BREAKING CHANGE_ if abstract types
-can be tested and the implemented interface was a previously existing one.
+The "member of a new type" aspect works similarly to [14. Implementing an
+interface in a concrete
+class](#_15-implementing-an-interface-in-a-concrete-class): a _BREAKING CHANGE_
+or _SAFE_ depending on if the type itself was a pre-exisitng one or new.
 
 #### 16. Moving a method's implementation to existing interface
 
@@ -205,11 +203,10 @@ This is an _OBVIOUS CONFLICT RISK_.
 - Strong "no inheritance of concrete classes" position.
 - Explicit module exports
 - Explicit experimental markers
-- Consider a "no tests for abstract types" position: it would decrease
-  uniformity of the language, but allow more changes to be non-breaking.
 - Condider semantic disctinction between Exceptions and Errors: "handling errors
-  is nasty" -- so using `{ x::Collection. True } onError: { False }` to
-  implement a type-test would be nasty. (Or maybe call them panics?)
+  is nasty", reducing the scope for inadvertent leakage of information as via
+  errors. (Could also eg. allow errors to trigger cleanups, but forcing them to
+  unwind the thread fully always.)
 - Consider adding _reserved methods_ to interfaces, meaning: not yet part of the
   interface, but will be, so implementing classes are not allowed to have one.
 

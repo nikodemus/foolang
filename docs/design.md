@@ -29,10 +29,11 @@ receive messages in specific order, etc.
 Reorganization of design notes into more coherent and future proof form
 in in progress, this is the current status:
 
-- [001 - Design Notes: Why and How](design/001-design-notes-why-and-how.md)
-- [002 - No Class Inheritance](design/002-no-class-inheritance.md)
-- [003 - Sorting Floats](design/003-sorting-floats.md)
-- [WIP - Tower of Babel](design/wip-tower-of-babel.md)
+- 001 - [Design Notes: Why and How](design/001-design-notes-why-and-how.md)
+- 002 - [No Class Inheritance](design/002-no-class-inheritance.md)
+- 003 - [Sorting Floats](design/003-sorting-floats.md)
+- 004 - [Reified Types Without Reflection](design/004-reified-types-without-reflection.md)
+- WIP - [Tower of Babel](design/wip-tower-of-babel.md)
 
 ### Old Design Notes
 
