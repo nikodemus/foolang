@@ -23,9 +23,13 @@ it's here more for future reference than anything else.
   Environment](http://laputan.org/pub/papers/Strongtalk-OOPSLA-93.pdf) by Gilad Bracha and David
   Griswold.
 
-- 1997 - [A Declarative Model for Defining Smalltalk
-  Programs](https://web.archive.org/web/20200301140324/https://www.instantiations.com/vast/files/archive/Smalltalk-Solutions97/SSDCL1.HTM)
-  by Allen Wirfs-Brock. _A short paper on merits of declarative models._
+- 1996 - [A Declarative Model for Defining Smalltalk Programs (OOPSLA'96
+  paper)](http://wirfs-brock.com/allen/files/papers/oopsladcl.pdf), by Allen
+  Wirfs-Brock, Juanita Ewing, Harold Williams, Brian Wilkerson. See also the
+  [OOPSLA'96 presentation slides for the
+  paper](http://www.wirfs-brock.com/allen/talks/oopsla96dclslides.pdf), and a
+  shorter paper with the same title from [Smalltalk Solutions
+  97](https://web.archive.org/web/20200301140324/https://www.instantiations.com/vast/files/archive/Smalltalk-Solutions97/SSDCL1.HTM).
 
 - 1997 - [Smalltalk ANSI Standard
   (draft)](https://web.archive.org/web/20200301135851/http://www.math.sfedu.ru/smalltalk/standard/index.html.en)
