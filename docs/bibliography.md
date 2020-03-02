@@ -26,6 +26,10 @@ it's here more for future reference than anything else.
 - 1993 - [The Early History of
   Smalltalk](http://worrydream.com/EarlyHistoryOfSmalltalk/) by Alan Kay.
 
+- 1996 - [Subsystems](https://www.instantiations.com/PDFs/OOPSLA96/subsys.pdf)
+  by Allen Wirfs-Brock, a proposal from OOPSLA'96 Extending Smalltalk Workshop.
+  _Private selectors are the really interesting part._
+
 - 1996 - [A Declarative Model for Defining Smalltalk Programs (OOPSLA'96
   paper)](http://wirfs-brock.com/allen/files/papers/oopsladcl.pdf), by Allen
   Wirfs-Brock, Juanita Ewing, Harold Williams, Brian Wilkerson. See also the
