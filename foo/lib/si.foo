@@ -13,6 +13,12 @@ Implementation Notes:
   to avoid the fully general symbolic units -- ideally representing even the
   exponents by the vtable for common cases, so unit values would just be floats
   with special vtables and types -- which would allow the compiler to reason about them.
+
+Examples:
+
+     0.5 * 80 kg * (18 m / s)^2 --> 12.96 kJ
+     10 kg * 2 m / s^2 --> 20 N
+
 ---
 
 import .assert.Assert
@@ -148,8 +154,17 @@ interface SI_Unit
     required method displayOn: stream
 
     method display: value on: stream
-        Prefix display: value on: stream.
+        Prefix display: (self scaleForDisplay: value) on: stream.
         self displayOn: stream
+
+    method displayUnitOn: stream
+        self displayOn: stream
+
+    -- This is required for Kilograms to be able to print right:
+    -- they scale they value by 1000.0 and then displayUsing: "g".
+    -- Stupid fixed prefix.
+    method scaleForDisplay: value
+        value
 
     method displayUsing: type on: stream
         -- Implementing classes provide call this with appropriate
@@ -214,6 +229,7 @@ interface SI_Unit
                     ifTrue: { powers at: species }
                     ifFalse: { 0 }.
         powers put: n + (mul * self power) at: species
+
 end
 
 class Meters { power::Integer }
@@ -264,14 +280,16 @@ class Candelas { power::Integer }
         Candelas
 end
 
--- The SI unit is actually kilograms, but this integrates to the
--- prefix system better. Causes occasionally idiosyncratic printing, though.
-class Grams { power::Integer }
+class Kilograms { power::Integer }
     is SI_Unit
     method displayOn: stream
         self displayUsing: "g" on: stream
+    method displayUnitOn: stream
+        self displayUsing: "kg" on: stream
+    method scaleForDisplay: value
+        1000.0 * value
     method species
-        Grams
+        Kilograms
 end
 
 class CompoundUnit { units }
@@ -300,6 +318,12 @@ class CompoundUnit { units }
             ifTrue: { units first }
             ifFalse: { CompoundUnit units: units }
 
+    method * right
+        CompoundUnit of: self multipliedBy: right
+
+    method / right
+        CompoundUnit of: self dividedBy: right
+
     method powersInto: powers by: mul
         units do: { |unit| unit powersInto: powers by: mul }
 
@@ -326,28 +350,33 @@ class CompoundUnit { units }
     method power
         units ifEmpty: { 0 } ifNotEmpty: { 1 }
 
-    method displayPositivePowersOn: stream
-        let many = positive size > 1.
-        many
-            ifTrue: { stream print: "(" }.
-        many
-            ifTrue: { stream print: ")" }.
-        nothing
-            ifTrue: { streeam print: "1" }
+    method power: p
+        let result = 1.0.
+        p > 0
+            ifTrue: { p times: { result = result * self } }
+            ifFalse: { -p times: { result = result / self } }.
+        result
 
-    method displayNegativePowersOn: stream
-        let nothing = True.
-        (units select: { |unit| unit power < 0 })
-            do: { |unit|
-                  nothing
-                      ifTrue: { nothing = False.
-                                stream print: "/" }
-                      ifFalse: { stream print: " "}.
-                  unit displayOn: stream }.
-        nothing
-            ifTrue: { streeam print: "1" }
+    method conventionalUnits
+        [
+            {ident: "N", model: (CompoundUnit units: [Kilograms power: 1,
+                                                      Meters power: 1,
+                                                      Seconds power: -2])},
+            {ident: "J", model: (CompoundUnit units: [Kilograms power: 1,
+                                                      Meters power: 2,
+                                                      Seconds power: -2])}
+        ]
+
+    method tryConventionalUnits: stream
+       self conventionalUnits
+          do: { |info|
+                (self == info model)
+                    ifTrue: { stream print: info ident. return True } }.
+       False
 
     method displayOn: stream
+        (self tryConventionalUnits: stream)
+            ifTrue: { return self }.
         let positive = units select: { |unit| unit power > 0 }.
         let negative = units select: { |unit| unit power < 0 }.
         positive ifEmpty: { stream print: "1" }.
@@ -355,7 +384,7 @@ class CompoundUnit { units }
         enclosePositive
             ifTrue: { stream print: "(" }.
         positive
-            do: { |unit| unit displayOn: stream }
+            do: { |unit| unit displayUnitOn: stream }
             interleaving: { stream print: " " }.
         enclosePositive
             ifTrue: { stream print: ")" }.
@@ -366,7 +395,7 @@ class CompoundUnit { units }
         encloseNegative
             ifTrue: { stream print: "(" }.
         negative
-            do: { |unit| (unit species power: - (unit power)) displayOn: stream }
+            do: { |unit| (unit species power: - (unit power)) displayUnitOn: stream }
             interleaving: { stream print: " " }.
         encloseNegative
             ifTrue: { stream print: ")" }.
@@ -397,7 +426,7 @@ class SI { value::Float _unit::SI_Unit }
         SI value: value unit: (Candelas power: 1)
 
     class method grams: value
-        SI value: value unit: (Grams power: 1)
+        SI value: value / Prefix k unit: (Kilograms power: 1)
 
     class method value: value unit: unit
         -- Dimensionless number, unit has been divided out
@@ -439,6 +468,11 @@ class SI { value::Float _unit::SI_Unit }
     method - right
         self checkUnit: right operation: "-".
         SI value: self value - right value unit: self unit
+
+    method ^ power::Integer
+        let result = 1.0.
+        power times: { result = result * self }.
+        result
 
     method * right
         right mulSI: self
@@ -504,6 +538,8 @@ interface SI_Number
     method cd
         SI candelas: self asFloat
 
+    -- Worry not, the underlying unit is actually kg, this
+    -- just makes this part more obviously correct.
     method mg
         SI grams: Prefix m * self
     method g
@@ -525,6 +561,32 @@ extend Float
     is SI_Number
 end
 
+-- FIXME: This should be defines, but they're not there yet.
+-- The point is to allow expressions like 1 m / s.
+let mm = 1 mm.
+let m = 1 m.
+let km = 1 km.
+
+let ns = 1 ns.
+let ms = 1 ms.
+let s = 1 s.
+
+let mol = 1 mol.
+let mmol = 1 mmol.
+
+-- FIXME: relax requirements...
+-- let A = 1 A.
+let mA = 1 mA.
+
+-- FIXME: relax requirements...
+-- let K = 1 K.
+
+let cd = 1 cd.
+
+let mg = 1 mg.
+let g = 1 g.
+let kg = 1 kg.
+
 class SI_Tests { assert }
     class method runTests: assert
         (self assert: assert) runTests
@@ -538,7 +600,7 @@ class SI_Tests { assert }
         self testCompoundUnitPrinting.
 
     method baseUnits
-        [Meters, Seconds, Moles, Amperes, Kelvins, Candelas, Grams]
+        [Meters, Seconds, Moles, Amperes, Kelvins, Candelas, Kilograms]
 
     method testBaseUnitArithmetic
         self testBaseUnitMultiplication.
@@ -775,6 +837,13 @@ class SI_Tests { assert }
         assert that: { "{1 cd / 1000 mA / (1 s * 1 s)}" }
                is: "1 cd/(A s^2)"
                testing: "printing 1 cd/(A s^2)".
+        assert that: { "{0.5 * 80 kg * (18 m / s)^2}" }
+               is: "12.96 kJ"
+               testing: "printing 12.96 kJ".
+        assert that: { "{10 kg * 2 m / s^2}" }
+               is: "20 N"
+               testing: "printing 20 N"
+
 end
 
 class Demo {}
@@ -786,5 +855,8 @@ class Demo {}
         output println: "{10 m * (5 m + 5 m)}".
         output println: "{10 * 10 m * 10 m}".
         output println: "{10 m * 10 m / 10}".
-        output println: "{(1 m * 1 kg * 1 m) / (1 s * 1 kg * 1 m * 1 s)}"
+        output println: "{(1 m * 1 kg * 1 m) / (1 s * 1 kg * 1 m * 1 s)}".
+        output println: "{0.5 * 80 kg * (18 m / s)^2}".
+        output println: "{10 kg * 2 m / s^2}"
+
 end

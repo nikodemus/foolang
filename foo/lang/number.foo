@@ -5,6 +5,12 @@ interface Number
         collection collect: { |x| block value: x value: self }
     method square
         self * self
+    -- FIXME: Should support floating point exponents for floats at least
+    method ^ power::Integer
+        -- FIXME: should be a nicer way of getting one in the receivers type.
+        let result = self / self.
+        power times: { result = result * self }.
+        result
     method to: other by: step
        Interval from: self to: other by: step
     method printOn: stream
