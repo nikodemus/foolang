@@ -14,7 +14,7 @@ class TestFailure { case input expected result }
                                ifFalse: { " on {input}" }.
         let resultMessage = expected is Nothing
                                 ifTrue: { "" }
-                                ifFalse: { ", expected {expected}, got {result}" }.
+                                ifFalse: { ", expected '{expected}', got '{result}'" }.
         output println: "! FAILURE in {case name}{valueMessage}{resultMessage}"
 end
 
