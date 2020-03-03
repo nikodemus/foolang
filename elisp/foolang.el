@@ -11,7 +11,10 @@
   (modify-syntax-entry ?\; "." table)
   (modify-syntax-entry ?. "." table)
   (modify-syntax-entry ?-  ". 12" table)
+  ;; _ is symbol constitutient, 12 is first and second character of
+  ;; two-character comment start (comment type a)
   (modify-syntax-entry ?-  "_ 12" table)
+  ;; > is comment end
   (modify-syntax-entry ?\n ">" table))
 
 ;; Done this way so it can be mutated on the fly for development
@@ -21,26 +24,43 @@
   :syntax-table foolang-syntax-table
   (font-lock-fontify-buffer)
   (make-local-variable 'foolang-indent-offset)
-  (set (make-local-variable 'indent-line-function) 'foolang-indent-line))
+  (setq-local indent-line-function 'foolang-indent-line))
+
+(defvar foolang--keywords
+  '(
+    "class"
+    "end"
+    "extend"
+    "import"
+    "interface"
+    "is"
+    "let"
+    "method"
+    "raise"
+    "required"
+    "return"
+    ))
 
 (font-lock-add-keywords
  'foolang-mode
- '(("\\<class\\>" . font-lock-keyword-face)
-   ("\\<extend\\>" . font-lock-keyword-face)
-   ("\\<interface\\>" . font-lock-keyword-face)
-   ("\\<end\\>" . font-lock-keyword-face)
-   ("\\<method\\>" . font-lock-keyword-face)
-   ("\\<class\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
-   ("\\<extend\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
-   ("\\<interface\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
-   ("\\<import\\>" . font-lock-keyword-face)
-   ("\\<raise\\>" . font-lock-keyword-face)
-   ("\\<return\\>" . font-lock-keyword-face)
-   ("\\<is\\>" . font-lock-keyword-face)
-   ("\\<method\\s-+\\(\\w+\\)\\>" 1 font-lock-function-name-face)
-   ("\\<let\\s-+\\(\\w+\\)\\>" 1 font-lock-variable-name-face)
-   ("\\<\\(\\w+\\)\\s-*=" 1 font-lock-variable-name-face)
-   ("\\<\\w+:" . font-lock-function-name-face)))
+ (append
+    ;; Foolang keywords from the list above. Do NOT use \\> to match word end as
+  ;; that would match keywords arguments.
+  (mapcar (lambda (keyword)
+            (cons (format "\\<%s\\s-+" keyword) 'font-lock-keyword-face))
+          foolang--keywords)
+  ;; Keyword arguments in method definitions and calls
+  '(("\\<method\\s-+\\([^ :]+\\)[ :]" 1 font-lock-function-name-face)
+    ("\\<\\w+:[^:]" . font-lock-function-name-face))
+  ;; Contexts in which type names appear as type names instead of
+  ;; just plain vanilla objects.
+  '(("\\<class\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
+    ("\\<extend\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
+    ("\\<interface\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
+    ("::\\(\\w+\\)\\>" 1 font-lock-type-face))
+  ;; Variable binding and assignment.
+  '(("\\<let\\s-+\\(\\w+\\)\\>" 1 font-lock-variable-name-face)
+    ("\\<\\(\\w+\\)\\s-*=[^=]" 1 font-lock-variable-name-face))))
 
 (add-to-list 'auto-mode-alist '("\\.foo" . foolang-mode))
 
