@@ -20,11 +20,42 @@
 ;; Done this way so it can be mutated on the fly for development
 (foolang-init-syntax-table foolang-syntax-table)
 
+(defconst foolang--syntax-propertize-rules
+  (syntax-propertize-precompile-rules
+   ("---" (0 "! b"))))
+
+(defun foolang--syntax-propertize (start end)
+  (goto-char start)
+  (funcall (syntax-propertize-rules foolang--syntax-propertize-rules)
+           start end))
+
+(defun foolang--syntax-propertize-extend-block-comments (start end)
+  (save-excursion
+    (save-restriction
+      (widen)
+      (narrow-to-region (point-min) start)
+      (goto-char (point-min))
+      ;; Count the number of --- comment fences before the start: if odd, move
+      ;; region start to the beginning of the line with the first one.
+      (let ((n 0))
+        (while (looking-at "\\(.\\|\n\\)*?---")
+          (goto-char (match-end 0))
+          (incf n))
+        (if (eql 0 (% n 2))
+            ;; Even number of fences, everything is fine.
+            (cons start end)
+          ;; Odd number of fences, widen
+          (cons (match-beginning 0) end))))))
+
 (define-derived-mode foolang-mode prog-mode "Foolang Mode"
   :syntax-table foolang-syntax-table
-  (font-lock-fontify-buffer)
   (make-local-variable 'foolang-indent-offset)
-  (setq-local indent-line-function 'foolang-indent-line))
+  (setq-local indent-line-function 'foolang-indent-line)
+  (setq-local syntax-propertize-function 'foolang--syntax-propertize)
+  (setq-local syntax-propertize-extend-region-functions
+              '(syntax-propertize-wholelines
+                foolang--syntax-propertize-extend-block-comments))
+  (font-lock-fontify-buffer))
 
 (defvar foolang--keywords
   '(
