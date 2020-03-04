@@ -438,15 +438,22 @@
 (defun foolang--indent-to (target col base stack ctx indent-all)
   (let ((now (line-number-at-pos)))
     ;; (foolang--note "line %s (target %s)" now target)
-    (if (eql target now)
-        (indent-line-to col)
-      (when indent-all
-        (indent-line-to col))
-      (destructuring-bind (new-col new-base new-stack new-ctx)
-          (foolang--compute-next-line-indent col base stack ctx)
-        (next-line)
-        (beginning-of-line)
-        (foolang--indent-to target new-col new-base new-stack new-ctx indent-all)))))
+    (cond ((eql target now)
+           (indent-line-to col))
+          ((looking-at "^\\s-*$")
+           ;; Skip over empty lines
+           (next-line)
+           (beginning-of-line)
+           (foolang--indent-to target col base stack ctx indent-all))
+          (t
+           ;; Compute indentation for next line and move down.
+           (when indent-all
+             (indent-line-to col))
+           (destructuring-bind (new-col new-base new-stack new-ctx)
+               (foolang--compute-next-line-indent col base stack ctx)
+             (next-line)
+             (beginning-of-line)
+             (foolang--indent-to target new-col new-base new-stack new-ctx indent-all))))))
 
 (cl-defun foolang--compute-next-line-indent (col base stack ctx)
   (foolang--note "indent: '%s'" (foolang--current-line))
@@ -1044,6 +1051,18 @@ testing:"
         assert raises: { files path: \"..\" }
                error: \"Cannot extend #<FilePath (root)> with ..\"
                testing:")
+
+(def-foolang-indent-test "body-indent-17"
+  "
+method foo
+bar.
+
+quux."
+  "
+    method foo
+        bar.
+
+        quux.")
 
 (def-foolang-indent-test "end-indent-1"
   "
