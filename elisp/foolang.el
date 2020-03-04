@@ -109,6 +109,30 @@
          (setcdr old rule)
        (push (cons ,name rule) foolang--indent-rules))))
 
+(defconst foolang--newline-or-lines-regex
+  "\\(\n\\s-*\\)+")
+
+(defconst foolang--space-or-eol-regex
+  "\\(\\s-+|\\)")
+
+(defconst foolang--method-or-class-method-regex
+  "\\(class\\s-+\\)?method\\s-+")
+
+(defconst foolang--op-regex
+  "\\s_+\\s-+")
+
+(defconst foolang--name-with-opt-type-regex
+  "\\w+\\(::\\w+\\)?\\>\\s-*")
+
+(defconst foolang--keyword-regex
+  "\\w+:[^:]\\s-*")
+
+(defconst foolang--keywords-and-names-with-opt-types-regex
+  (concat "\\("
+          foolang--keyword-regex
+          foolang--name-with-opt-type-regex
+          "\\)+"))
+
 (def-foolang-indent "-- comment" (col base stack ctx)
   (:after
     (looking-at "\\s-*--"))
@@ -299,18 +323,36 @@
          stack
          :body)))
 
+(defconst foolang--method-op-arg-with-opt-type-regex
+  (concat "\\s-*"
+          foolang--method-or-class-method-regex
+          foolang--op-regex
+          foolang--name-with-opt-type-regex
+          "$"))
+
 (def-foolang-indent "method op arg" (col base stack ctx)
   (:after
-    (looking-at " *\\(class *\\)?method *\\s_+ +\\w+ *$"))
+    (looking-at foolang--method-op-arg-with-opt-type-regex))
   (:indent
    (list (+ col foolang-indent-offset)
          (+ col foolang-indent-offset)
          stack
          :body)))
 
-(def-foolang-indent "method name: var \\ name:" (col base stack ctx)
+(defconst foolang--method-keywords-across-lines-regex
+  (concat "\\s-*"
+          foolang--method-or-class-method-regex
+          foolang--keywords-and-names-with-opt-types-regex
+          foolang--newline-or-lines-regex
+          foolang--keyword-regex
+          ;; No eol check here, since we don't care what the
+          ;; next line contains, just that is _starts_ with
+          ;; a keyword.
+          ))
+
+(def-foolang-indent "method name: arg \\ name:" (col base stack ctx)
   (:after
-    (looking-at " *\\(class *\\)?method *\\(\\w+: *\\w+\\s-*\\)+ *\n\\s-*\\w+:"))
+    (looking-at foolang--method-keywords-across-lines-regex))
   (:indent
    (search-forward ":")
    (backward-word)
@@ -320,21 +362,43 @@
            stack
            :method))))
 
-(def-foolang-indent "method name: var" (col base stack ctx)
+(defconst foolang--keywords-across-lines-regex
+  (concat "\\s-*"
+          foolang--keywords-and-names-with-opt-types-regex
+          foolang--newline-or-lines-regex
+          foolang--keyword-regex
+          ;; No eol check here, since we don't care what the
+          ;; next line contains, just that is _starts_ with
+          ;; a keyword.
+          ))
+
+(def-foolang-indent "tailing method name: arg \\ name:" (col base stack ctx)
   (:after
-    (looking-at " *\\(class *\\)?method *\\(\\w+: *\\w+\\s-*\\)+ *$"))
+    (when (eq :method ctx)
+      (looking-at foolang--keywords-across-lines-regex)))
+  (:indent
+   (list col base stack ctx)))
+
+(def-foolang-indent "tailing method fallthrough" (col base stack ctx)
+  (:after
+    (eq :method ctx))
+  (:indent
+   (list base base stack :body)))
+
+(defconst foolang--method-keywords-regex
+  (concat "\\s-*"
+          foolang--method-or-class-method-regex
+          foolang--keywords-and-names-with-opt-types-regex
+          "$"))
+
+(def-foolang-indent "method name: arg" (col base stack ctx)
+  (:after
+    (looking-at foolang--method-keywords-regex))
   (:indent
    (list (+ col foolang-indent-offset)
          (+ col foolang-indent-offset)
          stack
          :body)))
-
-(def-foolang-indent "tailing method var: name \\ expr" (col base stack ctx)
-  (:after
-    (when (eq :method ctx)
-      (looking-at " *\\(\\w+: *\\w+\\s-*\\)+\n\\s-*\\w+")))
-  (:indent
-   (list base base stack :body)))
 
 (def-foolang-indent "in-body expr name: expr \\ name:" (col base stack ctx)
   (:after
@@ -790,6 +854,32 @@ class Foo { a }
            quux: y
         x + y")
 
+(def-foolang-indent-test "method-indent-3.1"
+  "
+class Foo { a }
+method bar: x::Type
+quux: y::Type
+x + y"
+  "
+class Foo { a }
+    method bar: x::Type
+           quux: y::Type
+        x + y")
+
+(def-foolang-indent-test "method-indent-3.2"
+  "
+class Foo { a }
+method bar: x::Type
+quux: y::Type
+zo: z::Type
+- 42 + x + y + z"
+  "
+class Foo { a }
+    method bar: x::Type
+           quux: y::Type
+           zo: z::Type
+        - 42 + x + y + z")
+
 (def-foolang-indent-test "method-indent-4"
   "
 method bar: x quux: y
@@ -805,6 +895,16 @@ method prefix-
   "
     method prefix-
         -(self value)")
+
+(def-foolang-indent-test "method-indent-6"
+  "
+class Main {}
+class method + x::Type
+x"
+  "
+class Main {}
+    class method + x::Type
+        x")
 
 (def-foolang-indent-test "body-indent-1"
   "
