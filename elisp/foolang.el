@@ -479,16 +479,17 @@
       (insert "\n"))))
 
 (defun foolang-indent-line ()
+  (interactive)
   (foolang--indent-line-number (line-number-at-pos) nil))
 
 (defun foolang-indent-all ()
+  (interactive)
   (foolang--indent-line-number (line-number-at-pos) t))
 
 (defun foolang--indent-line-number (line-number indent-all)
   (let ((line-move-visual nil))
-    (save-excursion
-      (lexical-let ((base (foolang--find-indent-base)))
-        (foolang--indent-to line-number base base nil nil indent-all)))))
+    (lexical-let ((base (foolang--find-indent-base)))
+      (foolang--indent-to line-number base base nil nil indent-all))))
 
 (defun foolang--find-indent-base ()
   "Search lines up until it find a 'base', meaning
