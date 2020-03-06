@@ -291,6 +291,18 @@
          (cons (cons col base) stack)
          ctx)))
 
+(def-foolang-indent "enter list let name = expr" (col base stack ctx)
+  (:after
+    (when (eq :body ctx)
+      (and (foolang--nesting-increases-on-line)
+           (not (foolang--looking-at-terminated-line))
+           (looking-at ".*let\\s-+\\w+\\s-*=\\s-*\\S-+"))))
+  (:indent
+   (end-of-line)
+   (search-backward "=")
+   (let ((p (current-column)))
+     (list (+ (current-column) 2 foolang-indent-offset) base stack ctx))))
+
 (def-foolang-indent "enter list expr" (col base stack ctx)
   (:after
     (and (foolang--nesting-increases-on-line)
@@ -433,7 +445,7 @@
   (:after
     (when (eq :body ctx)
       (and (not (foolang--looking-at-terminated-line))
-           (looking-at "\\s-*let\\s-+\\w+\\s-*=\\s-*\\S-+"))))
+           (looking-at ".*let\\s-+\\w+\\s-*=\\s-*\\S-+"))))
   (:indent
    (search-forward "=")
    (let ((p (current-column)))
@@ -1164,6 +1176,28 @@ quux."
         bar.
 
         quux.")
+
+(def-foolang-indent-test "body-indent-18"
+  "
+method foo
+x run: { let x = y bar
+quux."
+  "
+    method foo
+        x run: { let x = y bar
+                             quux.")
+
+(def-foolang-indent-test "body-indent-19"
+  "
+method foo
+x run: { bing boing.
+let x = y bar
+quux."
+  "
+    method foo
+        x run: { bing boing.
+                 let x = y bar
+                             quux.")
 
 (def-foolang-indent-test "end-indent-1"
   "
