@@ -224,6 +224,23 @@
        (setq top (pop stack)))
      (list (cdr top) (cdr top) stack ctx))))
 
+(def-foolang-indent "exit keyword list \\ name:" (col base stack ctx)
+  (:after
+    (and (looking-at ".*\\w")
+         (foolang--exit-from-keyword-argument-list)
+         (save-excursion
+           (end-of-line)
+           (looking-at (concat foolang--newline-or-lines-regex
+                               foolang--keyword-regex)))))
+  (:indent
+   ()
+   (beginning-of-line)
+   (let (top)
+     (while (foolang--exit-list-on-current-line)
+       (assert stack nil "expr exit list. => stack empty")
+       (setq top (pop stack)))
+     (list (foolang--exit-from-keyword-argument-list) (cdr top) stack ctx))))
+
 (def-foolang-indent "expr exit list" (col base stack ctx)
   (:after
     (and (looking-at ".*\\w")
@@ -582,6 +599,17 @@
   (save-excursion
     (foolang--end-of-code-on-line)
     (looking-at "[\\.,]")))
+
+(defun foolang--exit-from-keyword-argument-list ()
+  (and (foolang--nesting-decreases-on-line)
+       (save-excursion
+         (beginning-of-line)
+         (backward-up-list)
+         (backward-char)
+         (foolang--skip-whitespace-left)
+         (when (looking-at ":")
+           (backward-word)
+           (current-column)))))
 
 (defun foolang--nesting-decreases-on-line ()
   (save-excursion
@@ -1198,6 +1226,18 @@ quux."
         x run: { bing boing.
                  let x = y bar
                              quux.")
+
+(def-foolang-indent-test "body-indent-20"
+  "
+method testRecord
+assert true: { let r = {x: -10, y: 52}.
+r x + r y == 42 }
+testing: \"record creation and accessors\""
+  "
+    method testRecord
+        assert true: { let r = {x: -10, y: 52}.
+                       r x + r y == 42 }
+               testing: \"record creation and accessors\"")
 
 (def-foolang-indent-test "end-indent-1"
   "
