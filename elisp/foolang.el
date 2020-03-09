@@ -57,7 +57,7 @@
                 foolang--syntax-propertize-extend-block-comments))
   (font-lock-fontify-buffer))
 
-(defvar foolang--keywords
+(defvar foolang--reserved-words
   '(
     "class"
     "end"
@@ -78,8 +78,8 @@
     ;; Foolang keywords from the list above. Do NOT use \\> to match word end as
   ;; that would match keywords arguments.
   (mapcar (lambda (keyword)
-            (cons (format "\\<%s\\s-+" keyword) 'font-lock-keyword-face))
-          foolang--keywords)
+            (cons (format "\\<%s\\($\\|\\s-+\\)" keyword) 'font-lock-keyword-face))
+          foolang--reserved-words)
   ;; Keyword arguments in method definitions and calls
   '(("\\<method\\s-+\\([^ :]+\\)[ :]" 1 font-lock-function-name-face)
     ("\\<\\w+:[^:]" . font-lock-function-name-face))
