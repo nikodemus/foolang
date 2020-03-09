@@ -1,4 +1,3 @@
-use std::borrow::ToOwned;
 use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::convert::Into;
@@ -6,782 +5,31 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::string::ToString;
 
-use crate::tokenstream::{Span, Token, TokenStream};
+use crate::tokenstream::{Token, TokenStream};
 use crate::unwind::{Error, Unwind};
+use crate::span::Span;
+use crate::span::TweakSpan;
 
-trait TweakSpan {
-    fn tweak(&mut self, shift: usize, extend: isize);
-    fn shift(&mut self, shift: usize);
-}
+use crate::syntax::Syntax;
+use crate::def::*;
+use crate::expr::*;
 
-impl TweakSpan for Span {
-    fn tweak(&mut self, shift: usize, extend: isize) {
-        self.start += shift;
-        self.end += shift;
-        if extend < 0 {
-            self.start -= (-extend) as usize;
-        } else {
-            self.end += extend as usize;
-        }
-    }
-    fn shift(&mut self, shift: usize) {
-        self.tweak(shift, 0);
-    }
-}
+pub type Parse = Result<Syntax, Unwind>;
+pub type ExprParse = Result<Expr, Unwind>;
 
-// FIXME: Do these really need clone, if so, why?
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Array {
-    pub span: Span,
-    pub data: Vec<Expr>,
-}
-
-impl Array {
-    pub fn expr(span: Span, data: Vec<Expr>) -> Expr {
-        Expr::Array(Array {
-            span,
-            data,
-        })
-    }
-    fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
-        for elt in &mut self.data {
-            elt.tweak_span(shift, extend);
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Assign {
-    pub span: Span,
-    pub name: String,
-    pub value: Box<Expr>,
-}
-
-impl Assign {
-    pub fn expr(span: Span, name: String, value: Expr) -> Expr {
-        Expr::Assign(Assign {
-            span,
-            name,
-            value: Box::new(value),
-        })
-    }
-    fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
-        self.value.tweak_span(shift, extend);
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Bind {
-    pub name: String,
-    pub typename: Option<String>,
-    pub value: Box<Expr>,
-    pub body: Option<Box<Expr>>,
-}
-
-impl Bind {
-    pub fn expr(
-        name: String,
-        typename: Option<String>,
-        value: Box<Expr>,
-        body: Option<Box<Expr>>,
-    ) -> Expr {
-        Expr::Bind(Bind {
-            name,
-            typename,
-            value,
-            body,
-        })
-    }
-    fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.value.tweak_span(shift, extend);
-        if let Some(ref mut expr) = self.body {
-            expr.tweak_span(shift, extend);
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Block {
-    pub span: Span,
-    pub params: Vec<Var>,
-    pub body: Box<Expr>,
-    pub rtype: Option<String>,
-}
-
-impl Block {
-    pub fn expr(span: Span, params: Vec<Var>, body: Box<Expr>, rtype: Option<String>) -> Expr {
-        Expr::Block(Block {
-            span,
-            params,
-            body,
-            rtype,
-        })
-    }
-    fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
-        for p in &mut self.params {
-            p.span.tweak(shift, extend);
-        }
-        self.body.tweak_span(shift, extend);
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Cascade {
-    pub receiver: Box<Expr>,
-    pub chains: Vec<Vec<Message>>,
-}
-
-impl Cascade {
-    pub fn expr(receiver: Box<Expr>, chains: Vec<Vec<Message>>) -> Expr {
-        Expr::Cascade(Cascade {
-            receiver,
-            chains,
-        })
-    }
-    fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.receiver.tweak_span(shift, extend);
-        for chain in &mut self.chains {
-            for message in chain {
-                message.tweak_span(shift, extend);
-            }
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Chain {
-    pub receiver: Box<Expr>,
-    pub messages: Vec<Message>,
-}
-
-impl Chain {
-    pub fn expr(receiver: Box<Expr>, messages: Vec<Message>) -> Expr {
-        Expr::Chain(Chain {
-            receiver,
-            messages,
-        })
-    }
-    fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.receiver.tweak_span(shift, extend);
-        for message in &mut self.messages {
-            message.tweak_span(shift, extend);
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Const {
-    pub span: Span,
-    pub literal: Literal,
-}
-
-impl Const {
-    pub fn expr(span: Span, literal: Literal) -> Expr {
-        Expr::Const(Const {
-            span,
-            literal,
-        })
-    }
-    fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Dictionary {
-    pub span: Span,
-    pub assoc: Vec<(Expr, Expr)>,
-}
-
-impl Dictionary {
-    pub fn expr(span: Span, assoc: Vec<(Expr, Expr)>) -> Expr {
-        Expr::Dictionary(Dictionary {
-            span,
-            assoc,
-        })
-    }
-    fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Eq {
-    pub span: Span,
-    pub left: Box<Expr>,
-    pub right: Box<Expr>,
-}
-
-impl Eq {
-    pub fn expr(span: Span, left: Box<Expr>, right: Box<Expr>) -> Expr {
-        Expr::Eq(Eq {
-            span,
-            left,
-            right,
-        })
-    }
-    fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
-        self.left.tweak_span(shift, extend);
-        self.right.tweak_span(shift, extend);
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Seq {
-    pub exprs: Vec<Expr>,
-}
-
-impl Seq {
-    fn expr(exprs: Vec<Expr>) -> Expr {
-        Expr::Seq(Seq {
-            exprs,
-        })
-    }
-    fn tweak_span(&mut self, shift: usize, extend: isize) {
-        for expr in &mut self.exprs {
-            expr.tweak_span(shift, extend);
-        }
-    }
-}
-
-// Span, Box<Expr>, String),
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Typecheck {
-    pub span: Span,
-    pub expr: Box<Expr>,
-    pub typename: String,
-}
-
-impl Typecheck {
-    fn expr(span: Span, expr: Box<Expr>, typename: String) -> Expr {
-        Expr::Typecheck(Typecheck {
-            span,
-            expr,
-            typename,
-        })
-    }
-    fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
-        self.expr.tweak_span(shift, extend);
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct ClassDefinition {
-    pub span: Span,
-    pub name: String,
-    pub instance_variables: Vec<Var>,
-    pub instance_methods: Vec<MethodDefinition>,
-    pub class_methods: Vec<MethodDefinition>,
-    pub interfaces: Vec<String>,
-    default_constructor: Option<String>,
-}
-
-impl ClassDefinition {
-    fn new(span: Span, name: String, instance_variables: Vec<Var>) -> ClassDefinition {
-        ClassDefinition {
-            span,
-            name,
-            instance_variables,
-            instance_methods: Vec::new(),
-            class_methods: Vec::new(),
-            interfaces: Vec::new(),
-            default_constructor: None,
-        }
-    }
-
-    fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
-        for var in &mut self.instance_variables {
-            var.span.tweak(shift, extend);
-        }
-        for m in &mut self.instance_methods {
-            m.tweak_span(shift, extend);
-        }
-        for m in &mut self.class_methods {
-            m.tweak_span(shift, extend);
-        }
-    }
-
-    #[cfg(test)]
-    pub fn expr(span: Span, name: String, instance_variables: Vec<Var>) -> Expr {
-        Expr::ClassDefinition(ClassDefinition::new(span, name, instance_variables))
-    }
-
-    fn add_interface(&mut self, name: &str) {
-        self.interfaces.push(name.to_string())
-    }
-
-    fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
-        match kind {
-            MethodKind::Instance => self.instance_methods.push(method),
-            MethodKind::Class => self.class_methods.push(method),
-            _ => panic!("Cannot add {:?} to a ClassDefinition", kind),
-        };
-    }
-
-    pub fn constructor(&self) -> String {
-        if self.instance_variables.is_empty() {
-            match &self.default_constructor {
-                Some(ctor) => ctor.to_string(),
-                None => "new".to_string(),
-            }
-        } else {
-            let mut selector = String::new();
-            for var in &self.instance_variables {
-                selector.push_str(&var.name);
-                selector.push_str(":");
-            }
-            selector
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct ClassExtension {
-    pub span: Span,
-    pub name: String,
-    pub instance_methods: Vec<MethodDefinition>,
-    pub class_methods: Vec<MethodDefinition>,
-    pub interfaces: Vec<String>,
-}
-
-impl ClassExtension {
-    pub fn new(span: Span, name: &str) -> Self {
-        Self {
-            span,
-            name: name.to_string(),
-            instance_methods: Vec::new(),
-            class_methods: Vec::new(),
-            interfaces: Vec::new(),
-        }
-    }
-
-    fn add_interface(&mut self, name: &str) {
-        self.interfaces.push(name.to_string())
-    }
-
-    pub fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
-        match kind {
-            MethodKind::Instance => self.instance_methods.push(method),
-            MethodKind::Class => self.class_methods.push(method),
-            _ => panic!("Cannot add {:?} to a ClassExtension", kind),
-        };
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Import {
-    pub span: Span,
-    pub path: PathBuf,
-    pub prefix: String,
-    pub name: Option<String>,
-    pub body: Option<Box<Expr>>,
-}
-
-impl Import {
-    pub fn expr<P: AsRef<Path>>(
-        span: Span,
-        path: P,
-        prefix: &str,
-        name: Option<&str>,
-        body: Option<Expr>,
-    ) -> Expr {
-        Expr::Import(Import {
-            span,
-            path: path.as_ref().to_path_buf(),
-            prefix: prefix.to_string(),
-            name: name.map(|x| x.to_string()),
-            body: body.map(|x| Box::new(x)),
-        })
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct InterfaceDefinition {
-    pub span: Span,
-    pub name: String,
-    pub instance_methods: Vec<MethodDefinition>,
-    pub class_methods: Vec<MethodDefinition>,
-    pub required_methods: Vec<MethodDefinition>,
-    pub interfaces: Vec<String>,
-}
-
-impl InterfaceDefinition {
-    pub fn new(span: Span, name: &str) -> InterfaceDefinition {
-        InterfaceDefinition {
-            span,
-            name: name.to_string(),
-            instance_methods: Vec::new(),
-            class_methods: Vec::new(),
-            required_methods: Vec::new(),
-            interfaces: Vec::new(),
-        }
-    }
-
-    fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
-        for m in &mut self.instance_methods {
-            m.tweak_span(shift, extend);
-        }
-        for m in &mut self.class_methods {
-            m.tweak_span(shift, extend);
-        }
-    }
-
-    pub fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
-        match kind {
-            MethodKind::Instance => self.instance_methods.push(method),
-            MethodKind::Class => self.class_methods.push(method),
-            MethodKind::Required => self.required_methods.push(method),
-        };
-    }
-
-    fn add_interface(&mut self, name: &str) {
-        self.interfaces.push(name.to_string())
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Message {
-    pub span: Span,
-    pub selector: String,
-    pub args: Vec<Expr>,
-}
-
-impl Message {
-    fn tweak_span(&mut self, shift: usize, ext: isize) {
-        self.span.tweak(shift, ext);
-        for arg in &mut self.args {
-            arg.tweak_span(shift, ext);
-        }
-    }
-}
-
-// FIXME: split into signature and method
-#[derive(Debug, PartialEq, Clone)]
-pub struct MethodDefinition {
-    pub span: Span,
-    pub selector: String,
-    pub parameters: Vec<Var>,
-    pub body: Option<Box<Expr>>,
-    pub return_type: Option<String>,
-}
-
-impl MethodDefinition {
-    fn new(
-        span: Span,
-        selector: String,
-        parameters: Vec<Var>,
-        return_type: Option<String>,
-    ) -> MethodDefinition {
-        MethodDefinition {
-            span,
-            selector,
-            parameters,
-            body: None,
-            return_type,
-        }
-    }
-    fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
-        for var in &mut self.parameters {
-            var.span.tweak(shift, extend);
-        }
-        match &mut self.body {
-            Some(ref mut span) => span.tweak_span(shift, extend),
-            _ => (),
-        }
-    }
-    pub fn required_body(&self) -> Result<&Expr, Unwind> {
-        match &self.body {
-            Some(body) => Ok(&(*body)),
-            None => {
-                return Unwind::error_at(self.span.clone(), "Partial methods not allowed here");
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum MethodKind {
-    Class,
-    Instance,
-    Required,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Raise {
-    pub span: Span,
-    pub value: Box<Expr>,
-}
-
-impl Raise {
-    pub fn expr(span: Span, value: Expr) -> Expr {
-        Expr::Raise(Raise {
-            span,
-            value: Box::new(value),
-        })
-    }
-    fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
-        self.value.tweak_span(shift, extend);
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Return {
-    pub span: Span,
-    pub value: Box<Expr>,
-}
-
-impl Return {
-    pub fn expr(span: Span, value: Expr) -> Expr {
-        Expr::Return(Return {
-            span,
-            value: Box::new(value),
-        })
-    }
-    fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
-        self.value.tweak_span(shift, extend);
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Var {
-    pub span: Span,
-    pub name: String,
-    pub typename: Option<String>,
-}
-
-impl Var {
-    fn untyped(span: Span, name: String) -> Var {
-        Var {
-            span,
-            name,
-            typename: None,
-        }
-    }
-    fn typed(span: Span, name: String, typename: String) -> Var {
-        Var {
-            span,
-            name,
-            typename: Some(typename),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Global {
-    pub span: Span,
-    pub name: String,
-}
-
-impl Global {
-    pub fn expr(span: Span, name: &str) -> Expr {
-        Expr::Global(Global {
-            span,
-            name: name.to_string(),
-        })
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Literal {
-    Boolean(bool),
-    Integer(i64),
-    Float(f64),
-    String(String),
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Expr {
-    Array(Array),
-    Assign(Assign),
-    Bind(Bind),
-    Block(Block),
-    Cascade(Cascade),
-    Chain(Chain),
-    ClassDefinition(ClassDefinition),
-    ClassExtension(ClassExtension),
-    Const(Const),
-    Dictionary(Dictionary),
-    Eq(Eq),
-    Global(Global),
-    Import(Import),
-    InterfaceDefinition(InterfaceDefinition),
-    Raise(Raise),
-    Return(Return),
-    Seq(Seq),
-    Typecheck(Typecheck),
-    Var(Var),
-}
-
-impl Expr {
-    fn is_var(&self) -> bool {
-        match self {
-            Expr::Var(..) => true,
-            _ => false,
-        }
-    }
-
-    fn is_end_expr(&self) -> bool {
-        match self {
-            Expr::ClassDefinition(..) => true,
-            Expr::ClassExtension(..) => true,
-            Expr::InterfaceDefinition(..) => true,
-            _ => false,
-        }
-    }
-
-    #[cfg(test)]
-    pub fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
-        match self {
-            Expr::ClassDefinition(class) => class.add_method(kind, method),
-            _ => panic!("BUG: trying to add a method to {:?}", self),
-        }
-    }
-
-    fn name(&self) -> String {
-        match self {
-            Expr::Var(var) => var.name.to_owned(),
-            _ => panic!("BUG: cannot extract name from {:?}", self),
-        }
-    }
-
-    fn to_cascade(self, in_cascade: bool) -> Expr {
-        // If we're already in cascade then self is a Chain whose
-        // receiver is a cascade and we splice the messages into the
-        // cascade, which becomes our receiver.
-        //
-        // Otherwise left becomes the initial receiver of an initially
-        // empty cascade.
-        match self {
-            Expr::Cascade(..) => self,
-            Expr::Chain(chain) => {
-                if let Expr::Cascade(mut cascade) = *chain.receiver {
-                    cascade.chains.push(chain.messages);
-                    Expr::Cascade(cascade)
-                } else {
-                    assert!(in_cascade);
-                    Cascade::expr(Box::new(Expr::Chain(chain)), vec![])
-                }
-            }
-            _ => {
-                assert!(in_cascade);
-                Cascade::expr(Box::new(self), vec![])
-            }
-        }
-    }
-
-    pub fn send(mut self, message: Message) -> Expr {
-        match self {
-            Expr::Chain(ref mut chain) => {
-                chain.messages.push(message);
-                self
-            }
-            _ => Chain::expr(Box::new(self), vec![message]),
-        }
-    }
-
-    pub fn span(&self) -> Span {
-        use Expr::*;
-        let span = match self {
-            Array(array) => &array.span,
-            Assign(assign) => &assign.span,
-            Bind(bind) => return bind.value.span(),
-            Block(block) => &block.span,
-            Cascade(cascade) => return cascade.receiver.span(),
-            ClassDefinition(definition) => &definition.span,
-            ClassExtension(extension) => &extension.span,
-            Dictionary(dictionary) => &dictionary.span,
-            Const(constant) => &constant.span,
-            Eq(eq) => &eq.span,
-            Global(global) => &global.span,
-            Chain(chain) => return chain.receiver.span(),
-            Import(import) => &import.span,
-            InterfaceDefinition(interface) => &interface.span,
-            Raise(raise) => &raise.span,
-            Return(ret) => &ret.span,
-            // FIXME: Questionable
-            Seq(seq) => return seq.exprs[seq.exprs.len() - 1].span(),
-            Typecheck(typecheck) => &typecheck.span,
-            Var(var) => &var.span,
-        };
-        span.to_owned()
-    }
-
-    fn shift_span(&mut self, n: usize) {
-        self.tweak_span(n, 0);
-    }
-
-    fn extend_span(&mut self, n: isize) {
-        self.tweak_span(0, n);
-    }
-
-    fn tweak_span(&mut self, shift: usize, extend: isize) {
-        use Expr::*;
-        match self {
-            Array(array) => array.tweak_span(shift, extend),
-            Assign(assign) => assign.tweak_span(shift, extend),
-            Bind(bind) => bind.tweak_span(shift, extend),
-            Block(block) => block.tweak_span(shift, extend),
-            Cascade(cascade) => cascade.tweak_span(shift, extend),
-            ClassDefinition(class) => class.tweak_span(shift, extend),
-            Chain(chain) => chain.tweak_span(shift, extend),
-            Const(constant) => constant.tweak_span(shift, extend),
-            Dictionary(dictionary) => dictionary.tweak_span(shift, extend),
-            Eq(eq) => eq.tweak_span(shift, extend),
-            InterfaceDefinition(interface) => interface.tweak_span(shift, extend),
-            Seq(seq) => seq.tweak_span(shift, extend),
-            Raise(raise) => raise.tweak_span(shift, extend),
-            Return(ret) => ret.tweak_span(shift, extend),
-            Typecheck(typecheck) => typecheck.tweak_span(shift, extend),
-            ClassExtension(ext) => {
-                ext.span.tweak(shift, extend);
-                for m in &mut ext.instance_methods {
-                    m.tweak_span(shift, extend);
-                }
-                for m in &mut ext.class_methods {
-                    m.tweak_span(shift, extend);
-                }
-            }
-            Global(global) => {
-                global.span.tweak(shift, extend);
-            }
-            Import(import) => {
-                import.span.tweak(shift, extend);
-                if let Some(ref mut body) = import.body {
-                    body.tweak_span(shift, extend);
-                }
-            }
-            Var(var) => {
-                var.span.tweak(shift, extend);
-            }
-        };
-    }
-}
-
-type PrefixParser = fn(&Parser) -> Result<Expr, Unwind>;
-type SuffixParser = fn(&Parser, Expr, PrecedenceFunction) -> Result<Expr, Unwind>;
+type PrefixParser = fn(&Parser) -> Parse;
+type SuffixParser = fn(&Parser, Expr, PrecedenceFunction) -> ExprParse;
 // FIXME: can I remove the span from here?
 type PrecedenceFunction = fn(&Parser, Span) -> Result<usize, Unwind>;
 
 #[derive(Clone)]
-enum Syntax {
+enum ParserSyntax {
     General(PrefixParser, SuffixParser, PrecedenceFunction),
     Operator(bool, bool, usize),
 }
 
-type TokenTable = HashMap<Token, Syntax>;
-type NameTable = HashMap<String, Syntax>;
+type TokenTable = HashMap<Token, ParserSyntax>;
+type NameTable = HashMap<String, ParserSyntax>;
 
 pub struct ParserState<'a> {
     tokenstream: TokenStream<'a>,
@@ -851,13 +99,17 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> Result<Expr, Unwind> {
-        self.parse_expr(0)
+    pub fn parse(&mut self) -> Parse {
+        self._parse()
+    }
+
+    fn _parse(&self) -> Parse {
+        self.parse_at_precedence(1)
     }
 
     pub fn parse_interpolated_block(&self, span: Span) -> Result<(Expr, usize), Unwind> {
         let subparser = Parser::new(self.slice_at(span.clone()), &self.root);
-        match subparser.parse_prefix() {
+        match subparser.parse_prefix_expr() {
             Err(Unwind::Exception(Error::EofError(_), _)) => {
                 Unwind::error_at(span, "Unterminated string interpolation.")
             }
@@ -882,58 +134,58 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse_seq(&self) -> Result<Expr, Unwind> {
-        let seq = self.parse_expr(1)?;
-        // FIXME: Terrible KLUDGE.
-        //
-        // 1. Expressions like 'class' and 'extend' do not consume
-        //    their 'end' since we use it to sequence toplevel definitions.
-        // 2. If they appear in a sequence context it will leave the
-        //    end behind to be discovered in a _prefix_ context.
-        //
-        // So we clean it up.
-        //
-        let (token, span) = self.lookahead()?;
-        if token == Token::WORD && self.slice_at(span) == "end" {
-            let is_class_def = if let Expr::Seq(seq) = &seq {
-                seq.exprs[seq.exprs.len() - 1].is_end_expr()
-            } else {
-                seq.is_end_expr()
-            };
-            if is_class_def {
-                self.next_token()?;
-            }
+    pub fn parse_expr(&self, precedence: usize) -> ExprParse {
+        match self.parse_at_precedence(precedence)? {
+            Syntax::Expr(e) => Ok(e),
+            Syntax::Def(d) => Unwind::error_at(
+                d.span(),
+                "Definition where expression was expected")
         }
-        Ok(seq)
     }
 
-    pub fn parse_body(&self) -> Result<Expr, Unwind> {
+    pub fn parse_seq(&self) -> ExprParse {
         self.parse_expr(1)
     }
 
-    pub fn parse_expr(&self, precedence: usize) -> Result<Expr, Unwind> {
-        self.parse_tail(self.parse_prefix()?, precedence)
+    pub fn parse_single(&self) -> ExprParse {
+        // Dot has precedence 2.
+        self.parse_expr(2)
     }
 
-    pub fn parse_tail(&self, mut expr: Expr, precedence: usize) -> Result<Expr, Unwind> {
+    pub fn parse_at_precedence(&self, precedence: usize) -> Parse {
+        match self.parse_prefix()? {
+            Syntax::Def(def) => Ok(Syntax::Def(def)),
+            Syntax::Expr(expr) =>
+                Ok(Syntax::Expr(self.parse_tail(expr, precedence)?))
+        }
+    }
+
+    pub fn parse_tail(&self, mut expr: Expr, precedence: usize) -> ExprParse {
         while precedence < self.next_precedence()? {
             expr = self.parse_suffix(expr)?;
         }
         Ok(expr)
     }
 
-    fn parse_prefix(&self) -> Result<Expr, Unwind> {
+    fn parse_prefix_expr(&self) -> ExprParse {
+        match self.parse_prefix()? {
+            Syntax::Expr(e) => Ok(e),
+            Syntax::Def(_) => Unwind::error("Definition whwre expression was expected!")
+        }
+    }
+
+    fn parse_prefix(&self) -> Parse {
         let token = self.next_token()?;
         match self.token_table.get(&token) {
-            Some(syntax) => self.parse_prefix_syntax(syntax),
+            Some(token_syntax) => self.parse_prefix_syntax(token_syntax),
             None => unimplemented!("Don't know how to parse {:?} in prefix position.", token),
         }
     }
 
-    fn parse_suffix(&self, left: Expr) -> Result<Expr, Unwind> {
+    fn parse_suffix(&self, left: Expr) -> ExprParse {
         let token = self.next_token()?;
         match self.token_table.get(&token) {
-            Some(syntax) => self.parse_suffix_syntax(syntax, left),
+            Some(token_syntax) => self.parse_suffix_syntax(token_syntax, left),
             None => unimplemented!("Don't know how to parse {:?} in suffix position.", token),
         }
     }
@@ -941,30 +193,30 @@ impl<'a> Parser<'a> {
     fn next_precedence(&self) -> Result<usize, Unwind> {
         let (token, span) = self.lookahead()?;
         match self.token_table.get(&token) {
-            Some(syntax) => self.syntax_precedence(syntax, span),
+            Some(token_syntax) => self.syntax_precedence(token_syntax, span),
             None => unimplemented!("No precedence defined for {:?}", token),
         }
     }
 
-    fn parse_prefix_syntax(&self, syntax: &Syntax) -> Result<Expr, Unwind> {
+    fn parse_prefix_syntax(&self, syntax: &ParserSyntax) -> Parse {
         match syntax {
-            Syntax::General(prefix, _, _) => prefix(self),
-            Syntax::Operator(_, _, _) => {
+            ParserSyntax::General(prefix, _, _) => prefix(self),
+            ParserSyntax::Operator(_, _, _) => {
                 let operator = self.tokenstring();
                 let span = self.span();
-                Ok(self.parse_expr(PREFIX_PRECEDENCE)?.send(Message {
+                Ok(Syntax::Expr(self.parse_expr(PREFIX_PRECEDENCE)?.send(Message {
                     span,
                     selector: format!("prefix{}", operator),
                     args: vec![],
-                }))
+                })))
             }
         }
     }
 
-    fn parse_suffix_syntax(&self, syntax: &Syntax, left: Expr) -> Result<Expr, Unwind> {
+    fn parse_suffix_syntax(&self, syntax: &ParserSyntax, left: Expr) -> ExprParse {
         match syntax {
-            Syntax::General(_, suffix, precedence) => suffix(self, left, *precedence),
-            Syntax::Operator(_, _, precedence) => {
+            ParserSyntax::General(_, suffix, precedence) => suffix(self, left, *precedence),
+            ParserSyntax::Operator(_, _, precedence) => {
                 let operator = self.tokenstring();
                 Ok(left.send(Message {
                     span: self.span(),
@@ -975,10 +227,10 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn syntax_precedence(&self, syntax: &Syntax, span: Span) -> Result<usize, Unwind> {
+    fn syntax_precedence(&self, syntax: &ParserSyntax, span: Span) -> Result<usize, Unwind> {
         match syntax {
-            Syntax::General(_, _, precedence) => precedence(self, span),
-            Syntax::Operator(_, _, precedence) => Ok(*precedence),
+            ParserSyntax::General(_, _, precedence) => precedence(self, span),
+            ParserSyntax::Operator(_, _, precedence) => Ok(*precedence),
         }
     }
 
@@ -1065,9 +317,9 @@ impl<'a> Parser<'a> {
     }
 }
 
-impl Syntax {
+impl ParserSyntax {
     fn def<A, T>(
-        table: &mut HashMap<T, Syntax>,
+        table: &mut HashMap<T, ParserSyntax>,
         key: A,
         prefix_parser: PrefixParser,
         suffix_parser: SuffixParser,
@@ -1078,14 +330,14 @@ impl Syntax {
         A: Into<T>,
     {
         table
-            .insert(key.into(), Syntax::General(prefix_parser, suffix_parser, precedence_function));
+            .insert(key.into(), ParserSyntax::General(prefix_parser, suffix_parser, precedence_function));
     }
     fn op(table: &mut NameTable, key: &str, is_prefix: bool, is_binary: bool, precedence: usize) {
         assert!(key.len() > 0);
         assert!(is_prefix || is_binary);
         assert!(10 <= precedence);
         assert!(precedence <= 100);
-        table.insert(key.to_string(), Syntax::Operator(is_prefix, is_binary, precedence));
+        table.insert(key.to_string(), ParserSyntax::Operator(is_prefix, is_binary, precedence));
     }
 }
 
@@ -1095,89 +347,90 @@ fn make_token_table() -> TokenTable {
     use Token::*;
 
     // Literals should appear in prefix-positions only, hence precedence_invald
-    Syntax::def(t, HEX_INTEGER, number_prefix, invalid_suffix, precedence_invalid);
-    Syntax::def(t, BIN_INTEGER, number_prefix, invalid_suffix, precedence_invalid);
-    Syntax::def(t, DEC_INTEGER, number_prefix, invalid_suffix, precedence_invalid);
-    Syntax::def(t, SINGLE_FLOAT, number_prefix, invalid_suffix, precedence_invalid);
-    Syntax::def(t, DOUBLE_FLOAT, number_prefix, invalid_suffix, precedence_invalid);
-    Syntax::def(t, STRING, string_prefix, invalid_suffix, precedence_invalid);
+    ParserSyntax::def(t, HEX_INTEGER, number_prefix, invalid_suffix, precedence_invalid);
+    ParserSyntax::def(t, BIN_INTEGER, number_prefix, invalid_suffix, precedence_invalid);
+    ParserSyntax::def(t, DEC_INTEGER, number_prefix, invalid_suffix, precedence_invalid);
+    ParserSyntax::def(t, SINGLE_FLOAT, number_prefix, invalid_suffix, precedence_invalid);
+    ParserSyntax::def(t, DOUBLE_FLOAT, number_prefix, invalid_suffix, precedence_invalid);
+    ParserSyntax::def(t, STRING, string_prefix, invalid_suffix, precedence_invalid);
     // Comments
-    Syntax::def(t, COMMENT, ignore_prefix, ignore_suffix, precedence_1000);
-    Syntax::def(t, BLOCK_COMMENT, ignore_prefix, ignore_suffix, precedence_1000);
+    ParserSyntax::def(t, COMMENT, ignore_prefix, ignore_suffix, precedence_1000);
+    ParserSyntax::def(t, BLOCK_COMMENT, ignore_prefix, ignore_suffix, precedence_1000);
     // Others
-    Syntax::def(t, WORD, identifier_prefix, identifier_suffix, identifier_precedence);
-    Syntax::def(t, SIGIL, operator_prefix, operator_suffix, operator_precedence);
-    Syntax::def(t, KEYWORD, invalid_prefix, keyword_suffix, precedence_9);
-    Syntax::def(t, EOF, eof_prefix, eof_suffix, precedence_0);
+    ParserSyntax::def(t, WORD, identifier_prefix, identifier_suffix, identifier_precedence);
+    ParserSyntax::def(t, SIGIL, operator_prefix, operator_suffix, operator_precedence);
+    ParserSyntax::def(t, KEYWORD, invalid_prefix, keyword_suffix, precedence_9);
+    ParserSyntax::def(t, EOF, eof_prefix, eof_suffix, precedence_0);
 
     table
 }
 
 // KLUDGE: couple of places which don't have convenient access to the table
 // need this.
-const SEQ_PRECEDENCE: usize = 2;
 const PREFIX_PRECEDENCE: usize = 1000;
 
-const UNKNOWN_OPERATOR_SYNTAX: Syntax = Syntax::Operator(true, true, 10);
+const UNKNOWN_OPERATOR_SYNTAX: ParserSyntax = ParserSyntax::Operator(true, true, 10);
 
 fn make_name_table() -> NameTable {
     let mut table: NameTable = HashMap::new();
     let t = &mut table;
 
-    Syntax::def(t, "class", class_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "extend", extend_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "import", import_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "interface", interface_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, ",", invalid_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "->", invalid_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "defaultConstructor", invalid_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "method", invalid_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "required", invalid_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "end", invalid_prefix, end_suffix, precedence_1);
-    Syntax::def(t, ".", invalid_prefix, sequence_suffix, precedence_2);
-    Syntax::def(t, "let", let_prefix, invalid_suffix, precedence_3);
-    Syntax::def(t, "return", return_prefix, invalid_suffix, precedence_3);
-    Syntax::def(t, "raise", raise_prefix, invalid_suffix, precedence_3);
-    Syntax::def(t, ";", invalid_prefix, cascade_suffix, precedence_3);
-    Syntax::def(t, "=", invalid_prefix, assign_suffix, precedence_4);
-    Syntax::def(t, "is", invalid_prefix, is_suffix, precedence_10);
-    Syntax::def(t, "::", invalid_prefix, typecheck_suffix, precedence_1000);
+    ParserSyntax::def(t, "class", class_prefix, invalid_suffix, precedence_0);
+    ParserSyntax::def(t, "extend", extend_prefix, invalid_suffix, precedence_0);
+    ParserSyntax::def(t, "import", import_prefix, invalid_suffix, precedence_0);
+    ParserSyntax::def(t, "interface", interface_prefix, invalid_suffix, precedence_0);
+    ParserSyntax::def(t, ",", invalid_prefix, invalid_suffix, precedence_0);
+    ParserSyntax::def(t, "->", invalid_prefix, invalid_suffix, precedence_0);
+    ParserSyntax::def(t, "defaultConstructor", invalid_prefix, invalid_suffix, precedence_0);
+    ParserSyntax::def(t, "method", invalid_prefix, invalid_suffix, precedence_0);
+    ParserSyntax::def(t, "required", invalid_prefix, invalid_suffix, precedence_0);
+    ParserSyntax::def(t, "end", invalid_prefix, invalid_suffix, precedence_0);
+    // NOTE: parse_seq vs parse_single have special knowledge about precedence
+    // 2!
+    ParserSyntax::def(t, ".", invalid_prefix, sequence_suffix, precedence_2);
+    ParserSyntax::def(t, "let", let_prefix, invalid_suffix, precedence_3);
+    ParserSyntax::def(t, "return", return_prefix, invalid_suffix, precedence_3);
+    ParserSyntax::def(t, "raise", raise_prefix, invalid_suffix, precedence_3);
+    ParserSyntax::def(t, ";", invalid_prefix, cascade_suffix, precedence_3);
+    ParserSyntax::def(t, "=", invalid_prefix, assign_suffix, precedence_4);
+    ParserSyntax::def(t, "is", invalid_prefix, is_suffix, precedence_10);
+    ParserSyntax::def(t, "::", invalid_prefix, typecheck_suffix, precedence_1000);
 
     // FIXME: Should opening group sigils use prefix precedence?
-    Syntax::def(t, "[", array_prefix, invalid_suffix, precedence_3);
-    Syntax::def(t, "]", invalid_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "(", paren_prefix, invalid_suffix, precedence_3);
-    Syntax::def(t, ")", invalid_prefix, invalid_suffix, precedence_0);
-    Syntax::def(t, "{", block_prefix, invalid_suffix, precedence_3);
-    Syntax::def(t, "}", invalid_prefix, invalid_suffix, precedence_0);
+    ParserSyntax::def(t, "[", array_prefix, invalid_suffix, precedence_3);
+    ParserSyntax::def(t, "]", invalid_prefix, invalid_suffix, precedence_0);
+    ParserSyntax::def(t, "(", paren_prefix, invalid_suffix, precedence_3);
+    ParserSyntax::def(t, ")", invalid_prefix, invalid_suffix, precedence_0);
+    ParserSyntax::def(t, "{", block_prefix, invalid_suffix, precedence_3);
+    ParserSyntax::def(t, "}", invalid_prefix, invalid_suffix, precedence_0);
 
-    Syntax::def(t, "False", false_prefix, invalid_suffix, precedence_3);
-    Syntax::def(t, "True", true_prefix, invalid_suffix, precedence_3);
+    ParserSyntax::def(t, "False", false_prefix, invalid_suffix, precedence_3);
+    ParserSyntax::def(t, "True", true_prefix, invalid_suffix, precedence_3);
 
-    Syntax::op(t, "^", false, true, 100);
+    ParserSyntax::op(t, "^", false, true, 100);
 
-    Syntax::op(t, "*", false, true, 90);
-    Syntax::op(t, "/", false, true, 90);
-    Syntax::op(t, "%", false, true, 90);
+    ParserSyntax::op(t, "*", false, true, 90);
+    ParserSyntax::op(t, "/", false, true, 90);
+    ParserSyntax::op(t, "%", false, true, 90);
 
-    Syntax::op(t, "+", false, true, 80);
-    Syntax::op(t, "-", true, true, 80);
+    ParserSyntax::op(t, "+", false, true, 80);
+    ParserSyntax::op(t, "-", true, true, 80);
 
-    Syntax::op(t, "<<", false, true, 70);
-    Syntax::op(t, ">>", false, true, 70);
+    ParserSyntax::op(t, "<<", false, true, 70);
+    ParserSyntax::op(t, ">>", false, true, 70);
 
-    Syntax::op(t, "&", false, true, 60);
-    Syntax::op(t, "|", false, true, 60);
+    ParserSyntax::op(t, "&", false, true, 60);
+    ParserSyntax::op(t, "|", false, true, 60);
 
-    Syntax::op(t, "<", false, true, 50);
-    Syntax::op(t, "<=", false, true, 50);
-    Syntax::op(t, ">", false, true, 50);
-    Syntax::op(t, ">=", false, true, 50);
-    Syntax::op(t, "==", false, true, 50);
-    Syntax::op(t, "!=", false, true, 50);
+    ParserSyntax::op(t, "<", false, true, 50);
+    ParserSyntax::op(t, "<=", false, true, 50);
+    ParserSyntax::op(t, ">", false, true, 50);
+    ParserSyntax::op(t, ">=", false, true, 50);
+    ParserSyntax::op(t, "==", false, true, 50);
+    ParserSyntax::op(t, "!=", false, true, 50);
 
-    Syntax::op(t, "&&", false, true, 40);
-    Syntax::op(t, "||", false, true, 30);
+    ParserSyntax::op(t, "&&", false, true, 40);
+    ParserSyntax::op(t, "||", false, true, 30);
 
     table
 }
@@ -1211,23 +464,20 @@ fn precedence_2(_: &Parser, _: Span) -> Result<usize, Unwind> {
     Ok(2)
 }
 
-fn precedence_1(_: &Parser, _: Span) -> Result<usize, Unwind> {
-    Ok(1)
-}
-
 fn precedence_0(_: &Parser, _: Span) -> Result<usize, Unwind> {
     Ok(0)
 }
 
-fn invalid_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    parser.error("Not valid in value position")
+fn invalid_prefix(parser: &Parser) -> Parse {
+    parser.error(&format!("Not valid in value position: '{}'", parser.slice()))
 }
 
-fn invalid_suffix(parser: &Parser, _: Expr, _: PrecedenceFunction) -> Result<Expr, Unwind> {
-    parser.error("Not valid in operator position")
+fn invalid_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> ExprParse {
+    parser.error(&format!("Not valid in operator position: {}, receiver: {:?}",
+                          parser.slice(), left))
 }
 
-fn array_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+fn array_prefix(parser: &Parser) -> Parse {
     let start = parser.span().start;
     let (token, next) = parser.lookahead()?;
     let next_end = next.end;
@@ -1237,7 +487,7 @@ fn array_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     } else {
         let mut data = vec![];
         loop {
-            data.push(parser.parse_expr(0)?);
+            data.push(parser.parse_expr(1)?);
             let token = parser.next_token()?;
             if token == Token::SIGIL && parser.slice() == "]" {
                 break (start..parser.span().end, data);
@@ -1248,7 +498,7 @@ fn array_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             return parser.error("Expected ] or ,");
         }
     };
-    Ok(Array::expr(span, data))
+    Ok(Syntax::Expr(Array::expr(span, data)))
 }
 
 fn assign_suffix(
@@ -1275,7 +525,7 @@ fn cascade_suffix(
     Ok(parser.parse_tail(receiver, precedence(parser, parser.span())?)?.to_cascade(false))
 }
 
-fn eof_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+fn eof_prefix(parser: &Parser) -> Parse {
     parser.eof_error("Unexpected EOF in value position")
 }
 
@@ -1283,8 +533,8 @@ fn eof_suffix(parser: &Parser, _: Expr, _: PrecedenceFunction) -> Result<Expr, U
     parser.eof_error("Unexpected EOF in suffix position")
 }
 
-fn false_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    Ok(Const::expr(parser.span(), Literal::Boolean(false)))
+fn false_prefix(parser: &Parser) -> Parse {
+    Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Boolean(false))))
 }
 
 fn identifier_precedence(parser: &Parser, span: Span) -> Result<usize, Unwind> {
@@ -1294,17 +544,14 @@ fn identifier_precedence(parser: &Parser, span: Span) -> Result<usize, Unwind> {
     }
 }
 
-fn identifier_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+fn identifier_prefix(parser: &Parser) -> Parse {
     let name = parser.slice();
     match parser.name_table.get(name) {
         Some(syntax) => parser.parse_prefix_syntax(syntax),
         None => {
-            let c = name.chars().next().expect("BUG: empty identifier");
-            if c.is_uppercase() {
-                // FIXME: not all languages have uppercase
-                return Ok(Global::expr(parser.span(), parser.slice()));
-            }
-            return Ok(Expr::Var(Var::untyped(parser.span(), parser.tokenstring())));
+            name.chars().next().expect("BUG: empty identifier");
+            Ok(Syntax::Expr(
+                Expr::Var(Var::untyped(parser.span(), parser.tokenstring()))))
         }
     }
 }
@@ -1317,7 +564,9 @@ fn identifier_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Resu
             let c = name.chars().next().expect("BUG: empty identifier");
             if c.is_uppercase() {
                 // FIXME: not all languages have uppercase
-                return parser.error("Invalid message name (must be lowercase)");
+                return parser.error(&format!(
+                    "'{}' is not a valid message name (receiver: {:?})",
+                    name, left));
             }
             // Unary message
             Ok(left.send(Message {
@@ -1370,7 +619,7 @@ fn operator_precedence(parser: &Parser, span: Span) -> Result<usize, Unwind> {
     parser.syntax_precedence(syntax, span)
 }
 
-fn operator_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+fn operator_prefix(parser: &Parser) -> Parse {
     let syntax = parser.name_table.get(parser.slice()).unwrap_or(&UNKNOWN_OPERATOR_SYNTAX);
     parser.parse_prefix_syntax(syntax)
 }
@@ -1380,19 +629,19 @@ fn operator_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Result
     parser.parse_suffix_syntax(syntax, left)
 }
 
-fn paren_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+fn paren_prefix(parser: &Parser) -> Parse {
     let expr = parser.parse_seq()?;
     let token = parser.next_token()?;
     if token == Token::SIGIL && parser.slice() == ")" {
-        Ok(expr)
+        Ok(Syntax::Expr(expr))
     } else {
         // FIXME: EOF
         parser.error("Expected )")
     }
 }
 
-fn true_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    Ok(Const::expr(parser.span(), Literal::Boolean(true)))
+fn true_prefix(parser: &Parser) -> Parse {
+    Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Boolean(true))))
 }
 
 fn typecheck_suffix(
@@ -1413,8 +662,13 @@ fn sequence_suffix(
 ) -> Result<Expr, Unwind> {
     let (token, span) = parser.lookahead()?;
     let text = parser.slice_at(span);
+    // FIXME: Pull this information from a table instead.
     if (token == Token::WORD
-        && (text == "required" || text == "method" || text == "end" || text == "class"))
+        && (text == "required" ||
+            text == "method" ||
+            text == "end" ||
+            text == "class" ||
+            text == "is"))
         || token == Token::EOF
     {
         return Ok(left);
@@ -1433,37 +687,6 @@ fn sequence_suffix(
     Ok(Seq::expr(exprs))
 }
 
-fn end_suffix(parser: &Parser, left: Expr, precedence: PrecedenceFunction) -> Result<Expr, Unwind> {
-    let mut exprs = if let Expr::Seq(left_seq) = left {
-        if left_seq.exprs[left_seq.exprs.len() - 1].is_end_expr() {
-            left_seq.exprs
-        } else {
-            return parser.error("Unexpected 'end': not after class definition.");
-        }
-    } else {
-        if left.is_end_expr() {
-            vec![left]
-        } else {
-            return parser.error("Unexpected 'end': not after class definition.");
-        }
-    };
-    let (token, _) = parser.lookahead()?;
-    if token == Token::EOF {
-        if exprs.len() > 1 {
-            return Ok(Seq::expr(exprs));
-        } else {
-            return Ok(exprs.pop().unwrap());
-        }
-    }
-    let right = parser.parse_expr(precedence(parser, parser.span())?)?;
-    if let Expr::Seq(mut right_seq) = right {
-        exprs.append(&mut right_seq.exprs);
-    } else {
-        exprs.push(right);
-    }
-    Ok(Seq::expr(exprs))
-}
-
 fn parse_record(parser: &Parser) -> Result<Expr, Unwind> {
     let start = parser.span().start;
     let mut selector = String::new();
@@ -1472,7 +695,7 @@ fn parse_record(parser: &Parser) -> Result<Expr, Unwind> {
         match parser.next_token()? {
             Token::KEYWORD => {
                 selector.push_str(parser.slice());
-                args.push(parser.parse_expr(0)?);
+                args.push(parser.parse_expr(1)?);
                 match parser.next_token()? {
                     Token::SIGIL if "," == parser.slice() => continue,
                     Token::SIGIL if "}" == parser.slice() => break,
@@ -1500,7 +723,7 @@ fn parse_dictionary(parser: &Parser, start: Span, mut key: Expr) -> Result<Expr,
         if "->" != parser.slice() {
             return parser.error(&format!("Expected ->, got {}", parser.slice()));
         }
-        assoc.push((key, parser.parse_expr(0)?));
+        assoc.push((key, parser.parse_expr(1)?));
         match parser.next_token()? {
             Token::SIGIL if "}" == parser.slice() => {
                 break;
@@ -1513,8 +736,7 @@ fn parse_dictionary(parser: &Parser, start: Span, mut key: Expr) -> Result<Expr,
                         break;
                     }
                     _ => {
-                        key = parser.parse_expr(0)?;
-                        println!("key: {:?}", &key);
+                        key = parser.parse_expr(1)?;
                         parser.next_token()?;
                     }
                 }
@@ -1588,20 +810,21 @@ fn parse_block_or_dictionary(parser: &Parser) -> Result<Expr, Unwind> {
     }
 }
 
-fn block_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+fn block_prefix(parser: &Parser) -> Parse {
     //
     // { keyword: ... } --> Record
     //
     // Otherwise either Block or Dictionary. Easier to diverge
     // later than figure out up front.
     //
-    match parser.lookahead() {
-        Ok((Token::KEYWORD, _)) => parse_record(parser),
-        _ => parse_block_or_dictionary(parser),
-    }
+    let res = match parser.lookahead() {
+        Ok((Token::KEYWORD, _)) => parse_record(parser)?,
+        _ => parse_block_or_dictionary(parser)?,
+    };
+    Ok(Syntax::Expr(res))
 }
 
-fn import_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+fn import_prefix(parser: &Parser) -> Parse {
     let import_start = parser.span().start;
     let (token, name_span) = parser.lookahead()?;
     let mut spec = String::new();
@@ -1613,18 +836,13 @@ fn import_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         parser.next_token()?;
         spec.push_str(parser.slice());
     }
+    // println!("import: {}", &spec);
     if spec.len() > 0 {
         // Deal with .*
         if let Some(star) = parser.dotted_name_at(parser.span().end, true)? {
             spec.push_str(parser.slice_at(star));
         }
         let name_end = parser.span().end;
-        let body = if Token::EOF == parser.lookahead()?.0 {
-            parser.next_token()?;
-            None
-        } else {
-            Some(Box::new(parser.parse_seq()?))
-        };
         let mut path = PathBuf::new();
         let mut prefix = String::new();
         let mut name = None;
@@ -1655,19 +873,18 @@ fn import_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             }
         }
         path.set_extension("foo");
-        Ok(Expr::Import(Import {
+        Ok(Syntax::Def(Def::ImportDef(ImportDef {
             span: import_start..name_end,
             path,
             prefix,
             name,
-            body,
-        }))
+        })))
     } else {
         return parser.error_at(name_span, "Expected module name");
     }
 }
 
-fn interface_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+fn interface_prefix(parser: &Parser) -> Parse {
     // FIXME: span is the span of the interface, but maybe it would be better if these
     // had all their own spans.
     //
@@ -1684,13 +901,14 @@ fn interface_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         }
         _ => return parser.error("Expected interface name"),
     };
-    let mut interface = InterfaceDefinition::new(span, interface_name);
+    // println!("interface: {}", interface_name);
+    let mut interface = InterfaceDef::new(span, interface_name);
     loop {
-        let (next, span2) = parser.lookahead()?;
-        if next == Token::WORD && parser.slice_at(span2) == "end" {
+        let next = parser.next_token()?;
+        if next == Token::WORD && parser.slice() == "end" {
             break;
         }
-        parser.next_token()?;
+
         if next == Token::EOF {
             return parser
                 .eof_error("Unexpected EOF while parsing interface: expected method or end");
@@ -1721,10 +939,10 @@ fn interface_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         }
         return parser.error("Expected method or end");
     }
-    Ok(Expr::InterfaceDefinition(interface))
+    Ok(Syntax::Def(Def::InterfaceDef(interface)))
 }
 
-fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+fn class_prefix(parser: &Parser) -> Parse {
     // FIXME: span is the span of the class, but maybe it would be better if these
     // had all their own spans.
     let span = parser.span();
@@ -1741,6 +959,7 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         }
         _ => return parser.error("Expected class name"),
     };
+    // println!("class: {}", class_name);
     loop {
         match parser.next_token()? {
             Token::SIGIL if parser.slice() == "{" => break,
@@ -1754,20 +973,21 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             Token::WORD => {
                 instance_variables.push(parse_var(parser)?);
             }
-            Token::SIGIL if parser.slice() == "}" => break,
+            Token::SIGIL if parser.slice() == "}" => {
+                break;
+            }
             _ => return parser.error("Invalid instance variable specification"),
         }
     }
     let size = instance_variables.len();
-    let mut class = ClassDefinition::new(span, class_name, instance_variables);
+    let mut class = ClassDef::new(span, class_name, instance_variables);
     loop {
-        let (next, span2) = parser.lookahead()?;
-        if next == Token::WORD && parser.slice_at(span2) == "end" {
-            break;
-        }
-        parser.next_token()?;
+        let next = parser.next_token()?;
         if next == Token::EOF {
             return parser.eof_error("Unexpected EOF while parsing class: expected method or end");
+        }
+        if next == Token::WORD && parser.slice() == "end" {
+            break;
         }
         if next == Token::WORD && parser.slice() == "class" {
             if parser.next_token()? == Token::WORD && parser.slice() == "method" {
@@ -1805,14 +1025,15 @@ fn class_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         if next == Token::COMMENT || next == Token::BLOCK_COMMENT {
             continue;
         }
-        return parser.error("Expected method or end while parsing class");
+        return parser.error(&format!("Expected method or end, got: '{}'",
+                                     parser.slice()));
     }
-    Ok(Expr::ClassDefinition(class))
+    Ok(Syntax::Def(Def::ClassDef(class)))
 }
 
-fn extend_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    // FIXME: span is the span of the extension, but maybe it would be better if these
-    // had all their own spans.
+fn extend_prefix(parser: &Parser) -> Parse {
+    // FIXME: span is the span of the extension, but maybe it would be better if
+    // these had all their own spans.
     //
     // FIXME: duplicated class_prefix pretty much.
     let span = parser.span();
@@ -1827,15 +1048,16 @@ fn extend_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         }
         _ => return parser.error("Expected class name"),
     };
-    let mut class = ClassExtension::new(span, &class_name);
+    let mut class = ExtensionDef::new(span, &class_name);
+    // println!("extend: {}", &class_name);
     loop {
-        let (next, span2) = parser.lookahead()?;
-        if next == Token::WORD && parser.slice_at(span2) == "end" {
+        let next = parser.next_token()?;
+        if next == Token::WORD && parser.slice() == "end" {
             break;
         }
-        parser.next_token()?;
         if next == Token::EOF {
-            return parser.eof_error("Unexpected EOF while parsing class: expected method or end");
+            return parser.eof_error(
+                "Unexpected EOF while parsing extension: expected method or end");
         }
         if next == Token::WORD && parser.slice() == "class" {
             if parser.next_token()? == Token::WORD && parser.slice() == "method" {
@@ -1856,12 +1078,13 @@ fn extend_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             }
             return parser.error("Invalid interface name in extend");
         }
-        return parser.error("Expected method or end");
+        return parser.error(&format!("Expected method or end, got: '{}'",
+                                     parser.slice()));
     }
-    Ok(Expr::ClassExtension(class))
+    Ok(Syntax::Def(Def::ExtensionDef(class)))
 }
 
-fn let_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+fn let_prefix(parser: &Parser) -> Parse {
     if Token::WORD != parser.next_token()? {
         return parser.error("Expected variable name after let");
     }
@@ -1876,7 +1099,7 @@ fn let_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         return parser.error("Expected = in let");
     }
 
-    let value = parser.parse_expr(SEQ_PRECEDENCE)?;
+    let value = parser.parse_single()?;
     let mut eof = match parser.next_token()? {
         Token::SIGIL if parser.slice() == "." => false,
         Token::EOF => true,
@@ -1898,18 +1121,18 @@ fn let_prefix(parser: &Parser) -> Result<Expr, Unwind> {
     } else {
         Some(Box::new(parser.parse_seq()?))
     };
-    Ok(Bind::expr(name, typename, Box::new(value), body))
+    Ok(Syntax::Expr(Bind::expr(name, typename, Box::new(value), body)))
 }
 
-fn ignore_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    parser.parse_expr(SEQ_PRECEDENCE)
+fn ignore_prefix(parser: &Parser) -> Parse {
+    parser._parse()
 }
 
 fn ignore_suffix(_parser: &Parser, left: Expr, _pre: PrecedenceFunction) -> Result<Expr, Unwind> {
     Ok(left)
 }
 
-fn number_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+fn number_prefix(parser: &Parser) -> Parse {
     let slice = parser.slice();
     // Hexadecimal case
     if slice.len() > 2 && ("0x" == &slice[0..2] || "0X" == &slice[0..2]) {
@@ -1917,45 +1140,45 @@ fn number_prefix(parser: &Parser) -> Result<Expr, Unwind> {
             Ok(i) => i,
             Err(_) => return parser.error("Malformed hexadecimal number"),
         };
-        Ok(Const::expr(parser.span(), Literal::Integer(integer)))
+        return Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Integer(integer))))
     }
     // Binary case
-    else if slice.len() > 2 && ("0b" == &slice[0..2] || "0B" == &slice[0..2]) {
+    if slice.len() > 2 && ("0b" == &slice[0..2] || "0B" == &slice[0..2]) {
         let integer = match i64::from_str_radix(&slice[2..], 2) {
             Ok(i) => i,
             Err(_) => return parser.error("Malformed binary number"),
         };
-        Ok(Const::expr(parser.span(), Literal::Integer(integer)))
+        return Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Integer(integer))))
     }
     // Decimal and float case
-    else {
-        let mut decimal: i64 = 0;
-        for byte in slice.bytes() {
-            if byte < 128 {
-                let c = byte as char;
-                if c == '_' {
-                    continue;
-                }
-                if c.is_digit(10) {
-                    decimal = decimal * 10 + c.to_digit(10).unwrap() as i64;
-                } else {
-                    match f64::from_str(slice) {
-                        Ok(f) => return Ok(Const::expr(parser.span(), Literal::Float(f))),
-                        Err(_) => return parser.error("Malformed number"),
-                    }
+    let mut decimal: i64 = 0;
+    for byte in slice.bytes() {
+        if byte < 128 {
+            let c = byte as char;
+            if c == '_' {
+                continue;
+            }
+            if c.is_digit(10) {
+                decimal = decimal * 10 + c.to_digit(10).unwrap() as i64;
+            } else {
+                match f64::from_str(slice) {
+                    Ok(f) => return Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Float(f)))),
+                    Err(_) => return parser.error("Malformed number"),
                 }
             }
         }
-        Ok(Const::expr(parser.span(), Literal::Integer(decimal)))
     }
+    Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Integer(decimal))))
 }
 
-fn return_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    Ok(Return::expr(parser.span(), parser.parse_expr(SEQ_PRECEDENCE)?))
+fn return_prefix(parser: &Parser) -> Parse {
+    // FIXME: what about "return x. dead-expr" ?
+    Ok(Syntax::Expr(Return::expr(parser.span(), parser.parse_single()?)))
 }
 
-fn raise_prefix(parser: &Parser) -> Result<Expr, Unwind> {
-    Ok(Raise::expr(parser.span(), parser.parse_expr(SEQ_PRECEDENCE)?))
+fn raise_prefix(parser: &Parser) -> Parse {
+    // FIXME: what about "raise x. dead-expr" ?
+    Ok(Syntax::Expr(Raise::expr(parser.span(), parser.parse_single()?)))
 }
 
 /// Takes care of \n, and such. Terminates on { or end of string.
@@ -1993,7 +1216,7 @@ fn scan_string_part(parser: &Parser, span: Span) -> Result<Expr, Unwind> {
     }
 }
 
-fn string_prefix(parser: &Parser) -> Result<Expr, Unwind> {
+fn string_prefix(parser: &Parser) -> Parse {
     let slice = parser.slice();
     let full = parser.span();
     let mut span = full.clone();
@@ -2029,7 +1252,7 @@ fn string_prefix(parser: &Parser) -> Result<Expr, Unwind> {
 
     // Append them all togather.
     let mut expr = match parts.pop() {
-        None => return Ok(Const::expr(span, Literal::String("".to_string()))),
+        None => return Ok(Syntax::Expr(Const::expr(span, Literal::String("".to_string())))),
         Some(part) => part,
     };
     while let Some(right) = parts.pop() {
@@ -2045,7 +1268,7 @@ fn string_prefix(parser: &Parser) -> Result<Expr, Unwind> {
         })
     }
 
-    Ok(expr)
+    Ok(Syntax::Expr(expr))
 }
 
 /// Utils
@@ -2062,19 +1285,23 @@ fn parse_var(parser: &Parser) -> Result<Var, Unwind> {
     let name = parser.tokenstring();
     let namespan = parser.span();
     let (token, span) = parser.lookahead()?;
-    if token == Token::SIGIL && parser.slice_at(span) == "::" {
+    let var = if token == Token::SIGIL && parser.slice_at(span) == "::" {
         parser.next_token()?;
-        Ok(Var::typed(namespan, name, parse_type_designator(parser)?))
+        Var::typed(namespan, name, parse_type_designator(parser)?)
     } else {
-        Ok(Var::untyped(namespan, name))
-    }
+        Var::untyped(namespan, name)
+    };
+    Ok(var)
 }
 
 fn parse_method(parser: &Parser) -> Result<MethodDefinition, Unwind> {
     let mut method = parse_method_signature(parser)?;
+    // println!("- method: {}", method.selector);
     // NOTE: This is the place where I could inform parser about instance
     // variables.
-    method.body = Some(Box::new(parser.parse_body()?));
+    // FIXME: Would be nice to add "while parsing method Bar#foo"
+    // type info to the error.
+    method.body = Some(Box::new(parser.parse_seq()?));
     Ok(method)
 }
 
@@ -2129,12 +1356,14 @@ fn parse_method_signature(parser: &Parser) -> Result<MethodDefinition, Unwind> {
     } else {
         None
     };
+    // FIXME: Would be nice to have a --verbose-parser which would print
+    // things like this
     Ok(MethodDefinition::new(span, selector, parameters, rtype))
 }
 
 /// Tests and tools
 
-pub fn parse_str_in_path<P: AsRef<Path>>(source: &str, root: P) -> Result<Expr, Unwind> {
+pub fn parse_str_in_path<P: AsRef<Path>>(source: &str, root: P) -> Parse {
     // FIXME: Don't like this parse_str/ path.
     Parser::new(source, root).parse().map_err(|unwind| unwind.with_context(source))
 }
@@ -2193,14 +1422,14 @@ pub mod utils {
         Const::expr(span, Literal::Boolean(value))
     }
 
-    pub fn class(span: Span, name: &str, instance_variables: Vec<&str>) -> Expr {
+    pub fn class(span: Span, name: &str, instance_variables: Vec<&str>) -> Def {
         let mut p = span.start + "class ".len() + name.len() + " { ".len();
         let mut vars = Vec::new();
         for v in instance_variables {
             vars.push(Var::untyped(p..p + v.len(), v.to_string()));
             p += v.len() + " ".len()
         }
-        ClassDefinition::expr(span, name.to_string(), vars)
+        ClassDef::syntax(span, name.to_string(), vars)
     }
 
     pub fn float(span: Span, value: f64) -> Expr {

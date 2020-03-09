@@ -1,7 +1,47 @@
+use std::cell::RefCell;
+use std::hash::{Hash, Hasher};
+use std::rc::Rc;
+
 use crate::eval::Env;
-use crate::objects::{Eval, Object, Source, Vtable};
+use crate::objects::{Foolang, Eval, Object, Source, Vtable, Datum};
 use crate::parse::Parser;
+use crate::syntax::Syntax;
 use crate::unwind::{Error, Unwind};
+
+pub struct Compiler {
+    env: Env,
+    source: RefCell<String>,
+    parsed: RefCell<Vec<Syntax>>,
+}
+
+impl PartialEq for Compiler {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self, other)
+    }
+}
+
+impl Eq for Compiler {}
+
+impl Hash for Compiler {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self, state);
+    }
+}
+
+pub fn make_compiler(foo: &Foolang) -> Object {
+    Object {
+        vtable: Rc::clone(&foo.compiler_vtable),
+        datum: Datum::Compiler(Rc::new(Compiler {
+            // This makes the objects resulting from Compiler eval share same
+            // vtable instances as the parent, which seems like the right thing
+            // -- but it would be nice to be able to specify a different
+            // prelude. Meh.
+            env: foo.toplevel_env(),
+            source: RefCell::new(String::new()),
+            parsed: RefCell::new(Vec::new()),
+        })),
+    }
+}
 
 pub fn class_vtable() -> Vtable {
     let vt = Vtable::new("class Compiler");
@@ -22,11 +62,17 @@ fn class_compiler_new(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_compiler())
 }
 
-fn compiler_evaluate(receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
+fn compiler_evaluate(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     let compiler = receiver.compiler();
-    let expr = compiler.expr.borrow();
     let source = compiler.source.borrow();
-    compiler.env.eval(&expr).context(&source)
+    let mut res = env.foo.make_boolean(false);
+    for s in compiler.parsed.borrow().iter() {
+        res = match s {
+            Syntax::Def(ref def) => compiler.env.augment(def).context(&source)?,
+            Syntax::Expr(ref expr) => compiler.env.eval(expr).context(&source)?
+        }
+    }
+    Ok(res)
 }
 
 fn compiler_define_as(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
@@ -41,15 +87,18 @@ fn parse_aux(receiver: &Object, source: &Object, handler: Option<&Object>, env: 
     let source = source.string_as_str();
     let mut parser = Parser::new(source, env.foo.root());
     let compiler = receiver.compiler();
-    let expr = match parser.parse() {
-        Ok(expr) => expr,
-        Err(Unwind::Exception(Error::EofError(ref e), ..)) if handler.is_some() => {
-            return handler.unwrap().send("value:", &[env.foo.into_string(e.what())], env)
-        }
-        Err(unwind) => return Err(unwind).context(source),
-    };
+    let mut parsed = Vec::new();
+    while !parser.at_eof() {
+        match parser.parse() {
+            Ok(syntax) => parsed.push(syntax),
+            Err(Unwind::Exception(Error::EofError(ref e), ..)) if handler.is_some() => {
+                return handler.unwrap().send("value:", &[env.foo.into_string(e.what())], env)
+            }
+            Err(unwind) => return Err(unwind).context(source),
+        };
+    }
     compiler.source.replace(source.to_string());
-    compiler.expr.replace(expr);
+    compiler.parsed.replace(parsed);
     Ok(receiver.clone())
 }
 

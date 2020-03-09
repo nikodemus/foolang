@@ -562,14 +562,14 @@ fn test_class_not_toplevel() {
         eval_str("{ class Point { x y } end } value"),
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
-                what: "Class definition not at toplevel".to_string(),
+                what: "Definition where expression was expected".to_string(),
             }),
             Location {
                 span: Some(2..7),
                 context: Some(
                     concat!(
                         "001 { class Point { x y } end } value\n",
-                        "      ^^^^^ Class definition not at toplevel\n"
+                        "      ^^^^^ Definition where expression was expected\n"
                     )
                     .to_string()
                 )
@@ -605,14 +605,14 @@ fn eval_global1() {
         eval_str("DoesNotExist"),
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
-                what: "Undefined global: DoesNotExist".to_string(),
+                what: "Unbound variable: DoesNotExist".to_string(),
             }),
             Location {
                 span: Some(0..12),
                 context: Some(
                     concat!(
                         "001 DoesNotExist\n",
-                        "    ^^^^^^^^^^^^ Undefined global: DoesNotExist\n"
+                        "    ^^^^^^^^^^^^ Unbound variable: DoesNotExist\n"
                     )
                     .to_string()
                 )
@@ -652,7 +652,7 @@ fn test_new_instance2() {
 fn test_instance_method1() {
     let (object, env) = eval_obj(
         "class Foo {}
-            method bar 311
+            method bar 311.
          end
          Foo new",
     );

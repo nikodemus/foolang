@@ -2,17 +2,17 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
+use std::path::{Path};
 
 use crate::objects::{
     read_instance_variable, write_instance_variable, Arg, Class, Datum, Eval, Foolang, Object,
-    Source, Vtable,
+    Source, Vtable
 };
-use crate::parse::{
-    Array, Assign, Bind, Block, Cascade, Chain, ClassDefinition, ClassExtension, Const, Dictionary,
-    Eq, Expr, Global, Import, InterfaceDefinition, Literal, Message, Parser, Raise, Return, Seq,
-    Typecheck, Var,
-};
-use crate::tokenstream::Span;
+use crate::syntax::Syntax;
+use crate::expr::*;
+use crate::def::*;
+use crate::parse::Parser;
+use crate::span::Span;
 use crate::unwind::Unwind;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -281,6 +281,20 @@ impl Env {
     pub fn new() -> Env {
         Foolang::here().toplevel_env()
     }
+
+    pub fn load_code<P: AsRef<Path>>(self, code: &str, root: P) -> Result<Env, Unwind> {
+        let mut parser = Parser::new(&code, root);
+        while !parser.at_eof() {
+            match parser.parse() {
+                Ok(Syntax::Def(def)) => self.augment(&def).context(&code)?,
+                // FIXME: Better error needed here.
+                Ok(Syntax::Expr(_)) => return Unwind::error("Expression at toplevel!"),
+                Err(unwind) => return Err(unwind.with_context(&code)),
+            };
+        }
+        Ok(self)
+    }
+
     /// Returns true iff underlying `EnvImpl` has is child of the builtin environment.
     /// or the builtin environment.
     fn is_toplevel(&self) -> bool {
@@ -342,24 +356,27 @@ impl Env {
         self.env_ref.get(name)
     }
 
+    // FIXME: Should probably be called "load_workspace"
     pub fn eval_all(&self, source: &str) -> Eval {
         let mut parser = Parser::new(source, self.foo.root());
-        loop {
-            let expr = match parser.parse() {
-                Err(unwind) => {
-                    return Err(unwind.with_context(source));
-                }
-                Ok(expr) => expr,
+        let env = self.clone();
+        let mut res = self.foo.make_boolean(false);
+        while !parser.at_eof() {
+            res = match parser.parse() {
+                Ok(Syntax::Def(def)) => env.augment(&def).context(&source)?,
+                Ok(Syntax::Expr(expr)) => env.eval(&expr).context(&source)?,
+                Err(unwind) => return Err(unwind.with_context(&source)),
             };
-            let object = match self.eval(&expr) {
-                Err(unwind) => {
-                    return Err(unwind.with_context(source));
-                }
-                Ok(object) => object,
-            };
-            if parser.at_eof() {
-                return Ok(object);
-            }
+        }
+        Ok(res)
+    }
+
+    pub fn augment(&self, def: &Def) -> Eval {
+        match def {
+            Def::ClassDef(klass) => self.do_class(klass),
+            Def::ExtensionDef(extension) => self.do_extension(extension),
+            Def::ImportDef(import) => self.do_import(import),
+            Def::InterfaceDef(interface) => self.do_interface(interface),
         }
     }
 
@@ -371,14 +388,9 @@ impl Env {
             Bind(bind) => self.eval_bind(bind),
             Block(block) => self.eval_block(block),
             Cascade(cascade) => self.eval_cascade(cascade),
-            ClassDefinition(definition) => self.eval_class_definition(definition),
-            ClassExtension(extension) => self.eval_class_extension(extension),
             Const(constant) => self.eval_constant(constant),
             Dictionary(dictionary) => self.eval_dictionary(dictionary),
             Eq(eq) => self.eval_eq(eq),
-            Global(global) => self.eval_global(global),
-            Import(import) => self.eval_import(import),
-            InterfaceDefinition(interface) => self.eval_interface(interface),
             Raise(raise) => self.eval_raise(raise),
             Return(ret) => self.eval_return(ret),
             Chain(chain) => self.eval_chain(chain),
@@ -463,7 +475,7 @@ impl Env {
         Ok(())
     }
 
-    fn eval_class_definition(&self, definition: &ClassDefinition) -> Eval {
+    fn do_class(&self, definition: &ClassDef) -> Eval {
         // println!("CLASS env: {:?}", self);
         // FIXME: allow anonymous classes
         self.check_toplevel(&definition.span, "Class definition")?;
@@ -474,12 +486,35 @@ impl Env {
         Ok(class)
     }
 
-    fn eval_class_extension(&self, extension: &ClassExtension) -> Eval {
+    fn do_extension(&self, extension: &ExtensionDef) -> Eval {
         if !self.is_toplevel() {
-            return Unwind::error_at(extension.span.clone(), "Class extension not at toplevel");
+            return Unwind::error_at(extension.span.clone(), "Extension not at toplevel");
         }
         let class = self.find_global_or_unwind(&extension.name)?;
         class.extend_class(extension, self)
+    }
+
+    fn do_import(&self, import: &ImportDef) -> Eval {
+        let module = &self.foo.load_module(&import.path)?.env_ref;
+        let res = match &import.name {
+            None => self.env_ref.import_prefixed(&module, &import.prefix),
+            Some(name) if name == "*" => self.env_ref.import_everything(&module),
+            Some(name) => self.env_ref.import_name(&module, name),
+        };
+        if let Err(mut unwind) = res {
+            unwind.add_span(&import.span);
+            return Err(unwind);
+        }
+        Ok(self.foo.make_string(&import.path.to_string_lossy()))
+    }
+
+    fn do_interface(&self, interface: &InterfaceDef) -> Eval {
+        self.check_toplevel(&interface.span, "Interface definition")?;
+        let name = &interface.name;
+        self.check_not_defined(&interface.name, &interface.span, "Interface")?;
+        let interface = self.foo.make_interface(interface, self)?;
+        self.define(name, interface.clone());
+        Ok(interface)
     }
 
     fn eval_dictionary(&self, dictionary: &Dictionary) -> Eval {
@@ -557,10 +592,6 @@ impl Env {
         }
     }
 
-    fn eval_global(&self, global: &Global) -> Eval {
-        self.find_global_or_unwind(&global.name).source(&global.span)
-    }
-
     fn eval_constant(&self, constant: &Const) -> Eval {
         match &constant.literal {
             Literal::Boolean(value) => Ok(self.foo.make_boolean(*value)),
@@ -573,33 +604,6 @@ impl Env {
     pub fn import_everything(&self, module: &Env) -> Eval {
         self.env_ref.import_everything(&module.env_ref)?;
         Ok(self.foo.make_boolean(true))
-    }
-
-    fn eval_import(&self, import: &Import) -> Eval {
-        let module = &self.foo.load_module(&import.path)?.env_ref;
-        let res = match &import.name {
-            None => self.env_ref.import_prefixed(&module, &import.prefix),
-            Some(name) if name == "*" => self.env_ref.import_everything(&module),
-            Some(name) => self.env_ref.import_name(&module, name),
-        };
-        if let Err(mut unwind) = res {
-            unwind.add_span(&import.span);
-            return Err(unwind);
-        }
-        match import.body {
-            // FIXME: Should be path + name, probably
-            None => Ok(self.foo.make_string(&import.path.to_string_lossy())),
-            Some(ref expr) => self.eval(expr),
-        }
-    }
-
-    fn eval_interface(&self, interface: &InterfaceDefinition) -> Eval {
-        self.check_toplevel(&interface.span, "Interface definition")?;
-        let name = &interface.name;
-        self.check_not_defined(&interface.name, &interface.span, "Interface")?;
-        let interface = self.foo.make_interface(interface, self)?;
-        self.define(name, interface.clone());
-        Ok(interface)
     }
 
     fn eval_raise(&self, raise: &Raise) -> Eval {

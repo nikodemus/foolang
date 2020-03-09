@@ -1,8 +1,5 @@
-use std::ops::Range;
-
 use crate::unwind::Unwind;
-
-pub type Span = Range<usize>;
+use crate::span::Span;
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]

@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::eval::EnvRef;
 use crate::objects::Object;
-use crate::tokenstream::Span;
+use crate::span::Span;
 
 trait LineIndices {
     // FIXME: learn to implement iterators
@@ -76,7 +76,10 @@ impl fmt::Display for Unwind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Unwind::Exception(error, location) => {
-                write!(f, "ERROR: {}\n{}", error.what(), location.context())
+                match &location.context {
+                    Some(c) => write!(f, "ERROR: {}\n{}", error.what(), c),
+                    None => write!(f, "ERROR: {} (no context)", error.what()),
+                }
             }
             Unwind::ReturnFrom(_, object) => write!(f, "#<Return {}>", object),
         }
@@ -130,6 +133,7 @@ impl Unwind {
     }
 
     pub fn error<T>(what: &str) -> Result<T, Unwind> {
+        // panic!("BOOM: {}", what);
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
                 what: what.to_string(),
@@ -139,6 +143,7 @@ impl Unwind {
     }
 
     pub fn error_at<T>(span: Span, what: &str) -> Result<T, Unwind> {
+        // panic!("BOOM_AT: {:?}, {}", span, what);
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
                 what: what.to_string(),

@@ -37,10 +37,10 @@ fn test_closure5() {
     assert_eq!(
         eval_ok(
             "class T {}
-               class method closeOver: value
-                 return { |x | value + x }
-               class method test
-                return (self closeOver: 40) value: 2
+                 class method closeOver: value
+                     return { |x | value + x }.
+                 class method test
+                     return (self closeOver: 40) value: 2.
              end
              T test"
         )

@@ -55,7 +55,7 @@ fn test_interpolated_error_location() {
         exception,
         Unwind::Exception(
             Error::SimpleError(SimpleError {
-                what: "Undefined global: X".to_string(),
+                what: "Unbound variable: X".to_string(),
             }),
             Location {
                 span: Some(48..49),
@@ -63,7 +63,7 @@ fn test_interpolated_error_location() {
                     concat!(
                         "003                 let x = 42.\n",
                         "004                 \"{X}\"\n",
-                        "                      ^ Undefined global: X\n",
+                        "                      ^ Unbound variable: X\n",
                         "005 \n"
                     )
                     .to_string()
