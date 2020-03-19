@@ -202,6 +202,10 @@ Returns a [Time](#time) object representing current time.
 
 !> Will be renamed `Block`, probably.
 
+#### **method** `apply:` _array_
+
+Executes the block using values from the array.
+
 #### **method** `ascending`
 
 Assumes that the receiver is a single-argument block that returns a value to be
