@@ -60,6 +60,7 @@
 (defvar foolang--reserved-words
   '(
     "class"
+    "define"
     "end"
     "extend"
     "import"
@@ -170,6 +171,15 @@
 (def-foolang-indent "class Name {...}" (col base stack ctx)
   (:after
     (looking-at " *class\\s-+[A-Z]+\\s-*{.*}\\s-*$"))
+  (:indent
+   (list (+ col foolang-indent-offset)
+         base
+         stack
+         ctx)))
+
+(def-foolang-indent "define <name>" (col base stack ctx)
+  (:after
+    (looking-at " *define\\s-+[A-Za-z_]+\\s-*$"))
   (:indent
    (list (+ col foolang-indent-offset)
          base
@@ -565,6 +575,7 @@
   (beginning-of-line)
   (cond ((foolang--looking-at-method) foolang-indent-offset)
         ((foolang--looking-at-class) 0)
+        ((foolang--looking-at-define) 0)
         ((foolang--looking-at-extend) 0)
         ((foolang--looking-at-interface) 0)
         ((foolang--top-of-buffer) 0)))
@@ -574,6 +585,9 @@
 
 (defun foolang--looking-at-class ()
   (looking-at " *class [A-Z]"))
+
+(defun foolang--looking-at-define ()
+  (looking-at " *define [A-Za-z_]"))
 
 (defun foolang--looking-at-extend ()
   (looking-at " *extend [A-Z]"))
@@ -1247,6 +1261,16 @@ end"
   "
     method bar
         42
+end")
+
+(def-foolang-indent-test "define-indent-1"
+  "
+define foo
+42
+end"
+  "
+define foo
+    42
 end")
 
 (foolang--run-tests)
