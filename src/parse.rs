@@ -154,9 +154,14 @@ impl<'a> Parser<'a> {
 
     pub fn parse_at_precedence(&self, precedence: usize) -> Parse {
         match self.parse_prefix()? {
-            Syntax::Def(def) => Ok(Syntax::Def(def)),
-            Syntax::Expr(expr) =>
+            Syntax::Def(def) => {
+                // println!(" -> def: {:?}", &def);
+                Ok(Syntax::Def(def))
+            }
+            Syntax::Expr(expr) => {
+                // println!(" -> exp: {:?}", &expr);
                 Ok(Syntax::Expr(self.parse_tail(expr, precedence)?))
+            }
         }
     }
 
@@ -384,6 +389,7 @@ fn make_name_table() -> NameTable {
     let t = &mut table;
 
     ParserSyntax::def(t, "class", class_prefix, invalid_suffix, precedence_0);
+    ParserSyntax::def(t, "define", define_prefix, invalid_suffix, precedence_0);
     ParserSyntax::def(t, "extend", extend_prefix, invalid_suffix, precedence_0);
     ParserSyntax::def(t, "import", import_prefix, invalid_suffix, precedence_0);
     ParserSyntax::def(t, "interface", interface_prefix, invalid_suffix, precedence_0);
@@ -1040,6 +1046,28 @@ fn class_prefix(parser: &Parser) -> Parse {
                                      parser.slice()));
     }
     Ok(Syntax::Def(Def::ClassDef(class)))
+}
+
+fn define_prefix(parser: &Parser) -> Parse {
+    if Token::WORD != parser.next_token()? {
+        return parser.error("Expected name after 'define'");
+    }
+
+    let start = parser.span().start;
+    let name = parser.tokenstring();
+    let init = parser.parse_seq()?;
+
+    parser.next_token()?;
+    if "end" != parser.slice() {
+        return parser.error(
+            &format!("Expected 'end' after definition, got: '{}'", parser.slice()));
+    }
+
+    Ok(Syntax::Def(Def::DefineDef(DefineDef {
+        span: start..parser.span().start,
+        name: name,
+        init: init,
+    })))
 }
 
 fn extend_prefix(parser: &Parser) -> Parse {

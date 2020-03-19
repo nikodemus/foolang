@@ -8,6 +8,7 @@ use crate::span::TweakSpan;
 #[derive(Debug, PartialEq)]
 pub enum Def {
     ClassDef(ClassDef),
+    DefineDef(DefineDef),
     ExtensionDef(ExtensionDef),
     ImportDef(ImportDef),
     InterfaceDef(InterfaceDef),
@@ -27,6 +28,7 @@ impl Def {
         use Def::*;
         let span = match self {
             ClassDef(definition) => &definition.span,
+            DefineDef(definition) => &definition.span,
             ExtensionDef(extension) => &extension.span,
             ImportDef(import) => &import.span,
             InterfaceDef(interface) => &interface.span,
@@ -45,6 +47,7 @@ impl Def {
     fn tweak_span(&mut self, shift: usize, extend: isize) {
         match self {
             Def::ClassDef(class) => class.tweak_span(shift, extend),
+            Def::DefineDef(def) => def.tweak_span(shift, extend),
             Def::ExtensionDef(ext) => {
                 ext.span.tweak(shift, extend);
                 for m in &mut ext.instance_methods {
@@ -130,6 +133,19 @@ impl ClassDef {
             }
             selector
         }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct DefineDef {
+    pub span: Span,
+    pub name: String,
+    pub init: Expr,
+}
+
+impl DefineDef {
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.span.tweak(shift, extend);
     }
 }
 

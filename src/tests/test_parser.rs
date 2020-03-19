@@ -120,6 +120,30 @@ fn test_sequence3() {
 }
 
 #[test]
+fn test_define1() {
+    assert_eq!(
+        parse_def("define m 1. end"),
+        Ok(Def::DefineDef(DefineDef {
+            span: 7..12,
+            name: "m".to_string(),
+            init: int(9..10, 1)
+        }))
+    )
+}
+
+#[test]
+fn test_define2() {
+    assert_eq!(
+        parse_def("define m 1 m. end"),
+        Ok(Def::DefineDef(DefineDef {
+            span: 7..14,
+            name: "m".to_string(),
+            init: unary(11..12, "m", int(9..10, 1))
+        }))
+    )
+}
+
+#[test]
 fn test_let1() {
     assert_eq!(
         parse_expr("let x = 21 + 21. x"),

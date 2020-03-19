@@ -561,31 +561,63 @@ extend Float
     is SI_Number
 end
 
--- FIXME: This should be defines, but they're not there yet.
--- The point is to allow expressions like 1 m / s.
-let mm = 1 mm.
-let m = 1 m.
-let km = 1 km.
+-- The point of these constants is to allow expressions like 1 m / s.
+define mm
+    1 mm.
+end
+define m
+    1 m.
+end
+define km
+    1 km.
+end
 
-let ns = 1 ns.
-let ms = 1 ms.
-let s = 1 s.
+define ns
+    1 ns.
+end
+define ms
+    1 ms.
+end
+define s
+    1 s.
+end
 
-let mol = 1 mol.
-let mmol = 1 mmol.
+define mol
+    1 mol.
+end
+define mmol
+    1 mmol.
+end
 
--- FIXME: relax requirements...
--- let A = 1 A.
-let mA = 1 mA.
+--- A is not a valid message name currently
+define A
+    1 A.
+end
+---
+define mA
+    1 mA.
+end
 
--- FIXME: relax requirements...
--- let K = 1 K.
+--- K is not a valid message name currently
+define K
+    1 K.
+end
+---
 
-let cd = 1 cd.
+define cd
+    1 cd.
+end
 
-let mg = 1 mg.
-let g = 1 g.
-let kg = 1 kg.
+define mg
+    1 mg.
+end
+
+define g
+    1 g.
+end
+define kg
+    1 kg.
+end
 
 class SI_Tests { assert }
     class method runTests: assert

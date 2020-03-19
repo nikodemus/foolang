@@ -374,6 +374,7 @@ impl Env {
     pub fn augment(&self, def: &Def) -> Eval {
         match def {
             Def::ClassDef(klass) => self.do_class(klass),
+            Def::DefineDef(def) => self.do_define(def),
             Def::ExtensionDef(extension) => self.do_extension(extension),
             Def::ImportDef(import) => self.do_import(import),
             Def::InterfaceDef(interface) => self.do_interface(interface),
@@ -484,6 +485,15 @@ impl Env {
         let class = self.foo.make_class(definition, self)?;
         self.define(name, class.clone());
         Ok(class)
+    }
+
+    fn do_define(&self, definition: &DefineDef) -> Eval {
+        self.check_toplevel(&definition.span, "Constant definition")?;
+        let name = &definition.name;
+        self.check_not_defined(name, &definition.span, "Constant")?;
+        let value = self.eval(&definition.init)?;
+        self.define(name, value.clone());
+        Ok(value)
     }
 
     fn do_extension(&self, extension: &ExtensionDef) -> Eval {
