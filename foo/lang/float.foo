@@ -4,50 +4,50 @@ extend Float
     is Number
 
     method asFloat
-        self
+        self.
 
     method to: other
-       self to: other by: 1.0
+       self to: other by: 1.0.
 
     method + x
-        x addFloat: self
+        x addFloat: self.
     method - x
-        x subFloat: self
+        x subFloat: self.
     method * x
-        x mulFloat: self
+        x mulFloat: self.
     method / x
-        x divFloat: self
+        x divFloat: self.
 
     method == x
-        x equalFloat: self
+        x equalFloat: self.
     method < x
-        x greaterThanFloat: self
+        x greaterThanFloat: self.
     method > x
-        x lessThanFloat: self
+        x lessThanFloat: self.
     method <= x
-        x greaterThanOrEqualFloat: self
+        x greaterThanOrEqualFloat: self.
     method >= x
-        x lessThanOrEqualFloat: self
+        x lessThanOrEqualFloat: self.
 
     method addInteger: x
-        self addFloat: x asFloat
+        self addFloat: x asFloat.
     method subInteger: x
-        self subFloat: x asFloat
+        self subFloat: x asFloat.
     method mulInteger: x
-        self mulFloat: x asFloat
+        self mulFloat: x asFloat.
     method divInteger: x
-        self divFloat: x asFloat
+        self divFloat: x asFloat.
 
     method equalInteger: x
-        self equalFloat: x asFloat
+        self equalFloat: x asFloat.
     method lessThanInteger: x
-        self lessThanFloat: x asFloat
+        self lessThanFloat: x asFloat.
     method greaterThanInteger: x
-        self greaterThanFloat: x asFloat
+        self greaterThanFloat: x asFloat.
     method lessThanOrEqualInteger: x
-        self lessThanOrEqualFloat: x asFloat
+        self lessThanOrEqualFloat: x asFloat.
     method greaterThanOrEqualInteger: x
-        self greaterThanOrEqualFloat: x asFloat
+        self greaterThanOrEqualFloat: x asFloat.
 
     method atLeast: min atMost: max
         let min = min asFloat.
@@ -56,5 +56,5 @@ extend Float
         let max = max asFloat.
         (self greaterThanFloat: max)
             ifTrue: { return max }.
-        self
+        self.
 end

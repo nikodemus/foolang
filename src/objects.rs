@@ -1,5 +1,6 @@
 use std::borrow::Borrow;
 use std::cell::{Ref, RefCell, RefMut};
+use std::cmp::Eq;
 use std::collections::{HashMap, HashSet};
 use std::convert::AsRef;
 use std::fmt;
@@ -10,13 +11,12 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+use crate::def::*;
 use crate::eval::{Binding, Env, EnvRef};
-use crate::parse::{
-    ClassDefinition, ClassExtension, Const, Expr, InterfaceDefinition, Literal, MethodDefinition,
-    Parser, Var,
-};
+use crate::expr::*;
+
+use crate::span::Span;
 use crate::time::TimeInfo;
-use crate::tokenstream::Span;
 use crate::unwind::Unwind;
 
 use crate::classes;
@@ -398,26 +398,6 @@ impl Closure {
     }
 }
 
-pub struct Compiler {
-    pub env: Env,
-    pub source: RefCell<String>,
-    pub expr: RefCell<Expr>,
-}
-
-impl PartialEq for Compiler {
-    fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self, other)
-    }
-}
-
-impl Eq for Compiler {}
-
-impl Hash for Compiler {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        std::ptr::hash(self, state);
-    }
-}
-
 pub struct Input {
     pub name: String,
     stream: RefCell<Box<dyn Read>>,
@@ -600,7 +580,7 @@ pub enum Datum {
     Class(Rc<Class>),
     Clock,
     Closure(Rc<Closure>),
-    Compiler(Rc<Compiler>),
+    Compiler(Rc<classes::compiler::Compiler>),
     Dictionary(Rc<classes::dictionary::Dictionary>),
     File(Rc<classes::file::File>),
     FilePath(Rc<classes::filepath::FilePath>),
@@ -823,18 +803,9 @@ impl Foolang {
     }
 
     pub fn run(self, program: &str, command: Object) -> Eval {
-        let system = self.make_system(None);
-        let env = self.builtin_env();
-        let mut parser = Parser::new(&program, env.foo.root());
-        while !parser.at_eof() {
-            let expr = match parser.parse() {
-                Ok(expr) => expr,
-                Err(unwind) => return Err(unwind.with_context(&program)),
-            };
-            env.eval(&expr).context(&program)?;
-        }
+        let env = self.builtin_env().load_code(program, self.root())?;
         let main = env.find_global_or_unwind("Main")?;
-        Ok(main.send("run:in:", &[command, system], &env).context(&program)?)
+        Ok(main.send("run:in:", &[command, self.make_system(None)], &env).context(&program)?)
     }
 
     pub fn load_module<P: AsRef<Path>>(&self, path: P) -> Result<Env, Unwind> {
@@ -897,16 +868,7 @@ impl Foolang {
                 ))
             }
         };
-        let mut parser = Parser::new(&code, fs::canonicalize(file).unwrap().parent().unwrap());
-        while !parser.at_eof() {
-            let expr = match parser.parse() {
-                Ok(expr) => expr,
-                Err(unwind) => return Err(unwind.with_context(&code)),
-            };
-            // println!("expr: {:?}", &expr);
-            env.eval(&expr).context(&code)?;
-        }
-        Ok(env)
+        env.load_code(&code, fs::canonicalize(file).unwrap().parent().unwrap())
     }
 
     pub fn make_array(&self, data: &[Object]) -> Object {
@@ -926,7 +888,7 @@ impl Foolang {
 
     // FIXME: inconsistent return type vs other make_foo methods.
     // Should others be Eval as well?
-    pub fn make_class(&self, def: &ClassDefinition, env: &Env) -> Eval {
+    pub fn make_class(&self, def: &ClassDef, env: &Env) -> Eval {
         let mut class = Class::new_class(&def.name);
         for (i, var) in def.instance_variables.iter().enumerate() {
             class.add_slot(&var.name, i, env.maybe_type(&var.typename)?)?;
@@ -944,7 +906,7 @@ impl Foolang {
         Ok(class)
     }
 
-    pub fn make_interface(&self, def: &InterfaceDefinition, env: &Env) -> Eval {
+    pub fn make_interface(&self, def: &InterfaceDef, env: &Env) -> Eval {
         let interface = Class::new_interface(&def.name);
         for method in &def.class_methods {
             interface.add_interpreted_class_method(env, method)?;
@@ -997,18 +959,7 @@ impl Foolang {
     }
 
     pub fn make_compiler(&self) -> Object {
-        Object {
-            vtable: Rc::clone(&self.compiler_vtable),
-            datum: Datum::Compiler(Rc::new(Compiler {
-                // This makes the objects resulting from Compiler eval
-                // share same vtable instances as the parent, which
-                // seems like the right thing -- but it would be nice to
-                // be able to specify a different prelude. Meh.
-                env: self.toplevel_env(),
-                source: RefCell::new(String::new()),
-                expr: RefCell::new(Const::expr(0..0, Literal::Boolean(false))),
-            })),
-        }
+        classes::compiler::make_compiler(self)
     }
 
     pub fn into_dictionary(&self, data: HashMap<Object, Object>) -> Object {
@@ -1161,7 +1112,7 @@ impl Object {
         return Unwind::type_error(self.clone(), typevt.name.clone());
     }
 
-    pub fn extend_class(&self, ext: &ClassExtension, env: &Env) -> Eval {
+    pub fn extend_class(&self, ext: &ExtensionDef, env: &Env) -> Eval {
         if !ext.class_methods.is_empty() && self.vtable.has("perform:with:") {
             return Unwind::error(&format!(
                 "Cannot extend {}: class method 'perform:with:' defined",
@@ -1202,7 +1153,7 @@ impl Object {
         }
     }
 
-    pub fn compiler(&self) -> Rc<Compiler> {
+    pub fn compiler(&self) -> Rc<classes::compiler::Compiler> {
         match &self.datum {
             Datum::Compiler(compiler) => Rc::clone(compiler),
             _ => panic!("BUG: {:?} is not a Compiler", self),

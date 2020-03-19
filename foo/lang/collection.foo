@@ -8,40 +8,40 @@ interface Collection
           do: { |i|
                 (self at: i) == (other at: i)
                     ifFalse: { return False } }.
-        True
+        True.
 
     method checkSize: collection
         let size = self size.
         size == collection size
             ifTrue: { size }
-            ifFalse: { raise "Collection size mismatch" }
+            ifFalse: { raise "Collection size mismatch" }.
 
     method first
-       self at: 1
+       self at: 1.
 
     method second
-       self at: 2
+       self at: 2.
 
     method last
-        self at: self size
+        self at: self size.
 
     method ifEmpty: block
         self size is 0
-            ifTrue: block
+            ifTrue: block.
 
     method ifEmpty: block ifNotEmpty: notBlock
         self size is 0
             ifTrue: block
-            ifFalse: notBlock
+            ifFalse: notBlock.
 
     method find: block
-        self find: block ifNone: { False }
+        self find: block ifNone: { False }.
 
     method find: block ifNone: noneBlock
         self do: { |elt|
                    (block value: elt) is True
                        ifTrue: { return elt } }.
-        noneBlock value
+        noneBlock value.
 
     method do: block interleaving: interBlock
         let first = True.
@@ -49,42 +49,43 @@ interface Collection
                    first
                        ifTrue: { first = False }
                        ifFalse: { interBlock value }.
-                   block value: elt }
+                   block value: elt }.
 
     method do: block
         1 to: self size
           do: { |i| block value: (self at: i) }.
-        self
+        self.
 
     method with: sequence do: block
         let size = self checkSize: sequence.
         1 to: size
           do: { |i|
                 block value: (self at: i) value: (sequence at: i) }.
-        self
+        self.
 
     method inject: value into: block
         let result = value.
         self do: { |elt| result = (block value: result value: elt) }.
-        result
+        result.
 
     method with: sequence inject: value into: block
         let result = value.
         self with: sequence
              do: { |a b|
                    result = (block value: result value: a value: b) }.
-        result
+        result.
 
     method sum
-        self inject: 0 into: { |res elt| res + elt }
+        self inject: 0 into: { |res elt| res + elt }.
 
     method sum: block
-        self inject: 0 into: { |res elt| res + (block value: elt) }
+        self inject: 0 into: { |res elt| res + (block value: elt) }.
 
     method with: array sum: block
         self
             with: array
             inject: 0
             into: { |res a b|
-                    res + (block value: a value: b) }
+                    res + (block value: a value: b) }.
+
 end

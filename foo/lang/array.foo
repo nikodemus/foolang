@@ -7,19 +7,19 @@ extend Array
         stream print: "[".
         self do: { |x| block value: x }
              interleaving: { stream print: ", " }.
-        stream print: "]"
+        stream print: "]".
 
     method displayOn: stream
-        self _emitOn: stream using: { |x| x displayOn: stream }
+        self _emitOn: stream using: { |x| x displayOn: stream }.
 
     method printOn: stream
-        self _emitOn: stream using: { |x| x printOn: stream }
+        self _emitOn: stream using: { |x| x printOn: stream }.
 
     method concat: other
         let new = Array withCapacity: self size + other size.
         self do: { |elt| new push: elt }.
         other do: { |elt| new push: elt }.
-        new
+        new.
 
     method collect: block
         let size = self size.
@@ -27,12 +27,12 @@ extend Array
         1 to: size
           do: { |i|
                 result push: (block value: (self at: i)) }.
-        result
+        result.
 
     method copy
         let copy = Array withCapacity: self size.
         self do: { |elt| copy push: elt }.
-        copy
+        copy.
 
     method count: block
         let n = 0.
@@ -40,7 +40,7 @@ extend Array
           do: { |i|
                 (block value: (self at: i))
                     ifTrue: { n = n + 1 } }.
-        n
+        n.
 
     method with: array collect: block
         let size = self checkSize: array.
@@ -48,30 +48,30 @@ extend Array
         1 to: size
           do: { |i|
                 result push: (block value: (self at: i)  value: (array at: i)) }.
-        result
+        result.
 
     method select: block
         let selection = Array withCapacity: 4.
         self do: { |elt|
                    (block value: elt) is True
                        ifTrue: { selection push: elt } }.
-        selection
+        selection.
 
     method reject: block
         let selection = Array withCapacity: 4.
         self do: { |elt|
                    (block value: elt) is True
                        ifFalse: { selection push: elt } }.
-        selection
+        selection.
 
     method sorted
-        self copy sort
+        self copy sort.
 
     method sorted: block
-        self copy sort: block
+        self copy sort: block.
 
     method sort
-        self sort: { |a b| a < b }
+        self sort: { |a b| a < b }.
 
     method sort: block
         -- Unfortunate a straigthforward rust-side wrapper for Vec::sort_by()
@@ -85,7 +85,7 @@ extend Array
             ifTrue: { let p = self _partition: left to: right by: block.
                       self _quicksort: left to: p - 1 by: block.
                       self _quicksort: p + 1 to: right by: block }.
-        self
+        self.
 
     method _partition: left to: right by: block
         let pivot = self at: right.
@@ -97,61 +97,61 @@ extend Array
                            ifTrue: { self swap: i with: j.
                                      i = i + 1 } }.
         self swap: i with: right.
-        i
+        i.
 
     method swap: i with: j
         let tmp = self at: i.
         self put: (self at: j) at: i.
         self put: tmp at: j.
-        self
+        self.
 
     method + x
-        x broadcast: {|a b| a + b} to: self
+        x broadcast: {|a b| a + b} to: self.
     method - x
-        x broadcast: {|a b| a - b} to: self
+        x broadcast: {|a b| a - b} to: self.
     method * x
-        x broadcast: {|a b| a * b} to: self
+        x broadcast: {|a b| a * b} to: self.
     method / x
-        x broadcast: {|a b| a / b} to: self
+        x broadcast: {|a b| a / b} to: self.
 
     method broadcast: block to: collection
-        collection with: self collect: block
+        collection with: self collect: block.
 
     method dot: other
-        self with: other sum: { |a b| a * b }
+        self with: other sum: { |a b| a * b }.
 
     method norm
-       (self inject: 0.0 into: { |abs elt| abs + (elt * elt) }) sqrt
+       (self inject: 0.0 into: { |abs elt| abs + (elt * elt) }) sqrt.
 
     method normalized
        let reciprocal = 1.0 / (self norm).
-       self * reciprocal
+       self * reciprocal.
 
     method scalarProjectionOn: other
-        (self dot: other) / other norm
+        (self dot: other) / other norm.
 
     method vectorProjectionOn: other
-        ((self dot: other) / (other dot: other)) * other
+        ((self dot: other) / (other dot: other)) * other.
 
     method addInteger: x
-       self collect: { |elt| elt addInteger: x }
+       self collect: { |elt| elt addInteger: x }.
     method addFloat: x
-       self collect: { |elt| elt addFloat: x }
+       self collect: { |elt| elt addFloat: x }.
 
     method divFloat: x
-       self collect: { |elt| elt divFloat: x }
+       self collect: { |elt| elt divFloat: x }.
     method divInteger: x
-       self collect: { |elt| elt divInteger: x }
+       self collect: { |elt| elt divInteger: x }.
 
     method mulInteger: x
-       self collect: { |elt| elt mulInteger: x }
+       self collect: { |elt| elt mulInteger: x }.
     method mulFloat: x
-       self collect: { |elt| elt mulFloat: x }
+       self collect: { |elt| elt mulFloat: x }.
 
     method subInteger: x
-       self collect: { |elt| elt subInteger: x }
+       self collect: { |elt| elt subInteger: x }.
     method subFloat: x
-       self collect: { |elt| elt subFloat: x }
+       self collect: { |elt| elt subFloat: x }.
 end
 
 class TestArray {}
@@ -163,7 +163,8 @@ class TestArray {}
         assert false: { [1, 2, 4] == [1, 2, 3] }
                testing: "Array#== (false 1)".
         assert false: { [1, 2, 3, 4] == [1, 2, 3] }
-               testing: "Array#== (false 2)"
+               testing: "Array#== (false 2)".
+
     class method testSort: assert
         assert that: { [] sort }
                equals: []
@@ -191,6 +192,5 @@ class TestArray {}
                testing: "sort, ten".
     class method runTests: assert
         self testEquality: assert.
-        self testSort: assert
-
+        self testSort: assert.
 end
