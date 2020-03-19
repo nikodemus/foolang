@@ -579,14 +579,6 @@ fn identifier_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Resu
     match parser.name_table.get(name) {
         Some(syntax) => parser.parse_suffix_syntax(syntax, left),
         None => {
-            let c = name.chars().next().expect("BUG: empty identifier");
-            if c.is_uppercase() {
-                // FIXME: not all languages have uppercase
-                return parser.error(&format!(
-                    "'{}' is not a valid message name (receiver: {:?})",
-                    name, left
-                ));
-            }
             // Unary message
             Ok(left.send(Message {
                 span: parser.span(),

@@ -589,20 +589,17 @@ define mmol
     1 mmol.
 end
 
---- A is not a valid message name currently
 define A
     1 A.
 end
----
+
 define mA
     1 mA.
 end
 
---- K is not a valid message name currently
 define K
     1 K.
 end
----
 
 define cd
     1 cd.
