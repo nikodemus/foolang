@@ -35,7 +35,7 @@ in in progress, this is the current status:
 - 004 - [Reified Types Without Reflection](design/004-reified-types-without-reflection.md)
 - 005 - [Program Definition and Refinement](design/005-program-definition-and-refinement.md)
 - 006 - [Integer Types](design/006-integer-types.md)
-- WIP - [Definitions and Expressions](design/wip-definitions-and-expressions.md)
+- 007 - [Definitions and Expressions](design/007-definitions-and-expressions.md)
 - WIP - [Tower of Babel](design/wip-tower-of-babel.md)
 
 ### Old Design Notes

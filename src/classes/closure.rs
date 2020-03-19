@@ -5,19 +5,25 @@ use crate::unwind::Unwind;
 pub fn vtable() -> Vtable {
     let vt = Vtable::new("Closure");
     // FUNDAMENTAL
+    vt.add_primitive_method_or_panic("apply:", closure_apply_array);
     vt.add_primitive_method_or_panic("onError:", closure_on_error);
     vt.add_primitive_method_or_panic("finally:", closure_finally);
-    vt.add_primitive_method_or_panic("value", closure_apply);
-    vt.add_primitive_method_or_panic("value:", closure_apply);
-    vt.add_primitive_method_or_panic("value:value:", closure_apply);
-    vt.add_primitive_method_or_panic("value:value:value:", closure_apply);
+    vt.add_primitive_method_or_panic("value", closure_apply_values);
+    vt.add_primitive_method_or_panic("value:", closure_apply_values);
+    vt.add_primitive_method_or_panic("value:value:", closure_apply_values);
+    vt.add_primitive_method_or_panic("value:value:value:", closure_apply_values);
     vt.add_primitive_method_or_panic("whileTrue:", closure_while_true);
     vt
 }
 
 // FUNDAMENTAL METHODS
 
-fn closure_apply(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
+fn closure_apply_array(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
+    let array = args[0].as_array("Closure#apply:")?.borrow();
+    receiver.closure_ref().apply(None, &array)
+}
+
+fn closure_apply_values(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     receiver.closure_ref().apply(None, args)
 }
 

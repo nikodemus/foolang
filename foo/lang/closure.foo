@@ -47,6 +47,7 @@ class TestClosure { assert }
             ; testWith
             ; testAscending
             ; testDescending
+            ; testApply
 
     method testApplication
         assert true: { 1 == { 1 } value }
@@ -107,18 +108,23 @@ class TestClosure { assert }
                                      onError: { |e c| 104 }.
                        [obj closed, res] }
                equals: [True, 104]
-               testing: "Closure:with: (unwind)".
+               testing: "Closure#with: (unwind)".
 
     method testAscending
         assert that: { ["a", "aaaa", "aa", "", "aaa"]
                            sort: { |array| array size } ascending }
                equals: ["", "a", "aa", "aaa", "aaaa"]
-               testing: "Closure:#ascending".
+               testing: "Closure#ascending".
 
     method testDescending
         assert that: { ["a", "aaaa", "aa", "", "aaa"]
                            sort: { |array| array size } descending }
                equals: ["aaaa", "aaa", "aa", "a", ""]
-               testing: "Closure:#descending".
+               testing: "Closure#descending".
+
+    method testApply
+        assert that: { { |x y| x + y } apply: [1, 2] }
+               equals: 3
+               testing: "Closure#apply:"
 
 end
