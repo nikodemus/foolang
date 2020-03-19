@@ -73,6 +73,30 @@ fn test_print_flush() -> Test {
 }
 
 #[test]
+fn test_class_comment1() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_class_comment1.foo");
+    cmd.assert().success().stdout("ok\n");
+    Ok(())
+}
+
+#[test]
+fn test_class_comment2() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_class_comment2.foo");
+    cmd.assert().success().stdout("ok\n");
+    Ok(())
+}
+
+#[test]
+fn test_class_comment3() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_class_comment3.foo");
+    cmd.assert().success().stdout("ok\n");
+    Ok(())
+}
+
+#[test]
 fn test_bad_class() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/tests/test_bad_class.foo");

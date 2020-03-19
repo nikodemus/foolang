@@ -266,6 +266,14 @@ impl<'a> Parser<'a> {
         }
     }
 
+    pub fn at_comment(&self) -> bool {
+        match self.lookahead() {
+            Ok((Token::COMMENT, _)) => true,
+            Ok((Token::BLOCK_COMMENT, _)) => true,
+            _ => false
+        }
+    }
+
     fn dotted_name_at(&self, point: usize, star: bool) -> Result<Option<Span>, Unwind> {
         let ((token1, span1), (token2, span2)) = self.lookahead2()?;
         if span1.start != point {
@@ -660,6 +668,9 @@ fn sequence_suffix(
     left: Expr,
     precedence: PrecedenceFunction,
 ) -> Result<Expr, Unwind> {
+    while parser.at_comment() {
+        parser.next_token()?;
+    }
     let (token, span) = parser.lookahead()?;
     let text = parser.slice_at(span);
     // FIXME: Pull this information from a table instead.
