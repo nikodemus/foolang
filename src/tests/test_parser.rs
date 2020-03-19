@@ -112,10 +112,10 @@ fn test_sequence2() {
 }
 
 #[test]
-fn test_sequence3() {
+fn test_sequence4() {
     assert_eq!(
-        parse_expr("foo bar. quux."),
-        Ok(seq(vec![unary(4..7, "bar", var(0..3, "foo")), var(9..13, "quux")]))
+        parse_expr("foo BAR. quux."),
+        Ok(seq(vec![unary(4..7, "BAR", var(0..3, "foo")), var(9..13, "quux")]))
     );
 }
 
