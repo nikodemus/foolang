@@ -1,5 +1,5 @@
 use crate::def::Def;
-use crate::expr::{Expr};
+use crate::expr::Expr;
 
 #[derive(Debug, PartialEq)]
 pub enum Syntax {
@@ -18,7 +18,7 @@ impl Syntax {
     pub fn def(self) -> Def {
         match self {
             Syntax::Expr(_) => panic!("Def expected, got Expr."),
-            Syntax::Def(d) => d
+            Syntax::Def(d) => d,
         }
     }
 }

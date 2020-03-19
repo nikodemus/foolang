@@ -1,9 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use crate::expr::*;
-use crate::unwind::Unwind;
 use crate::span::Span;
 use crate::span::TweakSpan;
+use crate::unwind::Unwind;
 
 #[derive(Debug, PartialEq)]
 pub enum Def {
@@ -15,7 +15,6 @@ pub enum Def {
 }
 
 impl Def {
-
     #[cfg(test)]
     pub fn add_method(&mut self, kind: MethodKind, method: MethodDefinition) {
         match self {
@@ -61,7 +60,7 @@ impl Def {
                 import.span.tweak(shift, extend);
             }
             Def::InterfaceDef(interface) => interface.tweak_span(shift, extend),
-       }
+        }
     }
 }
 
@@ -191,12 +190,7 @@ pub struct ImportDef {
 }
 
 impl ImportDef {
-    pub fn def<P: AsRef<Path>>(
-        span: Span,
-        path: P,
-        prefix: &str,
-        name: Option<&str>,
-    ) -> Def {
+    pub fn def<P: AsRef<Path>>(span: Span, path: P, prefix: &str, name: Option<&str>) -> Def {
         Def::ImportDef(ImportDef {
             span,
             path: path.as_ref().to_path_buf(),

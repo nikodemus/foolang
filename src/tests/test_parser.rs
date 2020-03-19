@@ -1,8 +1,8 @@
-use crate::parse::utils::*;
-use crate::unwind::Unwind;
-use crate::parse::*;
 use crate::def::*;
 use crate::expr::*;
+use crate::parse::utils::*;
+use crate::parse::*;
+use crate::unwind::Unwind;
 
 fn parse_str(source: &str) -> Parse {
     parse_str_in_path(source, "test/")
@@ -467,22 +467,13 @@ fn test_parse_import1() {
 #[test]
 fn test_parse_import2() {
     assert_eq!(parse_def("import .x"), Ok(ImportDef::def(0..9, "test/x.foo", "x", None)));
-    assert_eq!(
-        parse_def("import .x.Y"),
-        Ok(ImportDef::def(0..11, "test/x.foo", "", Some("Y")))
-    );
-    assert_eq!(
-        parse_def("import .x.*"),
-        Ok(ImportDef::def(0..11, "test/x.foo", "", Some("*")))
-    );
+    assert_eq!(parse_def("import .x.Y"), Ok(ImportDef::def(0..11, "test/x.foo", "", Some("Y"))));
+    assert_eq!(parse_def("import .x.*"), Ok(ImportDef::def(0..11, "test/x.foo", "", Some("*"))));
     assert_eq!(
         parse_def("import .x.y.Z"),
         Ok(ImportDef::def(0..13, "test/x/y.foo", "", Some("Z")))
     );
-    assert_eq!(
-        parse_def("import .x.y.z"),
-        Ok(ImportDef::def(0..13, "test/x/y/z.foo", "z", None))
-    );
+    assert_eq!(parse_def("import .x.y.z"), Ok(ImportDef::def(0..13, "test/x/y/z.foo", "z", None)));
 }
 
 #[test]

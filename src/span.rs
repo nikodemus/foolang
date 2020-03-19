@@ -21,4 +21,3 @@ impl TweakSpan for Span {
         self.tweak(shift, 0);
     }
 }
-

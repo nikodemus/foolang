@@ -5,14 +5,14 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::string::ToString;
 
-use crate::tokenstream::{Token, TokenStream};
-use crate::unwind::{Error, Unwind};
 use crate::span::Span;
 use crate::span::TweakSpan;
+use crate::tokenstream::{Token, TokenStream};
+use crate::unwind::{Error, Unwind};
 
-use crate::syntax::Syntax;
 use crate::def::*;
 use crate::expr::*;
+use crate::syntax::Syntax;
 
 pub type Parse = Result<Syntax, Unwind>;
 pub type ExprParse = Result<Expr, Unwind>;
@@ -137,9 +137,9 @@ impl<'a> Parser<'a> {
     pub fn parse_expr(&self, precedence: usize) -> ExprParse {
         match self.parse_at_precedence(precedence)? {
             Syntax::Expr(e) => Ok(e),
-            Syntax::Def(d) => Unwind::error_at(
-                d.span(),
-                "Definition where expression was expected")
+            Syntax::Def(d) => {
+                Unwind::error_at(d.span(), "Definition where expression was expected")
+            }
         }
     }
 
@@ -175,7 +175,7 @@ impl<'a> Parser<'a> {
     fn parse_prefix_expr(&self) -> ExprParse {
         match self.parse_prefix()? {
             Syntax::Expr(e) => Ok(e),
-            Syntax::Def(_) => Unwind::error("Definition whwre expression was expected!")
+            Syntax::Def(_) => Unwind::error("Definition whwre expression was expected!"),
         }
     }
 
@@ -275,7 +275,7 @@ impl<'a> Parser<'a> {
         match self.lookahead() {
             Ok((Token::COMMENT, _)) => true,
             Ok((Token::BLOCK_COMMENT, _)) => true,
-            _ => false
+            _ => false,
         }
     }
 
@@ -342,8 +342,10 @@ impl ParserSyntax {
         T: std::hash::Hash,
         A: Into<T>,
     {
-        table
-            .insert(key.into(), ParserSyntax::General(prefix_parser, suffix_parser, precedence_function));
+        table.insert(
+            key.into(),
+            ParserSyntax::General(prefix_parser, suffix_parser, precedence_function),
+        );
     }
     fn op(table: &mut NameTable, key: &str, is_prefix: bool, is_binary: bool, precedence: usize) {
         assert!(key.len() > 0);
@@ -487,8 +489,11 @@ fn invalid_prefix(parser: &Parser) -> Parse {
 }
 
 fn invalid_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> ExprParse {
-    parser.error(&format!("Not valid in operator position: {}, receiver: {:?}",
-                          parser.slice(), left))
+    parser.error(&format!(
+        "Not valid in operator position: {}, receiver: {:?}",
+        parser.slice(),
+        left
+    ))
 }
 
 fn array_prefix(parser: &Parser) -> Parse {
@@ -564,8 +569,7 @@ fn identifier_prefix(parser: &Parser) -> Parse {
         Some(syntax) => parser.parse_prefix_syntax(syntax),
         None => {
             name.chars().next().expect("BUG: empty identifier");
-            Ok(Syntax::Expr(
-                Expr::Var(Var::untyped(parser.span(), parser.tokenstring()))))
+            Ok(Syntax::Expr(Expr::Var(Var::untyped(parser.span(), parser.tokenstring()))))
         }
     }
 }
@@ -580,7 +584,8 @@ fn identifier_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Resu
                 // FIXME: not all languages have uppercase
                 return parser.error(&format!(
                     "'{}' is not a valid message name (receiver: {:?})",
-                    name, left));
+                    name, left
+                ));
             }
             // Unary message
             Ok(left.send(Message {
@@ -681,11 +686,11 @@ fn sequence_suffix(
     let text = parser.slice_at(span);
     // FIXME: Pull this information from a table instead.
     if (token == Token::WORD
-        && (text == "required" ||
-            text == "method" ||
-            text == "end" ||
-            text == "class" ||
-            text == "is"))
+        && (text == "required"
+            || text == "method"
+            || text == "end"
+            || text == "class"
+            || text == "is"))
         || token == Token::EOF
     {
         return Ok(left);
@@ -1042,8 +1047,7 @@ fn class_prefix(parser: &Parser) -> Parse {
         if next == Token::COMMENT || next == Token::BLOCK_COMMENT {
             continue;
         }
-        return parser.error(&format!("Expected method or end, got: '{}'",
-                                     parser.slice()));
+        return parser.error(&format!("Expected method or end, got: '{}'", parser.slice()));
     }
     Ok(Syntax::Def(Def::ClassDef(class)))
 }
@@ -1059,14 +1063,14 @@ fn define_prefix(parser: &Parser) -> Parse {
 
     parser.next_token()?;
     if "end" != parser.slice() {
-        return parser.error(
-            &format!("Expected 'end' after definition, got: '{}'", parser.slice()));
+        return parser
+            .error(&format!("Expected 'end' after definition, got: '{}'", parser.slice()));
     }
 
     Ok(Syntax::Def(Def::DefineDef(DefineDef {
         span: start..parser.span().start,
-        name: name,
-        init: init,
+        name,
+        init,
     })))
 }
 
@@ -1095,8 +1099,8 @@ fn extend_prefix(parser: &Parser) -> Parse {
             break;
         }
         if next == Token::EOF {
-            return parser.eof_error(
-                "Unexpected EOF while parsing extension: expected method or end");
+            return parser
+                .eof_error("Unexpected EOF while parsing extension: expected method or end");
         }
         if next == Token::WORD && parser.slice() == "class" {
             if parser.next_token()? == Token::WORD && parser.slice() == "method" {
@@ -1117,8 +1121,7 @@ fn extend_prefix(parser: &Parser) -> Parse {
             }
             return parser.error("Invalid interface name in extend");
         }
-        return parser.error(&format!("Expected method or end, got: '{}'",
-                                     parser.slice()));
+        return parser.error(&format!("Expected method or end, got: '{}'", parser.slice()));
     }
     Ok(Syntax::Def(Def::ExtensionDef(class)))
 }
@@ -1179,7 +1182,7 @@ fn number_prefix(parser: &Parser) -> Parse {
             Ok(i) => i,
             Err(_) => return parser.error("Malformed hexadecimal number"),
         };
-        return Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Integer(integer))))
+        return Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Integer(integer))));
     }
     // Binary case
     if slice.len() > 2 && ("0b" == &slice[0..2] || "0B" == &slice[0..2]) {
@@ -1187,7 +1190,7 @@ fn number_prefix(parser: &Parser) -> Parse {
             Ok(i) => i,
             Err(_) => return parser.error("Malformed binary number"),
         };
-        return Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Integer(integer))))
+        return Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Integer(integer))));
     }
     // Decimal and float case
     let mut decimal: i64 = 0;
@@ -1201,7 +1204,9 @@ fn number_prefix(parser: &Parser) -> Parse {
                 decimal = decimal * 10 + c.to_digit(10).unwrap() as i64;
             } else {
                 match f64::from_str(slice) {
-                    Ok(f) => return Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Float(f)))),
+                    Ok(f) => {
+                        return Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Float(f))))
+                    }
                     Err(_) => return parser.error("Malformed number"),
                 }
             }

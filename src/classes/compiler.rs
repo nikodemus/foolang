@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use crate::eval::Env;
-use crate::objects::{Foolang, Eval, Object, Source, Vtable, Datum};
+use crate::objects::{Datum, Eval, Foolang, Object, Source, Vtable};
 use crate::parse::Parser;
 use crate::syntax::Syntax;
 use crate::unwind::{Error, Unwind};
@@ -69,7 +69,7 @@ fn compiler_evaluate(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     for s in compiler.parsed.borrow().iter() {
         res = match s {
             Syntax::Def(ref def) => compiler.env.augment(def).context(&source)?,
-            Syntax::Expr(ref expr) => compiler.env.eval(expr).context(&source)?
+            Syntax::Expr(ref expr) => compiler.env.eval(expr).context(&source)?,
         }
     }
     Ok(res)

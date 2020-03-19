@@ -75,12 +75,10 @@ pub struct Location {
 impl fmt::Display for Unwind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Unwind::Exception(error, location) => {
-                match &location.context {
-                    Some(c) => write!(f, "ERROR: {}\n{}", error.what(), c),
-                    None => write!(f, "ERROR: {} (no context)", error.what()),
-                }
-            }
+            Unwind::Exception(error, location) => match &location.context {
+                Some(c) => write!(f, "ERROR: {}\n{}", error.what(), c),
+                None => write!(f, "ERROR: {} (no context)", error.what()),
+            },
             Unwind::ReturnFrom(_, object) => write!(f, "#<Return {}>", object),
         }
     }

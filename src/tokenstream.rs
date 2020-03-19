@@ -1,5 +1,5 @@
-use crate::unwind::Unwind;
 use crate::span::Span;
+use crate::unwind::Unwind;
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]

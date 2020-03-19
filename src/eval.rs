@@ -1,18 +1,18 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
+use std::path::Path;
 use std::rc::Rc;
-use std::path::{Path};
 
+use crate::def::*;
+use crate::expr::*;
 use crate::objects::{
     read_instance_variable, write_instance_variable, Arg, Class, Datum, Eval, Foolang, Object,
-    Source, Vtable
+    Source, Vtable,
 };
-use crate::syntax::Syntax;
-use crate::expr::*;
-use crate::def::*;
 use crate::parse::Parser;
 use crate::span::Span;
+use crate::syntax::Syntax;
 use crate::unwind::Unwind;
 
 #[derive(Debug, Clone, PartialEq)]

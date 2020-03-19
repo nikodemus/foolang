@@ -1,22 +1,22 @@
 use std::borrow::Borrow;
 use std::cell::{Ref, RefCell, RefMut};
+use std::cmp::Eq;
 use std::collections::{HashMap, HashSet};
 use std::convert::AsRef;
 use std::fmt;
+use std::fs;
 use std::hash::{Hash, Hasher};
 use std::io::Read;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::cmp::Eq;
-use std::fs;
 
+use crate::def::*;
 use crate::eval::{Binding, Env, EnvRef};
 use crate::expr::*;
-use crate::def::*;
 
-use crate::time::TimeInfo;
 use crate::span::Span;
+use crate::time::TimeInfo;
 use crate::unwind::Unwind;
 
 use crate::classes;
@@ -805,9 +805,7 @@ impl Foolang {
     pub fn run(self, program: &str, command: Object) -> Eval {
         let env = self.builtin_env().load_code(program, self.root())?;
         let main = env.find_global_or_unwind("Main")?;
-        Ok(main.send(
-            "run:in:", &[command, self.make_system(None)],
-            &env).context(&program)?)
+        Ok(main.send("run:in:", &[command, self.make_system(None)], &env).context(&program)?)
     }
 
     pub fn load_module<P: AsRef<Path>>(&self, path: P) -> Result<Env, Unwind> {
