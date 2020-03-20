@@ -1,5 +1,10 @@
 import lib.assert.Assert
-import lib.si.SI_Tests -- broken right now due to toplevel let usage
+import lib.si.SI_Tests
+import lang.array.TestArray
+import lang.closure.TestClosure
+import lang.record.TestRecord
+import lang.filepath.TestFilePath
+import lang.filestream.TestFileStream
 
 -- Generates signed integers small enough to add without overflowing.
 class SmallIntegers {}

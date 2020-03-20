@@ -686,9 +686,9 @@ pub struct Foolang {
     /// Holds the toplevel builtin environment, including prelude.
     builtin_env_ref: EnvRef,
     /// Used to ensure we load each module only once.
-    modules: Rc<RefCell<HashMap<PathBuf, Env>>>,
+    pub modules: Rc<RefCell<HashMap<PathBuf, Env>>>,
     /// Map from toplevel module names to their paths
-    roots: HashMap<String, PathBuf>,
+    pub roots: HashMap<String, PathBuf>,
 }
 
 impl Foolang {
@@ -808,35 +808,6 @@ impl Foolang {
         Ok(main.send("run:in:", &[command, self.make_system(None)], &env).context(&program)?)
     }
 
-    pub fn load_module<P: AsRef<Path>>(&self, path: P) -> Result<Env, Unwind> {
-        let mut file = path.as_ref().to_path_buf();
-        if file.is_relative() {
-            let name = match path.as_ref().components().next() {
-                Some(std::path::Component::Normal(p)) => AsRef::<Path>::as_ref(p).to_str().unwrap(),
-                _ => panic!("Bad module path! {}", path.as_ref().display()),
-            };
-            file = match self.roots.get(name) {
-                Some(p) => p.join(path),
-                None => {
-                    return Unwind::error(&format!(
-                        "Unknown module: {}, --use /path/to/{} missing from command-line?",
-                        name, name
-                    ))
-                }
-            };
-        }
-        {
-            // For some reason on 1.40 at least borrow() fails to infer type.
-            let modules = self.modules.borrow_mut();
-            if let Some(module) = modules.get(&file) {
-                return Ok(module.clone());
-            }
-        }
-        let env = self.load_module_into(&file, self.builtin_env())?;
-        self.modules.borrow_mut().insert(file.clone(), env.clone());
-        Ok(env)
-    }
-
     fn load_prelude(self, path: &Path) -> Result<Foolang, Unwind> {
         let env = self.builtin_env();
         self.load_module_into(path, env)?;
@@ -857,7 +828,7 @@ impl Foolang {
         }
     }
 
-    fn load_module_into(&self, file: &Path, env: Env) -> Result<Env, Unwind> {
+    pub fn load_module_into(&self, file: &Path, env: Env) -> Result<Env, Unwind> {
         // println!("load: {:?}", file);
         let code = match std::fs::read_to_string(file) {
             Ok(code) => code,

@@ -461,14 +461,6 @@ impl Env {
         Ok(res)
     }
 
-    fn check_toplevel(&self, span: &Span, what: &str) -> Result<(), Unwind> {
-        if self.is_toplevel() {
-            Ok(())
-        } else {
-            Unwind::error_at(span.clone(), &format!("{} not at toplevel", what))
-        }
-    }
-
     fn check_not_defined(&self, name: &str, span: &Span, what: &str) -> Result<(), Unwind> {
         if self.has_definition(name) {
             return Unwind::error_at(span.clone(), &format!("Cannot redefine {}", what));
@@ -476,10 +468,37 @@ impl Env {
         Ok(())
     }
 
+    pub fn load_module<P: AsRef<Path>>(&self, path: P) -> Result<Env, Unwind> {
+        let mut file = path.as_ref().to_path_buf();
+        if file.is_relative() {
+            let name = match path.as_ref().components().next() {
+                Some(std::path::Component::Normal(p)) => AsRef::<Path>::as_ref(p).to_str().unwrap(),
+                _ => panic!("Bad module path! {}", path.as_ref().display()),
+            };
+            file = match self.foo.roots.get(name) {
+                Some(p) => p.join(path),
+                None => {
+                    return Unwind::error(&format!(
+                        "Unknown module: {}, --use /path/to/{} missing from command-line?",
+                        name, name
+                    ))
+                }
+            };
+        }
+        {
+            // For some reason on 1.40 at least borrow() fails to infer type.
+            let modules = self.foo.modules.borrow_mut();
+            if let Some(module) = modules.get(&file) {
+                return Ok(module.clone());
+            }
+        }
+        let env = self.foo.load_module_into(&file, self.enclose())?;
+        self.foo.modules.borrow_mut().insert(file.clone(), env.clone());
+        Ok(env)
+    }
+
     fn do_class(&self, definition: &ClassDef) -> Eval {
         // println!("CLASS env: {:?}", self);
-        // FIXME: allow anonymous classes
-        self.check_toplevel(&definition.span, "Class definition")?;
         let name = &definition.name;
         self.check_not_defined(name, &definition.span, "Class")?;
         let class = self.foo.make_class(definition, self)?;
@@ -488,7 +507,6 @@ impl Env {
     }
 
     fn do_define(&self, definition: &DefineDef) -> Eval {
-        self.check_toplevel(&definition.span, "Constant definition")?;
         let name = &definition.name;
         self.check_not_defined(name, &definition.span, "Constant")?;
         let value = self.eval(&definition.init)?;
@@ -505,7 +523,9 @@ impl Env {
     }
 
     fn do_import(&self, import: &ImportDef) -> Eval {
-        let module = &self.foo.load_module(&import.path)?.env_ref;
+        let n = self.env_ref.frame.borrow().symbols.len();
+        let module = &self.load_module(&import.path)?.env_ref;
+        assert_eq!(n, self.env_ref.frame.borrow().symbols.len());
         let res = match &import.name {
             None => self.env_ref.import_prefixed(&module, &import.prefix),
             Some(name) if name == "*" => self.env_ref.import_everything(&module),
@@ -519,7 +539,6 @@ impl Env {
     }
 
     fn do_interface(&self, interface: &InterfaceDef) -> Eval {
-        self.check_toplevel(&interface.span, "Interface definition")?;
         let name = &interface.name;
         self.check_not_defined(&interface.name, &interface.span, "Interface")?;
         let interface = self.foo.make_interface(interface, self)?;

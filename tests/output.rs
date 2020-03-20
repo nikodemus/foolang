@@ -44,6 +44,7 @@ fn test_test() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/tests/test.foo");
     cmd.arg("--use=foo/lib");
+    cmd.arg("--use=foo/lang");
     cmd.assert().success();
     Ok(())
 }
