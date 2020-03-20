@@ -2,6 +2,9 @@
 
 (require 'cl)
 
+;; Soft require: ./test-elisp.sh provides this, but we don't depend on it
+(require 'highlight-numbers nil t)
+
 (defvar foolang-syntax-table)
 (setq foolang-syntax-table (make-syntax-table))
 
@@ -22,6 +25,12 @@
 
 (defconst foolang--syntax-propertize-rules
   (syntax-propertize-precompile-rules
+   ;; A lone '-' is a symbol.
+   ("\\<\\(-\\)[^-0-9]" (1 "_"))
+   ;; A leading '-' before a number is punctuation.
+   ("[^-]\\(-\\)[0-9]" (1 "."))
+   ("^\\(-\\)[0-9]" (1 "."))
+   ;; Block comments as generic fences.
    ("---" (0 "! b"))))
 
 (defun foolang--syntax-propertize (start end)
@@ -55,6 +64,8 @@
   (setq-local syntax-propertize-extend-region-functions
               '(syntax-propertize-wholelines
                 foolang--syntax-propertize-extend-block-comments))
+  (when (fboundp 'highlight-numbers-mode)
+    (highlight-numbers-mode))
   (font-lock-fontify-buffer))
 
 (defvar foolang--reserved-words
@@ -506,13 +517,13 @@
 ;;;; Indentation engine
 
 ;; Like this so that I can just C-x C-e here to turn it on.
-(defvar foolang--debug-indentation)
-(setq foolang--debug-indentation t)
-(setq foolang--debug-indentation nil)
+(defvar foolang--debug-mode)
+(setq foolang--debug-mode t)
+(setq foolang--debug-mode nil)
 
 (defun foolang--note (control &rest args)
-  (when foolang--debug-indentation
-    (with-current-buffer (get-buffer-create "*foolang-indentation*")
+  (when foolang--debug-mode
+    (with-current-buffer (get-buffer-create "*foolang-notes*")
       (end-of-buffer)
       (insert (apply #'format control args))
       (insert "\n"))))
@@ -732,14 +743,14 @@
 (defvar foolang--indentation-tests)
 (setq foolang--indentation-tests nil)
 
-(defvar foolang--indentation-test-failures)
-(setq foolang--indentation-test-failures nil)
+(defvar foolang--test-failures)
+(setq foolang--test-failures nil)
 
 (defun foolang--push-mark-around (old &optional loc nomsg activate)
   (funcall old loc t activate))
 
 (defun foolang--run-indentation-test (name source target)
-  (with-current-buffer (get-buffer-create "*foolang-indentation*")
+  (with-current-buffer (get-buffer-create "*foolang-notes*")
     (end-of-buffer)
     (let ((start (point)))
       (insert "\n--- " name " ---\n")
@@ -754,7 +765,7 @@
         (if (string= target result)
             (progn (insert "ok!")
                    (message "test %s ok" name))
-          (push name foolang--indentation-test-failures)
+          (push name foolang--test-failures)
           (insert "FAILED!\n")
           (insert "WANTED:\n")
           (insert target)
@@ -779,25 +790,6 @@
           (message "test %s FAILED:\n%s" name
                    (buffer-substring-no-properties start (point))))))))
 
-(defun foolang--run-tests ()
-  ;; For now these are all indentation tests. When others are
-  ;; added this should be split into parts.
-  (with-current-buffer (get-buffer-create "*foolang-indentation*")
-    (erase-buffer))
-  (setq foolang--indentation-test-failures nil)
-  (advice-add 'push-mark :around 'foolang--push-mark-around)
-  (unwind-protect
-      (dolist (test foolang--indentation-tests)
-        (apply 'foolang--run-indentation-test test))
-    (advice-remove 'push-mark 'foolang--push-mark-around))
-  (with-current-buffer "*foolang-indentation*"
-    (cond (foolang--indentation-test-failures
-           (display-buffer "*foolang-indentation*")
-           (user-error "Foolang indentation tests failed!"))
-          (t
-           (kill-buffer)
-           (message "Foolang tests ok!")))))
-
 (cl-defmacro def-foolang-indent-test (name source target)
   `(let* ((name ,name)
          (test (list ,source ,target))
@@ -805,7 +797,7 @@
      (if old
          (setcdr old test)
        (push (cons name test) foolang--indentation-tests))
-     (when foolang--debug-indentation
+     (when foolang--debug-mode
        (apply 'foolang--run-indentation-test name test))))
 
 (def-foolang-indent-test "class-indent-1"
@@ -1345,6 +1337,117 @@ end"
 define foo
     42
 end")
+
+(defvar foolang--face-tests)
+(setq foolang--face-tests nil)
+
+(defvar foolang--face-test-failures)
+(setq foolang--face-test-failures nil)
+
+(cl-defmacro def-foolang-face-test (name source &body target)
+  `(let* ((name ,name)
+         (test (list ,source ',target))
+         (old (assoc-string name foolang--face-tests)))
+     (if old
+         (setcdr old test)
+       (push (cons name test) foolang--face-tests))
+     (when foolang--debug-mode
+       (apply 'foolang--run-face-test name test))))
+
+(cl-defun foolang--face-specs-match (specs content)
+  (dolist (spec specs)
+    (multiple-value-bind (ok issue) (foolang--face-spec-matches spec content)
+      (unless ok
+        (return-from foolang--face-specs-match (values ok issue)))))
+  (values t nil))
+
+(cl-defun foolang--face-spec-matches (spec content)
+  (destructuring-bind (range face) spec
+    (destructuring-bind (start end)
+        (if (eq '* range)
+            (list 0 (length content))
+          range)
+      (loop for i from start below end
+            do (let ((actual (get-text-property i 'face content)))
+                 (unless (eq face actual)
+                   (return-from foolang--face-spec-matches
+                     (values nil (list i face actual))))))
+      (values t nil))))
+
+(defun foolang--run-face-test (name source target)
+  (with-current-buffer (get-buffer-create "*foolang-notes*")
+    (end-of-buffer)
+    (let ((start (point)))
+      (insert "\n" name)
+      (lexical-let ((result (with-temp-buffer
+                              (foolang-mode)
+                              (insert source)
+                              (font-lock-fontify-buffer)
+                              (buffer-substring (point-min) (point-max))
+                              ;; (thing-at-point 'buffer)
+                              )))
+        (end-of-buffer)
+        (multiple-value-bind (ok issue) (foolang--face-specs-match target result)
+          (if ok
+              (progn (insert " ok!")
+                     (message "test %s ok" name))
+            (push name foolang--test-failures)
+            (let ((oops (format " FAILED! wanted %s at %s, got %s"
+                                (second issue) (first issue) (third issue))))
+              (insert oops "\n")
+              (message "test %s%s" name oops))))))))
+
+(def-foolang-face-test "comment-face-1"
+  "-- foo"
+  (* font-lock-comment-face))
+
+(def-foolang-face-test "comment-face-2"
+  "--123"
+  (* font-lock-comment-face))
+
+(when (fboundp 'highlight-numbers-mode)
+  (def-foolang-face-test "number-face-1"
+    "123"
+    (* highlight-numbers-number))
+
+  (def-foolang-face-test "number-face-2"
+    "123.123"
+    ((0 2) highlight-numbers-number)
+    ((4 6) highlight-numbers-number))
+
+  (def-foolang-face-test "number-face-3"
+    " -123"
+    ((2 4) highlight-numbers-number))
+
+  (def-foolang-face-test "number-face-4"
+    "-123"
+    ((1 3) highlight-numbers-number))
+
+  (def-foolang-face-test "number-face-5"
+    "asd-123"
+    ((4 6) highlight-numbers-number)))
+
+(defun foolang--run-tests ()
+  ;; For now these are all indentation tests. When others are
+  ;; added this should be split into parts.
+  (with-current-buffer (get-buffer-create "*foolang-notes*")
+    (erase-buffer))
+  (setq foolang--test-failures nil)
+  (advice-add 'push-mark :around 'foolang--push-mark-around)
+  (unwind-protect
+      (progn
+        (dolist (test (reverse foolang--indentation-tests))
+          (apply 'foolang--run-indentation-test test))
+        (dolist (test (reverse foolang--face-tests))
+          (apply 'foolang--run-face-test test)))
+    (advice-remove 'push-mark 'foolang--push-mark-around))
+  (with-current-buffer "*foolang-notes*"
+    (cond (foolang--test-failures
+           (display-buffer "*foolang-notes*")
+           (user-error "Foolang-mode tests failed!"))
+          (t
+           (kill-buffer)
+           (message "Foolang-mode tests ok!")))))
 
 (foolang--run-tests)
 
