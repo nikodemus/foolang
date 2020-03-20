@@ -527,16 +527,19 @@
 
 (defun foolang--indent-line-number (line-number indent-all)
   (let ((line-move-visual nil))
-    (lexical-let ((base (foolang--find-indent-base)))
+    (lexical-let ((base (foolang--find-indent-base indent-all)))
       (foolang--indent-to line-number base base nil nil indent-all))))
 
-(defun foolang--find-indent-base ()
+(defun foolang--find-indent-base (indent-all)
   "Search lines up until it find a 'base', meaning
    a class or method definition line, or top of buffer."
   (lexical-let ((base nil))
-    (while (not (setq base (foolang--indent-base-or-nil)))
+    (while (not (setq base (foolang--indent-base-or-nil indent-all)))
       (previous-line))
-    (foolang--note "indent-base: %s on line %s" base (line-number-at-pos))
+    (foolang--note "indent-base(%s): %s at '%s'"
+                   (if indent-all "all" "local")
+                   base
+                   (foolang--current-line))
     base))
 
 (defun foolang--indent-to (target col base stack ctx indent-all)
@@ -571,20 +574,34 @@
   (foolang--note "  ! No rule to indent line after '%s'" (foolang--current-line))
   (list col base stack ctx))
 
-(defun foolang--indent-base-or-nil ()
+(defun foolang--indent-base-or-nil (indent-all)
   (beginning-of-line)
-  (cond ((foolang--looking-at-method) foolang-indent-offset)
-        ((foolang--looking-at-class) 0)
-        ((foolang--looking-at-define) 0)
-        ((foolang--looking-at-extend) 0)
-        ((foolang--looking-at-interface) 0)
-        ((foolang--top-of-buffer) 0)))
+  (cond ((foolang--looking-at-method)
+         (if indent-all
+             nil
+           (foolang--note "indent-base is method")
+           foolang-indent-offset))
+        ((foolang--looking-at-class)
+         (foolang--note "indent-base is class")
+         0)
+        ((foolang--looking-at-define)
+         (foolang--note "indent-base is define")
+         0)
+        ((foolang--looking-at-extend)
+         (foolang--note "indent-base is extend")
+         0)
+        ((foolang--looking-at-interface)
+         (foolang--note "indent-base is interface")
+         0)
+        ((foolang--top-of-buffer)
+         (foolang--note "indent-base is top-of-buffer")
+         0)))
 
 (defun foolang--looking-at-method ()
   (looking-at " *\\(method\\|class *method\\)"))
 
 (defun foolang--looking-at-class ()
-  (looking-at " *class [A-Z]"))
+  (looking-at " *class [A-Za-z_]"))
 
 (defun foolang--looking-at-define ()
   (looking-at " *define [A-Za-z_]"))
@@ -845,6 +862,16 @@ is"
 class Foo { a }
     is")
 
+(def-foolang-indent-test "class-indent-8"
+  "
+class Foo { a }
+-- comment
+method bar"
+  "
+class Foo { a }
+    -- comment
+    method bar")
+
 (def-foolang-indent-test "interface-indent-1"
   "
 interface Foo
@@ -937,17 +964,21 @@ class Foo { a }
 
 (def-foolang-indent-test "method-indent-4"
   "
+class Foo { a }
 method bar: x quux: y
 x + y"
   "
+class Foo { a }
     method bar: x quux: y
         x + y")
 
 (def-foolang-indent-test "method-indent-5"
   "
+class Foo { a }
 method prefix-
 -(self value)"
   "
+class Foo { a }
     method prefix-
         -(self value)")
 
@@ -963,21 +994,25 @@ class Main {}
 
 (def-foolang-indent-test "body-indent-1"
   "
+class Foo { a }
 method bar
 quux
 zot"
   "
+class Foo { a }
     method bar
         quux
             zot")
 
 (def-foolang-indent-test "body-indent-2"
   "
+class Foo { a }
 method bar
 quux
 zot.
 fii"
   "
+class Foo { a }
     method bar
         quux
             zot.
@@ -985,21 +1020,25 @@ fii"
 
 (def-foolang-indent-test "body-indent-3"
   "
+class Foo { a }
 method bar
 zot { dint.
 flint"
   "
+class Foo { a }
     method bar
         zot { dint.
               flint")
 
 (def-foolang-indent-test "body-indent-4"
   "
+class Foo { a }
 method bar
 zotarionz bee: x foo: y neg
 faa: z neg neg
 aas: s"
   "
+class Foo { a }
     method bar
         zotarionz bee: x foo: y neg
                   faa: z neg neg
@@ -1007,11 +1046,13 @@ aas: s"
 
 (def-foolang-indent-test "body-indent-5"
   "
+class Foo { a }
 method bar
 things
 do: { |thing|
 thing"
   "
+class Foo { a }
     method bar
         things
             do: { |thing|
@@ -1019,11 +1060,13 @@ thing"
 
 (def-foolang-indent-test "body-indent-6"
   "
+class Foo { a }
 method bar
 things
 ; doStuff: x
 ; moreStuff: y"
   "
+class Foo { a }
     method bar
         things
             ; doStuff: x
@@ -1031,11 +1074,13 @@ things
 
 (def-foolang-indent-test "body-indent-7"
   "
+class Foo { a }
 method bar
 P new: p x: {
 let n = p ifTrue: { x } ifFalse: { y }.
 Ouch of: n"
   "
+class Foo { a }
     method bar
         P new: p x: {
             let n = p ifTrue: { x } ifFalse: { y }.
@@ -1043,16 +1088,19 @@ Ouch of: n"
 
 (def-foolang-indent-test "body-indent-8"
   "
+class Foo { a }
 method bar
 -- XXX
 let foo = Quux x: 1"
   "
+class Foo { a }
     method bar
         -- XXX
         let foo = Quux x: 1")
 
 (def-foolang-indent-test "body-indent-9"
   "
+class Foo { a }
 class method run: command in: system
 -- XXX: decide full/short based on command-line
 let benchmarks = Benchmarks output: system output
@@ -1060,6 +1108,7 @@ clock: system clock
 full: False.
 benchmarks run"
   "
+class Foo { a }
     class method run: command in: system
         -- XXX: decide full/short based on command-line
         let benchmarks = Benchmarks output: system output
@@ -1069,6 +1118,7 @@ benchmarks run"
 
 (def-foolang-indent-test "body-indent-10"
   "
+class Foo { a }
 class method new: system
 let compiler = Compiler new.
 compiler define: \"system\" as: system.
@@ -1078,6 +1128,7 @@ _compiler: compiler
 _atEof: False
 _value: False"
         "
+class Foo { a }
     class method new: system
         let compiler = Compiler new.
         compiler define: \"system\" as: system.
@@ -1089,6 +1140,7 @@ _value: False"
 
 (def-foolang-indent-test "body-indent-11"
   "
+class Foo { a }
 method read
 let source = \"\".
 {
@@ -1100,6 +1152,7 @@ self _tryParse: source
 }
 } whileFalse"
   "
+class Foo { a }
     method read
         let source = \"\".
         {
@@ -1113,6 +1166,7 @@ self _tryParse: source
 
 (def-foolang-indent-test "body-indent-12"
   "
+class Foo { a }
 method readEvalPrint
 {
 -- Cascade just for fun.
@@ -1122,6 +1176,7 @@ onError: { |error context|
 _output println: \"ERROR: {error}\".
 _output println: context }"
   "
+class Foo { a }
     method readEvalPrint
         {
             -- Cascade just for fun.
@@ -1133,6 +1188,7 @@ _output println: context }"
 
 (def-foolang-indent-test "body-indent-13"
   "
+class Foo { a }
 method testPrefix
 assertForAll: (1 to: 10)
 that: { |n|
@@ -1140,6 +1196,7 @@ let b = Box value: n.
 -n == -b }
 testing: \"custom prefix method\""
   "
+class Foo { a }
     method testPrefix
         assertForAll: (1 to: 10)
         that: { |n|
@@ -1149,6 +1206,7 @@ testing: \"custom prefix method\""
 
 (def-foolang-indent-test "body-indent-14"
   "
+class Foo { a }
 method check: cond on: x onSuccess: success onFailure: failure
 let res = { cond value: x }
 onError: { |e ctx|
@@ -1158,6 +1216,7 @@ res
 ifTrue: success
 ifFalse: failure"
   "
+class Foo { a }
     method check: cond on: x onSuccess: success onFailure: failure
         let res = { cond value: x }
                       onError: { |e ctx|
@@ -1169,6 +1228,7 @@ ifFalse: failure"
 
 (def-foolang-indent-test "body-indent-15"
   "
+class Foo { a }
 method forAll: generator that: cond testing: thing
 let n = 0.
 generator
@@ -1181,6 +1241,7 @@ return False }}.
 system output println: \"  {thing} ok ({n} assertions)\".
 True"
   "
+class Foo { a }
     method forAll: generator that: cond testing: thing
         let n = 0.
         generator
@@ -1195,12 +1256,14 @@ True"
 
 (def-foolang-indent-test "body-indent-16"
   "
+class Foo { a }
 method testFilePath
 let pathX = files path: \"X\".
 assert raises: { files path: \"..\" }
 error: \"Cannot extend #<FilePath (root)> with ..\"
 testing:"
   "
+class Foo { a }
     method testFilePath
         let pathX = files path: \"X\".
         assert raises: { files path: \"..\" }
@@ -1209,11 +1272,13 @@ testing:"
 
 (def-foolang-indent-test "body-indent-17"
   "
+class Foo { a }
 method foo
 bar.
 
 quux."
   "
+class Foo { a }
     method foo
         bar.
 
@@ -1221,21 +1286,25 @@ quux."
 
 (def-foolang-indent-test "body-indent-18"
   "
+class Foo { a }
 method foo
 x run: { let x = y bar
 quux."
   "
+class Foo { a }
     method foo
         x run: { let x = y bar
                              quux.")
 
 (def-foolang-indent-test "body-indent-19"
   "
+class Foo { a }
 method foo
 x run: { bing boing.
 let x = y bar
 quux."
   "
+class Foo { a }
     method foo
         x run: { bing boing.
                  let x = y bar
@@ -1243,11 +1312,13 @@ quux."
 
 (def-foolang-indent-test "body-indent-20"
   "
+class Foo { a }
 method testRecord
 assert true: { let r = {x: -10, y: 52}.
 r x + r y == 42 }
 testing: \"record creation and accessors\""
   "
+class Foo { a }
     method testRecord
         assert true: { let r = {x: -10, y: 52}.
                        r x + r y == 42 }
@@ -1255,10 +1326,12 @@ testing: \"record creation and accessors\""
 
 (def-foolang-indent-test "end-indent-1"
   "
+class Foo { a }
 method bar
 42
 end"
   "
+class Foo { a }
     method bar
         42
 end")
