@@ -528,13 +528,23 @@
       (insert (apply #'format control args))
       (insert "\n"))))
 
+(defmacro foolang--save-indentation (body)
+  `(prog1
+       (save-excursion ,body)
+     (cond ((looking-at "\\s-*$")
+            (delete-trailing-whitespace (line-beginning-position) (line-end-position)))
+           ((looking-back "^\\s-*")
+            (back-to-indentation)))))
+
 (defun foolang-indent-line ()
   (interactive)
-  (foolang--indent-line-number (line-number-at-pos) nil))
+  (foolang--save-indentation
+    (foolang--indent-line-number (line-number-at-pos) nil)))
 
 (defun foolang-indent-all ()
   (interactive)
-  (foolang--indent-line-number (line-number-at-pos) t))
+  (foolang--save-indentation
+    (foolang--indent-line-number (line-number-at-pos) t)))
 
 (defun foolang--indent-line-number (line-number indent-all)
   (let ((line-move-visual nil))
@@ -759,8 +769,7 @@
                               (setq indent-tabs-mode nil)
                               (insert source)
                               (foolang-indent-all)
-                              (end-of-buffer)
-                              (buffer-substring-no-properties 1 (point)))))
+                              (buffer-substring-no-properties (point-min) (point-max)))))
         (end-of-buffer)
         (if (string= target result)
             (progn (insert "ok!")
@@ -1427,6 +1436,78 @@ end")
     "asd-123"
     ((4 6) highlight-numbers-number)))
 
+(defvar foolang--motion-tests)
+(setq foolang--motion-tests nil)
+
+(cl-defmacro def-foolang-motion-test (name
+                                      source start-position
+                                      command
+                                      target end-position)
+  `(let* ((name ,name)
+          (test (list ,source ',start-position ',command ,target ',end-position))
+          (old (assoc-string name foolang--motion-tests)))
+     (if old
+         (setcdr old test)
+       (push (cons name test) foolang--motion-tests))
+     (when foolang--debug-mode
+       (apply 'foolang--run-motion-test name test))))
+
+(defun foolang--run-motion-test (name
+                                 source start-position
+                                 command
+                                 target end-position)
+  (with-current-buffer (get-buffer-create "*foolang-notes*")
+    (end-of-buffer)
+    (let ((start (point)))
+      (insert "\n" name)
+      (destructuring-bind (result location)
+          (with-temp-buffer
+            (insert source)
+            (foolang-mode)
+            (setq indent-tabs-mode nil)
+            (destructuring-bind (line col) start-position
+              (goto-line line)
+              (move-to-column col))
+            (apply (first command) (rest command))
+            (list (buffer-substring-no-properties
+                   (point-min) (point-max))
+                  (list (line-number-at-pos) (current-column))))
+        (end-of-buffer)
+        (if (and (equal result target) (equal location end-position))
+            (progn (insert " ok!")
+                   (message "test %s ok" name))
+          (push name foolang--test-failures)
+          (insert " FAILED:\n")
+          (unless (equal result target)
+            (insert "Bad result, wanted:\n" target "\n")
+            (insert "Got:\n" result "\n"))
+          (unless (equal location end-position)
+            (insert (format "Bad location, wanted %s, got %s\n"
+                            end-position location)))
+          (message "test %s FAILED!" name))))))
+
+(def-foolang-motion-test "foolang-indent-line-0"
+  "
+class Foo {}
+          method bar"
+  (3 1)
+  (foolang-indent-line)
+  "
+class Foo {}
+    method bar"
+  (3 4))
+
+(def-foolang-motion-test "foolang-indent-line-1"
+  "
+class Foo {}
+ method bar         "
+  (3 15)
+  (foolang-indent-line)
+  "
+class Foo {}
+    method bar"
+  (3 14))
+
 (defun foolang--run-tests ()
   ;; For now these are all indentation tests. When others are
   ;; added this should be split into parts.
@@ -1439,7 +1520,9 @@ end")
         (dolist (test (reverse foolang--indentation-tests))
           (apply 'foolang--run-indentation-test test))
         (dolist (test (reverse foolang--face-tests))
-          (apply 'foolang--run-face-test test)))
+          (apply 'foolang--run-face-test test))
+        (dolist (test (reverse foolang--motion-tests))
+          (apply 'foolang--run-motion-test test)))
     (advice-remove 'push-mark 'foolang--push-mark-around))
   (with-current-buffer "*foolang-notes*"
     (cond (foolang--test-failures
