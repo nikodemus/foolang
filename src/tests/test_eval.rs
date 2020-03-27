@@ -488,6 +488,22 @@ fn test_typecheck10() {
 }
 
 #[test]
+fn test_typecheck11() {
+    assert_eq!(
+        eval_ok(
+            "class Foo {}
+            defaultConstructor foo
+            method zot: x::Integer
+                x
+         end
+         Foo foo zot: 42",
+        )
+        .integer(),
+        42
+    );
+}
+
+#[test]
 fn test_let1() {
     assert_eq!(eval_ok("let x = 42. x").integer(), 42);
 }
@@ -771,5 +787,20 @@ fn test_method_keyword_multiline() {
         )
         .integer(),
         42
+    );
+}
+
+#[test]
+fn test_method_declares_class_as_argtype() {
+    assert_eq!(
+        eval_ok(
+            r#"class Foo { x }
+                   method y: other::Foo
+                       other x
+               end
+               (Foo x: 42) y: (Foo x: 123)"#
+        )
+        .integer(),
+        123
     );
 }
