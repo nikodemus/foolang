@@ -179,6 +179,15 @@
                stack)
          :slots)))
 
+(def-foolang-indent "class Name {...} \\ end" (col base stack ctx)
+  (:after
+    (looking-at " *class\\s-+[A-Z]+\\s-*{.*}\\s-*\n\\s-*end\\>"))
+  (:indent
+   (list col
+         base
+         stack
+         ctx)))
+
 (def-foolang-indent "class Name {...}" (col base stack ctx)
   (:after
     (looking-at " *class\\s-+[A-Z]+\\s-*{.*}\\s-*$"))
@@ -1325,16 +1334,12 @@ class Foo { a }
                        r x + r y == 42 }
                testing: \"record creation and accessors\"")
 
-(def-foolang-indent-test "end-indent-1"
+(def-foolang-indent-test "end-indent-2"
   "
 class Foo { a }
-method bar
-42
-end"
+     end"
   "
 class Foo { a }
-    method bar
-        42
 end")
 
 (def-foolang-indent-test "define-indent-1"
