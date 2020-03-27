@@ -1261,8 +1261,9 @@ impl Object {
         env: &Env,
         method: &MethodDefinition,
     ) -> Result<(), Unwind> {
-        self.as_class_ref()?;
-        self.vtable.add_method(&method.selector, Method::closure(method, env)?)?;
+        let class = self.as_class_ref()?;
+        let env = env.bind(&class.instance_vtable.name, Binding::untyped(self.clone()));
+        self.vtable.add_method(&method.selector, Method::closure(method, &env)?)?;
         Ok(())
     }
 
@@ -1272,7 +1273,8 @@ impl Object {
         method: &MethodDefinition,
     ) -> Result<(), Unwind> {
         let class = self.as_class_ref()?;
-        class.instance_vtable.add_method(&method.selector, Method::closure(method, env)?)?;
+        let env = env.bind(&class.instance_vtable.name, Binding::untyped(self.clone()));
+        class.instance_vtable.add_method(&method.selector, Method::closure(method, &env)?)?;
         Ok(())
     }
 

@@ -325,11 +325,12 @@ impl Env {
 
     /// Creates a new environment enclosed by this one, containing one additional
     /// binding.
-    fn bind(&self, name: &str, binding: Binding) -> Env {
+    pub fn bind(&self, name: &str, binding: Binding) -> Env {
         let child = self.enclose();
         child.add_binding(name, binding);
         child
     }
+
     /// Creates a new environment enclosed by this one, containing
     /// `symbols`, `receiver`, and `closure` as the home.
     pub fn extend(&self, symbols: SymbolTable, receiver: Option<&Object>) -> Env {
@@ -579,12 +580,16 @@ impl Env {
     }
 
     // NOTE: name is correct, see maybe_type for more.
+    //
+    // This used get() instead of find_global because methods are
+    // in a special environment which includes the class as well, even
+    // though the definition is not yet complete.
     pub fn find_type(&self, name: &str) -> Result<Rc<Vtable>, Unwind> {
-        match self.find_global(name) {
-            None => Unwind::error(&format!("Undefined type: {}", name)),
+        match self.get(name) {
+            None => Unwind::error(&format!("Undefined type: '{}'", name)),
             Some(obj) => match &obj.datum {
                 Datum::Class(ref class) => Ok(class.instance_vtable.clone()),
-                _ => Unwind::error(&format!("Not a type: {}", name)),
+                _ => Unwind::error(&format!("Not a type: '{}'", name)),
             },
         }
     }
