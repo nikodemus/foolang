@@ -817,19 +817,19 @@ class SI_Tests { assert }
 
     method testBaseUnitPrinting
         assert that: { "{10 m * 100}" }
-               is: "1 km"
+               is: "1.0 km"
                testing: "print 1 km".
         assert that: { "{10 km * 100 m}" }
-               is: "1 Mm^2"
+               is: "1.0 Mm^2"
                testing: "print 1 Mm^2".
         assert that: { "{1 / (10 mm * 100)}" }
-               is: "1 m^-1"
+               is: "1.0 m^-1"
                testing: "print 1 m^-1".
         assert that: { "{100 mA + 900 mA}" }
-               is: "1 A"
+               is: "1.0 A"
                testing: "print 1 A".
         assert that: { "{10 cd * 100}" }
-               is: "1 kcd"
+               is: "1.0 kcd"
                testing: "print 1 kcd".
 
     method testCompoundUnitArithmetic
@@ -861,16 +861,16 @@ class SI_Tests { assert }
 
     method testCompoundUnitPrinting
         assert that: { "{1 km / 1 ms}" }
-               is: "1 Mm/s"
-               testing: "printing 1 Mm/s".
+               is: "1.0 Mm/s"
+               testing: "printing 1.0 Mm/s".
         assert that: { "{1 cd / 1000 mA / (1 s * 1 s)}" }
-               is: "1 cd/(A s^2)"
+               is: "1.0 cd/(A s^2)"
                testing: "printing 1 cd/(A s^2)".
         assert that: { "{0.5 * 80 kg * (18 m / s)^2}" }
                is: "12.96 kJ"
                testing: "printing 12.96 kJ".
         assert that: { "{10 kg * 2 m / s^2}" }
-               is: "20 N"
+               is: "20.0 N"
                testing: "printing 20 N"
 
 end
