@@ -14,7 +14,6 @@ pub fn vtable() -> Vtable {
     vt.add_primitive_method_or_panic("mulFloat:", float_mul_float);
     vt.add_primitive_method_or_panic("prefix-", float_neg);
     vt.add_primitive_method_or_panic("subFloat:", float_sub_float);
-    vt.add_primitive_method_or_panic("toString", float_to_string);
     vt.add_primitive_method_or_panic("asInteger", float_as_integer);
     vt.add_primitive_method_or_panic("sqrt", float_sqrt);
     vt
@@ -73,10 +72,6 @@ fn float_less_than_or_equal_float(receiver: &Object, args: &[Object], env: &Env)
 
 fn float_neg(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_float(-receiver.float()))
-}
-
-fn float_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    Ok(env.foo.make_string(&receiver.float().to_string()))
 }
 
 fn float_sqrt(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
