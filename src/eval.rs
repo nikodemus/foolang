@@ -7,8 +7,8 @@ use std::rc::Rc;
 use crate::def::*;
 use crate::expr::*;
 use crate::objects::{
-    read_instance_variable, write_instance_variable, Arg, Class, Datum, Eval, Foolang, Object,
-    Source, Vtable,
+    read_instance_variable, write_instance_variable, Arg, Datum, Eval, Foolang, Object, Source,
+    Vtable,
 };
 use crate::parse::Parser;
 use crate::span::Span;
@@ -516,9 +516,6 @@ impl Env {
     }
 
     fn do_extension(&self, extension: &ExtensionDef) -> Eval {
-        if !self.is_toplevel() {
-            return Unwind::error_at(extension.span.clone(), "Extension not at toplevel");
-        }
         let class = self.find_global_or_unwind(&extension.name)?;
         class.extend_class(extension, self)
     }
@@ -594,22 +591,11 @@ impl Env {
         }
     }
 
-    pub fn find_class(&self, name: &str) -> Result<Rc<Class>, Unwind> {
-        match self.find_global(name) {
-            None => Unwind::error(&format!("Undefined class: {}", name)),
-            Some(obj) => match &obj.datum {
-                Datum::Class(ref class) if !class.interface => Ok(class.clone()),
-                _ => panic!("Interface, not class: {}", name),
-                //_ => Unwind::error(&format!("Interface, not class: {}", name)),
-            },
-        }
-    }
-
-    pub fn find_interface(&self, name: &str) -> Result<Rc<Class>, Unwind> {
-        match self.find_global(name) {
+    pub fn find_interface(&self, name: &str) -> Eval {
+        match self.get(name) {
             None => Unwind::error(&format!("Undefined interface: {}", name)),
             Some(obj) => match &obj.datum {
-                Datum::Class(ref class) if class.interface => Ok(class.clone()),
+                Datum::Class(ref class) if class.interface => Ok(obj.clone()),
                 _ => Unwind::error(&format!("Class, not interface: {}", name)),
             },
         }
