@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::convert::Into;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::str::FromStr;
 use std::string::ToString;
 
@@ -75,6 +76,7 @@ impl<'a> ParserState<'a> {
 
 pub struct Parser<'a> {
     source: &'a str,
+    path: Option<Rc<PathBuf>>,
     token_table: TokenTable,
     name_table: NameTable,
     state: RefCell<ParserState<'a>>,
@@ -84,23 +86,41 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn parse_file<P: AsRef<Path>, R>(file: P,
-                                         root: P,
-                                         fun: impl FnOnce(&mut Parser) -> Result<R, Unwind>)
-                                         -> Result<R, Unwind> {
+    pub fn parse_file<P: AsRef<Path>, R>(
+        file: P,
+        root: P,
+        fun: impl FnOnce(&mut Parser) -> Result<R, Unwind>,
+    ) -> Result<R, Unwind> {
         let file = file.as_ref();
         let source = match std::fs::read_to_string(file) {
             Ok(code) => code,
-            Err(_err) => return Unwind::error(&format!(
-                "Could not read file: {}", file.to_string_lossy()))
+            Err(_err) => {
+                return Unwind::error(&format!("Could not read file: {}", file.to_string_lossy()))
+            }
         };
-        let mut parser = Parser::new(&source, root);
+        let mut parser = Parser::new_with_path(file, &source, root);
         fun(&mut parser)
     }
 
     pub fn new<P: AsRef<Path>>(source: &'a str, root: P) -> Parser<'a> {
         Parser {
             source,
+            path: None,
+            token_table: make_token_table(),
+            name_table: make_name_table(),
+            state: RefCell::new(ParserState {
+                tokenstream: TokenStream::new(source),
+                lookahead: VecDeque::new(),
+                span: 0..0,
+            }),
+            root: root.as_ref().to_path_buf(),
+        }
+    }
+
+    pub fn new_with_path<P: AsRef<Path>>(path: &Path, source: &'a str, root: P) -> Parser<'a> {
+        Parser {
+            source,
+            path: Some(Rc::new(path.to_path_buf())),
             token_table: make_token_table(),
             name_table: make_name_table(),
             state: RefCell::new(ParserState {
@@ -123,10 +143,9 @@ impl<'a> Parser<'a> {
     pub fn parse_interpolated_block(&self, span: Span) -> Result<(Expr, usize), Unwind> {
         let subparser = Parser::new(self.slice_at(span.clone()), &self.root);
         match subparser.parse_prefix_expr() {
-            Err(Unwind::Exception(Error::EofError(_), _)) => Unwind::error_at(
-                SourceLocation::span(&span),
-                "Unterminated string interpolation.",
-            ),
+            Err(Unwind::Exception(Error::EofError(_), _)) => {
+                Unwind::error_at(SourceLocation::span(&span), "Unterminated string interpolation.")
+            }
             Err(unwind) => Err(unwind.shift_span(span.start)),
             Ok(Expr::Block(mut block)) => {
                 block.span.shift(span.start);
@@ -149,10 +168,7 @@ impl<'a> Parser<'a> {
             Ok(other) => {
                 let mut errspan = other.span();
                 errspan.shift(span.start);
-                Unwind::error_at(
-                    SourceLocation::span(&errspan),
-                    "Interpolation not a block.",
-                )
+                Unwind::error_at(SourceLocation::span(&errspan), "Interpolation not a block.")
             }
         }
     }
@@ -288,7 +304,10 @@ impl<'a> Parser<'a> {
     }
 
     pub fn source_location(&self) -> SourceLocation {
-        SourceLocation::span(&self.span())
+        match &self.path {
+            None => SourceLocation::span(&self.span()),
+            Some(path) => SourceLocation::path(path, &self.span()),
+        }
     }
 
     pub fn slice(&self) -> &str {
@@ -601,7 +620,10 @@ fn identifier_prefix(parser: &Parser) -> Parse {
         Some(syntax) => parser.parse_prefix_syntax(syntax),
         None => {
             name.chars().next().expect("BUG: empty identifier");
-            Ok(Syntax::Expr(Expr::Var(Var::untyped(parser.source_location(), parser.tokenstring()))))
+            Ok(Syntax::Expr(Expr::Var(Var::untyped(
+                parser.source_location(),
+                parser.tokenstring(),
+            ))))
         }
     }
 }
@@ -1460,7 +1482,11 @@ pub mod utils {
             let start = p;
             let end = start + param.0.len();
             p = end + 4 + param.1.len();
-            blockparams.push(Var::typed(SourceLocation::span(&(start..end)), param.0.to_string(), param.1.to_string()));
+            blockparams.push(Var::typed(
+                SourceLocation::span(&(start..end)),
+                param.0.to_string(),
+                param.1.to_string(),
+            ));
         }
         Block::expr(span, blockparams, Box::new(body), None)
     }
@@ -1531,7 +1557,10 @@ pub mod utils {
             span,
             selector.to_string(),
             // FIXME: span
-            parameters.iter().map(|name| Var::untyped(SourceLocation::span(&(0..0)), name.to_string())).collect(),
+            parameters
+                .iter()
+                .map(|name| Var::untyped(SourceLocation::span(&(0..0)), name.to_string()))
+                .collect(),
             None,
         )
     }
@@ -1582,10 +1611,7 @@ fn test_parser_error_after_lookahead() {
     let parser = Parser::new("foo bar", "dummy");
     parser.next_token().unwrap();
     parser.lookahead().unwrap();
-    let err: Result<(), Unwind> = Unwind::error_at(
-        SourceLocation::span(&(0..3)),
-        "oops",
-    );
+    let err: Result<(), Unwind> = Unwind::error_at(SourceLocation::span(&(0..3)), "oops");
     assert_eq!(err, parser.error("oops"));
 }
 
@@ -1594,9 +1620,6 @@ fn test_parser_error_after_lookahead2() {
     let parser = Parser::new("foo bar", "dummy");
     parser.next_token().unwrap();
     parser.lookahead2().unwrap();
-    let err: Result<(), Unwind> = Unwind::error_at(
-        SourceLocation::span(&(0..3)),
-        "oops",
-    );
+    let err: Result<(), Unwind> = Unwind::error_at(SourceLocation::span(&(0..3)), "oops");
     assert_eq!(err, parser.error("oops"));
 }

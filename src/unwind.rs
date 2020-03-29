@@ -102,7 +102,7 @@ impl Unwind {
                 value,
                 expected,
             }),
-            Location::new(SourceLocation::span(&span))
+            Location::new(SourceLocation::span(&span)),
         ))
     }
 
