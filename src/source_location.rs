@@ -20,3 +20,13 @@ impl TweakSpan for Span {
         }
     }
 }
+
+pub struct SourceLocation {
+    pub span: Span,
+}
+
+impl TweakSpan for SourceLocation {
+    fn tweak(&mut self, shift: usize, extend: isize) {
+        self.span.tweak(shift, extend)
+    }
+}
