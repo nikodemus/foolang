@@ -170,6 +170,20 @@ fn test_var_type_error_location() -> Test {
 }
 
 #[test]
+fn test_method_arg_type_error_location() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_method_arg_type_error_location.foo");
+    cmd.assert().failure().code(1).stdout(predicates::str::contains(
+        "ERROR: String expected, got: Integer 42
+026         self oops: 42
+027     class method oops: x::String
+                           ^ String expected, got: Integer 42
+028         raise \"Not supposed to happen! x = {x}\"",
+    ));
+    Ok(())
+}
+
+#[test]
 fn test_interface_unimplemented() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/tests/test_interface_unimplemented.foo");
