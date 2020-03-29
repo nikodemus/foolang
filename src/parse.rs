@@ -583,7 +583,7 @@ fn assign_suffix(
     // We use the name we're assigning to as the span.
     // FIXME: Maybe this is a sign that we should actually store a Var with it's own span
     // in the Assign, then assign could have the span for just the operator?
-    Ok(Assign::expr(left.span(), left.name(), right))
+    Ok(Assign::expr(left.source_location(), left.name(), right))
 }
 
 fn cascade_suffix(

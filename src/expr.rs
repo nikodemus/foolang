@@ -94,7 +94,7 @@ impl Expr {
         use Expr::*;
         let span = match self {
             Array(array) => &array.span,
-            Assign(assign) => &assign.span,
+            Assign(assign) => return assign.source_location.get_span(),
             Bind(bind) => return bind.value.span(),
             Block(block) => &block.span,
             Cascade(cascade) => return cascade.receiver.span(),
@@ -116,7 +116,7 @@ impl Expr {
         use Expr::*;
         let span = match self {
             Array(array) => &array.span,
-            Assign(assign) => &assign.span,
+            Assign(assign) => return assign.source_location.clone(),
             Bind(bind) => return SourceLocation::span(&bind.value.span()),
             Block(block) => &block.span,
             Cascade(cascade) => return SourceLocation::span(&cascade.receiver.span()),
@@ -188,21 +188,21 @@ impl Array {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Assign {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub name: String,
     pub value: Box<Expr>,
 }
 
 impl Assign {
-    pub fn expr(span: Span, name: String, value: Expr) -> Expr {
+    pub fn expr(source_location: SourceLocation, name: String, value: Expr) -> Expr {
         Expr::Assign(Assign {
-            span,
+            source_location,
             name,
             value: Box::new(value),
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
+        self.source_location.tweak(shift, extend);
         self.value.tweak_span(shift, extend);
     }
 }

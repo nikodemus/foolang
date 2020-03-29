@@ -14,3 +14,9 @@ class SlotTypeError { slot::String }
     method oops
         slot = 123
 end
+
+class VarTypeError {}
+    class method oops
+        let x::String = "OK".
+        x = 12312
+end

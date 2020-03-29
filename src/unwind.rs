@@ -96,18 +96,22 @@ impl Unwind {
         ))
     }
 
-    pub fn type_error_at<T>(source_location: SourceLocation, value: Object, expected: String) -> Result<T, Unwind> {
+    pub fn type_error_at<T>(
+        source_location: SourceLocation,
+        value: Object,
+        expected: String,
+    ) -> Result<T, Unwind> {
         let code = source_location.code();
         let unwind = Unwind::Exception(
             Error::TypeError(TypeError {
                 value,
                 expected,
             }),
-            Location::new(source_location)
+            Location::new(source_location),
         );
         match code {
             Some(code) => Err(unwind.with_context(&code)),
-            None => Err(unwind)
+            None => Err(unwind),
         }
     }
 

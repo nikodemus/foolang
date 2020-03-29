@@ -15,7 +15,7 @@ use crate::def::*;
 use crate::eval::{Binding, Env, EnvRef};
 use crate::expr::*;
 
-use crate::source_location::{SourceLocation};
+use crate::source_location::SourceLocation;
 use crate::time::TimeInfo;
 use crate::unwind::Unwind;
 

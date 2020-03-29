@@ -684,24 +684,26 @@ impl Env {
         let expr = &typecheck.expr;
         let value = self.eval(expr)?;
         // WIP: should use expr.source_location, but this will do for now.
-        value.typecheck(&self.find_type(&typecheck.typename)?).source(&typecheck.source_location)?;
+        value
+            .typecheck(&self.find_type(&typecheck.typename)?)
+            .source(&typecheck.source_location)?;
         Ok(value)
     }
 
     fn eval_assign(&self, assign: &Assign) -> Eval {
         let value = self.eval(&assign.value)?;
         match self.set(&assign.name, value.clone()) {
-            Some(res) => res.source(&SourceLocation::span(&assign.span)),
+            Some(res) => res.source(&assign.source_location),
             None => {
                 if let Some(receiver) = self.receiver() {
                     if let Some(slot) = receiver.slots().get(&assign.name) {
                         return write_instance_variable(&receiver, slot, value)
-                            .source(&SourceLocation::span(&assign.span));
+                            .source(&assign.source_location);
                     }
                 }
                 // FIXME: there used to be a workspace lookup here...
                 Unwind::error_at(
-                    SourceLocation::span(&assign.span),
+                    assign.source_location.clone(),
                     "Cannot assign to an unbound variable",
                 )
             }

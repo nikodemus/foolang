@@ -142,6 +142,34 @@ fn test_value_type_error_location() -> Test {
 }
 
 #[test]
+fn test_slot_type_error_location() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_slot_type_error_location.foo");
+    cmd.assert().failure().code(1).stdout(predicates::str::contains(
+        "ERROR: String expected, got: Integer 123
+014     method oops
+015         slot = 123
+            ^^^^ String expected, got: Integer 123
+016 end",
+    ));
+    Ok(())
+}
+
+#[test]
+fn test_var_type_error_location() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_var_type_error_location.foo");
+    cmd.assert().failure().code(1).stdout(predicates::str::contains(
+        "ERROR: String expected, got: Integer 12312
+020         let x::String = \"OK\".
+021         x = 12312
+            ^ String expected, got: Integer 12312
+022 end",
+    ));
+    Ok(())
+}
+
+#[test]
 fn test_interface_unimplemented() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/tests/test_interface_unimplemented.foo");

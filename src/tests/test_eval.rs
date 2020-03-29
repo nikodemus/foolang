@@ -300,8 +300,7 @@ fn test_typecheck2() {
             }),
             Location::from(
                 5..11,
-                concat!("001 123::String\n",
-                        "         ^^^^^^ String expected, got: Integer 123\n")
+                concat!("001 123::String\n", "         ^^^^^^ String expected, got: Integer 123\n")
             )
         )
     );
