@@ -895,7 +895,7 @@ fn block_prefix(parser: &Parser) -> Parse {
 }
 
 fn import_prefix(parser: &Parser) -> Parse {
-    let import_start = parser.span().start;
+    let mut source_location = parser.source_location();
     let (token, name_span) = parser.lookahead()?;
     let mut spec = String::new();
     let mut relative = false;
@@ -912,7 +912,8 @@ fn import_prefix(parser: &Parser) -> Parse {
         if let Some(star) = parser.dotted_name_at(parser.span().end, true)? {
             spec.push_str(parser.slice_at(star));
         }
-        let name_end = parser.span().end;
+        let ext = parser.span().end - source_location.get_span().end;
+        source_location.extend(ext as isize);
         let mut path = PathBuf::new();
         let mut prefix = String::new();
         let mut name = None;
@@ -928,7 +929,7 @@ fn import_prefix(parser: &Parser) -> Parse {
             if parts.peek().is_some() {
                 if is_name {
                     return Unwind::error_at(
-                        SourceLocation::span(&(import_start..parser.span().start)),
+                        source_location.clone(),
                         "Illegal import: invalid module name",
                     );
                 }
@@ -944,7 +945,7 @@ fn import_prefix(parser: &Parser) -> Parse {
         }
         path.set_extension("foo");
         Ok(Syntax::Def(Def::ImportDef(ImportDef {
-            span: import_start..name_end,
+            source_location,
             path,
             prefix,
             name,

@@ -28,7 +28,7 @@ impl Def {
             ClassDef(definition) => &definition.span,
             DefineDef(definition) => &definition.span,
             ExtensionDef(extension) => &extension.span,
-            ImportDef(import) => &import.span,
+            ImportDef(import) => return import.source_location.get_span(),
             InterfaceDef(interface) => &interface.span,
         };
         span.clone()
@@ -56,7 +56,7 @@ impl Def {
                 }
             }
             Def::ImportDef(import) => {
-                import.span.tweak(shift, extend);
+                import.source_location.tweak(shift, extend);
             }
             Def::InterfaceDef(interface) => interface.tweak_span(shift, extend),
         }
@@ -182,16 +182,21 @@ impl ExtensionDef {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ImportDef {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub path: PathBuf,
     pub prefix: String,
     pub name: Option<String>,
 }
 
 impl ImportDef {
-    pub fn def<P: AsRef<Path>>(span: Span, path: P, prefix: &str, name: Option<&str>) -> Def {
+    pub fn def<P: AsRef<Path>>(
+        source_location: SourceLocation,
+        path: P,
+        prefix: &str,
+        name: Option<&str>,
+    ) -> Def {
         Def::ImportDef(ImportDef {
-            span,
+            source_location,
             path: path.as_ref().to_path_buf(),
             prefix: prefix.to_string(),
             name: name.map(|x| x.to_string()),

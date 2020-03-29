@@ -20,3 +20,15 @@ class VarTypeError {}
         let x::String = "OK".
         x = 12312
 end
+
+class MethodArgTypeError {}
+    class method oops
+        self oops: 42
+    class method oops: x::String
+        raise "Not supposed to happen! x = {x}"
+end
+
+class BlockArgTypeError {}
+    class method oops
+        { |x::String| x } value: 42
+end

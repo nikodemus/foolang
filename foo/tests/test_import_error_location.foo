@@ -1,0 +1,6 @@
+import .bad_import
+
+class Main {}
+    class method run: cmd in: sys
+        sys exit
+end

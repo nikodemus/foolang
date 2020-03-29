@@ -9,6 +9,9 @@ pub trait TweakSpan {
     fn shift(&mut self, shift: usize) {
         self.tweak(shift, 0);
     }
+    fn extend(&mut self, extend: isize) {
+        self.tweak(0, extend);
+    }
 }
 
 impl TweakSpan for Span {
