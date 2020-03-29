@@ -142,12 +142,17 @@ impl Unwind {
 
     pub fn error_at<T>(source_location: SourceLocation, what: &str) -> Result<T, Unwind> {
         // panic!("BOOM_AT: {:?}, {}", span, what);
-        Err(Unwind::Exception(
+        let code = source_location.code();
+        let unwind = Unwind::Exception(
             Error::SimpleError(SimpleError {
                 what: what.to_string(),
             }),
             Location::new(source_location),
-        ))
+        );
+        match code {
+            Some(code) => Err(unwind.with_context(&code)),
+            None => Err(unwind),
+        }
     }
 
     pub fn return_from<T>(env: EnvRef, value: Object) -> Result<T, Unwind> {

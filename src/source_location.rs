@@ -46,6 +46,14 @@ impl SourceLocation {
             SourceLocation::Path(path) => path.span.clone(),
         }
     }
+    pub fn code(&self) -> Option<String> {
+        match &self {
+            SourceLocation::Span(_) => None,
+            SourceLocation::Path(path) => {
+                Some(std::fs::read_to_string(path.path.as_path()).unwrap())
+            }
+        }
+    }
 }
 
 impl TweakSpan for SourceLocation {
