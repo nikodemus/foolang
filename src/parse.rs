@@ -715,7 +715,9 @@ fn typecheck_suffix(
     _precedence: PrecedenceFunction,
 ) -> Result<Expr, Unwind> {
     match parser.next_token()? {
-        Token::WORD => Ok(Typecheck::expr(parser.span(), Box::new(left), parser.tokenstring())),
+        Token::WORD => {
+            Ok(Typecheck::expr(parser.source_location(), Box::new(left), parser.tokenstring()))
+        }
         _ => parser.error("Invalid type designator"),
     }
 }
@@ -1573,8 +1575,8 @@ pub mod utils {
         Const::expr(span, Literal::String(value.to_string()))
     }
 
-    pub fn typecheck(span: Span, expr: Expr, typename: &str) -> Expr {
-        Typecheck::expr(span, Box::new(expr), typename.to_string())
+    pub fn typecheck(source_location: SourceLocation, expr: Expr, typename: &str) -> Expr {
+        Typecheck::expr(source_location, Box::new(expr), typename.to_string())
     }
 
     pub fn unary(span: Span, name: &str, left: Expr) -> Expr {

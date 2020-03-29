@@ -15,7 +15,7 @@ use crate::def::*;
 use crate::eval::{Binding, Env, EnvRef};
 use crate::expr::*;
 
-use crate::source_location::{SourceLocation, Span};
+use crate::source_location::{SourceLocation};
 use crate::time::TimeInfo;
 use crate::unwind::Unwind;
 
@@ -24,14 +24,14 @@ use crate::classes;
 pub type Eval = Result<Object, Unwind>;
 
 pub trait Source {
-    fn source(self, span: &Span) -> Self;
+    fn source(self, source_location: &SourceLocation) -> Self;
     fn context(self, source: &str) -> Self;
 }
 
 impl Source for Eval {
-    fn source(mut self, span: &Span) -> Self {
+    fn source(mut self, source_location: &SourceLocation) -> Self {
         if let Err(unwind) = &mut self {
-            unwind.add_span(span);
+            unwind.add_source_location(source_location);
         }
         self
     }
@@ -382,7 +382,7 @@ impl Closure {
             let binding = match vt {
                 None => Binding::untyped(obj),
                 Some(ref vtable) => {
-                    let value = obj.typecheck(vtable).source(&arg.source_location.get_span())?;
+                    let value = obj.typecheck(vtable).source(&arg.source_location)?;
                     Binding::typed(vtable.to_owned(), value)
                 }
             };
@@ -401,7 +401,7 @@ impl Closure {
             }
         };
         if let Some(vtable) = &self.signature.return_type {
-            result.typecheck(vtable).source(&self.body.span())?;
+            result.typecheck(vtable).source(&self.body.source_location())?;
         }
         Ok(result)
     }

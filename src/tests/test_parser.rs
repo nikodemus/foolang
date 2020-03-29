@@ -2,6 +2,7 @@ use crate::def::*;
 use crate::expr::*;
 use crate::parse::utils::*;
 use crate::parse::*;
+use crate::source_location::SourceLocation;
 use crate::unwind::Unwind;
 
 fn parse_str(source: &str) -> Parse {
@@ -300,7 +301,10 @@ fn parse_string2() {
 
 #[test]
 fn parse_type_assertions1() {
-    assert_eq!(parse_expr("foo::String"), Ok(typecheck(5..11, var(0..3, "foo"), "String")))
+    assert_eq!(
+        parse_expr("foo::String"),
+        Ok(typecheck(SourceLocation::span(&(5..11)), var(0..3, "foo"), "String"))
+    )
 }
 
 #[test]

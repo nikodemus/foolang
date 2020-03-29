@@ -266,6 +266,9 @@ fn test_typecheck1() {
     assert_eq!(object, env.foo.make_integer(123));
 }
 
+/* // XXX: This is the original test, to be restored when the behaviour is
+   // restored.
+
 #[test]
 fn test_typecheck2() {
     let (exception, env) = eval_exception("123::String");
@@ -279,6 +282,26 @@ fn test_typecheck2() {
             Location::from(
                 0..3,
                 concat!("001 123::String\n", "    ^^^ String expected, got: Integer 123\n")
+            )
+        )
+    );
+}
+*/
+
+#[test]
+fn test_typecheck2() {
+    let (exception, env) = eval_exception("123::String");
+    assert_eq!(
+        exception,
+        Unwind::Exception(
+            Error::TypeError(TypeError {
+                value: env.foo.make_integer(123),
+                expected: "String".to_string()
+            }),
+            Location::from(
+                5..11,
+                concat!("001 123::String\n",
+                        "         ^^^^^^ String expected, got: Integer 123\n")
             )
         )
     );

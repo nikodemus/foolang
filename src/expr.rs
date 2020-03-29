@@ -106,10 +106,32 @@ impl Expr {
             Return(ret) => &ret.span,
             // FIXME: Wrong span
             Seq(seq) => return seq.exprs[seq.exprs.len() - 1].span(),
-            Typecheck(typecheck) => &typecheck.span,
+            Typecheck(typecheck) => return typecheck.source_location.get_span(),
             Var(var) => return var.source_location.get_span(),
         };
         span.to_owned()
+    }
+
+    pub fn source_location(&self) -> SourceLocation {
+        use Expr::*;
+        let span = match self {
+            Array(array) => &array.span,
+            Assign(assign) => &assign.span,
+            Bind(bind) => return SourceLocation::span(&bind.value.span()),
+            Block(block) => &block.span,
+            Cascade(cascade) => return SourceLocation::span(&cascade.receiver.span()),
+            Dictionary(dictionary) => &dictionary.span,
+            Const(constant) => &constant.span,
+            Eq(eq) => &eq.span,
+            Chain(chain) => return SourceLocation::span(&chain.receiver.span()),
+            Raise(raise) => &raise.span,
+            Return(ret) => &ret.span,
+            // FIXME: Wrong span
+            Seq(seq) => return SourceLocation::span(&seq.exprs[seq.exprs.len() - 1].span()),
+            Typecheck(typecheck) => return typecheck.source_location.clone(),
+            Var(var) => return var.source_location.clone(),
+        };
+        SourceLocation::span(span)
     }
 
     pub fn shift_span(&mut self, n: usize) {
@@ -409,21 +431,21 @@ impl Seq {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Typecheck {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub expr: Box<Expr>,
     pub typename: String,
 }
 
 impl Typecheck {
-    pub fn expr(span: Span, expr: Box<Expr>, typename: String) -> Expr {
+    pub fn expr(source_location: SourceLocation, expr: Box<Expr>, typename: String) -> Expr {
         Expr::Typecheck(Typecheck {
-            span,
+            source_location,
             expr,
             typename,
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
+        self.source_location.tweak(shift, extend);
         self.expr.tweak_span(shift, extend);
     }
 }

@@ -431,7 +431,7 @@ impl Env {
             None => Binding::untyped(value),
             Some(ref typename) => {
                 let vt = self.find_type(typename)?;
-                value.typecheck(&vt).source(&bind.value.span())?;
+                value.typecheck(&vt).source(&bind.value.source_location())?;
                 // FIXME: make the typecheck explicit
                 Binding::typed(vt, value)
             }
@@ -547,7 +547,7 @@ impl Env {
             Some(name) => self.env_ref.import_name(&module, name),
         };
         if let Err(mut unwind) = res {
-            unwind.add_span(&import.span);
+            unwind.add_source_location(&SourceLocation::span(&import.span));
             return Err(unwind);
         }
         Ok(self.foo.make_string(&import.path.to_string_lossy()))
@@ -683,19 +683,20 @@ impl Env {
     fn eval_typecheck(&self, typecheck: &Typecheck) -> Eval {
         let expr = &typecheck.expr;
         let value = self.eval(expr)?;
-        value.typecheck(&self.find_type(&typecheck.typename)?).source(&expr.span())?;
+        // WIP: should use expr.source_location, but this will do for now.
+        value.typecheck(&self.find_type(&typecheck.typename)?).source(&typecheck.source_location)?;
         Ok(value)
     }
 
     fn eval_assign(&self, assign: &Assign) -> Eval {
         let value = self.eval(&assign.value)?;
         match self.set(&assign.name, value.clone()) {
-            Some(res) => res.source(&assign.span),
+            Some(res) => res.source(&SourceLocation::span(&assign.span)),
             None => {
                 if let Some(receiver) = self.receiver() {
                     if let Some(slot) = receiver.slots().get(&assign.name) {
                         return write_instance_variable(&receiver, slot, value)
-                            .source(&assign.span);
+                            .source(&SourceLocation::span(&assign.span));
                     }
                 }
                 // FIXME: there used to be a workspace lookup here...
