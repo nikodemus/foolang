@@ -114,6 +114,62 @@ fn test_bad_class() -> Test {
 }
 
 #[test]
+fn test_unbound_variable_location() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_unbound_variable_location.foo");
+    cmd.assert().failure().code(1).stdout(predicates::str::contains(
+        "ERROR: Unbound variable: oops
+002     class method oops
+003         oops
+            ^^^^ Unbound variable: oops
+004 end",
+    ));
+    Ok(())
+}
+
+#[test]
+fn test_value_type_error_location() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_value_type_error_location.foo");
+    cmd.assert().failure().code(1).stdout(predicates::str::contains(
+        "ERROR: String expected, got: Integer 14
+007     class method oops
+008         14::String
+                ^^^^^^ String expected, got: Integer 14
+009 end",
+    ));
+    Ok(())
+}
+
+#[test]
+fn test_slot_type_error_location() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_slot_type_error_location.foo");
+    cmd.assert().failure().code(1).stdout(predicates::str::contains(
+        "ERROR: String expected, got: Integer 123
+014     method oops
+015         slot = 123
+            ^^^^ String expected, got: Integer 123
+016 end",
+    ));
+    Ok(())
+}
+
+#[test]
+fn test_var_type_error_location() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_var_type_error_location.foo");
+    cmd.assert().failure().code(1).stdout(predicates::str::contains(
+        "ERROR: String expected, got: Integer 12312
+020         let x::String = \"OK\".
+021         x = 12312
+            ^ String expected, got: Integer 12312
+022 end",
+    ));
+    Ok(())
+}
+
+#[test]
 fn test_interface_unimplemented() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/tests/test_interface_unimplemented.foo");

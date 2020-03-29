@@ -96,14 +96,23 @@ impl Unwind {
         ))
     }
 
-    pub fn type_error_at<T>(span: Span, value: Object, expected: String) -> Result<T, Unwind> {
-        Err(Unwind::Exception(
+    pub fn type_error_at<T>(
+        source_location: SourceLocation,
+        value: Object,
+        expected: String,
+    ) -> Result<T, Unwind> {
+        let code = source_location.code();
+        let unwind = Unwind::Exception(
             Error::TypeError(TypeError {
                 value,
                 expected,
             }),
-            Location::new(SourceLocation::span(&span)),
-        ))
+            Location::new(source_location),
+        );
+        match code {
+            Some(code) => Err(unwind.with_context(&code)),
+            None => Err(unwind),
+        }
     }
 
     pub fn message_error<T>(
@@ -159,9 +168,13 @@ impl Unwind {
         Err(Unwind::ReturnFrom(env, value))
     }
 
-    pub fn add_span(&mut self, span: &Span) {
-        if let Unwind::Exception(_, location) = self {
-            location.add_span(span)
+    pub fn add_source_location(&mut self, source_location: &SourceLocation) {
+        if let Unwind::Exception(error, location) = self {
+            let code = source_location.code();
+            location.add_source_location(source_location);
+            if let Some(code) = code {
+                location.add_context(&code, error.what())
+            }
         }
     }
 
@@ -274,9 +287,9 @@ impl Location {
         }
     }
 
-    fn add_span(&mut self, span: &Span) {
+    fn add_source_location(&mut self, source_location: &SourceLocation) {
         assert!(self.source_location.is_none());
-        self.source_location = Some(SourceLocation::span(span))
+        self.source_location = Some(source_location.clone())
     }
 
     fn add_context(&mut self, source: &str, what: String) {

@@ -1,0 +1,22 @@
+class UnboundVariable {}
+    class method oops
+        oops
+end
+
+class ValueTypeError {}
+    class method oops
+        14::String
+end
+
+class SlotTypeError { slot::String }
+    class method oops
+        (self slot: "OK") oops
+    method oops
+        slot = 123
+end
+
+class VarTypeError {}
+    class method oops
+        let x::String = "OK".
+        x = 12312
+end

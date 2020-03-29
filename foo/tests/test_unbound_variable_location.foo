@@ -1,0 +1,6 @@
+import .errorLocationTests.UnboundVariable
+
+class Main {}
+    class method run: cmd in: sys
+        UnboundVariable oops
+end
