@@ -1,0 +1,6 @@
+import .errorLocationTests.BlockArgTypeError
+
+class Main {}
+    class method run: cmd in: sys
+        BlockArgTypeError oops
+end
