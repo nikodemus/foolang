@@ -139,6 +139,18 @@ pub struct Vtable {
     pub methods: RefCell<HashMap<String, Method>>,
     pub slots: RefCell<HashMap<String, Slot>>,
     pub interfaces: RefCell<HashSet<Rc<Vtable>>>,
+    pub implementations: RefCell<HashSet<Rc<Vtable>>>,
+}
+
+// Cannot be a method since requires access to target Rc.
+fn vt_add_interface(target: &Rc<Vtable>, interface_vt: &Rc<Vtable>) {
+    let mut interfaces = target.interfaces.borrow_mut();
+    for inherited in interface_vt.interfaces.borrow().iter() {
+        interfaces.insert(inherited.clone());
+        inherited.implementations.borrow_mut().insert(target.clone());
+    }
+    interfaces.insert(interface_vt.clone());
+    interface_vt.implementations.borrow_mut().insert(target.clone());
 }
 
 impl Vtable {
@@ -148,15 +160,8 @@ impl Vtable {
             methods: RefCell::new(HashMap::new()),
             slots: RefCell::new(HashMap::new()),
             interfaces: RefCell::new(HashSet::new()),
+            implementations: RefCell::new(HashSet::new()),
         }
-    }
-
-    pub fn add_interface(&self, vt: &Rc<Vtable>) {
-        let mut interfaces = self.interfaces.borrow_mut();
-        for inherited in vt.interfaces.borrow().iter() {
-            interfaces.insert(inherited.clone());
-        }
-        interfaces.insert(vt.clone());
     }
 
     pub fn add_method(&self, selector: &str, method: Method) -> Result<(), Unwind> {
@@ -165,6 +170,9 @@ impl Vtable {
                 "Cannot override method {} in {}",
                 selector, &self.name
             ));
+        }
+        for class in self.implementations.borrow().iter() {
+            class.add_method(selector, method.clone())?;
         }
         self.methods.borrow_mut().insert(selector.to_string(), method);
         Ok(())
@@ -1213,16 +1221,16 @@ impl Object {
         let class = self.as_class_ref()?;
         let class_name = &class.instance_vtable.name;
         // Add interface class methods
-        let interface_obj = env.find_global_or_unwind(name)?;
+        let interface_obj = env.find_interface(name)?;
         let interface = interface_obj.as_class_ref()?;
         for (selector, method) in interface_obj.vtable.methods().iter() {
             if !self.vtable.has(selector) {
                 self.vtable.add_method(selector, method.clone())?;
             }
         }
-        // Add interface to instance vtable
         let instance_vt = &class.instance_vtable;
-        instance_vt.add_interface(&interface.instance_vtable);
+        // Add interface to instance vtable
+        vt_add_interface(instance_vt, &interface.instance_vtable);
         // Add interface instance methods
         for (selector, method) in interface.instance_vtable.methods().iter() {
             let signature = method.signature()?;
@@ -1253,6 +1261,8 @@ impl Object {
                 }
             }
         }
+        // Add instance vtable as an implementation of interface
+
         Ok(())
     }
 

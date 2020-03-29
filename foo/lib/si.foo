@@ -507,7 +507,7 @@ class SI { value::Float _unit::SI_Unit }
         stream content
 end
 
-interface SI_Number
+extend Number
     method mm
         SI meters: Prefix m * self
     method m
@@ -551,14 +551,6 @@ interface SI_Number
         SI value: left value * self asFloat unit: left unit
     method divSI: left
         SI value: left value / self asFloat unit: left unit
-end
-
-extend Integer
-    is SI_Number
-end
-
-extend Float
-    is SI_Number
 end
 
 -- The point of these constants is to allow expressions like 1 m / s.
