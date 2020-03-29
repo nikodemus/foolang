@@ -547,7 +547,7 @@ impl Env {
             Some(name) => self.env_ref.import_name(&module, name),
         };
         if let Err(mut unwind) = res {
-            unwind.add_source_location(&SourceLocation::span(&import.span));
+            unwind.add_source_location(&import.source_location);
             return Err(unwind);
         }
         Ok(self.foo.make_string(&import.path.to_string_lossy()))

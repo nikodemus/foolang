@@ -461,23 +461,50 @@ fn test_parse_array3() {
 
 #[test]
 fn test_parse_import1() {
-    assert_eq!(parse_def("import x"), Ok(ImportDef::def(0..8, "x.foo", "x", None)));
-    assert_eq!(parse_def("import x.Y"), Ok(ImportDef::def(0..10, "x.foo", "", Some("Y"))));
-    assert_eq!(parse_def("import x.*"), Ok(ImportDef::def(0..10, "x.foo", "", Some("*"))));
-    assert_eq!(parse_def("import x.y.Z"), Ok(ImportDef::def(0..12, "x/y.foo", "", Some("Z"))));
-    assert_eq!(parse_def("import x.y.z"), Ok(ImportDef::def(0..12, "x/y/z.foo", "z", None)));
+    assert_eq!(
+        parse_def("import x"),
+        Ok(ImportDef::def(SourceLocation::span(&(0..8)), "x.foo", "x", None))
+    );
+    assert_eq!(
+        parse_def("import x.Y"),
+        Ok(ImportDef::def(SourceLocation::span(&(0..10)), "x.foo", "", Some("Y")))
+    );
+    assert_eq!(
+        parse_def("import x.*"),
+        Ok(ImportDef::def(SourceLocation::span(&(0..10)), "x.foo", "", Some("*")))
+    );
+    assert_eq!(
+        parse_def("import x.y.Z"),
+        Ok(ImportDef::def(SourceLocation::span(&(0..12)), "x/y.foo", "", Some("Z")))
+    );
+    assert_eq!(
+        parse_def("import x.y.z"),
+        Ok(ImportDef::def(SourceLocation::span(&(0..12)), "x/y/z.foo", "z", None))
+    );
 }
 
 #[test]
 fn test_parse_import2() {
-    assert_eq!(parse_def("import .x"), Ok(ImportDef::def(0..9, "test/x.foo", "x", None)));
-    assert_eq!(parse_def("import .x.Y"), Ok(ImportDef::def(0..11, "test/x.foo", "", Some("Y"))));
-    assert_eq!(parse_def("import .x.*"), Ok(ImportDef::def(0..11, "test/x.foo", "", Some("*"))));
+    assert_eq!(
+        parse_def("import .x"),
+        Ok(ImportDef::def(SourceLocation::span(&(0..9)), "test/x.foo", "x", None))
+    );
+    assert_eq!(
+        parse_def("import .x.Y"),
+        Ok(ImportDef::def(SourceLocation::span(&(0..11)), "test/x.foo", "", Some("Y")))
+    );
+    assert_eq!(
+        parse_def("import .x.*"),
+        Ok(ImportDef::def(SourceLocation::span(&(0..11)), "test/x.foo", "", Some("*")))
+    );
     assert_eq!(
         parse_def("import .x.y.Z"),
-        Ok(ImportDef::def(0..13, "test/x/y.foo", "", Some("Z")))
+        Ok(ImportDef::def(SourceLocation::span(&(0..13)), "test/x/y.foo", "", Some("Z")))
     );
-    assert_eq!(parse_def("import .x.y.z"), Ok(ImportDef::def(0..13, "test/x/y/z.foo", "z", None)));
+    assert_eq!(
+        parse_def("import .x.y.z"),
+        Ok(ImportDef::def(SourceLocation::span(&(0..13)), "test/x/y/z.foo", "z", None))
+    );
 }
 
 #[test]
