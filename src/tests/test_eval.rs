@@ -161,18 +161,15 @@ fn test_instance_variable4() {
                 value: env.foo.make_float(42.0),
                 expected: "Integer".to_string()
             }),
-            Location {
-                span: Some(66..69),
-                context: Some(
-                    concat!(
-                        "002            method foo: x\n",
-                        "003               bar = bar + x.\n",
-                        "                  ^^^ Integer expected, got: Float 42.0\n",
-                        "004               self\n"
-                    )
-                    .to_string()
+            Location::from(
+                66..69,
+                concat!(
+                    "002            method foo: x\n",
+                    "003               bar = bar + x.\n",
+                    "                  ^^^ Integer expected, got: Float 42.0\n",
+                    "004               self\n"
                 )
-            }
+            )
         )
     );
 }
@@ -235,10 +232,7 @@ fn test_extend_exception1() {
             Error::SimpleError(SimpleError {
                 what: "Cannot extend Foo: instance method 'perform:with:' defined".to_string()
             }),
-            Location {
-                span: None,
-                context: None
-            }
+            Location::none()
         )
     );
 }
@@ -261,10 +255,7 @@ fn test_extend_exception2() {
             Error::SimpleError(SimpleError {
                 what: "Cannot extend class Foo: class method 'perform:with:' defined".to_string()
             }),
-            Location {
-                span: None,
-                context: None
-            }
+            Location::none()
         )
     );
 }
@@ -285,13 +276,10 @@ fn test_typecheck2() {
                 value: env.foo.make_integer(123),
                 expected: "String".to_string()
             }),
-            Location {
-                span: Some(0..3),
-                context: Some(
-                    concat!("001 123::String\n", "    ^^^ String expected, got: Integer 123\n")
-                        .to_string()
-                ),
-            }
+            Location::from(
+                0..3,
+                concat!("001 123::String\n", "    ^^^ String expected, got: Integer 123\n")
+            )
         )
     );
 }
@@ -306,16 +294,13 @@ fn test_typecheck3() {
                 value: env.foo.make_float(42.0),
                 expected: "Integer".to_string()
             }),
-            Location {
-                span: Some(17..21),
-                context: Some(
-                    concat!(
-                        "001 let x::Integer = 42.0. x\n",
-                        "                     ^^^^ Integer expected, got: Float 42.0\n"
-                    )
-                    .to_string()
+            Location::from(
+                17..21,
+                concat!(
+                    "001 let x::Integer = 42.0. x\n",
+                    "                     ^^^^ Integer expected, got: Float 42.0\n"
                 )
-            }
+            )
         )
     );
 }
@@ -330,16 +315,13 @@ fn test_typecheck4() {
                 value: env.foo.make_float(1.0),
                 expected: "Integer".to_string()
             }),
-            Location {
-                span: Some(21..22),
-                context: Some(
-                    concat!(
-                        "001 let x::Integer = 42. x = 1.0. x\n",
-                        "                         ^ Integer expected, got: Float 1.0\n"
-                    )
-                    .to_string()
+            Location::from(
+                21..22,
+                concat!(
+                    "001 let x::Integer = 42. x = 1.0. x\n",
+                    "                         ^ Integer expected, got: Float 1.0\n"
                 )
-            }
+            )
         )
     );
 }
@@ -359,16 +341,13 @@ fn test_typecheck6() {
                 value: env.foo.make_float(41.0),
                 expected: "Integer".to_string()
             }),
-            Location {
-                span: Some(3..4),
-                context: Some(
-                    concat!(
-                        "001 { |x::Integer| x } value: 41.0\n",
-                        "       ^ Integer expected, got: Float 41.0\n"
-                    )
-                    .to_string()
+            Location::from(
+                3..4,
+                concat!(
+                    "001 { |x::Integer| x } value: 41.0\n",
+                    "       ^ Integer expected, got: Float 41.0\n"
                 )
-            }
+            )
         )
     );
 }
@@ -383,16 +362,13 @@ fn test_typecheck7() {
                 value: env.foo.make_float(41.0),
                 expected: "Integer".to_string()
             }),
-            Location {
-                span: Some(17..18),
-                context: Some(
-                    concat!(
-                        "001 { |y x::Integer| x = y } value: 41.0 value: 42\n",
-                        "                     ^ Integer expected, got: Float 41.0\n"
-                    )
-                    .to_string()
+            Location::from(
+                17..18,
+                concat!(
+                    "001 { |y x::Integer| x = y } value: 41.0 value: 42\n",
+                    "                     ^ Integer expected, got: Float 41.0\n"
                 )
-            }
+            )
         )
     );
 }
@@ -414,18 +390,15 @@ fn test_typecheck8() {
                 value: env.foo.make_float(1.0),
                 expected: "Integer".to_string()
             }),
-            Location {
-                span: Some(72..73),
-                context: Some(
-                    concat!(
-                        "002             defaultConstructor foo\n",
-                        "003             method zot: x::Integer\n",
-                        "                            ^ Integer expected, got: Float 1.0\n",
-                        "004                 x\n"
-                    )
-                    .to_string()
+            Location::from(
+                72..73,
+                concat!(
+                    "002             defaultConstructor foo\n",
+                    "003             method zot: x::Integer\n",
+                    "                            ^ Integer expected, got: Float 1.0\n",
+                    "004                 x\n"
                 )
-            }
+            )
         )
     );
 }
@@ -447,18 +420,15 @@ fn test_typecheck9() {
                 value: env.foo.make_float(2.0),
                 expected: "Integer".to_string()
             }),
-            Location {
-                span: Some(101..102),
-                context: Some(
-                    concat!(
-                        "003             method zot: x -> Integer\n",
-                        "004                 x + 1\n",
-                        "                    ^ Integer expected, got: Float 2.0\n",
-                        "005          end\n",
-                    )
-                    .to_string()
+            Location::from(
+                101..102,
+                concat!(
+                    "003             method zot: x -> Integer\n",
+                    "004                 x + 1\n",
+                    "                    ^ Integer expected, got: Float 2.0\n",
+                    "005          end\n",
                 )
-            }
+            )
         )
     );
 }
@@ -473,16 +443,13 @@ fn test_typecheck10() {
                 value: env.foo.make_float(2.0),
                 expected: "Integer".to_string()
             }),
-            Location {
-                span: Some(16..17),
-                context: Some(
-                    concat!(
-                        "001 {|x| -> Integer x + 1} value: 1.0\n",
-                        "                    ^ Integer expected, got: Float 2.0\n",
-                    )
-                    .to_string()
+            Location::from(
+                16..17,
+                concat!(
+                    "001 {|x| -> Integer x + 1} value: 1.0\n",
+                    "                    ^ Integer expected, got: Float 2.0\n",
                 )
-            }
+            )
         )
     );
 }
@@ -531,16 +498,13 @@ fn test_assign_unbound() {
             Error::SimpleError(SimpleError {
                 what: "Cannot assign to an unbound variable".to_string(),
             }),
-            Location {
-                span: Some(11..12),
-                context: Some(
-                    concat!(
-                        "001 let x = 1. z = x + 1. let y = x. y\n",
-                        "               ^ Cannot assign to an unbound variable\n"
-                    )
-                    .to_string()
+            Location::from(
+                11..12,
+                concat!(
+                    "001 let x = 1. z = x + 1. let y = x. y\n",
+                    "               ^ Cannot assign to an unbound variable\n"
                 )
-            }
+            )
         ))
     );
 }
@@ -558,16 +522,13 @@ fn test_unbound() {
             Error::SimpleError(SimpleError {
                 what: "Unbound variable: bar".to_string(),
             }),
-            Location {
-                span: Some(20..23),
-                context: Some(
-                    concat!(
-                        "001 let foo = 41. foo + bar\n",
-                        "                        ^^^ Unbound variable: bar\n"
-                    )
-                    .to_string()
+            Location::from(
+                20..23,
+                concat!(
+                    "001 let foo = 41. foo + bar\n",
+                    "                        ^^^ Unbound variable: bar\n"
                 )
-            }
+            )
         ))
     );
 }
@@ -580,16 +541,13 @@ fn test_class_not_toplevel() {
             Error::SimpleError(SimpleError {
                 what: "Definition where expression was expected".to_string(),
             }),
-            Location {
-                span: Some(2..7),
-                context: Some(
-                    concat!(
-                        "001 { class Point { x y } end } value\n",
-                        "      ^^^^^ Definition where expression was expected\n"
-                    )
-                    .to_string()
+            Location::from(
+                2..7,
+                concat!(
+                    "001 { class Point { x y } end } value\n",
+                    "      ^^^^^ Definition where expression was expected\n"
                 )
-            }
+            )
         ))
     );
 }
@@ -623,16 +581,10 @@ fn eval_global1() {
             Error::SimpleError(SimpleError {
                 what: "Unbound variable: DoesNotExist".to_string(),
             }),
-            Location {
-                span: Some(0..12),
-                context: Some(
-                    concat!(
-                        "001 DoesNotExist\n",
-                        "    ^^^^^^^^^^^^ Unbound variable: DoesNotExist\n"
-                    )
-                    .to_string()
-                )
-            }
+            Location::from(
+                0..12,
+                concat!("001 DoesNotExist\n", "    ^^^^^^^^^^^^ Unbound variable: DoesNotExist\n")
+            )
         ))
     );
 }

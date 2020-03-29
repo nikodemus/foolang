@@ -15,7 +15,7 @@ use crate::def::*;
 use crate::eval::{Binding, Env, EnvRef};
 use crate::expr::*;
 
-use crate::span::Span;
+use crate::source_location::{SourceLocation, Span};
 use crate::time::TimeInfo;
 use crate::unwind::Unwind;
 
@@ -272,14 +272,14 @@ impl Hash for System {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Arg {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub name: String,
 }
 
 impl Arg {
-    pub fn new(span: Span, name: String) -> Arg {
+    pub fn new(source_location: SourceLocation, name: String) -> Arg {
         Arg {
-            span,
+            source_location,
             name,
         }
     }
@@ -362,7 +362,8 @@ impl Closure {
         let mut symbols = HashMap::new();
         if self.params.len() != args.len() {
             return Unwind::error_at(
-                self.body.span(), // FIXME: call-site would be 1000 x better...
+                // FIXME: call-site would be 1000 x better...
+                SourceLocation::span(&self.body.span()),
                 &format!(
                     "Argument count mismatch, {} wanted {}, got {}: {:?}",
                     &self.name,
@@ -381,7 +382,7 @@ impl Closure {
             let binding = match vt {
                 None => Binding::untyped(obj),
                 Some(ref vtable) => {
-                    let value = obj.typecheck(vtable).source(&arg.span)?;
+                    let value = obj.typecheck(vtable).source(&arg.source_location.get_span())?;
                     Binding::typed(vtable.to_owned(), value)
                 }
             };
@@ -838,16 +839,7 @@ impl Foolang {
 
     pub fn load_module_into(&self, file: &Path, env: Env) -> Result<Env, Unwind> {
         // println!("load: {:?}", file);
-        let code = match std::fs::read_to_string(file) {
-            Ok(code) => code,
-            Err(_err) => {
-                return Unwind::error(&format!(
-                    "Could not load module from {}",
-                    file.to_string_lossy()
-                ))
-            }
-        };
-        env.load_code(&code, fs::canonicalize(file).unwrap().parent().unwrap())
+        env.load_file(&file, &fs::canonicalize(file).unwrap().parent().unwrap())
     }
 
     pub fn make_array(&self, data: &[Object]) -> Object {
@@ -1453,7 +1445,7 @@ pub fn make_method_closure(
     let mut args = vec![];
     let mut parameter_types = vec![];
     for param in params {
-        args.push(Arg::new(param.span.clone(), param.name.clone()));
+        args.push(Arg::new(param.source_location.clone(), param.name.clone()));
         match &param.typename {
             Some(name) => parameter_types.push(Some(env.find_type(name)?)),
             None => parameter_types.push(None),

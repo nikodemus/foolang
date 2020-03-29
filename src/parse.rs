@@ -2,11 +2,11 @@ use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::convert::Into;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::str::FromStr;
 use std::string::ToString;
 
-use crate::span::Span;
-use crate::span::TweakSpan;
+use crate::source_location::{SourceLocation, Span, TweakSpan};
 use crate::tokenstream::{Token, TokenStream};
 use crate::unwind::{Error, Unwind};
 
@@ -76,6 +76,7 @@ impl<'a> ParserState<'a> {
 
 pub struct Parser<'a> {
     source: &'a str,
+    path: Option<Rc<PathBuf>>,
     token_table: TokenTable,
     name_table: NameTable,
     state: RefCell<ParserState<'a>>,
@@ -85,9 +86,41 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
+    pub fn parse_file<P: AsRef<Path>, R>(
+        file: P,
+        root: P,
+        fun: impl FnOnce(&mut Parser) -> Result<R, Unwind>,
+    ) -> Result<R, Unwind> {
+        let file = file.as_ref();
+        let source = match std::fs::read_to_string(file) {
+            Ok(code) => code,
+            Err(_err) => {
+                return Unwind::error(&format!("Could not read file: {}", file.to_string_lossy()))
+            }
+        };
+        let mut parser = Parser::new_with_path(file, &source, root);
+        fun(&mut parser)
+    }
+
     pub fn new<P: AsRef<Path>>(source: &'a str, root: P) -> Parser<'a> {
         Parser {
             source,
+            path: None,
+            token_table: make_token_table(),
+            name_table: make_name_table(),
+            state: RefCell::new(ParserState {
+                tokenstream: TokenStream::new(source),
+                lookahead: VecDeque::new(),
+                span: 0..0,
+            }),
+            root: root.as_ref().to_path_buf(),
+        }
+    }
+
+    pub fn new_with_path<P: AsRef<Path>>(path: &Path, source: &'a str, root: P) -> Parser<'a> {
+        Parser {
+            source,
+            path: Some(Rc::new(path.to_path_buf())),
             token_table: make_token_table(),
             name_table: make_name_table(),
             state: RefCell::new(ParserState {
@@ -111,16 +144,22 @@ impl<'a> Parser<'a> {
         let subparser = Parser::new(self.slice_at(span.clone()), &self.root);
         match subparser.parse_prefix_expr() {
             Err(Unwind::Exception(Error::EofError(_), _)) => {
-                Unwind::error_at(span, "Unterminated string interpolation.")
+                Unwind::error_at(SourceLocation::span(&span), "Unterminated string interpolation.")
             }
             Err(unwind) => Err(unwind.shift_span(span.start)),
             Ok(Expr::Block(mut block)) => {
                 block.span.shift(span.start);
                 if !block.params.is_empty() {
-                    return Unwind::error_at(block.span, "Interpolated block has variables.");
+                    return Unwind::error_at(
+                        SourceLocation::span(&block.span),
+                        "Interpolated block has variables.",
+                    );
                 }
                 if block.rtype.is_some() {
-                    return Unwind::error_at(block.span, "Interpolated block has a return type.");
+                    return Unwind::error_at(
+                        SourceLocation::span(&block.span),
+                        "Interpolated block has a return type.",
+                    );
                 }
                 let mut expr = *block.body;
                 expr.shift_span(span.start);
@@ -129,7 +168,7 @@ impl<'a> Parser<'a> {
             Ok(other) => {
                 let mut errspan = other.span();
                 errspan.shift(span.start);
-                Unwind::error_at(errspan, "Interpolation not a block.")
+                Unwind::error_at(SourceLocation::span(&errspan), "Interpolation not a block.")
             }
         }
     }
@@ -137,9 +176,10 @@ impl<'a> Parser<'a> {
     pub fn parse_expr(&self, precedence: usize) -> ExprParse {
         match self.parse_at_precedence(precedence)? {
             Syntax::Expr(e) => Ok(e),
-            Syntax::Def(d) => {
-                Unwind::error_at(d.span(), "Definition where expression was expected")
-            }
+            Syntax::Def(d) => Unwind::error_at(
+                SourceLocation::span(&d.span()),
+                "Definition where expression was expected",
+            ),
         }
     }
 
@@ -257,6 +297,17 @@ impl<'a> Parser<'a> {
 
     pub fn span(&self) -> Span {
         self.state.borrow().span.clone()
+    }
+
+    pub fn code(&self) -> &'a str {
+        self.source
+    }
+
+    pub fn source_location(&self) -> SourceLocation {
+        match &self.path {
+            None => SourceLocation::span(&self.span()),
+            Some(path) => SourceLocation::path(path, &self.span()),
+        }
     }
 
     pub fn slice(&self) -> &str {
@@ -569,7 +620,10 @@ fn identifier_prefix(parser: &Parser) -> Parse {
         Some(syntax) => parser.parse_prefix_syntax(syntax),
         None => {
             name.chars().next().expect("BUG: empty identifier");
-            Ok(Syntax::Expr(Expr::Var(Var::untyped(parser.span(), parser.tokenstring()))))
+            Ok(Syntax::Expr(Expr::Var(Var::untyped(
+                parser.source_location(),
+                parser.tokenstring(),
+            ))))
         }
     }
 }
@@ -724,7 +778,7 @@ fn parse_record(parser: &Parser) -> Result<Expr, Unwind> {
     // This kind of indicates I need a more felicitious representation
     // in order to be able to reliably print back things without converting
     // {x: 42} to Record x: 42 accidentally. (Or I need to not have this syntax).
-    Ok(Expr::Var(Var::untyped(0..0, "Record".to_string())).send(Message {
+    Ok(Expr::Var(Var::untyped(SourceLocation::span(&(0..0)), "Record".to_string())).send(Message {
         span: start..end,
         selector,
         args,
@@ -872,7 +926,7 @@ fn import_prefix(parser: &Parser) -> Parse {
             if parts.peek().is_some() {
                 if is_name {
                     return Unwind::error_at(
-                        import_start..parser.span().start,
+                        SourceLocation::span(&(import_start..parser.span().start)),
                         "Illegal import: invalid module name",
                     );
                 }
@@ -1229,7 +1283,7 @@ fn scan_string_part(parser: &Parser, span: Span) -> Result<Expr, Unwind> {
             Some((pos0, '\\')) => match chars.next() {
                 None => {
                     return Unwind::error_at(
-                        start + pos0..start + pos0 + 1,
+                        SourceLocation::span(&(start + pos0..start + pos0 + 1)),
                         "Literal string ends on escape.",
                     )
                 }
@@ -1241,7 +1295,7 @@ fn scan_string_part(parser: &Parser, span: Span) -> Result<Expr, Unwind> {
                 Some((_, '{')) => res.push_str("{"),
                 Some((pos1, _)) => {
                     return Unwind::error_at(
-                        start + pos0..start + pos1,
+                        SourceLocation::span(&(start + pos0..start + pos1)),
                         "Unknown escape sequence in literal string.",
                     )
                 }
@@ -1319,13 +1373,13 @@ fn parse_type_designator(parser: &Parser) -> Result<String, Unwind> {
 
 fn parse_var(parser: &Parser) -> Result<Var, Unwind> {
     let name = parser.tokenstring();
-    let namespan = parser.span();
+    let loc = parser.source_location();
     let (token, span) = parser.lookahead()?;
     let var = if token == Token::SIGIL && parser.slice_at(span) == "::" {
         parser.next_token()?;
-        Var::typed(namespan, name, parse_type_designator(parser)?)
+        Var::typed(loc, name, parse_type_designator(parser)?)
     } else {
-        Var::untyped(namespan, name)
+        Var::untyped(loc, name)
     };
     Ok(var)
 }
@@ -1416,7 +1470,7 @@ pub mod utils {
             let start = p;
             let end = start + param.len();
             p = end + 2;
-            blockparams.push(Var::untyped(start..end, param.to_string()))
+            blockparams.push(Var::untyped(SourceLocation::span(&(start..end)), param.to_string()))
         }
         Block::expr(span, blockparams, Box::new(body), None)
     }
@@ -1428,7 +1482,11 @@ pub mod utils {
             let start = p;
             let end = start + param.0.len();
             p = end + 4 + param.1.len();
-            blockparams.push(Var::typed(start..end, param.0.to_string(), param.1.to_string()));
+            blockparams.push(Var::typed(
+                SourceLocation::span(&(start..end)),
+                param.0.to_string(),
+                param.1.to_string(),
+            ));
         }
         Block::expr(span, blockparams, Box::new(body), None)
     }
@@ -1462,7 +1520,7 @@ pub mod utils {
         let mut p = span.start + "class ".len() + name.len() + " { ".len();
         let mut vars = Vec::new();
         for v in instance_variables {
-            vars.push(Var::untyped(p..p + v.len(), v.to_string()));
+            vars.push(Var::untyped(SourceLocation::span(&(p..p + v.len())), v.to_string()));
             p += v.len() + " ".len()
         }
         ClassDef::syntax(span, name.to_string(), vars)
@@ -1499,7 +1557,10 @@ pub mod utils {
             span,
             selector.to_string(),
             // FIXME: span
-            parameters.iter().map(|name| Var::untyped(0..0, name.to_string())).collect(),
+            parameters
+                .iter()
+                .map(|name| Var::untyped(SourceLocation::span(&(0..0)), name.to_string()))
+                .collect(),
             None,
         )
     }
@@ -1525,7 +1586,7 @@ pub mod utils {
     }
 
     pub fn var(span: Span, name: &str) -> Expr {
-        Expr::Var(Var::untyped(span, name.to_string()))
+        Expr::Var(Var::untyped(SourceLocation::span(&span), name.to_string()))
     }
 }
 
@@ -1550,7 +1611,7 @@ fn test_parser_error_after_lookahead() {
     let parser = Parser::new("foo bar", "dummy");
     parser.next_token().unwrap();
     parser.lookahead().unwrap();
-    let err: Result<(), Unwind> = Unwind::error_at(0..3, "oops");
+    let err: Result<(), Unwind> = Unwind::error_at(SourceLocation::span(&(0..3)), "oops");
     assert_eq!(err, parser.error("oops"));
 }
 
@@ -1559,6 +1620,6 @@ fn test_parser_error_after_lookahead2() {
     let parser = Parser::new("foo bar", "dummy");
     parser.next_token().unwrap();
     parser.lookahead2().unwrap();
-    let err: Result<(), Unwind> = Unwind::error_at(0..3, "oops");
+    let err: Result<(), Unwind> = Unwind::error_at(SourceLocation::span(&(0..3)), "oops");
     assert_eq!(err, parser.error("oops"));
 }
