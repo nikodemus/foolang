@@ -436,16 +436,16 @@ pub struct Var {
 }
 
 impl Var {
-    pub fn untyped(span: Span, name: String) -> Var {
+    pub fn untyped(source_location: SourceLocation, name: String) -> Var {
         Var {
-            source_location: SourceLocation::span(&span),
+            source_location,
             name,
             typename: None,
         }
     }
-    pub fn typed(span: Span, name: String, typename: String) -> Var {
+    pub fn typed(source_location: SourceLocation, name: String, typename: String) -> Var {
         Var {
-            source_location: SourceLocation::span(&span),
+            source_location,
             name,
             typename: Some(typename),
         }

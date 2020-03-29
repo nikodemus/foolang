@@ -269,6 +269,10 @@ impl<'a> Parser<'a> {
         self.state.borrow().span.clone()
     }
 
+    pub fn source_location(&self) -> SourceLocation {
+        SourceLocation::span(&self.span())
+    }
+
     pub fn slice(&self) -> &str {
         &self.source[self.span()]
     }
@@ -579,7 +583,7 @@ fn identifier_prefix(parser: &Parser) -> Parse {
         Some(syntax) => parser.parse_prefix_syntax(syntax),
         None => {
             name.chars().next().expect("BUG: empty identifier");
-            Ok(Syntax::Expr(Expr::Var(Var::untyped(parser.span(), parser.tokenstring()))))
+            Ok(Syntax::Expr(Expr::Var(Var::untyped(parser.source_location(), parser.tokenstring()))))
         }
     }
 }
@@ -734,7 +738,7 @@ fn parse_record(parser: &Parser) -> Result<Expr, Unwind> {
     // This kind of indicates I need a more felicitious representation
     // in order to be able to reliably print back things without converting
     // {x: 42} to Record x: 42 accidentally. (Or I need to not have this syntax).
-    Ok(Expr::Var(Var::untyped(0..0, "Record".to_string())).send(Message {
+    Ok(Expr::Var(Var::untyped(SourceLocation::span(&(0..0)), "Record".to_string())).send(Message {
         span: start..end,
         selector,
         args,
@@ -1329,13 +1333,13 @@ fn parse_type_designator(parser: &Parser) -> Result<String, Unwind> {
 
 fn parse_var(parser: &Parser) -> Result<Var, Unwind> {
     let name = parser.tokenstring();
-    let namespan = parser.span();
+    let loc = parser.source_location();
     let (token, span) = parser.lookahead()?;
     let var = if token == Token::SIGIL && parser.slice_at(span) == "::" {
         parser.next_token()?;
-        Var::typed(namespan, name, parse_type_designator(parser)?)
+        Var::typed(loc, name, parse_type_designator(parser)?)
     } else {
-        Var::untyped(namespan, name)
+        Var::untyped(loc, name)
     };
     Ok(var)
 }
@@ -1426,7 +1430,7 @@ pub mod utils {
             let start = p;
             let end = start + param.len();
             p = end + 2;
-            blockparams.push(Var::untyped(start..end, param.to_string()))
+            blockparams.push(Var::untyped(SourceLocation::span(&(start..end)), param.to_string()))
         }
         Block::expr(span, blockparams, Box::new(body), None)
     }
@@ -1438,7 +1442,7 @@ pub mod utils {
             let start = p;
             let end = start + param.0.len();
             p = end + 4 + param.1.len();
-            blockparams.push(Var::typed(start..end, param.0.to_string(), param.1.to_string()));
+            blockparams.push(Var::typed(SourceLocation::span(&(start..end)), param.0.to_string(), param.1.to_string()));
         }
         Block::expr(span, blockparams, Box::new(body), None)
     }
@@ -1472,7 +1476,7 @@ pub mod utils {
         let mut p = span.start + "class ".len() + name.len() + " { ".len();
         let mut vars = Vec::new();
         for v in instance_variables {
-            vars.push(Var::untyped(p..p + v.len(), v.to_string()));
+            vars.push(Var::untyped(SourceLocation::span(&(p..p + v.len())), v.to_string()));
             p += v.len() + " ".len()
         }
         ClassDef::syntax(span, name.to_string(), vars)
@@ -1509,7 +1513,7 @@ pub mod utils {
             span,
             selector.to_string(),
             // FIXME: span
-            parameters.iter().map(|name| Var::untyped(0..0, name.to_string())).collect(),
+            parameters.iter().map(|name| Var::untyped(SourceLocation::span(&(0..0)), name.to_string())).collect(),
             None,
         )
     }
@@ -1535,7 +1539,7 @@ pub mod utils {
     }
 
     pub fn var(span: Span, name: &str) -> Expr {
-        Expr::Var(Var::untyped(span, name.to_string()))
+        Expr::Var(Var::untyped(SourceLocation::span(&span), name.to_string()))
     }
 }
 
