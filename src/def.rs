@@ -1,8 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::expr::*;
-use crate::span::Span;
-use crate::span::TweakSpan;
+use crate::source_location::{Span, TweakSpan};
 use crate::unwind::Unwind;
 
 #[derive(Debug, PartialEq)]

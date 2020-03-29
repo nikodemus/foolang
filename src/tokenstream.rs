@@ -1,4 +1,4 @@
-use crate::span::Span;
+use crate::source_location::Span;
 use crate::unwind::Unwind;
 
 #[allow(non_camel_case_types)]

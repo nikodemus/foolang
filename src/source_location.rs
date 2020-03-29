@@ -4,7 +4,9 @@ pub type Span = Range<usize>;
 
 pub trait TweakSpan {
     fn tweak(&mut self, shift: usize, extend: isize);
-    fn shift(&mut self, shift: usize);
+    fn shift(&mut self, shift: usize) {
+        self.tweak(shift, 0);
+    }
 }
 
 impl TweakSpan for Span {
@@ -16,8 +18,5 @@ impl TweakSpan for Span {
         } else {
             self.end += extend as usize;
         }
-    }
-    fn shift(&mut self, shift: usize) {
-        self.tweak(shift, 0);
     }
 }

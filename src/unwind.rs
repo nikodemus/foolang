@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::eval::EnvRef;
 use crate::objects::Object;
-use crate::span::Span;
+use crate::source_location::Span;
 
 trait LineIndices {
     // FIXME: learn to implement iterators

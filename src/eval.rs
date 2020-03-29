@@ -11,7 +11,7 @@ use crate::objects::{
     Vtable,
 };
 use crate::parse::Parser;
-use crate::span::Span;
+use crate::source_location::Span;
 use crate::syntax::Syntax;
 use crate::unwind::Unwind;
 

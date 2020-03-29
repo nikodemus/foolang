@@ -5,8 +5,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::string::ToString;
 
-use crate::span::Span;
-use crate::span::TweakSpan;
+use crate::source_location::{Span, TweakSpan};
 use crate::tokenstream::{Token, TokenStream};
 use crate::unwind::{Error, Unwind};
 

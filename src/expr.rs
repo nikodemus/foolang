@@ -1,5 +1,4 @@
-use crate::span::Span;
-use crate::span::TweakSpan;
+use crate::source_location::{Span, TweakSpan};
 use crate::syntax::Syntax;
 
 #[derive(Debug, PartialEq, Clone)]
