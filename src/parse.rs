@@ -84,6 +84,20 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
+    pub fn parse_file<P: AsRef<Path>, R>(file: P,
+                                         root: P,
+                                         fun: impl FnOnce(&mut Parser) -> Result<R, Unwind>)
+                                         -> Result<R, Unwind> {
+        let file = file.as_ref();
+        let source = match std::fs::read_to_string(file) {
+            Ok(code) => code,
+            Err(_err) => return Unwind::error(&format!(
+                "Could not read file: {}", file.to_string_lossy()))
+        };
+        let mut parser = Parser::new(&source, root);
+        fun(&mut parser)
+    }
+
     pub fn new<P: AsRef<Path>>(source: &'a str, root: P) -> Parser<'a> {
         Parser {
             source,
@@ -267,6 +281,10 @@ impl<'a> Parser<'a> {
 
     pub fn span(&self) -> Span {
         self.state.borrow().span.clone()
+    }
+
+    pub fn code(&self) -> &'a str {
+        self.source
     }
 
     pub fn source_location(&self) -> SourceLocation {

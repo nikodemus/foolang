@@ -839,16 +839,7 @@ impl Foolang {
 
     pub fn load_module_into(&self, file: &Path, env: Env) -> Result<Env, Unwind> {
         // println!("load: {:?}", file);
-        let code = match std::fs::read_to_string(file) {
-            Ok(code) => code,
-            Err(_err) => {
-                return Unwind::error(&format!(
-                    "Could not load module from {}",
-                    file.to_string_lossy()
-                ))
-            }
-        };
-        env.load_code(&code, fs::canonicalize(file).unwrap().parent().unwrap())
+        env.load_file(&file, &fs::canonicalize(file).unwrap().parent().unwrap())
     }
 
     pub fn make_array(&self, data: &[Object]) -> Object {

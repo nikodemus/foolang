@@ -295,6 +295,21 @@ impl Env {
         Ok(self)
     }
 
+    pub fn load_file<P: AsRef<Path>>(self, code: P, root: P) -> Result<Env, Unwind> {
+        Parser::parse_file(code, root, |parser: &mut Parser| {
+            while !parser.at_eof() {
+                match parser.parse() {
+                    Ok(Syntax::Def(def)) => self.augment(&def).context(parser.code())?,
+                    // FIXME: Better error needed here.
+                    Ok(Syntax::Expr(_)) => return Unwind::error("Expression at toplevel!"),
+                    Err(unwind) => return Err(unwind.with_context(parser.code())),
+                };
+            }
+            Ok(())
+        })?;
+        Ok(self)
+    }
+
     /// Returns true iff underlying `EnvImpl` has is child of the builtin environment.
     /// or the builtin environment.
     fn is_toplevel(&self) -> bool {
