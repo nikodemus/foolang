@@ -110,9 +110,7 @@ impl<'a> Parser<'a> {
         let subparser = Parser::new(self.slice_at(span.clone()), &self.root);
         match subparser.parse_prefix_expr() {
             Err(Unwind::Exception(Error::EofError(_), _)) => Unwind::error_at(
-                SourceLocation {
-                    span,
-                },
+                SourceLocation::span(&span),
                 "Unterminated string interpolation.",
             ),
             Err(unwind) => Err(unwind.shift_span(span.start)),
@@ -120,17 +118,13 @@ impl<'a> Parser<'a> {
                 block.span.shift(span.start);
                 if !block.params.is_empty() {
                     return Unwind::error_at(
-                        SourceLocation {
-                            span: block.span,
-                        },
+                        SourceLocation::span(&block.span),
                         "Interpolated block has variables.",
                     );
                 }
                 if block.rtype.is_some() {
                     return Unwind::error_at(
-                        SourceLocation {
-                            span: block.span,
-                        },
+                        SourceLocation::span(&block.span),
                         "Interpolated block has a return type.",
                     );
                 }
@@ -142,9 +136,7 @@ impl<'a> Parser<'a> {
                 let mut errspan = other.span();
                 errspan.shift(span.start);
                 Unwind::error_at(
-                    SourceLocation {
-                        span: errspan,
-                    },
+                    SourceLocation::span(&errspan),
                     "Interpolation not a block.",
                 )
             }
@@ -155,9 +147,7 @@ impl<'a> Parser<'a> {
         match self.parse_at_precedence(precedence)? {
             Syntax::Expr(e) => Ok(e),
             Syntax::Def(d) => Unwind::error_at(
-                SourceLocation {
-                    span: d.span(),
-                },
+                SourceLocation::span(&d.span()),
                 "Definition where expression was expected",
             ),
         }
@@ -892,9 +882,7 @@ fn import_prefix(parser: &Parser) -> Parse {
             if parts.peek().is_some() {
                 if is_name {
                     return Unwind::error_at(
-                        SourceLocation {
-                            span: import_start..parser.span().start,
-                        },
+                        SourceLocation::span(&(import_start..parser.span().start)),
                         "Illegal import: invalid module name",
                     );
                 }
@@ -1251,9 +1239,7 @@ fn scan_string_part(parser: &Parser, span: Span) -> Result<Expr, Unwind> {
             Some((pos0, '\\')) => match chars.next() {
                 None => {
                     return Unwind::error_at(
-                        SourceLocation {
-                            span: start + pos0..start + pos0 + 1,
-                        },
+                        SourceLocation::span(&(start + pos0..start + pos0 + 1)),
                         "Literal string ends on escape.",
                     )
                 }
@@ -1265,9 +1251,7 @@ fn scan_string_part(parser: &Parser, span: Span) -> Result<Expr, Unwind> {
                 Some((_, '{')) => res.push_str("{"),
                 Some((pos1, _)) => {
                     return Unwind::error_at(
-                        SourceLocation {
-                            span: start + pos0..start + pos1,
-                        },
+                        SourceLocation::span(&(start + pos0..start + pos1)),
                         "Unknown escape sequence in literal string.",
                     )
                 }
@@ -1577,9 +1561,7 @@ fn test_parser_error_after_lookahead() {
     parser.next_token().unwrap();
     parser.lookahead().unwrap();
     let err: Result<(), Unwind> = Unwind::error_at(
-        SourceLocation {
-            span: 0..3,
-        },
+        SourceLocation::span(&(0..3)),
         "oops",
     );
     assert_eq!(err, parser.error("oops"));
@@ -1591,9 +1573,7 @@ fn test_parser_error_after_lookahead2() {
     parser.next_token().unwrap();
     parser.lookahead2().unwrap();
     let err: Result<(), Unwind> = Unwind::error_at(
-        SourceLocation {
-            span: 0..3,
-        },
+        SourceLocation::span(&(0..3)),
         "oops",
     );
     assert_eq!(err, parser.error("oops"));

@@ -1,4 +1,6 @@
+use std::rc::Rc;
 use std::ops::Range;
+use std::path::PathBuf;
 
 pub type Span = Range<usize>;
 
@@ -22,11 +24,40 @@ impl TweakSpan for Span {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct SourceLocation {
-    pub span: Span,
+pub enum SourceLocation {
+    Path(SourcePath),
+    Span(Span), // WIP: remove
+}
+
+impl SourceLocation {
+    // WIP: remove
+    pub fn span(span: &Span) -> SourceLocation {
+        SourceLocation::Span(span.clone())
+    }
+    pub fn get_span(&self) -> Span {
+        match &self {
+            SourceLocation::Span(span) => span.clone(),
+            SourceLocation::Path(path) => path.span.clone(),
+        }
+    }
 }
 
 impl TweakSpan for SourceLocation {
+    fn tweak(&mut self, shift: usize, extend: isize) {
+        match self {
+            SourceLocation::Span(span) => span.tweak(shift, extend),
+            SourceLocation::Path(path) => path.tweak(shift, extend),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct SourcePath {
+    span: Span,
+    path: Rc<PathBuf>
+}
+
+impl SourcePath {
     fn tweak(&mut self, shift: usize, extend: isize) {
         self.span.tweak(shift, extend)
     }

@@ -107,7 +107,7 @@ impl Expr {
             // FIXME: Wrong span
             Seq(seq) => return seq.exprs[seq.exprs.len() - 1].span(),
             Typecheck(typecheck) => &typecheck.span,
-            Var(var) => &var.source_location.span,
+            Var(var) => return var.source_location.get_span(),
         };
         span.to_owned()
     }
@@ -438,18 +438,14 @@ pub struct Var {
 impl Var {
     pub fn untyped(span: Span, name: String) -> Var {
         Var {
-            source_location: SourceLocation {
-                span,
-            },
+            source_location: SourceLocation::span(&span),
             name,
             typename: None,
         }
     }
     pub fn typed(span: Span, name: String, typename: String) -> Var {
         Var {
-            source_location: SourceLocation {
-                span,
-            },
+            source_location: SourceLocation::span(&span),
             name,
             typename: Some(typename),
         }

@@ -363,9 +363,7 @@ impl Closure {
         if self.params.len() != args.len() {
             return Unwind::error_at(
                 // FIXME: call-site would be 1000 x better...
-                SourceLocation {
-                    span: self.body.span(),
-                },
+                SourceLocation::span(&self.body.span()),
                 &format!(
                     "Argument count mismatch, {} wanted {}, got {}: {:?}",
                     &self.name,
@@ -384,7 +382,7 @@ impl Closure {
             let binding = match vt {
                 None => Binding::untyped(obj),
                 Some(ref vtable) => {
-                    let value = obj.typecheck(vtable).source(&arg.source_location.span)?;
+                    let value = obj.typecheck(vtable).source(&arg.source_location.get_span())?;
                     Binding::typed(vtable.to_owned(), value)
                 }
             };

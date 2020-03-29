@@ -465,9 +465,7 @@ impl Env {
     fn check_not_defined(&self, name: &str, span: &Span, what: &str) -> Result<(), Unwind> {
         if self.has_definition(name) {
             return Unwind::error_at(
-                SourceLocation {
-                    span: span.clone(),
-                },
+                SourceLocation::span(span),
                 &format!("Cannot redefine {}", what),
             );
         };
@@ -633,9 +631,7 @@ impl Env {
 
     fn eval_raise(&self, raise: &Raise) -> Eval {
         Unwind::error_at(
-            SourceLocation {
-                span: raise.value.span(),
-            },
+            SourceLocation::span(&raise.value.span()),
             self.eval(&raise.value)?.string_as_str(),
         )
     }
@@ -643,9 +639,7 @@ impl Env {
     fn eval_return(&self, ret: &Return) -> Eval {
         match self.home() {
             None => Unwind::error_at(
-                SourceLocation {
-                    span: ret.span.clone(),
-                },
+                SourceLocation::span(&ret.span),
                 "Nothing to return from",
             ),
             Some(env) => Unwind::return_from(env, self.eval(&ret.value)?),
@@ -695,9 +689,7 @@ impl Env {
                 }
                 // FIXME: there used to be a workspace lookup here...
                 Unwind::error_at(
-                    SourceLocation {
-                        span: assign.span.clone(),
-                    },
+                    SourceLocation::span(&assign.span),
                     "Cannot assign to an unbound variable",
                 )
             }

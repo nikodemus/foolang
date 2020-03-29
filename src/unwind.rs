@@ -102,9 +102,7 @@ impl Unwind {
                 value,
                 expected,
             }),
-            Location::new(SourceLocation {
-                span,
-            }),
+            Location::new(SourceLocation::span(&span))
         ))
     }
 
@@ -128,9 +126,7 @@ impl Unwind {
             Error::EofError(SimpleError {
                 what: what.to_string(),
             }),
-            Location::new(SourceLocation {
-                span,
-            }),
+            Location::new(SourceLocation::span(&span)),
         ))
     }
 
@@ -238,9 +234,7 @@ impl Location {
 
     pub fn from(span: Span, context: &str) -> Location {
         Location {
-            source_location: Some(SourceLocation {
-                span,
-            }),
+            source_location: Some(SourceLocation::span(&span)),
             context: Some(context.to_string()),
         }
     }
@@ -261,7 +255,7 @@ impl Location {
 
     fn start(&self) -> usize {
         if let Some(source_location) = &self.source_location {
-            source_location.span.start
+            source_location.get_span().start
         } else {
             panic!("Expected Location with source location")
         }
@@ -269,7 +263,7 @@ impl Location {
 
     fn end(&self) -> usize {
         if let Some(source_location) = &self.source_location {
-            source_location.span.end
+            source_location.get_span().end
         } else {
             panic!("Expected Location with source location")
         }
@@ -277,9 +271,7 @@ impl Location {
 
     fn add_span(&mut self, span: &Span) {
         assert!(self.source_location.is_none());
-        self.source_location = Some(SourceLocation {
-            span: span.clone(),
-        })
+        self.source_location = Some(SourceLocation::span(span))
     }
 
     fn add_context(&mut self, source: &str, what: String) {

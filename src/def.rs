@@ -284,9 +284,7 @@ impl MethodDefinition {
             Some(body) => Ok(&(*body)),
             None => {
                 return Unwind::error_at(
-                    SourceLocation {
-                        span: self.span.clone(),
-                    },
+                    SourceLocation::span(&self.span),
                     "Partial methods not allowed here",
                 );
             }

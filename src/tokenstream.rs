@@ -82,9 +82,7 @@ impl<'a> TokenStream<'a> {
 
     pub fn error_at<T>(&self, span: Span, problem: &str) -> Result<T, Unwind> {
         Unwind::error_at(
-            SourceLocation {
-                span,
-            },
+            SourceLocation::span(&span),
             problem,
         )
     }
