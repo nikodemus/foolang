@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::expr::*;
-use crate::source_location::{Span, TweakSpan};
+use crate::source_location::{SourceLocation, Span, TweakSpan};
 use crate::unwind::Unwind;
 
 #[derive(Debug, PartialEq)]
@@ -90,7 +90,7 @@ impl ClassDef {
     fn tweak_span(&mut self, shift: usize, extend: isize) {
         self.span.tweak(shift, extend);
         for var in &mut self.instance_variables {
-            var.span.tweak(shift, extend);
+            var.source_location.tweak(shift, extend);
         }
         for m in &mut self.instance_methods {
             m.tweak_span(shift, extend);
@@ -272,7 +272,7 @@ impl MethodDefinition {
     fn tweak_span(&mut self, shift: usize, extend: isize) {
         self.span.tweak(shift, extend);
         for var in &mut self.parameters {
-            var.span.tweak(shift, extend);
+            var.source_location.tweak(shift, extend);
         }
         match &mut self.body {
             Some(ref mut span) => span.tweak_span(shift, extend),
@@ -283,7 +283,12 @@ impl MethodDefinition {
         match &self.body {
             Some(body) => Ok(&(*body)),
             None => {
-                return Unwind::error_at(self.span.clone(), "Partial methods not allowed here");
+                return Unwind::error_at(
+                    SourceLocation {
+                        span: self.span.clone(),
+                    },
+                    "Partial methods not allowed here",
+                );
             }
         }
     }

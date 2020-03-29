@@ -15,7 +15,7 @@ use crate::def::*;
 use crate::eval::{Binding, Env, EnvRef};
 use crate::expr::*;
 
-use crate::source_location::Span;
+use crate::source_location::{SourceLocation, Span};
 use crate::time::TimeInfo;
 use crate::unwind::Unwind;
 
@@ -272,14 +272,14 @@ impl Hash for System {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Arg {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub name: String,
 }
 
 impl Arg {
-    pub fn new(span: Span, name: String) -> Arg {
+    pub fn new(source_location: SourceLocation, name: String) -> Arg {
         Arg {
-            span,
+            source_location,
             name,
         }
     }
@@ -362,7 +362,10 @@ impl Closure {
         let mut symbols = HashMap::new();
         if self.params.len() != args.len() {
             return Unwind::error_at(
-                self.body.span(), // FIXME: call-site would be 1000 x better...
+                // FIXME: call-site would be 1000 x better...
+                SourceLocation {
+                    span: self.body.span(),
+                },
                 &format!(
                     "Argument count mismatch, {} wanted {}, got {}: {:?}",
                     &self.name,
@@ -381,7 +384,7 @@ impl Closure {
             let binding = match vt {
                 None => Binding::untyped(obj),
                 Some(ref vtable) => {
-                    let value = obj.typecheck(vtable).source(&arg.span)?;
+                    let value = obj.typecheck(vtable).source(&arg.source_location.span)?;
                     Binding::typed(vtable.to_owned(), value)
                 }
             };
@@ -1453,7 +1456,7 @@ pub fn make_method_closure(
     let mut args = vec![];
     let mut parameter_types = vec![];
     for param in params {
-        args.push(Arg::new(param.span.clone(), param.name.clone()));
+        args.push(Arg::new(param.source_location.clone(), param.name.clone()));
         match &param.typename {
             Some(name) => parameter_types.push(Some(env.find_type(name)?)),
             None => parameter_types.push(None),

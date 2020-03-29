@@ -57,18 +57,15 @@ fn test_interpolated_error_location() {
             Error::SimpleError(SimpleError {
                 what: "Unbound variable: X".to_string(),
             }),
-            Location {
-                span: Some(48..49),
-                context: Some(
-                    concat!(
-                        "003                 let x = 42.\n",
-                        "004                 \"{X}\"\n",
-                        "                      ^ Unbound variable: X\n",
-                        "005 \n"
-                    )
-                    .to_string()
+            Location::from(
+                48..49,
+                concat!(
+                    "003                 let x = 42.\n",
+                    "004                 \"{X}\"\n",
+                    "                      ^ Unbound variable: X\n",
+                    "005 \n"
                 )
-            }
+            )
         )
     );
 }

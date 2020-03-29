@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::eval::EnvRef;
 use crate::objects::Object;
-use crate::source_location::Span;
+use crate::source_location::{SourceLocation, Span, TweakSpan};
 
 trait LineIndices {
     // FIXME: learn to implement iterators
@@ -68,7 +68,7 @@ pub struct TypeError {
 
 #[derive(PartialEq, Debug)]
 pub struct Location {
-    pub span: Option<Span>,
+    pub source_location: Option<SourceLocation>,
     pub context: Option<String>,
 }
 
@@ -102,7 +102,9 @@ impl Unwind {
                 value,
                 expected,
             }),
-            Location::new(span),
+            Location::new(SourceLocation {
+                span,
+            }),
         ))
     }
 
@@ -126,7 +128,9 @@ impl Unwind {
             Error::EofError(SimpleError {
                 what: what.to_string(),
             }),
-            Location::new(span),
+            Location::new(SourceLocation {
+                span,
+            }),
         ))
     }
 
@@ -140,13 +144,13 @@ impl Unwind {
         ))
     }
 
-    pub fn error_at<T>(span: Span, what: &str) -> Result<T, Unwind> {
+    pub fn error_at<T>(source_location: SourceLocation, what: &str) -> Result<T, Unwind> {
         // panic!("BOOM_AT: {:?}, {}", span, what);
         Err(Unwind::Exception(
             Error::SimpleError(SimpleError {
                 what: what.to_string(),
             }),
-            Location::new(span),
+            Location::new(source_location),
         ))
     }
 
@@ -165,16 +169,19 @@ impl Unwind {
             Unwind::Exception(
                 err,
                 Location {
-                    span: Some(s),
+                    source_location: Some(mut loc),
                     context,
                 },
-            ) => Unwind::Exception(
-                err,
-                Location {
-                    span: Some((s.start + offset)..(s.end + offset)),
-                    context,
-                },
-            ),
+            ) => {
+                loc.shift(offset);
+                Unwind::Exception(
+                    err,
+                    Location {
+                        source_location: Some(loc),
+                        context,
+                    },
+                )
+            }
             _ => self,
         }
     }
@@ -222,16 +229,25 @@ impl TypeError {
 }
 
 impl Location {
-    fn new(span: Span) -> Location {
+    fn new(source_location: SourceLocation) -> Location {
         Location {
-            span: Some(span),
+            source_location: Some(source_location),
             context: None,
         }
     }
 
-    fn none() -> Location {
+    pub fn from(span: Span, context: &str) -> Location {
         Location {
-            span: None,
+            source_location: Some(SourceLocation {
+                span,
+            }),
+            context: Some(context.to_string()),
+        }
+    }
+
+    pub fn none() -> Location {
+        Location {
+            source_location: None,
             context: None,
         }
     }
@@ -244,31 +260,33 @@ impl Location {
     }
 
     fn start(&self) -> usize {
-        if let Some(span) = &self.span {
-            span.start
+        if let Some(source_location) = &self.source_location {
+            source_location.span.start
         } else {
-            panic!("Expected Location with span")
+            panic!("Expected Location with source location")
         }
     }
 
     fn end(&self) -> usize {
-        if let Some(span) = &self.span {
-            span.end
+        if let Some(source_location) = &self.source_location {
+            source_location.span.end
         } else {
-            panic!("Expected Location with span")
+            panic!("Expected Location with source location")
         }
     }
 
     fn add_span(&mut self, span: &Span) {
-        assert!(self.span.is_none());
-        self.span = Some(span.clone())
+        assert!(self.source_location.is_none());
+        self.source_location = Some(SourceLocation {
+            span: span.clone(),
+        })
     }
 
     fn add_context(&mut self, source: &str, what: String) {
         if self.context.is_some() {
             return;
         }
-        if self.span.is_none() {
+        if self.source_location.is_none() {
             return;
         }
         assert!(self.context.is_none());

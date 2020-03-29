@@ -11,7 +11,7 @@ use crate::objects::{
     Vtable,
 };
 use crate::parse::Parser;
-use crate::source_location::Span;
+use crate::source_location::{SourceLocation, Span};
 use crate::syntax::Syntax;
 use crate::unwind::Unwind;
 
@@ -441,7 +441,7 @@ impl Env {
         let mut args = vec![];
         let mut parameter_types = vec![];
         for p in &block.params {
-            args.push(Arg::new(p.span.clone(), p.name.clone()));
+            args.push(Arg::new(p.source_location.clone(), p.name.clone()));
             parameter_types.push(&p.typename);
         }
         self.foo.make_closure(
@@ -464,7 +464,12 @@ impl Env {
 
     fn check_not_defined(&self, name: &str, span: &Span, what: &str) -> Result<(), Unwind> {
         if self.has_definition(name) {
-            return Unwind::error_at(span.clone(), &format!("Cannot redefine {}", what));
+            return Unwind::error_at(
+                SourceLocation {
+                    span: span.clone(),
+                },
+                &format!("Cannot redefine {}", what),
+            );
         };
         Ok(())
     }
@@ -627,12 +632,22 @@ impl Env {
     }
 
     fn eval_raise(&self, raise: &Raise) -> Eval {
-        Unwind::error_at(raise.value.span(), self.eval(&raise.value)?.string_as_str())
+        Unwind::error_at(
+            SourceLocation {
+                span: raise.value.span(),
+            },
+            self.eval(&raise.value)?.string_as_str(),
+        )
     }
 
     fn eval_return(&self, ret: &Return) -> Eval {
         match self.home() {
-            None => Unwind::error_at(ret.span.clone(), "Nothing to return from"),
+            None => Unwind::error_at(
+                SourceLocation {
+                    span: ret.span.clone(),
+                },
+                "Nothing to return from",
+            ),
             Some(env) => Unwind::return_from(env, self.eval(&ret.value)?),
         }
     }
@@ -679,7 +694,12 @@ impl Env {
                     }
                 }
                 // FIXME: there used to be a workspace lookup here...
-                Unwind::error_at(assign.span.clone(), "Cannot assign to an unbound variable")
+                Unwind::error_at(
+                    SourceLocation {
+                        span: assign.span.clone(),
+                    },
+                    "Cannot assign to an unbound variable",
+                )
             }
         }
     }
@@ -687,7 +707,9 @@ impl Env {
     fn eval_var(&self, var: &Var) -> Eval {
         if &var.name == "self" {
             match self.receiver() {
-                None => Unwind::error_at(var.span.clone(), "self outside method context"),
+                None => {
+                    Unwind::error_at(var.source_location.clone(), "self outside method context")
+                }
                 Some(receiver) => Ok(receiver.clone()),
             }
         } else {
@@ -710,7 +732,10 @@ impl Env {
                     // FIXME: There used to be workspace handling here
                 }
             }
-            Unwind::error_at(var.span.clone(), &format!("Unbound variable: {}", &var.name))
+            Unwind::error_at(
+                var.source_location.clone(),
+                &format!("Unbound variable: {}", &var.name),
+            )
         }
     }
 }

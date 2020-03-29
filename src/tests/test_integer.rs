@@ -15,10 +15,7 @@ fn test_bad_decimal_integer() {
             Error::SimpleError(SimpleError {
                 what: "Malformed number".to_string(),
             }),
-            Location {
-                span: Some(0..3),
-                context: Some(concat!("001 1x3\n", "    ^^^ Malformed number\n").to_string())
-            }
+            Location::from(0..3, concat!("001 1x3\n", "    ^^^ Malformed number\n"))
         ))
     );
 }
@@ -36,12 +33,10 @@ fn test_bad_hex_integer() {
             Error::SimpleError(SimpleError {
                 what: "Malformed hexadecimal number".to_string(),
             }),
-            Location {
-                span: Some(0..5),
-                context: Some(
-                    concat!("001 0x1x3\n", "    ^^^^^ Malformed hexadecimal number\n").to_string()
-                )
-            }
+            Location::from(
+                0..5,
+                concat!("001 0x1x3\n", "    ^^^^^ Malformed hexadecimal number\n")
+            )
         ))
     );
 }
@@ -59,12 +54,7 @@ fn test_bad_binary_integer() {
             Error::SimpleError(SimpleError {
                 what: "Malformed binary number".to_string(),
             }),
-            Location {
-                span: Some(0..5),
-                context: Some(
-                    concat!("001 0b123\n", "    ^^^^^ Malformed binary number\n").to_string()
-                )
-            }
+            Location::from(0..5, concat!("001 0b123\n", "    ^^^^^ Malformed binary number\n"))
         ))
     );
 }

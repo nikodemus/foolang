@@ -1,4 +1,4 @@
-use crate::source_location::Span;
+use crate::source_location::{SourceLocation, Span};
 use crate::unwind::Unwind;
 
 #[allow(non_camel_case_types)]
@@ -81,7 +81,12 @@ impl<'a> TokenStream<'a> {
     }
 
     pub fn error_at<T>(&self, span: Span, problem: &str) -> Result<T, Unwind> {
-        Unwind::error_at(span, problem)
+        Unwind::error_at(
+            SourceLocation {
+                span,
+            },
+            problem,
+        )
     }
 
     pub fn error<T>(&self, problem: &str) -> Result<T, Unwind> {

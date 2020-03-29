@@ -21,6 +21,7 @@ impl TweakSpan for Span {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct SourceLocation {
     pub span: Span,
 }

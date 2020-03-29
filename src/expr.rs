@@ -1,4 +1,4 @@
-use crate::source_location::{Span, TweakSpan};
+use crate::source_location::{SourceLocation, Span, TweakSpan};
 use crate::syntax::Syntax;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -107,7 +107,7 @@ impl Expr {
             // FIXME: Wrong span
             Seq(seq) => return seq.exprs[seq.exprs.len() - 1].span(),
             Typecheck(typecheck) => &typecheck.span,
-            Var(var) => &var.span,
+            Var(var) => &var.source_location.span,
         };
         span.to_owned()
     }
@@ -137,7 +137,7 @@ impl Expr {
             Return(ret) => ret.tweak_span(shift, extend),
             Typecheck(typecheck) => typecheck.tweak_span(shift, extend),
             Var(var) => {
-                var.span.tweak(shift, extend);
+                var.source_location.tweak(shift, extend);
             }
         };
     }
@@ -235,7 +235,7 @@ impl Block {
     fn tweak_span(&mut self, shift: usize, extend: isize) {
         self.span.tweak(shift, extend);
         for p in &mut self.params {
-            p.span.tweak(shift, extend);
+            p.source_location.tweak(shift, extend);
         }
         self.body.tweak_span(shift, extend);
     }
@@ -430,7 +430,7 @@ impl Typecheck {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Var {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub name: String,
     pub typename: Option<String>,
 }
@@ -438,14 +438,18 @@ pub struct Var {
 impl Var {
     pub fn untyped(span: Span, name: String) -> Var {
         Var {
-            span,
+            source_location: SourceLocation {
+                span,
+            },
             name,
             typename: None,
         }
     }
     pub fn typed(span: Span, name: String, typename: String) -> Var {
         Var {
-            span,
+            source_location: SourceLocation {
+                span,
+            },
             name,
             typename: Some(typename),
         }

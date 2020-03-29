@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::string::ToString;
 
-use crate::source_location::{Span, TweakSpan};
+use crate::source_location::{SourceLocation, Span, TweakSpan};
 use crate::tokenstream::{Token, TokenStream};
 use crate::unwind::{Error, Unwind};
 
@@ -109,17 +109,30 @@ impl<'a> Parser<'a> {
     pub fn parse_interpolated_block(&self, span: Span) -> Result<(Expr, usize), Unwind> {
         let subparser = Parser::new(self.slice_at(span.clone()), &self.root);
         match subparser.parse_prefix_expr() {
-            Err(Unwind::Exception(Error::EofError(_), _)) => {
-                Unwind::error_at(span, "Unterminated string interpolation.")
-            }
+            Err(Unwind::Exception(Error::EofError(_), _)) => Unwind::error_at(
+                SourceLocation {
+                    span,
+                },
+                "Unterminated string interpolation.",
+            ),
             Err(unwind) => Err(unwind.shift_span(span.start)),
             Ok(Expr::Block(mut block)) => {
                 block.span.shift(span.start);
                 if !block.params.is_empty() {
-                    return Unwind::error_at(block.span, "Interpolated block has variables.");
+                    return Unwind::error_at(
+                        SourceLocation {
+                            span: block.span,
+                        },
+                        "Interpolated block has variables.",
+                    );
                 }
                 if block.rtype.is_some() {
-                    return Unwind::error_at(block.span, "Interpolated block has a return type.");
+                    return Unwind::error_at(
+                        SourceLocation {
+                            span: block.span,
+                        },
+                        "Interpolated block has a return type.",
+                    );
                 }
                 let mut expr = *block.body;
                 expr.shift_span(span.start);
@@ -128,7 +141,12 @@ impl<'a> Parser<'a> {
             Ok(other) => {
                 let mut errspan = other.span();
                 errspan.shift(span.start);
-                Unwind::error_at(errspan, "Interpolation not a block.")
+                Unwind::error_at(
+                    SourceLocation {
+                        span: errspan,
+                    },
+                    "Interpolation not a block.",
+                )
             }
         }
     }
@@ -136,9 +154,12 @@ impl<'a> Parser<'a> {
     pub fn parse_expr(&self, precedence: usize) -> ExprParse {
         match self.parse_at_precedence(precedence)? {
             Syntax::Expr(e) => Ok(e),
-            Syntax::Def(d) => {
-                Unwind::error_at(d.span(), "Definition where expression was expected")
-            }
+            Syntax::Def(d) => Unwind::error_at(
+                SourceLocation {
+                    span: d.span(),
+                },
+                "Definition where expression was expected",
+            ),
         }
     }
 
@@ -871,7 +892,9 @@ fn import_prefix(parser: &Parser) -> Parse {
             if parts.peek().is_some() {
                 if is_name {
                     return Unwind::error_at(
-                        import_start..parser.span().start,
+                        SourceLocation {
+                            span: import_start..parser.span().start,
+                        },
                         "Illegal import: invalid module name",
                     );
                 }
@@ -1228,7 +1251,9 @@ fn scan_string_part(parser: &Parser, span: Span) -> Result<Expr, Unwind> {
             Some((pos0, '\\')) => match chars.next() {
                 None => {
                     return Unwind::error_at(
-                        start + pos0..start + pos0 + 1,
+                        SourceLocation {
+                            span: start + pos0..start + pos0 + 1,
+                        },
                         "Literal string ends on escape.",
                     )
                 }
@@ -1240,7 +1265,9 @@ fn scan_string_part(parser: &Parser, span: Span) -> Result<Expr, Unwind> {
                 Some((_, '{')) => res.push_str("{"),
                 Some((pos1, _)) => {
                     return Unwind::error_at(
-                        start + pos0..start + pos1,
+                        SourceLocation {
+                            span: start + pos0..start + pos1,
+                        },
                         "Unknown escape sequence in literal string.",
                     )
                 }
@@ -1549,7 +1576,12 @@ fn test_parser_error_after_lookahead() {
     let parser = Parser::new("foo bar", "dummy");
     parser.next_token().unwrap();
     parser.lookahead().unwrap();
-    let err: Result<(), Unwind> = Unwind::error_at(0..3, "oops");
+    let err: Result<(), Unwind> = Unwind::error_at(
+        SourceLocation {
+            span: 0..3,
+        },
+        "oops",
+    );
     assert_eq!(err, parser.error("oops"));
 }
 
@@ -1558,6 +1590,11 @@ fn test_parser_error_after_lookahead2() {
     let parser = Parser::new("foo bar", "dummy");
     parser.next_token().unwrap();
     parser.lookahead2().unwrap();
-    let err: Result<(), Unwind> = Unwind::error_at(0..3, "oops");
+    let err: Result<(), Unwind> = Unwind::error_at(
+        SourceLocation {
+            span: 0..3,
+        },
+        "oops",
+    );
     assert_eq!(err, parser.error("oops"));
 }
