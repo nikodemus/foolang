@@ -125,7 +125,7 @@ fn test_define1() {
     assert_eq!(
         parse_def("define m 1. end"),
         Ok(Def::DefineDef(DefineDef {
-            span: 7..12,
+            source_location: SourceLocation::span(&(7..8)),
             name: "m".to_string(),
             init: int(9..10, 1)
         }))
@@ -137,7 +137,7 @@ fn test_define2() {
     assert_eq!(
         parse_def("define m 1 m. end"),
         Ok(Def::DefineDef(DefineDef {
-            span: 7..14,
+            source_location: SourceLocation::span(&(7..8)),
             name: "m".to_string(),
             init: unary(11..12, "m", int(9..10, 1))
         }))
@@ -525,14 +525,14 @@ fn test_parse_import2() {
 
 #[test]
 fn test_parse_extend1() {
-    let mut ext = ExtensionDef::new(0..6, "Foo");
+    let mut ext = ExtensionDef::new(SourceLocation::span(&(0..6)), "Foo");
     ext.add_method(MethodKind::Instance, method(11..17, "bar", vec![], int(22..24, 42)));
     assert_eq!(parse_def("extend Foo method bar 42 end"), Ok(Def::ExtensionDef(ext)));
 }
 
 #[test]
 fn test_parse_interface1() {
-    let mut interface = InterfaceDef::new(1..10, "Foo");
+    let mut interface = InterfaceDef::new(SourceLocation::span(&(1..10)), "Foo");
     interface.add_method(MethodKind::Instance, method(19..25, "bar", vec![], int(38..40, 42)));
     interface.add_method(MethodKind::Instance, method(71..77, "zot", vec![], int(90..93, 123)));
     interface.add_method(MethodKind::Required, method_signature(55..61, "quux", vec![]));

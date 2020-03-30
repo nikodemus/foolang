@@ -960,7 +960,7 @@ fn interface_prefix(parser: &Parser) -> Parse {
     // had all their own spans.
     //
     // FIXME: duplicated extend_prefix pretty much.
-    let span = parser.span();
+    let source_location = parser.source_location();
     let interface_name = match parser.next_token()? {
         Token::WORD => {
             if parser.slice().chars().next().expect("BUG: empty identifier").is_uppercase() {
@@ -973,7 +973,7 @@ fn interface_prefix(parser: &Parser) -> Parse {
         _ => return parser.error("Expected interface name"),
     };
     // println!("interface: {}", interface_name);
-    let mut interface = InterfaceDef::new(span, interface_name);
+    let mut interface = InterfaceDef::new(source_location, interface_name);
     loop {
         let next = parser.next_token()?;
         if next == Token::WORD && parser.slice() == "end" {
@@ -1016,7 +1016,7 @@ fn interface_prefix(parser: &Parser) -> Parse {
 fn class_prefix(parser: &Parser) -> Parse {
     // FIXME: span is the span of the class, but maybe it would be better if these
     // had all their own spans.
-    let span = parser.span();
+    let source_location = parser.source_location();
     let class_name = match parser.next_token()? {
         Token::WORD => {
             let next = parser.slice().chars().next().expect("BUG: empty identifier");
@@ -1051,7 +1051,7 @@ fn class_prefix(parser: &Parser) -> Parse {
         }
     }
     let size = instance_variables.len();
-    let mut class = ClassDef::new(span, class_name, instance_variables);
+    let mut class = ClassDef::new(source_location, class_name, instance_variables);
     loop {
         let next = parser.next_token()?;
         if next == Token::EOF {
@@ -1106,7 +1106,7 @@ fn define_prefix(parser: &Parser) -> Parse {
         return parser.error("Expected name after 'define'");
     }
 
-    let start = parser.span().start;
+    let source_location = parser.source_location();
     let name = parser.tokenstring();
     let init = parser.parse_seq()?;
 
@@ -1117,7 +1117,7 @@ fn define_prefix(parser: &Parser) -> Parse {
     }
 
     Ok(Syntax::Def(Def::DefineDef(DefineDef {
-        span: start..parser.span().start,
+        source_location,
         name,
         init,
     })))
@@ -1128,7 +1128,7 @@ fn extend_prefix(parser: &Parser) -> Parse {
     // these had all their own spans.
     //
     // FIXME: duplicated class_prefix pretty much.
-    let span = parser.span();
+    let source_location = parser.source_location();
     let class_name = match parser.next_token()? {
         Token::WORD => {
             if parser.slice().chars().next().expect("BUG: empty identifier").is_uppercase() {
@@ -1140,7 +1140,7 @@ fn extend_prefix(parser: &Parser) -> Parse {
         }
         _ => return parser.error("Expected class name"),
     };
-    let mut class = ExtensionDef::new(span, &class_name);
+    let mut class = ExtensionDef::new(source_location, &class_name);
     // println!("extend: {}", &class_name);
     loop {
         let next = parser.next_token()?;

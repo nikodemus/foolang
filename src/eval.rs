@@ -11,7 +11,7 @@ use crate::objects::{
     Vtable,
 };
 use crate::parse::Parser;
-use crate::source_location::{SourceLocation, Span};
+use crate::source_location::SourceLocation;
 use crate::syntax::Syntax;
 use crate::unwind::Unwind;
 
@@ -479,12 +479,13 @@ impl Env {
         Ok(res)
     }
 
-    fn check_not_defined(&self, name: &str, span: &Span) -> Result<(), Unwind> {
+    fn check_not_defined(
+        &self,
+        name: &str,
+        source_location: &SourceLocation,
+    ) -> Result<(), Unwind> {
         if self.has_definition(name) {
-            return Unwind::error_at(
-                SourceLocation::span(span),
-                &format!("Cannot redefine {}", name),
-            );
+            return Unwind::error_at(source_location.clone(), &format!("Cannot redefine {}", name));
         };
         Ok(())
     }
@@ -521,15 +522,15 @@ impl Env {
     fn do_class(&self, definition: &ClassDef) -> Eval {
         // println!("CLASS env: {:?}", self);
         let name = &definition.name;
-        self.check_not_defined(name, &definition.span)?;
-        let class = self.foo.make_class(definition, self)?;
+        self.check_not_defined(name, &definition.source_location)?;
+        let class = self.foo.make_class(definition, self).source(&definition.source_location)?;
         self.define(name, class.clone());
         Ok(class)
     }
 
     fn do_define(&self, definition: &DefineDef) -> Eval {
         let name = &definition.name;
-        self.check_not_defined(name, &definition.span)?;
+        self.check_not_defined(name, &definition.source_location)?;
         let value = self.eval(&definition.init)?;
         self.define(name, value.clone());
         Ok(value)
@@ -558,7 +559,7 @@ impl Env {
 
     fn do_interface(&self, interface: &InterfaceDef) -> Eval {
         let name = &interface.name;
-        self.check_not_defined(&interface.name, &interface.span)?;
+        self.check_not_defined(&interface.name, &interface.source_location)?;
         let interface = self.foo.make_interface(interface, self)?;
         self.define(name, interface.clone());
         Ok(interface)

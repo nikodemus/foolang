@@ -1,0 +1,3 @@
+class BadClass {}
+    is UndefinedInterface
+end

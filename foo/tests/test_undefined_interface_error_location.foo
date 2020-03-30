@@ -1,0 +1,6 @@
+import .undefined_interface
+
+class Main {}
+    class method run: cmd in: sys
+        sys exit
+end
