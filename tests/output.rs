@@ -263,6 +263,21 @@ fn test_undefined_value_type_error_location() -> Test {
 }
 
 #[test]
+fn test_undefined_var_type_error_location() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_undefined_var_type_error_location.foo");
+    // FIXME: Error points to variable, not the type
+    cmd.assert().failure().code(1).stdout(predicates::str::contains(
+        "ERROR: Undefined type: 'UndefinedType'
+050     class method oops
+051         let x::UndefinedType = \"OK\".
+                ^ Undefined type: 'UndefinedType'
+052         x",
+    ));
+    Ok(())
+}
+
+#[test]
 fn test_interface_unimplemented() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/tests/test_interface_unimplemented.foo");

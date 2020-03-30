@@ -433,7 +433,7 @@ impl Env {
         let binding = match bind.typename {
             None => Binding::untyped(value),
             Some(ref typename) => {
-                let vt = self.find_type(typename)?;
+                let vt = self.find_type(typename).source(&bind.source_location)?;
                 value.typecheck(&vt).source(&bind.source_location)?;
                 // FIXME: make the typecheck explicit
                 Binding::typed(vt, value)

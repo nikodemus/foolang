@@ -45,3 +45,9 @@ class UndefinedValueTypeError {}
     class method oops: x
         x::UndefinedType
 end
+
+class UndefinedVarTypeError {}
+    class method oops
+        let x::UndefinedType = "OK".
+        x
+end
