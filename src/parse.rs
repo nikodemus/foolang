@@ -536,15 +536,17 @@ fn precedence_0(_: &Parser, _: Span) -> Result<usize, Unwind> {
 }
 
 fn invalid_prefix(parser: &Parser) -> Parse {
-    parser.error(&format!("Not valid in value position: '{}'", parser.slice()))
+    Unwind::error_at(
+        parser.source_location(),
+        &format!("Not valid in value position: {}", parser.slice()),
+    )
 }
 
-fn invalid_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> ExprParse {
-    parser.error(&format!(
-        "Not valid in operator position: {}, receiver: {:?}",
-        parser.slice(),
-        left
-    ))
+fn invalid_suffix(parser: &Parser, _: Expr, _: PrecedenceFunction) -> ExprParse {
+    Unwind::error_at(
+        parser.source_location(),
+        &format!("Not valid in operator position: {}", parser.slice()),
+    )
 }
 
 fn array_prefix(parser: &Parser) -> Parse {
