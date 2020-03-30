@@ -283,11 +283,10 @@ fn test_undefined_interface_error_location() -> Test {
     cmd.arg("foo/tests/test_undefined_interface_error_location.foo");
     // FIXME: Error points to class
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
-        "ERROR: This here
-056     class method oops
-057         raise \"This here\"
-            ^^^^^ This here
-058 end",
+        " ERROR: Undefined interface: UndefinedInterface
+001 class BadClass {}
+    ^^^^^ Undefined interface: UndefinedInterface
+002     is UndefinedInterface",
     ));
     Ok(())
 }
@@ -298,10 +297,11 @@ fn test_raise_location() -> Test {
     cmd.arg("foo/tests/test_raise_location.foo");
     // FIXME: Error points to class
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
-        "ERROR: Undefined interface: UndefinedInterface
-001 class BadClass {}
-    ^^^^^ Undefined interface: UndefinedInterface
-002     is UndefinedInterface",
+        "ERROR: This here
+056     class method oops
+057         raise \"This here\"
+            ^^^^^ This here
+058 end",
     ));
     Ok(())
 }
