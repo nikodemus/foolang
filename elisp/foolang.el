@@ -127,6 +127,9 @@
 (defconst foolang--space-or-eol-regex
   "\\(\\s-+|\\)")
 
+(defconst foolang--eol-regex
+  "\\s-*$")
+
 (defconst foolang--method-or-class-method-regex
   "\\(class\\s-+\\)?method\\s-+")
 
@@ -144,6 +147,38 @@
           foolang--keyword-regex
           foolang--name-with-opt-type-regex
           "\\)+"))
+
+(defconst foolang--class-and-name-regex
+  "\\s-*class\\s-+\\w+")
+
+(defconst foolang--open-brace-regex
+  "\\s-*{")
+
+(defconst foolang--class-and-name-and-open-brace-regex
+  (concat foolang--class-and-name-regex
+          foolang--open-brace-regex
+          foolang--eol-regex))
+
+(defconst foolang--class-and-name-and-open-brace-and-slotnames-regex
+  (concat foolang--class-and-name-regex
+          foolang--open-brace-regex
+          "\\(\\s-+" foolang--name-with-opt-type-regex "\\)+"
+          foolang--eol-regex))
+
+(defconst foolang--slots-regex
+  ;; FIXME: sloppy regex
+  (concat "\\s-*{.*}"))
+
+(defconst foolang--class-and-name-and-slots-and-newline-end-regex
+  (concat  foolang--class-and-name-regex
+           foolang--slots-regex
+           foolang--newline-or-lines-regex
+           "end\\s-*$"))
+
+(defconst foolang--class-and-name-and-slots-regex
+  (concat foolang--class-and-name-regex
+          foolang--slots-regex
+          "\\s-*$"))
 
 (def-foolang-indent "-- comment" (col base stack ctx)
   (:after
@@ -171,7 +206,7 @@
 
 (def-foolang-indent "class Name {" (col base stack ctx)
   (:after
-    (looking-at " *class\\s-+[A-Z]+\\s-*{\\s-*$"))
+    (looking-at foolang--class-and-name-and-open-brace-regex))
   (:indent
    (list (* 2 foolang-indent-offset)
          (* 2 foolang-indent-offset)
@@ -179,9 +214,20 @@
                stack)
          :slots)))
 
+(def-foolang-indent "class Name { slot" (col base stack ctx)
+  (:after
+    (looking-at foolang--class-and-name-and-open-brace-and-slotnames-regex))
+  (:indent
+   (search-forward "{")
+   (let ((p (foolang--line-length-to-here)))
+     (list (+ p 1) (+ p 1)
+           (cons (cons foolang-indent-offset foolang-indent-offset)
+                 stack)
+           :slots))))
+
 (def-foolang-indent "class Name {...} \\ end" (col base stack ctx)
   (:after
-    (looking-at " *class\\s-+[A-Z]+\\s-*{.*}\\s-*\n\\s-*end\\>"))
+    (looking-at foolang--class-and-name-and-slots-and-newline-end-regex))
   (:indent
    (list col
          base
@@ -190,7 +236,7 @@
 
 (def-foolang-indent "class Name {...}" (col base stack ctx)
   (:after
-    (looking-at " *class\\s-+[A-Z]+\\s-*{.*}\\s-*$"))
+    (looking-at foolang--class-and-name-and-slots-regex))
   (:indent
    (list (+ col foolang-indent-offset)
          base
@@ -208,7 +254,7 @@
 
 (def-foolang-indent "extend Name" (col base stack ctx)
   (:after
-    (looking-at " *extend\\s-+[A-Z]+\\s-*$"))
+    (looking-at " *extend\\s-+\\w+\\s-*$"))
   (:indent
    (list (+ col foolang-indent-offset)
          base
@@ -217,23 +263,12 @@
 
 (def-foolang-indent "interface Name" (col base stack ctx)
   (:after
-    (looking-at " *interface\\s-+[A-Z]+\\s-*$"))
+    (looking-at " *interface\\s-+\\w+\\s-*$"))
   (:indent
    (list (+ col foolang-indent-offset)
          base
          stack
          ctx)))
-
-(def-foolang-indent "class Name { slot" (col base stack ctx)
-  (:after
-    (looking-at " *class\\s-+[A-Z]+\\s-*{\\s-*\\w+$"))
-  (:indent
-   (search-forward "{")
-   (let ((p (foolang--line-length-to-here)))
-     (list (+ p 1) (+ p 1)
-           (cons (cons foolang-indent-offset foolang-indent-offset)
-                 stack)
-           :slots))))
 
 (def-foolang-indent "\\ end" (col base stack ctx)
   (:after
@@ -525,10 +560,10 @@
 
 ;;;; Indentation engine
 
-;; Like this so that I can just C-x C-e here to turn it on.
-(defvar foolang--debug-mode)
-(setq foolang--debug-mode t)
-(setq foolang--debug-mode nil)
+;; Like this so that I can just C-x C-e here to turn it on / off
+(defvar foolang--debug-mode nil)
+;; (setq foolang--debug-mode t)
+;; (setq foolang--debug-mode nil)
 
 (defun foolang--note (control &rest args)
   (when foolang--debug-mode
@@ -556,8 +591,9 @@
     (foolang--indent-line-number (line-number-at-pos) t)))
 
 (defun foolang--indent-line-number (line-number indent-all)
-  (let ((line-move-visual nil))
-    (lexical-let ((base (foolang--find-indent-base indent-all)))
+  (let ((line-move-visual nil)
+        (case-fold-search nil))
+    (let ((base (foolang--find-indent-base indent-all)))
       (foolang--indent-to line-number base base nil nil indent-all))))
 
 (defun foolang--find-indent-base (indent-all)
@@ -777,7 +813,10 @@
                               (foolang-mode)
                               (setq indent-tabs-mode nil)
                               (insert source)
+                              (previous-line)
                               (foolang-indent-all)
+                              (next-line)
+                              (foolang-indent-line)
                               (buffer-substring-no-properties (point-min) (point-max)))))
         (end-of-buffer)
         (if (string= target result)
@@ -881,6 +920,12 @@ method bar"
 class Foo { a }
     -- comment
     method bar")
+
+(def-foolang-indent-test "class-indent-9"
+  "
+class MethodArgTypeError {}"
+  "
+class MethodArgTypeError {}")
 
 (def-foolang-indent-test "interface-indent-1"
   "
