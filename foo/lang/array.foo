@@ -3,6 +3,11 @@ import .collection.Collection
 extend Array
     is Collection
 
+    class method new: size value: init
+        let new = self withCapacity: size.
+        1 to: size do: { |_| new push: init }.
+        new
+
     method _emitOn: stream using: block
         stream print: "[".
         self do: { |x| block value: x }
@@ -64,11 +69,20 @@ extend Array
                        ifFalse: { selection push: elt } }.
         selection.
 
-    method sorted
-        self copy sort.
+    method reverse
+        let n = self size + 1. -- 1 based indexing isn't all sunshine!
+        1 to: n
+          do: { |i|
+                let j = n - i.
+                j <= i
+                    ifTrue: { return self }.
+                let tmp = self at: i.
+                self put: (self at: j) at: i.
+                self put: tmp at: j }.
+          raise "BUG: this should never happen."
 
-    method sorted: block
-        self copy sort: block.
+    method reversed
+        self copy reverse
 
     method sort
         self sort: { |a b| a < b }.
@@ -79,6 +93,12 @@ extend Array
         -- here's a quick and dirty quicksort. O(N^2) worst case, since I
         -- was too lazy to do the center pivot.
         self _quicksort: 1 to: self size by: block.
+
+    method sorted
+        self copy sort.
+
+    method sorted: block
+        self copy sort: block.
 
     method _quicksort: left to: right by: block
         left < right
@@ -190,7 +210,59 @@ class TestArray {}
         assert that: { [9, 2, 1, 8, 7, 3, 5, 4, 6, 0] sort }
                equals: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
                testing: "sort, ten".
+
+    class method testReverse: assert
+        assert that: { let a = [].
+                       a reverse.
+                       a }
+               equals: []
+               testing: "reverse array (empty)".
+        assert that: { let a = [1].
+                       a reverse.
+                       a }
+               equals: [1]
+               testing: "reverse array (1)".
+        assert that: { let a = [1,2].
+                       a reverse.
+                       a }
+               equals: [2,1]
+               testing: "reverse array (2)".
+        assert that: { let a = [1,2,3].
+                       a reverse.
+                       a }
+               equals: [3,2,1]
+               testing: "reverse array (3)".
+        assert that: { let a = [1,2,3].
+                       a reverse }
+               equals: [3,2,1]
+               testing: "reverse array, retval (3)".
+
+    class method testReversed: assert
+        assert that: { let a = [].
+                       a reversed }
+               equals: []
+               testing: "reversed array (empty)".
+        assert that: { let a = [1].
+                       a reversed }
+               equals: [1]
+               testing: "reversed array (1)".
+        assert that: { let a = [1,2].
+                       a reversed }
+               equals: [2,1]
+               testing: "reversed array (2)".
+        assert that: { let a = [1,2,3].
+                       a reversed }
+               equals: [3,2,1]
+               testing: "reversed array (3)".
+        assert that: { let a = [1,2,3].
+                       a reversed.
+                       a }
+               equals: [1,2,3]
+               testing: "reversed array, side-effect (3)".
+
     class method runTests: assert
         self testEquality: assert.
         self testSort: assert.
+        self testReverse: assert.
+        self testReversed: assert.
 end

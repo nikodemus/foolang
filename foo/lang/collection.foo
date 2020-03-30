@@ -25,6 +25,9 @@ interface Collection
     method last
         self at: self size.
 
+    method isEmpty
+        self size is 0
+
     method ifEmpty: block
         self size is 0
             ifTrue: block.
