@@ -248,9 +248,9 @@ impl<'a> Parser<'a> {
             ParserSyntax::General(prefix, _, _) => prefix(self),
             ParserSyntax::Operator(_, _, _) => {
                 let operator = self.tokenstring();
-                let span = self.span();
+                let source_location = self.source_location();
                 Ok(Syntax::Expr(self.parse_expr(PREFIX_PRECEDENCE)?.send(Message {
-                    span,
+                    source_location,
                     selector: format!("prefix{}", operator),
                     args: vec![],
                 })))
@@ -264,7 +264,7 @@ impl<'a> Parser<'a> {
             ParserSyntax::Operator(_, _, precedence) => {
                 let operator = self.tokenstring();
                 Ok(left.send(Message {
-                    span: self.span(),
+                    source_location: self.source_location(),
                     selector: operator,
                     args: vec![self.parse_expr(*precedence)?],
                 }))
@@ -635,7 +635,7 @@ fn identifier_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Resu
         None => {
             // Unary message
             Ok(left.send(Message {
-                span: parser.span(),
+                source_location: parser.source_location(),
                 selector: parser.tokenstring(),
                 args: vec![],
             }))
@@ -657,7 +657,7 @@ fn keyword_suffix(
     let precedence = precedence(parser, parser.span())?;
     let mut selector = parser.tokenstring();
     let mut args = vec![];
-    let start = parser.span();
+    let mut source_location = parser.source_location();
     loop {
         args.push(parser.parse_expr(precedence)?);
         // Two-element lookahead.
@@ -669,10 +669,15 @@ fn keyword_suffix(
             break;
         }
     }
-    // FIXME: Potential multiline span is probably going to cause
-    // trouble in error reporting...
+    // FIXME: Potential multiline span is probably going to cause trouble in
+    // error reporting...
+    //
+    // Might also be nice to mark a non-continuous source location that only
+    // underlines the selector fragments.
+    let ext = parser.span().end - source_location.get_span().end;
+    source_location.extend(ext as isize);
     Ok(left.send(Message {
-        span: start.start..parser.span().end,
+        source_location,
         selector,
         args,
     }))
@@ -758,7 +763,7 @@ fn sequence_suffix(
 }
 
 fn parse_record(parser: &Parser) -> Result<Expr, Unwind> {
-    let start = parser.span().start;
+    let mut source_location = parser.source_location();
     let mut selector = String::new();
     let mut args = Vec::new();
     loop {
@@ -776,12 +781,13 @@ fn parse_record(parser: &Parser) -> Result<Expr, Unwind> {
             _ => return parser.error("Malformed record"),
         }
     }
-    let end = parser.span().end;
+    let ext = parser.span().end - source_location.get_span().end;
+    source_location.extend(ext as isize);
     // This kind of indicates I need a more felicitious representation
     // in order to be able to reliably print back things without converting
     // {x: 42} to Record x: 42 accidentally. (Or I need to not have this syntax).
     Ok(Expr::Var(Var::untyped(SourceLocation::span(&(0..0)), "Record".to_string())).send(Message {
-        span: start..end,
+        source_location,
         selector,
         args,
     }))
@@ -1351,12 +1357,12 @@ fn string_prefix(parser: &Parser) -> Parse {
         Some(part) => part,
     };
     while let Some(right) = parts.pop() {
-        let rspan = right.span();
+        let rsource = right.source_location();
         expr = expr.send(Message {
-            span: rspan.clone(),
+            source_location: rsource.clone(),
             selector: "append:".to_string(),
             args: vec![right.send(Message {
-                span: rspan,
+                source_location: rsource,
                 selector: "toString".to_string(),
                 args: vec![],
             })],
@@ -1498,7 +1504,7 @@ pub mod utils {
 
     pub fn binary(span: Span, name: &str, left: Expr, right: Expr) -> Expr {
         left.send(Message {
-            span,
+            source_location: SourceLocation::span(&span),
             selector: name.to_string(),
             args: vec![right],
         })
@@ -1548,7 +1554,7 @@ pub mod utils {
 
     pub fn keyword(span: Span, name: &str, left: Expr, args: Vec<Expr>) -> Expr {
         left.send(Message {
-            span,
+            source_location: SourceLocation::span(&span),
             selector: name.to_string(),
             args,
         })
@@ -1591,7 +1597,7 @@ pub mod utils {
 
     pub fn unary(span: Span, name: &str, left: Expr) -> Expr {
         left.send(Message {
-            span,
+            source_location: SourceLocation::span(&span),
             selector: name.to_string(),
             args: vec![],
         })

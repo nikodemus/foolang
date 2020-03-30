@@ -307,6 +307,21 @@ fn test_raise_location() -> Test {
 }
 
 #[test]
+fn test_does_not_understand_location() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_does_not_understand_location.foo");
+    // FIXME: Error points to class
+    cmd.assert().failure().code(1).stdout(predicates::str::contains(
+        "ERROR: class DoesNotUnderstandError does not understand: noSuchMethod []
+061     class method oops
+062         self noSuchMethod
+                 ^^^^^^^^^^^^ class DoesNotUnderstandError does not understand: noSuchMethod []
+063 end",
+    ));
+    Ok(())
+}
+
+#[test]
 fn test_interface_unimplemented() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/tests/test_interface_unimplemented.foo");

@@ -3,14 +3,14 @@ use crate::syntax::Syntax;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Message {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub selector: String,
     pub args: Vec<Expr>,
 }
 
 impl Message {
     fn tweak_span(&mut self, shift: usize, ext: isize) {
-        self.span.tweak(shift, ext);
+        self.source_location.tweak(shift, ext);
         for arg in &mut self.args {
             arg.tweak_span(shift, ext);
         }

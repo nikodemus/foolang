@@ -664,7 +664,9 @@ impl Env {
             for arg in &message.args {
                 values.push(self.eval(arg)?);
             }
-            receiver = receiver.send(message.selector.as_str(), &values[..], &self)?
+            receiver = receiver
+                .send(message.selector.as_str(), &values[..], &self)
+                .source(&message.source_location)?
         }
         return Ok(receiver);
     }
