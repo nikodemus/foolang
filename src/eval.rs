@@ -287,8 +287,9 @@ impl Env {
         while !parser.at_eof() {
             match parser.parse() {
                 Ok(Syntax::Def(def)) => self.augment(&def).context(&code)?,
-                // FIXME: Better error needed here.
-                Ok(Syntax::Expr(_)) => return Unwind::error("Expression at toplevel!"),
+                Ok(Syntax::Expr(expr)) => {
+                    return Unwind::error_at(expr.source_location(), "Expression at toplevel")
+                }
                 Err(unwind) => return Err(unwind.with_context(&code)),
             };
         }
@@ -301,7 +302,9 @@ impl Env {
                 match parser.parse()? {
                     Syntax::Def(def) => self.augment(&def).context(parser.code())?,
                     // FIXME: Better error needed here.
-                    Syntax::Expr(_) => return Unwind::error("Expression at toplevel!"),
+                    Syntax::Expr(expr) => {
+                        return Unwind::error_at(expr.source_location(), "Expression at toplevel")
+                    }
                 };
             }
             Ok(())

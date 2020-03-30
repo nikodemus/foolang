@@ -1,0 +1,6 @@
+import .expr_at_toplevel
+
+class Main {}
+    class method run: cmd in: sys
+        sys exit
+end

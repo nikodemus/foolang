@@ -210,6 +210,18 @@ fn test_import_error_location() -> Test {
 }
 
 #[test]
+fn test_expr_at_toplevel_error_location() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_expr_at_toplevel_error_location.foo");
+    cmd.assert().failure().code(1).stdout(predicates::str::contains(
+        "ERROR: Expression at toplevel
+001 1::Integer
+       ^^^^^^^ Expression at toplevel",
+    ));
+    Ok(())
+}
+
+#[test]
 fn test_interface_unimplemented() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/tests/test_interface_unimplemented.foo");
