@@ -24,14 +24,13 @@ impl Def {
 
     pub fn span(&self) -> Span {
         use Def::*;
-        let span = match self {
-            ClassDef(definition) => &definition.span,
-            DefineDef(definition) => &definition.span,
-            ExtensionDef(extension) => &extension.span,
+        match self {
+            ClassDef(definition) => return definition.source_location.get_span(),
+            DefineDef(definition) => return definition.source_location.get_span(),
+            ExtensionDef(extension) => return extension.source_location.get_span(),
             ImportDef(import) => return import.source_location.get_span(),
-            InterfaceDef(interface) => &interface.span,
+            InterfaceDef(interface) => return interface.source_location.get_span(),
         };
-        span.clone()
     }
 
     pub fn shift_span(&mut self, n: usize) {
@@ -47,7 +46,7 @@ impl Def {
             Def::ClassDef(class) => class.tweak_span(shift, extend),
             Def::DefineDef(def) => def.tweak_span(shift, extend),
             Def::ExtensionDef(ext) => {
-                ext.span.tweak(shift, extend);
+                ext.source_location.tweak(shift, extend);
                 for m in &mut ext.instance_methods {
                     m.tweak_span(shift, extend);
                 }
@@ -65,7 +64,7 @@ impl Def {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ClassDef {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub name: String,
     pub instance_variables: Vec<Var>,
     pub instance_methods: Vec<MethodDefinition>,
@@ -75,9 +74,13 @@ pub struct ClassDef {
 }
 
 impl ClassDef {
-    pub fn new(span: Span, name: String, instance_variables: Vec<Var>) -> ClassDef {
+    pub fn new(
+        source_location: SourceLocation,
+        name: String,
+        instance_variables: Vec<Var>,
+    ) -> ClassDef {
         ClassDef {
-            span,
+            source_location,
             name,
             instance_variables,
             instance_methods: Vec::new(),
@@ -88,7 +91,7 @@ impl ClassDef {
     }
 
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
+        self.source_location.tweak(shift, extend);
         for var in &mut self.instance_variables {
             var.source_location.tweak(shift, extend);
         }
@@ -102,7 +105,7 @@ impl ClassDef {
 
     #[cfg(test)]
     pub fn syntax(span: Span, name: String, instance_variables: Vec<Var>) -> Def {
-        Def::ClassDef(ClassDef::new(span, name, instance_variables))
+        Def::ClassDef(ClassDef::new(SourceLocation::span(&span), name, instance_variables))
     }
 
     pub fn add_interface(&mut self, name: &str) {
@@ -136,20 +139,20 @@ impl ClassDef {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct DefineDef {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub name: String,
     pub init: Expr,
 }
 
 impl DefineDef {
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
+        self.source_location.tweak(shift, extend);
     }
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ExtensionDef {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub name: String,
     pub instance_methods: Vec<MethodDefinition>,
     pub class_methods: Vec<MethodDefinition>,
@@ -157,9 +160,9 @@ pub struct ExtensionDef {
 }
 
 impl ExtensionDef {
-    pub fn new(span: Span, name: &str) -> Self {
+    pub fn new(source_location: SourceLocation, name: &str) -> Self {
         Self {
-            span,
+            source_location,
             name: name.to_string(),
             instance_methods: Vec::new(),
             class_methods: Vec::new(),
@@ -206,7 +209,7 @@ impl ImportDef {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct InterfaceDef {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub name: String,
     pub instance_methods: Vec<MethodDefinition>,
     pub class_methods: Vec<MethodDefinition>,
@@ -215,9 +218,9 @@ pub struct InterfaceDef {
 }
 
 impl InterfaceDef {
-    pub fn new(span: Span, name: &str) -> InterfaceDef {
+    pub fn new(source_location: SourceLocation, name: &str) -> InterfaceDef {
         InterfaceDef {
-            span,
+            source_location,
             name: name.to_string(),
             instance_methods: Vec::new(),
             class_methods: Vec::new(),
@@ -227,7 +230,7 @@ impl InterfaceDef {
     }
 
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
+        self.source_location.tweak(shift, extend);
         for m in &mut self.instance_methods {
             m.tweak_span(shift, extend);
         }

@@ -102,7 +102,7 @@ impl Expr {
             Const(constant) => &constant.span,
             Eq(eq) => &eq.span,
             Chain(chain) => return chain.receiver.span(),
-            Raise(raise) => &raise.span,
+            Raise(raise) => return raise.source_location.get_span(),
             Return(ret) => &ret.span,
             // FIXME: Wrong span
             Seq(seq) => return seq.exprs[seq.exprs.len() - 1].span(),
@@ -124,7 +124,7 @@ impl Expr {
             Const(constant) => &constant.span,
             Eq(eq) => &eq.span,
             Chain(chain) => return SourceLocation::span(&chain.receiver.span()),
-            Raise(raise) => &raise.span,
+            Raise(raise) => return raise.source_location.clone(),
             Return(ret) => &ret.span,
             // FIXME: Wrong span
             Seq(seq) => return SourceLocation::span(&seq.exprs[seq.exprs.len() - 1].span()),
@@ -209,6 +209,7 @@ impl Assign {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Bind {
+    pub source_location: SourceLocation,
     pub name: String,
     pub typename: Option<String>,
     pub value: Box<Expr>,
@@ -217,12 +218,14 @@ pub struct Bind {
 
 impl Bind {
     pub fn expr(
+        source_location: SourceLocation,
         name: String,
         typename: Option<String>,
         value: Box<Expr>,
         body: Option<Box<Expr>>,
     ) -> Expr {
         Expr::Bind(Bind {
+            source_location,
             name,
             typename,
             value,
@@ -230,6 +233,7 @@ impl Bind {
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.source_location.tweak(shift, extend);
         self.value.tweak_span(shift, extend);
         if let Some(ref mut expr) = self.body {
             expr.tweak_span(shift, extend);
@@ -375,19 +379,19 @@ impl Eq {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Raise {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub value: Box<Expr>,
 }
 
 impl Raise {
-    pub fn expr(span: Span, value: Expr) -> Expr {
+    pub fn expr(source_location: SourceLocation, value: Expr) -> Expr {
         Expr::Raise(Raise {
-            span,
+            source_location,
             value: Box::new(value),
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
+        self.source_location.tweak(shift, extend);
         self.value.tweak_span(shift, extend);
     }
 }
