@@ -688,7 +688,7 @@ impl Env {
         let value = self.eval(expr)?;
         // WIP: should use expr.source_location, but this will do for now.
         value
-            .typecheck(&self.find_type(&typecheck.typename)?)
+            .typecheck(&self.find_type(&typecheck.typename).source(&typecheck.source_location)?)
             .source(&typecheck.source_location)?;
         Ok(value)
     }

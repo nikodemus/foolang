@@ -235,6 +235,20 @@ fn test_redefinition_error_location() -> Test {
 }
 
 #[test]
+fn test_undefined_value_type_error_location() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_undefined_value_type_error_location.foo");
+    cmd.assert().failure().code(1).stdout(predicates::str::contains(
+        "ERROR: Undefined type: 'UndefinedType'
+039     class method oops: x
+040         x::UndefinedType
+               ^^^^^^^^^^^^^ Undefined type: 'UndefinedType'
+041 end",
+    ));
+    Ok(())
+}
+
+#[test]
 fn test_interface_unimplemented() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/tests/test_interface_unimplemented.foo");
