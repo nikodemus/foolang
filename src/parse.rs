@@ -1273,7 +1273,7 @@ fn return_prefix(parser: &Parser) -> Parse {
 
 fn raise_prefix(parser: &Parser) -> Parse {
     // FIXME: what about "raise x. dead-expr" ?
-    Ok(Syntax::Expr(Raise::expr(parser.span(), parser.parse_single()?)))
+    Ok(Syntax::Expr(Raise::expr(parser.source_location(), parser.parse_single()?)))
 }
 
 /// Takes care of \n, and such. Terminates on { or end of string.

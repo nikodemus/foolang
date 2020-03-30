@@ -51,3 +51,8 @@ class UndefinedVarTypeError {}
         let x::UndefinedType = "OK".
         x
 end
+
+class RaiseError {}
+    class method oops
+        raise "This here"
+end

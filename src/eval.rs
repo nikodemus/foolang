@@ -648,10 +648,7 @@ impl Env {
     }
 
     fn eval_raise(&self, raise: &Raise) -> Eval {
-        Unwind::error_at(
-            SourceLocation::span(&raise.value.span()),
-            self.eval(&raise.value)?.string_as_str(),
-        )
+        Unwind::error_at(raise.source_location.clone(), self.eval(&raise.value)?.string_as_str())
     }
 
     fn eval_return(&self, ret: &Return) -> Eval {
