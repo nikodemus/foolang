@@ -56,3 +56,8 @@ class RaiseError {}
     class method oops
         raise "This here"
 end
+
+class DoesNotUnderstandError {}
+    class method oops
+        self noSuchMethod
+end

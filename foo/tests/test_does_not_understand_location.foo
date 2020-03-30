@@ -1,0 +1,6 @@
+import .errorLocationTests.DoesNotUnderstandError
+
+class Main {}
+    class method run: cmd in: sys
+        DoesNotUnderstandError oops
+end

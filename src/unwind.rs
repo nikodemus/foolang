@@ -170,10 +170,12 @@ impl Unwind {
 
     pub fn add_source_location(&mut self, source_location: &SourceLocation) {
         if let Unwind::Exception(error, location) = self {
-            let code = source_location.code();
-            location.add_source_location(source_location);
-            if let Some(code) = code {
-                location.add_context(&code, error.what())
+            if location.source_location.is_none() {
+                let code = source_location.code();
+                location.add_source_location(source_location);
+                if let Some(code) = code {
+                    location.add_context(&code, error.what())
+                }
             }
         }
     }

@@ -81,12 +81,12 @@ fn parse_operators3() {
         parse_expr("-a - b"),
         Ok(var(1..2, "a")
             .send(Message {
-                span: 0..1,
+                source_location: SourceLocation::span(&(0..1)),
                 selector: "prefix-".to_string(),
                 args: vec![]
             })
             .send(Message {
-                span: 3..4,
+                source_location: SourceLocation::span(&(3..4)),
                 selector: "-".to_string(),
                 args: vec![var(5..6, "b")]
             }))
@@ -383,18 +383,18 @@ fn test_parse_cascade1() {
         parse_expr("self foo; ba1 ba2"),
         Ok(Cascade::expr(
             Box::new(var(0..4, "self").send(Message {
-                span: 5..8,
+                source_location: SourceLocation::span(&(5..8)),
                 selector: "foo".to_string(),
                 args: vec![]
             })),
             vec![vec![
                 Message {
-                    span: 10..13,
+                    source_location: SourceLocation::span(&(10..13)),
                     selector: "ba1".to_string(),
                     args: vec![]
                 },
                 Message {
-                    span: 14..17,
+                    source_location: SourceLocation::span(&(14..17)),
                     selector: "ba2".to_string(),
                     args: vec![]
                 },
@@ -409,31 +409,31 @@ fn test_parse_cascade2() {
         parse_expr("self foo; ba1 ba2; fa1 fa2"),
         Ok(Cascade::expr(
             Box::new(var(0..4, "self").send(Message {
-                span: 5..8,
+                source_location: SourceLocation::span(&(5..8)),
                 selector: "foo".to_string(),
                 args: vec![]
             })),
             vec![
                 vec![
                     Message {
-                        span: 10..13,
+                        source_location: SourceLocation::span(&(10..13)),
                         selector: "ba1".to_string(),
                         args: vec![]
                     },
                     Message {
-                        span: 14..17,
+                        source_location: SourceLocation::span(&(14..17)),
                         selector: "ba2".to_string(),
                         args: vec![]
                     },
                 ],
                 vec![
                     Message {
-                        span: 19..22,
+                        source_location: SourceLocation::span(&(19..22)),
                         selector: "fa1".to_string(),
                         args: vec![]
                     },
                     Message {
-                        span: 23..26,
+                        source_location: SourceLocation::span(&(23..26)),
                         selector: "fa2".to_string(),
                         args: vec![]
                     },
