@@ -1,0 +1,121 @@
+---
+
+Start on the [6] and move that number of steps in any direction. (Forward,
+backward, diagonally, or sideways.) You must stay within the grid. The number
+you land on is the distance of your next move. Your goal is to end on the zero
+in the center.
+
+  6  2  5  2  5  5  2
+  1  5  1  4  3  3  4
+  6  2  3  3  3  5  5
+  5  4  4  0  4  4  4
+  6  2  1  4  4  2  2
+  4  3  3  5  3  3  2
+  6  2  1 [6] 1  5  5
+
+(This puzzle apparently exists as a sidewalk installation in park in Longmond,
+Colorado USA. Hi to all Coloradonians!)
+
+FIXME: Factor breath first searching into lang.algorithms
+
+---
+
+class Puzzle { height width data frontier paths }
+
+    class method height: height width: width data: data start: coordinate
+        let puzzle = self height: height
+                         width: width
+                         data: data
+                         frontier: [coordinate]
+                         paths: (Array new: data size value: False).
+        puzzle setPath: [] row: coordinate first col: coordinate second.
+        puzzle
+
+    method solve
+        { frontier isEmpty }
+            whileFalse: { self doFrontier:
+                              { |coordinate|
+                                (self try: coordinate)
+                                    ifTrue: { return self path: coordinate } } }.
+        [] -- no solution
+
+    method doFrontier: block
+        let old = frontier.
+        frontier = [].
+        old do: block
+
+    method try: coordinate
+        let row = coordinate first.
+        let col = coordinate second.
+        let steps = self row: row col: col.
+        steps is 0
+            ifTrue: { return True }.
+        self expandFromRow: row
+             col: col
+             steps: steps.
+        False
+
+    method path: coordinate
+        let trace = [coordinate].
+
+        {
+            let prev = self pathRow: coordinate first
+                            col: coordinate second.
+            prev
+                ifEmpty: { return trace reverse }.
+            trace push: prev.
+            coordinate = prev
+        }
+            loop
+
+    method indexRow: row col: col
+        height * (row - 1) + col
+
+    method pathRow: row col: col
+        paths at: (self indexRow: row col: col)
+
+    method setPath: prev row: row col: col
+        paths put: prev at: (self indexRow: row col: col)
+
+    method row: row col: col
+        data at: (height * (row - 1) + col)
+
+    method tryRow: row col: col from: prev
+        -- Filter out invalid positions
+        (1 <= row and: row <= height)
+            ifFalse: { return False }.
+        (1 <= col and: col <= width)
+            ifFalse: { return False }.
+        -- Filter out already visited
+        (self pathRow: row col: col) is False
+            ifTrue: { frontier push: [row, col].
+                       self setPath: prev row: row col: col }.
+        False
+
+    method expandFromRow: row col: col steps: steps
+        let here = [row, col].
+        let up = row - steps.
+        let down = row + steps.
+        let left = col + steps.
+        let right = col - steps.
+        [up, row, down]
+            do: { |row|
+                  [left, col, right]
+                      do: { |col|
+                            self tryRow: row col: col from: here }}
+end
+
+class Main {}
+    class method run: cmd in: system
+        let puzzle = Puzzle height: 7 width: 7
+                            data: [ 6, 2, 5, 2, 5, 5, 2,
+                                    1, 5, 1, 4, 3, 3, 4,
+                                    6, 2, 3, 3, 3, 5, 5,
+                                    5, 4, 4, 0, 4, 4, 4,
+                                    6, 2, 1, 4, 4, 2, 2,
+                                    4, 3, 3, 5, 3, 3, 2,
+                                    6, 2, 1, 6, 1, 5, 5 ]
+                            start: [ 7, 4 ].
+        let path = puzzle solve.
+        system output println: "path length {path size}: {path}".
+end

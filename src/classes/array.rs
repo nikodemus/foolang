@@ -101,13 +101,14 @@ pub fn instance_vtable() -> Vtable {
 }
 
 fn class_array_with_capacity(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let n = args[0].integer() as usize;
+    let n = args[0].as_usize("capacity in Array##withCapacity:")?;
     let v = Vec::with_capacity(n);
     Ok(into_array(&env.foo, v))
 }
 
 fn array_at(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
-    receiver.as_vec(move |vec| Ok(vec[(args[0].integer() - 1) as usize].clone()))
+    receiver
+        .as_vec(move |vec| Ok(vec[(args[0].as_usize("index in Array#at:")? - 1) as usize].clone()))
 }
 
 fn array_pop(receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
@@ -129,7 +130,7 @@ fn array_push(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
 fn array_put_at(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     let elt = args[0].clone();
     receiver.as_mut_vec(move |mut vec| {
-        vec[(args[1].integer() - 1) as usize] = elt.clone();
+        vec[(args[1].as_usize("index in Array#put:at:")? - 1) as usize] = elt.clone();
         Ok(elt)
     })
 }

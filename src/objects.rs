@@ -1182,6 +1182,13 @@ impl Object {
         }
     }
 
+    pub fn as_usize(&self, ctx: &str) -> Result<usize, Unwind> {
+        match self.datum {
+            Datum::Integer(i) => Ok(i as usize),
+            _ => Unwind::error(&format!("{:?} is not an unsigned Integer ({})", &self, ctx)),
+        }
+    }
+
     pub fn as_u8(&self, ctx: &str) -> Result<u8, Unwind> {
         match self.datum {
             Datum::Integer(i) => {

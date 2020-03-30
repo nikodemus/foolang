@@ -6,6 +6,16 @@
 
 - _interface [Collection](#collection)_
 
+#### **class method** `new:` _size_ `value:` _value_
+
+Returns a fresh array of specified size, with all elements initialized
+to _value_.
+
+#### **class method** `withCapacity:` _capacity_
+
+Returns a fresh empty array which has been allocated with enough capacity
+to contain _capacity_ elements without reserving more memory.
+
 #### **method** `+` _value_
 
 Returns a fresh array representing the sum of receiver and _value_. Numbers are
@@ -133,6 +143,14 @@ Increses the size of the array by one, adding _object_ as the new last element.
 
 Returns an array containing those elements of the receiver for which _block_
 did not return true.
+
+#### **method** `reverse`
+
+Returns the receiver in reversed order. (Reverses the array in place.)
+
+#### **method** `reversed`
+
+Returns a reversed copy of the receiver.
 
 #### **method** `scalarProjection:` _array_
 
