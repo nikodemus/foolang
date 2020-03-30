@@ -1180,6 +1180,8 @@ fn let_prefix(parser: &Parser) -> Parse {
         return parser.error("Expected variable name after let");
     }
 
+    let source_location = parser.source_location();
+
     let Var {
         name,
         typename,
@@ -1212,7 +1214,7 @@ fn let_prefix(parser: &Parser) -> Parse {
     } else {
         Some(Box::new(parser.parse_seq()?))
     };
-    Ok(Syntax::Expr(Bind::expr(name, typename, Box::new(value), body)))
+    Ok(Syntax::Expr(Bind::expr(source_location, name, typename, Box::new(value), body)))
 }
 
 fn ignore_prefix(parser: &Parser) -> Parse {
@@ -1502,12 +1504,19 @@ pub mod utils {
         })
     }
 
-    pub fn bind(name: &str, value: Expr, body: Expr) -> Expr {
-        Bind::expr(name.to_string(), None, Box::new(value), Some(Box::new(body)))
+    pub fn bind(source_location: SourceLocation, name: &str, value: Expr, body: Expr) -> Expr {
+        Bind::expr(source_location, name.to_string(), None, Box::new(value), Some(Box::new(body)))
     }
 
-    pub fn bind_typed(name: &str, typename: &str, value: Expr, body: Expr) -> Expr {
+    pub fn bind_typed(
+        source_location: SourceLocation,
+        name: &str,
+        typename: &str,
+        value: Expr,
+        body: Expr,
+    ) -> Expr {
         Bind::expr(
+            source_location,
             name.to_string(),
             Some(typename.to_string()),
             Box::new(value),

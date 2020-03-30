@@ -148,7 +148,12 @@ fn test_define2() {
 fn test_let1() {
     assert_eq!(
         parse_expr("let x = 21 + 21. x"),
-        Ok(bind("x", binary(11..12, "+", int(8..10, 21), int(13..15, 21)), var(17..18, "x")))
+        Ok(bind(
+            SourceLocation::span(&(4..5)),
+            "x",
+            binary(11..12, "+", int(8..10, 21), int(13..15, 21)),
+            var(17..18, "x")
+        ))
     );
 }
 
@@ -159,7 +164,12 @@ fn test_let2() {
             "let x = 21 + 21.
              x"
         ),
-        Ok(bind("x", binary(11..12, "+", int(8..10, 21), int(13..15, 21)), var(30..31, "x")))
+        Ok(bind(
+            SourceLocation::span(&(4..5)),
+            "x",
+            binary(11..12, "+", int(8..10, 21), int(13..15, 21)),
+            var(30..31, "x")
+        ))
     );
 }
 
@@ -311,7 +321,13 @@ fn parse_type_assertions1() {
 fn parse_type_assertions2() {
     assert_eq!(
         parse_expr("let x::Integer = 42. x"),
-        Ok(bind_typed("x", "Integer", int(17..19, 42), var(21..22, "x")))
+        Ok(bind_typed(
+            SourceLocation::span(&(4..5)),
+            "x",
+            "Integer",
+            int(17..19, 42),
+            var(21..22, "x")
+        ))
     )
 }
 

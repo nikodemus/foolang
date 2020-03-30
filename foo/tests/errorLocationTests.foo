@@ -21,6 +21,12 @@ class VarTypeError {}
         x = 12312
 end
 
+class VarInitTypeError {}
+    class method oops
+        let x::String = 123124.
+        x
+end
+
 class MethodArgTypeError {}
     class method oops
         self oops: 42

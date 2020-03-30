@@ -317,10 +317,10 @@ fn test_typecheck3() {
                 expected: "Integer".to_string()
             }),
             Location::from(
-                17..21,
+                4..5,
                 concat!(
                     "001 let x::Integer = 42.0. x\n",
-                    "                     ^^^^ Integer expected, got: Float 42.0\n"
+                    "        ^ Integer expected, got: Float 42.0\n"
                 )
             )
         )

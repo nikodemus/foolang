@@ -1,0 +1,6 @@
+import .errorLocationTests.VarInitTypeError
+
+class Main {}
+    class method run: cmd in: sys
+        VarInitTypeError oops
+end

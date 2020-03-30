@@ -170,15 +170,29 @@ fn test_var_type_error_location() -> Test {
 }
 
 #[test]
+fn test_var_init_type_error_location() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_var_init_type_error_location.foo");
+    cmd.assert().failure().code(1).stdout(predicates::str::contains(
+        "ERROR: String expected, got: Integer 123124
+025     class method oops
+026         let x::String = 123124.
+                ^ String expected, got: Integer 123124
+027         x",
+    ));
+    Ok(())
+}
+
+#[test]
 fn test_method_arg_type_error_location() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/tests/test_method_arg_type_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: String expected, got: Integer 42
-026         self oops: 42
-027     class method oops: x::String
+032         self oops: 42
+033     class method oops: x::String
                            ^ String expected, got: Integer 42
-028         raise \"Not supposed to happen! x = {x}\"",
+034         raise \"Not supposed to happen! x = {x}\"",
     ));
     Ok(())
 }
@@ -189,10 +203,10 @@ fn test_block_arg_type_error_location() -> Test {
     cmd.arg("foo/tests/test_block_arg_type_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: String expected, got: Integer 42
-032     class method oops
-033         { |x::String| x } value: 42
+038     class method oops
+039         { |x::String| x } value: 42
                ^ String expected, got: Integer 42
-034 end",
+040 end",
     ));
     Ok(())
 }
@@ -240,10 +254,10 @@ fn test_undefined_value_type_error_location() -> Test {
     cmd.arg("foo/tests/test_undefined_value_type_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Undefined type: 'UndefinedType'
-039     class method oops: x
-040         x::UndefinedType
+045     class method oops: x
+046         x::UndefinedType
                ^^^^^^^^^^^^^ Undefined type: 'UndefinedType'
-041 end",
+047 end",
     ));
     Ok(())
 }

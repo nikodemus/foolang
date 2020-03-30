@@ -209,6 +209,7 @@ impl Assign {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Bind {
+    pub source_location: SourceLocation,
     pub name: String,
     pub typename: Option<String>,
     pub value: Box<Expr>,
@@ -217,12 +218,14 @@ pub struct Bind {
 
 impl Bind {
     pub fn expr(
+        source_location: SourceLocation,
         name: String,
         typename: Option<String>,
         value: Box<Expr>,
         body: Option<Box<Expr>>,
     ) -> Expr {
         Expr::Bind(Bind {
+            source_location,
             name,
             typename,
             value,
@@ -230,6 +233,7 @@ impl Bind {
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
+        self.source_location.tweak(shift, extend);
         self.value.tweak_span(shift, extend);
         if let Some(ref mut expr) = self.body {
             expr.tweak_span(shift, extend);
