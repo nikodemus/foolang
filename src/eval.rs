@@ -479,11 +479,11 @@ impl Env {
         Ok(res)
     }
 
-    fn check_not_defined(&self, name: &str, span: &Span, what: &str) -> Result<(), Unwind> {
+    fn check_not_defined(&self, name: &str, span: &Span) -> Result<(), Unwind> {
         if self.has_definition(name) {
             return Unwind::error_at(
                 SourceLocation::span(span),
-                &format!("Cannot redefine {}", what),
+                &format!("Cannot redefine {}", name),
             );
         };
         Ok(())
@@ -521,7 +521,7 @@ impl Env {
     fn do_class(&self, definition: &ClassDef) -> Eval {
         // println!("CLASS env: {:?}", self);
         let name = &definition.name;
-        self.check_not_defined(name, &definition.span, "Class")?;
+        self.check_not_defined(name, &definition.span)?;
         let class = self.foo.make_class(definition, self)?;
         self.define(name, class.clone());
         Ok(class)
@@ -529,7 +529,7 @@ impl Env {
 
     fn do_define(&self, definition: &DefineDef) -> Eval {
         let name = &definition.name;
-        self.check_not_defined(name, &definition.span, "Constant")?;
+        self.check_not_defined(name, &definition.span)?;
         let value = self.eval(&definition.init)?;
         self.define(name, value.clone());
         Ok(value)
@@ -558,7 +558,7 @@ impl Env {
 
     fn do_interface(&self, interface: &InterfaceDef) -> Eval {
         let name = &interface.name;
-        self.check_not_defined(&interface.name, &interface.span, "Interface")?;
+        self.check_not_defined(&interface.name, &interface.span)?;
         let interface = self.foo.make_interface(interface, self)?;
         self.define(name, interface.clone());
         Ok(interface)

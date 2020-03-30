@@ -222,6 +222,19 @@ fn test_expr_at_toplevel_error_location() -> Test {
 }
 
 #[test]
+fn test_redefinition_error_location() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_redefinition_error_location.foo");
+    cmd.assert().failure().code(1).stdout(predicates::str::contains(
+        "ERROR: Cannot redefine Integer
+001 class Integer {}
+    ^^^^^ Cannot redefine Integer
+002 end",
+    ));
+    Ok(())
+}
+
+#[test]
 fn test_interface_unimplemented() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/tests/test_interface_unimplemented.foo");
