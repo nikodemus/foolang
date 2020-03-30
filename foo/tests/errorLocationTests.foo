@@ -32,3 +32,10 @@ class BlockArgTypeError {}
     class method oops
         { |x::String| x } value: 42
 end
+
+class UndefinedValueTypeError {}
+    class method oops
+        self oops: 42
+    class method oops: x
+        x::UndefinedType
+end

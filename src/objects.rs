@@ -44,6 +44,22 @@ impl Source for Eval {
     }
 }
 
+impl Source for Result<Rc<Vtable>, Unwind> {
+    fn source(mut self, source_location: &SourceLocation) -> Self {
+        if let Err(unwind) = &mut self {
+            unwind.add_source_location(source_location);
+        }
+        self
+    }
+    fn context(self, context: &str) -> Self {
+        if let Err(unwind) = self {
+            Err(unwind.with_context(context))
+        } else {
+            self
+        }
+    }
+}
+
 type MethodFunction = fn(&Object, &[Object], &Env) -> Eval;
 
 #[derive(PartialEq, Clone, Debug)]
