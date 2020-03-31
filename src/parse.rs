@@ -550,19 +550,24 @@ fn invalid_suffix(parser: &Parser, _: Expr, _: PrecedenceFunction) -> ExprParse 
 }
 
 fn array_prefix(parser: &Parser) -> Parse {
-    let start = parser.span().start;
+    let mut source_location = parser.source_location();
     let (token, next) = parser.lookahead()?;
     let next_end = next.end;
-    let (span, data) = if token == Token::SIGIL && parser.slice_at(next) == "]" {
+    let data = if token == Token::SIGIL && parser.slice_at(next) == "]"
+    {
         parser.next_token()?;
-        (start..next_end, vec![])
-    } else {
+        source_location.extend_to(next_end);
+        vec![]
+    }
+    else
+    {
         let mut data = vec![];
         loop {
             data.push(parser.parse_expr(1)?);
             let token = parser.next_token()?;
             if token == Token::SIGIL && parser.slice() == "]" {
-                break (start..parser.span().end, data);
+                source_location.extend_to(parser.span().end);
+                break data;
             }
             if token == Token::SIGIL && parser.slice() == "," {
                 continue;
@@ -570,7 +575,7 @@ fn array_prefix(parser: &Parser) -> Parse {
             return parser.error("Expected ] or ,");
         }
     };
-    Ok(Syntax::Expr(Array::expr(span, data)))
+    Ok(Syntax::Expr(Array::expr(source_location, data)))
 }
 
 fn assign_suffix(

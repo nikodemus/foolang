@@ -93,7 +93,7 @@ impl Expr {
     pub fn span(&self) -> Span {
         use Expr::*;
         let span = match self {
-            Array(array) => &array.span,
+            Array(array) => return array.source_location.get_span(),
             Assign(assign) => return assign.source_location.get_span(),
             Bind(bind) => return bind.value.span(),
             Block(block) => &block.span,
@@ -115,7 +115,7 @@ impl Expr {
     pub fn source_location(&self) -> SourceLocation {
         use Expr::*;
         let span = match self {
-            Array(array) => &array.span,
+            Array(array) => return array.source_location.clone(),
             Assign(assign) => return assign.source_location.clone(),
             Bind(bind) => return SourceLocation::span(&bind.value.span()),
             Block(block) => &block.span,
@@ -167,19 +167,19 @@ impl Expr {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Array {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub data: Vec<Expr>,
 }
 
 impl Array {
-    pub fn expr(span: Span, data: Vec<Expr>) -> Expr {
+    pub fn expr(source_location: SourceLocation, data: Vec<Expr>) -> Expr {
         Expr::Array(Array {
-            span,
+            source_location,
             data,
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
+        self.source_location.tweak(shift, extend);
         for elt in &mut self.data {
             elt.tweak_span(shift, extend);
         }
