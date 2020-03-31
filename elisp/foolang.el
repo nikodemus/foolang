@@ -575,10 +575,12 @@
 (defmacro foolang--save-indentation (body)
   `(prog1
        (save-excursion ,body)
-     (cond ((looking-at "\\s-*$")
-            (delete-trailing-whitespace (line-beginning-position) (line-end-position)))
-           ((looking-back "^\\s-*")
-            (back-to-indentation)))))
+     (let ((region-start (line-beginning-position)))
+       (when (looking-back "^\\s-*")
+         (back-to-indentation)
+         (setq region-start (point)))
+       (when (looking-at "\\s-*$")
+         (delete-trailing-whitespace region-start (line-end-position))))))
 
 (defun foolang-indent-line ()
   (interactive)
@@ -813,9 +815,8 @@
                               (foolang-mode)
                               (setq indent-tabs-mode nil)
                               (insert source)
-                              (previous-line)
+                              (end-of-buffer)
                               (foolang-indent-all)
-                              (next-line)
                               (foolang-indent-line)
                               (buffer-substring-no-properties (point-min) (point-max)))))
         (end-of-buffer)
@@ -825,9 +826,10 @@
           (push name foolang--test-failures)
           (insert "FAILED!\n")
           (insert "WANTED:\n")
-          (insert target)
+          ;; replace newlines to make trailing whitespace easy to spot
+          (insert (replace-regexp-in-string "\n" "|\n" target))
           (insert "\nGOT:\n")
-          (insert result)
+          (insert (replace-regexp-in-string "\n" "|\n" result))
           (lexical-let ((same nil))
             (condition-case nil
                 (dotimes (i (length target))
@@ -1386,6 +1388,16 @@ class Foo { a }
         assert true: { let r = {x: -10, y: 52}.
                        r x + r y == 42 }
                testing: \"record creation and accessors\"")
+
+(def-foolang-indent-test "body-indent-21"
+  "
+class Foo { a }
+method foo
+"
+  "
+class Foo { a }
+    method foo
+        ")
 
 (def-foolang-indent-test "end-indent-2"
   "
