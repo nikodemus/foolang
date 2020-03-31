@@ -1410,7 +1410,7 @@ fn parse_method(parser: &Parser) -> Result<MethodDefinition, Unwind> {
 
 fn parse_method_signature(parser: &Parser) -> Result<MethodDefinition, Unwind> {
     assert_eq!(parser.slice(), "method");
-    let span = parser.span();
+    let source_location = parser.source_location();
     let mut selector = String::new();
     let mut parameters = Vec::new();
     let mut prefix = false;
@@ -1461,7 +1461,7 @@ fn parse_method_signature(parser: &Parser) -> Result<MethodDefinition, Unwind> {
     };
     // FIXME: Would be nice to have a --verbose-parser which would print
     // things like this
-    Ok(MethodDefinition::new(span, selector, parameters, rtype))
+    Ok(MethodDefinition::new(source_location, selector, parameters, rtype))
 }
 
 /// Tests and tools
@@ -1561,20 +1561,22 @@ pub mod utils {
             args,
         })
     }
+
+    #[cfg(test)]
     pub fn method(
         span: Span,
         selector: &str,
         parameters: Vec<&str>,
         body: Expr,
     ) -> MethodDefinition {
-        let mut method = method_signature(span, selector, parameters);
+        let mut method = method_signature(SourceLocation::span(&span), selector, parameters);
         method.body = Some(Box::new(body));
         method
     }
 
-    pub fn method_signature(span: Span, selector: &str, parameters: Vec<&str>) -> MethodDefinition {
+    pub fn method_signature(source_location: SourceLocation, selector: &str, parameters: Vec<&str>) -> MethodDefinition {
         MethodDefinition::new(
-            span,
+            source_location,
             selector.to_string(),
             // FIXME: span
             parameters

@@ -535,7 +535,7 @@ fn test_parse_interface1() {
     let mut interface = InterfaceDef::new(SourceLocation::span(&(1..10)), "Foo");
     interface.add_method(MethodKind::Instance, method(19..25, "bar", vec![], int(38..40, 42)));
     interface.add_method(MethodKind::Instance, method(71..77, "zot", vec![], int(90..93, 123)));
-    interface.add_method(MethodKind::Required, method_signature(55..61, "quux", vec![]));
+    interface.add_method(MethodKind::Required, method_signature(SourceLocation::span(&(55..61)), "quux", vec![]));
     assert_eq!(
         parse_def(
             "
