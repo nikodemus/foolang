@@ -911,6 +911,14 @@ is"
 class Foo { a }
     is")
 
+(def-foolang-indent-test "class-indent-7.1"
+  "
+class Foo { a }
+is Bar"
+  "
+class Foo { a }
+    is Bar")
+
 (def-foolang-indent-test "class-indent-8"
   "
 class Foo { a }
