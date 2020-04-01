@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::expr::*;
-use crate::source_location::{SourceLocation, Span, TweakSpan};
+use crate::source_location::{SourceLocation, TweakSpan};
 use crate::unwind::Unwind;
 
 #[derive(Debug, PartialEq)]
@@ -22,15 +22,15 @@ impl Def {
         }
     }
 
-    pub fn span(&self) -> Span {
+    pub fn source_location(&self) -> SourceLocation {
         use Def::*;
         match self {
-            ClassDef(definition) => return definition.source_location.get_span(),
-            DefineDef(definition) => return definition.source_location.get_span(),
-            ExtensionDef(extension) => return extension.source_location.get_span(),
-            ImportDef(import) => return import.source_location.get_span(),
-            InterfaceDef(interface) => return interface.source_location.get_span(),
-        };
+            ClassDef(definition) => definition.source_location.clone(),
+            DefineDef(definition) => definition.source_location.clone(),
+            ExtensionDef(extension) => extension.source_location.clone(),
+            ImportDef(import) => import.source_location.clone(),
+            InterfaceDef(interface) => interface.source_location.clone(),
+        }
     }
 
     pub fn shift_span(&mut self, n: usize) {

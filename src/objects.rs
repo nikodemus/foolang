@@ -379,7 +379,7 @@ impl Closure {
         if self.params.len() != args.len() {
             return Unwind::error_at(
                 // FIXME: call-site would be 1000 x better...
-                SourceLocation::span(&self.body.span()),
+                self.body.source_location(),
                 &format!(
                     "Argument count mismatch, {} wanted {}, got {}: {:?}",
                     &self.name,

@@ -2,7 +2,9 @@ use std::fmt;
 
 use crate::eval::EnvRef;
 use crate::objects::Object;
-use crate::source_location::{SourceLocation, Span, TweakSpan};
+#[cfg(test)]
+use crate::source_location::Span;
+use crate::source_location::{SourceLocation, TweakSpan};
 
 trait LineIndices {
     // FIXME: learn to implement iterators
@@ -252,6 +254,7 @@ impl Location {
         }
     }
 
+    #[cfg(test)]
     pub fn from(span: Span, context: &str) -> Location {
         Location {
             source_location: Some(SourceLocation::span(&span)),

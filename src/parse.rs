@@ -144,11 +144,15 @@ impl<'a> Parser<'a> {
         self.parse_at_precedence(1)
     }
 
-    pub(crate) fn parse_interpolated_block(&self, span: Span) -> Result<(Expr, usize), Unwind> {
+    pub(crate) fn parse_interpolated_block(
+        &self,
+        source_location: SourceLocation,
+    ) -> Result<(Expr, usize), Unwind> {
+        let span = source_location.get_span();
         let subparser = Parser::new(self.slice_at(span.clone()), &self.root);
         match subparser.parse_prefix_expr() {
             Err(Unwind::Exception(Error::EofError(_), _)) => {
-                Unwind::error_at(SourceLocation::span(&span), "Unterminated string interpolation.")
+                Unwind::error_at(source_location, "Unterminated string interpolation.")
             }
             Err(unwind) => Err(unwind.shift_span(span.start)),
             Ok(Expr::Block(mut block)) => {
@@ -180,10 +184,9 @@ impl<'a> Parser<'a> {
     pub(crate) fn parse_expr(&self, precedence: usize) -> ExprParse {
         match self.parse_at_precedence(precedence)? {
             Syntax::Expr(e) => Ok(e),
-            Syntax::Def(d) => Unwind::error_at(
-                SourceLocation::span(&d.span()),
-                "Definition where expression was expected",
-            ),
+            Syntax::Def(d) => {
+                Unwind::error_at(d.source_location(), "Definition where expression was expected")
+            }
         }
     }
 
@@ -309,7 +312,7 @@ impl<'a> Parser<'a> {
 
     pub(crate) fn source_location(&self) -> SourceLocation {
         match &self.path {
-            None => SourceLocation::span(&self.span()),
+            None => SourceLocation::Span(self.span()),
             Some(path) => SourceLocation::path(path, &self.span()),
         }
     }
@@ -785,12 +788,11 @@ fn parse_record(parser: &Parser) -> Result<Expr, Unwind> {
             _ => return parser.error("Malformed record"),
         }
     }
-    let ext = parser.span().end - source_location.get_span().end;
-    source_location.extend(ext as isize);
+    source_location.extend_to(parser.span().end);
     // This kind of indicates I need a more felicitious representation
     // in order to be able to reliably print back things without converting
     // {x: 42} to Record x: 42 accidentally. (Or I need to not have this syntax).
-    Ok(Expr::Var(Var::untyped(SourceLocation::span(&(0..0)), "Record".to_string())).send(Message {
+    Ok(Expr::Var(Var::untyped(source_location.clone(), "Record".to_string())).send(Message {
         source_location,
         selector,
         args,
@@ -1319,10 +1321,11 @@ fn scan_string_part(parser: &Parser, mut source_location: SourceLocation) -> Res
                 Some((_, 'r')) => res.push_str("\r"),
                 Some((_, '{')) => res.push_str("{"),
                 Some((pos1, _)) => {
+                    source_location.set_span(&(start + pos0..start + pos1));
                     return Unwind::error_at(
-                        SourceLocation::span(&(start + pos0..start + pos1)),
+                        source_location,
                         "Unknown escape sequence in literal string.",
-                    )
+                    );
                 }
             },
             Some((pos, '{')) => {
@@ -1358,8 +1361,9 @@ fn string_prefix(parser: &Parser) -> Parse {
         // println!("literal: {:?}", parser.slice_at(literal.span()));
         span = literal.span().end..span.end;
         parts.push(literal);
+        source_location.set_span(&span);
         if span.start < span.end {
-            let (interp, end) = parser.parse_interpolated_block(span.clone())?;
+            let (interp, end) = parser.parse_interpolated_block(source_location.clone())?;
             parts.push(interp);
             span = end..span.end;
         } else {

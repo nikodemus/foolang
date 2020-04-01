@@ -33,6 +33,7 @@ pub enum SourceLocation {
 }
 
 impl SourceLocation {
+    #[cfg(test)]
     pub fn span(span: &Span) -> SourceLocation {
         SourceLocation::Span(span.clone())
     }
@@ -50,7 +51,7 @@ impl SourceLocation {
     }
     pub fn set_span(&mut self, span: &Span) {
         *self = match &self {
-            SourceLocation::Span(_) => SourceLocation::span(span),
+            SourceLocation::Span(_) => SourceLocation::Span(span.clone()),
             SourceLocation::Path(path) => SourceLocation::path(&path.path, span),
         }
     }
