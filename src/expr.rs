@@ -116,7 +116,7 @@ impl Expr {
         match self {
             Array(array) => array.source_location.clone(),
             Assign(assign) => assign.source_location.clone(),
-            Bind(bind) => SourceLocation::span(&bind.value.span()),
+            Bind(bind) => bind.source_location.clone(),
             Block(block) => block.source_location.clone(),
             Cascade(cascade) => SourceLocation::span(&cascade.receiver.span()),
             Dictionary(dictionary) => dictionary.source_location.clone(),
