@@ -653,7 +653,7 @@ impl Env {
 
     fn eval_return(&self, ret: &Return) -> Eval {
         match self.home() {
-            None => Unwind::error_at(SourceLocation::span(&ret.span), "Nothing to return from"),
+            None => Unwind::error_at(ret.source_location.clone(), "Nothing to return from"),
             Some(env) => Unwind::return_from(env, self.eval(&ret.value)?),
         }
     }

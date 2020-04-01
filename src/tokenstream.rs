@@ -1,4 +1,4 @@
-use crate::source_location::{SourceLocation, Span};
+use crate::source_location::Span;
 use crate::unwind::Unwind;
 
 #[allow(non_camel_case_types)]
@@ -21,7 +21,7 @@ pub enum Token {
 
 #[cfg(test)]
 impl Token {
-    pub fn name(&self) -> String {
+    pub(crate) fn name(&self) -> String {
         format!("{:?}", self)
     }
 }
@@ -35,7 +35,7 @@ pub struct TokenStream<'a> {
 }
 
 impl<'a> TokenStream<'a> {
-    pub fn new(source: &'a str) -> TokenStream<'a> {
+    pub(crate) fn new(source: &'a str) -> TokenStream<'a> {
         let mut stream = TokenStream {
             source,
             indices: std::cell::RefCell::new(source.char_indices()),
@@ -52,19 +52,16 @@ impl<'a> TokenStream<'a> {
         return stream;
     }
 
-    pub fn slice(&self) -> &str {
+    #[cfg(test)]
+    pub(crate) fn slice(&self) -> &str {
         &self.source[self.span()]
     }
 
-    pub fn slice_at(&self, span: Span) -> &str {
+    pub(crate) fn slice_at(&self, span: Span) -> &str {
         &self.source[span]
     }
 
-    pub fn tokenstring(&self) -> String {
-        self.slice().to_string()
-    }
-
-    pub fn span(&self) -> Span {
+    pub(crate) fn span(&self) -> Span {
         self.span.clone()
     }
 
@@ -80,25 +77,13 @@ impl<'a> TokenStream<'a> {
         self.current.1
     }
 
-    pub fn error_at<T>(&self, span: Span, problem: &str) -> Result<T, Unwind> {
-        Unwind::error_at(SourceLocation::span(&span), problem)
-    }
-
-    pub fn error<T>(&self, problem: &str) -> Result<T, Unwind> {
-        self.error_at(self.span(), problem)
-    }
-
-    pub fn eof_error<T>(&self, problem: &str) -> Result<T, Unwind> {
-        Unwind::eof_error_at(self.span(), problem)
-    }
-
     fn result(&mut self, token: Token, span: Span) -> Result<Token, Unwind> {
         self.span = span;
         Ok(token)
     }
 
     // Implements the algorithm from Tokenization.md
-    pub fn scan(&mut self) -> Result<Token, Unwind> {
+    pub(crate) fn scan(&mut self) -> Result<Token, Unwind> {
         //
         // 1. If at end of file, return EOF.
         //

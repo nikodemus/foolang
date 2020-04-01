@@ -2,7 +2,9 @@ use std::fmt;
 
 use crate::eval::EnvRef;
 use crate::objects::Object;
-use crate::source_location::{SourceLocation, Span, TweakSpan};
+use crate::source_location::SourceLocation;
+#[cfg(test)]
+use crate::source_location::Span;
 
 trait LineIndices {
     // FIXME: learn to implement iterators
@@ -130,12 +132,12 @@ impl Unwind {
         ))
     }
 
-    pub fn eof_error_at<T>(span: Span, what: &str) -> Result<T, Unwind> {
+    pub fn eof_error_at<T>(source_location: SourceLocation, what: &str) -> Result<T, Unwind> {
         Err(Unwind::Exception(
             Error::EofError(SimpleError {
                 what: what.to_string(),
             }),
-            Location::new(SourceLocation::span(&span)),
+            Location::new(source_location),
         ))
     }
 
@@ -189,7 +191,7 @@ impl Unwind {
                     context,
                 },
             ) => {
-                loc.shift(offset);
+                loc.shift_span(offset);
                 Unwind::Exception(
                     err,
                     Location {
@@ -252,6 +254,7 @@ impl Location {
         }
     }
 
+    #[cfg(test)]
     pub fn from(span: Span, context: &str) -> Location {
         Location {
             source_location: Some(SourceLocation::span(&span)),

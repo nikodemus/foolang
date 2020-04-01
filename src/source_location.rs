@@ -29,11 +29,11 @@ impl TweakSpan for Span {
 #[derive(Clone, Debug, PartialEq)]
 pub enum SourceLocation {
     Path(SourcePath),
-    Span(Span), // WIP: remove
+    Span(Span),
 }
 
 impl SourceLocation {
-    // WIP: remove
+    #[cfg(test)]
     pub fn span(span: &Span) -> SourceLocation {
         SourceLocation::Span(span.clone())
     }
@@ -51,7 +51,7 @@ impl SourceLocation {
     }
     pub fn set_span(&mut self, span: &Span) {
         *self = match &self {
-            SourceLocation::Span(_) => SourceLocation::span(span),
+            SourceLocation::Span(_) => SourceLocation::Span(span.clone()),
             SourceLocation::Path(path) => SourceLocation::path(&path.path, span),
         }
     }
@@ -69,17 +69,17 @@ impl SourceLocation {
             }
         }
     }
-    pub fn extend_to(&mut self, end: usize) {
-        self.extend((end - self.end()) as isize);
-    }
-}
-
-impl TweakSpan for SourceLocation {
-    fn tweak(&mut self, shift: usize, extend: isize) {
+    pub fn tweak_span(&mut self, shift: usize, extend: isize) {
         match self {
             SourceLocation::Span(span) => span.tweak(shift, extend),
-            SourceLocation::Path(path) => path.tweak(shift, extend),
+            SourceLocation::Path(path) => path.tweak_span(shift, extend),
         }
+    }
+    pub fn extend_span_to(&mut self, end: usize) {
+        self.tweak_span(0, (end - self.end()) as isize);
+    }
+    pub fn shift_span(&mut self, offset: usize) {
+        self.tweak_span(offset, 0);
     }
 }
 
@@ -90,7 +90,7 @@ pub struct SourcePath {
 }
 
 impl SourcePath {
-    fn tweak(&mut self, shift: usize, extend: isize) {
+    fn tweak_span(&mut self, shift: usize, extend: isize) {
         self.span.tweak(shift, extend)
     }
 }
