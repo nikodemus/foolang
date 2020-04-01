@@ -608,7 +608,7 @@ fn eof_suffix(parser: &Parser, _: Expr, _: PrecedenceFunction) -> Result<Expr, U
 }
 
 fn false_prefix(parser: &Parser) -> Parse {
-    Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Boolean(false))))
+    Ok(Syntax::Expr(Const::expr(parser.source_location(), Literal::Boolean(false))))
 }
 
 fn identifier_precedence(parser: &Parser, span: Span) -> Result<usize, Unwind> {
@@ -715,7 +715,7 @@ fn paren_prefix(parser: &Parser) -> Parse {
 }
 
 fn true_prefix(parser: &Parser) -> Parse {
-    Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Boolean(true))))
+    Ok(Syntax::Expr(Const::expr(parser.source_location(), Literal::Boolean(true))))
 }
 
 fn typecheck_suffix(
@@ -861,7 +861,8 @@ fn parse_block_or_dictionary(parser: &Parser) -> Result<Expr, Unwind> {
     //
     let (token, span) = parser.lookahead()?;
     let body = if token == Token::SIGIL && parser.slice_at(span.clone()) == "}" {
-        Const::expr(start.start..span.end, Literal::Boolean(false))
+        source_location.extend_to(span.end);
+        Const::expr(source_location.clone(), Literal::Boolean(false))
     } else {
         let expr = parser.parse_seq()?;
         let (token, span) = parser.lookahead()?;
@@ -1245,7 +1246,7 @@ fn number_prefix(parser: &Parser) -> Parse {
             Ok(i) => i,
             Err(_) => return parser.error("Malformed hexadecimal number"),
         };
-        return Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Integer(integer))));
+        return Ok(Syntax::Expr(Const::expr(parser.source_location(), Literal::Integer(integer))));
     }
     // Binary case
     if slice.len() > 2 && ("0b" == &slice[0..2] || "0B" == &slice[0..2]) {
@@ -1253,7 +1254,7 @@ fn number_prefix(parser: &Parser) -> Parse {
             Ok(i) => i,
             Err(_) => return parser.error("Malformed binary number"),
         };
-        return Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Integer(integer))));
+        return Ok(Syntax::Expr(Const::expr(parser.source_location(), Literal::Integer(integer))));
     }
     // Decimal and float case
     let mut decimal: i64 = 0;
@@ -1268,14 +1269,17 @@ fn number_prefix(parser: &Parser) -> Parse {
             } else {
                 match f64::from_str(slice) {
                     Ok(f) => {
-                        return Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Float(f))))
+                        return Ok(Syntax::Expr(Const::expr(
+                            parser.source_location(),
+                            Literal::Float(f),
+                        )))
                     }
                     Err(_) => return parser.error("Malformed number"),
                 }
             }
         }
     }
-    Ok(Syntax::Expr(Const::expr(parser.span(), Literal::Integer(decimal))))
+    Ok(Syntax::Expr(Const::expr(parser.source_location(), Literal::Integer(decimal))))
 }
 
 fn return_prefix(parser: &Parser) -> Parse {
@@ -1289,20 +1293,19 @@ fn raise_prefix(parser: &Parser) -> Parse {
 }
 
 /// Takes care of \n, and such. Terminates on { or end of string.
-fn scan_string_part(parser: &Parser, span: Span) -> Result<Expr, Unwind> {
-    // println!("scan: '{}'", parser.slice_at(span.clone()));
-    let mut chars = parser.slice_at(span.clone()).char_indices();
-    let mut res = String::new();
+fn scan_string_part(parser: &Parser, mut source_location: SourceLocation) -> Result<Expr, Unwind> {
+    // println!("scan: '{}'", parser.slice_at(source_location.get_span()));
+    let span = source_location.get_span();
     let start = span.start;
+    let mut chars = parser.slice_at(span).char_indices();
+    let mut res = String::new();
     loop {
         match chars.next() {
-            None => return Ok(Const::expr(span, Literal::String(res))),
+            None => return Ok(Const::expr(source_location, Literal::String(res))),
             Some((pos0, '\\')) => match chars.next() {
                 None => {
-                    return Unwind::error_at(
-                        SourceLocation::span(&(start + pos0..start + pos0 + 1)),
-                        "Literal string ends on escape.",
-                    )
+                    source_location.set_span(&(start + pos0..start + pos0 + 1));
+                    return Unwind::error_at(source_location, "Literal string ends on escape.");
                 }
                 Some((_, '"')) => res.push_str("\""),
                 Some((_, '\\')) => res.push_str("\\"),
@@ -1317,16 +1320,21 @@ fn scan_string_part(parser: &Parser, span: Span) -> Result<Expr, Unwind> {
                     )
                 }
             },
-            Some((pos, '{')) => return Ok(Const::expr(start..start + pos, Literal::String(res))),
+            Some((pos, '{')) => {
+                source_location.set_span(&(start..start + pos));
+                return Ok(Const::expr(source_location, Literal::String(res)));
+            }
             Some((_, c)) => res.push(c),
         }
     }
 }
 
 fn string_prefix(parser: &Parser) -> Parse {
+    // FIXME: This should generate either a literal string,
+    // or a StringInterpolation, so that pretty printing can work.
     let slice = parser.slice();
-    let full = parser.span();
-    let mut span = full.clone();
+    let mut source_location = parser.source_location();
+    let mut span = source_location.get_span();
 
     // Strip quotes from ends of span
     let mut n = 0;
@@ -1339,27 +1347,32 @@ fn string_prefix(parser: &Parser) -> Parse {
     let mut parts = Vec::new();
 
     loop {
-        let literal = scan_string_part(parser, span.clone())?;
+        source_location.set_span(&span);
+        // println!("scan: {:?}", &span);
+        let literal = scan_string_part(parser, source_location.clone())?;
+        // println!("literal: {:?}", parser.slice_at(literal.span()));
         span = literal.span().end..span.end;
         parts.push(literal);
         if span.start < span.end {
             let (interp, end) = parser.parse_interpolated_block(span.clone())?;
-            span = end..span.end;
             parts.push(interp);
+            span = end..span.end;
         } else {
             break;
         }
     }
 
     // Extend first and last part spans to cover the quotes, leaving
-    // the parts reversed for what comes nest.
+    // the parts reversed for what comes next.
     parts[0].extend_span(-(n as isize));
     parts.reverse();
     parts[0].extend_span(n as isize);
 
     // Append them all togather.
     let mut expr = match parts.pop() {
-        None => return Ok(Syntax::Expr(Const::expr(span, Literal::String("".to_string())))),
+        None => {
+            return Ok(Syntax::Expr(Const::expr(source_location, Literal::String("".to_string()))));
+        }
         Some(part) => part,
     };
     while let Some(right) = parts.pop() {
@@ -1537,7 +1550,7 @@ pub mod utils {
     }
 
     pub fn boolean(span: Span, value: bool) -> Expr {
-        Const::expr(span, Literal::Boolean(value))
+        Const::expr(SourceLocation::span(&span), Literal::Boolean(value))
     }
 
     pub fn class(span: Span, name: &str, instance_variables: Vec<&str>) -> Def {
@@ -1551,11 +1564,11 @@ pub mod utils {
     }
 
     pub fn float(span: Span, value: f64) -> Expr {
-        Const::expr(span, Literal::Float(value))
+        Const::expr(SourceLocation::span(&span), Literal::Float(value))
     }
 
     pub fn int(span: Span, value: i64) -> Expr {
-        Const::expr(span, Literal::Integer(value))
+        Const::expr(SourceLocation::span(&span), Literal::Integer(value))
     }
 
     pub fn keyword(span: Span, name: &str, left: Expr, args: Vec<Expr>) -> Expr {
@@ -1600,7 +1613,7 @@ pub mod utils {
     }
 
     pub fn string(span: Span, value: &str) -> Expr {
-        Const::expr(span, Literal::String(value.to_string()))
+        Const::expr(SourceLocation::span(&span), Literal::String(value.to_string()))
     }
 
     pub fn typecheck(source_location: SourceLocation, expr: Expr, typename: &str) -> Expr {

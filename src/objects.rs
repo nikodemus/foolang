@@ -855,7 +855,9 @@ impl Foolang {
 
     pub fn load_module_into(&self, file: &Path, env: Env) -> Result<Env, Unwind> {
         // println!("load: {:?}", file);
-        env.load_file(&file, &fs::canonicalize(file).unwrap().parent().unwrap())
+        let res = env.load_file(&file, &fs::canonicalize(file).unwrap().parent().unwrap());
+        // println!(" => {:?} load ok", file);
+        res
     }
 
     pub fn make_array(&self, data: &[Object]) -> Object {

@@ -300,13 +300,31 @@ fn test_comments1() {
 }
 
 #[test]
-fn parse_string1() {
+fn test_parse_string1() {
     assert_eq!(parse_expr(r#" "foo" "#), Ok(string(1..6, "foo")))
 }
 
 #[test]
-fn parse_string2() {
+fn test_parse_string2() {
     assert_eq!(parse_expr(r#" "" "#), Ok(string(1..3, "")))
+}
+
+#[test]
+fn test_parse_string3() {
+    assert_eq!(
+        parse_expr(r#" "{42}" "#),
+        Ok(keyword(
+            6..7,
+            "append:",
+            keyword(
+                3..5,
+                "append:",
+                string(1..2, ""),
+                vec![unary(3..5, "toString", int(3..5, 42))]
+            ),
+            vec![unary(6..7, "toString", string(6..7, ""))]
+        ))
+    )
 }
 
 #[test]

@@ -49,6 +49,12 @@ impl SourceLocation {
             SourceLocation::Path(path) => path.span.clone(),
         }
     }
+    pub fn set_span(&mut self, span: &Span) {
+        *self = match &self {
+            SourceLocation::Span(_) => SourceLocation::span(span),
+            SourceLocation::Path(path) => SourceLocation::path(&path.path, span),
+        }
+    }
     pub fn end(&self) -> usize {
         match &self {
             SourceLocation::Span(span) => span.end,

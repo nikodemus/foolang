@@ -99,7 +99,7 @@ impl Expr {
             Block(block) => return block.source_location.get_span(),
             Cascade(cascade) => return cascade.receiver.span(),
             Dictionary(dictionary) => &dictionary.span,
-            Const(constant) => &constant.span,
+            Const(constant) => return constant.source_location.get_span(),
             Eq(eq) => &eq.span,
             Chain(chain) => return chain.receiver.span(),
             Raise(raise) => return raise.source_location.get_span(),
@@ -121,7 +121,7 @@ impl Expr {
             Block(block) => return block.source_location.clone(),
             Cascade(cascade) => return SourceLocation::span(&cascade.receiver.span()),
             Dictionary(dictionary) => &dictionary.span,
-            Const(constant) => &constant.span,
+            Const(constant) => return constant.source_location.clone(),
             Eq(eq) => &eq.span,
             Chain(chain) => return SourceLocation::span(&chain.receiver.span()),
             Raise(raise) => return raise.source_location.clone(),
@@ -318,7 +318,7 @@ impl Chain {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Const {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub literal: Literal,
 }
 
@@ -331,14 +331,14 @@ pub enum Literal {
 }
 
 impl Const {
-    pub fn expr(span: Span, literal: Literal) -> Expr {
+    pub fn expr(source_location: SourceLocation, literal: Literal) -> Expr {
         Expr::Const(Const {
-            span,
+            source_location,
             literal,
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
+        self.source_location.tweak(shift, extend);
     }
 }
 
