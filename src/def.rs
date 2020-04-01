@@ -255,7 +255,7 @@ impl InterfaceDef {
 // FIXME: split into signature and method
 #[derive(Debug, PartialEq, Clone)]
 pub struct MethodDefinition {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub selector: String,
     pub parameters: Vec<Var>,
     pub body: Option<Box<Expr>>,
@@ -264,13 +264,13 @@ pub struct MethodDefinition {
 
 impl MethodDefinition {
     pub fn new(
-        span: Span,
+        source_location: SourceLocation,
         selector: String,
         parameters: Vec<Var>,
         return_type: Option<String>,
     ) -> MethodDefinition {
         MethodDefinition {
-            span,
+            source_location,
             selector,
             parameters,
             body: None,
@@ -278,7 +278,7 @@ impl MethodDefinition {
         }
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
+        self.source_location.tweak(shift, extend);
         for var in &mut self.parameters {
             var.source_location.tweak(shift, extend);
         }
@@ -292,7 +292,7 @@ impl MethodDefinition {
             Some(body) => Ok(&(*body)),
             None => {
                 return Unwind::error_at(
-                    SourceLocation::span(&self.span),
+                    self.source_location.clone(),
                     "Partial methods not allowed here",
                 );
             }

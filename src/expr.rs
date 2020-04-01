@@ -93,13 +93,13 @@ impl Expr {
     pub fn span(&self) -> Span {
         use Expr::*;
         let span = match self {
-            Array(array) => &array.span,
+            Array(array) => return array.source_location.get_span(),
             Assign(assign) => return assign.source_location.get_span(),
             Bind(bind) => return bind.value.span(),
-            Block(block) => &block.span,
+            Block(block) => return block.source_location.get_span(),
             Cascade(cascade) => return cascade.receiver.span(),
             Dictionary(dictionary) => &dictionary.span,
-            Const(constant) => &constant.span,
+            Const(constant) => return constant.source_location.get_span(),
             Eq(eq) => &eq.span,
             Chain(chain) => return chain.receiver.span(),
             Raise(raise) => return raise.source_location.get_span(),
@@ -115,13 +115,13 @@ impl Expr {
     pub fn source_location(&self) -> SourceLocation {
         use Expr::*;
         let span = match self {
-            Array(array) => &array.span,
+            Array(array) => return array.source_location.clone(),
             Assign(assign) => return assign.source_location.clone(),
             Bind(bind) => return SourceLocation::span(&bind.value.span()),
-            Block(block) => &block.span,
+            Block(block) => return block.source_location.clone(),
             Cascade(cascade) => return SourceLocation::span(&cascade.receiver.span()),
             Dictionary(dictionary) => &dictionary.span,
-            Const(constant) => &constant.span,
+            Const(constant) => return constant.source_location.clone(),
             Eq(eq) => &eq.span,
             Chain(chain) => return SourceLocation::span(&chain.receiver.span()),
             Raise(raise) => return raise.source_location.clone(),
@@ -167,19 +167,19 @@ impl Expr {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Array {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub data: Vec<Expr>,
 }
 
 impl Array {
-    pub fn expr(span: Span, data: Vec<Expr>) -> Expr {
+    pub fn expr(source_location: SourceLocation, data: Vec<Expr>) -> Expr {
         Expr::Array(Array {
-            span,
+            source_location,
             data,
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
+        self.source_location.tweak(shift, extend);
         for elt in &mut self.data {
             elt.tweak_span(shift, extend);
         }
@@ -243,23 +243,28 @@ impl Bind {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Block {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub params: Vec<Var>,
     pub body: Box<Expr>,
     pub rtype: Option<String>,
 }
 
 impl Block {
-    pub fn expr(span: Span, params: Vec<Var>, body: Box<Expr>, rtype: Option<String>) -> Expr {
+    pub fn expr(
+        source_location: SourceLocation,
+        params: Vec<Var>,
+        body: Box<Expr>,
+        rtype: Option<String>,
+    ) -> Expr {
         Expr::Block(Block {
-            span,
+            source_location,
             params,
             body,
             rtype,
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
+        self.source_location.tweak(shift, extend);
         for p in &mut self.params {
             p.source_location.tweak(shift, extend);
         }
@@ -313,7 +318,7 @@ impl Chain {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Const {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub literal: Literal,
 }
 
@@ -326,14 +331,14 @@ pub enum Literal {
 }
 
 impl Const {
-    pub fn expr(span: Span, literal: Literal) -> Expr {
+    pub fn expr(source_location: SourceLocation, literal: Literal) -> Expr {
         Expr::Const(Const {
-            span,
+            source_location,
             literal,
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
+        self.source_location.tweak(shift, extend);
     }
 }
 

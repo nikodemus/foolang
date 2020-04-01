@@ -49,6 +49,18 @@ impl SourceLocation {
             SourceLocation::Path(path) => path.span.clone(),
         }
     }
+    pub fn set_span(&mut self, span: &Span) {
+        *self = match &self {
+            SourceLocation::Span(_) => SourceLocation::span(span),
+            SourceLocation::Path(path) => SourceLocation::path(&path.path, span),
+        }
+    }
+    pub fn end(&self) -> usize {
+        match &self {
+            SourceLocation::Span(span) => span.end,
+            SourceLocation::Path(path) => path.span.end,
+        }
+    }
     pub fn code(&self) -> Option<String> {
         match &self {
             SourceLocation::Span(_) => None,
@@ -56,6 +68,9 @@ impl SourceLocation {
                 Some(std::fs::read_to_string(path.path.as_path()).unwrap())
             }
         }
+    }
+    pub fn extend_to(&mut self, end: usize) {
+        self.extend((end - self.end()) as isize);
     }
 }
 
