@@ -6,7 +6,7 @@ use crate::source_location::SourceLocation;
 use crate::unwind::Unwind;
 
 fn parse_str(source: &str) -> Parse {
-    parse_str_in_path(source, "test/")
+    Parser::new(source, "test/").parse().map_err(|unwind| unwind.with_context(source))
 }
 
 fn parse_expr(source: &str) -> ExprParse {

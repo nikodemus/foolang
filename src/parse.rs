@@ -86,7 +86,7 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn parse_file<P: AsRef<Path>, R>(
+    pub(crate) fn parse_file<P: AsRef<Path>, R>(
         file: P,
         root: P,
         fun: impl FnOnce(&mut Parser) -> Result<R, Unwind>,
@@ -102,7 +102,7 @@ impl<'a> Parser<'a> {
         fun(&mut parser)
     }
 
-    pub fn new<P: AsRef<Path>>(source: &'a str, root: P) -> Parser<'a> {
+    pub(crate) fn new<P: AsRef<Path>>(source: &'a str, root: P) -> Parser<'a> {
         Parser {
             source,
             path: None,
@@ -117,7 +117,11 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn new_with_path<P: AsRef<Path>>(path: &Path, source: &'a str, root: P) -> Parser<'a> {
+    pub(crate) fn new_with_path<P: AsRef<Path>>(
+        path: &Path,
+        source: &'a str,
+        root: P,
+    ) -> Parser<'a> {
         Parser {
             source,
             path: Some(Rc::new(path.to_path_buf())),
@@ -132,7 +136,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> Parse {
+    pub(crate) fn parse(&mut self) -> Parse {
         self._parse()
     }
 
@@ -140,7 +144,7 @@ impl<'a> Parser<'a> {
         self.parse_at_precedence(1)
     }
 
-    pub fn parse_interpolated_block(&self, span: Span) -> Result<(Expr, usize), Unwind> {
+    pub(crate) fn parse_interpolated_block(&self, span: Span) -> Result<(Expr, usize), Unwind> {
         let subparser = Parser::new(self.slice_at(span.clone()), &self.root);
         match subparser.parse_prefix_expr() {
             Err(Unwind::Exception(Error::EofError(_), _)) => {
@@ -173,7 +177,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse_expr(&self, precedence: usize) -> ExprParse {
+    pub(crate) fn parse_expr(&self, precedence: usize) -> ExprParse {
         match self.parse_at_precedence(precedence)? {
             Syntax::Expr(e) => Ok(e),
             Syntax::Def(d) => Unwind::error_at(
@@ -183,16 +187,16 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse_seq(&self) -> ExprParse {
+    pub(crate) fn parse_seq(&self) -> ExprParse {
         self.parse_expr(1)
     }
 
-    pub fn parse_single(&self) -> ExprParse {
+    pub(crate) fn parse_single(&self) -> ExprParse {
         // Dot has precedence 2.
         self.parse_expr(2)
     }
 
-    pub fn parse_at_precedence(&self, precedence: usize) -> Parse {
+    pub(crate) fn parse_at_precedence(&self, precedence: usize) -> Parse {
         match self.parse_prefix()? {
             Syntax::Def(def) => {
                 // println!(" -> def: {:?}", &def);
@@ -205,7 +209,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse_tail(&self, mut expr: Expr, precedence: usize) -> ExprParse {
+    pub(crate) fn parse_tail(&self, mut expr: Expr, precedence: usize) -> ExprParse {
         while precedence < self.next_precedence()? {
             expr = self.parse_suffix(expr)?;
         }
@@ -279,42 +283,42 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn lookahead(&self) -> Result<(Token, Span), Unwind> {
+    pub(crate) fn lookahead(&self) -> Result<(Token, Span), Unwind> {
         self.state.borrow_mut().lookahead()
     }
 
-    pub fn lookahead2(&self) -> Result<((Token, Span), (Token, Span)), Unwind> {
+    pub(crate) fn lookahead2(&self) -> Result<((Token, Span), (Token, Span)), Unwind> {
         self.state.borrow_mut().lookahead2()
     }
 
-    pub fn next_token(&self) -> Result<Token, Unwind> {
+    pub(crate) fn next_token(&self) -> Result<Token, Unwind> {
         self.state.borrow_mut().next_token()
     }
 
-    pub fn tokenstring(&self) -> String {
+    pub(crate) fn tokenstring(&self) -> String {
         self.state.borrow().tokenstring()
     }
 
-    pub fn span(&self) -> Span {
+    pub(crate) fn span(&self) -> Span {
         self.state.borrow().span.clone()
     }
 
-    pub fn code(&self) -> &'a str {
+    pub(crate) fn code(&self) -> &'a str {
         self.source
     }
 
-    pub fn source_location(&self) -> SourceLocation {
+    pub(crate) fn source_location(&self) -> SourceLocation {
         match &self.path {
             None => SourceLocation::span(&self.span()),
             Some(path) => SourceLocation::path(path, &self.span()),
         }
     }
 
-    pub fn slice(&self) -> &str {
+    pub(crate) fn slice(&self) -> &str {
         &self.source[self.span()]
     }
 
-    pub fn at_eof(&self) -> bool {
+    pub(crate) fn at_eof(&self) -> bool {
         if let Ok((Token::EOF, _)) = self.lookahead() {
             return true;
         } else {
@@ -322,7 +326,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn at_comment(&self) -> bool {
+    pub(crate) fn at_comment(&self) -> bool {
         match self.lookahead() {
             Ok((Token::COMMENT, _)) => true,
             Ok((Token::BLOCK_COMMENT, _)) => true,
@@ -364,20 +368,16 @@ impl<'a> Parser<'a> {
         Ok(Some(point..span2.end))
     }
 
-    pub fn slice_at(&self, span: Span) -> &str {
+    pub(crate) fn slice_at(&self, span: Span) -> &str {
         &self.source[span]
     }
 
-    pub fn eof_error<T>(&self, problem: &str) -> Result<T, Unwind> {
-        self.state.borrow().tokenstream.eof_error(problem)
+    pub(crate) fn eof_error<T>(&self, problem: &str) -> Result<T, Unwind> {
+        Unwind::eof_error_at(self.source_location(), problem)
     }
 
-    pub fn error<T>(&self, problem: &str) -> Result<T, Unwind> {
-        self.state.borrow().tokenstream.error_at(self.span(), problem)
-    }
-
-    pub fn error_at<T>(&self, span: Span, problem: &str) -> Result<T, Unwind> {
-        self.state.borrow().tokenstream.error_at(span, problem)
+    pub(crate) fn error<T>(&self, problem: &str) -> Result<T, Unwind> {
+        Unwind::error_at(self.source_location(), problem)
     }
 }
 
@@ -581,7 +581,7 @@ fn assign_suffix(
     precedence: PrecedenceFunction,
 ) -> Result<Expr, Unwind> {
     if !left.is_var() {
-        return parser.error_at(left.span(), "Cannot assign to this");
+        return Unwind::error_at(left.source_location(), "Cannot assign to this");
     }
     let right = parser.parse_expr(precedence(parser, parser.span())?)?;
     // We use the name we're assigning to as the span.
@@ -968,7 +968,8 @@ fn import_prefix(parser: &Parser) -> Parse {
             name,
         })))
     } else {
-        return parser.error_at(name_span, "Expected module name");
+        source_location.set_span(&name_span);
+        return Unwind::error_at(source_location, "Expected module name");
     }
 }
 
@@ -1487,17 +1488,12 @@ fn parse_method_signature(parser: &Parser) -> Result<MethodDefinition, Unwind> {
 
 /// Tests and tools
 
-pub fn parse_str_in_path<P: AsRef<Path>>(source: &str, root: P) -> Parse {
-    // FIXME: Don't like this parse_str/ path.
-    Parser::new(source, root).parse().map_err(|unwind| unwind.with_context(source))
-}
-
 #[cfg(test)]
 pub mod utils {
 
     use crate::parse::*;
 
-    pub fn block(span: Span, params: Vec<&str>, body: Expr) -> Expr {
+    pub(crate) fn block(span: Span, params: Vec<&str>, body: Expr) -> Expr {
         let mut p = span.start + 3;
         let mut blockparams = vec![];
         for param in params {
@@ -1509,7 +1505,7 @@ pub mod utils {
         Block::expr(SourceLocation::span(&span), blockparams, Box::new(body), None)
     }
 
-    pub fn block_typed(span: Span, params: Vec<(&str, &str)>, body: Expr) -> Expr {
+    pub(crate) fn block_typed(span: Span, params: Vec<(&str, &str)>, body: Expr) -> Expr {
         let mut p = span.start + 3;
         let mut blockparams = vec![];
         for param in params {
@@ -1525,7 +1521,7 @@ pub mod utils {
         Block::expr(SourceLocation::span(&span), blockparams, Box::new(body), None)
     }
 
-    pub fn binary(span: Span, name: &str, left: Expr, right: Expr) -> Expr {
+    pub(crate) fn binary(span: Span, name: &str, left: Expr, right: Expr) -> Expr {
         left.send(Message {
             source_location: SourceLocation::span(&span),
             selector: name.to_string(),
@@ -1533,11 +1529,16 @@ pub mod utils {
         })
     }
 
-    pub fn bind(source_location: SourceLocation, name: &str, value: Expr, body: Expr) -> Expr {
+    pub(crate) fn bind(
+        source_location: SourceLocation,
+        name: &str,
+        value: Expr,
+        body: Expr,
+    ) -> Expr {
         Bind::expr(source_location, name.to_string(), None, Box::new(value), Some(Box::new(body)))
     }
 
-    pub fn bind_typed(
+    pub(crate) fn bind_typed(
         source_location: SourceLocation,
         name: &str,
         typename: &str,
@@ -1553,11 +1554,7 @@ pub mod utils {
         )
     }
 
-    pub fn boolean(span: Span, value: bool) -> Expr {
-        Const::expr(SourceLocation::span(&span), Literal::Boolean(value))
-    }
-
-    pub fn class(span: Span, name: &str, instance_variables: Vec<&str>) -> Def {
+    pub(crate) fn class(span: Span, name: &str, instance_variables: Vec<&str>) -> Def {
         let mut p = span.start + "class ".len() + name.len() + " { ".len();
         let mut vars = Vec::new();
         for v in instance_variables {
@@ -1567,15 +1564,15 @@ pub mod utils {
         ClassDef::syntax(span, name.to_string(), vars)
     }
 
-    pub fn float(span: Span, value: f64) -> Expr {
+    pub(crate) fn float(span: Span, value: f64) -> Expr {
         Const::expr(SourceLocation::span(&span), Literal::Float(value))
     }
 
-    pub fn int(span: Span, value: i64) -> Expr {
+    pub(crate) fn int(span: Span, value: i64) -> Expr {
         Const::expr(SourceLocation::span(&span), Literal::Integer(value))
     }
 
-    pub fn keyword(span: Span, name: &str, left: Expr, args: Vec<Expr>) -> Expr {
+    pub(crate) fn keyword(span: Span, name: &str, left: Expr, args: Vec<Expr>) -> Expr {
         left.send(Message {
             source_location: SourceLocation::span(&span),
             selector: name.to_string(),
@@ -1583,8 +1580,7 @@ pub mod utils {
         })
     }
 
-    #[cfg(test)]
-    pub fn method(
+    pub(crate) fn method(
         span: Span,
         selector: &str,
         parameters: Vec<&str>,
@@ -1595,7 +1591,7 @@ pub mod utils {
         method
     }
 
-    pub fn method_signature(
+    pub(crate) fn method_signature(
         source_location: SourceLocation,
         selector: &str,
         parameters: Vec<&str>,
@@ -1612,19 +1608,19 @@ pub mod utils {
         )
     }
 
-    pub fn seq(exprs: Vec<Expr>) -> Expr {
+    pub(crate) fn seq(exprs: Vec<Expr>) -> Expr {
         Seq::expr(exprs)
     }
 
-    pub fn string(span: Span, value: &str) -> Expr {
+    pub(crate) fn string(span: Span, value: &str) -> Expr {
         Const::expr(SourceLocation::span(&span), Literal::String(value.to_string()))
     }
 
-    pub fn typecheck(source_location: SourceLocation, expr: Expr, typename: &str) -> Expr {
+    pub(crate) fn typecheck(source_location: SourceLocation, expr: Expr, typename: &str) -> Expr {
         Typecheck::expr(source_location, Box::new(expr), typename.to_string())
     }
 
-    pub fn unary(span: Span, name: &str, left: Expr) -> Expr {
+    pub(crate) fn unary(span: Span, name: &str, left: Expr) -> Expr {
         left.send(Message {
             source_location: SourceLocation::span(&span),
             selector: name.to_string(),
@@ -1632,7 +1628,7 @@ pub mod utils {
         })
     }
 
-    pub fn var(span: Span, name: &str) -> Expr {
+    pub(crate) fn var(span: Span, name: &str) -> Expr {
         Expr::Var(Var::untyped(SourceLocation::span(&span), name.to_string()))
     }
 }

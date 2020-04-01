@@ -29,11 +29,10 @@ impl TweakSpan for Span {
 #[derive(Clone, Debug, PartialEq)]
 pub enum SourceLocation {
     Path(SourcePath),
-    Span(Span), // WIP: remove
+    Span(Span),
 }
 
 impl SourceLocation {
-    // WIP: remove
     pub fn span(span: &Span) -> SourceLocation {
         SourceLocation::Span(span.clone())
     }

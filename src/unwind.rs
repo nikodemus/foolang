@@ -130,12 +130,12 @@ impl Unwind {
         ))
     }
 
-    pub fn eof_error_at<T>(span: Span, what: &str) -> Result<T, Unwind> {
+    pub fn eof_error_at<T>(source_location: SourceLocation, what: &str) -> Result<T, Unwind> {
         Err(Unwind::Exception(
             Error::EofError(SimpleError {
                 what: what.to_string(),
             }),
-            Location::new(SourceLocation::span(&span)),
+            Location::new(source_location),
         ))
     }
 
