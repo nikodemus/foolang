@@ -280,7 +280,10 @@ fn parse_method3() {
 
 #[test]
 fn parse_return1() {
-    assert_eq!(parse_expr("return 12"), Ok(Return::expr(0..6, int(7..9, 12))));
+    assert_eq!(
+        parse_expr("return 12"),
+        Ok(Return::expr(SourceLocation::span(&(0..6)), int(7..9, 12)))
+    );
 }
 
 #[test]

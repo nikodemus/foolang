@@ -1288,7 +1288,7 @@ fn number_prefix(parser: &Parser) -> Parse {
 
 fn return_prefix(parser: &Parser) -> Parse {
     // FIXME: what about "return x. dead-expr" ?
-    Ok(Syntax::Expr(Return::expr(parser.span(), parser.parse_single()?)))
+    Ok(Syntax::Expr(Return::expr(parser.source_location(), parser.parse_single()?)))
 }
 
 fn raise_prefix(parser: &Parser) -> Parse {

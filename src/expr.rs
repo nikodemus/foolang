@@ -92,46 +92,44 @@ impl Expr {
 
     pub fn span(&self) -> Span {
         use Expr::*;
-        let span = match self {
-            Array(array) => return array.source_location.get_span(),
-            Assign(assign) => return assign.source_location.get_span(),
-            Bind(bind) => return bind.value.span(),
-            Block(block) => return block.source_location.get_span(),
-            Cascade(cascade) => return cascade.receiver.span(),
-            Dictionary(dictionary) => return dictionary.source_location.get_span(),
-            Const(constant) => return constant.source_location.get_span(),
-            Eq(eq) => return eq.source_location.get_span(),
-            Chain(chain) => return chain.receiver.span(),
-            Raise(raise) => return raise.source_location.get_span(),
-            Return(ret) => &ret.span,
+        match self {
+            Array(array) => array.source_location.get_span(),
+            Assign(assign) => assign.source_location.get_span(),
+            Bind(bind) => bind.value.span(),
+            Block(block) => block.source_location.get_span(),
+            Cascade(cascade) => cascade.receiver.span(),
+            Dictionary(dictionary) => dictionary.source_location.get_span(),
+            Const(constant) => constant.source_location.get_span(),
+            Eq(eq) => eq.source_location.get_span(),
+            Chain(chain) => chain.receiver.span(),
+            Raise(raise) => raise.source_location.get_span(),
+            Return(ret) => ret.source_location.get_span(),
             // FIXME: Wrong span
-            Seq(seq) => return seq.exprs[seq.exprs.len() - 1].span(),
-            Typecheck(typecheck) => return typecheck.source_location.get_span(),
-            Var(var) => return var.source_location.get_span(),
-        };
-        span.to_owned()
+            Seq(seq) => seq.exprs[seq.exprs.len() - 1].span(),
+            Typecheck(typecheck) => typecheck.source_location.get_span(),
+            Var(var) => var.source_location.get_span(),
+        }
     }
 
     pub fn source_location(&self) -> SourceLocation {
         use Expr::*;
-        let span = match self {
-            Array(array) => return array.source_location.clone(),
-            Assign(assign) => return assign.source_location.clone(),
-            Bind(bind) => return SourceLocation::span(&bind.value.span()),
-            Block(block) => return block.source_location.clone(),
-            Cascade(cascade) => return SourceLocation::span(&cascade.receiver.span()),
-            Dictionary(dictionary) => return dictionary.source_location.clone(),
-            Const(constant) => return constant.source_location.clone(),
-            Eq(eq) => return eq.source_location.clone(),
-            Chain(chain) => return SourceLocation::span(&chain.receiver.span()),
-            Raise(raise) => return raise.source_location.clone(),
-            Return(ret) => &ret.span,
+        match self {
+            Array(array) => array.source_location.clone(),
+            Assign(assign) => assign.source_location.clone(),
+            Bind(bind) => SourceLocation::span(&bind.value.span()),
+            Block(block) => block.source_location.clone(),
+            Cascade(cascade) => SourceLocation::span(&cascade.receiver.span()),
+            Dictionary(dictionary) => dictionary.source_location.clone(),
+            Const(constant) => constant.source_location.clone(),
+            Eq(eq) => eq.source_location.clone(),
+            Chain(chain) => SourceLocation::span(&chain.receiver.span()),
+            Raise(raise) => raise.source_location.clone(),
+            Return(ret) => ret.source_location.clone(),
             // FIXME: Wrong span
-            Seq(seq) => return SourceLocation::span(&seq.exprs[seq.exprs.len() - 1].span()),
-            Typecheck(typecheck) => return typecheck.source_location.clone(),
-            Var(var) => return var.source_location.clone(),
-        };
-        SourceLocation::span(span)
+            Seq(seq) => SourceLocation::span(&seq.exprs[seq.exprs.len() - 1].span()),
+            Typecheck(typecheck) => typecheck.source_location.clone(),
+            Var(var) => var.source_location.clone(),
+        }
     }
 
     pub fn shift_span(&mut self, n: usize) {
@@ -403,19 +401,19 @@ impl Raise {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Return {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub value: Box<Expr>,
 }
 
 impl Return {
-    pub fn expr(span: Span, value: Expr) -> Expr {
+    pub fn expr(source_location: SourceLocation, value: Expr) -> Expr {
         Expr::Return(Return {
-            span,
+            source_location,
             value: Box::new(value),
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
+        self.source_location.tweak(shift, extend);
         self.value.tweak_span(shift, extend);
     }
 }
