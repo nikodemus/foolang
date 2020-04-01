@@ -122,7 +122,7 @@ impl Expr {
             Dictionary(dictionary) => dictionary.source_location.clone(),
             Const(constant) => constant.source_location.clone(),
             Eq(eq) => eq.source_location.clone(),
-            Chain(chain) => SourceLocation::span(&chain.receiver.span()),
+            Chain(chain) => chain.receiver.source_location(),
             Raise(raise) => raise.source_location.clone(),
             Return(ret) => ret.source_location.clone(),
             // FIXME: Wrong span
