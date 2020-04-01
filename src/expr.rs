@@ -105,7 +105,11 @@ impl Expr {
             Raise(raise) => raise.source_location.get_span(),
             Return(ret) => ret.source_location.get_span(),
             // FIXME: Wrong span
-            Seq(seq) => seq.exprs[seq.exprs.len() - 1].span(),
+            Seq(seq) => {
+                let mut span = seq.exprs[0].span();
+                span.end = seq.exprs[seq.exprs.len() - 1].span().end;
+                span
+            }
             Typecheck(typecheck) => typecheck.source_location.get_span(),
             Var(var) => var.source_location.get_span(),
         }
@@ -125,8 +129,11 @@ impl Expr {
             Chain(chain) => chain.receiver.source_location(),
             Raise(raise) => raise.source_location.clone(),
             Return(ret) => ret.source_location.clone(),
-            // FIXME: Wrong span
-            Seq(seq) => SourceLocation::span(&seq.exprs[seq.exprs.len() - 1].span()),
+            Seq(seq) => {
+                let mut source_location = seq.exprs[0].source_location();
+                source_location.set_span(&self.span());
+                source_location
+            }
             Typecheck(typecheck) => typecheck.source_location.clone(),
             Var(var) => var.source_location.clone(),
         }
