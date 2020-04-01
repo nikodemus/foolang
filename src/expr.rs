@@ -118,7 +118,7 @@ impl Expr {
             Assign(assign) => assign.source_location.clone(),
             Bind(bind) => bind.source_location.clone(),
             Block(block) => block.source_location.clone(),
-            Cascade(cascade) => SourceLocation::span(&cascade.receiver.span()),
+            Cascade(cascade) => cascade.receiver.source_location(),
             Dictionary(dictionary) => dictionary.source_location.clone(),
             Const(constant) => constant.source_location.clone(),
             Eq(eq) => eq.source_location.clone(),
