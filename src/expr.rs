@@ -98,7 +98,7 @@ impl Expr {
             Bind(bind) => return bind.value.span(),
             Block(block) => return block.source_location.get_span(),
             Cascade(cascade) => return cascade.receiver.span(),
-            Dictionary(dictionary) => &dictionary.span,
+            Dictionary(dictionary) => return dictionary.source_location.get_span(),
             Const(constant) => return constant.source_location.get_span(),
             Eq(eq) => &eq.span,
             Chain(chain) => return chain.receiver.span(),
@@ -120,7 +120,7 @@ impl Expr {
             Bind(bind) => return SourceLocation::span(&bind.value.span()),
             Block(block) => return block.source_location.clone(),
             Cascade(cascade) => return SourceLocation::span(&cascade.receiver.span()),
-            Dictionary(dictionary) => &dictionary.span,
+            Dictionary(dictionary) => return dictionary.source_location.clone(),
             Const(constant) => return constant.source_location.clone(),
             Eq(eq) => &eq.span,
             Chain(chain) => return SourceLocation::span(&chain.receiver.span()),
@@ -344,19 +344,19 @@ impl Const {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Dictionary {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub assoc: Vec<(Expr, Expr)>,
 }
 
 impl Dictionary {
-    pub fn expr(span: Span, assoc: Vec<(Expr, Expr)>) -> Expr {
+    pub fn expr(source_location: SourceLocation, assoc: Vec<(Expr, Expr)>) -> Expr {
         Expr::Dictionary(Dictionary {
-            span,
+            source_location,
             assoc,
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
+        self.source_location.tweak(shift, extend);
     }
 }
 

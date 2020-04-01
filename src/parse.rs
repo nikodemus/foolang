@@ -797,7 +797,11 @@ fn parse_record(parser: &Parser) -> Result<Expr, Unwind> {
     }))
 }
 
-fn parse_dictionary(parser: &Parser, start: Span, mut key: Expr) -> Result<Expr, Unwind> {
+fn parse_dictionary(
+    parser: &Parser,
+    mut source_location: SourceLocation,
+    mut key: Expr,
+) -> Result<Expr, Unwind> {
     let mut assoc = Vec::new();
     loop {
         if "->" != parser.slice() {
@@ -824,12 +828,12 @@ fn parse_dictionary(parser: &Parser, start: Span, mut key: Expr) -> Result<Expr,
             _ => return parser.error("Expected ',' or '}'"),
         }
     }
-    Ok(Dictionary::expr(start.start..parser.span().end, assoc))
+    source_location.extend_to(parser.span().end);
+    Ok(Dictionary::expr(source_location, assoc))
 }
 
 fn parse_block_or_dictionary(parser: &Parser) -> Result<Expr, Unwind> {
     let mut source_location = parser.source_location();
-    let start = parser.span();
     assert_eq!("{", parser.slice());
     //
     // Blocks only (if any of this happens, we're in a block)
@@ -871,7 +875,7 @@ fn parse_block_or_dictionary(parser: &Parser) -> Result<Expr, Unwind> {
                 return parser.error("Neither block nor dictionary");
             }
             parser.next_token()?;
-            return parse_dictionary(parser, start, expr);
+            return parse_dictionary(parser, source_location, expr);
         } else {
             expr
         }

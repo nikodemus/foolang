@@ -585,7 +585,10 @@ end"
 fn test_parse_dict1() {
     assert_eq!(
         parse_expr(r#"{"key1" -> "val1"}"#),
-        Ok(Dictionary::expr(0..18, vec![(string(1..7, "key1"), string(11..17, "val1"))]))
+        Ok(Dictionary::expr(
+            SourceLocation::span(&(0..18)),
+            vec![(string(1..7, "key1"), string(11..17, "val1"))]
+        ))
     );
 }
 
@@ -593,7 +596,10 @@ fn test_parse_dict1() {
 fn test_parse_dict2() {
     assert_eq!(
         parse_expr(r#"{"key1" -> "val1",}"#),
-        Ok(Dictionary::expr(0..19, vec![(string(1..7, "key1"), string(11..17, "val1"))]))
+        Ok(Dictionary::expr(
+            SourceLocation::span(&(0..19)),
+            vec![(string(1..7, "key1"), string(11..17, "val1"))]
+        ))
     );
 }
 
@@ -602,7 +608,7 @@ fn test_parse_dict3() {
     assert_eq!(
         parse_expr(r#"{"key1" -> "val1", 2 -> 2.0}"#),
         Ok(Dictionary::expr(
-            0..28,
+            SourceLocation::span(&(0..28)),
             vec![
                 (string(1..7, "key1"), string(11..17, "val1")),
                 (int(19..20, 2), float(24..27, 2.0))
@@ -616,7 +622,7 @@ fn test_parse_dict4() {
     assert_eq!(
         parse_expr(r#"{"key1" -> "val1", foo bar -> 2.0}"#),
         Ok(Dictionary::expr(
-            0..34,
+            SourceLocation::span(&(0..34)),
             vec![
                 (string(1..7, "key1"), string(11..17, "val1")),
                 (unary(23..26, "bar", var(19..22, "foo")), float(30..33, 2.0))
