@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use crate::expr::*;
-use crate::source_location::{SourceLocation, TweakSpan};
+use crate::source_location::SourceLocation;
+#[cfg(test)]
+use crate::source_location::Span;
 use crate::unwind::Unwind;
 
 #[derive(Debug, PartialEq)]
@@ -46,7 +48,7 @@ impl Def {
             Def::ClassDef(class) => class.tweak_span(shift, extend),
             Def::DefineDef(def) => def.tweak_span(shift, extend),
             Def::ExtensionDef(ext) => {
-                ext.source_location.tweak(shift, extend);
+                ext.source_location.tweak_span(shift, extend);
                 for m in &mut ext.instance_methods {
                     m.tweak_span(shift, extend);
                 }
@@ -55,7 +57,7 @@ impl Def {
                 }
             }
             Def::ImportDef(import) => {
-                import.source_location.tweak(shift, extend);
+                import.source_location.tweak_span(shift, extend);
             }
             Def::InterfaceDef(interface) => interface.tweak_span(shift, extend),
         }
@@ -91,9 +93,9 @@ impl ClassDef {
     }
 
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.source_location.tweak(shift, extend);
+        self.source_location.tweak_span(shift, extend);
         for var in &mut self.instance_variables {
-            var.source_location.tweak(shift, extend);
+            var.source_location.tweak_span(shift, extend);
         }
         for m in &mut self.instance_methods {
             m.tweak_span(shift, extend);
@@ -146,7 +148,7 @@ pub struct DefineDef {
 
 impl DefineDef {
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.source_location.tweak(shift, extend);
+        self.source_location.tweak_span(shift, extend);
     }
 }
 
@@ -230,7 +232,7 @@ impl InterfaceDef {
     }
 
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.source_location.tweak(shift, extend);
+        self.source_location.tweak_span(shift, extend);
         for m in &mut self.instance_methods {
             m.tweak_span(shift, extend);
         }
@@ -278,9 +280,9 @@ impl MethodDefinition {
         }
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.source_location.tweak(shift, extend);
+        self.source_location.tweak_span(shift, extend);
         for var in &mut self.parameters {
-            var.source_location.tweak(shift, extend);
+            var.source_location.tweak_span(shift, extend);
         }
         match &mut self.body {
             Some(ref mut span) => span.tweak_span(shift, extend),

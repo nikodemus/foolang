@@ -6,7 +6,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 use std::string::ToString;
 
-use crate::source_location::{SourceLocation, Span, TweakSpan};
+use crate::source_location::{SourceLocation, Span};
 use crate::tokenstream::{Token, TokenStream};
 use crate::unwind::{Error, Unwind};
 
@@ -156,7 +156,7 @@ impl<'a> Parser<'a> {
             }
             Err(unwind) => Err(unwind.shift_span(span.start)),
             Ok(Expr::Block(mut block)) => {
-                block.source_location.shift(span.start);
+                block.source_location.shift_span(span.start);
                 if !block.params.is_empty() {
                     return Unwind::error_at(
                         block.source_location.clone(),
@@ -175,7 +175,7 @@ impl<'a> Parser<'a> {
             }
             Ok(other) => {
                 let mut errloc = other.source_location();
-                errloc.shift(span.start);
+                errloc.shift_span(span.start);
                 Unwind::error_at(errloc, "Interpolation not a block.")
             }
         }
@@ -558,7 +558,7 @@ fn array_prefix(parser: &Parser) -> Parse {
     let next_end = next.end;
     let data = if token == Token::SIGIL && parser.slice_at(next) == "]" {
         parser.next_token()?;
-        source_location.extend_to(next_end);
+        source_location.extend_span_to(next_end);
         vec![]
     } else {
         let mut data = vec![];
@@ -566,7 +566,7 @@ fn array_prefix(parser: &Parser) -> Parse {
             data.push(parser.parse_expr(1)?);
             let token = parser.next_token()?;
             if token == Token::SIGIL && parser.slice() == "]" {
-                source_location.extend_to(parser.span().end);
+                source_location.extend_span_to(parser.span().end);
                 break data;
             }
             if token == Token::SIGIL && parser.slice() == "," {
@@ -681,8 +681,7 @@ fn keyword_suffix(
     //
     // Might also be nice to mark a non-continuous source location that only
     // underlines the selector fragments.
-    let ext = parser.span().end - source_location.get_span().end;
-    source_location.extend(ext as isize);
+    source_location.extend_span_to(parser.span().end);
     Ok(left.send(Message {
         source_location,
         selector,
@@ -788,7 +787,7 @@ fn parse_record(parser: &Parser) -> Result<Expr, Unwind> {
             _ => return parser.error("Malformed record"),
         }
     }
-    source_location.extend_to(parser.span().end);
+    source_location.extend_span_to(parser.span().end);
     // This kind of indicates I need a more felicitious representation
     // in order to be able to reliably print back things without converting
     // {x: 42} to Record x: 42 accidentally. (Or I need to not have this syntax).
@@ -830,7 +829,7 @@ fn parse_dictionary(
             _ => return parser.error("Expected ',' or '}'"),
         }
     }
-    source_location.extend_to(parser.span().end);
+    source_location.extend_span_to(parser.span().end);
     Ok(Dictionary::expr(source_location, assoc))
 }
 
@@ -867,7 +866,7 @@ fn parse_block_or_dictionary(parser: &Parser) -> Result<Expr, Unwind> {
     //
     let (token, span) = parser.lookahead()?;
     let body = if token == Token::SIGIL && parser.slice_at(span.clone()) == "}" {
-        source_location.extend_to(span.end);
+        source_location.extend_span_to(span.end);
         Const::expr(source_location.clone(), Literal::Boolean(false))
     } else {
         let expr = parser.parse_seq()?;
@@ -886,7 +885,7 @@ fn parse_block_or_dictionary(parser: &Parser) -> Result<Expr, Unwind> {
     // If we're still here we're in a block
     //
     let end = parser.next_token()?;
-    source_location.extend_to(parser.span().end);
+    source_location.extend_span_to(parser.span().end);
     // FIXME: hardcoded {
     // Would be nice to be able to swap between [] and {} and
     // keep this function same,
@@ -931,8 +930,7 @@ fn import_prefix(parser: &Parser) -> Parse {
         if let Some(star) = parser.dotted_name_at(parser.span().end, true)? {
             spec.push_str(parser.slice_at(star));
         }
-        let ext = parser.span().end - source_location.get_span().end;
-        source_location.extend(ext as isize);
+        source_location.extend_span_to(parser.span().end);
         let mut path = PathBuf::new();
         let mut prefix = String::new();
         let mut name = None;

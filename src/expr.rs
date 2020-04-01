@@ -1,4 +1,4 @@
-use crate::source_location::{SourceLocation, Span, TweakSpan};
+use crate::source_location::{SourceLocation, Span};
 use crate::syntax::Syntax;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -10,7 +10,7 @@ pub struct Message {
 
 impl Message {
     fn tweak_span(&mut self, shift: usize, ext: isize) {
-        self.source_location.tweak(shift, ext);
+        self.source_location.tweak_span(shift, ext);
         for arg in &mut self.args {
             arg.tweak_span(shift, ext);
         }
@@ -164,7 +164,7 @@ impl Expr {
             Return(ret) => ret.tweak_span(shift, extend),
             Typecheck(typecheck) => typecheck.tweak_span(shift, extend),
             Var(var) => {
-                var.source_location.tweak(shift, extend);
+                var.source_location.tweak_span(shift, extend);
             }
         };
     }
@@ -184,7 +184,7 @@ impl Array {
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.source_location.tweak(shift, extend);
+        self.source_location.tweak_span(shift, extend);
         for elt in &mut self.data {
             elt.tweak_span(shift, extend);
         }
@@ -207,7 +207,7 @@ impl Assign {
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.source_location.tweak(shift, extend);
+        self.source_location.tweak_span(shift, extend);
         self.value.tweak_span(shift, extend);
     }
 }
@@ -238,7 +238,7 @@ impl Bind {
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.source_location.tweak(shift, extend);
+        self.source_location.tweak_span(shift, extend);
         self.value.tweak_span(shift, extend);
         if let Some(ref mut expr) = self.body {
             expr.tweak_span(shift, extend);
@@ -269,9 +269,9 @@ impl Block {
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.source_location.tweak(shift, extend);
+        self.source_location.tweak_span(shift, extend);
         for p in &mut self.params {
-            p.source_location.tweak(shift, extend);
+            p.source_location.tweak_span(shift, extend);
         }
         self.body.tweak_span(shift, extend);
     }
@@ -343,7 +343,7 @@ impl Const {
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.source_location.tweak(shift, extend);
+        self.source_location.tweak_span(shift, extend);
     }
 }
 
@@ -361,7 +361,7 @@ impl Dictionary {
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.source_location.tweak(shift, extend);
+        self.source_location.tweak_span(shift, extend);
     }
 }
 
@@ -381,7 +381,7 @@ impl Eq {
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.source_location.tweak(shift, extend);
+        self.source_location.tweak_span(shift, extend);
         self.left.tweak_span(shift, extend);
         self.right.tweak_span(shift, extend);
     }
@@ -401,7 +401,7 @@ impl Raise {
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.source_location.tweak(shift, extend);
+        self.source_location.tweak_span(shift, extend);
         self.value.tweak_span(shift, extend);
     }
 }
@@ -420,7 +420,7 @@ impl Return {
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.source_location.tweak(shift, extend);
+        self.source_location.tweak_span(shift, extend);
         self.value.tweak_span(shift, extend);
     }
 }
@@ -459,7 +459,7 @@ impl Typecheck {
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.source_location.tweak(shift, extend);
+        self.source_location.tweak_span(shift, extend);
         self.expr.tweak_span(shift, extend);
     }
 }

@@ -2,9 +2,9 @@ use std::fmt;
 
 use crate::eval::EnvRef;
 use crate::objects::Object;
+use crate::source_location::SourceLocation;
 #[cfg(test)]
 use crate::source_location::Span;
-use crate::source_location::{SourceLocation, TweakSpan};
 
 trait LineIndices {
     // FIXME: learn to implement iterators
@@ -191,7 +191,7 @@ impl Unwind {
                     context,
                 },
             ) => {
-                loc.shift(offset);
+                loc.shift_span(offset);
                 Unwind::Exception(
                     err,
                     Location {
