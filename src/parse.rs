@@ -648,9 +648,9 @@ fn identifier_suffix(parser: &Parser, left: Expr, _: PrecedenceFunction) -> Resu
 }
 
 fn is_suffix(parser: &Parser, left: Expr, pre: PrecedenceFunction) -> Result<Expr, Unwind> {
-    let span = parser.span();
-    let right = parser.parse_expr(pre(parser, span.clone())?)?;
-    Ok(Eq::expr(span, Box::new(left), Box::new(right)))
+    let source_location = parser.source_location();
+    let right = parser.parse_expr(pre(parser, parser.span())?)?;
+    Ok(Eq::expr(source_location, Box::new(left), Box::new(right)))
 }
 
 fn keyword_suffix(

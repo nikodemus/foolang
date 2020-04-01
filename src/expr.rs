@@ -100,7 +100,7 @@ impl Expr {
             Cascade(cascade) => return cascade.receiver.span(),
             Dictionary(dictionary) => return dictionary.source_location.get_span(),
             Const(constant) => return constant.source_location.get_span(),
-            Eq(eq) => &eq.span,
+            Eq(eq) => return eq.source_location.get_span(),
             Chain(chain) => return chain.receiver.span(),
             Raise(raise) => return raise.source_location.get_span(),
             Return(ret) => &ret.span,
@@ -122,7 +122,7 @@ impl Expr {
             Cascade(cascade) => return SourceLocation::span(&cascade.receiver.span()),
             Dictionary(dictionary) => return dictionary.source_location.clone(),
             Const(constant) => return constant.source_location.clone(),
-            Eq(eq) => &eq.span,
+            Eq(eq) => return eq.source_location.clone(),
             Chain(chain) => return SourceLocation::span(&chain.receiver.span()),
             Raise(raise) => return raise.source_location.clone(),
             Return(ret) => &ret.span,
@@ -362,21 +362,21 @@ impl Dictionary {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Eq {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub left: Box<Expr>,
     pub right: Box<Expr>,
 }
 
 impl Eq {
-    pub fn expr(span: Span, left: Box<Expr>, right: Box<Expr>) -> Expr {
+    pub fn expr(source_location: SourceLocation, left: Box<Expr>, right: Box<Expr>) -> Expr {
         Expr::Eq(Eq {
-            span,
+            source_location,
             left,
             right,
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
+        self.source_location.tweak(shift, extend);
         self.left.tweak_span(shift, extend);
         self.right.tweak_span(shift, extend);
     }
