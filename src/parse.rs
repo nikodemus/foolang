@@ -148,27 +148,27 @@ impl<'a> Parser<'a> {
             }
             Err(unwind) => Err(unwind.shift_span(span.start)),
             Ok(Expr::Block(mut block)) => {
-                block.span.shift(span.start);
+                block.source_location.shift(span.start);
                 if !block.params.is_empty() {
                     return Unwind::error_at(
-                        SourceLocation::span(&block.span),
+                        block.source_location.clone(),
                         "Interpolated block has variables.",
                     );
                 }
                 if block.rtype.is_some() {
                     return Unwind::error_at(
-                        SourceLocation::span(&block.span),
+                        block.source_location.clone(),
                         "Interpolated block has a return type.",
                     );
                 }
                 let mut expr = *block.body;
                 expr.shift_span(span.start);
-                return Ok((expr, block.span.end));
+                return Ok((expr, block.source_location.end()));
             }
             Ok(other) => {
-                let mut errspan = other.span();
-                errspan.shift(span.start);
-                Unwind::error_at(SourceLocation::span(&errspan), "Interpolation not a block.")
+                let mut errloc = other.source_location();
+                errloc.shift(span.start);
+                Unwind::error_at(errloc, "Interpolation not a block.")
             }
         }
     }
@@ -553,14 +553,11 @@ fn array_prefix(parser: &Parser) -> Parse {
     let mut source_location = parser.source_location();
     let (token, next) = parser.lookahead()?;
     let next_end = next.end;
-    let data = if token == Token::SIGIL && parser.slice_at(next) == "]"
-    {
+    let data = if token == Token::SIGIL && parser.slice_at(next) == "]" {
         parser.next_token()?;
         source_location.extend_to(next_end);
         vec![]
-    }
-    else
-    {
+    } else {
         let mut data = vec![];
         loop {
             data.push(parser.parse_expr(1)?);
@@ -831,6 +828,7 @@ fn parse_dictionary(parser: &Parser, start: Span, mut key: Expr) -> Result<Expr,
 }
 
 fn parse_block_or_dictionary(parser: &Parser) -> Result<Expr, Unwind> {
+    let mut source_location = parser.source_location();
     let start = parser.span();
     assert_eq!("{", parser.slice());
     //
@@ -881,11 +879,12 @@ fn parse_block_or_dictionary(parser: &Parser) -> Result<Expr, Unwind> {
     // If we're still here we're in a block
     //
     let end = parser.next_token()?;
+    source_location.extend_to(parser.span().end);
     // FIXME: hardcoded {
     // Would be nice to be able to swap between [] and {} and
     // keep this function same,
     if end == Token::SIGIL && parser.slice() == "}" {
-        Ok(Block::expr(start.start..parser.span().end, params, Box::new(body), rtype))
+        Ok(Block::expr(source_location, params, Box::new(body), rtype))
     } else if end == Token::EOF {
         parser.eof_error("Unexpected EOF while pasing a block: expected } as block terminator")
     } else {
@@ -1490,7 +1489,7 @@ pub mod utils {
             p = end + 2;
             blockparams.push(Var::untyped(SourceLocation::span(&(start..end)), param.to_string()))
         }
-        Block::expr(span, blockparams, Box::new(body), None)
+        Block::expr(SourceLocation::span(&span), blockparams, Box::new(body), None)
     }
 
     pub fn block_typed(span: Span, params: Vec<(&str, &str)>, body: Expr) -> Expr {
@@ -1506,7 +1505,7 @@ pub mod utils {
                 param.1.to_string(),
             ));
         }
-        Block::expr(span, blockparams, Box::new(body), None)
+        Block::expr(SourceLocation::span(&span), blockparams, Box::new(body), None)
     }
 
     pub fn binary(span: Span, name: &str, left: Expr, right: Expr) -> Expr {
@@ -1579,7 +1578,11 @@ pub mod utils {
         method
     }
 
-    pub fn method_signature(source_location: SourceLocation, selector: &str, parameters: Vec<&str>) -> MethodDefinition {
+    pub fn method_signature(
+        source_location: SourceLocation,
+        selector: &str,
+        parameters: Vec<&str>,
+    ) -> MethodDefinition {
         MethodDefinition::new(
             source_location,
             selector.to_string(),

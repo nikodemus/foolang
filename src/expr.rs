@@ -96,7 +96,7 @@ impl Expr {
             Array(array) => return array.source_location.get_span(),
             Assign(assign) => return assign.source_location.get_span(),
             Bind(bind) => return bind.value.span(),
-            Block(block) => &block.span,
+            Block(block) => return block.source_location.get_span(),
             Cascade(cascade) => return cascade.receiver.span(),
             Dictionary(dictionary) => &dictionary.span,
             Const(constant) => &constant.span,
@@ -118,7 +118,7 @@ impl Expr {
             Array(array) => return array.source_location.clone(),
             Assign(assign) => return assign.source_location.clone(),
             Bind(bind) => return SourceLocation::span(&bind.value.span()),
-            Block(block) => &block.span,
+            Block(block) => return block.source_location.clone(),
             Cascade(cascade) => return SourceLocation::span(&cascade.receiver.span()),
             Dictionary(dictionary) => &dictionary.span,
             Const(constant) => &constant.span,
@@ -243,23 +243,28 @@ impl Bind {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Block {
-    pub span: Span,
+    pub source_location: SourceLocation,
     pub params: Vec<Var>,
     pub body: Box<Expr>,
     pub rtype: Option<String>,
 }
 
 impl Block {
-    pub fn expr(span: Span, params: Vec<Var>, body: Box<Expr>, rtype: Option<String>) -> Expr {
+    pub fn expr(
+        source_location: SourceLocation,
+        params: Vec<Var>,
+        body: Box<Expr>,
+        rtype: Option<String>,
+    ) -> Expr {
         Expr::Block(Block {
-            span,
+            source_location,
             params,
             body,
             rtype,
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
-        self.span.tweak(shift, extend);
+        self.source_location.tweak(shift, extend);
         for p in &mut self.params {
             p.source_location.tweak(shift, extend);
         }

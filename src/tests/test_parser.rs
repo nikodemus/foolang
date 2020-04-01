@@ -450,14 +450,20 @@ fn test_parse_array0() {
 
 #[test]
 fn test_parse_array1() {
-    assert_eq!(parse_expr("[1]"), Ok(Array::expr(SourceLocation::span(&(0..3)), vec![int(1..2, 1)])))
+    assert_eq!(
+        parse_expr("[1]"),
+        Ok(Array::expr(SourceLocation::span(&(0..3)), vec![int(1..2, 1)]))
+    )
 }
 
 #[test]
 fn test_parse_array2() {
     assert_eq!(
         parse_expr("[1,2,3]"),
-        Ok(Array::expr(SourceLocation::span(&(0..7)), vec![int(1..2, 1), int(3..4, 2), int(5..6, 3)]))
+        Ok(Array::expr(
+            SourceLocation::span(&(0..7)),
+            vec![int(1..2, 1), int(3..4, 2), int(5..6, 3)]
+        ))
     )
 }
 
@@ -471,7 +477,10 @@ fn test_parse_array3() {
                 3
              ]"
         ),
-        Ok(Array::expr(SourceLocation::span(&(0..72)), vec![int(18..19, 1), int(37..38, 2), int(56..57, 3)]))
+        Ok(Array::expr(
+            SourceLocation::span(&(0..72)),
+            vec![int(18..19, 1), int(37..38, 2), int(56..57, 3)]
+        ))
     )
 }
 
@@ -535,7 +544,10 @@ fn test_parse_interface1() {
     let mut interface = InterfaceDef::new(SourceLocation::span(&(1..10)), "Foo");
     interface.add_method(MethodKind::Instance, method(19..25, "bar", vec![], int(38..40, 42)));
     interface.add_method(MethodKind::Instance, method(71..77, "zot", vec![], int(90..93, 123)));
-    interface.add_method(MethodKind::Required, method_signature(SourceLocation::span(&(55..61)), "quux", vec![]));
+    interface.add_method(
+        MethodKind::Required,
+        method_signature(SourceLocation::span(&(55..61)), "quux", vec![]),
+    );
     assert_eq!(
         parse_def(
             "
