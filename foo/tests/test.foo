@@ -53,6 +53,15 @@ class Box { value }
         - (self value)
 end
 
+define $testVar
+    123
+end
+
+class TestVar {}
+    class method read
+        $testVar
+end
+
 class Main { assert system }
     class method run: cmd in: system
         let instance = self assert: (Assert reportingTo: system output)
@@ -80,7 +89,8 @@ class Main { assert system }
         self testStringOutput.
         self testPrecedence.
         self testPrefix.
-        self testRaise
+        self testRaise.
+        self testDynamicVars.
 
     method testIs
         assert true: { 1 is 1 } testing: "integer 'is' integer (match)".
@@ -144,4 +154,10 @@ class Main { assert system }
                       cmp == out content }
              testing: "string output"
 
+    method testDynamicVars
+        assert that: { [ TestVar read,
+                         { let $testVar = 42. TestVar read } value,
+                         TestVar read ] }
+               equals: [ 123, 42, 123 ]
+               testing: "dynamic binding of dynamic variable".
 end

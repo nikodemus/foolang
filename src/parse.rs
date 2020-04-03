@@ -1135,12 +1135,18 @@ fn class_prefix(parser: &Parser) -> Parse {
 }
 
 fn define_prefix(parser: &Parser) -> Parse {
-    if Token::WORD != parser.next_token()? {
+    let mut name = String::new();
+    let mut next = parser.next_token()?;
+    if Token::SIGIL == next && "$" == parser.slice() {
+        name.push_str("$");
+        next = parser.next_token()?;
+    }
+    if Token::WORD != next {
         return parser.error("Expected name after 'define'");
     }
+    name.push_str(parser.slice());
 
     let source_location = parser.source_location();
-    let name = parser.tokenstring();
     let init = parser.parse_seq()?;
 
     parser.next_token()?;
@@ -1434,8 +1440,14 @@ fn parse_type_designator(parser: &Parser) -> Result<String, Unwind> {
 }
 
 fn parse_var(parser: &Parser, dynamic: bool) -> Result<Var, Unwind> {
-    let name = parser.tokenstring();
-    let loc = parser.source_location();
+    let mut loc = parser.source_location();
+    let mut name = String::new();
+    if dynamic {
+        let span = parser.span();
+        loc.set_span(&(span.start - 1..span.end));
+        name.push_str("$");
+    };
+    name.push_str(parser.slice());
     let (token, span) = parser.lookahead()?;
     let var = if token == Token::SIGIL && parser.slice_at(span) == "::" {
         parser.next_token()?;

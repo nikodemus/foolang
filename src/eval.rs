@@ -429,9 +429,6 @@ impl Env {
     }
 
     fn eval_bind(&self, bind: &Bind) -> Eval {
-        if bind.dynamic {
-            unimplemented!("dynamic binding")
-        }
         let value = self.eval(&bind.value)?;
         let binding = match bind.typename {
             None => Binding::untyped(value),
@@ -447,7 +444,9 @@ impl Env {
         // or even better this should arrange to return the new environment somehow,
         // so that successive lets of same names each would create a new binding
         // and environment.
-        let env = if self.is_toplevel() {
+        let env = if bind.dynamic {
+            self.clone()
+        } else if self.is_toplevel() {
             self.add_binding(&bind.name, binding);
             self.clone()
         } else {
@@ -455,7 +454,24 @@ impl Env {
         };
         match &bind.body {
             None => Ok(tmp),
-            Some(body) => env.eval(&body),
+            Some(body) => {
+                if bind.dynamic {
+                    let old = if let Some(old) = env.get(&bind.name) {
+                        env.set(&bind.name, tmp);
+                        old
+                    } else {
+                        return Unwind::error_at(
+                            bind.source_location.clone(),
+                            &format!("Dynamic variable has no definition: {}", &bind.name),
+                        );
+                    };
+                    let res = env.eval(&body);
+                    env.set(&bind.name, old);
+                    res
+                } else {
+                    env.eval(&body)
+                }
+            }
         }
     }
 
@@ -727,9 +743,6 @@ impl Env {
                 Some(receiver) => Ok(receiver.clone()),
             }
         } else {
-            if var.dynamic {
-                unimplemented!("dynamic variables")
-            }
             match self.get(&var.name) {
                 Some(value) => return Ok(value),
                 None => {
