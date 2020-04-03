@@ -429,6 +429,9 @@ impl Env {
     }
 
     fn eval_bind(&self, bind: &Bind) -> Eval {
+        if bind.dynamic {
+            unimplemented!("dynamic binding")
+        }
         let value = self.eval(&bind.value)?;
         let binding = match bind.typename {
             None => Binding::untyped(value),
@@ -440,9 +443,11 @@ impl Env {
             }
         };
         let tmp = binding.value.clone();
-        // FIXME: there used to be workspace stuff there to handle 'toplevel lets'.
+        // FIXME: the toplevel environment be marked as workspace to allow this,
+        // or even better this should arrange to return the new environment somehow,
+        // so that successive lets of same names each would create a new binding
+        // and environment.
         let env = if self.is_toplevel() {
-            // FIXME: should check if the toplevel is a "workspace" or not.
             self.add_binding(&bind.name, binding);
             self.clone()
         } else {
@@ -722,6 +727,9 @@ impl Env {
                 Some(receiver) => Ok(receiver.clone()),
             }
         } else {
+            if var.dynamic {
+                unimplemented!("dynamic variables")
+            }
             match self.get(&var.name) {
                 Some(value) => return Ok(value),
                 None => {
