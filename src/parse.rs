@@ -474,6 +474,8 @@ fn make_name_table() -> NameTable {
     ParserSyntax::def(t, "{", block_prefix, invalid_suffix, precedence_3);
     ParserSyntax::def(t, "}", invalid_prefix, invalid_suffix, precedence_0);
 
+    ParserSyntax::def(t, "$", dynamic_var_prefix, invalid_suffix, precedence_0);
+
     ParserSyntax::def(t, "False", false_prefix, invalid_suffix, precedence_3);
     ParserSyntax::def(t, "True", true_prefix, invalid_suffix, precedence_3);
 
@@ -602,6 +604,16 @@ fn cascade_suffix(
     Ok(parser.parse_tail(receiver, precedence(parser, parser.span())?)?.to_cascade(false))
 }
 
+fn dynamic_var_prefix(parser: &Parser) -> Parse {
+    let source_location = parser.source_location();
+    let next = parser.next_token()?;
+    if let Token::WORD = next {
+        Ok(Syntax::Expr(Expr::Var(parse_var(parser, true)?)))
+    } else {
+        Unwind::error_at(source_location, "Invalid dynamic variable name")
+    }
+}
+
 fn eof_prefix(parser: &Parser) -> Parse {
     parser.eof_error("Unexpected EOF in value position")
 }
@@ -630,6 +642,7 @@ fn identifier_prefix(parser: &Parser) -> Parse {
             Ok(Syntax::Expr(Expr::Var(Var::untyped(
                 parser.source_location(),
                 parser.tokenstring(),
+                false,
             ))))
         }
     }
@@ -791,11 +804,13 @@ fn parse_record(parser: &Parser) -> Result<Expr, Unwind> {
     // This kind of indicates I need a more felicitious representation
     // in order to be able to reliably print back things without converting
     // {x: 42} to Record x: 42 accidentally. (Or I need to not have this syntax).
-    Ok(Expr::Var(Var::untyped(source_location.clone(), "Record".to_string())).send(Message {
-        source_location,
-        selector,
-        args,
-    }))
+    Ok(Expr::Var(Var::untyped(source_location.clone(), "Record".to_string(), false)).send(
+        Message {
+            source_location,
+            selector,
+            args,
+        },
+    ))
 }
 
 fn parse_dictionary(
@@ -847,7 +862,7 @@ fn parse_block_or_dictionary(parser: &Parser) -> Result<Expr, Unwind> {
         loop {
             let token = parser.next_token()?;
             if token == Token::WORD {
-                params.push(parse_var(parser)?);
+                params.push(parse_var(parser, false)?);
                 continue;
             }
             if token == Token::SIGIL && parser.slice() == "|" {
@@ -1060,7 +1075,7 @@ fn class_prefix(parser: &Parser) -> Parse {
         let token = parser.next_token()?;
         match token {
             Token::WORD => {
-                instance_variables.push(parse_var(parser)?);
+                instance_variables.push(parse_var(parser, false)?);
             }
             Token::SIGIL if parser.slice() == "}" => {
                 break;
@@ -1120,12 +1135,18 @@ fn class_prefix(parser: &Parser) -> Parse {
 }
 
 fn define_prefix(parser: &Parser) -> Parse {
-    if Token::WORD != parser.next_token()? {
+    let mut name = String::new();
+    let mut next = parser.next_token()?;
+    if Token::SIGIL == next && "$" == parser.slice() {
+        name.push_str("$");
+        next = parser.next_token()?;
+    }
+    if Token::WORD != next {
         return parser.error("Expected name after 'define'");
     }
+    name.push_str(parser.slice());
 
     let source_location = parser.source_location();
-    let name = parser.tokenstring();
     let init = parser.parse_seq()?;
 
     parser.next_token()?;
@@ -1194,17 +1215,27 @@ fn extend_prefix(parser: &Parser) -> Parse {
 }
 
 fn let_prefix(parser: &Parser) -> Parse {
-    if Token::WORD != parser.next_token()? {
+    let mut next = parser.next_token()?;
+    let mut source_location = parser.source_location();
+
+    let dynamic = if Token::SIGIL == next && "$" == parser.slice() {
+        next = parser.next_token()?;
+        true
+    } else {
+        false
+    };
+
+    if Token::WORD != next {
         return parser.error("Expected variable name after let");
     }
 
-    let source_location = parser.source_location();
+    source_location.extend_span_to(parser.span().end);
 
     let Var {
         name,
         typename,
         ..
-    } = parse_var(parser)?;
+    } = parse_var(parser, dynamic)?;
 
     if !(parser.next_token()? == Token::SIGIL && parser.slice() == "=") {
         return parser.error("Expected = in let");
@@ -1232,7 +1263,7 @@ fn let_prefix(parser: &Parser) -> Parse {
     } else {
         Some(Box::new(parser.parse_seq()?))
     };
-    Ok(Syntax::Expr(Bind::expr(source_location, name, typename, Box::new(value), body)))
+    Ok(Syntax::Expr(Bind::expr(source_location, name, typename, Box::new(value), body, dynamic)))
 }
 
 fn ignore_prefix(parser: &Parser) -> Parse {
@@ -1408,15 +1439,21 @@ fn parse_type_designator(parser: &Parser) -> Result<String, Unwind> {
     }
 }
 
-fn parse_var(parser: &Parser) -> Result<Var, Unwind> {
-    let name = parser.tokenstring();
-    let loc = parser.source_location();
+fn parse_var(parser: &Parser, dynamic: bool) -> Result<Var, Unwind> {
+    let mut loc = parser.source_location();
+    let mut name = String::new();
+    if dynamic {
+        let span = parser.span();
+        loc.set_span(&(span.start - 1..span.end));
+        name.push_str("$");
+    };
+    name.push_str(parser.slice());
     let (token, span) = parser.lookahead()?;
     let var = if token == Token::SIGIL && parser.slice_at(span) == "::" {
         parser.next_token()?;
-        Var::typed(loc, name, parse_type_designator(parser)?)
+        Var::typed(loc, name, parse_type_designator(parser)?, dynamic)
     } else {
-        Var::untyped(loc, name)
+        Var::untyped(loc, name, dynamic)
     };
     Ok(var)
 }
@@ -1456,7 +1493,7 @@ fn parse_method_signature(parser: &Parser) -> Result<MethodDefinition, Unwind> {
                     break;
                 }
                 if let Token::WORD = parser.next_token()? {
-                    parameters.push(parse_var(parser)?);
+                    parameters.push(parse_var(parser, false)?);
                 } else {
                     return parser.error("Expected binary selector parameter");
                 }
@@ -1464,7 +1501,7 @@ fn parse_method_signature(parser: &Parser) -> Result<MethodDefinition, Unwind> {
             }
             Token::KEYWORD => {
                 if let Token::WORD = parser.next_token()? {
-                    parameters.push(parse_var(parser)?);
+                    parameters.push(parse_var(parser, false)?);
                 } else {
                     return parser.error("Expected keyword selector parameter");
                 }
@@ -1502,7 +1539,11 @@ pub mod utils {
             let start = p;
             let end = start + param.len();
             p = end + 2;
-            blockparams.push(Var::untyped(SourceLocation::span(&(start..end)), param.to_string()))
+            blockparams.push(Var::untyped(
+                SourceLocation::span(&(start..end)),
+                param.to_string(),
+                false,
+            ))
         }
         Block::expr(SourceLocation::span(&span), blockparams, Box::new(body), None)
     }
@@ -1518,6 +1559,7 @@ pub mod utils {
                 SourceLocation::span(&(start..end)),
                 param.0.to_string(),
                 param.1.to_string(),
+                false,
             ));
         }
         Block::expr(SourceLocation::span(&span), blockparams, Box::new(body), None)
@@ -1537,7 +1579,14 @@ pub mod utils {
         value: Expr,
         body: Expr,
     ) -> Expr {
-        Bind::expr(source_location, name.to_string(), None, Box::new(value), Some(Box::new(body)))
+        Bind::expr(
+            source_location,
+            name.to_string(),
+            None,
+            Box::new(value),
+            Some(Box::new(body)),
+            false,
+        )
     }
 
     pub(crate) fn bind_typed(
@@ -1553,6 +1602,7 @@ pub mod utils {
             Some(typename.to_string()),
             Box::new(value),
             Some(Box::new(body)),
+            false,
         )
     }
 
@@ -1560,7 +1610,7 @@ pub mod utils {
         let mut p = span.start + "class ".len() + name.len() + " { ".len();
         let mut vars = Vec::new();
         for v in instance_variables {
-            vars.push(Var::untyped(SourceLocation::span(&(p..p + v.len())), v.to_string()));
+            vars.push(Var::untyped(SourceLocation::span(&(p..p + v.len())), v.to_string(), false));
             p += v.len() + " ".len()
         }
         ClassDef::syntax(span, name.to_string(), vars)
@@ -1604,7 +1654,7 @@ pub mod utils {
             // FIXME: span
             parameters
                 .iter()
-                .map(|name| Var::untyped(SourceLocation::span(&(0..0)), name.to_string()))
+                .map(|name| Var::untyped(SourceLocation::span(&(0..0)), name.to_string(), false))
                 .collect(),
             None,
         )
@@ -1631,7 +1681,7 @@ pub mod utils {
     }
 
     pub(crate) fn var(span: Span, name: &str) -> Expr {
-        Expr::Var(Var::untyped(SourceLocation::span(&span), name.to_string()))
+        Expr::Var(Var::untyped(SourceLocation::span(&span), name.to_string(), false))
     }
 }
 

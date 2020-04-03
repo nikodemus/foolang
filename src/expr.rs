@@ -219,6 +219,7 @@ pub struct Bind {
     pub typename: Option<String>,
     pub value: Box<Expr>,
     pub body: Option<Box<Expr>>,
+    pub dynamic: bool,
 }
 
 impl Bind {
@@ -228,6 +229,7 @@ impl Bind {
         typename: Option<String>,
         value: Box<Expr>,
         body: Option<Box<Expr>>,
+        dynamic: bool,
     ) -> Expr {
         Expr::Bind(Bind {
             source_location,
@@ -235,6 +237,7 @@ impl Bind {
             typename,
             value,
             body,
+            dynamic,
         })
     }
     fn tweak_span(&mut self, shift: usize, extend: isize) {
@@ -469,21 +472,29 @@ pub struct Var {
     pub source_location: SourceLocation,
     pub name: String,
     pub typename: Option<String>,
+    pub dynamic: bool,
 }
 
 impl Var {
-    pub fn untyped(source_location: SourceLocation, name: String) -> Var {
+    pub fn untyped(source_location: SourceLocation, name: String, dynamic: bool) -> Var {
         Var {
             source_location,
             name,
             typename: None,
+            dynamic,
         }
     }
-    pub fn typed(source_location: SourceLocation, name: String, typename: String) -> Var {
+    pub fn typed(
+        source_location: SourceLocation,
+        name: String,
+        typename: String,
+        dynamic: bool,
+    ) -> Var {
         Var {
             source_location,
             name,
             typename: Some(typename),
+            dynamic,
         }
     }
 }

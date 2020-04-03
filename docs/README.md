@@ -82,13 +82,13 @@ but do not yet support explicit conflict resolution. (See
 **No inheritance of implementations**: similarly to Julia and Rust, concrete
 instantiable classes cannot be inherited from in Foolang.
 
-### Pending
-
-<span class="todo">&cross;</span>
+<span class="done">&cross;</span>
 **Dynamic bindings**: dynamic bindings combined with lexical closures
 allow powerful error handling to be implemented in user code,
 implementation of interesting paradigms like context oriented programming,
 and make dependency injection easier.
+
+### Pending
 
 <span class="todo">&cross;</span>
 **Extensible syntax & code generation**: Foolang is intended to offer a

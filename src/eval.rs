@@ -440,9 +440,13 @@ impl Env {
             }
         };
         let tmp = binding.value.clone();
-        // FIXME: there used to be workspace stuff there to handle 'toplevel lets'.
-        let env = if self.is_toplevel() {
-            // FIXME: should check if the toplevel is a "workspace" or not.
+        // FIXME: the toplevel environment be marked as workspace to allow this,
+        // or even better this should arrange to return the new environment somehow,
+        // so that successive lets of same names each would create a new binding
+        // and environment.
+        let env = if bind.dynamic {
+            self.clone()
+        } else if self.is_toplevel() {
             self.add_binding(&bind.name, binding);
             self.clone()
         } else {
@@ -450,7 +454,24 @@ impl Env {
         };
         match &bind.body {
             None => Ok(tmp),
-            Some(body) => env.eval(&body),
+            Some(body) => {
+                if bind.dynamic {
+                    let old = if let Some(old) = env.get(&bind.name) {
+                        env.set(&bind.name, tmp);
+                        old
+                    } else {
+                        return Unwind::error_at(
+                            bind.source_location.clone(),
+                            &format!("Dynamic variable has no definition: {}", &bind.name),
+                        );
+                    };
+                    let res = env.eval(&body);
+                    env.set(&bind.name, old);
+                    res
+                } else {
+                    env.eval(&body)
+                }
+            }
         }
     }
 
