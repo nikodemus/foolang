@@ -82,7 +82,7 @@ but do not yet support explicit conflict resolution. (See
 **No inheritance of implementations**: similarly to Julia and Rust, concrete
 instantiable classes cannot be inherited from in Foolang.
 
-<span class="done">&cross;</span>
+<span class="done">&check;</span>
 **Dynamic bindings**: dynamic bindings combined with lexical closures
 allow powerful error handling to be implemented in user code,
 implementation of interesting paradigms like context oriented programming,
