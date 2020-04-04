@@ -36,11 +36,16 @@ fn closure_finally(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
 fn closure_on_panic(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let res = receiver.closure_ref().apply(None, &[]);
     if let Err(Unwind::Panic(error, loc)) = res {
-        args[0].send(
-            "value:",
+        let panic_class = match env.get("Panic") {
+            None => panic!("Panic class not defined!"),
+            Some(obj) => obj,
+        };
+        let panic_obj = panic_class.send(
+            "description:context:",
             &[env.foo.into_string(error.what()), env.foo.into_string(loc.context())],
             env,
-        )
+        )?;
+        args[0].send("value:", &[panic_obj], env)
     } else {
         res
     }

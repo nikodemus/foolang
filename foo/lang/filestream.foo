@@ -79,7 +79,7 @@ class TestFileStream { assert dir foopath foodata }
                testing: "FileStream#readString (ok)".
         assert true: { let s = foopath forRead open.
                        s close.
-                       { s readString. False } onPanic: { |e c| True } }
+                       { s readString. False } onPanic: { |p| True } }
                testing: "FileStream#readString (closed)".
 
     method testResize

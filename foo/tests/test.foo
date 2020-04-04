@@ -98,13 +98,13 @@ class Main { assert system }
         assert true: { "foo" is "foo" } testing: "string 'is' string (match)".
         assert false: { "foo" is "bar" } testing: "string 'is' string (mismatch)".
         assert false: { "foo" is 42 } testing: "string 'is' integer (mismatch)".
-        assert true: { { (panic "Oops") is 42. False } onPanic: { |e c| True } }
+        assert true: { { (panic "Oops") is 42. False } onPanic: { |_| True } }
                testing: "'is' propagates errors from left".
-        assert true: { { 42 is (panic "Oops"). False } onPanic: { |e c| True } }
+        assert true: { { 42 is (panic "Oops"). False } onPanic: { |_| True } }
                testing: "'is' propagates errors from right"
 
     method testPanic
-        assert true: { ({ panic "BOOM" } onPanic: { |e c| e })
+        assert true: { ({ panic "BOOM" } onPanic: { |p| p description })
                            == "BOOM" }
                testing: "panic with string argument"
 
@@ -149,7 +149,7 @@ class Main { assert system }
                testing: "integer addition commutates".
         assert forAll: SmallIntegers
                that: { |x| { x / 0 }
-                           onPanic: { |e c| e startsWith: "Divide by zero:"} }
+                           onPanic: { |p| p description startsWith: "Divide by zero:"} }
                testing: "division by zero (unhandled)".
         assert forAll: SmallIntegers
                that: { |x| ({ x / 0 } on: DivideByZero do: { |ex| 42 })
@@ -158,7 +158,7 @@ class Main { assert system }
         assert forAll: SmallIntegers
                that: { |x|
                        { { x / 0 } on: Error do: { |ex| 42 } }
-                           onPanic: { |ex _| ex startsWith: "UNHANDLED ERROR" } }
+                           onPanic: { |p| p description startsWith: "UNHANDLED ERROR" } }
                testing: "division by zero (bad catch)".
         assert forAll: SmallIntegers
                that: { |x|

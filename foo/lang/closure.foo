@@ -57,14 +57,14 @@ class TestClosure { assert }
 
     method testOnPanic
         assert true: { { panic "Foo". False }
-                         onPanic: { |e c| True } }
+                         onPanic: { |p| True } }
         testing: "Closure#onPanic".
 
     method testFinally
         assert true: { let flag = False.
                        { { panic "Foo". False }
                              finally: { flag = True } }
-                       onPanic: { |c ea| flag } }
+                       onPanic: { |p| flag } }
                 testing: "Closure#finally"
 
     method testWhileTrue
@@ -107,7 +107,7 @@ class TestClosure { assert }
                testing: "Closure#with: (normal)".
         assert that: { let obj = _Closable closed: False.
                        let res = { { |arg| panic "Bang" } with: obj }
-                                     onPanic: { |e c| 104 }.
+                                     onPanic: { |p| 104 }.
                        [obj closed, res] }
                equals: [True, 104]
                testing: "Closure#with: (unwind)".

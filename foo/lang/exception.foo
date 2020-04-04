@@ -1,3 +1,9 @@
+class Panic { description context }
+    method displayOn: stream
+        stream println: "PANIC: {self description}".
+        stream println: self context
+end
+
 define $error
 { |ex| panic (ex description) }
 end
@@ -13,6 +19,8 @@ class Error { description }
         panic "UNHANDLED ERROR: {error description}"
     class method handler
         { |ex| $error value: ex }
+    method displayOn: stream
+        stream println: "ERROR: {self description}"
 end
 
 define $divideByZero
@@ -27,4 +35,6 @@ class DivideByZero { value }
         $divideByZero value: (self value: value)
     method description
         "Divide by zero: {value} cannot be divided by zero"
+    method displayOn: stream
+        stream println: "ERROR: {self description}"
 end

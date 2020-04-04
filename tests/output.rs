@@ -526,11 +526,11 @@ fn test_repl() -> Test {
 > 42
 > 42
 > [43]
-> ERROR: Unbound variable: inside
+> PANIC: Unbound variable: inside
 001                inside
                    ^^^^^^ Unbound variable: inside
 
-> ERROR: Unbound variable: inside2
+> PANIC: Unbound variable: inside2
 001                [let inside2 = 42. inside2 + 2, inside2]
                                                    ^^^^^^^ Unbound variable: inside2
 "#,

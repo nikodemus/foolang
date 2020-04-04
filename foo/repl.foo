@@ -28,9 +28,7 @@ class REPL {
             -- Cascade just for fun.
             self; prompt; read; eval; print
         }
-            onPanic: { |error context|
-                       _output println: "ERROR: {error}".
-                       _output println: context }
+            onPanic: { |p| p displayOn: _output }
 
     method prompt
         _output print: "> ".

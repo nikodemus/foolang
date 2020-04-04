@@ -6,6 +6,7 @@ import .lang.collection.Collection
 import .lang.dictionary.Dictionary
 import .lang.exception.DivideByZero
 import .lang.exception.Error
+import .lang.exception.Panic
 import .lang.file.File
 import .lang.filepath.FilePath
 import .lang.filestream.FileStream
