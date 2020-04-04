@@ -1,5 +1,6 @@
 use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
+use crate::unwind::Unwind;
 
 pub fn vtable() -> Vtable {
     let vt = Vtable::new("Integer");
@@ -31,8 +32,14 @@ fn integer_add_integer(receiver: &Object, args: &[Object], env: &Env) -> Eval {
 }
 
 fn integer_div_integer(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let res = args[0].integer() / receiver.integer();
-    Ok(env.foo.make_integer(res))
+    let div = receiver.integer();
+    if div == 0 {
+        match env.get("DivideByZero") {
+            None => return Unwind::error("DivideByZero not defined"),
+            Some(obj) => return obj.send("raise:", args, env),
+        }
+    }
+    Ok(env.foo.make_integer(args[0].integer() / div))
 }
 
 fn integer_equal_integer(receiver: &Object, args: &[Object], env: &Env) -> Eval {

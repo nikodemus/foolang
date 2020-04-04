@@ -24,6 +24,8 @@ extend Closure
     method descending
         { |a b| (self value: a) > (self value: b) }
 
+    method on: condition do: block
+        condition withHandler: block do: self
 end
 
 -- For testing Closure#with:

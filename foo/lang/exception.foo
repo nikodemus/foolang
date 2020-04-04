@@ -1,0 +1,30 @@
+define $error
+{ |ex| panic (ex description) }
+end
+
+class Error { description }
+    class method withHandler: handler do: block
+        let $error = { |error| self handle: error with: handler }.
+        block value
+    class method raise: description
+        $error value: (self description: description)
+    class method handle: error with: handler
+        handler value: error.
+        panic "UNHANDLED ERROR: {error description}"
+    class method handler
+        { |ex| $error value: ex }
+end
+
+define $divideByZero
+Error handler
+end
+
+class DivideByZero { value }
+    class method withHandler: handler do: block
+        let $divideByZero = handler.
+        block value
+    class method raise: value
+        $divideByZero value: (self value: value)
+    method description
+        "Divide by zero: {value} cannot be divided by zero"
+end

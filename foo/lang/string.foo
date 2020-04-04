@@ -21,4 +21,10 @@ extend String
         stream writeString: "\""
     method == other
         other stringEqual: self
+    method startsWith: other
+        1 to: other size
+          do: { |i|
+                (self at: i) == (other at: i)
+                    ifFalse: { return False } }.
+        True
 end
