@@ -89,7 +89,7 @@ class Main { assert system }
         self testStringOutput.
         self testPrecedence.
         self testPrefix.
-        self testRaise.
+        self testPanic.
         self testDynamicVars.
 
     method testIs
@@ -98,15 +98,15 @@ class Main { assert system }
         assert true: { "foo" is "foo" } testing: "string 'is' string (match)".
         assert false: { "foo" is "bar" } testing: "string 'is' string (mismatch)".
         assert false: { "foo" is 42 } testing: "string 'is' integer (mismatch)".
-        assert true: { { (raise "Oops") is 42. False } onError: { |e c| True } }
+        assert true: { { (panic "Oops") is 42. False } onPanic: { |e c| True } }
                testing: "'is' propagates errors from left".
-        assert true: { { 42 is (raise "Oops"). False } onError: { |e c| True } }
+        assert true: { { 42 is (panic "Oops"). False } onPanic: { |e c| True } }
                testing: "'is' propagates errors from right"
 
-    method testRaise
-        assert true: { ({ raise "BOOM" } onError: { |e c| e })
+    method testPanic
+        assert true: { ({ panic "BOOM" } onPanic: { |e c| e })
                            == "BOOM" }
-               testing: "raise with string argument"
+               testing: "panic with string argument"
 
     method testPrefix
         assert forAll: (1 to: 10)

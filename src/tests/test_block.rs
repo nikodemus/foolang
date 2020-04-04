@@ -132,7 +132,7 @@ fn test_closure_while_false_closure() {
 #[test]
 fn test_closure_on_error() {
     assert_eq!(
-        eval_ok("{ undefined } onError: { |err _| err }").string_as_str(),
+        eval_ok("{ undefined } onPanic: { |err _| err }").string_as_str(),
         "Unbound variable: undefined"
     );
 }
@@ -140,7 +140,7 @@ fn test_closure_on_error() {
 #[test]
 fn test_closure_argcount_error() {
     assert_eq!(
-        eval_ok("{ {|x| x + 1} value } onError: { |err _| err }").string_as_str(),
+        eval_ok("{ {|x| x + 1} value } onPanic: { |err _| err }").string_as_str(),
         "Argument count mismatch, block wanted 1, got 0: []"
     );
 }

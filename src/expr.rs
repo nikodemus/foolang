@@ -29,7 +29,7 @@ pub enum Expr {
     Const(Const),
     Dictionary(Dictionary),
     Eq(Eq),
-    Raise(Raise),
+    Panic(Panic),
     Return(Return),
     Seq(Seq),
     Typecheck(Typecheck),
@@ -102,7 +102,7 @@ impl Expr {
             Const(constant) => constant.source_location.get_span(),
             Eq(eq) => eq.source_location.get_span(),
             Chain(chain) => chain.receiver.span(),
-            Raise(raise) => raise.source_location.get_span(),
+            Panic(panic) => panic.source_location.get_span(),
             Return(ret) => ret.source_location.get_span(),
             // FIXME: Wrong span
             Seq(seq) => {
@@ -127,7 +127,7 @@ impl Expr {
             Const(constant) => constant.source_location.clone(),
             Eq(eq) => eq.source_location.clone(),
             Chain(chain) => chain.receiver.source_location(),
-            Raise(raise) => raise.source_location.clone(),
+            Panic(panic) => panic.source_location.clone(),
             Return(ret) => ret.source_location.clone(),
             Seq(seq) => {
                 let mut source_location = seq.exprs[0].source_location();
@@ -160,7 +160,7 @@ impl Expr {
             Dictionary(dictionary) => dictionary.tweak_span(shift, extend),
             Eq(eq) => eq.tweak_span(shift, extend),
             Seq(seq) => seq.tweak_span(shift, extend),
-            Raise(raise) => raise.tweak_span(shift, extend),
+            Panic(panic) => panic.tweak_span(shift, extend),
             Return(ret) => ret.tweak_span(shift, extend),
             Typecheck(typecheck) => typecheck.tweak_span(shift, extend),
             Var(var) => {
@@ -391,14 +391,14 @@ impl Eq {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Raise {
+pub struct Panic {
     pub source_location: SourceLocation,
     pub value: Box<Expr>,
 }
 
-impl Raise {
+impl Panic {
     pub fn expr(source_location: SourceLocation, value: Expr) -> Expr {
-        Expr::Raise(Raise {
+        Expr::Panic(Panic {
             source_location,
             value: Box::new(value),
         })

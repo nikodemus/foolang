@@ -50,7 +50,7 @@ reified types:
 ``` foolang
 class Typecheck {}
    method isFloat: obj
-        { obj::Float. True } onError: { False }
+        { obj::Float. True } onPanic: { False }
 end
 ```
 

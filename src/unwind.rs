@@ -37,7 +37,7 @@ impl LineIndices for str {
 
 #[derive(PartialEq, Debug)]
 pub enum Unwind {
-    Exception(Error, Location),
+    Panic(Error, Location),
     ReturnFrom(EnvRef, Object),
 }
 
@@ -77,7 +77,7 @@ pub struct Location {
 impl fmt::Display for Unwind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Unwind::Exception(error, location) => match &location.context {
+            Unwind::Panic(error, location) => match &location.context {
                 Some(c) => write!(f, "ERROR: {}\n{}", error.what(), c),
                 None => write!(f, "ERROR: {} (no context)", error.what()),
             },
@@ -89,7 +89,7 @@ impl fmt::Display for Unwind {
 impl Unwind {
     // FIXME: The vtable as expected, extract name here.
     pub fn type_error<T>(value: Object, expected: String) -> Result<T, Unwind> {
-        Err(Unwind::Exception(
+        Err(Unwind::Panic(
             Error::TypeError(TypeError {
                 value,
                 expected,
@@ -104,7 +104,7 @@ impl Unwind {
         expected: String,
     ) -> Result<T, Unwind> {
         let code = source_location.code();
-        let unwind = Unwind::Exception(
+        let unwind = Unwind::Panic(
             Error::TypeError(TypeError {
                 value,
                 expected,
@@ -122,7 +122,7 @@ impl Unwind {
         message: &str,
         args: &[Object],
     ) -> Result<T, Unwind> {
-        Err(Unwind::Exception(
+        Err(Unwind::Panic(
             Error::MessageError(MessageError {
                 receiver: receiver.clone(),
                 message: message.to_string(),
@@ -133,7 +133,7 @@ impl Unwind {
     }
 
     pub fn eof_error_at<T>(source_location: SourceLocation, what: &str) -> Result<T, Unwind> {
-        Err(Unwind::Exception(
+        Err(Unwind::Panic(
             Error::EofError(SimpleError {
                 what: what.to_string(),
             }),
@@ -143,7 +143,7 @@ impl Unwind {
 
     pub fn error<T>(what: &str) -> Result<T, Unwind> {
         // panic!("BOOM: {}", what);
-        Err(Unwind::Exception(
+        Err(Unwind::Panic(
             Error::SimpleError(SimpleError {
                 what: what.to_string(),
             }),
@@ -154,7 +154,7 @@ impl Unwind {
     pub fn error_at<T>(source_location: SourceLocation, what: &str) -> Result<T, Unwind> {
         // panic!("BOOM_AT: {:?}, {}", span, what);
         let code = source_location.code();
-        let unwind = Unwind::Exception(
+        let unwind = Unwind::Panic(
             Error::SimpleError(SimpleError {
                 what: what.to_string(),
             }),
@@ -171,7 +171,7 @@ impl Unwind {
     }
 
     pub fn add_source_location(&mut self, source_location: &SourceLocation) {
-        if let Unwind::Exception(error, location) = self {
+        if let Unwind::Panic(error, location) = self {
             if location.source_location.is_none() {
                 let code = source_location.code();
                 location.add_source_location(source_location);
@@ -184,7 +184,7 @@ impl Unwind {
 
     pub fn shift_span(self, offset: usize) -> Self {
         match self {
-            Unwind::Exception(
+            Unwind::Panic(
                 err,
                 Location {
                     source_location: Some(mut loc),
@@ -192,7 +192,7 @@ impl Unwind {
                 },
             ) => {
                 loc.shift_span(offset);
-                Unwind::Exception(
+                Unwind::Panic(
                     err,
                     Location {
                         source_location: Some(loc),
@@ -205,7 +205,7 @@ impl Unwind {
     }
 
     pub fn with_context(mut self, source: &str) -> Unwind {
-        if let Unwind::Exception(error, location) = &mut self {
+        if let Unwind::Panic(error, location) = &mut self {
             location.add_context(source, error.what());
         }
         self

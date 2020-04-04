@@ -151,7 +151,7 @@ impl<'a> Parser<'a> {
         let span = source_location.get_span();
         let subparser = Parser::new(self.slice_at(span.clone()), &self.root);
         match subparser.parse_prefix_expr() {
-            Err(Unwind::Exception(Error::EofError(_), _)) => {
+            Err(Unwind::Panic(Error::EofError(_), _)) => {
                 Unwind::error_at(source_location, "Unterminated string interpolation.")
             }
             Err(unwind) => Err(unwind.shift_span(span.start)),
@@ -460,7 +460,7 @@ fn make_name_table() -> NameTable {
     ParserSyntax::def(t, ".", invalid_prefix, sequence_suffix, precedence_2);
     ParserSyntax::def(t, "let", let_prefix, invalid_suffix, precedence_3);
     ParserSyntax::def(t, "return", return_prefix, invalid_suffix, precedence_3);
-    ParserSyntax::def(t, "raise", raise_prefix, invalid_suffix, precedence_3);
+    ParserSyntax::def(t, "panic", panic_prefix, invalid_suffix, precedence_3);
     ParserSyntax::def(t, ";", invalid_prefix, cascade_suffix, precedence_3);
     ParserSyntax::def(t, "=", invalid_prefix, assign_suffix, precedence_4);
     ParserSyntax::def(t, "is", invalid_prefix, is_suffix, precedence_10);
@@ -1323,9 +1323,9 @@ fn return_prefix(parser: &Parser) -> Parse {
     Ok(Syntax::Expr(Return::expr(parser.source_location(), parser.parse_single()?)))
 }
 
-fn raise_prefix(parser: &Parser) -> Parse {
-    // FIXME: what about "raise x. dead-expr" ?
-    Ok(Syntax::Expr(Raise::expr(parser.source_location(), parser.parse_single()?)))
+fn panic_prefix(parser: &Parser) -> Parse {
+    // FIXME: what about "panic x. dead-expr" ?
+    Ok(Syntax::Expr(Panic::expr(parser.source_location(), parser.parse_single()?)))
 }
 
 /// Takes care of \n, and such. Terminates on { or end of string.

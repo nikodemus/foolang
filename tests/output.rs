@@ -192,7 +192,7 @@ fn test_method_arg_type_error_location() -> Test {
 032         self oops: 42
 033     class method oops: x::String
                            ^ String expected, got: Integer 42
-034         raise \"Not supposed to happen! x = {x}\"",
+034         panic \"Not supposed to happen! x = {x}\"",
     ));
     Ok(())
 }
@@ -292,14 +292,14 @@ fn test_undefined_interface_error_location() -> Test {
 }
 
 #[test]
-fn test_raise_location() -> Test {
+fn test_panic_location() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
-    cmd.arg("foo/tests/test_raise_location.foo");
+    cmd.arg("foo/tests/test_panic_location.foo");
     // FIXME: Error points to class
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: This here
 056     class method oops
-057         raise \"This here\"
+057         panic \"This here\"
             ^^^^^ This here
 058 end",
     ));

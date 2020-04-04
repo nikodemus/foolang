@@ -79,7 +79,7 @@ extend Array
                 let tmp = self at: i.
                 self put: (self at: j) at: i.
                 self put: tmp at: j }.
-          raise "BUG: this should never happen."
+          panic "BUG: this should never happen."
 
     method reversed
         self copy reverse

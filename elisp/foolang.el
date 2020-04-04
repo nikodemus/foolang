@@ -1237,7 +1237,7 @@ method readEvalPrint
 -- Cascade just for fun.
 self; prompt; read; eval; print
 }
-onError: { |error context|
+onPanic: { |error context|
 _output println: \"ERROR: {error}\".
 _output println: context }"
   "
@@ -1247,7 +1247,7 @@ class Foo { a }
             -- Cascade just for fun.
             self; prompt; read; eval; print
         }
-            onError: { |error context|
+            onPanic: { |error context|
                        _output println: \"ERROR: {error}\".
                        _output println: context }")
 
@@ -1274,7 +1274,7 @@ class Foo { a }
 class Foo { a }
 method check: cond on: x onSuccess: success onFailure: failure
 let res = { cond value: x }
-onError: { |e ctx|
+onPanic: { |e ctx|
 system output println: \"ERROR: {e}\".
 failure value }.
 res
@@ -1284,7 +1284,7 @@ ifFalse: failure"
 class Foo { a }
     method check: cond on: x onSuccess: success onFailure: failure
         let res = { cond value: x }
-                      onError: { |e ctx|
+                      onPanic: { |e ctx|
                                  system output println: \"ERROR: {e}\".
                                  failure value }.
         res
