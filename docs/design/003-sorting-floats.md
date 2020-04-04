@@ -43,9 +43,9 @@ method order: other
                       ifFalse: { Before } }
         ifFalse: { other <= self
                       ifTrue: { After }
-                      ifFalse: { raise NotOrderedException
-                                           value: self
-                                           value: other } }
+                      ifFalse: { NotOrderedException
+                                     value: self
+                                     value: other } }
 ```
 
 Floating point classes can implement `order:` directly providing the IEE

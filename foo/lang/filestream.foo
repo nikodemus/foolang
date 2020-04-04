@@ -10,14 +10,14 @@ extend FileStream
         let bytes = ByteArray new: n.
         let got = self tryRead: n bytesInto: bytes at: 1.
         got == n
-            ifFalse: { raise "Could not #readBytes from {self} upto end of file" }.
+            ifFalse: { panic "Could not #readBytes from {self} upto end of file" }.
         bytes
 
     method read: n bytesInto: buffer at: index
         let got = self tryRead: n bytesInto: buffer at: index.
         got == n
             ifTrue: { return n }
-            ifFalse: { raise "Could not read {n} bytes from {self}." }
+            ifFalse: { panic "Could not read {n} bytes from {self}." }
 
     method tryRead: n bytesInto: buffer at: index
         let total = 0.
@@ -37,7 +37,7 @@ extend FileStream
         let did = self tryWrite: n bytesFrom: buffer at: index.
         did == n
             ifTrue: { return n }
-            ifFalse: { raise "Could not write {n} bytes to {self}." }
+            ifFalse: { panic "Could not write {n} bytes to {self}." }
 
     method tryWrite: n bytesFrom: buffer at: index
         let total = 0.
@@ -79,7 +79,7 @@ class TestFileStream { assert dir foopath foodata }
                testing: "FileStream#readString (ok)".
         assert true: { let s = foopath forRead open.
                        s close.
-                       { s readString. False } onError: { |e c| True } }
+                       { s readString. False } onPanic: { |p| True } }
                testing: "FileStream#readString (closed)".
 
     method testResize

@@ -410,7 +410,7 @@ impl Env {
             Const(constant) => self.eval_constant(constant),
             Dictionary(dictionary) => self.eval_dictionary(dictionary),
             Eq(eq) => self.eval_eq(eq),
-            Raise(raise) => self.eval_raise(raise),
+            Panic(panic) => self.eval_panic(panic),
             Return(ret) => self.eval_return(ret),
             Chain(chain) => self.eval_chain(chain),
             Seq(seq) => self.eval_seq(&seq),
@@ -668,8 +668,8 @@ impl Env {
         Ok(self.foo.make_boolean(true))
     }
 
-    fn eval_raise(&self, raise: &Raise) -> Eval {
-        Unwind::error_at(raise.source_location.clone(), self.eval(&raise.value)?.string_as_str())
+    fn eval_panic(&self, panic: &Panic) -> Eval {
+        Unwind::error_at(panic.source_location.clone(), self.eval(&panic.value)?.string_as_str())
     }
 
     fn eval_return(&self, ret: &Return) -> Eval {
@@ -779,7 +779,7 @@ pub mod utils {
         let env = Env::new();
         match env.eval_all(source) {
             Err(unwind) => match &unwind {
-                Unwind::Exception(..) => (unwind, env),
+                Unwind::Panic(..) => (unwind, env),
                 _ => panic!("Expected exception, got: {:?}", unwind),
             },
             Ok(value) => panic!("Expected exception, got: {:?}", value),
@@ -802,8 +802,8 @@ pub mod utils {
     pub fn eval_ok(source: &str) -> Object {
         match eval_str(source) {
             Ok(obj) => obj,
-            Err(Unwind::Exception(error, location)) => {
-                panic!("Exception in eval_ok: {}:\n{}", error.what(), location.context());
+            Err(Unwind::Panic(error, location)) => {
+                panic!("Panic in eval_ok: {}:\n{}", error.what(), location.context());
             }
             Err(Unwind::ReturnFrom(..)) => panic!("Unexpected return-from in eval_ok"),
         }

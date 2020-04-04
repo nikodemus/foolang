@@ -256,7 +256,7 @@ executed after the receiver even if the receiver raises an exception.
 Executes the receiver repeatedly forever, or until the receiver uwinds through
 a return or exception.
 
-#### **method** `onError:` _handler_
+#### **method** `onPanic:` _handler_
 
 Executes the receiver and returns the resulting value, unless the receiver
 raises an exception, in which case the _handler_ is executed with the

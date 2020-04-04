@@ -24,6 +24,8 @@ extend Closure
     method descending
         { |a b| (self value: a) > (self value: b) }
 
+    method on: condition do: block
+        condition withHandler: block do: self
 end
 
 -- For testing Closure#with:
@@ -40,7 +42,7 @@ class TestClosure { assert }
     method runTests
         self
             ; testApplication
-            ; testOnError
+            ; testOnPanic
             ; testFinally
             ; testWhileTrue
             ; testWhileFalse
@@ -53,16 +55,16 @@ class TestClosure { assert }
         assert true: { 1 == { 1 } value }
                testing: "Closure#value".
 
-    method testOnError
-        assert true: { { raise "Foo". False }
-                           onError: { |e c| True } }
-        testing: "Closure#onError".
+    method testOnPanic
+        assert true: { { panic "Foo". False }
+                         onPanic: { |p| True } }
+        testing: "Closure#onPanic".
 
     method testFinally
         assert true: { let flag = False.
-                       { { raise "Foo". False }
+                       { { panic "Foo". False }
                              finally: { flag = True } }
-                       onError: { |c e| flag } }
+                       onPanic: { |p| flag } }
                 testing: "Closure#finally"
 
     method testWhileTrue
@@ -104,8 +106,8 @@ class TestClosure { assert }
                equals: [True, 42]
                testing: "Closure#with: (normal)".
         assert that: { let obj = _Closable closed: False.
-                       let res = { { |arg| raise "Bang" } with: obj }
-                                     onError: { |e c| 104 }.
+                       let res = { { |arg| panic "Bang" } with: obj }
+                                     onPanic: { |p| 104 }.
                        [obj closed, res] }
                equals: [True, 104]
                testing: "Closure#with: (unwind)".

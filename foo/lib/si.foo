@@ -439,7 +439,7 @@ class SI { value::Float _unit::SI_Unit }
 
     method checkUnit: right operation: op
         self unit == right unit
-            ifFalse: { raise "Invalid operation: {self} {op} {right}" }
+            ifFalse: { panic "Invalid operation: {self} {op} {right}" }
 
     method == right
         self checkUnit: right operation: "==".

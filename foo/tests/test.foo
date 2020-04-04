@@ -89,7 +89,7 @@ class Main { assert system }
         self testStringOutput.
         self testPrecedence.
         self testPrefix.
-        self testRaise.
+        self testPanic.
         self testDynamicVars.
 
     method testIs
@@ -98,15 +98,15 @@ class Main { assert system }
         assert true: { "foo" is "foo" } testing: "string 'is' string (match)".
         assert false: { "foo" is "bar" } testing: "string 'is' string (mismatch)".
         assert false: { "foo" is 42 } testing: "string 'is' integer (mismatch)".
-        assert true: { { (raise "Oops") is 42. False } onError: { |e c| True } }
+        assert true: { { (panic "Oops") is 42. False } onPanic: { |_| True } }
                testing: "'is' propagates errors from left".
-        assert true: { { 42 is (raise "Oops"). False } onError: { |e c| True } }
+        assert true: { { 42 is (panic "Oops"). False } onPanic: { |_| True } }
                testing: "'is' propagates errors from right"
 
-    method testRaise
-        assert true: { ({ raise "BOOM" } onError: { |e c| e })
+    method testPanic
+        assert true: { ({ panic "BOOM" } onPanic: { |p| p description })
                            == "BOOM" }
-               testing: "raise with string argument"
+               testing: "panic with string argument"
 
     method testPrefix
         assert forAll: (1 to: 10)
@@ -132,16 +132,42 @@ class Main { assert system }
               that: { |x| x + x == x * 2.0 }
               testing: "float addition"
 
+    method auxIntegerDivZeroError: x by: y
+        { x / y }
+            on: Error
+            do: { |error| return "oops" }
+
     method testIntegers
-       assert forAll: SmallIntegers
-              that: { |x| x + x == x * 2 }
-              testing: "integer self addition".
-       assert forAll: SmallIntegers
-              that: { |x| x - x == 0 }
-              testing: "integer self substraction".
-       assert forAll: SmallIntegers
-              that: { |x| x + 1 == 1 + x }
-              testing: "integer addition commutates"
+        assert forAll: SmallIntegers
+               that: { |x| x + x == x * 2 }
+               testing: "integer self addition".
+        assert forAll: SmallIntegers
+               that: { |x| x - x == 0 }
+               testing: "integer self substraction".
+        assert forAll: SmallIntegers
+               that: { |x| x + 1 == 1 + x }
+               testing: "integer addition commutates".
+        assert forAll: SmallIntegers
+               that: { |x| { x / 0 }
+                           onPanic: { |p| p description startsWith: "Divide by zero:"} }
+               testing: "division by zero (unhandled)".
+        assert forAll: SmallIntegers
+               that: { |x| ({ x / 0 } on: DivideByZero do: { |ex| 42 })
+                           == 42 }
+               testing: "division by zero (handled)".
+        assert forAll: SmallIntegers
+               that: { |x|
+                       { { x / 0 } on: Error do: { |ex| 42 } }
+                           onPanic: { |p| p description startsWith: "UNHANDLED ERROR" } }
+               testing: "division by zero (bad catch)".
+        assert forAll: SmallIntegers
+               that: { |x|
+                       x is 0
+                           ifTrue: { x = 1 }.
+                       [ self auxIntegerDivZeroError: x by: x,
+                         self auxIntegerDivZeroError: x by: 0 ]
+                       == [1, "oops"] }
+               testing: "division by zero (good catch)".
 
     method testStringOutput
        assert forAll: ShortStringSeqs

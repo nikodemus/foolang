@@ -36,7 +36,7 @@ impl Connection {
                             format!("{}", obj)
                         }
                     }
-                    Err(Unwind::Exception(error, location)) => {
+                    Err(Unwind::Panic(error, location)) => {
                         format!("ERROR: {}\n\n{}", error.what(), location.context())
                     }
                     _ => format!("BUG: unexpected return-from result from eval_all"),

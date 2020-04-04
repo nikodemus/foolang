@@ -11,7 +11,7 @@ fn test_decimal_integer() {
 fn test_bad_decimal_integer() {
     assert_eq!(
         eval_str("1x3"),
-        Err(Unwind::Exception(
+        Err(Unwind::Panic(
             Error::SimpleError(SimpleError {
                 what: "Malformed number".to_string(),
             }),
@@ -29,7 +29,7 @@ fn test_hex_integer() {
 fn test_bad_hex_integer() {
     assert_eq!(
         eval_str("0x1x3"),
-        Err(Unwind::Exception(
+        Err(Unwind::Panic(
             Error::SimpleError(SimpleError {
                 what: "Malformed hexadecimal number".to_string(),
             }),
@@ -50,7 +50,7 @@ fn test_binary_integer() {
 fn test_bad_binary_integer() {
     assert_eq!(
         eval_str("0b123"),
-        Err(Unwind::Exception(
+        Err(Unwind::Panic(
             Error::SimpleError(SimpleError {
                 what: "Malformed binary number".to_string(),
             }),

@@ -53,7 +53,7 @@ fn test_interpolated_error_location() {
     );
     assert_eq!(
         exception,
-        Unwind::Exception(
+        Unwind::Panic(
             Error::SimpleError(SimpleError {
                 what: "Unbound variable: X".to_string(),
             }),

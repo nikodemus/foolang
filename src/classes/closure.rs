@@ -6,7 +6,7 @@ pub fn vtable() -> Vtable {
     let vt = Vtable::new("Closure");
     // FUNDAMENTAL
     vt.add_primitive_method_or_panic("apply:", closure_apply_array);
-    vt.add_primitive_method_or_panic("onError:", closure_on_error);
+    vt.add_primitive_method_or_panic("onPanic:", closure_on_panic);
     vt.add_primitive_method_or_panic("finally:", closure_finally);
     vt.add_primitive_method_or_panic("value", closure_apply_values);
     vt.add_primitive_method_or_panic("value:", closure_apply_values);
@@ -33,14 +33,19 @@ fn closure_finally(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     res
 }
 
-fn closure_on_error(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+fn closure_on_panic(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let res = receiver.closure_ref().apply(None, &[]);
-    if let Err(Unwind::Exception(error, loc)) = res {
-        args[0].send(
-            "value:",
+    if let Err(Unwind::Panic(error, loc)) = res {
+        let panic_class = match env.get("Panic") {
+            None => panic!("Panic class not defined!"),
+            Some(obj) => obj,
+        };
+        let panic_obj = panic_class.send(
+            "description:context:",
             &[env.foo.into_string(error.what()), env.foo.into_string(loc.context())],
             env,
-        )
+        )?;
+        args[0].send("value:", &[panic_obj], env)
     } else {
         res
     }

@@ -50,9 +50,9 @@ class TestCase { name condition successCount failureCount errorCount }
 
     method expect: expected using: block
         let actual = { condition value }
-                         onError: { |error ctx|
+                         onPanic: { |p|
                                     return self errorOn: Nothing
-                                                what: error }.
+                                                what: (p description) }.
         (block value: actual value: expected)
             ifTrue: { self successOn: Nothing }
             ifFalse: { self failureOn: Nothing
@@ -61,9 +61,9 @@ class TestCase { name condition successCount failureCount errorCount }
 
     method tryOn: input
         let ok = { condition value: input }
-                         onError: { |error ctx|
-                                    return self errorOn: input
-                                                what: error }.
+                     onPanic: { |p|
+                                return self errorOn: input
+                                            what: (p description) }.
         ok
             ifTrue: { self successOn: input }
             ifFalse: { self failureOn: input }

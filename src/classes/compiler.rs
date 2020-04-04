@@ -91,7 +91,7 @@ fn parse_aux(receiver: &Object, source: &Object, handler: Option<&Object>, env: 
     while !parser.at_eof() {
         match parser.parse() {
             Ok(syntax) => parsed.push(syntax),
-            Err(Unwind::Exception(Error::EofError(ref e), ..)) if handler.is_some() => {
+            Err(Unwind::Panic(Error::EofError(ref e), ..)) if handler.is_some() => {
                 return handler.unwrap().send("value:", &[env.foo.into_string(e.what())], env)
             }
             Err(unwind) => return Err(unwind).context(source),

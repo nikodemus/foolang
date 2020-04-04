@@ -156,7 +156,7 @@ fn test_instance_variable4() {
     );
     assert_eq!(
         exception,
-        Unwind::Exception(
+        Unwind::Panic(
             Error::TypeError(TypeError {
                 value: env.foo.make_float(42.0),
                 expected: "Integer".to_string()
@@ -228,7 +228,7 @@ fn test_extend_exception1() {
     );
     assert_eq!(
         exception,
-        Unwind::Exception(
+        Unwind::Panic(
             Error::SimpleError(SimpleError {
                 what: "Cannot extend Foo: instance method 'perform:with:' defined".to_string()
             }),
@@ -251,7 +251,7 @@ fn test_extend_exception2() {
     );
     assert_eq!(
         exception,
-        Unwind::Exception(
+        Unwind::Panic(
             Error::SimpleError(SimpleError {
                 what: "Cannot extend class Foo: class method 'perform:with:' defined".to_string()
             }),
@@ -274,7 +274,7 @@ fn test_typecheck2() {
     let (exception, env) = eval_exception("123::String");
     assert_eq!(
         exception,
-        Unwind::Exception(
+        Unwind::Panic(
             Error::TypeError(TypeError {
                 value: env.foo.make_integer(123),
                 expected: "String".to_string()
@@ -293,7 +293,7 @@ fn test_typecheck2() {
     let (exception, env) = eval_exception("123::String");
     assert_eq!(
         exception,
-        Unwind::Exception(
+        Unwind::Panic(
             Error::TypeError(TypeError {
                 value: env.foo.make_integer(123),
                 expected: "String".to_string()
@@ -311,7 +311,7 @@ fn test_typecheck3() {
     let (exception, env) = eval_exception("let x::Integer = 42.0. x");
     assert_eq!(
         exception,
-        Unwind::Exception(
+        Unwind::Panic(
             Error::TypeError(TypeError {
                 value: env.foo.make_float(42.0),
                 expected: "Integer".to_string()
@@ -332,7 +332,7 @@ fn test_typecheck4() {
     let (exception, env) = eval_exception("let x::Integer = 42. x = 1.0. x");
     assert_eq!(
         exception,
-        Unwind::Exception(
+        Unwind::Panic(
             Error::TypeError(TypeError {
                 value: env.foo.make_float(1.0),
                 expected: "Integer".to_string()
@@ -358,7 +358,7 @@ fn test_typecheck6() {
     let (exception, env) = eval_exception("{ |x::Integer| x } value: 41.0");
     assert_eq!(
         exception,
-        Unwind::Exception(
+        Unwind::Panic(
             Error::TypeError(TypeError {
                 value: env.foo.make_float(41.0),
                 expected: "Integer".to_string()
@@ -379,7 +379,7 @@ fn test_typecheck7() {
     let (exception, env) = eval_exception("{ |y x::Integer| x = y } value: 41.0 value: 42");
     assert_eq!(
         exception,
-        Unwind::Exception(
+        Unwind::Panic(
             Error::TypeError(TypeError {
                 value: env.foo.make_float(41.0),
                 expected: "Integer".to_string()
@@ -407,7 +407,7 @@ fn test_typecheck8() {
     );
     assert_eq!(
         exception,
-        Unwind::Exception(
+        Unwind::Panic(
             Error::TypeError(TypeError {
                 value: env.foo.make_float(1.0),
                 expected: "Integer".to_string()
@@ -437,7 +437,7 @@ fn test_typecheck9() {
     );
     assert_eq!(
         exception,
-        Unwind::Exception(
+        Unwind::Panic(
             Error::TypeError(TypeError {
                 value: env.foo.make_float(2.0),
                 expected: "Integer".to_string()
@@ -460,7 +460,7 @@ fn test_typecheck10() {
     let (exception, env) = eval_exception("{|x| -> Integer x + 1} value: 1.0");
     assert_eq!(
         exception,
-        Unwind::Exception(
+        Unwind::Panic(
             Error::TypeError(TypeError {
                 value: env.foo.make_float(2.0),
                 expected: "Integer".to_string()
@@ -516,7 +516,7 @@ fn test_assign1() {
 fn test_assign_unbound() {
     assert_eq!(
         eval_str("let x = 1. z = x + 1. let y = x. y"),
-        Err(Unwind::Exception(
+        Err(Unwind::Panic(
             Error::SimpleError(SimpleError {
                 what: "Cannot assign to an unbound variable".to_string(),
             }),
@@ -540,7 +540,7 @@ fn eval_unary() {
 fn test_unbound() {
     assert_eq!(
         eval_str("let foo = 41. foo + bar"),
-        Err(Unwind::Exception(
+        Err(Unwind::Panic(
             Error::SimpleError(SimpleError {
                 what: "Unbound variable: bar".to_string(),
             }),
@@ -559,7 +559,7 @@ fn test_unbound() {
 fn test_class_not_toplevel() {
     assert_eq!(
         eval_str("{ class Point { x y } end } value"),
-        Err(Unwind::Exception(
+        Err(Unwind::Panic(
             Error::SimpleError(SimpleError {
                 what: "Definition where expression was expected".to_string(),
             }),
@@ -599,7 +599,7 @@ fn test_class1() {
 fn eval_global1() {
     assert_eq!(
         eval_str("DoesNotExist"),
-        Err(Unwind::Exception(
+        Err(Unwind::Panic(
             Error::SimpleError(SimpleError {
                 what: "Unbound variable: DoesNotExist".to_string(),
             }),

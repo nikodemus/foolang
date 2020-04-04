@@ -14,7 +14,7 @@ Following words have special meaning:
 
 ``` foolang
 class   extend  method    return
-let     import  raise
+let     import  panic
 end     is      required
 ```
 

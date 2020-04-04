@@ -1,6 +1,0 @@
-import .errorLocationTests.RaiseError
-
-class Main {}
-    class method run: cmd in: sys
-        RaiseError oops
-end

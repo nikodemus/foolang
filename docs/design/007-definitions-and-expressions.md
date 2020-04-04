@@ -56,7 +56,7 @@ mixed.
 <expr> := <simpleExpr> . <expr>?
         | let <name> = <simpleExpr> . <expr>
         | return <simpleExpr> . <deadExpr>?
-        | raise <simpleExpr> . <deadExpr>?
+        | panic <simpleExpr> . <deadExpr>?
 
 Allowed, but cause for a warning:
 
@@ -75,7 +75,7 @@ Allowed, but cause for a warning:
 
 <reservedWord> := let
                 | return
-                | raise
+                | panic
                 | required
                 | method
                 | import
