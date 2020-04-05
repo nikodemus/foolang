@@ -1,0 +1,99 @@
+
+---
+See: Object Oriented Implementation of Numerical Methods, 1.4
+
+radix: Radix of the floating point representation, normally 2
+precision: Largest positive number that when added to 1.0 yields 1.0
+negativePrecision: Largest positive number that when substracted from 1.0 yields 1.0
+largestNumber: Largest finite positive number that can be represented
+smallestNumber: Smallest positive number that can be represented
+defaultNumericPrecision: Relative precision that can be expected for a general computation
+smallNumber: A number that can be added to some value without noticeably chainging the result of a computation
+---
+
+class _MachineFloat {
+        radix
+        precision
+        negativePrecision
+        largestNumber
+        smallestNumber
+        defaultNumericPrecision
+        smallNumber
+    }
+
+    class method new
+        let radix = self computeRadix.
+        let precision = self computePrecision: radix.
+        let negativePrecision = self computeNegativePrecision: radix.
+        let smallestNumber = self computeSmallestNumber: radix
+                                  negativePrecision: negativePrecision.
+        self radix: radix
+             precision: precision
+             negativePrecision: negativePrecision
+             largestNumber: (self computeLargestNumber: radix
+                                  negativePrecision: negativePrecision)
+             smallestNumber: smallestNumber
+             defaultNumericPrecision: precision sqrt
+             smallNumber: smallestNumber sqrt
+
+    class method computeRadix
+        let a = 1.0.
+        { a = a + a.
+          let tmp1 = a + 1.0.
+          let tmp2 = tmp1 - a.
+          tmp2 - 1.0 == 0.0 }
+        whileTrue.
+        let b = 1.0.
+        let radix = 0.
+        { b = b + b.
+          let tmp = a + b.
+          radix = (tmp - a) truncate.
+          radix == 0 }
+        whileTrue.
+        radix
+
+    class method computePrecision: radix
+        let invRadix = 1.0 / radix asFloat.
+        let machinePrecision = 1.0.
+        { let tmp = 1.0 + machinePrecision.
+          tmp == 1.0 }
+        whileFalse: { machinePrecision =
+                          machinePrecision * invRadix }.
+        machinePrecision
+
+    class method computeNegativePrecision: radix
+        let invRadix = 1.0 / radix asFloat.
+        let negativeMachinePrecision = 1.0.
+        { let tmp = 1.0 - negativeMachinePrecision.
+          tmp == 1.0 }
+        whileFalse: { negativeMachinePrecision =
+                          negativeMachinePrecision * invRadix }.
+        negativeMachinePrecision
+
+    class method computeLargestNumber: radix negativePrecision: negativePrecision
+        let floatRadix = radix asFloat.
+        let fullMantissaNumber = 1.0 - (floatRadix * negativePrecision).
+        let largestNumber = fullMantissaNumber.
+        { fullMantissaNumber isFinite }
+            whileTrue: { largestNumber = fullMantissaNumber.
+                         fullMantissaNumber = fullMantissaNumber * floatRadix }.
+        largestNumber
+
+    class method computeSmallestNumber: radix negativePrecision: negativePrecision
+        let floatRadix = radix asFloat.
+        let invRadix = 1.0 / floatRadix.
+        let fullMantissaNumber = 1.0 - (floatRadix * negativePrecision).
+        let smallestNumber = fullMantissaNumber.
+        { fullMantissaNumber == 0.0 }
+            whileFalse: { smallestNumber = fullMantissaNumber.
+                          fullMantissaNumber = fullMantissaNumber * invRadix }.
+        smallestNumber
+
+    method displayOn: stream
+        stream print: "#<MachineFloat>"
+
+end
+
+define MachineFloat
+    _MachineFloat new
+end
