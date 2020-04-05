@@ -14,8 +14,12 @@ pub fn vtable() -> Vtable {
     vt.add_primitive_method_or_panic("mulFloat:", float_mul_float);
     vt.add_primitive_method_or_panic("prefix-", float_neg);
     vt.add_primitive_method_or_panic("subFloat:", float_sub_float);
+    // FIXME: This seems dubious, at least if the float is not integral
     vt.add_primitive_method_or_panic("asInteger", float_as_integer);
+    vt.add_primitive_method_or_panic("truncate", float_truncate);
     vt.add_primitive_method_or_panic("sqrt", float_sqrt);
+    vt.add_primitive_method_or_panic("isInfinite", float_is_infinite);
+    vt.add_primitive_method_or_panic("isFinite", float_is_finite);
     vt
 }
 
@@ -23,6 +27,18 @@ pub fn vtable() -> Vtable {
 
 fn float_as_integer(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_integer(receiver.float().round() as i64))
+}
+
+fn float_is_infinite(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_boolean(receiver.float().is_infinite()))
+}
+
+fn float_is_finite(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_boolean(receiver.float().is_finite()))
+}
+
+fn float_truncate(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_integer(receiver.float().trunc() as i64))
 }
 
 fn float_add_float(receiver: &Object, args: &[Object], env: &Env) -> Eval {
