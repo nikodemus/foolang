@@ -1,5 +1,8 @@
 extend Closure
 
+    method displayOn: stream
+        stream print: self toString
+
     method whileTrue
         { self value } whileTrue: {}.
 
