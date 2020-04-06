@@ -110,3 +110,19 @@ extend Float
             ifFalse: { (self - other) abs < precision * norm }
 
 end
+
+extend Closure
+
+    method derivative
+        self derivative: 0.000001
+
+    method derivative: precision
+        let f = self.
+        { |x|
+          let x1 = x == 0
+                       ifTrue: { precision }
+                       ifFalse: { x * (1.0 + precision) }.
+          let x2 = 2.0 * x - x1.
+          ((f value: x1) - (f value: x2)) / (x1 - x2) }
+
+end
