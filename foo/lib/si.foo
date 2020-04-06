@@ -486,18 +486,12 @@ class SI { value::Float _unit::SI_Unit }
     method divSI: left
         SI value: left value / self value unit: (left unit / self unit)
 
-    method mulFloat: left
+    method mulNumber: left
         SI value: left * self value unit: self unit
 
-    method mulInteger: left
-        self mulFloat: left asFloat
-
-    method divFloat: left
+    method divNumber: left
         let unit = self unit.
         SI value: left / self value unit: (unit species power: - (unit power))
-
-    method divInteger: left
-        self divFloat: left asFloat
 
     method displayOn: stream
         self unit display: self value on: stream

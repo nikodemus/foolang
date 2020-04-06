@@ -8,10 +8,29 @@ interface Number
     method square
         self * self
 
+    method + right
+        right addNumber: self
+    method - right
+        right subNumber: self
+    method * right
+        right mulNumber: self
+    method / right
+        right divNumber: self
+
+    method == right
+        right eqNumber: self
+    method < right
+        right ltNumber: self
+    method > right
+        right gtNumber: self
+    method <= right
+        right lteNumber: self
+    method >= right
+        right gteNumber: self
+
     -- FIXME: Should support floating point exponents for floats at least
     method ^ power::Integer
-        -- FIXME: should be a nicer way of getting one in the receivers type.
-        let result = self / self.
+        let result = 1.
         power times: { result = result * self }.
         result
 

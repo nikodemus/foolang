@@ -21,46 +21,43 @@ extend Integer
            whileTrue: { block value. i = i + 1 }.
         self
 
-    method + x
-        x addInteger: self
-    method - x
-        x subInteger: self
-    method * x
-        x mulInteger: self
-    method / x
-        x divInteger: self
+    method addNumber: left
+        left integerAdd: self
+    method subNumber: left
+        left integerSub: self
+    method mulNumber: left
+        left integerMul: self
+    method divNumber: left
+        left integerDiv: self
 
-    method square
-        self mulInteger: self
+    method eqNumber: left
+        left integerEq: self
+    method ltNumber: left
+        left integerLt: self
+    method gtNumber: left
+        left integerGt: self
+    method lteNumber: left
+        left integerLte: self
+    method gteNumber: left
+        left integerGte: self
 
-    method == x
-        x equalInteger: self
-    method < x
-        x greaterThanInteger: self
-    method > x
-        x lessThanInteger: self
-    method <= x
-        x greaterThanOrEqualInteger: self
-    method >= x
-        x lessThanOrEqualInteger: self
+    method floatAdd: right
+        self asFloat floatAdd: right
+    method floatSub: right
+        self asFloat floatSub: right
+    method floatMul: right
+        self asFloat floatMul: right
+    method floatDiv: right
+        self asFloat floatDiv: right
 
-    method addFloat: x
-        self asFloat addFloat: x
-    method subFloat: x
-        self asFloat subFloat: x
-    method mulFloat: x
-        self asFloat mulFloat: x
-    method divFloat: x
-        self asFloat divFloat: x
-
-    method equalFloat: x
-        self asFloat equalFloat: x
-    method greaterThanFloat: x
-        self asFloat greaterThanFloat: x
-    method greaterThanOrEqualFloat: x
-        self asFloat greaterThanOrEqualFloat: x
-    method lessThanFloat: x
-        self asFloat lessThanFloat: x
-    method lessThanOrEqualFloat: x
-        self asFloat lessThanOrEqualFloat: x
+    method floatEq: right
+        self asFloat floatEq: right
+    method floatGt: right
+        self asFloat floatGt: right
+    method floatLt: right
+        self asFloat floatLt: right
+    method floatGte: right
+        self asFloat floatGte: right
+    method floatLte: right
+        self asFloat floatLte: right
 end
