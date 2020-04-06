@@ -97,3 +97,16 @@ end
 define MachineFloat
     _MachineFloat new
 end
+
+extend Float
+
+    method near: other
+        self near: other precision: MachineFloat defaultNumericPrecision
+
+    method near: other precision: precision
+        let norm = self abs max: other abs.
+        norm < precision
+            ifTrue: { True }
+            ifFalse: { (self - other) abs < precision * norm }
+
+end
