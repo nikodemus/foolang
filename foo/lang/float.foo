@@ -9,21 +9,6 @@ extend Float
     method to: other
        self to: other by: 1.0.
 
-    method abs
-        self < 0.0
-            ifTrue: { -self }
-            ifFalse: { self }
-
-    method max: other
-        self < other
-            ifTrue: { other }
-            ifFalse: { self }
-
-    method min: other
-        self > other
-            ifTrue: { other }
-            ifFalse: { self }
-
     method + x
         x addFloat: self.
     method - x
