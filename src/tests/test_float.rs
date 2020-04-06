@@ -41,9 +41,9 @@ fn test_float_as_float() {
 }
 
 #[test]
-fn test_float_as_integer() {
-    assert_eq!(eval_ok("42.1 asInteger").integer(), 42);
-    assert_eq!(eval_ok("41.9 asInteger").integer(), 42);
+fn test_float_round() {
+    assert_eq!(eval_ok("42.1 round").integer(), 42);
+    assert_eq!(eval_ok("41.9 round").integer(), 42);
 }
 
 #[test]

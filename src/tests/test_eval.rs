@@ -533,7 +533,7 @@ fn test_assign_unbound() {
 
 #[test]
 fn eval_unary() {
-    assert_eq!(eval_ok("42 asFloat asInteger").integer(), 42);
+    assert_eq!(eval_ok("42 asFloat round").integer(), 42);
 }
 
 #[test]

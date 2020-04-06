@@ -55,6 +55,25 @@ extend Array
                 result push: (block value: (self at: i)  value: (array at: i)) }.
         result.
 
+    method with: array default: default collect: block
+        let size1 = self size.
+        let size2 = array size.
+        let size = size1 max: size2.
+        let result = Array withCapacity: size.
+        let common = size1 min: size2.
+        1 to: common
+          do: { |i| result push: (block value: (self at: i) value: (array at: i)) }.
+        common == size
+            ifTrue: { return result }.
+        let tailHandler = size1 < size2
+                              ifTrue: { { |i|
+                                          block value: default value: (array at: i) } }
+                              ifFalse: { { |i|
+                                           block value: (self at: i) value: default } }.
+        common + 1 to: size
+                   do: { |i| result push: (tailHandler value: i) }.
+        result
+
     method select: block
         let selection = Array withCapacity: 4.
         self do: { |elt|
@@ -153,25 +172,14 @@ extend Array
     method vectorProjectionOn: other
         ((self dot: other) / (other dot: other)) * other.
 
-    method addInteger: x
-       self collect: { |elt| elt addInteger: x }.
-    method addFloat: x
-       self collect: { |elt| elt addFloat: x }.
-
-    method divFloat: x
-       self collect: { |elt| elt divFloat: x }.
-    method divInteger: x
-       self collect: { |elt| elt divInteger: x }.
-
-    method mulInteger: x
-       self collect: { |elt| elt mulInteger: x }.
-    method mulFloat: x
-       self collect: { |elt| elt mulFloat: x }.
-
-    method subInteger: x
-       self collect: { |elt| elt subInteger: x }.
-    method subFloat: x
-       self collect: { |elt| elt subFloat: x }.
+    method addNumber: left
+       self collect: { |elt| left + elt }.
+    method subNumber: left
+       self collect: { |elt| left - elt }.
+    method divNumber: left
+       self collect: { |elt| left / elt }.
+    method mulNumber: left
+       self collect: { |elt| left * elt }.
 end
 
 class TestArray {}

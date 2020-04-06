@@ -1,20 +1,61 @@
 import .interval.Interval
 
 interface Number
+
     method broadcast: block to: collection
         collection collect: { |x| block value: x value: self }
+
     method square
         self * self
+
+    method + right
+        right addNumber: self
+    method - right
+        right subNumber: self
+    method * right
+        right mulNumber: self
+    method / right
+        right divNumber: self
+
+    method == right
+        right eqNumber: self
+    method < right
+        right ltNumber: self
+    method > right
+        right gtNumber: self
+    method <= right
+        right lteNumber: self
+    method >= right
+        right gteNumber: self
+
     -- FIXME: Should support floating point exponents for floats at least
     method ^ power::Integer
-        -- FIXME: should be a nicer way of getting one in the receivers type.
-        let result = self / self.
+        let result = 1.
         power times: { result = result * self }.
         result
+
+    method abs
+        self < 0.0
+            ifTrue: { -self }
+            ifFalse: { self }
+
+    method max: other
+        self < other
+            ifTrue: { other }
+            ifFalse: { self }
+
+    method min: other
+        self > other
+            ifTrue: { other }
+            ifFalse: { self }
+
     method to: other by: step
        Interval from: self to: other by: step
+
     method printOn: stream
         stream print: self toString
+
     method displayOn: stream
         self printOn: stream
+
 end

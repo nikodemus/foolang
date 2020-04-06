@@ -9,52 +9,52 @@ extend Float
     method to: other
        self to: other by: 1.0.
 
-    method + x
-        x addFloat: self.
-    method - x
-        x subFloat: self.
-    method * x
-        x mulFloat: self.
-    method / x
-        x divFloat: self.
+    method addNumber: left
+        left floatAdd: self
+    method subNumber: left
+        left floatSub: self.
+    method mulNumber: left
+        left floatMul: self.
+    method divNumber: left
+        left floatDiv: self.
 
-    method == x
-        x equalFloat: self.
-    method < x
-        x greaterThanFloat: self.
-    method > x
-        x lessThanFloat: self.
-    method <= x
-        x greaterThanOrEqualFloat: self.
-    method >= x
-        x lessThanOrEqualFloat: self.
+    method eqNumber: left
+        left floatEq: self.
+    method ltNumber: left
+        left floatLt: self.
+    method gtNumber: left
+        left floatGt: self.
+    method lteNumber: left
+        left floatLte: self.
+    method gteNumber: left
+        left floatGte: self.
 
-    method addInteger: x
-        self addFloat: x asFloat.
-    method subInteger: x
-        self subFloat: x asFloat.
-    method mulInteger: x
-        self mulFloat: x asFloat.
-    method divInteger: x
-        self divFloat: x asFloat.
+    method integerAdd: right
+        self floatAdd: right asFloat.
+    method integerSub: right
+        self floatSub: right asFloat.
+    method integerMul: right
+        self floatMul: right asFloat.
+    method integerDiv: right
+        self floatDiv: right asFloat.
 
-    method equalInteger: x
-        self equalFloat: x asFloat.
-    method lessThanInteger: x
-        self lessThanFloat: x asFloat.
-    method greaterThanInteger: x
-        self greaterThanFloat: x asFloat.
-    method lessThanOrEqualInteger: x
-        self lessThanOrEqualFloat: x asFloat.
-    method greaterThanOrEqualInteger: x
-        self greaterThanOrEqualFloat: x asFloat.
+    method integerEq: right
+        self floatEq: right asFloat.
+    method integerLt: right
+        self floatLt: right asFloat.
+    method integerGt: right
+        self floatGt: right asFloat.
+    method integerLte: right
+        self floatLte: right asFloat.
+    method integerGte: right
+        self floatGte: right asFloat.
 
     method atLeast: min atMost: max
         let min = min asFloat.
-        (self lessThanFloat: min)
+        (self floatLt: min)
             ifTrue: { return min }.
         let max = max asFloat.
-        (self greaterThanFloat: max)
+        (self floatGt: max)
             ifTrue: { return max }.
         self.
 end
