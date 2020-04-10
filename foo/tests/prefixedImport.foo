@@ -1,0 +1,11 @@
+define X
+    "eks"
+end
+
+define _Y
+    "why"
+end
+
+define Y
+    { _Y }
+end

@@ -437,6 +437,22 @@ fn test_import_bar_y() -> Test {
 }
 
 #[test]
+fn test_prefixed_import() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_prefixed_import.foo");
+    cmd.assert().failure().stdout(predicates::str::contains(
+        "X = eks
+Y = why
+FATAL - ERROR: Unbound variable: _Y
+007         out println: \"Y = {Y value}\".
+008         out println: \"_Y = {_Y}\".
+                                ^^ Unbound variable: _Y
+009         sys exit",
+    ));
+    Ok(())
+}
+
+#[test]
 fn test_prelude1() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/tests/test_prelude.foo");
