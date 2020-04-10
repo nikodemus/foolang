@@ -5,8 +5,8 @@
 ;; Soft require: ./test-elisp.sh provides this, but we don't depend on it
 (require 'highlight-numbers nil t)
 
-(defvar foolang-syntax-table)
-(setq foolang-syntax-table (make-syntax-table))
+(defvar foolang-syntax-table (make-syntax-table))
+;; (setq foolang-syntax-table (make-syntax-table))
 
 (defun foolang-init-syntax-table (table)
   (modify-syntax-entry ?_ "w" table)
@@ -401,9 +401,12 @@
   (:indent
    (end-of-line)
    (backward-up-list)
+   (forward-char)
+   (while (looking-at "\\s-")
+     (forward-char))
    (let ((p (current-column)))
-     (list (+ p 2 foolang-indent-offset)
-           (+ p 2)
+     (list (+ p foolang-indent-offset)
+           p
            (cons (cons col base) stack)
            ctx))))
 
@@ -524,10 +527,20 @@
    (let ((p (current-column)))
      (list p base stack ctx))))
 
+(defconst foolang--keyword-arg-line-regex
+  (concat "\\s-*"
+          foolang--keyword-regex "[^\\s-\n]*"
+          foolang--newline-or-lines-regex))
+
+(defconst foolang--two-keyword-arg-lines-regex
+  (concat foolang--keyword-arg-line-regex
+          "\\s-*"
+          foolang--keyword-regex))
+
 (def-foolang-indent "in-body name: var \\ name: var" (col base stack ctx)
   (:after
     (when (eq :body ctx)
-      (looking-at " *\\(\\w+: *\\w+\\s-*\\)+\n\\s-*\\w+:")))
+      (looking-at foolang--two-keyword-arg-lines-regex)))
   (:indent
    (list col base stack ctx)))
 
@@ -1440,6 +1453,46 @@ class Foo { a }
         defaultNumericPrecision: precision sqrt
         -- ie. epsilon
         smallNumber: (self computeSmallNumber)")
+
+(def-foolang-indent-test "body-indent-24"
+  "
+class Foo {}
+method addPolynomial: left
+Polynomial
+coefficients: (self coefficients
+with: left coefficients
+default: 0.0
+collect: { |c1 c2| c1 + c2 } )"
+  "
+class Foo {}
+    method addPolynomial: left
+        Polynomial
+            coefficients: (self coefficients
+                               with: left coefficients
+                               default: 0.0
+                               collect: { |c1 c2| c1 + c2 } )")
+
+(def-foolang-indent-test "body-indent-24.1"
+  "
+class Foo {}
+method addPolynomial: left
+Polynomial
+coefficients: (self coefficients
+with: left coefficients
+
+default: 0.0
+
+collect: { |c1 c2| c1 + c2 } )"
+  "
+class Foo {}
+    method addPolynomial: left
+        Polynomial
+            coefficients: (self coefficients
+                               with: left coefficients
+
+                               default: 0.0
+
+                               collect: { |c1 c2| c1 + c2 } )")
 
 (def-foolang-indent-test "end-indent-1"
   "
