@@ -2,6 +2,8 @@
 interface Collection
 
     method == other
+        (Collection includes: other)
+            ifFalse: { return False }.
         let size = self size.
         size is other size
             ifFalse: { return False }.

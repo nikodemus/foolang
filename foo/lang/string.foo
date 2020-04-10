@@ -20,7 +20,8 @@ extend String
         self do: { |c| c _escapeOn: stream }.
         stream writeString: "\""
     method == other
-        other stringEqual: self
+        (String includes: other)
+            ifTrue: { other stringEqual: self }
     method startsWith: other
         1 to: other size
           do: { |i|

@@ -192,6 +192,8 @@ class TestArray {}
                testing: "Array#== (false 1)".
         assert false: { [1, 2, 3, 4] == [1, 2, 3] }
                testing: "Array#== (false 2)".
+        assert false: { ["one", 2, 3] == [1, "two", 3] }
+               testing: "Array#== (false 3)".
 
     class method testSort: assert
         assert that: { [] sort }
