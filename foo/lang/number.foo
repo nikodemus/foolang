@@ -18,7 +18,8 @@ interface Number
         right divNumber: self
 
     method == right
-        right eqNumber: self
+        (Number includes: right)
+            ifTrue: { right eqNumber: self }
     method < right
         right ltNumber: self
     method > right

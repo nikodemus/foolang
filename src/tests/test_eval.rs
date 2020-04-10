@@ -162,11 +162,11 @@ fn test_instance_variable4() {
                 expected: "Integer".to_string()
             }),
             Location::from(
-                66..69,
+                72..79,
                 concat!(
                     "002            method foo: x\n",
                     "003               bar = bar + x.\n",
-                    "                  ^^^ Integer expected, got: Float 42.0\n",
+                    "                        ^^^^^^^ Integer expected, got: Float 42.0\n",
                     "004               self\n"
                 )
             )
@@ -299,8 +299,8 @@ fn test_typecheck2() {
                 expected: "String".to_string()
             }),
             Location::from(
-                5..11,
-                concat!("001 123::String\n", "         ^^^^^^ String expected, got: Integer 123\n")
+                0..3,
+                concat!("001 123::String\n", "    ^^^ String expected, got: Integer 123\n")
             )
         )
     );
@@ -317,10 +317,10 @@ fn test_typecheck3() {
                 expected: "Integer".to_string()
             }),
             Location::from(
-                4..5,
+                17..21,
                 concat!(
                     "001 let x::Integer = 42.0. x\n",
-                    "        ^ Integer expected, got: Float 42.0\n"
+                    "                     ^^^^ Integer expected, got: Float 42.0\n"
                 )
             )
         )
@@ -338,10 +338,10 @@ fn test_typecheck4() {
                 expected: "Integer".to_string()
             }),
             Location::from(
-                21..22,
+                25..28,
                 concat!(
                     "001 let x::Integer = 42. x = 1.0. x\n",
-                    "                         ^ Integer expected, got: Float 1.0\n"
+                    "                             ^^^ Integer expected, got: Float 1.0\n"
                 )
             )
         )
@@ -364,10 +364,10 @@ fn test_typecheck6() {
                 expected: "Integer".to_string()
             }),
             Location::from(
-                3..4,
+                19..30,
                 concat!(
                     "001 { |x::Integer| x } value: 41.0\n",
-                    "       ^ Integer expected, got: Float 41.0\n"
+                    "                       ^^^^^^^^^^^ Integer expected, got: Float 41.0\n"
                 )
             )
         )
@@ -385,10 +385,10 @@ fn test_typecheck7() {
                 expected: "Integer".to_string()
             }),
             Location::from(
-                17..18,
+                21..22,
                 concat!(
                     "001 { |y x::Integer| x = y } value: 41.0 value: 42\n",
-                    "                     ^ Integer expected, got: Float 41.0\n"
+                    "                         ^ Integer expected, got: Float 41.0\n"
                 )
             )
         )
@@ -402,8 +402,10 @@ fn test_typecheck8() {
             defaultConstructor foo
             method zot: x::Integer
                 x
+            method boom
+                self zot: 1.0
          end
-         Foo foo zot: 1.0",
+         Foo foo boom",
     );
     assert_eq!(
         exception,
@@ -413,12 +415,12 @@ fn test_typecheck8() {
                 expected: "Integer".to_string()
             }),
             Location::from(
-                72..73,
+                146..154,
                 concat!(
-                    "002             defaultConstructor foo\n",
-                    "003             method zot: x::Integer\n",
-                    "                            ^ Integer expected, got: Float 1.0\n",
-                    "004                 x\n"
+                    "005             method boom\n",
+                    "006                 self zot: 1.0\n",
+                    "                         ^^^^^^^^ Integer expected, got: Float 1.0\n",
+                    "007          end\n"
                 )
             )
         )
@@ -443,11 +445,11 @@ fn test_typecheck9() {
                 expected: "Integer".to_string()
             }),
             Location::from(
-                101..102,
+                101..106,
                 concat!(
                     "003             method zot: x -> Integer\n",
                     "004                 x + 1\n",
-                    "                    ^ Integer expected, got: Float 2.0\n",
+                    "                    ^^^^^ Integer expected, got: Float 2.0\n",
                     "005          end\n",
                 )
             )
@@ -466,10 +468,10 @@ fn test_typecheck10() {
                 expected: "Integer".to_string()
             }),
             Location::from(
-                16..17,
+                16..21,
                 concat!(
                     "001 {|x| -> Integer x + 1} value: 1.0\n",
-                    "                    ^ Integer expected, got: Float 2.0\n",
+                    "                    ^^^^^ Integer expected, got: Float 2.0\n",
                 )
             )
         )
@@ -493,17 +495,17 @@ fn test_typecheck11() {
 }
 
 #[test]
-fn test_let1() {
+fn test_eval_let1() {
     assert_eq!(eval_ok("let x = 42. x").integer(), 42);
 }
 
 #[test]
-fn test_let2() {
+fn test_eval_let2() {
     assert_eq!(eval_ok("let x = 1. let x = 42. x").integer(), 42);
 }
 
 #[test]
-fn test_let3() {
+fn test_eval_let3() {
     assert_eq!(eval_ok("let x = 42. let y = 1. x").integer(), 42);
 }
 
@@ -583,14 +585,14 @@ fn test_class1() {
         class.instance_vtable.slots()["x"],
         Slot {
             index: 0,
-            vtable: None,
+            typed: None,
         }
     );
     assert_eq!(
         class.instance_vtable.slots()["y"],
         Slot {
             index: 1,
-            vtable: None,
+            typed: None,
         }
     );
 }

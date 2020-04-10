@@ -69,19 +69,17 @@ Demonstration that user-defined subtypes do not need `classOf`:
 
 ``` foolang
 class Codepoint { value }
-   class method check: obj
-      Self _check: obj
 end
 
 class GermanicCodepoint {}
-    class method _check: obj
-        (Codepoint check: obj)
+    class method includes: obj
+        (Codepoint includes: obj)
             and: (Codepoint germanicRange includes: obj value)
-    class method _subtypeOf: type
+    class method subtypeOf: type
         type is Codepoint
 ```
 
-Notice the default `#_check:` method on classes: if that did not exist there
+Notice the default `#includes:` method on classes: if that did not exist there
 would be a need to access the class of an object directly&mdash;at the same time
 this limits the ability to test arbitrary types unless they choose to allow
 that, providing a light the push towards code that doesn't depend on typechecks.

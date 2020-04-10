@@ -52,7 +52,7 @@ impl fmt::Debug for ByteArray {
 }
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("class ByteArray");
+    let vt = Vtable::new("ByteArray");
     vt.add_primitive_method_or_panic("new:", class_byte_array_new);
     vt
 }

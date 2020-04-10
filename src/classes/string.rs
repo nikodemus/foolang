@@ -13,7 +13,7 @@ pub fn instance_vtable() -> Vtable {
 }
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("class String");
+    let vt = Vtable::new("String");
     vt.add_primitive_method_or_panic("new", class_string_new);
     vt
 }

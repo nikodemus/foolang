@@ -63,7 +63,7 @@ fn parse_var2() {
 fn parse_operators1() {
     assert_eq!(
         parse_expr("a + b * c"),
-        Ok(binary(2..3, "+", var(0..1, "a"), binary(6..7, "*", var(4..5, "b"), var(8..9, "c"))))
+        Ok(binary(2..9, "+", var(0..1, "a"), binary(6..9, "*", var(4..5, "b"), var(8..9, "c"))))
     );
 }
 
@@ -71,7 +71,7 @@ fn parse_operators1() {
 fn parse_operators2() {
     assert_eq!(
         parse_expr("a * b + c"),
-        Ok(binary(6..7, "+", binary(2..3, "*", var(0..1, "a"), var(4..5, "b")), var(8..9, "c")))
+        Ok(binary(6..9, "+", binary(2..5, "*", var(0..1, "a"), var(4..5, "b")), var(8..9, "c")))
     );
 }
 
@@ -86,7 +86,7 @@ fn parse_operators3() {
                 args: vec![]
             })
             .send(Message {
-                source_location: SourceLocation::span(&(3..4)),
+                source_location: SourceLocation::span(&(3..6)),
                 selector: "-".to_string(),
                 args: vec![var(5..6, "b")]
             }))
@@ -145,20 +145,20 @@ fn test_define2() {
 }
 
 #[test]
-fn test_let1() {
+fn test_parse_let1() {
     assert_eq!(
         parse_expr("let x = 21 + 21. x"),
         Ok(bind(
             SourceLocation::span(&(4..5)),
             "x",
-            binary(11..12, "+", int(8..10, 21), int(13..15, 21)),
+            binary(11..15, "+", int(8..10, 21), int(13..15, 21)),
             var(17..18, "x")
         ))
     );
 }
 
 #[test]
-fn test_let2() {
+fn test_parse_let2() {
     assert_eq!(
         parse_expr(
             "let x = 21 + 21.
@@ -167,7 +167,7 @@ fn test_let2() {
         Ok(bind(
             SourceLocation::span(&(4..5)),
             "x",
-            binary(11..12, "+", int(8..10, 21), int(13..15, 21)),
+            binary(11..15, "+", int(8..10, 21), int(13..15, 21)),
             var(30..31, "x")
         ))
     );
@@ -364,7 +364,7 @@ fn parse_type_assertions3() {
 fn parse_parens() {
     assert_eq!(
         parse_expr("(a+b)*c"),
-        Ok(binary(5..6, "*", binary(2..3, "+", var(1..2, "a"), var(3..4, "b")), var(6..7, "c")))
+        Ok(binary(5..7, "*", binary(2..4, "+", var(1..2, "a"), var(3..4, "b")), var(6..7, "c")))
     )
 }
 

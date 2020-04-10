@@ -2,7 +2,7 @@ use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("class Output");
+    let vt = Vtable::new("Output");
     vt.add_primitive_method_or_panic("debug", class_output_debug);
     vt
 }

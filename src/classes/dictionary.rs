@@ -52,7 +52,7 @@ impl fmt::Debug for Dictionary {
 }
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("class Dictionary");
+    let vt = Vtable::new("Dictionary");
     vt.add_primitive_method_or_panic("new", class_dictionary_new);
     vt
 }

@@ -3,7 +3,7 @@ use crate::objects::{Eval, Object, Vtable};
 use crate::time::TimeInfo;
 
 pub fn class_vtable() -> Vtable {
-    Vtable::new("class Clock")
+    Vtable::new("Clock")
 }
 
 pub fn instance_vtable() -> Vtable {

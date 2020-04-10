@@ -8,7 +8,6 @@ use crate::def::*;
 use crate::expr::*;
 use crate::objects::{
     read_instance_variable, write_instance_variable, Arg, Datum, Eval, Foolang, Object, Source,
-    Vtable,
 };
 use crate::parse::Parser;
 use crate::source_location::SourceLocation;
@@ -17,29 +16,32 @@ use crate::unwind::Unwind;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Binding {
-    vtable: Option<Rc<Vtable>>,
+    pub typed: Option<Object>,
     pub value: Object,
 }
 
 impl Binding {
     pub fn untyped(init: Object) -> Binding {
         Binding {
-            vtable: None,
+            typed: None,
             value: init,
         }
     }
-    pub fn typed(vtable: Rc<Vtable>, init: Object) -> Binding {
-        Binding {
-            vtable: Some(vtable),
-            value: init,
-        }
+    pub fn typed(typed: Object, init: Object, env: &Env) -> Result<Binding, Unwind> {
+        let ok = typed.send("typecheck:", &[init], env)?;
+        Ok(Binding {
+            typed: Some(typed),
+            value: ok,
+        })
     }
-    pub fn assign(&mut self, value: Object) -> Eval {
-        if let Some(vtable) = &self.vtable {
-            value.typecheck(vtable)?;
-        }
-        self.value = value.clone();
-        Ok(value)
+    pub fn assign(&mut self, value: Object, env: &Env) -> Eval {
+        let ok = if let Some(typed) = &self.typed {
+            typed.send("typecheck:", &[value], env)?
+        } else {
+            value
+        };
+        self.value = ok.clone();
+        Ok(ok)
     }
 }
 
@@ -159,12 +161,12 @@ impl EnvRef {
     pub fn define(&self, name: &str, value: Object) {
         self.add_binding(name, Binding::untyped(value));
     }
-    fn set(&self, name: &str, value: Object) -> Option<Eval> {
+    fn set(&self, name: &str, value: Object, env: &Env) -> Option<Eval> {
         let mut frame = self.frame.borrow_mut();
         match frame.symbols.get_mut(name) {
-            Some(binding) => Some(binding.assign(value)),
+            Some(binding) => Some(binding.assign(value, env)),
             None => match &frame.parent {
-                Some(parent) => parent.set(name, value),
+                Some(parent) => parent.set(name, value, env),
                 None => None,
             },
         }
@@ -367,7 +369,7 @@ impl Env {
     }
 
     pub fn set(&self, name: &str, value: Object) -> Option<Eval> {
-        self.env_ref.set(name, value)
+        self.env_ref.set(name, value, self)
     }
 
     pub fn get(&self, name: &str) -> Option<Object> {
@@ -433,10 +435,14 @@ impl Env {
         let binding = match bind.typename {
             None => Binding::untyped(value),
             Some(ref typename) => {
-                let vt = self.find_type(typename).source(&bind.source_location)?;
-                value.typecheck(&vt).source(&bind.source_location)?;
-                // FIXME: make the typecheck explicit
-                Binding::typed(vt, value)
+                let typed = self.find_type(typename).source(&bind.source_location)?;
+                match Binding::typed(typed, value, self) {
+                    Ok(ok) => ok,
+                    Err(mut unwind) => {
+                        unwind.add_source_location(&bind.value.source_location());
+                        return Err(unwind);
+                    }
+                }
             }
         };
         let tmp = binding.value.clone();
@@ -608,28 +614,22 @@ impl Env {
         }
     }
 
-    // NOTE: The name is correct: vtables stand in for classes right now,
-    // and once we have non-vtable types this will return Option<Type>
-    // instead. Ditto for maybe_type.
-    pub fn maybe_type(&self, maybe_name: &Option<String>) -> Result<Option<Rc<Vtable>>, Unwind> {
+    pub fn maybe_type(&self, maybe_name: &Option<String>) -> Result<Option<Object>, Unwind> {
         match maybe_name {
             None => return Ok(None),
             Some(name) => Ok(Some(self.find_type(name)?)),
         }
     }
 
-    // NOTE: name is correct, see maybe_type for more.
+    // FIXME: should verify that the object is a type
     //
-    // This used get() instead of find_global because methods are
-    // in a special environment which includes the class as well, even
-    // though the definition is not yet complete.
-    pub fn find_type(&self, name: &str) -> Result<Rc<Vtable>, Unwind> {
+    // This MUST use get() instead of find_global because methods are in a
+    // special environment which includes the class as well, even though the
+    // definition is not yet complete.
+    pub fn find_type(&self, name: &str) -> Eval {
         match self.get(name) {
             None => Unwind::error(&format!("Undefined type: '{}'", name)),
-            Some(obj) => match &obj.datum {
-                Datum::Class(ref class) => Ok(class.instance_vtable.clone()),
-                _ => Unwind::error(&format!("Not a type: '{}'", name)),
-            },
+            Some(obj) => Ok(obj.clone()),
         }
     }
 
@@ -705,24 +705,20 @@ impl Env {
     }
 
     fn eval_typecheck(&self, typecheck: &Typecheck) -> Eval {
-        let expr = &typecheck.expr;
-        let value = self.eval(expr)?;
-        // WIP: should use expr.source_location, but this will do for now.
-        value
-            .typecheck(&self.find_type(&typecheck.typename).source(&typecheck.source_location)?)
-            .source(&typecheck.source_location)?;
-        Ok(value)
+        let value = self.eval(&typecheck.expr)?;
+        let typed = self.find_type(&typecheck.typename).source(&typecheck.source_location)?;
+        typed.send("typecheck:", &[value], self).source_expr(&typecheck.expr)
     }
 
     fn eval_assign(&self, assign: &Assign) -> Eval {
         let value = self.eval(&assign.value)?;
         match self.set(&assign.name, value.clone()) {
-            Some(res) => res.source(&assign.source_location),
+            Some(res) => res.source_expr(&assign.value),
             None => {
                 if let Some(receiver) = self.receiver() {
                     if let Some(slot) = receiver.slots().get(&assign.name) {
-                        return write_instance_variable(&receiver, slot, value)
-                            .source(&assign.source_location);
+                        return write_instance_variable(&receiver, slot, value, self)
+                            .source_expr(&assign.value);
                     }
                 }
                 // FIXME: there used to be a workspace lookup here...

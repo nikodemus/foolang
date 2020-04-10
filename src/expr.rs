@@ -91,28 +91,7 @@ impl Expr {
     }
 
     pub fn span(&self) -> Span {
-        use Expr::*;
-        match self {
-            Array(array) => array.source_location.get_span(),
-            Assign(assign) => assign.source_location.get_span(),
-            Bind(bind) => bind.value.span(),
-            Block(block) => block.source_location.get_span(),
-            Cascade(cascade) => cascade.receiver.span(),
-            Dictionary(dictionary) => dictionary.source_location.get_span(),
-            Const(constant) => constant.source_location.get_span(),
-            Eq(eq) => eq.source_location.get_span(),
-            Chain(chain) => chain.receiver.span(),
-            Panic(panic) => panic.source_location.get_span(),
-            Return(ret) => ret.source_location.get_span(),
-            // FIXME: Wrong span
-            Seq(seq) => {
-                let mut span = seq.exprs[0].span();
-                span.end = seq.exprs[seq.exprs.len() - 1].span().end;
-                span
-            }
-            Typecheck(typecheck) => typecheck.source_location.get_span(),
-            Var(var) => var.source_location.get_span(),
-        }
+        self.source_location().get_span()
     }
 
     pub fn source_location(&self) -> SourceLocation {
@@ -123,15 +102,21 @@ impl Expr {
             Bind(bind) => bind.source_location.clone(),
             Block(block) => block.source_location.clone(),
             Cascade(cascade) => cascade.receiver.source_location(),
-            Dictionary(dictionary) => dictionary.source_location.clone(),
+            Chain(chain) => {
+                let mut source = chain.receiver.source_location();
+                source.extend_span_to(
+                    chain.messages[chain.messages.len() - 1].source_location.get_span().end,
+                );
+                source
+            }
             Const(constant) => constant.source_location.clone(),
+            Dictionary(dictionary) => dictionary.source_location.clone(),
             Eq(eq) => eq.source_location.clone(),
-            Chain(chain) => chain.receiver.source_location(),
             Panic(panic) => panic.source_location.clone(),
             Return(ret) => ret.source_location.clone(),
             Seq(seq) => {
                 let mut source_location = seq.exprs[0].source_location();
-                source_location.set_span(&self.span());
+                source_location.extend_span_to(seq.exprs[seq.exprs.len() - 1].span().end);
                 source_location
             }
             Typecheck(typecheck) => typecheck.source_location.clone(),

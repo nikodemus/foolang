@@ -44,7 +44,7 @@ pub fn make_compiler(foo: &Foolang) -> Object {
 }
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("class Compiler");
+    let vt = Vtable::new("Compiler");
     vt.add_primitive_method_or_panic("new", class_compiler_new);
     vt
 }

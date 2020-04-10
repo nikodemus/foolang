@@ -24,11 +24,19 @@ use crate::classes;
 pub type Eval = Result<Object, Unwind>;
 
 pub trait Source {
+    fn source_expr(self, expr: &Expr) -> Self;
     fn source(self, source_location: &SourceLocation) -> Self;
     fn context(self, source: &str) -> Self;
 }
 
 impl Source for Eval {
+    fn source_expr(mut self, expr: &Expr) -> Self {
+        if let Err(unwind) = &mut self {
+            unwind.add_source_location(&expr.source_location());
+        }
+        self
+    }
+
     fn source(mut self, source_location: &SourceLocation) -> Self {
         if let Err(unwind) = &mut self {
             unwind.add_source_location(source_location);
@@ -45,6 +53,12 @@ impl Source for Eval {
 }
 
 impl Source for Result<Rc<Vtable>, Unwind> {
+    fn source_expr(mut self, expr: &Expr) -> Self {
+        if let Err(unwind) = &mut self {
+            unwind.add_source_location(&expr.source_location());
+        }
+        self
+    }
     fn source(mut self, source_location: &SourceLocation) -> Self {
         if let Err(unwind) = &mut self {
             unwind.add_source_location(source_location);
@@ -64,8 +78,8 @@ type MethodFunction = fn(&Object, &[Object], &Env) -> Eval;
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct Signature {
-    parameter_types: Vec<Option<Rc<Vtable>>>,
-    return_type: Option<Rc<Vtable>>,
+    parameter_types: Vec<Option<Object>>,
+    return_type: Option<Object>,
 }
 
 impl fmt::Display for Signature {
@@ -79,13 +93,13 @@ impl fmt::Display for Signature {
                 write!(f, ", ")?;
             }
             match t {
-                Some(vt) => write!(f, "{}", &vt.name)?,
+                Some(t) => write!(f, "{}", &t.vtable.name)?,
                 None => write!(f, "Any")?,
             }
         }
         write!(f, ") -> ")?;
         match &self.return_type {
-            Some(vt) => write!(f, "{}", &vt.name)?,
+            Some(t) => write!(f, "{}", &t.vtable.name)?,
             None => write!(f, "Any")?,
         }
         Ok(())
@@ -147,7 +161,7 @@ impl Method {
 #[derive(Debug, PartialEq, Eq)]
 pub struct Slot {
     pub index: usize,
-    pub vtable: Option<Rc<Vtable>>,
+    pub typed: Option<Object>,
 }
 
 pub struct Vtable {
@@ -181,7 +195,10 @@ impl Vtable {
     }
 
     pub fn add_method(&self, selector: &str, method: Method) -> Result<(), Unwind> {
-        if self.has(selector) {
+        if let Some(m) = self.get(selector) {
+            if m == method {
+                return Ok(());
+            }
             return Unwind::error(&format!(
                 "Cannot override method {} in {}",
                 selector, &self.name
@@ -199,12 +216,12 @@ impl Vtable {
             .expect(&format!("Could not add primitive method: {:?} to {:?}", selector, self));
     }
 
-    pub fn add_slot(&self, name: &str, index: usize, vtable: Option<Rc<Vtable>>) {
+    pub fn add_slot(&self, name: &str, index: usize, typed: Option<Object>) {
         self.slots.borrow_mut().insert(
             name.to_string(),
             Slot {
                 index,
-                vtable,
+                typed,
             },
         );
     }
@@ -340,13 +357,14 @@ impl Class {
         }
     }
     fn object(class_vtable: &Rc<Vtable>, instance_vtable: &Rc<Vtable>) -> Object {
-        Object {
+        let class = Object {
             vtable: Rc::clone(class_vtable),
             datum: Datum::Class(Rc::new(Class {
                 instance_vtable: Rc::clone(instance_vtable),
                 interface: false,
             })),
-        }
+        };
+        class
     }
 }
 
@@ -397,10 +415,7 @@ impl Closure {
         {
             let binding = match vt {
                 None => Binding::untyped(obj),
-                Some(ref vtable) => {
-                    let value = obj.typecheck(vtable).source(&arg.source_location)?;
-                    Binding::typed(vtable.to_owned(), value)
-                }
+                Some(ref typed) => Binding::typed(typed.clone(), obj, &self.env)?,
             };
             symbols.insert(arg.name.clone(), binding);
         }
@@ -416,10 +431,11 @@ impl Closure {
                 return Err(unwind);
             }
         };
-        if let Some(vtable) = &self.signature.return_type {
-            result.typecheck(vtable).source(&self.body.source_location())?;
+        if let Some(typed) = &self.signature.return_type {
+            typed.send("typecheck:", &[result], &self.env).source(&self.body.source_location())
+        } else {
+            Ok(result)
         }
-        Ok(result)
     }
 }
 
@@ -772,7 +788,7 @@ impl Foolang {
             byte_array_vtable: Rc::new(classes::byte_array::instance_vtable()),
             clock_class_vtable: Rc::new(classes::clock::class_vtable()),
             clock_vtable: Rc::new(classes::clock::instance_vtable()),
-            closure_class_vtable: Rc::new(Vtable::new("class Closure")),
+            closure_class_vtable: Rc::new(Vtable::new("Closure")),
             closure_vtable: Rc::new(classes::closure::vtable()),
             compiler_class_vtable: Rc::new(classes::compiler::class_vtable()),
             compiler_vtable: Rc::new(classes::compiler::instance_vtable()),
@@ -784,11 +800,11 @@ impl Foolang {
             filepath_vtable: Rc::new(classes::filepath::instance_vtable()),
             filestream_class_vtable: Rc::new(classes::filestream::class_vtable()),
             filestream_vtable: Rc::new(classes::filestream::instance_vtable()),
-            float_class_vtable: Rc::new(Vtable::new("class Float")),
+            float_class_vtable: Rc::new(Vtable::new("Float")),
             float_vtable: Rc::new(classes::float::vtable()),
-            input_class_vtable: Rc::new(Vtable::new("class Input")),
+            input_class_vtable: Rc::new(Vtable::new("Input")),
             input_vtable: Rc::new(classes::input::vtable()),
-            integer_class_vtable: Rc::new(Vtable::new("class Integer")),
+            integer_class_vtable: Rc::new(Vtable::new("Integer")),
             integer_vtable: Rc::new(classes::integer::vtable()),
             output_class_vtable: Rc::new(classes::output::class_vtable()),
             output_vtable: Rc::new(classes::output::instance_vtable()),
@@ -1089,16 +1105,24 @@ impl Object {
         }
     }
 
-    pub fn typecheck(&self, typevt: &Rc<Vtable>) -> Eval {
+    fn is_type(&self, typevt: &Rc<Vtable>) -> bool {
         if typevt == &self.vtable {
-            return Ok(self.clone());
+            return true;
         }
         for vt in self.vtable.interfaces().iter() {
             if typevt == vt {
-                return Ok(self.clone());
+                return true;
             }
         }
-        return Unwind::type_error(self.clone(), typevt.name.clone());
+        false
+    }
+
+    fn typecheck(&self, typevt: &Rc<Vtable>) -> Eval {
+        if self.is_type(typevt) {
+            Ok(self.clone())
+        } else {
+            Unwind::type_error(self.clone(), typevt.name.clone())
+        }
     }
 
     pub fn extend_class(&self, ext: &ExtensionDef, env: &Env) -> Eval {
@@ -1207,17 +1231,12 @@ impl Object {
         }
     }
 
-    fn add_slot(
-        &mut self,
-        name: &str,
-        index: usize,
-        vtable: Option<Rc<Vtable>>,
-    ) -> Result<(), Unwind> {
+    fn add_slot(&mut self, name: &str, index: usize, typed: Option<Object>) -> Result<(), Unwind> {
         let class = self.as_class_ref()?;
         if class.interface {
             return Unwind::error("BUG: Cannot add slot to an interface");
         }
-        class.instance_vtable.add_slot(name, index, vtable);
+        class.instance_vtable.add_slot(name, index, typed);
         if !name.starts_with("_") {
             class.instance_vtable.add_method(name, Method::reader(index))?;
         }
@@ -1441,6 +1460,8 @@ impl Object {
                 }
             },
             None if selector == "toString" => generic_to_string(self, args, env),
+            None if selector == "typecheck:" => generic_typecheck(self, args, env),
+            None if selector == "includes:" => generic_class_includes(self, args, env),
             None => {
                 // println!("known: {:?}", self.vtable.selectors());
                 let not_understood = vec![env.foo.make_string(selector), env.foo.make_array(args)];
@@ -1453,7 +1474,10 @@ impl Object {
                             Unwind::error(&format!("Required method '{}' unimplemented", selector))
                         }
                     },
-                    None => Unwind::message_error(self, selector, args),
+                    None => {
+                        // panic!("message '{}' not understood by: {}", selector, self);
+                        Unwind::message_error(self, selector, args)
+                    }
                 }
             }
         }
@@ -1495,7 +1519,7 @@ impl fmt::Display for Object {
             Datum::Boolean(true) => write!(f, "True"),
             Datum::Boolean(false) => write!(f, "False"),
             Datum::ByteArray(byte_array) => write!(f, "{:?}", byte_array),
-            Datum::Class(_) => write!(f, "#<{}>", self.vtable.name),
+            Datum::Class(_) => write!(f, "#<class {}>", self.vtable.name),
             Datum::Clock => write!(f, "#<Clock>"),
             Datum::Closure(x) => write!(f, "#<closure {:?}>", x.params),
             Datum::Compiler(_) => write!(f, "#<Compiler>"),
@@ -1587,17 +1611,29 @@ fn generic_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     }
 }
 
+fn generic_class_includes(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let class = receiver.as_class_ref()?;
+    Ok(env.foo.make_boolean(args[0].is_type(&class.instance_vtable)))
+}
+
+fn generic_typecheck(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
+    let class = receiver.as_class_ref()?;
+    args[0].typecheck(&class.instance_vtable)
+}
+
 pub fn read_instance_variable(receiver: &Object, index: usize) -> Eval {
     let instance = receiver.instance();
     let value = instance.instance_variables.borrow()[index].clone();
     Ok(value)
 }
 
-pub fn write_instance_variable(receiver: &Object, slot: &Slot, value: Object) -> Eval {
-    if let Some(vtable) = &slot.vtable {
-        value.typecheck(vtable)?;
-    }
+pub fn write_instance_variable(receiver: &Object, slot: &Slot, value: Object, env: &Env) -> Eval {
+    let ok = if let Some(typed) = &slot.typed {
+        typed.send("typecheck:", &[value], env)?
+    } else {
+        value
+    };
     let instance = receiver.instance();
-    instance.instance_variables.borrow_mut()[slot.index] = value.clone();
-    Ok(value)
+    instance.instance_variables.borrow_mut()[slot.index] = ok.clone();
+    Ok(ok)
 }

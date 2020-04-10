@@ -270,10 +270,13 @@ impl<'a> Parser<'a> {
             ParserSyntax::General(_, suffix, precedence) => suffix(self, left, *precedence),
             ParserSyntax::Operator(_, _, precedence) => {
                 let operator = self.tokenstring();
+                let mut source = self.source_location();
+                let arg = self.parse_expr(*precedence)?;
+                source.extend_span_to(arg.span().end);
                 Ok(left.send(Message {
-                    source_location: self.source_location(),
+                    source_location: source,
                     selector: operator,
-                    args: vec![self.parse_expr(*precedence)?],
+                    args: vec![arg],
                 }))
             }
         }

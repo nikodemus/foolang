@@ -207,6 +207,8 @@ interface SI_Unit
        right unitDivision: self
 
     method == right
+        (SI_Unit includes: right)
+            ifFalse: { return False }.
         -- Compound unit overrides this, but this is enough for base units
         (self species) is (right species) and: self power == right power
 
@@ -331,6 +333,8 @@ class CompoundUnit { units }
         True
 
     method == other
+        (SI_Unit includes: other)
+            ifFalse: { return False }.
         other isCompound
             ifFalse: { return False }.
         let n = other units size.
@@ -442,6 +446,8 @@ class SI { value::Float _unit::SI_Unit }
             ifFalse: { panic "Invalid operation: {self} {op} {right}" }
 
     method == right
+        (SI includes: right)
+            ifFalse: { return False }.
         self checkUnit: right operation: "==".
         self value == right value
 
