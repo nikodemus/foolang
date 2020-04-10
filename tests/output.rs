@@ -135,7 +135,7 @@ fn test_value_type_error_location() -> Test {
         "ERROR: String expected, got: Integer 14
 007     class method oops
 008         14::String
-                ^^^^^^ String expected, got: Integer 14
+            ^^ String expected, got: Integer 14
 009 end",
     ));
     Ok(())
@@ -149,7 +149,7 @@ fn test_slot_type_error_location() -> Test {
         "ERROR: String expected, got: Integer 123
 014     method oops
 015         slot = 123
-            ^^^^ String expected, got: Integer 123
+                   ^^^ String expected, got: Integer 123
 016 end",
     ));
     Ok(())
@@ -163,7 +163,7 @@ fn test_var_type_error_location() -> Test {
         "ERROR: String expected, got: Integer 12312
 020         let x::String = \"OK\".
 021         x = 12312
-            ^ String expected, got: Integer 12312
+                ^^^^^ String expected, got: Integer 12312
 022 end",
     ));
     Ok(())
@@ -177,7 +177,7 @@ fn test_var_init_type_error_location() -> Test {
         "ERROR: String expected, got: Integer 123124
 025     class method oops
 026         let x::String = 123124.
-                ^ String expected, got: Integer 123124
+                            ^^^^^^ String expected, got: Integer 123124
 027         x",
     ));
     Ok(())
@@ -188,11 +188,11 @@ fn test_method_arg_type_error_location() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/tests/test_method_arg_type_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
-        "ERROR: String expected, got: Integer 42
+        " ERROR: String expected, got: Integer 42
+031     class method oops
 032         self oops: 42
-033     class method oops: x::String
-                           ^ String expected, got: Integer 42
-034         panic \"Not supposed to happen! x = {x}\"",
+                 ^^^^^^^^ String expected, got: Integer 42
+033     class method oops: x::String",
     ));
     Ok(())
 }
@@ -205,7 +205,7 @@ fn test_block_arg_type_error_location() -> Test {
         "ERROR: String expected, got: Integer 42
 038     class method oops
 039         { |x::String| x } value: 42
-               ^ String expected, got: Integer 42
+                              ^^^^^^^^^ String expected, got: Integer 42
 040 end",
     ));
     Ok(())

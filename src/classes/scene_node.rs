@@ -6,7 +6,7 @@ use crate::objects::{Eval, Object, Vtable};
 use nalgebra::Translation3;
 
 pub fn class_vtable() -> Vtable {
-    Vtable::new("class SceneNode")
+    Vtable::new("SceneNode")
 }
 
 pub fn instance_vtable() -> Vtable {

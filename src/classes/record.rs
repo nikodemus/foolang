@@ -52,7 +52,7 @@ impl fmt::Debug for Record {
 }
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("class Record");
+    let vt = Vtable::new("Record");
     vt.add_primitive_method_or_panic("perform:with:", class_record_perform_with);
     vt
 }

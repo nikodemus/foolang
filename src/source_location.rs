@@ -76,7 +76,12 @@ impl SourceLocation {
         }
     }
     pub fn extend_span_to(&mut self, end: usize) {
-        self.tweak_span(0, (end - self.end()) as isize);
+        // Conditional takes care of extending spans for prefix messages.
+        // FIXME: Not quite right, though: should fix start instead.
+        let here = self.end();
+        if end > here {
+            self.tweak_span(0, (end - here) as isize);
+        }
     }
     pub fn shift_span(&mut self, offset: usize) {
         self.tweak_span(offset, 0);

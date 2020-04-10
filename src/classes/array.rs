@@ -85,7 +85,7 @@ pub fn into_array(foolang: &Foolang, data: Vec<Object>) -> Object {
 }
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("class Array");
+    let vt = Vtable::new("Array");
     vt.add_primitive_method_or_panic("withCapacity:", class_array_with_capacity);
     vt
 }

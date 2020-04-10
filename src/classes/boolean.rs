@@ -8,7 +8,7 @@ pub fn instance_vtable() -> Vtable {
 }
 
 pub fn class_vtable() -> Vtable {
-    Vtable::new("class Boolean")
+    Vtable::new("Boolean")
 }
 
 fn boolean_if_true_if_false(receiver: &Object, args: &[Object], env: &Env) -> Eval {

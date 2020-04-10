@@ -75,7 +75,7 @@ pub fn as_file<'a>(obj: &'a Object, ctx: &str) -> Result<&'a File, Unwind> {
 }
 
 pub fn class_vtable() -> Vtable {
-    Vtable::new("class File")
+    Vtable::new("File")
 }
 
 pub fn instance_vtable() -> Vtable {

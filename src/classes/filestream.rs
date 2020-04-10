@@ -60,7 +60,7 @@ impl fmt::Debug for FileStream {
 }
 
 pub fn class_vtable() -> Vtable {
-    Vtable::new("FileStreamClass")
+    Vtable::new("FileStream")
 }
 
 pub fn instance_vtable() -> Vtable {

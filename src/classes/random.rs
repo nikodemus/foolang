@@ -44,7 +44,7 @@ pub fn instance_vtable() -> Vtable {
 }
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("class Random");
+    let vt = Vtable::new("Random");
     vt.add_primitive_method_or_panic("new", class_random_new);
     vt.add_primitive_method_or_panic("new:", class_random_new_arg);
     vt

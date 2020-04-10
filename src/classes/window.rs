@@ -7,7 +7,7 @@ use std::path::Path;
 use nalgebra::{Point3, Vector3};
 
 pub fn class_vtable() -> Vtable {
-    Vtable::new("class Window")
+    Vtable::new("Window")
 }
 
 pub fn instance_vtable() -> Vtable {

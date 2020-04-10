@@ -2,7 +2,7 @@ use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
 
 pub fn class_vtable() -> Vtable {
-    Vtable::new("class Time")
+    Vtable::new("Time")
 }
 
 pub fn instance_vtable() -> Vtable {
