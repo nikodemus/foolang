@@ -181,9 +181,12 @@
           foolang--slots-regex
           "\\s-*$"))
 
+(defconst foolang--comment-regex
+  "\\s-*--")
+
 (def-foolang-indent "-- comment" (col base stack ctx)
   (:after
-    (looking-at "\\s-*--"))
+    (looking-at foolang--comment-regex))
   (:indent
    (list col base stack ctx)))
 
@@ -512,6 +515,8 @@
            (foolang--looking-at-keyword-message-eol)
            (save-excursion
              (next-line)
+             (while (looking-at foolang--comment-regex)
+               (next-line))
              (foolang--looking-at-keyword-message-bol)))))
   (:indent
    (search-forward ":")
@@ -1421,6 +1426,20 @@ class Foo {}
     method ^ x
         oops
 end")
+
+(def-foolang-indent-test "body-indent-23"
+  "
+class Foo { a }
+method foo
+defaultNumericPrecision: precision sqrt
+-- ie. epsilon
+smallNumber: (self computeSmallNumber)"
+  "
+class Foo { a }
+    method foo
+        defaultNumericPrecision: precision sqrt
+        -- ie. epsilon
+        smallNumber: (self computeSmallNumber)")
 
 (def-foolang-indent-test "end-indent-1"
   "
