@@ -12,6 +12,7 @@
   (modify-syntax-entry ?_ "w" table)
   (modify-syntax-entry ?\" "\"" table)
   (modify-syntax-entry ?\; "." table)
+  (modify-syntax-entry ?^ "_" table)
   (modify-syntax-entry ?. "." table)
   (modify-syntax-entry ?-  ". 12" table)
   ;; _ is symbol constitutient, 12 is first and second character of
@@ -423,6 +424,11 @@
           foolang--op-regex
           foolang--name-with-opt-type-regex
           "$"))
+
+(defun foolang-foo ()
+  (looking-at foolang--method-op-arg-with-opt-type-regex))
+
+
 
 (def-foolang-indent "method op arg" (col base stack ctx)
   (:after
@@ -1398,6 +1404,18 @@ method foo
 class Foo { a }
     method foo
         ")
+
+(def-foolang-indent-test "body-indent-22"
+  "
+class Foo {}
+method ^ x
+oops
+end"
+  "
+class Foo {}
+    method ^ x
+        oops
+end")
 
 (def-foolang-indent-test "end-indent-2"
   "
