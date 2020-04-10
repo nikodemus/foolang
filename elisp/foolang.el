@@ -271,9 +271,14 @@
          stack
          ctx)))
 
+(defconst foolang--line-followed-by-end-regex
+  (concat "[^\n]*"
+          foolang--newline-or-lines-regex
+          "\\s-*end\\>"))
+
 (def-foolang-indent "\\ end" (col base stack ctx)
   (:after
-    (looking-at "[^\n]*\n\\s-*end\\>"))
+    (looking-at foolang--line-followed-by-end-regex))
   (:indent
    (list 0 0 nil :toplevel)))
 
@@ -1415,6 +1420,38 @@ end"
 class Foo {}
     method ^ x
         oops
+end")
+
+(def-foolang-indent-test "end-indent-1"
+  "
+class Foo { a }
+
+method bar
+42
+
+end"
+  "
+class Foo { a }
+
+    method bar
+        42
+
+end")
+
+(def-foolang-indent-test "end-indent-1.1"
+  "
+class Foo { a }
+
+method bar
+42.
+
+end"
+  "
+class Foo { a }
+
+    method bar
+        42.
+
 end")
 
 (def-foolang-indent-test "end-indent-2"
