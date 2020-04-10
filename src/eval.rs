@@ -215,7 +215,7 @@ impl EnvRef {
     pub fn import_everything(&self, module: &EnvRef) -> Result<(), Unwind> {
         let mut todo = vec![];
         for (name, binding) in module.frame.borrow().symbols.iter() {
-            if name.contains(".") {
+            if name.contains(".") || name.starts_with("_") {
                 continue;
             }
             if let Some(old_binding) = self.get_binding(&name) {
