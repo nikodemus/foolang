@@ -95,7 +95,7 @@
           foolang--reserved-words)
   ;; Keyword arguments in method definitions and calls
   '(("\\<method\\s-+\\([^ :]+\\)[ :]" 1 font-lock-function-name-face)
-    ("\\<\\w+:[^:]" . font-lock-function-name-face))
+    ("\\<\\(\\w+:\\)[^:]" 1 font-lock-function-name-face))
   ;; Contexts in which type names appear as type names instead of
   ;; just plain vanilla objects.
   '(("\\<class\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
@@ -1610,6 +1610,11 @@ end")
 (def-foolang-face-test "comment-face-2"
   "--123"
   (* font-lock-comment-face))
+
+(def-foolang-face-test "keyword-face-1"
+  "foo:bar"
+  ((0 3) font-lock-function-name-face)
+  ((4 6) nil))
 
 (when (fboundp 'highlight-numbers-mode)
   (def-foolang-face-test "number-face-1"
