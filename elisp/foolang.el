@@ -249,7 +249,7 @@
 
 (def-foolang-indent "define <name>" (col base stack ctx)
   (:after
-    (looking-at " *define\\s-+[A-Za-z_]+\\s-*$"))
+    (looking-at " *define\\s-+\\w++\\s-*$"))
   (:indent
    (list (+ col foolang-indent-offset)
          base
@@ -1541,6 +1541,16 @@ define foo
 end"
   "
 define foo
+    42
+end")
+
+(def-foolang-indent-test "define-indent-2"
+  "
+define $foo
+42
+end"
+  "
+define $foo
     42
 end")
 
