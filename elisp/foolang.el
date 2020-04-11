@@ -102,8 +102,9 @@
     ("\\<extend\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
     ("\\<interface\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
     ("::\\(\\w+\\)\\>" 1 font-lock-type-face))
-  ;; Variable binding and assignment.
-  '(("\\<let\\s-+\\(\\w+\\)\\>" 1 font-lock-variable-name-face)
+  ;; Constant definition, variable binding and assignment.
+  '(("\\<define\\s-+\\(\\w+\\)\\>" 1 font-lock-variable-name-face)
+    ("\\<let\\s-+\\(\\w+\\)\\>" 1 font-lock-variable-name-face)
     ("\\<\\(\\w+\\)\\s-*=[^=]" 1 font-lock-variable-name-face))))
 
 (add-to-list 'auto-mode-alist '("\\.foo" . foolang-mode))
@@ -249,7 +250,7 @@
 
 (def-foolang-indent "define <name>" (col base stack ctx)
   (:after
-    (looking-at " *define\\s-+[A-Za-z_]+\\s-*$"))
+    (looking-at " *define\\s-+\\w++\\s-*$"))
   (:indent
    (list (+ col foolang-indent-offset)
          base
@@ -1541,6 +1542,16 @@ define foo
 end"
   "
 define foo
+    42
+end")
+
+(def-foolang-indent-test "define-indent-2"
+  "
+define $foo
+42
+end"
+  "
+define $foo
     42
 end")
 
