@@ -70,7 +70,7 @@ class TestFileStream { assert dir foopath foodata }
             createOrOpen: { |f| f writeString: newdata }.
         assert that: { newpath forRead
                            open: { |f| f readBytes } }
-               equals: [13, 13, 10, 10]
+               equals: [13, 13, 10, 10] bytes
                testing: "FileStream#readBytes".
         newpath deleteFile
 
@@ -106,14 +106,14 @@ class TestFileStream { assert dir foopath foodata }
                            open: { |f| f tryRead: 4 bytesInto: buf at: 2 } }
                is: 4
                testing: "FileStream#tryRead:bytesInto:at: (return)".
-        assert that: { [101, 13, 10, 13, 10, 106] }
+        assert that: { [101, 13, 10, 13, 10, 106] bytes }
                equals: buf
                testing: "FileStream#tryRead:bytesInto:at: (data)".
         assert that: { newpath forRead
                            open: { |f| f tryRead: 6 bytesInto: buf at: 1 } }
                is: 4
                testing: "FileStream#tryRead:bytesInto:at: (short return)".
-        assert that: { [13, 10, 13, 10, 10, 106] }
+        assert that: { [13, 10, 13, 10, 10, 106] bytes }
                equals: buf
                testing: "FileStream#tryRead:bytesInto:at: (short data)".
         newpath deleteFile
@@ -136,7 +136,7 @@ class TestFileStream { assert dir foopath foodata }
                            open: { |f| f tryRead: data size bytesInto: data at: 1 } }
                is: 10
                testing: "FileStream#tryWrite:bytesFrom:at: (wrote length)".
-        assert that: { [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 0] }
+        assert that: { [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 0] bytes }
                equals: data
                testing: "FileStream#tryWrite:bytesFrom:at: (wrote data)".
         newpath deleteFile

@@ -104,7 +104,7 @@ fn test_integer_equal() {
     assert_eq!(eval_ok("2 == 1").boolean(), false);
     assert_eq!(eval_ok("1 == 1").boolean(), true);
 
-    assert_eq!(eval_ok("1 == 1.0").boolean(), true);
+    assert_eq!(eval_ok("1 == 1.0").boolean(), false);
     assert_eq!(eval_ok("1 == 1.1").boolean(), false);
     assert_eq!(eval_ok("1 == 0.9").boolean(), false);
 }

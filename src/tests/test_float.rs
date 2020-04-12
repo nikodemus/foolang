@@ -79,7 +79,7 @@ fn test_float_equals() {
     assert_eq!(eval_ok("2.0 == 1.0").boolean(), false);
     assert_eq!(eval_ok("1.0 == 1.0").boolean(), true);
 
-    assert_eq!(eval_ok("1.0 == 1").boolean(), true);
+    assert_eq!(eval_ok("1.0 == 1").boolean(), false);
     assert_eq!(eval_ok("0.9 == 1").boolean(), false);
     assert_eq!(eval_ok("1.1 == 1").boolean(), false);
 }

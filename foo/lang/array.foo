@@ -4,9 +4,14 @@ extend Array
     is Collection
 
     class method new: size value: init
-        let new = self withCapacity: size.
+        let new = Self withCapacity: size.
         1 to: size do: { |_| new push: init }.
         new
+
+    method bytes
+        let bytes = ByteArray new: self size.
+        1 to: self size do: { |i| bytes put: (self at: i) at: i }.
+        bytes
 
     method _emitOn: stream using: block
         stream print: "[".
