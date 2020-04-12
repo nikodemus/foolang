@@ -8,7 +8,7 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("size", string_size);
     vt.add_primitive_method_or_panic("do:", string_do);
     vt.add_primitive_method_or_panic("at:", string_at);
-    vt.add_primitive_method_or_panic("stringEqual:", string_equal);
+    vt.add_primitive_method_or_panic("isEquivalent:", string_is_equivalent);
     vt
 }
 
@@ -49,6 +49,6 @@ fn string_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_string(&data[i..i + 1]))
 }
 
-fn string_equal(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+fn string_is_equivalent(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_boolean(receiver.string_as_str() == args[0].string_as_str()))
 }

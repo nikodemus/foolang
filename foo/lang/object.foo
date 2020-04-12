@@ -1,0 +1,8 @@
+-- Should this be "Standard" or "StandardObject" instead?
+interface Object
+    method == other
+        (Self includes: other)
+            ifTrue: { self isEquivalent: other }
+            ifFalse: { False }
+    required method isEquivalent: other
+end

@@ -1,4 +1,14 @@
+import .object.Object
+
 extend Boolean
+    is Object
+
+    method == other
+        self is other
+
+    method isEquivalent: other
+        self is other
+
     method and: other::Boolean
         self
            ifTrue: { other }
@@ -18,9 +28,6 @@ extend Boolean
         self
            ifTrue: { True }
            ifFalse: { other }
-
-    method == other
-        self is other
 
     method not
         self

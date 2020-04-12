@@ -1,6 +1,14 @@
 import .interval.Interval
+import .object.Object
 
 interface Number
+    is Object
+
+    method == right
+        self is right
+
+    method isEquivalent: right
+        self is right
 
     method broadcast: block to: collection
         collection collect: { |x| block value: x value: self }
@@ -17,9 +25,6 @@ interface Number
     method / right
         right divNumber: self
 
-    method == right
-        (Number includes: right)
-            ifTrue: { right eqNumber: self }
     method < right
         right ltNumber: self
     method > right

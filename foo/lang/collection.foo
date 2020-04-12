@@ -1,9 +1,9 @@
+import .object.Object
 
 interface Collection
+    is Object
 
-    method == other
-        (Collection includes: other)
-            ifFalse: { return False }.
+    method isEquivalent: other
         let size = self size.
         size is other size
             ifFalse: { return False }.

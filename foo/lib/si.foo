@@ -151,6 +151,12 @@ class Prefix {}
 end
 
 interface SI_Unit
+    is Object
+
+    method isEquivalent: right
+        -- Compound unit overrides this, but this is enough for base units
+        (self species) is (right species) and: self power == right power
+
     required method displayOn: stream
 
     method display: value on: stream
@@ -205,15 +211,6 @@ interface SI_Unit
 
     method / right
        right unitDivision: self
-
-    method == right
-        (SI_Unit includes: right)
-            ifFalse: { return False }.
-        -- Compound unit overrides this, but this is enough for base units
-        (self species) is (right species) and: self power == right power
-
-    method isCompound
-        False
 
     method unitProduct: left
         self species is left species
@@ -297,6 +294,21 @@ end
 class CompoundUnit { units }
     is SI_Unit
 
+    method isEquivalent: other
+        let n = other units size.
+        n == units size
+            ifFalse: { return False }.
+        -- This is slooow, should store as a Set at the very least
+        let powers = Dictionary new.
+        other units do: { |unit| powers put: unit power at: unit species }.
+        units do: { |unit|
+                    (powers has: unit species)
+                        ifTrue: { unit power == (powers at: unit species)
+                                      ifFalse: { return False }.
+                                  n = n - 1 }
+                        ifFalse: { return False } }.
+        n is 0
+
     class method of: left multipliedBy: right
         let powers = Dictionary new.
         left powersInto: powers by: 1.
@@ -328,28 +340,6 @@ class CompoundUnit { units }
 
     method powersInto: powers by: mul
         units do: { |unit| unit powersInto: powers by: mul }
-
-    method isCompound
-        True
-
-    method == other
-        (SI_Unit includes: other)
-            ifFalse: { return False }.
-        other isCompound
-            ifFalse: { return False }.
-        let n = other units size.
-        n == units size
-            ifFalse: { return False }.
-        -- This is slooow, should store as a Set at the very least
-        let powers = Dictionary new.
-        other units do: { |unit| powers put: unit power at: unit species }.
-        units do: { |unit|
-                    (powers has: unit species)
-                        ifTrue: { unit power == (powers at: unit species)
-                                      ifFalse: { return False }.
-                                  n = n - 1 }
-                        ifFalse: { return False } }.
-        n is 0
 
     method power
         units ifEmpty: { 0 } ifNotEmpty: { 1 }
@@ -410,6 +400,11 @@ class CompoundUnit { units }
 end
 
 class SI { value::Float _unit::SI_Unit }
+    is Object
+
+    method isEquivalent: right
+        self checkUnit: right operation: "==".
+        self value == right value
 
     class method meters: value
         SI value: value unit: (Meters power: 1)
@@ -444,12 +439,6 @@ class SI { value::Float _unit::SI_Unit }
     method checkUnit: right operation: op
         self unit == right unit
             ifFalse: { panic "Invalid operation: {self} {op} {right}" }
-
-    method == right
-        (SI includes: right)
-            ifFalse: { return False }.
-        self checkUnit: right operation: "==".
-        self value == right value
 
     method < right
         self checkUnit: right operation: "<".

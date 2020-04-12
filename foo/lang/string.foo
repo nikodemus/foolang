@@ -1,4 +1,8 @@
+import .object.Object
+
 extend String
+    is Object
+
     method append: other
        other appendToString: self
     method newline
@@ -19,9 +23,6 @@ extend String
         stream writeString: "\"".
         self do: { |c| c _escapeOn: stream }.
         stream writeString: "\""
-    method == other
-        (String includes: other)
-            ifTrue: { other stringEqual: self }
     method startsWith: other
         1 to: other size
           do: { |i|

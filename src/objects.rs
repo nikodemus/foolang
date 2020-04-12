@@ -156,6 +156,13 @@ impl Method {
             Method::Reader(_) => Unwind::error("Reader method has no signature"),
         }
     }
+
+    fn extend_env(&self, name: &str, value: &Object) -> Method {
+        match self {
+            Method::Interpreter(ref c) => Method::Interpreter(c.extend_env(name, value)),
+            _ => panic!("BUG: Cannot extend environment of non-interpreter method."),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -392,6 +399,16 @@ impl Hash for Closure {
 }
 
 impl Closure {
+    pub fn extend_env(&self, name: &str, value: &Object) -> Rc<Closure> {
+        Rc::new(Closure {
+            name: self.name.clone(),
+            env: self.env.bind(name, Binding::untyped(value.clone())),
+            params: self.params.clone(),
+            body: self.body.clone(),
+            signature: self.signature.clone(),
+        })
+    }
+
     pub fn apply(&self, receiver: Option<&Object>, args: &[Object]) -> Eval {
         let mut symbols = HashMap::new();
         if self.params.len() != args.len() {
@@ -1261,7 +1278,7 @@ impl Object {
         let interface = interface_obj.as_class_ref()?;
         for (selector, method) in interface_obj.vtable.methods().iter() {
             if !self.vtable.has(selector) {
-                self.vtable.add_method(selector, method.clone())?;
+                self.vtable.add_method(selector, method.extend_env("Self", self))?;
             }
         }
         let instance_vt = &class.instance_vtable;
@@ -1280,6 +1297,9 @@ impl Object {
                         ));
                     }
                 }
+                Some(Method::Primitive(_)) => {
+                    // FIXME: signature not checked!
+                }
                 Some(_) => {
                     return Unwind::error(&format!(
                     "{}#{} is an interface method, non-vanilla implementations not supporte yet",
@@ -1293,7 +1313,7 @@ impl Object {
                     ))
                 }
                 None => {
-                    instance_vt.add_method(selector, method.clone())?;
+                    instance_vt.add_method(selector, method.extend_env("Self", self))?;
                 }
             }
         }
@@ -1308,7 +1328,8 @@ impl Object {
         method: &MethodDefinition,
     ) -> Result<(), Unwind> {
         let class = self.as_class_ref()?;
-        let env = env.bind(&class.instance_vtable.name, Binding::untyped(self.clone()));
+        let binding = Binding::untyped(self.clone());
+        let env = env.bind(&class.instance_vtable.name, binding.clone());
         self.vtable.add_method(&method.selector, Method::closure(method, &env)?)?;
         Ok(())
     }
@@ -1319,7 +1340,8 @@ impl Object {
         method: &MethodDefinition,
     ) -> Result<(), Unwind> {
         let class = self.as_class_ref()?;
-        let env = env.bind(&class.instance_vtable.name, Binding::untyped(self.clone()));
+        let binding = Binding::untyped(self.clone());
+        let env = env.bind(&class.instance_vtable.name, binding.clone());
         class.instance_vtable.add_method(&method.selector, Method::closure(method, &env)?)?;
         Ok(())
     }
