@@ -27,7 +27,9 @@ pub fn vtable() -> Vtable {
 }
 
 fn system_abort(_receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
-    std::process::abort()
+    // FIXME: This used to be std::process::abort(), but that started hanging
+    // in Azure Pipelines tests.
+    std::process::exit(1)
 }
 
 fn system_clock(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
