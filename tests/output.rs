@@ -386,6 +386,14 @@ fn test_import_x_local() -> Test {
 }
 
 #[test]
+fn test_class_comments() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_class_comments.foo");
+    cmd.assert().success().stdout("");
+    Ok(())
+}
+
+#[test]
 fn test_import_x() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/tests/test_import_x.foo");

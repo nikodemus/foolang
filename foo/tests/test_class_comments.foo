@@ -1,0 +1,42 @@
+class -- comment
+---
+block
+---
+        LotsOfComments
+-- comment
+---
+block
+---
+{
+    -- comment
+    name::String -- comment
+}
+-- comment
+---
+block
+---
+is Object
+-- comment
+---
+block
+---
+    method isEquivalent: other
+        other getName == self getName
+-- comment
+---
+block
+---
+    method getName
+        self name
+-- comment
+---
+block
+---
+end
+
+class Main {}
+    class method run: cmd in: system
+        (LotsOfComments name: "test") == (LotsOfComments name: "test")
+            ifTrue: { system exit }
+            ifFalse: { system abort }
+end
