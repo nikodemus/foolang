@@ -1053,22 +1053,28 @@ fn class_prefix(parser: &Parser) -> Parse {
     // FIXME: span is the span of the class, but maybe it would be better if these
     // had all their own spans.
     let source_location = parser.source_location();
-    let class_name = match parser.next_token()? {
-        Token::WORD => {
-            let next = parser.slice().chars().next().expect("BUG: empty identifier");
-            if next.is_uppercase() || next == '_' {
-                parser.tokenstring()
-            } else {
-                // FIXME: Not all languages use capital letters
-                return parser
-                    .error("Class names must start with an uppercase letter or underscore");
+    let class_name = loop {
+        match parser.next_token()? {
+            Token::COMMENT => continue,
+            Token::BLOCK_COMMENT => continue,
+            Token::WORD => {
+                let next = parser.slice().chars().next().expect("BUG: empty identifier");
+                if next.is_uppercase() || next == '_' {
+                    break parser.tokenstring();
+                } else {
+                    // FIXME: Not all languages use capital letters
+                    return parser
+                        .error("Class names must start with an uppercase letter or underscore");
+                }
             }
+            _ => return parser.error("Expected class name"),
         }
-        _ => return parser.error("Expected class name"),
     };
     // println!("class: {}", class_name);
     loop {
         match parser.next_token()? {
+            Token::COMMENT => continue,
+            Token::BLOCK_COMMENT => continue,
             Token::SIGIL if parser.slice() == "{" => break,
             _ => return parser.error("Expected { to open instance variable block"),
         }
@@ -1077,6 +1083,8 @@ fn class_prefix(parser: &Parser) -> Parse {
     loop {
         let token = parser.next_token()?;
         match token {
+            Token::COMMENT => continue,
+            Token::BLOCK_COMMENT => continue,
             Token::WORD => {
                 instance_variables.push(parse_var(parser, false)?);
             }
@@ -1090,6 +1098,9 @@ fn class_prefix(parser: &Parser) -> Parse {
     let mut class = ClassDef::new(source_location, class_name, instance_variables);
     loop {
         let next = parser.next_token()?;
+        if next == Token::COMMENT || next == Token::BLOCK_COMMENT {
+            continue;
+        }
         if next == Token::EOF {
             return parser.eof_error("Unexpected EOF while parsing class: expected method or end");
         }
@@ -1128,9 +1139,6 @@ fn class_prefix(parser: &Parser) -> Parse {
                 continue;
             }
             return parser.error("Invalid interface name in class");
-        }
-        if next == Token::COMMENT || next == Token::BLOCK_COMMENT {
-            continue;
         }
         return parser.error(&format!("Expected method or end, got: '{}'", parser.slice()));
     }
