@@ -63,6 +63,11 @@ it's here more for future reference than anything else.
   various. _Foolang has quite different design criteria than Fortress, but
   Fortress was an amazing design and well worth learning from._
 
+- 2009 - [On Understading Data Abstraction,
+  Revisited](https://www.cs.utexas.edu/~wcook/Drafts/2009/essay.pdf) by William
+  R. Cook. _What is the difference between ADTs and objects? Read this and a
+  light will go on. Foolang is very much on the object side of this divide._
+
 - 2017 - [Pony Language](https://www.ponylang.io/)
   _Pony's rejection of ambient authority is where Foolang got the bug. Lots of
   interesting stuff going in Pony! Foolang's more dynamic paradigm rules a lot
