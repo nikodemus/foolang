@@ -22,6 +22,8 @@ steps:
       echo "##vso[task.setvariable variable=PATH;]%PATH%;%USERPROFILE%\.cargo\bin"
     displayName: Windows install rust
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
+  - script: rustup component add rustfmt
+    displayName: Rustup install rustfmt
   - script: cargo fmt -- --check
     displayName: Cargo fmt check
   - script: cargo build --all
