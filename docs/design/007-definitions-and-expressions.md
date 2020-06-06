@@ -12,6 +12,7 @@
 **History**:
 - 2020-03-15: initial version by Nikodemus
 - 2020-03-19: implementation notes by Nikodemus
+- 2020-06-06: impact clarified by Nikodemus
 
 ## Problem Description
 
@@ -102,12 +103,16 @@ None.
 
 #### Ergonomics
 
-Improved clarity.
+"Absolutely everything is an expression" elegance is lost, but separate
+syntactic categories otherwise clarify parsing.
+
+#### Performance
+
+None.
 
 #### Uniformity
 
-"Absolutely everything is an expression" elegance is lost, but separate
-syntactic categories otherwise clarify parsing.
+None.
 
 #### Implementation
 

@@ -15,6 +15,7 @@
 
 **History**:
 - 2020-03-02: initial version by Nikodemus
+- 2020-06-06: performance notes by Nikodemus
 
 ## Problem Description
 
@@ -77,7 +78,8 @@ Named integer subtypes such as `I8` are simply names given to intervals. This
 makes it clear that addition of `U8` and `I32` is just a regular integer
 addition.
 
-One of the major downsides is that `U64` is potentially a BigInt.
+Given a fat pointer implementation `U64` is always an `Int`, but that probably
+should not be required at language level.
 
 Arithmetic is implemented through triple dispatch: `+` -> `addInteger:` ->
 `addInt:` | `addBigInt:`. This way classes which want to participate in
@@ -143,6 +145,24 @@ No impact.
 #### Ergonomics
 
 Good.
+
+#### Performance
+
+Average: potential BigInt allocation is impossible to avoid even if types are
+fully declared. Having `I8` and like as distinct classes using modular
+arithmetic would be clearly better for performance. However, this design allows
+that to be implemented in user space:
+
+```
+class Mod32 { value::Int }
+    method + other::Mod32 -> Mod32
+        Mod32 value: (value add32: other)
+```
+
+Assuming fat pointer implementation of classes this should carry zero overhead
+if types are known.
+
+(Methods supporting modular arithmetic need to be in place, of course.)
 
 #### Uniformity
 

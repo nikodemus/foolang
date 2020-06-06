@@ -13,6 +13,7 @@
 
 **History**:
 - 2020-03-21: initial version by Nikodemus
+- 2020-06-06: list of alternatives by Nikodemus
 
 ## Problem Description
 
@@ -49,35 +50,51 @@ methods of the instances directly access the indexed part, and the constructor
 fragments don't have a prefix, and start with lowercase letters.
 
 Allowing references to `<indexed>` reifies it as a special object, allowing
-direct access to it as if a collection.
+direct access to it as if a collection. (XXX: not collection, since cannot add
+or remove items.)
 
 ### Summary
 
-Why this proposal is a good idea.
+TODO: Why this proposal is a good idea.
 
 #### Safety
 
-Impact on safety: memory safety, concurrency, authority, fault tolerance, etc.
+No safety impact.
 
 #### Ergonomics
 
-Impact on ergonomics & (user) aesthetics.
+TODO: Impact on ergonomics & (user) aesthetics.
+
+#### Performance
+
+TODO: Impact on performance, including impact on future compiler optimizations.
 
 #### Uniformity
 
-Impact on performance, including impact on future compiler optimizations.
+Improved uniformity.
 
 #### Implementation
 
-Impact on implementation: complexity, amount of work, maintenance burden, etc.
+TODO: Impact on implementation: complexity, amount of work, maintenance burden, etc.
 
 #### Users
 
-Impact on users, including backwards compatibility.
+No users, no impact.
 
 ## Alternatives
 
-Alternatives to the proposal that were considered.
+- Moral equivalent of C++ `new[]`, allowing allocation of blocks of arbitrary
+  type. This seems like a complementary feature more than an alternative -- both
+  can replace the other in terms of what can be done, but what is convenient is
+  different.
+- Allowing arbitrary number of indexed slots per class. This would be nice, but
+  complicates instance access more than I consider desirable right now - and
+  the uses cases are a bit rare.
+- Not naming the slot, but automatically providing the collection-like methods
+  for the class. (Also, no reification of the slot.)
+
+Syntax variations are a dime a dozen. The current one is almost certainly not
+the final one.
 
 ## Implementation Notes
 
