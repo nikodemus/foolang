@@ -84,6 +84,10 @@ None.
 Positive: sorting is easier, different behaviours are accessible. Aestherics
 are good.
 
+### Performance
+
+None.
+
 #### Uniformity
 
 None.

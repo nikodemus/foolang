@@ -50,7 +50,7 @@ associated source code, and constructing the objects it describes:
 2. The compiler processes all associated source code, creating the declaratively
    defined objects in the environment under their own names, adding the
    constructively defined names to the environment as placeholders containing
-   their associted constructive definitions without executing them yet.
+   their associated constructive definitions without executing them yet.
 
 3. The compiler executes all constructive definitions in the environment,
    replacing the plaholder defitions with the constructed objects. Accessing a
@@ -89,7 +89,7 @@ In development mode the immutability constraint of a program environment is
 relaxed, allowing its refinement via patching:
 - Mutation of global objects to add, remove, and redefine methods, and change
   layouts of classes.
-- Addition of new gobal objects.
+- Addition of new global objects.
 - Removal of global objects.
 
 Patching a program is equivalent to sending a message to the program environment
@@ -118,6 +118,10 @@ None.
 
 Good: constructive definitions are convenient, declarative definitions are
 clean.
+
+#### Performance
+
+None.
 
 #### Uniformity
 

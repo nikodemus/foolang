@@ -41,9 +41,14 @@ Impact on safety: memory safety, concurrency, authority, fault tolerance, etc.
 
 Impact on ergonomics & (user) aesthetics.
 
-#### Uniformity
+#### Performance
 
 Impact on performance, including impact on future compiler optimizations.
+
+#### Uniformity
+
+Impact on language uniformity: built-in types should not be privileged over
+user defined types.
 
 #### Implementation
 

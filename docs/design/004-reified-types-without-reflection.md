@@ -14,6 +14,7 @@
 
 **History**:
 - 2020-03-01: initial version by Nikodemus
+- 2020-06-06: additional performance note by Nikodemus
 
 ## Problem Description
 
@@ -98,11 +99,22 @@ Minimal. If something becomes harder or impossible without `classOf`, that's
 obviously a negative&mdash;and may lead to reconsideration of this position, but
 I believe most of the time it is just smelly code.
 
+#### Performance
+
+None. Code that wants to special case a concrete type can already do so:
+
+```
+method foo: arg::Number
+    (SmallInteger includes: arg)
+       ifTrue: [ fast case ]
+       ifFalse: [ slow case ]
+```
+
 #### Uniformity
 
-Negative: built-in code definitely needs to be able to access the class of an
-object, making this a violation of the Uniformity principle. (This is actually
-the strongest argument in favor of `classOf` so far.)
+Negative: internals do need to be able to access the class of an object, making
+this a violation of the Uniformity principle. (This is actually the strongest
+argument in favor of `classOf` so far.)
 
 #### Implementation
 

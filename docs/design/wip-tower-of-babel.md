@@ -218,6 +218,10 @@ None as of yet.
 
 No impact.
 
+#### Performance
+
+No impact.
+
 #### Ergonomics
 
 No impact.
