@@ -93,9 +93,10 @@
   (mapcar (lambda (keyword)
             (cons (format "\\<%s\\($\\|\\s-+\\)" keyword) 'font-lock-keyword-face))
           foolang--reserved-words)
-  ;; Keyword arguments in method definitions and calls
-  '(("\\<method\\s-+\\([^ :]+\\)[ :]" 1 font-lock-function-name-face)
-    ("\\<\\(\\w+:\\)[^:]" 1 font-lock-function-name-face))
+  ;; Method names in definitions
+  '(("\\<method\\s-+\\([^ :]+\\)" 1 font-lock-function-name-face))
+  ;; Keyword arguments
+  '(("\\<\\(\\w+:\\)[^:]" 1 font-lock-function-name-face))
   ;; Contexts in which type names appear as type names instead of
   ;; just plain vanilla objects.
   '(("\\<class\\s-+\\(\\w+\\)\\>" 1 font-lock-type-face)
@@ -609,9 +610,10 @@
 
 ;;;; Indentation engine
 
-;; Like this so that I can just C-x C-e here to turn it on / off
+;; Like this so that I can just C-x C-e here to turn it on / off,
+;; and it sticks on reload.
 (defvar foolang--debug-mode nil)
-(setq foolang--debug-mode t)
+;; (setq foolang--debug-mode t)
 ;; (setq foolang--debug-mode nil)
 
 (defun foolang--note (control &rest args)
@@ -1755,6 +1757,8 @@ end")
         (if (eq '* range)
             (list 0 (length content))
           range)
+      (when (eq '* end)
+        (setq end (length content)))
       (loop for i from start below end
             do (let ((actual (get-text-property i 'face content)))
                  (unless (eq face actual)
@@ -1797,6 +1801,22 @@ end")
   "foo:bar"
   ((0 3) font-lock-function-name-face)
   ((4 6) nil))
+
+(def-foolang-face-test "method-name-1"
+  "method isEmpty"
+  ((0 6) font-lock-keyword-face)
+  ((7 14) font-lock-function-name-face))
+
+(def-foolang-face-test "method-name-1.2"
+  "method second"
+  ((0 6) font-lock-keyword-face)
+  ((7 13) font-lock-function-name-face))
+
+(def-foolang-face-test "method-name-2"
+  "method + other"
+  ((0 6) font-lock-keyword-face)
+  ((7 8) font-lock-function-name-face)
+  ((9 12) nil))
 
 (when (fboundp 'highlight-numbers-mode)
   (def-foolang-face-test "number-face-1"
