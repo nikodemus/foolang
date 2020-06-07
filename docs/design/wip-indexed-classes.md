@@ -9,7 +9,6 @@
 **Prior Art**:
 - Smalltalk indexed instance variables
 - C structs with tailing arrays
-- Self?
 
 **History**:
 - 2020-03-21: initial version by Nikodemus
