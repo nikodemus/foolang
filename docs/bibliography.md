@@ -8,6 +8,8 @@ it's here more for future reference than anything else.
 
 - 1981 - [Design Principles Behind
   Smalltalk](http://stephane.ducasse.free.fr/FreeBooks/BlueBookHughes/Design%20Principles%20Behind%20Smalltalk.pdf)
+  _A compelling statement of intent. Foolang doesn't quite follow these Smalltalk
+  principles, but being explicit about that would be nice._ 
 
 - 1983 - [Smalltalk-80: The Language and Its Implementation](http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf)
   Adale Goldberd and David Robson
