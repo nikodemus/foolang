@@ -20,9 +20,6 @@ it's here more for future reference than anything else.
   while Foolang has a toe in the static world, metaprogramming facilities are
   invaluable and should not be thrown out._
 
-- 1989 - [An Environment for Literate Smalltalk
-  Programming](https://heim.ifi.uio.no/~trygver/1989/1989.10.1-LiterateProgrammingOOPSLA.pdf)
-  
 - 1993 - [Strongtalk, Typechecking Smalltalk in a Production
   Environment](http://laputan.org/pub/papers/Strongtalk-OOPSLA-93.pdf) by Gilad Bracha and David
   Griswold.
