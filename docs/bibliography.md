@@ -23,9 +23,6 @@ it's here more for future reference than anything else.
   Environment](http://laputan.org/pub/papers/Strongtalk-OOPSLA-93.pdf) by Gilad Bracha and David
   Griswold.
 
-- 1993 - [The Early History of
-  Smalltalk](http://worrydream.com/EarlyHistoryOfSmalltalk/) by Alan Kay.
-
 - 1996 - [Subsystems](https://www.instantiations.com/PDFs/OOPSLA96/subsys.pdf)
   by Allen Wirfs-Brock, a proposal from OOPSLA'96 Extending Smalltalk Workshop.
   _Private selectors are the really interesting part._
