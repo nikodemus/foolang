@@ -20,6 +20,10 @@ it's here more for future reference than anything else.
   while Foolang has a toe in the static world, metaprogramming facilities are
   invaluable and should not be thrown out._
 
+- 1990 - [A Type System for
+  Smalltalk](https://www.researchgate.net/publication/2815088_A_Type_System_for_Smalltalk)
+  by Justin O. Graver and Ralph E. Johnson.
+
 - 1993 - [Strongtalk, Typechecking Smalltalk in a Production
   Environment](http://laputan.org/pub/papers/Strongtalk-OOPSLA-93.pdf) by Gilad Bracha and David
   Griswold.
