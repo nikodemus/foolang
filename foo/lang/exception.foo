@@ -20,11 +20,11 @@ class Error { description }
     class method handler
         { |ex| $error value: ex }
     method displayOn: stream
-        stream println: "ERROR: {self description}"
+        stream print: "#<Error {self description}>"
 end
 
 define $divideByZero
-Error handler
+    Error handler
 end
 
 class DivideByZero { value }
@@ -36,5 +36,21 @@ class DivideByZero { value }
     method description
         "Divide by zero: {value} cannot be divided by zero"
     method displayOn: stream
-        stream println: "ERROR: {self description}"
+        stream print: "#<DivideByZero {value}>"
+end
+
+define $iteratorExhausted
+    Error handler
+end
+
+class IteratorExhausted { value }
+    class method withHandler: handler do: block
+        let $iteratorExhausted = handler.
+        block value
+    class method raise: value
+        $iteratorExhausted value: ( self value: value )
+    method description
+        "Iterator exhausted: {value}"
+    method displayOn: stream
+        stream print: "#<IteratorExhausted {value}>"
 end

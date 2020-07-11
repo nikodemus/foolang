@@ -37,7 +37,7 @@ impl Hash for ByteArray {
 impl fmt::Debug for ByteArray {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let data = self.data.borrow();
-        let mut buf = String::from("#[");
+        let mut buf = String::from("[");
         if !data.is_empty() {
             buf.push_str(&format!("{}", &data[0]));
             if data.len() > 1 {
@@ -46,7 +46,7 @@ impl fmt::Debug for ByteArray {
                 }
             }
         }
-        buf.push_str("]");
+        buf.push_str("] bytes");
         write!(f, "{}", buf)
     }
 }

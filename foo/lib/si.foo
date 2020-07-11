@@ -322,7 +322,7 @@ class CompoundUnit { units }
         self fromPowers: powers
 
     class method fromPowers: powers
-        let units = [].
+        let units = List new.
         powers doKeys: { |species|
                          let power = powers at: species.
                          power is 0

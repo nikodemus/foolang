@@ -1,0 +1,80 @@
+import .object.Object
+
+interface Ordered
+    is Object
+
+    method bytes
+        let bytes = ByteArray new: self size.
+        1 to: self size do: { |i| bytes put: (self at: i) at: i }.
+        bytes
+
+    method isEquivalent: other
+        self size == other size
+            ifTrue: { 1 to: self size
+                        do: { |i|
+                              (self at: i) == (other at: i)
+                                  ifFalse: { return False } } }
+            ifFalse: { return False }.
+        True
+
+    method copy
+        let copy = Self withCapacity: self size.
+        self do: { |elt| copy push: elt }.
+        copy.
+
+    method reverse
+        let n = self size.
+        0 to: n
+          do: { |offset|
+                let i = 1 + offset.
+                let j = n - offset.
+                j <= i
+                    ifTrue: { return self }.
+                self swap: i with: j }.
+          panic "BUG: this should never happen."
+
+    method reversed
+        self copy reverse
+
+    method sort
+        self sort: { |a b| a < b }.
+
+    method sort: block
+        -- Unfortunate a straigthforward rust-side wrapper for Vec::sort_by()
+        -- cannot propagate errors from the comparison function, so instead
+        -- here's a quick and dirty quicksort. O(N^2) worst case, since I
+        -- was too lazy to do the center pivot.
+        self _quicksort: 1 to: self size by: block.
+
+    method sorted
+        self copy sort.
+
+    method sorted: block
+        self copy sort: block.
+
+    method _quicksort: left to: right by: block
+        left < right
+            ifTrue: { let p = self _partition: left to: right by: block.
+                      self _quicksort: left to: p - 1 by: block.
+                      self _quicksort: p + 1 to: right by: block }.
+        self.
+
+    method _partition: left to: right by: block
+        let pivot = self at: right.
+        let i = left.
+        left to: right
+                 do: { |j|
+                       let x = self at: j.
+                       (block value: x value: pivot)
+                           ifTrue: { self swap: i with: j.
+                                     i = i + 1 } }.
+        self swap: i with: right.
+        i.
+
+    method swap: i with: j
+        let tmp = self at: i.
+        self put: (self at: j) at: i.
+        self put: tmp at: j.
+        self.
+
+end

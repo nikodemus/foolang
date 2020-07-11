@@ -1,11 +1,380 @@
-# Foolang Iterators
+# Foolang Iterables
 
-!> Sketching out the interfaces. Does not match what is currently implemented.
-Would also like to disentangle this into purely functional and side-effectful
-parts.
+```mermaid
+graph TD
+    iterable(["Iterable"])
+    ordered(["Ordered"])
+    collection(["Collection"])
 
-!> Not super fond of minor inconsistencies in naming: `select:` but `indexIf:`,
-etc.
+    iterable
+    iterable-->ordered
+    iterable-->collection
+
+    ordered-->Array
+    ordered-->List
+
+    collection-->List
+    collection-->Set
+    collection-->Dictionary
+```
+
+## Iterable
+
+```mermaid
+graph TD
+    object(["Object"])
+    iterable(["Iterable"])
+    ordered(["Ordered"])
+    collection(["Collection"])
+
+    object-->iterable
+    iterable-->ordered
+    iterable-->collection
+```
+
+Iterable allows operations over elements of an object.
+
+!> The `xxx:with:` methods might be moved out of iterable, since they are
+tricky to define in a way that is consistent across different types of
+collections.
+
+### **required method** `iterator`
+
+Returns an `Iterator` which iterates over the elements of the object. While
+this is the only required method, it is strongly recommended that iterables
+also implement the following methods: since the default implementations using
+iterator are probably not nearly as efficient as specialized ones would be.
+
+- `do:`
+- `do:with:ifExhausted:`
+- `elementType`
+- `first`
+- `isEmpty`
+- `reduce:`
+- `second`
+- `sizeEstimate`
+
+(Other methods are implemented using these, and should have reasonable performance.)
+
+### *method* `allSatisfy:` _block_
+
+Iterates over elements of the receiver, applying each to the _block_.
+
+Returns `False` as soon as block evaluates to `False` for any element. Returns
+`True` if block never evaluates to `False`.
+
+### *method* `anySatisfy:` _block_
+
+Iterates over elements of the receiver, applying each to the _block_.
+
+Returns `True` as soon as block evaluates to `True` for any element. Returns
+`False` if block never evaluates to `True`.
+
+### *method* `collect:` _block_ `as:` _species_
+
+Iterates over elements of the receiver, collecting results of applying each to
+the _block_, by adding them to a _Collection_ created by sending a `#new`
+message to the _species_.
+
+Returns the collection.
+
+### *method* `collect:` _block_ `into:` _collection_
+
+Iterates over elements of the receiver, collecting results of applying each to
+the _block_, by adding them to the _collection_.
+
+Returns the collection.
+
+### *method* `collect:` _block_ `with:` _other_ `as:` _species_
+
+Iterates over elements of the receiver and _other_ in parallel, collecting
+results of applying each pair to the _block_, by adding them to a _Collection_
+created by sending a `#new` message to the _species_.
+
+Iteration is terminated when either receiver or _other_ is exhausted.
+
+Returns the collection.
+
+Example:
+
+``` foolang
+let iterable1 = [1, 2, 3, 4].
+let iterable2 = [100, 200].
+iterable1
+    collect: { |each1 each2| each1 + each2 }
+    with: iterable2
+    as: List --> [101, 202]
+```
+
+### *method* `collect:` _block_ `with:` _other_ `into:` _collection_
+
+Iterates over elements of the receiver and _other_ in parallel, collecting
+results of applying each pair to the _block_, by adding them to the _collection_.
+
+Iteration is terminated when either receiver or _other_ is exhausted.
+
+Returns the collection.
+
+Example:
+
+``` foolang
+let iterable1 = [1, 2].
+let iterable2 = [100, 200, 300].
+iterable1
+    collect: { |each1 each2| each1 + each2 }
+    with: iterable2
+    into: [0] --> [0, 101, 202]
+```
+
+### **method** `count:` _block_
+
+Iterates over elements of the receiver, applying each to the _block_.
+
+Returns the number of times the block evaluates to `True`.
+
+### **method** `count:` _block_ `with:` _other_
+
+Iterates over elements of the receiver and _other_ in parallel, applying
+each pair to the _block_.
+
+Returns the number of times the block evaluates to `True`.
+
+### **method** `do:` _block_
+
+Iterates over elements of the receiver, applying rach to the _block_.
+
+Returns the receiver.
+
+### **method** `do:` _block_ `with:` _other_
+
+Iterates over elements of the receiver and _other_ in parallel, applying
+each pair to the _block_.
+
+Returns the receiver.
+
+If either receiver or _other_ is exhausted before the other, returns the
+receiver
+
+### **method** `do:` _block_ `with:` _other_ `ifExhausted:` _exhaustedBlock_
+
+Iterates over elements of the receiver and _other_ in parallel, applying
+each pair to the _block_.
+
+Returns the receiver.
+
+If the _other_ is exhausted before the receiver, uses results of evaluting the
+_exhaustedBlock_ for the missing elements of _other_.
+
+### **method** `elementType`
+
+Returns the element type of the iterator: all elements of the iterator
+are of this type. Defaults to `Object`, implementing classes that restrict
+this must also enforce it.
+
+### **method** `equals:` _other_
+
+Returns `True` if elements of the _other_ match elements of the receiver.
+
+### **method** `find:` _block_
+
+Iterates over elements of the receiver, applying each to _block_.
+
+If the block evaluates to `True` for any element, returns that element
+immediately. If the block doesn't evaluate true for any element returns `False`
+instead.
+
+### **method** `find:` _block_ `ifNone:` _noneBlock_
+
+Iterates over elements of the receiver, applying each to _block_.
+
+If the block evaluates to `True` for any element, returns that element
+immediately. If the block doesn't evaluate true for any element evaluates
+the _noneBlock_ and returns its value instead.
+
+### **method** `first`
+
+Returns the first element of the receiver. Raises an error if
+there are no elements.
+
+### **method** `ifEmpty:` _emptyBlock_
+
+If the receiver is empty evaluates the _emptyBlock_ and returns its value.
+Otherwise returns `False`.
+
+### **method** `ifEmpty:` _emptyBlock_ `ifNotEmpty:` _notBlock_
+
+If the receiver is empty evaluates the _emptyBlock_ and returns its value.
+Otherwise evaluates the _notBlock_ and returns its value.
+
+### **method** `ifNotEmpty:` _notBlock_
+
+If the receiver is empty returns `False`, otherwise evaluates the _notBlock_
+and returns its value.
+
+### **method** `includes:` _object_
+
+Returns `True` any of the elements of the receiver is equal to the _object_
+as if by `#==`, and `False` otherwise.
+
+### **method** `includesAll:` _other_
+
+Iterates over elements of the _other, checking if they are all members of
+the receiver as if by `includes:`.
+
+### **method** `inject:` _initialValue_ `into:` _block_
+
+Iterates over elements of the receiver, applying an accumulator and each
+element to the _block_. Accumulator starts as _initialValue_
+and is updated to value of the block after each evaluation.
+
+Returns the evaluator.
+
+### **method** `inject:` _initialValue_ `into:` _block_ `with:` _other_
+
+Iterates over elements of the receiver and _other_ in parallel, applying an
+accumulator and each pair to the _block_. Accumulator starts as _initialValue_
+and is updated to value of the block after each evaluation.
+
+### **method** `isEmpty`
+
+Returns true if receiver is empty.
+
+### **method** `isEquivalent:` _other_
+
+Delegates to `equals:`: returns `True` if elements of the _other_ match elements
+of the receiver.
+
+### **method** `max:` _block_
+
+Iterates over elements of the receiver, applying each to the _block_. Returns
+maximum element as determined by comparing values the block evaluates to with
+`#<`.
+
+### **method** `max`
+
+Iterates over elements of the receiver, returns the maximum element as
+determined by comparing them with `#<`.
+
+### **method** `min:` _block_
+
+Iterates over elements of the receiver, applying each to the _block_. Returns
+minimum element as determined by comparing values the block evaluates to with
+`#<`.
+
+### **method** `min`
+
+Iterates over elements of the receiver, returns the minimum element as
+determined by comparing them with `#<`.
+
+### **method** `reduce:` _block_
+
+If the receiver has only a single element, returns it. Otherwise iterates over
+subsequent elements of the receiver, applying an accumulator and each to the
+_block_. Accumulator starts as first element of the receiver, and is updated to
+value of the block after each evaluation.
+
+### **method** `second`
+
+Returns second element of the receiver.
+
+### **method** `select:` _block_ `as:` _species_
+
+Iterates over elements of the receiver, applying each to the _block_. Adds those
+elements for which the block returns `True` to a _Collection_ created by sending
+a `#new` message to the _species_.
+
+Returns the collection.
+
+### *method* `select:` _block_ `into:` _collection_
+
+Iterates over elements of the receiver, applying each to the _block_. Adds those
+elements for which the block returns `True` to the _collection_.
+
+Returns the collection.
+
+### *method* `sizeEstimate`
+
+Returns the estimated number of elements in the receiver, or the exact
+number if known (ie. if it can be determined in O(1) time.) Returns zero
+if the receiver is empty, and a number greater than zero if the receiver
+is not empty.
+
+### *method* `sum:` _block_
+
+Iterates over elements of the receiver, applying each to the _block_. Returns
+the sum of values that the block evaluates to.
+
+### *method* `sum`
+
+Iterates over elements of the block, returning their sum.
+
+?> There is no `#reject:as` or `#reject:into` since those names are too
+confusing.
+
+## Collection
+
+```mermaid
+graph TD
+    iterable(["Iterable"])
+    collection(["Collection"])
+
+    iterable-->collection
+    collection-->List
+```
+
+Finite. Support creation, addition of elements, and removal of elements.
+
+### *required class method* `of:` _type_ `withCapacity:` _capacity_
+
+Creates a new _Collection_ specialized to contain elements of _type_ which
+can hold upto _capacity_ items without needing to grow.
+
+### *required method* `add:` _element_
+
+Adds _element_ to receiver.
+
+### *required method* `remove:` _element_
+
+Remove _element_ from the receiver.
+
+### *required method* `clear`
+
+Removes all elements from the receiver.
+
+- required method `clear`
+- required method `remove:`
+- required method `removeIf:`
+- required method `size`
+- class method `defaultCapacity`
+- class method `defaultElementType`
+- class method `from:`
+- class method `new:`
+- class method `new:default:`
+- class method `new`
+- class method `of:from:`
+- class method `withCapacity:`
+- method `addAll:`
+- method `as:`
+- method `collect:`
+- method `copy`
+- method `reject:`
+- method `remove:`
+- method `removeAll:`
+- method `removeIfNot:`
+- method `reserveCapacity`
+- method `select:`
+- method `with:collect:`
+
+### Indexed < Iterable
+
+- required class method `of:new:value:`
+- class method `new:`
+- required method `at:`
+- required method `at:put:`
+
+### List < Indexed, Collection
+
+### Array < Indexed
 
 !> Would also like a method of operating on slices, reflecting the changes
 back to original. Would make `(x from: start to: end) rotateLeft: n` work

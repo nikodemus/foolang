@@ -86,51 +86,35 @@ pub fn into_array(foolang: &Foolang, data: Vec<Object>) -> Object {
 
 pub fn class_vtable() -> Vtable {
     let vt = Vtable::new("Array");
-    vt.add_primitive_method_or_panic("withCapacity:", class_array_with_capacity);
+    vt.add_primitive_method_or_panic("new:value:", class_array_new_value);
     vt
 }
 
 pub fn instance_vtable() -> Vtable {
     let vt = Vtable::new("Array");
     vt.add_primitive_method_or_panic("at:", array_at);
-    vt.add_primitive_method_or_panic("pop", array_pop);
-    vt.add_primitive_method_or_panic("push:", array_push);
     vt.add_primitive_method_or_panic("put:at:", array_put_at);
     vt.add_primitive_method_or_panic("size", array_size);
     vt
 }
 
-fn class_array_with_capacity(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let n = args[0].as_usize("capacity in Array##withCapacity:")?;
-    let v = Vec::with_capacity(n);
+fn class_array_new_value(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let n = args[0].as_usize("size in Array##new:value:")?;
+    let mut v = Vec::with_capacity(n);
+    for _ in 0..n {
+        v.push(args[1].clone());
+    }
     Ok(into_array(&env.foo, v))
 }
 
 fn array_at(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
-    receiver
-        .as_vec(move |vec| Ok(vec[(args[0].as_usize("index in Array#at:")? - 1) as usize].clone()))
-}
-
-fn array_pop(receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
-    receiver.as_mut_vec(move |mut vec| match vec.pop() {
-        Some(obj) => Ok(obj),
-        None => Unwind::error(&format!("Could not pop from: {:?}", receiver)),
-    })
-}
-
-fn array_push(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
-    let elt = args[0].clone();
-    receiver.as_mut_vec(move |mut vec| {
-        vec.push(elt);
-        Ok(())
-    })?;
-    Ok(receiver.clone())
+    receiver.as_vec(move |vec| Ok(vec[(args[0].as_index("Array#at:")? - 1) as usize].clone()))
 }
 
 fn array_put_at(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     let elt = args[0].clone();
     receiver.as_mut_vec(move |mut vec| {
-        vec[(args[1].as_usize("index in Array#put:at:")? - 1) as usize] = elt.clone();
+        vec[(args[1].as_index("Array#put:at:")? - 1) as usize] = elt.clone();
         Ok(elt)
     })
 }

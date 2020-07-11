@@ -49,11 +49,11 @@ class Benchmark { name block userTime systemTime realTime }
             ; newline
 
     class method sumFloats: full
-        let array = [].
         let n = full ifTrue: { 150_000 } ifFalse: { 150 }.
-        1 to: n do: { |x| array push: x asFloat }.
+        let floats = List new.
+        1 to: n do: { |x| floats add: x asFloat }.
         Benchmark new: "SumFloats"
-            is: { array inject: 0.0 into: { |sum each | sum + each } }
+            is: { floats inject: 0.0 into: { |sum each | sum + each } }
 
     class method factorial: full
         Benchmark new: "Factorial"

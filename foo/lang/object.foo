@@ -1,3 +1,5 @@
+import .output.Output
+
 -- Should this be "Standard" or "StandardObject" instead?
 interface Object
     method == other

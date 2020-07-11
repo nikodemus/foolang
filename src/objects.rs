@@ -206,10 +206,12 @@ impl Vtable {
             if m == method {
                 return Ok(());
             }
+            /*
             return Unwind::error(&format!(
                 "Cannot override method {} in {}",
                 selector, &self.name
             ));
+             */
         }
         for class in self.implementations.borrow().iter() {
             class.add_method(selector, method.clone())?;
@@ -1229,6 +1231,13 @@ impl Object {
         match self.datum {
             Datum::Integer(i) => Ok(i as usize),
             _ => Unwind::error(&format!("{:?} is not an unsigned Integer ({})", &self, ctx)),
+        }
+    }
+
+    pub fn as_index(&self, ctx: &str) -> Result<i64, Unwind> {
+        match self.datum {
+            Datum::Integer(i) if i >= 1 => Ok(i as i64),
+            _ => Unwind::error(&format!("{:?} is not a valid index in {}", &self, ctx)),
         }
     }
 
