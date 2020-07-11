@@ -8,23 +8,25 @@ it's here more for future reference than anything else.
 
 - 1981 - [Design Principles Behind
   Smalltalk](http://stephane.ducasse.free.fr/FreeBooks/BlueBookHughes/Design%20Principles%20Behind%20Smalltalk.pdf)
+  by Daniel Ingalis. _A compelling statement of intent. Foolang doesn't quite follow these Smalltalk
+  principles, but being explicit about that would be nice._ 
 
 - 1983 - [Smalltalk-80: The Language and Its Implementation](http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf)
-  Adale Goldberd and David Robson
+  Adale Goldberd and David Robson. 
 
 - 1989 - [Reflective Facilities in
   Smalltalk-80](http://www.laputan.org/ref89/ref89.html) by Brian Foote and
-  Ralph E. Johnson.
+  Ralph E. Johnson. _A good summary, and worth considering as Foolang evolves:
+  while Foolang has a toe in the static world, metaprogramming facilities are
+  invaluable and should not be thrown out._
 
-- 1989 - [An Environment for Literate Smalltalk
-  Programming](https://heim.ifi.uio.no/~trygver/1989/1989.10.1-LiterateProgrammingOOPSLA.pdf)
-  
+- 1990 - [A Type System for
+  Smalltalk](https://www.researchgate.net/publication/2815088_A_Type_System_for_Smalltalk)
+  by Justin O. Graver and Ralph E. Johnson.
+
 - 1993 - [Strongtalk, Typechecking Smalltalk in a Production
   Environment](http://laputan.org/pub/papers/Strongtalk-OOPSLA-93.pdf) by Gilad Bracha and David
   Griswold.
-
-- 1993 - [The Early History of
-  Smalltalk](http://worrydream.com/EarlyHistoryOfSmalltalk/) by Alan Kay.
 
 - 1996 - [Subsystems](https://www.instantiations.com/PDFs/OOPSLA96/subsys.pdf)
   by Allen Wirfs-Brock, a proposal from OOPSLA'96 Extending Smalltalk Workshop.
