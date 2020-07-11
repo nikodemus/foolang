@@ -62,6 +62,45 @@ method _emitOn: stream using: block
     method dot: other
         self with: other sum: { |a b| a * b }.
 
+    method collect: block
+        let new = Array new: self size.
+        1 to: self size
+          do: { |i|
+                new put: (block value: (self at: i)) at: i }.
+        new.
+
+    method with: other collect: block
+        self size == other size
+            ifTrue: { let new = Array new: self size.
+                      1 to: self size
+                        do: { |i|
+                              new put: (block value: (self at: i)
+                                            value: (other at: i))
+                                  at: i }.
+                      new }
+            ifFalse: { Error raise: "Size mismatch in Array#with:collect:" }
+
+    method with: other do: block
+        self size == other size
+            ifTrue: { 1 to: self size
+                        do: { |i| block value: (self at: i) value: (other at: i)} }
+            ifFalse: { Error raise: "Size mismatch in Array#with:do:" }.
+        self
+
+    method with: other inject: value into: block
+        let result = value.
+        self
+            with: other
+            do: { |a b| result = block value: result value: a value: b }.
+        result.
+
+    method with: other sum: block
+        self
+            with: other
+            inject: 0
+            into: { |res a b|
+                    res + (block value: a value: b) }
+
     method norm
        (self inject: 0.0 into: { |abs elt| abs + (elt * elt) }) sqrt.
 

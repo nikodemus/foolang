@@ -26,7 +26,7 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
                 maxThrust: maxThrust
                 debug: debug
 
-     let forces = [].
+     let forces = List new.
 
      let model = PointMass forces: forces
                            mass: mass
@@ -118,7 +118,7 @@ class Main {}
       let t = 0.0.
       let step = 0.02.
       { t < 100.0 } whileTrue: {
-          -- system output println: "t: {t} pos: {plane position} speed: {plane velocity}"
+          system output println: "t: {t} pos: {plane position} speed: {plane velocity}".
           let height = plane position at: 3.
           takeoff ifFalse: {
              height > 0.1 ifTrue: {
