@@ -86,14 +86,17 @@ pub fn into_array(foolang: &Foolang, data: Vec<Object>, etype: Option<Object>) -
     }
 }
 
-fn array_of(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
+fn array_of(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let etype = args[0].clone();
-    let array = receiver.as_array("Array#of:")?;
+    let data = receiver.as_array("Array#of:")?.borrow();
+    for elt in data.iter() {
+        etype.send("typecheck:", std::slice::from_ref(elt), env)?;
+    }
     Ok(Object {
         vtable: receiver.vtable.clone(),
         datum: Datum::Array(Rc::new(Array {
             etype: Some(etype),
-            data: RefCell::new(array.data.borrow().clone()),
+            data: RefCell::new(data.clone()),
         })),
     })
 }
