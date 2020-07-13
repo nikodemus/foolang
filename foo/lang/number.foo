@@ -4,6 +4,9 @@ import .object.Object
 interface Number
     is Object
 
+    class method default
+        0
+
     method == right
         self is right
 
