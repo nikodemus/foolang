@@ -896,11 +896,11 @@ impl Foolang {
     }
 
     pub fn make_array(&self, data: &[Object]) -> Object {
-        self.into_array(data.to_vec())
+        self.into_array(data.to_vec(), None)
     }
 
-    pub fn into_array(&self, data: Vec<Object>) -> Object {
-        classes::array::into_array(self, data)
+    pub fn into_array(&self, data: Vec<Object>, etype: Option<Object>) -> Object {
+        classes::array::into_array(self, data, etype)
     }
 
     pub fn make_boolean(&self, x: bool) -> Object {

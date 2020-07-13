@@ -221,6 +221,7 @@ fn main() {
             matches
                 .values_of("arg")
                 .map_or(vec![], |args| args.map(|arg| foo.make_string(arg)).collect()),
+            foo.toplevel_env().find_global("String"),
         );
         // FIXME: pass in env and argv to run
         match foo.run(&program, command) {

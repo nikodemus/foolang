@@ -8,6 +8,7 @@ use crate::objects::{Datum, Eval, Foolang, Object, Vtable};
 use crate::unwind::Unwind;
 
 pub struct Array {
+    pub etype: Option<Object>,
     pub data: RefCell<Vec<Object>>,
 }
 
@@ -75,13 +76,26 @@ pub fn as_array<'a>(obj: &'a Object, ctx: &str) -> Result<&'a Array, Unwind> {
     }
 }
 
-pub fn into_array(foolang: &Foolang, data: Vec<Object>) -> Object {
+pub fn into_array(foolang: &Foolang, data: Vec<Object>, etype: Option<Object>) -> Object {
     Object {
         vtable: Rc::clone(&foolang.array_vtable),
         datum: Datum::Array(Rc::new(Array {
+            etype,
             data: RefCell::new(data),
         })),
     }
+}
+
+fn array_of(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
+    let etype = args[0].clone();
+    let array = receiver.as_array("Array#of:")?;
+    Ok(Object {
+        vtable: receiver.vtable.clone(),
+        datum: Datum::Array(Rc::new(Array {
+            etype: Some(etype),
+            data: RefCell::new(array.data.borrow().clone()),
+        })),
+    })
 }
 
 pub fn class_vtable() -> Vtable {
@@ -92,6 +106,7 @@ pub fn class_vtable() -> Vtable {
 
 pub fn instance_vtable() -> Vtable {
     let vt = Vtable::new("Array");
+    vt.add_primitive_method_or_panic("of:", array_of);
     vt.add_primitive_method_or_panic("at:", array_at);
     vt.add_primitive_method_or_panic("put:at:", array_put_at);
     vt.add_primitive_method_or_panic("size", array_size);
@@ -104,19 +119,22 @@ fn class_array_new_value(_receiver: &Object, args: &[Object], env: &Env) -> Eval
     for _ in 0..n {
         v.push(args[1].clone());
     }
-    Ok(into_array(&env.foo, v))
+    Ok(into_array(&env.foo, v, None))
 }
 
 fn array_at(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     receiver.as_vec(move |vec| Ok(vec[(args[0].as_index("Array#at:")? - 1) as usize].clone()))
 }
 
-fn array_put_at(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
+fn array_put_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let elt = args[0].clone();
-    receiver.as_mut_vec(move |mut vec| {
-        vec[(args[1].as_index("Array#put:at:")? - 1) as usize] = elt.clone();
-        Ok(elt)
-    })
+    let array = receiver.as_array("Array#put:at:")?;
+    if let Some(etype) = &array.etype {
+        etype.send("typecheck:", std::slice::from_ref(&elt), env)?;
+    }
+    let index = (args[1].as_index("Array#put:at:")? - 1) as usize;
+    array.data.borrow_mut()[index] = elt.clone();
+    Ok(elt)
 }
 
 fn array_size(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
