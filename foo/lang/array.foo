@@ -19,6 +19,26 @@ class ArrayIterator { array index }
         index <= array size
 end
 
+class Specialized { containerClass elementType }
+    class method class: containerClass of: elementType
+        self containerClass: containerClass elementType: elementType
+    method new
+        containerClass of: elementType new: 0
+    method new: size
+        containerClass of: elementType new: size
+    method new: size value: value
+        containerClass of: elementType new: size value: value
+    method includes: thing
+        (containerClass includes: thing)
+            ifTrue: { thing elementType is elementType }
+    method typecheck: thing
+        self includes: thing
+             ifFalse: { TypeError raise: thing expected: self }.
+        thing
+    method displayOn: stream
+        stream print: "{containerClass} of: {elementType}"
+end
+
 extend Array
     is Ordered
     is Iterable
@@ -26,8 +46,23 @@ extend Array
     method iterator
         ArrayIterator new: self
 
+    method elementType
+        -- KLUDGE: otherwise Iterator#elementType:
+        -- need something like
+        --  is Iterable except: [#elementType]
+        self arrayElementType
+
     class method new: size
-        self new: size value: False
+        self of: Object new: size value: False
+
+    class method new: size value: value
+        self of: Object new: size value: value
+
+    class method of: type new: size
+        self of: type new: size value: type default
+
+    class method of: type
+        Specialized class: Array of: type
 
     method copy
         let copy = Array new: self size.
@@ -35,7 +70,7 @@ extend Array
           do: { |i| copy put: (self at: i) at: i }.
         copy
 
-method _emitOn: stream using: block
+    method _emitOn: stream using: block
         stream print: "[".
         self do: { |x| block value: x }
              interleaving: { stream print: ", " }.

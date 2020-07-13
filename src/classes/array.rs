@@ -103,7 +103,7 @@ fn array_of(receiver: &Object, args: &[Object], env: &Env) -> Eval {
 
 pub fn class_vtable() -> Vtable {
     let vt = Vtable::new("Array");
-    vt.add_primitive_method_or_panic("new:value:", class_array_new_value);
+    vt.add_primitive_method_or_panic("of:new:value:", class_array_of_new_value);
     vt
 }
 
@@ -113,16 +113,28 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("at:", array_at);
     vt.add_primitive_method_or_panic("put:at:", array_put_at);
     vt.add_primitive_method_or_panic("size", array_size);
+    vt.add_primitive_method_or_panic("arrayElementType", array_element_type);
     vt
 }
 
-fn class_array_new_value(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let n = args[0].as_usize("size in Array##new:value:")?;
+fn class_array_of_new_value(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let n = args[1].as_usize("size in Array##new:value:")?;
     let mut v = Vec::with_capacity(n);
+    let etype = args[0].clone();
     for _ in 0..n {
-        v.push(args[1].clone());
+        let elt = args[2].clone();
+        etype.send("typecheck:", std::slice::from_ref(&elt), env)?;
+        v.push(elt);
     }
-    Ok(into_array(&env.foo, v, None))
+    Ok(into_array(&env.foo, v, Some(etype)))
+}
+
+fn array_element_type(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    if let Some(etype) = &receiver.as_array("Array#elementType")?.etype {
+        Ok(etype.clone())
+    } else {
+        env.find_global_or_unwind("Object")
+    }
 }
 
 fn array_at(receiver: &Object, args: &[Object], _env: &Env) -> Eval {

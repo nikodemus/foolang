@@ -37,17 +37,21 @@ interface Collection
         iterable do: { |each| new add: each }.
         new
 
-    class method new
-        self of: self defaultElementType
+    class method newOf: type
+        self of: type
              withCapacity: self defaultCapacity
 
-    class method new: size
-        self new: size value: self defaultElementType default
+    class method new
+        self newOf: self defaultElementType
 
-    class method new: size default: default
-        let new = self withCapacity: size.
-        size times: { new add: default }.
-        new
+    class method new: size
+        self new _initSize: size
+
+    class method of: type new: size
+        (self newOf: type) _initSize: size
+
+    class method of: type new: size value: value
+        (self newOf: type) _initSize: size value: value
 
     class method of: type from: iterable
         let new = self of: type withCapacity: iterable sizeEstimate.
@@ -56,6 +60,13 @@ interface Collection
 
     class method withCapacity: capacity
         self of: self defaultElementType withCapacity: capacity
+
+    method _initSize: size
+        self _initSize: size value: self elementType default
+
+    method _initSize: size value: value
+        size times: { new add: value }.
+        self
 
     method isEmpty
         self size is 0

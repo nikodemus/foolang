@@ -1,6 +1,9 @@
 import .array.Array
+import .array.Specialized
 import .collection.Collection
 import .ordered.Ordered
+
+
 
 class List { size data }
     is Collection
@@ -17,7 +20,13 @@ class List { size data }
         new
 
     class method of: type withCapacity: capacity
-        self size: 0 data: (Array new: capacity) -- FIXME: type
+        self size: 0 data: (Array of: type new: capacity)
+
+    class method of: type
+        Specialized class: List of: type
+
+    method elementType
+        data elementType
 
     method add: element
         self atCapacity
@@ -26,8 +35,8 @@ class List { size data }
                         do: { |i|
                               newdata put: (data at: i) at: i }.
                       data = newdata }.
+        data put: element at: size + 1.
         size = size + 1.
-        data put: element at: size.
         self
 
     method pop
@@ -63,7 +72,9 @@ class List { size data }
         self.
 
     method _emitOn: stream using: block
-        stream print: "List from: [".
+        self elementType is Object
+            ifTrue: { stream print: "List from: [" }
+            ifFalse: { stream print: "List of: {self elementType} from: [" }.
         self do: { |x| block value: x }
              interleaving: { stream print: ", " }.
         stream print: "]".
