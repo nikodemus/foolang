@@ -4,6 +4,8 @@ extend String
     is Object
     is Ordered
 
+    class method default
+        ""
     method append: other
        other appendToString: self
     method newline
