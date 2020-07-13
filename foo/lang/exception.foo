@@ -23,6 +23,23 @@ class Error { description }
         stream print: "#<Error {self description}>"
 end
 
+define $typeError
+    Error handler
+end
+
+class TypeError { value expected }
+    class method withHandler: handler do: block
+        let $typeError = { |error| self handle: error with: handler }.
+        block value
+    class method raise: value expected: type
+        $typeError value: (self value: value expected: type)
+    method description
+        "Type error: {expected} expected, got: {value}".
+    method displayOn: stream
+        stream print: "#<TypeError {expected}, got: {value}>"
+end
+
+
 define $divideByZero
     Error handler
 end
