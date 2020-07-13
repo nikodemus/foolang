@@ -166,7 +166,7 @@ fn test_instance_variable4() {
                 concat!(
                     "002            method foo: x\n",
                     "003               bar = bar + x.\n",
-                    "                        ^^^^^^^ Integer expected, got: Float 42.0\n",
+                    "                        ^^^^^^^ Integer expected, got Float: 42.0\n",
                     "004               self\n"
                 )
             )
@@ -281,7 +281,7 @@ fn test_typecheck2() {
             }),
             Location::from(
                 0..3,
-                concat!("001 123::String\n", "    ^^^ String expected, got: Integer 123\n")
+                concat!("001 123::String\n", "    ^^^ String expected, got Integer: 123\n")
             )
         )
     );
@@ -300,7 +300,7 @@ fn test_typecheck2() {
             }),
             Location::from(
                 0..3,
-                concat!("001 123::String\n", "    ^^^ String expected, got: Integer 123\n")
+                concat!("001 123::String\n", "    ^^^ String expected, got Integer: 123\n")
             )
         )
     );
@@ -320,7 +320,7 @@ fn test_typecheck3() {
                 17..21,
                 concat!(
                     "001 let x::Integer = 42.0. x\n",
-                    "                     ^^^^ Integer expected, got: Float 42.0\n"
+                    "                     ^^^^ Integer expected, got Float: 42.0\n"
                 )
             )
         )
@@ -341,7 +341,7 @@ fn test_typecheck4() {
                 25..28,
                 concat!(
                     "001 let x::Integer = 42. x = 1.0. x\n",
-                    "                             ^^^ Integer expected, got: Float 1.0\n"
+                    "                             ^^^ Integer expected, got Float: 1.0\n"
                 )
             )
         )
@@ -367,7 +367,7 @@ fn test_typecheck6() {
                 19..30,
                 concat!(
                     "001 { |x::Integer| x } value: 41.0\n",
-                    "                       ^^^^^^^^^^^ Integer expected, got: Float 41.0\n"
+                    "                       ^^^^^^^^^^^ Integer expected, got Float: 41.0\n"
                 )
             )
         )
@@ -388,7 +388,7 @@ fn test_typecheck7() {
                 21..22,
                 concat!(
                     "001 { |y x::Integer| x = y } value: 41.0 value: 42\n",
-                    "                         ^ Integer expected, got: Float 41.0\n"
+                    "                         ^ Integer expected, got Float: 41.0\n"
                 )
             )
         )
@@ -419,7 +419,7 @@ fn test_typecheck8() {
                 concat!(
                     "005             method boom\n",
                     "006                 self zot: 1.0\n",
-                    "                         ^^^^^^^^ Integer expected, got: Float 1.0\n",
+                    "                         ^^^^^^^^ Integer expected, got Float: 1.0\n",
                     "007          end\n"
                 )
             )
@@ -449,7 +449,7 @@ fn test_typecheck9() {
                 concat!(
                     "003             method zot: x -> Integer\n",
                     "004                 x + 1\n",
-                    "                    ^^^^^ Integer expected, got: Float 2.0\n",
+                    "                    ^^^^^ Integer expected, got Float: 2.0\n",
                     "005          end\n",
                 )
             )
@@ -471,7 +471,7 @@ fn test_typecheck10() {
                 16..21,
                 concat!(
                     "001 {|x| -> Integer x + 1} value: 1.0\n",
-                    "                    ^^^^^ Integer expected, got: Float 2.0\n",
+                    "                    ^^^^^ Integer expected, got Float: 2.0\n",
                 )
             )
         )

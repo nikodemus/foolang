@@ -238,10 +238,10 @@ impl SimpleError {
 impl TypeError {
     pub fn what(&self) -> String {
         format!(
-            "{} expected, got: {} {}",
+            "{} expected, got {}: {:?}",
             self.expected,
             self.value.vtable.name.clone(),
-            self.value
+            self.value,
         )
     }
 }
