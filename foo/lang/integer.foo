@@ -3,6 +3,9 @@ import .number.Number
 extend Integer
     is Number
 
+    class method default
+        0
+
     method asInteger
         self
 
