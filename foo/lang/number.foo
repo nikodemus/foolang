@@ -58,10 +58,4 @@ interface Number
     method to: other by: step
        Interval from: self to: other by: step
 
-    method printOn: stream
-        stream print: self toString
-
-    method displayOn: stream
-        self printOn: stream
-
 end

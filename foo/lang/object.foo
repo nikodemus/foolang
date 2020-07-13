@@ -7,4 +7,15 @@ interface Object
             ifTrue: { self isEquivalent: other }
             ifFalse: { False }
     required method isEquivalent: other
+    class method printOn: stream
+        stream print: self toString
+
+    class method displayOn: stream
+        self printOn: stream
+
+    method printOn: stream
+        stream print: self toString
+
+    method displayOn: stream
+        self printOn: stream
 end
