@@ -23,6 +23,9 @@ interface Collection
     required method add: object
     required method clear
 
+    class method default
+        List new
+
     class method defaultCapacity
         8
 
