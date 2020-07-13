@@ -2,6 +2,7 @@ import .object.Object
 
 extend String
     is Object
+    is Ordered
 
     method append: other
        other appendToString: self
@@ -16,7 +17,7 @@ extend String
          ["\r", "\\r"],
          ["\{", "\\\{"]]
            do: { |esc|
-                 (self stringEqual: esc first)
+                 (self isEquivalent: esc first)
                     ifTrue: { stream writeString: esc second. return stream } }.
         stream writeString: self
     method displayOn: stream
