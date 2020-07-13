@@ -12,7 +12,9 @@ interface Object
     -- Should be able to specify non-inherited methods for
     -- cases like this?
     class method default
-        False::Self
+        self is Object
+            ifTrue: { False }
+            ifFalse: { Error raise: "No default value for {self}" }
 
     class method printOn: stream
         stream print: self toString

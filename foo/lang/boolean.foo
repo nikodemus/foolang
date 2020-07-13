@@ -3,6 +3,9 @@ import .object.Object
 extend Boolean
     is Object
 
+    class method default
+        False
+
     method == other
         self is other
 
