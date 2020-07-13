@@ -2,11 +2,18 @@ import .output.Output
 
 -- Should this be "Standard" or "StandardObject" instead?
 interface Object
+    required method isEquivalent: other
+
     method == other
         (Self includes: other)
             ifTrue: { self isEquivalent: other }
             ifFalse: { False }
-    required method isEquivalent: other
+
+    -- Should be able to specify non-inherited methods for
+    -- cases like this?
+    class method default
+        False::Self
+
     class method printOn: stream
         stream print: self toString
 
