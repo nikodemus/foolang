@@ -44,7 +44,10 @@ All other methods are implemented on top of these ones.
 ---
 -- required method iterator
 
+import .object.Object
+
 interface Iterable
+    is Object
 
     method allSatisfy: block
         self do: { |each|
@@ -58,22 +61,16 @@ interface Iterable
                        ifTrue: { return True } }.
         False
 
-    method collect: block as: species
-        self collect: block into: species new
-
     method collect: block into: collection
         self do: { |each|
                    collection add: (block value: each) }.
         collection
 
-    method collect: block with: iterable as: species
-        self collect: block with: iterable into: species new
-
-    method collect: block with: iterable into: collection
+    method with: iterable collect: block into: collection
         self
+            with: iterable
             do: { |each1 each2|
-                  collection add: (block value: each1 value: each2) }
-            with: iterable.
+                  collection add: (block value: each1 value: each2) }.
         collection
 
     method count: block
@@ -83,10 +80,10 @@ interface Iterable
                        ifTrue: { n = n + 1 } }.
         n
 
-    method count: block with: other
+    method with: other count: block
         let n = 0.
         self do: { |each1 each2|
-                   (block value: each1 each: each2)
+                   (block value: each1 value: each2)
                        ifTrue: { n = n + 1 } }.
         n
 

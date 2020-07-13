@@ -41,16 +41,6 @@ end
 
 extend Array
     is Ordered
-    is Iterable
-
-    method iterator
-        ArrayIterator new: self
-
-    method elementType
-        -- KLUDGE: otherwise Iterator#elementType:
-        -- need something like
-        --  is Iterable except: [#elementType]
-        self arrayElementType
 
     class method new: size
         self of: Object new: size value: False
@@ -58,29 +48,11 @@ extend Array
     class method new: size value: value
         self of: Object new: size value: value
 
-    class method of: type new: size
-        self of: type new: size value: type default
-
     class method of: type
         Specialized class: Array of: type
 
-    method copy
-        let copy = Array new: self size.
-        1 to: self size
-          do: { |i| copy put: (self at: i) at: i }.
-        copy
-
-    method _emitOn: stream using: block
-        stream print: "[".
-        self do: { |x| block value: x }
-             interleaving: { stream print: ", " }.
-        stream print: "]".
-
-    method displayOn: stream
-        self _emitOn: stream using: { |x| x displayOn: stream }.
-
-    method printOn: stream
-        self _emitOn: stream using: { |x| x printOn: stream }.
+    class method of: type new: size
+        self of: type new: size value: type default
 
     method + x
         x broadcast: {|a b| a + b} to: self.
@@ -94,54 +66,36 @@ extend Array
     method broadcast: block to: collection
         collection with: self collect: block.
 
+    method iterator
+        ArrayIterator new: self
+
+    method elementType
+        -- KLUDGE: otherwise Iterator#elementType:
+        -- need something like
+        --  is Iterable except: [#elementType]
+        self arrayElementType
+
+    method _emitOn: stream using: block
+        stream print: "[".
+        self do: { |x| block value: x }
+             interleaving: { stream print: ", " }.
+        stream print: "]".
+
+    method displayOn: stream
+        self _emitOn: stream using: { |x| x displayOn: stream }.
+
+    method printOn: stream
+        self _emitOn: stream using: { |x| x printOn: stream }.
+
     method dot: other
         self with: other sum: { |a b| a * b }.
-
-    method collect: block
-        let new = Array new: self size.
-        1 to: self size
-          do: { |i|
-                new put: (block value: (self at: i)) at: i }.
-        new.
-
-    method with: other collect: block
-        self size == other size
-            ifTrue: { let new = Array new: self size.
-                      1 to: self size
-                        do: { |i|
-                              new put: (block value: (self at: i)
-                                            value: (other at: i))
-                                  at: i }.
-                      new }
-            ifFalse: { Error raise: "Size mismatch in Array#with:collect:" }
-
-    method with: other do: block
-        self size == other size
-            ifTrue: { 1 to: self size
-                        do: { |i| block value: (self at: i) value: (other at: i)} }
-            ifFalse: { Error raise: "Size mismatch in Array#with:do:" }.
-        self
-
-    method with: other inject: value into: block
-        let result = value.
-        self
-            with: other
-            do: { |a b| result = block value: result value: a value: b }.
-        result.
-
-    method with: other sum: block
-        self
-            with: other
-            inject: 0
-            into: { |res a b|
-                    res + (block value: a value: b) }
 
     method norm
        (self inject: 0.0 into: { |abs elt| abs + (elt * elt) }) sqrt.
 
     method normalized
        let reciprocal = 1.0 / (self norm).
-       self * reciprocal.
+        self * reciprocal.
 
     method scalarProjectionOn: other
         (self dot: other) / other norm.

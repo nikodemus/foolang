@@ -1,7 +1,7 @@
-import .object.Object
+import .iterable.Iterable
 
 interface Ordered
-    is Object
+    is Iterable
 
     method bytes
         let bytes = ByteArray new: self size.
@@ -18,9 +18,68 @@ interface Ordered
         True
 
     method copy
-        let copy = Self withCapacity: self size.
-        self do: { |elt| copy push: elt }.
-        copy.
+        let copy = Self of: (self elementType) new: self size.
+        1 to: self size
+          do: { |i| copy put: (self at: i) at: i }.
+          copy.
+
+    method species
+        Self of: self elementType
+
+    method collect: block
+        self collect: block as: self species
+
+    method collect: block of: type
+        self collect: block as: (Self of: type)
+
+    method collect: block as: type
+        let n = self size.
+        let new = type new: self size.
+        1 to: n
+          do: { |i|
+                new put: (block value: (self at: i)) at: i }.
+        new.
+
+    method do: block
+        1 to: self size
+          do: { |i|
+                block value: (self at: i) }.
+        self.
+
+    method with: other collect: block
+        self with: other collect: block of: Object
+
+    method with: other collect: block of: type
+        self with: other collect: block as: (Self of: type)
+
+    method with: other: collect: block as: species
+        let new = species new: self size.
+        1 to: self size
+          do: { |i|
+                new put: (block
+                              value: (self at: i)
+                              value: (other at: i))
+                    at: i }.
+        new.
+
+    method with: other do: block
+        1 to: self size
+          do: { |i| block value: (self at: i) value: (other at: i) }.
+        self.
+
+    method with: other inject: value into: block
+        let result = value.
+        self
+            with: other
+            do: { |a b| result = block value: result value: a value: b }.
+        result.
+
+    method with: other sum: block
+        self
+            with: other
+            inject: 0
+            into: { |res a b|
+                    res + (block value: a value: b) }
 
     method reverse
         let n = self size.

@@ -6,7 +6,7 @@ extend Boolean
     class method default
         False
 
-    method == other
+    method == other -> Boolean
         self is other
 
     method isEquivalent: other

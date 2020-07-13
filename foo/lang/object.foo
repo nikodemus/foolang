@@ -1,20 +1,22 @@
 import .output.Output
 
 -- Should this be "Standard" or "StandardObject" instead?
+
+-- Should be able to specify non-inherited methods for
+-- cases like #default. (direct method?)
 interface Object
-    required method isEquivalent: other
-
-    method == other
-        (Self includes: other)
-            ifTrue: { self isEquivalent: other }
-            ifFalse: { False }
-
-    -- Should be able to specify non-inherited methods for
-    -- cases like this?
     class method default
         self is Object
             ifTrue: { False }
             ifFalse: { Error raise: "No default value for {self}" }
+
+    method isEquivalent: other
+        self is other
+
+    method == other -> Boolean
+        (Self includes: other)
+            ifTrue: { self isEquivalent: other }
+            ifFalse: { False }
 
     class method printOn: stream
         stream print: self toString

@@ -7,7 +7,7 @@ interface Number
     class method default
         0
 
-    method == right
+    method == right -> Boolean
         self is right
 
     method isEquivalent: right
