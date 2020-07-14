@@ -538,14 +538,19 @@
    (let ((p (current-column)))
      (list p base stack ctx))))
 
+(defconst foolang--optional-horizontal-whitespace-regex
+  "\\s-*")
+
+(defconst foolang--regex-to-newline "[^\n]*")
+
 (defconst foolang--keyword-arg-line-regex
-  (concat "\\s-*"
-          foolang--keyword-regex "[^\\s-\n]*"
+  (concat foolang--optional-horizontal-whitespace-regex
+          foolang--keyword-regex foolang--regex-to-newline
           foolang--newline-or-lines-regex))
 
 (defconst foolang--two-keyword-arg-lines-regex
   (concat foolang--keyword-arg-line-regex
-          "\\s-*"
+          foolang--optional-horizontal-whitespace-regex
           foolang--keyword-regex))
 
 (def-foolang-indent "in-body name: var \\ name: var" (col base stack ctx)
@@ -1601,15 +1606,27 @@ class Foo {}
   "
 class Foo {}
 method foo
+x
 ifTrue: { { |i|
-            block value: default value (array at: i) } }
-ifFalse: {}"
-"
+block value: default value (array at: i) } }
+ifFalse: {}.
+42.
+m bar: quux
+ifTrue: { 42 }.
+13
+end"
+  "
 class Foo {}
     method foo
-        ifTrue: { { |i|
-                    block value: default value (array at: i) } }
-        ifFalse: {}")
+        x
+            ifTrue: { { |i|
+                        block value: default value (array at: i) } }
+            ifFalse: {}.
+        42.
+        m bar: quux
+          ifTrue: { 42 }.
+        13
+end")
 
 (def-foolang-indent-test "list-indent-3.1"
   "
