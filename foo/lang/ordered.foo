@@ -52,7 +52,7 @@ interface Ordered
     method with: other collect: block of: type
         self with: other collect: block as: (Self of: type)
 
-    method with: other: collect: block as: species
+    method with: other collect: block as: species
         let new = species new: self size.
         1 to: self size
           do: { |i|
