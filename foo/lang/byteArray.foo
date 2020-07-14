@@ -1,9 +1,8 @@
-import .iterable.Iterable
 import .ordered.Ordered
 import .array.ArrayIterator
+import .object.Object
 
 extend ByteArray
-    is Iterable
     is Ordered
 
     method iterator

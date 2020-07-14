@@ -1,4 +1,7 @@
+import .object.Object
+
 class Panic { description context }
+    is Object
     method displayOn: stream
         stream println: "PANIC: {self description}".
         stream println: self context
@@ -9,6 +12,7 @@ define $error
 end
 
 class Error { description }
+    is Object
     class method withHandler: handler do: block
         let $error = { |error| self handle: error with: handler }.
         block value
@@ -28,6 +32,7 @@ define $typeError
 end
 
 class TypeError { value expected }
+    is Object
     class method withHandler: handler do: block
         let $typeError = { |error| self handle: error with: handler }.
         block value
@@ -45,6 +50,7 @@ define $divideByZero
 end
 
 class DivideByZero { value }
+    is Object
     class method withHandler: handler do: block
         let $divideByZero = handler.
         block value
@@ -61,6 +67,7 @@ define $iteratorExhausted
 end
 
 class IteratorExhausted { value }
+    is Object
     class method withHandler: handler do: block
         let $iteratorExhausted = handler.
         block value
