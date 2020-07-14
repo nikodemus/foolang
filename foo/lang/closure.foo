@@ -1,4 +1,7 @@
+import .object.Object
+
 extend Closure
+    is Object
 
     method displayOn: stream
         stream print: self toString

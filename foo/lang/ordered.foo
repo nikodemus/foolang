@@ -1,0 +1,139 @@
+import .iterable.Iterable
+
+interface Ordered
+    is Iterable
+
+    method bytes
+        let bytes = ByteArray new: self size.
+        1 to: self size do: { |i| bytes put: (self at: i) at: i }.
+        bytes
+
+    method isEquivalent: other
+        self size == other size
+            ifTrue: { 1 to: self size
+                        do: { |i|
+                              (self at: i) == (other at: i)
+                                  ifFalse: { return False } } }
+            ifFalse: { return False }.
+        True
+
+    method copy
+        let copy = Self of: (self elementType) new: self size.
+        1 to: self size
+          do: { |i| copy put: (self at: i) at: i }.
+          copy.
+
+    method species
+        Self of: self elementType
+
+    method collect: block
+        self collect: block as: self species
+
+    method collect: block of: type
+        self collect: block as: (Self of: type)
+
+    method collect: block as: type
+        let n = self size.
+        let new = type new: self size.
+        1 to: n
+          do: { |i|
+                new put: (block value: (self at: i)) at: i }.
+        new.
+
+    method do: block
+        1 to: self size
+          do: { |i|
+                block value: (self at: i) }.
+        self.
+
+    method with: other collect: block
+        self with: other collect: block of: Object
+
+    method with: other collect: block of: type
+        self with: other collect: block as: (Self of: type)
+
+    method with: other collect: block as: species
+        let new = species new: self size.
+        1 to: self size
+          do: { |i|
+                new put: (block
+                              value: (self at: i)
+                              value: (other at: i))
+                    at: i }.
+        new.
+
+    method with: other do: block
+        1 to: self size
+          do: { |i| block value: (self at: i) value: (other at: i) }.
+        self.
+
+    method with: other inject: value into: block
+        let result = value.
+        self
+            with: other
+            do: { |a b| result = block value: result value: a value: b }.
+        result.
+
+    method with: other sum: block
+        self
+            with: other
+            inject: 0
+            into: { |res a b|
+                    res + (block value: a value: b) }
+
+    method reverse
+        let n = self size.
+        0 to: n
+          do: { |offset|
+                let i = 1 + offset.
+                let j = n - offset.
+                j <= i
+                    ifTrue: { return self }.
+                self swap: i with: j }.
+          panic "BUG: this should never happen."
+
+    method reversed
+        self copy reverse
+
+    method sort
+        self sort: { |a b| a < b }.
+
+    method sort: block
+        -- Unfortunate a straigthforward rust-side wrapper for Vec::sort_by()
+        -- cannot propagate errors from the comparison function, so instead
+        -- here's a quick and dirty quicksort. O(N^2) worst case, since I
+        -- was too lazy to do the center pivot.
+        self _quicksort: 1 to: self size by: block.
+
+    method sorted
+        self copy sort.
+
+    method sorted: block
+        self copy sort: block.
+
+    method _quicksort: left to: right by: block
+        left < right
+            ifTrue: { let p = self _partition: left to: right by: block.
+                      self _quicksort: left to: p - 1 by: block.
+                      self _quicksort: p + 1 to: right by: block }.
+        self.
+
+    method _partition: left to: right by: block
+        let pivot = self at: right.
+        let i = left.
+        left to: right
+                 do: { |j|
+                       let x = self at: j.
+                       (block value: x value: pivot)
+                           ifTrue: { self swap: i with: j.
+                                     i = i + 1 } }.
+        self swap: i with: right.
+        i.
+
+    method swap: i with: j
+        let tmp = self at: i.
+        self put: (self at: j) at: i.
+        self put: tmp at: j.
+        self.
+
+end

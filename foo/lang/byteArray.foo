@@ -1,7 +1,12 @@
-import .collection.Collection
+import .ordered.Ordered
+import .array.ArrayIterator
+import .object.Object
 
 extend ByteArray
-    is Collection
+    is Ordered
+
+    method iterator
+        ArrayIterator new: self
 
     method displayOn: stream
         stream print: self toString

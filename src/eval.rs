@@ -427,7 +427,7 @@ impl Env {
         for elt in &array.data {
             data.push(array_env.eval(elt)?);
         }
-        Ok(self.foo.into_array(data))
+        Ok(self.foo.into_array(data, None))
     }
 
     fn eval_bind(&self, bind: &Bind) -> Eval {

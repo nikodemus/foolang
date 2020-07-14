@@ -1,153 +1,58 @@
-import .collection.Collection
+import .iterable.Iterator
+import .iterable.Iterable
+import .ordered.Ordered
+
+class ArrayIterator { array index }
+    is Iterator
+
+    class method new: array
+        self array: array index: 1
+
+    method nextIfNone: block
+        let next = index > array size
+            ifTrue: { return block value }
+            ifFalse: { array at: index }.
+        index = index + 1.
+        next
+
+    method hasNext
+        index <= array size
+end
+
+class Specialized { containerClass elementType }
+    class method class: containerClass of: elementType
+        self containerClass: containerClass elementType: elementType
+    method new
+        containerClass of: elementType new: 0
+    method new: size
+        containerClass of: elementType new: size
+    method new: size value: value
+        containerClass of: elementType new: size value: value
+    method includes: thing
+        (containerClass includes: thing)
+            ifTrue: { thing elementType is elementType }
+    method typecheck: thing
+        self includes: thing
+             ifFalse: { TypeError raise: thing expected: self }.
+        thing
+    method displayOn: stream
+        stream print: "{containerClass} of: {elementType}"
+end
 
 extend Array
-    is Collection
+    is Ordered
 
-    class method new: size value: init
-        let new = Self withCapacity: size.
-        1 to: size do: { |_| new push: init }.
-        new
+    class method new: size
+        self of: Object new: size value: False
 
-    method bytes
-        let bytes = ByteArray new: self size.
-        1 to: self size do: { |i| bytes put: (self at: i) at: i }.
-        bytes
+    class method new: size value: value
+        self of: Object new: size value: value
 
-    method _emitOn: stream using: block
-        stream print: "[".
-        self do: { |x| block value: x }
-             interleaving: { stream print: ", " }.
-        stream print: "]".
+    class method of: type
+        Specialized class: Array of: type
 
-    method displayOn: stream
-        self _emitOn: stream using: { |x| x displayOn: stream }.
-
-    method printOn: stream
-        self _emitOn: stream using: { |x| x printOn: stream }.
-
-    method concat: other
-        let new = Array withCapacity: self size + other size.
-        self do: { |elt| new push: elt }.
-        other do: { |elt| new push: elt }.
-        new.
-
-    method collect: block
-        let size = self size.
-        let result = Array withCapacity: size.
-        1 to: size
-          do: { |i|
-                result push: (block value: (self at: i)) }.
-        result.
-
-    method copy
-        let copy = Array withCapacity: self size.
-        self do: { |elt| copy push: elt }.
-        copy.
-
-    method count: block
-        let n = 0.
-        1 to: size
-          do: { |i|
-                (block value: (self at: i))
-                    ifTrue: { n = n + 1 } }.
-        n.
-
-    method with: array collect: block
-        let size = self checkSize: array.
-        let result = Array withCapacity: size.
-        1 to: size
-          do: { |i|
-                result push: (block value: (self at: i)  value: (array at: i)) }.
-        result.
-
-    method with: array default: default collect: block
-        let size1 = self size.
-        let size2 = array size.
-        let size = size1 max: size2.
-        let result = Array withCapacity: size.
-        let common = size1 min: size2.
-        1 to: common
-          do: { |i| result push: (block value: (self at: i) value: (array at: i)) }.
-        common == size
-            ifTrue: { return result }.
-        let tailHandler = size1 < size2
-                              ifTrue: { { |i|
-                                          block value: default value: (array at: i) } }
-                              ifFalse: { { |i|
-                                           block value: (self at: i) value: default } }.
-        common + 1 to: size
-                   do: { |i| result push: (tailHandler value: i) }.
-        result
-
-    method select: block
-        let selection = Array withCapacity: 4.
-        self do: { |elt|
-                   (block value: elt) is True
-                       ifTrue: { selection push: elt } }.
-        selection.
-
-    method reject: block
-        let selection = Array withCapacity: 4.
-        self do: { |elt|
-                   (block value: elt) is True
-                       ifFalse: { selection push: elt } }.
-        selection.
-
-    method reverse
-        let n = self size + 1. -- 1 based indexing isn't all sunshine!
-        1 to: n
-          do: { |i|
-                let j = n - i.
-                j <= i
-                    ifTrue: { return self }.
-                let tmp = self at: i.
-                self put: (self at: j) at: i.
-                self put: tmp at: j }.
-          panic "BUG: this should never happen."
-
-    method reversed
-        self copy reverse
-
-    method sort
-        self sort: { |a b| a < b }.
-
-    method sort: block
-        -- Unfortunate a straigthforward rust-side wrapper for Vec::sort_by()
-        -- cannot propagate errors from the comparison function, so instead
-        -- here's a quick and dirty quicksort. O(N^2) worst case, since I
-        -- was too lazy to do the center pivot.
-        self _quicksort: 1 to: self size by: block.
-
-    method sorted
-        self copy sort.
-
-    method sorted: block
-        self copy sort: block.
-
-    method _quicksort: left to: right by: block
-        left < right
-            ifTrue: { let p = self _partition: left to: right by: block.
-                      self _quicksort: left to: p - 1 by: block.
-                      self _quicksort: p + 1 to: right by: block }.
-        self.
-
-    method _partition: left to: right by: block
-        let pivot = self at: right.
-        let i = left.
-        left to: right
-                 do: { |j|
-                       let x = self at: j.
-                       (block value: x value: pivot)
-                           ifTrue: { self swap: i with: j.
-                                     i = i + 1 } }.
-        self swap: i with: right.
-        i.
-
-    method swap: i with: j
-        let tmp = self at: i.
-        self put: (self at: j) at: i.
-        self put: tmp at: j.
-        self.
+    class method of: type new: size
+        self of: type new: size value: type default
 
     method + x
         x broadcast: {|a b| a + b} to: self.
@@ -161,6 +66,27 @@ extend Array
     method broadcast: block to: collection
         collection with: self collect: block.
 
+    method iterator
+        ArrayIterator new: self
+
+    method elementType
+        -- KLUDGE: otherwise Iterator#elementType:
+        -- need something like
+        --  is Iterable except: [#elementType]
+        self arrayElementType
+
+    method _emitOn: stream using: block
+        stream print: "[".
+        self do: { |x| block value: x }
+             interleaving: { stream print: ", " }.
+        stream print: "]".
+
+    method displayOn: stream
+        self _emitOn: stream using: { |x| x displayOn: stream }.
+
+    method printOn: stream
+        self _emitOn: stream using: { |x| x printOn: stream }.
+
     method dot: other
         self with: other sum: { |a b| a * b }.
 
@@ -169,7 +95,7 @@ extend Array
 
     method normalized
        let reciprocal = 1.0 / (self norm).
-       self * reciprocal.
+        self * reciprocal.
 
     method scalarProjectionOn: other
         (self dot: other) / other norm.

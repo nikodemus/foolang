@@ -2,9 +2,197 @@
 
 !> Incomplete, work in progress!
 
+Class and interface methods denoted with:
+
+- `ClassOrInterface selector`
+
+Instance methods denoted with:
+
+- `selector`
+
+FIXME: this _really_ needs to be generated.
+
 ## Array
 
-- _interface [Collection](#collection)_
+```mermaid
+graph LR
+Object-->Iterable-->Ordered-->Array
+```
+
+1-indexed fixed size mutable sequence of elements.
+
+- `Array new:` _size_
+- `Array new:` _size_ `value:` _value_
+- `Array of:` _type_
+- `Array of:` _type_ `new:` _size_
+- `Array of:` _type_ `new:` _size_ `value:` _value_
+
+- `*` _other_
+- `+` _other_
+- `-` _other
+- `/` _other_
+- `at:` _index_
+- `broadcast:` _block_ `to:` _collection_
+- `displayOn:` _stream_
+- `elementType`
+- `iterator`
+- `printOn:` _stream_
+- `dot:` _other_
+- `norm`
+- `normalized`
+- `scalarProjectionOn:`
+- `vectorProjectionOn:`
+- `addNumber:` _number_
+- `subNumber:` _number_
+- `divNumber:` _number_
+- `mulNumber:` _number_
+- `size`
+- `put:` _element_ `at:` _index_
+- `of:` _type_
+
+## Block
+
+```mermaid
+graph LR
+Object-->Block
+```
+
+## Boolean
+
+```mermaid
+graph LR
+Object-->Boolean
+```
+
+## Collection
+
+```mermaid
+graph LR
+Object-->Iterable-->Collection
+```
+
+## DivideByZero
+
+```mermaid
+graph LR
+Object-->Error-->DivideByZero
+```
+
+## Dictionary
+
+```mermaid
+graph LR
+Object-->Iterable-->Collection-->Dictionary
+```
+
+## Error
+
+```mermaid
+graph LR
+Object-->Error
+```
+
+## Float
+
+```mermaid
+graph LR
+Object-->Number-->Float
+```
+
+## Integer
+
+```mermaid
+graph LR
+Object-->Number-->Integer
+```
+
+## Iterator
+
+```mermaid
+graph LR
+Object-->Iterator
+```
+
+## Number
+
+```mermaid
+graph LR
+Object-->Number
+```
+
+## TypeError
+
+```mermaid
+graph LR
+Object-->Error-->TypeError
+```
+
+## Iterable
+
+```mermaid
+graph LR
+Object-->Iterable
+```
+
+## List
+
+```mermaid
+graph LR
+Object-->Iterable
+Iterable-->Collection-->List
+Iterable-->Ordered-->List
+
+```
+
+## Object
+
+```mermaid
+graph LR
+Object
+```
+
+- `Object default`
+- `Object printOn:` _stream_
+- `Object displayOn:` _stream_
+
+- `printOn:` _stream_
+- `displayOn:` _stream_
+- `==` _other_ 
+- `isEquivalent:` _other_
+
+## Ordered
+
+```mermaid
+graph LR
+Object-->Iterable-->Ordered
+```
+
+- `bytes`
+- `collect:` _block_
+- `collect:` _block_ `as:` _species_
+- `collect:` _block_ `of:` _type_
+- `copy`
+- `do:` _block_
+- `isEquivalent:` _other_
+- `reverse`
+- `reversed`
+- `sort:`
+- `sort`
+- `sorted:`
+- `sorted`
+- `species`
+- `swap`
+- `with:` _other_ `collect:` _block_
+- `with:` _other_ `collect:` _block_ `as` _type_
+- `with:` _other_ `collect:` _block_ `of:` _type_
+- `with:` _other_ `do:` _block_
+- `with:` _other_ `inject:` _initialValue_ `into:` _block_
+- `with:` _other_ `sum:` _block_
+
+
+---
+
+# OLD
 
 #### **class method** `new:` _size_ `value:` _value_
 

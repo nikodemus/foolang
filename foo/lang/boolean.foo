@@ -3,7 +3,10 @@ import .object.Object
 extend Boolean
     is Object
 
-    method == other
+    class method default
+        False
+
+    method == other -> Boolean
         self is other
 
     method isEquivalent: other

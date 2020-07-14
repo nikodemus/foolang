@@ -36,7 +36,7 @@ in in progress, this is the current status:
 - 005 - [Program Definition and Refinement](design/005-program-definition-and-refinement.md)
 - 006 - [Integer Types](design/006-integer-types.md)
 - 007 - [Definitions and Expressions](design/007-definitions-and-expressions.md)
-- WIP - [Indexed Classes](design/wip-indexed-classes.md)
+- 008 - [Indexed Classes](design/008-indexed-classes.md)
 - WIP - [Tower of Babel](design/wip-tower-of-babel.md)
 
 ### Old Design Notes

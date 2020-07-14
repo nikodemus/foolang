@@ -1,5 +1,33 @@
 # Foolang Miscellany
 
+## Zip
+
+While `with:collect:` and friends are not bad, they require a fair amount
+of duplication
+
+An efficient zip could be so much nicer:
+
+`(names zip: addresses) do: { |name address| db save: name :and address }`
+
+Efficient meaning a `Zipper { left right }`, which can then be open
+coded into equivalent code as hand written `with:collect:`
+
+## Method catenations
+
+Consider, what if method selectors were broken up based on existence.
+
+Assuming Foo#bar: -> Quux, and Quux#zot: -> Zot
+
+Foo bar: 42 zot: 13 === (Foo bar: 42) zot: 13
+
+This means that absent `Integer#to:do`, `1 to: 10 do: ...` would still work.
+
+Existence of methodNotUnderstood makes this hard, though.
+
+...and it might not be so nice anyhow.
+
+Still, kind of like method currying, except not.
+
 ## Block vs object syntax
 
 Should Foolang should use `[]` for blocks instead? Rectangular blocks suit ST
@@ -10,15 +38,19 @@ OTOH, `{}` is for better and worse what everyone expects blocks to look like.
 
 ## is vs equals
 
-- `a = b --> True` iff a is same object as b (currently this is `is`)
-  - Pro: natural because: `let a = b. a = b --> True`
-    I also think this is a reasonable thing to ask.
-  - Con: could be part of Any interface, with default implementation of
-    Foolang eq: x to: b
+`a = b --> True` iff a is same object as b (currently this is `is`)
 
-- `a is B --> True` iff a is member of type B
-   - Pro: don't need to add isString -type methods to umpteen classes
-   - Con: reflection and case-statement territory combined
+- Pro: natural because: `let a = b. a = b --> True`
+  I also think this is a reasonable thing to ask.
+- Pro: less exceptions syntax
+- Con: "doesn't scan"
+- Con: if this is a regular method, then it can be overridden, which seems
+  terrible
+
+Same reasoning except for the first pro applies to making a `is:` method, and
+`is:` does scan, but doesn't work as nicely vs. precedence.
+
+Non-overridable methods in Object?
 
 ## Literate Programming
 

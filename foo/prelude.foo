@@ -13,8 +13,11 @@ import .lang.filestream.FileStream
 import .lang.float.Float
 import .lang.integer.Integer
 import .lang.interval.Interval
+import .lang.iterable.Iterable
+import .lang.list.List
 import .lang.number.Number
 import .lang.object.Object
+import .lang.ordered.Ordered
 import .lang.output.Output
 import .lang.random.Random
 import .lang.record.Record

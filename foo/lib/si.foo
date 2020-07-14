@@ -157,7 +157,9 @@ interface SI_Unit
         -- Compound unit overrides this, but this is enough for base units
         (self species) is (right species) and: self power == right power
 
-    required method displayOn: stream
+    -- FIXME: since Object implements this, there is currently no way
+    -- to require subclasses to implement it specifically.
+    -- required method displayOn: stream
 
     method display: value on: stream
         Prefix display: (self scaleForDisplay: value) on: stream.
@@ -322,7 +324,7 @@ class CompoundUnit { units }
         self fromPowers: powers
 
     class method fromPowers: powers
-        let units = [].
+        let units = List new.
         powers doKeys: { |species|
                          let power = powers at: species.
                          power is 0

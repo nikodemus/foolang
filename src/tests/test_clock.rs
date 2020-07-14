@@ -3,7 +3,7 @@ use crate::objects::Foolang;
 #[test]
 fn test_clock1() {
     let foo = Foolang::here();
-    let cmd = foo.into_array(vec![]);
+    let cmd = foo.into_array(vec![], foo.toplevel_env().find_global("String"));
     let res = foo
         .run(
             "class Main {}
@@ -21,7 +21,7 @@ fn test_clock2() {
     // FIXME: This init here smells bad.
     crate::time::TimeInfo::init();
     let foo = Foolang::here();
-    let cmd = foo.into_array(vec![]);
+    let cmd = foo.into_array(vec![], foo.toplevel_env().find_global("String"));
     let res = foo
         .run(
             "class Main {}

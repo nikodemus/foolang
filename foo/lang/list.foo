@@ -1,0 +1,287 @@
+import .array.Array
+import .array.Specialized
+import .collection.Collection
+import .ordered.Ordered
+
+
+
+class List { size data }
+    is Collection
+    is Ordered
+
+    class method from: collection
+        let new = self withCapacity: collection size.
+        collection do: { |elt| new add: elt }.
+        new
+
+    class method new: size value: init
+        let new = self withCapacity: size.
+        1 to: size do: { |_| new push: init }.
+        new
+
+    class method of: type withCapacity: capacity
+        self size: 0 data: (Array of: type new: capacity)
+
+    class method of: type
+        Specialized class: List of: type
+
+    method elementType
+        data elementType
+
+    method add: element
+        self atCapacity
+            ifTrue: { let newdata = Array new: size * 2.
+                      1 to: size
+                        do: { |i|
+                              newdata put: (data at: i) at: i }.
+                      data = newdata }.
+        data put: element at: size + 1.
+        size = size + 1.
+        self
+
+    method pop
+        size > 0
+            ifTrue: { let elt = data at: size.
+                      size = size - 1.
+                      elt }
+            ifFalse: { Error raise: "Cannot pop from empty " }
+
+    method push: element
+        self add: element
+
+    method put: element at: index
+        self checkIndex: index.
+        data put: element at: index
+
+    method at: index
+        self checkIndex: index.
+        data at: index
+
+    method checkIndex: index
+        index > size
+            ifTrue: { Error raise: "List index out of bounds: {index}" }
+
+    method capacity
+        data size
+
+    method atCapacity
+        size == self capacity
+
+    method clear
+        size = 0.
+        self.
+
+    method _emitOn: stream using: block
+        self elementType is Object
+            ifTrue: { stream print: "List from: [" }
+            ifFalse: { stream print: "List of: {self elementType} from: [" }.
+        self do: { |x| block value: x }
+             interleaving: { stream print: ", " }.
+        stream print: "]".
+
+    method displayOn: stream
+        self _emitOn: stream using: { |x| x displayOn: stream }.
+
+    method printOn: stream
+        self _emitOn: stream using: { |x| x printOn: stream }.
+
+    method concat: other
+        let new = List withCapacity: self size + other size.
+        self do: { |elt| new push: elt }.
+        other do: { |elt| new push: elt }.
+        new.
+
+    method collect: block
+        let size = self size.
+        let result = List withCapacity: size.
+        1 to: size
+          do: { |i|
+                result push: (block value: (self at: i)) }.
+        result.
+
+    method copy
+        let copy = List withCapacity: self size.
+        self do: { |elt| copy push: elt }.
+        copy.
+
+    method count: block
+        let n = 0.
+        1 to: size
+          do: { |i|
+                (block value: (self at: i))
+                    ifTrue: { n = n + 1 } }.
+        n.
+
+    method with: list collect: block
+        let size = self checkSize: list.
+        let result = List withCapacity: size.
+        1 to: size
+          do: { |i|
+                result push: (block value: (self at: i)  value: (list at: i)) }.
+        result.
+
+    method with: list default: default collect: block
+        let size1 = self size.
+        let size2 = list size.
+        let size = size1 max: size2.
+        let result = List withCapacity: size.
+        let common = size1 min: size2.
+        1 to: common
+          do: { |i| result push: (block value: (self at: i) value: (list at: i)) }.
+        common == size
+            ifTrue: { return result }.
+        let tailHandler = size1 < size2
+                              ifTrue: { { |i|
+                                          block value: default value: (list at: i) } }
+                              ifFalse: { { |i|
+                                           block value: (self at: i) value: default } }.
+        common + 1 to: size
+                   do: { |i| result push: (tailHandler value: i) }.
+        result
+
+    method select: block
+        let selection = List withCapacity: 4.
+        self do: { |elt|
+                   (block value: elt) is True
+                       ifTrue: { selection push: elt } }.
+        selection.
+
+    method reject: block
+        let selection = List withCapacity: 4.
+        self do: { |elt|
+                   (block value: elt) is True
+                       ifFalse: { selection push: elt } }.
+        selection.
+
+    method + x
+        x broadcast: {|a b| a + b} to: self.
+    method - x
+        x broadcast: {|a b| a - b} to: self.
+    method * x
+        x broadcast: {|a b| a * b} to: self.
+    method / x
+        x broadcast: {|a b| a / b} to: self.
+
+    method broadcast: block to: collection
+        collection with: self collect: block.
+
+    method dot: other
+        self with: other sum: { |a b| a * b }.
+
+    method norm
+       (self inject: 0.0 into: { |abs elt| abs + (elt * elt) }) sqrt.
+
+    method normalized
+       let reciprocal = 1.0 / (self norm).
+       self * reciprocal.
+
+    method scalarProjectionOn: other
+        (self dot: other) / other norm.
+
+    method vectorProjectionOn: other
+        ((self dot: other) / (other dot: other)) * other.
+
+    method addNumber: left
+       self collect: { |elt| left + elt }.
+    method subNumber: left
+       self collect: { |elt| left - elt }.
+    method divNumber: left
+       self collect: { |elt| left / elt }.
+    method mulNumber: left
+       self collect: { |elt| left * elt }.
+end
+
+class TestList {}
+    class method testEquality: assert
+        assert true: { [1, 2, 3] == [1, 2, 3] }
+               testing: "List#== (true 1)".
+        assert true: { [1, 2, [3, 4]] == [1, 2, [3, 4]] }
+               testing: "List#== (true 2)".
+        assert false: { [1, 2, 4] == [1, 2, 3] }
+               testing: "List#== (false 1)".
+        assert false: { [1, 2, 3, 4] == [1, 2, 3] }
+               testing: "List#== (false 2)".
+        assert false: { ["one", 2, 3] == [1, "two", 3] }
+               testing: "List#== (false 3)".
+
+    class method testSort: assert
+        assert that: { [] sort }
+               equals: []
+               testing: "sort, empty".
+        assert that: { [1] sort }
+               equals: [1]
+               testing: "sort, singular".
+        assert that: { [1, 1] sort }
+               equals: [1, 1]
+               testing: "sort, two identical".
+        assert that: { [1, 2] sort }
+               equals: [1, 2]
+               testing: "sort, two in order".
+        assert that: { [2, 1] sort }
+               equals: [1, 2]
+               testing: "sort, two in reverse order".
+        assert that: { [1, 2, 3] sort }
+               equals: [1, 2, 3]
+               testing: "sort, three in order".
+        assert that: { [3, 2, 1] sort }
+               equals: [1, 2, 3]
+               testing: "sort, three in reverse order".
+        assert that: { [9, 2, 1, 8, 7, 3, 5, 4, 6, 0] sort }
+               equals: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+               testing: "sort, ten".
+
+    class method testReverse: assert
+        assert that: { let a = [].
+                       a reverse.
+                       a }
+               equals: []
+               testing: "reverse list (empty)".
+        assert that: { let a = [1].
+                       a reverse.
+                       a }
+               equals: [1]
+               testing: "reverse list (1)".
+        assert that: { let a = [1,2].
+                       a reverse.
+                       a }
+               equals: [2,1]
+               testing: "reverse list (2)".
+        assert that: { let a = [1,2,3].
+                       a reverse.
+                       a }
+               equals: [3,2,1]
+               testing: "reverse list (3)".
+        assert that: { let a = [1,2,3].
+                       a reverse }
+               equals: [3,2,1]
+               testing: "reverse list, retval (3)".
+
+    class method testReversed: assert
+        assert that: { let a = [].
+                       a reversed }
+               equals: []
+               testing: "reversed list (empty)".
+        assert that: { let a = [1].
+                       a reversed }
+               equals: [1]
+               testing: "reversed list (1)".
+        assert that: { let a = [1,2].
+                       a reversed }
+               equals: [2,1]
+               testing: "reversed list (2)".
+        assert that: { let a = [1,2,3].
+                       a reversed }
+               equals: [3,2,1]
+               testing: "reversed list (3)".
+        assert that: { let a = [1,2,3].
+                       a reversed.
+                       a }
+               equals: [1,2,3]
+               testing: "reversed list, side-effect (3)".
+
+    class method runTests: assert
+        self testEquality: assert.
+        self testSort: assert.
+        self testReverse: assert.
+        self testReversed: assert.
+end

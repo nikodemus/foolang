@@ -1,26 +1,114 @@
-import .object.Object
+import .iterable.Iterable
+
+---
+Implementing classes probably want to implement the following in
+addition to the required methods:
+- do:
+- do:with:
+- do:with:default:
+- reduce:
+- reserveCapacity
+- first
+- second
+---
+
+--    required class method of: type withCapacity: capacity
+--    required method removeIf: block
+--    required method remove: object
+--    required method size
 
 interface Collection
-    is Object
+    is Iterable
 
-    method isEquivalent: other
-        let size = self size.
-        size is other size
-            ifFalse: { return False }.
-        1 to: size
-          do: { |i|
-                (self at: i) == (other at: i)
-                    ifFalse: { return False } }.
-        True.
+    required method add: object
+    required method clear
 
-    method checkSize: collection
-        let size = self size.
-        size == collection size
-            ifTrue: { size }
-            ifFalse: { panic "Collection size mismatch: {size} != {collection size}" }.
+    class method default
+        List new
 
-    method first
-       self at: 1.
+    class method defaultCapacity
+        8
+
+    class method defaultElementType
+        Object
+
+    class method from: iterable
+        let new = self of: iterable elementType withCapacity: iterable sizeEstimate.
+        iterable do: { |each| new add: each }.
+        new
+
+    class method newOf: type
+        self of: type
+             withCapacity: self defaultCapacity
+
+    class method new
+        self newOf: self defaultElementType
+
+    class method new: size
+        self new _initSize: size
+
+    class method of: type new: size
+        (self newOf: type) _initSize: size
+
+    class method of: type new: size value: value
+        (self newOf: type) _initSize: size value: value
+
+    class method of: type from: iterable
+        let new = self of: type withCapacity: iterable sizeEstimate.
+        iterable do: { |each| new add: each }.
+        new
+
+    class method withCapacity: capacity
+        self of: self defaultElementType withCapacity: capacity
+
+    method _initSize: size
+        self _initSize: size value: self elementType default
+
+    method _initSize: size value: value
+        size times: { new add: value }.
+        self
+
+    method isEmpty
+        self size is 0
+
+    method addAll: iterable
+        self reserveCapacity: (self size + iterable sizeEstimate).
+        iterable do: { |each| self add: each }.
+        self
+
+    method as: type
+        type fromCollection: self
+
+    method collect: block
+        self collect: block into: (Self withCapacity: self size)
+
+    method copy
+        let new = Self withCapacity: self size.
+        self do: { |each| new add: each }.
+        new
+
+    method reject: block
+        self select: { |each| (block value: each) not }
+
+    method removeAll: iterable
+        self removeIf: { |each| iterable includes: each }.
+        self
+
+    method removeIfNot: block
+        self removeIf: { |each| (block value: each) not }.
+        self
+
+    method reserveCapacity
+        self
+
+    method select: block
+        self select: block as: Self
+
+    method sizeEstimate
+        self size
+
+    method with: iterable collect: block
+        self with: iterable collect: block as: Self
 
     method second
        self at: 2.
@@ -49,18 +137,72 @@ interface Collection
                        ifTrue: { return elt } }.
         noneBlock value.
 
-    method do: block interleaving: interBlock
-        let first = True.
-        self do: { |elt|
-                   first
-                       ifTrue: { first = False }
-                       ifFalse: { interBlock value }.
-                   block value: elt }.
-
     method do: block
         1 to: self size
           do: { |i| block value: (self at: i) }.
         self.
+
+    method inject: value into: block
+        let result = value.
+        self do: { |elt| result = (block value: result value: elt) }.
+        result.
+
+    method reject: block
+        let selection = Array withCapacity: 4.
+        self do: { |elt|
+                   (block value: elt) is True
+                       ifFalse: { selection push: elt } }.
+        selection.
+
+    method reverse
+        let n = (self size / 2) truncate.
+        let s = self size + 1.
+        1 to: n
+          do: { |i|
+                let j = s - i.
+                let tmp = self at: i.
+                self put: (self at: j) at: i.
+                self put: tmp at: j }.
+          panic "BUG: this should never happen."
+
+    method reversed
+        self copy reverse
+
+    method select: block
+        let selection = Array withCapacity: 4.
+        self do: { |elt|
+                   (block value: elt) is True
+                       ifTrue: { selection push: elt } }.
+        selection.
+
+    method with: other collect: block
+        let size = self checkSize: other.
+        let new = Self new: size.
+        1 to: size
+          do: { |i|
+                new put: (block value: (self at: i)  value: (other at: i)) }.
+        new.
+
+    method with: array default: default collect: block
+        let size1 = self size.
+        let size2 = array size.
+        let size = size1 max: size2.
+        let result = Self new: size.
+        let common = size1 min: size2.
+        1 to: common
+          do: { |i|
+                let elt = block value: (self at: i) value: (array at: i).
+                result put: elt at: i }.
+        common == size
+            ifTrue: { return result }.
+        let tailHandler = size1 < size2
+                              ifTrue: { { |i|
+                                          block value: default value: (array at: i) } }
+                              ifFalse: { { |i|
+                                           block value: (self at: i) value: default } }.
+        common + 1 to: size
+                   do: { |i| result put: (tailHandler value: i) at: i }.
+        result
 
     method with: sequence do: block
         let size = self checkSize: sequence.
@@ -68,11 +210,6 @@ interface Collection
           do: { |i|
                 block value: (self at: i) value: (sequence at: i) }.
         self.
-
-    method inject: value into: block
-        let result = value.
-        self do: { |elt| result = (block value: result value: elt) }.
-        result.
 
     method with: sequence inject: value into: block
         let result = value.

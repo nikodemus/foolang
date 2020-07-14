@@ -1,4 +1,7 @@
+import .object.Object
+
 class Panic { description context }
+    is Object
     method displayOn: stream
         stream println: "PANIC: {self description}".
         stream println: self context
@@ -9,6 +12,7 @@ define $error
 end
 
 class Error { description }
+    is Object
     class method withHandler: handler do: block
         let $error = { |error| self handle: error with: handler }.
         block value
@@ -20,14 +24,33 @@ class Error { description }
     class method handler
         { |ex| $error value: ex }
     method displayOn: stream
-        stream println: "ERROR: {self description}"
+        stream print: "#<Error {self description}>"
 end
 
+define $typeError
+    Error handler
+end
+
+class TypeError { value expected }
+    is Object
+    class method withHandler: handler do: block
+        let $typeError = { |error| self handle: error with: handler }.
+        block value
+    class method raise: value expected: type
+        $typeError value: (self value: value expected: type)
+    method description
+        "Type error: {expected} expected, got: {value}".
+    method displayOn: stream
+        stream print: "#<TypeError {expected}, got: {value}>"
+end
+
+
 define $divideByZero
-Error handler
+    Error handler
 end
 
 class DivideByZero { value }
+    is Object
     class method withHandler: handler do: block
         let $divideByZero = handler.
         block value
@@ -36,5 +59,22 @@ class DivideByZero { value }
     method description
         "Divide by zero: {value} cannot be divided by zero"
     method displayOn: stream
-        stream println: "ERROR: {self description}"
+        stream print: "#<DivideByZero {value}>"
+end
+
+define $iteratorExhausted
+    Error handler
+end
+
+class IteratorExhausted { value }
+    is Object
+    class method withHandler: handler do: block
+        let $iteratorExhausted = handler.
+        block value
+    class method raise: value
+        $iteratorExhausted value: ( self value: value )
+    method description
+        "Iterator exhausted: {value}"
+    method displayOn: stream
+        stream print: "#<IteratorExhausted {value}>"
 end
