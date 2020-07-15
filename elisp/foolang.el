@@ -281,12 +281,6 @@
           foolang--newline-or-lines-regex
           "\\s-*end\\>"))
 
-(def-foolang-indent "\\ end" (col base stack ctx)
-  (:after
-    (looking-at foolang--line-followed-by-end-regex))
-  (:indent
-   (list 0 0 nil :toplevel)))
-
 (def-foolang-indent "expr exit list." (col base stack ctx)
   (:after
     (and (looking-at ".*\\w")
@@ -666,11 +660,16 @@
                    (foolang--current-line))
     base))
 
+(defun foolang--indent-line-to (col)
+  (if (looking-at "\\s-*end\\>")
+      (indent-line-to 0)
+    (indent-line-to col)))
+
 (defun foolang--indent-to (target col base stack ctx indent-all)
   (let ((now (line-number-at-pos)))
     ;; (foolang--note "line %s (target %s)" now target)
     (cond ((eql target now)
-           (indent-line-to col))
+           (foolang--indent-line-to col))
           ((looking-at "^\\s-*$")
            ;; Skip over empty lines
            (next-line)
@@ -679,7 +678,7 @@
           (t
            ;; Compute indentation for next line and move down.
            (when indent-all
-             (indent-line-to col))
+             (foolang--indent-line-to col))
            (destructuring-bind (new-col new-base new-stack new-ctx)
                (foolang--compute-next-line-indent col base stack ctx)
              (next-line)
