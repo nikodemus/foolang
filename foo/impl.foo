@@ -1,0 +1,154 @@
+class Context { stack }
+    class method new
+        self stack: List from: [List new]
+    method at: index in: frame
+        (stack at: frame) at: index
+    method add: value
+        (stack at: 1) add: value
+end
+
+interface Expr
+    required method evalIn: context
+end
+
+class Constant { value }
+    is Expr
+    method evalIn: context
+        value.
+end
+
+class Bind { value body }
+    is Expr
+    method evalIn: context
+        context pushValue: (value evalIn: context).
+        body evalIn: context
+end
+
+class Variable { frame index }
+    is Expr
+    method evalIn: context
+        context at: index in: frame
+end
+
+class Send { receiverExpr selectorExpr argumentExprs }
+    is Expr
+    method evalIn: context
+        (selectorExpr evalIn: context)
+            sendTo: (receiverExpr evalIn: context)
+            with: (argumentExprs collect: { |arg| arg evalIn: context })
+end
+
+class AstTest {}
+    class method run
+        (Send receiverExpr: (Constant value: 40)
+             selectorExpr: (Constant value: "+")
+             argumentExprs: [(Constant value: 2)])
+        evalIn: Context new
+end
+
+interface Binding
+    required method at: offset in: frame
+end
+
+class VariableBinding { name }
+    is Binding
+    method at: offset in: frame
+        Variable frame: frame offset: offset
+end
+
+class ConstantBinding { name value }
+    is Binding
+    method at: offset in: frame
+        Constant value: value
+end
+
+class Environment { bindings parent }
+    class method new
+        self bindings: (List of: Binding new: 0) parent: False
+    method reference: name
+        self reference: name frame: 0
+    method reference: name frame: frame
+        let offset = bindings position: { |binding| binding name == name }.
+        offset is False
+            ifTrue: { return parent reference: name frame: frame + 1 }.
+        (bindings at: offset) at: offset in: frame
+    method extend: name
+        Environment bindings: (bindings copy add: (VariableBinding name: name))
+                    parent: parent
+end
+
+interface Syntax
+    required method translateIn: environment
+end
+
+class Literal { value }
+    is Syntax
+    method translateIn: environment
+        Constant value: value
+end
+
+class LetSyntax { name value body }
+    is Syntax
+    method translateIn: environment
+        Bind value: value translateIn: environment
+             body: (body translateIn: (environment extend: name))
+end
+
+class Reference { name }
+    is Syntax
+    method translateIn: environment
+        environment reference: name
+end
+
+class PrefixSend { receiver selector }
+    is Syntax
+    method translateIn: environment
+        Send receiverExpr: (receiver translateIn: environment)
+             selectorExpr: (Constant value: "prefix{selector}")
+             argumentExprs: []
+end
+
+class UnarySend { receiver selector }
+    is Syntax
+    method translateIn: environment
+        Send receiverExpr: (receiver translateIn: environment)
+             selectorExpr: (Constant value: selector)
+             argumentExprs: []
+end
+
+class BinarySend { receiver selector argument }
+    is Syntax
+    method translateIn: environment
+        Send receiverExpr: (receiver translateIn: environment)
+             selectorExpr: (Constant value: selector)
+             argumentExprs: [argument translateIn: environment]
+end
+
+class CstTest {}
+    class method run
+        self new
+            ; test1
+            ; test2
+    method makeAddition
+        BinarySend receiver: (Literal value: 40) selector: "+" argument: (Literal value: 2)
+    method negate: receiver
+        PrefixSend receiver: receiver selector: "-".
+    method asFloat: receiver
+        UnarySend receiver: receiver selector: "asFloat".
+    method run: cst
+        (cst translateIn: Environment new) evalIn: (Context new)
+    method test1
+        self run: self makeAddition run
+    method test2
+        self run: (self negate: self makeAddition)
+    method test3
+        self run: (self asFloat: (self negate: self makeAddition))
+    method test4
+        self run: (LetSyntax
+                       name: "a"
+                       value: (Literal value: 40)
+                       body: (BinarySend
+                                  receiver: (Reference name: "a")
+                                  selector: "+"
+                                  argument: (Literal value: 2)))
+end
