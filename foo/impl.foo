@@ -1,3 +1,122 @@
+---
+Ok, I like this context stuff.
+
+TODO
+- dynamic variables
+
+---
+
+class AstContext {
+        sender         -- context which activated this one
+        receiver       -- value of self
+        frame          -- arguments to method/block and local variables
+        astMethod      -- executing method
+        astReturn      -- block to excute to return from this context
+        astClosure     -- current AstBlockClosure or False
+    }
+    method at: offset in: frameNumber
+        frameNumber > 1
+            ifTrue: { sender at: offset in: frameNumber - 1 }
+            ifFalse: { frame at: offset }
+    method put: value at: offset in: frameNumber
+        frameNumber > 1
+            ifTrue: { sender put: value at: offset in: frameNumber - 1 }
+            ifFalse: { frame put: value at: offset }
+end
+
+class AstBlockClosure {
+        outerContext
+        block
+    }
+    method apply: arguments in: context
+        let frame = Array new: block frameSize.
+        let nArgs = arguments size.
+        block argumentCount == nArgs
+            ifFalse: { Error raise: "Block argument count mismatch!" }.
+        1 to: nArgs
+          do: { |i| frame put: (arguments at: i) at: i }.
+        block body
+            evalIn: (AstContext
+                         sender: context sender
+                         receiver: context receiver
+                         frame: frame
+                         astMethod: context astMethod
+                         astReturn: outerContext astReturn
+                         astClosure: self)
+end
+
+class AstSend {
+        astReceiver
+        selector
+        astArguments
+    }
+    method evalIn: context
+        let receiver = astReceiver evalIn: context.
+        let astMethod = receiver astMethod: selector.
+        let frame = Array new: code frameSize.
+        let nArgs = astArguments size.
+        astMethod argumentCount == nArgs
+            ifFalse: { panic "method Argument count mismatch!" }.
+        1 to: nArgs
+          do: { |i|
+                let arg = (astArguments at: i) evalIn: context.
+                frame put: arg at: i }.
+        astMethod
+            evalIn: (AstContext
+                         sender: context
+                         receiver: receiver
+                         frame: frame
+                         astMethod: astMethod
+                         astReturn: { |value| return value }
+                         astClosure: False).
+end
+
+class AstBlock { argumentCount frameSize body }
+    method evalIn: context
+        AstBlockClosure
+            context: context
+            block: self
+end
+
+class AstMethod { selector argumentCount frameSize body }
+    method evalIn: context
+        body evalIn: context
+end
+
+class AstSelf {}
+    method evalIn: context
+        context receiver
+end
+
+class AstReturn { value }
+    method evalIn: context
+        context astReturn value: (value evalIn: context)
+end
+
+class AstVariableRef { frame index closedOver }
+    method evalIn: context
+        closedOver
+            ifTrue: { context astClosure outerContext
+                          at: index
+                          in: frame }
+            ifFalse: { context
+                           at: index
+                           in: frame }
+end
+
+class AstVariableSet { frame index closedOver ast }
+    method evalIn: context
+        let value = ast evalIn: context.
+        closedOver
+            ifTrue: { context astClosure outerContext
+                          put: value
+                          at: index
+                          in: frame }
+end
+
+--
+
+
 class Context { stack }
     class method new
         self stack: List from: [List new]
@@ -50,13 +169,13 @@ interface Binding
     required method at: offset in: frame
 end
 
-class VariableBinding { name }
+class VariableBinding { name next }
     is Binding
     method at: offset in: frame
         Variable frame: frame offset: offset
 end
 
-class ConstantBinding { name value }
+class ConstantBinding { name value next }
     is Binding
     method at: offset in: frame
         Constant value: value
@@ -64,15 +183,18 @@ end
 
 class Environment { bindings parent }
     class method new
-        self bindings: (List of: Binding new: 0) parent: False
+        self bindings: False parent: False
     method reference: name
         self reference: name frame: 0
     method reference: name frame: frame
+        -- FIXME:
+        -- if we're in a block AND the variable is not local
+        -- then we mark it as closed over
         let offset = bindings position: { |binding| binding name == name }.
         offset is False
             ifTrue: { return parent reference: name frame: frame + 1 }.
         (bindings at: offset) at: offset in: frame
-    method extend: name
+    method addVariable: name
         Environment bindings: (bindings copy add: (VariableBinding name: name))
                     parent: parent
 end
@@ -151,4 +273,6 @@ class CstTest {}
                                   receiver: (Reference name: "a")
                                   selector: "+"
                                   argument: (Literal value: 2)))
+    method test5
+        self run: (UnarySend receiver: (BlockSyntax parameters: []))
 end
