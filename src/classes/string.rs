@@ -9,6 +9,7 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("do:", string_do);
     vt.add_primitive_method_or_panic("at:", string_at);
     vt.add_primitive_method_or_panic("isEquivalent:", string_is_equivalent);
+    vt.add_primitive_method_or_panic("sendTo:with:", string_send_to_with);
     vt
 }
 
@@ -27,6 +28,13 @@ fn string_do(receiver: &Object, args: &[Object], env: &Env) -> Eval {
         args[0].send("value:", &[env.foo.make_string(&ch.to_string())], env)?;
     }
     Ok(receiver.clone())
+}
+
+fn string_send_to_with(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let selector2 = receiver.string_as_str();
+    let receiver2 = &args[0];
+    let args2 = &args[1].as_array("String#sendTo:with:")?.borrow();
+    receiver2.send(selector2, args2, env)
 }
 
 fn string_append_to_string(receiver: &Object, args: &[Object], env: &Env) -> Eval {
