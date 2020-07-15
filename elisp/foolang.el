@@ -192,6 +192,12 @@
   (:indent
    (list col base stack ctx)))
 
+(def-foolang-indent "end" (col base stack ctx)
+  (:after
+    (looking-at "\\s-*end\\>"))
+  (:indent
+   (list 0 0 nil :toplevel)))
+
 (def-foolang-indent "class" (col base stack ctx)
   (:after
     (looking-at " *class\\s-*$"))
@@ -1716,13 +1722,25 @@ class Foo { a }
 
 end")
 
-(def-foolang-indent-test "end-indent-2"
+(def-foolang-indent-test "end-indent-2.0"
   "
 class Foo { a }
      end"
   "
 class Foo { a }
 end")
+
+(def-foolang-indent-test "end-indent-2.1"
+  "
+class Foo { a }
+     end
+
+"
+  "
+class Foo { a }
+end
+
+")
 
 (def-foolang-indent-test "define-indent-1"
   "
