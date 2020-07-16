@@ -1,8 +1,39 @@
 ---
 Ok, I like this context and process stuff.
+
+However: note that thisContext type thing is very leaky: using it
+you can get access to object you weren't supposed to have -- so
+it should be hidden behind System.
+
+AstContext and friends aren't quite as powerful as a VM context,
+but almost:
+
+- CAN do dynamic variables
+- CAN do backtraces
+- CAN do tco
+- CAN do debug, edit, continue
+- CAN do exceptions (though don't need to, necessarily)
+- NOPE for backtracking, callcc, process persistence, coroutines
+  (part of the interpreter state is on host stack in this setup!)
+
+--> So this is good enough for now, plan being:
+    - source -> Syntax
+    - Syntax -> Expr
+    - Expr eval
+    - Expr to C/Rust/Bitcode -> self-hosted native Expr interpreter
+       with tco, backtraces, and debug-edit-continue support
+
+This will take me far enough right now.
 ---
 
 class Process { localVariables }
+end
+
+class RestartMarker {}
+end
+
+define NoReturn
+    { panic "No return continuation!" }
 end
 
 class AstContext {
@@ -10,17 +41,51 @@ class AstContext {
         receiver       -- value of self
         frame          -- arguments to method/block and local variables
         astMethod      -- executing method
-        astReturn      -- block to excute to return from this context
         astClosure     -- current AstBlockClosure or False
+        returnCont
     }
-    method at: offset in: frameNumber
+
+    class method sender: sender
+                 receiver: receiver
+                 frame: frame
+                 astMethod: astMethod
+                 astClosure: astClosure
+        self
+            sender: sender
+            receiver: receiver
+            frame: frame
+            astMethod: astMethod
+            astClosure: astClosure
+            returnCont: NoReturn
+
+    method at: index in: frameNumber
         frameNumber > 1
-            ifTrue: { sender at: offset in: frameNumber - 1 }
-            ifFalse: { frame at: offset }
-    method put: value at: offset in: frameNumber
+            ifTrue: { sender at: index in: frameNumber - 1 }
+            ifFalse: { frame at: index }
+
+    method put: value at: index in: frameNumber
         frameNumber > 1
-            ifTrue: { sender put: value at: offset in: frameNumber - 1 }
-            ifFalse: { frame put: value at: offset }
+            ifTrue: { sender put: value at: index in: frameNumber - 1 }
+            ifFalse: { frame put: value at: index }
+
+    method _runIn: process
+        {
+            returnCont = { |value| return value }.
+            self asClosure is False
+                ifTrue: { self astMethod body evalWith: self in: process }
+                ifFalse: { self asClosure body evalWith: self in: process }
+        }
+            -- This prevents returning from same frame context twice.
+            finally: { returnCont = NoReturn }
+
+    method runIn: process
+        let res = False.
+        { res = self _runIn: process.
+          res is RestartMarker } whileTrue.
+        res
+
+    method restart
+        self returnCont value: RestartMarker.
 end
 
 class AstBlockClosure {
@@ -30,19 +95,18 @@ class AstBlockClosure {
     method apply: arguments with: context in: process
         let frame = Array new: block frameSize.
         let nArgs = arguments size.
-        block argumentCount == nArgs
+        block argumentCount is nArgs
             ifFalse: { Error raise: "Block argument count mismatch!" }.
         1 to: nArgs
           do: { |i| frame put: (arguments at: i) at: i }.
-        block body
-            evalWith: (AstContext
-                         sender: context sender
-                         receiver: context receiver
-                         frame: frame
-                         astMethod: context astMethod
-                         astReturn: outerContext astReturn
-                         astClosure: self)
-            in: process
+        (AstContext
+               sender: context sender
+               receiver: context receiver
+               frame: frame
+               astMethod: context astMethod
+               astClosure: self
+               return: outerContext returnCont)
+        runIn: process
 end
 
 class AstSend {
@@ -63,15 +127,42 @@ class AstSend {
                               evalWith: context
                               in: process.
                 frame put: arg at: i }.
-        astMethod
-            evalWith: (AstContext
-                         sender: context
-                         receiver: receiver
-                         frame: frame
-                         astMethod: astMethod
-                         astReturn: { |value| return value }
-                         astClosure: False)
-            in: process.
+        (AstContext
+             sender: context
+             receiver: receiver
+             frame: frame
+             astMethod: astMethod
+             astReturn: { |value| return value }
+             astClosure: False)
+        runIn: process.
+end
+
+class AstTailSend {
+        astReceiver
+        selector
+        astArguments
+    }
+    method evalWith: context in: process
+        let receiver = astReceiver evalWith: context in: process.
+        let astMethod = receiver astMethod: selector.
+        let frame = Array new: code frameSize.
+        let nArgs = astArguments size.
+        astMethod argumentCount == nArgs
+            ifFalse: { panic "method Argument count mismatch!" }.
+        1 to: nArgs
+          do: { |i|
+                let arg = (astArguments at: i)
+                              evalWith: context
+                              in: process.
+                frame put: arg at: i }.
+        (AstContext
+             sender: context sender
+             receiver: receiver
+             frame: frame
+             astMethod: astMethod
+             astClosure: False
+             returnCont: context returnCont)
+        runIn: process.
 end
 
 class AstBlock { argumentCount frameSize body }
@@ -99,6 +190,18 @@ end
 class AstDynamicRef { index }
     method evalWith: context in: process
         process localStorage at: index
+end
+
+class AstDynamicBind { index value body }
+    method evalWith: context in: process
+        let oldValue = process localStorage at: index.
+        { process localStorage
+              put: (value evalWith: context in: process)
+              at: index.
+          body evalWith: context in: process }
+        finally: { process localStorage
+                       put: oldValue
+                       at: index }
 end
 
 class AstLocalRef { frame index closedOver }
@@ -131,148 +234,114 @@ class AstLocalBind { index value body }
         body evalWith: context in process.
 end
 
-class AstDynamicBind { index value body }
+class AstSeq { first next }
     method evalWith: context in: process
-        let oldValue = process localStorage at: index.
-        { process localStorage
-              put: (value evalWith: context in: process)
-              at: index.
-          body evalWith: context in: process }
-        finally: { process localStorage
-                       put: oldValue
-                       at: index }
+        first evalWith: context in: process.
+        next evalWith: context in: process.
 end
 
--- OLD
-
-
-class Context { stack }
-    class method new
-        self stack: List from: [List new]
-    method at: index in: frame
-        (stack at: frame) at: index
-    method add: value
-        (stack at: 1) add: value
+class AstConstantRef { value }
+    method evalWith: context in: process cont: cont
+        cont value: value
 end
 
-interface Expr
-    required method evalWith: context
-end
-
-class Constant { value }
-    is Expr
-    method evalWith: context
-        value.
-end
-
-class Bind { value body }
-    is Expr
-    method evalWith: context
-        context pushValue: (value evalWith: context).
-        body evalWith: context
-end
-
-class Variable { frame index }
-    is Expr
-    method evalWith: context
-        context at: index in: frame
-end
-
-class Send { receiverExpr selectorExpr argumentExprs }
-    is Expr
-    method evalWith: context
-        (selectorExpr evalWith: context)
-            sendTo: (receiverExpr evalWith: context)
-            with: (argumentExprs collect: { |arg| arg evalWith: context })
-end
-
-class AstTest {}
-    class method run
-        (Send receiverExpr: (Constant value: 40)
-             selectorExpr: (Constant value: "+")
-             argumentExprs: [(Constant value: 2)])
-        evalWith: Context new
-end
+-- CST --
 
 interface Binding
-    required method at: offset in: frame
+    required method at: index in: frame
 end
 
 class VariableBinding { name next }
     is Binding
-    method at: offset in: frame
-        Variable frame: frame offset: offset
+    method ref: index in: frame
+        AstLocalRef frame: frame index: index closedOver: False
 end
 
 class ConstantBinding { name value next }
     is Binding
-    method at: offset in: frame
-        Constant value: value
+    method ref: index in: frame
+        AstConstantRef value: value
 end
 
 class Environment { bindings parent }
     class method new
         self bindings: False parent: False
     method reference: name
-        self reference: name frame: 0
+        (name startsWith: "$")
+            ifTrue: { AstDynamicRef
+                          index: (self dynamicVariableIndex: name) }
+            ifFalse: { self reference: name frame: 1 }
     method reference: name frame: frame
-        -- FIXME:
+        -- FIXME: closed over variables -- need home information in environment
         -- if we're in a block AND the variable is not local
-        -- then we mark it as closed over
-        let offset = bindings position: { |binding| binding name == name }.
-        offset is False
-            ifTrue: { return parent reference: name frame: frame + 1 }.
-        (bindings at: offset) at: offset in: frame
+        -- then we should mark it as closed over
+        let index = bindings
+                        position: { |binding| binding name == name }
+                        ifNone: { return parent reference: name frame: frame + 1 }.
+        (bindings at: offset) ref: offset in: frame
     method addVariable: name
         Environment bindings: (bindings copy add: (VariableBinding name: name))
                     parent: parent
+    method size
+        bindings size
 end
 
 interface Syntax
     required method translateIn: environment
 end
 
-class Literal { value }
+class SyntaxLiteral { value }
     is Syntax
     method translateIn: environment
-        Constant value: value
+        AstConstant value: value
 end
 
-class LetSyntax { name value body }
+class SyntaxLet { name value body }
     is Syntax
     method translateIn: environment
-        Bind value: value translateIn: environment
-             body: (body translateIn: (environment extend: name))
+        let astValue = value translateIn: environment.
+        (name startsWith: "$")
+            ifTrue: { AstDynamicBind
+                          index: (environment dynamicVariableIndex: name)
+                          astValue: astValue
+                          body: (body translateIn: environment) }
+            ifFalse: { AstLocalBind
+                           index: environment size + 1
+                           astValue: astValue
+                           body: (body translateIn: (environment addVariable: name)) }.
 end
 
-class Reference { name }
+class SyntaxRef { name }
     is Syntax
     method translateIn: environment
-        environment reference: name
+        (name startsWith: "$")
+            ifTrue: { AstDynamicRef
+                          index: (environment dynamicVariableIndex: name) }
+            ifFalse: { environment reference: name }
 end
 
-class PrefixSend { receiver selector }
+class SyntaxPrefixSend { receiver selector }
     is Syntax
     method translateIn: environment
-        Send receiverExpr: (receiver translateIn: environment)
-             selectorExpr: (Constant value: "prefix{selector}")
-             argumentExprs: []
+        AstSend astReceiver: (receiver translateIn: environment)
+                astSelector: "prefix{selector}"
+                astArguments: []
 end
 
 class UnarySend { receiver selector }
     is Syntax
     method translateIn: environment
-        Send receiverExpr: (receiver translateIn: environment)
-             selectorExpr: (Constant value: selector)
-             argumentExprs: []
+        AstSend astReceiver: (receiver translateIn: environment)
+                astSelector: selector
+                astArguments: []
 end
 
 class BinarySend { receiver selector argument }
     is Syntax
     method translateIn: environment
-        Send receiverExpr: (receiver translateIn: environment)
-             selectorExpr: (Constant value: selector)
-             argumentExprs: [argument translateIn: environment]
+        AstSend astReceiver: (receiver translateIn: environment)
+                astSelector: selector
+                astArgument: [argument translateIn: environment]
 end
 
 class CstTest {}
