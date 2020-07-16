@@ -1,27 +1,25 @@
 ---
 Ok, I like this context and process stuff.
 
-However: note that thisContext type thing is very leaky: using it
-you can get access to object you weren't supposed to have -- so
-it should be hidden behind System.
+However: note that thisContext type thing is very leaky: using it you can get
+access to object you weren't supposed to have -- so it should be hidden behind
+System... and right now I'm not exposing it at all.
 
 AstContext and friends aren't quite as powerful as a VM context,
 but almost:
 
 - CAN do dynamic variables
 - CAN do backtraces
-- CAN do tco
 - CAN do debug, edit, continue
 - CAN do exceptions (though don't need to, necessarily)
-- NOPE for backtracking, callcc, process persistence, coroutines
+- NOPE for tco, backtracking, callcc, process persistence, coroutines
   (part of the interpreter state is on host stack in this setup!)
 
 --> So this is good enough for now, plan being:
     - source -> Syntax
     - Syntax -> Expr
     - Expr eval
-    - Expr to C/Rust/Bitcode -> self-hosted native Expr interpreter
-       with tco, backtraces, and debug-edit-continue support
+    - Expr to C/Rust/Bitcode -> self-hosted native interpreter
 
 This will take me far enough right now.
 ---
@@ -34,6 +32,10 @@ end
 
 define NoReturn
     { panic "No return continuation!" }
+end
+
+define DeadReturn
+    { panic "Cannot return from a dead context!" }
 end
 
 class AstContext {
@@ -58,34 +60,36 @@ class AstContext {
             astClosure: astClosure
             returnCont: NoReturn
 
-    method at: index in: frameNumber
+    method at: index inFrame: frameNumber
         frameNumber > 1
             ifTrue: { sender at: index in: frameNumber - 1 }
             ifFalse: { frame at: index }
 
-    method put: value at: index in: frameNumber
+    method put: value at: index inFrame: frameNumber
         frameNumber > 1
             ifTrue: { sender put: value at: index in: frameNumber - 1 }
             ifFalse: { frame put: value at: index }
 
     method _runIn: process
         {
-            returnCont = { |value| return value }.
+            returnCont is NoReturn
+                ifTrue: { returnCont = { |value| return value } }.
             self asClosure is False
                 ifTrue: { self astMethod body evalWith: self in: process }
                 ifFalse: { self asClosure body evalWith: self in: process }
         }
-            -- This prevents returning from same frame context twice.
-            finally: { returnCont = NoReturn }
+            finally: { returnCont = DeadReturn }
 
     method runIn: process
         let res = False.
         { res = self _runIn: process.
           res is RestartMarker } whileTrue.
-        res
+        astClosure is False
+            ifTrue: { res }
+            ifFalse: { astClosure outerContext returnCont value: res }
 
     method restart
-        self returnCont value: RestartMarker.
+        self returnCont value: RestartMarker
 end
 
 class AstBlockClosure {
@@ -105,7 +109,7 @@ class AstBlockClosure {
                frame: frame
                astMethod: context astMethod
                astClosure: self
-               return: outerContext returnCont)
+               returnCont: outerContext returnCont)
         runIn: process
 end
 
@@ -127,41 +131,13 @@ class AstSend {
                               evalWith: context
                               in: process.
                 frame put: arg at: i }.
+
         (AstContext
              sender: context
              receiver: receiver
              frame: frame
              astMethod: astMethod
-             astReturn: { |value| return value }
              astClosure: False)
-        runIn: process.
-end
-
-class AstTailSend {
-        astReceiver
-        selector
-        astArguments
-    }
-    method evalWith: context in: process
-        let receiver = astReceiver evalWith: context in: process.
-        let astMethod = receiver astMethod: selector.
-        let frame = Array new: code frameSize.
-        let nArgs = astArguments size.
-        astMethod argumentCount == nArgs
-            ifFalse: { panic "method Argument count mismatch!" }.
-        1 to: nArgs
-          do: { |i|
-                let arg = (astArguments at: i)
-                              evalWith: context
-                              in: process.
-                frame put: arg at: i }.
-        (AstContext
-             sender: context sender
-             receiver: receiver
-             frame: frame
-             astMethod: astMethod
-             astClosure: False
-             returnCont: context returnCont)
         runIn: process.
 end
 
