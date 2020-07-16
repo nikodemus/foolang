@@ -1,10 +1,9 @@
 ---
-Ok, I like this context stuff.
-
-TODO
-- dynamic variables
-
+Ok, I like this context and process stuff.
 ---
+
+class Process { localVariables }
+end
 
 class AstContext {
         sender         -- context which activated this one
@@ -28,7 +27,7 @@ class AstBlockClosure {
         outerContext
         block
     }
-    method apply: arguments in: context
+    method apply: arguments with: context in: process
         let frame = Array new: block frameSize.
         let nArgs = arguments size.
         block argumentCount == nArgs
@@ -36,13 +35,14 @@ class AstBlockClosure {
         1 to: nArgs
           do: { |i| frame put: (arguments at: i) at: i }.
         block body
-            evalIn: (AstContext
+            evalWith: (AstContext
                          sender: context sender
                          receiver: context receiver
                          frame: frame
                          astMethod: context astMethod
                          astReturn: outerContext astReturn
                          astClosure: self)
+            in: process
 end
 
 class AstSend {
@@ -50,8 +50,8 @@ class AstSend {
         selector
         astArguments
     }
-    method evalIn: context
-        let receiver = astReceiver evalIn: context.
+    method evalWith: context in: process
+        let receiver = astReceiver evalWith: context in: process.
         let astMethod = receiver astMethod: selector.
         let frame = Array new: code frameSize.
         let nArgs = astArguments size.
@@ -59,42 +59,50 @@ class AstSend {
             ifFalse: { panic "method Argument count mismatch!" }.
         1 to: nArgs
           do: { |i|
-                let arg = (astArguments at: i) evalIn: context.
+                let arg = (astArguments at: i)
+                              evalWith: context
+                              in: process.
                 frame put: arg at: i }.
         astMethod
-            evalIn: (AstContext
+            evalWith: (AstContext
                          sender: context
                          receiver: receiver
                          frame: frame
                          astMethod: astMethod
                          astReturn: { |value| return value }
-                         astClosure: False).
+                         astClosure: False)
+            in: process.
 end
 
 class AstBlock { argumentCount frameSize body }
-    method evalIn: context
+    method evalWith: context in: process
         AstBlockClosure
             context: context
             block: self
 end
 
 class AstMethod { selector argumentCount frameSize body }
-    method evalIn: context
-        body evalIn: context
+    method evalWith: context in: process
+        body evalWith: context in: process
 end
 
 class AstSelf {}
-    method evalIn: context
+    method evalWith: context in: process
         context receiver
 end
 
 class AstReturn { value }
-    method evalIn: context
-        context astReturn value: (value evalIn: context)
+    method evalWith: context in: process
+        context astReturn value: (value evalWith: context in: process)
 end
 
-class AstVariableRef { frame index closedOver }
-    method evalIn: context
+class AstDynamicRef { index }
+    method evalWith: context in: process
+        process localStorage at: index
+end
+
+class AstLocalRef { frame index closedOver }
+    method evalWith: context in: process
         closedOver
             ifTrue: { context astClosure outerContext
                           at: index
@@ -104,9 +112,9 @@ class AstVariableRef { frame index closedOver }
                            in: frame }
 end
 
-class AstVariableSet { frame index closedOver ast }
-    method evalIn: context
-        let value = ast evalIn: context.
+class AstLocalSet { frame index closedOver ast }
+    method evalWith: context in: process
+        let value = ast evalWith: context in: process.
         closedOver
             ifTrue: { context astClosure outerContext
                           put: value
@@ -114,7 +122,28 @@ class AstVariableSet { frame index closedOver ast }
                           in: frame }
 end
 
---
+
+class AstLocalBind { index value body }
+    method evalWith: context in: process
+        context frame
+            put: (value evalWith: context in: process)
+            at: index.
+        body evalWith: context in process.
+end
+
+class AstDynamicBind { index value body }
+    method evalWith: context in: process
+        let oldValue = process localStorage at: index.
+        { process localStorage
+              put: (value evalWith: context in: process)
+              at: index.
+          body evalWith: context in: process }
+        finally: { process localStorage
+                       put: oldValue
+                       at: index }
+end
+
+-- OLD
 
 
 class Context { stack }
@@ -127,34 +156,34 @@ class Context { stack }
 end
 
 interface Expr
-    required method evalIn: context
+    required method evalWith: context
 end
 
 class Constant { value }
     is Expr
-    method evalIn: context
+    method evalWith: context
         value.
 end
 
 class Bind { value body }
     is Expr
-    method evalIn: context
-        context pushValue: (value evalIn: context).
-        body evalIn: context
+    method evalWith: context
+        context pushValue: (value evalWith: context).
+        body evalWith: context
 end
 
 class Variable { frame index }
     is Expr
-    method evalIn: context
+    method evalWith: context
         context at: index in: frame
 end
 
 class Send { receiverExpr selectorExpr argumentExprs }
     is Expr
-    method evalIn: context
-        (selectorExpr evalIn: context)
-            sendTo: (receiverExpr evalIn: context)
-            with: (argumentExprs collect: { |arg| arg evalIn: context })
+    method evalWith: context
+        (selectorExpr evalWith: context)
+            sendTo: (receiverExpr evalWith: context)
+            with: (argumentExprs collect: { |arg| arg evalWith: context })
 end
 
 class AstTest {}
@@ -162,7 +191,7 @@ class AstTest {}
         (Send receiverExpr: (Constant value: 40)
              selectorExpr: (Constant value: "+")
              argumentExprs: [(Constant value: 2)])
-        evalIn: Context new
+        evalWith: Context new
 end
 
 interface Binding
@@ -258,7 +287,7 @@ class CstTest {}
     method asFloat: receiver
         UnarySend receiver: receiver selector: "asFloat".
     method run: cst
-        (cst translateIn: Environment new) evalIn: (Context new)
+        (cst translateIn: Environment new) evalWith: (Context new)
     method test1
         self run: self makeAddition run
     method test2
