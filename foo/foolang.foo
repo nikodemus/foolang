@@ -60,6 +60,16 @@ class SyntaxLiteral { value }
         value toString
 end
 
+class SyntaxPrefix { receiver selector }
+    is Object
+    method translateIn: environment
+        AstSend receiver: (receiver translateIn: environment)
+                selector: (Selector name: "prefix{selector name}")
+                arguments: []
+    method toString
+        "({selector name} {receiver})"
+end
+
 class SyntaxBinary { receiver selector argument }
     is Object
     method translateIn: environment
@@ -70,12 +80,12 @@ class SyntaxBinary { receiver selector argument }
         "({receiver} {selector name} {argument})"
 end
 
-define InvalidSuffixPrecedence
-    -1
-end
-
 define UnknownOperatorPrecedence
     10
+end
+
+define PrefixPrecedence
+    1000
 end
 
 define TokenPrecedence
@@ -103,13 +113,13 @@ class TokenDecimal { string first last }
     is Token
 
     method precedence
-        panic "TokenDecimal is not a valid suffix!"
+        Error raise: "{string} is not valid in suffix position!"
 
     method parseAsPrefixWith: parser
         let n = 0.
-        first to: last
-              do: { |pos|
-                    n = n * 10 + (parser source at: pos) digit }.
+        1 to: string size
+          do: { |pos|
+                n = n * 10 + (string at: pos) digit }.
         SyntaxLiteral value: n
 end
 
@@ -134,10 +144,15 @@ class TokenSigil { string first last }
             at: string
             ifNone: { UnknownOperatorPrecedence }
 
+    method parseAsPrefixWith: parser
+        SyntaxPrefix
+            receiver: (parser parseWithPrecedence: PrefixPrecedence)
+            selector: (Selector name: string)
+
     method parseAsSuffixOf: prefix with: parser
         SyntaxBinary
             receiver: prefix
-            selector: (Selector name: (parser source from: first to: last))
+            selector: (Selector name: string)
             argument: (parser parseWithPrecedence: (self precedence))
 end
 
@@ -278,12 +293,15 @@ class Tests {}
             ; test42
             ; testPlus
             ; testPrecedence
+            ; testPrefixMethod
     method test42
         ("42" eval == 42) assert: "Constant evaluation".
     method testPlus
         ("100 + 1000 + 10 + 1" eval == 1111) assert: "Constant addition".
     method testPrecedence
         ("12 + 10 * 10 - 1" eval == 111) assert: "Binary precedence".
+    method testPrefixMethod
+        ("- 42" eval == -42) assert: "Prefix method".
 end
 
 class Main {}

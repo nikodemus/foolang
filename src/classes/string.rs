@@ -60,12 +60,12 @@ fn string_from_to(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     if from < 1 || data.len() < i {
         return Unwind::error(&format!("String#from:to: -- #from: out of bounds: {}", from));
     }
-    let to = args[0].integer();
+    let to = args[1].integer();
     let j = to as usize;
     if to < 1 || data.len() < j {
         return Unwind::error(&format!("String#from:to: -- #to: out of bounds: {}", from));
     }
-    if j - 1 > i {
+    if from > to {
         return Unwind::error(&format!(
             "String#From:to: -- #from: {} is greater than #to: {}",
             from, to
