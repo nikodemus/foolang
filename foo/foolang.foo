@@ -13,6 +13,7 @@ class TokenDecimal { first last }
         SyntaxLiteral value: n
 end
 
+-- FIXME: Broken for unicode input!
 class Parser { source position first last comingTokens }
     class method parse: source
         (self

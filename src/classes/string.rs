@@ -1,5 +1,6 @@
 use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
+use crate::unwind::Unwind;
 
 pub fn instance_vtable() -> Vtable {
     let vt = Vtable::new("String");
@@ -53,8 +54,17 @@ fn string_size(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
 
 fn string_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let data: &str = receiver.string_as_str();
-    let i = (args[0].integer() - 1) as usize;
-    Ok(env.foo.make_string(&data[i..i + 1]))
+    let arg = args[0].integer();
+    let i = (arg - 1) as usize;
+    if data.is_char_boundary(i) {
+        env.find_global_or_unwind("Character")?.send(
+            "code:",
+            &[env.foo.make_integer(data[i..].chars().next().unwrap() as i64)],
+            env,
+        )
+    } else {
+        Unwind::error(&format!("String#at: {} not at character boundary.", arg))
+    }
 }
 
 fn string_is_equivalent(receiver: &Object, args: &[Object], env: &Env) -> Eval {
