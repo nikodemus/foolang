@@ -6,7 +6,7 @@ define ASCII
      carriageReturn: 0x0D}
 end
 
-define WhitespaceAscii
+define WhitespaceASCII
     [ASCII space,
      ASCII tab,
      ASCII lineFeed,
@@ -19,7 +19,7 @@ import .object.Object
 class Character { code }
     is Object
     method isWhitespace
-        Whitespace anySatisfy: { |whitespaceCode| whitespaceCode is code }
+        WhitespaceASCII anySatisfy: { |whitespaceCode| whitespaceCode is code }
     method isDigit
         0x30 <= code and: code <= 0x39
     method digit
