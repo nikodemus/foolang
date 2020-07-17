@@ -34,6 +34,13 @@ class AstConstantRef { value }
         value
 end
 
+class AstIs { left right }
+    is Object
+    method evalWith: context in: process
+        (left evalWith: context in: process)
+            is (right evalWith: context in: process)
+end
+
 class AstSend {
         receiver
         selector
@@ -98,11 +105,22 @@ class SyntaxKeyword { receiver selector arguments }
                                            arg translateIn: environment })
 end
 
+class SyntaxIs { left right }
+    is Object
+    method translateIn: environment
+        AstIs left: (left translateIn: environment)
+              right: (right translateIn: environment)
+end
+
 define KeywordPrecedence
     9
 end
 
 define UnknownOperatorPrecedence
+    10
+end
+
+define IsPrecedence
     10
 end
 
@@ -181,13 +199,45 @@ class TokenSigil { string first last }
             argument: (parser parseWithPrecedence: (self precedence))
 end
 
+class TokenReservedWordIs { first last }
+    is Token
+
+    class method string: string first: first last: last
+        self first: first last: last
+
+    method precedence
+        10
+
+    method parseAsSuffixOf: prefix with: parser
+        SyntaxIs
+            left: prefix
+            right: (parser parseWithPrecedence: IsPrecedence)
+
+    method string
+        "is"
+end
+
+define ReservedWords
+    let words = Dictionary new.
+    words put: TokenReservedWordIs at: "is".
+    words
+end
+
 class TokenWord { string first last }
     is Token
 
+    class method from: first to: last in: parser
+        let tokenString = parser source from: first to: last.
+        -- Reserved words get their own classes!
+        let tokenClass = ReservedWords
+                             at: tokenString
+                             ifNone: { TokenWord }.
+        tokenClass string: tokenString first: first last: last
+
     method parseAsSuffixOf: prefix with: parser
-        SyntaxUnary
+           SyntaxUnary
             receiver: prefix
-            selector: (Selector name: string)
+            selector: (Selector name: string).
 end
 
 class TokenKeyword { string first last }
@@ -384,6 +434,7 @@ class Tests {}
             ; testPrefixMethod
             ; testUnaryMethod
             ; testKeywordMethod
+            ; testIs
     method test42
         ("42" eval == 42) assert: "Constant evaluation".
     method testPlus
@@ -396,6 +447,9 @@ class Tests {}
         ("- 42 abs" eval == 42) assert: "Unary method".
     method testKeywordMethod
         ("1 to: 10 by: 2" eval == (1 to: 10 by: 2)) assert: "Keyword method".
+    method testIs
+        ("1 is 1" eval == True) assert: "Builtin 'is' --> True".
+        ("1 is 2" eval == False) assert: "Builtin 'is' --> False".
 end
 
 class Main {}
