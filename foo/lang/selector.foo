@@ -1,0 +1,16 @@
+class Selector { name }
+    is Object
+    class method new: name
+        self name: name
+    method sendTo: receiver
+        name sendTo: receiver with: []
+    method sendTo: receiver with: arguments
+        name sendTo: receiver with: arguments
+    method value: value
+        self sendTo: value
+    -- FIXME: Should really intern selectors!
+    method isEquivalent: other
+        name == other name
+    method toString
+        "#{name}"
+end

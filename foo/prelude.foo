@@ -21,6 +21,7 @@ import .lang.ordered.Ordered
 import .lang.output.Output
 import .lang.random.Random
 import .lang.record.Record
+import .lang.selector.Selector
 import .lang.string.String
 import .lang.stringOutput.StringOutput
 import .lang.time.Time

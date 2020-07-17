@@ -321,6 +321,7 @@ pub enum Literal {
     Integer(i64),
     Float(f64),
     String(String),
+    Selector(String),
 }
 
 impl Const {
