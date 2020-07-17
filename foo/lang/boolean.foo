@@ -6,6 +6,9 @@ extend Boolean
     class method default
         False
 
+    method assert: what
+        self ifFalse: { panic "{what} assertion failed!" }
+
     method == other -> Boolean
         self is other
 
