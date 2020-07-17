@@ -4,8 +4,9 @@ import .object.Object
 extend Dictionary
     is Object
 
-    method displayOn: stream
-        stream print: self toString
+    method at: key
+        self at: key ifNone: { False }
+
     class method runTests: assert
         assert that: { let d = { 1 + 1 + 40 -> "the" append: "Answer" }.
                        (d at: 42) }
