@@ -130,7 +130,7 @@ interface Iterable
         noneBlock value
 
     method first
-        self iterator next
+        self do: { |elt| return elt }
 
     method ifEmpty: block
         self isEmpty
