@@ -477,6 +477,7 @@ fn make_name_table() -> NameTable {
     ParserSyntax::def(t, "{", block_prefix, invalid_suffix, precedence_3);
     ParserSyntax::def(t, "}", invalid_prefix, invalid_suffix, precedence_0);
 
+    ParserSyntax::def(t, "#", literal_prefix, invalid_suffix, precedence_0);
     ParserSyntax::def(t, "$", dynamic_var_prefix, invalid_suffix, precedence_0);
 
     ParserSyntax::def(t, "False", false_prefix, invalid_suffix, precedence_3);
@@ -615,6 +616,32 @@ fn dynamic_var_prefix(parser: &Parser) -> Parse {
     } else {
         Unwind::error_at(source_location, "Invalid dynamic variable name")
     }
+}
+
+fn literal_prefix(parser: &Parser) -> Parse {
+    let mut source_location = parser.source_location();
+    let mut selector = String::new();
+    match parser.lookahead()? {
+        (Token::WORD, span) => {
+            parser.next_token()?;
+            selector.push_str(parser.slice_at(span.clone()));
+        }
+        (Token::SIGIL, span) => {
+            parser.next_token()?;
+            selector.push_str(parser.slice_at(span.clone()));
+        }
+        (Token::KEYWORD, span) => {
+            parser.next_token()?;
+            selector.push_str(parser.slice_at(span.clone()));
+            while let (Token::KEYWORD, span) = parser.lookahead()? {
+                parser.next_token()?;
+                selector.push_str(parser.slice_at(span.clone()));
+            }
+        }
+        _ => return Unwind::error_at(source_location, "Invalid token after #"),
+    }
+    source_location.extend_span_to(parser.span().end);
+    Ok(Syntax::Expr(Const::expr(source_location, Literal::Selector(selector))))
 }
 
 fn eof_prefix(parser: &Parser) -> Parse {
