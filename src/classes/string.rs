@@ -9,6 +9,7 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("size", string_size);
     vt.add_primitive_method_or_panic("do:", string_do);
     vt.add_primitive_method_or_panic("at:", string_at);
+    vt.add_primitive_method_or_panic("from:to:", string_from_to);
     vt.add_primitive_method_or_panic("isEquivalent:", string_is_equivalent);
     vt.add_primitive_method_or_panic("sendTo:with:", string_send_to_with);
     vt
@@ -50,6 +51,27 @@ fn string_to_string(receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
 
 fn string_size(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_integer(receiver.string_as_str().len() as i64))
+}
+
+fn string_from_to(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let data: &str = receiver.string_as_str();
+    let from = args[0].integer();
+    let i = (from - 1) as usize;
+    if from < 1 || data.len() < i {
+        return Unwind::error(&format!("String#from:to: -- #from: out of bounds: {}", from));
+    }
+    let to = args[0].integer();
+    let j = to as usize;
+    if to < 1 || data.len() < j {
+        return Unwind::error(&format!("String#from:to: -- #to: out of bounds: {}", from));
+    }
+    if j - 1 > i {
+        return Unwind::error(&format!(
+            "String#From:to: -- #from: {} is greater than #to: {}",
+            from, to
+        ));
+    }
+    Ok(env.foo.make_string(&data[i..j]))
 }
 
 fn string_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {

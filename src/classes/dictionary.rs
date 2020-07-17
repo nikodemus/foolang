@@ -59,7 +59,7 @@ pub fn class_vtable() -> Vtable {
 
 pub fn instance_vtable() -> Vtable {
     let vt = Vtable::new("Dictionary");
-    vt.add_primitive_method_or_panic("at:", dictionary_at);
+    vt.add_primitive_method_or_panic("at:ifNone:", dictionary_at_if_none);
     vt.add_primitive_method_or_panic("doKeys:", dictionary_do_keys);
     vt.add_primitive_method_or_panic("has:", dictionary_has);
     vt.add_primitive_method_or_panic("put:at:", dictionary_put_at);
@@ -93,10 +93,10 @@ fn class_dictionary_new(_receiver: &Object, _args: &[Object], env: &Env) -> Eval
     })
 }
 
-fn dictionary_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    match receiver.as_dictionary("in Dictionary#at:")?.borrow().get(&args[0]) {
+fn dictionary_at_if_none(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    match receiver.as_dictionary("in Dictionary#at:ifNone:")?.borrow().get(&args[0]) {
         Some(obj) => Ok(obj.clone()),
-        None => Ok(env.foo.make_boolean(false)),
+        None => args[1].send("value", &[], env),
     }
 }
 
