@@ -5,7 +5,7 @@ class Selector { name }
     method sendTo: receiver
         name sendTo: receiver with: []
     method sendTo: receiver with: arguments
-        name sendTo: receiver with: arguments
+        name sendTo: receiver with: (Array from: arguments)
     method value: value
         self sendTo: value
     -- FIXME: Should really intern selectors!

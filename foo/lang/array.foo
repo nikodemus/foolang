@@ -42,6 +42,14 @@ end
 extend Array
     is Ordered
 
+    class method from: ordered
+        (Array includes: ordered)
+            ifTrue: { return ordered }.
+        let new = self new: ordered size.
+        1 to: new size
+          do: { |i| new put: (ordered at: i) at: i }.
+        new
+
     class method new: size
         self of: Object new: size value: False
 

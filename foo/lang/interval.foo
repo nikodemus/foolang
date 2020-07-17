@@ -1,4 +1,15 @@
+import .object.Object
+
 class Interval { from to by }
+    is Object
+    method isEquivalent: other
+        from == other from
+            ifFalse: { return False }.
+        to == other to
+            ifFalse: { return False }.
+        by == other by
+            ifFalse: { return False }.
+        True
     method do: block
        let i = from.
        { i <= to }
