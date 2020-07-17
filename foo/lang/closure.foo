@@ -40,6 +40,13 @@ class _Closable { closed }
         closed = True
 end
 
+class TestSelfRefInClosure { cookie }
+    class method test
+        (self cookie: 132132132) test
+    method test
+        { self cookie is cookie } value
+end
+
 class TestClosure { assert }
 
     class method runTests: assert
@@ -56,6 +63,11 @@ class TestClosure { assert }
             ; testAscending
             ; testDescending
             ; testApply
+            ; testSelfRefInClosure
+
+    method testSelfRefInClosure
+        assert true: { TestSelfRefInClosure test }
+               testing: "reference to self inside closure".
 
     method testApplication
         assert true: { 1 == { 1 } value }

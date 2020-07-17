@@ -137,11 +137,14 @@ impl EnvRef {
     }
     fn receiver(&self) -> Option<Object> {
         let frame = self.frame.borrow();
-        match &frame.receiver {
-            Some(receiver) => Some(receiver.clone()),
-            None => match &frame.parent {
-                Some(parent) => parent.receiver(),
-                None => None,
+        match &frame.home {
+            Some(home) if &home != &self => home.receiver(),
+            _ => match &frame.receiver {
+                Some(receiver) => Some(receiver.clone()),
+                None => match &frame.parent {
+                    Some(parent) => parent.receiver(),
+                    None => None,
+                },
             },
         }
     }
