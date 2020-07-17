@@ -32,4 +32,8 @@ extend String
                 (self at: i) == (other at: i)
                     ifFalse: { return False } }.
         True
+    method character
+        self size == 1
+            ifTrue: { self at: 1 }
+            ifFalse: { Error raise: "Not a character designator string: {self}" }
 end
