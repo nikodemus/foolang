@@ -56,12 +56,19 @@ fn string_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let data: &str = receiver.string_as_str();
     let arg = args[0].integer();
     let i = (arg - 1) as usize;
+    if arg < 1 || data.len() < arg as usize {
+        return Unwind::error(&format!("Index out of bounds for string: {}", arg));
+    }
     if data.is_char_boundary(i) {
-        env.find_global_or_unwind("Character")?.send(
-            "code:",
-            &[env.foo.make_integer(data[i..].chars().next().unwrap() as i64)],
-            env,
-        )
+        if let Some(code) = data[i..].chars().next() {
+            env.find_global_or_unwind("Character")?.send(
+                "code:",
+                &[env.foo.make_integer(code as i64)],
+                env,
+            )
+        } else {
+            Unwind::error(&format!("Index out of bounds for string: {}", arg))
+        }
     } else {
         Unwind::error(&format!("String#at: {} not at character boundary.", arg))
     }
