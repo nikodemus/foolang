@@ -16,8 +16,16 @@ class InterpreterContext {}
     is Object
 end
 
+define EmptyInterpreterContext
+    InterpreterContext new
+end
+
 class Environment {}
     is Object
+end
+
+define EmptyEnvironment
+    Environment new
 end
 
 class AstConstantRef { value }
@@ -48,6 +56,8 @@ class SyntaxLiteral { value }
     is Object
     method translateIn: environment
         AstConstantRef value: value
+    method toString
+        value toString
 end
 
 class SyntaxBinary { receiver selector argument }
@@ -56,10 +66,12 @@ class SyntaxBinary { receiver selector argument }
         AstSend receiver: (receiver translateIn: environment)
                 selector: selector
                 arguments: [argument translateIn: environment]
+    method toString
+        "({receiver} {selector name} {argument})"
 end
 
 define InvalidSuffixPrecedence
-    0
+    -1
 end
 
 define UnknownOperatorPrecedence
@@ -68,17 +80,30 @@ end
 
 define TokenPrecedence
     let tokens = Dictionary new.
+    tokens put: 90 at: "*".
+    tokens put: 90 at: "/".
     tokens put: 80 at: "-".
+    tokens put: 80 at: "+".
     tokens
 end
 
-class TokenDecimal { first last }
+interface Token
     is Object
-    class method from: first to: last
-        self first: first last: last
 
-    method precedenceWith: parser
-        InvalidSuffixPrecedence
+    class method from: first to: last in: parser
+        self
+            string: (parser source from: first to: last)
+            first: first last: last
+
+    method toString
+        "#<Token {string}>"
+end
+
+class TokenDecimal { string first last }
+    is Token
+
+    method precedence
+        panic "TokenDecimal is not a valid suffix!"
 
     method parseAsPrefixWith: parser
         let n = 0.
@@ -89,30 +114,31 @@ class TokenDecimal { first last }
 end
 
 class TokenEof { position }
-    is Object
-    class method at: position
+    is Token
+
+    class method at: position in: parser
         self position: position
 
-    method precedenceWith: parser
-        InvalidSuffixPrecedence
+    method precedence
+        0
+
+    method toString
+        "#<TokenEof>"
 end
 
-class TokenSigil { first last }
-    is Object
-    class method from: first to: last
-        self first: first last: last
+class TokenSigil { string first last }
+    is Token
 
-    method precedenceWith: parser
+    method precedence
         TokenPrecedence
-            at: (parser source from: first to: last)
+            at: string
             ifNone: { UnknownOperatorPrecedence }
 
     method parseAsSuffixOf: prefix with: parser
         SyntaxBinary
             receiver: prefix
             selector: (Selector name: (parser source from: first to: last))
-            argument: parser parse.
-
+            argument: (parser parseWithPrecedence: (self precedence))
 end
 
 define SpecialCharacters
@@ -122,8 +148,8 @@ define SpecialCharacters
      "]" character]
 end
 
-define SigilCharacters
-    ["+" character]
+define UnderscoreCharacter
+    "_" character
 end
 
 -- FIXME: Broken for unicode input!
@@ -157,7 +183,7 @@ class Parser { source position first last lookahead }
         self nextToken parseAsSuffixOf: prefix with: self
 
     method nextPrecedence
-        self lookahead precedenceWith: self
+        self lookahead precedence
 
     method lookahead
         lookahead
@@ -172,7 +198,7 @@ class Parser { source position first last lookahead }
     method scanNext
         self skipWhitespace.
         self atEof
-            ifTrue: { return TokenEof at: position }.
+            ifTrue: { return TokenEof at: position in: self }.
         self atDigit
             ifTrue: { return self scanDecimal }.
         self atSigil
@@ -182,7 +208,7 @@ class Parser { source position first last lookahead }
     method atEof
         position > last
 
-    method atSpecialChar
+    method atSpecial
         self isAt: { |char|
                      SpecialCharacters
                          anySatisfy: { |special| special == char } }
@@ -190,11 +216,15 @@ class Parser { source position first last lookahead }
     method atDigit
         self isAt: #isDigit
 
-    method atSigil
+    method atWord
         self isAt: { |char|
-                     SigilCharacters
-                         anySatisfy: { |sigil|
-                                       sigil == char } }
+                     char isAlphanumeric or: char == UnderscoreCharacter }
+
+    method atTerminating
+        self atSpecial or: self atWhitespace
+
+    method atSigil
+        (self atWord or: self atTerminating) not
 
     method atWhitespace
         self isAt: #isWhitespace
@@ -214,10 +244,16 @@ class Parser { source position first last lookahead }
         self skipWhile: #atWhitespace
 
     method scanDecimal
-        TokenDecimal from: position to: (self skipWhile: #atDigit).
+        TokenDecimal
+            from: position
+            to: (self skipWhile: #atDigit)
+            in: self.
 
     method scanSigil
-        TokenSigil from: position to: (self skipWhile: #atSigil).
+        TokenSigil
+            from: position
+            to: (self skipWhile: #atSigil)
+            in: self.
 
     method advance
         position <= last assert: "can advance".
@@ -225,22 +261,33 @@ class Parser { source position first last lookahead }
 
 end
 
+extend String
+    method parse
+        Parser parse: self
+    method eval
+        (self parse translateIn: EmptyEnvironment)
+            evalWith: EmptyInterpreterContext
+            in: Process new.
+end
+
 class Tests {}
     class method run
         self new run
     method run
-        self test42.
-        self testPlus.
+        self
+            ; test42
+            ; testPlus
+            ; testPrecedence
     method test42
-        let ast = (Parser parse: "42") translateIn: Environment new.
-        let res = ast
-                      evalWith: InterpreterContext new
-                      in: Process new.
-        res is 42 assert: "Constant evaluation".
+        ("42" eval == 42) assert: "Constant evaluation".
     method testPlus
-        let ast = (Parser parse: "100 + 1000 + 10 + 1") translateIn: Environment new.
-        let res = ast
-                      evalWith: InterpreterContext new
-                      in: Process new.
-        res is 1111 assert: "Constant addition".
+        ("100 + 1000 + 10 + 1" eval == 1111) assert: "Constant addition".
+    method testPrecedence
+        ("12 + 10 * 10 - 1" eval == 111) assert: "Binary precedence".
+end
+
+class Main {}
+    class method run: cmd in: system
+        Tests run.
+        system output println: "ok!"
 end
