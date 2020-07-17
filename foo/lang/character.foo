@@ -24,6 +24,8 @@ class Character { code }
         0x30 <= code and: code <= 0x39
     method digit
         self isDigit ifTrue: { code - 0x30 }
+    method isEquivalent: other
+        code is other code
     method toString
         "#<Character code: {code}>"
 end
