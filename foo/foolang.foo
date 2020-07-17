@@ -88,6 +88,20 @@ class SyntaxBinary { receiver selector argument }
         "({receiver} {selector name} {argument})"
 end
 
+class SyntaxKeyword { receiver selector arguments }
+    is Object
+    method translateIn: environment
+        AstSend receiver: (receiver translateIn: environment)
+                selector: selector
+                arguments: (arguments
+                                collect: { |arg|
+                                           arg translateIn: environment })
+end
+
+define KeywordPrecedence
+    9
+end
+
 define UnknownOperatorPrecedence
     10
 end
@@ -112,6 +126,9 @@ interface Token
         self
             string: (parser source from: first to: last)
             first: first last: last
+
+    method parseAsPrefixWith: parser
+        Error raise: "{string} is not valid in prefix position!"
 
     method precedence
         TokenPrecedence
@@ -173,6 +190,28 @@ class TokenWord { string first last }
             selector: (Selector name: string)
 end
 
+class TokenKeyword { string first last }
+    is Token
+
+    method precedence
+        KeywordPrecedence
+
+    method parseAsSuffixOf: prefix with: parser
+        let arguments = List new.
+        let selector = StringOutput new: string.
+        { arguments push: (parser parseWithPrecedence: (self precedence)).
+          let token = parser lookahead.
+          (TokenKeyword includes: token)
+              ifTrue: { parser nextToken.
+                        selector print: token string.
+                        True } }
+        whileTrue.
+        SyntaxKeyword
+            receiver: prefix
+            selector: (Selector name: selector content)
+            arguments: arguments
+end
+
 define SpecialCharacters
     ["(" character,
      ")" character,
@@ -184,8 +223,16 @@ define UnderscoreCharacter
     "_" character
 end
 
+define ColonCharacter
+    ":" character
+end
+
 -- FIXME: Broken for unicode input!
-class Parser { source position first last lookahead }
+class Parser { source::String
+               position::Integer
+               first::Integer
+               last::Integer
+               lookahead::List }
     is Object
     class method parse: source
         (self
@@ -263,6 +310,14 @@ class Parser { source position first last lookahead }
     method atWhitespace
         self isAt: #isWhitespace
 
+    method atChar: char1 thenNot: char2
+        self atEof
+            ifTrue: { return False }.
+        (source at: position) == char1
+            ifFalse: { return False }.
+        (position + 1 > last)
+            ifFalse: { ((source at: position + 1) == char2) not }
+
     method isAt: block
         self atEof
             ifTrue: { False }
@@ -290,10 +345,18 @@ class Parser { source position first last lookahead }
             in: self.
 
     method scanWord
-        TokenWord
-            from: position
-            to: (self skipWhile: #atWord)
-            in: self.
+        let first = position.
+        self skipWhile: #atWord.
+        (self atChar: ColonCharacter thenNot: ColonCharacter)
+            ifTrue: { self advance.
+                      TokenKeyword
+                          from: first
+                          to: position - 1
+                          in: self }
+            ifFalse: { TokenWord
+                           from: first
+                           to: position - 1
+                           in: self }
 
     method advance
         position <= last assert: "can advance".
@@ -320,6 +383,7 @@ class Tests {}
             ; testPrecedence
             ; testPrefixMethod
             ; testUnaryMethod
+            ; testKeywordMethod
     method test42
         ("42" eval == 42) assert: "Constant evaluation".
     method testPlus
@@ -330,6 +394,8 @@ class Tests {}
         ("- 42" eval == -42) assert: "Prefix method".
     method testUnaryMethod
         ("- 42 abs" eval == 42) assert: "Unary method".
+    method testKeywordMethod
+        ("1 to: 10 by: 2" eval == (1 to: 10 by: 2)) assert: "Keyword method".
 end
 
 class Main {}

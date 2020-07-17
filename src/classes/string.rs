@@ -58,12 +58,20 @@ fn string_from_to(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let from = args[0].integer();
     let i = (from - 1) as usize;
     if from < 1 || data.len() < i {
-        return Unwind::error(&format!("String#from:to: -- #from: out of bounds: {}", from));
+        return Unwind::error(&format!(
+            "String#from:to: -- #from: out of bounds: {}, should be 1-{}",
+            from,
+            data.len()
+        ));
     }
     let to = args[1].integer();
     let j = to as usize;
     if to < 1 || data.len() < j {
-        return Unwind::error(&format!("String#from:to: -- #to: out of bounds: {}", from));
+        return Unwind::error(&format!(
+            "String#from:to: -- #to: out of bounds: {}, should be 1-{}",
+            to,
+            data.len()
+        ));
     }
     if from > to {
         return Unwind::error(&format!(
@@ -76,7 +84,7 @@ fn string_from_to(receiver: &Object, args: &[Object], env: &Env) -> Eval {
 
 fn string_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let data: &str = receiver.string_as_str();
-    let arg = args[0].integer();
+    let arg = args[0].as_i64("String#at: index")?;
     let i = (arg - 1) as usize;
     if arg < 1 || data.len() < arg as usize {
         return Unwind::error(&format!("Index out of bounds for string: {}", arg));

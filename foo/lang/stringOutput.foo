@@ -1,4 +1,8 @@
 extend StringOutput
+    class method new: string
+        let out = self new.
+        out print: string.
+        out.
     method toString
         "#<StringOutput>"
     method flush
