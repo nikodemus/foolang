@@ -1,11 +1,40 @@
+class Process {}
+    is Object
+end
+
+class InterpreterContext {}
+    is Object
+end
+
+class Environment {}
+    is Object
+end
+
+class AstConstantRef { value }
+    is Object
+    method evalWith: context in: process
+        value
+end
+
+class SyntaxLiteral { value }
+    is Object
+    method translateIn: environment
+        AstConstantRef value: value
+end
+
+define InvalidSuffixPrecedence
+    0
+end
+
 class TokenDecimal { first last }
+    is Object
     class method from: first to: last
         self first: first last: last
 
     method precedence
         InvalidSuffixPrecedence
 
-    method parsePrefixWith: parser
+    method parseAsPrefixWith: parser
         let n = 0.
         first to: last
               do: { |pos|
@@ -13,23 +42,32 @@ class TokenDecimal { first last }
         SyntaxLiteral value: n
 end
 
+class TokenEof { position }
+    is Object
+    class method at: position
+        self position: position
+
+    method precedence
+        InvalidSuffixPrecedence
+end
+
 -- FIXME: Broken for unicode input!
-class Parser { source position first last comingTokens }
+class Parser { source position first last lookahead }
+    is Object
     class method parse: source
         (self
              source: source
              position: 1
              first: 1
              last: (source size)
-             coming: List new)
-        parsePrecedence: 0
+             lookahead: List new)
+        parseWithPrecedence: 0
 
-    method parseWith: precedence
+    method parseWithPrecedence: precedence
         self parseSuffixOf: self parsePrefix with: precedence
 
     method parsePrefix
-        (self tokenParser: self nextToken)
-            parsePrefixWith: self
+        self nextToken parseAsPrefixWith: self
 
     method parseSuffixOf: prefix with: precedence
         let expr = prefix.
@@ -46,14 +84,21 @@ class Parser { source position first last comingTokens }
         self lookahead precedence
 
     method lookahead
-        comingTokens
-            ifEmpty: { coming push: self scanNext }.
-        comingTokens first
+        lookahead
+            ifEmpty: { lookahead push: self scanNext }.
+        lookahead first
+
+    method nextToken
+        lookahead isEmpty
+            ifTrue: { self scanNext }
+            ifFalse: { lookahead pop }.
 
     method scanNext
         self atDigit
             ifTrue: { return self scanDecimal }.
-        Error raise: "Don't know how to scan {source at: position}"
+        self atEof
+            ifTrue: { return TokenEof at: position }.
+        Error raise: "Don't know how to scan pos: {position} in: {source}"
 
     method scanDecimal
         self atDigit assert: "scanDecimal starts on digit".
@@ -75,22 +120,25 @@ class Parser { source position first last comingTokens }
         self at: #isWhitespace
 
     method at: selector
-        self atEof not
-            and: (selector sendTo: (source at: position))
+        self atEof
+            ifTrue: { False }
+            ifFalse: { (selector sendTo: (source at: position)) }
 
     method skipWhitespace
-        { self atEof not and: (source at: position isWhitespace) }
+        { self atWhitespace }
             whileTrue: { self advance }.
 
 end
 
-class Tests { assert system }
-    class method runTests: assert in: system
-        (self assert: assert system: system) runTests
-    method runTests
+class Tests {}
+    class method run
+        self new run
+    method run
         self test42.
     method test42
         let ast = (Parser parse: "42") translateIn: Environment new.
-        let res = ast evalWith: Context new in: Process new.
-        assert that: res is 42
+        let res = ast
+                      evalWith: InterpreterContext new
+                      in: Process new.
+        res is 42 assert: "Constant evaluation"
 end
