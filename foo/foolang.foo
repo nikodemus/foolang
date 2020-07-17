@@ -70,6 +70,14 @@ class SyntaxPrefix { receiver selector }
         "({selector name} {receiver})"
 end
 
+class SyntaxUnary { receiver selector }
+    is Object
+    method translateIn: environment
+        AstSend receiver: (receiver translateIn: environment)
+                selector: selector
+                arguments: []
+end
+
 class SyntaxBinary { receiver selector argument }
     is Object
     method translateIn: environment
@@ -105,6 +113,11 @@ interface Token
             string: (parser source from: first to: last)
             first: first last: last
 
+    method precedence
+        TokenPrecedence
+            at: string
+            ifNone: { UnknownOperatorPrecedence }
+
     method toString
         "#<Token {string}>"
 end
@@ -139,11 +152,6 @@ end
 class TokenSigil { string first last }
     is Token
 
-    method precedence
-        TokenPrecedence
-            at: string
-            ifNone: { UnknownOperatorPrecedence }
-
     method parseAsPrefixWith: parser
         SyntaxPrefix
             receiver: (parser parseWithPrecedence: PrefixPrecedence)
@@ -154,6 +162,15 @@ class TokenSigil { string first last }
             receiver: prefix
             selector: (Selector name: string)
             argument: (parser parseWithPrecedence: (self precedence))
+end
+
+class TokenWord { string first last }
+    is Token
+
+    method parseAsSuffixOf: prefix with: parser
+        SyntaxUnary
+            receiver: prefix
+            selector: (Selector name: string)
 end
 
 define SpecialCharacters
@@ -218,6 +235,8 @@ class Parser { source position first last lookahead }
             ifTrue: { return self scanDecimal }.
         self atSigil
             ifTrue: { return self scanSigil }.
+        self atWord
+            ifTrue: { return self scanWord }.
         Error raise: "Don't know how to scan pos: {position} in: {source}"
 
     method atEof
@@ -270,6 +289,12 @@ class Parser { source position first last lookahead }
             to: (self skipWhile: #atSigil)
             in: self.
 
+    method scanWord
+        TokenWord
+            from: position
+            to: (self skipWhile: #atWord)
+            in: self.
+
     method advance
         position <= last assert: "can advance".
         position = position + 1.
@@ -294,6 +319,7 @@ class Tests {}
             ; testPlus
             ; testPrecedence
             ; testPrefixMethod
+            ; testUnaryMethod
     method test42
         ("42" eval == 42) assert: "Constant evaluation".
     method testPlus
@@ -302,6 +328,8 @@ class Tests {}
         ("12 + 10 * 10 - 1" eval == 111) assert: "Binary precedence".
     method testPrefixMethod
         ("- 42" eval == -42) assert: "Prefix method".
+    method testUnaryMethod
+        ("- 42 abs" eval == 42) assert: "Unary method".
 end
 
 class Main {}
