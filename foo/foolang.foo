@@ -1,0 +1,95 @@
+class TokenDecimal { first last }
+    class method from: first to: last
+        self first: first last: last
+
+    method precedence
+        InvalidSuffixPrecedence
+
+    method parsePrefixWith: parser
+        let n = 0.
+        first to: last
+              do: { |pos|
+                    n = n * 10 + (parser source at: pos) digit }.
+        SyntaxLiteral value: n
+end
+
+class Parser { source position first last comingTokens }
+    class method parse: source
+        (self
+             source: source
+             position: 1
+             first: 1
+             last: (source size)
+             coming: List new)
+        parsePrecedence: 0
+
+    method parseWith: precedence
+        self parseSuffixOf: self parsePrefix with: precedence
+
+    method parsePrefix
+        (self tokenParser: self nextToken)
+            parsePrefixWith: self
+
+    method parseSuffixOf: prefix with: precedence
+        let expr = prefix.
+        { precedence < self nextPrecedence }
+            whileTrue: { expr = self parseSuffixOf: expr }.
+        expr
+
+    method parseSuffixOf: prefix
+        (self tokenParser: self nextToken)
+            parseSuffixOf: prefix
+            with: self
+
+    method nextPrecedence
+        self lookahead precedence
+
+    method lookahead
+        comingTokens
+            ifEmpty: { coming push: self scanNext }.
+        comingTokens first
+
+    method scanNext
+        self atDigit
+            ifTrue: { return self scanDecimal }.
+        Error raise: "Don't know how to scan {source at: position}"
+
+    method scanDecimal
+        self atDigit assert: "scanDecimal starts on digit".
+        let start = position.
+        { self atDigit }
+            whileTrue: { self advance }.
+        TokenDecimal first: start last: position - 1.
+
+    method advance
+        position = position + 1.
+
+    method atEof
+        position > last
+
+    method atDigit
+        self at: #isDigit
+
+    method atWhitespace
+        self at: #isWhitespace
+
+    method at: selector
+        self atEof not
+            and: (selector sendTo: (source at: position))
+
+    method skipWhitespace
+        { self atEof not and: (source at: position isWhitespace) }
+            whileTrue: { self advance }.
+
+end
+
+class Tests { assert system }
+    class method runTests: assert in: system
+        (self assert: assert system: system) runTests
+    method runTests
+        self test42.
+    method test42
+        let ast = (Parser parse: "42") translateIn: Environment new.
+        let res = ast evalWith: Context new in: Process new.
+        assert that: res is 42
+end
