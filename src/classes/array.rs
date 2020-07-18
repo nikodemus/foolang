@@ -138,7 +138,21 @@ fn array_element_type(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
 }
 
 fn array_at(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
-    receiver.as_vec(move |vec| Ok(vec[(args[0].as_index("Array#at:")? - 1) as usize].clone()))
+    let array = receiver.as_array("Array#at:")?;
+    let data = array.data.borrow();
+    let index_arg = args[0].as_index("Array#put:at:")?;
+    let index = (index_arg - 1) as usize;
+    if data.len() == 0 {
+        return Unwind::error(&format!("Array#at: -- cannot access elements of an empty array!"));
+    }
+    if index_arg < 1 || data.len() <= index {
+        return Unwind::error(&format!(
+            "Array#at: -- index out of bounds: {}, should be 1-{}",
+            index_arg,
+            data.len()
+        ));
+    }
+    Ok(data[index].clone())
 }
 
 fn array_put_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
