@@ -57,6 +57,17 @@ class Environment { bindings parent }
                                      index: bindings size + 1))
             parent: parent
 
+    method addVariables: names
+        let newBindings = bindings copy.
+        names do: { |name|
+                    newBindings
+                        add: (Binding
+                                  name: name
+                                  index: bindings size + 1) }.
+        Environment
+            bindings: newBindings
+            parent: parent
+
     method reference: name
         self reference: name inFrame: 1
 
@@ -129,15 +140,30 @@ end
 
 class AstBlockClosure { context block }
     method value
-        -- FIXME: how to get Process in here?
-        block body evalWith: context in: False
+        self apply: []
+    method value: arg
+        self apply: [arg]
+    method apply: arguments
+        let frame = Array new: block frameSize.
+        let nArgs = arguments size.
+        block argumentCount is nArgs
+            ifFalse: { Error raise: "Block argument count mismatch!" }.
+        1 to: nArgs
+          do: { |i| frame put: (arguments at: i) at: i }.
+        block body
+            evalWith: (InterpreterContext
+                           sender: False
+                           frame: frame)
+            in: False
 end
 
-class AstBlock { body }
+class AstBlock { argumentCount body }
     method evalWith: context in: process
         AstBlockClosure
             context: context
             block: self
+    method frameSize
+        argumentCount
 end
 
 class AstLexicalRef { name frame index }
@@ -267,11 +293,12 @@ class SyntaxParens { body }
         "({body})"
 end
 
-class SyntaxBlock { body }
+class SyntaxBlock { arguments body }
     is Syntax
     method translateIn: environment
         AstBlock
-            body: (body translateIn: environment)
+            argumentCount: arguments size
+            body: (body translateIn: (environment addVariables: arguments))
     method toString
         "\{ {body} }"
 end
@@ -437,9 +464,14 @@ class TokenReservedSigilOpenBrace { first last }
     is ReservedToken
 
     method parseAsPrefixWith: parser
+        let arguments = List new.
+        parser
+            when: "|"
+            then: { parser until: "|"
+                           do: { arguments add: (parser parseVariableName) } }.
         let body = parser parseWithPrecedence: SeqPrecedence.
         parser expect: "}".
-        SyntaxBlock body: body
+        SyntaxBlock arguments: arguments body: body
 
     method string
         "\{"
@@ -590,6 +622,15 @@ class Parser { source::String
         let got = self nextToken string.
         got == expected
             ifFalse: { Error raise: "Expected '{expected}', got '{got}'" }.
+
+    method when: test then: action
+        self lookahead string == test
+            ifTrue: { self nextToken. action value }
+
+    method until: test do: action
+        { self lookahead string == test }
+            whileFalse: action.
+        self nextToken.
 
     method parseWithPrecedence: precedence
         self parseSuffixOf: self parsePrefix with: precedence
@@ -755,6 +796,7 @@ class Tests {}
             ; testParens
             ; testAssign
             ; testSimpleBlock
+            ; testArgBlock
     method test42
         ("42" eval == 42) assert: "Constant evaluation".
     method testPlus
@@ -783,6 +825,8 @@ class Tests {}
             eval == 4242)  assert: "assign with scope".
     method testSimpleBlock
         ("\{ 32 + 10 } value" eval == 42) assert: "simple block".
+    method testArgBlock
+        ("\{ |x| x + 1 } value: 41" eval == 42) assert: "arg block".
 end
 
 class Main {}
