@@ -30,7 +30,7 @@ class List { size data }
 
     method add: element
         self atCapacity
-            ifTrue: { let newdata = Array new: size * 2.
+            ifTrue: { let newdata = Array new: (size + 1) * 2.
                       1 to: size
                         do: { |i|
                               newdata put: (data at: i) at: i }.
