@@ -38,7 +38,7 @@ end
 class Binding { name index }
     is Object
     method referenceInFrame: frame
-        AstLexicalRef frame: frame index: index
+        AstLexicalRef name: name frame: frame index: index
 end
 
 class Environment { bindings parent }
@@ -61,7 +61,7 @@ class Environment { bindings parent }
         self reference: name inFrame: 1
 
     method reference: name inFrame: frame
-        let binding = bindings
+        let binding = bindings reversed -- SLOW!
                           find: { |binding| binding name == name }
                           ifNone: { return parent reference: name inFrame: frame + 1 }.
         binding referenceInFrame: frame
@@ -74,17 +74,28 @@ define EmptyEnvironment
     Environment new
 end
 
-class AstConstantRef { value }
+interface AstNode
     is Object
+end
+
+class AstConstantRef { value }
+    is AstNode
     method evalWith: context in: process
         value
 end
 
 class AstIs { left right }
-    is Object
+    is AstNode
     method evalWith: context in: process
         (left evalWith: context in: process)
             is (right evalWith: context in: process)
+end
+
+class AstSeq { first then }
+    is AstNode
+    method evalWith: context in: process
+        first evalWith: context in: process.
+        then evalWith: context in: process
 end
 
 class AstSend {
@@ -92,6 +103,7 @@ class AstSend {
         selector
         arguments
     }
+    is AstNode
     method evalWith: context in: process
         let receiver = receiver evalWith: context in: process.
         (self getMethod: selector for: receiver)
@@ -106,6 +118,7 @@ class AstSend {
 end
 
 class AstBindLexical { index value body }
+    is AstNode
     method evalWith: context in: process
         context
             put: (value evalWith: context in: process)
@@ -114,29 +127,46 @@ class AstBindLexical { index value body }
         body evalWith: context in: process.
 end
 
-class AstLexicalRef { frame index }
+class AstLexicalRef { name frame index }
+    is AstNode
     method evalWith: context in: process
         context at: index inFrame: frame
 end
 
-class SyntaxLiteral { value }
+class AstLexicalSet { name frame index value }
+    is AstNode
+    method evalWith: context in: process
+        context
+            put: (value evalWith: context in: process)
+            at: index
+            inFrame: frame.
+end
+
+interface Syntax
     is Object
+end
+
+class SyntaxLiteral { value }
+    is Syntax
     method translateIn: environment
         AstConstantRef value: value
     method toString
         value toString
 end
 
-class SyntaxVariable { name }
-    is Object
+class SyntaxSeq { first then }
+    is Syntax
     method translateIn: environment
-        environment reference: name
+        -- FIXME: Would be nicer to flatten this out.
+        AstSeq
+            first: (first translateIn: environment)
+            then: (then translateIn: environment).
     method toString
-        name
+        "{first}. {then}"
 end
 
 class SyntaxPrefix { receiver selector }
-    is Object
+    is Syntax
     method translateIn: environment
         AstSend receiver: (receiver translateIn: environment)
                 selector: (Selector name: "prefix{selector name}")
@@ -146,7 +176,7 @@ class SyntaxPrefix { receiver selector }
 end
 
 class SyntaxUnary { receiver selector }
-    is Object
+    is Syntax
     method translateIn: environment
         AstSend receiver: (receiver translateIn: environment)
                 selector: selector
@@ -154,7 +184,7 @@ class SyntaxUnary { receiver selector }
 end
 
 class SyntaxBinary { receiver selector argument }
-    is Object
+    is Syntax
     method translateIn: environment
         AstSend receiver: (receiver translateIn: environment)
                 selector: selector
@@ -164,7 +194,7 @@ class SyntaxBinary { receiver selector argument }
 end
 
 class SyntaxKeyword { receiver selector arguments }
-    is Object
+    is Syntax
     method translateIn: environment
         AstSend receiver: (receiver translateIn: environment)
                 selector: selector
@@ -174,7 +204,7 @@ class SyntaxKeyword { receiver selector arguments }
 end
 
 class SyntaxIs { left right }
-    is Object
+    is Syntax
     method translateIn: environment
         AstIs left: (left translateIn: environment)
               right: (right translateIn: environment)
@@ -183,7 +213,7 @@ class SyntaxIs { left right }
 end
 
 class SyntaxLet { name value body }
-    is Object
+    is Syntax
     method translateIn: environment
         AstBindLexical
             index: environment size + 1
@@ -193,8 +223,29 @@ class SyntaxLet { name value body }
         "(let {name} = {value}. {body})"
 end
 
+class SyntaxVariable { name }
+    is Syntax
+    method translateIn: environment
+        environment reference: name
+    method toString
+        name
+end
+
+class SyntaxAssign { variable value }
+    is Syntax
+    method translateIn: environment
+        let binding = environment reference: variable name.
+        AstLexicalSet
+            name: variable name
+            frame: binding frame
+            index: binding index
+            value: (value translateIn: environment).
+    method toString
+        "({variable} = {value})".
+end
+
 class SyntaxParens { body }
-    is Object
+    is Syntax
     method translateIn: environment
         body translateIn: environment
     method toString
@@ -228,6 +279,7 @@ define TokenPrecedence
     tokens put: 80 at: "-".
     tokens put: 80 at: "+".
     tokens put: 10 at: "is".
+    tokens put: 4 at: "=".
     tokens put: 3 at: "let".
     tokens put: 3 at: "(".
     tokens put: 2 at: ".".
@@ -355,6 +407,18 @@ class TokenReservedSigilCloseParen { first last }
         ")"
 end
 
+class TokenReservedSigilEqual { first last }
+    is ReservedToken
+
+    method parseAsSuffixOf: prefix with: parser
+        SyntaxAssign
+            variable: prefix::SyntaxVariable
+            value: (parser parseWithPrecedence: SingleExpressionPrecedence).
+
+    method string
+        "="
+end
+
 define ReservedTokens
     let tokens = Dictionary new.
     tokens put: TokenReservedWordIs at: "is".
@@ -362,6 +426,7 @@ define ReservedTokens
     tokens put: TokenReservedSigilDot at: ".".
     tokens put: TokenReservedSigilOpenParen at: "(".
     tokens put: TokenReservedSigilCloseParen at: ")".
+    tokens put: TokenReservedSigilEqual at: "=".
     tokens
 end
 
@@ -635,6 +700,7 @@ class Tests {}
             ; testIs
             ; testLet
             ; testParens
+            ; testAssign
     method test42
         ("42" eval == 42) assert: "Constant evaluation".
     method testPlus
@@ -654,6 +720,13 @@ class Tests {}
         ("let x = 1. x + x" eval == 2) assert: "Let binding".
     method testParens
         ("(1 + 1) * 2" eval == 4) assert: "Parens".
+    method testAssign
+        ("let x = 20. x = x + 1. x * 2" eval == 42) assert: "assign".
+        ("let y = 0.
+          let x = 20.
+          (let x = 2000. x = x + 100. y = x * 2).
+          x = x + 1. y + x * 2"
+            eval == 4242)  assert: "assign with scope".
 end
 
 class Main {}

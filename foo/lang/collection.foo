@@ -154,20 +154,6 @@ interface Collection
                        ifFalse: { selection push: elt } }.
         selection.
 
-    method reverse
-        let n = (self size / 2) truncate.
-        let s = self size + 1.
-        1 to: n
-          do: { |i|
-                let j = s - i.
-                let tmp = self at: i.
-                self put: (self at: j) at: i.
-                self put: tmp at: j }.
-          panic "BUG: this should never happen."
-
-    method reversed
-        self copy reverse
-
     method select: block
         let selection = Array withCapacity: 4.
         self do: { |elt|
