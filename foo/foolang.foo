@@ -193,6 +193,14 @@ class SyntaxLet { name value body }
         "(let {name} = {value}. {body})"
 end
 
+class SyntaxParens { body }
+    is Object
+    method translateIn: environment
+        body translateIn: environment
+    method toString
+        "({body})"
+end
+
 define SeqPrecedence
     1
 end
@@ -221,7 +229,9 @@ define TokenPrecedence
     tokens put: 80 at: "+".
     tokens put: 10 at: "is".
     tokens put: 3 at: "let".
+    tokens put: 3 at: "(".
     tokens put: 2 at: ".".
+    tokens put: 0 at: ")".
     tokens
 end
 
@@ -326,11 +336,32 @@ class TokenReservedSigilDot { first last }
         "."
 end
 
+class TokenReservedSigilOpenParen { first last }
+    is ReservedToken
+
+    method parseAsPrefixWith: parser
+        let body = parser parseWithPrecedence: SeqPrecedence.
+        parser expect: ")".
+        SyntaxParens
+            body: body
+
+    method string
+        "("
+end
+
+class TokenReservedSigilCloseParen { first last }
+    is ReservedToken
+    method string
+        ")"
+end
+
 define ReservedTokens
     let tokens = Dictionary new.
     tokens put: TokenReservedWordIs at: "is".
     tokens put: TokenReservedWordLet at: "let".
     tokens put: TokenReservedSigilDot at: ".".
+    tokens put: TokenReservedSigilOpenParen at: "(".
+    tokens put: TokenReservedSigilCloseParen at: ")".
     tokens
 end
 
@@ -485,6 +516,8 @@ class Parser { source::String
         self skipWhitespace.
         self atEof
             ifTrue: { return TokenEof at: position in: self }.
+        self atSpecial
+            ifTrue: { return self scanSpecial }.
         self atDigit
             ifTrue: { return self scanDecimal }.
         self atSigil
@@ -538,6 +571,14 @@ class Parser { source::String
 
     method skipWhitespace
         self skipWhile: #atWhitespace
+
+    method scanSpecial
+        let start = position.
+        self advance.
+        TokenSigil
+            from: start
+            to: start
+            in: self.
 
     method scanDecimal
         TokenDecimal
@@ -593,6 +634,7 @@ class Tests {}
             ; testKeywordMethod
             ; testIs
             ; testLet
+            ; testParens
     method test42
         ("42" eval == 42) assert: "Constant evaluation".
     method testPlus
@@ -609,8 +651,9 @@ class Tests {}
         ("1 is 1" eval == True) assert: "Builtin 'is' --> True".
         ("1 is 2" eval == False) assert: "Builtin 'is' --> False".
     method testLet
-        Debug println: "let x = 1. x + x" parse.
         ("let x = 1. x + x" eval == 2) assert: "Let binding".
+    method testParens
+        ("(1 + 1) * 2" eval == 4) assert: "Parens".
 end
 
 class Main {}
