@@ -53,7 +53,7 @@ end
 class NullEnvironment {}
 end
 
-class Environment { bindings parent allocation }
+class Environment { bindings parent allocation globals }
     is Object
 
     class method new
@@ -61,12 +61,14 @@ class Environment { bindings parent allocation }
             bindings: List new
             parent: NullEnvironment
             allocation: FrameAllocation new
+            globals: Dictionary new
 
     method newFrame
         Environment
             bindings: List new
             parent: self
             allocation: FrameAllocation new
+            globals: globals
 
     method addVariable: name
         Environment
@@ -76,6 +78,7 @@ class Environment { bindings parent allocation }
                                      index: allocation nextIndex))
             parent: parent
             allocation: allocation
+            globals: globals
 
     method addVariables: names
         let newBindings = bindings copy.
@@ -88,6 +91,25 @@ class Environment { bindings parent allocation }
             bindings: newBindings
             parent: parent
             allocation: allocation
+            globals: globals
+
+    method load: definition
+        definition defineIn: self.
+        self
+
+    method eval: string
+        let env = Environment
+                      bindings: List new
+                      parent: False
+                      allocation: FrameAllocation new
+                      globals: globals.
+        (string parse translateIn: env)::AstNode
+            evalWith: (InterpreterContext new: env allocation size)
+            in: Process new
+
+    method global: name
+        globals at: name
+                ifNone: { Error raise: "Unbound variable: {name}" }.
 
     method reference: name
         self reference: name inFrame: 1
@@ -95,12 +117,16 @@ class Environment { bindings parent allocation }
     method reference: name inFrame: frame::Integer
         let binding = bindings reversed -- SLOW!
                           find: { |binding| binding name == name }
-                          ifNone: { return parent reference: name inFrame: frame + 1 }.
+                          ifNone: { parent is False
+                                        ifTrue: { return self global: name }
+                                        ifFalse: { return parent reference: name inFrame: frame + 1 } }.
         binding referenceInFrame: frame
 end
 
 interface AstNode
     is Object
+    method debug
+        Debug println: "#<AST {self}>".
 end
 
 class AstConstantRef { value }
@@ -153,10 +179,30 @@ define $process
 end
 
 class AstMethod { receiver selector }
+    is AstNode
     method invoke: arguments with: context in: process
         let $context = context.
         let $process = process.
         selector sendTo: receiver with: arguments.
+end
+
+class AstGlobal { name value }
+    is AstNode
+    method evalWith: context in: process
+        value
+end
+
+class AstDefine { name body frameSize }
+    is AstNode
+    method defineIn: environment
+        environment globals
+            put: (AstGlobal
+                      name: name
+                      value: self _eval)
+            at: name.
+    method _eval
+        body evalWith: (InterpreterContext new: frameSize)
+             in: Process new
 end
 
 class AstBlockClosure { context block }
@@ -347,6 +393,17 @@ class SyntaxBlock { arguments body }
         "\{ {body} }"
 end
 
+class SyntaxDefine { name body }
+    is Syntax
+    method translateIn: environment
+        AstDefine
+            name: name
+            body: (body translateIn: environment)
+            frameSize: environment allocation size.
+    method toString
+        "define {name} {body} end"
+end
+
 define SeqPrecedence
     1
 end
@@ -381,6 +438,8 @@ define TokenPrecedence
     tokens put: 2 at: ".".
     tokens put: 0 at: ")".
     tokens put: 0 at: "}".
+    tokens put: 0 at: "define".
+    tokens put: 0 at: "end".
     tokens
 end
 
@@ -442,6 +501,27 @@ interface ReservedToken
     is SuffixToken
     class method string: string first: first last: last
         self first: first last: last
+end
+
+class TokenReservedWordDefine { first last }
+    is ReservedToken
+
+    method parseAsPrefixWith: parser
+        let def = SyntaxDefine
+                      name: parser parseVariableName
+                      body: (parser parseWithPrecedence: SeqPrecedence).
+        parser expect: "end".
+        def
+
+    method string
+        "define"
+end
+
+class TokenReservedWordEnd { first last }
+    is ReservedToken
+
+    method string
+        "end"
 end
 
 class TokenReservedWordIs { first last }
@@ -541,14 +621,15 @@ end
 
 define ReservedTokens
     let tokens = Dictionary new.
+    tokens put: TokenReservedSigilCloseBrace at: "}".
+    tokens put: TokenReservedSigilCloseParen at: ")".
+    tokens put: TokenReservedSigilDot at: ".".
+    tokens put: TokenReservedSigilEqual at: "=".
+    tokens put: TokenReservedSigilOpenBrace at: "\{".
+    tokens put: TokenReservedSigilOpenParen at: "(".
+    tokens put: TokenReservedWordDefine at: "define".
     tokens put: TokenReservedWordIs at: "is".
     tokens put: TokenReservedWordLet at: "let".
-    tokens put: TokenReservedSigilDot at: ".".
-    tokens put: TokenReservedSigilOpenParen at: "(".
-    tokens put: TokenReservedSigilCloseParen at: ")".
-    tokens put: TokenReservedSigilOpenBrace at: "\{".
-    tokens put: TokenReservedSigilCloseBrace at: "}".
-    tokens put: TokenReservedSigilEqual at: "=".
     tokens
 end
 
@@ -823,6 +904,8 @@ extend String
         (self parse translateIn: env)
             evalWith: (InterpreterContext new: (env allocation size))
             in: Process new.
+    method load
+        Environment new load: (self parse translateIn: Environment new)
 end
 
 class Tests {}
@@ -843,6 +926,7 @@ class Tests {}
             ; testSimpleBlock
             ; testArgBlock
             ; testBlockClosure
+            ; testDefine
     method test42
         ("42" eval == 42) assert: "Constant evaluation".
     method testPlus
@@ -877,6 +961,10 @@ class Tests {}
         ("let block = (let x = 21. \{ x = x * 2 }).
           let x = 0.
           block value. block value" eval == 84) assert: "block closure."
+    method testDefine
+        (("define FourtyTwoForTestDefine
+             42
+           end" load eval: "FourtyTwoForTestDefine") == 42) assert: "define".
 end
 
 class Main {}
