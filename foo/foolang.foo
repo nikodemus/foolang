@@ -5,7 +5,7 @@ end
 
 class HostMethod { receiver selector }
     is Object
-    method invoke: arguments
+    method invoke: arguments with: context in: process
         selector sendTo: receiver with: arguments
 end
 
@@ -18,44 +18,64 @@ class InterpreterContext {
         frame::Array
     }
     is Object
+
+    class method new: size
+        self sender: False frame: (Array new: size value: "<unbound>")
+
     method at: index inFrame: frameNumber
         frameNumber > 1
-            ifTrue: { sender at: index in: frameNumber - 1 }
+            ifTrue: { sender at: index inFrame: frameNumber - 1 }
             ifFalse: { frame at: index }
 
     method put: value at: index inFrame: frameNumber
         frameNumber > 1
-            ifTrue: { sender put: value at: index in: frameNumber - 1 }
+            ifTrue: { sender put: value at: index inFrame: frameNumber - 1 }
             ifFalse: { frame put: value at: index }
 end
 
-define EmptyInterpreterContext
-    -- FIXME: wrap expressions in blocks so that we can query the AST for the frame
-    -- size before executing.
-    InterpreterContext sender: False frame: (Array new: 100)
-end
-
-class Binding { name index }
+class Binding { name index::Integer }
     is Object
     method referenceInFrame: frame
         AstLexicalRef name: name frame: frame index: index
 end
 
-class Environment { bindings parent }
+class FrameAllocation { size::Integer }
+    class method new
+        -- Debug println: "** frame allocation **".
+        self size: 0
+    method nextIndex
+        size = size + 1.
+        size
+    method index
+        size
+end
+
+class NullEnvironment {}
+end
+
+class Environment { bindings parent allocation }
     is Object
 
     class method new
         Environment
             bindings: List new
-            parent: False
+            parent: NullEnvironment
+            allocation: FrameAllocation new
+
+    method newFrame
+        Environment
+            bindings: List new
+            parent: self
+            allocation: FrameAllocation new
 
     method addVariable: name
         Environment
             bindings: (bindings copy
                            add: (Binding
                                      name: name
-                                     index: bindings size + 1))
+                                     index: allocation nextIndex))
             parent: parent
+            allocation: allocation
 
     method addVariables: names
         let newBindings = bindings copy.
@@ -63,26 +83,20 @@ class Environment { bindings parent }
                     newBindings
                         add: (Binding
                                   name: name
-                                  index: bindings size + 1) }.
+                                  index: allocation nextIndex) }.
         Environment
             bindings: newBindings
             parent: parent
+            allocation: allocation
 
     method reference: name
         self reference: name inFrame: 1
 
-    method reference: name inFrame: frame
+    method reference: name inFrame: frame::Integer
         let binding = bindings reversed -- SLOW!
                           find: { |binding| binding name == name }
                           ifNone: { return parent reference: name inFrame: frame + 1 }.
         binding referenceInFrame: frame
-
-    method size
-        bindings size
-end
-
-define EmptyEnvironment
-    Environment new
 end
 
 interface AstNode
@@ -109,6 +123,11 @@ class AstSeq { first then }
         then evalWith: context in: process
 end
 
+extend Object
+    method getMethod: selector
+        HostMethod receiver: self selector: selector
+end
+
 class AstSend {
         receiver
         selector
@@ -117,28 +136,31 @@ class AstSend {
     is AstNode
     method evalWith: context in: process
         let receiver = receiver evalWith: context in: process.
-        (self getMethod: selector for: receiver)
+        (receiver getMethod: selector)
             invoke: (arguments
                          collect: { |arg|
                                     arg evalWith: context in: process })
-
-    method getMethod: selector for: receiver
-        -- Later this will distinguish between host and interpreter methods.
-        HostMethod receiver: receiver selector: selector
-
+            with: context
+            in: process
 end
 
-class AstBindLexical { index value body }
-    is AstNode
-    method evalWith: context in: process
-        context
-            put: (value evalWith: context in: process)
-            at: index
-            inFrame: 1.
-        body evalWith: context in: process.
+define $context
+    False
+end
+
+define $process
+    False
+end
+
+class AstMethod { receiver selector }
+    method invoke: arguments with: context in: process
+        let $context = context.
+        let $process = process.
+        selector sendTo: receiver with: arguments.
 end
 
 class AstBlockClosure { context block }
+    is AstNode
     method value
         self apply: []
     method value: arg
@@ -152,27 +174,45 @@ class AstBlockClosure { context block }
           do: { |i| frame put: (arguments at: i) at: i }.
         block body
             evalWith: (InterpreterContext
-                           sender: False
+                           sender: context
                            frame: frame)
             in: False
+    method getMethod: selector
+        AstMethod receiver: self selector: selector
 end
 
-class AstBlock { argumentCount body }
+class AstBlock { body argumentCount frameSize }
     method evalWith: context in: process
         AstBlockClosure
             context: context
             block: self
     method frameSize
-        argumentCount
+        frameSize
 end
 
-class AstLexicalRef { name frame index }
+class AstBindLexical { name index value body }
+    is AstNode
+    method evalWith: context in: process
+        let object = value evalWith: context in: process.
+        context
+            put: object
+            at: index
+            inFrame: 1.
+        body evalWith: context in: process.
+end
+
+class AstLexicalRef { name
+                      frame::Integer
+                      index::Integer }
     is AstNode
     method evalWith: context in: process
         context at: index inFrame: frame
 end
 
-class AstLexicalSet { name frame index value }
+class AstLexicalSet { name
+                      frame::Integer
+                      index::Integer
+                      value }
     is AstNode
     method evalWith: context in: process
         context
@@ -256,10 +296,12 @@ end
 class SyntaxLet { name value body }
     is Syntax
     method translateIn: environment
+        let bindEnv = environment addVariable: name.
         AstBindLexical
-            index: environment size + 1
+            name: name
+            index: environment allocation index
             value: (value translateIn: environment)
-            body: (body translateIn: (environment addVariable: name))
+            body: (body translateIn: bindEnv)
     method toString
         "(let {name} = {value}. {body})"
 end
@@ -278,8 +320,8 @@ class SyntaxAssign { variable value }
         let binding = environment reference: variable name.
         AstLexicalSet
             name: variable name
-            frame: binding frame
-            index: binding index
+            frame: binding frame :: Integer
+            index: binding index :: Integer
             value: (value translateIn: environment).
     method toString
         "({variable} = {value})".
@@ -296,9 +338,11 @@ end
 class SyntaxBlock { arguments body }
     is Syntax
     method translateIn: environment
+        let bodyEnv = environment newFrame addVariables: arguments.
         AstBlock
+            body: (body translateIn: bodyEnv)
             argumentCount: arguments size
-            body: (body translateIn: (environment addVariables: arguments))
+            frameSize: arguments size + bodyEnv allocation size.
     method toString
         "\{ {body} }"
 end
@@ -775,8 +819,9 @@ extend String
     method parse
         Parser parse: self
     method eval
-        (self parse translateIn: EmptyEnvironment)
-            evalWith: EmptyInterpreterContext
+        let env = Environment new.
+        (self parse translateIn: env)
+            evalWith: (InterpreterContext new: (env allocation size))
             in: Process new.
 end
 
@@ -797,6 +842,7 @@ class Tests {}
             ; testAssign
             ; testSimpleBlock
             ; testArgBlock
+            ; testBlockClosure
     method test42
         ("42" eval == 42) assert: "Constant evaluation".
     method testPlus
@@ -827,6 +873,10 @@ class Tests {}
         ("\{ 32 + 10 } value" eval == 42) assert: "simple block".
     method testArgBlock
         ("\{ |x| x + 1 } value: 41" eval == 42) assert: "arg block".
+    method testBlockClosure
+        ("let block = (let x = 21. \{ x = x * 2 }).
+          let x = 0.
+          block value. block value" eval == 84) assert: "block closure."
 end
 
 class Main {}
