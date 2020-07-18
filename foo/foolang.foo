@@ -127,6 +127,19 @@ class AstBindLexical { index value body }
         body evalWith: context in: process.
 end
 
+class AstBlockClosure { context block }
+    method value
+        -- FIXME: how to get Process in here?
+        block body evalWith: context in: False
+end
+
+class AstBlock { body }
+    method evalWith: context in: process
+        AstBlockClosure
+            context: context
+            block: self
+end
+
 class AstLexicalRef { name frame index }
     is AstNode
     method evalWith: context in: process
@@ -181,6 +194,8 @@ class SyntaxUnary { receiver selector }
         AstSend receiver: (receiver translateIn: environment)
                 selector: selector
                 arguments: []
+    method toString
+        "({receiver} {selector name})"
 end
 
 class SyntaxBinary { receiver selector argument }
@@ -252,6 +267,15 @@ class SyntaxParens { body }
         "({body})"
 end
 
+class SyntaxBlock { body }
+    is Syntax
+    method translateIn: environment
+        AstBlock
+            body: (body translateIn: environment)
+    method toString
+        "\{ {body} }"
+end
+
 define SeqPrecedence
     1
 end
@@ -282,8 +306,10 @@ define TokenPrecedence
     tokens put: 4 at: "=".
     tokens put: 3 at: "let".
     tokens put: 3 at: "(".
+    tokens put: 3 at: "\{".
     tokens put: 2 at: ".".
     tokens put: 0 at: ")".
+    tokens put: 0 at: "}".
     tokens
 end
 
@@ -407,6 +433,24 @@ class TokenReservedSigilCloseParen { first last }
         ")"
 end
 
+class TokenReservedSigilOpenBrace { first last }
+    is ReservedToken
+
+    method parseAsPrefixWith: parser
+        let body = parser parseWithPrecedence: SeqPrecedence.
+        parser expect: "}".
+        SyntaxBlock body: body
+
+    method string
+        "\{"
+end
+
+class TokenReservedSigilCloseBrace { first last }
+    is ReservedToken
+    method string
+        "}"
+end
+
 class TokenReservedSigilEqual { first last }
     is ReservedToken
 
@@ -426,6 +470,8 @@ define ReservedTokens
     tokens put: TokenReservedSigilDot at: ".".
     tokens put: TokenReservedSigilOpenParen at: "(".
     tokens put: TokenReservedSigilCloseParen at: ")".
+    tokens put: TokenReservedSigilOpenBrace at: "\{".
+    tokens put: TokenReservedSigilCloseBrace at: "}".
     tokens put: TokenReservedSigilEqual at: "=".
     tokens
 end
@@ -554,7 +600,7 @@ class Parser { source::String
     method parseSuffixOf: prefix with: precedence
         let expr = prefix.
 
-        { -- Debug println: "expr: {expr}, precedence={precedence}, next={self nextPrecedence}".
+        { -- Debug println: "expr: {expr}, precedence={precedence}, next={self lookahead}? {self nextPrecedence}".
           precedence < self nextPrecedence }
         whileTrue: { -- Debug println: " -> go".
                      expr = self parseSuffixOf: expr }.
@@ -610,7 +656,8 @@ class Parser { source::String
         self atSpecial or: self atWhitespace
 
     method atSigil
-        (self atWord or: self atTerminating) not
+        self atEof not
+            ifTrue: { (self atWord or: self atTerminating) not }
 
     method atWhitespace
         self isAt: #isWhitespace
@@ -629,6 +676,7 @@ class Parser { source::String
             ifFalse: { block value: (source at: position) }
 
     method skipWhile: test
+        -- Debug println: "/skipWhile: {test}".
         let start = position.
         { test value: self }
             whileTrue: { self advance }.
@@ -638,6 +686,7 @@ class Parser { source::String
         self skipWhile: #atWhitespace
 
     method scanSpecial
+        -- Debug println: "/scanSpecial".
         let start = position.
         self advance.
         TokenSigil
@@ -646,18 +695,21 @@ class Parser { source::String
             in: self.
 
     method scanDecimal
+        -- Debug println: "/scanDecimal".
         TokenDecimal
             from: position
             to: (self skipWhile: #atDigit)
             in: self.
 
     method scanSigil
+        -- Debug println: "/scanSigil".
         TokenSigil
             from: position
             to: (self skipWhile: #atSigil)
             in: self.
 
     method scanWord
+        -- Debug println: "/scanWord".
         let first = position.
         self skipWhile: #atWord.
         (self atChar: ColonCharacter thenNot: ColonCharacter)
@@ -672,7 +724,8 @@ class Parser { source::String
                            in: self }
 
     method advance
-        position <= last assert: "can advance".
+        position <= last
+            ifFalse: { panic "Tried to advance beyond end: \"{source}\"" }.
         position = position + 1.
 
 end
@@ -701,6 +754,7 @@ class Tests {}
             ; testLet
             ; testParens
             ; testAssign
+            ; testSimpleBlock
     method test42
         ("42" eval == 42) assert: "Constant evaluation".
     method testPlus
@@ -727,6 +781,8 @@ class Tests {}
           (let x = 2000. x = x + 100. y = x * 2).
           x = x + 1. y + x * 2"
             eval == 4242)  assert: "assign with scope".
+    method testSimpleBlock
+        ("\{ 32 + 10 } value" eval == 42) assert: "simple block".
 end
 
 class Main {}
