@@ -147,8 +147,18 @@ fn array_put_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     if let Some(etype) = &array.etype {
         etype.send("typecheck:", std::slice::from_ref(&elt), env)?;
     }
-    let index = (args[1].as_index("Array#put:at:")? - 1) as usize;
-    array.data.borrow_mut()[index] = elt.clone();
+    let mut data = array.data.borrow_mut();
+    let index_arg = args[1].as_index("Array#put:at:")?;
+    let index = (index_arg - 1) as usize;
+    if index_arg < 1 || data.len() <= index {
+        return Unwind::error(&format!(
+            "Array#put:at: -- index for {} out of bounds: {}, should be 1-{}",
+            elt,
+            index_arg,
+            data.len()
+        ));
+    }
+    data[index] = elt.clone();
     Ok(elt)
 }
 
