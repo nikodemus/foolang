@@ -4,6 +4,7 @@ class Debug {}
 end
 
 class HostMethod { receiver selector }
+    is Object
     method invoke: arguments
         selector sendTo: receiver with: arguments
 end
@@ -12,16 +13,61 @@ class Process {}
     is Object
 end
 
-class InterpreterContext {}
+class InterpreterContext {
+        sender
+        frame::Array
+    }
     is Object
+    method at: index inFrame: frameNumber
+        frameNumber > 1
+            ifTrue: { sender at: index in: frameNumber - 1 }
+            ifFalse: { frame at: index }
+
+    method put: value at: index inFrame: frameNumber
+        frameNumber > 1
+            ifTrue: { sender put: value at: index in: frameNumber - 1 }
+            ifFalse: { frame put: value at: index }
 end
 
 define EmptyInterpreterContext
-    InterpreterContext new
+    -- FIXME: wrap expressions in blocks so that we can query the AST for the frame
+    -- size before executing.
+    InterpreterContext sender: False frame: (Array new: 100)
 end
 
-class Environment {}
+class Binding { name index }
     is Object
+    method referenceInFrame: frame
+        AstLexicalRef frame: frame index: index
+end
+
+class Environment { bindings parent }
+    is Object
+
+    class method new
+        Environment
+            bindings: List new
+            parent: False
+
+    method addVariable: name
+        Environment
+            bindings: (bindings copy
+                           add: (Binding
+                                     name: name
+                                     index: bindings size + 1))
+            parent: parent
+
+    method reference: name
+        self reference: name inFrame: 1
+
+    method reference: name inFrame: frame
+        let binding = bindings
+                          find: { |binding| binding name == name }
+                          ifNone: { return parent reference: name inFrame: frame + 1 }.
+        binding referenceInFrame: frame
+
+    method size
+        bindings size
 end
 
 define EmptyEnvironment
@@ -59,12 +105,34 @@ class AstSend {
 
 end
 
+class AstBindLexical { index value body }
+    method evalWith: context in: process
+        context
+            put: (value evalWith: context in: process)
+            at: index
+            inFrame: 1.
+        body evalWith: context in: process.
+end
+
+class AstLexicalRef { frame index }
+    method evalWith: context in: process
+        context at: index inFrame: frame
+end
+
 class SyntaxLiteral { value }
     is Object
     method translateIn: environment
         AstConstantRef value: value
     method toString
         value toString
+end
+
+class SyntaxVariable { name }
+    is Object
+    method translateIn: environment
+        environment reference: name
+    method toString
+        name
 end
 
 class SyntaxPrefix { receiver selector }
@@ -110,6 +178,27 @@ class SyntaxIs { left right }
     method translateIn: environment
         AstIs left: (left translateIn: environment)
               right: (right translateIn: environment)
+    method toString
+        "({left} is {right})"
+end
+
+class SyntaxLet { name value body }
+    is Object
+    method translateIn: environment
+        AstBindLexical
+            index: environment size + 1
+            value: (value translateIn: environment)
+            body: (body translateIn: (environment addVariable: name))
+    method toString
+        "(let {name} = {value}. {body})"
+end
+
+define SeqPrecedence
+    1
+end
+
+define SingleExpressionPrecedence
+    2 -- dot has precedence 2
 end
 
 define KeywordPrecedence
@@ -117,10 +206,6 @@ define KeywordPrecedence
 end
 
 define UnknownOperatorPrecedence
-    10
-end
-
-define IsPrecedence
     10
 end
 
@@ -134,6 +219,9 @@ define TokenPrecedence
     tokens put: 90 at: "/".
     tokens put: 80 at: "-".
     tokens put: 80 at: "+".
+    tokens put: 10 at: "is".
+    tokens put: 3 at: "let".
+    tokens put: 2 at: ".".
     tokens
 end
 
@@ -145,23 +233,30 @@ interface Token
             string: (parser source from: first to: last)
             first: first last: last
 
+    method precedence
+        Error raise: "{self string} is not valid in suffix position!"
+
+    method parseAsSuffixOf: prefix with: parser
+        Error raise: "Cannot parse {self} in suffix position!"
+
     method parseAsPrefixWith: parser
-        Error raise: "{string} is not valid in prefix position!"
+        Error raise: "Cannot parse {self} in prefix position!"
+
+    method toString
+        "#<Token {self string}>"
+end
+
+interface SuffixToken
+    is Token
 
     method precedence
         TokenPrecedence
-            at: string
+            at: self string
             ifNone: { UnknownOperatorPrecedence }
-
-    method toString
-        "#<Token {string}>"
 end
 
 class TokenDecimal { string first last }
     is Token
-
-    method precedence
-        Error raise: "{string} is not valid in suffix position!"
 
     method parseAsPrefixWith: parser
         let n = 0.
@@ -180,12 +275,79 @@ class TokenEof { position }
     method precedence
         0
 
-    method toString
-        "#<TokenEof>"
+    method string
+        "EOF"
+end
+
+interface ReservedToken
+    is SuffixToken
+    class method string: string first: first last: last
+        self first: first last: last
+end
+
+class TokenReservedWordIs { first last }
+    is ReservedToken
+
+    method parseAsSuffixOf: prefix with: parser
+        SyntaxIs
+            left: prefix
+            right: (parser parseWithPrecedence: (self precedence))
+
+    method string
+        "is"
+end
+
+class TokenReservedWordLet { first last }
+    is ReservedToken
+
+    method parseAsPrefixWith: parser
+        let name = parser parseVariableName.
+        parser expect: "=".
+        let value = (parser parseWithPrecedence: SingleExpressionPrecedence).
+        parser expect: ".".
+        SyntaxLet
+            name: name
+            value: value
+            body: (parser parseWithPrecedence: SeqPrecedence)
+
+    method string
+        "let"
+end
+
+class TokenReservedSigilDot { first last }
+    is ReservedToken
+
+    method parseAsSuffixOf: prefix with: parser
+        SyntaxSeq
+            first: prefix
+            then: (parser parseWithPrecedence: SeqPrecedence)
+
+    method string
+        "."
+end
+
+define ReservedTokens
+    let tokens = Dictionary new.
+    tokens put: TokenReservedWordIs at: "is".
+    tokens put: TokenReservedWordLet at: "let".
+    tokens put: TokenReservedSigilDot at: ".".
+    tokens
+end
+
+interface LookupToken
+    is SuffixToken
+
+    class method from: first to: last in: parser
+        let tokenString = parser source from: first to: last.
+        -- Reserved words get their own classes!
+        let tokenClass = ReservedTokens
+                             at: tokenString
+                             ifNone: { Self }.
+        tokenClass string: tokenString first: first last: last
 end
 
 class TokenSigil { string first last }
-    is Token
+    is LookupToken
 
     method parseAsPrefixWith: parser
         SyntaxPrefix
@@ -199,40 +361,20 @@ class TokenSigil { string first last }
             argument: (parser parseWithPrecedence: (self precedence))
 end
 
-class TokenReservedWordIs { first last }
-    is Token
-
-    class method string: string first: first last: last
-        self first: first last: last
-
-    method precedence
-        10
-
-    method parseAsSuffixOf: prefix with: parser
-        SyntaxIs
-            left: prefix
-            right: (parser parseWithPrecedence: IsPrecedence)
-
-    method string
-        "is"
-end
-
-define ReservedWords
-    let words = Dictionary new.
-    words put: TokenReservedWordIs at: "is".
-    words
-end
-
 class TokenWord { string first last }
-    is Token
+    is LookupToken
 
     class method from: first to: last in: parser
         let tokenString = parser source from: first to: last.
         -- Reserved words get their own classes!
-        let tokenClass = ReservedWords
+        let tokenClass = ReservedTokens
                              at: tokenString
                              ifNone: { TokenWord }.
         tokenClass string: tokenString first: first last: last
+
+    method parseAsPrefixWith: parser
+        SyntaxVariable
+            name: string
 
     method parseAsSuffixOf: prefix with: parser
            SyntaxUnary
@@ -241,7 +383,7 @@ class TokenWord { string first last }
 end
 
 class TokenKeyword { string first last }
-    is Token
+    is SuffixToken
 
     method precedence
         KeywordPrecedence
@@ -296,6 +438,17 @@ class Parser { source::String
     method parse
         self parseWithPrecedence: 0
 
+    method parseVariableName
+        let token = self nextToken.
+        (TokenWord includes: token)
+            ifFalse: { panic "Invalid variable name: {token string}" }.
+        token string
+
+    method expect: expected
+        let got = self nextToken string.
+        got == expected
+            ifFalse: { Error raise: "Expected '{expected}', got '{got}'" }.
+
     method parseWithPrecedence: precedence
         self parseSuffixOf: self parsePrefix with: precedence
 
@@ -304,8 +457,12 @@ class Parser { source::String
 
     method parseSuffixOf: prefix with: precedence
         let expr = prefix.
-        { precedence < self nextPrecedence }
-            whileTrue: { expr = self parseSuffixOf: expr }.
+
+        { -- Debug println: "expr: {expr}, precedence={precedence}, next={self nextPrecedence}".
+          precedence < self nextPrecedence }
+        whileTrue: { -- Debug println: " -> go".
+                     expr = self parseSuffixOf: expr }.
+        -- Debug println: " -> no".
         expr
 
     method parseSuffixOf: prefix
@@ -435,6 +592,7 @@ class Tests {}
             ; testUnaryMethod
             ; testKeywordMethod
             ; testIs
+            ; testLet
     method test42
         ("42" eval == 42) assert: "Constant evaluation".
     method testPlus
@@ -450,6 +608,9 @@ class Tests {}
     method testIs
         ("1 is 1" eval == True) assert: "Builtin 'is' --> True".
         ("1 is 2" eval == False) assert: "Builtin 'is' --> False".
+    method testLet
+        Debug println: "let x = 1. x + x" parse.
+        ("let x = 1. x + x" eval == 2) assert: "Let binding".
 end
 
 class Main {}
