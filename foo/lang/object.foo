@@ -29,4 +29,16 @@ interface Object
 
     method displayOn: stream
         self printOn: stream
+
+    method checkEqual: other
+        (Self includes: other)
+            ifTrue: { return self checkEqualInternal: other }.
+        self mismatch: other
+
+    method checkEqualInternal: other
+        self == other
+            ifFalse: { self mismatch: other }
+
+    method mismatch: other
+        Error raise: "Mismatch: '{self}' != {other}"
 end

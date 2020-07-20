@@ -17,6 +17,9 @@ interface Ordered
             ifFalse: { return False }.
         True
 
+    method isEmpty
+        self size is 0
+
     method copy
         let copy = Self of: (self elementType) new: self size.
         1 to: self size
@@ -39,6 +42,14 @@ interface Ordered
           do: { |i|
                 new put: (block value: (self at: i)) at: i }.
         new.
+
+    method split: byBlock do: block
+        let cursor = 1.
+        1 to: self size
+          do: { |index|
+                (byBlock value: (self at: index))
+                    ifTrue: { block value: (self from: cursor to: index).
+                              cursor = index + 1 } }
 
     method do: block
         1 to: self size

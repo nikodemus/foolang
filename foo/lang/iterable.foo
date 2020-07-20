@@ -91,10 +91,10 @@ interface Iterable
         self iterator do: block.
         self
 
-    method do: block with: iterable
+    method with: iterable do: block
         self do: block with: iterable iterator ifExhausted: { return self }
 
-    method do: block with: iterable ifExhausted: exhaustedBlock
+    method with: iterable do: block ifExhausted: exhaustedBlock
         self iterator do: block with: iterable iterator ifExhausted: exhaustedBlock.
         self
 

@@ -190,13 +190,6 @@ interface Collection
                    do: { |i| result put: (tailHandler value: i) at: i }.
         result
 
-    method with: sequence do: block
-        let size = self checkSize: sequence.
-        1 to: size
-          do: { |i|
-                block value: (self at: i) value: (sequence at: i) }.
-        self.
-
     method with: sequence inject: value into: block
         let result = value.
         self with: sequence
