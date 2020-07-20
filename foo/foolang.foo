@@ -123,6 +123,9 @@ class Environment { bindings parent allocation globals }
         binding referenceInFrame: frame!
 end
 
+interface AstObject
+end
+
 interface AstNode
     is Object
     method debug
@@ -149,23 +152,23 @@ class AstSeq { first then }
         then evalWith: context in: process!
 end
 
-extend Object
-    method getMethod: selector
-        HostMethod receiver: self selector: selector!
-end
-
 class AstSend {
         receiver
         selector
         arguments
     }
     is AstNode
+
+    method methodFor: object
+        (AstObject includes: object)
+            ifTrue: { object getMethod: selector }
+            ifFalse: { HostMethod receiver: object selector: selector }!
+
     method evalWith: context in: process
-        let receiver = receiver evalWith: context in: process.
-        (receiver getMethod: selector)
+        let objMethod = self methodFor: (receiver evalWith: context in: process).
+        objMethod
             invoke: (arguments
-                         collect: { |arg|
-                                    arg evalWith: context in: process })
+                         collect: { |arg| arg evalWith: context in: process })
             with: context
             in: process!
 end
@@ -201,6 +204,23 @@ class AstDefine { name body frameSize }
     method _eval
         body evalWith: (InterpreterContext new: frameSize)
              in: Process new!
+end
+
+class AstClass { name slots }
+    is AstNode
+    method defineIn: environment
+        environment globals
+            put: (AstGlobal
+                      name: name
+                      value: self _eval)
+            at: name!
+    -- Class methods should be translated in a specific environment
+    -- that contains the instance variables.
+    method _eval
+        Class
+            new: name
+            slots: (Array from: slots)
+            interfaces: ["Object"]!
 end
 
 class AstBlockClosure { context block }
@@ -274,6 +294,8 @@ interface Syntax
             in: Process new!
     method load
         Environment new load: (self translateIn: Environment new)!
+    method debug
+        self toString!
 end
 
 class SyntaxLiteral { value }
@@ -324,6 +346,8 @@ class SyntaxUnary { receiver selector }
         selector checkEqual: other selector!
     method toString
         "{receiver} {selector name}"!
+    method debug
+        "({receiver debug} {selector name})"!
 end
 
 class SyntaxBinary { receiver selector argument }
@@ -338,6 +362,8 @@ class SyntaxBinary { receiver selector argument }
         argument checkEqual: other argument!
     method toString
         "{receiver} {selector name} {argument}"!
+    method debug
+        "({receiver debug} {selector name} {argument debug})"!
 end
 
 class SyntaxKeyword { receiver selector arguments }
@@ -362,6 +388,13 @@ class SyntaxKeyword { receiver selector arguments }
                        do: { |part arg|
                              string print: "{part} {arg}" }.
         string content!
+    method debug
+        let string = StringOutput new: "({receiver debug} ".
+        selector parts with: arguments
+                       do: { |part arg|
+                             string print: "{part} {arg debug}" }.
+        string print: ")".
+        string content!
 end
 
 class SyntaxIs { left right }
@@ -374,6 +407,8 @@ class SyntaxIs { left right }
         right checkEqual: other right!
     method toString
         "{left} is {right}"!
+    method debug
+        "({left debug} is {right debug})"!
 end
 
 class SyntaxLet { name value body }
@@ -391,6 +426,8 @@ class SyntaxLet { name value body }
         body checkEqual: other body!
     method toString
         "let {name} = {value}. {body}"!
+    method debug
+        "(let {name} = {value debug}. {body debug})"!
 end
 
 class SyntaxVariable { name }
@@ -400,6 +437,8 @@ class SyntaxVariable { name }
     method isEquivalent: other
         name == other name!
     method toString
+        name!
+    method debug
         name!
 end
 
@@ -464,6 +503,23 @@ class SyntaxDefine { name body }
         "define {name} {body}!"!
 end
 
+class SyntaxClass { name slots }
+    is Syntax
+    method translateIn: environment
+        AstClass
+            name: name
+            slots: slots!
+    method checkEqualInternal: other
+        name checkEqual: other name.
+        slots checkEqual: other slots!
+    method toString
+        let slotDesc = StringOutput new: "\{".
+        slots ifNotEmpty: { slotDesc print: " " }.
+        slots do: { |name| slotDesc print: "{name} " }.
+        slotDesc print: "}".
+        "class {name} {slotDesc content} end"!
+end
+
 define SeqPrecedence
     1!
 
@@ -477,6 +533,9 @@ define UnknownOperatorPrecedence
     10!
 
 define PrefixPrecedence
+    1000!
+
+define UnaryPrecedence
     1000!
 
 define TokenPrecedence
@@ -495,7 +554,7 @@ define TokenPrecedence
     tokens put: 0 at: ")".
     tokens put: 0 at: "}".
     tokens put: 0 at: "define".
-    tokens put: 0 at: "end".
+    tokens put: 0 at: "class".
     tokens!
 
 interface Token
@@ -674,6 +733,24 @@ class TokenReservedSigilEqual { first last }
         "="!
 end
 
+class TokenReservedWordClass { first last }
+    is ReservedToken
+
+    method parseAsPrefixWith: parser
+        let name = parser parseVariableName.
+        parser expect: "\{".
+        let slots = List new.
+        { TokenWord includes: parser lookahead }
+            whileTrue: { slots add: parser parseVariableName }.
+        parser expect: "}".
+        parser expect: "end".
+        SyntaxClass
+            name: name
+            slots: slots!
+    method string
+        "class"!
+end
+
 define ReservedTokens
     let tokens = Dictionary new.
     tokens put: TokenReservedSigilCloseBrace at: "}".
@@ -682,6 +759,7 @@ define ReservedTokens
     tokens put: TokenReservedSigilEqual at: "=".
     tokens put: TokenReservedSigilOpenBrace at: "\{".
     tokens put: TokenReservedSigilOpenParen at: "(".
+    tokens put: TokenReservedWordClass at: "class".
     tokens put: TokenReservedWordDefine at: "define".
     tokens put: TokenReservedWordIs at: "is".
     tokens put: TokenReservedWordLet at: "let".
@@ -717,6 +795,9 @@ end
 class TokenWord { string first last }
     is LookupToken
 
+    method precedence
+        UnaryPrecedence!
+
     class method from: first to: last in: parser
         let tokenString = parser source from: first to: last.
         -- Reserved words get their own classes!
@@ -726,6 +807,7 @@ class TokenWord { string first last }
         tokenClass string: tokenString first: first last: last!
 
     method parseAsPrefixWith: parser
+
         SyntaxVariable
             name: string!
 
@@ -797,7 +879,8 @@ class Parser { source::String
     method expect: expected
         let got = self nextToken string.
         got == expected
-            ifFalse: { Error raise: "Expected '{expected}', got '{got}'" }!
+            ifFalse: { Error raise: "Self-hosted parser expected '{expected}', got '{got}'
+Context: {source}" }!
 
     method when: test then: action
         self lookahead string == test
@@ -960,12 +1043,15 @@ class Tests {}
             ; testKeywordMethod
             ; testIs
             ; testLet
+            ; testPrecedence2
             ; testParens
             ; testAssign
             ; testSimpleBlock
             ; testArgBlock
             ; testBlockClosure
-            ; testDefine!
+            ; testDefine
+            ; testSimpleClass
+            !
     method parseSyntax: string
         -- Check Syntax print/parse consistency.
         let syntax = Parser parse: string.
@@ -1007,6 +1093,8 @@ from: '{expr}'" }!
     method testLet
         self eval: "let x = 1. x + x"
              expect: 2!
+    method testPrecedence2
+        self eval: "let x = -40. let y = -2. x abs + y abs" expect: 42!
     method testParens
         self eval: "(1 + 1) * 2"
              expect: 4!
@@ -1033,6 +1121,13 @@ from: '{expr}'" }!
         self load: "define FourtyTwoForTestDefine
                        42!"
              eval: "FourtyTwoForTestDefine"
+             expect: 42!
+    method testSimpleClass
+        self load: "class MyClass \{ x } end"
+             eval: "let c = MyClass x: 42. c x"
+             expect: 42.
+         self load: "class MyClass \{ x y } end"
+             eval: "let c = MyClass x: 40 y: 2. c x + c y"
              expect: 42!
 end
 

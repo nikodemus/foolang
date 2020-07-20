@@ -1,6 +1,7 @@
 pub mod array;
 pub mod boolean;
 pub mod byte_array;
+pub mod class;
 pub mod clock;
 pub mod closure;
 pub mod compiler;

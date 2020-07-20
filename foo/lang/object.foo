@@ -38,5 +38,9 @@ interface Object
             ifFalse: { self mismatch: other }!
 
     method mismatch: other
-        Error raise: "Mismatch: '{self}' != {other}"!
+        Error raise: "Mismatch: {self} != {other}"!
+end
+
+extend Class
+    is Object
 end
