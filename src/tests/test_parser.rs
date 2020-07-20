@@ -123,7 +123,7 @@ fn test_sequence4() {
 #[test]
 fn test_define1() {
     assert_eq!(
-        parse_def("define m 1. end"),
+        parse_def("define m 1!"),
         Ok(Def::DefineDef(DefineDef {
             source_location: SourceLocation::span(&(7..8)),
             name: "m".to_string(),
@@ -135,7 +135,7 @@ fn test_define1() {
 #[test]
 fn test_define2() {
     assert_eq!(
-        parse_def("define m 1 m. end"),
+        parse_def("define m 1 m!"),
         Ok(Def::DefineDef(DefineDef {
             source_location: SourceLocation::span(&(7..8)),
             name: "m".to_string(),
@@ -227,7 +227,7 @@ fn test_parse_class1() {
 fn parse_method1() {
     let mut class = class(0..5, "Foo", vec![]);
     class.add_method(MethodKind::Instance, method(13..19, "bar", vec![], int(24..26, 42)));
-    assert_eq!(parse_def("class Foo {} method bar 42 . end"), Ok(class));
+    assert_eq!(parse_def("class Foo {} method bar 42! end"), Ok(class));
 }
 
 #[test]
@@ -237,19 +237,19 @@ fn parse_method2() {
         MethodKind::Instance,
         method(90..96, "foo", vec![], unary(130..133, "bar", var(125..129, "self"))),
     );
-    class.add_method(MethodKind::Instance, method(240..246, "bar", vec![], int(275..277, 42)));
+    class.add_method(MethodKind::Instance, method(241..247, "bar", vec![], int(276..278, 42)));
     assert_eq!(
         parse_def(
             "
                  class Foo {}
                      -- this is a foo
                      method foo
-                        self bar
+                        self bar!
                      ---
                      this is a bar
                      ---
                      method bar
-                        42
+                        42!
                  end"
         ),
         Ok(class)
@@ -269,9 +269,9 @@ fn parse_method3() {
             "
                  class Foo {}
                      method foo
-                        self bar.
+                        self bar!
                      method bar
-                        42.
+                        42!
                  end"
         ),
         Ok(class)
@@ -374,7 +374,7 @@ fn test_newlines1() {
         "class Point { x y }
             method add: point
                Point x: x + point x
-                     y: y + point y
+                     y: y + point y!
          end"
     )
     .is_ok());
@@ -392,7 +392,7 @@ fn test_newlines2() {
 
            method add: point
               Point x: x + point x
-                    y: y + point y
+                    y: y + point y!
          end"
     )
     .is_ok());
@@ -557,7 +557,7 @@ fn test_parse_import2() {
 fn test_parse_extend1() {
     let mut ext = ExtensionDef::new(SourceLocation::span(&(0..6)), "Foo");
     ext.add_method(MethodKind::Instance, method(11..17, "bar", vec![], int(22..24, 42)));
-    assert_eq!(parse_def("extend Foo method bar 42 end"), Ok(Def::ExtensionDef(ext)));
+    assert_eq!(parse_def("extend Foo method bar 42! end"), Ok(Def::ExtensionDef(ext)));
 }
 
 #[test]
@@ -574,10 +574,10 @@ fn test_parse_interface1() {
             "
 interface Foo
     method bar
-        42.
+        42!
     required method quux
     method zot
-        123.
+        123!
 end"
         ),
         Ok(Def::InterfaceDef(interface))

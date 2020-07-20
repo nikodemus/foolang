@@ -26,5 +26,5 @@ class Main {}
                   ifFalse: { n = n + 1 }
       }.
       win close.
-      system output println: "Done!"
+      system output println: "Done!"!
 end

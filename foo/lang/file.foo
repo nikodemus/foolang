@@ -1,12 +1,12 @@
 extend File
     method displayOn: stream
-        stream print: self toString
+        stream print: self toString!
     method open: block
-        block with: self open
+        block with: self open!
     method create: block
-        block with: self create
+        block with: self create!
     method createOrOpen: block
-        block with: self createOrOpen
+        block with: self createOrOpen!
     class method runTests: assert in: system
         let file = system currentDirectory file.
         assert false: { file isAppend }
@@ -52,7 +52,5 @@ extend File
         assert false: { truncatefile isRead }
                testing: "File#truncateExisting does not set read".
         assert false: { truncatefile isWrite }
-               testing: "File#forWrite does not set write"
-
-
+               testing: "File#forWrite does not set write"!
 end

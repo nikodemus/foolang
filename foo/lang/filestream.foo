@@ -1,9 +1,9 @@
 extend FileStream
     method displayOn: stream
-        stream print: self toString
+        stream print: self toString!
 
     method isOpen
-        self isClosed not
+        self isClosed not!
 
     method readBytes
         let n = self size - self offset.
@@ -11,13 +11,13 @@ extend FileStream
         let got = self tryRead: n bytesInto: bytes at: 1.
         got == n
             ifFalse: { panic "Could not #readBytes from {self} upto end of file" }.
-        bytes
+        bytes!
 
     method read: n bytesInto: buffer at: index
         let got = self tryRead: n bytesInto: buffer at: index.
         got == n
             ifTrue: { return n }
-            ifFalse: { panic "Could not read {n} bytes from {self}." }
+            ifFalse: { panic "Could not read {n} bytes from {self}." }!
 
     method tryRead: n bytesInto: buffer at: index
         let total = 0.
@@ -31,13 +31,13 @@ extend FileStream
                          total = total + did.
                          n = n - did.
                          index = index + did }.
-        total
+        total!
 
     method write: n bytesFrom: buffer at: index
         let did = self tryWrite: n bytesFrom: buffer at: index.
         did == n
             ifTrue: { return n }
-            ifFalse: { panic "Could not write {n} bytes to {self}." }
+            ifFalse: { panic "Could not write {n} bytes to {self}." }!
 
     method tryWrite: n bytesFrom: buffer at: index
         let total = 0.
@@ -51,14 +51,14 @@ extend FileStream
                          total = total + did.
                          n = n - did.
                          index = index + did }.
-        total
+        total!
 
     method size
         let pos = self offset.
-        { self offsetFromEnd: 0 } finally: { self offset: pos }
+        { self offsetFromEnd: 0 } finally: { self offset: pos }!
 
     method writeBytes: bytes
-        self write: bytes size bytesFrom: bytes at: 1
+        self write: bytes size bytesFrom: bytes at: 1!
 end
 
 class TestFileStream { assert dir foopath foodata }
@@ -72,7 +72,7 @@ class TestFileStream { assert dir foopath foodata }
                            open: { |f| f readBytes } }
                equals: [13, 13, 10, 10] bytes
                testing: "FileStream#readBytes".
-        newpath deleteFile
+        newpath deleteFile!
 
     method testReadString
         assert true: { foodata is (foopath forRead open readString) }
@@ -80,7 +80,7 @@ class TestFileStream { assert dir foopath foodata }
         assert true: { let s = foopath forRead open.
                        s close.
                        { s readString. False } onPanic: { |p| True } }
-               testing: "FileStream#readString (closed)".
+               testing: "FileStream#readString (closed)"!
 
     method testResize
         let newpath = dir path: "TestFileStream-testResize.tmp".
@@ -92,7 +92,7 @@ class TestFileStream { assert dir foopath foodata }
                                    [ f size, f resize: 4. f size, f readString ]
                                        == [ 38, 4, "This" ] } }
                testing: "FileStream#resize:".
-        newpath deleteFile
+        newpath deleteFile!
 
     method testTryReadBytesIntoAt
         let newpath = dir path: "TestFileStream-testTryReadBytesIntoAt.tmp".
@@ -116,7 +116,7 @@ class TestFileStream { assert dir foopath foodata }
         assert that: { [13, 10, 13, 10, 10, 106] bytes }
                equals: buf
                testing: "FileStream#tryRead:bytesInto:at: (short data)".
-        newpath deleteFile
+        newpath deleteFile!
 
     method testTryWriteBytesFromAt
         let newpath = dir path: "TestFileStream-testTryWriteBytesFromAt.tmp".
@@ -139,19 +139,19 @@ class TestFileStream { assert dir foopath foodata }
         assert that: { [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 0] bytes }
                equals: data
                testing: "FileStream#tryWrite:bytesFrom:at: (wrote data)".
-        newpath deleteFile
+        newpath deleteFile!
 
     method testIsOpen
         assert true: { foopath forRead open: { |f| f isOpen } }
                testing: "FileStream#isOpen (true)".
         assert false: { (foopath forRead open: { |f| f }) isOpen }
-               testing: "FileStream#isOpen (false)"
+               testing: "FileStream#isOpen (false)"!
 
     method testIsClosed
         assert false: { foopath forRead open: { |f| f isClosed } }
                testing: "FileStream#isClosed (false)".
         assert true: { (foopath forRead open: { |f| f }) isClosed }
-               testing: "FileStream#isClosed (true)"
+               testing: "FileStream#isClosed (true)"!
 
     method testOffset
         assert that: { foopath forRead open: { |f| f offset } } is: 0
@@ -159,19 +159,19 @@ class TestFileStream { assert dir foopath foodata }
         assert that: { foopath forRead
                            open:  { |f| f readString. f offset } }
                is: 45
-               testing: "FileStream#offset (45)"
+               testing: "FileStream#offset (45)"!
 
     method testOffsetSet
         assert that: { foopath forRead
                            open: { |f| f offset: 5. f readString } }
                is: "file just says 'foo' for test purposes.\n"
-               testing: "FileStream#offset:"
+               testing: "FileStream#offset:"!
 
     method testOffsetFromEnd
         assert that: { foopath forRead
                            open: { |f| f offsetFromEnd: -10. f readString } }
                is: "purposes.\n"
-               testing: "FileStream#offsetFromEnd:"
+               testing: "FileStream#offsetFromEnd:"!
 
     method testSize
         assert that: { foopath forRead
@@ -184,7 +184,7 @@ class TestFileStream { assert dir foopath foodata }
         assert true: { let res = foopath forRead
                                     open: { |f| [f size, f offset] }.
                        res == [45, 0] }
-               testing: "FileStream#size"
+               testing: "FileStream#size"!
 
     method testWriteString
         let newpath = dir path: "TestFileStream-testWriteString.tmp".
@@ -197,7 +197,7 @@ class TestFileStream { assert dir foopath foodata }
         assert that: { newpath readString }
                is: newdata
                testing: "FileStream#writeString: (post)".
-        newpath deleteFile
+        newpath deleteFile!
 
     class method runTests: assert in: system
         let tests = self assert: assert
@@ -214,6 +214,6 @@ class TestFileStream { assert dir foopath foodata }
         tests testTryReadBytesIntoAt.
         tests testTryWriteBytesFromAt.
         tests testSize.
-        tests testWriteString
+        tests testWriteString!
 
 end

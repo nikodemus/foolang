@@ -4,53 +4,53 @@ extend Closure
     is Object
 
     method displayOn: stream
-        stream print: self toString
+        stream print: self toString!
 
     method whileTrue
-        { self value } whileTrue: {}.
+        { self value } whileTrue: {}!
 
     method whileFalse
-        { self value } whileFalse: {}
+        { self value } whileFalse: {}!
 
     method whileFalse: bodyBlock
-        { self value not } whileTrue: bodyBlock
+        { self value not } whileTrue: bodyBlock!
 
     method loop
-        { True } whileTrue: self
+        { True } whileTrue: self!
 
     method with: value
         -- Deserves a better verb than close, should probably
         -- steal python's __enter__ and __exit__ style names.
         -- and protocol.
-        { self value: value } finally: { value close }
+        { self value: value } finally: { value close }!
 
     method ascending
-        { |a b| (self value: a) < (self value: b) }
+        { |a b| (self value: a) < (self value: b) }!
 
     method descending
-        { |a b| (self value: a) > (self value: b) }
+        { |a b| (self value: a) > (self value: b) }!
 
     method on: condition do: block
-        condition withHandler: block do: self
+        condition withHandler: block do: self!
 end
 
 -- For testing Closure#with:
 class _Closable { closed }
     method close
-        closed = True
+        closed = True!
 end
 
 class TestSelfRefInClosure { cookie }
     class method test
-        (self cookie: 132132132) test
+        (self cookie: 132132132) test!
     method test
-        { self cookie is cookie } value
+        { self cookie is cookie } value!
 end
 
 class TestClosure { assert }
 
     class method runTests: assert
-        (self assert: assert) runTests
+        (self assert: assert) runTests!
 
     method runTests
         self
@@ -63,27 +63,28 @@ class TestClosure { assert }
             ; testAscending
             ; testDescending
             ; testApply
-            ; testSelfRefInClosure
+            ; testSelfRefInClosure.
+        self!
 
     method testSelfRefInClosure
         assert true: { TestSelfRefInClosure test }
-               testing: "reference to self inside closure".
+               testing: "reference to self inside closure"!
 
     method testApplication
         assert true: { 1 == { 1 } value }
-               testing: "Closure#value".
+               testing: "Closure#value"!
 
     method testOnPanic
         assert true: { { panic "Foo". False }
                          onPanic: { |p| True } }
-        testing: "Closure#onPanic".
+               testing: "Closure#onPanic"!
 
     method testFinally
         assert true: { let flag = False.
                        { { panic "Foo". False }
                              finally: { flag = True } }
                        onPanic: { |p| flag } }
-                testing: "Closure#finally"
+               testing: "Closure#finally"!
 
     method testWhileTrue
         let a = 0.
@@ -93,7 +94,7 @@ class TestClosure { assert }
         let b = 0.
         assert that: { { b = b + 1. b < 10 } whileTrue. b }
                is: 10
-               testing: "Closure#whileTrue".
+               testing: "Closure#whileTrue"!
 
     method testWhileFalse
         let a = 0.
@@ -103,17 +104,17 @@ class TestClosure { assert }
         let b = 0.
         assert that: { { b = b + 1. b == 10 } whileFalse. b }
                is: 10
-               testing: "Closure#whileFalse".
+               testing: "Closure#whileFalse"!
 
     method auxTextLoop
         let a = 0.
-        { a = a + 1. a == 10 ifTrue: { return a } } loop
+        { a = a + 1. a == 10 ifTrue: { return a } } loop!
 
     method testLoop
         let a = 0.
         assert that: { auxTestLoop }
                is: 10
-               testing: "Closure#loop"
+               testing: "Closure#loop"!
 
     method testWith
         assert false: { (_Closable closed: False) closed }
@@ -128,23 +129,23 @@ class TestClosure { assert }
                                      onPanic: { |p| 104 }.
                        [obj closed, res] }
                equals: [True, 104]
-               testing: "Closure#with: (unwind)".
+               testing: "Closure#with: (unwind)"!
 
     method testAscending
         assert that: { ["a", "aaaa", "aa", "", "aaa"]
                            sort: { |array| array size } ascending }
                equals: ["", "a", "aa", "aaa", "aaaa"]
-               testing: "Closure#ascending".
+               testing: "Closure#ascending"!
 
     method testDescending
         assert that: { ["a", "aaaa", "aa", "", "aaa"]
                            sort: { |array| array size } descending }
                equals: ["aaaa", "aaa", "aa", "a", ""]
-               testing: "Closure#descending".
+               testing: "Closure#descending"!
 
     method testApply
         assert that: { { |x y| x + y } apply: [1, 2] }
                equals: 3
-               testing: "Closure#apply:"
+               testing: "Closure#apply:"!
 
 end

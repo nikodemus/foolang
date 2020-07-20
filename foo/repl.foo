@@ -8,7 +8,7 @@ class REPL {
     }
 
     class method runIn: system
-        (self new: system) run
+        (self new: system) run!
 
     class method new: system
         let compiler = Compiler new.
@@ -17,23 +17,23 @@ class REPL {
              _output: system output
              _compiler: compiler
              _atEof: False
-             _value: False
+             _value: False!
 
     method run
         _output println: "Foolang 0.0.0".
-        { _atEof } whileFalse: { self readEvalPrint }
+        { _atEof } whileFalse: { self readEvalPrint }!
 
     method readEvalPrint
         {
             -- Cascade just for fun.
             self; prompt; read; eval; print
         }
-            onPanic: { |p| p displayOn: _output }
+            onPanic: { |p| p displayOn: _output }!
 
     method prompt
         _output print: "> ".
         _output flush.
-        self
+        self!
 
     method read
         let source = "".
@@ -44,25 +44,25 @@ class REPL {
                 source = source append: line newline.
                 self _tryParse: source
             }
-        } whileFalse
+        } whileFalse!
 
     method eval
-        _atEof ifFalse: { _value = _compiler evaluate }
+        _atEof ifFalse: { _value = _compiler evaluate }!
 
     method print
         _atEof ifFalse: {
             _output display: _value.
             _output newline.
             _output flush
-        }
+        }!
 
     method _tryParse: source
         _compiler parse: source onEof: { |_err| return False }.
-        True
+        True!
 
 end
 
 class Main {}
     class method run: command in: system
-        REPL runIn: system
+        REPL runIn: system!
 end

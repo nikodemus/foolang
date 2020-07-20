@@ -5,60 +5,60 @@ interface Number
     is Object
 
     class method default
-        0
+        0!
 
     method == right -> Boolean
-        self is right
+        self is right!
 
     method isEquivalent: right
-        self is right
+        self is right!
 
     method broadcast: block to: collection
-        collection collect: { |x| block value: x value: self }
+        collection collect: { |x| block value: x value: self }!
 
     method square
-        self * self
+        self * self!
 
     method + right
-        right addNumber: self
+        right addNumber: self!
     method - right
-        right subNumber: self
+        right subNumber: self!
     method * right
-        right mulNumber: self
+        right mulNumber: self!
     method / right
-        right divNumber: self
+        right divNumber: self!
 
     method < right
-        right ltNumber: self
+        right ltNumber: self!
     method > right
-        right gtNumber: self
+        right gtNumber: self!
     method <= right
-        right lteNumber: self
+        right lteNumber: self!
     method >= right
-        right gteNumber: self
+        right gteNumber: self!
 
     -- FIXME: Should support floating point exponents for floats at least
     method ^ power::Integer
         let result = 1.
         power times: { result = result * self }.
-        result
+        result!
 
     method abs
         self < 0.0
             ifTrue: { -self }
-            ifFalse: { self }
+            ifFalse: { self }!
 
     method max: other
         self < other
             ifTrue: { other }
-            ifFalse: { self }
+            ifFalse: { self }!
 
     method min: other
         self > other
             ifTrue: { other }
-            ifFalse: { self }
+            ifFalse: { self }!
 
     method to: other by: step
-       Interval from: self to: other by: step
+       Interval from: self to: other by: step!
 
 end

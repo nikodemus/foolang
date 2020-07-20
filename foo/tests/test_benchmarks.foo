@@ -7,14 +7,14 @@ class Benchmarks { benchmarks output clock }
                            Benchmark ackermann: full,
                            Benchmark fibonacci: full ]
             output: output
-            clock: clock
+            clock: clock!
 
     method run
         benchmarks
             do: { |benchmark|
                   benchmark
                       ; runWith: clock
-                      ; reportTo: output }
+                      ; reportTo: output }!
 end
 
 class Benchmark { name block userTime systemTime realTime }
@@ -24,8 +24,7 @@ class Benchmark { name block userTime systemTime realTime }
              block: block
              userTime: False
              systemTime: False
-             realTime: False
-
+             realTime: False!
 
     method runWith: clock
         let t0 = clock time.
@@ -35,7 +34,7 @@ class Benchmark { name block userTime systemTime realTime }
         let delta = (t2 - t1) - (t1 - t0).
         userTime = delta user.
         systemTime = delta system.
-        realTime = delta real
+        realTime = delta real!
 
     method reportTo: output
         output
@@ -46,37 +45,37 @@ class Benchmark { name block userTime systemTime realTime }
             ; print: systemTime toString
             ; print: ", "
             ; print: realTime toString
-            ; newline
+            ; newline!
 
     class method sumFloats: full
         let n = full ifTrue: { 150_000 } ifFalse: { 150 }.
         let floats = List new.
         1 to: n do: { |x| floats add: x asFloat }.
         Benchmark new: "SumFloats"
-            is: { floats inject: 0.0 into: { |sum each | sum + each } }
+            is: { floats inject: 0.0 into: { |sum each | sum + each } }!
 
     class method factorial: full
         Benchmark new: "Factorial"
                   is: { let res = 0.
                         let n = full ifTrue: { 2000 } ifFalse: { 2 }.
                         n times: { res = Factorial of: 20 }.
-                        res }
+                        res }!
 
     class method emptyLoop: full
         Benchmark new: "EmptyLoop"
                   is: { let n = full ifTrue: { 600_000 } ifFalse: { 600 }.
-                        n times: {} }
+                        n times: {} }!
 
     class method ackermann: full
         Benchmark new: "Ackermann"
                   is: { let n = full ifTrue: { 50 } ifFalse: { 1 }.
-                        n times: { Ackermann m: 3 n: 2 } }
+                        n times: { Ackermann m: 3 n: 2 } }!
 
     class method fibonacci: full
         Benchmark new: "Fibonacci" is: {
             let n = full ifTrue: { 21 } ifFalse: { 5 }.
             Fibonacci of: n
-        }
+        }!
 
 end
 
@@ -85,7 +84,7 @@ class Fibonacci {}
     class method of: n
         n < 2
             ifTrue: { return 1 }.
-        (Fibonacci of: n - 1) + (Fibonacci of: n - 2)
+        (Fibonacci of: n - 1) + (Fibonacci of: n - 2)!
 end
 
 class Factorial {}
@@ -93,7 +92,7 @@ class Factorial {}
     class method of: n
         n < 2
             ifTrue: { return n }.
-        n * (Factorial of: n - 1)
+        n * (Factorial of: n - 1)!
 
 end
 
@@ -104,7 +103,7 @@ class Ackermann {}
             ifTrue: { return n + 1 }.
         n == 0
             ifTrue: { return Ackermann m: m - 1 n: 1 }.
-        Ackermann m: m - 1 n: (Ackermann m: m n: n - 1)
+        Ackermann m: m - 1 n: (Ackermann m: m n: n - 1)!
 
 end
 
@@ -114,5 +113,5 @@ class Main {}
         let benchmarks = Benchmarks output: system output
                                     clock: system clock
                                     full: False.
-        benchmarks run
+        benchmarks run!
 end

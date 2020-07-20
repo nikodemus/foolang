@@ -10,8 +10,8 @@ end
 
 class Main {}
     class method test: x::I
-        True
+        True!
     class method run: cmd in: system
         system output println: "YesI: {self test: YesI new}".
-        system output println: "NotI: {self test: NotI new}"
+        system output println: "NotI: {self test: NotI new}"!
 end

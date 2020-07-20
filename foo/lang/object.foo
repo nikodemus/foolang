@@ -1,5 +1,3 @@
-import .output.Output
-
 -- Should this be "Standard" or "StandardObject" instead?
 
 -- Should be able to specify non-inherited methods for
@@ -8,37 +6,37 @@ interface Object
     class method default
         self is Object
             ifTrue: { False }
-            ifFalse: { Error raise: "No default value for {self}" }
+            ifFalse: { Error raise: "No default value for {self}" }!
 
     method isEquivalent: other
-        self is other
+        self is other!
 
     method == other -> Boolean
         (Self includes: other)
             ifTrue: { self isEquivalent: other }
-            ifFalse: { False }
+            ifFalse: { False }!
 
     class method printOn: stream
-        stream print: self toString
+        stream print: self toString!
 
     class method displayOn: stream
-        self printOn: stream
+        self printOn: stream!
 
     method printOn: stream
-        stream print: self toString
+        stream print: self toString!
 
     method displayOn: stream
-        self printOn: stream
+        self printOn: stream!
 
     method checkEqual: other
         (Self includes: other)
             ifTrue: { return self checkEqualInternal: other }.
-        self mismatch: other
+        self mismatch: other!
 
     method checkEqualInternal: other
         self == other
-            ifFalse: { self mismatch: other }
+            ifFalse: { self mismatch: other }!
 
     method mismatch: other
-        Error raise: "Mismatch: '{self}' != {other}"
+        Error raise: "Mismatch: '{self}' != {other}"!
 end

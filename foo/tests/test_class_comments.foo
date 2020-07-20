@@ -21,13 +21,13 @@ is Object
 block
 ---
     method isEquivalent: other
-        other getName == self getName
+        other getName == self getName!
 -- comment
 ---
 block
 ---
     method getName
-        self name
+        self name!
 -- comment
 ---
 block
@@ -38,5 +38,5 @@ class Main {}
     class method run: cmd in: system
         (LotsOfComments name: "test") == (LotsOfComments name: "test")
             ifTrue: { system exit }
-            ifFalse: { system abort }
+            ifFalse: { system abort }!
 end

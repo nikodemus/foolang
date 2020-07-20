@@ -2,5 +2,5 @@ import .errorLocationTests.MethodArgTypeError
 
 class Main {}
     class method run: cmd in: sys
-        MethodArgTypeError oops
+        MethodArgTypeError oops!
 end

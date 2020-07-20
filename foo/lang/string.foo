@@ -5,13 +5,13 @@ extend String
     is Ordered
 
     class method default
-        ""
+        ""!
     method append: other
-       other appendToString: self
+       other appendToString: self!
     method newline
-        "\n" appendToString: self
+        "\n" appendToString: self!
     method printOn: stream
-        stream writeString: self
+        stream writeString: self!
     method _escapeOn: stream
         [["\"", "\\\""],
          ["\n", "\\n"],
@@ -21,19 +21,19 @@ extend String
            do: { |esc|
                  (self isEquivalent: esc first)
                     ifTrue: { stream writeString: esc second. return stream } }.
-        stream writeString: self
+        stream writeString: self!
     method displayOn: stream
         stream writeString: "\"".
         self do: { |c| c _escapeOn: stream }.
-        stream writeString: "\""
+        stream writeString: "\""!
     method startsWith: other
         1 to: other size
           do: { |i|
                 (self at: i) == (other at: i)
                     ifFalse: { return False } }.
-        True
+        True!
     method character
         self size == 1
             ifTrue: { self at: 1 }
-            ifFalse: { Error raise: "Not a character designator string: {self}" }
+            ifFalse: { Error raise: "Not a character designator string: {self}" }!
 end

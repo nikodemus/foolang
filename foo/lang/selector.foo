@@ -1,27 +1,26 @@
 import .string.String
 
 define ColonCharacter
-    ":" character
-end
+    ":" character!
 
 class Selector { name }
     is Object
     class method new: name
-        self name: name
+        self name: name!
     method sendTo: receiver
-        name sendTo: receiver with: []
+        name sendTo: receiver with: []!
     method sendTo: receiver with: arguments
-        name sendTo: receiver with: (Array from: arguments)
+        name sendTo: receiver with: (Array from: arguments)!
     method value: value
-        self sendTo: value
+        self sendTo: value!
     method parts
         let parts = List new.
         self name split: { |c| c == ColonCharacter }
                   do:  { |part| parts add: part }.
-        parts
+        parts!
     -- FIXME: Should really intern selectors!
     method isEquivalent: other
-        name == other name
+        name == other name!
     method toString
-        "#{name}"
+        "#{name}"!
 end

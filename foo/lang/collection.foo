@@ -24,142 +24,142 @@ interface Collection
     required method clear
 
     class method default
-        List new
+        List new!
 
     class method defaultCapacity
-        8
+        8!
 
     class method defaultElementType
-        Object
+        Object!
 
     class method from: iterable
         let new = self of: iterable elementType withCapacity: iterable sizeEstimate.
         iterable do: { |each| new add: each }.
-        new
+        new!
 
     class method newOf: type
         self of: type
-             withCapacity: self defaultCapacity
+             withCapacity: self defaultCapacity!
 
     class method new
-        self newOf: self defaultElementType
+        self newOf: self defaultElementType!
 
     class method new: size
-        self new _initSize: size
+        self new _initSize: size!
 
     class method of: type new: size
-        (self newOf: type) _initSize: size
+        (self newOf: type) _initSize: size!
 
     class method of: type new: size value: value
-        (self newOf: type) _initSize: size value: value
+        (self newOf: type) _initSize: size value: value!
 
     class method of: type from: iterable
         let new = self of: type withCapacity: iterable sizeEstimate.
         iterable do: { |each| new add: each }.
-        new
+        new!
 
     class method withCapacity: capacity
-        self of: self defaultElementType withCapacity: capacity
+        self of: self defaultElementType withCapacity: capacity!
 
     method _initSize: size
-        self _initSize: size value: self elementType default
+        self _initSize: size value: self elementType default!
 
     method _initSize: size value: value
         size times: { new add: value }.
-        self
+        self!
 
     method isEmpty
-        self size is 0
+        self size is 0!
 
     method addAll: iterable
         self reserveCapacity: (self size + iterable sizeEstimate).
         iterable do: { |each| self add: each }.
-        self
+        self!
 
     method as: type
-        type fromCollection: self
+        type fromCollection: self!
 
     method collect: block
-        self collect: block into: (Self withCapacity: self size)
+        self collect: block into: (Self withCapacity: self size)!
 
     method copy
         let new = Self withCapacity: self size.
         self do: { |each| new add: each }.
-        new
+        new!
 
     method reject: block
-        self select: { |each| (block value: each) not }
+        self select: { |each| (block value: each) not }!
 
     method removeAll: iterable
         self removeIf: { |each| iterable includes: each }.
-        self
+        self!
 
     method removeIfNot: block
         self removeIf: { |each| (block value: each) not }.
-        self
+        self!
 
     method reserveCapacity
-        self
+        self!
 
     method select: block
-        self select: block as: Self
+        self select: block as: Self!
 
     method sizeEstimate
-        self size
+        self size!
 
     method with: iterable collect: block
-        self with: iterable collect: block as: Self
+        self with: iterable collect: block as: Self!
 
     method second
-       self at: 2.
+       self at: 2!
 
     method last
-        self at: self size.
+        self at: self size!
 
     method isEmpty
-        self size is 0
+        self size is 0!
 
     method ifEmpty: block
         self size is 0
-            ifTrue: block.
+            ifTrue: block!
 
     method ifEmpty: block ifNotEmpty: notBlock
         self size is 0
             ifTrue: block
-            ifFalse: notBlock.
+            ifFalse: notBlock!
 
     method find: block
-        self find: block ifNone: { False }.
+        self find: block ifNone: { False }!
 
     method find: block ifNone: noneBlock
         self do: { |elt|
                    (block value: elt) is True
                        ifTrue: { return elt } }.
-        noneBlock value.
+        noneBlock value!
 
     method do: block
         1 to: self size
           do: { |i| block value: (self at: i) }.
-        self.
+        self!
 
     method inject: value into: block
         let result = value.
         self do: { |elt| result = (block value: result value: elt) }.
-        result.
+        result!
 
     method reject: block
         let selection = Array withCapacity: 4.
         self do: { |elt|
                    (block value: elt) is True
                        ifFalse: { selection push: elt } }.
-        selection.
+        selection!
 
     method select: block
         let selection = Array withCapacity: 4.
         self do: { |elt|
                    (block value: elt) is True
                        ifTrue: { selection push: elt } }.
-        selection.
+        selection!
 
     method with: other collect: block
         let size = self checkSize: other.
@@ -167,7 +167,7 @@ interface Collection
         1 to: size
           do: { |i|
                 new put: (block value: (self at: i)  value: (other at: i)) }.
-        new.
+        new!
 
     method with: array default: default collect: block
         let size1 = self size.
@@ -188,26 +188,26 @@ interface Collection
                                            block value: (self at: i) value: default } }.
         common + 1 to: size
                    do: { |i| result put: (tailHandler value: i) at: i }.
-        result
+        result!
 
     method with: sequence inject: value into: block
         let result = value.
         self with: sequence
              do: { |a b|
                    result = (block value: result value: a value: b) }.
-        result.
+        result!
 
     method sum
-        self inject: 0 into: { |res elt| res + elt }.
+        self inject: 0 into: { |res elt| res + elt }!
 
     method sum: block
-        self inject: 0 into: { |res elt| res + (block value: elt) }.
+        self inject: 0 into: { |res elt| res + (block value: elt) }!
 
     method with: array sum: block
         self
             with: array
             inject: 0
             into: { |res a b|
-                    res + (block value: a value: b) }.
+                    res + (block value: a value: b) }!
 
 end

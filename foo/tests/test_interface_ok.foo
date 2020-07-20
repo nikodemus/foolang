@@ -1,17 +1,17 @@
 interface I
     method foo
-        "I#foo"
+        "I#foo"!
     method bar
-        "I#bar"
+        "I#bar"!
     required method quux -> Integer
 end
 
 class C {}
     is I
     method foo
-        "C#foo"
+        "C#foo"!
     method quux -> Integer
-        42
+        42!
 end
 
 class Main {}
@@ -19,5 +19,5 @@ class Main {}
         let c = C new.
         system output println: "foo = {c foo}".
         system output println: "bar = {c bar}".
-        system output println: "quux = {c quux}".
+        system output println: "quux = {c quux}"!
 end

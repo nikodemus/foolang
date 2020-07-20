@@ -2,5 +2,5 @@ import .errorLocationTests.PanicError
 
 class Main {}
     class method run: cmd in: sys
-        PanicError oops
+        PanicError oops!
 end

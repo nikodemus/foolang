@@ -2,5 +2,5 @@ import x
 
 class Main {}
    class method run: command in: system
-      system exit: (x.Identity value: 123)
+      system exit: (x.Identity value: 123)!
 end

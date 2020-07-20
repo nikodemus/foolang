@@ -12,26 +12,26 @@ class List { size data }
     method toString
         self isEmpty
             ifTrue: { "List from: []" }
-            ifFalse: { "List from: {data from: 1 to: self size}" }.
+            ifFalse: { "List from: {data from: 1 to: self size}" }!
 
     class method from: collection
         let new = self withCapacity: collection size.
         collection do: { |elt| new add: elt }.
-        new
+        new!
 
     class method new: size value: init
         let new = self withCapacity: size.
         1 to: size do: { |_| new push: init }.
-        new
+        new!
 
     class method of: type withCapacity: capacity
-        self size: 0 data: (Array of: type new: capacity)
+        self size: 0 data: (Array of: type new: capacity)!
 
     class method of: type
-        Specialized class: List of: type
+        Specialized class: List of: type!
 
     method elementType
-        data elementType
+        data elementType!
 
     method add: element
         self atCapacity
@@ -42,39 +42,39 @@ class List { size data }
                       data = newdata }.
         data put: element at: size + 1.
         size = size + 1.
-        self
+        self!
 
     method pop
         size > 0
             ifTrue: { let elt = data at: size.
                       size = size - 1.
                       elt }
-            ifFalse: { Error raise: "Cannot pop from empty " }
+            ifFalse: { Error raise: "Cannot pop from empty " }!
 
     method push: element
-        self add: element
+        self add: element!
 
     method put: element at: index
         self checkIndex: index.
-        data put: element at: index
+        data put: element at: index!
 
     method at: index
         self checkIndex: index.
-        data at: index
+        data at: index!
 
     method checkIndex: index
         index > size
-            ifTrue: { Error raise: "List index out of bounds: {index}" }
+            ifTrue: { Error raise: "List index out of bounds: {index}" }!
 
     method capacity
-        data size
+        data size!
 
     method atCapacity
-        size == self capacity
+        size == self capacity!
 
     method clear
         size = 0.
-        self.
+        self!
 
     method _emitOn: stream using: block
         self elementType is Object
@@ -82,19 +82,19 @@ class List { size data }
             ifFalse: { stream print: "List of: {self elementType} from: [" }.
         self do: { |x| block value: x }
              interleaving: { stream print: ", " }.
-        stream print: "]".
+        stream print: "]"!
 
     method displayOn: stream
-        self _emitOn: stream using: { |x| x displayOn: stream }.
+        self _emitOn: stream using: { |x| x displayOn: stream }!
 
     method printOn: stream
-        self _emitOn: stream using: { |x| x printOn: stream }.
+        self _emitOn: stream using: { |x| x printOn: stream }!
 
     method concat: other
         let new = List withCapacity: self size + other size.
         self do: { |elt| new push: elt }.
         other do: { |elt| new push: elt }.
-        new.
+        new!
 
     method collect: block
         let size = self size.
@@ -102,12 +102,12 @@ class List { size data }
         1 to: size
           do: { |i|
                 result push: (block value: (self at: i)) }.
-        result.
+        result!
 
     method copy
         let copy = List withCapacity: self size.
         self do: { |elt| copy push: elt }.
-        copy.
+        copy!
 
     method count: block
         let n = 0.
@@ -115,7 +115,7 @@ class List { size data }
           do: { |i|
                 (block value: (self at: i))
                     ifTrue: { n = n + 1 } }.
-        n.
+        n!
 
     method with: list collect: block
         let size = self checkSize: list.
@@ -123,7 +123,7 @@ class List { size data }
         1 to: size
           do: { |i|
                 result push: (block value: (self at: i)  value: (list at: i)) }.
-        result.
+        result!
 
     method with: list default: default collect: block
         let size1 = self size.
@@ -142,58 +142,58 @@ class List { size data }
                                            block value: (self at: i) value: default } }.
         common + 1 to: size
                    do: { |i| result push: (tailHandler value: i) }.
-        result
+        result!
 
     method select: block
         let selection = List withCapacity: 4.
         self do: { |elt|
                    (block value: elt) is True
                        ifTrue: { selection push: elt } }.
-        selection.
+        selection!
 
     method reject: block
         let selection = List withCapacity: 4.
         self do: { |elt|
                    (block value: elt) is True
                        ifFalse: { selection push: elt } }.
-        selection.
+        selection!
 
     method + x
-        x broadcast: {|a b| a + b} to: self.
+        x broadcast: {|a b| a + b} to: self!
     method - x
-        x broadcast: {|a b| a - b} to: self.
+        x broadcast: {|a b| a - b} to: self!
     method * x
-        x broadcast: {|a b| a * b} to: self.
+        x broadcast: {|a b| a * b} to: self!
     method / x
-        x broadcast: {|a b| a / b} to: self.
+        x broadcast: {|a b| a / b} to: self!
 
     method broadcast: block to: collection
-        collection with: self collect: block.
+        collection with: self collect: block!
 
     method dot: other
-        self with: other sum: { |a b| a * b }.
+        self with: other sum: { |a b| a * b }!
 
     method norm
-       (self inject: 0.0 into: { |abs elt| abs + (elt * elt) }) sqrt.
+       (self inject: 0.0 into: { |abs elt| abs + (elt * elt) }) sqrt!
 
     method normalized
        let reciprocal = 1.0 / (self norm).
-       self * reciprocal.
+       self * reciprocal!
 
     method scalarProjectionOn: other
-        (self dot: other) / other norm.
+        (self dot: other) / other norm!
 
     method vectorProjectionOn: other
-        ((self dot: other) / (other dot: other)) * other.
+        ((self dot: other) / (other dot: other)) * other!
 
     method addNumber: left
-       self collect: { |elt| left + elt }.
+       self collect: { |elt| left + elt }!
     method subNumber: left
-       self collect: { |elt| left - elt }.
+       self collect: { |elt| left - elt }!
     method divNumber: left
-       self collect: { |elt| left / elt }.
+       self collect: { |elt| left / elt }!
     method mulNumber: left
-       self collect: { |elt| left * elt }.
+       self collect: { |elt| left * elt }!
 end
 
 class TestList {}
@@ -207,7 +207,7 @@ class TestList {}
         assert false: { [1, 2, 3, 4] == [1, 2, 3] }
                testing: "List#== (false 2)".
         assert false: { ["one", 2, 3] == [1, "two", 3] }
-               testing: "List#== (false 3)".
+               testing: "List#== (false 3)"!
 
     class method testSort: assert
         assert that: { [] sort }
@@ -233,7 +233,7 @@ class TestList {}
                testing: "sort, three in reverse order".
         assert that: { [9, 2, 1, 8, 7, 3, 5, 4, 6, 0] sort }
                equals: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-               testing: "sort, ten".
+               testing: "sort, ten"!
 
     class method testReverse: assert
         assert that: { let a = [].
@@ -259,7 +259,7 @@ class TestList {}
         assert that: { let a = [1,2,3].
                        a reverse }
                equals: [3,2,1]
-               testing: "reverse list, retval (3)".
+               testing: "reverse list, retval (3)"!
 
     class method testReversed: assert
         assert that: { let a = [].
@@ -282,11 +282,11 @@ class TestList {}
                        a reversed.
                        a }
                equals: [1,2,3]
-               testing: "reversed list, side-effect (3)".
+               testing: "reversed list, side-effect (3)"!
 
     class method runTests: assert
         self testEquality: assert.
         self testSort: assert.
         self testReverse: assert.
-        self testReversed: assert.
+        self testReversed: assert!
 end

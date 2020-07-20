@@ -1,5 +1,5 @@
 class Main {}
   class method run: command in: system
      (system output print: "Foo") flush.
-     system exit
+     system exit!
 end

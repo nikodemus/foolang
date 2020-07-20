@@ -2,5 +2,5 @@ import .errorLocationTests.SlotTypeError
 
 class Main {}
     class method run: cmd in: sys
-        SlotTypeError oops
+        SlotTypeError oops!
 end

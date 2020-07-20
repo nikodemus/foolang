@@ -2,5 +2,5 @@ import x.*
 
 class Main {}
    class method run: command in: system
-      system exit: (Identity value: Utility foo)
+      system exit: (Identity value: Utility foo)!
 end

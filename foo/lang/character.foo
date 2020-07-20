@@ -3,16 +3,14 @@ define ASCII
      tab: 0x09,
      lineFeed: 0x0A,
      formFeed: 0x0C,
-     carriageReturn: 0x0D}
-end
+     carriageReturn: 0x0D}!
 
 define WhitespaceASCII
     [ASCII space,
      ASCII tab,
      ASCII lineFeed,
      ASCII formFeed,
-     ASCII carriageReturn]
-end
+     ASCII carriageReturn]!
 
 import .object.Object
 
@@ -20,18 +18,18 @@ import .object.Object
 class Character { code }
     is Object
     method isAlphanumeric
-        self isAlpha or: self isDigit
+        self isAlpha or: self isDigit!
     method isAlpha
         (0x41 <= code and: code <= 0x5A)
-            ifFalse: { 0x61 <= code and: code <= 0x7A }
+            ifFalse: { 0x61 <= code and: code <= 0x7A }!
     method isWhitespace
-        WhitespaceASCII anySatisfy: { |whitespaceCode| whitespaceCode is code }
+        WhitespaceASCII anySatisfy: { |whitespaceCode| whitespaceCode is code }!
     method isDigit
-        0x30 <= code and: code <= 0x39
+        0x30 <= code and: code <= 0x39!
     method digit
-        self isDigit ifTrue: { code - 0x30 }
+        self isDigit ifTrue: { code - 0x30 }!
     method isEquivalent: other
-        code is other code
+        code is other code!
     method toString
-        "#<Character code: {code}>"
+        "#<Character code: {code}>"!
 end

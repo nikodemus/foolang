@@ -26,10 +26,10 @@ class Puzzle { height width data frontier paths }
         let puzzle = self height: height
                          width: width
                          data: data
-                         frontier: [coordinate]
+                         frontier: (List from: [coordinate])
                          paths: (Array new: data size value: False).
         puzzle setPath: [] row: coordinate first col: coordinate second.
-        puzzle
+        puzzle!
 
     method solve
         { frontier isEmpty }
@@ -37,12 +37,13 @@ class Puzzle { height width data frontier paths }
                               { |coordinate|
                                 (self try: coordinate)
                                     ifTrue: { return self path: coordinate } } }.
-        [] -- no solution
+        -- no solution
+        []!
 
     method doFrontier: block
         let old = frontier.
         frontier = [].
-        old do: block
+        old do: block!
 
     method try: coordinate
         let row = coordinate first.
@@ -53,7 +54,7 @@ class Puzzle { height width data frontier paths }
         self expandFromRow: row
              col: col
              steps: steps.
-        False
+        False!
 
     method path: coordinate
         let trace = [coordinate].
@@ -66,19 +67,19 @@ class Puzzle { height width data frontier paths }
             trace push: prev.
             coordinate = prev
         }
-            loop
+            loop!
 
     method indexRow: row col: col
-        height * (row - 1) + col
+        height * (row - 1) + col!
 
     method pathRow: row col: col
-        paths at: (self indexRow: row col: col)
+        paths at: (self indexRow: row col: col)!
 
     method setPath: prev row: row col: col
-        paths put: prev at: (self indexRow: row col: col)
+        paths put: prev at: (self indexRow: row col: col)!
 
     method row: row col: col
-        data at: (height * (row - 1) + col)
+        data at: (height * (row - 1) + col)!
 
     method tryRow: row col: col from: prev
         -- Filter out invalid positions
@@ -90,7 +91,7 @@ class Puzzle { height width data frontier paths }
         (self pathRow: row col: col) is False
             ifTrue: { frontier push: [row, col].
                        self setPath: prev row: row col: col }.
-        False
+        False!
 
     method expandFromRow: row col: col steps: steps
         let here = [row, col].
@@ -102,7 +103,7 @@ class Puzzle { height width data frontier paths }
             do: { |row|
                   [left, col, right]
                       do: { |col|
-                            self tryRow: row col: col from: here }}
+                            self tryRow: row col: col from: here }}!
 end
 
 class Main {}
@@ -117,5 +118,5 @@ class Main {}
                                     6, 2, 1, 6, 1, 5, 5 ]
                             start: [ 7, 4 ].
         let path = puzzle solve.
-        system output println: "path length {path size}: {path}".
+        system output println: "path length {path size}: {path}"!
 end

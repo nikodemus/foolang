@@ -1,8 +1,8 @@
 interface I
     method foo
-        "I#foo"
+        "I#foo"!
     method bar
-        "I#bar"
+        "I#bar"!
     required method quux -> Integer
 end
 

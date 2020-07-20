@@ -2,5 +2,5 @@ import .errorLocationTests.ValueTypeError
 
 class Main {}
     class method run: cmd in: sys
-        ValueTypeError oops
+        ValueTypeError oops!
 end

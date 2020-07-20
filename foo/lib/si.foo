@@ -8,6 +8,7 @@ Implementation Notes:
   operations in could be done closer to 0-1 range.
 - Conventional compound units with their own names, like Joule not handled.
   Should deal with printing & entering values.
+- Should store the base unit powers as a vector instead of a table.
 - Would be nice of units were types: x::Meters^2
 - Would be nice to have specialized representations for commonplace units
   to avoid the fully general symbolic units -- ideally representing even the
@@ -42,112 +43,112 @@ class Prefix {}
             {base: 1e-15, prefix: "f"},
             {base: 1e-18, prefix: "a"},
             {base: 1e-21, prefix: "z"}
-        ]
+        ]!
     class method display: value on: stream
         let spec = self displaySpecs
                        find: { |spec| value >= spec base }
                        ifNone: { {base: 1e-24, prefix: "y"} }.
-        stream print: "{value / spec base} {spec prefix}"
+        stream print: "{value / spec base} {spec prefix}"!
 
     class method yocto
-        1e-24
+        1e-24!
     class method y
-        self yocto
+        self yocto!
 
     class method zepto
-        1e-21
+        1e-21!
     class method z
-        self zepto
+        self zepto!
 
     class method atto
-        1e-18
+        1e-18!
     class method a
-        self atto
+        self atto!
 
     class method femto
-        1e-15
+        1e-15!
     class method f
-        self femto
+        self femto!
 
     class method pico
-        1e-12
+        1e-12!
     class method p
-        self pico
+        self pico!
 
     class method nano
-        1e-9
+        1e-9!
     class method n
-        self nano
+        self nano!
 
     class method micro
-        1e-6
+        1e-6!
     class method u
-        self micro
+        self micro!
 
     class method milli
-        1e-3
+        1e-3!
     class method m
-        self milli
+        self milli!
 
     class method centi
-        1e-2
+        1e-2!
     class method c
-        self centi
+        self centi!
 
     class method deci
-        1e-1
+        1e-1!
     class method d
-        self deci
+        self deci!
 
     class method deka
-        1e0
+        1e0!
     class method da
-        self deka
+        self deka!
 
     class method hecto
-        1e2
+        1e2!
     class method h
-        self hecto
+        self hecto!
 
     class method kilo
-        1e3
+        1e3!
     class method k
-        self kilo
+        self kilo!
 
     class method mega
-        1e6
+        1e6!
     class method M
-        self mega
+        self mega!
 
     class method giga
-        1e9
+        1e9!
     class method G
-        self giga
+        self giga!
 
     class method tera
-        1e12
+        1e12!
     class method T
-        self tera
+        self tera!
 
     class method peta
-        1e15
+        1e15!
     class method P
-        self peta
+        self peta!
 
     class method exa
-        1e18
+        1e18!
     class method E
-        self exa
+        self exa!
 
-    class method Z
-        self zetta
     class method zetta
-        1e21
+        1e21!
+    class method Z
+        self zetta!
 
     class method yotta
-        1e24
+        1e24!
     class method Y
-        self yotta
+        self yotta!
 end
 
 interface SI_Unit
@@ -155,7 +156,7 @@ interface SI_Unit
 
     method isEquivalent: right
         -- Compound unit overrides this, but this is enough for base units
-        (self species) is (right species) and: self power == right power
+        (self species) is (right species) and: self power == right power!
 
     -- FIXME: since Object implements this, there is currently no way
     -- to require subclasses to implement it specifically.
@@ -163,16 +164,16 @@ interface SI_Unit
 
     method display: value on: stream
         Prefix display: (self scaleForDisplay: value) on: stream.
-        self displayOn: stream
+        self displayOn: stream!
 
     method displayUnitOn: stream
-        self displayOn: stream
+        self displayOn: stream!
 
     -- This is required for Kilograms to be able to print right:
     -- they scale they value by 1000.0 and then displayUsing: "g".
     -- Stupid fixed prefix.
     method scaleForDisplay: value
-        value
+        value!
 
     method displayUsing: type on: stream
         -- Implementing classes provide call this with appropriate
@@ -206,91 +207,91 @@ interface SI_Unit
                          power = high.
                          tmp print: (superscripts at: low + 1) }.
         stream print: tmp content.
-        False
+        False!
 
     method * right
-       right unitProduct: self
+       right unitProduct: self!
 
     method / right
-       right unitDivision: self
+       right unitDivision: self!
 
     method unitProduct: left
         self species is left species
             ifTrue: { self species power: (left power + self power) }
-            ifFalse: { CompoundUnit of: left multipliedBy: self }
+            ifFalse: { CompoundUnit of: left multipliedBy: self }!
 
     method unitDivision: left
         self species is left species
             ifTrue: { self species power: (left power - self power) }
-            ifFalse: { CompoundUnit of: left dividedBy: self }
+            ifFalse: { CompoundUnit of: left dividedBy: self }!
 
     method powersInto: powers by: mul
         let species = self species.
         let n = (powers has: species)
                     ifTrue: { powers at: species }
                     ifFalse: { 0 }.
-        powers put: n + (mul * self power) at: species
+        powers put: n + (mul * self power) at: species!
 
 end
 
 class Meters { power::Integer }
     is SI_Unit
     method displayOn: stream
-        self displayUsing: "m" on: stream
+        self displayUsing: "m" on: stream!
     method species
-       Meters
+       Meters!
 end
 
 class Seconds { power::Integer }
     is SI_Unit
     method displayOn: stream
-        self displayUsing: "s" on: stream
+        self displayUsing: "s" on: stream!
     method species
-        Seconds
+        Seconds!
 end
 
 class Moles { power::Integer }
     is SI_Unit
     method displayOn: stream
-        self displayUsing: "mol" on: stream
+        self displayUsing: "mol" on: stream!
     method species
-        Moles
+        Moles!
 end
 
 class Amperes { power::Integer }
     is SI_Unit
     method displayOn: stream
-        self displayUsing: "A" on: stream
+        self displayUsing: "A" on: stream!
     method species
-        Amperes
+        Amperes!
 end
 
 class Kelvins { power::Integer }
     is SI_Unit
     method displayOn: stream
-        self displayUsing: "K" on: stream
+        self displayUsing: "K" on: stream!
     method species
-        Kelvins
+        Kelvins!
 end
 
 class Candelas { power::Integer }
     is SI_Unit
     method displayOn: stream
-        self displayUsing: "cd" on: stream
+        self displayUsing: "cd" on: stream!
     method species
-        Candelas
+        Candelas!
 end
 
 class Kilograms { power::Integer }
     is SI_Unit
     method displayOn: stream
-        self displayUsing: "g" on: stream
+        self displayUsing: "g" on: stream!
     method displayUnitOn: stream
-        self displayUsing: "kg" on: stream
+        self displayUsing: "kg" on: stream!
     method scaleForDisplay: value
-        1000.0 * value
+        1000.0 * value!
     method species
-        Kilograms
+        Kilograms!
 end
 
 class CompoundUnit { units }
@@ -309,19 +310,19 @@ class CompoundUnit { units }
                                       ifFalse: { return False }.
                                   n = n - 1 }
                         ifFalse: { return False } }.
-        n is 0
+        n is 0!
 
     class method of: left multipliedBy: right
         let powers = Dictionary new.
         left powersInto: powers by: 1.
         right powersInto: powers by: 1.
-        self fromPowers: powers
+        self fromPowers: powers!
 
     class method of: left dividedBy: right
         let powers = Dictionary new.
         left powersInto: powers by: 1.
         right powersInto: powers by: -1.
-        self fromPowers: powers
+        self fromPowers: powers!
 
     class method fromPowers: powers
         let units = List new.
@@ -332,26 +333,26 @@ class CompoundUnit { units }
         units sort: { |a b| a power > b power }.
         units size is 1
             ifTrue: { units first }
-            ifFalse: { CompoundUnit units: units }
+            ifFalse: { CompoundUnit units: units }!
 
     method * right
-        CompoundUnit of: self multipliedBy: right
+        CompoundUnit of: self multipliedBy: right!
 
     method / right
-        CompoundUnit of: self dividedBy: right
+        CompoundUnit of: self dividedBy: right!
 
     method powersInto: powers by: mul
-        units do: { |unit| unit powersInto: powers by: mul }
+        units do: { |unit| unit powersInto: powers by: mul }!
 
     method power
-        units ifEmpty: { 0 } ifNotEmpty: { 1 }
+        units ifEmpty: { 0 } ifNotEmpty: { 1 }!
 
     method power: p
         let result = 1.0.
         p > 0
             ifTrue: { p times: { result = result * self } }
             ifFalse: { -p times: { result = result / self } }.
-        result
+        result!
 
     method conventionalUnits
         [
@@ -361,14 +362,14 @@ class CompoundUnit { units }
             {ident: "J", model: (CompoundUnit units: [Kilograms power: 1,
                                                       Meters power: 2,
                                                       Seconds power: -2])}
-        ]
+        ]!
 
     method tryConventionalUnits: stream
        self conventionalUnits
           do: { |info|
                 (self == info model)
                     ifTrue: { stream print: info ident. return True } }.
-       False
+       False!
 
     method displayOn: stream
         (self tryConventionalUnits: stream)
@@ -395,10 +396,10 @@ class CompoundUnit { units }
             interleaving: { stream print: " " }.
         encloseNegative
             ifTrue: { stream print: ")" }.
-        self
+        self!
 
     method species
-        self
+        self!
 end
 
 class SI { value::Float _unit::SI_Unit }
@@ -406,202 +407,193 @@ class SI { value::Float _unit::SI_Unit }
 
     method isEquivalent: right
         self checkUnit: right operation: "==".
-        self value == right value
+        self value == right value!
 
     class method meters: value
-        SI value: value unit: (Meters power: 1)
+        SI value: value unit: (Meters power: 1)!
 
     class method seconds: value
-        SI value: value unit: (Seconds power: 1)
+        SI value: value unit: (Seconds power: 1)!
 
     class method moles: value
-        SI value: value unit: (Moles power: 1)
+        SI value: value unit: (Moles power: 1)!
 
     class method amperes: value
-        SI value: value unit: (Amperes power: 1)
+        SI value: value unit: (Amperes power: 1)!
 
     class method kelvins: value
-        SI value: value unit: (Kelvins power: 1)
+        SI value: value unit: (Kelvins power: 1)!
 
     class method candelas: value
-        SI value: value unit: (Candelas power: 1)
+        SI value: value unit: (Candelas power: 1)!
 
     class method grams: value
-        SI value: value / Prefix k unit: (Kilograms power: 1)
+        SI value: value / Prefix k unit: (Kilograms power: 1)!
 
     class method value: value unit: unit
         -- Dimensionless number, unit has been divided out
         unit power is 0
             ifTrue: { value }
-            ifFalse: { SI value: value _unit: unit }
+            ifFalse: { SI value: value _unit: unit }!
 
     method unit
-        _unit
+        _unit!
 
     method checkUnit: right operation: op
         self unit == right unit
-            ifFalse: { panic "Invalid operation: {self} {op} {right}" }
+            ifFalse: { panic "Invalid operation: {self} {op} {right}" }!
 
     method < right
         self checkUnit: right operation: "<".
-        self value < right value
+        self value < right value!
 
     method <= right
         self checkUnit: right operation: "<=".
-        self value <= right value
+        self value <= right value!
 
     method >= right
         self checkUnit: right operation: ">=".
-        self value >= right value
+        self value >= right value!
 
     method > right
         self checkUnit: right operation: ">".
-        self value > right value
+        self value > right value!
 
     method + right
         self checkUnit: right operation: "+".
-        SI value: self value + right value unit: self unit
+        SI value: self value + right value unit: self unit!
 
     method - right
         self checkUnit: right operation: "-".
-        SI value: self value - right value unit: self unit
+        SI value: self value - right value unit: self unit!
 
     method ^ power::Integer
         let result = 1.0.
         power times: { result = result * self }.
-        result
+        result!
 
     method * right
-        right mulSI: self
+        right mulSI: self!
 
     method / right
-        right divSI: self
+        right divSI: self!
 
     method mulSI: left
-        SI value: left value * self value unit: (left unit * self unit)
+        SI value: left value * self value unit: (left unit * self unit)!
 
     method divSI: left
-        SI value: left value / self value unit: (left unit / self unit)
+        SI value: left value / self value unit: (left unit / self unit)!
 
     method mulNumber: left
-        SI value: left * self value unit: self unit
+        SI value: left * self value unit: self unit!
 
     method divNumber: left
         let unit = self unit.
-        SI value: left / self value unit: (unit species power: - (unit power))
+        SI value: left / self value unit: (unit species power: - (unit power))!
 
     method displayOn: stream
-        self unit display: self value on: stream
+        self unit display: self value on: stream!
     method toString
         let stream = StringOutput new.
         self displayOn: stream.
-        stream content
+        stream content!
 end
 
 extend Number
     method mm
-        SI meters: Prefix m * self
+        SI meters: Prefix m * self!
     method m
-        SI meters: self asFloat
+        SI meters: self asFloat!
     method km
-        SI meters: Prefix k * self
+        SI meters: Prefix k * self!
 
     method ns
-        SI seconds: Prefix n * self
+        SI seconds: Prefix n * self!
     method ms
-        SI seconds: Prefix m * self
+        SI seconds: Prefix m * self!
     method s
-        SI seconds: self asFloat
+        SI seconds: self asFloat!
 
     method mol
-        SI moles: self asFloat
+        SI moles: self asFloat!
     method mmol
-        SI moles: Prefix m * self
+        SI moles: Prefix m * self!
 
     method A
-        SI amperes: self asFloat
+        SI amperes: self asFloat!
     method mA
-        SI amperes: Prefix m * self
+        SI amperes: Prefix m * self!
 
     method K
-        SI kelvins: self asFloat
+        SI kelvins: self asFloat!
 
     method cd
-        SI candelas: self asFloat
+        SI candelas: self asFloat!
 
     -- Worry not, the underlying unit is actually kg, this
     -- just makes this part more obviously correct.
     method mg
-        SI grams: Prefix m * self
+        SI grams: Prefix m * self!
     method g
-        SI grams: self asFloat
+        SI grams: self asFloat!
     method kg
-        SI grams: Prefix k * self
+        SI grams: Prefix k * self!
 
     method mulSI: left
-        SI value: left value * self asFloat unit: left unit
+        SI value: left value * self asFloat unit: left unit!
     method divSI: left
-        SI value: left value / self asFloat unit: left unit
+        SI value: left value / self asFloat unit: left unit!
 end
 
 -- The point of these constants is to allow expressions like 1 m / s.
 define mm
-    1 mm.
-end
+    1 mm!
+
 define m
-    1 m.
-end
+    1 m!
+
 define km
-    1 km.
-end
+    1 km!
 
 define ns
-    1 ns.
-end
+    1 ns!
+
 define ms
-    1 ms.
-end
+    1 ms!
+
 define s
-    1 s.
-end
+    1 s!
 
 define mol
-    1 mol.
-end
+    1 mol!
+
 define mmol
-    1 mmol.
-end
+    1 mmol!
 
 define A
-    1 A.
-end
+    1 A!
 
 define mA
-    1 mA.
-end
+    1 mA!
 
 define K
-    1 K.
-end
+    1 K!
 
 define cd
-    1 cd.
-end
+    1 cd!
 
 define mg
-    1 mg.
-end
+    1 mg!
 
 define g
-    1 g.
-end
+    1 g!
+
 define kg
-    1 kg.
-end
+    1 kg!
 
 class SI_Tests { assert }
     class method runTests: assert
-        (self assert: assert) runTests
+        (self assert: assert) runTests!
 
     method runTests
         self testBaseUnitArithmetic.
@@ -609,16 +601,16 @@ class SI_Tests { assert }
         self testBaseUnitPrinting.
         self testCompoundUnitArithmetic.
         self testCompoundUnitComparisons.
-        self testCompoundUnitPrinting.
+        self testCompoundUnitPrinting!
 
     method baseUnits
-        [Meters, Seconds, Moles, Amperes, Kelvins, Candelas, Kilograms]
+        [Meters, Seconds, Moles, Amperes, Kelvins, Candelas, Kilograms]!
 
     method testBaseUnitArithmetic
         self testBaseUnitMultiplication.
         self testBaseUnitDivision.
         self testBaseUnitAddition.
-        self testBaseUnitSubstraction.
+        self testBaseUnitSubstraction!
 
     method testBaseUnitMultiplication
         assert forAll: self baseUnits
@@ -655,7 +647,7 @@ class SI_Tests { assert }
                        let unit = unitType power: 1.
                        let a = SI value: 10.0 unit: unit.
                        2 * a == (SI value: 20.0 unit: unit) }
-               testing: "integer * baseUnit".
+               testing: "integer * baseUnit"!
 
     method testBaseUnitDivision
         assert forAll: self baseUnits
@@ -692,7 +684,7 @@ class SI_Tests { assert }
                        let unit = unitType power: 1.
                        let b = SI value: 2.0 unit: unit.
                        10 / b == (SI value: 5.0 unit: (unitType power: -1)) }
-               testing: "integer / baseUnit".
+               testing: "integer / baseUnit"!
 
     method testBaseUnitAddition
         assert forAll: self baseUnits
@@ -701,7 +693,7 @@ class SI_Tests { assert }
                        let a = SI value: 10.0 unit: unit.
                        let b = SI value: 2.0 unit: unit.
                        a + b == (SI value: 12.0 unit: unit) }
-               testing: "baseUnit + baseUunit".
+               testing: "baseUnit + baseUunit"!
 
     method testBaseUnitSubstraction
         assert forAll: self baseUnits
@@ -710,7 +702,7 @@ class SI_Tests { assert }
                        let a = SI value: 10.0 unit: unit.
                        let b = SI value: 2.0 unit: unit.
                        a - b == (SI value: 8.0 unit: unit) }
-               testing: "baseUnit - baseUunit".
+               testing: "baseUnit - baseUunit"!
 
     method testBaseUnitComparisons
         -- test >
@@ -796,7 +788,7 @@ class SI_Tests { assert }
                        let unit = unitType power: 1.
                        let a = SI value: 10.0 unit: unit.
                        a >= a }
-               testing: "baseUnit >= baseUunit (eq)".
+               testing: "baseUnit >= baseUunit (eq)"!
 
     method testBaseUnitPrinting
         assert that: { "{10 m * 100}" }
@@ -813,7 +805,7 @@ class SI_Tests { assert }
                testing: "print 1 A".
         assert that: { "{10 cd * 100}" }
                is: "1.0 kcd"
-               testing: "print 1 kcd".
+               testing: "print 1 kcd"!
 
     method testCompoundUnitArithmetic
         assert that: { 1 km / 2 ms }
@@ -830,7 +822,7 @@ class SI_Tests { assert }
                testing: "compoundUnit * float".
         assert that: { 0.1 * (1 km / 2 ms) }
                equals: (SI value: 50000.0 unit: (CompoundUnit units: [(Meters power: 1), (Seconds power: -1)]))
-               testing: "float * compoundUnit".
+               testing: "float * compoundUnit"!
 
     method testCompoundUnitComparisons
         assert true: { 1 km / 1 s > 1 m / 1 s }
@@ -840,7 +832,7 @@ class SI_Tests { assert }
         assert true: { 1 mm / 1 s < 1 m / 1 s }
                testing: "compoundUnit < compoundUnit (true)".
         assert false: { 1 km / 1 s < 1 m / 1 s }
-               testing: "compoundUnit < compoundUnit (false)".
+               testing: "compoundUnit < compoundUnit (false)"!
 
     method testCompoundUnitPrinting
         assert that: { "{1 km / 1 ms}" }
@@ -854,8 +846,7 @@ class SI_Tests { assert }
                testing: "printing 12.96 kJ".
         assert that: { "{10 kg * 2 m / s^2}" }
                is: "20.0 N"
-               testing: "printing 20 N"
-
+               testing: "printing 20 N"!
 end
 
 class Demo {}
@@ -869,6 +860,5 @@ class Demo {}
         output println: "{10 m * 10 m / 10}".
         output println: "{(1 m * 1 kg * 1 m) / (1 s * 1 kg * 1 m * 1 s)}".
         output println: "{0.5 * 80 kg * (18 m / s)^2}".
-        output println: "{10 kg * 2 m / s^2}"
-
+        output println: "{10 kg * 2 m / s^2}"!
 end

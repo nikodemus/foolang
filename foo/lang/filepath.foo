@@ -1,18 +1,18 @@
 extend FilePath
     method displayOn: stream
-        stream print: self toString
+        stream print: self toString!
     method forAppend
-        self file forAppend
+        self file forAppend!
     method forRead
-        self file forRead
+        self file forRead!
     method forWrite
-        self file forWrite
+        self file forWrite!
     method readString
-        self forRead open: { |f| f readString }
+        self forRead open: { |f| f readString }!
     method readString: path
-        (self path: path) readString
+        (self path: path) readString!
     method ifExists: block
-        self exists ifTrue: block
+        self exists ifTrue: block!
 end
 
 class TestFilePath { assert dir none file }
@@ -22,7 +22,7 @@ class TestFilePath { assert dir none file }
         assert false: { none exists }
                testing: "FilePath#exists (none)".
         assert true: { file exists }
-               testing: "FilePath#exists (file)"
+               testing: "FilePath#exists (file)"!
 
     method testIsDirectory
         assert true: { dir isDirectory }
@@ -30,7 +30,7 @@ class TestFilePath { assert dir none file }
         assert false: { none isDirectory }
                testing: "FilePath#isDirectory (none)".
         assert false: { file isDirectory }
-               testing: "FilePath#isDirectory (file)"
+               testing: "FilePath#isDirectory (file)"!
 
     method testIsFile
         assert false: { dir isFile }
@@ -38,7 +38,7 @@ class TestFilePath { assert dir none file }
         assert false: { none isFile }
                testing: "FilePath#isFile (none)".
         assert true: { file isFile }
-               testing: "FilePath#isFile (file)".
+               testing: "FilePath#isFile (file)"!
 
     method testDeleteFile
         let tmpfile = dir path: "FilePath-testDeleteFile.tmp".
@@ -51,7 +51,7 @@ class TestFilePath { assert dir none file }
                testing: "FilePath#deleteFile (pre2)".
         tmpfile deleteFile.
         assert false: { tmpfile exists }
-               testing: "FilePath#deleteFile (post)"
+               testing: "FilePath#deleteFile (post)"!
 
     class method runTests: assert in: system
         -- Assumes the repository root as the current directory
@@ -62,6 +62,6 @@ class TestFilePath { assert dir none file }
         tests testDeleteFile.
         tests testExists.
         tests testIsDirectory.
-        tests testIsFile
+        tests testIsFile!
 
 end
