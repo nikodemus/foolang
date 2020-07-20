@@ -6,5 +6,5 @@ class Main {}
         out println: "X = {X}".
         out println: "Y = {Y value}".
         out println: "_Y = {_Y}".
-        sys exit
+        sys exit!
 end

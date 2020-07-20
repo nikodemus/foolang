@@ -1,4 +1,4 @@
 class Main {}
    class method run: command in: system
-       system exit: (1 + 1)
+       system exit: (1 + 1)!
 end

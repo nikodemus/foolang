@@ -1,9 +1,9 @@
 class Identity {}
    class method value: x
-      x
+      x!
 end
 
 class Utility {}
    class method foo
-      42
+      42!
 end

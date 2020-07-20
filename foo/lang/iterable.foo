@@ -4,26 +4,26 @@ interface Iterator
     required method hasNext
 
     method next
-        self nextIfNone: { IteratorExhausted raise: self }
+        self nextIfNone: { IteratorExhausted raise: self }!
 
     method skip
         self next.
-        self
+        self!
 
     method skip: count
         1 to: count do: { self next }.
-        self
+        self!
 
     method do: block
-        { block value: (self nextIfNone: { return self }) } loop
+        { block value: (self nextIfNone: { return self }) } loop!
 
     method do: block with: iterator
-        self with: iterator ifExhausted: { return self } do: block
+        self with: iterator ifExhausted: { return self } do: block!
 
     method do: block with: iterator ifExhausted: exhaustedBlock
         { let each1 = self nextIfNone: { return self }.
           let each2 = iterator nextIfNone: exhaustedBlock.
-          block value: each1 value: each2 } loop
+          block value: each1 value: each2 } loop!
 end
 
 ---
@@ -53,50 +53,50 @@ interface Iterable
         self do: { |each|
                    (block value: each)
                        ifFalse: { return False } }.
-        True
+        True!
 
     method anySatisfy: block
         self do: { |each|
                    (block value: each)
                        ifTrue: { return True } }.
-        False
+        False!
 
     method collect: block into: collection
         self do: { |each|
                    collection add: (block value: each) }.
-        collection
+        collection!
 
     method with: iterable collect: block into: collection
         self
             with: iterable
             do: { |each1 each2|
                   collection add: (block value: each1 value: each2) }.
-        collection
+        collection!
 
     method count: block
         let n = 0.
         self do: { |each|
                    (block value: each)
                        ifTrue: { n = n + 1 } }.
-        n
+        n!
 
     method with: other count: block
         let n = 0.
         self do: { |each1 each2|
                    (block value: each1 value: each2)
                        ifTrue: { n = n + 1 } }.
-        n
+        n!
 
     method do: block
         self iterator do: block.
-        self
+        self!
 
     method with: iterable do: block
-        self do: block with: iterable iterator ifExhausted: { return self }
+        self do: block with: iterable iterator ifExhausted: { return self }!
 
     method with: iterable do: block ifExhausted: exhaustedBlock
         self iterator do: block with: iterable iterator ifExhausted: exhaustedBlock.
-        self
+        self!
 
     method do: block interleaving: interBlock
         let first = True.
@@ -104,10 +104,10 @@ interface Iterable
                    first
                        ifTrue: { first = False }
                        ifFalse: { interBlock value }.
-                   block value: elt }.
+                   block value: elt }!
 
     method elementType
-        Object
+        Object!
 
     method equals: other
         (self is other)
@@ -118,50 +118,50 @@ interface Iterable
                                      ifFalse: { return False } }
                            with: other
                            ifExhausted: { return False } }.
-        True
+        True!
 
     method find: block
-        self find: block ifNone: { False }
+        self find: block ifNone: { False }!
 
     method find: block ifNone: noneBlock
         self do: { |each|
                    (block value: each)
                        ifTrue: { return each } }.
-        noneBlock value
+        noneBlock value!
 
     method first
-        self do: { |elt| return elt }
+        self do: { |elt| return elt }!
 
     method ifEmpty: block
         self isEmpty
-            ifTrue: block
+            ifTrue: block!
 
     method ifEmpty: emptyBlock ifNotEmpty: notEmptyBlock
         self isEmpty
             ifTrue: emptyBlock
-            ifFalse: notEmptyBlock
+            ifFalse: notEmptyBlock!
 
     method ifNotEmpty: block
         self isEmpty
-            ifFalse: block
+            ifFalse: block!
 
     method includes: object
-        self anySatisfy: { |each| each == object }
+        self anySatisfy: { |each| each == object }!
 
     method includesAll: iterable
         iterable allSatisfy: { |each1|
-                               self anySatisfy: { |each2| each1 == each2 } }
+                               self anySatisfy: { |each2| each1 == each2 } }!
 
     method inject: value into: block
         self do: { |each| value = block value: value value: each }.
-        value
+        value!
 
     method inject: value into: block with: iterable
         self
             do: { |each1 each2|
                   value = block value: value value: each1 value: each2 }
             with: iterable.
-        value
+        value!
 
     method inject: value into: block with: iterable ifExhausted: exhaustedBlock
         self
@@ -169,61 +169,61 @@ interface Iterable
                   value = block value: value value: each1 value: each2 }
             with: iterable
             ifExhausted: exhaustedBlock.
-        value
+        value!
 
     method isEmpty
-        self iterator hasNext not
+        self iterator hasNext not!
 
     method isEquivalent: other
-        self equals: other
+        self equals: other!
 
     method max
-        self max: { |x| x }
+        self max: { |x| x }!
 
     method max: block
         self reduce: { |a b|
                        (block value: a) > (block value: b)
                            ifTrue: { a }
-                           ifFalse: { b } }
+                           ifFalse: { b } }!
 
     method min
-        self min: { |x| x }
+        self min: { |x| x }!
 
     method min: block
         self reduce: { |a b|
                        (block value: a) < (block value: b)
                            ifTrue: { a }
-                           ifFalse: { b } }
+                           ifFalse: { b } }!
 
     method reduce: block
         let iter = self iterator.
         let value = iter next.
         { value = block
               value: value
-              value: (iter nextIfNone: { return value }) } loop
+              value: (iter nextIfNone: { return value }) } loop!
 
     method second
-        self iterator skip next
+        self iterator skip next!
 
     method select: block as: species
-        self select: block into: species new.
+        self select: block into: species new!
 
     method select: block into: collection
         self do: { |each|
                    (block value: each)
                        ifTrue: { collection add: each } }.
-        collection
+        collection!
 
     method sizeEstimate
-        4
+        4!
 
     method sum
-        self sum: { |x| x }
+        self sum: { |x| x }!
 
     method sum: block
         self inject: 0
              into: { |sum each|
-                     sum + (block value: each) }
+                     sum + (block value: each) }!
 
 end
 
@@ -270,7 +270,7 @@ class TestIterable { make assert }
         self testSelectInto.
         self testSizeEstimate.
         self testSumArg.
-        self testSum.
+        self testSum!
 
     method testAllSatisfy
         assert true: { (make value: []) allSatisfy: { |each| False } }
@@ -286,7 +286,7 @@ class TestIterable { make assert }
         assert false: { (make value: [42, 42, 0]) allSatisfy: { |each| each is 42 } }
                testing: "allSatisfy: -> False (size 3)".
         assert false: { (make value: [42, 0, 42, 42]) allSatisfy: { |each| each is 42 } }
-               testing: "allSatisfy: -> False (size 4)".
+               testing: "allSatisfy: -> False (size 4)"!
 
     method testAnySatisfy
         assert false: { (make value: []) anySatisfy: { |each| True } }
@@ -303,7 +303,7 @@ class TestIterable { make assert }
                testing: "anySatisfy: -> True (size 5)".
 
         assert false: { (make value: [0, 0, 0]) anySatisfy: { |each| each is 42 }}
-               testing: "anySatisfy: -> False (size 3)".
+               testing: "anySatisfy: -> False (size 3)"!
 
     method testCollectAs
         assert that: { (make value: []) collect: { |each| 42 } as: List }
@@ -312,7 +312,7 @@ class TestIterable { make assert }
                assert that: { ((make value: [1, 2, 3, 4]) collect: { |each| each + 1 } as: List)
                                   sort }
                equals: [41, 42, 43, 44]
-               testing: "collect:as: (size 4)".
+               testing: "collect:as: (size 4)"!
 
     method testCollectInto
         assert that: { (make value: []) collect: { |each| 42 } into: [123] }
@@ -321,7 +321,7 @@ class TestIterable { make assert }
         assert that: { ((make value: [1,2,3]) collect: { |each| -each } into: [213])
                            sort }
                equals: [-1, -2, -3, 213]
-               testing: "collect:into: (size 3)".
+               testing: "collect:into: (size 3)"!
 
     method testCollectWithAs
         assert that: { (make value: [])
@@ -336,7 +336,7 @@ class TestIterable { make assert }
                            as: List)
                        sort }
                equals: [1, 10, 100]
-               testing: "collect:with:as: (size 3)".
+               testing: "collect:with:as: (size 3)"!
 
     method testCollectWithInto
         assert that: { (make value: [])
@@ -351,7 +351,7 @@ class TestIterable { make assert }
                            into: [123])
                        sort }
                equals: [1, 10, 100, 123]
-               testing: "collect:with:into: (size 3)".
+               testing: "collect:with:into: (size 3)"!
 
     method testCount
         assert that: { (make value: []) count: { |each| True }}
@@ -359,7 +359,7 @@ class TestIterable { make assert }
                testing: "count: (empty)".
         assert that: { (make value: [1,10,1,10,1,1,10]) count: { |each| each == 10 }}
                equals: 3
-               testing: "count: (size 7)".
+               testing: "count: (size 7)"!
 
     method testCountWith
         assert that: { (make value: [])
@@ -371,7 +371,7 @@ class TestIterable { make assert }
                            count: { |each1 each2| each1 == each2 }
                            with: [1,0,1,0,0,1,0] }
                equals: 3
-               testing: "count:with: (size 7)".
+               testing: "count:with: (size 7)"!
 
     method testDo
         assert that: { (make value: []) do: { |each| panic "never" }}
@@ -384,7 +384,7 @@ class TestIterable { make assert }
                            ifFalse: { panic "oops" }.
                        elts }
                equals: [1,2,3]
-               testing: "do: (size 3)".
+               testing: "do: (size 3)"!
 
     method testDoWith
         assert that: { (make value: [1,2])
@@ -400,7 +400,7 @@ class TestIterable { make assert }
                            ifFalse: { panic "oops" }.
                        elts }
                equals: [100, 10]
-               testing: "do:with: (size 2)".
+               testing: "do:with: (size 2)"!
 
     method testDoWithIfExhausted
         assert that: { (make value: [])
@@ -418,7 +418,7 @@ class TestIterable { make assert }
                            ifFalse: { panic "oops" }.
                        elts }
                equals: [1, 10, 300, 4000 ]
-               testing: "do:with:ifExhausted: (size 4)".
+               testing: "do:with:ifExhausted: (size 4)"!
 
     method testEquals
         assert that: { make value: [1,2,3] }
@@ -426,7 +426,7 @@ class TestIterable { make assert }
                testing: "equals: (true)".
         assert that: { make value: [1,2,3,4] }
                equals: make value: [1,2,3]
-               testing: "equals: (false)".
+               testing: "equals: (false)"!
 
     method testFind
         assert that: { (make value: [1,2,100,1]) find: { |each| each > 10 } }
@@ -434,7 +434,7 @@ class TestIterable { make assert }
                testing: "find: (yes)".
         assert that: { (make value: [1,2,10,1]) find: { |each| each > 10 } }
                equals: False
-               testing: "find: (no)"
+               testing: "find: (no)"!
 
     method testFindIfNone
         assert that: { (make value: [1,2,100,1])
@@ -446,7 +446,7 @@ class TestIterable { make assert }
                            find: { |each| each > 10 }
                            ifNone: { 42 }}
                equals: 42
-               testing: "find:ifNone: (no)".
+               testing: "find:ifNone: (no)"!
 
     method testFirst
         assert that: { (make value: [1,2]) first }
@@ -455,7 +455,7 @@ class TestIterable { make assert }
         assert that: { { (make value: []) first }
                            on: Error do: { 123 } }
                equals: 123
-               testing: "first (empty)".
+               testing: "first (empty)"!
 
     method testIfEmpty
         assert that: { (make value: []) ifEmpty: { 123 } }
@@ -463,7 +463,7 @@ class TestIterable { make assert }
                testing: "ifEmpty: (empty)".
         assert that: { (make value: [1] ifEmpty: { 123 }) }
                equals: False
-               testing: "ifEmpty: (not)".
+               testing: "ifEmpty: (not)"!
 
     method testIfEmptyNotEmpty
         assert that: { (make value: []) ifEmpty: { 123 } ifNotEmpty: { "foo" }}
@@ -471,7 +471,7 @@ class TestIterable { make assert }
                testing: "ifEmpty:IifNotEmpty: (empty)".
         assert that: { (make value: [1] ifEmpty: { "foo" } ifNotEmpty: { 123 }) }
                equals: 123
-               testing: "ifEmpty:ifNotEmpty: (not)".
+               testing: "ifEmpty:ifNotEmpty: (not)"!
 
     method testIfNotEmpty
         assert that: { (make value: []) ifNotEmpty: { "foo" } }
@@ -479,7 +479,7 @@ class TestIterable { make assert }
                testing: "ifNotEmpty: (empty)".
         assert that: { (make value: [1] ifEmpty: { 123 }) }
                equals: 123
-               testing: "ifNotEmpty: (not)".
+               testing: "ifNotEmpty: (not)"!
 
     method testIncludes
         assert that: { (make value: []) includes: 42 }
@@ -490,7 +490,7 @@ class TestIterable { make assert }
                testing: "includes: (non-empty, false)".
         assert that: { (make value: [1,42,3]) includes: 42 }
                equals: True
-               testing: "includes: (non-empty, true)".
+               testing: "includes: (non-empty, true)"!
 
     method testIncludesAll
         assert that: { (make value: []) includesAll: [] }
@@ -501,7 +501,7 @@ class TestIterable { make assert }
                testing: "includesAll: (true)".
         assert that: { (make value: [1,2]) includesAll: [1,2,3] }
                equals: False
-               testing: "includesAll: (false)".
+               testing: "includesAll: (false)"!
 
     method testInject
         assert that: { (make value: [])
@@ -513,13 +513,13 @@ class TestIterable { make assert }
                            inject: 100
                            into: { |acc each| acc + each } }
                equals: 106
-               testing: "inject:into: (size 3)".
+               testing: "inject:into: (size 3)"!
 
     method testIsEmpty
         assert true: { (make value: []) isEmpty }
                testing: "isEmpty (true)".
         assert true: { (make value: [1]) isEmpty }
-               testing: "isEmpty (false)".
+               testing: "isEmpty (false)"!
 
     method testIsEquivalent
         assert that: { make value: [1,2,3] }
@@ -527,27 +527,27 @@ class TestIterable { make assert }
                testing: "equals: (true)".
         assert that: { make value: [1,2,3,4] }
                equals: make value: [1,2,3]
-               testing: "equals: (false)".
+               testing: "equals: (false)"!
 
     method testMaxArg
         assert that: { (make value: ["a", "bb", "ccc", "d"]) max: { |each| each size } }
                equals: "ccc"
-               testing: "max:".
+               testing: "max:"!
 
     method testMax
         assert that: { (make value: [1, 100, 1, 1]) max }
                equals: 100
-               testing: "max"
+               testing: "max"!
 
     method testMinArg
         assert that: { (make value: ["aa", "bb", "ccc", "x", "dd", "fff"]) min: { |each| each size } }
                equals: "x"
-               testing: "min:".
+               testing: "min:"!
 
     method testMin
         assert that: { (make value: [1, -100, 1, 1]) min }
                equals: -100
-               testing: "min".
+               testing: "min"!
 
     method testReduce
         assert that: { (make value: [1]) reduce: { |sum each| panic "never" } }
@@ -555,22 +555,22 @@ class TestIterable { make assert }
                testing: "reduce: (one)"
         assert that: { (make value: [1, 2, 3]) reduce: { |sum each| sum + each } }
                equals: 6
-               testing: "reduce: (three)"
+               testing: "reduce: (three)"!
 
     method testSecond
         assert that: { (make value: [1,2]) second }
                equals: 2
-               testing: "second (not empty)".
+               testing: "second (not empty)"!
 
     method testSelectAs
         assert that: { (make value: [1,10,1,100]) select: { |each| each > 1 } as: List }
                equals: [10, 100]
-               testing: "select:as:".
+               testing: "select:as:"!
 
     method testSelectInto
         assert that: { (make value: [1,10,1,100]) select: { |each| each > 1 } into: [123] }
                equals: [123,10,100]
-               testing: "select:into:".
+               testing: "select:into:"!
 
     method testSizeEstimate
         assert that: { (make value: []) sizeEstimate }
@@ -578,7 +578,7 @@ class TestIterable { make assert }
                testing: "sizeEstimate (zero)".
         assert that: { (make value: [1,2,3]) sizeEstimate > 0 }
                equals: True
-               testing: "sizeEstimate (> 0)".
+               testing: "sizeEstimate (> 0)"!
 
     method testSumArg
         assert that: { (make value: []) sum: { |each| panic "never" }}
@@ -586,7 +586,7 @@ class TestIterable { make assert }
                testing: "sum: (empty)".
         assert that: { (make value: [1,2] sum: { |each| each * 100 }) }
                equals: 300
-               testing: "sum: (not empty)".
+               testing: "sum: (not empty)"!
 
     method testSum
         assert that: { (make value: []) sum }
@@ -594,6 +594,6 @@ class TestIterable { make assert }
                testing: "sum (empty)".
         assert that: { (make value: [1,2]) sum }
                equals: 3
-               testing: "sum (not empty)".
+               testing: "sum (not empty)"!
 
 end

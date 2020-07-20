@@ -128,7 +128,7 @@ fn test_unbound_variable_location() -> Test {
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Unbound variable: oops
 002     class method oops
-003         oops
+003         oops!
             ^^^^ Unbound variable: oops
 004 end",
     ));
@@ -142,7 +142,7 @@ fn test_value_type_error_location() -> Test {
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: String expected, got Integer: 14
 007     class method oops
-008         14::String
+008         14::String!
             ^^ String expected, got Integer: 14
 009 end",
     ));
@@ -156,7 +156,7 @@ fn test_slot_type_error_location() -> Test {
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: String expected, got Integer: 123
 014     method oops
-015         slot = 123
+015         slot = 123!
                    ^^^ String expected, got Integer: 123
 016 end",
     ));
@@ -170,7 +170,7 @@ fn test_var_type_error_location() -> Test {
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: String expected, got Integer: 12312
 020         let x::String = \"OK\".
-021         x = 12312
+021         x = 12312!
                 ^^^^^ String expected, got Integer: 12312
 022 end",
     ));
@@ -198,7 +198,7 @@ fn test_method_arg_type_error_location() -> Test {
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: String expected, got Integer: 42
 031     class method oops
-032         self oops: 42
+032         self oops: 42!
                  ^^^^^^^^ String expected, got Integer: 42
 033     class method oops: x::String",
     ));
@@ -212,7 +212,7 @@ fn test_block_arg_type_error_location() -> Test {
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: String expected, got Integer: 42
 038     class method oops
-039         { |x::String| x } value: 42
+039         { |x::String| x } value: 42!
                               ^^^^^^^^^ String expected, got Integer: 42
 040 end",
     ));
@@ -263,7 +263,7 @@ fn test_undefined_value_type_error_location() -> Test {
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Undefined type: 'UndefinedType'
 045     class method oops: x
-046         x::UndefinedType
+046         x::UndefinedType!
                ^^^^^^^^^^^^^ Undefined type: 'UndefinedType'
 047 end",
     ));
@@ -307,7 +307,7 @@ fn test_panic_location() -> Test {
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: This here
 056     class method oops
-057         panic \"This here\"
+057         panic \"This here\"!
             ^^^^^ This here
 058 end",
     ));
@@ -322,7 +322,7 @@ fn test_does_not_understand_location() -> Test {
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: class DoesNotUnderstandError does not understand: noSuchMethod []
 061     class method oops
-062         self noSuchMethod
+062         self noSuchMethod!
                  ^^^^^^^^^^^^ class DoesNotUnderstandError does not understand: noSuchMethod []
 063 end",
     ));
@@ -496,7 +496,7 @@ fn test_array_let1() -> Test {
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Unbound variable: x
 002    class method run: command in: system
-003       system output println: [let x = 42. x + x, x]
+003       system output println: [let x = 42. x + x, x]!
                                                      ^ Unbound variable: x
 004 end
 
@@ -512,7 +512,7 @@ fn test_array_let2() -> Test {
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Unbound variable: x
 003       let a = [let x = 42. x, 123].
-004       system output println: x
+004       system output println: x!
                                  ^ Unbound variable: x
 005 end
 ",
@@ -527,12 +527,12 @@ fn test_repl() -> Test {
         .write_stdin(
             r#"class Point { x y }
                   class method displayOn: stream
-                     stream print: "<class Point>"
+                     stream print: "<class Point>"!
                   method + other
                      Point x: x + other x
-                           y: y + other y
+                           y: y + other y!
                   method displayOn: stream
-                     stream print: "{x}@{y}"
+                     stream print: "{x}@{y}"!
                end
                { let p1 = Point x: 1 y: 2.
                  let p2 = Point x: 100 y: 200.

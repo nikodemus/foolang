@@ -1,8 +1,8 @@
 extend Random
    class method integer
-      self new integer
+      self new integer!
    class method float
-      self new float
+      self new float!
    class method boolean
-      self new boolean
+      self new boolean!
 end

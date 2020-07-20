@@ -8,7 +8,7 @@ syntax, design notes, aspirations, etc.
 ``` foolang
 class Main {}
     class method run: command in: system
-        system output println: "Hello world!"
+        system output println: "Hello world!"!
 end
 ```
 

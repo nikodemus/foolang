@@ -6,10 +6,10 @@ extend ByteArray
     is Ordered
 
     method iterator
-        ArrayIterator new: self
+        ArrayIterator new: self!
 
     method displayOn: stream
-        stream print: self toString
+        stream print: self toString!
 
     class method runTests: assert
         assert forAll: (1 to: 10)
@@ -23,5 +23,5 @@ extend ByteArray
                            and: (old == 0)
                            and: (new == n)
                            and: (n > 0) }
-               testing: "ByteArray creation and access"
+               testing: "ByteArray creation and access"!
 end

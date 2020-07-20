@@ -1,12 +1,12 @@
 class Debug {}
     class method println: what
-        Output debug println: what
+        Output debug println: what!
 end
 
 class HostMethod { receiver selector }
     is Object
     method invoke: arguments with: context in: process
-        selector sendTo: receiver with: arguments
+        selector sendTo: receiver with: arguments!
 end
 
 class Process {}
@@ -20,34 +20,34 @@ class InterpreterContext {
     is Object
 
     class method new: size
-        self sender: False frame: (Array new: size value: "<unbound>")
+        self sender: False frame: (Array new: size value: "<unbound>")!
 
     method at: index inFrame: frameNumber
         frameNumber > 1
             ifTrue: { sender at: index inFrame: frameNumber - 1 }
-            ifFalse: { frame at: index }
+            ifFalse: { frame at: index }!
 
     method put: value at: index inFrame: frameNumber
         frameNumber > 1
             ifTrue: { sender put: value at: index inFrame: frameNumber - 1 }
-            ifFalse: { frame put: value at: index }
+            ifFalse: { frame put: value at: index }!
 end
 
 class Binding { name index::Integer }
     is Object
     method referenceInFrame: frame
-        AstLexicalRef name: name frame: frame index: index
+        AstLexicalRef name: name frame: frame index: index!
 end
 
 class FrameAllocation { size::Integer }
     class method new
         -- Debug println: "** frame allocation **".
-        self size: 0
+        self size: 0!
     method nextIndex
         size = size + 1.
-        size
+        size!
     method index
-        size
+        size!
 end
 
 class NullEnvironment {}
@@ -61,14 +61,14 @@ class Environment { bindings parent allocation globals }
             bindings: List new
             parent: NullEnvironment
             allocation: FrameAllocation new
-            globals: Dictionary new
+            globals: Dictionary new!
 
     method newFrame
         Environment
             bindings: List new
             parent: self
             allocation: FrameAllocation new
-            globals: globals
+            globals: globals!
 
     method addVariable: name
         Environment
@@ -78,7 +78,7 @@ class Environment { bindings parent allocation globals }
                                      index: allocation nextIndex))
             parent: parent
             allocation: allocation
-            globals: globals
+            globals: globals!
 
     method addVariables: names
         let newBindings = bindings copy.
@@ -91,11 +91,11 @@ class Environment { bindings parent allocation globals }
             bindings: newBindings
             parent: parent
             allocation: allocation
-            globals: globals
+            globals: globals!
 
     method load: definition
         definition defineIn: self.
-        self
+        self!
 
     method eval: string
         let env = Environment
@@ -105,14 +105,14 @@ class Environment { bindings parent allocation globals }
                       globals: globals.
         ((Parser parse: string) translateIn: env)::AstNode
             evalWith: (InterpreterContext new: env allocation size)
-            in: Process new
+            in: Process new!
 
     method global: name
         globals at: name
-                ifNone: { Error raise: "Unbound variable: {name}" }.
+                ifNone: { Error raise: "Unbound variable: {name}" }!
 
     method reference: name
-        self reference: name inFrame: 1
+        self reference: name inFrame: 1!
 
     method reference: name inFrame: frame::Integer
         let binding = bindings reversed -- SLOW!
@@ -120,38 +120,38 @@ class Environment { bindings parent allocation globals }
                           ifNone: { parent is False
                                         ifTrue: { return self global: name }
                                         ifFalse: { return parent reference: name inFrame: frame + 1 } }.
-        binding referenceInFrame: frame
+        binding referenceInFrame: frame!
 end
 
 interface AstNode
     is Object
     method debug
-        Debug println: "#<AST {self}>".
+        Debug println: "#<AST {self}>"!
 end
 
 class AstConstantRef { value }
     is AstNode
     method evalWith: context in: process
-        value
+        value!
 end
 
 class AstIs { left right }
     is AstNode
     method evalWith: context in: process
         (left evalWith: context in: process)
-            is (right evalWith: context in: process)
+            is (right evalWith: context in: process)!
 end
 
 class AstSeq { first then }
     is AstNode
     method evalWith: context in: process
         first evalWith: context in: process.
-        then evalWith: context in: process
+        then evalWith: context in: process!
 end
 
 extend Object
     method getMethod: selector
-        HostMethod receiver: self selector: selector
+        HostMethod receiver: self selector: selector!
 end
 
 class AstSend {
@@ -167,29 +167,27 @@ class AstSend {
                          collect: { |arg|
                                     arg evalWith: context in: process })
             with: context
-            in: process
+            in: process!
 end
 
 define $context
-    False
-end
+    False!
 
 define $process
-    False
-end
+    False!
 
 class AstMethod { receiver selector }
     is AstNode
     method invoke: arguments with: context in: process
         let $context = context.
         let $process = process.
-        selector sendTo: receiver with: arguments.
+        selector sendTo: receiver with: arguments!
 end
 
 class AstGlobal { name value }
     is AstNode
     method evalWith: context in: process
-        value
+        value!
 end
 
 class AstDefine { name body frameSize }
@@ -199,18 +197,18 @@ class AstDefine { name body frameSize }
             put: (AstGlobal
                       name: name
                       value: self _eval)
-            at: name.
+            at: name!
     method _eval
         body evalWith: (InterpreterContext new: frameSize)
-             in: Process new
+             in: Process new!
 end
 
 class AstBlockClosure { context block }
     is AstNode
     method value
-        self apply: []
+        self apply: []!
     method value: arg
-        self apply: [arg]
+        self apply: [arg]!
     method apply: arguments
         let frame = Array new: block frameSize.
         let nArgs = arguments size.
@@ -222,18 +220,18 @@ class AstBlockClosure { context block }
             evalWith: (InterpreterContext
                            sender: context
                            frame: frame)
-            in: False
+            in: False!
     method getMethod: selector
-        AstMethod receiver: self selector: selector
+        AstMethod receiver: self selector: selector!
 end
 
 class AstBlock { body argumentCount frameSize }
     method evalWith: context in: process
         AstBlockClosure
             context: context
-            block: self
+            block: self!
     method frameSize
-        frameSize
+        frameSize!
 end
 
 class AstBindLexical { name index value body }
@@ -244,7 +242,7 @@ class AstBindLexical { name index value body }
             put: object
             at: index
             inFrame: 1.
-        body evalWith: context in: process.
+        body evalWith: context in: process!
 end
 
 class AstLexicalRef { name
@@ -252,7 +250,7 @@ class AstLexicalRef { name
                       index::Integer }
     is AstNode
     method evalWith: context in: process
-        context at: index inFrame: frame
+        context at: index inFrame: frame!
 end
 
 class AstLexicalSet { name
@@ -264,7 +262,7 @@ class AstLexicalSet { name
         context
             put: (value evalWith: context in: process)
             at: index
-            inFrame: frame.
+            inFrame: frame!
 end
 
 interface Syntax
@@ -273,19 +271,19 @@ interface Syntax
         let env = Environment new.
         (self translateIn: env)
             evalWith: (InterpreterContext new: (env allocation size))
-            in: Process new.
+            in: Process new!
     method load
-        Environment new load: (self translateIn: Environment new)
+        Environment new load: (self translateIn: Environment new)!
 end
 
 class SyntaxLiteral { value }
     is Syntax
     method translateIn: environment
-        AstConstantRef value: value
+        AstConstantRef value: value!
     method isEquivalent: other
-        self value == other value
+        self value == other value!
     method toString
-        value toString
+        value toString!
 end
 
 class SyntaxSeq { first then }
@@ -294,12 +292,12 @@ class SyntaxSeq { first then }
         -- FIXME: Would be nicer to flatten this out.
         AstSeq
             first: (first translateIn: environment)
-            then: (then translateIn: environment).
+            then: (then translateIn: environment)!
     method checkEqualInternal: other
         self first checkEqual: other first.
-        self then checkEqual: other then.
+        self then checkEqual: other then!
     method toString
-        "{first}. {then}"
+        "{first}. {then}"!
 end
 
 class SyntaxPrefix { receiver selector }
@@ -307,12 +305,12 @@ class SyntaxPrefix { receiver selector }
     method translateIn: environment
         AstSend receiver: (receiver translateIn: environment)
                 selector: (Selector name: "prefix{selector name}")
-                arguments: []
+                arguments: []!
     method checkEqualInternal: other
         receiver checkEqual: other receiver.
-        selector checkEqual: other selector.
+        selector checkEqual: other selector!
     method toString
-        "{selector name}{receiver}"
+        "{selector name}{receiver}"!
 end
 
 class SyntaxUnary { receiver selector }
@@ -320,12 +318,12 @@ class SyntaxUnary { receiver selector }
     method translateIn: environment
         AstSend receiver: (receiver translateIn: environment)
                 selector: selector
-                arguments: []
+                arguments: []!
     method checkEqualInternal: other
         receiver checkEqual: other receiver.
-        selector checkEqual: other selector.
+        selector checkEqual: other selector!
     method toString
-        "{receiver} {selector name}"
+        "{receiver} {selector name}"!
 end
 
 class SyntaxBinary { receiver selector argument }
@@ -333,13 +331,13 @@ class SyntaxBinary { receiver selector argument }
     method translateIn: environment
         AstSend receiver: (receiver translateIn: environment)
                 selector: selector
-                arguments: [argument translateIn: environment]
+                arguments: [argument translateIn: environment]!
     method checkEqualInternal: other
         receiver checkEqual: other receiver.
         selector checkEqual: other selector.
-        argument checkEqual: other argument
+        argument checkEqual: other argument!
     method toString
-        "{receiver} {selector name} {argument}"
+        "{receiver} {selector name} {argument}"!
 end
 
 class SyntaxKeyword { receiver selector arguments }
@@ -349,7 +347,7 @@ class SyntaxKeyword { receiver selector arguments }
                 selector: selector
                 arguments: (arguments
                                 collect: { |arg|
-                                           arg translateIn: environment })
+                                           arg translateIn: environment })!
     method checkEqualInternal: other
         receiver checkEqual: other receiver.
         selector checkEqual: other selector.
@@ -357,25 +355,25 @@ class SyntaxKeyword { receiver selector arguments }
         List typecheck: other arguments.
         arguments
             with: other arguments
-            do: { |arg1 arg2| arg1 checkEqual: arg2 }
+            do: { |arg1 arg2| arg1 checkEqual: arg2 }!
     method toString
         let string = StringOutput new: "{receiver} ".
         selector parts with: arguments
                        do: { |part arg|
                              string print: "{part} {arg}" }.
-        string content
+        string content!
 end
 
 class SyntaxIs { left right }
     is Syntax
     method translateIn: environment
         AstIs left: (left translateIn: environment)
-              right: (right translateIn: environment)
+              right: (right translateIn: environment)!
     method checkEqualInternal: other
         left checkEqual: other left.
-        right checkEqual: other right.
+        right checkEqual: other right!
     method toString
-        "{left} is {right}"
+        "{left} is {right}"!
 end
 
 class SyntaxLet { name value body }
@@ -386,23 +384,23 @@ class SyntaxLet { name value body }
             name: name
             index: environment allocation index
             value: (value translateIn: environment)
-            body: (body translateIn: bindEnv)
+            body: (body translateIn: bindEnv)!
     method checkEqualInternal: other
         value checkEqual: other value.
         name checkEqual: other name.
-        body checkEqual: other body.
+        body checkEqual: other body!
     method toString
-        "let {name} = {value}. {body}"
+        "let {name} = {value}. {body}"!
 end
 
 class SyntaxVariable { name }
     is Syntax
     method translateIn: environment
-        environment reference: name
+        environment reference: name!
     method isEquivalent: other
-        name == other name
+        name == other name!
     method toString
-        name
+        name!
 end
 
 class SyntaxAssign { variable value }
@@ -413,22 +411,22 @@ class SyntaxAssign { variable value }
             name: variable name
             frame: binding frame :: Integer
             index: binding index :: Integer
-            value: (value translateIn: environment).
+            value: (value translateIn: environment)!
     method checkEqualInternal: other
         variable checkEqual: other variable.
-        value checkEqual: other value.
+        value checkEqual: other value!
     method toString
-        "{variable} = {value}".
+        "{variable} = {value}"!
 end
 
 class SyntaxParens { body }
     is Syntax
     method translateIn: environment
-        body translateIn: environment
+        body translateIn: environment!
     method checkEqualInternal: other
-        body checkEqual: other body
+        body checkEqual: other body!
     method toString
-        "({body})"
+        "({body})"!
 end
 
 class SyntaxBlock { arguments body }
@@ -438,10 +436,10 @@ class SyntaxBlock { arguments body }
         AstBlock
             body: (body translateIn: bodyEnv)
             argumentCount: arguments size
-            frameSize: arguments size + bodyEnv allocation size.
+            frameSize: arguments size + bodyEnv allocation size!
     method checkEqualInternal: other
         arguments checkEqual: other arguments.
-        body checkEqual: other body.
+        body checkEqual: other body!
     method toString
         let args = StringOutput new: "".
         arguments
@@ -449,7 +447,7 @@ class SyntaxBlock { arguments body }
                           arguments do: { |arg| args print: "{arg}" }
                                     interleaving: { args print: " " }.
                           args print: "| " }.
-        "\{ {args content}{body} }"
+        "\{ {args content}{body} }"!
 end
 
 class SyntaxDefine { name body }
@@ -458,33 +456,28 @@ class SyntaxDefine { name body }
         AstDefine
             name: name
             body: (body translateIn: environment)
-            frameSize: environment allocation size.
+            frameSize: environment allocation size!
     method checkEqualInternal: other
         name checkEqual: other name.
-        body checkEqual: other body.
+        body checkEqual: other body!
     method toString
-        "define {name} {body} end"
+        "define {name} {body}!"!
 end
 
 define SeqPrecedence
-    1
-end
+    1!
 
 define SingleExpressionPrecedence
-    2 -- dot has precedence 2
-end
+    2! -- dot has precedence 2
 
 define KeywordPrecedence
-    9
-end
+    9!
 
 define UnknownOperatorPrecedence
-    10
-end
+    10!
 
 define PrefixPrecedence
-    1000
-end
+    1000!
 
 define TokenPrecedence
     let tokens = Dictionary new.
@@ -498,12 +491,12 @@ define TokenPrecedence
     tokens put: 3 at: "(".
     tokens put: 3 at: "\{".
     tokens put: 2 at: ".".
+    tokens put: 1 at: "!".
     tokens put: 0 at: ")".
     tokens put: 0 at: "}".
     tokens put: 0 at: "define".
     tokens put: 0 at: "end".
-    tokens
-end
+    tokens!
 
 interface Token
     is Object
@@ -511,19 +504,19 @@ interface Token
     class method from: first to: last in: parser
         self
             string: (parser source from: first to: last)
-            first: first last: last
+            first: first last: last!
 
     method precedence
-        Error raise: "{self string} is not valid in suffix position!"
+        Error raise: "{self string} is not valid in suffix position!"!
 
     method parseAsSuffixOf: prefix with: parser
-        Error raise: "Cannot parse {self} in suffix position!"
+        Error raise: "Cannot parse {self} in suffix position!"!
 
     method parseAsPrefixWith: parser
-        Error raise: "Cannot parse {self} in prefix position!"
+        Error raise: "Cannot parse {self} in prefix position!"!
 
     method toString
-        "#<Token {self string}>"
+        "#<Token {self string}>"!
 end
 
 interface SuffixToken
@@ -532,7 +525,7 @@ interface SuffixToken
     method precedence
         TokenPrecedence
             at: self string
-            ifNone: { UnknownOperatorPrecedence }
+            ifNone: { UnknownOperatorPrecedence }!
 end
 
 class TokenDecimal { string first last }
@@ -543,26 +536,26 @@ class TokenDecimal { string first last }
         1 to: string size
           do: { |pos|
                 n = n * 10 + (string at: pos) digit }.
-        SyntaxLiteral value: n
+        SyntaxLiteral value: n!
 end
 
 class TokenEof { position }
     is Token
 
     class method at: position in: parser
-        self position: position
+        self position: position!
 
     method precedence
-        0
+        0!
 
     method string
-        "EOF"
+        "EOF"!
 end
 
 interface ReservedToken
     is SuffixToken
     class method string: string first: first last: last
-        self first: first last: last
+        self first: first last: last!
 end
 
 class TokenReservedWordDefine { first last }
@@ -572,18 +565,18 @@ class TokenReservedWordDefine { first last }
         let def = SyntaxDefine
                       name: parser parseVariableName
                       body: (parser parseWithPrecedence: SeqPrecedence).
-        parser expect: "end".
-        def
+        parser expect: "!".
+        def!
 
     method string
-        "define"
+        "define"!
 end
 
 class TokenReservedWordEnd { first last }
     is ReservedToken
 
     method string
-        "end"
+        "end"!
 end
 
 class TokenReservedWordIs { first last }
@@ -592,10 +585,10 @@ class TokenReservedWordIs { first last }
     method parseAsSuffixOf: prefix with: parser
         SyntaxIs
             left: prefix
-            right: (parser parseWithPrecedence: (self precedence))
+            right: (parser parseWithPrecedence: (self precedence))!
 
     method string
-        "is"
+        "is"!
 end
 
 class TokenReservedWordLet { first last }
@@ -609,10 +602,10 @@ class TokenReservedWordLet { first last }
         SyntaxLet
             name: name
             value: value
-            body: (parser parseWithPrecedence: SeqPrecedence)
+            body: (parser parseWithPrecedence: SeqPrecedence)!
 
     method string
-        "let"
+        "let"!
 end
 
 class TokenReservedSigilDot { first last }
@@ -621,10 +614,10 @@ class TokenReservedSigilDot { first last }
     method parseAsSuffixOf: prefix with: parser
         SyntaxSeq
             first: prefix
-            then: (parser parseWithPrecedence: SeqPrecedence)
+            then: (parser parseWithPrecedence: SeqPrecedence)!
 
     method string
-        "."
+        "."!
 end
 
 class TokenReservedSigilOpenParen { first last }
@@ -634,16 +627,16 @@ class TokenReservedSigilOpenParen { first last }
         let body = parser parseWithPrecedence: SeqPrecedence.
         parser expect: ")".
         SyntaxParens
-            body: body
+            body: body!
 
     method string
-        "("
+        "("!
 end
 
 class TokenReservedSigilCloseParen { first last }
     is ReservedToken
     method string
-        ")"
+        ")"!
 end
 
 class TokenReservedSigilOpenBrace { first last }
@@ -657,16 +650,16 @@ class TokenReservedSigilOpenBrace { first last }
                            do: { arguments add: (parser parseVariableName) } }.
         let body = parser parseWithPrecedence: SeqPrecedence.
         parser expect: "}".
-        SyntaxBlock arguments: arguments body: body
+        SyntaxBlock arguments: arguments body: body!
 
     method string
-        "\{"
+        "\{"!
 end
 
 class TokenReservedSigilCloseBrace { first last }
     is ReservedToken
     method string
-        "}"
+        "}"!
 end
 
 class TokenReservedSigilEqual { first last }
@@ -675,10 +668,10 @@ class TokenReservedSigilEqual { first last }
     method parseAsSuffixOf: prefix with: parser
         SyntaxAssign
             variable: prefix::SyntaxVariable
-            value: (parser parseWithPrecedence: SingleExpressionPrecedence).
+            value: (parser parseWithPrecedence: SingleExpressionPrecedence)!
 
     method string
-        "="
+        "="!
 end
 
 define ReservedTokens
@@ -692,8 +685,7 @@ define ReservedTokens
     tokens put: TokenReservedWordDefine at: "define".
     tokens put: TokenReservedWordIs at: "is".
     tokens put: TokenReservedWordLet at: "let".
-    tokens
-end
+    tokens!
 
 interface LookupToken
     is SuffixToken
@@ -704,7 +696,7 @@ interface LookupToken
         let tokenClass = ReservedTokens
                              at: tokenString
                              ifNone: { Self }.
-        tokenClass string: tokenString first: first last: last
+        tokenClass string: tokenString first: first last: last!
 end
 
 class TokenSigil { string first last }
@@ -713,13 +705,13 @@ class TokenSigil { string first last }
     method parseAsPrefixWith: parser
         SyntaxPrefix
             receiver: (parser parseWithPrecedence: PrefixPrecedence)
-            selector: (Selector name: string)
+            selector: (Selector name: string)!
 
     method parseAsSuffixOf: prefix with: parser
         SyntaxBinary
             receiver: prefix
             selector: (Selector name: string)
-            argument: (parser parseWithPrecedence: (self precedence))
+            argument: (parser parseWithPrecedence: (self precedence))!
 end
 
 class TokenWord { string first last }
@@ -731,23 +723,23 @@ class TokenWord { string first last }
         let tokenClass = ReservedTokens
                              at: tokenString
                              ifNone: { TokenWord }.
-        tokenClass string: tokenString first: first last: last
+        tokenClass string: tokenString first: first last: last!
 
     method parseAsPrefixWith: parser
         SyntaxVariable
-            name: string
+            name: string!
 
     method parseAsSuffixOf: prefix with: parser
            SyntaxUnary
             receiver: prefix
-            selector: (Selector name: string).
+            selector: (Selector name: string)!
 end
 
 class TokenKeyword { string first last }
     is SuffixToken
 
     method precedence
-        KeywordPrecedence
+        KeywordPrecedence!
 
     method parseAsSuffixOf: prefix with: parser
         let arguments = List new.
@@ -762,23 +754,20 @@ class TokenKeyword { string first last }
         SyntaxKeyword
             receiver: prefix
             selector: (Selector name: selector content)
-            arguments: arguments
+            arguments: arguments!
 end
 
 define SpecialCharacters
     ["(" character,
      ")" character,
      "[" character,
-     "]" character]
-end
+     "]" character]!
 
 define UnderscoreCharacter
-    "_" character
-end
+    "_" character!
 
 define ColonCharacter
-    ":" character
-end
+    ":" character!
 
 -- FIXME: Broken for unicode input!
 class Parser { source::String
@@ -794,36 +783,36 @@ class Parser { source::String
              first: 1
              last: (source size)
              lookahead: List new)
-        parse
+        parse!
 
     method parse
-        self parseWithPrecedence: 0
+        self parseWithPrecedence: 0!
 
     method parseVariableName
         let token = self nextToken.
         (TokenWord includes: token)
             ifFalse: { panic "Invalid variable name: {token string}" }.
-        token string
+        token string!
 
     method expect: expected
         let got = self nextToken string.
         got == expected
-            ifFalse: { Error raise: "Expected '{expected}', got '{got}'" }.
+            ifFalse: { Error raise: "Expected '{expected}', got '{got}'" }!
 
     method when: test then: action
         self lookahead string == test
-            ifTrue: { self nextToken. action value }
+            ifTrue: { self nextToken. action value }!
 
     method until: test do: action
         { self lookahead string == test }
             whileFalse: action.
-        self nextToken.
+        self nextToken!
 
     method parseWithPrecedence: precedence
-        self parseSuffixOf: self parsePrefix with: precedence
+        self parseSuffixOf: self parsePrefix with: precedence!
 
     method parsePrefix
-        self nextToken parseAsPrefixWith: self
+        self nextToken parseAsPrefixWith: self!
 
     method parseSuffixOf: prefix with: precedence
         let expr = prefix.
@@ -833,23 +822,23 @@ class Parser { source::String
         whileTrue: { -- Debug println: " -> go".
                      expr = self parseSuffixOf: expr }.
         -- Debug println: " -> no".
-        expr
+        expr!
 
     method parseSuffixOf: prefix
-        self nextToken parseAsSuffixOf: prefix with: self
+        self nextToken parseAsSuffixOf: prefix with: self!
 
     method nextPrecedence
-        self lookahead precedence
+        self lookahead precedence!
 
     method lookahead
         lookahead
             ifEmpty: { lookahead push: self scanNext }.
-        lookahead first
+        lookahead first!
 
     method nextToken
         lookahead isEmpty
             ifTrue: { self scanNext }
-            ifFalse: { lookahead pop }.
+            ifFalse: { lookahead pop }!
 
     method scanNext
         self skipWhitespace.
@@ -863,32 +852,32 @@ class Parser { source::String
             ifTrue: { return self scanSigil }.
         self atWord
             ifTrue: { return self scanWord }.
-        Error raise: "Don't know how to scan pos: {position} in: {source}"
+        Error raise: "Don't know how to scan pos: {position} in: {source}"!
 
     method atEof
-        position > last
+        position > last!
 
     method atSpecial
         self isAt: { |char|
                      SpecialCharacters
-                         anySatisfy: { |special| special == char } }
+                         anySatisfy: { |special| special == char } }!
 
     method atDigit
-        self isAt: #isDigit
+        self isAt: #isDigit!
 
     method atWord
         self isAt: { |char|
-                     char isAlphanumeric or: char == UnderscoreCharacter }
+                     char isAlphanumeric or: char == UnderscoreCharacter }!
 
     method atTerminating
-        self atSpecial or: self atWhitespace
+        self atSpecial or: self atWhitespace!
 
     method atSigil
         self atEof not
-            ifTrue: { (self atWord or: self atTerminating) not }
+            ifTrue: { (self atWord or: self atTerminating) not }!
 
     method atWhitespace
-        self isAt: #isWhitespace
+        self isAt: #isWhitespace!
 
     method atChar: char1 thenNot: char2
         self atEof
@@ -896,22 +885,22 @@ class Parser { source::String
         (source at: position) == char1
             ifFalse: { return False }.
         (position + 1 > last)
-            ifFalse: { ((source at: position + 1) == char2) not }
+            ifFalse: { ((source at: position + 1) == char2) not }!
 
     method isAt: block
         self atEof
             ifTrue: { False }
-            ifFalse: { block value: (source at: position) }
+            ifFalse: { block value: (source at: position) }!
 
     method skipWhile: test
         -- Debug println: "/skipWhile: {test}".
         let start = position.
         { test value: self }
             whileTrue: { self advance }.
-        position - 1
+        position - 1!
 
     method skipWhitespace
-        self skipWhile: #atWhitespace
+        self skipWhile: #atWhitespace!
 
     method scanSpecial
         -- Debug println: "/scanSpecial".
@@ -920,21 +909,21 @@ class Parser { source::String
         TokenSigil
             from: start
             to: start
-            in: self.
+            in: self!
 
     method scanDecimal
         -- Debug println: "/scanDecimal".
         TokenDecimal
             from: position
             to: (self skipWhile: #atDigit)
-            in: self.
+            in: self!
 
     method scanSigil
         -- Debug println: "/scanSigil".
         TokenSigil
             from: position
             to: (self skipWhile: #atSigil)
-            in: self.
+            in: self!
 
     method scanWord
         -- Debug println: "/scanWord".
@@ -949,18 +938,18 @@ class Parser { source::String
             ifFalse: { TokenWord
                            from: first
                            to: position - 1
-                           in: self }
+                           in: self }!
 
     method advance
         position <= last
             ifFalse: { panic "Tried to advance beyond end: \"{source}\"" }.
-        position = position + 1.
+        position = position + 1!
 
 end
 
 class Tests {}
     class method run
-        self new run
+        self new run!
     method run
         self
             ; test42
@@ -976,7 +965,7 @@ class Tests {}
             ; testSimpleBlock
             ; testArgBlock
             ; testBlockClosure
-            ; testDefine
+            ; testDefine!
     method parseSyntax: string
         -- Check Syntax print/parse consistency.
         let syntax = Parser parse: string.
@@ -988,39 +977,39 @@ class Tests {}
 original: {string}
 printed: {printed}
 problem: {desc}" }.
-        syntax
+        syntax!
     method load: def eval: expr expect: expected
         let result = ((self parseSyntax: def) load eval: expr).
         (result == expected)
             ifFalse: { Error raise: "Expected {expected}, got: {result}
 from: {expr}
-with: {def}" }
+with: {def}" }!
     method eval: expr expect: expected
         let result = (self parseSyntax: expr) eval.
         (result == expected)
             ifFalse: { Error raise: "Expected {expected}, got: {result}
-from: '{expr}'" }
+from: '{expr}'" }!
     method test42
-        self eval: "42" expect: 42
+        self eval: "42" expect: 42!
     method testPlus
-        self eval: "100 + 1000 + 10 + 1" expect: 1111.
+        self eval: "100 + 1000 + 10 + 1" expect: 1111!
     method testPrecedence
-        self eval: "12 + 10 * 10 - 1" expect: 111.
+        self eval: "12 + 10 * 10 - 1" expect: 111!
     method testPrefixMethod
-        self eval: "- 42" expect: -42.
+        self eval: "- 42" expect: -42!
     method testUnaryMethod
-        self eval: "- 42 abs" expect: 42.
+        self eval: "- 42 abs" expect: 42!
     method testKeywordMethod
-        self eval: "1 to: 10 by: 2" expect: (1 to: 10 by: 2).
+        self eval: "1 to: 10 by: 2" expect: (1 to: 10 by: 2)!
     method testIs
         self eval: "1 is 1" expect: True.
-        self eval: "1 is 2" expect: False.
+        self eval: "1 is 2" expect: False!
     method testLet
         self eval: "let x = 1. x + x"
-             expect: 2
+             expect: 2!
     method testParens
         self eval: "(1 + 1) * 2"
-             expect: 4
+             expect: 4!
     method testAssign
         self eval: "let x = 20. x = x + 1. x * 2"
              expect: 42.
@@ -1028,28 +1017,27 @@ from: '{expr}'" }
                     let x = 20.
                     (let x = 2000. x = x + 100. y = x * 2).
                     x = x + 1. y + x * 2"
-            expect: 4242.
+            expect: 4242!
     method testSimpleBlock
         self eval: "\{ 32 + 10 } value"
-             expect: 42.
+             expect: 42!
     method testArgBlock
         self eval: "\{ |x| x + 1 } value: 41"
-             expect: 42
+             expect: 42!
     method testBlockClosure
         self eval: "let block = (let x = 21. \{ x = x * 2 }).
                     let x = 0.
                     block value. block value"
-            expect: 84
+            expect: 84!
     method testDefine
         self load: "define FourtyTwoForTestDefine
-                       42
-                    end"
+                       42!"
              eval: "FourtyTwoForTestDefine"
-             expect: 42
+             expect: 42!
 end
 
 class Main {}
     class method run: cmd in: system
         Tests run.
-        system output println: "ok!"
+        system output println: "ok!"!
 end

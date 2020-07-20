@@ -1,63 +1,63 @@
 class UnboundVariable {}
     class method oops
-        oops
+        oops!
 end
 
 class ValueTypeError {}
     class method oops
-        14::String
+        14::String!
 end
 
 class SlotTypeError { slot::String }
     class method oops
-        (self slot: "OK") oops
+        (self slot: "OK") oops!
     method oops
-        slot = 123
+        slot = 123!
 end
 
 class VarTypeError {}
     class method oops
         let x::String = "OK".
-        x = 12312
+        x = 12312!
 end
 
 class VarInitTypeError {}
     class method oops
         let x::String = 123124.
-        x
+        x!
 end
 
 class MethodArgTypeError {}
     class method oops
-        self oops: 42
+        self oops: 42!
     class method oops: x::String
-        panic "Not supposed to happen! x = {x}"
+        panic "Not supposed to happen! x = {x}"!
 end
 
 class BlockArgTypeError {}
     class method oops
-        { |x::String| x } value: 42
+        { |x::String| x } value: 42!
 end
 
 class UndefinedValueTypeError {}
     class method oops
-        self oops: 42
+        self oops: 42!
     class method oops: x
-        x::UndefinedType
+        x::UndefinedType!
 end
 
 class UndefinedVarTypeError {}
     class method oops
         let x::UndefinedType = "OK".
-        x
+        x!
 end
 
 class PanicError {}
     class method oops
-        panic "This here"
+        panic "This here"!
 end
 
 class DoesNotUnderstandError {}
     class method oops
-        self noSuchMethod
+        self noSuchMethod!
 end

@@ -25,9 +25,9 @@ fn test_cascade2() {
           class Foo { a }
             method neg
                a = -a.
-               self
+               self!
             method up: by
-               a = a + by
+               a = a + by!
           end
           Foo a: 44; neg up: 2; neg; a"
         )
@@ -45,9 +45,9 @@ fn test_cascade3() {
           class Foo { a }
             method neg
                a = -a.
-               self
+               self!
             method up: by
-               a = a + by
+               a = a + by!
           end
           Foo a: 44
           ; neg up: 2
@@ -64,9 +64,9 @@ fn test_class_method1() {
     let (class, env) = eval_obj(
         "class Foo { a }
             class method new
-                self a: 42
+                self a: 42!
             class method foo
-                12
+                12!
          end",
     );
     assert_eq!(class.send("foo", &[], &env), Ok(env.foo.make_integer(12)));
@@ -81,11 +81,11 @@ fn test_class_method2() {
     let (class, env) = eval_obj(
         "class Foo { _a }
             class method new
-                self _a: 42
+                self _a: 42!
             class method foo
-                12
+                12!
             method a
-                _a
+                _a!
          end",
     );
     assert_eq!(class.send("foo", &[], &env), Ok(env.foo.make_integer(12)));
@@ -101,7 +101,7 @@ fn test_instance_variable1() {
         eval_ok(
             "class Foo { bar }
                method zot
-                  bar
+                  bar!
              end
              (Foo bar: 42) zot"
         )
@@ -117,9 +117,9 @@ fn test_instance_variable2() {
             "class Foo { bar }
                method zit
                   bar = bar + 1.
-                  self
+                  self!
                method zot
-                  bar
+                  bar!
              end
              (Foo bar: 41) zit zot"
         )
@@ -135,7 +135,7 @@ fn test_instance_variable3() {
             "class Foo { bar::Integer }
                method foo: x
                   bar = bar + x.
-                  self
+                  self!
              end
              ((Foo bar: 41) foo: 1) bar"
         )
@@ -150,7 +150,7 @@ fn test_instance_variable4() {
         "class Foo { bar::Integer }
            method foo: x
               bar = bar + x.
-              self
+              self!
          end
          ((Foo bar: 41) foo: 1.0) bar",
     );
@@ -167,7 +167,7 @@ fn test_instance_variable4() {
                     "002            method foo: x\n",
                     "003               bar = bar + x.\n",
                     "                        ^^^^^^^ Integer expected, got Float: 42.0\n",
-                    "004               self\n"
+                    "004               self!\n"
                 )
             )
         )
@@ -181,11 +181,11 @@ fn test_extend1() {
             "
          class Foo {}
             class method perform: s with: args
-               666
+               666!
          end
          extend Foo
             method bar
-               42
+               42!
          end
          Foo new bar",
         )
@@ -201,11 +201,11 @@ fn test_extend2() {
             "
          class Foo {}
             method perform: s with: args
-               666
+               666!
          end
          extend Foo
             class method bar
-               42
+               42!
          end
          Foo bar",
         )
@@ -219,11 +219,11 @@ fn test_extend_exception1() {
     let (exception, _env) = eval_exception(
         "class Foo {}
             method perform: s with: args
-               42
+               42!
          end
          extend Foo
             method bar
-               666
+               666!
          end",
     );
     assert_eq!(
@@ -242,11 +242,11 @@ fn test_extend_exception2() {
     let (exception, _env) = eval_exception(
         "class Foo {}
             class method perform: s with: args
-               42
+               42!
          end
          extend Foo
             class method bar
-               666
+               666!
          end",
     );
     assert_eq!(
@@ -401,9 +401,9 @@ fn test_typecheck8() {
         "class Foo {}
             defaultConstructor foo
             method zot: x::Integer
-                x
+                x!
             method boom
-                self zot: 1.0
+                self zot: 1.0!
          end
          Foo foo boom",
     );
@@ -415,10 +415,10 @@ fn test_typecheck8() {
                 expected: "Integer".to_string()
             }),
             Location::from(
-                146..154,
+                147..155,
                 concat!(
                     "005             method boom\n",
-                    "006                 self zot: 1.0\n",
+                    "006                 self zot: 1.0!\n",
                     "                         ^^^^^^^^ Integer expected, got Float: 1.0\n",
                     "007          end\n"
                 )
@@ -433,7 +433,7 @@ fn test_typecheck9() {
         "class Foo {}
             defaultConstructor foo
             method zot: x -> Integer
-                x + 1
+                x + 1!
          end
          Foo foo zot: 1.0",
     );
@@ -448,7 +448,7 @@ fn test_typecheck9() {
                 101..106,
                 concat!(
                     "003             method zot: x -> Integer\n",
-                    "004                 x + 1\n",
+                    "004                 x + 1!\n",
                     "                    ^^^^^ Integer expected, got Float: 2.0\n",
                     "005          end\n",
                 )
@@ -485,7 +485,7 @@ fn test_typecheck11() {
             "class Foo {}
             defaultConstructor foo
             method zot: x::Integer
-                x
+                x!
          end
          Foo foo zot: 42",
         )
@@ -632,7 +632,7 @@ fn test_new_instance1() {
 fn test_new_instance2() {
     let (object, env) = eval_obj(
         "class Oh {}
-            method no 42
+            method no 42!
             defaultConstructor noes
          end
          Oh noes",
@@ -644,7 +644,7 @@ fn test_new_instance2() {
 fn test_instance_method1() {
     let (object, env) = eval_obj(
         "class Foo {}
-            method bar 311.
+            method bar 311!
          end
          Foo new",
     );
@@ -656,9 +656,9 @@ fn test_instance_method2() {
     let (object, env) = eval_obj(
         "class Foo {}
             method foo
-               self bar
+               self bar!
             method bar
-               311
+               311!
          end
          Foo new",
     );
@@ -670,11 +670,11 @@ fn test_instance_method3() {
     let (object, env) = eval_obj(
         "class Foo { value }
             method + other
-               Foo value: value + other value
+               Foo value: value + other value!
          end
          class Bar { a b }
             method sum
-              a + b
+              a + b!
          end
          Bar a: (Foo value: 1) b: (Foo value: 10)",
     );
@@ -690,7 +690,7 @@ fn test_return_returns() {
         "class Foo {}
             method foo
                return 1.
-               2
+               2!
          end
          Foo new foo",
     );
@@ -703,9 +703,9 @@ fn test_return_from_method_block() {
         "class Foo {}
             method test
                 self boo: { return 42 }.
-                31
+                31!
             method boo: blk
-                blk value
+                blk value!
          end
          Foo new test
         ",
@@ -718,16 +718,16 @@ fn test_return_from_deep_block_to_middle() {
     let (object, env) = eval_obj(
         "class Foo {}
             method test
-               return 1 + let x = 41. self test0: x
+               return 1 + let x = 41. self test0: x!
             method test0: x
                self test1: { return x }.
-               return 100
+               return 100!
             method test1: blk
                self test2: blk.
-               return 1000
+               return 1000!
             method test2: blk
                blk value.
-               return 10000
+               return 10000!
          end
          Foo new test
         ",
@@ -741,7 +741,7 @@ fn test_not_understood() {
         eval_ok(
             r#"class Foo {}
                 method perform: m with: args
-                   "not understood: {m} args: {args}"
+                   "not understood: {m} args: {args}"!
                end
                Foo new foo: 1 bar: 2"#
         )
@@ -757,7 +757,7 @@ fn test_method_keyword_multiline() {
             r#"class Foo {}
                   class method bar: x
                                quux: y
-                    x + y
+                    x + y!
                end
                Foo bar: 40 quux: 2"#
         )
@@ -772,7 +772,7 @@ fn test_method_declares_class_as_argtype() {
         eval_ok(
             r#"class Foo { x }
                    method y: other::Foo
-                       other x
+                       other x!
                end
                (Foo x: 42) y: (Foo x: 123)"#
         )

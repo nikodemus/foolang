@@ -1,11 +1,8 @@
 define X
-    "eks"
-end
+    "eks"!
 
 define _Y
-    "why"
-end
+    "why"!
 
 define Y
-    { _Y }
-end
+    { _Y }!

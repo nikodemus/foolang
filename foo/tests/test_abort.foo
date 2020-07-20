@@ -1,4 +1,4 @@
 class Main {}
   class method run: cmd in: system
-     system abort
+     system abort!
 end

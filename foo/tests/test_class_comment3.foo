@@ -1,7 +1,7 @@
 class Main {}
     class method run: cmd in: system
-        system output println: "ok".
+        system output println: "ok"!
     -- leading comment 1
     class method bar
-        42
+        42!
 end

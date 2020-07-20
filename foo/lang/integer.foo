@@ -4,63 +4,63 @@ extend Integer
     is Number
 
     class method default
-        0
+        0!
 
     method asInteger
-        self
+        self!
 
     method to: other
-        self to: other by: 1
+        self to: other by: 1!
 
     method to: other do: block
         let i = self.
         { i <= other }
            whileTrue: { block value: i. i = i + 1 }.
-        self
+        self!
 
     method times: block
         let i = 0.
         { i < self }
            whileTrue: { block value. i = i + 1 }.
-        self
+        self!
 
     method addNumber: left
-        left integerAdd: self
+        left integerAdd: self!
     method subNumber: left
-        left integerSub: self
+        left integerSub: self!
     method mulNumber: left
-        left integerMul: self
+        left integerMul: self!
     method divNumber: left
-        left integerDiv: self
+        left integerDiv: self!
 
     method eqNumber: left
-        left integerEq: self
+        left integerEq: self!
     method ltNumber: left
-        left integerLt: self
+        left integerLt: self!
     method gtNumber: left
-        left integerGt: self
+        left integerGt: self!
     method lteNumber: left
-        left integerLte: self
+        left integerLte: self!
     method gteNumber: left
-        left integerGte: self
+        left integerGte: self!
 
     method floatAdd: right
-        self asFloat floatAdd: right
+        self asFloat floatAdd: right!
     method floatSub: right
-        self asFloat floatSub: right
+        self asFloat floatSub: right!
     method floatMul: right
-        self asFloat floatMul: right
+        self asFloat floatMul: right!
     method floatDiv: right
-        self asFloat floatDiv: right
+        self asFloat floatDiv: right!
 
     method floatEq: right
-        self asFloat floatEq: right
+        self asFloat floatEq: right!
     method floatGt: right
-        self asFloat floatGt: right
+        self asFloat floatGt: right!
     method floatLt: right
-        self asFloat floatLt: right
+        self asFloat floatLt: right!
     method floatGte: right
-        self asFloat floatGte: right
+        self asFloat floatGte: right!
     method floatLte: right
-        self asFloat floatLte: right
+        self asFloat floatLte: right!
 end

@@ -1,4 +1,4 @@
 class Identity {}
    class method value: x
-      x
+      x!
 end

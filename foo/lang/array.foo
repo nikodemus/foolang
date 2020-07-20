@@ -6,37 +6,37 @@ class ArrayIterator { array index }
     is Iterator
 
     class method new: array
-        self array: array index: 1
+        self array: array index: 1!
 
     method nextIfNone: block
         let next = index > array size
             ifTrue: { return block value }
             ifFalse: { array at: index }.
         index = index + 1.
-        next
+        next!
 
     method hasNext
-        index <= array size
+        index <= array size!
 end
 
 class Specialized { containerClass elementType }
     class method class: containerClass of: elementType
-        self containerClass: containerClass elementType: elementType
+        self containerClass: containerClass elementType: elementType!
     method new
-        containerClass of: elementType new: 0
+        containerClass of: elementType new: 0!
     method new: size
-        containerClass of: elementType new: size
+        containerClass of: elementType new: size!
     method new: size value: value
-        containerClass of: elementType new: size value: value
+        containerClass of: elementType new: size value: value!
     method includes: thing
         (containerClass includes: thing)
-            ifTrue: { thing elementType is elementType }
+            ifTrue: { thing elementType is elementType }!
     method typecheck: thing
         self includes: thing
-             ifFalse: { TypeError raise: thing expected: self }.
-        thing
+             ifFalse: { TypeError raise: thing expected: self }
+        thing!
     method displayOn: stream
-        stream print: "{containerClass} of: {elementType}"
+        stream print: "{containerClass} of: {elementType}"!
 end
 
 extend Array
@@ -48,84 +48,84 @@ extend Array
         let new = self new: ordered size.
         1 to: new size
           do: { |i| new put: (ordered at: i) at: i }.
-        new
+        new!
 
     class method new: size
-        self of: Object new: size value: False
+        self of: Object new: size value: False!
 
     class method new: size value: value
-        self of: Object new: size value: value
+        self of: Object new: size value: value!
 
     class method of: type
-        Specialized class: Array of: type
+        Specialized class: Array of: type!
 
     class method of: type new: size
-        self of: type new: size value: type default
+        self of: type new: size value: type default!
 
     method from: first to: last
         let offset = first - 1.
         let new = Array of: self arrayElementType new: last - offset.
         1 to: new size
           do: { |i| new put: (self at: i + offset) at: i }.
-        new
+        new!
 
     method + x
-        x broadcast: {|a b| a + b} to: self.
+        x broadcast: {|a b| a + b} to: self!
     method - x
-        x broadcast: {|a b| a - b} to: self.
+        x broadcast: {|a b| a - b} to: self!
     method * x
-        x broadcast: {|a b| a * b} to: self.
+        x broadcast: {|a b| a * b} to: self!
     method / x
-        x broadcast: {|a b| a / b} to: self.
+        x broadcast: {|a b| a / b} to: self!
 
     method broadcast: block to: collection
-        collection with: self collect: block.
+        collection with: self collect: block!
 
     method iterator
-        ArrayIterator new: self
+        ArrayIterator new: self!
 
     method elementType
         -- KLUDGE: otherwise Iterator#elementType:
         -- need something like
         --  is Iterable except: [#elementType]
-        self arrayElementType
+        self arrayElementType!
 
     method _emitOn: stream using: block
         stream print: "[".
         self do: { |x| block value: x }
              interleaving: { stream print: ", " }.
-        stream print: "]".
+        stream print: "]"!
 
     method displayOn: stream
-        self _emitOn: stream using: { |x| x displayOn: stream }.
+        self _emitOn: stream using: { |x| x displayOn: stream }!
 
     method printOn: stream
-        self _emitOn: stream using: { |x| x printOn: stream }.
+        self _emitOn: stream using: { |x| x printOn: stream }!
 
     method dot: other
-        self with: other sum: { |a b| a * b }.
+        self with: other sum: { |a b| a * b }!
 
     method norm
-       (self inject: 0.0 into: { |abs elt| abs + (elt * elt) }) sqrt.
+       (self inject: 0.0 into: { |abs elt| abs + (elt * elt) }) sqrt!
 
     method normalized
-       let reciprocal = 1.0 / (self norm).
-        self * reciprocal.
+        let reciprocal = 1.0 / (self norm).
+        self * reciprocal!
 
     method scalarProjectionOn: other
-        (self dot: other) / other norm.
+        (self dot: other) / other norm!
 
     method vectorProjectionOn: other
-        ((self dot: other) / (other dot: other)) * other.
+        ((self dot: other) / (other dot: other)) * other!
 
     method addNumber: left
-       self collect: { |elt| left + elt }.
+       self collect: { |elt| left + elt }!
     method subNumber: left
-       self collect: { |elt| left - elt }.
+       self collect: { |elt| left - elt }!
     method divNumber: left
-       self collect: { |elt| left / elt }.
+       self collect: { |elt| left / elt }!
     method mulNumber: left
-       self collect: { |elt| left * elt }.
+       self collect: { |elt| left * elt }!
 end
 
 class TestArray {}
@@ -140,6 +140,7 @@ class TestArray {}
                testing: "Array#== (false 2)".
         assert false: { ["one", 2, 3] == [1, "two", 3] }
                testing: "Array#== (false 3)".
+        self!
 
     class method testSort: assert
         assert that: { [] sort }
@@ -166,6 +167,7 @@ class TestArray {}
         assert that: { [9, 2, 1, 8, 7, 3, 5, 4, 6, 0] sort }
                equals: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
                testing: "sort, ten".
+        self!
 
     class method testReverse: assert
         assert that: { let a = [].
@@ -192,6 +194,7 @@ class TestArray {}
                        a reverse }
                equals: [3,2,1]
                testing: "reverse array, retval (3)".
+        self!
 
     class method testReversed: assert
         assert that: { let a = [].
@@ -215,10 +218,12 @@ class TestArray {}
                        a }
                equals: [1,2,3]
                testing: "reversed array, side-effect (3)".
+        self!
 
     class method runTests: assert
         self testEquality: assert.
         self testSort: assert.
         self testReverse: assert.
         self testReversed: assert.
+        self!
 end

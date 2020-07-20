@@ -5,7 +5,7 @@ extend Dictionary
     is Object
 
     method at: key
-        self at: key ifNone: { False }
+        self at: key ifNone: { False }!
 
     class method runTests: assert
         assert that: { let d = { 1 + 1 + 40 -> "the" append: "Answer" }.
@@ -16,5 +16,5 @@ extend Dictionary
                        d put: "foo" at: "bar".
                        (d at: "bar") }
                is: "foo"
-               testing: "Dictionary#put:at: and #at:"
+               testing: "Dictionary#put:at: and #at:"!
 end

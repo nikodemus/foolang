@@ -455,11 +455,9 @@ fn make_name_table() -> NameTable {
     ParserSyntax::def(t, ",", invalid_prefix, invalid_suffix, precedence_0);
     ParserSyntax::def(t, "->", invalid_prefix, invalid_suffix, precedence_0);
     ParserSyntax::def(t, "defaultConstructor", invalid_prefix, invalid_suffix, precedence_0);
-    ParserSyntax::def(t, "method", invalid_prefix, invalid_suffix, precedence_0);
-    ParserSyntax::def(t, "required", invalid_prefix, invalid_suffix, precedence_0);
-    ParserSyntax::def(t, "end", invalid_prefix, invalid_suffix, precedence_0);
     // NOTE: parse_seq vs parse_single have special knowledge about precedence
     // 2!
+    ParserSyntax::def(t, "!", invalid_prefix, invalid_suffix, precedence_1);
     ParserSyntax::def(t, ".", invalid_prefix, sequence_suffix, precedence_2);
     ParserSyntax::def(t, "let", let_prefix, invalid_suffix, precedence_3);
     ParserSyntax::def(t, "return", return_prefix, invalid_suffix, precedence_3);
@@ -538,6 +536,10 @@ fn precedence_3(_: &Parser, _: Span) -> Result<usize, Unwind> {
 
 fn precedence_2(_: &Parser, _: Span) -> Result<usize, Unwind> {
     Ok(2)
+}
+
+fn precedence_1(_: &Parser, _: Span) -> Result<usize, Unwind> {
+    Ok(1)
 }
 
 fn precedence_0(_: &Parser, _: Span) -> Result<usize, Unwind> {
@@ -1039,6 +1041,9 @@ fn interface_prefix(parser: &Parser) -> Parse {
     let mut interface = InterfaceDef::new(source_location, interface_name);
     loop {
         let next = parser.next_token()?;
+        if next == Token::COMMENT || next == Token::BLOCK_COMMENT {
+            continue;
+        }
         if next == Token::WORD && parser.slice() == "end" {
             break;
         }
@@ -1188,9 +1193,8 @@ fn define_prefix(parser: &Parser) -> Parse {
     let init = parser.parse_seq()?;
 
     parser.next_token()?;
-    if "end" != parser.slice() {
-        return parser
-            .error(&format!("Expected 'end' after definition, got: '{}'", parser.slice()));
+    if "!" != parser.slice() {
+        return parser.error(&format!("Expected '!' after definition, got: '{}'", parser.slice()));
     }
 
     Ok(Syntax::Def(Def::DefineDef(DefineDef {
@@ -1221,6 +1225,9 @@ fn extend_prefix(parser: &Parser) -> Parse {
     // println!("extend: {}", &class_name);
     loop {
         let next = parser.next_token()?;
+        if next == Token::COMMENT || next == Token::BLOCK_COMMENT {
+            continue;
+        }
         if next == Token::WORD && parser.slice() == "end" {
             break;
         }
@@ -1284,7 +1291,7 @@ fn let_prefix(parser: &Parser) -> Parse {
         Token::SIGIL if parser.slice() == "." => false,
         Token::EOF => true,
         _ => {
-            return parser.error("Expected separator after let");
+            return parser.error("Expected '.' after let");
         }
     };
     // For REPL niceness:
@@ -1504,6 +1511,16 @@ fn parse_method(parser: &Parser) -> Result<MethodDefinition, Unwind> {
     // FIXME: Would be nice to add "while parsing method Bar#foo"
     // type info to the error.
     method.body = Some(Box::new(parser.parse_seq()?));
+    if parser.at_eof() {
+        return parser.eof_error("End of input inside method");
+    }
+    parser.next_token()?;
+    if parser.slice() != "!" {
+        return Unwind::error_at(
+            method.body.unwrap().source_location(),
+            &format!("Expected '!' after method {}, got: '{}'", method.selector, parser.slice()),
+        );
+    }
     Ok(method)
 }
 

@@ -1,13 +1,13 @@
 extend Output
     method println: string
         string printOn: self.
-        self newline
+        self newline!
     method newline
-        self print: "\n".
+        self print: "\n"!
     method print: object
-        object printOn: self.
+        object printOn: self!
     method display: object
-        object displayOn: self
+        object displayOn: self!
     method displayOn: stream
-        stream print: self toString
+        stream print: self toString!
 end

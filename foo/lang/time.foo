@@ -1,6 +1,6 @@
 extend Time
     method + x
-        x addTime: self
+        x addTime: self!
     method - x
-        x subTime: self
+        x subTime: self!
 end

@@ -1,5 +1,5 @@
 class Main {}
     -- leading comment 1
     class method run: cmd in: system
-        system output println: "ok"
+        system output println: "ok"!
 end

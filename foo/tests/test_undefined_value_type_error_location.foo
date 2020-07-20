@@ -2,5 +2,5 @@ import .errorLocationTests.UndefinedValueTypeError
 
 class Main {}
     class method run: cmd in: sys
-        UndefinedValueTypeError oops
+        UndefinedValueTypeError oops!
 end

@@ -4,77 +4,72 @@ class Panic { description context }
     is Object
     method displayOn: stream
         stream println: "PANIC: {self description}".
-        stream println: self context
+        stream println: self context!
 end
 
 define $error
-{ |ex| panic (ex description) }
-end
+    { |ex| panic (ex description) }!
 
 class Error { description }
     is Object
     class method withHandler: handler do: block
         let $error = { |error| self handle: error with: handler }.
-        block value
+        block value!
     class method raise: description
-        $error value: (self description: description)
+        $error value: (self description: description)!
     class method handle: error with: handler
         handler value: error.
-        panic "UNHANDLED ERROR: {error description}"
+        panic "UNHANDLED ERROR: {error description}"!
     class method handler
-        { |ex| $error value: ex }
+        { |ex| $error value: ex }!
     method displayOn: stream
-        stream print: "#<Error {self description}>"
+        stream print: "#<Error {self description}>"!
 end
 
 define $typeError
-    Error handler
-end
+    Error handler!
 
 class TypeError { value expected }
     is Object
     class method withHandler: handler do: block
         let $typeError = { |error| self handle: error with: handler }.
-        block value
+        block value!
     class method raise: value expected: type
-        $typeError value: (self value: value expected: type)
+        $typeError value: (self value: value expected: type)!
     method description
-        "Type error: {expected} expected, got: {value}".
+        "Type error: {expected} expected, got: {value}"!
     method displayOn: stream
-        stream print: "#<TypeError {expected}, got: {value}>"
+        stream print: "#<TypeError {expected}, got: {value}>"!
 end
-
 
 define $divideByZero
-    Error handler
-end
+    Error handler!
 
 class DivideByZero { value }
     is Object
     class method withHandler: handler do: block
         let $divideByZero = handler.
-        block value
+        block value!
     class method raise: value
-        $divideByZero value: (self value: value)
+        $divideByZero value: (self value: value)!
     method description
-        "Divide by zero: {value} cannot be divided by zero"
+        "Divide by zero: {value} cannot be divided by zero"!
     method displayOn: stream
-        stream print: "#<DivideByZero {value}>"
+        stream print: "#<DivideByZero {value}>"!
 end
 
 define $iteratorExhausted
-    Error handler
-end
+    Error handler!
 
 class IteratorExhausted { value }
     is Object
     class method withHandler: handler do: block
         let $iteratorExhausted = handler.
-        block value
+        block value!
     class method raise: value
-        $iteratorExhausted value: ( self value: value )
+        $iteratorExhausted value: ( self value: value )!
     method description
-        "Iterator exhausted: {value}"
+        "Iterator exhausted: {value}"!
     method displayOn: stream
-        stream print: "#<IteratorExhausted {value}>"
+        stream print: "#<IteratorExhausted {value}>"!
 end

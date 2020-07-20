@@ -8,7 +8,7 @@ fn test_clock1() {
         .run(
             "class Main {}
              class method run: command in: system
-                 system clock :: Clock toString
+                 system clock :: Clock toString!
          end",
             cmd,
         )
@@ -30,7 +30,7 @@ fn test_clock2() {
                  let t0 = clock time.
                  system sleep: 10.
                  let t1 = clock time.
-                 t0 real < t1 real
+                 t0 real < t1 real!
          end",
             cmd,
         )

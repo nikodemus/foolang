@@ -2,15 +2,15 @@ extend StringOutput
     class method new: string
         let out = self new.
         out print: string.
-        out.
+        out!
     method toString
-        "#<StringOutput>"
+        "#<StringOutput>"!
     method flush
-        self
+        self!
     method println: string
         self print: string.
-        self newline
+        self newline!
     method newline
         self print: ("" newline).
-        self
+        self!
 end
