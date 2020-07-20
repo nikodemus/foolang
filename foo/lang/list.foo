@@ -6,8 +6,13 @@ import .ordered.Ordered
 
 
 class List { size data }
-    is Collection
     is Ordered
+    is Collection
+
+    method toString
+        self isEmpty
+            ifTrue: { "List from: []" }
+            ifFalse: { "List from: {data from: 1 to: self size}" }.
 
     class method from: collection
         let new = self withCapacity: collection size.

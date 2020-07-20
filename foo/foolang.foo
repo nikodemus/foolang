@@ -103,7 +103,7 @@ class Environment { bindings parent allocation globals }
                       parent: False
                       allocation: FrameAllocation new
                       globals: globals.
-        (string parse translateIn: env)::AstNode
+        ((Parser parse: string) translateIn: env)::AstNode
             evalWith: (InterpreterContext new: env allocation size)
             in: Process new
 
@@ -269,12 +269,21 @@ end
 
 interface Syntax
     is Object
+    method eval
+        let env = Environment new.
+        (self translateIn: env)
+            evalWith: (InterpreterContext new: (env allocation size))
+            in: Process new.
+    method load
+        Environment new load: (self translateIn: Environment new)
 end
 
 class SyntaxLiteral { value }
     is Syntax
     method translateIn: environment
         AstConstantRef value: value
+    method isEquivalent: other
+        self value == other value
     method toString
         value toString
 end
@@ -286,6 +295,9 @@ class SyntaxSeq { first then }
         AstSeq
             first: (first translateIn: environment)
             then: (then translateIn: environment).
+    method checkEqualInternal: other
+        self first checkEqual: other first.
+        self then checkEqual: other then.
     method toString
         "{first}. {then}"
 end
@@ -296,8 +308,11 @@ class SyntaxPrefix { receiver selector }
         AstSend receiver: (receiver translateIn: environment)
                 selector: (Selector name: "prefix{selector name}")
                 arguments: []
+    method checkEqualInternal: other
+        receiver checkEqual: other receiver.
+        selector checkEqual: other selector.
     method toString
-        "({selector name} {receiver})"
+        "{selector name}{receiver}"
 end
 
 class SyntaxUnary { receiver selector }
@@ -306,8 +321,11 @@ class SyntaxUnary { receiver selector }
         AstSend receiver: (receiver translateIn: environment)
                 selector: selector
                 arguments: []
+    method checkEqualInternal: other
+        receiver checkEqual: other receiver.
+        selector checkEqual: other selector.
     method toString
-        "({receiver} {selector name})"
+        "{receiver} {selector name}"
 end
 
 class SyntaxBinary { receiver selector argument }
@@ -316,8 +334,12 @@ class SyntaxBinary { receiver selector argument }
         AstSend receiver: (receiver translateIn: environment)
                 selector: selector
                 arguments: [argument translateIn: environment]
+    method checkEqualInternal: other
+        receiver checkEqual: other receiver.
+        selector checkEqual: other selector.
+        argument checkEqual: other argument
     method toString
-        "({receiver} {selector name} {argument})"
+        "{receiver} {selector name} {argument}"
 end
 
 class SyntaxKeyword { receiver selector arguments }
@@ -328,6 +350,20 @@ class SyntaxKeyword { receiver selector arguments }
                 arguments: (arguments
                                 collect: { |arg|
                                            arg translateIn: environment })
+    method checkEqualInternal: other
+        receiver checkEqual: other receiver.
+        selector checkEqual: other selector.
+        List typecheck: arguments.
+        List typecheck: other arguments.
+        arguments
+            with: other arguments
+            do: { |arg1 arg2| arg1 checkEqual: arg2 }
+    method toString
+        let string = StringOutput new: "{receiver} ".
+        selector parts with: arguments
+                       do: { |part arg|
+                             string print: "{part} {arg}" }.
+        string content
 end
 
 class SyntaxIs { left right }
@@ -335,8 +371,11 @@ class SyntaxIs { left right }
     method translateIn: environment
         AstIs left: (left translateIn: environment)
               right: (right translateIn: environment)
+    method checkEqualInternal: other
+        left checkEqual: other left.
+        right checkEqual: other right.
     method toString
-        "({left} is {right})"
+        "{left} is {right}"
 end
 
 class SyntaxLet { name value body }
@@ -348,14 +387,20 @@ class SyntaxLet { name value body }
             index: environment allocation index
             value: (value translateIn: environment)
             body: (body translateIn: bindEnv)
+    method checkEqualInternal: other
+        value checkEqual: other value.
+        name checkEqual: other name.
+        body checkEqual: other body.
     method toString
-        "(let {name} = {value}. {body})"
+        "let {name} = {value}. {body}"
 end
 
 class SyntaxVariable { name }
     is Syntax
     method translateIn: environment
         environment reference: name
+    method isEquivalent: other
+        name == other name
     method toString
         name
 end
@@ -369,14 +414,19 @@ class SyntaxAssign { variable value }
             frame: binding frame :: Integer
             index: binding index :: Integer
             value: (value translateIn: environment).
+    method checkEqualInternal: other
+        variable checkEqual: other variable.
+        value checkEqual: other value.
     method toString
-        "({variable} = {value})".
+        "{variable} = {value}".
 end
 
 class SyntaxParens { body }
     is Syntax
     method translateIn: environment
         body translateIn: environment
+    method checkEqualInternal: other
+        body checkEqual: other body
     method toString
         "({body})"
 end
@@ -389,8 +439,17 @@ class SyntaxBlock { arguments body }
             body: (body translateIn: bodyEnv)
             argumentCount: arguments size
             frameSize: arguments size + bodyEnv allocation size.
+    method checkEqualInternal: other
+        arguments checkEqual: other arguments.
+        body checkEqual: other body.
     method toString
-        "\{ {body} }"
+        let args = StringOutput new: "".
+        arguments
+            ifNotEmpty: { args print: "|".
+                          arguments do: { |arg| args print: "{arg}" }
+                                    interleaving: { args print: " " }.
+                          args print: "| " }.
+        "\{ {args content}{body} }"
 end
 
 class SyntaxDefine { name body }
@@ -400,6 +459,9 @@ class SyntaxDefine { name body }
             name: name
             body: (body translateIn: environment)
             frameSize: environment allocation size.
+    method checkEqualInternal: other
+        name checkEqual: other name.
+        body checkEqual: other body.
     method toString
         "define {name} {body} end"
 end
@@ -896,18 +958,6 @@ class Parser { source::String
 
 end
 
-extend String
-    method parse
-        Parser parse: self
-    method eval
-        let env = Environment new.
-        (self parse translateIn: env)
-            evalWith: (InterpreterContext new: (env allocation size))
-            in: Process new.
-    method load
-        Environment new load: (self parse translateIn: Environment new)
-end
-
 class Tests {}
     class method run
         self new run
@@ -927,44 +977,75 @@ class Tests {}
             ; testArgBlock
             ; testBlockClosure
             ; testDefine
+    method parseSyntax: string
+        -- Check Syntax print/parse consistency.
+        let syntax = Parser parse: string.
+        let printed = syntax toString.
+        { (syntax checkEqual: (Parser parse: string)) }
+            on: Error
+            do: { |desc|
+                  panic "CST print/parse inconsistency!
+original: {string}
+printed: {printed}
+problem: {desc}" }.
+        syntax
+    method load: def eval: expr expect: expected
+        let result = ((self parseSyntax: def) load eval: expr).
+        (result == expected)
+            ifFalse: { Error raise: "Expected {expected}, got: {result}
+from: {expr}
+with: {def}" }
+    method eval: expr expect: expected
+        let result = (self parseSyntax: expr) eval.
+        (result == expected)
+            ifFalse: { Error raise: "Expected {expected}, got: {result}
+from: '{expr}'" }
     method test42
-        ("42" eval == 42) assert: "Constant evaluation".
+        self eval: "42" expect: 42
     method testPlus
-        ("100 + 1000 + 10 + 1" eval == 1111) assert: "Constant addition".
+        self eval: "100 + 1000 + 10 + 1" expect: 1111.
     method testPrecedence
-        ("12 + 10 * 10 - 1" eval == 111) assert: "Binary precedence".
+        self eval: "12 + 10 * 10 - 1" expect: 111.
     method testPrefixMethod
-        ("- 42" eval == -42) assert: "Prefix method".
+        self eval: "- 42" expect: -42.
     method testUnaryMethod
-        ("- 42 abs" eval == 42) assert: "Unary method".
+        self eval: "- 42 abs" expect: 42.
     method testKeywordMethod
-        ("1 to: 10 by: 2" eval == (1 to: 10 by: 2)) assert: "Keyword method".
+        self eval: "1 to: 10 by: 2" expect: (1 to: 10 by: 2).
     method testIs
-        ("1 is 1" eval == True) assert: "Builtin 'is' --> True".
-        ("1 is 2" eval == False) assert: "Builtin 'is' --> False".
+        self eval: "1 is 1" expect: True.
+        self eval: "1 is 2" expect: False.
     method testLet
-        ("let x = 1. x + x" eval == 2) assert: "Let binding".
+        self eval: "let x = 1. x + x"
+             expect: 2
     method testParens
-        ("(1 + 1) * 2" eval == 4) assert: "Parens".
+        self eval: "(1 + 1) * 2"
+             expect: 4
     method testAssign
-        ("let x = 20. x = x + 1. x * 2" eval == 42) assert: "assign".
-        ("let y = 0.
-          let x = 20.
-          (let x = 2000. x = x + 100. y = x * 2).
-          x = x + 1. y + x * 2"
-            eval == 4242)  assert: "assign with scope".
+        self eval: "let x = 20. x = x + 1. x * 2"
+             expect: 42.
+        self eval: "let y = 0.
+                    let x = 20.
+                    (let x = 2000. x = x + 100. y = x * 2).
+                    x = x + 1. y + x * 2"
+            expect: 4242.
     method testSimpleBlock
-        ("\{ 32 + 10 } value" eval == 42) assert: "simple block".
+        self eval: "\{ 32 + 10 } value"
+             expect: 42.
     method testArgBlock
-        ("\{ |x| x + 1 } value: 41" eval == 42) assert: "arg block".
+        self eval: "\{ |x| x + 1 } value: 41"
+             expect: 42
     method testBlockClosure
-        ("let block = (let x = 21. \{ x = x * 2 }).
-          let x = 0.
-          block value. block value" eval == 84) assert: "block closure."
+        self eval: "let block = (let x = 21. \{ x = x * 2 }).
+                    let x = 0.
+                    block value. block value"
+            expect: 84
     method testDefine
-        (("define FourtyTwoForTestDefine
-             42
-           end" load eval: "FourtyTwoForTestDefine") == 42) assert: "define".
+        self load: "define FourtyTwoForTestDefine
+                       42
+                    end"
+             eval: "FourtyTwoForTestDefine"
+             expect: 42
 end
 
 class Main {}
