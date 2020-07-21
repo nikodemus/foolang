@@ -114,6 +114,7 @@ pub enum Method {
     // FIXME: split Interface from Class, give Interface a vec
     // of required signature.
     Required(Signature),
+    Object(Object),
 }
 
 impl PartialEq for Method {
@@ -129,6 +130,9 @@ impl Method {
     }
     fn primitive(method: MethodFunction) -> Method {
         Method::Primitive(method)
+    }
+    pub fn object(method: &Object) -> Method {
+        Method::Object(method.clone())
     }
     fn closure(method: &MethodDefinition, env: &Env) -> Result<Method, Unwind> {
         Ok(Method::Interpreter(Rc::new(make_method_closure(
@@ -155,6 +159,7 @@ impl Method {
             // FIXME: Both should
             Method::Primitive(_) => Unwind::error("Primitive method has no signature"),
             Method::Reader(_) => Unwind::error("Reader method has no signature"),
+            Method::Object(_) => Unwind::error("Object method signature fetching not implemented."),
         }
     }
 
@@ -1165,10 +1170,10 @@ impl Object {
         }
     }
 
-    pub fn instance(&self) -> Rc<Instance> {
+    pub fn instance(&self) -> Result<Rc<Instance>, Unwind> {
         match &self.datum {
-            Datum::Instance(instance) => Rc::clone(instance),
-            _ => panic!("BUG: {:?} is not an instance", self),
+            Datum::Instance(instance) => Ok(Rc::clone(instance)),
+            _ => Unwind::error(&format!("{:?} is not an instance", self)),
         }
     }
 
@@ -1488,7 +1493,13 @@ impl Object {
                 Method::Required(_) => {
                     Unwind::error(&format!("Required method '{}' unimplemented", selector))
                 }
+                Method::Object(method) => {
+                    method.send("invoke:on:", &[env.foo.make_array(args), self.clone()], env)
+                }
             },
+            None if selector == "__slot:" => {
+                read_instance_variable(self, args[0].as_usize("#__slot:")?)
+            }
             None if selector == "toString" => generic_to_string(self, args, env),
             None if selector == "typecheck:" => generic_typecheck(self, args, env),
             None if selector == "includes:" => generic_class_includes(self, args, env),
@@ -1503,6 +1514,7 @@ impl Object {
                         Method::Required(_) => {
                             Unwind::error(&format!("Required method '{}' unimplemented", selector))
                         }
+                        Method::Object(method) => method.send("invoke:", &not_understood, env),
                     },
                     None => {
                         // panic!("message '{}' not understood by: {}", selector, self);
@@ -1652,7 +1664,7 @@ fn generic_typecheck(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
 }
 
 pub fn read_instance_variable(receiver: &Object, index: usize) -> Eval {
-    let instance = receiver.instance();
+    let instance = receiver.instance()?;
     let value = instance.instance_variables.borrow()[index].clone();
     Ok(value)
 }
@@ -1663,7 +1675,7 @@ pub fn write_instance_variable(receiver: &Object, slot: &Slot, value: Object, en
     } else {
         value
     };
-    let instance = receiver.instance();
+    let instance = receiver.instance()?;
     instance.instance_variables.borrow_mut()[slot.index] = ok.clone();
     Ok(ok)
 }
