@@ -2,7 +2,6 @@ use std::borrow::Borrow;
 use std::cell::{Ref, RefCell, RefMut};
 use std::cmp::Eq;
 use std::collections::{HashMap, HashSet};
-use std::convert::AsRef;
 use std::fmt;
 use std::fs;
 use std::hash::{Hash, Hasher};
@@ -20,6 +19,7 @@ use crate::time::TimeInfo;
 use crate::unwind::Unwind;
 
 use crate::classes;
+use crate::classes::class::Class;
 
 pub type Eval = Result<Object, Unwind>;
 
@@ -122,8 +122,9 @@ impl PartialEq for Method {
     }
 }
 
+// FIXME: move to class.rs?
 impl Method {
-    fn reader(index: usize) -> Method {
+    pub fn reader(index: usize) -> Method {
         Method::Reader(index)
     }
     fn primitive(method: MethodFunction) -> Method {
@@ -180,7 +181,7 @@ pub struct Vtable {
 }
 
 // Cannot be a method since requires access to target Rc.
-fn vt_add_interface(target: &Rc<Vtable>, interface_vt: &Rc<Vtable>) {
+pub fn vt_add_interface(target: &Rc<Vtable>, interface_vt: &Rc<Vtable>) {
     let mut interfaces = target.interfaces.borrow_mut();
     for inherited in interface_vt.interfaces.borrow().iter() {
         interfaces.insert(inherited.clone());
@@ -324,56 +325,6 @@ impl Arg {
             source_location,
             name,
         }
-    }
-}
-
-pub struct Class {
-    pub instance_vtable: Rc<Vtable>,
-    pub interface: bool,
-}
-
-impl PartialEq for Class {
-    fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self, other)
-    }
-}
-
-impl Eq for Class {}
-
-impl Hash for Class {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        std::ptr::hash(self, state);
-    }
-}
-
-impl Class {
-    fn new_class(name: &str) -> Object {
-        Object {
-            vtable: Rc::new(Vtable::new(&format!("class {}", name))),
-            datum: Datum::Class(Rc::new(Class {
-                instance_vtable: Rc::new(Vtable::new(name)),
-                interface: false,
-            })),
-        }
-    }
-    fn new_interface(name: &str) -> Object {
-        Object {
-            vtable: Rc::new(Vtable::new(&format!("interface {}", name))),
-            datum: Datum::Class(Rc::new(Class {
-                instance_vtable: Rc::new(Vtable::new(name)),
-                interface: true,
-            })),
-        }
-    }
-    fn object(class_vtable: &Rc<Vtable>, instance_vtable: &Rc<Vtable>) -> Object {
-        let class = Object {
-            vtable: Rc::clone(class_vtable),
-            datum: Datum::Class(Rc::new(Class {
-                instance_vtable: Rc::clone(instance_vtable),
-                interface: false,
-            })),
-        };
-        class
     }
 }
 
@@ -706,6 +657,7 @@ pub struct Foolang {
     pub boolean_vtable: Rc<Vtable>,
     pub byte_array_vtable: Rc<Vtable>,
     pub byte_array_class_vtable: Rc<Vtable>,
+    pub class_vtable: Rc<Vtable>,
     pub clock_class_vtable: Rc<Vtable>,
     pub clock_vtable: Rc<Vtable>,
     pub closure_class_vtable: Rc<Vtable>,
@@ -762,6 +714,7 @@ impl Foolang {
             "ByteArray",
             Class::object(&self.byte_array_class_vtable, &self.byte_array_vtable),
         );
+        env.define("Class", Class::object(&self.class_vtable, &self.class_vtable));
         env.define("Clock", Class::object(&self.clock_class_vtable, &self.clock_vtable));
         env.define("Closure", Class::object(&self.closure_class_vtable, &self.closure_vtable));
         env.define("Compiler", Class::object(&self.compiler_class_vtable, &self.compiler_vtable));
@@ -805,6 +758,7 @@ impl Foolang {
             boolean_vtable: Rc::new(classes::boolean::instance_vtable()),
             byte_array_class_vtable: Rc::new(classes::byte_array::class_vtable()),
             byte_array_vtable: Rc::new(classes::byte_array::instance_vtable()),
+            class_vtable: Rc::new(classes::class::class_vtable()),
             clock_class_vtable: Rc::new(classes::clock::class_vtable()),
             clock_vtable: Rc::new(classes::clock::instance_vtable()),
             closure_class_vtable: Rc::new(Vtable::new("Closure")),
@@ -913,21 +867,22 @@ impl Foolang {
     // FIXME: inconsistent return type vs other make_foo methods.
     // Should others be Eval as well?
     pub fn make_class(&self, def: &ClassDef, env: &Env) -> Eval {
-        let mut class = Class::new_class(&def.name);
+        let class_object = Class::new_class(&def.name);
+        let class = class_object.as_class_ref()?;
         for (i, var) in def.instance_variables.iter().enumerate() {
             class.add_slot(&var.name, i, env.maybe_type(&var.typename)?)?;
         }
-        class.add_primitive_class_method(&def.constructor(), generic_ctor)?;
+        class_object.add_primitive_class_method(&def.constructor(), generic_ctor)?;
         for method in &def.class_methods {
-            class.add_interpreted_class_method(env, method)?;
+            class_object.add_interpreted_class_method(env, method)?;
         }
         for method in &def.instance_methods {
-            class.add_interpreted_instance_method(env, method)?;
+            class_object.add_interpreted_instance_method(env, method)?;
         }
         for name in &def.interfaces {
-            class.add_interface(env, name)?;
+            class_object.add_interface(env, name)?;
         }
-        Ok(class)
+        Ok(class_object)
     }
 
     pub fn make_interface(&self, def: &InterfaceDef, env: &Env) -> Eval {
@@ -1124,7 +1079,7 @@ impl Object {
         }
     }
 
-    fn is_type(&self, typevt: &Rc<Vtable>) -> bool {
+    pub fn is_type(&self, typevt: &Rc<Vtable>) -> bool {
         if typevt == &self.vtable {
             return true;
         }
@@ -1133,6 +1088,10 @@ impl Object {
                 return true;
             }
         }
+        // println!("{:?} != {:?}", &self.vtable, typevt);
+        // for vt in self.vtable.interfaces().iter() {
+        //    println!(" - {:?}", &vt);
+        // }
         false
     }
 
@@ -1257,19 +1216,7 @@ impl Object {
         }
     }
 
-    fn add_slot(&mut self, name: &str, index: usize, typed: Option<Object>) -> Result<(), Unwind> {
-        let class = self.as_class_ref()?;
-        if class.interface {
-            return Unwind::error("BUG: Cannot add slot to an interface");
-        }
-        class.instance_vtable.add_slot(name, index, typed);
-        if !name.starts_with("_") {
-            class.instance_vtable.add_method(name, Method::reader(index))?;
-        }
-        Ok(())
-    }
-
-    fn add_primitive_class_method(
+    pub fn add_primitive_class_method(
         &self,
         selector: &str,
         method: MethodFunction,
@@ -1279,7 +1226,59 @@ impl Object {
         Ok(())
     }
 
-    fn add_interface(&self, env: &Env, name: &str) -> Result<(), Unwind> {
+    pub fn add_class_interface(&self, env: &Env, name: &str) -> Result<(), Unwind> {
+        let class = self.as_class_ref()?;
+        let class_name = &class.instance_vtable.name;
+        // Add interface class methods
+        let interface_obj = env.find_interface(name)?;
+        let interface = interface_obj.as_class_ref()?;
+        for (selector, method) in interface_obj.vtable.methods().iter() {
+            if !self.vtable.has(selector) {
+                self.vtable.add_method(selector, method.extend_env("Self", self))?;
+            }
+        }
+        let instance_vt = &class.instance_vtable;
+        // Add interface to instance vtable
+        vt_add_interface(instance_vt, &interface.instance_vtable);
+        // Add interface instance methods
+        for (selector, method) in interface.instance_vtable.methods().iter() {
+            let signature = method.signature()?;
+            let required = method.is_required();
+            match instance_vt.get(selector) {
+                Some(Method::Interpreter(ref closure)) => {
+                    if &closure.signature != signature {
+                        return Unwind::error(&format!(
+                            "{}#{} is {}, interface {} specifies {}",
+                            class_name, selector, &closure.signature, name, signature
+                        ));
+                    }
+                }
+                Some(Method::Primitive(_)) => {
+                    // FIXME: signature not checked!
+                }
+                Some(_) => {
+                    return Unwind::error(&format!(
+                    "{}#{} is an interface method, non-vanilla implementations not supporte yet",
+                    class_name, selector
+                ))
+                }
+                None if required => {
+                    return Unwind::error(&format!(
+                        "{}#{} unimplemented, required by interface {}",
+                        class_name, selector, name
+                    ))
+                }
+                None => {
+                    instance_vt.add_method(selector, method.extend_env("Self", self))?;
+                }
+            }
+        }
+        // Add instance vtable as an implementation of interface
+
+        Ok(())
+    }
+
+    pub fn add_interface(&self, env: &Env, name: &str) -> Result<(), Unwind> {
         let class = self.as_class_ref()?;
         let class_name = &class.instance_vtable.name;
         // Add interface class methods
@@ -1607,7 +1606,7 @@ impl fmt::Debug for Object {
     }
 }
 
-fn generic_ctor(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
+pub fn generic_ctor(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     let class = receiver.as_class_ref()?;
     Ok(Object {
         vtable: Rc::clone(&class.instance_vtable),
