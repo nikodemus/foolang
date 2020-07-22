@@ -69,16 +69,13 @@ class FrameAllocation { size::Integer }
         size!
 end
 
-class NullEnvironment {}
-end
-
 class Environment { bindings parent allocation globals }
     is Object
 
     class method new
         Environment
             bindings: List new
-            parent: NullEnvironment
+            parent: False
             allocation: FrameAllocation new
             globals: Dictionary new!
 
@@ -268,6 +265,10 @@ class AstClass { name slots methods }
             slots: (Array from: slots)
             interfaces: ["Object"]
             methods: (Array from: methods)!
+    method checkEqualInternal: other
+        name checkEqual: other name.
+        slots checkEqual: other slots.
+        methods checkEqual: other methods!
 end
 
 class AstBlockClosure { context block }
@@ -345,6 +346,7 @@ end
 
 interface Syntax
     is Object
+    ---
     method eval
         let env = Environment new.
         (self translateIn: env)
@@ -352,6 +354,7 @@ interface Syntax
             in: Process new!
     method load
         Environment new load: (self translateIn: Environment new)!
+    ---
     method debug
         self toString!
 end
@@ -492,6 +495,10 @@ class SyntaxSelf {}
     is Syntax
     method translateIn: environment
         AstSelfRef new!
+    method toString
+        "self"!
+    method checkEqualInternal: other
+        True!
 end
 
 class SyntaxVariable { name }
@@ -569,20 +576,41 @@ end
 
 class SyntaxMethod { signature body }
     is Syntax
+
     method selector
         signature selector!
+
     method translateIn: environment
         let bodyEnv = environment newFrame
                           addVariables: signature parameters.
         let body = body translateIn: bodyEnv.
         AstMethod
-            selector: signature selector
+            selector: signature selector name
             argumentCount: signature parameters size
             body: body
             frameSize: bodyEnv allocation size!
+
+    method checkEqualInternal: other
+        signature checkEqual: other signature.
+        body checkEqual: other body!
+
+    method toString
+        "method {signature}\n{body}!"!
 end
 
 class SyntaxMethodSignature { selector parameters }
+    is Syntax
+    method toString
+        parameters
+            ifEmpty: { return selector name }.
+        let index = 1.
+        let out = StringOutput new.
+        selector parts do: { |part|
+                             out print: "{part} {parameters at: index}" }.
+        out content!
+    method checkEqualInternal: other
+        selector checkEqual: other selector.
+        parameters checkEqual: other parameters!
 end
 
 class SyntaxClass { name slots methods }
@@ -595,13 +623,16 @@ class SyntaxClass { name slots methods }
             methods: (methods collect: { |m| m translateIn: classEnv })!
     method checkEqualInternal: other
         name checkEqual: other name.
-        slots checkEqual: other slots!
+        slots checkEqual: other slots.
+        methods checkEqual: other methods!
     method toString
         let slotDesc = StringOutput new: "\{".
         slots ifNotEmpty: { slotDesc print: " " }.
         slots do: { |name| slotDesc print: "{name} " }.
         slotDesc print: "}".
-        "class {name} {slotDesc content}\nend\n"!
+        let methodDesc = StringOutput new.
+        methods do: { |m| methodDesc println: m toString }.
+        "class {name} {slotDesc content}\n{methodDesc content}end\n"!
 end
 
 define SeqPrecedence
@@ -650,13 +681,13 @@ interface Token
             first: first last: last!
 
     method precedence
-        Error raise: "{self string} is not valid in suffix position!"!
+        Error raise: "{self string} is not valid in suffix position in self-hosted parser!"!
 
     method parseAsSuffixOf: prefix with: parser
-        Error raise: "Cannot parse {self} in suffix position!"!
+        Error raise: "Self-hosted parser cannot parse {self} ({self first}) in suffix position!"!
 
     method parseAsPrefixWith: parser
-        Error raise: "Cannot parse {self} in prefix position!"!
+        Error raise: "Self-hosted parser cannot parse {self} ({self first}) in prefix position!"!
 
     method toString
         "#<Token {self string}>"!
@@ -801,6 +832,10 @@ end
 
 class TokenReservedSigilCloseBrace { first last }
     is ReservedToken
+
+    method precedence
+        0!
+
     method string
         "}"!
 end
@@ -858,7 +893,7 @@ class TokenReservedWordClass { first last }
             selector: selector
             parameters: parameters.
         SyntaxMethodSignature
-            selector: selector content
+            selector: (Selector new: selector content)
             parameters: parameters!
 
     method string
@@ -979,7 +1014,13 @@ define SpecialCharacters
     ["(" character,
      ")" character,
      "[" character,
-     "]" character]!
+     "]" character,
+     "\{" character,
+     "}" character,
+     "!" character,
+     "." character,
+     ";" character,
+     "," character]!
 
 define UnderscoreCharacter
     "_" character!
@@ -1010,6 +1051,7 @@ class Parser { source::String
         let syntax = List new.
         { parser skipWhitespace. parser atEof }
             whileFalse: { syntax add: (parser parse) }.
+        -- syntax do: { |s| Debug println: "=> {s}" }.
         syntax!
 
     method parse
@@ -1205,6 +1247,7 @@ class Tests {}
             ; testClassWithMethod
             ; testClassWithPrefixMethod
             ; testTwoClasses
+            ; testBlockInMethod
             !
 
     method parse: source
@@ -1215,18 +1258,19 @@ class Tests {}
         let printed = output content.
         { (syntaxList checkEqual: (Parser parse: printed)) }
             on: Error
-            do: { |desc|
+            do: { |err|
                   panic "CST print/parse inconsistency!
 original: {source}
 printed: {printed}
-problem: {desc}" }.
+problem: {err description}" }.
         syntaxList!
 
     method load: defSource eval: exprSource expect: expected
         let defs = List new.
         let env = Environment new.
+        -- FIXME: Requires definitions to be in order.
         (self parse: defSource)
-            do: { |def| env load: (def translateIn: Environment new) }.
+            do: { |def| env load: (def translateIn: env) }.
         let result = env eval: exprSource.
         (result == expected)
             ifFalse: { Error raise: "Expected {expected}, got: {result}
@@ -1326,6 +1370,24 @@ from: '{expr}'" }!
                            y foo: self!
                     end"
              eval: "(Class2 slot: 2) foo: (Class1 slot: 20)"
+             expect: 42!
+    method testBlockInMethod
+        self load: "class ClassAA \{ slot }
+                        method capture: x
+                           \{ x }!
+                        method captureSlot
+                           \{ slot }!
+                        method capture
+                           let z = 2.
+                           \{ (self captureSlot) value + (self capture: z) value }!
+                    end
+                    class ClassBB \{ slot }
+                        method ctor: x
+                           \{ (ClassAA slot: x + slot) }!
+                        method run: x
+                           (self ctor: x * 2) value capture value!
+                    end"
+             eval: "(ClassBB slot: 20) run: 10"
              expect: 42!
 end
 

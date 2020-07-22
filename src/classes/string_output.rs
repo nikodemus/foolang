@@ -3,7 +3,7 @@ use crate::objects::{Eval, Object, Vtable};
 
 pub fn instance_vtable() -> Vtable {
     let vt = Vtable::new("StringOutput");
-    vt.add_primitive_method_or_panic("print:", string_output_print);
+    vt.add_primitive_method_or_panic("writeString:", string_output_write_string);
     vt.add_primitive_method_or_panic("content", string_output_content);
     vt
 }
@@ -18,8 +18,8 @@ fn class_string_output_new(_receiver: &Object, _args: &[Object], env: &Env) -> E
     Ok(env.foo.make_string_output())
 }
 
-fn string_output_print(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
-    receiver.string_output().write(args[0].string_as_str());
+fn string_output_write_string(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
+    receiver.string_output().write(args[0].as_str()?);
     Ok(receiver.clone())
 }
 

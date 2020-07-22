@@ -1,16 +1,20 @@
 extend StringOutput
     class method new: string
         let out = self new.
-        out print: string.
+        out writeString: string.
         out!
     method toString
         "#<StringOutput>"!
+    method print: thing
+        thing printOn: self!
+    method display: thing
+        thing displayOn: self!
     method flush
         self!
     method println: string
-        self print: string.
+        self writeString: string.
         self newline!
     method newline
-        self print: ("" newline).
+        self writeString: "\n".
         self!
 end
