@@ -136,9 +136,13 @@ class Environment { bindings parent allocation globals }
                       parent: False
                       allocation: FrameAllocation new
                       globals: globals.
-        ((Parser parse: string) translateIn: env)::AstNode
-            evalWith: (InterpreterContext new: env allocation size)
-            in: Process new!
+        let res = False.
+        (Parser parse: string)
+            do: { |syntax|
+                  res = (syntax translateIn: env)
+                                evalWith: (InterpreterContext new: env allocation size)
+                                in: Process new }.
+        res!
 
     method global: name
         globals at: name
@@ -294,6 +298,12 @@ class AstBlock { body argumentCount frameSize }
             block: self!
     method frameSize
         frameSize!
+end
+
+class AstSelfRef {}
+    is AstNode
+    method evalWith: context in: process
+        context receiver!
 end
 
 class AstSlotRef { name index::Integer }
@@ -478,6 +488,12 @@ class SyntaxLet { name value body }
         "(let {name} = {value debug}. {body debug})"!
 end
 
+class SyntaxSelf {}
+    is Syntax
+    method translateIn: environment
+        AstSelfRef new!
+end
+
 class SyntaxVariable { name }
     is Syntax
     method translateIn: environment
@@ -585,7 +601,7 @@ class SyntaxClass { name slots methods }
         slots ifNotEmpty: { slotDesc print: " " }.
         slots do: { |name| slotDesc print: "{name} " }.
         slotDesc print: "}".
-        "class {name} {slotDesc content} end"!
+        "class {name} {slotDesc content}\nend\n"!
 end
 
 define SeqPrecedence
@@ -801,6 +817,13 @@ class TokenReservedSigilEqual { first last }
         "="!
 end
 
+class TokenReservedWordSelf { first last }
+    is ReservedToken
+
+    method parseAsPrefixWith: parser
+        SyntaxSelf new!
+end
+
 class TokenReservedWordClass { first last }
     is ReservedToken
 
@@ -854,6 +877,7 @@ define ReservedTokens
     tokens put: TokenReservedWordDefine at: "define".
     tokens put: TokenReservedWordIs at: "is".
     tokens put: TokenReservedWordLet at: "let".
+    tokens put: TokenReservedWordSelf at: "self".
     tokens!
 
 interface LookupToken
@@ -970,14 +994,23 @@ class Parser { source::String
                last::Integer
                lookahead::List }
     is Object
-    class method parse: source
-        (self
-             source: source
-             position: 1
+
+    class method new: source
+        source
+            ifEmpty: { Error raise: "Cannot parse empty string!" }.
+        self
+            source: source
+            position: 1
              first: 1
              last: (source size)
-             lookahead: List new)
-        parse!
+             lookahead: List new!
+
+    class method parse: source
+        let parser = (self new: source).
+        let syntax = List new.
+        { parser skipWhitespace. parser atEof }
+            whileFalse: { syntax add: (parser parse) }.
+        syntax!
 
     method parse
         self parseWithPrecedence: 0!
@@ -1147,8 +1180,10 @@ Context: {source}" }!
 end
 
 class Tests {}
+
     class method run
         self new run!
+
     method run
         self
             ; test42
@@ -1169,30 +1204,48 @@ class Tests {}
             ; testSimpleClass
             ; testClassWithMethod
             ; testClassWithPrefixMethod
+            ; testTwoClasses
             !
-    method parseSyntax: string
+
+    method parse: source
         -- Check Syntax print/parse consistency.
-        let syntax = Parser parse: string.
-        let printed = syntax toString.
-        { (syntax checkEqual: (Parser parse: string)) }
+        let syntaxList = Parser parse: source.
+        let output = StringOutput new.
+        syntaxList do: { |syntax| output print: syntax toString }.
+        let printed = output content.
+        { (syntaxList checkEqual: (Parser parse: printed)) }
             on: Error
             do: { |desc|
                   panic "CST print/parse inconsistency!
-original: {string}
+original: {source}
 printed: {printed}
 problem: {desc}" }.
-        syntax!
-    method load: def eval: expr expect: expected
-        let result = ((self parseSyntax: def) load eval: expr).
+        syntaxList!
+
+    method load: defSource eval: exprSource expect: expected
+        let defs = List new.
+        let env = Environment new.
+        (self parse: defSource)
+            do: { |def| env load: (def translateIn: Environment new) }.
+        let result = env eval: exprSource.
         (result == expected)
             ifFalse: { Error raise: "Expected {expected}, got: {result}
-from: {expr}
-with: {def}" }!
-    method eval: expr expect: expected
-        let result = (self parseSyntax: expr) eval.
+from: {exprSource}
+with: {defSource}" }!
+
+    method eval: exprSource expect: expected
+        let process = Process new.
+        let result = False.
+        (self parse: exprSource)
+            do: { |expr|
+                  let env = Environment new.
+                  result = (expr translateIn: env)
+                      evalWith: (InterpreterContext new: env allocation size)
+                      in: process }.
         (result == expected)
             ifFalse: { Error raise: "Expected {expected}, got: {result}
 from: '{expr}'" }!
+
     method test42
         self eval: "42" expect: 42!
     method testPlus
@@ -1255,12 +1308,25 @@ from: '{expr}'" }!
              eval: "(MyClass slot: 40) foo: 2"
              expect: 42!
     method testClassWithPrefixMethod
-        self load: "class MyClass \{ slot}
+        self load: "class MyClass \{ slot }
                         method prefix%
                             slot * slot!
                     end"
              eval: "%(MyClass slot: -2)"
              expect: 4!
+    method testTwoClasses
+        self load: "class Class1 \{ slot }
+                        method foo: x
+                           x bar + slot * 2!
+                    end
+                    class Class2 \{ slot }
+                        method bar
+                           slot!
+                        method foo: y
+                           y foo: self!
+                    end"
+             eval: "(Class2 slot: 2) foo: (Class1 slot: 20)"
+             expect: 42!
 end
 
 class Main {}

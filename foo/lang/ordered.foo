@@ -8,13 +8,19 @@ interface Ordered
         1 to: self size do: { |i| bytes put: (self at: i) at: i }.
         bytes!
 
+    method checkEqualInternal: other
+        self size == other size
+            ifFalse: { self mismatch: other }.
+        self with: other
+             do: { |a b| a checkEqual: b }!
+
     method isEquivalent: other
         self size == other size
-            ifTrue: { 1 to: self size
-                        do: { |i|
-                              (self at: i) == (other at: i)
-                                  ifFalse: { return False } } }
             ifFalse: { return False }.
+        self with: other
+             do: { |a b|
+                   a == b
+                       ifFalse: { return False } }.
         True!
 
     method isEmpty
