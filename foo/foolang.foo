@@ -912,7 +912,12 @@ class TokenWord { string first last }
             selector: (Selector name: string)!
 
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
-        selector print: string!
+        selector print: string.
+        string == "prefix"
+            ifTrue: { let op = parser nextToken.
+                      (TokenSigil includes: op)
+                          ifFalse: { Error raise: "Expected prefix sigil, got: {op string}" }.
+                      selector print: op string }!
 end
 
 class TokenKeyword { string first last }
@@ -1163,6 +1168,7 @@ class Tests {}
             ; testDefine
             ; testSimpleClass
             ; testClassWithMethod
+            ; testClassWithPrefixMethod
             !
     method parseSyntax: string
         -- Check Syntax print/parse consistency.
@@ -1248,6 +1254,13 @@ from: '{expr}'" }!
                     end"
              eval: "(MyClass slot: 40) foo: 2"
              expect: 42!
+    method testClassWithPrefixMethod
+        self load: "class MyClass \{ slot}
+                        method prefix%
+                            slot * slot!
+                    end"
+             eval: "%(MyClass slot: -2)"
+             expect: 4!
 end
 
 class Main {}
