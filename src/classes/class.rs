@@ -69,16 +69,22 @@ impl Class {
 
 pub fn class_vtable() -> Vtable {
     let vt = Vtable::new("Class");
-    vt.add_primitive_method_or_panic("new:slots:interfaces:", class_new_slots_interfaces);
+    vt.add_primitive_method_or_panic(
+        "new:slots:interfaces:methods:",
+        class_new_slots_interfaces_methods,
+    );
     vt
 }
 
-fn class_new_slots_interfaces(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
+fn class_new_slots_interfaces_methods(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let class_object = Class::new_class(args[0].as_str()?);
     let class = class_object.as_class_ref()?;
     let mut selector = String::new();
-    for (i, slot) in
-        args[1].as_array("slots in Class#new:slots:interfaces:")?.borrow().iter().enumerate()
+    for (i, slot) in args[1]
+        .as_array("slots in Class#new:slots:interfaces:methods:")?
+        .borrow()
+        .iter()
+        .enumerate()
     {
         let name = slot.as_str()?;
         selector.push_str(name);
@@ -89,8 +95,17 @@ fn class_new_slots_interfaces(_receiver: &Object, args: &[Object], env: &Env) ->
         selector.push_str("new");
     }
     class_object.add_primitive_class_method(&selector, generic_ctor)?;
-    for interface in args[2].as_array("interfaces in Class:new:slots:interfaes:")?.borrow().iter() {
+    for interface in
+        args[2].as_array("interfaces in Class:new:slots:interfaes:methods:")?.borrow().iter()
+    {
         class_object.add_interface(env, interface.as_str()?)?;
+    }
+    for method in
+        args[3].as_array("methods in Class:new:slots:interfaces:methods:")?.borrow().iter()
+    {
+        class
+            .instance_vtable
+            .add_method(method.send("selector", &[], env)?.as_str()?, Method::object(method))?
     }
     Ok(class_object)
 }

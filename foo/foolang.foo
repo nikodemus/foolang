@@ -3,24 +3,37 @@ class Debug {}
         Output debug println: what!
 end
 
-class HostMethod { receiver selector }
-    is Object
-    method invoke: arguments with: context in: process
-        selector sendTo: receiver with: arguments!
-end
-
 class Process {}
     is Object
 end
 
 class InterpreterContext {
         sender
+        receiver
         frame::Array
     }
     is Object
 
     class method new: size
-        self sender: False frame: (Array new: size value: "<unbound>")!
+        self sender: False
+             receiver: False
+             frame: (Array new: size value: "<unbound>")!
+
+    method slot: index
+        -- FIXME: Replace this with Primitive readSlot: index of: receiver.
+        -- which breaks encapsulation. Dammit, so it needs to be:
+        --
+        --    system primitives readSlot: index of: receiver.
+        --
+        -- so primitives need to be passed down here. Yuck.
+        --
+        -- Maybe some of the auth should be statically handled?
+        -- Like:
+        --
+        --    import foolang allowing: Primitive
+        --
+        -- ?
+        receiver __slot: (index - 1)!
 
     method at: index inFrame: frameNumber
         frameNumber > 1
@@ -33,10 +46,16 @@ class InterpreterContext {
             ifFalse: { frame put: value at: index }!
 end
 
-class Binding { name index::Integer }
+class VariableBinding { name index::Integer }
     is Object
     method referenceInFrame: frame
         AstLexicalRef name: name frame: frame index: index!
+end
+
+class SlotBinding { name index::Integer }
+    is Object
+    method referenceInFrame: frame
+        AstSlotRef name: name index: index!
 end
 
 class FrameAllocation { size::Integer }
@@ -73,7 +92,7 @@ class Environment { bindings parent allocation globals }
     method addVariable: name
         Environment
             bindings: (bindings copy
-                           add: (Binding
+                           add: (VariableBinding
                                      name: name
                                      index: allocation nextIndex))
             parent: parent
@@ -84,9 +103,23 @@ class Environment { bindings parent allocation globals }
         let newBindings = bindings copy.
         names do: { |name|
                     newBindings
-                        add: (Binding
+                        add: (VariableBinding
                                   name: name
                                   index: allocation nextIndex) }.
+        Environment
+            bindings: newBindings
+            parent: parent
+            allocation: allocation
+            globals: globals!
+
+    method addSlots: names
+        let newBindings = bindings copy.
+        let slotAllocation = FrameAllocation new.
+        names do: { |name|
+                    newBindings
+                        add: (SlotBinding
+                                  name: name
+                                  index: slotAllocation nextIndex) }.
         Environment
             bindings: newBindings
             parent: parent
@@ -159,18 +192,18 @@ class AstSend {
     }
     is AstNode
 
-    method methodFor: object
-        (AstObject includes: object)
-            ifTrue: { object getMethod: selector }
-            ifFalse: { HostMethod receiver: object selector: selector }!
-
     method evalWith: context in: process
-        let objMethod = self methodFor: (receiver evalWith: context in: process).
-        objMethod
-            invoke: (arguments
-                         collect: { |arg| arg evalWith: context in: process })
-            with: context
-            in: process!
+        let object = receiver
+                         evalWith: context
+                         in: process.
+        let arguments = arguments
+                            collect: { |arg|
+                                       arg
+                                           evalWith: context
+                                           in: process }.
+        let $context = context.
+        let $process = process.
+        selector sendTo: object with: arguments!
 end
 
 define $context
@@ -178,14 +211,6 @@ define $context
 
 define $process
     False!
-
-class AstMethod { receiver selector }
-    is AstNode
-    method invoke: arguments with: context in: process
-        let $context = context.
-        let $process = process.
-        selector sendTo: receiver with: arguments!
-end
 
 class AstGlobal { name value }
     is AstNode
@@ -206,7 +231,24 @@ class AstDefine { name body frameSize }
              in: Process new!
 end
 
-class AstClass { name slots }
+class AstMethod { selector argumentCount body frameSize }
+    is Object
+    method invoke: arguments on: receiver
+        let frame = Array new: frameSize.
+        let nArgs = arguments size.
+        argumentCount is nArgs
+            ifFalse: { Error raise: "Method argument count mismatch!" }.
+        1 to: nArgs
+          do: { |i| frame put: (arguments at: i) at: i }.
+        body
+            evalWith: (InterpreterContext
+                           sender: $context
+                           receiver: receiver
+                           frame: frame)
+            in: $process!
+end
+
+class AstClass { name slots methods }
     is AstNode
     method defineIn: environment
         environment globals
@@ -220,7 +262,8 @@ class AstClass { name slots }
         Class
             new: name
             slots: (Array from: slots)
-            interfaces: ["Object"]!
+            interfaces: ["Object"]
+            methods: (Array from: methods)!
 end
 
 class AstBlockClosure { context block }
@@ -239,10 +282,9 @@ class AstBlockClosure { context block }
         block body
             evalWith: (InterpreterContext
                            sender: context
+                           receiver: context receiver
                            frame: frame)
-            in: False!
-    method getMethod: selector
-        AstMethod receiver: self selector: selector!
+            in: $process!
 end
 
 class AstBlock { body argumentCount frameSize }
@@ -252,6 +294,12 @@ class AstBlock { body argumentCount frameSize }
             block: self!
     method frameSize
         frameSize!
+end
+
+class AstSlotRef { name index::Integer }
+    is AstNode
+    method evalWith: context in: process
+        context slot: index!
 end
 
 class AstBindLexical { name index value body }
@@ -503,12 +551,32 @@ class SyntaxDefine { name body }
         "define {name} {body}!"!
 end
 
-class SyntaxClass { name slots }
+class SyntaxMethod { signature body }
+    is Syntax
+    method selector
+        signature selector!
+    method translateIn: environment
+        let bodyEnv = environment newFrame
+                          addVariables: signature parameters.
+        let body = body translateIn: bodyEnv.
+        AstMethod
+            selector: signature selector
+            argumentCount: signature parameters size
+            body: body
+            frameSize: bodyEnv allocation size!
+end
+
+class SyntaxMethodSignature { selector parameters }
+end
+
+class SyntaxClass { name slots methods }
     is Syntax
     method translateIn: environment
+        let classEnv = environment addSlots: slots.
         AstClass
             name: name
-            slots: slots!
+            slots: slots
+            methods: (methods collect: { |m| m translateIn: classEnv })!
     method checkEqualInternal: other
         name checkEqual: other name.
         slots checkEqual: other slots!
@@ -742,11 +810,34 @@ class TokenReservedWordClass { first last }
         let slots = List new.
         { TokenWord includes: parser lookahead }
             whileTrue: { slots add: parser parseVariableName }.
+        let methods = List new.
         parser expect: "}".
+        parser while: "method"
+               do: { methods add: (self parseMethodWith: parser) }.
         parser expect: "end".
         SyntaxClass
             name: name
-            slots: slots!
+            slots: slots
+            methods: methods!
+
+    method parseMethodWith: parser
+        let syntax = SyntaxMethod
+            signature: (self parseMethodSignatureWith: parser)
+            body: (parser parseWithPrecedence: SeqPrecedence).
+        parser expect: "!".
+        syntax!
+
+    method parseMethodSignatureWith: parser
+        let selector = StringOutput new.
+        let parameters = List new.
+        parser nextToken
+            parseAsMethodSignatureWith: parser
+            selector: selector
+            parameters: parameters.
+        SyntaxMethodSignature
+            selector: selector content
+            parameters: parameters!
+
     method string
         "class"!
 end
@@ -790,6 +881,10 @@ class TokenSigil { string first last }
             receiver: prefix
             selector: (Selector name: string)
             argument: (parser parseWithPrecedence: (self precedence))!
+
+    method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
+        selector print: string.
+        parameters add: parser parseVariableName!
 end
 
 class TokenWord { string first last }
@@ -815,6 +910,9 @@ class TokenWord { string first last }
            SyntaxUnary
             receiver: prefix
             selector: (Selector name: string)!
+
+    method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
+        selector print: string!
 end
 
 class TokenKeyword { string first last }
@@ -837,6 +935,15 @@ class TokenKeyword { string first last }
             receiver: prefix
             selector: (Selector name: selector content)
             arguments: arguments!
+
+    method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
+        selector print: string.
+        parameters add: parser parseVariableName.
+        (TokenKeyword includes: parser lookahead)
+            ifTrue: { parser nextToken
+                          parseAsMethodSignatureWith: parser
+                          selector: selector
+                          parameters: parameters }!
 end
 
 define SpecialCharacters
@@ -890,6 +997,10 @@ Context: {source}" }!
         { self lookahead string == test }
             whileFalse: action.
         self nextToken!
+
+    method while: test do: action
+        { self lookahead string == test }
+            whileTrue: { self nextToken. action value }!
 
     method parseWithPrecedence: precedence
         self parseSuffixOf: self parsePrefix with: precedence!
@@ -1051,6 +1162,7 @@ class Tests {}
             ; testBlockClosure
             ; testDefine
             ; testSimpleClass
+            ; testClassWithMethod
             !
     method parseSyntax: string
         -- Check Syntax print/parse consistency.
@@ -1128,6 +1240,13 @@ from: '{expr}'" }!
              expect: 42.
          self load: "class MyClass \{ x y } end"
              eval: "let c = MyClass x: 40 y: 2. c x + c y"
+             expect: 42!
+    method testClassWithMethod
+        self load: "class MyClass \{ slot }
+                        method foo: x
+                           slot + x!
+                    end"
+             eval: "(MyClass slot: 40) foo: 2"
              expect: 42!
 end
 
