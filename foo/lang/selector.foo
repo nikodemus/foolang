@@ -17,6 +17,7 @@ class Selector { name }
         let parts = List new.
         self name split: { |c| c == ColonCharacter }
                   do:  { |part| parts add: part }.
+        parts ifEmpty: { parts add: self name }.
         parts!
     -- FIXME: Should really intern selectors!
     method isEquivalent: other

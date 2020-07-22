@@ -38,7 +38,11 @@ interface Object
             ifFalse: { self mismatch: other }!
 
     method mismatch: other
-        Error raise: "Mismatch: {self} != {other}"!
+        let err = StringOutput new.
+        err print: self.
+        err print: " <==> ".
+        err print: other.
+        Error raise: "Mismatch: {err content}"!
 
 end
 
