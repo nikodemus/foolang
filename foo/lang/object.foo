@@ -39,6 +39,7 @@ interface Object
 
     method mismatch: other
         Error raise: "Mismatch: {self} != {other}"!
+
 end
 
 extend Class
