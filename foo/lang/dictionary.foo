@@ -7,10 +7,19 @@ extend Dictionary
     method at: key
         self at: key ifNone: { False }!
 
+    method has: key
+        self at: key ifNone: { return False }.
+        True!
+
     method keys
         let keys = List new.
         self doKeys: { |key| keys add: key }.
         keys!
+
+    method copy
+        let copy = Dictionary new.
+        self doKeys: { |key| copy put: (self at: key) at: key }.
+        copy!
 
     direct method runTests: assert
         assert that: { let d = { 1 + 1 + 40 -> "the" append: "Answer" }.
@@ -21,5 +30,15 @@ extend Dictionary
                        d put: "foo" at: "bar".
                        (d at: "bar") }
                is: "foo"
-               testing: "Dictionary#put:at: and #at:"!
+               testing: "Dictionary#put:at: and #at:".
+        assert that: { let orig = Dictionary new.
+                       orig put: 1 at: "one".
+                       let copy = orig copy.
+                       copy put: 2 at: "two".
+                       orig put: 3 at: "three".
+                       [orig at: "one", orig at: "two", orig at: "three",
+                        copy at: "one", copy at: "two", copy at: "three"] }
+               equals: [1,False,3,
+                        1,2,False]
+               testing: "Dictionary#copy, Dictionary#has:"!
 end
