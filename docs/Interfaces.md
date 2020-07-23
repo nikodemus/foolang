@@ -50,4 +50,4 @@ Interface methods can also be used directly:
 
     something Printable.printOn: stream
 
-Most importantly, this is the way to "call superdirect methods".
+Most importantly, this is the way to "call superclass methods".
