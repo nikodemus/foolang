@@ -32,4 +32,6 @@ class Character { code }
         code is other code!
     method toString
         "#<Character code: {code}>"!
+    method isNewline
+        self code is ASCII lineFeed!
 end

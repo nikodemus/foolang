@@ -86,6 +86,12 @@ interface AstNode
         Debug println: "#<AST {self}>"!
 end
 
+class AstComment { comment value }
+    is Object
+    method evalWith: context in: process
+        value evalWith: context in: process!
+end
+
 class AstGlobal { name value }
     is AstNode
     method evalWith: context in: process
@@ -424,6 +430,28 @@ class SyntaxReturn { value }
         "return {value}"!
 end
 
+interface SyntaxComment
+    is Syntax
+    method translateIn: environment
+        AstComment comment: self comment
+                   value: (self value translateIn: environment)!
+    method checkEqualInternal: other
+        comment checkEqual: other comment.
+        value checkEqual: other value!
+end
+
+class SyntaxPrefixComment { comment value }
+    is SyntaxComment
+    method toString
+        "--{comment}\n{value}"!
+end
+
+class SyntaxSuffixComment { comment value }
+    is SyntaxComment
+    method toString
+        "{value} --{comment}\n"!
+end
+
 class SyntaxPrefix { receiver selector }
     is Syntax
     method translateIn: environment
@@ -729,11 +757,11 @@ interface Token
     method parseAsSuffixOf: prefix with: parser
         Error raise: "Self-hosted parser cannot parse {self} ({self first}) in suffix position!"!
 
-    method parseAsPrefixWith: parser
+    method parseAsPrefixWith: parser atPrecedence: _precedence
         Error raise: "Self-hosted parser cannot parse {self} ({self first}) in prefix position!"!
 
     method toString
-        "#<Token {self string}>"!
+        "#<Token \"{self string}\">"!
 end
 
 interface SuffixToken
@@ -748,7 +776,7 @@ end
 class TokenDecimal { string first last }
     is Token
 
-    method parseAsPrefixWith: parser
+    method parseAsPrefixWith: parser atPrecedence: _precedence
         let n = 0.
         1 to: string size
           do: { |pos|
@@ -778,10 +806,10 @@ end
 class TokenReservedWordDefine { first last }
     is ReservedToken
 
-    method parseAsPrefixWith: parser
+    method parseAsPrefixWith: parser atPrecedence: _precedence
         let def = SyntaxDefine
                       name: parser parseVariableName
-                      body: (parser parseWithPrecedence: SeqPrecedence).
+                      body: (parser parseAtPrecedence: SeqPrecedence).
         parser expect: "!".
         def!
 
@@ -802,7 +830,7 @@ class TokenReservedWordIs { first last }
     method parseAsSuffixOf: prefix with: parser
         SyntaxIs
             left: prefix
-            right: (parser parseWithPrecedence: (self precedence))!
+            right: (parser parseAtPrecedence: SingleExpressionPrecedence)!
 
     method string
         "is"!
@@ -811,9 +839,9 @@ end
 class TokenReservedWordReturn { first last }
     is ReservedToken
 
-    method parseAsPrefixWith: parser
+    method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxReturn
-            value: (parser parseWithPrecedence: SingleExpressionPrecedence)!
+            value: (parser parseAtPrecedence: SingleExpressionPrecedence)!
 
     method string
         "return"!
@@ -822,15 +850,15 @@ end
 class TokenReservedWordLet { first last }
     is ReservedToken
 
-    method parseAsPrefixWith: parser
+    method parseAsPrefixWith: parser atPrecedence: _precedence
         let name = parser parseVariableName.
         parser expect: "=".
-        let value = (parser parseWithPrecedence: SingleExpressionPrecedence).
+        let value = (parser parseAtPrecedence: SingleExpressionPrecedence).
         parser expect: ".".
         SyntaxLet
             name: name
             value: value
-            body: (parser parseWithPrecedence: SeqPrecedence)!
+            body: (parser parseAtPrecedence: SeqPrecedence)!
 
     method string
         "let"!
@@ -842,7 +870,7 @@ class TokenReservedSigilDot { first last }
     method parseAsSuffixOf: prefix with: parser
         SyntaxSeq
             first: prefix
-            then: (parser parseWithPrecedence: SeqPrecedence)!
+            then: (parser parseAtPrecedence: SeqPrecedence)!
 
     method string
         "."!
@@ -851,8 +879,8 @@ end
 class TokenReservedSigilOpenParen { first last }
     is ReservedToken
 
-    method parseAsPrefixWith: parser
-        let body = parser parseWithPrecedence: SeqPrecedence.
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        let body = parser parseAtPrecedence: SeqPrecedence.
         parser expect: ")".
         SyntaxParens
             body: body!
@@ -870,13 +898,13 @@ end
 class TokenReservedSigilOpenBrace { first last }
     is ReservedToken
 
-    method parseAsPrefixWith: parser
+    method parseAsPrefixWith: parser atPrecedence: _precedence
         let arguments = List new.
         parser
             when: "|"
             then: { parser until: "|"
                            do: { arguments add: (parser parseVariableName) } }.
-        let body = parser parseWithPrecedence: SeqPrecedence.
+        let body = parser parseAtPrecedence: SeqPrecedence.
         parser expect: "}".
         SyntaxBlock arguments: arguments body: body!
 
@@ -900,23 +928,59 @@ class TokenReservedSigilEqual { first last }
     method parseAsSuffixOf: prefix with: parser
         SyntaxAssign
             variable: prefix::SyntaxVariable
-            value: (parser parseWithPrecedence: SingleExpressionPrecedence)!
+            value: (parser parseAtPrecedence: SingleExpressionPrecedence)!
 
     method string
         "="!
 end
 
+class TokenReservedSigilDoubledash { first last }
+    is ReservedToken
+
+    ---
+    FIXME: see below.
+
+    -- Prefix comments make sense
+    some expression.
+
+    another expression. -- But what is intended as a suffix comment
+                        -- to `another expression` becomes a prefix
+                        -- comment to `next expression`!
+    next expression
+    ---
+
+    method parseAsPrefixWith: parser atPrecedence: precedence
+        -- NOTE: must continue at same precedence! Consider eg.
+        --
+        --    let x = -- comment
+        --            -42 abs.
+        --    123
+        --
+        -- where the comment is hit at SingleExpressionPrecedence!
+        SyntaxPrefixComment
+            comment: parser readline
+            value: (parser parseAtPrecedence: precedence)!
+
+    method parseAsSuffixOf: prefix with: parser
+        SyntaxSuffixComment
+            comment: parser readline
+            value: prefix!
+
+    method string
+        "--"!
+end
+
 class TokenReservedWordSelf { first last }
     is ReservedToken
 
-    method parseAsPrefixWith: parser
+    method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxSelf new!
 end
 
 class TokenReservedWordClass { first last }
     is ReservedToken
 
-    method parseAsPrefixWith: parser
+    method parseAsPrefixWith: parser atPrecedence: _precedence
         let name = parser parseVariableName.
 
         let slots = List new.
@@ -942,7 +1006,7 @@ class TokenReservedWordClass { first last }
     method parseMethodWith: parser
         let syntax = SyntaxMethod
             signature: (self parseMethodSignatureWith: parser)
-            body: (parser parseWithPrecedence: SeqPrecedence).
+            body: (parser parseAtPrecedence: SeqPrecedence).
         parser expect: "!".
         syntax!
 
@@ -975,6 +1039,7 @@ define ReservedTokens
     tokens put: TokenReservedWordLet at: "let".
     tokens put: TokenReservedWordSelf at: "self".
     tokens put: TokenReservedWordReturn at: "return".
+    tokens put: TokenReservedSigilDoubledash at: "--".
     tokens!
 
 interface LookupToken
@@ -992,16 +1057,16 @@ end
 class TokenSigil { string first last }
     is LookupToken
 
-    method parseAsPrefixWith: parser
+    method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxPrefix
-            receiver: (parser parseWithPrecedence: PrefixPrecedence)
+            receiver: (parser parseAtPrecedence: PrefixPrecedence)
             selector: (Selector name: string)!
 
     method parseAsSuffixOf: prefix with: parser
         SyntaxBinary
             receiver: prefix
             selector: (Selector name: string)
-            argument: (parser parseWithPrecedence: (self precedence))!
+            argument: (parser parseAtPrecedence: (self precedence))!
 
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
         selector print: string.
@@ -1022,8 +1087,7 @@ class TokenWord { string first last }
                              ifNone: { TokenWord }.
         tokenClass string: tokenString first: first last: last!
 
-    method parseAsPrefixWith: parser
-
+    method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxVariable
             name: string!
 
@@ -1050,7 +1114,7 @@ class TokenKeyword { string first last }
     method parseAsSuffixOf: prefix with: parser
         let arguments = List new.
         let selector = StringOutput new: string.
-        { arguments push: (parser parseWithPrecedence: (self precedence)).
+        { arguments push: (parser parseAtPrecedence: (self precedence)).
           let token = parser lookahead.
           (TokenKeyword includes: token)
               ifTrue: { parser nextToken.
@@ -1116,8 +1180,16 @@ class Parser { source::String
         -- syntax do: { |s| Debug println: "=> {s}" }.
         syntax!
 
+    method readline
+        let start = position.
+        { self atEof or: self atNewline }
+            whileFalse: { self advance }.
+        let stop = position - 1.
+        self advance.
+        source from: start to: stop!
+
     method parse
-        self parseWithPrecedence: 0!
+        self parseAtPrecedence: 0!
 
     method parseVariableName
         let token = self nextToken.
@@ -1144,11 +1216,13 @@ Context: {source}" }!
         { self lookahead string == test }
             whileTrue: { self nextToken. action value }!
 
-    method parseWithPrecedence: precedence
-        self parseSuffixOf: self parsePrefix with: precedence!
+    method parseAtPrecedence: precedence
+        self
+            parseSuffixOf: (self parsePrefixAtPrecedence: precedence)
+            with: precedence!
 
-    method parsePrefix
-        self nextToken parseAsPrefixWith: self!
+    method parsePrefixAtPrecedence: precedence
+        self nextToken parseAsPrefixWith: self atPrecedence: precedence!
 
     method parseSuffixOf: prefix with: precedence
         let expr = prefix.
@@ -1207,6 +1281,9 @@ Context: {source}" }!
 
     method atTerminating
         self atSpecial or: self atWhitespace!
+
+    method atNewline
+        self isAt: #isNewline!
 
     method atSigil
         self atEof not
@@ -1288,30 +1365,38 @@ class Tests {}
     direct method run
         self new run!
 
+    method test: name
+        { name sendTo: self }
+            on: Error
+            do: { |e| Debug println: "{name} FAILED:\n! {e description}".
+                  return False }.
+        True!
+
     method run
         self
-            ; test42
-            ; testPlus
-            ; testPrecedence
-            ; testPrefixMethod
-            ; testUnaryMethod
-            ; testKeywordMethod
-            ; testIs
-            ; testLet
-            ; testPrecedence2
-            ; testParens
-            ; testAssign
-            ; testSimpleBlock
-            ; testArgBlock
-            ; testBlockClosure
-            ; testDefine
-            ; testSimpleClass
-            ; testClassWithMethod
-            ; testClassWithPrefixMethod
-            ; testTwoClasses
-            ; testBlockInMethod
-            ; testDirectMethod
-            ; testReturn
+            ; test: #test42
+            ; test: #testPlus
+            ; test: #testPrecedence
+            ; test: #testPrefixMethod
+            ; test: #testUnaryMethod
+            ; test: #testKeywordMethod
+            ; test: #testIs
+            ; test: #testLet
+            ; test: #testPrecedence2
+            ; test: #testParens
+            ; test: #testAssign
+            ; test: #testSimpleBlock
+            ; test: #testArgBlock
+            ; test: #testBlockClosure
+            ; test: #testDefine
+            ; test: #testSimpleClass
+            ; test: #testClassWithMethod
+            ; test: #testClassWithPrefixMethod
+            ; test: #testTwoClasses
+            ; test: #testBlockInMethod
+            ; test: #testDirectMethod
+            ; test: #testReturn
+            ; test: #testComment
             !
 
     method parse: source
@@ -1473,6 +1558,23 @@ from: '{expr}'" }!
                     end"
             eval: "ReturnTest test: True"
             expect: 42!
+    method testComment
+        self load: "class CommentTest1 \{}
+                       method foo
+                          let x = -- boop
+                                  21.
+                          x * 2!
+                    end"
+            eval: "CommentTest1 new foo"
+            expect: 42.
+        self load: "class CommentTest2 \{}
+                       method foo
+                          let x = 21 -- boop
+                          .
+                          x * 2!
+                    end"
+            eval: "CommentTest2 new foo"
+            expect: 41!
 end
 
 class Main {}
