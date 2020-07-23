@@ -1360,15 +1360,16 @@ Context: {source}" }!
 
 end
 
-class Tests {}
+class Tests { ok }
 
     direct method run
-        self new run!
+        (self ok: True) run!
 
     method test: name
         { name sendTo: self }
             on: Error
             do: { |e| Debug println: "{name} FAILED:\n! {e description}".
+                  ok = False.
                   return False }.
         True!
 
@@ -1396,8 +1397,8 @@ class Tests {}
             ; test: #testBlockInMethod
             ; test: #testDirectMethod
             ; test: #testReturn
-            ; test: #testComment
-            !
+            ; test: #testComment.
+        self!
 
     method parse: source
         -- Check Syntax print/parse consistency.
@@ -1574,11 +1575,13 @@ from: '{expr}'" }!
                           x * 2!
                     end"
             eval: "CommentTest2 new foo"
-            expect: 41!
+            expect: 42!
 end
 
 class Main {}
     direct method run: cmd in: system
-        Tests run.
-        system output println: "ok!"!
+        system output
+            println: (Tests run ok
+                          ifTrue: { "All tests ok!" }
+                          ifFalse: { "Tests failed!" })!
 end
