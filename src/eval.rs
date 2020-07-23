@@ -561,7 +561,7 @@ impl Env {
     fn do_define(&self, definition: &DefineDef) -> Eval {
         let name = &definition.name;
         self.check_not_defined(name, &definition.source_location)?;
-        let value = self.eval(&definition.init)?;
+        let value = self.enclose().eval(&definition.init)?;
         self.define(name, value.clone());
         Ok(value)
     }
