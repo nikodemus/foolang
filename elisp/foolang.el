@@ -733,7 +733,7 @@
          0)))
 
 (defun foolang--looking-at-method ()
-  (looking-at " *\\(method\\|direct *method\\)"))
+  (looking-at " *\\(method\\|direct *method\\)\\>"))
 
 (defun foolang--looking-at-class ()
   (looking-at " *class [A-Za-z_]"))
@@ -1135,6 +1135,18 @@ x"
 class Main {}
     direct method + x::Type
         x")
+
+(def-foolang-indent-test "method-indent-7"
+  "
+class MyClass { block }
+method do: methods
+methods do: block.
+self"
+  "
+class MyClass { block }
+    method do: methods
+        methods do: block.
+        self")
 
 (def-foolang-indent-test "body-indent-1"
   "
