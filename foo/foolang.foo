@@ -11,13 +11,24 @@ class InterpreterContext {
         sender
         receiver
         frame::Array
+        returnBlock
     }
     is Object
 
     direct method new: size
+        self new: size
+             returnBlock: { |value|
+                            Error raise: "Invalid return: {value}" }!
+
+    direct method new: size returnBlock: returnBlock
         self sender: False
              receiver: False
-             frame: (Array new: size value: "<unbound>")!
+             frame: (Array new: size value: "<unbound>")
+             returnBlock: returnBlock!
+
+    method invalidate
+        returnBlock = { |value|
+                        Error raise: "Cannot return from dead context: {value}" }!
 
     method slot: index
         -- FIXME: Replace this with Primitive readSlot: index of: receiver.
@@ -69,6 +80,24 @@ class FrameAllocation { size::Integer }
         size!
 end
 
+interface AstNode
+    is Object
+    method debug
+        Debug println: "#<AST {self}>"!
+end
+
+class AstGlobal { name value }
+    is AstNode
+    method evalWith: context in: process
+        value!
+end
+
+define BuiltinGlobals
+    let globals = Dictionary new.
+    globals put: (AstGlobal name: "True" value: True) at: "True".
+    globals put: (AstGlobal name: "False" value: False) at: "False".
+    globals!
+
 class Environment { bindings parent allocation globals }
     is Object
 
@@ -77,7 +106,7 @@ class Environment { bindings parent allocation globals }
             bindings: List new
             parent: False
             allocation: FrameAllocation new
-            globals: Dictionary new!
+            globals: BuiltinGlobals copy!
 
     method newFrame
         Environment
@@ -160,12 +189,6 @@ end
 interface AstObject
 end
 
-interface AstNode
-    is Object
-    method debug
-        Debug println: "#<AST {self}>"!
-end
-
 class AstConstantRef { value }
     is AstNode
     method evalWith: context in: process
@@ -184,6 +207,12 @@ class AstSeq { first then }
     method evalWith: context in: process
         first evalWith: context in: process.
         then evalWith: context in: process!
+end
+
+class AstReturn { value }
+    is AstNode
+    method evalWith: context in: process
+        context returnBlock value: (value evalWith: context in: process)!
 end
 
 class AstSend {
@@ -213,12 +242,6 @@ define $context
 define $process
     False!
 
-class AstGlobal { name value }
-    is AstNode
-    method evalWith: context in: process
-        value!
-end
-
 class AstDefine { name body frameSize }
     is AstNode
     method defineIn: environment
@@ -228,8 +251,11 @@ class AstDefine { name body frameSize }
                       value: self _eval)
             at: name!
     method _eval
-        body evalWith: (InterpreterContext new: frameSize)
-             in: Process new!
+        -- return inside define should work
+        let context = InterpreterContext new: frameSize
+                                         returnBlock: { |value| return value }.
+        { body evalWith: context in: Process new }
+            finally: { context invalidate } !
 end
 
 class AstMethod { selector argumentCount body frameSize }
@@ -241,12 +267,13 @@ class AstMethod { selector argumentCount body frameSize }
             ifFalse: { Error raise: "Method argument count mismatch!" }.
         1 to: nArgs
           do: { |i| frame put: (arguments at: i) at: i }.
-        body
-            evalWith: (InterpreterContext
-                           sender: $context
-                           receiver: receiver
-                           frame: frame)
-            in: $process!
+        let context = InterpreterContext
+                          sender: $context
+                          receiver: receiver
+                          frame: frame
+                          returnBlock: { |value| return value }.
+        { body evalWith: context in: $process }
+            finally: { context invalidate } !
 end
 
 class AstClass { name directMethods slots methods }
@@ -290,11 +317,13 @@ class AstBlockClosure { context block }
             evalWith: (InterpreterContext
                            sender: context
                            receiver: context receiver
-                           frame: frame)
+                           frame: frame
+                           returnBlock: context returnBlock)
             in: $process!
 end
 
 class AstBlock { body argumentCount frameSize }
+    is AstNode
     method evalWith: context in: process
         AstBlockClosure
             context: context
@@ -383,6 +412,16 @@ class SyntaxSeq { first then }
         self then checkEqual: other then!
     method toString
         "{first}. {then}"!
+end
+
+class SyntaxReturn { value }
+    is Syntax
+    method translateIn: environment
+        AstReturn value: (value translateIn: environment)!
+    method checkEqualInternal: other
+        value checkEqual: other value!
+    method toString
+        "return {value}"!
 end
 
 class SyntaxPrefix { receiver selector }
@@ -769,6 +808,17 @@ class TokenReservedWordIs { first last }
         "is"!
 end
 
+class TokenReservedWordReturn { first last }
+    is ReservedToken
+
+    method parseAsPrefixWith: parser
+        SyntaxReturn
+            value: (parser parseWithPrecedence: SingleExpressionPrecedence)!
+
+    method string
+        "return"!
+end
+
 class TokenReservedWordLet { first last }
     is ReservedToken
 
@@ -924,6 +974,7 @@ define ReservedTokens
     tokens put: TokenReservedWordIs at: "is".
     tokens put: TokenReservedWordLet at: "let".
     tokens put: TokenReservedWordSelf at: "self".
+    tokens put: TokenReservedWordReturn at: "return".
     tokens!
 
 interface LookupToken
@@ -1260,6 +1311,7 @@ class Tests {}
             ; testTwoClasses
             ; testBlockInMethod
             ; testDirectMethod
+            ; testReturn
             !
 
     method parse: source
@@ -1280,10 +1332,12 @@ problem: {err description}" }.
     method load: defSource eval: exprSource expect: expected
         let defs = List new.
         let env = Environment new.
+        -- Debug println: "load, then eval: {exprSource}".
         -- FIXME: Requires definitions to be in order.
         (self parse: defSource)
             do: { |def| env load: (def translateIn: env) }.
         let result = env eval: exprSource.
+        -- Debug println: " --> {result}, expected: {expected}".
         (result == expected)
             ifFalse: { Error raise: "Expected {expected}, got: {result}
 from: {exprSource}
@@ -1410,6 +1464,15 @@ from: '{expr}'" }!
                     end"
              eval: "ClassDirectMethod gimme1"
              expect: 42!
+    method testReturn
+        self load: "class ReturnTest \{}
+                        direct method test: ok
+                            ok
+                               ifTrue: \{ return 42 }.
+                            666!
+                    end"
+            eval: "ReturnTest test: True"
+            expect: 42!
 end
 
 class Main {}
