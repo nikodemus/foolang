@@ -5,6 +5,8 @@ import .lang.character.Character
 import .lang.closure.Closure
 import .lang.collection.Collection
 import .lang.dictionary.Dictionary
+import .lang.exception.DoesNotUnderstand
+import .lang.exception.TypeError
 import .lang.exception.DivideByZero
 import .lang.exception.Error
 import .lang.exception.Panic

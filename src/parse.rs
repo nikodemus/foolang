@@ -592,7 +592,7 @@ fn assign_suffix(
     precedence: PrecedenceFunction,
 ) -> Result<Expr, Unwind> {
     if !left.is_var() {
-        return Unwind::error_at(left.source_location(), "Cannot assign to this");
+        return Unwind::error_at(parser.source_location(), "Invalid assignment");
     }
     let right = parser.parse_expr(precedence(parser, parser.span())?)?;
     // We use the name we're assigning to as the span.

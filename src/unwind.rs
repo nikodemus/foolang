@@ -152,7 +152,7 @@ impl Unwind {
     }
 
     pub fn error_at<T>(source_location: SourceLocation, what: &str) -> Result<T, Unwind> {
-        // panic!("BOOM_AT: {:?}, {}", span, what);
+        // println!("{} AT: {:?}", what, &source_location);
         let code = source_location.code();
         let unwind = Unwind::Panic(
             Error::SimpleError(SimpleError {

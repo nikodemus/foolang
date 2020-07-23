@@ -36,4 +36,23 @@ extend String
         self size == 1
             ifTrue: { self at: 1 }
             ifFalse: { Error raise: "Not a character designator string: {self}" }!
+
+    method doLines: block
+        let from = False.
+        1 to: self size
+          do: { |index|
+                let c = self at: index.
+                c isNewline
+                    ifTrue: { from is False
+                                  ifTrue: { block value: "" }
+                                  ifFalse: { block value: (self from: from to: index - 1).
+                                             from = False } }
+                   ifFalse: { from is False
+                                  ifTrue: { from = index } } }.
+        self!
+
+    method repeat: n
+        let out = StringOutput new.
+        n times: { out print: self }.
+        out content!
 end

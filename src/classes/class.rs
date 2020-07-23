@@ -104,6 +104,7 @@ fn class_new_(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
         .borrow()
         .iter()
     {
+        // println!("Adding class method: {}", method);
         class_object
             .vtable
             .add_method(method.send("selector", &[], env)?.as_str()?, Method::object(method))?
@@ -113,6 +114,8 @@ fn class_new_(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
         .borrow()
         .iter()
     {
+        //println!("Adding instance method: {} to {}",
+        //         method.send("selector", &[], env)?, &class.instance_vtable.name);
         class
             .instance_vtable
             .add_method(method.send("selector", &[], env)?.as_str()?, Method::object(method))?

@@ -148,17 +148,13 @@ class Main { assert system }
                testing: "integer addition commutates".
         assert forAll: SmallIntegers
                that: { |x| { x / 0 }
-                           onPanic: { |p| p description startsWith: "Divide by zero:"} }
+                           onPanic: { |p|
+                                      p description startsWith: "UNHANDLED ERROR: Divide by zero:" } }
                testing: "division by zero (unhandled)".
         assert forAll: SmallIntegers
-               that: { |x| ({ x / 0 } on: DivideByZero do: { |ex| 42 })
+               that: { |x| ({ x / 0 } on: DivideByZero do: { |ex| ex return: 42 })
                            == 42 }
                testing: "division by zero (handled)".
-        assert forAll: SmallIntegers
-               that: { |x|
-                       { { x / 0 } on: Error do: { |ex| 42 } }
-                           onPanic: { |p| p description startsWith: "UNHANDLED ERROR" } }
-               testing: "division by zero (bad catch)".
         assert forAll: SmallIntegers
                that: { |x|
                        x is 0

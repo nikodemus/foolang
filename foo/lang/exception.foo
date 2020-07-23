@@ -7,67 +7,113 @@ class Panic { description context }
         stream println: self context!
 end
 
-define $error
-    { |ex| panic (ex description) }!
+class FallbackHandler {}
+    direct method raise: ex
+        panic "UNHANDLED ERROR: {ex description}"!
+end
 
-class Error { description }
+define $error
+    FallbackHandler!
+
+class Handler { on block next }
+    direct method on: on block: block
+        self
+            on: on
+            block: block
+            next: $error!
+    method raise: ex
+        (on includes: ex)
+            ifTrue: { let $error = next.
+                      block value: ex }.
+        next raise: ex!
+    method toString
+        "#<Handler {on}>"!
+end
+
+interface Error
     is Object
+    direct method raise: description::String
+        SimpleError raise: description!
     direct method withHandler: handler do: block
-        let $error = { |error| self handle: error with: handler }.
+        let $error = Handler on: self block: handler.
         block value!
-    direct method raise: description
-        $error value: (self description: description)!
-    direct method handle: error with: handler
-        handler value: error.
-        panic "UNHANDLED ERROR: {error description}"!
-    direct method handler
-        { |ex| $error value: ex }!
+    method raise
+        $error raise: self.
+        panic "$error fallthrough!"!
+    method printOn: stream
+        stream print: "Error: {self description}>"!
     method displayOn: stream
         stream print: "#<Error {self description}>"!
 end
 
-define $typeError
-    Error handler!
+define $return
+    False!
+
+interface ValueError
+    is Error
+    method return: value
+        $return value: value!
+    method raise
+        let $return = { |value| return value }.
+        $error raise: self.
+        panic "$error fallthrough!"!
+end
+
+
+
+class SimpleError { description }
+    is Error
+    direct method raise: description
+        (self description: description) raise!
+end
+
+class DoesNotUnderstand { receiver selector arguments source }
+    is Error
+    direct method raise: selector with: arguments on: receiver
+        (self
+            raise: selector
+            with: arguments
+            on: receiver
+            source: False)
+        raise!
+    direct method raise: selector with: arguments on: receiver source: source
+        (self
+             receiver: receiver
+             selector: selector
+             arguments: arguments
+             source: source)
+        raise!
+    method description
+        let note = "{receiver} does not understand: {selector}".
+        source is False
+            ifTrue: { note }
+            ifFalse: { "{note}\n{source note: note}" }!
+end
 
 class TypeError { value expected }
-    is Object
-    direct method withHandler: handler do: block
-        let $typeError = { |error| self handle: error with: handler }.
-        block value!
+    is Error
     direct method raise: value expected: type
-        $typeError value: (self value: value expected: type)!
+        (self value: value expected: type) raise!
     method description
         "Type error: {expected} expected, got: {value}"!
     method displayOn: stream
         stream print: "#<TypeError {expected}, got: {value}>"!
 end
 
-define $divideByZero
-    Error handler!
-
 class DivideByZero { value }
-    is Object
-    direct method withHandler: handler do: block
-        let $divideByZero = handler.
-        block value!
+    is ValueError
     direct method raise: value
-        $divideByZero value: (self value: value)!
+        (self value: value) raise!
     method description
         "Divide by zero: {value} cannot be divided by zero"!
     method displayOn: stream
         stream print: "#<DivideByZero {value}>"!
 end
 
-define $iteratorExhausted
-    Error handler!
-
 class IteratorExhausted { value }
-    is Object
-    direct method withHandler: handler do: block
-        let $iteratorExhausted = handler.
-        block value!
+    is Error
     direct method raise: value
-        $iteratorExhausted value: ( self value: value )!
+        (self value: value) raise!
     method description
         "Iterator exhausted: {value}"!
     method displayOn: stream

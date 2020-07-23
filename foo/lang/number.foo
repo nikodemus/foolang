@@ -61,4 +61,11 @@ interface Number
     method to: other by: step
        Interval from: self to: other by: step!
 
+    method leftPad: width by: padding
+        padding size is 1 assert: "padding size is 1 in Number#leftPad:by:".
+        let padded = self toString.
+        { padded size < width }
+            whileTrue: { padded = "{padding}{padded}" }.
+        padded!
+
 end

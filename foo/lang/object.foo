@@ -28,6 +28,11 @@ interface Object
     method displayOn: stream
         self printOn: stream!
 
+    method displayString
+        let out = StringOutput new.
+        self displayOn: out.
+        out content!
+
     method checkEqual: other
         (Self includes: other)
             ifTrue: { return self checkEqualInternal: other }.
@@ -44,6 +49,17 @@ interface Object
         err print: other.
         Error raise: "Mismatch: {err content}"!
 
+    direct method perform: selector with: arguments
+        DoesNotUnderstand
+            raise: (Selector new: selector)
+            with: arguments
+            on: self!
+
+    method perform: selector with: arguments
+        DoesNotUnderstand
+            raise: (Selector new: selector)
+            with: arguments
+            on: self!
 end
 
 extend Class

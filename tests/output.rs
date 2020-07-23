@@ -563,7 +563,7 @@ fn test_repl() -> Test {
         .assert()
         .success()
         .stdout(predicates::str::contains(
-            r#"Foolang 0.0.0
+            r#"Foolang 0.1.0
 > <class Point>
 > 101@202
 > Hi!

@@ -1,6 +1,8 @@
 class Debug {}
     direct method println: what
         Output debug println: what!
+    direct method print: what
+        Output debug print: what!
 end
 
 class Process {}
@@ -86,7 +88,7 @@ interface AstNode
         Debug println: "#<AST {self}>"!
 end
 
-class AstComment { comment value }
+class AstComment { comment value source }
     is Object
     method evalWith: context in: process
         value evalWith: context in: process!
@@ -178,7 +180,7 @@ class Environment { bindings parent allocation globals }
 
     method global: name
         globals at: name
-                ifNone: { Error raise: "Unbound variable: {name}" }!
+                ifNone: { Error raise: "Unbound variable in self-hosted code: {name}" }!
 
     method reference: name
         self reference: name inFrame: 1!
@@ -225,6 +227,7 @@ class AstSend {
         receiver
         selector
         arguments
+        source
     }
     is AstNode
 
@@ -239,7 +242,17 @@ class AstSend {
                                            in: process }.
         let $context = context.
         let $process = process.
-        selector sendTo: object with: arguments!
+        -- Debug println: "<- {selector}".
+        { selector sendTo: object with: arguments }
+            on: DoesNotUnderstand
+            do: { |ex|
+                  -- Add the source location to the error.
+                  (object is ex receiver and: selector == ex selector)
+                      ifTrue: { DoesNotUnderstand
+                                    raise: selector
+                                    with: arguments
+                                    on: object
+                                    source: source }} !
 end
 
 define $context
@@ -434,30 +447,32 @@ interface SyntaxComment
     is Syntax
     method translateIn: environment
         AstComment comment: self comment
-                   value: (self value translateIn: environment)!
+                   value: (self value translateIn: environment)
+                   source: self source!
     method checkEqualInternal: other
-        comment checkEqual: other comment.
-        value checkEqual: other value!
+        self comment checkEqual: other comment.
+        self value checkEqual: other value!
 end
 
-class SyntaxPrefixComment { comment value }
+class SyntaxPrefixComment { comment value source }
     is SyntaxComment
     method toString
         "--{comment}\n{value}"!
 end
 
-class SyntaxSuffixComment { comment value }
+class SyntaxSuffixComment { comment value source }
     is SyntaxComment
     method toString
         "{value} --{comment}\n"!
 end
 
-class SyntaxPrefix { receiver selector }
+class SyntaxPrefix { receiver selector source }
     is Syntax
     method translateIn: environment
         AstSend receiver: (receiver translateIn: environment)
                 selector: (Selector name: "prefix{selector name}")
-                arguments: []!
+                arguments: []
+                source: source!
     method checkEqualInternal: other
         receiver checkEqual: other receiver.
         selector checkEqual: other selector!
@@ -465,12 +480,13 @@ class SyntaxPrefix { receiver selector }
         "{selector name}{receiver}"!
 end
 
-class SyntaxUnary { receiver selector }
+class SyntaxUnary { receiver selector source }
     is Syntax
     method translateIn: environment
         AstSend receiver: (receiver translateIn: environment)
                 selector: selector
-                arguments: []!
+                arguments: []
+                source: source!
     method checkEqualInternal: other
         receiver checkEqual: other receiver.
         selector checkEqual: other selector!
@@ -480,12 +496,13 @@ class SyntaxUnary { receiver selector }
         "({receiver debug} {selector name})"!
 end
 
-class SyntaxBinary { receiver selector argument }
+class SyntaxBinary { receiver selector argument source }
     is Syntax
     method translateIn: environment
         AstSend receiver: (receiver translateIn: environment)
                 selector: selector
-                arguments: [argument translateIn: environment]!
+                arguments: [argument translateIn: environment]
+                source: source!
     method checkEqualInternal: other
         receiver checkEqual: other receiver.
         selector checkEqual: other selector.
@@ -496,14 +513,17 @@ class SyntaxBinary { receiver selector argument }
         "({receiver debug} {selector name} {argument debug})"!
 end
 
-class SyntaxKeyword { receiver selector arguments }
+-- FIXME: Currently multi-keyword syntax gets as source the first
+-- keyword only. Should support non-contigous source regions for this.
+class SyntaxKeyword { receiver selector arguments source }
     is Syntax
     method translateIn: environment
         AstSend receiver: (receiver translateIn: environment)
                 selector: selector
                 arguments: (arguments
                                 collect: { |arg|
-                                           arg translateIn: environment })!
+                                           arg translateIn: environment })
+                source: source!
     method checkEqualInternal: other
         receiver checkEqual: other receiver.
         selector checkEqual: other selector.
@@ -514,9 +534,11 @@ class SyntaxKeyword { receiver selector arguments }
             do: { |arg1 arg2| arg1 checkEqual: arg2 }!
     method toString
         let string = StringOutput new: "{receiver} ".
+        let spacer = "".
         selector parts with: arguments
                        do: { |part arg|
-                             string print: "{part} {arg}" }.
+                             string print: "{spacer}{part} {arg}".
+                             spacer = " "}.
         string content!
     method debug
         let string = StringOutput new: "({receiver debug} ".
@@ -682,16 +704,29 @@ class SyntaxMethodSignature { selector parameters }
         parameters checkEqual: other parameters!
 end
 
+---
+class DoesNotUnderstand {}
+    is Object
+    method selector
+        "perform:with:"!
+    method invoke: message on: receiver
+        Error raise: "{receiver} does not understand: #{message first}"!
+end
+---
+
 class SyntaxClass { name directMethods slots methods }
     is Syntax
     method translateIn: environment
+        let astDirectMethods
+            = directMethods collect: { |m| m translateIn: environment }.
         let instanceEnv = environment addSlots: slots.
+        let astMethods
+            = methods collect: { |m| m translateIn: instanceEnv }.
         AstClass
             name: name
-            directMethods: (directMethods
-                                collect: { |m| m translateIn: environment })
+            directMethods: astDirectMethods
             slots: slots
-            methods: (methods collect: { |m| m translateIn: instanceEnv })!
+            methods: astMethods!
     method checkEqualInternal: other
         name checkEqual: other name.
         slots checkEqual: other slots.
@@ -704,6 +739,88 @@ class SyntaxClass { name directMethods slots methods }
         let methodDesc = StringOutput new.
         methods do: { |m| methodDesc println: m toString }.
         "class {name} {slotDesc content}\n{methodDesc content}end\n"!
+end
+
+interface Source
+end
+
+class SourceString { string first last }
+    method location
+        first to: last!
+
+    method doLines: block
+        let newline = 0.
+        string
+            doLines: { |line|
+                       let linestart = newline + 1.
+                       let linestop = linestart + line size - 1.
+                       newline = linestop + 1.
+                       block
+                           value: linestart
+                           value: linestop
+                           value: line }!
+
+    method findContext
+        let leadingContext = 2.
+        let trailingContext = 2.
+        let totalContext = leadingContext + trailingContext.
+        let context = List newOf: Record.
+        let lineNumber = 0.
+        let inMatch = False.
+        self
+            doLines: { |from to line|
+                       lineNumber = lineNumber + 1.
+                       first > to
+                           ifTrue: { context size >= leadingContext
+                                         ifTrue: { context popFirst }.
+                                     context
+                                         push: { lineNumber: lineNumber,
+                                                 underline: False,
+                                                 line: line } }.
+                       last < from
+                           ifTrue: { context size < totalContext
+                                         ifTrue: { context
+                                                       push: { lineNumber: lineNumber,
+                                                               underline: False,
+                                                               line: line } }.
+                                     inMatch = False }.
+                       (from <= first and: first <= to)
+                           ifTrue: { inMatch = True }.
+                       inMatch
+                           ifTrue: { totalContext = totalContext + 1.
+                                     context push: { lineNumber: lineNumber,
+                                                     underline: { from: (first - from + 1 max: 1),
+                                                                  to: (last - from + 1 min: line size) },
+                                                     line: line } } }.
+        context!
+
+    method underlineFrom: from to: to note: note in: output
+        output print: "    ". -- line number
+        output print: (" " repeat: from - 1).
+        output print: ("^" repeat: (to - from + 1)).
+        note
+            ifEmpty: { output newline }
+            ifNotEmpty: { output print: " ".
+                          output println: note }!
+
+    method note: note
+        let output = StringOutput new.
+        self findContext
+            do: { |ctxLine|
+                  output print: (ctxLine lineNumber leftPad: 3 by: "0").
+                  output print: " ".
+                  output println: ctxLine line.
+                  ctxLine underline is False
+                      ifFalse: { self
+                                     underlineFrom: ctxLine underline from
+                                     to: ctxLine underline to
+                                     note: note
+                                     in: output } }.
+        output content!
+
+    method toString
+        self note: ""!
+
 end
 
 define SeqPrecedence
@@ -956,15 +1073,17 @@ class TokenReservedSigilDoubledash { first last }
         --            -42 abs.
         --    123
         --
-        -- where the comment is hit at SingleExpressionPrecedence!
+        -- where the comment while parsing at SingleExpressionPrecedence!
         SyntaxPrefixComment
             comment: parser readline
-            value: (parser parseAtPrecedence: precedence)!
+            value: (parser parseAtPrecedence: precedence)
+            source: (parser sourceFrom: first to: last)!
 
     method parseAsSuffixOf: prefix with: parser
         SyntaxSuffixComment
             comment: parser readline
-            value: prefix!
+            value: prefix
+            source: (parser sourceFrom: first to: last)!
 
     method string
         "--"!
@@ -1060,13 +1179,15 @@ class TokenSigil { string first last }
     method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxPrefix
             receiver: (parser parseAtPrecedence: PrefixPrecedence)
-            selector: (Selector name: string)!
+            selector: (Selector name: string)
+            source: (parser sourceFrom: first to: last)!
 
     method parseAsSuffixOf: prefix with: parser
         SyntaxBinary
             receiver: prefix
             selector: (Selector name: string)
-            argument: (parser parseAtPrecedence: (self precedence))!
+            argument: (parser parseAtPrecedence: (self precedence))
+            source: (parser sourceFrom: first to: last)!
 
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
         selector print: string.
@@ -1092,9 +1213,10 @@ class TokenWord { string first last }
             name: string!
 
     method parseAsSuffixOf: prefix with: parser
-           SyntaxUnary
+        SyntaxUnary
             receiver: prefix
-            selector: (Selector name: string)!
+            selector: (Selector name: string)
+            source: (parser sourceFrom: first to: last)!
 
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
         selector print: string.
@@ -1124,7 +1246,8 @@ class TokenKeyword { string first last }
         SyntaxKeyword
             receiver: prefix
             selector: (Selector name: selector content)
-            arguments: arguments!
+            arguments: arguments
+            source: (parser sourceFrom: first to: last)!
 
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
         selector print: string.
@@ -1173,7 +1296,7 @@ class Parser { source::String
              lookahead: List new!
 
     direct method parse: source
-        let parser = (self new: source).
+        let parser = self new: source.
         let syntax = List new.
         { parser skipWhitespace. parser atEof }
             whileFalse: { syntax add: (parser parse) }.
@@ -1187,6 +1310,9 @@ class Parser { source::String
         let stop = position - 1.
         self advance.
         source from: start to: stop!
+
+    method sourceFrom: first to: last
+        SourceString string: source first: first last: last!
 
     method parse
         self parseAtPrecedence: 0!
@@ -1365,16 +1491,20 @@ class Tests { ok }
     direct method run
         (self ok: True) run!
 
-    method test: name
-        { name sendTo: self }
+    method test: selector
+        { Debug print: selector name.
+          selector sendTo: self.
+          Debug println: " ok" }
             on: Error
-            do: { |e| Debug println: "{name} FAILED:\n! {e description}".
+            do: { |e|
+                  Debug println: " FAILED:\n{e description}".
                   ok = False.
                   return False }.
         True!
 
     method run
         self
+            ; test: #testAstSource
             ; test: #test42
             ; test: #testPlus
             ; test: #testPrecedence
@@ -1397,7 +1527,8 @@ class Tests { ok }
             ; test: #testBlockInMethod
             ; test: #testDirectMethod
             ; test: #testReturn
-            ; test: #testComment.
+            ; test: #testComment
+                .
         self!
 
     method parse: source
@@ -1415,19 +1546,33 @@ printed: {printed}
 problem: {err description}" }.
         syntaxList!
 
-    method load: defSource eval: exprSource expect: expected
+    method load: defSource eval: exprSource
         let defs = List new.
         let env = Environment new.
-        -- Debug println: "load, then eval: {exprSource}".
         -- FIXME: Requires definitions to be in order.
         (self parse: defSource)
             do: { |def| env load: (def translateIn: env) }.
-        let result = env eval: exprSource.
-        -- Debug println: " --> {result}, expected: {expected}".
+        env eval: exprSource!
+
+    method load: defSource eval: exprSource expect: expected
+        let result = self load: defSource eval: exprSource.
         (result == expected)
             ifFalse: { Error raise: "Expected {expected}, got: {result}
 from: {exprSource}
 with: {defSource}" }!
+
+    method load: defSource eval: exprSource expectError: type where: test
+        { self load: defSource eval: exprSource }
+            on: type
+            do: { |err|
+                  (test value: err)
+                      ifTrue: { return True }
+                      ifFalse: { Error raise: "Error did not match expectations: {err description}
+from: {exprSource}
+with: {defSource}" }}.
+        Error raise: "Expected error, didn't get one
+from: {exprSource}
+with: {defSource}"!
 
     method eval: exprSource expect: expected
         let process = Process new.
@@ -1576,6 +1721,22 @@ from: '{expr}'" }!
                     end"
             eval: "CommentTest2 new foo"
             expect: 42!
+    method testAstSource
+        self load: "class SourceTest \{}
+                         method foo
+                            let x = 1 + 2.
+                            self bar: x
+                                 quux: x.
+                            self quux.
+                            self zot.
+                            2 + 3!
+                    end"
+            eval: "SourceTest new foo"
+            expectError: DoesNotUnderstand
+            where: { |e|
+                     -- FIXME: this is only for "bar:", should include the
+                     -- whole selector!
+                     e source location == (133 to: 136) } !
 end
 
 class Main {}
