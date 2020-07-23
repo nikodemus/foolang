@@ -66,17 +66,17 @@ fn string_from_to(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     }
     let to = args[1].integer();
     let j = to as usize;
-    if to < 1 || data.len() < j {
+    if from > to + 1 {
+        return Unwind::error(&format!(
+            "String#From:to: -- #from: {} is greater than #to+1: {}",
+            from, to
+        ));
+    }
+    if data.len() < j {
         return Unwind::error(&format!(
             "String#from:to: -- #to: out of bounds: {}, should be 1-{}",
             to,
             data.len()
-        ));
-    }
-    if from > to {
-        return Unwind::error(&format!(
-            "String#From:to: -- #from: {} is greater than #to: {}",
-            from, to
         ));
     }
     Ok(env.foo.make_string(&data[i..j]))
