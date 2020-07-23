@@ -1567,7 +1567,13 @@ impl fmt::Display for Object {
             Datum::Boolean(true) => write!(f, "True"),
             Datum::Boolean(false) => write!(f, "False"),
             Datum::ByteArray(byte_array) => write!(f, "{:?}", byte_array),
-            Datum::Class(_) => write!(f, "#<class {}>", self.vtable.name),
+            Datum::Class(class) => {
+                if class.interface {
+                    write!(f, "#<interface {}>", self.vtable.name)
+                } else {
+                    write!(f, "#<class {}>", self.vtable.name)
+                }
+            }
             Datum::Clock => write!(f, "#<Clock>"),
             Datum::Closure(x) => write!(f, "#<closure {:?}>", x.params),
             Datum::Compiler(_) => write!(f, "#<Compiler>"),
