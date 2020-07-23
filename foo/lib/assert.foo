@@ -26,7 +26,7 @@ class TestError { case input what }
 end
 
 class TestCase { name condition successCount failureCount errorCount }
-    class method name: name condition: condition
+    direct method name: name condition: condition
         self
             name: name
             condition: condition
@@ -83,7 +83,7 @@ end
 
 class Assert { output failed }
 
-    class method reportingTo: output
+    direct method reportingTo: output
         self output: output failed: False!
 
     method report: testResult

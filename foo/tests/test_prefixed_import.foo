@@ -1,7 +1,7 @@
 import .prefixedImport.*
 
 class Main {}
-    class method run: cmd in: sys
+    direct method run: cmd in: sys
         let out = sys output.
         out println: "X = {X}".
         out println: "Y = {Y value}".

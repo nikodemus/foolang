@@ -3,7 +3,7 @@
 -- Should be able to specify non-inherited methods for
 -- cases like #default. (direct method?)
 interface Object
-    class method default
+    direct method default
         self is Object
             ifTrue: { False }
             ifFalse: { Error raise: "No default value for {self}" }!
@@ -16,10 +16,10 @@ interface Object
             ifTrue: { self isEquivalent: other }
             ifFalse: { False }!
 
-    class method printOn: stream
+    direct method printOn: stream
         stream print: self toString!
 
-    class method displayOn: stream
+    direct method displayOn: stream
         self printOn: stream!
 
     method printOn: stream

@@ -15,7 +15,7 @@ class C {}
 end
 
 class Main {}
-    class method run: command in: system
+    direct method run: command in: system
         let c = C new.
         system output println: "foo = {c foo}".
         system output println: "bar = {c bar}".

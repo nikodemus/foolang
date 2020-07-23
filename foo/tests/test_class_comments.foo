@@ -35,7 +35,7 @@ block
 end
 
 class Main {}
-    class method run: cmd in: system
+    direct method run: cmd in: system
         (LotsOfComments name: "test") == (LotsOfComments name: "test")
             ifTrue: { system exit }
             ifFalse: { system abort }!

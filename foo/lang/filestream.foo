@@ -199,7 +199,7 @@ class TestFileStream { assert dir foopath foodata }
                testing: "FileStream#writeString: (post)".
         newpath deleteFile!
 
-    class method runTests: assert in: system
+    direct method runTests: assert in: system
         let tests = self assert: assert
                          dir: system currentDirectory
                          foopath: (system currentDirectory path: "foo/tests/foo.txt")

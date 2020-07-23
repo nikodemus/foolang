@@ -1,5 +1,5 @@
 class TestRecord {}
-    class method runTests: assert
+    direct method runTests: assert
         assert that: { let r = {x: -10, y: 52}.
                        r x + r y }
                is: 42

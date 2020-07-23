@@ -14,20 +14,20 @@ class List { size data }
             ifTrue: { "List from: []" }
             ifFalse: { "List from: {data from: 1 to: self size}" }!
 
-    class method from: collection
+    direct method from: collection
         let new = self withCapacity: collection size.
         collection do: { |elt| new add: elt }.
         new!
 
-    class method new: size value: init
+    direct method new: size value: init
         let new = self withCapacity: size.
         1 to: size do: { |_| new push: init }.
         new!
 
-    class method of: type withCapacity: capacity
+    direct method of: type withCapacity: capacity
         self size: 0 data: (Array of: type new: capacity)!
 
-    class method of: type
+    direct method of: type
         Specialized class: List of: type!
 
     method elementType
@@ -197,7 +197,7 @@ class List { size data }
 end
 
 class TestList {}
-    class method testEquality: assert
+    direct method testEquality: assert
         assert true: { [1, 2, 3] == [1, 2, 3] }
                testing: "List#== (true 1)".
         assert true: { [1, 2, [3, 4]] == [1, 2, [3, 4]] }
@@ -209,7 +209,7 @@ class TestList {}
         assert false: { ["one", 2, 3] == [1, "two", 3] }
                testing: "List#== (false 3)"!
 
-    class method testSort: assert
+    direct method testSort: assert
         assert that: { [] sort }
                equals: []
                testing: "sort, empty".
@@ -235,7 +235,7 @@ class TestList {}
                equals: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
                testing: "sort, ten"!
 
-    class method testReverse: assert
+    direct method testReverse: assert
         assert that: { let a = [].
                        a reverse.
                        a }
@@ -261,7 +261,7 @@ class TestList {}
                equals: [3,2,1]
                testing: "reverse list, retval (3)"!
 
-    class method testReversed: assert
+    direct method testReversed: assert
         assert that: { let a = [].
                        a reversed }
                equals: []
@@ -284,7 +284,7 @@ class TestList {}
                equals: [1,2,3]
                testing: "reversed list, side-effect (3)"!
 
-    class method runTests: assert
+    direct method runTests: assert
         self testEquality: assert.
         self testSort: assert.
         self testReverse: assert.

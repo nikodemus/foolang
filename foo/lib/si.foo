@@ -25,7 +25,7 @@ Examples:
 import .assert.Assert
 
 class Prefix {}
-    class method displaySpecs
+    direct method displaySpecs
         [
             {base: 1e24, prefix: "Y"},
             {base: 1e21, prefix: "Z"},
@@ -44,110 +44,110 @@ class Prefix {}
             {base: 1e-18, prefix: "a"},
             {base: 1e-21, prefix: "z"}
         ]!
-    class method display: value on: stream
+    direct method display: value on: stream
         let spec = self displaySpecs
                        find: { |spec| value >= spec base }
                        ifNone: { {base: 1e-24, prefix: "y"} }.
         stream print: "{value / spec base} {spec prefix}"!
 
-    class method yocto
+    direct method yocto
         1e-24!
-    class method y
+    direct method y
         self yocto!
 
-    class method zepto
+    direct method zepto
         1e-21!
-    class method z
+    direct method z
         self zepto!
 
-    class method atto
+    direct method atto
         1e-18!
-    class method a
+    direct method a
         self atto!
 
-    class method femto
+    direct method femto
         1e-15!
-    class method f
+    direct method f
         self femto!
 
-    class method pico
+    direct method pico
         1e-12!
-    class method p
+    direct method p
         self pico!
 
-    class method nano
+    direct method nano
         1e-9!
-    class method n
+    direct method n
         self nano!
 
-    class method micro
+    direct method micro
         1e-6!
-    class method u
+    direct method u
         self micro!
 
-    class method milli
+    direct method milli
         1e-3!
-    class method m
+    direct method m
         self milli!
 
-    class method centi
+    direct method centi
         1e-2!
-    class method c
+    direct method c
         self centi!
 
-    class method deci
+    direct method deci
         1e-1!
-    class method d
+    direct method d
         self deci!
 
-    class method deka
+    direct method deka
         1e0!
-    class method da
+    direct method da
         self deka!
 
-    class method hecto
+    direct method hecto
         1e2!
-    class method h
+    direct method h
         self hecto!
 
-    class method kilo
+    direct method kilo
         1e3!
-    class method k
+    direct method k
         self kilo!
 
-    class method mega
+    direct method mega
         1e6!
-    class method M
+    direct method M
         self mega!
 
-    class method giga
+    direct method giga
         1e9!
-    class method G
+    direct method G
         self giga!
 
-    class method tera
+    direct method tera
         1e12!
-    class method T
+    direct method T
         self tera!
 
-    class method peta
+    direct method peta
         1e15!
-    class method P
+    direct method P
         self peta!
 
-    class method exa
+    direct method exa
         1e18!
-    class method E
+    direct method E
         self exa!
 
-    class method zetta
+    direct method zetta
         1e21!
-    class method Z
+    direct method Z
         self zetta!
 
-    class method yotta
+    direct method yotta
         1e24!
-    class method Y
+    direct method Y
         self yotta!
 end
 
@@ -312,19 +312,19 @@ class CompoundUnit { units }
                         ifFalse: { return False } }.
         n is 0!
 
-    class method of: left multipliedBy: right
+    direct method of: left multipliedBy: right
         let powers = Dictionary new.
         left powersInto: powers by: 1.
         right powersInto: powers by: 1.
         self fromPowers: powers!
 
-    class method of: left dividedBy: right
+    direct method of: left dividedBy: right
         let powers = Dictionary new.
         left powersInto: powers by: 1.
         right powersInto: powers by: -1.
         self fromPowers: powers!
 
-    class method fromPowers: powers
+    direct method fromPowers: powers
         let units = List new.
         powers doKeys: { |species|
                          let power = powers at: species.
@@ -409,28 +409,28 @@ class SI { value::Float _unit::SI_Unit }
         self checkUnit: right operation: "==".
         self value == right value!
 
-    class method meters: value
+    direct method meters: value
         SI value: value unit: (Meters power: 1)!
 
-    class method seconds: value
+    direct method seconds: value
         SI value: value unit: (Seconds power: 1)!
 
-    class method moles: value
+    direct method moles: value
         SI value: value unit: (Moles power: 1)!
 
-    class method amperes: value
+    direct method amperes: value
         SI value: value unit: (Amperes power: 1)!
 
-    class method kelvins: value
+    direct method kelvins: value
         SI value: value unit: (Kelvins power: 1)!
 
-    class method candelas: value
+    direct method candelas: value
         SI value: value unit: (Candelas power: 1)!
 
-    class method grams: value
+    direct method grams: value
         SI value: value / Prefix k unit: (Kilograms power: 1)!
 
-    class method value: value unit: unit
+    direct method value: value unit: unit
         -- Dimensionless number, unit has been divided out
         unit power is 0
             ifTrue: { value }
@@ -592,7 +592,7 @@ define kg
     1 kg!
 
 class SI_Tests { assert }
-    class method runTests: assert
+    direct method runTests: assert
         (self assert: assert) runTests!
 
     method runTests
@@ -850,7 +850,7 @@ class SI_Tests { assert }
 end
 
 class Demo {}
-    class method run: _ in: system
+    direct method run: _ in: system
         let output = system output.
         -- Demo
         output println: "{10 mol / 1000}".

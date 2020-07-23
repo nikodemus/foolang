@@ -5,7 +5,7 @@ import .ordered.Ordered
 class ArrayIterator { array index }
     is Iterator
 
-    class method new: array
+    direct method new: array
         self array: array index: 1!
 
     method nextIfNone: block
@@ -20,7 +20,7 @@ class ArrayIterator { array index }
 end
 
 class Specialized { containerClass elementType }
-    class method class: containerClass of: elementType
+    direct method class: containerClass of: elementType
         self containerClass: containerClass elementType: elementType!
     method new
         containerClass of: elementType new: 0!
@@ -42,7 +42,7 @@ end
 extend Array
     is Ordered
 
-    class method from: ordered
+    direct method from: ordered
         (Array includes: ordered)
             ifTrue: { return ordered }.
         let new = self new: ordered size.
@@ -50,16 +50,16 @@ extend Array
           do: { |i| new put: (ordered at: i) at: i }.
         new!
 
-    class method new: size
+    direct method new: size
         self of: Object new: size value: False!
 
-    class method new: size value: value
+    direct method new: size value: value
         self of: Object new: size value: value!
 
-    class method of: type
+    direct method of: type
         Specialized class: Array of: type!
 
-    class method of: type new: size
+    direct method of: type new: size
         self of: type new: size value: type default!
 
     method from: first to: last
@@ -129,7 +129,7 @@ extend Array
 end
 
 class TestArray {}
-    class method testEquality: assert
+    direct method testEquality: assert
         assert true: { [1, 2, 3] == [1, 2, 3] }
                testing: "Array#== (true 1)".
         assert true: { [1, 2, [3, 4]] == [1, 2, [3, 4]] }
@@ -142,7 +142,7 @@ class TestArray {}
                testing: "Array#== (false 3)".
         self!
 
-    class method testSort: assert
+    direct method testSort: assert
         assert that: { [] sort }
                equals: []
                testing: "sort, empty".
@@ -169,7 +169,7 @@ class TestArray {}
                testing: "sort, ten".
         self!
 
-    class method testReverse: assert
+    direct method testReverse: assert
         assert that: { let a = [].
                        a reverse.
                        a }
@@ -196,7 +196,7 @@ class TestArray {}
                testing: "reverse array, retval (3)".
         self!
 
-    class method testReversed: assert
+    direct method testReversed: assert
         assert that: { let a = [].
                        a reversed }
                equals: []
@@ -220,7 +220,7 @@ class TestArray {}
                testing: "reversed array, side-effect (3)".
         self!
 
-    class method runTests: assert
+    direct method runTests: assert
         self testEquality: assert.
         self testSort: assert.
         self testReverse: assert.

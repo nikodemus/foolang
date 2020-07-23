@@ -10,7 +10,7 @@
 
 ## Open Questions
 
-What about class methods?
+What about direct methods?
 
 While it may make sense for there to be Interface##method, it doesnt'
 really feel right for that to imply that there is also Class##method, does it?
@@ -50,4 +50,4 @@ Interface methods can also be used directly:
 
     something Printable.printOn: stream
 
-Most importantly, this is the way to "call superclass methods".
+Most importantly, this is the way to "call superdirect methods".

@@ -1,6 +1,6 @@
 import .redefinition_error
 
 class Main {}
-    class method run: cmd in: sys
+    direct method run: cmd in: sys
         sys exit!
 end

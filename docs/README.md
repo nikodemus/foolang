@@ -26,7 +26,7 @@ midnight oil to hit a milestone.
 
 ``` foolang
 class Main {}
-    class method run: command in: system
+    direct method run: command in: system
         system output println: "Hello world!"!
 end
 ```

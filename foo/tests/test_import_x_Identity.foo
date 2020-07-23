@@ -1,6 +1,6 @@
 import x.Identity
 
 class Main {}
-   class method run: command in: system
+   direct method run: command in: system
        system exit: (Identity value: 100)!
 end

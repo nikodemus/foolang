@@ -12,15 +12,15 @@ define $error
 
 class Error { description }
     is Object
-    class method withHandler: handler do: block
+    direct method withHandler: handler do: block
         let $error = { |error| self handle: error with: handler }.
         block value!
-    class method raise: description
+    direct method raise: description
         $error value: (self description: description)!
-    class method handle: error with: handler
+    direct method handle: error with: handler
         handler value: error.
         panic "UNHANDLED ERROR: {error description}"!
-    class method handler
+    direct method handler
         { |ex| $error value: ex }!
     method displayOn: stream
         stream print: "#<Error {self description}>"!
@@ -31,10 +31,10 @@ define $typeError
 
 class TypeError { value expected }
     is Object
-    class method withHandler: handler do: block
+    direct method withHandler: handler do: block
         let $typeError = { |error| self handle: error with: handler }.
         block value!
-    class method raise: value expected: type
+    direct method raise: value expected: type
         $typeError value: (self value: value expected: type)!
     method description
         "Type error: {expected} expected, got: {value}"!
@@ -47,10 +47,10 @@ define $divideByZero
 
 class DivideByZero { value }
     is Object
-    class method withHandler: handler do: block
+    direct method withHandler: handler do: block
         let $divideByZero = handler.
         block value!
-    class method raise: value
+    direct method raise: value
         $divideByZero value: (self value: value)!
     method description
         "Divide by zero: {value} cannot be divided by zero"!
@@ -63,10 +63,10 @@ define $iteratorExhausted
 
 class IteratorExhausted { value }
     is Object
-    class method withHandler: handler do: block
+    direct method withHandler: handler do: block
         let $iteratorExhausted = handler.
         block value!
-    class method raise: value
+    direct method raise: value
         $iteratorExhausted value: ( self value: value )!
     method description
         "Iterator exhausted: {value}"!

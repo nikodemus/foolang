@@ -1111,7 +1111,7 @@ impl Object {
     pub fn extend_class(&self, ext: &ExtensionDef, env: &Env) -> Eval {
         if !ext.class_methods.is_empty() && self.vtable.has("perform:with:") {
             return Unwind::error(&format!(
-                "Cannot extend {}: class method 'perform:with:' defined",
+                "Cannot extend {}: direct method 'perform:with:' defined",
                 &self.vtable.name
             ));
         }
@@ -1234,7 +1234,7 @@ impl Object {
     pub fn add_class_interface(&self, env: &Env, name: &str) -> Result<(), Unwind> {
         let class = self.as_class_ref()?;
         let class_name = &class.instance_vtable.name;
-        // Add interface class methods
+        // Add interface direct methods
         let interface_obj = env.find_interface(name)?;
         let interface = interface_obj.as_class_ref()?;
         for (selector, method) in interface_obj.vtable.methods().iter() {
@@ -1286,7 +1286,7 @@ impl Object {
     pub fn add_interface(&self, env: &Env, name: &str) -> Result<(), Unwind> {
         let class = self.as_class_ref()?;
         let class_name = &class.instance_vtable.name;
-        // Add interface class methods
+        // Add interface direct methods
         let interface_obj = env.find_interface(name)?;
         let interface = interface_obj.as_class_ref()?;
         for (selector, method) in interface_obj.vtable.methods().iter() {

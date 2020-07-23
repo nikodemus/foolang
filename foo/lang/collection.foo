@@ -12,7 +12,7 @@ addition to the required methods:
 - second
 ---
 
---    required class method of: type withCapacity: capacity
+--    required direct method of: type withCapacity: capacity
 --    required method removeIf: block
 --    required method remove: object
 --    required method size
@@ -23,42 +23,42 @@ interface Collection
     required method add: object
     required method clear
 
-    class method default
+    direct method default
         List new!
 
-    class method defaultCapacity
+    direct method defaultCapacity
         8!
 
-    class method defaultElementType
+    direct method defaultElementType
         Object!
 
-    class method from: iterable
+    direct method from: iterable
         let new = self of: iterable elementType withCapacity: iterable sizeEstimate.
         iterable do: { |each| new add: each }.
         new!
 
-    class method newOf: type
+    direct method newOf: type
         self of: type
              withCapacity: self defaultCapacity!
 
-    class method new
+    direct method new
         self newOf: self defaultElementType!
 
-    class method new: size
+    direct method new: size
         self new _initSize: size!
 
-    class method of: type new: size
+    direct method of: type new: size
         (self newOf: type) _initSize: size!
 
-    class method of: type new: size value: value
+    direct method of: type new: size value: value
         (self newOf: type) _initSize: size value: value!
 
-    class method of: type from: iterable
+    direct method of: type from: iterable
         let new = self of: type withCapacity: iterable sizeEstimate.
         iterable do: { |each| new add: each }.
         new!
 
-    class method withCapacity: capacity
+    direct method withCapacity: capacity
         self of: self defaultElementType withCapacity: capacity!
 
     method _initSize: size

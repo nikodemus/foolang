@@ -1,5 +1,5 @@
 class Debug {}
-    class method println: what
+    direct method println: what
         Output debug println: what!
 end
 
@@ -14,7 +14,7 @@ class InterpreterContext {
     }
     is Object
 
-    class method new: size
+    direct method new: size
         self sender: False
              receiver: False
              frame: (Array new: size value: "<unbound>")!
@@ -59,7 +59,7 @@ class SlotBinding { name index::Integer }
 end
 
 class FrameAllocation { size::Integer }
-    class method new
+    direct method new
         -- Debug println: "** frame allocation **".
         self size: 0!
     method nextIndex
@@ -72,7 +72,7 @@ end
 class Environment { bindings parent allocation globals }
     is Object
 
-    class method new
+    direct method new
         Environment
             bindings: List new
             parent: False
@@ -675,7 +675,7 @@ define TokenPrecedence
 interface Token
     is Object
 
-    class method from: first to: last in: parser
+    direct method from: first to: last in: parser
         self
             string: (parser source from: first to: last)
             first: first last: last!
@@ -716,7 +716,7 @@ end
 class TokenEof { position }
     is Token
 
-    class method at: position in: parser
+    direct method at: position in: parser
         self position: position!
 
     method precedence
@@ -728,7 +728,7 @@ end
 
 interface ReservedToken
     is SuffixToken
-    class method string: string first: first last: last
+    direct method string: string first: first last: last
         self first: first last: last!
 end
 
@@ -918,7 +918,7 @@ define ReservedTokens
 interface LookupToken
     is SuffixToken
 
-    class method from: first to: last in: parser
+    direct method from: first to: last in: parser
         let tokenString = parser source from: first to: last.
         -- Reserved words get their own classes!
         let tokenClass = ReservedTokens
@@ -952,7 +952,7 @@ class TokenWord { string first last }
     method precedence
         UnaryPrecedence!
 
-    class method from: first to: last in: parser
+    direct method from: first to: last in: parser
         let tokenString = parser source from: first to: last.
         -- Reserved words get their own classes!
         let tokenClass = ReservedTokens
@@ -1036,7 +1036,7 @@ class Parser { source::String
                lookahead::List }
     is Object
 
-    class method new: source
+    direct method new: source
         source
             ifEmpty: { Error raise: "Cannot parse empty string!" }.
         self
@@ -1046,7 +1046,7 @@ class Parser { source::String
              last: (source size)
              lookahead: List new!
 
-    class method parse: source
+    direct method parse: source
         let parser = (self new: source).
         let syntax = List new.
         { parser skipWhitespace. parser atEof }
@@ -1223,7 +1223,7 @@ end
 
 class Tests {}
 
-    class method run
+    direct method run
         self new run!
 
     method run
@@ -1392,7 +1392,7 @@ from: '{expr}'" }!
 end
 
 class Main {}
-    class method run: cmd in: system
+    direct method run: cmd in: system
         Tests run.
         system output println: "ok!"!
 end

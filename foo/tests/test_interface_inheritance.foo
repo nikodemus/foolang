@@ -20,13 +20,13 @@ class C {}
 end
 
 class Main {}
-    class method foo: x::I0
+    direct method foo: x::I0
         x::I::C foo!
-    class method bar: x::I1
+    direct method bar: x::I1
         x::I::C bar!
-    class method quux: x::I
+    direct method quux: x::I
         x quux!
-    class method run: cmd in: sys
+    direct method run: cmd in: sys
         let c = C new.
         sys output println: "foo: {self foo: c} => I0 ok".
         sys output println: "bar: {self bar: c} => I1 ok".

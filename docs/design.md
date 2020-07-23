@@ -97,9 +97,9 @@ to really miss them.
 
 ``` foolang
 class Foo {}
-  class method bad
+  direct method bad
      { return 42 }
-  class method bang
+  direct method bang
      self bad value
 end
 ```

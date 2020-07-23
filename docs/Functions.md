@@ -4,7 +4,7 @@ I suspect functions are a good thing.
 
 Not just to duplicate mathematical syntax, but to
 express things: having a class that is never instantiated
-just to have a place for a single class method seems wrong.
+just to have a place for a single direct method seems wrong.
 
 You could already fake them with blocks anyhow:
 

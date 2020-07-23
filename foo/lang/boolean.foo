@@ -3,7 +3,7 @@ import .object.Object
 extend Boolean
     is Object
 
-    class method default
+    direct method default
         False!
 
     method assert: what

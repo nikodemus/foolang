@@ -1,5 +1,5 @@
 extend StringOutput
-    class method new: string
+    direct method new: string
         let out = self new.
         out writeString: string.
         out!
