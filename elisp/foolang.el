@@ -138,7 +138,7 @@
   "\\(direct\\s-+\\)?method\\s-+")
 
 (defconst foolang--name-regex
-  "\\w+\\s-*")
+  "\\w+")
 
 (defconst foolang--op-regex
   "\\s_+\\s-+")
@@ -436,31 +436,12 @@
                  base col))
      (list (+ col foolang-indent-offset) base stack ctx))))
 
-(defconst foolang--method-unary-regex
-  (concat "\\s-*"
-          foolang--method-or-direct-method-regex
-          foolang--name-regex))
-
-(def-foolang-indent "method name" (col base stack ctx)
-  (:after
-    (looking-at foolang--method-unary-regex))
-  (:indent
-   (list (+ col foolang-indent-offset)
-         (+ col foolang-indent-offset)
-         stack
-         :body)))
-
 (defconst foolang--method-op-arg-with-opt-type-regex
   (concat "\\s-*"
           foolang--method-or-direct-method-regex
           foolang--op-regex
           foolang--name-with-opt-type-regex
           "$"))
-
-(defun foolang-foo ()
-  (looking-at foolang--method-op-arg-with-opt-type-regex))
-
-
 
 (def-foolang-indent "method op arg" (col base stack ctx)
   (:after
@@ -516,6 +497,20 @@
     (eq :method ctx))
   (:indent
    (list base base stack :body)))
+
+(defconst foolang--method-unary-regex
+  (concat "\\s-*"
+          foolang--method-or-direct-method-regex
+          foolang--name-regex))
+
+(def-foolang-indent "method name" (col base stack ctx)
+  (:after
+    (looking-at foolang--method-unary-regex))
+  (:indent
+   (list (+ col foolang-indent-offset)
+         (+ col foolang-indent-offset)
+         stack
+         :body)))
 
 (defconst foolang--method-keywords-regex
   (concat "\\s-*"
