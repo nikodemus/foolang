@@ -1,0 +1,8 @@
+define X
+    let y = 42.
+    y!
+
+class Main {}
+    direct method run: command in: system
+        y!
+end

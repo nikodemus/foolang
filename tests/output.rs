@@ -122,6 +122,20 @@ fn test_bad_class() -> Test {
 }
 
 #[test]
+fn test_define_let_leak() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/tests/test_define_let_leak.foo");
+    cmd.assert().failure().code(1).stdout(predicates::str::contains(
+        " ERROR: Unbound variable: y
+006     direct method run: command in: system
+007         y!
+            ^ Unbound variable: y
+008 end",
+    ));
+    Ok(())
+}
+
+#[test]
 fn test_unbound_variable_location() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/tests/test_unbound_variable_location.foo");
