@@ -1288,30 +1288,37 @@ class Tests {}
     direct method run
         self new run!
 
+    method test: name
+        { name sendTo: self }
+            on: Error
+            do: { |e| Debug println: "{name} FAILED:\n! {e description}".
+                  return False }.
+        True!
+
     method run
         self
-            ; test42
-            ; testPlus
-            ; testPrecedence
-            ; testPrefixMethod
-            ; testUnaryMethod
-            ; testKeywordMethod
-            ; testIs
-            ; testLet
-            ; testPrecedence2
-            ; testParens
-            ; testAssign
-            ; testSimpleBlock
-            ; testArgBlock
-            ; testBlockClosure
-            ; testDefine
-            ; testSimpleClass
-            ; testClassWithMethod
-            ; testClassWithPrefixMethod
-            ; testTwoClasses
-            ; testBlockInMethod
-            ; testDirectMethod
-            ; testReturn
+            ; test: #test42
+            ; test: #testPlus
+            ; test: #testPrecedence
+            ; test: #testPrefixMethod
+            ; test: #testUnaryMethod
+            ; test: #testKeywordMethod
+            ; test: #testIs
+            ; test: #testLet
+            ; test: #testPrecedence2
+            ; test: #testParens
+            ; test: #testAssign
+            ; test: #testSimpleBlock
+            ; test: #testArgBlock
+            ; test: #testBlockClosure
+            ; test: #testDefine
+            ; test: #testSimpleClass
+            ; test: #testClassWithMethod
+            ; test: #testClassWithPrefixMethod
+            ; test: #testTwoClasses
+            ; test: #testBlockInMethod
+            ; test: #testDirectMethod
+            ; test: #testReturn
             !
 
     method parse: source
