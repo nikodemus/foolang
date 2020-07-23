@@ -1261,6 +1261,9 @@ impl Object {
                 Some(Method::Primitive(_)) => {
                     // FIXME: signature not checked!
                 }
+                Some(Method::Reader(_)) => {
+                    // FIXME: signature not checked!
+                }
                 Some(_) => {
                     return Unwind::error(&format!(
                     "{}#{} is an interface method, non-vanilla implementations not supporte yet",
@@ -1311,6 +1314,9 @@ impl Object {
                     }
                 }
                 Some(Method::Primitive(_)) => {
+                    // FIXME: signature not checked!
+                }
+                Some(Method::Reader(_)) => {
                     // FIXME: signature not checked!
                 }
                 Some(_) => {
