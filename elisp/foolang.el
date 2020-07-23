@@ -676,13 +676,20 @@
       (indent-line-to 0)
     (indent-line-to col)))
 
+(defun foolang--dont-indent ()
+  (let ((s (syntax-ppss)))
+    (or (nth 3 s) ; inside string
+        (and (nth 4 s) ; inside comment, but not final ---
+             (not (looking-at "---"))))))
+
 (defun foolang--indent-to (target col base stack ctx indent-all)
   (let ((now (line-number-at-pos)))
     ;; (foolang--note "line %s (target %s)" now target)
     (cond ((eql target now)
-           (foolang--indent-line-to col))
-          ((looking-at "^\\s-*$")
-           ;; Skip over empty lines
+           (unless (foolang--dont-indent)
+             (foolang--indent-line-to col)))
+          ((or (looking-at "^\\s-*$") (foolang--dont-indent))
+           ;; Skip over empty lines and strings and comments
            (next-line)
            (beginning-of-line)
            (foolang--indent-to target col base stack ctx indent-all))
@@ -1555,6 +1562,42 @@ class Foo {}
                                default: 0.0
 
                                collect: { |c1 c2| c1 + c2 } )")
+
+(def-foolang-indent-test "body-indent-26"
+  "
+class Foo {}
+method bar
+---
+                         class {}
+method bar
+                                             42!
+---"
+  "
+class Foo {}
+    method bar
+        ---
+                         class {}
+method bar
+                                             42!
+        ---")
+
+(def-foolang-indent-test "body-indent-25"
+  "
+class Foo {}
+method bar
+\"
+                         class {}
+method bar
+                                             42!
+\""
+  "
+class Foo {}
+    method bar
+        \"
+                         class {}
+method bar
+                                             42!
+\"")
 
 (def-foolang-indent-test "list-indent-1.1"
   "
