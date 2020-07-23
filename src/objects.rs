@@ -166,7 +166,7 @@ impl Method {
     fn extend_env(&self, name: &str, value: &Object) -> Method {
         match self {
             Method::Interpreter(ref c) => Method::Interpreter(c.extend_env(name, value)),
-            _ => panic!("BUG: Cannot extend environment of non-interpreter method."),
+            _ => self.clone(),
         }
     }
 }
@@ -1325,7 +1325,7 @@ impl Object {
                     class_name, selector
                 ))
                 }
-                None if required => {
+                None if required && !class.interface => {
                     return Unwind::error(&format!(
                         "{}#{} unimplemented, required by interface {}",
                         class_name, selector, name
