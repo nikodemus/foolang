@@ -718,7 +718,9 @@
 
 (defun foolang--indent-base-or-nil (indent-all)
   (beginning-of-line)
-  (cond ((foolang--looking-at-method)
+  (cond ((foolang--dont-indent)
+         nil)
+        ((foolang--looking-at-method)
          (if indent-all
              nil
            (foolang--note "indent-base is method")
@@ -844,8 +846,7 @@
   (foolang--skip-whitespace-left)
   (while (looking-at ":")
     (backward-char))
-  (cond ((looking-at "[]})]")
-         (backward-up-list)
+  (cond ((and (looking-at "[]})]") (ignore-errors (backward-up-list) t))
          (backward-char))
         ((looking-at "\\w")
          (while (looking-at "\\w")
@@ -1563,6 +1564,24 @@ class Foo {}
 
                                collect: { |c1 c2| c1 + c2 } )")
 
+(def-foolang-indent-test "body-indent-25"
+  "
+class Foo {}
+method bar
+\"
+                         class {}
+method bar
+                                             42!
+\""
+  "
+class Foo {}
+    method bar
+        \"
+                         class {}
+method bar
+                                             42!
+\"")
+
 (def-foolang-indent-test "body-indent-26"
   "
 class Foo {}
@@ -1581,23 +1600,29 @@ method bar
                                              42!
         ---")
 
-(def-foolang-indent-test "body-indent-25"
+(def-foolang-indent-test "body-indent-27"
   "
 class Foo {}
-method bar
-\"
-                         class {}
-method bar
-                                             42!
-\""
+method testDirectMethod
+self load: \"class ClassDirectMethod \{}
+                        direct method gimme1
+                            self new gimme2!
+                        method gimme2
+                            42!
+                    end\"
+eval: \"ClassDirectMethod gimme1\"
+expect: 42!"
   "
 class Foo {}
-    method bar
-        \"
-                         class {}
-method bar
-                                             42!
-\"")
+    method testDirectMethod
+        self load: \"class ClassDirectMethod \{}
+                        direct method gimme1
+                            self new gimme2!
+                        method gimme2
+                            42!
+                    end\"
+            eval: \"ClassDirectMethod gimme1\"
+            expect: 42!")
 
 (def-foolang-indent-test "list-indent-1.1"
   "
