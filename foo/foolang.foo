@@ -249,7 +249,7 @@ class AstMethod { selector argumentCount body frameSize }
             in: $process!
 end
 
-class AstClass { name slots methods }
+class AstClass { name directMethods slots methods }
     is AstNode
     method defineIn: environment
         environment globals
@@ -262,11 +262,13 @@ class AstClass { name slots methods }
     method _eval
         Class
             new: name
-            slots: (Array from: slots)
             interfaces: ["Object"]
+            directMethods: (Array from: directMethods)
+            slots: (Array from: slots)
             methods: (Array from: methods)!
     method checkEqualInternal: other
         name checkEqual: other name.
+        directMethods checkEqual: other directMethods.
         slots checkEqual: other slots.
         methods checkEqual: other methods!
 end
@@ -613,14 +615,16 @@ class SyntaxMethodSignature { selector parameters }
         parameters checkEqual: other parameters!
 end
 
-class SyntaxClass { name slots methods }
+class SyntaxClass { name directMethods slots methods }
     is Syntax
     method translateIn: environment
-        let classEnv = environment addSlots: slots.
+        let instanceEnv = environment addSlots: slots.
         AstClass
             name: name
+            directMethods: (directMethods
+                                collect: { |m| m translateIn: environment })
             slots: slots
-            methods: (methods collect: { |m| m translateIn: classEnv })!
+            methods: (methods collect: { |m| m translateIn: instanceEnv })!
     method checkEqualInternal: other
         name checkEqual: other name.
         slots checkEqual: other slots.
@@ -864,17 +868,24 @@ class TokenReservedWordClass { first last }
 
     method parseAsPrefixWith: parser
         let name = parser parseVariableName.
-        parser expect: "\{".
+
         let slots = List new.
-        { TokenWord includes: parser lookahead }
-            whileTrue: { slots add: parser parseVariableName }.
+        parser expect: "\{".
+        parser until: "}"
+               do: { slots add: parser parseVariableName }.
+
+        let directMethods = List new.
         let methods = List new.
-        parser expect: "}".
-        parser while: "method"
-               do: { methods add: (self parseMethodWith: parser) }.
-        parser expect: "end".
+        parser until: "end"
+               do: { parser while: "direct"
+                            do: { parser expect: "method".
+                                  directMethods add: (self parseMethodWith: parser) }.
+                     parser while: "method"
+                            do: { methods add: (self parseMethodWith: parser) } }.
+
         SyntaxClass
             name: name
+            directMethods: directMethods
             slots: slots
             methods: methods!
 
@@ -1248,6 +1259,7 @@ class Tests {}
             ; testClassWithPrefixMethod
             ; testTwoClasses
             ; testBlockInMethod
+            ; testDirectMethod
             !
 
     method parse: source
@@ -1388,6 +1400,15 @@ from: '{expr}'" }!
                            (self ctor: x * 2) value capture value!
                     end"
              eval: "(ClassBB slot: 20) run: 10"
+             expect: 42!
+    method testDirectMethod
+        self load: "class ClassDirectMethod \{}
+                        direct method gimme1
+                            self new gimme2!
+                        method gimme2
+                            42!
+                    end"
+             eval: "ClassDirectMethod gimme1"
              expect: 42!
 end
 
