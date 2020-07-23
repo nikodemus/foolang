@@ -462,7 +462,7 @@ dependencies = [
 
 [[package]]
 name = "foolang"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "assert_cmd 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
