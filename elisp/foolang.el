@@ -83,6 +83,7 @@
     "raise"
     "required"
     "return"
+    "direct"
     ))
 
 (font-lock-add-keywords
@@ -133,14 +134,18 @@
 (defconst foolang--eol-regex
   "\\s-*$")
 
-(defconst foolang--method-or-class-method-regex
-  "\\(class\\s-+\\)?method\\s-+")
+(defconst foolang--method-or-direct-method-regex
+  "\\(direct\\s-+\\)?method\\s-+")
+
+(defconst foolang--name-regex
+  "\\w+")
 
 (defconst foolang--op-regex
   "\\s_+\\s-+")
 
 (defconst foolang--name-with-opt-type-regex
-  "\\w+\\(::\\w+\\)?\\>\\s-*")
+  (concat foolang--name-regex
+          "\\(::\\s-*\\w+\\)?\\>\\s-*"))
 
 (defconst foolang--keyword-regex
   "\\w+:[^:]\\s-*")
@@ -431,26 +436,12 @@
                  base col))
      (list (+ col foolang-indent-offset) base stack ctx))))
 
-(def-foolang-indent "method name" (col base stack ctx)
-  (:after
-    (looking-at " *\\(class *\\)?method *\\w+\\s_* *$"))
-  (:indent
-   (list (+ col foolang-indent-offset)
-         (+ col foolang-indent-offset)
-         stack
-         :body)))
-
 (defconst foolang--method-op-arg-with-opt-type-regex
   (concat "\\s-*"
-          foolang--method-or-class-method-regex
+          foolang--method-or-direct-method-regex
           foolang--op-regex
           foolang--name-with-opt-type-regex
           "$"))
-
-(defun foolang-foo ()
-  (looking-at foolang--method-op-arg-with-opt-type-regex))
-
-
 
 (def-foolang-indent "method op arg" (col base stack ctx)
   (:after
@@ -463,7 +454,7 @@
 
 (defconst foolang--method-keywords-across-lines-regex
   (concat "\\s-*"
-          foolang--method-or-class-method-regex
+          foolang--method-or-direct-method-regex
           foolang--keywords-and-names-with-opt-types-regex
           foolang--newline-or-lines-regex
           foolang--keyword-regex
@@ -507,9 +498,23 @@
   (:indent
    (list base base stack :body)))
 
+(defconst foolang--method-unary-regex
+  (concat "\\s-*"
+          foolang--method-or-direct-method-regex
+          foolang--name-regex))
+
+(def-foolang-indent "method name" (col base stack ctx)
+  (:after
+    (looking-at foolang--method-unary-regex))
+  (:indent
+   (list (+ col foolang-indent-offset)
+         (+ col foolang-indent-offset)
+         stack
+         :body)))
+
 (defconst foolang--method-keywords-regex
   (concat "\\s-*"
-          foolang--method-or-class-method-regex
+          foolang--method-or-direct-method-regex
           foolang--keywords-and-names-with-opt-types-regex
           "$"))
 
@@ -728,7 +733,7 @@
          0)))
 
 (defun foolang--looking-at-method ()
-  (looking-at " *\\(method\\|class *method\\)"))
+  (looking-at " *\\(method\\|direct *method\\)"))
 
 (defun foolang--looking-at-class ()
   (looking-at " *class [A-Za-z_]"))
@@ -1030,10 +1035,10 @@ extend Foo
 (def-foolang-indent-test "extend-indent-2"
   "
 extend Foo
-class method bar"
+direct method bar"
   "
 extend Foo
-    class method bar")
+    direct method bar")
 
 (def-foolang-indent-test "extend-indent-3"
   "
@@ -1124,11 +1129,11 @@ class Foo { a }
 (def-foolang-indent-test "method-indent-6"
   "
 class Main {}
-class method + x::Type
+direct method + x::Type
 x"
   "
 class Main {}
-    class method + x::Type
+    direct method + x::Type
         x")
 
 (def-foolang-indent-test "body-indent-1"
@@ -1240,7 +1245,7 @@ class Foo { a }
 (def-foolang-indent-test "body-indent-9"
   "
 class Foo { a }
-class method run: command in: system
+direct method run: command in: system
 -- XXX: decide full/short based on command-line
 let benchmarks = Benchmarks output: system output
 clock: system clock
@@ -1248,7 +1253,7 @@ full: False.
 benchmarks run"
   "
 class Foo { a }
-    class method run: command in: system
+    direct method run: command in: system
         -- XXX: decide full/short based on command-line
         let benchmarks = Benchmarks output: system output
                                     clock: system clock
@@ -1258,7 +1263,7 @@ class Foo { a }
 (def-foolang-indent-test "body-indent-10"
   "
 class Foo { a }
-class method new: system
+direct method new: system
 let compiler = Compiler new.
 compiler define: \"system\" as: system.
 self _input: system input
@@ -1268,7 +1273,7 @@ _atEof: False
 _value: False"
         "
 class Foo { a }
-    class method new: system
+    direct method new: system
         let compiler = Compiler new.
         compiler define: \"system\" as: system.
         self _input: system input

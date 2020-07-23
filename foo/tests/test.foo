@@ -8,7 +8,7 @@ import lang.filestream.TestFileStream
 
 -- Generates signed integers small enough to add without overflowing.
 class SmallIntegers {}
-    class method do: block
+    direct method do: block
         -- First around zero
         block value: -1.
         block value: 0.
@@ -19,7 +19,7 @@ class SmallIntegers {}
 end
 
 class ShortStringSeqs {}
-   class method do: block
+   direct method do: block
       -- FIXME: actual random generation, please
       block value: [].
       block value: [""].
@@ -31,7 +31,7 @@ class ShortStringSeqs {}
 end
 
 class Floats {}
-   class method do: block
+   direct method do: block
       block value: -0.0.
       block value: 0.0.
       block value: 1.0.
@@ -57,12 +57,12 @@ define $testVar
     123!
 
 class TestVar {}
-    class method read
+    direct method read
         $testVar!
 end
 
 class Main { assert system }
-    class method run: cmd in: system
+    direct method run: cmd in: system
         let instance = self assert: (Assert reportingTo: system output)
                             system: system.
         instance test.

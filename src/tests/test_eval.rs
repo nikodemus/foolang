@@ -63,9 +63,9 @@ fn test_cascade3() {
 fn test_class_method1() {
     let (class, env) = eval_obj(
         "class Foo { a }
-            class method new
+            direct method new
                 self a: 42!
-            class method foo
+            direct method foo
                 12!
          end",
     );
@@ -80,9 +80,9 @@ fn test_class_method1() {
 fn test_class_method2() {
     let (class, env) = eval_obj(
         "class Foo { _a }
-            class method new
+            direct method new
                 self _a: 42!
-            class method foo
+            direct method foo
                 12!
             method a
                 _a!
@@ -180,7 +180,7 @@ fn test_extend1() {
         eval_ok(
             "
          class Foo {}
-            class method perform: s with: args
+            direct method perform: s with: args
                666!
          end
          extend Foo
@@ -204,7 +204,7 @@ fn test_extend2() {
                666!
          end
          extend Foo
-            class method bar
+            direct method bar
                42!
          end
          Foo bar",
@@ -241,11 +241,11 @@ fn test_extend_exception1() {
 fn test_extend_exception2() {
     let (exception, _env) = eval_exception(
         "class Foo {}
-            class method perform: s with: args
+            direct method perform: s with: args
                42!
          end
          extend Foo
-            class method bar
+            direct method bar
                666!
          end",
     );
@@ -253,7 +253,7 @@ fn test_extend_exception2() {
         exception,
         Unwind::Panic(
             Error::SimpleError(SimpleError {
-                what: "Cannot extend class Foo: class method 'perform:with:' defined".to_string()
+                what: "Cannot extend class Foo: direct method 'perform:with:' defined".to_string()
             }),
             Location::none()
         )
@@ -755,7 +755,7 @@ fn test_method_keyword_multiline() {
     assert_eq!(
         eval_ok(
             r#"class Foo {}
-                  class method bar: x
+                  direct method bar: x
                                quux: y
                     x + y!
                end

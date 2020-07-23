@@ -4,7 +4,7 @@ extend String
     is Object
     is Ordered
 
-    class method default
+    direct method default
         ""!
     method append: other
        other appendToString: self!

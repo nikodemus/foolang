@@ -10,7 +10,7 @@
 
 ## Open Questions
 
-What about class methods?
+What about direct methods?
 
 While it may make sense for there to be Interface##method, it doesnt'
 really feel right for that to imply that there is also Class##method, does it?

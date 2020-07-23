@@ -37,9 +37,9 @@ fn test_closure5() {
     assert_eq!(
         eval_ok(
             "class T {}
-                 class method closeOver: value
+                 direct method closeOver: value
                      return { |x | value + x }!
-                 class method test
+                 direct method test
                      return (self closeOver: 40) value: 2!
              end
              T test"
@@ -54,10 +54,10 @@ fn test_closure_return() {
     assert_eq!(
         eval_ok(
             "class T {}
-               class method test
+               direct method test
                  self boo: { return 42 }.
                  return 31!
-               class method boo: block
+               direct method boo: block
                  block value!
              end
              T test",

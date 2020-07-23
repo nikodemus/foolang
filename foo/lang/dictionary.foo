@@ -12,7 +12,7 @@ extend Dictionary
         self doKeys: { |key| keys add: key }.
         keys!
 
-    class method runTests: assert
+    direct method runTests: assert
         assert that: { let d = { 1 + 1 + 40 -> "the" append: "Answer" }.
                        (d at: 42) }
                is: "theAnswer"

@@ -1,7 +1,7 @@
 class Vector {}
-   class method project: a onto: b
+   direct method project: a onto: b
       ((Vector dot: a with: b) / (Vector dot: b with: b)) * b
-   class method dot: a with: b
+   direct method dot: a with: b
       (a at: 1) * (b at: 1) +
       (a at: 2) * (b at: 2) +
       (a at: 3) * (b at: 3)
@@ -29,7 +29,7 @@ end
 
 class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttle debug }
 
-   class method mass: mass
+   direct method mass: mass
                 maxLift: maxLift
                 maxSpeed: maxSpeed
                 maxThrust: maxThrust
@@ -117,7 +117,7 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
 end
 
 class Main {}
-   class method run: command in: system
+   direct method run: command in: system
       let plane = Plane mass: 750.0
                         maxLift: 18.0
                         maxSpeed: 27.0

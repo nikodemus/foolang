@@ -3,7 +3,7 @@ import .number.Number
 extend Integer
     is Number
 
-    class method default
+    direct method default
         0!
 
     method asInteger

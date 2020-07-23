@@ -47,7 +47,7 @@ class AstContext {
         returnCont
     }
 
-    class method sender: sender
+    direct method sender: sender
                  receiver: receiver
                  frame: frame
                  astMethod: astMethod
@@ -240,7 +240,7 @@ class ConstantBinding { name value next }
 end
 
 class Environment { bindings parent }
-    class method new
+    direct method new
         self bindings: False parent: False
     method reference: name
         (name startsWith: "$")
@@ -321,7 +321,7 @@ class BinarySend { receiver selector argument }
 end
 
 class CstTest {}
-    class method run
+    direct method run
         self new
             ; test1
             ; test2

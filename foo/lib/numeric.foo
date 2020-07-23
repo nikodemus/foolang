@@ -21,7 +21,7 @@ class _MachineFloat {
         smallNumber
     }
 
-    class method new
+    direct method new
         let radix = self computeRadix.
         let precision = self computePrecision: radix.
         let negativePrecision = self computeNegativePrecision: radix.
@@ -36,7 +36,7 @@ class _MachineFloat {
              defaultNumericPrecision: precision sqrt
              smallNumber: smallestNumber sqrt
 
-    class method computeRadix
+    direct method computeRadix
         let a = 1.0.
         { a = a + a.
           let tmp1 = a + 1.0.
@@ -52,7 +52,7 @@ class _MachineFloat {
         whileTrue.
         radix
 
-    class method computePrecision: radix
+    direct method computePrecision: radix
         let invRadix = 1.0 / radix asFloat.
         let machinePrecision = 1.0.
         { let tmp = 1.0 + machinePrecision.
@@ -61,7 +61,7 @@ class _MachineFloat {
                           machinePrecision * invRadix }.
         machinePrecision
 
-    class method computeNegativePrecision: radix
+    direct method computeNegativePrecision: radix
         let invRadix = 1.0 / radix asFloat.
         let negativeMachinePrecision = 1.0.
         { let tmp = 1.0 - negativeMachinePrecision.
@@ -70,7 +70,7 @@ class _MachineFloat {
                           negativeMachinePrecision * invRadix }.
         negativeMachinePrecision
 
-    class method computeLargestNumber: radix negativePrecision: negativePrecision
+    direct method computeLargestNumber: radix negativePrecision: negativePrecision
         let floatRadix = radix asFloat.
         let fullMantissaNumber = 1.0 - (floatRadix * negativePrecision).
         let largestNumber = fullMantissaNumber.
@@ -79,7 +79,7 @@ class _MachineFloat {
                          fullMantissaNumber = fullMantissaNumber * floatRadix }.
         largestNumber
 
-    class method computeSmallestNumber: radix negativePrecision: negativePrecision
+    direct method computeSmallestNumber: radix negativePrecision: negativePrecision
         let floatRadix = radix asFloat.
         let invRadix = 1.0 / floatRadix.
         let fullMantissaNumber = 1.0 - (floatRadix * negativePrecision).

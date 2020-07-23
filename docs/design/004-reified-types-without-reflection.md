@@ -73,10 +73,10 @@ class Codepoint { value }
 end
 
 class GermanicCodepoint {}
-    class method includes: obj
+    direct method includes: obj
         (Codepoint includes: obj)
             and: (Codepoint germanicRange includes: obj value)
-    class method subtypeOf: type
+    direct method subtypeOf: type
         type is Codepoint
 ```
 

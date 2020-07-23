@@ -3,7 +3,7 @@ import .number.Number
 extend Float
     is Number
 
-    class method default
+    direct method default
         0.0!
 
     method asFloat

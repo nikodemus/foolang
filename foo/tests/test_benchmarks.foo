@@ -1,6 +1,6 @@
 class Benchmarks { benchmarks output clock }
 
-    class method output: output clock: clock full: full
+    direct method output: output clock: clock full: full
         self benchmarks: [ Benchmark emptyLoop: full,
                            Benchmark factorial: full,
                            Benchmark sumFloats: full,
@@ -19,7 +19,7 @@ end
 
 class Benchmark { name block userTime systemTime realTime }
 
-    class method new: benchmark is: block
+    direct method new: benchmark is: block
         self name: benchmark
              block: block
              userTime: False
@@ -47,31 +47,31 @@ class Benchmark { name block userTime systemTime realTime }
             ; print: realTime toString
             ; newline!
 
-    class method sumFloats: full
+    direct method sumFloats: full
         let n = full ifTrue: { 150_000 } ifFalse: { 150 }.
         let floats = List new.
         1 to: n do: { |x| floats add: x asFloat }.
         Benchmark new: "SumFloats"
             is: { floats inject: 0.0 into: { |sum each | sum + each } }!
 
-    class method factorial: full
+    direct method factorial: full
         Benchmark new: "Factorial"
                   is: { let res = 0.
                         let n = full ifTrue: { 2000 } ifFalse: { 2 }.
                         n times: { res = Factorial of: 20 }.
                         res }!
 
-    class method emptyLoop: full
+    direct method emptyLoop: full
         Benchmark new: "EmptyLoop"
                   is: { let n = full ifTrue: { 600_000 } ifFalse: { 600 }.
                         n times: {} }!
 
-    class method ackermann: full
+    direct method ackermann: full
         Benchmark new: "Ackermann"
                   is: { let n = full ifTrue: { 50 } ifFalse: { 1 }.
                         n times: { Ackermann m: 3 n: 2 } }!
 
-    class method fibonacci: full
+    direct method fibonacci: full
         Benchmark new: "Fibonacci" is: {
             let n = full ifTrue: { 21 } ifFalse: { 5 }.
             Fibonacci of: n
@@ -81,7 +81,7 @@ end
 
 class Fibonacci {}
 
-    class method of: n
+    direct method of: n
         n < 2
             ifTrue: { return 1 }.
         (Fibonacci of: n - 1) + (Fibonacci of: n - 2)!
@@ -89,7 +89,7 @@ end
 
 class Factorial {}
 
-    class method of: n
+    direct method of: n
         n < 2
             ifTrue: { return n }.
         n * (Factorial of: n - 1)!
@@ -98,7 +98,7 @@ end
 
 class Ackermann {}
 
-    class method m:m n:n
+    direct method m:m n:n
         m == 0
             ifTrue: { return n + 1 }.
         n == 0
@@ -108,7 +108,7 @@ class Ackermann {}
 end
 
 class Main {}
-    class method run: command in: system
+    direct method run: command in: system
         -- XXX: decide full/short based on command-line
         let benchmarks = Benchmarks output: system output
                                     clock: system clock

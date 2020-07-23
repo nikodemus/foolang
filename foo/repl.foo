@@ -7,10 +7,10 @@ class REPL {
         _value
     }
 
-    class method runIn: system
+    direct method runIn: system
         (self new: system) run!
 
-    class method new: system
+    direct method new: system
         let compiler = Compiler new.
         compiler define: "system" as: system.
         self _input: system input
@@ -63,6 +63,6 @@ class REPL {
 end
 
 class Main {}
-    class method run: command in: system
+    direct method run: command in: system
         REPL runIn: system!
 end

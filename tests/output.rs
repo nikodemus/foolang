@@ -127,7 +127,7 @@ fn test_unbound_variable_location() -> Test {
     cmd.arg("foo/tests/test_unbound_variable_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Unbound variable: oops
-002     class method oops
+002     direct method oops
 003         oops!
             ^^^^ Unbound variable: oops
 004 end",
@@ -141,7 +141,7 @@ fn test_value_type_error_location() -> Test {
     cmd.arg("foo/tests/test_value_type_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: String expected, got Integer: 14
-007     class method oops
+007     direct method oops
 008         14::String!
             ^^ String expected, got Integer: 14
 009 end",
@@ -183,7 +183,7 @@ fn test_var_init_type_error_location() -> Test {
     cmd.arg("foo/tests/test_var_init_type_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: String expected, got Integer: 123124
-025     class method oops
+025     direct method oops
 026         let x::String = 123124.
                             ^^^^^^ String expected, got Integer: 123124
 027         x",
@@ -197,10 +197,10 @@ fn test_method_arg_type_error_location() -> Test {
     cmd.arg("foo/tests/test_method_arg_type_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: String expected, got Integer: 42
-031     class method oops
+031     direct method oops
 032         self oops: 42!
                  ^^^^^^^^ String expected, got Integer: 42
-033     class method oops: x::String",
+033     direct method oops: x::String",
     ));
     Ok(())
 }
@@ -211,7 +211,7 @@ fn test_block_arg_type_error_location() -> Test {
     cmd.arg("foo/tests/test_block_arg_type_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: String expected, got Integer: 42
-038     class method oops
+038     direct method oops
 039         { |x::String| x } value: 42!
                               ^^^^^^^^^ String expected, got Integer: 42
 040 end",
@@ -262,7 +262,7 @@ fn test_undefined_value_type_error_location() -> Test {
     cmd.arg("foo/tests/test_undefined_value_type_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Undefined type: 'UndefinedType'
-045     class method oops: x
+045     direct method oops: x
 046         x::UndefinedType!
                ^^^^^^^^^^^^^ Undefined type: 'UndefinedType'
 047 end",
@@ -277,7 +277,7 @@ fn test_undefined_var_type_error_location() -> Test {
     // FIXME: Error points to variable, not the type
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Undefined type: 'UndefinedType'
-050     class method oops
+050     direct method oops
 051         let x::UndefinedType = \"OK\".
                 ^ Undefined type: 'UndefinedType'
 052         x",
@@ -306,7 +306,7 @@ fn test_panic_location() -> Test {
     // FIXME: Error points to class
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: This here
-056     class method oops
+056     direct method oops
 057         panic \"This here\"!
             ^^^^^ This here
 058 end",
@@ -321,7 +321,7 @@ fn test_does_not_understand_location() -> Test {
     // FIXME: Error points to class
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: class DoesNotUnderstandError does not understand: noSuchMethod []
-061     class method oops
+061     direct method oops
 062         self noSuchMethod!
                  ^^^^^^^^^^^^ class DoesNotUnderstandError does not understand: noSuchMethod []
 063 end",
@@ -495,7 +495,7 @@ fn test_array_let1() -> Test {
     cmd.arg("foo/tests/test_array_let1.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Unbound variable: x
-002    class method run: command in: system
+002    direct method run: command in: system
 003       system output println: [let x = 42. x + x, x]!
                                                      ^ Unbound variable: x
 004 end
@@ -526,7 +526,7 @@ fn test_repl() -> Test {
     cmd.arg("foo/repl.foo")
         .write_stdin(
             r#"class Point { x y }
-                  class method displayOn: stream
+                  direct method displayOn: stream
                      stream print: "<class Point>"!
                   method + other
                      Point x: x + other x

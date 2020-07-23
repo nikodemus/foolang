@@ -194,12 +194,12 @@ Object-->Iterable-->Ordered
 
 # OLD
 
-#### **class method** `new:` _size_ `value:` _value_
+#### **direct method** `new:` _size_ `value:` _value_
 
 Returns a fresh array of specified size, with all elements initialized
 to _value_.
 
-#### **class method** `withCapacity:` _capacity_
+#### **direct method** `withCapacity:` _capacity_
 
 Returns a fresh empty array which has been allocated with enough capacity
 to contain _capacity_ elements without reserving more memory.

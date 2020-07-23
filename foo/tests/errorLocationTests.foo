@@ -1,63 +1,63 @@
 class UnboundVariable {}
-    class method oops
+    direct method oops
         oops!
 end
 
 class ValueTypeError {}
-    class method oops
+    direct method oops
         14::String!
 end
 
 class SlotTypeError { slot::String }
-    class method oops
+    direct method oops
         (self slot: "OK") oops!
     method oops
         slot = 123!
 end
 
 class VarTypeError {}
-    class method oops
+    direct method oops
         let x::String = "OK".
         x = 12312!
 end
 
 class VarInitTypeError {}
-    class method oops
+    direct method oops
         let x::String = 123124.
         x!
 end
 
 class MethodArgTypeError {}
-    class method oops
+    direct method oops
         self oops: 42!
-    class method oops: x::String
+    direct method oops: x::String
         panic "Not supposed to happen! x = {x}"!
 end
 
 class BlockArgTypeError {}
-    class method oops
+    direct method oops
         { |x::String| x } value: 42!
 end
 
 class UndefinedValueTypeError {}
-    class method oops
+    direct method oops
         self oops: 42!
-    class method oops: x
+    direct method oops: x
         x::UndefinedType!
 end
 
 class UndefinedVarTypeError {}
-    class method oops
+    direct method oops
         let x::UndefinedType = "OK".
         x!
 end
 
 class PanicError {}
-    class method oops
+    direct method oops
         panic "This here"!
 end
 
 class DoesNotUnderstandError {}
-    class method oops
+    direct method oops
         self noSuchMethod!
 end

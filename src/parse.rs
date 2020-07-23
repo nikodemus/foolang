@@ -791,6 +791,7 @@ fn sequence_suffix(
     // FIXME: Pull this information from a table instead.
     if (token == Token::WORD
         && (text == "required"
+            || text == "direct"
             || text == "method"
             || text == "end"
             || text == "class"
@@ -1052,12 +1053,12 @@ fn interface_prefix(parser: &Parser) -> Parse {
             return parser
                 .eof_error("Unexpected EOF while parsing interface: expected method or end");
         }
-        if next == Token::WORD && parser.slice() == "class" {
+        if next == Token::WORD && parser.slice() == "direct" {
             if parser.next_token()? == Token::WORD && parser.slice() == "method" {
                 interface.add_method(MethodKind::Class, parse_method(parser)?);
                 continue;
             } else {
-                return parser.error("Expected class method");
+                return parser.error("Expected 'method'");
             }
         }
         if next == Token::WORD && parser.slice() == "method" {
@@ -1139,12 +1140,12 @@ fn class_prefix(parser: &Parser) -> Parse {
         if next == Token::WORD && parser.slice() == "end" {
             break;
         }
-        if next == Token::WORD && parser.slice() == "class" {
+        if next == Token::WORD && parser.slice() == "direct" {
             if parser.next_token()? == Token::WORD && parser.slice() == "method" {
                 class.add_method(MethodKind::Class, parse_method(parser)?);
                 continue;
             } else {
-                return parser.error("Expected class method");
+                return parser.error("Expected 'method'");
             }
         }
         if next == Token::WORD && parser.slice() == "method" {
@@ -1172,7 +1173,8 @@ fn class_prefix(parser: &Parser) -> Parse {
             }
             return parser.error("Invalid interface name in class");
         }
-        return parser.error(&format!("Expected method or end, got: '{}'", parser.slice()));
+        return parser
+            .error(&format!("Expected method specification or end, got: '{}'", parser.slice()));
     }
     Ok(Syntax::Def(Def::ClassDef(class)))
 }
@@ -1235,12 +1237,12 @@ fn extend_prefix(parser: &Parser) -> Parse {
             return parser
                 .eof_error("Unexpected EOF while parsing extension: expected method or end");
         }
-        if next == Token::WORD && parser.slice() == "class" {
+        if next == Token::WORD && parser.slice() == "direct" {
             if parser.next_token()? == Token::WORD && parser.slice() == "method" {
                 class.add_method(MethodKind::Class, parse_method(parser)?);
                 continue;
             } else {
-                return parser.error("Expected class method");
+                return parser.error("Expected 'method'");
             }
         }
         if next == Token::WORD && parser.slice() == "method" {

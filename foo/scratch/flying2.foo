@@ -120,7 +120,7 @@ constant Cessna = #{ mass: 750.0,
                      maxThrust: 470 }
 
 class Main {}
-   class method run: command in: system
+   direct method run: command in: system
       let plane = Plane model: Cessna debug: system output.
       plane throttle: 1.0.
       1000 times: {

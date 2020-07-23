@@ -7,7 +7,7 @@ fn test_clock1() {
     let res = foo
         .run(
             "class Main {}
-             class method run: command in: system
+             direct method run: command in: system
                  system clock :: Clock toString!
          end",
             cmd,
@@ -25,7 +25,7 @@ fn test_clock2() {
     let res = foo
         .run(
             "class Main {}
-             class method run: command in: system
+             direct method run: command in: system
                  let clock = system clock.
                  let t0 = clock time.
                  system sleep: 10.

@@ -22,7 +22,7 @@ FIXME: Factor breath first searching into lang.algorithms
 
 class Puzzle { height width data frontier paths }
 
-    class method height: height width: width data: data start: coordinate
+    direct method height: height width: width data: data start: coordinate
         let puzzle = self height: height
                          width: width
                          data: data
@@ -107,7 +107,7 @@ class Puzzle { height width data frontier paths }
 end
 
 class Main {}
-    class method run: cmd in: system
+    direct method run: cmd in: system
         let puzzle = Puzzle height: 7 width: 7
                             data: [ 6, 2, 5, 2, 5, 5, 2,
                                     1, 5, 1, 4, 3, 3, 4,

@@ -5,7 +5,7 @@ define ColonCharacter
 
 class Selector { name }
     is Object
-    class method new: name
+    direct method new: name
         self name: name!
     method sendTo: receiver
         name sendTo: receiver with: []!

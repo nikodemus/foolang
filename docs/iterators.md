@@ -324,7 +324,7 @@ graph TD
 
 Finite. Support creation, addition of elements, and removal of elements.
 
-### *required class method* `of:` _type_ `withCapacity:` _capacity_
+### *required direct method* `of:` _type_ `withCapacity:` _capacity_
 
 Creates a new _Collection_ specialized to contain elements of _type_ which
 can hold upto _capacity_ items without needing to grow.
@@ -345,14 +345,14 @@ Removes all elements from the receiver.
 - required method `remove:`
 - required method `removeIf:`
 - required method `size`
-- class method `defaultCapacity`
-- class method `defaultElementType`
-- class method `from:`
-- class method `new:`
-- class method `new:default:`
-- class method `new`
-- class method `of:from:`
-- class method `withCapacity:`
+- direct method `defaultCapacity`
+- direct method `defaultElementType`
+- direct method `from:`
+- direct method `new:`
+- direct method `new:default:`
+- direct method `new`
+- direct method `of:from:`
+- direct method `withCapacity:`
 - method `addAll:`
 - method `as:`
 - method `collect:`
@@ -367,8 +367,8 @@ Removes all elements from the receiver.
 
 ### Indexed < Iterable
 
-- required class method `of:new:value:`
-- class method `new:`
+- required direct method `of:new:value:`
+- direct method `new:`
 - required method `at:`
 - required method `at:put:`
 

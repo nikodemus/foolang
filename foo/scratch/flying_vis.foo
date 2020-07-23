@@ -20,7 +20,7 @@ end
 
 class PlaneGraphics { position plane shadow debug }
 
-   class method position: position window: window debug: debug
+   direct method position: position window: window debug: debug
       let plane = window cube: [1, 1, 3].
       plane color: [1, 0, 0].
       plane translate: [0, 0.5, 0].
@@ -39,7 +39,7 @@ end
 
 class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttle debug graphics }
 
-   class method mass: mass
+   direct method mass: mass
                 maxLift: maxLift
                 maxSpeed: maxSpeed
                 maxThrust: maxThrust
@@ -128,7 +128,7 @@ class Plane { model noseDirection upDirection maxLift maxSpeed maxThrust throttl
 end
 
 class Main {}
-   class method run: command in: system
+   direct method run: command in: system
       let window = system window: "Flying".
       window light.
       let ground = window cube: [100, 0.1, 500].

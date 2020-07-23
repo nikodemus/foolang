@@ -41,7 +41,7 @@ class _Closable { closed }
 end
 
 class TestSelfRefInClosure { cookie }
-    class method test
+    direct method test
         (self cookie: 132132132) test!
     method test
         { self cookie is cookie } value!
@@ -49,7 +49,7 @@ end
 
 class TestClosure { assert }
 
-    class method runTests: assert
+    direct method runTests: assert
         (self assert: assert) runTests!
 
     method runTests

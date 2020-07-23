@@ -1,6 +1,6 @@
 import bar.y
 
 class Main {}
-   class method run: command in: system
+   direct method run: command in: system
       system exit: (y.Identity value: 111)!
 end

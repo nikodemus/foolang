@@ -579,7 +579,7 @@ bell ring!
   sound too bad.
 
   __ prefix for class
-  _ prefix for class methods
+  _ prefix for direct methods
   _ in place of :
   ...allow dashing-names?
 

@@ -53,7 +53,7 @@ class TestFilePath { assert dir none file }
         assert false: { tmpfile exists }
                testing: "FilePath#deleteFile (post)"!
 
-    class method runTests: assert in: system
+    direct method runTests: assert in: system
         -- Assumes the repository root as the current directory
         let tests = self assert: assert
                          dir: system currentDirectory
