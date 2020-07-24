@@ -417,24 +417,28 @@ interface SyntaxVisitor
     required method visitClassDefinition: name directMethods: directMethods slots: slots methods: methods
 end
 
-class SyntaxPrinter { output }
+class SyntaxPrinter { output indent }
     is SyntaxVisitor
 
     direct method print: syntax to: output
-        syntax visitBy: (self output: output)!
+        syntax visitBy: (self output: output indent: 0)!
+
+    method indentBody
+        SyntaxPrinter output: output indent: indent + 4!
 
     method print: string
         output print: string!
 
     method println: string
-        output println: string!
+        output println: string.
+        indent times: { output print: " " }!
 
     method visitLiteral: value
         self print: value toString!
 
     method visitSeqFirst: first then: then
         first visitBy: self.
-        self print: ". ".
+        self println: ".".
         then visitBy: self!
 
     method visitReturn: value
@@ -487,7 +491,7 @@ class SyntaxPrinter { output }
         self print: name.
         self print: " = ".
         value visitBy: self.
-        self print: ". ".
+        self println: ".".
         body visitBy: self!
 
     method visitSelf
@@ -514,14 +518,14 @@ class SyntaxPrinter { output }
                                      interleaving: { self print: " " }.
                           self print: "| " }.
         body visitBy: self.
-        self print: "}"!
+        self print: " }"!
 
     method visitDefine: name body: body
         self print: "define ".
-        self print: name.
-        self print: " ".
-        body visitBy: self.
-        self print: "!"!
+        let bodyVisitor = self indentBody.
+        bodyVisitor println: name.
+        body visitBy: bodyVisitor.
+        self println: "!"!
 
     method visitMethodDefinition: signature body: body
         self print: "method".
@@ -533,10 +537,11 @@ class SyntaxPrinter { output }
                                  self print: " ".
                                  self print: part.
                                  self print: " ".
-                                 self print: (signature parameters at: index) } }.
-        self println: "".
-        body visitBy: self.
-        self println: "!"!
+                                          self print: (signature parameters at: index) } }.
+        let bodyVisitor = self indentBody.
+        bodyVisitor println: "".
+        body visitBy: bodyVisitor.
+        self print: "!"!
 
     method visitClassDefinition: name directMethods: directMethods slots: slots methods: methods
         self print: "class ".
@@ -546,11 +551,16 @@ class SyntaxPrinter { output }
                             slots do: { |slot|
                                         self print: slot.
                                         self print: " " } }.
-        self println: "}".
+        self print: "}".
+        let methodVisitor = self indentBody.
         directMethods do: { |m|
-                            self print: "direct ".
-                            m visitBy: self }.
-        methods do: { |m| m visitBy: self }.
+                            methodVisitor println: "".
+                            methodVisitor print: "direct ".
+                            m visitBy: methodVisitor }.
+        methods do: { |m|
+                      methodVisitor println: "".
+                      m visitBy: methodVisitor }.
+        self println: "".
         self println: "end"!
 end
 
@@ -1739,7 +1749,10 @@ problem: {err description}" }.
         let env = Environment new.
         -- FIXME: Requires definitions to be in order.
         (self parse: defSource)
-            do: { |def| env load: (SyntaxTranslator translate: def in: env) }.
+            do: { |def|
+                  Debug println: "".
+                  SyntaxPrinter print: def to: Output debug.
+                  env load: (SyntaxTranslator translate: def in: env) }.
         env eval: exprSource!
 
     method load: defSource eval: exprSource expect: expected
