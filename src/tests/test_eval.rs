@@ -215,52 +215,6 @@ fn test_extend2() {
 }
 
 #[test]
-fn test_extend_exception1() {
-    let (exception, _env) = eval_exception(
-        "class Foo {}
-            method perform: s with: args
-               42!
-         end
-         extend Foo
-            method bar
-               666!
-         end",
-    );
-    assert_eq!(
-        exception,
-        Unwind::Panic(
-            Error::SimpleError(SimpleError {
-                what: "Cannot extend Foo: instance method 'perform:with:' defined".to_string()
-            }),
-            Location::none()
-        )
-    );
-}
-
-#[test]
-fn test_extend_exception2() {
-    let (exception, _env) = eval_exception(
-        "class Foo {}
-            direct method perform: s with: args
-               42!
-         end
-         extend Foo
-            direct method bar
-               666!
-         end",
-    );
-    assert_eq!(
-        exception,
-        Unwind::Panic(
-            Error::SimpleError(SimpleError {
-                what: "Cannot extend class Foo: direct method 'perform:with:' defined".to_string()
-            }),
-            Location::none()
-        )
-    );
-}
-
-#[test]
 fn test_typecheck1() {
     let (object, env) = eval_obj("123::Integer");
     assert_eq!(object, env.foo.make_integer(123));

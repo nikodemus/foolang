@@ -20,7 +20,7 @@ class REPL {
              _value: False!
 
     method run
-        _output println: "Foolang 0.0.0".
+        _output println: "Foolang 0.1.0".
         { _atEof } whileFalse: { self readEvalPrint }!
 
     method readEvalPrint

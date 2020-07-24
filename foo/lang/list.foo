@@ -9,6 +9,14 @@ class List { size data }
     is Ordered
     is Collection
 
+    method popFirst
+        let first = self first.
+        1 to: self size - 1
+          do: { |index|
+                self data put: (self data at: index + 1) at: index }.
+        size = size - 1.
+        first!
+
     method toString
         self isEmpty
             ifTrue: { "List from: []" }

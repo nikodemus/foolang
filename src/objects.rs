@@ -1109,21 +1109,8 @@ impl Object {
     }
 
     pub fn extend_class(&self, ext: &ExtensionDef, env: &Env) -> Eval {
-        if !ext.class_methods.is_empty() && self.vtable.has("perform:with:") {
-            return Unwind::error(&format!(
-                "Cannot extend {}: direct method 'perform:with:' defined",
-                &self.vtable.name
-            ));
-        }
         for method in &ext.class_methods {
             self.add_interpreted_class_method(env, method)?;
-        }
-        let class = self.as_class_ref()?;
-        if !ext.instance_methods.is_empty() && class.instance_vtable.has("perform:with:") {
-            return Unwind::error(&format!(
-                "Cannot extend {}: instance method 'perform:with:' defined",
-                class.instance_vtable.name
-            ));
         }
         for method in &ext.instance_methods {
             self.add_interpreted_instance_method(env, method)?;
@@ -1520,11 +1507,11 @@ impl Object {
                         Method::Required(_) => {
                             Unwind::error(&format!("Required method '{}' unimplemented", selector))
                         }
-                        Method::Object(method) => method.send("invoke:", &not_understood, env),
+                        Method::Object(_) => self.send("perform:with:", &not_understood, env),
                     },
                     None => {
-                        // panic!("message '{}' not understood by: {}", selector, self);
                         Unwind::message_error(self, selector, args)
+                        // panic!("message '{}' not understood by: {}", selector, self);
                     }
                 }
             }
