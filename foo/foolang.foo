@@ -394,7 +394,169 @@ class AstLexicalSet { name
             inFrame: frame!
 end
 
+interface SyntaxVisitor
+    is Object
+    required method visitLiteral: value
+    required method visitSeqFirst: first then: then
+    required method visitReturn: syntax
+    required method visitPrefixComment: comment value: value source: source
+    required method visitSuffixComment: comment value: value source: source
+    required method visitLet: name value: value body: body
+    required method visitPrefixMessage: selector receiver: receiver source: source
+    required method visitUnaryMessage: selector receiver: receiver source: source
+    required method visitBinaryMessage: selector receiver: receiver argument: argument source: source
+    required method visitKeywordMessage: selector receiver: receiver arguments: arguments source: source
+    required method visitIsLeft: left right: right
+    required method visitSelf
+    required method visitVariable: name
+    required method visitAssign: value to: variable
+    required method visitParens: body
+    required method visitBlockWith: parameters body: body
+    required method visitDefine: name body: body
+    required method visitMethodDefinition: signature body: body
+    required method visitClassDefinition: name directMethods: directMethods slots: slots methods: methods
+end
+
+class SyntaxPrinter { output }
+    is SyntaxVisitor
+
+    direct method print: syntax to: output
+        syntax visitBy: (self output: output)!
+
+    method print: string
+        output print: string!
+
+    method println: string
+        output println: string!
+
+    method visitLiteral: value
+        self print: value toString!
+
+    method visitSeqFirst: first then: then
+        first visitBy: self.
+        self print: ". ".
+        then visitBy: self!
+
+    method visitReturn: value
+        self print: "return ".
+        value visitBy: self!
+
+    method visitPrefixComment: comment value: value source: source
+        self print: "--".
+        self println: comment.
+        value visitBy: self!
+
+    method visitSuffixComment: comment value: value source: source
+        value visitBy: self.
+        self print: " --".
+        self println: comment!
+
+    method visitPrefixMessage: selector receiver: receiver source: source
+        self print: selector name.
+        receiver visitBy: self!
+
+    method visitUnaryMessage: selector receiver: receiver source: source
+        receiver visitBy: self.
+        self print: " ".
+        self print: selector name!
+
+    method visitBinaryMessage: selector receiver: receiver argument: argument source: source
+        receiver visitBy: self.
+        self print: " ".
+        self print: selector name.
+        self print: " ".
+        argument visitBy: self!
+
+    method visitKeywordMessage: selector receiver: receiver arguments: arguments source: source
+        receiver visitBy: self.
+        selector parts
+            with: arguments
+            do: { |part arg|
+                  self print: " ".
+                  self print: part.
+                  self print: " ".
+                  arg visitBy: self }!
+
+    method visitIsLeft: left right: right
+        left visitBy: self.
+        self print: " is ".
+        right visitBy: self!
+
+    method visitLet: name value: value body: body
+        self print: "let ".
+        self print: name.
+        self print: " = ".
+        value visitBy: self.
+        self print: ". ".
+        body visitBy: self!
+
+    method visitSelf
+        self print: "self"!
+
+    method visitVariable: name
+        self print: name!
+
+    method visitAssign: value to: name
+        self print: name.
+        self print: " = ".
+        value visitBy: self!
+
+    method visitParens: body
+        self print: "(".
+        body visitBy: self.
+        self print: ")"!
+
+    method visitBlockWith: parameters body: body
+        self print: "\{ ".
+        parameters
+            ifNotEmpty: { self print: "|".
+                          parameters do: { |param| self print: param }
+                                     interleaving: { self print: " " }.
+                          self print: "| " }.
+        body visitBy: self.
+        self print: "}"!
+
+    method visitDefine: name body: body
+        self print: "define ".
+        self print: name.
+        self print: " ".
+        body visitBy: self.
+        self print: "!"!
+
+    method visitMethodDefinition: signature body: body
+        self print: "method".
+        signature parameters isEmpty
+            ifTrue: { self print: " ".
+                      self print: signature selector name }
+            ifFalse: { signature selector parts
+                           withIndexDo: { |part index|
+                                 self print: " ".
+                                 self print: part.
+                                 self print: " ".
+                                 self print: (signature parameters at: index) } }.
+        self println: "".
+        body visitBy: self.
+        self println: "!"!
+
+    method visitClassDefinition: name directMethods: directMethods slots: slots methods: methods
+        self print: "class ".
+        self print: name.
+        self print: " \{".
+        slots ifNotEmpty: { self print: " ".
+                            slots do: { |slot|
+                                        self print: slot.
+                                        self print: " " } }.
+        self println: "}".
+        directMethods do: { |m|
+                            self print: "direct ".
+                            m visitBy: self }.
+        methods do: { |m| m visitBy: self }.
+        self println: "end"!
+end
+
 class SyntaxTranslator { env }
+    is SyntaxVisitor
+
     direct method translate: syntax in: env
         syntax
             visitBy: (SyntaxTranslator env: env)!
@@ -528,6 +690,11 @@ interface Syntax
         self parts with: other parts
                    do: { |a b| a == b ifFalse: { return False } }.
         True!
+
+    method toString
+        let out = StringOutput new.
+        SyntaxPrinter print: self to: out.
+        out content!
 end
 
 class SyntaxLiteral { value }
@@ -538,9 +705,6 @@ class SyntaxLiteral { value }
 
     method parts
         [value]!
-
-    method toString
-        value toString!
 end
 
 class SyntaxSeq { first then }
@@ -551,9 +715,6 @@ class SyntaxSeq { first then }
 
     method parts
         [first, then]!
-
-    method toString
-        "{first}. {then}"!
 end
 
 class SyntaxReturn { value }
@@ -564,9 +725,6 @@ class SyntaxReturn { value }
 
     method parts
         [value]!
-
-    method toString
-        "return {value}"!
 end
 
 class SyntaxPrefixComment { comment value source }
@@ -580,9 +738,6 @@ class SyntaxPrefixComment { comment value source }
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
         [self comment, self value]!
-
-    method toString
-        "--{comment}\n{value}"!
 end
 
 class SyntaxSuffixComment { comment value source }
@@ -596,9 +751,6 @@ class SyntaxSuffixComment { comment value source }
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
         [comment, value]!
-
-    method toString
-        "{value} --{comment}\n"!
 end
 
 class SyntaxPrefix { receiver selector source }
@@ -612,9 +764,6 @@ class SyntaxPrefix { receiver selector source }
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
         [receiver, selector]!
-
-    method toString
-        "{selector name}{receiver}"!
 end
 
 class SyntaxUnary { receiver selector source }
@@ -628,12 +777,6 @@ class SyntaxUnary { receiver selector source }
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
         [receiver, selector]!
-
-    method toString
-        "{receiver} {selector name}"!
-
-    method debug
-        "({receiver debug} {selector name})"!
 end
 
 class SyntaxBinary { receiver selector argument source }
@@ -648,12 +791,6 @@ class SyntaxBinary { receiver selector argument source }
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
         [receiver, selector, argument]!
-
-    method toString
-        "{receiver} {selector name} {argument}"!
-
-    method debug
-        "({receiver debug} {selector name} {argument debug})"!
 end
 
 -- FIXME: Currently multi-keyword syntax gets as source the first
@@ -670,23 +807,6 @@ class SyntaxKeyword { receiver selector arguments source }
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
         [receiver, selector, arguments]!
-
-    method toString
-        let string = StringOutput new: "{receiver} ".
-        let spacer = "".
-        selector parts with: arguments
-                       do: { |part arg|
-                             string print: "{spacer}{part} {arg}".
-                             spacer = " "}.
-        string content!
-
-    method debug
-        let string = StringOutput new: "({receiver debug} ".
-        selector parts with: arguments
-                       do: { |part arg|
-                             string print: "{part} {arg debug}" }.
-        string print: ")".
-        string content!
 end
 
 class SyntaxIs { left right }
@@ -698,12 +818,6 @@ class SyntaxIs { left right }
 
     method parts
         [left, right]!
-
-    method toString
-        "{left} is {right}"!
-
-    method debug
-        "({left debug} is {right debug})"!
 end
 
 class SyntaxLet { name value body }
@@ -716,12 +830,6 @@ class SyntaxLet { name value body }
 
     method parts
         [value, name, body]!
-
-    method toString
-        "let {name} = {value}. {body}"!
-
-    method debug
-        "(let {name} = {value debug}. {body debug})"!
 end
 
 class SyntaxSelf {}
@@ -732,9 +840,6 @@ class SyntaxSelf {}
 
     method parts
         []!
-
-    method toString
-        "self"!
 end
 
 class SyntaxVariable { name::String }
@@ -745,12 +850,6 @@ class SyntaxVariable { name::String }
 
     method parts
         [name]!
-
-    method toString
-        name!
-
-    method debug
-        name!
 end
 
 class SyntaxAssign { variable::String value }
@@ -761,9 +860,6 @@ class SyntaxAssign { variable::String value }
 
     method parts
         [variable, value]!
-
-    method toString
-        "{variable} = {value}"!
 end
 
 class SyntaxParens { body }
@@ -774,9 +870,6 @@ class SyntaxParens { body }
 
     method parts
         [body]!
-
-    method toString
-        "({body})"!
 end
 
 class SyntaxBlock { arguments body }
@@ -787,15 +880,6 @@ class SyntaxBlock { arguments body }
 
     method parts
         [arguments, body]!
-
-    method toString
-        let args = StringOutput new: "".
-        arguments
-            ifNotEmpty: { args print: "|".
-                          arguments do: { |arg| args print: "{arg}" }
-                                    interleaving: { args print: " " }.
-                          args print: "| " }.
-        "\{ {args content}{body} }"!
 end
 
 class SyntaxDefine { name body }
@@ -806,42 +890,28 @@ class SyntaxDefine { name body }
 
     method parts
         [name, body]!
-
-    method toString
-        "define {name} {body}!"!
 end
 
 class SyntaxMethod { signature body }
     is Syntax
 
     method visitBy: visitor
-        visitor visitMethodDefinition: signature body: body!
+        visitor
+            visitMethodDefinition: signature
+            body: body!
 
     method selector
         signature selector!
 
     method parts
         [signature, body]!
-
-    method toString
-        "method {signature}\n{body}!"!
 end
 
 class MethodSignature { selector parameters }
     is Object
 
-    method toString
-        parameters
-            ifEmpty: { return selector name }.
-        let index = 1.
-        let out = StringOutput new.
-        selector parts do: { |part|
-                             out print: "{part} {parameters at: index}" }.
-        out content!
-
-    method checkEqualInternal: other
-        selector checkEqual: other selector.
-        parameters checkEqual: other parameters!
+    method isEquivalent: other
+        selector == other selector and: parameters == other parameters!
 end
 
 class SyntaxClass { name directMethods slots methods }
@@ -854,16 +924,7 @@ class SyntaxClass { name directMethods slots methods }
                 methods: methods!
 
     method parts
-        [name, slots, methods]!
-
-    method toString
-        let slotDesc = StringOutput new: "\{".
-        slots ifNotEmpty: { slotDesc print: " " }.
-        slots do: { |name| slotDesc print: "{name} " }.
-        slotDesc print: "}".
-        let methodDesc = StringOutput new.
-        methods do: { |m| methodDesc println: m toString }.
-        "class {name} {slotDesc content}\n{methodDesc content}end\n"!
+        [name, directMethods, slots, methods]!
 end
 
 interface Source
@@ -1447,7 +1508,7 @@ class Parser { source::String
     method parseVariableName
         let token = self nextToken.
         (TokenWord includes: token)
-            ifFalse: { panic "Invalid variable name: {token string}" }.
+            ifFalse: { Error raise: "Invalid variable name in self-hosted parser: {token string}" }.
         token string!
 
     method expect: expected
@@ -1665,8 +1726,7 @@ class Tests { ok }
         let output = StringOutput new.
         syntaxList do: { |syntax| output print: syntax toString }.
         let printed = output content.
-        let reparsed = Parser parse: printed.
-        { syntaxList checkEqual: reparsed }
+        { syntaxList checkEqual: (Parser parse: printed) }
             on: Error
             do: { |err|
                   panic "CST print/parse inconsistency!

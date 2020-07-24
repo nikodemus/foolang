@@ -26,6 +26,10 @@ interface Ordered
     method isEmpty
         self size is 0!
 
+    method withIndexDo: block
+        1 to: self size
+          do: { |index| block value: (self at: index) value: index }!
+
     method copy
         let copy = Self of: (self elementType) new: self size.
         1 to: self size
