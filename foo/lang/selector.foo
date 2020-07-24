@@ -5,23 +5,33 @@ define ColonCharacter
 
 class Selector { name }
     is Object
+
     direct method new: name
         self name: name!
+
     method sendTo: receiver
         name sendTo: receiver with: []!
+
     method sendTo: receiver with: arguments
         name sendTo: receiver with: (Array from: arguments)!
+
     method value: value
         self sendTo: value!
+
+    method value: receiver value: argument
+        self sendTo: receiver with: [argument]!
+
     method parts
         let parts = List new.
         self name split: { |c| c == ColonCharacter }
                   do:  { |part| parts add: part }.
         parts ifEmpty: { parts add: self name }.
         parts!
+
     -- FIXME: Should really intern selectors!
     method isEquivalent: other
         name == other name!
+
     method toString
         "#{name}"!
 end

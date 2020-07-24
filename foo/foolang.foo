@@ -173,7 +173,7 @@ class Environment { bindings parent allocation globals }
         let res = False.
         (Parser parse: string)
             do: { |syntax|
-                  res = (syntax translateIn: env)
+                  res = (SyntaxTranslator translate: syntax in: env)
                                 evalWith: (InterpreterContext new: env allocation size)
                                 in: Process new }.
         res!
@@ -394,121 +394,264 @@ class AstLexicalSet { name
             inFrame: frame!
 end
 
+class SyntaxTranslator { env }
+    direct method translate: syntax in: env
+        syntax
+            visitBy: (SyntaxTranslator env: env)!
+
+    method addVariable: name
+        SyntaxTranslator env: (env addVariable: name)!
+
+    method visitLiteral: value
+        AstConstantRef
+            value: value!
+
+    method visitSeqFirst: first then: then
+        -- FIXME: Would be nicer to flatten this out.
+        AstSeq
+            first: (first visitBy: self)
+            then: (then visitBy: self)!
+
+    method visitReturn: syntax
+        AstReturn
+            value: (syntax visitBy: self)!
+
+    method visitPrefixComment: comment value: value source: source
+        AstComment comment: comment
+                   value: (value visitBy: self)
+                   source: source!
+
+    method visitSuffixComment: comment value: value source: source
+        AstComment comment: comment
+                   value: (value visitBy: self)
+                   source: source!
+
+    method visitLet: name value: value body: body
+        let bodyVisitor = self addVariable: name.
+        AstBindLexical
+            name: name
+            index: bodyVisitor env allocation index
+            value: (value visitBy: self)
+            body: (body visitBy: bodyVisitor)!
+
+    method visitPrefixMessage: selector receiver: receiver source: source
+        AstSend receiver: (receiver visitBy: self)
+                selector: (Selector name: "prefix{selector name}")
+                arguments: []
+                source: source!
+
+    method visitUnaryMessage: selector receiver: receiver source: source
+        AstSend receiver: (receiver visitBy: self)
+                selector: selector
+                arguments: []
+                source: source!
+
+    method visitBinaryMessage: selector receiver: receiver argument: argument source: source
+        AstSend receiver: (receiver visitBy: self)
+                selector: selector
+                arguments: [argument visitBy: self]
+                source: source!
+
+    method visitKeywordMessage: selector receiver: receiver arguments: arguments source: source
+        AstSend receiver: (receiver visitBy: self)
+                selector: selector
+                arguments: (arguments
+                                collect: { |arg|  arg visitBy: self })
+                source: source!
+
+    method visitIsLeft: left right: right
+        AstIs left: (left visitBy: self)
+              right: (right visitBy: self)!
+
+    method visitSelf
+        AstSelfRef new!
+
+    method visitVariable: name
+        env reference: name!
+
+    method visitAssign: value to: variable
+        let binding = env reference: variable name.
+        AstLexicalSet
+            name: variable name
+            frame: binding frame :: Integer
+            index: binding index :: Integer
+            value: (value visitBy: self)!
+
+    method visitParens: body
+        body visitBy: self!
+
+    method visitBlockWith: parameters body: body
+        let bodyEnv = env newFrame addVariables: parameters.
+        AstBlock
+            body: (body visitBy: (SyntaxTranslator env: bodyEnv))
+            argumentCount: parameters size
+            frameSize: parameters size + bodyEnv allocation size!
+
+    method visitDefine: name body: body
+        -- FIXME: Is this right?? Should body not gets an environment of its own?
+        AstDefine
+            name: name
+            body: (body visitBy: self)
+            frameSize: env allocation size!
+
+    method visitMethodDefinition: signature body: body
+        let bodyEnv = env newFrame addVariables: signature parameters.
+        AstMethod
+            selector: signature selector name
+            argumentCount: signature parameters size
+            body: (body visitBy: (SyntaxTranslator env: bodyEnv))
+            frameSize: bodyEnv allocation size!
+
+    method visitClassDefinition: name directMethods: directMethods slots: slots methods: methods
+        let astDirectMethods = directMethods collect: { |m| m visitBy: self }.
+        let instanceMethodVisitor = SyntaxTranslator env: (env addSlots: slots).
+        let astMethods = methods collect: { |m| m visitBy: instanceMethodVisitor }.
+        AstClass
+            name: name
+            directMethods: astDirectMethods
+            slots: slots
+            methods: astMethods!
+end
+
 interface Syntax
     is Object
-    ---
-    method eval
-        let env = Environment new.
-        (self translateIn: env)
-            evalWith: (InterpreterContext new: (env allocation size))
-            in: Process new!
-    method load
-        Environment new load: (self translateIn: Environment new)!
-    ---
-    method debug
-        self toString!
+
+    required method visitBy: visitor
+
+    required method parts
+
+    method checkEqualInternal: other
+        self parts with: other parts
+                   do: #checkEqual:!
+
+    method isEquivalent: other
+        self parts with: other parts
+                   do: { |a b| a == b ifFalse: { return False } }.
+        True!
 end
 
 class SyntaxLiteral { value }
     is Syntax
-    method translateIn: environment
-        AstConstantRef value: value!
-    method isEquivalent: other
-        self value == other value!
+
+    method visitBy: visitor
+        visitor visitLiteral: value!
+
+    method parts
+        [value]!
+
     method toString
         value toString!
 end
 
 class SyntaxSeq { first then }
     is Syntax
-    method translateIn: environment
-        -- FIXME: Would be nicer to flatten this out.
-        AstSeq
-            first: (first translateIn: environment)
-            then: (then translateIn: environment)!
-    method checkEqualInternal: other
-        self first checkEqual: other first.
-        self then checkEqual: other then!
+
+    method visitBy: visitor
+        visitor visitSeqFirst: first then: then!
+
+    method parts
+        [first, then]!
+
     method toString
         "{first}. {then}"!
 end
 
 class SyntaxReturn { value }
     is Syntax
-    method translateIn: environment
-        AstReturn value: (value translateIn: environment)!
-    method checkEqualInternal: other
-        value checkEqual: other value!
+
+    method visitBy: visitor
+        visitor visitReturn: value!
+
+    method parts
+        [value]!
+
     method toString
         "return {value}"!
 end
 
-interface SyntaxComment
-    is Syntax
-    method translateIn: environment
-        AstComment comment: self comment
-                   value: (self value translateIn: environment)
-                   source: self source!
-    method checkEqualInternal: other
-        self comment checkEqual: other comment.
-        self value checkEqual: other value!
-end
-
 class SyntaxPrefixComment { comment value source }
-    is SyntaxComment
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitPrefixComment: self comment
+                value: self value
+                source: self source!
+
+    method parts
+        -- Source left out intentionally, since it doesn't need to compere equal.
+        [self comment, self value]!
+
     method toString
         "--{comment}\n{value}"!
 end
 
 class SyntaxSuffixComment { comment value source }
-    is SyntaxComment
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitSuffixComment: self comment
+                value: self value
+                source: self source!
+
+    method parts
+        -- Source left out intentionally, since it doesn't need to compere equal.
+        [comment, value]!
+
     method toString
         "{value} --{comment}\n"!
 end
 
 class SyntaxPrefix { receiver selector source }
     is Syntax
-    method translateIn: environment
-        AstSend receiver: (receiver translateIn: environment)
-                selector: (Selector name: "prefix{selector name}")
-                arguments: []
+
+    method visitBy: visitor
+        visitor visitPrefixMessage: selector
+                receiver: receiver
                 source: source!
-    method checkEqualInternal: other
-        receiver checkEqual: other receiver.
-        selector checkEqual: other selector!
+
+    method parts
+        -- Source left out intentionally, since it doesn't need to compere equal.
+        [receiver, selector]!
+
     method toString
         "{selector name}{receiver}"!
 end
 
 class SyntaxUnary { receiver selector source }
     is Syntax
-    method translateIn: environment
-        AstSend receiver: (receiver translateIn: environment)
-                selector: selector
-                arguments: []
+
+    method visitBy: visitor
+        visitor visitUnaryMessage: selector
+                receiver: receiver
                 source: source!
-    method checkEqualInternal: other
-        receiver checkEqual: other receiver.
-        selector checkEqual: other selector!
+
+    method parts
+        -- Source left out intentionally, since it doesn't need to compere equal.
+        [receiver, selector]!
+
     method toString
         "{receiver} {selector name}"!
+
     method debug
         "({receiver debug} {selector name})"!
 end
 
 class SyntaxBinary { receiver selector argument source }
     is Syntax
-    method translateIn: environment
-        AstSend receiver: (receiver translateIn: environment)
-                selector: selector
-                arguments: [argument translateIn: environment]
+
+    method visitBy: visitor
+        visitor visitBinaryMessage: selector
+                receiver: receiver
+                argument: argument
                 source: source!
-    method checkEqualInternal: other
-        receiver checkEqual: other receiver.
-        selector checkEqual: other selector.
-        argument checkEqual: other argument!
+
+    method parts
+        -- Source left out intentionally, since it doesn't need to compere equal.
+        [receiver, selector, argument]!
+
     method toString
         "{receiver} {selector name} {argument}"!
+
     method debug
         "({receiver debug} {selector name} {argument debug})"!
 end
@@ -517,21 +660,17 @@ end
 -- keyword only. Should support non-contigous source regions for this.
 class SyntaxKeyword { receiver selector arguments source }
     is Syntax
-    method translateIn: environment
-        AstSend receiver: (receiver translateIn: environment)
-                selector: selector
-                arguments: (arguments
-                                collect: { |arg|
-                                           arg translateIn: environment })
+
+    method visitBy: visitor
+        visitor visitKeywordMessage: selector
+                receiver: receiver
+                arguments: arguments
                 source: source!
-    method checkEqualInternal: other
-        receiver checkEqual: other receiver.
-        selector checkEqual: other selector.
-        List typecheck: arguments.
-        List typecheck: other arguments.
-        arguments
-            with: other arguments
-            do: { |arg1 arg2| arg1 checkEqual: arg2 }!
+
+    method parts
+        -- Source left out intentionally, since it doesn't need to compere equal.
+        [receiver, selector, arguments]!
+
     method toString
         let string = StringOutput new: "{receiver} ".
         let spacer = "".
@@ -540,6 +679,7 @@ class SyntaxKeyword { receiver selector arguments source }
                              string print: "{spacer}{part} {arg}".
                              spacer = " "}.
         string content!
+
     method debug
         let string = StringOutput new: "({receiver debug} ".
         selector parts with: arguments
@@ -551,96 +691,103 @@ end
 
 class SyntaxIs { left right }
     is Syntax
-    method translateIn: environment
-        AstIs left: (left translateIn: environment)
-              right: (right translateIn: environment)!
-    method checkEqualInternal: other
-        left checkEqual: other left.
-        right checkEqual: other right!
+
+    method visitBy: visitor
+        visitor visitIsLeft: left
+                right: right!
+
+    method parts
+        [left, right]!
+
     method toString
         "{left} is {right}"!
+
     method debug
         "({left debug} is {right debug})"!
 end
 
 class SyntaxLet { name value body }
     is Syntax
-    method translateIn: environment
-        let bindEnv = environment addVariable: name.
-        AstBindLexical
-            name: name
-            index: environment allocation index
-            value: (value translateIn: environment)
-            body: (body translateIn: bindEnv)!
-    method checkEqualInternal: other
-        value checkEqual: other value.
-        name checkEqual: other name.
-        body checkEqual: other body!
+
+    method visitBy: visitor
+        visitor visitLet: name
+                value: value
+                body: body!
+
+    method parts
+        [value, name, body]!
+
     method toString
         "let {name} = {value}. {body}"!
+
     method debug
         "(let {name} = {value debug}. {body debug})"!
 end
 
 class SyntaxSelf {}
     is Syntax
-    method translateIn: environment
-        AstSelfRef new!
+
+    method visitBy: visitor
+        visitor visitSelf!
+
+    method parts
+        []!
+
     method toString
         "self"!
-    method checkEqualInternal: other
-        True!
 end
 
-class SyntaxVariable { name }
+class SyntaxVariable { name::String }
     is Syntax
-    method translateIn: environment
-        environment reference: name!
-    method isEquivalent: other
-        name == other name!
+
+    method visitBy: visitor
+        visitor visitVariable: name!
+
+    method parts
+        [name]!
+
     method toString
         name!
+
     method debug
         name!
 end
 
-class SyntaxAssign { variable value }
+class SyntaxAssign { variable::String value }
     is Syntax
-    method translateIn: environment
-        let binding = environment reference: variable name.
-        AstLexicalSet
-            name: variable name
-            frame: binding frame :: Integer
-            index: binding index :: Integer
-            value: (value translateIn: environment)!
-    method checkEqualInternal: other
-        variable checkEqual: other variable.
-        value checkEqual: other value!
+
+    method visitBy: visitor
+        visitor visitAssign: value to: variable!
+
+    method parts
+        [variable, value]!
+
     method toString
         "{variable} = {value}"!
 end
 
 class SyntaxParens { body }
     is Syntax
-    method translateIn: environment
-        body translateIn: environment!
-    method checkEqualInternal: other
-        body checkEqual: other body!
+
+    method visitBy: visitor
+        visitor visitParens: body!
+
+    method parts
+        [body]!
+
     method toString
         "({body})"!
 end
 
 class SyntaxBlock { arguments body }
     is Syntax
-    method translateIn: environment
-        let bodyEnv = environment newFrame addVariables: arguments.
-        AstBlock
-            body: (body translateIn: bodyEnv)
-            argumentCount: arguments size
-            frameSize: arguments size + bodyEnv allocation size!
-    method checkEqualInternal: other
-        arguments checkEqual: other arguments.
-        body checkEqual: other body!
+
+    method visitBy: visitor
+        visitor visitBlockWith: arguments body: body!
+
+    method parts
+        [arguments, body]!
+
     method toString
         let args = StringOutput new: "".
         arguments
@@ -653,14 +800,13 @@ end
 
 class SyntaxDefine { name body }
     is Syntax
-    method translateIn: environment
-        AstDefine
-            name: name
-            body: (body translateIn: environment)
-            frameSize: environment allocation size!
-    method checkEqualInternal: other
-        name checkEqual: other name.
-        body checkEqual: other body!
+
+    method visitBy: visitor
+        visitor visitDefine: name body: body!
+
+    method parts
+        [name, body]!
+
     method toString
         "define {name} {body}!"!
 end
@@ -668,29 +814,22 @@ end
 class SyntaxMethod { signature body }
     is Syntax
 
+    method visitBy: visitor
+        visitor visitMethodDefinition: signature body: body!
+
     method selector
         signature selector!
 
-    method translateIn: environment
-        let bodyEnv = environment newFrame
-                          addVariables: signature parameters.
-        let body = body translateIn: bodyEnv.
-        AstMethod
-            selector: signature selector name
-            argumentCount: signature parameters size
-            body: body
-            frameSize: bodyEnv allocation size!
-
-    method checkEqualInternal: other
-        signature checkEqual: other signature.
-        body checkEqual: other body!
+    method parts
+        [signature, body]!
 
     method toString
         "method {signature}\n{body}!"!
 end
 
-class SyntaxMethodSignature { selector parameters }
-    is Syntax
+class MethodSignature { selector parameters }
+    is Object
+
     method toString
         parameters
             ifEmpty: { return selector name }.
@@ -699,38 +838,24 @@ class SyntaxMethodSignature { selector parameters }
         selector parts do: { |part|
                              out print: "{part} {parameters at: index}" }.
         out content!
+
     method checkEqualInternal: other
         selector checkEqual: other selector.
         parameters checkEqual: other parameters!
 end
 
----
-class DoesNotUnderstand {}
-    is Object
-    method selector
-        "perform:with:"!
-    method invoke: message on: receiver
-        Error raise: "{receiver} does not understand: #{message first}"!
-end
----
-
 class SyntaxClass { name directMethods slots methods }
     is Syntax
-    method translateIn: environment
-        let astDirectMethods
-            = directMethods collect: { |m| m translateIn: environment }.
-        let instanceEnv = environment addSlots: slots.
-        let astMethods
-            = methods collect: { |m| m translateIn: instanceEnv }.
-        AstClass
-            name: name
-            directMethods: astDirectMethods
-            slots: slots
-            methods: astMethods!
-    method checkEqualInternal: other
-        name checkEqual: other name.
-        slots checkEqual: other slots.
-        methods checkEqual: other methods!
+
+    method visitBy: visitor
+        visitor visitClassDefinition: name
+                directMethods: directMethods
+                slots: slots
+                methods: methods!
+
+    method parts
+        [name, slots, methods]!
+
     method toString
         let slotDesc = StringOutput new: "\{".
         slots ifNotEmpty: { slotDesc print: " " }.
@@ -742,9 +867,11 @@ class SyntaxClass { name directMethods slots methods }
 end
 
 interface Source
+    is Object
 end
 
 class SourceString { string first last }
+
     method location
         first to: last!
 
@@ -1136,7 +1263,7 @@ class TokenReservedWordClass { first last }
             parseAsMethodSignatureWith: parser
             selector: selector
             parameters: parameters.
-        SyntaxMethodSignature
+        MethodSignature
             selector: (Selector new: selector content)
             parameters: parameters!
 
@@ -1504,8 +1631,7 @@ class Tests { ok }
 
     method run
         self
-            ; test: #testAstSource
-            ; test: #test42
+             ; test: #test42
             ; test: #testPlus
             ; test: #testPrecedence
             ; test: #testPrefixMethod
@@ -1515,7 +1641,8 @@ class Tests { ok }
             ; test: #testLet
             ; test: #testPrecedence2
             ; test: #testParens
-            ; test: #testAssign
+            ; test: #testAssign1
+            ; test: #testAssign2
             ; test: #testSimpleBlock
             ; test: #testArgBlock
             ; test: #testBlockClosure
@@ -1528,7 +1655,8 @@ class Tests { ok }
             ; test: #testDirectMethod
             ; test: #testReturn
             ; test: #testComment
-                .
+            ; test: #testAstSource
+               .
         self!
 
     method parse: source
@@ -1537,7 +1665,8 @@ class Tests { ok }
         let output = StringOutput new.
         syntaxList do: { |syntax| output print: syntax toString }.
         let printed = output content.
-        { (syntaxList checkEqual: (Parser parse: printed)) }
+        let reparsed = Parser parse: printed.
+        { syntaxList checkEqual: reparsed }
             on: Error
             do: { |err|
                   panic "CST print/parse inconsistency!
@@ -1547,11 +1676,10 @@ problem: {err description}" }.
         syntaxList!
 
     method load: defSource eval: exprSource
-        let defs = List new.
         let env = Environment new.
         -- FIXME: Requires definitions to be in order.
         (self parse: defSource)
-            do: { |def| env load: (def translateIn: env) }.
+            do: { |def| env load: (SyntaxTranslator translate: def in: env) }.
         env eval: exprSource!
 
     method load: defSource eval: exprSource expect: expected
@@ -1580,7 +1708,7 @@ with: {defSource}"!
         (self parse: exprSource)
             do: { |expr|
                   let env = Environment new.
-                  result = (expr translateIn: env)
+                  result = (SyntaxTranslator translate: expr in: env)
                       evalWith: (InterpreterContext new: env allocation size)
                       in: process }.
         (result == expected)
@@ -1610,9 +1738,10 @@ from: '{expr}'" }!
     method testParens
         self eval: "(1 + 1) * 2"
              expect: 4!
-    method testAssign
+    method testAssign1
         self eval: "let x = 20. x = x + 1. x * 2"
-             expect: 42.
+             expect: 42!
+    method testAssign2
         self eval: "let y = 0.
                     let x = 20.
                     (let x = 2000. x = x + 100. y = x * 2).
