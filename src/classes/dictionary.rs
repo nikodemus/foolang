@@ -94,10 +94,10 @@ fn class_dictionary_new(_receiver: &Object, _args: &[Object], env: &Env) -> Eval
 }
 
 fn dictionary_at_if_none(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    match receiver.as_dictionary("in Dictionary#at:ifNone:")?.borrow().get(&args[0]) {
-        Some(obj) => Ok(obj.clone()),
-        None => args[1].send("value", &[], env),
+    if let Some(obj) = receiver.as_dictionary("in Dictionary#at:ifNone:")?.borrow().get(&args[0]) {
+        return Ok(obj.clone());
     }
+    args[1].send("value", &[], env)
 }
 
 fn dictionary_do_keys(receiver: &Object, args: &[Object], env: &Env) -> Eval {

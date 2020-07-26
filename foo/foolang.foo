@@ -94,10 +94,82 @@ class AstComment { comment value source }
         value evalWith: context in: process!
 end
 
-class AstGlobal { name value }
+class StandardUndefinedPolicy {}
+    -- Called during translation when encountering an undefined variable
+    -- This particular method gets called when an undefined variable is
+    -- encountered outside a definition.
+    direct method reference: name in: environment
+        Error raise: "Undefined variable: {name}"!
+
+    -- Called during evaluation when encountering a lazily resolved undefined
+    -- variable. This particilar method should never be called.
+    direct method resolve: name
+        panic "Unresolved undefined variable: {name}! This should not happen."!
+end
+
+class AllowReferenceToUndefined {}
+    -- During translation of definitions we allow references to undefined
+    -- variables.
+    direct method reference: name in: env
+        let global = (AstGlobal name: name).
+        env globals
+            put: global
+            at: name.
+        return global!
+
+    direct method resolve: name
+        StandardUndefinedPolicy resolve: name!
+
+end
+
+class ResolveUndefinedsWith { definitions environment }
+    direct method definitions: definitions in: environment
+        self definitions: definitions environment: environment!
+
+    method reference: name in: environment
+        StandardUndefinedPolicy reference: name in: environment!
+
+    -- During evaluation of definition bodies we resolve undefineds to
+    -- as-of-yet evaluated definitions.
+    method resolve: name
+        (definitions
+             at: name
+             ifNone: { StandardUndefinedPolicy reference: name in: environment })
+        defineIn: environment!
+end
+
+define $UndefinedPolicy
+    StandardUndefinedPolicy!
+
+class UndefinedMarker {}
+end
+
+class AstGlobal { name _value }
     is AstNode
+
+    direct method name: name
+        self
+            name: name
+            value: UndefinedMarker!
+
+    direct method name: name value: value
+        self
+            name: name
+            _value: value!
+
+    method isUndefined
+        _value is UndefinedMarker!
+
+    method value
+        self isUndefined
+            ifTrue: { return $UndefinedPolicy resolve: self name }.
+        _value!
+
+    method value: newValue
+        _value = newValue!
+
     method evalWith: context in: process
-        value!
+        self value!
 end
 
 define BuiltinGlobals
@@ -115,6 +187,13 @@ class Environment { bindings parent allocation globals }
             parent: False
             allocation: FrameAllocation new
             globals: BuiltinGlobals copy!
+
+    method toplevel
+        Environment
+            bindings: List new
+            parent: False
+            allocation: FrameAllocation new
+            globals: globals!
 
     method newFrame
         Environment
@@ -160,8 +239,18 @@ class Environment { bindings parent allocation globals }
             allocation: allocation
             globals: globals!
 
-    method load: definition
-        definition defineIn: self.
+    method load: string
+        let defs = Dictionary new.
+        (Parser parse: string)
+            do: { |syntax|
+                  let $UndefinedPolicy = AllowReferenceToUndefined.
+                  let def = SyntaxTranslator
+                                translate: syntax
+                                in: (self toplevel) .
+                  defs put: def at: def name }.
+        let $UndefinedPolicy = ResolveUndefinedsWith definitions: defs in: self.
+        defs doValues: { |def| def defineIn: self }.
+        self checkGlobals.
         self!
 
     method eval: string
@@ -178,9 +267,28 @@ class Environment { bindings parent allocation globals }
                                 in: Process new }.
         res!
 
+    method checkGlobals
+        globals doValues: { |global|
+                            global isUndefined
+                                ifTrue: { Error raise: "Undefined variable: {global name}" } }!
+
     method global: name
-        globals at: name
-                ifNone: { Error raise: "Unbound variable in self-hosted code: {name}" }!
+        globals at: name ifNone: { self undefined: name }!
+
+    method undefined: name
+        $UndefinedPolicy reference: name in: self!
+
+    method define: name value: value
+        let global = globals
+                         at: name
+                         ifNone: { globals
+                                       put: (AstGlobal name: name value: value)
+                                       at: name.
+                                   return value }.
+        global isUndefined
+            ifTrue: { global value: value.
+                      value }
+            ifFalse: { Error raise: "Cannot redefined a global: {name}" }!
 
     method reference: name
         self reference: name inFrame: 1!
@@ -261,14 +369,41 @@ define $context
 define $process
     False!
 
-class AstDefine { name body frameSize }
+define $DefinitionsInProgress
+    False!
+
+class DefinitionsInProgress { this next }
+    direct method with: definition do: block
+        let old = $DefinitionsInProgress.
+        old is False
+            ifFalse: { old checkCycle: definition }.
+        let $DefinitionsInProgress = DefinitionsInProgress this: definition next: old.
+        block value!
+
+    method checkCycle: definition
+        this is definition
+            ifTrue: { Error raise: "Cyclic definition!" }.
+        next is False
+            ifFalse: { next checkCycle: definition }!
+end
+
+interface AstDefinition
     is AstNode
+    required method done
+    required method _eval
     method defineIn: environment
-        environment globals
-            put: (AstGlobal
-                      name: name
-                      value: self _eval)
-            at: name!
+        self done
+            ifTrue: { (environment globals at: name) value }
+            ifFalse: { DefinitionsInProgress
+                           with: self
+                           do: { { environment define: name value: self _eval }
+                                     finally: { done = True } } }!
+end
+
+class AstDefine { name body frameSize done }
+    is AstDefinition
+    direct method name: name body: body frameSize: frameSize
+        self name: name body: body frameSize: frameSize done: False!
     method _eval
         -- return inside define should work
         let context = InterpreterContext new: frameSize
@@ -295,14 +430,18 @@ class AstMethod { selector argumentCount body frameSize }
             finally: { context invalidate } !
 end
 
-class AstClass { name directMethods slots methods }
-    is AstNode
-    method defineIn: environment
-        environment globals
-            put: (AstGlobal
-                      name: name
-                      value: self _eval)
-            at: name!
+class AstClass { name directMethods slots methods done }
+    is AstDefinition
+    direct method name: name
+                  directMethods: directMethods
+                  slots: slots
+                  methods: methods
+        self
+            name: name
+            directMethods: directMethods
+            slots: slots
+            methods: methods
+            done: False!
     -- Class methods should be translated in a specific environment
     -- that contains the instance variables.
     method _eval
@@ -1736,7 +1875,7 @@ class Tests { ok }
 
     method run
         self
-             ; test: #test42
+            ; test: #test42
             ; test: #testPlus
             ; test: #testPrecedence
             ; test: #testPrefixMethod
@@ -1761,6 +1900,8 @@ class Tests { ok }
             ; test: #testReturn
             ; test: #testComment
             ; test: #testAstSource
+            ; test: #testOutOfOrderDefine
+            ; test: #testOutOfOrderClasses
                .
         self!
 
@@ -1784,10 +1925,7 @@ problem: {err description}" }.
 
     method load: defSource eval: exprSource
         let env = Environment new.
-        -- FIXME: Requires definitions to be in order.
-        (self parse: defSource)
-            do: { |def|
-                 env load: (SyntaxTranslator translate: def in: env) }.
+        env load: defSource.
         env eval: exprSource!
 
     method load: defSource eval: exprSource expect: expected
@@ -1974,6 +2112,26 @@ from: '{expr}'" }!
                      -- FIXME: this is only for "bar:", should include the
                      -- whole selector!
                      e source location == (133 to: 136) } !
+    method testOutOfOrderDefine
+        self load: "define Two
+                       One + One!
+                    define One
+                       1!"
+            eval: "Two"
+            expect: 2!
+    method testOutOfOrderClasses
+        self load: "class Two \{}
+                       direct method fini
+                          42!
+                       method test
+                          One new test!
+                    end
+                    class One \{}
+                      method test
+                          Two fini!
+                    end"
+            eval: "Two new test"
+            expect: 42!
 end
 
 class Main {}

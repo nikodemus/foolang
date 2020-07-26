@@ -15,6 +15,11 @@ extend Closure
     method whileFalse: bodyBlock
         { self value not } whileTrue: bodyBlock!
 
+    method after: block
+        let res = self value.
+        block value.
+        res!
+
     method loop
         { True } whileTrue: self!
 

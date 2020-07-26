@@ -16,6 +16,10 @@ extend Dictionary
         self doKeys: { |key| keys add: key }.
         keys!
 
+    method doValues: block
+        self doKeys: { |key| block value: (self at: key) }.
+        self!
+
     method copy
         let copy = Dictionary new.
         self doKeys: { |key| copy put: (self at: key) at: key }.
