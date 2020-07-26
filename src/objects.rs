@@ -1496,6 +1496,7 @@ impl Object {
             None if selector == "toString" => generic_to_string(self, args, env),
             None if selector == "typecheck:" => generic_typecheck(self, args, env),
             None if selector == "includes:" => generic_class_includes(self, args, env),
+            None if selector == "className" => Ok(env.foo.make_string(&self.vtable.name)),
             None => {
                 // println!("known: {:?}", self.vtable.selectors());
                 let not_understood = vec![env.foo.make_string(selector), env.foo.make_array(args)];

@@ -42,11 +42,14 @@ interface Object
         self == other
             ifFalse: { self mismatch: other }!
 
+    method debug
+        self toString!
+
     method mismatch: other
         let err = StringOutput new.
-        err print: self.
+        err print: self debug.
         err print: " <==> ".
-        err print: other.
+        err print: other debug.
         Error raise: "Mismatch: {err content}"!
 
     direct method perform: selector with: arguments
