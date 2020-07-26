@@ -417,26 +417,56 @@ interface SyntaxVisitor
     required method visitClassDefinition: name directMethods: directMethods slots: slots methods: methods
 end
 
-class SyntaxPrinter { output indent }
+class SyntaxPrinter { output indent printed blockStart }
     is SyntaxVisitor
 
     direct method print: syntax to: output
-        syntax visitBy: (self output: output indent: 0)!
+        syntax visitBy: (self
+                             output: output
+                             indent: 0
+                             printed: 0
+                             blockStart: False)!
 
     method indentBody
-        SyntaxPrinter output: output indent: indent + 4!
+        SyntaxPrinter
+            output: output
+            indent: indent + 4
+            printed: printed
+            blockStart: False!
 
-    method print: string
-        output print: string!
+    method indentHere
+        SyntaxPrinter
+            output: output
+            indent: printed
+            printed: printed
+            blockStart: False!
 
-    method println: string
+    method indentBlock
+        SyntaxPrinter
+            output: output
+            indent: printed
+            printed: printed
+            blockStart: True!
+
+    method print: string::String
+        output print: string.
+        printed = printed + string size!
+
+    method println: string::String
         output println: string.
-        indent times: { output print: " " }!
+        indent times: { output print: " " }.
+        printed = indent!
+
+    method handleBlockStart
+        blockStart
+            ifTrue: { self println: "".
+                      blockStart = False }!
 
     method visitLiteral: value
         self print: value toString!
 
     method visitSeqFirst: first then: then
+        self handleBlockStart.
         first visitBy: self.
         self println: ".".
         then visitBy: self!
@@ -446,11 +476,13 @@ class SyntaxPrinter { output indent }
         value visitBy: self!
 
     method visitPrefixComment: comment value: value source: source
+        self handleBlockStart.
         self print: "--".
         self println: comment.
-        value visitBy: self!
+        value visitBy: self indentBody!
 
     method visitSuffixComment: comment value: value source: source
+        self handleBlockStart.
         value visitBy: self.
         self print: " --".
         self println: comment!
@@ -487,6 +519,7 @@ class SyntaxPrinter { output indent }
         right visitBy: self!
 
     method visitLet: name value: value body: body
+        self handleBlockStart.
         self print: "let ".
         self print: name.
         self print: " = ".
@@ -500,24 +533,25 @@ class SyntaxPrinter { output indent }
     method visitVariable: name
         self print: name!
 
-    method visitAssign: value to: name
-        self print: name.
+    method visitAssign: value to: variable
+        self print: variable name.
         self print: " = ".
         value visitBy: self!
 
     method visitParens: body
         self print: "(".
-        body visitBy: self.
+        body visitBy: self indentHere.
         self print: ")"!
 
     method visitBlockWith: parameters body: body
         self print: "\{ ".
+        let bodyPrinter = self indentBlock.
         parameters
             ifNotEmpty: { self print: "|".
                           parameters do: { |param| self print: param }
                                      interleaving: { self print: " " }.
                           self print: "| " }.
-        body visitBy: self.
+        body visitBy: bodyPrinter.
         self print: " }"!
 
     method visitDefine: name body: body
@@ -1733,8 +1767,11 @@ class Tests { ok }
     method parse: source
         -- Check Syntax print/parse consistency.
         let syntaxList = Parser parse: source.
-        let output = StringOutput new.
-        syntaxList do: { |syntax| output print: syntax toString }.
+         let output = StringOutput new.
+        syntaxList do: { |syntax|
+                         -- Debug println: "".
+                         -- SyntaxPrinter print: syntax to: Output debug.
+                         output print: syntax toString }.
         let printed = output content.
         { syntaxList checkEqual: (Parser parse: printed) }
             on: Error
@@ -1750,9 +1787,7 @@ problem: {err description}" }.
         -- FIXME: Requires definitions to be in order.
         (self parse: defSource)
             do: { |def|
-                  Debug println: "".
-                  SyntaxPrinter print: def to: Output debug.
-                  env load: (SyntaxTranslator translate: def in: env) }.
+                 env load: (SyntaxTranslator translate: def in: env) }.
         env eval: exprSource!
 
     method load: defSource eval: exprSource expect: expected
