@@ -50,6 +50,9 @@ class CTranspiler { output intern }
         self selector: selector.
         output print: ", ".
         receiver visitBy: self.
+        output print: ", ".
+        output print: arguments size.
+        output print: "ul".
         arguments do: { |arg|
                         output print: ", ".
                         arg visitBy: self }.

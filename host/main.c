@@ -9,7 +9,8 @@
 #undef NDEBUG
 #include <assert.h>
 
-#define FOO_ALLOC(type) ((type*)foo_alloc(sizeof(type)))
+#define FOO_ALLOC(type) ((type*)foo_alloc(1, sizeof(type)))
+#define FOO_ALLOC_ARRAY(n, type) ((type*)foo_alloc((n), sizeof(type)))
 
 void foo_panic(const char* message) __attribute__ ((noreturn));
 void foo_panic(const char* message) {
@@ -35,8 +36,8 @@ void foo_abort(const char* message) {
   _Exit(1);
 }
 
-void* foo_alloc(size_t size) {
-  void* new = calloc(1, size);
+void* foo_alloc(size_t n, size_t size) {
+  void* new = calloc(n, size);
   if (new) {
     return new;
   } else {
@@ -111,10 +112,26 @@ struct FooArray {
   struct Foo data[];
 };
 
-typedef struct Foo (*FooMethodFunction)(struct Foo, va_list);
+struct FooContext {
+  struct FooContext* sender;
+  struct Foo receiver;
+  struct Foo* frame;
+};
+
+struct Foo* foo_frame_new(size_t size, size_t nargs, va_list args) {
+  struct Foo* frame = FOO_ALLOC_ARRAY(size, struct Foo);
+  for (size_t i = 0; i < nargs; ++i) {
+    frame[i] = va_arg(args, struct Foo);
+  }
+  return frame;
+}
+
+typedef struct Foo (*FooMethodFunction)(struct FooContext*);
 
 struct FooMethod {
   struct FooSelector* selector;
+  size_t argCount;
+  size_t frameSize;
   FooMethodFunction function;
 };
 
@@ -127,6 +144,14 @@ struct FooVtable {
   struct FooCString name;
   struct FooMethodArray* methods;
 };
+
+struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj) {
+  if (vtable == obj.vtable) {
+    return obj;
+  } else {
+    foo_panic("Type error!");
+  }
+}
 
 struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, const struct FooSelector* selector) {
   struct FooMethodArray* methods = vtable->methods;
@@ -142,25 +167,21 @@ struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, const s
 
 struct FooVtable FOO_IntegerVtable;
 
-/**
-   TODO: pass in context
- */
-
-struct Foo foo_Integer_method_debug(struct Foo receiver,
-                                    __attribute__ ((unused)) va_list arguments) {
+struct Foo foo_Integer_method_debug(struct FooContext* ctx) {
+  struct Foo receiver = ctx->receiver;
   printf("#<Integer %" PRId64 ">", receiver.datum.int64);
   return receiver;
 }
 
-struct Foo foo_Integer_method__add_(struct Foo receiver,
-                                    __attribute__ ((unused)) va_list arguments) {
-  struct Foo arg = va_arg(arguments, struct Foo);
+struct Foo foo_Integer_method__add_(struct FooContext* ctx) {
+  struct Foo receiver = ctx->receiver;
+  struct Foo arg = foo_vtable_typecheck(&FOO_IntegerVtable, ctx->frame[0]);
   return (struct Foo){ .vtable = &FOO_IntegerVtable, .datum = { .int64 = receiver.datum.int64 + arg.datum.int64 } };
 }
 
-struct Foo foo_Integer_method__mul_(struct Foo receiver,
-                                    __attribute__ ((unused)) va_list arguments) {
-  struct Foo arg = va_arg(arguments, struct Foo);
+struct Foo foo_Integer_method__mul_(struct FooContext* ctx) {
+  struct Foo receiver = ctx->receiver;
+  struct Foo arg = foo_vtable_typecheck(&FOO_IntegerVtable, ctx->frame[0]);
   return (struct Foo){ .vtable = &FOO_IntegerVtable, .datum = { .int64 = receiver.datum.int64 * arg.datum.int64 } };
 }
 
@@ -168,10 +189,16 @@ struct FooMethodArray FOO_IntegerBuiltinMethods =
   {
    .size = 3,
    .data = { (struct FooMethod){ .selector = &FOO_SELECTOR_debug,
+                                 .argCount = 0,
+                                 .frameSize = 0,
                                  .function = &foo_Integer_method_debug },
              (struct FooMethod){ .selector = &FOO_SELECTOR__add_,
+                                 .argCount = 1,
+                                 .frameSize = 1,
                                  .function = &foo_Integer_method__add_ },
              (struct FooMethod){ .selector = &FOO_SELECTOR__mul_,
+                                 .argCount = 1,
+                                 .frameSize = 1,
                                  .function = &foo_Integer_method__mul_ }}
   };
 
@@ -181,15 +208,21 @@ struct FooVtable FOO_IntegerVtable =
    .methods = &FOO_IntegerBuiltinMethods
   };
 
-struct Foo foo_send(const struct FooSelector* selector, struct Foo receiver, ...) {
+struct Foo foo_send(const struct FooSelector* selector, struct Foo receiver, size_t nargs, ...) {
   va_list arguments;
-  va_start(arguments, receiver);
+  va_start(arguments, nargs);
   struct FooMethod* method = foo_vtable_find_method(receiver.vtable, selector);
   if (method) {
-    return method->function(receiver, arguments);
+    if (method->argCount == nargs) {
+      struct FooContext* context = FOO_ALLOC(struct FooContext);
+      context->receiver = receiver;
+      context->frame = foo_frame_new(method->frameSize, nargs, arguments);
+      return method->function(context);
+    } else {
+      foo_panic("foo_send: wrong number of arguments");
+    }
   } else {
-    printf("MSg: %s\n", selector->name->data);
-    foo_panic("foo_send: receiver does not understand message!");
+    foo_panic("foo_send: receiver does not understand message");
   }
 }
 
