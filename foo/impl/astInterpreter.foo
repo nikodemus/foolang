@@ -1,0 +1,191 @@
+import .utils.Debug
+import .astVisitor.AstVisitor
+
+class Process {}
+    is Object
+end
+
+class InterpreterContext {
+        sender
+        receiver
+        frame::Array
+        returnBlock
+    }
+    is Object
+
+    direct method new: size
+        self new: size
+             returnBlock: { |value|
+                            Error raise: "Invalid return: {value}" }!
+
+    direct method new: size returnBlock: returnBlock
+        self sender: False
+             receiver: False
+             frame: (Array new: size value: "<unbound>")
+             returnBlock: returnBlock!
+
+    method invalidate
+        returnBlock = { |value|
+                        Error raise: "Cannot return from dead context: {value}" }!
+
+    method slot: index
+        -- FIXME: Replace this with Primitive readSlot: index of: receiver.
+        -- which breaks encapsulation. Dammit, so it needs to be:
+        --
+        --    system primitives readSlot: index of: receiver.
+        --
+        -- so primitives need to be passed down here. Yuck.
+        --
+        -- Maybe some of the auth should be statically handled?
+        -- Like:
+        --
+        --    import foolang allowing: Primitive
+        --
+        -- ?
+        receiver __slot: (index - 1)!
+
+    method at: index inFrame: frameNumber
+        frameNumber > 1
+            ifTrue: { sender at: index inFrame: frameNumber - 1 }
+            ifFalse: { frame at: index }!
+
+    method put: value at: index inFrame: frameNumber
+        frameNumber > 1
+            ifTrue: { sender put: value at: index inFrame: frameNumber - 1 }
+            ifFalse: { frame put: value at: index }!
+end
+
+class AstBlockClosure { context block }
+    is Object
+    method value
+        self apply: []!
+    method value: arg
+        self apply: [arg]!
+    method apply: arguments
+        let frame = Array new: block frameSize.
+        let nArgs = arguments size.
+        block argumentCount is nArgs
+            ifFalse: { Error raise: "Self-hostend block argument count mismatch!" }.
+        1 to: nArgs
+          do: { |i| frame put: (arguments at: i) at: i }.
+        let context = InterpreterContext
+                          sender: context
+                          receiver: context receiver
+                          frame: frame
+                          returnBlock: context returnBlock.
+        { AstInterpreter eval: block body with: context }
+            finally: { context invalidate } !
+end
+
+-- Used to pass process and context through host frames by visitSend
+define $process
+    False!
+define $context
+    False!
+
+class AstInterpreter { context process }
+    is AstVisitor
+
+    direct method eval: ast inEnv: env
+        self
+            eval: ast
+            with: (InterpreterContext new: env allocation size)
+            in: Process new!
+
+    direct method eval: ast with: context
+        self
+            eval: ast
+            with: context
+            in: $process!
+
+    direct method eval: ast with: context in: process
+        ast visitBy: (self
+                          context: context
+                          process: process)!
+
+    direct method evalDefine: body frameSize: frameSize
+        let context = InterpreterContext
+                          new: frameSize
+                          returnBlock: { |value| return value }.
+        { self eval: body with: context in: Process new }
+            finally: { context invalidate } !
+
+    direct method invokeMethod: astMethod on: receiver with: arguments
+        let frame = Array new: astMethod frameSize.
+        let nArgs = arguments size.
+        astMethod argumentCount is nArgs
+            ifFalse: { Error raise: "Self-hosted method argument count mismatch!" }.
+        1 to: nArgs
+          do: { |i| frame put: (arguments at: i) at: i }.
+        let context = InterpreterContext
+                          sender: $context
+                          receiver: receiver
+                          frame: frame
+                          returnBlock: { |value| return value }.
+        { AstInterpreter eval: astMethod body with: context }
+            finally: { context invalidate } !
+
+    method visitConstant: value
+        value!
+
+    method visitGlobal: value
+        value!
+
+    method visitIsLeft: left right: right
+        (left visitBy: self) is (right visitBy: self)!
+
+    method visitSeqFirst: first then: then
+        first visitBy: self.
+        then visitBy: self!
+
+    method visitReturn: value
+        context returnBlock value: (value visitBy: self)!
+
+    method visitSend: selector to: receiver with: arguments source: source
+        let object = receiver visitBy: self.
+        let arguments = arguments collect: { |arg| arg visitBy: self }.
+        let $context = context.
+        let $process = process.
+        -- Debug println: "<- {selector}".
+        { selector sendTo: object with: arguments }
+            on: DoesNotUnderstand
+            do: { |ex|
+                  -- Add the source location to the error.
+                  (object is ex receiver and: selector == ex selector)
+                      ifTrue: { DoesNotUnderstand
+                                    raise: selector
+                                    with: arguments
+                                    on: object
+                                    source: source }} !
+
+    method visitComment: comment value: value source: source
+        value visitBy: self!
+
+    method visitBlock: block
+        AstBlockClosure
+            context: context
+            block: block!
+
+    method visitSelf
+        context receiver!
+
+    method visitSlotRef: name at: index
+        context slot: index!
+
+    method visitBindLexical: name value: value index: index body: body
+        context
+            put: (value visitBy: self)
+            at: index
+            inFrame: 1.
+        body visitBy: self!
+
+    method visitLexicalRef: name index: index frame: frame
+        context at: index inFrame: frame!
+
+
+    method visitLexicalSet: name value: value index: index frame: frame
+        context
+            put: (value visitBy: self)
+            at: index
+            inFrame: frame!
+end
