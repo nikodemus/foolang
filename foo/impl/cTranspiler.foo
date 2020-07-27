@@ -5,12 +5,16 @@ define SigilNames
     names!
 
 class CTranspiler { output intern }
-    direct method transpile: ast
+    direct method transpile: ast in: env
         let visitor = self output: StringOutput new intern: Dictionary new.
+        visitor initContext: env allocation size.
         ast do: { |node| node visitBy: visitor }.
         visitor output println: ";".
         {selectors_h: visitor selectors_h,
          main: visitor output content}!
+
+    method initContext: frameSize
+        output println: "struct FooContext* context = foo_context_new(foo_Integer_new(0), {frameSize}ul, 0, NULL);"!
 
     method selectors_h
         let output = StringOutput new.
@@ -57,4 +61,14 @@ class CTranspiler { output intern }
                         output print: ", ".
                         arg visitBy: self }.
         output print: ")"!
+
+    method visitBindLexical: name value: value index: index body: body
+        output print: "\{ context->frame[{index-1}ul] = ".
+        value visitBy: self.
+        output println: ";".
+        body visitBy: self.
+        output println: "; }"!
+
+    method visitLexicalRef: name index: index frame: frame
+        output print: "foo_lexical_ref(context, {index-1}ul, {frame-1}ul)"!
 end

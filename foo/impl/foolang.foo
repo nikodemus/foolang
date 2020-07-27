@@ -282,12 +282,13 @@ with: {defSource}"!
             expect: 42!
 
     method transpile: string
+        let env = Environment new.
         let cst = Parser parse: string.
         let ast = cst collect: { |syntax|
                                  SyntaxTranslator
                                      translate: syntax
-                                     in: Environment new }.
-        let c = CTranspiler transpile: ast.
+                                     in: env }.
+        let c = CTranspiler transpile: ast in: env.
         (system files path: "host/selectors.h")
             forWrite truncateExisting
                 createOrOpen: { |f| f writeString: c selectors_h }.
@@ -296,7 +297,7 @@ with: {defSource}"!
                 createOrOpen: { |f| f writeString: c main }!
 
     method testTranspile
-        self transpile: "(20 + 22 * 10) debug"!
+        self transpile: "let x = 20. (x + 22 * 10) debug"!
 end
 
 class Main {}

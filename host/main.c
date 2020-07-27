@@ -9,8 +9,10 @@
 #undef NDEBUG
 #include <assert.h>
 
-#define FOO_ALLOC(type) ((type*)foo_alloc(1, sizeof(type)))
-#define FOO_ALLOC_ARRAY(n, type) ((type*)foo_alloc((n), sizeof(type)))
+#define FOO_ALLOC(type) \
+  ((type*)foo_alloc(1, sizeof(type)))
+#define FOO_ALLOC_ARRAY(n, type) \
+  ((type*)foo_alloc((n), sizeof(type)))
 
 void foo_panic(const char* message) __attribute__ ((noreturn));
 void foo_panic(const char* message) {
@@ -118,6 +120,12 @@ struct FooContext {
   struct Foo* frame;
 };
 
+struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t frame) {
+  while (frame > 0) {
+    context = context->sender;
+  }
+  return context->frame[index];
+}
 struct Foo* foo_frame_new(size_t size, size_t nargs, va_list args) {
   struct Foo* frame = FOO_ALLOC_ARRAY(size, struct Foo);
   for (size_t i = 0; i < nargs; ++i) {
@@ -134,6 +142,14 @@ struct FooMethod {
   size_t frameSize;
   FooMethodFunction function;
 };
+
+
+struct FooContext* foo_context_new(struct Foo receiver, size_t frameSize, size_t nargs, va_list arguments) {
+  struct FooContext* context = FOO_ALLOC(struct FooContext);
+  context->receiver = receiver;
+  context->frame = foo_frame_new(frameSize, nargs, arguments);
+  return context;
+}
 
 struct FooMethodArray {
   size_t size;
@@ -167,6 +183,10 @@ struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, const s
 
 struct FooVtable FOO_IntegerVtable;
 
+struct Foo foo_Integer_new(int64_t n) {
+  return (struct Foo){ .vtable = &FOO_IntegerVtable, .datum = { .int64 = n } };
+}
+
 struct Foo foo_Integer_method_debug(struct FooContext* ctx) {
   struct Foo receiver = ctx->receiver;
   printf("#<Integer %" PRId64 ">", receiver.datum.int64);
@@ -176,13 +196,13 @@ struct Foo foo_Integer_method_debug(struct FooContext* ctx) {
 struct Foo foo_Integer_method__add_(struct FooContext* ctx) {
   struct Foo receiver = ctx->receiver;
   struct Foo arg = foo_vtable_typecheck(&FOO_IntegerVtable, ctx->frame[0]);
-  return (struct Foo){ .vtable = &FOO_IntegerVtable, .datum = { .int64 = receiver.datum.int64 + arg.datum.int64 } };
+  return foo_Integer_new(receiver.datum.int64 + arg.datum.int64);
 }
 
 struct Foo foo_Integer_method__mul_(struct FooContext* ctx) {
   struct Foo receiver = ctx->receiver;
   struct Foo arg = foo_vtable_typecheck(&FOO_IntegerVtable, ctx->frame[0]);
-  return (struct Foo){ .vtable = &FOO_IntegerVtable, .datum = { .int64 = receiver.datum.int64 * arg.datum.int64 } };
+  return foo_Integer_new(receiver.datum.int64 * arg.datum.int64);
 }
 
 struct FooMethodArray FOO_IntegerBuiltinMethods =
@@ -214,9 +234,7 @@ struct Foo foo_send(const struct FooSelector* selector, struct Foo receiver, siz
   struct FooMethod* method = foo_vtable_find_method(receiver.vtable, selector);
   if (method) {
     if (method->argCount == nargs) {
-      struct FooContext* context = FOO_ALLOC(struct FooContext);
-      context->receiver = receiver;
-      context->frame = foo_frame_new(method->frameSize, nargs, arguments);
+      struct FooContext* context = foo_context_new(receiver, method->frameSize, nargs, arguments);
       return method->function(context);
     } else {
       foo_panic("foo_send: wrong number of arguments");
