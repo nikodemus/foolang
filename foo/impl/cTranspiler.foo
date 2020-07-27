@@ -1,24 +1,26 @@
 define SigilNames
     let names = Dictionary new.
-    names put: "_plus_" at: "+".
+    names put: "_add_" at: "+".
+    names put: "_mul_" at: "*".
     names!
 
 class CTranspiler { output intern }
     direct method transpile: ast
         let visitor = self output: StringOutput new intern: Dictionary new.
         ast do: { |node| node visitBy: visitor }.
+        visitor output println: ";".
         {selectors_h: visitor selectors_h,
          main: visitor output content}!
 
     method selectors_h
         let output = StringOutput new.
-        let prev = "&FOO_SELECTOR_debug".
+        let prev = "NULL".
         intern doKeys: { |selector|
                          let name = SigilNames at: selector.
                          let this = "FOO_SELECTOR_{name}".
                          output print: "struct FooSelector ".
                          output print: this.
-                         output print: " = \{ .name  = &FOO_CSTRING(".
+                         output print: " = \{ .name = &FOO_CSTRING(".
                          output display: selector.
                          output print: "), .next = ".
                          output print: prev.
@@ -28,7 +30,7 @@ class CTranspiler { output intern }
         output content!
 
     method vtable: name datum: value
-        output print: "(struct Foo)\{ .vtable = {name}, .int64 = {value}l }"!
+        output print: "(struct Foo)\{ .vtable = {name}, .datum = \{ .int64 = {value}l } }"!
 
     method selector: selector
         let name = selector name.

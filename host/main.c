@@ -142,25 +142,37 @@ struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, const s
 
 struct FooVtable FOO_IntegerVtable;
 
+/**
+   TODO: pass in context
+ */
+
 struct Foo foo_Integer_method_debug(struct Foo receiver,
                                     __attribute__ ((unused)) va_list arguments) {
   printf("#<Integer %" PRId64 ">", receiver.datum.int64);
   return receiver;
 }
 
-struct Foo foo_Integer_method__plus_(struct Foo receiver,
+struct Foo foo_Integer_method__add_(struct Foo receiver,
                                     __attribute__ ((unused)) va_list arguments) {
   struct Foo arg = va_arg(arguments, struct Foo);
   return (struct Foo){ .vtable = &FOO_IntegerVtable, .datum = { .int64 = receiver.datum.int64 + arg.datum.int64 } };
 }
 
+struct Foo foo_Integer_method__mul_(struct Foo receiver,
+                                    __attribute__ ((unused)) va_list arguments) {
+  struct Foo arg = va_arg(arguments, struct Foo);
+  return (struct Foo){ .vtable = &FOO_IntegerVtable, .datum = { .int64 = receiver.datum.int64 * arg.datum.int64 } };
+}
+
 struct FooMethodArray FOO_IntegerBuiltinMethods =
   {
-   .size = 2,
+   .size = 3,
    .data = { (struct FooMethod){ .selector = &FOO_SELECTOR_debug,
                                  .function = &foo_Integer_method_debug },
-             (struct FooMethod){ .selector = &FOO_SELECTOR__plus_,
-                                 .function = &foo_Integer_method__plus_ }}
+             (struct FooMethod){ .selector = &FOO_SELECTOR__add_,
+                                 .function = &foo_Integer_method__add_ },
+             (struct FooMethod){ .selector = &FOO_SELECTOR__mul_,
+                                 .function = &foo_Integer_method__mul_ }}
   };
 
 struct FooVtable FOO_IntegerVtable =
@@ -182,9 +194,6 @@ struct Foo foo_send(const struct FooSelector* selector, struct Foo receiver, ...
 }
 
 int main() {
-  foo_send(&FOO_SELECTOR_debug,
-           foo_send(&FOO_SELECTOR__plus_,
-                    (struct Foo){ .vtable = &FOO_IntegerVtable, .datum = { .int64 = 20l } },
-                    (struct Foo){ .vtable = &FOO_IntegerVtable, .datum = { .int64 = 22l } }));
+  #include "main.h"
   return 0;
 }
