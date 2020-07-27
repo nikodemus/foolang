@@ -1,0 +1,182 @@
+import .syntaxVisitor.SyntaxVisitor
+
+class SyntaxPrinter { output indent printed blockStart }
+    is SyntaxVisitor
+
+    direct method print: syntax to: output
+        syntax visitBy: (self
+                             output: output
+                             indent: 0
+                             printed: 0
+                             blockStart: False)!
+
+    method indentBody
+        SyntaxPrinter
+            output: output
+            indent: indent + 4
+            printed: printed
+            blockStart: False!
+
+    method indentHere
+        SyntaxPrinter
+            output: output
+            indent: printed
+            printed: printed
+            blockStart: False!
+
+    method indentBlock
+        SyntaxPrinter
+            output: output
+            indent: printed
+            printed: printed
+            blockStart: True!
+
+    method print: string::String
+        output print: string.
+        printed = printed + string size!
+
+    method println: string::String
+        output println: string.
+        indent times: { output print: " " }.
+        printed = indent!
+
+    method handleBlockStart
+        blockStart
+            ifTrue: { self println: "".
+                      blockStart = False }!
+
+    method visitLiteral: value
+        self print: value toString!
+
+    method visitSeqFirst: first then: then
+        self handleBlockStart.
+        first visitBy: self.
+        self println: ".".
+        then visitBy: self!
+
+    method visitReturn: value
+        self print: "return ".
+        value visitBy: self!
+
+    method visitPrefixComment: comment value: value source: source
+        self handleBlockStart.
+        self print: "--".
+        self println: comment.
+        value visitBy: self indentBody!
+
+    method visitSuffixComment: comment value: value source: source
+        self handleBlockStart.
+        value visitBy: self.
+        self print: " --".
+        self println: comment!
+
+    method visitPrefixMessage: selector receiver: receiver source: source
+        self print: selector name.
+        receiver visitBy: self!
+
+    method visitUnaryMessage: selector receiver: receiver source: source
+        receiver visitBy: self.
+        self print: " ".
+        self print: selector name!
+
+    method visitBinaryMessage: selector receiver: receiver argument: argument source: source
+        receiver visitBy: self.
+        self print: " ".
+        self print: selector name.
+        self print: " ".
+        argument visitBy: self!
+
+    method visitKeywordMessage: selector receiver: receiver arguments: arguments source: source
+        receiver visitBy: self.
+        selector parts
+            with: arguments
+            do: { |part arg|
+                  self print: " ".
+                  self print: part.
+                  self print: " ".
+                  arg visitBy: self }!
+
+    method visitIsLeft: left right: right
+        left visitBy: self.
+        self print: " is ".
+        right visitBy: self!
+
+    method visitLet: name value: value body: body
+        self handleBlockStart.
+        self print: "let ".
+        self print: name.
+        self print: " = ".
+        value visitBy: self.
+        self println: ".".
+        body visitBy: self!
+
+    method visitSelf
+        self print: "self"!
+
+    method visitVariable: name
+        self print: name!
+
+    method visitAssign: value to: variable
+        self print: variable name.
+        self print: " = ".
+        value visitBy: self!
+
+    method visitParens: body
+        self print: "(".
+        body visitBy: self indentHere.
+        self print: ")"!
+
+    method visitBlockWith: parameters body: body
+        self print: "\{ ".
+        let bodyPrinter = self indentBlock.
+        parameters
+            ifNotEmpty: { self print: "|".
+                          parameters do: { |param| self print: param }
+                                     interleaving: { self print: " " }.
+                          self print: "| " }.
+        body visitBy: bodyPrinter.
+        self print: " }"!
+
+    method visitDefine: name body: body
+        self print: "define ".
+        let bodyVisitor = self indentBody.
+        bodyVisitor println: name.
+        body visitBy: bodyVisitor.
+        self println: "!"!
+
+    method visitMethodDefinition: signature body: body
+        self print: "method".
+        signature parameters isEmpty
+            ifTrue: { self print: " ".
+                      self print: signature selector name }
+            ifFalse: { signature selector parts
+                           withIndexDo: { |part index|
+                                 self print: " ".
+                                 self print: part.
+                                 self print: " ".
+                                          self print: (signature parameters at: index) } }.
+        let bodyVisitor = self indentBody.
+        bodyVisitor println: "".
+        body visitBy: bodyVisitor.
+        self print: "!"!
+
+    method visitClassDefinition: name directMethods: directMethods slots: slots methods: methods
+        self print: "class ".
+        self print: name.
+        self print: " \{".
+        slots ifNotEmpty: { self print: " ".
+                            slots do: { |slot|
+                                        self print: slot.
+                                        self print: " " } }.
+        self print: "}".
+        let methodVisitor = self indentBody.
+        directMethods do: { |m|
+                            methodVisitor println: "".
+                            methodVisitor print: "direct ".
+                            m visitBy: methodVisitor }.
+        methods do: { |m|
+                      methodVisitor println: "".
+                      m visitBy: methodVisitor }.
+        self println: "".
+        self println: "end"!
+end

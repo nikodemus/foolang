@@ -1,0 +1,123 @@
+import .ast.*
+import .syntaxVisitor.SyntaxVisitor
+
+class SyntaxTranslator { env }
+    is SyntaxVisitor
+
+    direct method translate: syntax in: env
+        syntax
+            visitBy: (SyntaxTranslator env: env)!
+
+    method addVariable: name
+        SyntaxTranslator env: (env addVariable: name)!
+
+    method visitLiteral: value
+        AstConstantRef
+            value: value!
+
+    method visitSeqFirst: first then: then
+        -- FIXME: Would be nicer to flatten this out.
+        AstSeq
+            first: (first visitBy: self)
+            then: (then visitBy: self)!
+
+    method visitReturn: syntax
+        AstReturn
+            value: (syntax visitBy: self)!
+
+    method visitPrefixComment: comment value: value source: source
+        AstComment comment: comment
+                   value: (value visitBy: self)
+                   source: source!
+
+    method visitSuffixComment: comment value: value source: source
+        AstComment comment: comment
+                   value: (value visitBy: self)
+                   source: source!
+
+    method visitLet: name value: value body: body
+        let bodyVisitor = self addVariable: name.
+        AstBindLexical
+            name: name
+            index: bodyVisitor env allocation index
+            value: (value visitBy: self)
+            body: (body visitBy: bodyVisitor)!
+
+    method visitPrefixMessage: selector receiver: receiver source: source
+        AstSend receiver: (receiver visitBy: self)
+                selector: (Selector name: "prefix{selector name}")
+                arguments: []
+                source: source!
+
+    method visitUnaryMessage: selector receiver: receiver source: source
+        AstSend receiver: (receiver visitBy: self)
+                selector: selector
+                arguments: []
+                source: source!
+
+    method visitBinaryMessage: selector receiver: receiver argument: argument source: source
+        AstSend receiver: (receiver visitBy: self)
+                selector: selector
+                arguments: [argument visitBy: self]
+                source: source!
+
+    method visitKeywordMessage: selector receiver: receiver arguments: arguments source: source
+        AstSend receiver: (receiver visitBy: self)
+                selector: selector
+                arguments: (arguments
+                                collect: { |arg|  arg visitBy: self })
+                source: source!
+
+    method visitIsLeft: left right: right
+        AstIs left: (left visitBy: self)
+              right: (right visitBy: self)!
+
+    method visitSelf
+        AstSelfRef new!
+
+    method visitVariable: name
+        env reference: name!
+
+    method visitAssign: value to: variable
+        let binding = env reference: variable name.
+        AstLexicalSet
+            name: variable name
+            frame: binding frame :: Integer
+            index: binding index :: Integer
+            value: (value visitBy: self)!
+
+    method visitParens: body
+        body visitBy: self!
+
+    method visitBlockWith: parameters body: body
+        let bodyEnv = env newFrame addVariables: parameters.
+        AstBlock
+            body: (body visitBy: (SyntaxTranslator env: bodyEnv))
+            argumentCount: parameters size
+            frameSize: parameters size + bodyEnv allocation size!
+
+    method visitDefine: name body: body
+        -- FIXME: Is this right?? Should body not gets an environment of its own?
+        AstDefine
+            name: name
+            body: (body visitBy: self)
+            frameSize: env allocation size!
+
+    method visitMethodDefinition: signature body: body
+        let bodyEnv = env newFrame addVariables: signature parameters.
+        AstMethod
+            selector: signature selector name
+            argumentCount: signature parameters size
+            body: (body visitBy: (SyntaxTranslator env: bodyEnv))
+            frameSize: bodyEnv allocation size!
+
+    method visitClassDefinition: name directMethods: directMethods slots: slots methods: methods
+        let astDirectMethods = directMethods collect: { |m| m visitBy: self }.
+        let instanceMethodVisitor = SyntaxTranslator env: (env addSlots: slots).
+        let astMethods = methods collect: { |m| m visitBy: instanceMethodVisitor }.
+        AstClass
+            name: name
+            directMethods: astDirectMethods
+            slots: slots
+            methods: astMethods!
+end

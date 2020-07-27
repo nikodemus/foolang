@@ -1,0 +1,83 @@
+interface Source
+    is Object
+end
+
+class SourceString { string first last }
+
+    method location
+        first to: last!
+
+    method doLines: block
+        let newline = 0.
+        string
+            doLines: { |line|
+                       let linestart = newline + 1.
+                       let linestop = linestart + line size - 1.
+                       newline = linestop + 1.
+                       block
+                           value: linestart
+                           value: linestop
+                           value: line }!
+
+    method findContext
+        let leadingContext = 2.
+        let trailingContext = 2.
+        let totalContext = leadingContext + trailingContext.
+        let context = List newOf: Record.
+        let lineNumber = 0.
+        let inMatch = False.
+        self
+            doLines: { |from to line|
+                       lineNumber = lineNumber + 1.
+                       first > to
+                           ifTrue: { context size >= leadingContext
+                                         ifTrue: { context popFirst }.
+                                     context
+                                         push: { lineNumber: lineNumber,
+                                                 underline: False,
+                                                 line: line } }.
+                       last < from
+                           ifTrue: { context size < totalContext
+                                         ifTrue: { context
+                                                       push: { lineNumber: lineNumber,
+                                                               underline: False,
+                                                               line: line } }.
+                                     inMatch = False }.
+                       (from <= first and: first <= to)
+                           ifTrue: { inMatch = True }.
+                       inMatch
+                           ifTrue: { totalContext = totalContext + 1.
+                                     context push: { lineNumber: lineNumber,
+                                                     underline: { from: (first - from + 1 max: 1),
+                                                                  to: (last - from + 1 min: line size) },
+                                                     line: line } } }.
+        context!
+
+    method underlineFrom: from to: to note: note in: output
+        output print: "    ". -- line number
+        output print: (" " repeat: from - 1).
+        output print: ("^" repeat: (to - from + 1)).
+        note
+            ifEmpty: { output newline }
+            ifNotEmpty: { output print: " ".
+                          output println: note }!
+
+    method note: note
+        let output = StringOutput new.
+        self findContext
+            do: { |ctxLine|
+                  output print: (ctxLine lineNumber leftPad: 3 by: "0").
+                  output print: " ".
+                  output println: ctxLine line.
+                  ctxLine underline is False
+                      ifFalse: { self
+                                     underlineFrom: ctxLine underline from
+                                     to: ctxLine underline to
+                                     note: note
+                                     in: output } }.
+        output content!
+
+    method toString
+        self note: ""!
+
+end

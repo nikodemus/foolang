@@ -1,0 +1,161 @@
+import .syntaxTranslator.SyntaxTranslator
+import .utils.Debug
+import .ast.AstGlobal
+import .ast.AstLexicalRef
+import .ast.AstSlotRef
+import .undefinedPolicy.UndefinedPolicy
+import .undefinedPolicy.AllowReferenceToUndefined
+import .undefinedPolicy.ResolveUndefinedsWith
+
+define BuiltinGlobals
+    let globals = Dictionary new.
+    globals put: (AstGlobal name: "True" value: True) at: "True".
+    globals put: (AstGlobal name: "False" value: False) at: "False".
+    globals!
+
+class FrameAllocation { size::Integer }
+    direct method new
+        -- Debug println: "** frame allocation **".
+        self size: 0!
+    method nextIndex
+        size = size + 1.
+        size!
+    method index
+        size!
+end
+
+class VariableBinding { name index::Integer }
+    is Object
+    method referenceInFrame: frame
+        AstLexicalRef name: name frame: frame index: index!
+end
+
+class SlotBinding { name index::Integer }
+    is Object
+    method referenceInFrame: frame
+        AstSlotRef name: name index: index!
+end
+
+class Environment { bindings parent allocation globals }
+    is Object
+
+    direct method new
+        Environment
+            bindings: List new
+            parent: False
+            allocation: FrameAllocation new
+            globals: BuiltinGlobals copy!
+
+    method toplevel
+        Environment
+            bindings: List new
+            parent: False
+            allocation: FrameAllocation new
+            globals: globals!
+
+    method newFrame
+        Environment
+            bindings: List new
+            parent: self
+            allocation: FrameAllocation new
+            globals: globals!
+
+    method addVariable: name
+        Environment
+            bindings: (bindings copy
+                           add: (VariableBinding
+                                     name: name
+                                     index: allocation nextIndex))
+            parent: parent
+            allocation: allocation
+            globals: globals!
+
+    method addVariables: names
+        let newBindings = bindings copy.
+        names do: { |name|
+                    newBindings
+                        add: (VariableBinding
+                                  name: name
+                                  index: allocation nextIndex) }.
+        Environment
+            bindings: newBindings
+            parent: parent
+            allocation: allocation
+            globals: globals!
+
+    method addSlots: names
+        let newBindings = bindings copy.
+        let slotAllocation = FrameAllocation new.
+        names do: { |name|
+                    newBindings
+                        add: (SlotBinding
+                                  name: name
+                                  index: slotAllocation nextIndex) }.
+        Environment
+            bindings: newBindings
+            parent: parent
+            allocation: allocation
+            globals: globals!
+
+    method load: string
+        let defs = Dictionary new.
+        (Parser parse: string)
+            do: { |syntax|
+                  AllowReferenceToUndefined
+                      do: { let def = SyntaxTranslator
+                                          translate: syntax
+                                          in: (self toplevel).
+                             defs put: def at: def name } }.
+        ResolveUndefinedsWith
+            definitions: defs
+            in: self
+            do: { defs doValues: { |def| def defineIn: self } }.
+        self checkGlobals.
+        self!
+
+    method eval: string
+        let env = Environment
+                      bindings: List new
+                      parent: False
+                      allocation: FrameAllocation new
+                      globals: globals.
+        let res = False.
+        (Parser parse: string)
+            do: { |syntax|
+                  res = (SyntaxTranslator translate: syntax in: env) evalInEnv: env }.
+        res!
+
+    method checkGlobals
+        globals doValues: { |global|
+                            global isUndefined
+                                ifTrue: { Error raise: "Undefined variable: {global name}" } }!
+
+    method global: name
+        globals at: name ifNone: { self undefined: name }!
+
+    method undefined: name
+        UndefinedPolicy reference: name in: self!
+
+    method define: name value: value
+        let global = globals
+                         at: name
+                         ifNone: { globals
+                                       put: (AstGlobal name: name value: value)
+                                       at: name.
+                                   return value }.
+        global isUndefined
+            ifTrue: { global value: value.
+                      value }
+            ifFalse: { Error raise: "Cannot redefined a global: {name}" }!
+
+    method reference: name
+        self reference: name inFrame: 1!
+
+    method reference: name inFrame: frame::Integer
+        let binding = bindings reversed -- SLOW!
+                          find: { |binding| binding name == name }
+                          ifNone: { parent is False
+                                        ifTrue: { return self global: name }
+                                        ifFalse: { return parent reference: name inFrame: frame + 1 } }.
+        binding referenceInFrame: frame!
+end

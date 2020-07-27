@@ -1,0 +1,6 @@
+class Debug {}
+    direct method println: what
+        Output debug println: what!
+    direct method print: what
+        Output debug print: what!
+end
