@@ -1,6 +1,8 @@
 import .environment.Environment
 import .parser.Parser
 import .utils.Debug
+import .syntaxTranslator.SyntaxTranslator
+import .cTranspiler.CTranspiler
 
 class Tests { ok }
 
@@ -20,6 +22,8 @@ class Tests { ok }
 
     method run
         self
+            ; test: #testTranspileConstant
+            ---
             ; test: #test42
             ; test: #testPlus
             ; test: #testPrecedence
@@ -47,6 +51,7 @@ class Tests { ok }
             ; test: #testAstSource
             ; test: #testOutOfOrderDefine
             ; test: #testOutOfOrderClasses
+            ---
                .
         self!
 
@@ -272,6 +277,14 @@ with: {defSource}"!
                     end"
             eval: "Two new test"
             expect: 42!
+    method testTranspileConstant
+        let cst = Parser parse: "42".
+        let ast = cst collect: { |syntax|
+                                 SyntaxTranslator
+                                     translate: syntax
+                                     in: Environment new }.
+        let c = ast collect: { |node| CTranspiler transpile: node }.
+        Debug println: c!
 end
 
 class Main {}

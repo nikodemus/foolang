@@ -1,0 +1,55 @@
+define SigilNames
+    let names = Dictionary new.
+    names put: "_plus_" at: "+".
+    names!
+
+class CTranspiler { output intern }
+    direct method transpile: ast
+        let visitor = self output: StringOutput new intern: Dictionary new.
+        ast do: { |node| node visitBy: visitor }.
+        {selectors_h: visitor selectors_h,
+         main: visitor output content}!
+
+    method selectors_h
+        let output = StringOutput new.
+        let prev = "&FOO_SELECTOR_debug".
+        intern doKeys: { |selector|
+                         let name = SigilNames at: selector.
+                         let this = "FOO_SELECTOR_{name}".
+                         output print: "struct FooSelector ".
+                         output print: this.
+                         output print: " = \{ .name  = &FOO_CSTRING(".
+                         output display: selector.
+                         output print: "), .next = ".
+                         output print: prev.
+                         output print: " };\n".
+                         prev = "&{this}" }.
+        output println: "struct FooSelector* FOO_InternedSelectors = {prev};".
+        output content!
+
+    method vtable: name datum: value
+        output print: "(struct Foo)\{ .vtable = {name}, .int64 = {value}l }"!
+
+    method selector: selector
+        let name = selector name.
+        let sigilname = SigilNames at: name ifNone: { name }.
+        intern
+            put: sigilname
+            at: name.
+        output print: "&FOO_SELECTOR_{sigilname}"!
+
+    method visitConstant: value
+        (Integer includes: value)
+            ifTrue: { return self vtable: "&FOO_IntegerVtable" datum: value }.
+        Error raise: "Don't know how to transpile constant `{value}` into C."!
+
+    method visitSend: selector to: receiver with: arguments source: source
+        output print: "foo_send(".
+        self selector: selector.
+        output print: ", ".
+        receiver visitBy: self.
+        arguments do: { |arg|
+                        output print: ", ".
+                        arg visitBy: self }.
+        output print: ")"!
+end
