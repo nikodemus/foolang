@@ -1,12 +1,39 @@
-define SigilNames
+define DefaultCNames
     let names = Dictionary new.
-    names put: "_add_" at: "+".
-    names put: "_mul_" at: "*".
+    names put: "FOO_SELECTOR_add" at: "+".
+    names put: "FOO_SELECTOR_mul" at: "*".
     names!
 
-class CTranspiler { output intern }
+class SelectorMap { cnames }
+    direct method new
+        self cnames: Dictionary new!
+
+    method map: selector
+        let name = selector name.
+        cnames
+            at: name
+            ifNone: { let default = self _default: name.
+                      cnames put: default at: name.
+                      default }!
+
+    method do: block
+        cnames doKeys: { |name|
+                         block
+                             value: name
+                             value: (cnames at: name) }!
+
+    method _default: name
+        DefaultCNames
+            at: name
+            ifNone: { "FOO_SELECTOR__{name}" }!
+end
+
+class CTranspiler { output selectorMap }
+
     direct method transpile: ast in: env
-        let visitor = self output: StringOutput new intern: Dictionary new.
+        let visitor = self
+                          output: StringOutput new
+                          selectorMap: SelectorMap new.
         visitor initContext: env allocation size.
         ast do: { |node| node visitBy: visitor }.
         visitor output println: ";".
@@ -14,35 +41,29 @@ class CTranspiler { output intern }
          main: visitor output content}!
 
     method initContext: frameSize
-        output println: "struct FooContext* context = foo_context_new(foo_Integer_new(0), {frameSize}ul, 0, NULL);"!
+        output
+            println: "struct FooContext* context = foo_context_new(foo_Integer_new(0), {frameSize}ul, 0, NULL);"!
 
     method selectors_h
         let output = StringOutput new.
         let prev = "NULL".
-        intern doKeys: { |selector|
-                         let name = SigilNames at: selector.
-                         let this = "FOO_SELECTOR_{name}".
+        selectorMap do: { |name cname|
                          output print: "struct FooSelector ".
-                         output print: this.
+                         output print: cname.
                          output print: " = \{ .name = &FOO_CSTRING(".
-                         output display: selector.
+                         output display: name.
                          output print: "), .next = ".
                          output print: prev.
                          output print: " };\n".
-                         prev = "&{this}" }.
+                         prev = "&{cname}" }.
         output println: "struct FooSelector* FOO_InternedSelectors = {prev};".
         output content!
 
     method vtable: name datum: value
         output print: "(struct Foo)\{ .vtable = {name}, .datum = \{ .int64 = {value}l } }"!
 
-    method selector: selector
-        let name = selector name.
-        let sigilname = SigilNames at: name ifNone: { name }.
-        intern
-            put: sigilname
-            at: name.
-        output print: "&FOO_SELECTOR_{sigilname}"!
+    method selectorCName: selector
+        self selectorMap map: selector!
 
     method visitConstant: value
         (Integer includes: value)
@@ -50,8 +71,8 @@ class CTranspiler { output intern }
         Error raise: "Don't know how to transpile constant `{value}` into C."!
 
     method visitSend: selector to: receiver with: arguments source: source
-        output print: "foo_send(".
-        self selector: selector.
+        output print: "foo_send(&".
+        output print: (self selectorCName: selector).
         output print: ", ".
         receiver visitBy: self.
         output print: ", ".

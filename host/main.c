@@ -86,7 +86,6 @@ struct FooSelector {
   struct FooSelector* next;
 };
 
-struct FooSelector FOO_SELECTOR_debug = { .name = &FOO_CSTRING("debug"), .next = NULL };
 #include "selectors.h"
 
 struct FooSelector* foo_intern_new_selector(const struct FooCString* name) {
@@ -193,13 +192,13 @@ struct Foo foo_Integer_method_debug(struct FooContext* ctx) {
   return receiver;
 }
 
-struct Foo foo_Integer_method__add_(struct FooContext* ctx) {
+struct Foo foo_Integer_method_add(struct FooContext* ctx) {
   struct Foo receiver = ctx->receiver;
   struct Foo arg = foo_vtable_typecheck(&FOO_IntegerVtable, ctx->frame[0]);
   return foo_Integer_new(receiver.datum.int64 + arg.datum.int64);
 }
 
-struct Foo foo_Integer_method__mul_(struct FooContext* ctx) {
+struct Foo foo_Integer_method_mul(struct FooContext* ctx) {
   struct Foo receiver = ctx->receiver;
   struct Foo arg = foo_vtable_typecheck(&FOO_IntegerVtable, ctx->frame[0]);
   return foo_Integer_new(receiver.datum.int64 * arg.datum.int64);
@@ -208,18 +207,18 @@ struct Foo foo_Integer_method__mul_(struct FooContext* ctx) {
 struct FooMethodArray FOO_IntegerBuiltinMethods =
   {
    .size = 3,
-   .data = { (struct FooMethod){ .selector = &FOO_SELECTOR_debug,
+   .data = { (struct FooMethod){ .selector = &FOO_SELECTOR__debug,
                                  .argCount = 0,
                                  .frameSize = 0,
                                  .function = &foo_Integer_method_debug },
-             (struct FooMethod){ .selector = &FOO_SELECTOR__add_,
+             (struct FooMethod){ .selector = &FOO_SELECTOR_add,
                                  .argCount = 1,
                                  .frameSize = 1,
-                                 .function = &foo_Integer_method__add_ },
-             (struct FooMethod){ .selector = &FOO_SELECTOR__mul_,
+                                 .function = &foo_Integer_method_add },
+             (struct FooMethod){ .selector = &FOO_SELECTOR_mul,
                                  .argCount = 1,
                                  .frameSize = 1,
-                                 .function = &foo_Integer_method__mul_ }}
+                                 .function = &foo_Integer_method_mul }}
   };
 
 struct FooVtable FOO_IntegerVtable =
