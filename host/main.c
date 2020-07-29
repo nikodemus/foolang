@@ -86,7 +86,7 @@ struct FooSelector {
   struct FooSelector* next;
 };
 
-#include "selectors.h"
+#include "generated_selectors.h"
 
 struct FooSelector* foo_intern_new_selector(const struct FooCString* name) {
   struct FooSelector* new = FOO_ALLOC(struct FooSelector);
@@ -244,6 +244,6 @@ struct Foo foo_send(const struct FooSelector* selector, struct Foo receiver, siz
 }
 
 int main() {
-  #include "main.h"
+  #include "generated_main.c"
   return 0;
 }
