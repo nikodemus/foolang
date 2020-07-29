@@ -1,0 +1,23 @@
+interface SyntaxVisitor
+    is Object
+    required method visitLiteral: value
+    required method visitSeqFirst: first then: then
+    required method visitReturn: syntax
+    required method visitPrefixComment: comment value: value source: source
+    required method visitSuffixComment: comment value: value source: source
+    required method visitLet: name value: value body: body
+    required method visitPrefixMessage: selector receiver: receiver source: source
+    required method visitUnaryMessage: selector receiver: receiver source: source
+    required method visitBinaryMessage: selector receiver: receiver argument: argument source: source
+    required method visitKeywordMessage: selector receiver: receiver arguments: arguments source: source
+    required method visitIsLeft: left right: right
+    required method visitSelf
+    required method visitVariable: name
+    required method visitAssign: value to: variable
+    required method visitParens: body
+    required method visitBlockWith: parameters body: body
+    required method visitDefine: name body: body
+    required method visitMethodDefinition: signature body: body
+    required method visitClassDefinition: name directMethods: directMethods slots: slots methods: methods
+end
+

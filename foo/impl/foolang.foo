@@ -1,0 +1,317 @@
+import .environment.Environment
+import .parser.Parser
+import .utils.Debug
+import .syntaxTranslator.SyntaxTranslator
+import .cTranspiler.CTranspiler
+
+class Tests { system ok }
+
+    direct method runIn: system
+        (self system: system ok: True) run!
+
+    method test: selector
+        { Debug print: selector name.
+          selector sendTo: self.
+          Debug println: " ok" }
+            on: Error
+            do: { |e|
+                  Debug println: " FAILED:\n{e description}".
+                  ok = False.
+                  return False }.
+        True!
+
+    method run
+        self
+            ; test: #testTranspile
+            ---
+            ; test: #test42
+            ; test: #testPlus
+            ; test: #testPrecedence
+            ; test: #testPrefixMethod
+            ; test: #testUnaryMethod
+            ; test: #testKeywordMethod
+            ; test: #testIs
+            ; test: #testLet
+            ; test: #testPrecedence2
+            ; test: #testParens
+            ; test: #testAssign1
+            ; test: #testAssign2
+            ; test: #testSimpleBlock
+            ; test: #testArgBlock
+            ; test: #testBlockClosure
+            ; test: #testDefine
+            ; test: #testSimpleClass
+            ; test: #testClassWithMethod
+            ; test: #testClassWithPrefixMethod
+            ; test: #testTwoClasses
+            ; test: #testBlockInMethod
+            ; test: #testDirectMethod
+            ; test: #testReturn
+            ; test: #testComment
+            ; test: #testAstSource
+            ; test: #testOutOfOrderDefine
+            ; test: #testOutOfOrderClasses
+            ---
+               .
+        self!
+
+    method checkParse: source
+        -- Check Syntax print/parse consistency.
+        let syntaxList = Parser parse: source.
+         let output = StringOutput new.
+        syntaxList do: { |syntax|
+                         -- Debug println: "".
+                         -- SyntaxPrinter print: syntax to: Output debug.
+                         output print: syntax toString }.
+        let printed = output content.
+        { syntaxList checkEqual: (Parser parse: printed) }
+            on: Error
+            do: { |err|
+                  panic "CST print/parse inconsistency!
+original: {source}
+printed: {printed}
+problem: {err description}" }!
+
+    method eval: exprSource expect: expected
+        self checkParse: exprSource.
+        let result = Environment new eval: exprSource.
+        (result == expected)
+            ifFalse: { Error raise: "Expected {expected}, got: {result}
+from: '{exprSource}'" }!
+
+    method load: defSource eval: exprSource
+        self checkParse: defSource.
+        self checkParse: exprSource.
+        let env = Environment new.
+        env load: defSource.
+        env eval: exprSource!
+
+    method load: defSource eval: exprSource expect: expected
+        let result = self load: defSource eval: exprSource.
+        (result == expected)
+            ifFalse: { Error raise: "Expected {expected}, got: {result}
+from: {exprSource}
+with: {defSource}" }!
+
+    method load: defSource eval: exprSource expectError: type where: test
+        { self load: defSource eval: exprSource }
+            on: type
+            do: { |err|
+                  (test value: err)
+                      ifTrue: { return True }
+                      ifFalse: { Error raise: "Error did not match expectations: {err description}
+from: {exprSource}
+with: {defSource}" }}.
+        Error raise: "Expected error, didn't get one
+from: {exprSource}
+with: {defSource}"!
+
+    method test42
+        self eval: "42" expect: 42!
+    method testPlus
+        self eval: "100 + 1000 + 10 + 1" expect: 1111!
+    method testPrecedence
+        self eval: "12 + 10 * 10 - 1" expect: 111!
+    method testPrefixMethod
+        self eval: "- 42" expect: -42!
+    method testUnaryMethod
+        self eval: "- 42 abs" expect: 42!
+    method testKeywordMethod
+        self eval: "1 to: 10 by: 2" expect: (1 to: 10 by: 2)!
+    method testIs
+        self eval: "1 is 1" expect: True.
+        self eval: "1 is 2" expect: False!
+    method testLet
+        self eval: "let x = 1. x + x"
+             expect: 2!
+    method testPrecedence2
+        self eval: "let x = -40. let y = -2. x abs + y abs" expect: 42!
+    method testParens
+        self eval: "(1 + 1) * 2"
+             expect: 4!
+    method testAssign1
+        self eval: "let x = 20. x = x + 1. x * 2"
+             expect: 42!
+    method testAssign2
+        self eval: "let y = 0.
+                    let x = 20.
+                    (let x = 2000. x = x + 100. y = x * 2).
+                    x = x + 1. y + x * 2"
+            expect: 4242!
+    method testSimpleBlock
+        self eval: "\{ 32 + 10 } value"
+             expect: 42!
+    method testArgBlock
+        self eval: "\{ |x| x + 1 } value: 41"
+             expect: 42!
+    method testBlockClosure
+        self eval: "let block = (let x = 21. \{ x = x * 2 }).
+                    let x = 0.
+                    block value. block value"
+            expect: 84!
+    method testDefine
+        self load: "define FourtyTwoForTestDefine
+                       42!"
+             eval: "FourtyTwoForTestDefine"
+             expect: 42!
+    method testSimpleClass
+        self load: "class MyClass \{ x } end"
+             eval: "let c = MyClass x: 42. c x"
+             expect: 42.
+         self load: "class MyClass \{ x y } end"
+             eval: "let c = MyClass x: 40 y: 2. c x + c y"
+             expect: 42!
+    method testClassWithMethod
+        self load: "class MyClass \{ slot }
+                        method foo: x
+                           slot + x!
+                    end"
+             eval: "(MyClass slot: 40) foo: 2"
+             expect: 42!
+    method testClassWithPrefixMethod
+        self load: "class MyClass \{ slot }
+                        method prefix%
+                            slot * slot!
+                    end"
+             eval: "%(MyClass slot: -2)"
+             expect: 4!
+    method testTwoClasses
+        self load: "class Class1 \{ slot }
+                        method foo: x
+                           x bar + slot * 2!
+                    end
+                    class Class2 \{ slot }
+                        method bar
+                           slot!
+                        method foo: y
+                           y foo: self!
+                    end"
+             eval: "(Class2 slot: 2) foo: (Class1 slot: 20)"
+             expect: 42!
+    method testBlockInMethod
+        self load: "class ClassAA \{ slot }
+                        method capture: x
+                           \{ x }!
+                        method captureSlot
+                           \{ slot }!
+                        method capture
+                           let z = 2.
+                           \{ (self captureSlot) value + (self capture: z) value }!
+                    end
+                    class ClassBB \{ slot }
+                        method ctor: x
+                           \{ (ClassAA slot: x + slot) }!
+                        method run: x
+                           (self ctor: x * 2) value capture value!
+                    end"
+             eval: "(ClassBB slot: 20) run: 10"
+             expect: 42!
+    method testDirectMethod
+        self load: "class ClassDirectMethod \{}
+                        direct method gimme1
+                            self new gimme2!
+                        method gimme2
+                            42!
+                    end"
+             eval: "ClassDirectMethod gimme1"
+             expect: 42!
+    method testReturn
+        self load: "class ReturnTest \{}
+                        direct method test: ok
+                            ok
+                               ifTrue: \{ return 42 }.
+                            666!
+                    end"
+            eval: "ReturnTest test: True"
+            expect: 42!
+    method testComment
+        self load: "class CommentTest1 \{}
+                       method foo
+                          let x = -- boop
+                                  21.
+                          x * 2!
+                    end"
+            eval: "CommentTest1 new foo"
+            expect: 42.
+        self load: "class CommentTest2 \{}
+                       method foo
+                          let x = 21 -- boop
+                          .
+                          x * 2!
+                    end"
+            eval: "CommentTest2 new foo"
+            expect: 42!
+
+    method testAstSource
+        self load: "class SourceTest \{}
+                         method foo
+                            let x = 1 + 2.
+                            self bar: x
+                                 quux: x.
+                            self quux.
+                            self zot.
+                            2 + 3!
+                    end"
+            eval: "SourceTest new foo"
+            expectError: DoesNotUnderstand
+            where: { |e|
+                     -- FIXME: this is only for "bar:", should include the
+                     -- whole selector!
+                     e source location == (133 to: 136) } !
+
+    method testOutOfOrderDefine
+        self load: "define Two
+                       One + One!
+                    define One
+                       1!"
+            eval: "Two"
+            expect: 2!
+
+    method testOutOfOrderClasses
+        self load: "class Two \{}
+                       direct method fini
+                          42!
+                       method test
+                          One new test!
+                    end
+                    class One \{}
+                      method test
+                          Two fini!
+                    end"
+            eval: "Two new test"
+            expect: 42!
+
+    method transpile: string
+        let env = Environment new.
+        let cst = Parser parse: string.
+        let ast = cst collect: { |syntax|
+                                 SyntaxTranslator
+                                     translate: syntax
+                                     in: env }.
+        let c = CTranspiler transpile: ast in: env.
+        (system files path: "host/generated_selectors.h")
+            forWrite truncateExisting
+                createOrOpen: { |f| f writeString: c selectors }.
+        (system files path: "host/generated_blocks.c")
+            forWrite truncateExisting
+                createOrOpen: { |f| f writeString: c blocks }.
+        (system files path: "host/generated_main.c")
+            forWrite truncateExisting
+                createOrOpen: { |f| f writeString: c main }!
+
+    method testTranspile
+        self transpile: "let x = 20.
+                         let b1 = \{ x + 11 * 2 }.
+                         let b2 = \{ let x = 0. b1 value }.
+                         let x = 1.
+                         b2 value debug"!
+
+end
+
+class Main {}
+    direct method run: cmd in: system
+        system output
+            println: ((Tests runIn: system) ok
+                          ifTrue: { "All tests ok!" }
+                          ifFalse: { "Tests failed!" })!
+end

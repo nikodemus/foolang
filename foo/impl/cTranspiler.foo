@@ -1,0 +1,128 @@
+define DefaultCNames
+    let names = Dictionary new.
+    names put: "FOO_SELECTOR_add" at: "+".
+    names put: "FOO_SELECTOR_mul" at: "*".
+    names!
+
+class SelectorMap { cnames }
+    direct method new
+        self cnames: Dictionary new!
+
+    method map: selector
+        let name = selector name.
+        cnames
+            at: name
+            ifNone: { let default = self _default: name.
+                      cnames put: default at: name.
+                      default }!
+
+    method do: block
+        cnames doKeys: { |name|
+                         block
+                             value: name
+                             value: (cnames at: name) }!
+
+    method _default: name
+        DefaultCNames
+            at: name
+            ifNone: { "FOO_SELECTOR__{name}" }!
+end
+
+class CTranspiler { output selectorMap blockFunctions }
+
+    direct method transpile: ast in: env
+        let visitor = self
+                          output: StringOutput new
+                          selectorMap: SelectorMap new
+                          blockFunctions: List new.
+        visitor initContext: env allocation size.
+        ast do: { |node| node visitBy: visitor }.
+        visitor output println: ";".
+        {selectors: visitor generateSelectors,
+         blocks: visitor generateBlocks,
+         main: visitor output content}!
+
+    method initContext: frameSize
+        output
+            println: "struct FooContext* context = foo_context_new_main({frameSize}ul);"!
+
+    method generateSelectors
+        let output = StringOutput new.
+        let prev = "NULL".
+        selectorMap do: { |name cname|
+                         output print: "struct FooSelector ".
+                         output print: cname.
+                         output print: " = \{ .name = &FOO_CSTRING(".
+                         output display: name.
+                         output print: "), .next = ".
+                         output print: prev.
+                         output print: " };\n".
+                         prev = "&{cname}" }.
+        output println: "struct FooSelector* FOO_InternedSelectors = {prev};".
+        output content!
+
+    method generateBlocks
+        let output = StringOutput new.
+        blockFunctions do: { |block| output println: block }.
+        output content!
+
+    method selectorCName: selector
+        self selectorMap map: selector!
+
+    method blockCName: block
+        let output = StringOutput new.
+        -- Placeholder so that recursive entry by visitor doesn't grab the
+        -- same id.
+        blockFunctions add: False.
+        let index = blockFunctions size.
+        let cname = "foo_block_id{index}".
+        output print: "struct Foo ".
+        output print: cname.
+        output println: " (struct FooContext* context) \{".
+        output print: "return ".
+        let blockVisitor = CTranspiler
+                               output: output
+                               selectorMap: selectorMap
+                               blockFunctions: blockFunctions.
+        block body visitBy: blockVisitor.
+        output println: ";\n}".
+        blockFunctions put: output content at: index.
+        cname!
+
+    method visitConstant: value
+        (Integer includes: value)
+            ifTrue: { return output print: "foo_Integer_new({value})" }.
+        Error raise: "Don't know how to transpile constant `{value}` into C."!
+
+    method visitSend: selector to: receiver with: arguments source: source
+        output print: "foo_send(context, &".
+        output print: (self selectorCName: selector).
+        output print: ", ".
+        receiver visitBy: self.
+        output print: ", ".
+        output print: arguments size.
+        output print: "ul".
+        arguments do: { |arg|
+                        output print: ", ".
+                        arg visitBy: self }.
+        output print: ")"!
+
+    method visitBindLexical: name value: value index: index body: body
+        output print: "(\{ context->frame[{index-1}ul] = ".
+        value visitBy: self.
+        output print: ";".
+        body visitBy: self.
+        output print: "; })"!
+
+    method visitLexicalRef: name index: index frame: frame
+        output print: "foo_lexical_ref(context, {index-1}ul, {frame-1}ul)"!
+
+    method visitBlock: block
+        output print: "foo_block_new(context, ".
+        output print: (self blockCName: block).
+        output print: ", ".
+        output print: block argumentCount.
+        output print: ", ".
+        output print: block frameSize.
+        output print: ")"!
+end

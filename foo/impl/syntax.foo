@@ -1,0 +1,253 @@
+import .syntaxPrinter.SyntaxPrinter
+
+interface Syntax
+    is Object
+
+    required method visitBy: visitor
+
+    required method parts
+
+    method checkEqualInternal: other
+        self parts with: other parts
+                   do: #checkEqual:!
+
+    method isEquivalent: other
+        self parts with: other parts
+                   do: { |a b| a == b ifFalse: { return False } }.
+        True!
+
+    method toString
+        let out = StringOutput new.
+        SyntaxPrinter print: self to: out.
+        out content!
+end
+
+class SyntaxLiteral { value }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitLiteral: value!
+
+    method parts
+        [value]!
+end
+
+class SyntaxSeq { first then }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitSeqFirst: first then: then!
+
+    method parts
+        [first, then]!
+end
+
+class SyntaxReturn { value }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitReturn: value!
+
+    method parts
+        [value]!
+end
+
+class SyntaxPrefixComment { comment value source }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitPrefixComment: self comment
+                value: self value
+                source: self source!
+
+    method parts
+        -- Source left out intentionally, since it doesn't need to compere equal.
+        [self comment, self value]!
+end
+
+class SyntaxSuffixComment { comment value source }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitSuffixComment: self comment
+                value: self value
+                source: self source!
+
+    method parts
+        -- Source left out intentionally, since it doesn't need to compere equal.
+        [comment, value]!
+end
+
+class SyntaxPrefix { receiver selector source }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitPrefixMessage: selector
+                receiver: receiver
+                source: source!
+
+    method parts
+        -- Source left out intentionally, since it doesn't need to compere equal.
+        [receiver, selector]!
+end
+
+class SyntaxUnary { receiver selector source }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitUnaryMessage: selector
+                receiver: receiver
+                source: source!
+
+    method parts
+        -- Source left out intentionally, since it doesn't need to compere equal.
+        [receiver, selector]!
+end
+
+class SyntaxBinary { receiver selector argument source }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitBinaryMessage: selector
+                receiver: receiver
+                argument: argument
+                source: source!
+
+    method parts
+        -- Source left out intentionally, since it doesn't need to compere equal.
+        [receiver, selector, argument]!
+end
+
+-- FIXME: Currently multi-keyword syntax gets as source the first
+-- keyword only. Should support non-contigous source regions for this.
+class SyntaxKeyword { receiver selector arguments source }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitKeywordMessage: selector
+                receiver: receiver
+                arguments: arguments
+                source: source!
+
+    method parts
+        -- Source left out intentionally, since it doesn't need to compere equal.
+        [receiver, selector, arguments]!
+end
+
+class SyntaxIs { left right }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitIsLeft: left
+                right: right!
+
+    method parts
+        [left, right]!
+end
+
+class SyntaxLet { name value body }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitLet: name
+                value: value
+                body: body!
+
+    method parts
+        [value, name, body]!
+end
+
+class SyntaxSelf {}
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitSelf!
+
+    method parts
+        []!
+end
+
+class SyntaxVariable { name::String }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitVariable: name!
+
+    method parts
+        [name]!
+end
+
+class SyntaxAssign { variable::String value }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitAssign: value to: variable!
+
+    method parts
+        [variable, value]!
+end
+
+class SyntaxParens { body }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitParens: body!
+
+    method parts
+        [body]!
+end
+
+class SyntaxBlock { arguments body }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitBlockWith: arguments body: body!
+
+    method parts
+        [arguments, body]!
+end
+
+class SyntaxDefine { name body }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitDefine: name body: body!
+
+    method parts
+        [name, body]!
+end
+
+class SyntaxMethod { signature body }
+    is Syntax
+
+    method visitBy: visitor
+        visitor
+            visitMethodDefinition: signature
+            body: body!
+
+    method selector
+        signature selector!
+
+    method parts
+        [signature, body]!
+end
+
+class MethodSignature { selector parameters }
+    is Object
+
+    method isEquivalent: other
+        selector == other selector and: parameters == other parameters!
+end
+
+class SyntaxClass { name directMethods slots methods }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitClassDefinition: name
+                directMethods: directMethods
+                slots: slots
+                methods: methods!
+
+    method parts
+        [name, directMethods, slots, methods]!
+end

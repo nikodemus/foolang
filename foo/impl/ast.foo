@@ -1,0 +1,246 @@
+import .undefinedPolicy.UndefinedPolicy
+import .utils.Debug
+
+interface Ast
+    is Object
+
+    method debug
+        Debug println: "#<AST {self}>"!
+end
+
+define $DefinitionsInProgress
+    False!
+
+class DefinitionsInProgress { this next }
+    direct method with: definition do: block
+        let old = $DefinitionsInProgress.
+        old is False
+            ifFalse: { old checkCycle: definition }.
+        let $DefinitionsInProgress = DefinitionsInProgress this: definition next: old.
+        block value!
+
+    method checkCycle: definition
+        this is definition
+            ifTrue: { Error raise: "Cyclic definition!" }.
+        next is False
+            ifFalse: { next checkCycle: definition }!
+end
+
+interface AstDefinition
+    is Object
+
+    required method isDefined
+    required method markDefined
+    required method eval
+
+    method defineIn: environment
+        self isDefined
+            ifTrue: { (environment globals at: name) value }
+            ifFalse: { DefinitionsInProgress
+                           with: self
+                           do: { { environment define: name value: self eval }
+                                     after: { self markDefined } } } !
+end
+
+class AstDefine { name body frameSize isDefined }
+    is AstDefinition
+
+    direct method name: name body: body frameSize: frameSize
+        self name: name body: body frameSize: frameSize isDefined: False!
+
+    method markDefined
+        isDefined = True!
+
+    method eval
+        AstInterpreter evalDefine: body frameSize: frameSize!
+end
+
+class AstClass { name directMethods slots methods isDefined }
+    is AstDefinition
+
+    direct method name: name
+                  directMethods: directMethods
+                  slots: slots
+                  methods: methods
+        self
+            name: name
+            directMethods: directMethods
+            slots: slots
+            methods: methods
+            isDefined: False!
+
+    method markDefined
+        isDefined = True!
+
+    method eval
+        Class
+            new: name
+            interfaces: ["Object"]
+            directMethods: (Array from: directMethods)
+            slots: (Array from: slots)
+            methods: (Array from: methods)!
+end
+
+class AstMethod { selector argumentCount body frameSize }
+    is Object
+    method invoke: arguments on: receiver
+        AstInterpreter
+            invokeMethod: self
+            on: receiver
+            with: arguments!
+end
+
+interface AstNode
+    is Ast
+
+    required method visitBy: visitor
+end
+
+class AstComment { comment value source }
+    is AstNode
+
+    method visitBy: visitor
+        visitor
+            visitComment: comment
+            value: value
+            source: source!
+end
+
+class AstUndefinedMarker {}
+end
+
+class AstGlobal { name _value }
+    is AstNode
+
+    direct method name: name
+        self
+            name: name
+            value: AstUndefinedMarker!
+
+    direct method name: name value: value
+        self
+            name: name
+            _value: value!
+
+    method isUndefined
+        _value is AstUndefinedMarker!
+
+    method value
+        self isUndefined
+            ifTrue: { return UndefinedPolicy resolve: self name }.
+        _value!
+
+    method value: newValue
+        _value = newValue!
+
+    method visitBy: visitor
+        visitor visitGlobal: self value!
+end
+
+class AstConstantRef { value }
+    is AstNode
+
+    method visitBy: visitor
+        visitor visitConstant: value!
+end
+
+class AstIs { left right }
+    is AstNode
+
+    method visitBy: visitor
+        visitor
+            visitIsLeft: left
+            right: right!
+end
+
+class AstSeq { first then }
+    is AstNode
+
+    method visitBy: visitor
+        visitor
+            visitSeqFirst: first
+            then: then!
+end
+
+class AstReturn { value }
+    is AstNode
+
+    method visitBy: visitor
+        visitor visitReturn: value!
+end
+
+class AstSend {
+        receiver
+        selector
+        arguments
+        source
+    }
+    is AstNode
+
+    method visitBy: visitor
+        visitor
+            visitSend: selector
+            to: receiver
+            with: arguments
+            source: source!
+end
+
+class AstBlock { body argumentCount frameSize }
+    is AstNode
+
+    method visitBy: visitor
+        visitor visitBlock: self!
+end
+
+class AstSelfRef {}
+    is AstNode
+
+    method visitBy: visitor
+        visitor visitSelf!
+end
+
+class AstSlotRef { name index::Integer }
+    is AstNode
+
+    method visitBy: visitor
+        visitor
+            visitSlotRef: name
+            at: index!
+end
+
+class AstBindLexical { name index value body }
+    is AstNode
+
+    method visitBy: visitor
+        visitor
+            visitBindLexical: name
+            value: value
+            index: index
+            body: body!
+end
+
+class AstLexicalRef { name
+                      frame::Integer
+                      index::Integer }
+    is AstNode
+
+    method visitBy: visitor
+        visitor
+            visitLexicalRef: name
+            index: index
+            frame: frame!
+end
+
+class AstLexicalSet { name
+                      frame::Integer
+                      index::Integer
+                      value }
+    is AstNode
+
+    method visitBy: visitor
+        visitor
+            visitLexicalSet: name
+            value: value
+            index: index
+            frame: frame!
+end

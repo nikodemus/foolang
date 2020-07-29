@@ -7,7 +7,7 @@ type Test = Result<(), Box<dyn std::error::Error>>;
 #[test]
 fn test_self_hosted() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
-    cmd.arg("foo/foolang.foo");
+    cmd.arg("foo/impl/foolang.foo");
     cmd.assert().success().stdout("All tests ok!\n");
     Ok(())
 }
