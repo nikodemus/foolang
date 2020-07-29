@@ -291,13 +291,20 @@ with: {defSource}"!
         let c = CTranspiler transpile: ast in: env.
         (system files path: "host/generated_selectors.h")
             forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c selectors_h }.
+                createOrOpen: { |f| f writeString: c selectors }.
+        (system files path: "host/generated_blocks.c")
+            forWrite truncateExisting
+                createOrOpen: { |f| f writeString: c blocks }.
         (system files path: "host/generated_main.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f writeString: c main }!
 
     method testTranspile
-        self transpile: "let x = 20. (x + 22 * 10) debug"!
+        self transpile: "let x = 20.
+                         let b1 = \{ x + 11 * 2 }.
+                         let b2 = \{ let x = 0. b1 value }.
+                         let x = 1.
+                         b2 value debug"!
 
 end
 
