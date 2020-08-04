@@ -1,12 +1,10 @@
 # Foolang Syntax
 
-Foolang is expression oriented: every expression has a value.
-
 ## Aesthetic
 
 The syntax tries to minimize the amount of visual noise from puctuation, and be
 easy to read out loud and understand when read out loud: order of operations
-should match reading order.
+should by large match the reading order.
 
 ## Reserved Words
 
@@ -21,6 +19,9 @@ end     is      required
 This restricts their use as both messages and as variables.
 
 All other reserved words except `is` are used in prefix position.
+
+!> Current design intention is to get rid of reserved words for the most parts,
+but these still remain.
 
 ## Comments
 
@@ -88,8 +89,8 @@ Escape sequences usable in strings:
 "\{" -- open brace
 ```
 
-There are currently no character objects: the elements of a multicharacter
-string are single character strings.
+Elements of a string are characters, but there is currently no distinct character
+syntax.
 
 ## Messages
 
@@ -124,12 +125,13 @@ The above is:
 2. Message `bar` to response of message #1.
 3. Message `quux:` with argument 42 to response of message #2.
 
-Message chains with keyword messages in the middle need parenthesis.
+Message chains with keyword messages in the middle need parenthesis. (See
+Precedence Rules below.)
 
 ``` foolang
 -- Without the parenthesis "bar" would be sent to 42 and not the
 -- response of "quux:".
-(object foo quux: 42) bar 
+(object foo quux: 42) bar
 ```
 
 Similarly for chaining multiple keyword messages:
@@ -140,9 +142,8 @@ Similarly for chaining multiple keyword messages:
 (object quux: 1) quux: 2
 ```
 
-There is currently no literal selector syntax. Using a punctuation character to
-allow chaining keyword messages without parenthesis is being considered, but it
-may be that long chains of messages may be an anti-pattern.
+Using a punctuation character to allow chaining keyword messages without
+parenthesis is being considered.
 
 ## Precedence Rules
 
@@ -150,8 +151,8 @@ Unary prefix messages have the highest precedence.
 
 Unary suffix messages have the second highest precedence.
 
-Binary messages as a group have the third highest precedence. Amongst
-themselves they have conventional precedence unlike in Smalltalk:
+Binary messages as a group have the third highest precedence. Amongst themselves
+they have "conventional precedence" _unlike Smalltalk_:
 
 1. `*`
 2. `/`
@@ -160,7 +161,7 @@ themselves they have conventional precedence unlike in Smalltalk:
 5. All other non-alphabetic message operators.
 
 !> Current precedence rules and implementation is a placeholder: Foolang is
-intended to have non-transitive user-definable operator precedence.
+intended to have non-transitive user-extensible operator precedence.
 
 Keyword messages have the lowest precedence.
 
@@ -176,8 +177,8 @@ objectA foo.
 objectB bar
 ```
 
-A sequence of expressions like this is an expression that evaluates to
-the value of the last subexpression.
+A sequence of expressions like this is an expression that evaluates to the value
+of the last subexpression, ie. `objectB bar` in the example above.
 
 ?> Foolang very much wanted to use newlines as separators, but it turns out
 that that there are far too many places where a human would want to enter
@@ -217,6 +218,9 @@ Blocks can take arguments:
 { |x y| x + y } value: 40 value: 2 --> 42
 ```
 
+Blocks are evaluated in the environment they appear in, ie. they're lexical
+closures.
+
 ## Records
 
 Records are objects that respond to messages corresponding to their
@@ -229,51 +233,59 @@ coords x: 40.
 coords x + coords y --> 42
 ```
 
-!> Records are currently immutable.
+Records are immutable.
 
 ## Dictionaries
 
 ``` foolang
-let key = "foo".
-let value = "lang".
-let dict = { key -> value }.
+let dict = { "foo" -> "lang", "bar" -> "notlang" }.
 dict at: "foo" --> "lang"
-dict at: "foo" put: "Foolang".
-dict at: "foo" --> "Foolang".
+dict at: "foo" put: "Foolang"
+dict at: "foo" --> "Foolang"
 ```
-
-!> Dictionary syntax is not implemented.
 
 ## Class Definitions
 
+Classes have implicit constructors: a keyword selector corresponding to slot
+names, or `new` if the class has no slots.
+
+Methods are terminated by `!`.
+
+Direct methods operate on the class object itself. ("Static" or "class" methods
+in some other languages.)
+
 ``` foolang
 class Point { x y }
+   direct method zero
+      Point x: 0 y: 0!
    method + other
       Point x: x + other x
-            y: y + other y.
+            y: y + other y!
    method displayOn: stream
-      stream print: "#<Point {x,y}>".
+      stream print: "#<Point {x,y}>"!
 end
 ```
 
 Implicit constructor using the slot names:
 
 ``` foolang
-let p0 = Point x: 1 :y 2     --> #<Point 1,2>
+let p0 = Point x: 1 y: 2     --> #<Point 1,2>
 let p1 = Point x: 100 y: 200 --> #<Point 100,200>
 let p2 = p0 + p1             --> #<Point 101,202>
 ```
 
-Slot values are not accessible externally without
-accessor methods:
+Slot currently have automatic reader methods, unless their name is prefixed by
+`_`:
 
 ``` foolang
-p0 x --| ERROR: #<Point 1,2> does not understand x
+let p = Point x: 1 y: 2.
+p x --> 1
 ```
 
 ## Type Annotations
 
-Double-colon suffix is used for type annotations.
+Double-colon suffix is used for type annotations, along with `->` for method
+return types.
 
 ``` foolang
 expression::Type
@@ -299,7 +311,9 @@ x::T::K
 
 Are constructed using square brackets
 
+``` foolang
     let array = [1, 2, 3]
+```
 
 ## Module Import
 

@@ -13,21 +13,20 @@ has what you might generously call _somewhat optimistic aspirations_:
 - Performance of C++
 - Fault tolerance of Erlang
 
-**_"Are you there yet?"_**
+**_"Are we there yet?"_**
 
-Hah, not by a long shot.
+Nope.
 
-**_"When are you going to get there?"_**
+**_"When we going to get there?"_**
 
-Probably never: this project is more about play and exploration than burning
-midnight oil to hit a milestone.
+Someday!
 
 ## Hello World
 
 ``` foolang
 class Main {}
     direct method run: command in: system
-        system output println: "Hello world!"!
+        system output println: "Hello world"!
 end
 ```
 
