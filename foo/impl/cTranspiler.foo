@@ -108,11 +108,11 @@ class CTranspiler { output selectorMap blockFunctions }
                         arg visitBy: self }.
         output print: ")"!
 
-    method visitBindLexical: name value: value index: index body: body
-        output print: "(\{ context->frame[{index-1}ul] = ".
-        value visitBy: self.
+    method visitBindLexical: bindExpr
+        output print: "(\{ context->frame[{bindExpr index - 1}ul] = ".
+        bindExpr value visitBy: self.
         output print: ";".
-        body visitBy: self.
+        bindExpr body visitBy: self.
         output print: "; })"!
 
     method visitLexicalRef: name index: index frame: frame

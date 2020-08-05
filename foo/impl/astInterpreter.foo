@@ -173,12 +173,12 @@ class AstInterpreter { context process }
     method visitSlotRef: slotExpr
         context slot: slotExpr index!
 
-    method visitBindLexical: name value: value index: index body: body
+    method visitBindLexical: bindExpr
         context
-            put: (value visitBy: self)
-            at: index
+            put: (bindExpr value visitBy: self)
+            at: bindExpr index
             inFrame: 1.
-        body visitBy: self!
+        bindExpr body visitBy: self!
 
     method visitLexicalRef: name index: index frame: frame
         context at: index inFrame: frame!

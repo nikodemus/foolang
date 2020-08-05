@@ -199,11 +199,7 @@ class AstBindLexical { name index value body }
     is AstNode
 
     method visitBy: visitor
-        visitor
-            visitBindLexical: name
-            value: value
-            index: index
-            body: body!
+        visitor visitBindLexical: self!
 end
 
 class AstLexicalRef { name
