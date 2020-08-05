@@ -36,7 +36,7 @@ class SyntaxSeq { first then }
     is Syntax
 
     method visitBy: visitor
-        visitor visitSeqFirst: first then: then!
+        visitor visitSeq: self!
 
     method parts
         [first, then]!

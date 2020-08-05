@@ -48,11 +48,11 @@ class SyntaxPrinter { output indent printed blockStart }
     method visitLiteral: aLiteral
         self print: aLiteral value toString!
 
-    method visitSeqFirst: first then: then
+    method visitSeq: aSeq
         self handleBlockStart.
-        first visitBy: self.
+        aSeq first visitBy: self.
         self println: ".".
-        then visitBy: self!
+        aSeq then visitBy: self!
 
     method visitReturn: value
         self print: "return ".

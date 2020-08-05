@@ -14,11 +14,11 @@ class SyntaxTranslator { env }
     method visitLiteral: aLiteral
         AstConstantRef value: aLiteral value!
 
-    method visitSeqFirst: first then: then
+    method visitSeq: aSeq
         -- FIXME: Would be nicer to flatten this out.
         AstSeq
-            first: (first visitBy: self)
-            then: (then visitBy: self)!
+            first: (aSeq first visitBy: self)
+            then: (aSeq then visitBy: self)!
 
     method visitReturn: syntax
         AstReturn
