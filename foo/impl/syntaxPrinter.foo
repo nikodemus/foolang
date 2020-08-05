@@ -79,12 +79,12 @@ class SyntaxPrinter { output indent printed blockStart }
         self print: " ".
         self print: aMessage selector name!
 
-    method visitBinaryMessage: selector receiver: receiver argument: argument source: source
-        receiver visitBy: self.
+    method visitBinaryMessage: aMessage
+        aMessage receiver visitBy: self.
         self print: " ".
-        self print: selector name.
+        self print: aMessage selector name.
         self print: " ".
-        argument visitBy: self!
+        aMessage argument visitBy: self!
 
     method visitKeywordMessage: selector receiver: receiver arguments: arguments source: source
         receiver visitBy: self.

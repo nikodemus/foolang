@@ -8,7 +8,7 @@ interface SyntaxVisitor
     required method visitLet: aLet
     required method visitPrefixMessage: aMessage
     required method visitUnaryMessage: aMessage
-    required method visitBinaryMessage: selector receiver: receiver argument: argument source: source
+    required method visitBinaryMessage: aMessage
     required method visitKeywordMessage: selector receiver: receiver arguments: arguments source: source
     required method visitIsLeft: left right: right
     required method visitSelf

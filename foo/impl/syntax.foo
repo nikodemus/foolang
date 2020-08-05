@@ -100,10 +100,7 @@ class SyntaxBinary { receiver selector argument source }
     is Syntax
 
     method visitBy: visitor
-        visitor visitBinaryMessage: selector
-                receiver: receiver
-                argument: argument
-                source: source!
+        visitor visitBinaryMessage: self!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
