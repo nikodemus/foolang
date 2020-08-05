@@ -128,8 +128,8 @@ class AstInterpreter { context process }
     method visitConstant: constant
         constant value!
 
-    method visitGlobal: value
-        value!
+    method visitGlobal: global
+        global value!
 
     method visitIsLeft: left right: right
         (left visitBy: self) is (right visitBy: self)!

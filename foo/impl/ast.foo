@@ -134,7 +134,7 @@ class AstGlobal { name _value }
         _value = newValue!
 
     method visitBy: visitor
-        visitor visitGlobal: self value!
+        visitor visitGlobal: self!
 end
 
 class AstConstantRef { value }

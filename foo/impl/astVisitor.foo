@@ -1,6 +1,6 @@
 interface AstVisitor
     required method visitConstant: constant
-    required method visitGlobal: value
+    required method visitGlobal: global
     required method visitIsLeft: left right: right
     required method visitSeqFirst: first then: then
     required method visitReturn: value
