@@ -138,8 +138,8 @@ class AstInterpreter { context process }
         seqExpr first visitBy: self.
         seqExpr then visitBy: self!
 
-    method visitReturn: value
-        context returnBlock value: (value visitBy: self)!
+    method visitReturn: returnExpr
+        context returnBlock value: (returnExpr value visitBy: self)!
 
     method visitSend: selector to: receiver with: arguments source: source
         let object = receiver visitBy: self.

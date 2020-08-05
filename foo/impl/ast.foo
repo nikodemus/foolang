@@ -162,7 +162,7 @@ class AstReturn { value }
     is AstNode
 
     method visitBy: visitor
-        visitor visitReturn: value!
+        visitor visitReturn: self!
 end
 
 class AstSend {

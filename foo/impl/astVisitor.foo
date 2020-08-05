@@ -3,7 +3,7 @@ interface AstVisitor
     required method visitGlobal: globalExpr
     required method visitIs: isExpr
     required method visitSeq: seqExpr
-    required method visitReturn: value
+    required method visitReturn: returnExpr
     required method visitSend: selector to: receiver with: arguments source: source
     required method visitComment: comment value: value source: source
     required method visitBlock: block
