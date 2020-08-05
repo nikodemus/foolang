@@ -58,11 +58,11 @@ class SyntaxPrinter { output indent printed blockStart }
         self print: "return ".
         aReturn value visitBy: self!
 
-    method visitPrefixComment: comment value: value source: source
+    method visitPrefixComment: aComment
         self handleBlockStart.
         self print: "--".
-        self println: comment.
-        value visitBy: self indentBody!
+        self println: aComment comment.
+        aComment value visitBy: self indentBody!
 
     method visitSuffixComment: comment value: value source: source
         self handleBlockStart.

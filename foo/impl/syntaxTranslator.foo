@@ -23,10 +23,11 @@ class SyntaxTranslator { env }
     method visitReturn: aReturn
         AstReturn value: (aReturn value visitBy: self)!
 
-    method visitPrefixComment: comment value: value source: source
-        AstComment comment: comment
-                   value: (value visitBy: self)
-                   source: source!
+    method visitPrefixComment: aComment
+        AstComment
+            comment: aComment comment
+            value: (aComment value visitBy: self)
+            source: aComment source!
 
     method visitSuffixComment: comment value: value source: source
         AstComment comment: comment

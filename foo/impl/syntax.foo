@@ -56,9 +56,7 @@ class SyntaxPrefixComment { comment value source }
     is Syntax
 
     method visitBy: visitor
-        visitor visitPrefixComment: self comment
-                value: self value
-                source: self source!
+        visitor visitPrefixComment: self!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
