@@ -9,7 +9,7 @@ interface SyntaxVisitor
     required method visitPrefixMessage: aMessage
     required method visitUnaryMessage: aMessage
     required method visitBinaryMessage: aMessage
-    required method visitKeywordMessage: selector receiver: receiver arguments: arguments source: source
+    required method visitKeywordMessage: aMessage
     required method visitIsLeft: left right: right
     required method visitSelf
     required method visitVariable: name

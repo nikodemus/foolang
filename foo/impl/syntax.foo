@@ -113,10 +113,7 @@ class SyntaxKeyword { receiver selector arguments source }
     is Syntax
 
     method visitBy: visitor
-        visitor visitKeywordMessage: selector
-                receiver: receiver
-                arguments: arguments
-                source: source!
+        visitor visitKeywordMessage: self!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.

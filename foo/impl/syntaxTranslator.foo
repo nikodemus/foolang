@@ -64,12 +64,12 @@ class SyntaxTranslator { env }
             arguments: [aMessage argument visitBy: self]
             source: aMessage source!
 
-    method visitKeywordMessage: selector receiver: receiver arguments: arguments source: source
-        AstSend receiver: (receiver visitBy: self)
-                selector: selector
-                arguments: (arguments
-                                collect: { |arg|  arg visitBy: self })
-                source: source!
+    method visitKeywordMessage: aMessage
+        AstSend
+            receiver: (aMessage receiver visitBy: self)
+            selector: aMessage selector
+            arguments: (aMessage arguments collect: { |arg| arg visitBy: self })
+            source: aMessage source!
 
     method visitIsLeft: left right: right
         AstIs left: (left visitBy: self)

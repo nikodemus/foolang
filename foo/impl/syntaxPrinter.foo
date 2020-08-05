@@ -86,10 +86,10 @@ class SyntaxPrinter { output indent printed blockStart }
         self print: " ".
         aMessage argument visitBy: self!
 
-    method visitKeywordMessage: selector receiver: receiver arguments: arguments source: source
-        receiver visitBy: self.
-        selector parts
-            with: arguments
+    method visitKeywordMessage: aMessage
+        aMessage receiver visitBy: self.
+        aMessage selector parts
+            with: aMessage arguments
             do: { |part arg|
                   self print: " ".
                   self print: part.
