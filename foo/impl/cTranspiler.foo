@@ -89,42 +89,42 @@ class CTranspiler { output selectorMap blockFunctions }
         blockFunctions put: output content at: index.
         cname!
 
-    method visitConstant: constant
-        let value = constant value.
+    method visitConstant: aConstant
+        let value = aConstant value.
         (Integer includes: value)
             ifTrue: { return output print: "foo_Integer_new({value})" }.
         Error raise: "Don't know how to transpile constant `{value}` into C."!
 
-    method visitSend: sendExpr
+    method visitSend: aSend
         output print: "foo_send(context, &".
-        output print: (self selectorCName: sendExpr selector).
+        output print: (self selectorCName: aSend selector).
         output print: ", ".
-        sendExpr receiver visitBy: self.
+        aSend receiver visitBy: self.
         output print: ", ".
-        output print: sendExpr arguments size.
+        output print: aSend arguments size.
         output print: "ul".
-        sendExpr arguments do: { |arg|
-                        output print: ", ".
-                        arg visitBy: self }.
+        aSend arguments
+            do: { |arg|
+                  output print: ", ".
+                  arg visitBy: self }.
         output print: ")"!
 
-    method visitBindLexical: bindExpr
-        output print: "(\{ context->frame[{bindExpr index - 1}ul] = ".
-        bindExpr value visitBy: self.
+    method visitBindLexical: aBind
+        output print: "(\{ context->frame[{aBind index - 1}ul] = ".
+        aBind value visitBy: self.
         output print: ";".
-        bindExpr body visitBy: self.
+        aBind body visitBy: self.
         output print: "; })"!
 
-    method visitLexicalRef: refExpr
-        -- name index: index frame: frame
-        output print: "foo_lexical_ref(context, {refExpr index -1}ul, {refExpr frame - 1}ul)"!
+    method visitLexicalRef: aRef
+        output print: "foo_lexical_ref(context, {aRef index -1}ul, {aRef frame - 1}ul)"!
 
-    method visitBlock: block
+    method visitBlock: aBlock
         output print: "foo_block_new(context, ".
-        output print: (self blockCName: block).
+        output print: (self blockCName: aBlock).
         output print: ", ".
-        output print: block argumentCount.
+        output print: aBlock argumentCount.
         output print: ", ".
-        output print: block frameSize.
+        output print: aBlock frameSize.
         output print: ")"!
 end

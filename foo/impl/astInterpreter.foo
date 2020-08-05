@@ -125,26 +125,26 @@ class AstInterpreter { context process }
         { AstInterpreter eval: astMethod body with: context }
             finally: { context invalidate } !
 
-    method visitConstant: constant
-        constant value!
+    method visitConstant: aConstant
+        aConstant value!
 
-    method visitGlobal: global
-        global value!
+    method visitGlobal: aGlobal
+        aGlobal value!
 
-    method visitIs: isExpr
-        (isExpr left visitBy: self) is (isExpr right visitBy: self)!
+    method visitIs: anIs
+        (anIs left visitBy: self) is (anIs right visitBy: self)!
 
-    method visitSeq: seqExpr
-        seqExpr first visitBy: self.
-        seqExpr then visitBy: self!
+    method visitSeq: aSeq
+        aSeq first visitBy: self.
+        aSeq then visitBy: self!
 
-    method visitReturn: returnExpr
-        context returnBlock value: (returnExpr value visitBy: self)!
+    method visitReturn: aReturn
+        context returnBlock value: (aReturn value visitBy: self)!
 
-    method visitSend: sendExpr
-        let selector = sendExpr selector.
-        let object = sendExpr receiver visitBy: self.
-        let arguments = sendExpr arguments collect: { |arg| arg visitBy: self }.
+    method visitSend: aSend
+        let selector = aSend selector.
+        let object = aSend receiver visitBy: self.
+        let arguments = aSend arguments collect: { |arg| arg visitBy: self }.
         let $context = context.
         let $process = process.
         -- Debug println: "<- {selector}".
@@ -157,38 +157,37 @@ class AstInterpreter { context process }
                                     raise: selector
                                     with: arguments
                                     on: object
-                                    source: sendExpr source }} !
+                                    source: aSend source }} !
 
-    method visitComment: commentExpr
-        commentExpr value visitBy: self!
+    method visitComment: aComment
+        aComment value visitBy: self!
 
-    method visitBlock: block
+    method visitBlock: aBlock
         AstBlockClosure
             context: context
-            block: block!
+            block: aBlock!
 
-    method visitSelf: selfExpr
+    method visitSelf: aSelf
         context receiver!
 
-    method visitSlotRef: slotExpr
-        context slot: slotExpr index!
+    method visitSlotRef: aSlotRef
+        context slot: aSlotRef index!
 
-    method visitBindLexical: bindExpr
+    method visitBindLexical: aBind
         context
-            put: (bindExpr value visitBy: self)
-            at: bindExpr index
+            put: (aBind value visitBy: self)
+            at: aBind index
             inFrame: 1.
-        bindExpr body visitBy: self!
+        aBind body visitBy: self!
 
-    method visitLexicalRef: refExpr
+    method visitLexicalRef: aRef
         context
-            at: refExpr index
-            inFrame: refExpr frame!
+            at: aRef index
+            inFrame: aRef frame!
 
-
-    method visitLexicalSet: setExpr
+    method visitLexicalSet: aSet
         context
-            put: (setExpr value visitBy: self)
-            at: setExpr index
-            inFrame: setExpr frame!
+            put: (aSet value visitBy: self)
+            at: aSet index
+            inFrame: aSet frame!
 end
