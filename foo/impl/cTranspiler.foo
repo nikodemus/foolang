@@ -35,7 +35,7 @@ class CTranspiler { output selectorMap blockFunctions }
                           output: StringOutput new
                           selectorMap: SelectorMap new
                           blockFunctions: List new.
-        visitor initContext: env allocation size.
+        visitor initContext: env frame size.
         ast do: { |node| node visitBy: visitor }.
         visitor output println: ";".
         {selectors: visitor generateSelectors,
@@ -110,14 +110,14 @@ class CTranspiler { output selectorMap blockFunctions }
         output print: ")"!
 
     method visitBindLexical: aBind
-        output print: "(\{ context->frame[{aBind index - 1}ul] = ".
+        output print: "(\{ context->frame[{aBind variable index - 1}ul] = ".
         aBind value visitBy: self.
         output print: ";".
         aBind body visitBy: self.
         output print: "; })"!
 
     method visitLexicalRef: aRef
-        output print: "foo_lexical_ref(context, {aRef index -1}ul, {aRef frame - 1}ul)"!
+        output print: "foo_lexical_ref(context, {aRef variable index - 1}ul, {aRef frameOffset}ul)"!
 
     method visitBlock: aBlock
         output print: "foo_block_new(context, ".

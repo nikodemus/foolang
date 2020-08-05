@@ -188,33 +188,28 @@ class AstSelfRef {}
         visitor visitSelf: self!
 end
 
-class AstSlotRef { name index::Integer }
+class AstSlotRef { slot }
     is AstNode
 
     method visitBy: visitor
         visitor visitSlotRef: self!
 end
 
-class AstBindLexical { name index value body }
+class AstBindLexical { variable value body }
     is AstNode
 
     method visitBy: visitor
         visitor visitBindLexical: self!
 end
 
-class AstLexicalRef { name
-                      frame::Integer
-                      index::Integer }
+class AstLexicalRef { variable frameOffset::Integer }
     is AstNode
 
     method visitBy: visitor
         visitor visitLexicalRef: self!
 end
 
-class AstLexicalSet { name
-                      frame::Integer
-                      index::Integer
-                      value }
+class AstLexicalSet { variable frameOffset::Integer value }
     is AstNode
 
     method visitBy: visitor
