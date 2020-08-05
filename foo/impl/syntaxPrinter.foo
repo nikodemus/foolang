@@ -101,14 +101,14 @@ class SyntaxPrinter { output indent printed blockStart }
         self print: " is ".
         right visitBy: self!
 
-    method visitLet: name value: value body: body
+    method visitLet: aLet
         self handleBlockStart.
         self print: "let ".
-        self print: name.
+        self print: aLet name.
         self print: " = ".
-        value visitBy: self.
+        aLet value visitBy: self.
         self println: ".".
-        body visitBy: self!
+        aLet body visitBy: self!
 
     method visitSelf
         self print: "self"!

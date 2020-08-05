@@ -35,13 +35,13 @@ class SyntaxTranslator { env }
             value: (aComment value visitBy: self)
             source: aComment source!
 
-    method visitLet: name value: value body: body
-        let bodyVisitor = self addVariable: name.
+    method visitLet: aLet
+        let bodyVisitor = self addVariable: aLet name.
         AstBindLexical
-            name: name
+            name: aLet name
             index: bodyVisitor env allocation index
-            value: (value visitBy: self)
-            body: (body visitBy: bodyVisitor)!
+            value: (aLet value visitBy: self)
+            body: (aLet body visitBy: bodyVisitor)!
 
     method visitPrefixMessage: selector receiver: receiver source: source
         AstSend receiver: (receiver visitBy: self)

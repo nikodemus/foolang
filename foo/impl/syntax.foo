@@ -145,9 +145,7 @@ class SyntaxLet { name value body }
     is Syntax
 
     method visitBy: visitor
-        visitor visitLet: name
-                value: value
-                body: body!
+        visitor visitLet: self!
 
     method parts
         [value, name, body]!
