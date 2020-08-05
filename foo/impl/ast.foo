@@ -208,10 +208,7 @@ class AstLexicalRef { name
     is AstNode
 
     method visitBy: visitor
-        visitor
-            visitLexicalRef: name
-            index: index
-            frame: frame!
+        visitor visitLexicalRef: self!
 end
 
 class AstLexicalSet { name

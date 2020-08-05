@@ -115,8 +115,9 @@ class CTranspiler { output selectorMap blockFunctions }
         bindExpr body visitBy: self.
         output print: "; })"!
 
-    method visitLexicalRef: name index: index frame: frame
-        output print: "foo_lexical_ref(context, {index-1}ul, {frame-1}ul)"!
+    method visitLexicalRef: refExpr
+        -- name index: index frame: frame
+        output print: "foo_lexical_ref(context, {refExpr index -1}ul, {refExpr frame - 1}ul)"!
 
     method visitBlock: block
         output print: "foo_block_new(context, ".

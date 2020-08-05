@@ -180,8 +180,8 @@ class AstInterpreter { context process }
             inFrame: 1.
         bindExpr body visitBy: self!
 
-    method visitLexicalRef: name index: index frame: frame
-        context at: index inFrame: frame!
+    method visitLexicalRef: refExpr
+        context at: refExpr index inFrame: refExpr frame!
 
 
     method visitLexicalSet: name value: value index: index frame: frame

@@ -10,6 +10,6 @@ interface AstVisitor
     required method visitSelf
     required method visitSlotRef: slotExpr
     required method visitBindLexical: bindExpr
-    required method visitLexicalRef: name index: index frame: frame
+    required method visitLexicalRef: refExpr
     required method visitLexicalSet: name value: value index: index frame: frame
 end
