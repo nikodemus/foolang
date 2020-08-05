@@ -82,13 +82,13 @@ class SyntaxTranslator { env }
     method visitVariable: aVariable
         env reference: aVariable name!
 
-    method visitAssign: value to: variable
-        let binding = env reference: variable name.
+    method visitAssign: anAssign
+        let binding = env reference: anAssign variable name.
         AstLexicalSet
-            name: variable name
+            name: anAssign variable name
             frame: binding frame :: Integer
             index: binding index :: Integer
-            value: (value visitBy: self)!
+            value: (anAssign value visitBy: self)!
 
     method visitParens: body
         body visitBy: self!

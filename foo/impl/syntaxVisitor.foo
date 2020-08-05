@@ -13,7 +13,7 @@ interface SyntaxVisitor
     required method visitIs: anIs
     required method visitSelf: aSelf
     required method visitVariable: aVariable
-    required method visitAssign: value to: variable
+    required method visitAssign: anAssign
     required method visitParens: body
     required method visitBlockWith: parameters body: body
     required method visitDefine: name body: body

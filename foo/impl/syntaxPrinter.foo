@@ -116,10 +116,10 @@ class SyntaxPrinter { output indent printed blockStart }
     method visitVariable: aVariable
         self print: aVariable name!
 
-    method visitAssign: value to: variable
-        self print: variable name.
+    method visitAssign: anAssign
+        self print: anAssign variable name.
         self print: " = ".
-        value visitBy: self!
+        anAssign value visitBy: self!
 
     method visitParens: body
         self print: "(".

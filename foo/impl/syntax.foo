@@ -164,7 +164,7 @@ class SyntaxAssign { variable::String value }
     is Syntax
 
     method visitBy: visitor
-        visitor visitAssign: value to: variable!
+        visitor visitAssign: self!
 
     method parts
         [variable, value]!
