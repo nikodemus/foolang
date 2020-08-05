@@ -116,13 +116,13 @@ class SyntaxTranslator { env }
             body: (aMethod body visitBy: (SyntaxTranslator env: bodyEnv))
             frameSize: bodyEnv allocation size!
 
-    method visitClassDefinition: name directMethods: directMethods slots: slots methods: methods
-        let astDirectMethods = directMethods collect: { |m| m visitBy: self }.
-        let instanceMethodVisitor = SyntaxTranslator env: (env addSlots: slots).
-        let astMethods = methods collect: { |m| m visitBy: instanceMethodVisitor }.
+    method visitClass: aClass
+        let instanceMethodVisitor = SyntaxTranslator env: (env addSlots: aClass slots).
         AstClass
-            name: name
-            directMethods: astDirectMethods
-            slots: slots
-            methods: astMethods!
+            name: aClass name
+            directMethods: (aClass directMethods
+                                collect: { |m| m visitBy: self })
+            slots: aClass slots
+            methods: (aClass methods
+                          collect: { |m| m visitBy: instanceMethodVisitor })!
 end

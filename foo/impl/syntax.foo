@@ -224,10 +224,7 @@ class SyntaxClass { name directMethods slots methods }
     is Syntax
 
     method visitBy: visitor
-        visitor visitClassDefinition: name
-                directMethods: directMethods
-                slots: slots
-                methods: methods!
+        visitor visitClass: self!
 
     method parts
         [name, directMethods, slots, methods]!

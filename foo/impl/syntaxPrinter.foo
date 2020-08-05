@@ -162,23 +162,27 @@ class SyntaxPrinter { output indent printed blockStart }
         aMethod body visitBy: bodyVisitor.
         self print: "!"!
 
-    method visitClassDefinition: name directMethods: directMethods slots: slots methods: methods
+    method visitClass: aClass
         self print: "class ".
-        self print: name.
+        self print: aClass name.
         self print: " \{".
-        slots ifNotEmpty: { self print: " ".
-                            slots do: { |slot|
-                                        self print: slot.
-                                        self print: " " } }.
+        aClass slots
+            ifNotEmpty: { self print: " ".
+                          aClass slots
+                              do: { |slot|
+                                    self print: slot.
+                                    self print: " " }}.
         self print: "}".
         let methodVisitor = self indentBody.
-        directMethods do: { |m|
-                            methodVisitor println: "".
-                            methodVisitor print: "direct ".
-                            m visitBy: methodVisitor }.
-        methods do: { |m|
-                      methodVisitor println: "".
-                      m visitBy: methodVisitor }.
+        aClass directMethods
+            do: { |m|
+                  methodVisitor println: "".
+                  methodVisitor print: "direct ".
+                  m visitBy: methodVisitor }.
+        aClass methods
+            do: { |m|
+                  methodVisitor println: "".
+                  m visitBy: methodVisitor }.
         self println: "".
         self println: "end"!
 end

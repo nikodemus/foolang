@@ -18,6 +18,6 @@ interface SyntaxVisitor
     required method visitBlock: aBlock
     required method visitDefine: aDefine
     required method visitMethod: aMethod
-    required method visitClassDefinition: name directMethods: directMethods slots: slots methods: methods
+    required method visitClass: aClass
 end
 
