@@ -78,9 +78,7 @@ class SyntaxPrefix { receiver selector source }
     is Syntax
 
     method visitBy: visitor
-        visitor visitPrefixMessage: selector
-                receiver: receiver
-                source: source!
+        visitor visitPrefixMessage: self!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.

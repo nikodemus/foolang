@@ -70,9 +70,9 @@ class SyntaxPrinter { output indent printed blockStart }
         self print: " --".
         self println: aComment comment!
 
-    method visitPrefixMessage: selector receiver: receiver source: source
-        self print: selector name.
-        receiver visitBy: self!
+    method visitPrefixMessage: aMessage
+        self print: aMessage selector name.
+        aMessage receiver visitBy: self!
 
     method visitUnaryMessage: selector receiver: receiver source: source
         receiver visitBy: self.

@@ -6,7 +6,7 @@ interface SyntaxVisitor
     required method visitPrefixComment: aComment
     required method visitSuffixComment: aComment
     required method visitLet: aLet
-    required method visitPrefixMessage: selector receiver: receiver source: source
+    required method visitPrefixMessage: aMessage
     required method visitUnaryMessage: selector receiver: receiver source: source
     required method visitBinaryMessage: selector receiver: receiver argument: argument source: source
     required method visitKeywordMessage: selector receiver: receiver arguments: arguments source: source
