@@ -50,11 +50,11 @@ class SyntaxTranslator { env }
             arguments: []
             source: aMessage source!
 
-    method visitUnaryMessage: selector receiver: receiver source: source
-        AstSend receiver: (receiver visitBy: self)
-                selector: selector
+    method visitUnaryMessage: aMessage
+        AstSend receiver: (aMessage receiver visitBy: self)
+                selector: aMessage selector
                 arguments: []
-                source: source!
+                source: aMessage source!
 
     method visitBinaryMessage: selector receiver: receiver argument: argument source: source
         AstSend receiver: (receiver visitBy: self)

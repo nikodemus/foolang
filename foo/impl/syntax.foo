@@ -89,9 +89,7 @@ class SyntaxUnary { receiver selector source }
     is Syntax
 
     method visitBy: visitor
-        visitor visitUnaryMessage: selector
-                receiver: receiver
-                source: source!
+        visitor visitUnaryMessage: self!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
