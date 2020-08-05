@@ -159,8 +159,8 @@ class AstInterpreter { context process }
                                     on: object
                                     source: sendExpr source }} !
 
-    method visitComment: comment value: value source: source
-        value visitBy: self!
+    method visitComment: commentExpr
+        commentExpr value visitBy: self!
 
     method visitBlock: block
         AstBlockClosure

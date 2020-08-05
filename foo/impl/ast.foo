@@ -100,10 +100,7 @@ class AstComment { comment value source }
     is AstNode
 
     method visitBy: visitor
-        visitor
-            visitComment: comment
-            value: value
-            source: source!
+        visitor visitComment: self!
 end
 
 class AstUndefinedMarker {}

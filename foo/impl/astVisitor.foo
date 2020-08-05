@@ -5,7 +5,7 @@ interface AstVisitor
     required method visitSeq: seqExpr
     required method visitReturn: returnExpr
     required method visitSend: sendExpr
-    required method visitComment: comment value: value source: source
+    required method visitComment: commentExpr
     required method visitBlock: block
     required method visitSelf
     required method visitSlotRef: name at: index
