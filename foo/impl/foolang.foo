@@ -23,7 +23,6 @@ class Tests { system ok }
     method run
         self
             ; test: #testTranspile
-            ---
             ; test: #test42
             ; test: #testPlus
             ; test: #testPrecedence
@@ -51,7 +50,6 @@ class Tests { system ok }
             ; test: #testAstSource
             ; test: #testOutOfOrderDefine
             ; test: #testOutOfOrderClasses
-            ---
                .
         self!
 
