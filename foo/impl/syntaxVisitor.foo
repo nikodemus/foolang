@@ -15,7 +15,7 @@ interface SyntaxVisitor
     required method visitVariable: aVariable
     required method visitAssign: anAssign
     required method visitParens: aParens
-    required method visitBlockWith: parameters body: body
+    required method visitBlock: aBlock
     required method visitDefine: name body: body
     required method visitMethodDefinition: signature body: body
     required method visitClassDefinition: name directMethods: directMethods slots: slots methods: methods

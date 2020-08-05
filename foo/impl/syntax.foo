@@ -180,14 +180,14 @@ class SyntaxParens { body }
         [body]!
 end
 
-class SyntaxBlock { arguments body }
+class SyntaxBlock { parameters body }
     is Syntax
 
     method visitBy: visitor
-        visitor visitBlockWith: arguments body: body!
+        visitor visitBlock: self!
 
     method parts
-        [arguments, body]!
+        [parameters, body]!
 end
 
 class SyntaxDefine { name body }

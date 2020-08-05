@@ -126,15 +126,16 @@ class SyntaxPrinter { output indent printed blockStart }
         aParens body visitBy: self indentHere.
         self print: ")"!
 
-    method visitBlockWith: parameters body: body
+    method visitBlock: aBlock
         self print: "\{ ".
         let bodyPrinter = self indentBlock.
-        parameters
+        aBlock parameters
             ifNotEmpty: { self print: "|".
-                          parameters do: { |param| self print: param }
-                                     interleaving: { self print: " " }.
+                          aBlock parameters
+                              do: { |param| self print: param }
+                              interleaving: { self print: " " }.
                           self print: "| " }.
-        body visitBy: bodyPrinter.
+        aBlock body visitBy: bodyPrinter.
         self print: " }"!
 
     method visitDefine: name body: body

@@ -93,12 +93,12 @@ class SyntaxTranslator { env }
     method visitParens: aParens
         aParens body visitBy: self!
 
-    method visitBlockWith: parameters body: body
-        let bodyEnv = env newFrame addVariables: parameters.
+    method visitBlock: aBlock
+        let bodyEnv = env newFrame addVariables: aBlock parameters.
         AstBlock
-            body: (body visitBy: (SyntaxTranslator env: bodyEnv))
-            argumentCount: parameters size
-            frameSize: parameters size + bodyEnv allocation size!
+            body: (aBlock body visitBy: (SyntaxTranslator env: bodyEnv))
+            argumentCount: aBlock parameters size
+            frameSize: aBlock parameters size + bodyEnv allocation size!
 
     method visitDefine: name body: body
         -- FIXME: Is this right?? Should body not gets an environment of its own?
