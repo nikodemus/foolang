@@ -9,6 +9,9 @@ extend Boolean
     method assert: what
         self ifFalse: { panic "{what} assertion failed!" }!
 
+    method assert
+        self ifFalse: { panic "assertion failed!" }!
+
     method == other -> Boolean
         self is other!
 

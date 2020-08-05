@@ -37,9 +37,10 @@ class SyntaxTranslator { env }
 
     method visitLet: aLet
         let bodyVisitor = self addVariable: aLet name.
+        let var = bodyVisitor env bindings first.
+        (var name == aLet name) assert.
         AstBindLexical
-            name: aLet name
-            index: bodyVisitor env allocation index
+            variable: var
             value: (aLet value visitBy: self)
             body: (aLet body visitBy: bodyVisitor)!
 
@@ -85,9 +86,8 @@ class SyntaxTranslator { env }
     method visitAssign: anAssign
         let binding = env reference: anAssign variable name.
         AstLexicalSet
-            name: anAssign variable name
-            frame: binding frame :: Integer
-            index: binding index :: Integer
+            variable: binding variable
+            frameOffset: binding frameOffset :: Integer
             value: (anAssign value visitBy: self)!
 
     method visitParens: aParens
@@ -98,14 +98,14 @@ class SyntaxTranslator { env }
         AstBlock
             body: (aBlock body visitBy: (SyntaxTranslator env: bodyEnv))
             argumentCount: aBlock parameters size
-            frameSize: aBlock parameters size + bodyEnv allocation size!
+            frameSize: bodyEnv frame size!
 
     method visitDefine: aDefine
         let bodyVisitor = SyntaxTranslator env: env newFrame.
         AstDefine
             name: aDefine name
             body: (aDefine body visitBy: bodyVisitor)
-            frameSize: bodyVisitor env allocation size!
+            frameSize: bodyVisitor env frame size!
 
     method visitMethod: aMethod
         let signature = aMethod signature.
@@ -114,7 +114,7 @@ class SyntaxTranslator { env }
             selector: signature selector name -- FIXME: should pass in whole selector
             argumentCount: signature parameters size
             body: (aMethod body visitBy: (SyntaxTranslator env: bodyEnv))
-            frameSize: bodyEnv allocation size!
+            frameSize: bodyEnv frame size!
 
     method visitClass: aClass
         let instanceMethodVisitor = SyntaxTranslator env: (env addSlots: aClass slots).

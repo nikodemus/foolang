@@ -45,12 +45,12 @@ class InterpreterContext {
         receiver __slot: (index - 1)!
 
     method at: index inFrame: frameNumber
-        frameNumber > 1
+        frameNumber > 0
             ifTrue: { sender at: index inFrame: frameNumber - 1 }
             ifFalse: { frame at: index }!
 
     method put: value at: index inFrame: frameNumber
-        frameNumber > 1
+        frameNumber > 0
             ifTrue: { sender put: value at: index inFrame: frameNumber - 1 }
             ifFalse: { frame put: value at: index }!
 end
@@ -89,7 +89,7 @@ class AstInterpreter { context process }
     direct method eval: ast inEnv: env
         self
             eval: ast
-            with: (InterpreterContext new: env allocation size)
+            with: (InterpreterContext new: env frame size)
             in: Process new!
 
     direct method eval: ast with: context
@@ -163,6 +163,7 @@ class AstInterpreter { context process }
         aComment value visitBy: self!
 
     method visitBlock: aBlock
+        -- Debug println: "\nblock args: {aBlock argumentCount}, size: {aBlock frameSize}".
         AstBlockClosure
             context: context
             block: aBlock!
@@ -171,23 +172,25 @@ class AstInterpreter { context process }
         context receiver!
 
     method visitSlotRef: aSlotRef
-        context slot: aSlotRef index!
+        context slot: aSlotRef slot index!
 
     method visitBindLexical: aBind
         context
             put: (aBind value visitBy: self)
-            at: aBind index
-            inFrame: 1.
+            at: aBind variable index
+            inFrame: 0.
         aBind body visitBy: self!
 
     method visitLexicalRef: aRef
+        -- Debug println: "ref: {aRef variable}".
         context
-            at: aRef index
-            inFrame: aRef frame!
+            at: aRef variable index
+            inFrame: aRef frameOffset!
 
     method visitLexicalSet: aSet
+        -- Debug println: "set: {aSet variable}".
         context
             put: (aSet value visitBy: self)
-            at: aSet index
-            inFrame: aSet frame!
+            at: aSet variable index
+            inFrame: aSet frameOffset!
 end
