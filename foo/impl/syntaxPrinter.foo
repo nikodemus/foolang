@@ -45,8 +45,8 @@ class SyntaxPrinter { output indent printed blockStart }
             ifTrue: { self println: "".
                       blockStart = False }!
 
-    method visitLiteral: value
-        self print: value toString!
+    method visitLiteral: aLiteral
+        self print: aLiteral value toString!
 
     method visitSeqFirst: first then: then
         self handleBlockStart.

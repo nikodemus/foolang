@@ -1,6 +1,6 @@
 interface SyntaxVisitor
     is Object
-    required method visitLiteral: value
+    required method visitLiteral: aLiteral
     required method visitSeqFirst: first then: then
     required method visitReturn: syntax
     required method visitPrefixComment: comment value: value source: source

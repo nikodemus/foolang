@@ -11,9 +11,8 @@ class SyntaxTranslator { env }
     method addVariable: name
         SyntaxTranslator env: (env addVariable: name)!
 
-    method visitLiteral: value
-        AstConstantRef
-            value: value!
+    method visitLiteral: aLiteral
+        AstConstantRef value: aLiteral value!
 
     method visitSeqFirst: first then: then
         -- FIXME: Would be nicer to flatten this out.
