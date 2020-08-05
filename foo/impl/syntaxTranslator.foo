@@ -79,8 +79,8 @@ class SyntaxTranslator { env }
     method visitSelf: aSelf
         AstSelfRef new!
 
-    method visitVariable: name
-        env reference: name!
+    method visitVariable: aVariable
+        env reference: aVariable name!
 
     method visitAssign: value to: variable
         let binding = env reference: variable name.

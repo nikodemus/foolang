@@ -154,7 +154,7 @@ class SyntaxVariable { name::String }
     is Syntax
 
     method visitBy: visitor
-        visitor visitVariable: name!
+        visitor visitVariable: self!
 
     method parts
         [name]!

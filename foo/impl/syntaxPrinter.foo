@@ -113,8 +113,8 @@ class SyntaxPrinter { output indent printed blockStart }
     method visitSelf: aSelf
         self print: "self"!
 
-    method visitVariable: name
-        self print: name!
+    method visitVariable: aVariable
+        self print: aVariable name!
 
     method visitAssign: value to: variable
         self print: variable name.
