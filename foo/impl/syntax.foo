@@ -194,7 +194,7 @@ class SyntaxDefine { name body }
     is Syntax
 
     method visitBy: visitor
-        visitor visitDefine: name body: body!
+        visitor visitDefine: self!
 
     method parts
         [name, body]!

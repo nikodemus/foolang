@@ -138,11 +138,11 @@ class SyntaxPrinter { output indent printed blockStart }
         aBlock body visitBy: bodyPrinter.
         self print: " }"!
 
-    method visitDefine: name body: body
+    method visitDefine: aDefine
         self print: "define ".
         let bodyVisitor = self indentBody.
-        bodyVisitor println: name.
-        body visitBy: bodyVisitor.
+        bodyVisitor println: aDefine name.
+        aDefine body visitBy: bodyVisitor.
         self println: "!"!
 
     method visitMethodDefinition: signature body: body

@@ -100,12 +100,12 @@ class SyntaxTranslator { env }
             argumentCount: aBlock parameters size
             frameSize: aBlock parameters size + bodyEnv allocation size!
 
-    method visitDefine: name body: body
-        -- FIXME: Is this right?? Should body not gets an environment of its own?
+    method visitDefine: aDefine
+        let bodyVisitor = SyntaxTranslator env: env newFrame.
         AstDefine
-            name: name
-            body: (body visitBy: self)
-            frameSize: env allocation size!
+            name: aDefine name
+            body: (aDefine body visitBy: bodyVisitor)
+            frameSize: bodyVisitor env allocation size!
 
     method visitMethodDefinition: signature body: body
         let bodyEnv = env newFrame addVariables: signature parameters.
