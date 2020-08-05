@@ -110,7 +110,7 @@ class SyntaxPrinter { output indent printed blockStart }
         self println: ".".
         aLet body visitBy: self!
 
-    method visitSelf
+    method visitSelf: aSelf
         self print: "self"!
 
     method visitVariable: name

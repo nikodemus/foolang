@@ -76,7 +76,7 @@ class SyntaxTranslator { env }
             left: (anIs left visitBy: self)
             right: (anIs right visitBy: self)!
 
-    method visitSelf
+    method visitSelf: aSelf
         AstSelfRef new!
 
     method visitVariable: name

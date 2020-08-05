@@ -11,7 +11,7 @@ interface SyntaxVisitor
     required method visitBinaryMessage: aMessage
     required method visitKeywordMessage: aMessage
     required method visitIs: anIs
-    required method visitSelf
+    required method visitSelf: aSelf
     required method visitVariable: name
     required method visitAssign: value to: variable
     required method visitParens: body

@@ -144,7 +144,7 @@ class SyntaxSelf {}
     is Syntax
 
     method visitBy: visitor
-        visitor visitSelf!
+        visitor visitSelf: self!
 
     method parts
         []!
