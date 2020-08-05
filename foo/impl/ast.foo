@@ -192,9 +192,7 @@ class AstSlotRef { name index::Integer }
     is AstNode
 
     method visitBy: visitor
-        visitor
-            visitSlotRef: name
-            at: index!
+        visitor visitSlotRef: self!
 end
 
 class AstBindLexical { name index value body }

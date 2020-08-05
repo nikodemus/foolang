@@ -6,9 +6,9 @@ interface AstVisitor
     required method visitReturn: returnExpr
     required method visitSend: sendExpr
     required method visitComment: commentExpr
-    required method visitBlock: block
+    required method visitBlock: blockExpr
     required method visitSelf
-    required method visitSlotRef: name at: index
+    required method visitSlotRef: slotExpr
     required method visitBindLexical: name value: value index: index body: body
     required method visitLexicalRef: name index: index frame: frame
     required method visitLexicalSet: name value: value index: index frame: frame

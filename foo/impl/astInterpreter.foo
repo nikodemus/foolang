@@ -170,8 +170,8 @@ class AstInterpreter { context process }
     method visitSelf
         context receiver!
 
-    method visitSlotRef: name at: index
-        context slot: index!
+    method visitSlotRef: slotExpr
+        context slot: slotExpr index!
 
     method visitBindLexical: name value: value index: index body: body
         context
