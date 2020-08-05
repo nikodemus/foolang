@@ -174,7 +174,7 @@ class SyntaxParens { body }
     is Syntax
 
     method visitBy: visitor
-        visitor visitParens: body!
+        visitor visitParens: self!
 
     method parts
         [body]!

@@ -14,7 +14,7 @@ interface SyntaxVisitor
     required method visitSelf: aSelf
     required method visitVariable: aVariable
     required method visitAssign: anAssign
-    required method visitParens: body
+    required method visitParens: aParens
     required method visitBlockWith: parameters body: body
     required method visitDefine: name body: body
     required method visitMethodDefinition: signature body: body

@@ -121,9 +121,9 @@ class SyntaxPrinter { output indent printed blockStart }
         self print: " = ".
         anAssign value visitBy: self!
 
-    method visitParens: body
+    method visitParens: aParens
         self print: "(".
-        body visitBy: self indentHere.
+        aParens body visitBy: self indentHere.
         self print: ")"!
 
     method visitBlockWith: parameters body: body

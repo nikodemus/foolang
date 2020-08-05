@@ -90,8 +90,8 @@ class SyntaxTranslator { env }
             index: binding index :: Integer
             value: (anAssign value visitBy: self)!
 
-    method visitParens: body
-        body visitBy: self!
+    method visitParens: aParens
+        aParens body visitBy: self!
 
     method visitBlockWith: parameters body: body
         let bodyEnv = env newFrame addVariables: parameters.
