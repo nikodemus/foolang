@@ -26,15 +26,15 @@ it sucks to work on something and then later learn that it's not wanted.
 
 Roughly:
 
-- Cleanups to the Rust code are welcome even if not planned, particularly
-  if they address a `FIXME` in the source. Go right ahead.
 - Library code written in Foolang is very welcome even if not planned. For now
-  just stick it under `foo/`. Go right ahead.
-- Library code written in Rust is less welcome right now: the Kiss3D stuff is
-  already causing regrets. An import/plugin architecture for classes written
-  in Rust needs to be implemented first. Open an issue first.
-- Core language contributions are extremely welcome, but far more risky in
-  terms of "does it fit in the current plans". Open an issue first.
+  just stick it under `foo/lib/` or `foo/lang/` as appropriate. Go right ahead.
+- Examples and toys written in Foolang are very welcome! Stick them under
+  `foo/examples/` for now.
+- Core language contributions are extremely welcome, but far more risky in terms
+  of "does it fit in the current plans". Opening an issue first is a good idea.
+- Work on the Rust code is welcome, but you should be aware that it is destined
+  to go away by 0.2.0 when self hosting is done. (Rust will remain the preferred
+  language for writing foreign plugins -- once we get to supporting them.)
 
 ## Coding Conventions
 
