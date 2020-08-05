@@ -96,10 +96,10 @@ class SyntaxPrinter { output indent printed blockStart }
                   self print: " ".
                   arg visitBy: self }!
 
-    method visitIsLeft: left right: right
-        left visitBy: self.
+    method visitIs: anIs
+        anIs left visitBy: self.
         self print: " is ".
-        right visitBy: self!
+        anIs right visitBy: self!
 
     method visitLet: aLet
         self handleBlockStart.

@@ -124,8 +124,7 @@ class SyntaxIs { left right }
     is Syntax
 
     method visitBy: visitor
-        visitor visitIsLeft: left
-                right: right!
+        visitor visitIs: self!
 
     method parts
         [left, right]!

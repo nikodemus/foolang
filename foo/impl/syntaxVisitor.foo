@@ -10,7 +10,7 @@ interface SyntaxVisitor
     required method visitUnaryMessage: aMessage
     required method visitBinaryMessage: aMessage
     required method visitKeywordMessage: aMessage
-    required method visitIsLeft: left right: right
+    required method visitIs: anIs
     required method visitSelf
     required method visitVariable: name
     required method visitAssign: value to: variable
