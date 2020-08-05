@@ -148,9 +148,7 @@ class AstIs { left right }
     is AstNode
 
     method visitBy: visitor
-        visitor
-            visitIsLeft: left
-            right: right!
+        visitor visitIs: self!
 end
 
 class AstSeq { first then }
