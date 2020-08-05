@@ -174,11 +174,7 @@ class AstSend {
     is AstNode
 
     method visitBy: visitor
-        visitor
-            visitSend: selector
-            to: receiver
-            with: arguments
-            source: source!
+        visitor visitSend: self!
 end
 
 class AstBlock { body argumentCount frameSize }

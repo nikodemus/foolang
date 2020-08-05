@@ -95,15 +95,15 @@ class CTranspiler { output selectorMap blockFunctions }
             ifTrue: { return output print: "foo_Integer_new({value})" }.
         Error raise: "Don't know how to transpile constant `{value}` into C."!
 
-    method visitSend: selector to: receiver with: arguments source: source
+    method visitSend: sendExpr
         output print: "foo_send(context, &".
-        output print: (self selectorCName: selector).
+        output print: (self selectorCName: sendExpr selector).
         output print: ", ".
-        receiver visitBy: self.
+        sendExpr receiver visitBy: self.
         output print: ", ".
-        output print: arguments size.
+        output print: sendExpr arguments size.
         output print: "ul".
-        arguments do: { |arg|
+        sendExpr arguments do: { |arg|
                         output print: ", ".
                         arg visitBy: self }.
         output print: ")"!

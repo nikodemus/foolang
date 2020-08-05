@@ -141,9 +141,10 @@ class AstInterpreter { context process }
     method visitReturn: returnExpr
         context returnBlock value: (returnExpr value visitBy: self)!
 
-    method visitSend: selector to: receiver with: arguments source: source
-        let object = receiver visitBy: self.
-        let arguments = arguments collect: { |arg| arg visitBy: self }.
+    method visitSend: sendExpr
+        let selector = sendExpr selector.
+        let object = sendExpr receiver visitBy: self.
+        let arguments = sendExpr arguments collect: { |arg| arg visitBy: self }.
         let $context = context.
         let $process = process.
         -- Debug println: "<- {selector}".
@@ -156,7 +157,7 @@ class AstInterpreter { context process }
                                     raise: selector
                                     with: arguments
                                     on: object
-                                    source: source }} !
+                                    source: sendExpr source }} !
 
     method visitComment: comment value: value source: source
         value visitBy: self!

@@ -4,7 +4,7 @@ interface AstVisitor
     required method visitIs: isExpr
     required method visitSeq: seqExpr
     required method visitReturn: returnExpr
-    required method visitSend: selector to: receiver with: arguments source: source
+    required method visitSend: sendExpr
     required method visitComment: comment value: value source: source
     required method visitBlock: block
     required method visitSelf
