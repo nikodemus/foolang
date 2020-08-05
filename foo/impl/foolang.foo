@@ -2,6 +2,7 @@ import .environment.Environment
 import .parser.Parser
 import .utils.Debug
 import .syntaxTranslator.SyntaxTranslator
+import .syntaxPrinter.SyntaxPrinter
 import .cTranspiler.CTranspiler
 
 class Tests { system ok }
@@ -22,6 +23,15 @@ class Tests { system ok }
 
     method run
         self
+            ; test: #testComment1
+            ; test: #testComment2
+            ; test: #testComment3
+            ; test: #testComment4
+            ; test: #testComment5
+            ; test: #testComment6
+            ; test: #testComment7
+            ; test: #testComment8
+            -- ; test: #testComment9
             ; test: #testTranspile
             ; test: #test42
             ; test: #testPlus
@@ -47,7 +57,6 @@ class Tests { system ok }
             ; test: #testBlockInMethod
             ; test: #testDirectMethod
             ; test: #testReturn
-            ; test: #testComment
             ; test: #testAstSource
             ; test: #testOutOfOrderDefine
             ; test: #testOutOfOrderClasses
@@ -57,7 +66,7 @@ class Tests { system ok }
     method checkParse: source
         -- Check Syntax print/parse consistency.
         let syntaxList = Parser parse: source.
-         let output = StringOutput new.
+        let output = StringOutput new.
         syntaxList do: { |syntax|
                          -- Debug println: "".
                          -- SyntaxPrinter print: syntax to: Output debug.
@@ -67,9 +76,29 @@ class Tests { system ok }
             on: Error
             do: { |err|
                   panic "CST print/parse inconsistency!
-original: {source}
-printed: {printed}
+original:\n{source}
+printed:\n{printed}
 problem: {err description}" }!
+
+    method parse: source expect: pretty
+        -- Checks that parse pretty-prints as expected
+        let syntaxList1 = Parser parse: source.
+        let syntaxList2 = Parser parse: pretty.
+        { syntaxList1 checkEqual: syntaxList2 }
+            on: Error
+            do: { |err|
+                  Error raise: "parse inconsistent with desired pretty-print!
+source:\n{source}
+pretty:\n{pretty}
+problem: {err description}" }.
+        let output = StringOutput new.
+        syntaxList1 do: { |syntax| output print: syntax toString }.
+        let printed = output content.
+        printed == pretty
+            ifFalse: { Error raise: "print inconsistent with desired pretty-print!
+source:\n{source}
+printed:\n{printed}
+pretty:\n{pretty}" }!
 
     method eval: exprSource expect: expected
         self checkParse: exprSource.
@@ -233,23 +262,66 @@ with: {defSource}"!
                     end"
             eval: "ReturnTest test: True"
             expect: 42!
-    method testComment
-        self load: "class CommentTest1 \{}
-                       method foo
-                          let x = -- boop
-                                  21.
-                          x * 2!
-                    end"
-            eval: "CommentTest1 new foo"
-            expect: 42.
-        self load: "class CommentTest2 \{}
-                       method foo
-                          let x = 21 -- boop
-                          .
-                          x * 2!
-                    end"
-            eval: "CommentTest2 new foo"
-            expect: 42!
+
+    method testComment1
+        -- Prefix comment to let value
+        self
+            parse: "           let x = -- boop\n 21.     x     *  2"
+            expect: "let x = -- boop\n        21.\nx * 2"!
+
+    method testComment2
+        -- Suffix comment to let value
+        self
+            parse: "let x = 21 -- boop\n.\nx * 2"
+            expect: "let x = 21. -- boop\nx * 2".
+        self
+            parse: "let x = 21. -- boop\n\nx * 2"
+            expect: "let x = 21. -- boop\nx * 2"!
+
+    method testComment3
+        -- Prefix comment in sequence
+        self
+            parse: "    doo daa.\n    -- boop\n   self bar. \n x * 2"
+            expect: "doo daa.\n-- boop\nself bar.\nx * 2"!
+
+    method testComment4
+        -- Suffix comment in sequence
+        self
+            parse: "self bar. -- boop\n x * 2"
+            expect: "self bar. -- boop\nx * 2".
+        self
+            parse: "self bar -- boop\n. x * 2"
+            expect: "self bar. -- boop\nx * 2"!
+
+    method testComment5
+        -- Prefix comment to class
+        self
+            parse: "-- boop\n    class   X   \{}   end"
+            expect: "-- boop\nclass X \{}\nend\n"!
+
+    method testComment6
+        -- Suffix comment to class
+        self
+            parse: "class   X   \{}   end -- boop"
+            expect: "class X \{}\nend -- boop\n"!
+
+    method testComment7
+        -- Suffix comment to method signature == prefix comment to body
+        self
+            parse: "class   X   \{}method bar -- boop\n42!\nend"
+            expect: "class X \{}\n    method bar\n        -- boop\n        42!\nend\n"!
+
+    method testComment8
+        -- Suffix comment to method body
+        self
+            parse: "class X \{} method bar\n42! -- boop\nend"
+            expect: "class X \{}\n    method bar\n        42! -- boop\nend\n"!
+
+    method testComment9
+        -- Prefix comment to method (does not work currently!)
+        self
+            parse: "class X \{} -- boop\n method bar\n 42!\n end\n"
+            expect: "class X \{}\n    -- boop\n    method bar\n        42!\nend\n"!
 
     method testAstSource
         self load: "class SourceTest \{}

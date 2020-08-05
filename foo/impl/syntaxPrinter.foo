@@ -1,6 +1,6 @@
 import .syntaxVisitor.SyntaxVisitor
 
-class SyntaxPrinter { output indent printed blockStart }
+class SyntaxPrinter { output indent printed blockStart suffixComment }
     is SyntaxVisitor
 
     direct method print: syntax to: output
@@ -8,41 +8,54 @@ class SyntaxPrinter { output indent printed blockStart }
                              output: output
                              indent: 0
                              printed: 0
-                             blockStart: False)!
+                             blockStart: False
+                             suffixComment: False)!
 
     method indentBody
         SyntaxPrinter
             output: output
             indent: indent + 4
             printed: printed
-            blockStart: False!
+            blockStart: False
+            suffixComment: False!
 
     method indentHere
         SyntaxPrinter
             output: output
             indent: printed
             printed: printed
-            blockStart: False!
+            blockStart: False
+            suffixComment: False!
 
     method indentBlock
         SyntaxPrinter
             output: output
             indent: printed
             printed: printed
-            blockStart: True!
+            blockStart: True
+            suffixComment: False!
+
+    method newline
+        output println: "".
+        indent times: { output print: " " }.
+        printed = indent!
+
+    method handleSuffixComment
+        suffixComment is False
+            ifFalse: { self print: suffixComment.
+                       suffixComment = False }!
 
     method print: string::String
         output print: string.
         printed = printed + string size!
 
     method println: string::String
-        output println: string.
-        indent times: { output print: " " }.
-        printed = indent!
+        self print: string.
+        self newline!
 
     method handleBlockStart
         blockStart
-            ifTrue: { self println: "".
+            ifTrue: { self newline.
                       blockStart = False }!
 
     method visitLiteral: aLiteral
@@ -51,7 +64,9 @@ class SyntaxPrinter { output indent printed blockStart }
     method visitSeq: aSeq
         self handleBlockStart.
         aSeq first visitBy: self.
-        self println: ".".
+        self print: ".".
+        self handleSuffixComment.
+        self newline.
         aSeq then visitBy: self!
 
     method visitReturn: aReturn
@@ -60,15 +75,16 @@ class SyntaxPrinter { output indent printed blockStart }
 
     method visitPrefixComment: aComment
         self handleBlockStart.
-        self print: "--".
-        self println: aComment comment.
-        aComment value visitBy: self indentBody!
+        let valueVisitor = self indentHere.
+        self print: "--{aComment comment}".
+        valueVisitor newline.
+        aComment value visitBy: valueVisitor!
 
     method visitSuffixComment: aComment
         self handleBlockStart.
-        aComment value visitBy: self.
-        self print: " --".
-        self println: aComment comment!
+        suffixComment not assert.
+        suffixComment = " --{aComment comment}".
+        aComment value visitBy: self!
 
     method visitPrefixMessage: aMessage
         self print: aMessage selector name.
@@ -107,7 +123,9 @@ class SyntaxPrinter { output indent printed blockStart }
         self print: aLet name.
         self print: " = ".
         aLet value visitBy: self.
-        self println: ".".
+        self print: ".".
+        self handleSuffixComment.
+        self newline.
         aLet body visitBy: self!
 
     method visitSelf: aSelf
@@ -160,7 +178,9 @@ class SyntaxPrinter { output indent printed blockStart }
         let bodyVisitor = self indentBody.
         bodyVisitor println: "".
         aMethod body visitBy: bodyVisitor.
-        self print: "!"!
+        self print: "!".
+        -- no newline!
+        self handleSuffixComment!
 
     method visitClass: aClass
         self print: "class ".
@@ -176,13 +196,15 @@ class SyntaxPrinter { output indent printed blockStart }
         let methodVisitor = self indentBody.
         aClass directMethods
             do: { |m|
-                  methodVisitor println: "".
+                  methodVisitor newline.
                   methodVisitor print: "direct ".
                   m visitBy: methodVisitor }.
         aClass methods
             do: { |m|
-                  methodVisitor println: "".
+                  methodVisitor newline.
                   m visitBy: methodVisitor }.
-        self println: "".
-        self println: "end"!
+        self newline.
+        self print: "end".
+        self handleSuffixComment.
+        self newline!
 end

@@ -146,6 +146,16 @@ end
 class TokenReservedWordLet { first last }
     is ReservedToken
 
+    ---
+    Special casing for end of line comments after dot to
+    make the following a _suffix_ comment on `foo bar`:
+
+        let x = foo bar. -- comment
+        quux zot
+
+    The human expectation trumps consistency here.
+    ---
+
     method parseAsPrefixWith: parser atPrecedence: _precedence
         let name = parser parseVariableName.
         parser expect: "=".
@@ -153,7 +163,7 @@ class TokenReservedWordLet { first last }
         parser expect: ".".
         SyntaxLet
             name: name
-            value: value
+            value: (parser handleSuffixCommentOf: value)
             body: (parser parseAtPrecedence: SeqPrecedence)!
 
     method string
@@ -163,9 +173,19 @@ end
 class TokenReservedSigilDot { first last }
     is ReservedToken
 
+    ---
+    Special casing for end of line comments after dot to
+    make the following a _suffix_ comment on `foo bar`:
+
+        foo bar. -- comment
+        quux zot
+
+    The human expectation trumps consistency here.
+    ---
+
     method parseAsSuffixOf: prefix with: parser
         SyntaxSeq
-            first: prefix
+            first: (parser handleSuffixCommentOf: prefix)
             then: (parser parseAtPrecedence: SeqPrecedence)!
 
     method string
@@ -236,15 +256,16 @@ class TokenReservedSigilDoubledash { first last }
     is ReservedToken
 
     ---
-    FIXME: see below.
+    See also: special handlings in TokenReservedSigilDot and
+    TokenReservedSigilLet to parse
 
-    -- Prefix comments make sense
-    some expression.
+        foo bar. -- comment
+        quux zot
 
-    another expression. -- But what is intended as a suffix comment
-                        -- to `another expression` becomes a prefix
-                        -- comment to `next expression`!
-    next expression
+        let x = foo bar. -- comment
+        quux zot
+
+    as suffix comments on `foo bar`.
     ---
 
     method parseAsPrefixWith: parser atPrecedence: precedence
@@ -254,7 +275,14 @@ class TokenReservedSigilDoubledash { first last }
         --            -42 abs.
         --    123
         --
-        -- where the comment while parsing at SingleExpressionPrecedence!
+        -- where the comment is reached while parsing at SingleExpressionPrecedence,
+        -- versus:
+        --
+        --    foo bar.
+        --    -- comment
+        --    bar quux
+        --
+        -- where the comment is reached while parsing at SeqPrecedence!
         SyntaxPrefixComment
             comment: parser readline
             value: (parser parseAtPrecedence: precedence)
@@ -291,24 +319,36 @@ class TokenReservedWordClass { first last }
         let directMethods = List new.
         let methods = List new.
         parser until: "end"
-               do: { parser while: "direct"
-                            do: { parser expect: "method".
-                                  directMethods add: (self parseMethodWith: parser) }.
-                     parser while: "method"
-                            do: { methods add: (self parseMethodWith: parser) } }.
+               do: { self
+                         parseClassPartWith: parser
+                         directMethods: directMethods
+                         methods: methods }.
 
-        SyntaxClass
-            name: name
-            directMethods: directMethods
-            slots: slots
-            methods: methods!
+        let theClass = SyntaxClass
+                           name: name
+                           directMethods: directMethods
+                           slots: slots
+                           methods: methods.
+        parser handleSuffixCommentOf: theClass!
+
+    method parseClassPartWith: parser directMethods: directMethods methods: methods
+        -- FIXME: This should instead augment the syntax of the parser
+        -- with method and direct. That way we will get comments, etc right.
+        parser when: "direct"
+               then: { parser expect: "method".
+                       directMethods add: (self parseMethodWith: parser).
+                       return True }.
+        parser when: "method"
+               then: { methods add: (self parseMethodWith: parser).
+                       return True }.
+        Error raise: "Syntax error in class body: {parser nextToken string}"!
 
     method parseMethodWith: parser
         let syntax = SyntaxMethod
             signature: (self parseMethodSignatureWith: parser)
             body: (parser parseAtPrecedence: SeqPrecedence).
         parser expect: "!".
-        syntax!
+        parser handleSuffixCommentOf: syntax!
 
     method parseMethodSignatureWith: parser
         let selector = StringOutput new.
@@ -484,12 +524,21 @@ class Parser { source::String
         -- syntax do: { |s| Debug println: "=> {s}" }.
         syntax!
 
+    method handleSuffixCommentOf: prefix
+        -- #sees: means without intervening newline!
+        (self sees: "--")
+            ifTrue: { self nextToken
+                          parseAsSuffixOf: prefix
+                          with: self }
+            ifFalse: { prefix }!
+
     method readline
         let start = position.
         { self atEof or: self atNewline }
             whileFalse: { self advance }.
         let stop = position - 1.
-        self advance.
+        self atEof
+            ifFalse: { self advance }.
         source from: start to: stop!
 
     method sourceFrom: first to: last
@@ -509,6 +558,12 @@ class Parser { source::String
         got == expected
             ifFalse: { Error raise: "Self-hosted parser expected '{expected}', got '{got}'
 Context: {source}" }!
+
+    method sees: test
+        -- Cannot use lookahead since that would skip newlines!
+        self skipWhile: #atHorizontalWhitespace.
+        let last = (position + test size - 1) min: source size.
+        test == (source from: position to: last)!
 
     method when: test then: action
         self lookahead string == test
@@ -591,6 +646,9 @@ Context: {source}" }!
 
     method atNewline
         self isAt: #isNewline!
+
+    method atHorizontalWhitespace
+        self isAt: #isHorizontalWhitespace!
 
     method atSigil
         self atEof not

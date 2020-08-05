@@ -5,6 +5,10 @@ define ASCII
      formFeed: 0x0C,
      carriageReturn: 0x0D}!
 
+define HorizontalWhitespaceASCII
+    [ASCII space,
+     ASCII tab]!
+
 define WhitespaceASCII
     [ASCII space,
      ASCII tab,
@@ -24,6 +28,8 @@ class Character { code }
             ifFalse: { 0x61 <= code and: code <= 0x7A }!
     method isWhitespace
         WhitespaceASCII anySatisfy: { |whitespaceCode| whitespaceCode is code }!
+    method isHorizontalWhitespace
+        HorizontalWhitespaceASCII anySatisfy: { |whitespaceCode| whitespaceCode is code }!
     method isDigit
         0x30 <= code and: code <= 0x39!
     method digit
