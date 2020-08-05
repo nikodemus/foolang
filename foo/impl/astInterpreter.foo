@@ -134,9 +134,9 @@ class AstInterpreter { context process }
     method visitIs: isExpr
         (isExpr left visitBy: self) is (isExpr right visitBy: self)!
 
-    method visitSeqFirst: first then: then
-        first visitBy: self.
-        then visitBy: self!
+    method visitSeq: seqExpr
+        seqExpr first visitBy: self.
+        seqExpr then visitBy: self!
 
     method visitReturn: value
         context returnBlock value: (value visitBy: self)!

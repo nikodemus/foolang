@@ -155,9 +155,7 @@ class AstSeq { first then }
     is AstNode
 
     method visitBy: visitor
-        visitor
-            visitSeqFirst: first
-            then: then!
+        visitor visitSeq: self!
 end
 
 class AstReturn { value }

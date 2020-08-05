@@ -1,8 +1,8 @@
 interface AstVisitor
-    required method visitConstant: constant
-    required method visitGlobal: global
+    required method visitConstant: constantExpr
+    required method visitGlobal: globalExpr
     required method visitIs: isExpr
-    required method visitSeqFirst: first then: then
+    required method visitSeq: seqExpr
     required method visitReturn: value
     required method visitSend: selector to: receiver with: arguments source: source
     required method visitComment: comment value: value source: source
