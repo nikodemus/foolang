@@ -1,5 +1,5 @@
 interface AstVisitor
-    required method visitConstant: value
+    required method visitConstant: constant
     required method visitGlobal: value
     required method visitIsLeft: left right: right
     required method visitSeqFirst: first then: then

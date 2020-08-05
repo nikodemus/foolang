@@ -141,7 +141,7 @@ class AstConstantRef { value }
     is AstNode
 
     method visitBy: visitor
-        visitor visitConstant: value!
+        visitor visitConstant: self!
 end
 
 class AstIs { left right }

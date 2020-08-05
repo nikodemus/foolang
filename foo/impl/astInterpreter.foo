@@ -125,8 +125,8 @@ class AstInterpreter { context process }
         { AstInterpreter eval: astMethod body with: context }
             finally: { context invalidate } !
 
-    method visitConstant: value
-        value!
+    method visitConstant: constant
+        constant value!
 
     method visitGlobal: value
         value!
