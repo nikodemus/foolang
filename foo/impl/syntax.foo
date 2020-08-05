@@ -204,9 +204,7 @@ class SyntaxMethod { signature body }
     is Syntax
 
     method visitBy: visitor
-        visitor
-            visitMethodDefinition: signature
-            body: body!
+        visitor visitMethod: self!
 
     method selector
         signature selector!

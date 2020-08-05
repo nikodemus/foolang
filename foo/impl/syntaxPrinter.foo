@@ -145,20 +145,21 @@ class SyntaxPrinter { output indent printed blockStart }
         aDefine body visitBy: bodyVisitor.
         self println: "!"!
 
-    method visitMethodDefinition: signature body: body
+    method visitMethod: aMethod
         self print: "method".
+        let signature = aMethod signature.
         signature parameters isEmpty
             ifTrue: { self print: " ".
                       self print: signature selector name }
             ifFalse: { signature selector parts
                            withIndexDo: { |part index|
-                                 self print: " ".
-                                 self print: part.
-                                 self print: " ".
+                                          self print: " ".
+                                          self print: part.
+                                          self print: " ".
                                           self print: (signature parameters at: index) } }.
         let bodyVisitor = self indentBody.
         bodyVisitor println: "".
-        body visitBy: bodyVisitor.
+        aMethod body visitBy: bodyVisitor.
         self print: "!"!
 
     method visitClassDefinition: name directMethods: directMethods slots: slots methods: methods
