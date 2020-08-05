@@ -20,9 +20,8 @@ class SyntaxTranslator { env }
             first: (aSeq first visitBy: self)
             then: (aSeq then visitBy: self)!
 
-    method visitReturn: syntax
-        AstReturn
-            value: (syntax visitBy: self)!
+    method visitReturn: aReturn
+        AstReturn value: (aReturn value visitBy: self)!
 
     method visitPrefixComment: comment value: value source: source
         AstComment comment: comment

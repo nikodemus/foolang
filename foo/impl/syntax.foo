@@ -46,7 +46,7 @@ class SyntaxReturn { value }
     is Syntax
 
     method visitBy: visitor
-        visitor visitReturn: value!
+        visitor visitReturn: self!
 
     method parts
         [value]!

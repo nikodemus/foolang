@@ -2,7 +2,7 @@ interface SyntaxVisitor
     is Object
     required method visitLiteral: aLiteral
     required method visitSeq: aSeq
-    required method visitReturn: syntax
+    required method visitReturn: aReturn
     required method visitPrefixComment: comment value: value source: source
     required method visitSuffixComment: comment value: value source: source
     required method visitLet: name value: value body: body

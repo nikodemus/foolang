@@ -54,9 +54,9 @@ class SyntaxPrinter { output indent printed blockStart }
         self println: ".".
         aSeq then visitBy: self!
 
-    method visitReturn: value
+    method visitReturn: aReturn
         self print: "return ".
-        value visitBy: self!
+        aReturn value visitBy: self!
 
     method visitPrefixComment: comment value: value source: source
         self handleBlockStart.
