@@ -64,11 +64,11 @@ class SyntaxPrinter { output indent printed blockStart }
         self println: aComment comment.
         aComment value visitBy: self indentBody!
 
-    method visitSuffixComment: comment value: value source: source
+    method visitSuffixComment: aComment
         self handleBlockStart.
-        value visitBy: self.
+        aComment value visitBy: self.
         self print: " --".
-        self println: comment!
+        self println: aComment comment!
 
     method visitPrefixMessage: selector receiver: receiver source: source
         self print: selector name.

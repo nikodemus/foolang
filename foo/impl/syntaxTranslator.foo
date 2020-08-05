@@ -29,10 +29,11 @@ class SyntaxTranslator { env }
             value: (aComment value visitBy: self)
             source: aComment source!
 
-    method visitSuffixComment: comment value: value source: source
-        AstComment comment: comment
-                   value: (value visitBy: self)
-                   source: source!
+    method visitSuffixComment: aComment
+        AstComment
+            comment: aComment comment
+            value: (aComment value visitBy: self)
+            source: aComment source!
 
     method visitLet: name value: value body: body
         let bodyVisitor = self addVariable: name.

@@ -4,7 +4,7 @@ interface SyntaxVisitor
     required method visitSeq: aSeq
     required method visitReturn: aReturn
     required method visitPrefixComment: aComment
-    required method visitSuffixComment: comment value: value source: source
+    required method visitSuffixComment: aComment
     required method visitLet: name value: value body: body
     required method visitPrefixMessage: selector receiver: receiver source: source
     required method visitUnaryMessage: selector receiver: receiver source: source
