@@ -57,5 +57,5 @@ class UndefinedPolicy {}
     direct method reference: name in: environment
         $UndefinedPolicy reference: name in: environment!
     direct method resolve: name
-        $UndefinedPolicy resolve: name in: environment!
+        $UndefinedPolicy resolve: name!
 end
