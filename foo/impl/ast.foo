@@ -185,7 +185,7 @@ class AstSelfRef {}
     is AstNode
 
     method visitBy: visitor
-        visitor visitSelf!
+        visitor visitSelf: self!
 end
 
 class AstSlotRef { name index::Integer }

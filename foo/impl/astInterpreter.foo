@@ -167,7 +167,7 @@ class AstInterpreter { context process }
             context: context
             block: block!
 
-    method visitSelf
+    method visitSelf: selfExpr
         context receiver!
 
     method visitSlotRef: slotExpr

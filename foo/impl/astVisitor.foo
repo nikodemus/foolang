@@ -7,7 +7,7 @@ interface AstVisitor
     required method visitSend: sendExpr
     required method visitComment: commentExpr
     required method visitBlock: blockExpr
-    required method visitSelf
+    required method visitSelf: selfExpr
     required method visitSlotRef: slotExpr
     required method visitBindLexical: bindExpr
     required method visitLexicalRef: refExpr
