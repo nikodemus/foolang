@@ -100,10 +100,7 @@ class AstComment { comment value source }
     is AstNode
 
     method visitBy: visitor
-        visitor
-            visitComment: comment
-            value: value
-            source: source!
+        visitor visitComment: self!
 end
 
 class AstUndefinedMarker {}
@@ -134,39 +131,35 @@ class AstGlobal { name _value }
         _value = newValue!
 
     method visitBy: visitor
-        visitor visitGlobal: self value!
+        visitor visitGlobal: self!
 end
 
 class AstConstantRef { value }
     is AstNode
 
     method visitBy: visitor
-        visitor visitConstant: value!
+        visitor visitConstant: self!
 end
 
 class AstIs { left right }
     is AstNode
 
     method visitBy: visitor
-        visitor
-            visitIsLeft: left
-            right: right!
+        visitor visitIs: self!
 end
 
 class AstSeq { first then }
     is AstNode
 
     method visitBy: visitor
-        visitor
-            visitSeqFirst: first
-            then: then!
+        visitor visitSeq: self!
 end
 
 class AstReturn { value }
     is AstNode
 
     method visitBy: visitor
-        visitor visitReturn: value!
+        visitor visitReturn: self!
 end
 
 class AstSend {
@@ -178,11 +171,7 @@ class AstSend {
     is AstNode
 
     method visitBy: visitor
-        visitor
-            visitSend: selector
-            to: receiver
-            with: arguments
-            source: source!
+        visitor visitSend: self!
 end
 
 class AstBlock { body argumentCount frameSize }
@@ -196,27 +185,21 @@ class AstSelfRef {}
     is AstNode
 
     method visitBy: visitor
-        visitor visitSelf!
+        visitor visitSelf: self!
 end
 
 class AstSlotRef { name index::Integer }
     is AstNode
 
     method visitBy: visitor
-        visitor
-            visitSlotRef: name
-            at: index!
+        visitor visitSlotRef: self!
 end
 
 class AstBindLexical { name index value body }
     is AstNode
 
     method visitBy: visitor
-        visitor
-            visitBindLexical: name
-            value: value
-            index: index
-            body: body!
+        visitor visitBindLexical: self!
 end
 
 class AstLexicalRef { name
@@ -225,10 +208,7 @@ class AstLexicalRef { name
     is AstNode
 
     method visitBy: visitor
-        visitor
-            visitLexicalRef: name
-            index: index
-            frame: frame!
+        visitor visitLexicalRef: self!
 end
 
 class AstLexicalSet { name
@@ -238,9 +218,5 @@ class AstLexicalSet { name
     is AstNode
 
     method visitBy: visitor
-        visitor
-            visitLexicalSet: name
-            value: value
-            index: index
-            frame: frame!
+        visitor visitLexicalSet: self!
 end

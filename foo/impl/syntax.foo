@@ -26,7 +26,7 @@ class SyntaxLiteral { value }
     is Syntax
 
     method visitBy: visitor
-        visitor visitLiteral: value!
+        visitor visitLiteral: self!
 
     method parts
         [value]!
@@ -36,7 +36,7 @@ class SyntaxSeq { first then }
     is Syntax
 
     method visitBy: visitor
-        visitor visitSeqFirst: first then: then!
+        visitor visitSeq: self!
 
     method parts
         [first, then]!
@@ -46,7 +46,7 @@ class SyntaxReturn { value }
     is Syntax
 
     method visitBy: visitor
-        visitor visitReturn: value!
+        visitor visitReturn: self!
 
     method parts
         [value]!
@@ -56,9 +56,7 @@ class SyntaxPrefixComment { comment value source }
     is Syntax
 
     method visitBy: visitor
-        visitor visitPrefixComment: self comment
-                value: self value
-                source: self source!
+        visitor visitPrefixComment: self!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
@@ -69,9 +67,7 @@ class SyntaxSuffixComment { comment value source }
     is Syntax
 
     method visitBy: visitor
-        visitor visitSuffixComment: self comment
-                value: self value
-                source: self source!
+        visitor visitSuffixComment: self!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
@@ -82,9 +78,7 @@ class SyntaxPrefix { receiver selector source }
     is Syntax
 
     method visitBy: visitor
-        visitor visitPrefixMessage: selector
-                receiver: receiver
-                source: source!
+        visitor visitPrefixMessage: self!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
@@ -95,9 +89,7 @@ class SyntaxUnary { receiver selector source }
     is Syntax
 
     method visitBy: visitor
-        visitor visitUnaryMessage: selector
-                receiver: receiver
-                source: source!
+        visitor visitUnaryMessage: self!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
@@ -108,10 +100,7 @@ class SyntaxBinary { receiver selector argument source }
     is Syntax
 
     method visitBy: visitor
-        visitor visitBinaryMessage: selector
-                receiver: receiver
-                argument: argument
-                source: source!
+        visitor visitBinaryMessage: self!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
@@ -124,10 +113,7 @@ class SyntaxKeyword { receiver selector arguments source }
     is Syntax
 
     method visitBy: visitor
-        visitor visitKeywordMessage: selector
-                receiver: receiver
-                arguments: arguments
-                source: source!
+        visitor visitKeywordMessage: self!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
@@ -138,8 +124,7 @@ class SyntaxIs { left right }
     is Syntax
 
     method visitBy: visitor
-        visitor visitIsLeft: left
-                right: right!
+        visitor visitIs: self!
 
     method parts
         [left, right]!
@@ -149,9 +134,7 @@ class SyntaxLet { name value body }
     is Syntax
 
     method visitBy: visitor
-        visitor visitLet: name
-                value: value
-                body: body!
+        visitor visitLet: self!
 
     method parts
         [value, name, body]!
@@ -161,7 +144,7 @@ class SyntaxSelf {}
     is Syntax
 
     method visitBy: visitor
-        visitor visitSelf!
+        visitor visitSelf: self!
 
     method parts
         []!
@@ -171,7 +154,7 @@ class SyntaxVariable { name::String }
     is Syntax
 
     method visitBy: visitor
-        visitor visitVariable: name!
+        visitor visitVariable: self!
 
     method parts
         [name]!
@@ -181,7 +164,7 @@ class SyntaxAssign { variable::String value }
     is Syntax
 
     method visitBy: visitor
-        visitor visitAssign: value to: variable!
+        visitor visitAssign: self!
 
     method parts
         [variable, value]!
@@ -191,27 +174,27 @@ class SyntaxParens { body }
     is Syntax
 
     method visitBy: visitor
-        visitor visitParens: body!
+        visitor visitParens: self!
 
     method parts
         [body]!
 end
 
-class SyntaxBlock { arguments body }
+class SyntaxBlock { parameters body }
     is Syntax
 
     method visitBy: visitor
-        visitor visitBlockWith: arguments body: body!
+        visitor visitBlock: self!
 
     method parts
-        [arguments, body]!
+        [parameters, body]!
 end
 
 class SyntaxDefine { name body }
     is Syntax
 
     method visitBy: visitor
-        visitor visitDefine: name body: body!
+        visitor visitDefine: self!
 
     method parts
         [name, body]!
@@ -221,9 +204,7 @@ class SyntaxMethod { signature body }
     is Syntax
 
     method visitBy: visitor
-        visitor
-            visitMethodDefinition: signature
-            body: body!
+        visitor visitMethod: self!
 
     method selector
         signature selector!
@@ -243,10 +224,7 @@ class SyntaxClass { name directMethods slots methods }
     is Syntax
 
     method visitBy: visitor
-        visitor visitClassDefinition: name
-                directMethods: directMethods
-                slots: slots
-                methods: methods!
+        visitor visitClass: self!
 
     method parts
         [name, directMethods, slots, methods]!

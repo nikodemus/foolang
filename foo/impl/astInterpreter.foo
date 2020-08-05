@@ -125,25 +125,26 @@ class AstInterpreter { context process }
         { AstInterpreter eval: astMethod body with: context }
             finally: { context invalidate } !
 
-    method visitConstant: value
-        value!
+    method visitConstant: aConstant
+        aConstant value!
 
-    method visitGlobal: value
-        value!
+    method visitGlobal: aGlobal
+        aGlobal value!
 
-    method visitIsLeft: left right: right
-        (left visitBy: self) is (right visitBy: self)!
+    method visitIs: anIs
+        (anIs left visitBy: self) is (anIs right visitBy: self)!
 
-    method visitSeqFirst: first then: then
-        first visitBy: self.
-        then visitBy: self!
+    method visitSeq: aSeq
+        aSeq first visitBy: self.
+        aSeq then visitBy: self!
 
-    method visitReturn: value
-        context returnBlock value: (value visitBy: self)!
+    method visitReturn: aReturn
+        context returnBlock value: (aReturn value visitBy: self)!
 
-    method visitSend: selector to: receiver with: arguments source: source
-        let object = receiver visitBy: self.
-        let arguments = arguments collect: { |arg| arg visitBy: self }.
+    method visitSend: aSend
+        let selector = aSend selector.
+        let object = aSend receiver visitBy: self.
+        let arguments = aSend arguments collect: { |arg| arg visitBy: self }.
         let $context = context.
         let $process = process.
         -- Debug println: "<- {selector}".
@@ -156,36 +157,37 @@ class AstInterpreter { context process }
                                     raise: selector
                                     with: arguments
                                     on: object
-                                    source: source }} !
+                                    source: aSend source }} !
 
-    method visitComment: comment value: value source: source
-        value visitBy: self!
+    method visitComment: aComment
+        aComment value visitBy: self!
 
-    method visitBlock: block
+    method visitBlock: aBlock
         AstBlockClosure
             context: context
-            block: block!
+            block: aBlock!
 
-    method visitSelf
+    method visitSelf: aSelf
         context receiver!
 
-    method visitSlotRef: name at: index
-        context slot: index!
+    method visitSlotRef: aSlotRef
+        context slot: aSlotRef index!
 
-    method visitBindLexical: name value: value index: index body: body
+    method visitBindLexical: aBind
         context
-            put: (value visitBy: self)
-            at: index
+            put: (aBind value visitBy: self)
+            at: aBind index
             inFrame: 1.
-        body visitBy: self!
+        aBind body visitBy: self!
 
-    method visitLexicalRef: name index: index frame: frame
-        context at: index inFrame: frame!
-
-
-    method visitLexicalSet: name value: value index: index frame: frame
+    method visitLexicalRef: aRef
         context
-            put: (value visitBy: self)
-            at: index
-            inFrame: frame!
+            at: aRef index
+            inFrame: aRef frame!
+
+    method visitLexicalSet: aSet
+        context
+            put: (aSet value visitBy: self)
+            at: aSet index
+            inFrame: aSet frame!
 end

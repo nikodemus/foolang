@@ -195,14 +195,16 @@ class TokenReservedSigilOpenBrace { first last }
     is ReservedToken
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        let arguments = List new.
+        let parameters = List new.
         parser
             when: "|"
             then: { parser until: "|"
-                           do: { arguments add: (parser parseVariableName) } }.
+                           do: { parameters add: (parser parseVariableName) } }.
         let body = parser parseAtPrecedence: SeqPrecedence.
         parser expect: "}".
-        SyntaxBlock arguments: arguments body: body!
+        SyntaxBlock
+            parameters: parameters
+            body: body!
 
     method string
         "\{"!

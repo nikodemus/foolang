@@ -1,15 +1,15 @@
 interface AstVisitor
-    required method visitConstant: value
-    required method visitGlobal: value
-    required method visitIsLeft: left right: right
-    required method visitSeqFirst: first then: then
-    required method visitReturn: value
-    required method visitSend: selector to: receiver with: arguments source: source
-    required method visitComment: comment value: value source: source
-    required method visitBlock: block
-    required method visitSelf
-    required method visitSlotRef: name at: index
-    required method visitBindLexical: name value: value index: index body: body
-    required method visitLexicalRef: name index: index frame: frame
-    required method visitLexicalSet: name value: value index: index frame: frame
+    required method visitConstant: aConstant
+    required method visitGlobal: aGlobal
+    required method visitIs: anIs
+    required method visitSeq: aSeq
+    required method visitReturn: aReturn
+    required method visitSend: aSend
+    required method visitComment: aComment
+    required method visitBlock: aBlock
+    required method visitSelf: aSelf
+    required method visitSlotRef: aSlotRef
+    required method visitBindLexical: aBind
+    required method visitLexicalRef: aRef
+    required method visitLexicalSet: aSet
 end

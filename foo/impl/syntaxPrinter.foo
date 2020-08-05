@@ -45,138 +45,144 @@ class SyntaxPrinter { output indent printed blockStart }
             ifTrue: { self println: "".
                       blockStart = False }!
 
-    method visitLiteral: value
-        self print: value toString!
+    method visitLiteral: aLiteral
+        self print: aLiteral value toString!
 
-    method visitSeqFirst: first then: then
+    method visitSeq: aSeq
         self handleBlockStart.
-        first visitBy: self.
+        aSeq first visitBy: self.
         self println: ".".
-        then visitBy: self!
+        aSeq then visitBy: self!
 
-    method visitReturn: value
+    method visitReturn: aReturn
         self print: "return ".
-        value visitBy: self!
+        aReturn value visitBy: self!
 
-    method visitPrefixComment: comment value: value source: source
+    method visitPrefixComment: aComment
         self handleBlockStart.
         self print: "--".
-        self println: comment.
-        value visitBy: self indentBody!
+        self println: aComment comment.
+        aComment value visitBy: self indentBody!
 
-    method visitSuffixComment: comment value: value source: source
+    method visitSuffixComment: aComment
         self handleBlockStart.
-        value visitBy: self.
+        aComment value visitBy: self.
         self print: " --".
-        self println: comment!
+        self println: aComment comment!
 
-    method visitPrefixMessage: selector receiver: receiver source: source
-        self print: selector name.
-        receiver visitBy: self!
+    method visitPrefixMessage: aMessage
+        self print: aMessage selector name.
+        aMessage receiver visitBy: self!
 
-    method visitUnaryMessage: selector receiver: receiver source: source
-        receiver visitBy: self.
+    method visitUnaryMessage: aMessage
+        aMessage receiver visitBy: self.
         self print: " ".
-        self print: selector name!
+        self print: aMessage selector name!
 
-    method visitBinaryMessage: selector receiver: receiver argument: argument source: source
-        receiver visitBy: self.
+    method visitBinaryMessage: aMessage
+        aMessage receiver visitBy: self.
         self print: " ".
-        self print: selector name.
+        self print: aMessage selector name.
         self print: " ".
-        argument visitBy: self!
+        aMessage argument visitBy: self!
 
-    method visitKeywordMessage: selector receiver: receiver arguments: arguments source: source
-        receiver visitBy: self.
-        selector parts
-            with: arguments
+    method visitKeywordMessage: aMessage
+        aMessage receiver visitBy: self.
+        aMessage selector parts
+            with: aMessage arguments
             do: { |part arg|
                   self print: " ".
                   self print: part.
                   self print: " ".
                   arg visitBy: self }!
 
-    method visitIsLeft: left right: right
-        left visitBy: self.
+    method visitIs: anIs
+        anIs left visitBy: self.
         self print: " is ".
-        right visitBy: self!
+        anIs right visitBy: self!
 
-    method visitLet: name value: value body: body
+    method visitLet: aLet
         self handleBlockStart.
         self print: "let ".
-        self print: name.
+        self print: aLet name.
         self print: " = ".
-        value visitBy: self.
+        aLet value visitBy: self.
         self println: ".".
-        body visitBy: self!
+        aLet body visitBy: self!
 
-    method visitSelf
+    method visitSelf: aSelf
         self print: "self"!
 
-    method visitVariable: name
-        self print: name!
+    method visitVariable: aVariable
+        self print: aVariable name!
 
-    method visitAssign: value to: variable
-        self print: variable name.
+    method visitAssign: anAssign
+        self print: anAssign variable name.
         self print: " = ".
-        value visitBy: self!
+        anAssign value visitBy: self!
 
-    method visitParens: body
+    method visitParens: aParens
         self print: "(".
-        body visitBy: self indentHere.
+        aParens body visitBy: self indentHere.
         self print: ")"!
 
-    method visitBlockWith: parameters body: body
+    method visitBlock: aBlock
         self print: "\{ ".
         let bodyPrinter = self indentBlock.
-        parameters
+        aBlock parameters
             ifNotEmpty: { self print: "|".
-                          parameters do: { |param| self print: param }
-                                     interleaving: { self print: " " }.
+                          aBlock parameters
+                              do: { |param| self print: param }
+                              interleaving: { self print: " " }.
                           self print: "| " }.
-        body visitBy: bodyPrinter.
+        aBlock body visitBy: bodyPrinter.
         self print: " }"!
 
-    method visitDefine: name body: body
+    method visitDefine: aDefine
         self print: "define ".
         let bodyVisitor = self indentBody.
-        bodyVisitor println: name.
-        body visitBy: bodyVisitor.
+        bodyVisitor println: aDefine name.
+        aDefine body visitBy: bodyVisitor.
         self println: "!"!
 
-    method visitMethodDefinition: signature body: body
+    method visitMethod: aMethod
         self print: "method".
+        let signature = aMethod signature.
         signature parameters isEmpty
             ifTrue: { self print: " ".
                       self print: signature selector name }
             ifFalse: { signature selector parts
                            withIndexDo: { |part index|
-                                 self print: " ".
-                                 self print: part.
-                                 self print: " ".
+                                          self print: " ".
+                                          self print: part.
+                                          self print: " ".
                                           self print: (signature parameters at: index) } }.
         let bodyVisitor = self indentBody.
         bodyVisitor println: "".
-        body visitBy: bodyVisitor.
+        aMethod body visitBy: bodyVisitor.
         self print: "!"!
 
-    method visitClassDefinition: name directMethods: directMethods slots: slots methods: methods
+    method visitClass: aClass
         self print: "class ".
-        self print: name.
+        self print: aClass name.
         self print: " \{".
-        slots ifNotEmpty: { self print: " ".
-                            slots do: { |slot|
-                                        self print: slot.
-                                        self print: " " } }.
+        aClass slots
+            ifNotEmpty: { self print: " ".
+                          aClass slots
+                              do: { |slot|
+                                    self print: slot.
+                                    self print: " " }}.
         self print: "}".
         let methodVisitor = self indentBody.
-        directMethods do: { |m|
-                            methodVisitor println: "".
-                            methodVisitor print: "direct ".
-                            m visitBy: methodVisitor }.
-        methods do: { |m|
-                      methodVisitor println: "".
-                      m visitBy: methodVisitor }.
+        aClass directMethods
+            do: { |m|
+                  methodVisitor println: "".
+                  methodVisitor print: "direct ".
+                  m visitBy: methodVisitor }.
+        aClass methods
+            do: { |m|
+                  methodVisitor println: "".
+                  m visitBy: methodVisitor }.
         self println: "".
         self println: "end"!
 end

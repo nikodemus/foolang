@@ -11,113 +11,118 @@ class SyntaxTranslator { env }
     method addVariable: name
         SyntaxTranslator env: (env addVariable: name)!
 
-    method visitLiteral: value
-        AstConstantRef
-            value: value!
+    method visitLiteral: aLiteral
+        AstConstantRef value: aLiteral value!
 
-    method visitSeqFirst: first then: then
+    method visitSeq: aSeq
         -- FIXME: Would be nicer to flatten this out.
         AstSeq
-            first: (first visitBy: self)
-            then: (then visitBy: self)!
+            first: (aSeq first visitBy: self)
+            then: (aSeq then visitBy: self)!
 
-    method visitReturn: syntax
-        AstReturn
-            value: (syntax visitBy: self)!
+    method visitReturn: aReturn
+        AstReturn value: (aReturn value visitBy: self)!
 
-    method visitPrefixComment: comment value: value source: source
-        AstComment comment: comment
-                   value: (value visitBy: self)
-                   source: source!
+    method visitPrefixComment: aComment
+        AstComment
+            comment: aComment comment
+            value: (aComment value visitBy: self)
+            source: aComment source!
 
-    method visitSuffixComment: comment value: value source: source
-        AstComment comment: comment
-                   value: (value visitBy: self)
-                   source: source!
+    method visitSuffixComment: aComment
+        AstComment
+            comment: aComment comment
+            value: (aComment value visitBy: self)
+            source: aComment source!
 
-    method visitLet: name value: value body: body
-        let bodyVisitor = self addVariable: name.
+    method visitLet: aLet
+        let bodyVisitor = self addVariable: aLet name.
         AstBindLexical
-            name: name
+            name: aLet name
             index: bodyVisitor env allocation index
-            value: (value visitBy: self)
-            body: (body visitBy: bodyVisitor)!
+            value: (aLet value visitBy: self)
+            body: (aLet body visitBy: bodyVisitor)!
 
-    method visitPrefixMessage: selector receiver: receiver source: source
-        AstSend receiver: (receiver visitBy: self)
-                selector: (Selector name: "prefix{selector name}")
-                arguments: []
-                source: source!
+    method visitPrefixMessage: aMessage
+        AstSend
+            receiver: (aMessage receiver visitBy: self)
+            selector: (Selector name: "prefix{aMessage selector name}")
+            arguments: []
+            source: aMessage source!
 
-    method visitUnaryMessage: selector receiver: receiver source: source
-        AstSend receiver: (receiver visitBy: self)
-                selector: selector
-                arguments: []
-                source: source!
+    method visitUnaryMessage: aMessage
+        AstSend
+            receiver: (aMessage receiver visitBy: self)
+            selector: aMessage selector
+            arguments: []
+            source: aMessage source!
 
-    method visitBinaryMessage: selector receiver: receiver argument: argument source: source
-        AstSend receiver: (receiver visitBy: self)
-                selector: selector
-                arguments: [argument visitBy: self]
-                source: source!
+    method visitBinaryMessage: aMessage
+        AstSend
+            receiver: (aMessage receiver visitBy: self)
+            selector: aMessage selector
+            arguments: [aMessage argument visitBy: self]
+            source: aMessage source!
 
-    method visitKeywordMessage: selector receiver: receiver arguments: arguments source: source
-        AstSend receiver: (receiver visitBy: self)
-                selector: selector
-                arguments: (arguments
-                                collect: { |arg|  arg visitBy: self })
-                source: source!
+    method visitKeywordMessage: aMessage
+        AstSend
+            receiver: (aMessage receiver visitBy: self)
+            selector: aMessage selector
+            arguments: (aMessage arguments collect: { |arg| arg visitBy: self })
+            source: aMessage source!
 
-    method visitIsLeft: left right: right
-        AstIs left: (left visitBy: self)
-              right: (right visitBy: self)!
+    method visitIs: anIs
+        AstIs
+            left: (anIs left visitBy: self)
+            right: (anIs right visitBy: self)!
 
-    method visitSelf
+    method visitSelf: aSelf
         AstSelfRef new!
 
-    method visitVariable: name
-        env reference: name!
+    method visitVariable: aVariable
+        env reference: aVariable name!
 
-    method visitAssign: value to: variable
-        let binding = env reference: variable name.
+    method visitAssign: anAssign
+        let binding = env reference: anAssign variable name.
         AstLexicalSet
-            name: variable name
+            name: anAssign variable name
             frame: binding frame :: Integer
             index: binding index :: Integer
-            value: (value visitBy: self)!
+            value: (anAssign value visitBy: self)!
 
-    method visitParens: body
-        body visitBy: self!
+    method visitParens: aParens
+        aParens body visitBy: self!
 
-    method visitBlockWith: parameters body: body
-        let bodyEnv = env newFrame addVariables: parameters.
+    method visitBlock: aBlock
+        let bodyEnv = env newFrame addVariables: aBlock parameters.
         AstBlock
-            body: (body visitBy: (SyntaxTranslator env: bodyEnv))
-            argumentCount: parameters size
-            frameSize: parameters size + bodyEnv allocation size!
+            body: (aBlock body visitBy: (SyntaxTranslator env: bodyEnv))
+            argumentCount: aBlock parameters size
+            frameSize: aBlock parameters size + bodyEnv allocation size!
 
-    method visitDefine: name body: body
-        -- FIXME: Is this right?? Should body not gets an environment of its own?
+    method visitDefine: aDefine
+        let bodyVisitor = SyntaxTranslator env: env newFrame.
         AstDefine
-            name: name
-            body: (body visitBy: self)
-            frameSize: env allocation size!
+            name: aDefine name
+            body: (aDefine body visitBy: bodyVisitor)
+            frameSize: bodyVisitor env allocation size!
 
-    method visitMethodDefinition: signature body: body
+    method visitMethod: aMethod
+        let signature = aMethod signature.
         let bodyEnv = env newFrame addVariables: signature parameters.
         AstMethod
-            selector: signature selector name
+            selector: signature selector name -- FIXME: should pass in whole selector
             argumentCount: signature parameters size
-            body: (body visitBy: (SyntaxTranslator env: bodyEnv))
+            body: (aMethod body visitBy: (SyntaxTranslator env: bodyEnv))
             frameSize: bodyEnv allocation size!
 
-    method visitClassDefinition: name directMethods: directMethods slots: slots methods: methods
-        let astDirectMethods = directMethods collect: { |m| m visitBy: self }.
-        let instanceMethodVisitor = SyntaxTranslator env: (env addSlots: slots).
-        let astMethods = methods collect: { |m| m visitBy: instanceMethodVisitor }.
+    method visitClass: aClass
+        let instanceMethodVisitor = SyntaxTranslator env: (env addSlots: aClass slots).
         AstClass
-            name: name
-            directMethods: astDirectMethods
-            slots: slots
-            methods: astMethods!
+            name: aClass name
+            directMethods: (aClass directMethods
+                                collect: { |m| m visitBy: self })
+            slots: aClass slots
+            methods: (aClass methods
+                          collect: { |m| m visitBy: instanceMethodVisitor })!
 end
