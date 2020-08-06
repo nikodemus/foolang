@@ -6,18 +6,18 @@ interface Composable
         Composition
             first: self
             then: then!
-    method value
-        self then value: first value!
-    method value: arg
-        self then value: (first value: arg)!
-    method value: arg1 value: arg2
-        self then value: (first value: arg1 value: arg2)!
 end
 
 class Composition { first then }
     is Composable
     method printOn: output
         output print: "#<Composition {first} then: {then}>"!
+    method value
+        self then value: first value!
+    method value: arg
+        self then value: (first value: arg)!
+    method value: arg1 value: arg2
+        self then value: (first value: arg1 value: arg2)!
 end
 
 extend Closure
