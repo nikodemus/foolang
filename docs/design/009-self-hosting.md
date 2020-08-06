@@ -59,7 +59,7 @@ No impact.
 
 Positive impact: transpiled code with type annotations should be "pretty
 decent", and transpilation will expose any "this is hard to compile well"
-issues with the language design sooner than later. 
+issues with the language design sooner than later.
 
 #### Uniformity
 
@@ -104,55 +104,61 @@ refined IRs in micro-passes.
 
 Tradeoffs abound, mostly debugging and ease of implmentation vs speed.
 
-In order to be able to eyeball the performance we're getting usefully the
-C code should use native stack and calling conventions, including XEPs and IEPs:
+Rough sketch of options:
+
+- C calling convention, using fixed or varargs as appropriate. Very little
+  flexibility, live debugging hard. Cost: low.
+
+- Separate data stack. Live debugging much easier than with C calling
+  convention. With enough work also allows materialization of contexts. Cost:
+  medium.
+
+- Explict heap allocated contexts. This is the most flexible solution, but even
+  then all of classic Smalltalk context trickery will remain out of reach unless
+  execution is also trampolined. Cost: high.
+
+Compromise:
+
+1. Strict methods (methods declaring that at least one of their arguments is an
+   instance of specific class) are implemented in two parts: external entry
+   point using a data-stack, and internal entry point which pulls arguments from
+   the stack, typechecks and unboxes the ones with class types, and calls the
+   internal entry point using C-convention, finally boxing up the return value
+   if it's class was declared. The internal entry point uses C calling
+   convention.
+
+   When a strict method has a known send to it, it is compiled directly using
+   the internal entry point.
+
+2. Non-strict methods do not have an internal entry point, and directly use
+   the data stack for both arguments and local variables.
+
+Backtraces can be generated for both with with `libunwind` / Windows'
+`CaptureStackBackTrace`, and C names demangled/mapped into class and selector
+names, and external/internal interface frames merged.
+
+For internal entry point frames arguments and variables will no be accessible.
+
+For external entry point frames it should be possible to identify the section of
+the data stack and the associated argument and variable names.
+
+Full sends can use `setjmp/longjmp` to provide both restartability and debugger
+return capability, as per following sketch:
 
 ```
-struct FOO* foo_Integer_method_addInteger_xep(struct Foo* receiver, int nargs, ...) {
-    va_list args;
-    va_start(args, nargs);
-    /* IEP inlined since it's a primitive */
-    return FOO(.class = &FOO_CLASS_Integer,
-               .i64 = receiver.datum.i64 + FOO_INTEGER_ARG(args, FOO_SOURCE_INFO_9861));
-    /* IEP out of line like it would normally be */
-    return FOO(.class = &FOO_CLASS_Integer,
-               .i64 = foo_Integer_method_addInteger_iep(receiver.datum.i64,  FOO_INTEGER_ARG(args, FOO_SOURCE_INFO_9861)));
+foo_send(struct FooStack* stack) {
+  restart:
+    jmp_buf control;
+    switch (setjmp(control)) {
+        case SETJMP_INIT:
+            return foo_send_internal(&control, stack);
+        case SETJMP_RETURN:
+            return stack->unwind_return_value;
+        case SETJMP_RESTART:
+            goto restart;
+    }
 }
 ```
-
-Mininum requirements for transpiled code:
-- Backtrace with classes and selectors.
-- Mixing interpreted and transpiled frames.
-
-Backtrace can be generated with `libunwind` / Windows' `CaptureStackBackTrace`,
-and C names demangled/mapped into class and selector names.
-
-Access to XEP receiver and arguments is probably doable via frame pointer fairly
-easily -- but also noncritical if missed. Access to IEP arguments is clearly
-harder, and will be elided for now. Access to local variables is not going to happen.
-
-Restarting transpiled frames might be doable, but is elided.
-
-Initial implementation of non-local returns can use `setjmp/longjmp`.
-
-Consider:
-
-```
-method someInterpretedMethod
-    array collect: interpretedBlock!
-```
-
-If there's an error in interpreted block, backtrace should look like:
-
-```
-...
-Block#value:
-Array#collect:(compiled)
-Foo#someInterpretedMethod
-```
-
-This will be a bit tricky, but getting it right seems hugely important for
-quality of life.
 
 ## Discussion
 
