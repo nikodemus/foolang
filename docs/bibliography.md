@@ -65,6 +65,11 @@ it's here more for future reference than anything else.
   various. _Foolang has quite different design criteria than Fortress, but
   Fortress was an amazing design and well worth learning from._
 
+- 2008 - [The Little Manual of API
+  Design](https://people.mpi-inf.mpg.de/~jblanche/api-design.pdf) by Jasmin
+  Blanchette. _Library design rather than language design, but close enough.
+  Everyone should read this._
+
 - 2009 - [On Understading Data Abstraction,
   Revisited](https://www.cs.utexas.edu/~wcook/Drafts/2009/essay.pdf) by William
   R. Cook. _What is the difference between ADTs and objects? Read this and a
