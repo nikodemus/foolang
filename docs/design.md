@@ -37,6 +37,7 @@ in in progress, this is the current status:
 - 006 - [Integer Types](design/006-integer-types.md)
 - 007 - [Definitions and Expressions](design/007-definitions-and-expressions.md)
 - 008 - [Indexed Classes](design/008-indexed-classes.md)
+- 009 - [Self Hosting](design/009-self-hosting.md)
 - WIP - [Tower of Babel](design/wip-tower-of-babel.md)
 
 ### Old Design Notes
