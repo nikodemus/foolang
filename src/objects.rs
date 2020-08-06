@@ -1490,9 +1490,14 @@ impl Object {
                     method.send("invoke:on:", &[env.foo.make_array(args), self.clone()], env)
                 }
             },
-            None if selector == "__slot:" => {
-                read_instance_variable(self, args[0].as_usize("#__slot:")?)
+            None if selector == "__atSlot:" => {
+                read_instance_variable(self, args[0].as_usize("#__atSlot:")?)
             }
+            None if selector == "__put:__atSlot:" => unsafe_write_instance_variable(
+                self,
+                &args[0],
+                args[1].as_usize("#__put:__atSlot:")?,
+            ),
             None if selector == "toString" => generic_to_string(self, args, env),
             None if selector == "typecheck:" => generic_typecheck(self, args, env),
             None if selector == "includes:" => generic_class_includes(self, args, env),
@@ -1667,6 +1672,12 @@ pub fn read_instance_variable(receiver: &Object, index: usize) -> Eval {
     let instance = receiver.instance()?;
     let value = instance.instance_variables.borrow()[index].clone();
     Ok(value)
+}
+
+pub fn unsafe_write_instance_variable(receiver: &Object, value: &Object, index: usize) -> Eval {
+    let instance = receiver.instance()?;
+    instance.instance_variables.borrow_mut()[index] = value.clone();
+    Ok(value.clone())
 }
 
 pub fn write_instance_variable(receiver: &Object, slot: &Slot, value: Object, env: &Env) -> Eval {

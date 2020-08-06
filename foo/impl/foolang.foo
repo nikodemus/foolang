@@ -41,6 +41,7 @@ class Tests { system ok }
             ; test: #testDefine
             ; test: #testSimpleClass
             ; test: #testClassWithMethod
+            ; test: #testSlotAssign
             ; test: #testClassWithPrefixMethod
             ; test: #testTwoClasses
             ; test: #testBlockInMethod
@@ -165,6 +166,16 @@ with: {defSource}"!
                            slot + x!
                     end"
              eval: "(MyClass slot: 40) foo: 2"
+             expect: 42!
+    method testSlotAssign
+        self load: "class MyClass \{ slot }
+                        method bar
+                           slot = slot * 2!
+                        method foo
+                           self bar.
+                           slot!
+                    end"
+             eval: "(MyClass slot: 21) foo"
              expect: 42!
     method testClassWithPrefixMethod
         self load: "class MyClass \{ slot }

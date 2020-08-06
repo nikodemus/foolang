@@ -28,22 +28,6 @@ class InterpreterContext {
         returnBlock = { |value|
                         Error raise: "Cannot return from dead context: {value}" }!
 
-    method slot: index
-        -- FIXME: Replace this with Primitive readSlot: index of: receiver.
-        -- which breaks encapsulation. Dammit, so it needs to be:
-        --
-        --    system primitives readSlot: index of: receiver.
-        --
-        -- so primitives need to be passed down here. Yuck.
-        --
-        -- Maybe some of the auth should be statically handled?
-        -- Like:
-        --
-        --    import foolang allowing: Primitive
-        --
-        -- ?
-        receiver __slot: (index - 1)!
-
     method at: index inFrame: frameNumber
         frameNumber > 0
             ifTrue: { sender at: index inFrame: frameNumber - 1 }
@@ -172,7 +156,12 @@ class AstInterpreter { context process }
         context receiver!
 
     method visitSlotRef: aSlotRef
-        context slot: aSlotRef slot index!
+        context receiver __atSlot: aSlotRef slot index - 1!
+
+    method visitSlotSet: aSlotSet
+        context receiver
+            __put: (aSlotSet value visitBy: self)
+            __atSlot: aSlotSet slot index - 1!
 
     method visitBindLexical: aBind
         context

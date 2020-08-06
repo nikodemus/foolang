@@ -84,11 +84,8 @@ class SyntaxTranslator { env }
         env reference: aVariable name!
 
     method visitAssign: anAssign
-        let binding = env reference: anAssign variable name.
-        AstLexicalSet
-            variable: binding variable
-            frameOffset: binding frameOffset :: Integer
-            value: (anAssign value visitBy: self)!
+        (env reference: anAssign variable name)
+            assign: (anAssign value visitBy: self)!
 
     method visitParens: aParens
         aParens body visitBy: self!
