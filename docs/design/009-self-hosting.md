@@ -100,6 +100,60 @@ Both syntax translator and interpreter are structured as visitors.
 For transpilation rewriting visitors will transmute AST into successively
 refined IRs in micro-passes.
 
+### Transpiled code
+
+Tradeoffs abound, mostly debugging and ease of implmentation vs speed.
+
+In order to be able to eyeball the performance we're getting usefully the
+C code should use native stack and calling conventions, including XEPs and IEPs:
+
+```
+struct FOO* foo_Integer_method_addInteger_xep(struct Foo* receiver, int nargs, ...) {
+    va_list args;
+    va_start(args, nargs);
+    /* IEP inlined since it's a primitive */
+    return FOO(.class = &FOO_CLASS_Integer,
+               .i64 = receiver.datum.i64 + FOO_INTEGER_ARG(args, FOO_SOURCE_INFO_9861));
+    /* IEP out of line like it would normally be */
+    return FOO(.class = &FOO_CLASS_Integer,
+               .i64 = foo_Integer_method_addInteger_iep(receiver.datum.i64,  FOO_INTEGER_ARG(args, FOO_SOURCE_INFO_9861)));
+}
+```
+
+Mininum requirements for transpiled code:
+- Backtrace with classes and selectors.
+- Mixing interpreted and transpiled frames.
+
+Backtrace can be generated with `libunwind` / Windows' `CaptureStackBackTrace`,
+and C names demangled/mapped into class and selector names.
+
+Access to XEP receiver and arguments is probably doable via frame pointer fairly
+easily -- but also noncritical if missed. Access to IEP arguments is clearly
+harder, and will be elided for now. Access to local variables is not going to happen.
+
+Restarting transpiled frames might be doable, but is elided.
+
+Initial implementation of non-local returns can use `setjmp/longjmp`.
+
+Consider:
+
+```
+method someInterpretedMethod
+    array collect: interpretedBlock!
+```
+
+If there's an error in interpreted block, backtrace should look like:
+
+```
+...
+Block#value:
+Array#collect:(compiled)
+Foo#someInterpretedMethod
+```
+
+This will be a bit tricky, but getting it right seems hugely important for
+quality of life.
+
 ## Discussion
 
 None.
