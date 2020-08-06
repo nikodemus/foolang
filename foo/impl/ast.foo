@@ -193,6 +193,18 @@ class AstSlotRef { slot }
 
     method visitBy: visitor
         visitor visitSlotRef: self!
+
+    method assign: value
+        AstSlotSet
+            slot: slot
+            value: value!
+end
+
+class AstSlotSet { slot value }
+    is AstNode
+
+    method visitBy: visitor
+        visitor visitSlotSet: self!
 end
 
 class AstBindLexical { variable value body }
@@ -207,6 +219,12 @@ class AstLexicalRef { variable frameOffset::Integer }
 
     method visitBy: visitor
         visitor visitLexicalRef: self!
+
+    method assign: value
+        AstLexicalSet
+            variable: variable
+            frameOffset: frameOffset
+            value: value!
 end
 
 class AstLexicalSet { variable frameOffset::Integer value }
