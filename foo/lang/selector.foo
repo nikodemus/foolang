@@ -1,10 +1,11 @@
 import .string.String
+import .closure.Composable
 
 define ColonCharacter
     ":" character!
 
 class Selector { name }
-    is Object
+    is Composable
 
     direct method new: name
         self name: name!
