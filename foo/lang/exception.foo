@@ -9,7 +9,7 @@ end
 
 class FallbackHandler {}
     direct method raise: ex
-        panic "UNHANDLED ERROR: {ex}"!
+        panic "UNHANDLED ERROR: {ex description}"!
 end
 
 define $error
@@ -94,12 +94,6 @@ class DoesNotUnderstand { receiver selector arguments source context }
              source: source
              context: context)
         raise!
-    method toString
-        Output debug print: "\nDNU ".
-        Output debug print: selector.
-        Output debug print: " to ".
-        Output debug println: receiver.
-        "DNU {selector}"!
     method description
         let note = "{receiver} does not understand: {selector}".
         source is False
