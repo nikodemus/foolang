@@ -23,6 +23,9 @@ class Tests { system ok }
 
     method run
         self
+            ; test: #testString1
+            ; test: #testString2
+            ; test: #testString3
             ; test: #testComment1
             ; test: #testComment2
             ; test: #testComment3
@@ -30,8 +33,7 @@ class Tests { system ok }
             ; test: #testComment5
             ; test: #testComment6
             ; test: #testComment7
-            ; test: #testComment8
-            -- ; test: #testComment9
+            ; test: #testComment8 -- ; test: #testComment9
             ; test: #testTranspile
             ; test: #test42
             ; test: #testPlus
@@ -361,6 +363,18 @@ with: {defSource}"!
                     end"
             eval: "Two new test"
             expect: 42!
+
+    method testString1
+        self eval: " \"foo\" "
+             expect: "foo"!
+
+    method testString2
+        self eval: " \"foo\\\"bar\" "
+             expect: "foo\"bar"!
+
+    method testString3
+        self eval: " \"foo\\nbar\" "
+             expect: "foo\nbar"!
 
     method transpile: string
         let env = Environment new.

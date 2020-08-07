@@ -59,7 +59,7 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
                       blockStart = False }!
 
     method visitLiteral: aLiteral
-        self print: aLiteral value toString!
+        self print: aLiteral value displayString!
 
     method visitSeq: aSeq
         self handleBlockStart.

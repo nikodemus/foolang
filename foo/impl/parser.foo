@@ -60,6 +60,32 @@ interface Token
         "#<Token \"{self string}\">"!
 end
 
+define StringEscapes
+    let escapes = Dictionary new.
+    escapes put: "\n" at: "n".
+    escapes!
+
+class TokenString { string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        let out = StringOutput new.
+        let escape = False.
+        first to: last
+              do: { |pos|
+                    (escape not and: (parser atEscape: pos))
+                        ifTrue: { escape = True }
+                        ifFalse: { let orig = parser source from: pos to: pos.
+                                   out print: (escape
+                                                   ifTrue: { escape = False.
+                                                             self escape: orig }
+                                                   ifFalse: { orig }) } }.
+        SyntaxLiteral value: out content!
+
+    method escape: s
+        StringEscapes at: s ifNone: { s }!
+end
+
 interface SuffixToken
     is Token
 
@@ -495,6 +521,12 @@ define SpecialCharacters
 define UnderscoreCharacter
     "_" character!
 
+define DoublequoteCharacter
+    "\"" character!
+
+define EscapeCharacter
+    "\\" character!
+
 define ColonCharacter
     ":" character!
 
@@ -561,7 +593,7 @@ Context: {source}" }!
 
     method sees: test
         -- Cannot use lookahead since that would skip newlines!
-        self skipWhile: #atHorizontalWhitespace.
+        self skipWhile: { self atHorizontalWhitespace }.
         let last = (position + test size - 1) min: source size.
         test == (source from: position to: last)!
 
@@ -620,6 +652,8 @@ Context: {source}" }!
             ifTrue: { return self scanSpecial }.
         self atDigit
             ifTrue: { return self scanDecimal }.
+        self atDoublequote
+            ifTrue: { return self scanString }.
         self atSigil
             ifTrue: { return self scanSigil }.
         self atWord
@@ -627,6 +661,9 @@ Context: {source}" }!
         Error raise: "Don't know how to scan pos: {position} in: {source}"!
 
     method atEof
+        self atEof: position!
+
+    method atEof: position
         position > last!
 
     method atSpecial
@@ -636,6 +673,9 @@ Context: {source}" }!
 
     method atDigit
         self isAt: #isDigit!
+
+    method atDoublequote
+        self isAt: { |char| char == DoublequoteCharacter }!
 
     method atWord
         self isAt: { |char|
@@ -657,13 +697,22 @@ Context: {source}" }!
     method atWhitespace
         self isAt: #isWhitespace!
 
-    method atChar: char1 thenNot: char2
+    method atChar: char1 notFollowedBy: char2
         self atEof
             ifTrue: { return False }.
         (source at: position) == char1
             ifFalse: { return False }.
         (position + 1 > last)
             ifFalse: { ((source at: position + 1) == char2) not }!
+
+    method afterEscape
+        self atEscape: position - 1!
+
+    method atEscape: position
+        (self atEof: position)
+            ifTrue: { return False }.
+        (position >= first)
+            ifTrue: { (source at: position) == EscapeCharacter }!
 
     method isAt: block
         self atEof
@@ -673,12 +722,11 @@ Context: {source}" }!
     method skipWhile: test
         -- Debug println: "/skipWhile: {test}".
         let start = position.
-        { test value: self }
-            whileTrue: { self advance }.
+        test whileTrue: { self advance }.
         position - 1!
 
     method skipWhitespace
-        self skipWhile: #atWhitespace!
+        self skipWhile: { self atWhitespace }!
 
     method scanSpecial
         -- Debug println: "/scanSpecial".
@@ -693,21 +741,31 @@ Context: {source}" }!
         -- Debug println: "/scanDecimal".
         TokenDecimal
             from: position
-            to: (self skipWhile: #atDigit)
+            to: (self skipWhile: { self atDigit })
             in: self!
+
+    method scanString
+        -- Debug println: "/scanString".
+        self advance.
+        let string = TokenString
+                         from: position
+                         to: (self skipWhile: { self atDoublequote not or: self afterEscape })
+                         in: self.
+        self advance.
+        string!
 
     method scanSigil
         -- Debug println: "/scanSigil".
         TokenSigil
             from: position
-            to: (self skipWhile: #atSigil)
+            to: (self skipWhile: { self atSigil })
             in: self!
 
     method scanWord
         -- Debug println: "/scanWord".
         let first = position.
-        self skipWhile: #atWord.
-        (self atChar: ColonCharacter thenNot: ColonCharacter)
+        self skipWhile: { self atWord }.
+        (self atChar: ColonCharacter notFollowedBy: ColonCharacter)
             ifTrue: { self advance.
                       TokenKeyword
                           from: first
