@@ -421,14 +421,6 @@ class TokenWord { string first last }
     method precedence
         UnaryPrecedence!
 
-    direct method from: first to: last in: parser
-        let tokenString = parser source from: first to: last.
-        -- Reserved words get their own classes!
-        let tokenClass = ReservedTokens
-                             at: tokenString
-                             ifNone: { TokenWord }.
-        tokenClass string: tokenString first: first last: last!
-
     method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxVariable
             name: string!
