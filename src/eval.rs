@@ -64,6 +64,8 @@ pub struct EnvFrame {
     receiver: Option<Object>,
 }
 
+// static mut DEBUG_DEPTH: usize = 0;
+
 #[derive(Debug, Clone)]
 pub struct EnvRef {
     frame: Rc<RefCell<EnvFrame>>,
@@ -688,15 +690,30 @@ impl Env {
     }
 
     fn eval_sends(&self, mut receiver: Object, messages: &Vec<Message>) -> Eval {
+        /*
+        let orig_receiver = receiver.clone();
+        unsafe {
+            println!("{} CHAIN TO: {:?}", &DEBUG_DEPTH, &receiver);
+            DEBUG_DEPTH += 1;
+        } */
         for message in messages {
+            // unsafe { println!("{} <- #{}", &DEBUG_DEPTH, message.selector.as_str()); }
             let mut values = Vec::new();
+            values.reserve(message.args.len());
             for arg in &message.args {
                 values.push(self.eval(arg)?);
             }
             receiver = receiver
                 .send(message.selector.as_str(), &values[..], &self)
-                .source(&message.source_location)?
+                .source(&message.source_location)?;
+            // unsafe { println!("{} -> #{} ok!", &DEBUG_DEPTH, message.selector.as_str()); }
         }
+        /*
+        unsafe {
+            DEBUG_DEPTH -= 1;
+            println!("{} CHAIN OK: {:?}", &DEBUG_DEPTH, orig_receiver);
+        }
+        */
         return Ok(receiver);
     }
 

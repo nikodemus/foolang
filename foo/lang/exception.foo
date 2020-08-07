@@ -67,21 +67,32 @@ class SimpleError { description }
         (self description: description) raise!
 end
 
-class DoesNotUnderstand { receiver selector arguments source }
+class DoesNotUnderstand { receiver selector arguments source context }
     is Error
     direct method raise: selector with: arguments on: receiver
         (self
             raise: selector
             with: arguments
             on: receiver
-            source: False)
+            source: False
+            context: False)
         raise!
     direct method raise: selector with: arguments on: receiver source: source
         (self
              receiver: receiver
              selector: selector
              arguments: arguments
-             source: source)
+             source: source
+             context: False)
+        raise!
+    direct method raise: selector with: arguments on: receiver source: source
+                  context: context
+        (self
+             receiver: receiver
+             selector: selector
+             arguments: arguments
+             source: source
+             context: context)
         raise!
     method description
         let note = "{receiver} does not understand: {selector}".

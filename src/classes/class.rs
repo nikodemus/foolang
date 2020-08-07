@@ -107,7 +107,7 @@ fn class_new_(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
         // println!("Adding class method: {}", method);
         class_object
             .vtable
-            .add_method(method.send("selector", &[], env)?.as_str()?, Method::object(method))?
+            .add_method(method.send("name", &[], env)?.as_str()?, Method::object(method))?
     }
     for method in args[4]
         .as_array("methods in Class:new:interfaces:directMethods:slots:methods:")?
@@ -118,7 +118,7 @@ fn class_new_(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
         //         method.send("selector", &[], env)?, &class.instance_vtable.name);
         class
             .instance_vtable
-            .add_method(method.send("selector", &[], env)?.as_str()?, Method::object(method))?
+            .add_method(method.send("name", &[], env)?.as_str()?, Method::object(method))?
     }
     Ok(class_object)
 }

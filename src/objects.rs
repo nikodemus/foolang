@@ -1477,7 +1477,7 @@ impl Object {
     // SEND
 
     pub fn send(&self, selector: &str, args: &[Object], env: &Env) -> Eval {
-        // println!("debug: {} {} {:?}", self, selector, args);
+        // println!("send: {} {} {:?}", self, selector, args);
         match self.vtable.get(selector) {
             Some(m) => match &m {
                 Method::Primitive(method) => method(self, args, env),

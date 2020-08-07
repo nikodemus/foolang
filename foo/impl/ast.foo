@@ -81,8 +81,18 @@ class AstClass { name directMethods slots methods isDefined }
             methods: (Array from: methods)!
 end
 
-class AstMethod { selector argumentCount body frameSize }
+class AstMethod { name argumentCount body frameSize }
     is Object
+    direct method selector: selector
+                  argumentCount: argumentCount
+                  body: body
+                  frameSize: frameSize
+        self name: selector name
+             argumentCount: argumentCount
+             body: body
+             frameSize: frameSize!
+    method selector
+        Selector name: name!
     method invoke: arguments on: receiver
         AstInterpreter
             invokeMethod: self
@@ -176,6 +186,17 @@ end
 
 class AstBlock { body argumentCount frameSize }
     is AstNode
+
+    method selector
+        argumentCount is 0
+            ifTrue: { return #value }.
+        argumentCount is 1
+            ifTrue: { return #value: }.
+        argumentCount is 2
+            ifTrue: { return #value:value: }.
+        argumentCount is 3
+            ifTrue: { return #value:value:value: }.
+        #apply:!
 
     method visitBy: visitor
         visitor visitBlock: self!

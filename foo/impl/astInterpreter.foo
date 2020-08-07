@@ -5,9 +5,15 @@ class Process {}
     is Object
 end
 
+class BacktraceFrame { receiver selector::Selector arguments }
+    is Object
+end
+
 class InterpreterContext {
         sender
         receiver
+        theMethod
+        frameContext
         frame::Array
         returnBlock
     }
@@ -21,6 +27,8 @@ class InterpreterContext {
     direct method new: size returnBlock: returnBlock
         self sender: False
              receiver: False
+             theMethod: False
+             frameContext: False
              frame: (Array new: size value: "<unbound>")
              returnBlock: returnBlock!
 
@@ -30,13 +38,28 @@ class InterpreterContext {
 
     method at: index inFrame: frameNumber
         frameNumber > 0
-            ifTrue: { sender at: index inFrame: frameNumber - 1 }
+            ifTrue: { frameContext at: index inFrame: frameNumber - 1 }
             ifFalse: { frame at: index }!
 
     method put: value at: index inFrame: frameNumber
         frameNumber > 0
-            ifTrue: { sender put: value at: index inFrame: frameNumber - 1 }
+            ifTrue: { frameContext put: value at: index inFrame: frameNumber - 1 }
             ifFalse: { frame put: value at: index }!
+
+    method backtrace
+        let bt = List new.
+        let ctx = self.
+        { ctx is False }
+            whileFalse: { let m = ctx theMethod.
+                          m is False
+                              ifFalse: { bt add:
+                                             (BacktraceFrame
+                                                  receiver: ctx receiver
+                                                  selector: m selector
+                                                  arguments: (ctx frame from: 1 to: m argumentCount)) }.
+                         ctx = ctx sender }.
+        bt!
+
 end
 
 class AstBlockClosure { context block }
@@ -53,8 +76,10 @@ class AstBlockClosure { context block }
         1 to: nArgs
           do: { |i| frame put: (arguments at: i) at: i }.
         let context = InterpreterContext
-                          sender: context
+                          sender: $context
                           receiver: context receiver
+                          theMethod: block
+                          frameContext: context
                           frame: frame
                           returnBlock: context returnBlock.
         { AstInterpreter eval: block body with: context }
@@ -104,6 +129,8 @@ class AstInterpreter { context process }
         let context = InterpreterContext
                           sender: $context
                           receiver: receiver
+                          theMethod: astMethod
+                          frameContext: $context
                           frame: frame
                           returnBlock: { |value| return value }.
         { AstInterpreter eval: astMethod body with: context }
@@ -141,7 +168,8 @@ class AstInterpreter { context process }
                                     raise: selector
                                     with: arguments
                                     on: object
-                                    source: aSend source }} !
+                                    source: aSend source
+                                    context: context }} !
 
     method visitComment: aComment
         aComment value visitBy: self!
