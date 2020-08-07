@@ -329,6 +329,9 @@ class TokenReservedWordSelf { first last }
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxSelf new!
+
+    method string
+        "self"!
 end
 
 class TokenReservedWordClass { first last }

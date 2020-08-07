@@ -108,7 +108,7 @@ class SyntaxTranslator { env }
         let signature = aMethod signature.
         let bodyEnv = env newFrame addVariables: signature parameters.
         AstMethod
-            selector: signature selector name -- FIXME: should pass in whole selector
+            selector: signature selector
             argumentCount: signature parameters size
             body: (aMethod body visitBy: (SyntaxTranslator env: bodyEnv))
             frameSize: bodyEnv frame size!

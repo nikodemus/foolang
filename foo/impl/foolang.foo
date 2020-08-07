@@ -23,6 +23,7 @@ class Tests { system ok }
 
     method run
         self
+            ; test: #testBacktrace
             ; test: #testString1
             ; test: #testString2
             ; test: #testString3
@@ -324,6 +325,25 @@ with: {defSource}"!
         self
             parse: "class X \{} -- boop\n method bar\n 42!\n end\n"
             expect: "class X \{}\n    -- boop\n    method bar\n        42!\nend\n"!
+
+    method testBacktrace
+        self load: "class BacktraceTest \{}
+                        method bang: block
+                           block value!
+                        method foo
+                            self bang: \{ self nope }!
+                        method bar
+                           self foo!
+                        direct method test
+                           self new bar!
+                    end"
+            eval: "BacktraceTest test"
+            expectError: DoesNotUnderstand
+            where: { |e|
+                     e selector == #nope
+                         ifTrue: { let bt = e context backtrace.
+                                   let selectors = bt collect: { |f| f selector :: Selector }.
+                                   selectors isEquivalent: [#value, #bang:, #foo, #bar, #test] }}!
 
     method testAstSource
         self load: "class SourceTest \{}
