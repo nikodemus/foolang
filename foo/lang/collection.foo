@@ -30,7 +30,7 @@ interface Collection
         8!
 
     direct method defaultElementType
-        Object!
+        Any!
 
     direct method from: iterable
         let new = self of: iterable elementType withCapacity: iterable sizeEstimate.

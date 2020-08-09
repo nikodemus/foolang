@@ -40,11 +40,6 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         indent times: { output print: " " }.
         printed = indent!
 
-    method handleSuffixComment
-        suffixComment is False
-            ifFalse: { self print: suffixComment.
-                       suffixComment = False }!
-
     method print: string::String
         output print: string.
         printed = printed + string size!
@@ -54,9 +49,14 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         self newline!
 
     method handleBlockStart
-        blockStart
+        blockStart is True
             ifTrue: { self newline.
                       blockStart = False }!
+
+    method handleSuffixComment
+        suffixComment is False
+            ifFalse: { self print: suffixComment.
+                       suffixComment = False }!
 
     method visitLiteral: aLiteral
         self print: aLiteral value displayString!
@@ -164,6 +164,7 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         self println: "!"!
 
     method visitMethod: aMethod
+        -- Debug println: "/pp method {aMethod signature selector}".
         self print: "method".
         let signature = aMethod signature.
         signature parameters isEmpty
@@ -178,11 +179,12 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         let bodyVisitor = self indentBody.
         bodyVisitor println: "".
         aMethod body visitBy: bodyVisitor.
-        self print: "!".
+        bodyVisitor print: "!".
         -- no newline!
-        self handleSuffixComment!
+        bodyVisitor handleSuffixComment!
 
     method visitClass: aClass
+        -- Debug println: "/pp class {aClass name}".
         self print: "class ".
         self print: aClass name.
         self print: " \{".
@@ -193,18 +195,35 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
                                     self print: slot.
                                     self print: " " }}.
         self print: "}".
-        let methodVisitor = self indentBody.
-        aClass directMethods
-            do: { |m|
-                  methodVisitor newline.
-                  methodVisitor print: "direct ".
-                  m visitBy: methodVisitor }.
-        aClass methods
-            do: { |m|
-                  methodVisitor newline.
-                  m visitBy: methodVisitor }.
+        self _visitMethods: aClass.
         self newline.
         self print: "end".
         self handleSuffixComment.
         self newline!
+
+    method visitInterfaceRef: aRef
+        self println: "is {aRef name}"!
+
+    method visitInterface: anInterface
+        self print: "interface ".
+        self print: anInterface name.
+        self _visitMethods: anInterface.
+        self newline.
+        self print: "end".
+        self handleSuffixComment.
+        self newline!
+
+    method _visitMethods: aType
+        -- Debug println: "/pp methods of {aType name}".
+        let methodVisitor = self indentBody.
+        aType directMethods
+            do: { |m|
+                  methodVisitor newline.
+                  methodVisitor print: "direct ".
+                  m visitBy: methodVisitor }.
+        aType instanceMethods
+            do: { |m|
+                  methodVisitor newline.
+                  m visitBy: methodVisitor }!
+
 end

@@ -51,10 +51,10 @@ extend Array
         new!
 
     direct method new: size
-        self of: Object new: size value: False!
+        self of: Any new: size value: False!
 
     direct method new: size value: value
-        self of: Object new: size value: value!
+        self of: Any new: size value: value!
 
     direct method of: type
         Specialized class: Array of: type!

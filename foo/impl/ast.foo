@@ -55,18 +55,45 @@ class AstDefine { name body frameSize isDefined }
         AstInterpreter evalDefine: body frameSize: frameSize!
 end
 
-class AstClass { name directMethods slots methods isDefined }
+class AstInterface { name interfaces directMethods instanceMethods isDefined }
     is AstDefinition
 
     direct method name: name
+                  interfaces: interfaces
                   directMethods: directMethods
-                  slots: slots
-                  methods: methods
+                  instanceMethods: instanceMethods
         self
             name: name
+            interfaces: interfaces
             directMethods: directMethods
+            instanceMethods: instanceMethods
+            isDefined: False!
+
+    method markDefined
+        isDefined = True!
+
+    method eval
+        Interface
+            new: name
+            interfaces: (Array from: (interfaces collect: #value))
+            directMethods: (Array from: directMethods)
+            instanceMethods: (Array from: instanceMethods)!
+end
+
+class AstClass { name slots interfaces directMethods instanceMethods isDefined }
+    is AstDefinition
+
+    direct method name: name
+                  slots: slots
+                  interfaces: interfaces
+                  directMethods: directMethods
+                  instanceMethods: instanceMethods
+        self
+            name: name
             slots: slots
-            methods: methods
+            interfaces: interfaces
+            directMethods: directMethods
+            instanceMethods: instanceMethods
             isDefined: False!
 
     method markDefined
@@ -75,10 +102,10 @@ class AstClass { name directMethods slots methods isDefined }
     method eval
         Class
             new: name
-            interfaces: ["Object"]
-            directMethods: (Array from: directMethods)
             slots: (Array from: slots)
-            methods: (Array from: methods)!
+            interfaces: (Array from: (interfaces collect: #value))
+            directMethods: (Array from: directMethods)
+            instanceMethods: (Array from: instanceMethods)!
 end
 
 class AstMethod { name argumentCount body frameSize }

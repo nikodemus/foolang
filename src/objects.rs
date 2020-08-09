@@ -561,6 +561,7 @@ pub struct Foolang {
     pub input_vtable: Rc<Vtable>,
     pub integer_class_vtable: Rc<Vtable>,
     pub integer_vtable: Rc<Vtable>,
+    pub interface_vtable: Rc<Vtable>,
     pub output_class_vtable: Rc<Vtable>,
     pub output_vtable: Rc<Vtable>,
     pub random_class_vtable: Rc<Vtable>,
@@ -609,6 +610,7 @@ impl Foolang {
         env.define("Float", Class::object(&self.float_class_vtable, &self.float_vtable));
         env.define("Input", Class::object(&self.input_class_vtable, &self.input_vtable));
         env.define("Integer", Class::object(&self.integer_class_vtable, &self.integer_vtable));
+        env.define("Interface", Class::object(&self.interface_vtable, &self.interface_vtable));
         env.define("Output", Class::object(&self.output_class_vtable, &self.output_vtable));
         env.define("Random", Class::object(&self.random_class_vtable, &self.random_vtable));
         env.define("Record", Class::object(&self.record_class_vtable, &self.record_vtable));
@@ -651,6 +653,7 @@ impl Foolang {
             input_vtable: Rc::new(classes::input::vtable()),
             integer_class_vtable: Rc::new(Vtable::new("Integer")),
             integer_vtable: Rc::new(classes::integer::vtable()),
+            interface_vtable: Rc::new(classes::class::interface_vtable()),
             output_class_vtable: Rc::new(classes::output::class_vtable()),
             output_vtable: Rc::new(classes::output::instance_vtable()),
             random_class_vtable: Rc::new(classes::random::class_vtable()),
@@ -1116,10 +1119,18 @@ impl Object {
     }
 
     pub fn add_interface(&self, env: &Env, name: &str) -> Result<(), Unwind> {
+        self.add_interface_object(&env.find_interface(name)?)
+    }
+
+    pub fn add_interface_object(&self, interface_obj: &Object) -> Result<(), Unwind> {
+        match &interface_obj.datum {
+            Datum::Class(class) if class.interface => (),
+            _ => return Unwind::error(&format!("{:?} is no an interface!", &interface_obj)),
+        }
         let class = self.as_class_ref()?;
         let class_name = &class.instance_vtable.name;
+        let interface_name = &interface_obj.as_class_ref()?.instance_vtable.name;
         // Add interface direct methods
-        let interface_obj = env.find_interface(name)?;
         let interface = interface_obj.as_class_ref()?;
         for (selector, method) in interface_obj.vtable.methods().iter() {
             if !self.vtable.has(selector) {
@@ -1131,18 +1142,21 @@ impl Object {
         vt_add_interface(instance_vt, &interface.instance_vtable);
         // Add interface instance methods
         for (selector, method) in interface.instance_vtable.methods().iter() {
-            let signature = method.signature()?;
             let required = method.is_required();
             match instance_vt.get(selector) {
                 Some(Method::Interpreter(ref closure)) => {
+                    let signature = method.signature()?;
                     if &closure.signature != signature {
                         return Unwind::error(&format!(
                             "{}#{} is {}, interface {} specifies {}",
-                            class_name, selector, &closure.signature, name, signature
+                            class_name, selector, &closure.signature, interface_name, signature
                         ));
                     }
                 }
                 Some(Method::Primitive(_)) => {
+                    // FIXME: signature not checked!
+                }
+                Some(Method::Object(_)) => {
                     // FIXME: signature not checked!
                 }
                 Some(Method::Reader(_)) => {
@@ -1157,7 +1171,7 @@ impl Object {
                 None if required && !class.interface => {
                     return Unwind::error(&format!(
                         "{}#{} unimplemented, required by interface {}",
-                        class_name, selector, name
+                        class_name, selector, interface_name
                     ))
                 }
                 None => {
@@ -1303,7 +1317,7 @@ impl Object {
     // SEND
 
     pub fn send(&self, selector: &str, args: &[Object], env: &Env) -> Eval {
-        // println!("send: {} {} {:?}", self, selector, args);
+        // println!("send: {} #{} {:?}", self, selector, args);
         match self.vtable.get(selector) {
             Some(m) => match &m {
                 Method::Primitive(method) => method(self, args, env),
@@ -1390,7 +1404,7 @@ impl fmt::Display for Object {
                 if class.interface {
                     write!(f, "#<interface {}>", self.vtable.name)
                 } else {
-                    write!(f, "#<class {}>", self.vtable.name)
+                    write!(f, "#<{}>", self.vtable.name)
                 }
             }
             Datum::Clock => write!(f, "#<Clock>"),
@@ -1471,9 +1485,9 @@ fn generic_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
                 if info.is_empty() {
                     info.push_str(" ");
                 } else {
-                    info.push_str(",");
+                    info.push_str(", ");
                 }
-                info.push_str(format!("{:?}", var).as_str());
+                info.push_str(format!("{}", var).as_str());
             }
             Ok(env.foo.into_string(format!("#<{}{}>", &receiver.vtable.name, info)))
         }

@@ -643,7 +643,7 @@ impl Env {
             None => Unwind::error(&format!("Undefined interface: {}", name)),
             Some(obj) => match &obj.datum {
                 Datum::Class(ref class) if class.interface => Ok(obj.clone()),
-                _ => Unwind::error(&format!("Class, not interface: {}", name)),
+                _ => Unwind::error(&format!("Not an interface: {}", name)),
             },
         }
     }

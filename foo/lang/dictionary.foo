@@ -11,6 +11,11 @@ extend Dictionary
         self at: key ifNone: { return False }.
         True!
 
+    method merge: other
+        other doKeys: { |key|
+                        self put: (other at: key) at: key }.
+        self!
+
     method keys
         let keys = List new.
         self doKeys: { |key| keys add: key }.

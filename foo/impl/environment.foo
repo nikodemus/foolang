@@ -4,6 +4,7 @@ import .utils.Debug
 import .ast.AstGlobal
 import .ast.AstLexicalRef
 import .ast.AstSlotRef
+import .ast.AstDefinition
 import .undefinedPolicy.UndefinedPolicy
 import .undefinedPolicy.AllowReferenceToUndefined
 import .undefinedPolicy.ResolveUndefinedsWith
@@ -12,6 +13,7 @@ define BuiltinGlobals
     let globals = Dictionary new.
     globals put: (AstGlobal name: "True" value: True) at: "True".
     globals put: (AstGlobal name: "False" value: False) at: "False".
+    globals put: (AstGlobal name: "Object" value: Object) at: "Object".
     globals!
 
 class Variable { name index }
@@ -111,12 +113,13 @@ class Environment { parent    -- Enclosing environment or False
 
     method load: string
         let defs = Dictionary new.
-        (Parser parse: string)
+        (Parser parseDefinitions: string)
             do: { |syntax|
                   AllowReferenceToUndefined
-                      do: { let def = SyntaxTranslator
-                                          translate: syntax
-                                          in: (self toplevel).
+                      do: { let def::AstDefinition
+                                = SyntaxTranslator
+                                    translate: syntax
+                                    in: (self toplevel).
                              defs put: def at: def name } }.
         ResolveUndefinedsWith
             definitions: defs
@@ -131,7 +134,7 @@ class Environment { parent    -- Enclosing environment or False
     method eval: string
         let toplevelEnv = self toplevel.
         let res = False.
-        (Parser parse: string)
+        (Parser parseExpressions: string)
             do: { |syntax|
                   res =
                       AstInterpreter

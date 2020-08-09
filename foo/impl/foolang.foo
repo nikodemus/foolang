@@ -23,6 +23,36 @@ class Tests { system ok }
 
     method run
         self
+            ; test: #test42
+            ; test: #testPlus
+            ; test: #testPrecedence1
+            ; test: #testPrecedence2
+            ; test: #testPrefixMethod
+            ; test: #testUnaryMethod
+            ; test: #testKeywordMethod
+            ; test: #testIs
+            ; test: #testLet
+            ; test: #testParens
+            ; test: #testAssign1
+            ; test: #testAssign2
+            ; test: #testSimpleBlock
+            ; test: #testArgBlock
+            ; test: #testBlockClosure
+            ; test: #testSimpleClass
+            ; test: #testClassWithMethod
+            ; test: #testSlotAssign
+            ; test: #testClassWithPrefixMethod
+            ; test: #testTwoClasses
+            ; test: #testDefine
+            ; test: #testBlockInMethod
+            ; test: #testDirectMethod
+            ; test: #testReturn
+            ; test: #testAstSource
+            ; test: #testOutOfOrderDefine
+            ; test: #testOutOfOrderClasses
+            ; test: #testInterface1
+            ; test: #testInterface2
+            ; test: #testInterface3
             ; test: #testBacktrace
             ; test: #testString1
             ; test: #testString2
@@ -36,46 +66,22 @@ class Tests { system ok }
             ; test: #testComment7
             ; test: #testComment8 -- ; test: #testComment9
             ; test: #testTranspile
-            ; test: #test42
-            ; test: #testPlus
-            ; test: #testPrecedence
-            ; test: #testPrefixMethod
-            ; test: #testUnaryMethod
-            ; test: #testKeywordMethod
-            ; test: #testIs
-            ; test: #testLet
-            ; test: #testPrecedence2
-            ; test: #testParens
-            ; test: #testAssign1
-            ; test: #testAssign2
-            ; test: #testSimpleBlock
-            ; test: #testArgBlock
-            ; test: #testBlockClosure
-            ; test: #testDefine
-            ; test: #testSimpleClass
-            ; test: #testClassWithMethod
-            ; test: #testSlotAssign
-            ; test: #testClassWithPrefixMethod
-            ; test: #testTwoClasses
-            ; test: #testBlockInMethod
-            ; test: #testDirectMethod
-            ; test: #testReturn
-            ; test: #testAstSource
-            ; test: #testOutOfOrderDefine
-            ; test: #testOutOfOrderClasses
                .
         self!
 
-    method checkParse: source
+    method checkParsingBy: block for: source
         -- Check Syntax print/parse consistency.
-        let syntaxList = Parser parse: source.
+        -- Debug println: "/parse1".
+        let syntaxList = block value: source.
         let output = StringOutput new.
+        -- Debug println: "/pretty".
         syntaxList do: { |syntax|
                          -- Debug println: "".
                          -- SyntaxPrinter print: syntax to: Output debug.
                          output print: syntax toString }.
         let printed = output content.
-        { syntaxList checkEqual: (Parser parse: printed) }
+        -- Debug println: "/parse2 + compare".
+        { syntaxList checkEqual: (block value: source) }
             on: Error
             do: { |err|
                   panic "CST print/parse inconsistency!
@@ -85,8 +91,8 @@ problem: {err description}" }!
 
     method parse: source expect: pretty
         -- Checks that parse pretty-prints as expected
-        let syntaxList1 = Parser parse: source.
-        let syntaxList2 = Parser parse: pretty.
+        let syntaxList1 = Parser parseMixed: source.
+        let syntaxList2 = Parser parseMixed: pretty.
         { syntaxList1 checkEqual: syntaxList2 }
             on: Error
             do: { |err|
@@ -104,17 +110,24 @@ printed:\n{printed}
 pretty:\n{pretty}" }!
 
     method eval: exprSource expect: expected
-        self checkParse: exprSource.
+        self checkParsingBy: { |source| Parser parseExpressions: source }
+             for: exprSource.
         let result = Environment new eval: exprSource.
         (result == expected)
             ifFalse: { Error raise: "Expected {expected}, got: {result}
 from: '{exprSource}'" }!
 
     method load: defSource eval: exprSource
-        self checkParse: defSource.
-        self checkParse: exprSource.
+        -- Debug println: "/parseDef".
+        self checkParsingBy: { |source| Parser parseDefinitions: source }
+             for: defSource.
+        -- Debug println: "/parseExpr".
+        self checkParsingBy: { |source| Parser parseExpressions: source }
+             for: exprSource.
         let env = Environment new.
+        -- Debug println: "/load".
         env load: defSource.
+        -- Debug println: "/eval".
         env eval: exprSource!
 
     method load: defSource eval: exprSource expect: expected
@@ -137,61 +150,103 @@ with: {defSource}" }}.
 from: {exprSource}
 with: {defSource}"!
 
+    method testInterface1
+        self load: "interface TestInterface1
+                        direct method answer
+                           42!
+                    end"
+            eval: "TestInterface1 answer"
+            expect: 42!
+
+    method testInterface2
+        self load: "interface TestInterface2
+                    end"
+            eval: "TestInterface2 includes: 42"
+            expect: False!
+
+    method testInterface3
+        self load: "interface TestInterface3
+                        method foo
+                            self!
+                    end
+                    class TestInterface3Impl \{}
+                        is TestInterface3
+                    end"
+            eval: "TestInterface3 includes: (TestInterface3Impl new foo)"
+            expect: True!
+
     method test42
         self eval: "42" expect: 42!
+
     method testPlus
         self eval: "100 + 1000 + 10 + 1" expect: 1111!
-    method testPrecedence
+
+    method testPrecedence1
         self eval: "12 + 10 * 10 - 1" expect: 111!
+
+    method testPrecedence2
+        self eval: "let x = -40. let y = -2. x abs + y abs" expect: 42!
+
     method testPrefixMethod
         self eval: "- 42" expect: -42!
+
     method testUnaryMethod
         self eval: "- 42 abs" expect: 42!
+
     method testKeywordMethod
         self eval: "1 to: 10 by: 2" expect: (1 to: 10 by: 2)!
+
     method testIs
         self eval: "1 is 1" expect: True.
         self eval: "1 is 2" expect: False!
+
     method testLet
         self eval: "let x = 1. x + x"
              expect: 2!
-    method testPrecedence2
-        self eval: "let x = -40. let y = -2. x abs + y abs" expect: 42!
+
     method testParens
         self eval: "(1 + 1) * 2"
              expect: 4!
+
     method testAssign1
         self eval: "let x = 20. x = x + 1. x * 2"
              expect: 42!
+
     method testAssign2
         self eval: "let y = 0.
                     let x = 20.
                     (let x = 2000. x = x + 100. y = x * 2).
                     x = x + 1. y + x * 2"
             expect: 4242!
+
     method testSimpleBlock
         self eval: "\{ 32 + 10 } value"
              expect: 42!
+
     method testArgBlock
         self eval: "\{ |x| x + 1 } value: 41"
              expect: 42!
+
     method testBlockClosure
         self eval: "let block = (let x = 21. \{ x = x * 2 }).
                     let x = 0.
                     block value. block value"
             expect: 84!
+
     method testDefine
         self load: "define FourtyTwoForTestDefine
                        42!"
              eval: "FourtyTwoForTestDefine"
              expect: 42!
+
     method testSimpleClass
-        self load: "class MyClass \{ x } end"
+        self load: "class MyClass \{ x } is Object end"
              eval: "let c = MyClass x: 42. c x"
              expect: 42.
-         self load: "class MyClass \{ x y } end"
+         self load: "class MyClass \{ x y } is Object end"
              eval: "let c = MyClass x: 40 y: 2. c x + c y"
              expect: 42!
+
     method testClassWithMethod
         self load: "class MyClass \{ slot }
                         method foo: x
@@ -199,6 +254,7 @@ with: {defSource}"!
                     end"
              eval: "(MyClass slot: 40) foo: 2"
              expect: 42!
+
     method testSlotAssign
         self load: "class MyClass \{ slot }
                         method bar
@@ -209,6 +265,7 @@ with: {defSource}"!
                     end"
              eval: "(MyClass slot: 21) foo"
              expect: 42!
+
     method testClassWithPrefixMethod
         self load: "class MyClass \{ slot }
                         method prefix%
@@ -216,12 +273,15 @@ with: {defSource}"!
                     end"
              eval: "%(MyClass slot: -2)"
              expect: 4!
+
     method testTwoClasses
         self load: "class Class1 \{ slot }
+                        is Object
                         method foo: x
                            x bar + slot * 2!
                     end
                     class Class2 \{ slot }
+                        is Object
                         method bar
                            slot!
                         method foo: y
@@ -229,6 +289,7 @@ with: {defSource}"!
                     end"
              eval: "(Class2 slot: 2) foo: (Class1 slot: 20)"
              expect: 42!
+
     method testBlockInMethod
         self load: "class ClassAA \{ slot }
                         method capture: x
@@ -247,6 +308,7 @@ with: {defSource}"!
                     end"
              eval: "(ClassBB slot: 20) run: 10"
              expect: 42!
+
     method testDirectMethod
         self load: "class ClassDirectMethod \{}
                         direct method gimme1
@@ -256,6 +318,7 @@ with: {defSource}"!
                     end"
              eval: "ClassDirectMethod gimme1"
              expect: 42!
+
     method testReturn
         self load: "class ReturnTest \{}
                         direct method test: ok
@@ -328,6 +391,7 @@ with: {defSource}"!
 
     method testBacktrace
         self load: "class BacktraceTest \{}
+                        is Object
                         method bang: block
                            block value!
                         method foo
@@ -347,6 +411,7 @@ with: {defSource}"!
 
     method testAstSource
         self load: "class SourceTest \{}
+                         is Object
                          method foo
                             let x = 1 + 2.
                             self bar: x
@@ -360,7 +425,7 @@ with: {defSource}"!
             where: { |e|
                      -- FIXME: this is only for "bar:", should include the
                      -- whole selector!
-                     e source location == (133 to: 136) } !
+                     e source location == (168 to: 171) } !
 
     method testOutOfOrderDefine
         self load: "define Two
@@ -398,7 +463,7 @@ with: {defSource}"!
 
     method transpile: string
         let env = Environment new.
-        let cst = Parser parse: string.
+        let cst = Parser parseExpressions: string.
         let ast = cst collect: { |syntax|
                                  SyntaxTranslator
                                      translate: syntax
