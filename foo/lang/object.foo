@@ -8,6 +8,12 @@ interface Object
             ifTrue: { False }
             ifFalse: { Error raise: "No default value for {self}" }!
 
+    direct method isEquivalent: other
+        self is other!
+
+    direct method == other -> Boolean
+        self is other!
+
     method isEquivalent: other
         self is other!
 

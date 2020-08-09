@@ -1,0 +1,8 @@
+interface Any
+    direct method includes: object
+        True!
+    direct method typecheck: object
+        object!
+    direct method == other
+        self is other!
+end

@@ -1,3 +1,4 @@
+import .lang.any.Any
 import .lang.array.Array
 import .lang.boolean.Boolean
 import .lang.byteArray.ByteArray

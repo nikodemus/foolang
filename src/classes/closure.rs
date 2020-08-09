@@ -93,6 +93,7 @@ pub fn vtable() -> Vtable {
     let vt = Vtable::new("Closure");
     // FUNDAMENTAL
     vt.add_primitive_method_or_panic("apply:", closure_apply_array);
+    vt.add_primitive_method_or_panic("signature", closure_signature);
     vt.add_primitive_method_or_panic("arity", closure_arity);
     vt.add_primitive_method_or_panic("onPanic:", closure_on_panic);
     vt.add_primitive_method_or_panic("finally:", closure_finally);
@@ -109,6 +110,19 @@ pub fn vtable() -> Vtable {
 fn closure_apply_array(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     let array = args[0].as_array("Closure#apply:")?.borrow();
     receiver.closure_ref().apply(None, &array)
+}
+
+fn closure_signature(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    // FIXME: return value too?
+    let mut sigtypes = Vec::new();
+    let any = env.find_type("Any")?;
+    for t in &receiver.closure_ref().signature.parameter_types {
+        match t {
+            Some(o) => sigtypes.push(o.clone()),
+            None => sigtypes.push(any.clone()),
+        };
+    }
+    Ok(env.foo.into_array(sigtypes, None))
 }
 
 fn closure_arity(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
