@@ -749,8 +749,8 @@ parameter to `Main##run:in:`.
 
 Outside development mode this is the only way to gain access to things like the
 filesystem and the network. In development mode (as currently provided by the
-webrepl and `repl.foo`) the system object is accessible as lexically bound
-`system` variable.
+`repl.foo`) the system object is accessible as lexically bound `system`
+variable.
 
 #### **method** `abort`
 

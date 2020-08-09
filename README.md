@@ -30,4 +30,3 @@ foo/       Foolang code, including prelude, self hosting, tests, and examples
 host/      Scaffolding for transpiled-to-C code
 src/       Rust code for the bootstrap interpreter
 tests/     Rust code for integration tests
-webrepl/   HTML and Javascript for the webrepl

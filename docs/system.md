@@ -7,7 +7,7 @@ can be passed on in messages.
 Outside development mode this is the only way to gain access to things like
 the filesystem and the network.
 
-In development mode (as provided by the webrepl and `repl.foo`) the system
+In development mode (as provided by `repl.foo`) the system
 object is accessible as lexically bound `system` variable.
 
 ## System Methods
