@@ -5,6 +5,7 @@ import lang.closure.TestClosure
 import lang.record.TestRecord
 import lang.filepath.TestFilePath
 import lang.filestream.TestFileStream
+import lang.selector.TestSelector
 
 -- Generates signed integers small enough to add without overflowing.
 class SmallIntegers {}
@@ -75,6 +76,7 @@ class Main { assert system }
             TestArray,
             TestClosure,
             TestRecord,
+            TestSelector,
             SI_Tests
         ] do: { |each| each runTests: assert }.
         [

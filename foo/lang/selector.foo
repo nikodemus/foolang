@@ -4,11 +4,39 @@ import .closure.Composable
 define ColonCharacter
     ":" character!
 
+define UnderscoreCharacter
+    "_" character!
+
 class Selector { name }
     is Composable
 
     direct method new: name
         self name: name!
+
+    method isKeyword
+        name find: { |c| c == ":" }
+             ifNone: { return False }.
+        True!
+
+    method isSymbol
+        let char = name at: 1.
+        char == UnderscoreCharacter
+            ifTrue: { False }
+            ifFalse: { char isAlpha not }!
+
+    method isUnary
+        self isSymbol
+            ifTrue: { return False }.
+        self isKeyword
+            ifTrue: { return False }.
+        True!
+
+    method arity
+        self isKeyword
+            ifTrue: { return 1 + (name count: { |c| c == ":" }) }.
+        self isSymbol
+            ifTrue: { return 2 }.
+        1!
 
     method sendTo: receiver
         name sendTo: receiver with: []!
@@ -24,9 +52,9 @@ class Selector { name }
 
     method parts
         let parts = List new.
-        self name split: { |c| c == ColonCharacter }
-                  do:  { |part| parts add: part }.
-        parts ifEmpty: { parts add: self name }.
+        name split: { |c| c == ColonCharacter }
+             do:  { |part| parts add: part }.
+        parts ifEmpty: { parts add: name }.
         parts!
 
     -- FIXME: Should really intern selectors!
@@ -35,4 +63,93 @@ class Selector { name }
 
     method toString
         "#{name}"!
+end
+
+class TestSelector { assert }
+    direct method runTests: assert
+        (self assert: assert)
+            testAll: [
+                #isKeyword,
+                #isSymbol,
+                #isUnary,
+                #arity,
+                #sendTo:,
+                #sendTo:with:,
+                #value:,
+                #value:value:,
+                #parts,
+                #isEquivalent:,
+                #toString
+            ]!
+
+    method testAll: selectors
+        selectors do: { |selector|
+                        assert true: { (self testFor: selector) sendTo: self }
+                               testing: "Selector{selector}" }!
+
+    method testFor: selector
+        let uncolonized = selector name replace: ":" with: "_".
+        Selector name: "test_{uncolonized}"!
+
+    method check: results
+        results allTrue
+            ifTrue: { True }
+            ifFalse: { Error raise: "{results} not all true!" }!
+
+    method test_isKeyword
+        self check: [ #foo isKeyword not,
+                      #_bar isKeyword not,
+                      #+ isKeyword not,
+                      #quux: isKeyword,
+                      #a:b:c: isKeyword ]!
+
+    method test_isSymbol
+        self check: [ #foo isSymbol not,
+                      #_bar isSymbol not,
+                      #+ isSymbol,
+                      #quux: isSymbol not,
+                      #a:b:c: isSymbol not ]!
+
+    method test_isUnary
+        self check: [ #foo isUnary,
+                      #_bar isUnary,
+                      #+ isUnary not,
+                      #quux: isUnary not,
+                      #a:b:c: isUnary not]!
+
+    method test_arity
+        self check: [ #foo arity is 1,
+                      #_bar arity is 1,
+                      #+ arity is 2,
+                      #quux: arity is 2,
+                      #a:b:c: arity is 4]!
+
+    method test_sendTo_
+        self check: [ (#abs sendTo: -123) is 123 ]!
+
+    method test_sendTo_with_
+        self check: [ (#+ sendTo: 41 with: [1]) is 42 ]!
+
+    method test_value_
+        self check: [ (#abs value: -42) is 42]!
+
+    method test_value_value_
+        self check: [ (#+ value: 123 value: 19) is 142]!
+
+    method test_parts
+        self check: [ #foo parts isEquivalent: ["foo"],
+                      #_foo parts isEquivalent: ["_foo"],
+                      #+ parts isEquivalent: ["+"],
+                      #foo: parts isEquivalent: ["foo:"],
+                      #foo:bar:quux: parts isEquivalent: ["foo:", "bar:", "quux:"] ]!
+
+    method test_isEquivalent_
+        self check: [ #foo == #foo,
+                      (#bar == #foo) not,
+                      #foo isEquivalent: (Selector name: "foo") ]!
+
+    method test_toString
+        self check: [ #foo toString == "#foo",
+                      #+ toString == "#+",
+                      #foo:bar:quux: toString == "#foo:bar:quux:" ]!
 end
