@@ -472,42 +472,6 @@ impl StringOutput {
     }
 }
 
-pub struct Window {
-    pub window: RefCell<kiss3d::window::Window>,
-}
-
-impl PartialEq for Window {
-    fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self, other)
-    }
-}
-
-impl Eq for Window {}
-
-impl Hash for Window {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        std::ptr::hash(self, state);
-    }
-}
-
-pub struct SceneNode {
-    pub node: RefCell<kiss3d::scene::SceneNode>,
-}
-
-impl PartialEq for SceneNode {
-    fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self, other)
-    }
-}
-
-impl Eq for SceneNode {}
-
-impl Hash for SceneNode {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        std::ptr::hash(self, state);
-    }
-}
-
 #[derive(PartialEq, Clone)]
 pub enum Datum {
     Array(Rc<classes::array::Array>),
@@ -533,9 +497,6 @@ pub enum Datum {
     // XXX: Null?
     System(Rc<System>),
     Time(Rc<TimeInfo>),
-    // Kiss3D stuff
-    Window(Rc<Window>),
-    SceneNode(Rc<SceneNode>),
 }
 
 impl Eq for Datum {}
@@ -567,9 +528,6 @@ impl Hash for Datum {
             // XXX: Null?
             System(x) => x.hash(state),
             Time(x) => x.hash(state),
-            // Kiss3D stuff
-            Window(x) => x.hash(state),
-            SceneNode(x) => x.hash(state),
         }
     }
 }
@@ -615,11 +573,6 @@ pub struct Foolang {
     pub string_vtable: Rc<Vtable>,
     pub time_class_vtable: Rc<Vtable>,
     pub time_vtable: Rc<Vtable>,
-    // Kiss3D stuff
-    pub window_vtable: Rc<Vtable>,
-    pub window_class_vtable: Rc<Vtable>,
-    pub scene_node_vtable: Rc<Vtable>,
-    pub scene_node_class_vtable: Rc<Vtable>,
     /// Holds the toplevel builtin environment, including prelude.
     builtin_env_ref: EnvRef,
     /// Used to ensure we load each module only once.
@@ -665,12 +618,6 @@ impl Foolang {
             Class::object(&self.string_output_class_vtable, &self.string_output_vtable),
         );
         env.define("Time", Class::object(&self.time_class_vtable, &self.time_vtable));
-        // Kiss3D stuff
-        env.define("Window", Class::object(&self.window_class_vtable, &self.window_vtable));
-        env.define(
-            "SceneNode",
-            Class::object(&self.scene_node_class_vtable, &self.scene_node_vtable),
-        );
         // println!("INIT OK");
         self
     }
@@ -716,11 +663,6 @@ impl Foolang {
             string_vtable: Rc::new(classes::string::instance_vtable()),
             time_class_vtable: Rc::new(classes::time::class_vtable()),
             time_vtable: Rc::new(classes::time::instance_vtable()),
-            // Kiss3D stuff
-            window_vtable: Rc::new(classes::window::instance_vtable()),
-            window_class_vtable: Rc::new(classes::window::class_vtable()),
-            scene_node_vtable: Rc::new(classes::scene_node::instance_vtable()),
-            scene_node_class_vtable: Rc::new(classes::scene_node::class_vtable()),
             // Other
             builtin_env_ref: EnvRef::new(),
             modules: Rc::new(RefCell::new(HashMap::new())),
@@ -938,26 +880,6 @@ impl Foolang {
         Object {
             vtable: Rc::clone(&self.time_vtable),
             datum: Datum::Time(Rc::new(timeinfo)),
-        }
-    }
-
-    // Kiss3D stuff
-
-    pub fn make_window(&self, window: kiss3d::window::Window) -> Object {
-        Object {
-            vtable: Rc::clone(&self.window_vtable),
-            datum: Datum::Window(Rc::new(Window {
-                window: RefCell::new(window),
-            })),
-        }
-    }
-
-    pub fn make_scene_node(&self, node: kiss3d::scene::SceneNode) -> Object {
-        Object {
-            vtable: Rc::clone(&self.scene_node_vtable),
-            datum: Datum::SceneNode(Rc::new(SceneNode {
-                node: RefCell::new(node),
-            })),
         }
     }
 }
@@ -1378,22 +1300,6 @@ impl Object {
         }
     }
 
-    // Kiss3D stuff
-
-    pub fn window(&self) -> &Rc<Window> {
-        match &self.datum {
-            Datum::Window(win) => win,
-            _ => panic!("BUG: {:?} is not a Window", self),
-        }
-    }
-
-    pub fn scene_node(&self) -> &Rc<SceneNode> {
-        match &self.datum {
-            Datum::SceneNode(node) => node,
-            _ => panic!("BUG: {:?} is not a Window", self),
-        }
-    }
-
     // SEND
 
     pub fn send(&self, selector: &str, args: &[Object], env: &Env) -> Eval {
@@ -1515,9 +1421,6 @@ impl fmt::Display for Object {
                 "#<Time real: {}, system: {}, user: {}>",
                 time.real, time.system, time.user
             ),
-            // Kiss3D stuff
-            Datum::Window(_) => write!(f, "#<Window>"),
-            Datum::SceneNode(_) => write!(f, "#<SceneNode>"),
         }
     }
 }

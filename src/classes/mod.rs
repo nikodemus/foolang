@@ -19,7 +19,3 @@ pub mod string;
 pub mod string_output;
 pub mod system;
 pub mod time;
-
-// Kiss3D stuff
-pub mod scene_node;
-pub mod window;

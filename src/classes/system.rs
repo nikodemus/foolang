@@ -22,7 +22,6 @@ pub fn vtable() -> Vtable {
     vt.add_primitive_method_or_panic("random:", system_random_arg);
     vt.add_primitive_method_or_panic("sleep", system_sleep);
     vt.add_primitive_method_or_panic("sleep:", system_sleep_arg);
-    vt.add_primitive_method_or_panic("window:", system_window);
     vt
 }
 
@@ -94,8 +93,4 @@ fn system_sleep_arg(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
         thread::sleep(duration);
     }
     Ok(env.foo.make_boolean(true))
-}
-
-fn system_window(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    Ok(env.foo.make_window(kiss3d::window::Window::new(args[0].string_as_str())))
 }
