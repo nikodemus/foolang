@@ -61,6 +61,12 @@ interface Iterable
                        ifTrue: { return True } }.
         False!
 
+    method allTrue
+        self do: { |each|
+                   each is True
+                       ifFalse: { return False } }.
+        True!
+
     method collect: block into: collection
         self do: { |each|
                    collection add: (block value: each) }.
