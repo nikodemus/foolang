@@ -22,7 +22,6 @@ opt-level = 1
 regex = "1.*.*"
 lazy_static = "1.*.*"
 clap = "2.*.*"
-kiss3d = "0.22.*"
 nalgebra = "0.19.*"
 getrandom = "0.1.*"
 rand = "0.7.*"
