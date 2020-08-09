@@ -6,12 +6,16 @@ extend String
 
     direct method default
         ""!
+
     method append: other
        other appendToString: self!
+
     method newline
         "\n" appendToString: self!
+
     method printOn: stream
         stream writeString: self!
+
     method _escapeOn: stream
         [["\"", "\\\""],
          ["\n", "\\n"],
@@ -22,20 +26,31 @@ extend String
                  (self isEquivalent: esc first)
                     ifTrue: { stream writeString: esc second. return stream } }.
         stream writeString: self!
+
     method displayOn: stream
         stream writeString: "\"".
         self do: { |c| c _escapeOn: stream }.
         stream writeString: "\""!
+
     method startsWith: other
         1 to: other size
           do: { |i|
                 (self at: i) == (other at: i)
                     ifFalse: { return False } }.
         True!
+
     method character
         self size == 1
             ifTrue: { self at: 1 }
             ifFalse: { Error raise: "Not a character designator string: {self}" }!
+
+    method replace: s1 with: s2
+        let out = StringOutput new.
+        self do: { |sX|
+                   sX == s1
+                       ifTrue: { out print: s2 }
+                       ifFalse: { out print: sX } }.
+        out content!
 
     method doLines: block
         let from = False.

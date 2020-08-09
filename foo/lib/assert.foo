@@ -43,7 +43,10 @@ class TestCase { name condition successCount failureCount errorCount }
             ifFalse: { self summarizeSuccessOn: output }!
 
     method summarizeSuccessOn: output
-        output println: "  {name}: {successCount} tests ok"!
+        -- This makes sense for #forAll:... but not individual
+        -- asserts -- too noisy by far.
+        successCount > 1
+            ifTrue: { output println: "  {name}: {successCount} asserts ok" }!
 
     method summarizeFailureOn: output
         output println: "--{name}: {failureCount} failures, {errorCount} errors, {successCount} successes"!
