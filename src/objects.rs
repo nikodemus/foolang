@@ -20,6 +20,7 @@ use crate::unwind::Unwind;
 
 use crate::classes;
 use crate::classes::class::Class;
+use crate::classes::closure::Closure;
 
 pub type Eval = Result<Object, Unwind>;
 
@@ -78,8 +79,8 @@ type MethodFunction = fn(&Object, &[Object], &Env) -> Eval;
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct Signature {
-    parameter_types: Vec<Option<Object>>,
-    return_type: Option<Object>,
+    pub parameter_types: Vec<Option<Object>>,
+    pub return_type: Option<Object>,
 }
 
 impl fmt::Display for Signature {
@@ -329,87 +330,6 @@ impl Arg {
         Arg {
             source_location,
             name,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Closure {
-    pub name: String,
-    pub env: Env,
-    pub params: Vec<Arg>,
-    pub body: Expr,
-    pub signature: Signature,
-}
-
-impl PartialEq for Closure {
-    fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self, other)
-    }
-}
-
-impl Eq for Closure {}
-
-impl Hash for Closure {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        std::ptr::hash(self, state);
-    }
-}
-
-impl Closure {
-    pub fn extend_env(&self, name: &str, value: &Object) -> Rc<Closure> {
-        Rc::new(Closure {
-            name: self.name.clone(),
-            env: self.env.bind(name, Binding::untyped(value.clone())),
-            params: self.params.clone(),
-            body: self.body.clone(),
-            signature: self.signature.clone(),
-        })
-    }
-
-    pub fn apply(&self, receiver: Option<&Object>, args: &[Object]) -> Eval {
-        let mut symbols = HashMap::new();
-        if self.params.len() != args.len() {
-            return Unwind::error_at(
-                // FIXME: call-site would be 1000 x better...
-                self.body.source_location(),
-                &format!(
-                    "Argument count mismatch, {} wanted {}, got {}: {:?}",
-                    &self.name,
-                    self.params.len(),
-                    args.len(),
-                    args,
-                ),
-            );
-        }
-        for ((arg, vt), obj) in self
-            .params
-            .iter()
-            .zip(&self.signature.parameter_types)
-            .zip(args.into_iter().map(|x| (*x).clone()))
-        {
-            let binding = match vt {
-                None => Binding::untyped(obj),
-                Some(ref typed) => Binding::typed(typed.clone(), obj, &self.env)?,
-            };
-            symbols.insert(arg.name.clone(), binding);
-        }
-        let env = self.env.extend(symbols, receiver);
-        let ret = env.eval(&self.body);
-        // println!("apply return: {:?}", &ret);
-        let result = match ret {
-            Ok(value) => value,
-            Err(Unwind::ReturnFrom(ref ret_env, ref value)) if ret_env == &env.env_ref => {
-                value.clone()
-            }
-            Err(unwind) => {
-                return Err(unwind);
-            }
-        };
-        if let Some(typed) = &self.signature.return_type {
-            typed.send("typecheck:", &[result], &self.env).source(&self.body.source_location())
-        } else {
-            Ok(result)
         }
     }
 }

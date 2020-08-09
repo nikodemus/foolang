@@ -88,8 +88,19 @@ class TestClosure { assert }
             ; testAscending
             ; testDescending
             ; testApply
-            ; testSelfRefInClosure.
+            ; testSelfRefInClosure
+            ; testArity
+                .
         self!
+
+    method testArity
+        assert forAll: [ [{ 42 }, 0],
+                         [{ || 42 }, 0],
+                         [{ |x| x }, 1],
+                         [{ |x y| x + y }, 2] ]
+               that: { |case|
+                       case first arity is case second }
+               testing: "Closure#arity"!
 
     method testSelfRefInClosure
         assert true: { TestSelfRefInClosure test }
