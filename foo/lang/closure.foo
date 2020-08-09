@@ -90,17 +90,31 @@ class TestClosure { assert }
             ; testApply
             ; testSelfRefInClosure
             ; testArity
+            ; testSignature
                 .
         self!
 
+    method testSignature
+        assert forAll: [
+            [{ 42 }, []],
+            [{ || 42 }, []],
+            [{ |x| x }, [Any]],
+            [{ |x::Integer z y::Object| x + y }, [Integer, Any, Object]]
+        ]
+            that: { |case|
+                    case first signature == case second }
+            testing: "Closure#signature"!
+
     method testArity
-        assert forAll: [ [{ 42 }, 0],
-                         [{ || 42 }, 0],
-                         [{ |x| x }, 1],
-                         [{ |x y| x + y }, 2] ]
-               that: { |case|
-                       case first arity is case second }
-               testing: "Closure#arity"!
+        assert forAll: [
+            [{ 42 }, 0],
+            [{ || 42 }, 0],
+            [{ |x| x }, 1],
+            [{ |x y| x + y }, 2]
+        ]
+            that: { |case|
+                    case first arity is case second }
+            testing: "Closure#arity"!
 
     method testSelfRefInClosure
         assert true: { TestSelfRefInClosure test }
