@@ -58,6 +58,7 @@ interface Object
         err print: other debug.
         Error raise: "Mismatch: {err content}"!
 
+    -- FIXME: Would be infinitely preferable for the host to handle this
     direct method perform: selector with: arguments
         DoesNotUnderstand
             raise: (Selector new: selector)
@@ -72,5 +73,9 @@ interface Object
 end
 
 extend Class
+    is Object
+end
+
+extend Interface
     is Object
 end

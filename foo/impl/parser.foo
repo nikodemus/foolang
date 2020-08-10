@@ -2,43 +2,6 @@ import .source.*
 import .syntax.*
 import .utils.Debug
 
-define SeqPrecedence
-    1!
-
-define SingleExpressionPrecedence
-    2! -- dot has precedence 2
-
-define KeywordPrecedence
-    9!
-
-define UnknownOperatorPrecedence
-    10!
-
-define PrefixPrecedence
-    1000!
-
-define UnaryPrecedence
-    1000!
-
-define TokenPrecedence
-    let tokens = Dictionary new.
-    tokens put: 90 at: "*".
-    tokens put: 90 at: "/".
-    tokens put: 80 at: "-".
-    tokens put: 80 at: "+".
-    tokens put: 10 at: "is".
-    tokens put: 4 at: "=".
-    tokens put: 3 at: "let".
-    tokens put: 3 at: "(".
-    tokens put: 3 at: "\{".
-    tokens put: 2 at: ".".
-    tokens put: 1 at: "!".
-    tokens put: 0 at: ")".
-    tokens put: 0 at: "}".
-    tokens put: 0 at: "define".
-    tokens put: 0 at: "class".
-    tokens!
-
 interface Token
     is Object
 
@@ -48,16 +11,18 @@ interface Token
             first: first last: last!
 
     method precedence
-        Error raise: "{self string} is not valid in suffix position in self-hosted parser!"!
+        False!
 
     method parseAsSuffixOf: prefix with: parser
-        Error raise: "Self-hosted parser cannot parse {self} ({self first}) in suffix position!"!
+        Error raise: "Cannot parse {self} (@{self first}) in suffix position {parser syntaxTable where}! (self-hosted parser)"!
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        Error raise: "Self-hosted parser cannot parse {self} ({self first}) in prefix position!"!
+        Error raise: "Cannot parse {self} (@{self first}) in prefix position position {parser syntaxTable where}! (self-hosted parser)"!
 
     method toString
         "#<Token \"{self string}\">"!
+
+    required method string
 end
 
 define StringEscapes
@@ -86,15 +51,6 @@ class TokenString { string first last }
         StringEscapes at: s ifNone: { s }!
 end
 
-interface SuffixToken
-    is Token
-
-    method precedence
-        TokenPrecedence
-            at: self string
-            ifNone: { UnknownOperatorPrecedence }!
-end
-
 class TokenDecimal { string first last }
     is Token
 
@@ -104,6 +60,9 @@ class TokenDecimal { string first last }
           do: { |pos|
                 n = n * 10 + (string at: pos) digit }.
         SyntaxLiteral value: n!
+
+    method toString
+        "#<TokenDecimal {string}>"!
 end
 
 class TokenEof { position }
@@ -117,173 +76,24 @@ class TokenEof { position }
 
     method string
         "EOF"!
+
+    method first
+        position!
+
+    method last
+        position!
 end
 
-interface ReservedToken
-    is SuffixToken
-    direct method string: string first: first last: last
-        self first: first last: last!
+-- For CoreSyntaxTable --
+
+class UnmatchedCloseToken { precedence string first last }
+    is Token
 end
 
-class TokenReservedWordDefine { first last }
-    is ReservedToken
-
-    method parseAsPrefixWith: parser atPrecedence: _precedence
-        let def = SyntaxDefine
-                      name: parser parseVariableName
-                      body: (parser parseAtPrecedence: SeqPrecedence).
-        parser expect: "!".
-        def!
-
-    method string
-        "define"!
-end
-
-class TokenReservedWordEnd { first last }
-    is ReservedToken
-
-    method string
-        "end"!
-end
-
-class TokenReservedWordIs { first last }
-    is ReservedToken
-
-    method parseAsSuffixOf: prefix with: parser
-        SyntaxIs
-            left: prefix
-            right: (parser parseAtPrecedence: SingleExpressionPrecedence)!
-
-    method string
-        "is"!
-end
-
-class TokenReservedWordReturn { first last }
-    is ReservedToken
-
-    method parseAsPrefixWith: parser atPrecedence: _precedence
-        SyntaxReturn
-            value: (parser parseAtPrecedence: SingleExpressionPrecedence)!
-
-    method string
-        "return"!
-end
-
-class TokenReservedWordLet { first last }
-    is ReservedToken
-
+class CommentToken { precedence string first last }
+    is Token
     ---
-    Special casing for end of line comments after dot to
-    make the following a _suffix_ comment on `foo bar`:
-
-        let x = foo bar. -- comment
-        quux zot
-
-    The human expectation trumps consistency here.
-    ---
-
-    method parseAsPrefixWith: parser atPrecedence: _precedence
-        let name = parser parseVariableName.
-        parser expect: "=".
-        let value = (parser parseAtPrecedence: SingleExpressionPrecedence).
-        parser expect: ".".
-        SyntaxLet
-            name: name
-            value: (parser handleSuffixCommentOf: value)
-            body: (parser parseAtPrecedence: SeqPrecedence)!
-
-    method string
-        "let"!
-end
-
-class TokenReservedSigilDot { first last }
-    is ReservedToken
-
-    ---
-    Special casing for end of line comments after dot to
-    make the following a _suffix_ comment on `foo bar`:
-
-        foo bar. -- comment
-        quux zot
-
-    The human expectation trumps consistency here.
-    ---
-
-    method parseAsSuffixOf: prefix with: parser
-        SyntaxSeq
-            first: (parser handleSuffixCommentOf: prefix)
-            then: (parser parseAtPrecedence: SeqPrecedence)!
-
-    method string
-        "."!
-end
-
-class TokenReservedSigilOpenParen { first last }
-    is ReservedToken
-
-    method parseAsPrefixWith: parser atPrecedence: _precedence
-        let body = parser parseAtPrecedence: SeqPrecedence.
-        parser expect: ")".
-        SyntaxParens
-            body: body!
-
-    method string
-        "("!
-end
-
-class TokenReservedSigilCloseParen { first last }
-    is ReservedToken
-    method string
-        ")"!
-end
-
-class TokenReservedSigilOpenBrace { first last }
-    is ReservedToken
-
-    method parseAsPrefixWith: parser atPrecedence: _precedence
-        let parameters = List new.
-        parser
-            when: "|"
-            then: { parser until: "|"
-                           do: { parameters add: (parser parseVariableName) } }.
-        let body = parser parseAtPrecedence: SeqPrecedence.
-        parser expect: "}".
-        SyntaxBlock
-            parameters: parameters
-            body: body!
-
-    method string
-        "\{"!
-end
-
-class TokenReservedSigilCloseBrace { first last }
-    is ReservedToken
-
-    method precedence
-        0!
-
-    method string
-        "}"!
-end
-
-class TokenReservedSigilEqual { first last }
-    is ReservedToken
-
-    method parseAsSuffixOf: prefix with: parser
-        SyntaxAssign
-            variable: prefix::SyntaxVariable
-            value: (parser parseAtPrecedence: SingleExpressionPrecedence)!
-
-    method string
-        "="!
-end
-
-class TokenReservedSigilDoubledash { first last }
-    is ReservedToken
-
-    ---
-    See also: special handlings in TokenReservedSigilDot and
-    TokenReservedSigilLet to parse
+    See also: special handlings in SequenceToken and LetToken to parse
 
         foo bar. -- comment
         quux zot
@@ -319,65 +129,197 @@ class TokenReservedSigilDoubledash { first last }
             comment: parser readline
             value: prefix
             source: (parser sourceFrom: first to: last)!
-
-    method string
-        "--"!
 end
 
-class TokenReservedWordSelf { first last }
-    is ReservedToken
+-- For ExpressionSyntaxTable --
+
+class SequenceToken { precedence string first last }
+    is Token
+    ---
+    Special casing for end of line comments after dot to
+    make the following a _suffix_ comment on `foo bar`:
+
+        foo bar. -- comment
+        quux zot
+
+    The human expectation trumps consistency here.
+    ---
+
+    method parseAsSuffixOf: prefix with: parser
+        SyntaxSeq
+            first: (parser handleSuffixCommentOf: prefix)
+            then: (parser parseAtPrecedence: SeqPrecedence)!
+end
+
+class AssignmentToken { precedence string first last }
+    is Token
+
+    method parseAsSuffixOf: prefix with: parser
+        SyntaxAssign
+            variable: prefix::SyntaxVariable
+            value: (parser parseAtPrecedence: SingleExpressionPrecedence)!
+end
+
+class BlockStartToken { precedence string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        let parameters = List new.
+        parser
+            when: "|"
+            then: { parser until: "|"
+                           do: { parameters add: (parser parseVariableName) } }.
+        let body = parser parseAtPrecedence: SeqPrecedence.
+        parser expect: "}".
+        SyntaxBlock
+            parameters: parameters
+            body: body!
+end
+
+class OpenParenToken { precedence string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        let body = parser parseAtPrecedence: SeqPrecedence.
+        parser expect: ")".
+        SyntaxParens body: body!
+end
+
+class IsSuffixToken { precedence string first last }
+    is Token
+
+    method parseAsSuffixOf: prefix with: parser
+        SyntaxIs
+            left: prefix
+            right: (parser parseAtPrecedence: SingleExpressionPrecedence)!
+
+    method toString
+        "#<IsSuffixToken>"!
+end
+
+class LetToken { precedence string first last }
+    is Token
+
+    ---
+    Special casing for end of line comments after dot to
+    make the following a _suffix_ comment on `foo bar`:
+
+        let x = foo bar. -- comment
+        quux zot
+
+    The human expectation trumps consistency here.
+    ---
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        let name = parser parseVariableName.
+        parser expect: "=".
+        let value = (parser parseAtPrecedence: SingleExpressionPrecedence).
+        parser expect: ".".
+        SyntaxLet
+            name: name
+            value: (parser handleSuffixCommentOf: value)
+            body: (parser parseAtPrecedence: SeqPrecedence)!
+end
+
+class SelfToken { precedence string first last }
+    is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxSelf new!
 
-    method string
-        "self"!
+    method toString
+        "#<SelfToken>"!
 end
 
-class TokenReservedWordClass { first last }
-    is ReservedToken
+class ReturnToken { precedence string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        SyntaxReturn
+            value: (parser parseAtPrecedence: SingleExpressionPrecedence)!
+
+    method toString
+        "#<ReturnToken>"!
+end
+
+-- For ToplevelSyntaxTable --
+
+class ClassToken { precedence string first last }
+    is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
         let name = parser parseVariableName.
-
         let slots = List new.
         parser expect: "\{".
         parser until: "}"
                do: { slots add: parser parseVariableName }.
 
-        let directMethods = List new.
-        let methods = List new.
-        parser until: "end"
-               do: { self
-                         parseClassPartWith: parser
-                         directMethods: directMethods
-                         methods: methods }.
-
-        let theClass = SyntaxClass
-                           name: name
-                           directMethods: directMethods
-                           slots: slots
-                           methods: methods.
+        let theClass = SyntaxClass name: name slots: slots.
+        let classParser = parser syntaxTable: ClassSyntaxTable.
+        classParser
+            until: "end"
+            do: { theClass add: (classParser parseAtPrecedence: precedence) }.
         parser handleSuffixCommentOf: theClass!
 
-    method parseClassPartWith: parser directMethods: directMethods methods: methods
-        -- FIXME: This should instead augment the syntax of the parser
-        -- with method and direct. That way we will get comments, etc right.
-        parser when: "direct"
-               then: { parser expect: "method".
-                       directMethods add: (self parseMethodWith: parser).
-                       return True }.
-        parser when: "method"
-               then: { methods add: (self parseMethodWith: parser).
-                       return True }.
-        Error raise: "Syntax error in class body: {parser nextToken string}"!
+    method toString
+        "#<ClassToken>"!
+end
 
-    method parseMethodWith: parser
-        let syntax = SyntaxMethod
-            signature: (self parseMethodSignatureWith: parser)
-            body: (parser parseAtPrecedence: SeqPrecedence).
+class DefineToken { precedence string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        let definitionParser = parser syntaxTable: ExpressionSyntaxTable.
+        let def = SyntaxDefine
+                      name: definitionParser parseVariableName
+                      body: (definitionParser parseAtPrecedence: SeqPrecedence).
         parser expect: "!".
-        parser handleSuffixCommentOf: syntax!
+        def!
+
+    method toString
+        "#<DefineToken>"!
+end
+
+class InterfaceToken { precedence string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        let theInterface = SyntaxInterface name: parser parseVariableName.
+        let interfaceParser = parser syntaxTable: InterfaceSyntaxTable.
+        interfaceParser
+            until: "end"
+            do: { theInterface add: (interfaceParser parseAtPrecedence: precedence) }.
+        parser handleSuffixCommentOf: theInterface!
+
+    method toString
+        "#<InterfaceToken>"!
+end
+
+-- For ClassSyntaxTable and InterfaceSyntaxTable --
+
+class IsPrefixToken { precedence string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        SyntaxInterfaceRef name: parser parseVariableName!
+
+    method toString
+        "#<IsPrefixToken>"!
+end
+
+interface MethodToken
+    is Token
+
+    method parseWith: parser as: methodClass
+        let bodyParser = parser syntaxTable: ExpressionSyntaxTable.
+        let signature = self parseMethodSignatureWith: bodyParser.
+        -- Debug println: "\n- method {signature selector}, {methodClass}".
+        let body = bodyParser parseAtPrecedence: SeqPrecedence.
+        parser expect: "!".
+        body = bodyParser handleSuffixCommentOf: body.
+        methodClass
+                signature: signature
+                body: body!
 
     method parseMethodSignatureWith: parser
         let selector = StringOutput new.
@@ -390,41 +332,162 @@ class TokenReservedWordClass { first last }
             selector: (Selector new: selector content)
             parameters: parameters!
 
-    method string
-        "class"!
+    method toString
+        "#<MethodToken>"!
 end
 
-define ReservedTokens
-    let tokens = Dictionary new.
-    tokens put: TokenReservedSigilCloseBrace at: "}".
-    tokens put: TokenReservedSigilCloseParen at: ")".
-    tokens put: TokenReservedSigilDot at: ".".
-    tokens put: TokenReservedSigilEqual at: "=".
-    tokens put: TokenReservedSigilOpenBrace at: "\{".
-    tokens put: TokenReservedSigilOpenParen at: "(".
-    tokens put: TokenReservedWordClass at: "class".
-    tokens put: TokenReservedWordDefine at: "define".
-    tokens put: TokenReservedWordIs at: "is".
-    tokens put: TokenReservedWordLet at: "let".
-    tokens put: TokenReservedWordSelf at: "self".
-    tokens put: TokenReservedWordReturn at: "return".
-    tokens put: TokenReservedSigilDoubledash at: "--".
-    tokens!
+class InstanceMethodToken { precedence string first last }
+    is MethodToken
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        self parseWith: parser as: SyntaxInstanceMethod!
+
+    method toString
+        "#<InstanceMethodToken>"!
+end
+
+class DirectMethodToken { precedence string first last }
+    is MethodToken
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        parser expect: "method".
+        self parseWith: parser as: SyntaxDirectMethod!
+
+    method toString
+        "#<DirectMethodToken>"!
+end
+
+class BangToken { precedence string first last }
+    is Token
+
+    method toString
+        "#<BangToken>"!
+end
+
+class SyntaxTable { where tokens }
+    is Object
+
+    method where: newWhere tokens: newTokens
+        SyntaxTable
+            where: newWhere
+            tokens: (tokens copy merge: newTokens)!
+end
+
+-- FIXME: call it binding power, it's more accurate
+class SyntaxEntry { tokenClass precedence }
+    is Object
+end
+
+class SigilEntry { precedence }
+    is Object
+    method tokenClass
+        TokenSigil!
+end
+
+define SeqPrecedence
+    1!
+
+define SingleExpressionPrecedence
+    2! -- dot has precedence 2
+
+define KeywordPrecedence
+    9!
+
+define UnknownOperatorPrecedence
+    10!
+
+define UnaryPrecedence
+    1000!
+
+define PrefixPrecedence
+    1000!
+
+define CoreSyntaxTable
+    SyntaxTable
+    where: "anywhere"
+    tokens:
+    {
+         "}" -> SyntaxEntry tokenClass: UnmatchedCloseToken precedence: 0,
+         ")" -> SyntaxEntry tokenClass: UnmatchedCloseToken precedence: 0,
+         "]" -> SyntaxEntry tokenClass: UnmatchedCloseToken precedence: 0,
+         "--" -> SyntaxEntry tokenClass: CommentToken precedence: 1000
+    }!
+
+define ExpressionSyntaxTable
+    CoreSyntaxTable
+    where: "in an expression"
+    tokens:
+    {
+         "return" -> SyntaxEntry tokenClass: ReturnToken precedence: 1000,
+         "self" -> SyntaxEntry tokenClass: SelfToken precedence: 1000,
+         "*" -> SigilEntry precedence: 90,
+         "/" -> SigilEntry precedence: 90,
+         "+" -> SigilEntry precedence: 80,
+         "-" -> SigilEntry precedence: 80,
+         "is" -> SyntaxEntry tokenClass: IsSuffixToken precedence: 10,
+         "=" -> SyntaxEntry tokenClass: AssignmentToken precedence: 4,
+         "let" -> SyntaxEntry tokenClass: LetToken precedence: 3,
+         "\{" -> SyntaxEntry tokenClass: BlockStartToken precedence: 3, -- ???
+         "(" -> SyntaxEntry tokenClass: OpenParenToken precedence: 3, -- ???
+         "." -> SyntaxEntry tokenClass: SequenceToken precedence: 2,
+         "!" -> SyntaxEntry tokenClass: BangToken precedence: 1
+    }!
+
+define ToplevelSyntaxTable
+    CoreSyntaxTable
+    where: "at toplevel"
+    tokens:
+    {
+         "define" -> SyntaxEntry tokenClass: DefineToken precedence: 1000,
+         "class" -> SyntaxEntry tokenClass: ClassToken precedence: 1000,
+         "interface" -> SyntaxEntry tokenClass: InterfaceToken precedence: 1000
+    }!
+
+define MixedSyntaxTable
+    ExpressionSyntaxTable
+    where: "here"
+    tokens: ToplevelSyntaxTable tokens!
+
+define ClassSyntaxTable
+    CoreSyntaxTable
+    where: "in a class"
+    tokens:
+    {
+         "is" -> SyntaxEntry tokenClass: IsPrefixToken precedence: 1000,
+         "method" -> SyntaxEntry tokenClass: InstanceMethodToken precedence: 1000,
+         "direct" -> SyntaxEntry tokenClass: DirectMethodToken precedence: 1000
+    }!
+
+-- Currently same as ClassSyntaxTable, but will diverge with required methods, etc
+define InterfaceSyntaxTable
+    ClassSyntaxTable
+    where: "in an interface"
+    tokens: Dictionary new!
 
 interface LookupToken
-    is SuffixToken
+    is Token
 
     direct method from: first to: last in: parser
         let tokenString = parser source from: first to: last.
-        -- Reserved words get their own classes!
-        let tokenClass = ReservedTokens
-                             at: tokenString
-                             ifNone: { Self }.
-        tokenClass string: tokenString first: first last: last!
+        -- Figure out the correct tokenclass using current syntax.
+        let entry = parser syntaxTable tokens
+                        at: tokenString
+                        ifNone: { SyntaxEntry
+                                      tokenClass: self
+                                      precedence: (self defaultPrecedence) }.
+        -- Debug println: "token '{tokenString}' --> {tokenClass}".
+        entry tokenClass
+            precedence: entry precedence
+            string: tokenString
+            first: first
+            last: last!
 end
 
-class TokenSigil { string first last }
+class TokenSigil { precedence string first last }
     is LookupToken
+
+    direct method defaultPrecedence
+        UnknownOperatorPrecedence!
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxPrefix
@@ -436,7 +499,7 @@ class TokenSigil { string first last }
         SyntaxBinary
             receiver: prefix
             selector: (Selector name: string)
-            argument: (parser parseAtPrecedence: (self precedence))
+            argument: (parser parseAtPrecedence: precedence)
             source: (parser sourceFrom: first to: last)!
 
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
@@ -444,10 +507,10 @@ class TokenSigil { string first last }
         parameters add: parser parseVariableName!
 end
 
-class TokenWord { string first last }
+class TokenWord { precedence string first last }
     is LookupToken
 
-    method precedence
+    direct method defaultPrecedence
         UnaryPrecedence!
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
@@ -467,10 +530,18 @@ class TokenWord { string first last }
                       (TokenSigil includes: op)
                           ifFalse: { Error raise: "Expected prefix sigil, got: {op string}" }.
                       selector print: op string }!
+
+    method toString
+        "#<TokenWord {string}>"!
 end
 
 class TokenKeyword { string first last }
-    is SuffixToken
+    is Token
+
+    direct method from: first to: last in: parser
+        self string: (parser source from: first to: last)
+             first: first
+             last: last!
 
     method precedence
         KeywordPrecedence!
@@ -478,7 +549,7 @@ class TokenKeyword { string first last }
     method parseAsSuffixOf: prefix with: parser
         let arguments = List new.
         let selector = StringOutput new: string.
-        { arguments push: (parser parseAtPrecedence: (self precedence)).
+        { arguments push: (parser parseAtPrecedence: self precedence).
           let token = parser lookahead.
           (TokenKeyword includes: token)
               ifTrue: { parser nextToken.
@@ -527,27 +598,56 @@ define ColonCharacter
 
 -- FIXME: Broken for unicode input!
 class Parser { source::String
-               position::Integer
+               positionBox
                first::Integer
                last::Integer
-               lookahead::List }
+               stack::List -- for lookahead
+               syntaxTable }
     is Object
 
-    direct method new: source
+    method position
+        positionBox first!
+
+    method toString
+        "#<Parser position: {self position}>"!
+
+    direct method _new: source syntaxTable: syntaxTable
         source
             ifEmpty: { Error raise: "Cannot parse empty string!" }.
         self
             source: source
-            position: 1
-             first: 1
-             last: (source size)
-             lookahead: List new!
+            positionBox: [1]
+            first: 1
+            last: (source size)
+            stack: List new
+            syntaxTable: syntaxTable!
 
-    direct method parse: source::String
-        let parser = self new: source.
+    method syntaxTable: newSyntaxTable
+        Parser
+            source: source
+            positionBox: positionBox
+            first: first
+            last: (source size)
+            stack: stack
+            syntaxTable: newSyntaxTable!
+
+    direct method parseExpressions: source
+        (self _new: source syntaxTable: ExpressionSyntaxTable)
+            parseAll: #parse!
+
+    direct method parseDefinitions: source
+        (self _new: source syntaxTable: ToplevelSyntaxTable)
+            parseAll: #parsePrefix!
+
+    direct method parseMixed: source
+        (self _new: source syntaxTable: MixedSyntaxTable)
+            parseAll: #parse! -- wwwhhhhaaaaa
+
+    method parseAll: selector
         let syntax = List new.
-        { parser skipWhitespace. parser atEof }
-            whileFalse: { syntax add: (parser parse) }.
+        { self skipWhitespace.
+          self atEof }
+        whileFalse: { syntax add: (selector sendTo: self) }.
         -- syntax do: { |s| Debug println: "=> {s}" }.
         syntax!
 
@@ -560,10 +660,10 @@ class Parser { source::String
             ifFalse: { prefix }!
 
     method readline
-        let start = position.
+        let start = self position.
         { self atEof or: self atNewline }
             whileFalse: { self advance }.
-        let stop = position - 1.
+        let stop = self position - 1.
         self atEof
             ifFalse: { self advance }.
         source from: start to: stop!
@@ -574,6 +674,9 @@ class Parser { source::String
     method parse
         self parseAtPrecedence: 0!
 
+    method parsePrefix
+        self parseAtPrecedence: 1000!
+
     method parseVariableName
         let token = self nextToken.
         (TokenWord includes: token)
@@ -583,14 +686,15 @@ class Parser { source::String
     method expect: expected
         let got = self nextToken string.
         got == expected
-            ifFalse: { Error raise: "Self-hosted parser expected '{expected}', got '{got}'
-Context: {source}" }!
+            ifFalse: { Error raise: "Expected '{expected}', got '{got}' {syntaxTable where} (self-hosted parser)
+Position: {self position}
+Source: {source}" }!
 
     method sees: test
         -- Cannot use lookahead since that would skip newlines!
         self skipWhile: { self atHorizontalWhitespace }.
-        let last = (position + test size - 1) min: source size.
-        test == (source from: position to: last)!
+        let last = (self position + test size - 1) min: source size.
+        test == (source from: self position to: last)!
 
     method when: test then: action
         self lookahead string == test
@@ -616,7 +720,7 @@ Context: {source}" }!
     method parseSuffixOf: prefix with: precedence
         let expr = prefix.
 
-        { -- Debug println: "expr: {expr}, precedence={precedence}, next={self lookahead}? {self nextPrecedence}".
+        { -- Debug println: "expr: {expr}, precedence={precedence}, next={self lookahead}?, nextPrecedence={self nextPrecedence}".
           precedence < self nextPrecedence }
         whileTrue: { -- Debug println: " -> go".
                      expr = self parseSuffixOf: expr }.
@@ -630,19 +734,19 @@ Context: {source}" }!
         self lookahead precedence!
 
     method lookahead
-        lookahead
-            ifEmpty: { lookahead push: self scanNext }.
-        lookahead first!
+        stack
+            ifEmpty: { stack push: self scanNext }.
+        stack first!
 
     method nextToken
-        lookahead isEmpty
+        stack isEmpty
             ifTrue: { self scanNext }
-            ifFalse: { lookahead pop }!
+            ifFalse: { stack pop }!
 
     method scanNext
         self skipWhitespace.
         self atEof
-            ifTrue: { return TokenEof at: position in: self }.
+            ifTrue: { return TokenEof at: self position in: self }.
         self atSpecial
             ifTrue: { return self scanSpecial }.
         self atDigit
@@ -653,10 +757,10 @@ Context: {source}" }!
             ifTrue: { return self scanSigil }.
         self atWord
             ifTrue: { return self scanWord }.
-        Error raise: "Don't know how to scan pos: {position} in: {source}"!
+        Error raise: "Don't know how to scan pos: {self position} in: {source}"!
 
     method atEof
-        self atEof: position!
+        self atEof: self position!
 
     method atEof: position
         position > last!
@@ -695,13 +799,13 @@ Context: {source}" }!
     method atChar: char1 notFollowedBy: char2
         self atEof
             ifTrue: { return False }.
-        (source at: position) == char1
+        (source at: self position) == char1
             ifFalse: { return False }.
-        (position + 1 > last)
-            ifFalse: { ((source at: position + 1) == char2) not }!
+        (self position + 1 > last)
+            ifFalse: { ((source at: self position + 1) == char2) not }!
 
     method afterEscape
-        self atEscape: position - 1!
+        self atEscape: self position - 1!
 
     method atEscape: position
         (self atEof: position)
@@ -712,20 +816,20 @@ Context: {source}" }!
     method isAt: block
         self atEof
             ifTrue: { False }
-            ifFalse: { block value: (source at: position) }!
+            ifFalse: { block value: (source at: self position) }!
 
     method skipWhile: test
         -- Debug println: "/skipWhile: {test}".
-        let start = position.
+        let start = self position.
         test whileTrue: { self advance }.
-        position - 1!
+        self position - 1!
 
     method skipWhitespace
         self skipWhile: { self atWhitespace }!
 
     method scanSpecial
         -- Debug println: "/scanSpecial".
-        let start = position.
+        let start = self position.
         self advance.
         TokenSigil
             from: start
@@ -735,7 +839,7 @@ Context: {source}" }!
     method scanDecimal
         -- Debug println: "/scanDecimal".
         TokenDecimal
-            from: position
+            from: self position
             to: (self skipWhile: { self atDigit })
             in: self!
 
@@ -743,7 +847,7 @@ Context: {source}" }!
         -- Debug println: "/scanString".
         self advance.
         let string = TokenString
-                         from: position
+                         from: self position
                          to: (self skipWhile: { self atDoublequote not or: self afterEscape })
                          in: self.
         self advance.
@@ -752,28 +856,28 @@ Context: {source}" }!
     method scanSigil
         -- Debug println: "/scanSigil".
         TokenSigil
-            from: position
+            from: self position
             to: (self skipWhile: { self atSigil })
             in: self!
 
     method scanWord
         -- Debug println: "/scanWord".
-        let first = position.
+        let first = self position.
         self skipWhile: { self atWord }.
         (self atChar: ColonCharacter notFollowedBy: ColonCharacter)
             ifTrue: { self advance.
                       TokenKeyword
                           from: first
-                          to: position - 1
+                          to: self position - 1
                           in: self }
             ifFalse: { TokenWord
                            from: first
-                           to: position - 1
+                           to: self position - 1
                            in: self }!
 
     method advance
-        position <= last
+        self position <= last
             ifFalse: { panic "Tried to advance beyond end: \"{source}\"" }.
-        position = position + 1!
+        positionBox put: self position + 1 at: 1!
 
 end

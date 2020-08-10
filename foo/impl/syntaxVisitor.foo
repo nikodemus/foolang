@@ -19,5 +19,5 @@ interface SyntaxVisitor
     required method visitDefine: aDefine
     required method visitMethod: aMethod
     required method visitClass: aClass
+    required method visitInterface: anInterface
 end
-

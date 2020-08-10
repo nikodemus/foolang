@@ -94,6 +94,9 @@ class SyntaxUnary { receiver selector source }
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
         [receiver, selector]!
+
+    method toString
+        "#<SyntaxUnary {selector} receiver: {receiver}>"!
 end
 
 class SyntaxBinary { receiver selector argument source }
@@ -200,17 +203,100 @@ class SyntaxDefine { name body }
         [name, body]!
 end
 
-class SyntaxMethod { signature body }
+class SyntaxClass { name slots interfaces directMethods instanceMethods }
     is Syntax
+
+    direct method name: name slots: slots
+        self
+            name: name
+            slots: slots
+            interfaces: List new
+            directMethods: List new
+            instanceMethods: List new!
+
+    method add: part
+        part addTo: self!
+
+    method visitBy: visitor
+        visitor visitClass: self!
+
+    method parts
+        [name, slots, interfaces, directMethods, instanceMethods]!
+end
+
+class SyntaxInterface { name interfaces directMethods instanceMethods }
+    is Syntax
+
+    direct method name: name
+        self
+            name: name
+            interfaces: List new
+            directMethods: List new
+            instanceMethods: List new!
+
+    method add: part
+        part addTo: self!
+
+    method visitBy: visitor
+        visitor visitInterface: self!
+
+    method parts
+        [name, interfaces, directMethods, instanceMethods]!
+end
+
+interface DefinitionPart
+   required method addTo: definition
+end
+
+class SyntaxInterfaceRef { name }
+    is Syntax
+    is DefinitionPart
+
+    method addTo: definition
+        definition interfaces add: self!
+
+    method visitBy: visitor
+        visitor visitInterfaceRef: self!
+
+    method parts
+        [name]!
+
+    method toString
+        "#<SyntaxInterfaceRef {name}>"!
+end
+
+interface SyntaxMethod
+    is Syntax
+    is DefinitionPart
+
+    method selector
+        self signature selector!
 
     method visitBy: visitor
         visitor visitMethod: self!
 
-    method selector
-        signature selector!
-
     method parts
-        [signature, body]!
+        [self signature, self body]!
+end
+
+class SyntaxInstanceMethod { signature body }
+    is SyntaxMethod
+
+    method addTo: thing
+        thing instanceMethods add: self!
+
+    method toString
+        "#<SyntaxInstanceMethod {self selector}>"!
+end
+
+class SyntaxDirectMethod { signature body }
+    is SyntaxMethod
+
+    method addTo: thing
+        thing directMethods add: self!
+
+    method toString
+        "#<SyntaxDirectMethod {self selector}>"!
 end
 
 class MethodSignature { selector parameters }
@@ -218,14 +304,4 @@ class MethodSignature { selector parameters }
 
     method isEquivalent: other
         selector == other selector and: parameters == other parameters!
-end
-
-class SyntaxClass { name directMethods slots methods }
-    is Syntax
-
-    method visitBy: visitor
-        visitor visitClass: self!
-
-    method parts
-        [name, directMethods, slots, methods]!
 end

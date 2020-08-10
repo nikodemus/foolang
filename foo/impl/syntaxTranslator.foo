@@ -83,6 +83,9 @@ class SyntaxTranslator { env }
     method visitVariable: aVariable
         env reference: aVariable name!
 
+    method visitInterfaceRef: aRef
+        env global: aRef name!
+
     method visitAssign: anAssign
         (env reference: anAssign variable name)
             assign: (anAssign value visitBy: self)!
@@ -115,11 +118,25 @@ class SyntaxTranslator { env }
 
     method visitClass: aClass
         let instanceMethodVisitor = SyntaxTranslator env: (env addSlots: aClass slots).
+         -- FIXME: should fetch interface object instead of using the name
         AstClass
             name: aClass name
+            slots: aClass slots
+            interfaces: (aClass interfaces
+                             collect: { |i| i visitBy: self })
             directMethods: (aClass directMethods
                                 collect: { |m| m visitBy: self })
-            slots: aClass slots
-            methods: (aClass methods
+            instanceMethods: (aClass instanceMethods
                           collect: { |m| m visitBy: instanceMethodVisitor })!
+
+    method visitInterface: anInterface
+         -- FIXME: should fetch interface object instead of using the name
+        AstInterface
+            name: anInterface name
+            interfaces: (anInterface interfaces
+                             collect: { |i| i visitBy: self })
+            directMethods: (anInterface directMethods
+                                collect: { |m| m visitBy: self })
+            instanceMethods: (anInterface instanceMethods
+                                  collect: { |m| m visitBy: self })!
 end
