@@ -91,6 +91,15 @@ it's here more for future reference than anything else.
   Anthony Cocchi, Stephen Fink, David Grove, and Derek Lieber. Describes the
   method Jalapeno JVM uses. (Or at least used in 2001.)
 
+- 2005 - [Efficient Multimethods in a Single Dispatch
+  Language](http://www.laputan.org/reflection/Foote-Johnson-Noble-ECOOP-2005.pdf)
+  by Brian Foote, Ralph E. Johnson, and James Noble. _An **excellent** discourse
+  on multimethods in Smalltalk-like languages. Multimethods following
+  assymmetric semantics were in Foolang plans even before I discovered this
+  paper. :) From personal CLOS implementation experience I suspect they did
+  not give the table approach a fair shake&mdash;it really requires a custom
+  hashtable._
+
 - 2007 - [Open, extensible object models](https://www.piumarta.com/software/cola/objmodel2.pdf) by Ian Piumarta
   and Alessandro Warth. _Hugely influential in early genesis of Foolang._
 
