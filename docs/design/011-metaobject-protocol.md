@@ -1,3 +1,19 @@
+XXX issues
+- how to express type "this must be a protocol inheriting from x"
+  (not an instance, but a protocol!)
+- how to express type "constant x"
+
+XXX compromises for convenience (printing, mainly!)
+- #class method in Any
+- #name method in Class and Interface
+
+Use cases:
+- reflection on interpreter objects producing an interpreter mirror
+- interpreter being able to reflect on it's own objects without system object
+- being able to get the host mirror on interpreter objects if you want it
+  `system reflection of: anInterpreterObject in: Mirror` vs
+  `system reflection of: anInterpreterObject in: ObjectMirror`
+
 # Metaobject Protocol
 
 **Status**: WIP (design in progress, not implemented)
@@ -41,26 +57,181 @@ How can the self-hosted interpreter access slots of the classes it creates?
 
 ## Proposal
 
-A shallow metaobject protocol, without providing much in the way of readymade
+A simple metaobject protocol, without providing much in the way of readymade
 building blocks.
 
-Control access to metalevel objects through `Reflection` class and _Mirror_
-instances.
+Access to existing metalevel objects is through `Mirror` and `Reflection`
+interfaces. (New metalevel objects can be created by baselevel code.)
 
-The `Reflection` class provides compiler visibility into which objects are
-reflected.
+The `Reflection` interface is the "raw" reflective API, the general version of
+which is accessible through `System#reflection` method, thereby rooting
+the authority to do reflection in the system object.
 
-The `Mirror` interface provides authority to break encapsulation, as the general
-purpose instance can only be obtained through `System#mirror`. Those
-programmatically building classes (like the self-hosted interpreter) already
-have access to their metaobjects, and as such can implement mirrors for them
-without access to the system object.
+The `Mirror` interface in contrast functions as a way of making reflection
+visible to the compiler, as direct interface references are _much_ easier
+to reason about than messages and dataflow.
+
+Code constructing classes programmatically already has access to the their
+metaobjects as part of the construction, and can create mirrors for them without
+access to the system object&mdash;and is able to create a `Reflection` class for
+use with the constructed objects if so desired.
+
+---
+
+### Reflection (interface)
+
+* **method** `reflectee` -> Object
+
+  Returns the object being reflected.
+
+* **method** `classReflection` -> [Reflection](#reflection-interface)
+
+  Returns a reflection for the class of the object being reflected.
+
+* **method** `behavior` -> [Behavior](#behavior-class)
+
+  Returns the behavior of the reflected object.
+
+* **method** `layout` -> [Layout](#layout-class)
+
+  Returns the layout of the reflected object.
+
+---
+
+### SystemReflection (class)
+
+is [Reflection](#reflection-interface)
+
+* **direct method** `of:` Object `in:` MirrorInterface -> [Mirror](#mirror-interface)
+
+  Returns a [Mirror](#mirror-interface) reflecting on _object_ using built-in
+  reflection facilities.
+
+  The _mirror interface_ must be a [Protocol](#protocol-interface) implementing
+  [Mirror](#mirror-interface). Most common use case is to use the
+  [Mirror](#mirror-interface) interface directly, but other implementations of
+  [Mirror](#mirror-interface) may be used to control the mirror class selection
+  (see below.)
+
+  Sends `#mirrorClassFor:` message to the _mirror interface_ with the _object_,
+  to obtain a mirror class.
+
+  Sends `#reflection:` message to the mirror class, with a
+  [SystemReflection](#systemreflection-class) of the _object_.
+
+  This method is the only way to obtain a
+  [SystemReflection](#systemreflection-class).
+
+---
+
+### Mirror (interface)
+
+* **required direct method** `reflection:` [Reflection](#reflection-interface) -> [Mirror](#interface-mirror)
+
+  Returns a [Mirror](#mirror-interface) with the given _reflection_.
+
+* **direct method** `mirrorClassFor:` object -> [Class](#class-class)
+
+  Returns a class inheriting [Mirror](#mirror-interface) suitable for use with
+  _object_.
+
+  Default implementation sends the message `#mirrorClassUsing:` to the _object_
+  with the receiver. This allows eg. proxy classes to provide mirrors reflecting
+  on the proxied object instead.
+
+  Default implementations of `#mirrorClassUsing:` in `Object`, `Interface`, and
+  `Class` send `#mirrorClassForObject`, `#mirrorClassForInterface`, and
+  `#mirrorClassForClass` respectively back to the mirror interface they received.
+
+  **NOTE**: Implementations of `mirrorClassUsing:` should not directly refer to
+  classes implementing [Mirror](#mirror-interface), that creates unnecessary
+  references to `Mirror` in them, causing compiler to think reflection may be
+  happening whenever a class implements `mirrorClassUsing:`. This can be avoided
+  using the `#mirrorClassFor*` sends.
+
+* **direct method** `mirrorClassForObject` -> MirrorClass
+
+  Returns `ObjectMirror`.
+
+* **direct method** `mirrorClassForInterface` -> MirrorClass
+
+  Returns `InterfaceMirror`.
+
+* **direct method** `mirrorClassForClass` -> MirrorClass
+
+  Returns `ClassMirror`.
+
+* **method** `reflectee` -> Object
+
+  Returns the object being reflected, aka the reflectee.
+
+* **method** `classMirror` -> [ClassMirror](#classmirror-class)
+
+  Returns a mirror for the class of the reflectee.
+
+* **method** `behavior` -> [Behavior](#behavior-class)
+
+  Returns the behavior of the reflectee.
+
+* **method** `layout` -> [Layout](#layout-class)
+
+  Returns the layout of the reflectee.
+
+---
+
+### class ObjectMirror
+
+is Mirror
+
+* **direct method** `mirrorClassFor`: Object -> MirrorClass
+
+  Returns `ObjectMirror`.
+
+---
+
+### class ClassMirror
+
+is Mirror
+
+* **direct method** `mirrorClassFor`: Object -> MirrorClass
+
+  Returns `ClassMirror`.
+
+* **method** `name` -> Selector
+
+  Returns the name of the class being reflected.
+
+* **method** `instanceBehavior` -> [Behavior](#class-behavior)
+
+  Returns the behavior of the instances of the class.
+
+* **method** `instanceLayout` -> [Behavior](#class-behavior)
+
+  Returns the layout of the instances of the class.
+
+---
+
+### class InterfaceMirror
+
+is Mirror
+
+* **direct method** `mirrorClassFor`: Object -> MirrorClass
+
+  Returns InterfaceMirror.
+
+* **method** `name` -> Selector
+
+  Returns the name of the interface being reflected.
+
+* **method** `instanceBehavior` -> [Behavior](#class-behavior)
+
+  Returns the behavior of the instances of the class.
 
 ---
 
 ### interface Protocol
 
-Common ancestor of classes `Interface` and `Class`. 
+Common ancestor of classes `Interface` and `Class`.
 
 ---
 
@@ -68,10 +239,12 @@ Common ancestor of classes `Interface` and `Class`.
 
 is Protocol
 
-#### _direct method_ `name:` name `behavior:` [Behavior](#interface-behavior) `instanceBehavior:` [Behavior](#interface-behavior) `instanceLayout:` [Layout](#class-layout) -> [Class](#class-class)
+* **direct method** `name:` name `behavior:` [Behavior](#interface-behavior)
+  `instanceBehavior:` [Behavior](#interface-behavior) `instanceLayout:`
+  [Layout](#class-layout) -> [Class](#class-class)
 
-Constructs a new instance of `Class`, with the specified behaviors and instances
-layout.
+   Constructs a new instance of `Class`, with the specified behaviors and instance
+   layout.
 
 ---
 
@@ -79,172 +252,74 @@ layout.
 
 is Protocol
 
-#### _direct method_ `name:` name `behavior:` [Behavior](#interface-behavior) `instanceBehavior:` [Behavior](#interface-behavior) -> [Interface](#class-interface)
+* **direct method** `name:` name `behavior:` [Behavior](#interface-behavior) `instanceBehavior:` [Behavior](#interface-behavior) -> [Interface](#class-interface)
 
-Constructs a new instance of `Interface`, with the specified behaviors.
-
----
-
-### class Reflection
-
-#### _direct method_ `of:` Object `in:` [Mirror](#interface-mirror) -> [Reflection](#class-reflection)
-
-Provides access to a reflection, through which various metaobjects can be
-accessed.
-
-Send `#show:of:` to the mirror with a new empty reflection and the object
-to be reflected as arguments.
-
-Verifies that the reflection is no longer empty, and returns it.
-
-Sketch:
-``` foolang
-let reflection = self _new.
-mirror show: reflection of: object.
-{ reflection _isEmpty } assertFalse.
-reflection!
-```
-
-#### _method_ `isClassReflection` -> Boolean
-
-Returns true if the reflected object is a `Class`.
-
-#### _method_ `isInterfaceReflection` -> Boolean
-
-Returns true if the reflected object is an `Interface`.
-
-#### _method_ `isProtocolReflection` -> Boolean
-
-Returns true if the reflected object is a `Protocol`.
-
-#### _method_ `behavior` -> [Behavior](#class-behavior)
-
-Provides access to the behavior of the reflected object. Raises an error
-if the reflection is empty.
-
-#### _method_ `layout` -> [Layout](#interface-layout)
-
-Provides access to the layout of the reflected object. Raises an error
-if the reflection is empty.
-
-#### _method_ `instanceBehavior` -> [Behavior](#class-behavior)
-
-Provides access to the behavior metaobject describing instances of the
-reflected object. Raises an error if the reflection is empty, or if the
-reflected object is not a `Protocol`.
-
-#### _method_ `instanceLayout` -> [Behavior](#class-behavior)
-
-Provides access to the layout metaobject of instances of the reflected object.
-Raises an error if the reflection is empty, or if the reflected object is not a
-`Class`.
-
-#### _method_ `behavior:` [Behavior](#class-behavior) `layout:` [Layout](#interface-layout) -> None
-
-Sets the behavior and layout of the reflection of a non-protocol instance.
-Raises an error if the reflection is not empty. The reflection is no longer
-empty after its behavior and layout have been set.
-
-For use by those implementing their own mirrors.
-
-#### _method_ `behavior:` [Behavior](#class-behavior) instanceBehavior: [Behavior](#class-behavior) `layout:` [Layout](#interface-layout) -> None
-
-Sets the behavior, instance behavior, and layout of the reflection of an
-Interface instance. Raises an error if the reflection is not empty. The
-reflection is no longer empty after its behavior and layout have been set.
-
-For use by those implementing their own mirrors.
-
-#### _method_ `behavior:` [Behavior](#class-behavior) instanceBehavior: [Behavior](#class-behavior) `layout:` [Layout](#interface-layout) `instanceLayout:` [Layout](#interface-layout) -> None
-
-Sets the behavior, instance behavior, layout, and instance layout of the
-reflection of a Class instance. Raises an error if the reflection is not empty.
-The reflection is no longer empty after its behavior and layout have been set.
-
-For use by those implementing their own mirrors.
-
----
-
-### interface Mirror
-
-#### _direct method_ `show:` [Reflection](#class-reflection)  `of:` Object -> None
-
-Sets the behaviors and layouts of the reflection to those of the object's
-class.
-
-**NOTE**: Only way to have access to an empty reflection is through `Reflection
-of:in:`, which sends it to a `Mirror` as part of this message, and later checks
-that it is no longer empty. The general mirror provided by `System#mirror`
-requires an empty `Reflection`, allowing the compiler to reason about reflection
-of standard classes in most cases, hopefully. More importantly it stops
-unauthorized access to metalevel.
-
-!> Above claim needs proof.
+  Constructs a new instance of `Interface`, with the specified behaviors.
 
 ---
 
 ### class Behavior
 
 Examples:
-```
+``` foolang
 -- methods on integer 42
-(Reflection of: 42 in: system mirror)
+(system reflection of: 42 in: Mirror)
     behavior methodDictionary
 
 -- methods on all integers (same method dictionary as result as above)
-(Reflection of: Integer in: system mirror)
+(system reflection of: Integer in: Mirror)
     instanceBehavior methodDictionary
 
--- direct method on Number interface 
-(Reflection of: Number in: system mirror)
+-- direct methods on Number interface
+(system reflection of: Number in: Mirror)
    behavior methodDictionary
-   
--- classes and interfaces directly saying `is Number`
-(Reflection of: Number in: system mirror)
+
+-- all classes and interfaces directly saying `is Number`
+(system reflection of: Number in: Mirror)
    behavior immediateImplementors
 
--- classes implementing Number
-(Reflection of: Number in: system mirror)
-   behavior implementors select: { |impl| Class includes: impl }
+-- all classes implementing Number, directly or indirectly
+(system reflection of: Number in: Mirror)
+   behavior implementors select: { Class includes: _ }
 ```
 
-#### _method_ `host` -> Procotol
+* **method** `host` -> Procotol
 
 Returns the class or interface whose behavior the receiver is.
 
-#### _method_ `immediateBehaviors` -> Array of: Behavior
+* **method** `immediateBehaviors` -> Array of: Behavior
 
 Returns an array of behaviors immediate to the receiver, ie. not inherited.
 
 This corresponds to `is` declarations in class and interface definitions,
 and appears in the same order as those do.
 
-#### _method_ `immediateMethodDictionary` -> Dictionary from: Selector to: [Method](#interface-method)
+* **method** `immediateMethodDictionary` -> Dictionary from: Selector to: [Method](#interface-method)
 
 Returns a dictionary which maps selectors to methods immediate to this
 behavior, ie. not inherited.
 
-#### _method_ `immediateImplementors` -> Array of: Protocol
+* **method** `immediateImplementors` -> Array of: Protocol
 
 Returns an array of all protocols which immediately implement this behavior, ie.
 not through inherirance. This does not include `#host`.
 
 **NOTE**: This returns regular class and interface objects, not behaviors!
 
-#### _method_ `behaviours` Array of: Protocol
+* **method** `behaviours` Array of: Protocol
 
 Returns a [C3 linearization](https://en.wikipedia.org/wiki/C3_linearization) of
 all behaviors implemented by receiver, including inherited ones. This includes
 the receiver as the first element.
 
-#### _method_ `methodDictionary` -> Dictionary from: Selector to: [Method](#interface-method)
+* **method** `methodDictionary` -> Dictionary from: Selector to: [Method](#interface-method)
 
 Returns a dictionary of methods available to instances of `#host`, including
 inherited ones.
 
 Construction is done based on the `#behaviors` linearization.
 
-#### _method_ `implementors` -> Array of: Protocols
+* **method** `implementors` -> Array of: Protocols
 
 Returns an array of all protocols implementing this behavior either immediately
 or through inheritance. This always includes `#host`.
@@ -255,17 +330,17 @@ or through inheritance. This always includes `#host`.
 
 ### interface Layout
 
-#### _method_ `host` -> Class
+* **method** `host` -> Class
 
 Returns the class whose layout this is. (Interfaces do not have layouts, only
 behavior.)
 
-#### _method_ `slots` -> Array of: [Slot](#interface-slot)
+* **method** `slots` -> Array of: [Slot](#interface-slot)
 
 Returns and array of slots in the same order as they appeared in
 the class definition.
 
-#### _method_ `allocate:` initialValues -> Any
+* **method** `allocate:` initialValues -> Any
 
 Returns an instance of `#host` class with given initial values.
 
@@ -273,19 +348,19 @@ Returns an instance of `#host` class with given initial values.
 
 ### interface Slot
 
-#### _method_ `name` -> Selector
+* **method** `name` -> Selector
 
 Returns the name of this slot.
 
-#### _method_ `type` -> Type
+* **method** `type` -> Type
 
 Returns the type constraint of this slot.
 
-#### _method_ `read:` instance -> Any
+* **method** `read:` instance -> Any
 
 Returns the value of this slot in _instance_. The returned value is of `#type`.
 
-#### _method_ `write:` value `to:` instance -> Any
+* **method** `write:` value `to:` instance -> Any
 
 Writes _value_ to this slot in _instance_. Returns _value_.
 
@@ -293,21 +368,21 @@ Writes _value_ to this slot in _instance_. Returns _value_.
 
 ### interface Method
 
-#### _method_ `selector` -> Selector
+* **method** `selector` -> Selector
 
-#### _method_ `host` -> Protocol
+* **method** `host` -> Protocol
 
 Returns the class or interface in which this method is defined.
 
-#### _method_ `argumentTypes` -> Array of: Type
+* **method** `argumentTypes` -> Array of: Type
 
 Returns the argument types required by the method.
 
-#### _method_ `returnType` -> Type
+* **method** `returnType` -> Type
 
 Returns the return type of the method.
 
-#### _method_ `invokeOn:` receiver `with:` arguments -> Any 
+* **method** `invokeOn:` receiver `with:` arguments -> Any
 
 Invokes the method using _receiver_ and _arguments_. Returns a value
 consistent with `#returnType`.
