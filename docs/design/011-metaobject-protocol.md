@@ -3,16 +3,14 @@ XXX issues
   (not an instance, but a protocol!)
 - how to express type "constant x"
 
-XXX compromises for convenience (printing, mainly!)
+XXX compromises for printing
 - #class method in Any
 - #name method in Class and Interface
 
-Use cases:
-- reflection on interpreter objects producing an interpreter mirror
-- interpreter being able to reflect on it's own objects without system object
-- being able to get the host mirror on interpreter objects if you want it
-  `system reflection of: anInterpreterObject in: Mirror` vs
-  `system reflection of: anInterpreterObject in: ObjectMirror`
+XXX decisions
+- direct methods on classes and interfaces are instance methods on metaclasses 
+- Class is an interface
+- Interface is a interface
 
 # Metaobject Protocol
 
@@ -43,8 +41,8 @@ Use cases:
 How are methods resolved? (If a class inherits two interfaces with the same
 selector, which one gets used?)
 
-Is there a `super`, or similar way to send a message to an overridden
-interface methods?
+Is there a `super`, or similar way to send a message to an overridden interface
+methods?
 
 How to build classes programmatically?
 
@@ -78,61 +76,77 @@ use with the constructed objects if so desired.
 
 ---
 
-### Reflection (interface)
+### Reflection
 
-* **method** `reflectee` -> Object
+(an Interface)
+
+#### Instance Methods
+
+* `reflectee` -> Object
 
   Returns the object being reflected.
 
-* **method** `classReflection` -> [Reflection](#reflection-interface)
+* `classReflection` -> [Reflection](#reflection)
 
   Returns a reflection for the class of the object being reflected.
 
-* **method** `behavior` -> [Behavior](#behavior-class)
+* `behavior` -> [Behavior](#behavior)
 
   Returns the behavior of the reflected object.
 
-* **method** `layout` -> [Layout](#layout-class)
+* `layout` -> [Layout](#layout)
 
   Returns the layout of the reflected object.
 
 ---
 
-### SystemReflection (class)
+### SystemReflection
 
-is [Reflection](#reflection-interface)
+(a Class)
 
-* **direct method** `of:` Object `in:` MirrorInterface -> [Mirror](#mirror-interface)
+#### Interfaces
 
-  Returns a [Mirror](#mirror-interface) reflecting on _object_ using built-in
-  reflection facilities.
+- [Reflection](#reflection)
 
-  The _mirror interface_ must be a [Protocol](#protocol-interface) implementing
-  [Mirror](#mirror-interface). Most common use case is to use the
-  [Mirror](#mirror-interface) interface directly, but other implementations of
-  [Mirror](#mirror-interface) may be used to control the mirror class selection
+#### Direct Methods
+
+* `of:` Object `in:` MirrorInterface -> [Mirror](#mirror)
+
+  Returns a [Mirror](#mirror) reflecting on _object_ using built-in reflection
+  facilities.
+
+  The _mirror interface_ must be a [Protocol](#protocol) implementing
+  [Mirror](#mirror). Most common use case is to use the
+  [Mirror](#mirror) interface directly, but other implementations of
+  [Mirror](#mirror) may be used to control the mirror class selection
   (see below.)
 
   Sends `#mirrorClassFor:` message to the _mirror interface_ with the _object_,
   to obtain a mirror class.
 
   Sends `#reflection:` message to the mirror class, with a
-  [SystemReflection](#systemreflection-class) of the _object_.
+  [SystemReflection](#systemreflection) of the _object_.
 
-  This method is the only way to obtain a
-  [SystemReflection](#systemreflection-class).
+  This method is the only way to obtain a [SystemReflection](#systemreflection)
+  instance.
 
 ---
 
-### Mirror (interface)
+### Mirror
 
-* **required direct method** `reflection:` [Reflection](#reflection-interface) -> [Mirror](#interface-mirror)
+(an Interface)
 
-  Returns a [Mirror](#mirror-interface) with the given _reflection_.
+#### Direct Methods
 
-* **direct method** `mirrorClassFor:` object -> [Class](#class-class)
+* **required** `#reflection:` [Reflection](#reflection) -> [Mirror](#mirror)
 
-  Returns a class inheriting [Mirror](#mirror-interface) suitable for use with
+  Returns a [Mirror](#mirror) with the given _reflection_. This message
+  is sent by [Reflection](#reflection)`#of:in:` with the newly created
+  reflection to a specific mirror class.
+
+* `mirrorClassFor:` object -> [Class](#class)
+
+  Returns a class inheriting [Mirror](#mirror) suitable for use with
   _object_.
 
   Default implementation sends the message `#mirrorClassUsing:` to the _object_
@@ -144,117 +158,316 @@ is [Reflection](#reflection-interface)
   `#mirrorClassForClass` respectively back to the mirror interface they received.
 
   **NOTE**: Implementations of `mirrorClassUsing:` should not directly refer to
-  classes implementing [Mirror](#mirror-interface), that creates unnecessary
+  classes implementing [Mirror](#mirror), that creates unnecessary
   references to `Mirror` in them, causing compiler to think reflection may be
   happening whenever a class implements `mirrorClassUsing:`. This can be avoided
   using the `#mirrorClassFor*` sends.
 
-* **direct method** `mirrorClassForObject` -> MirrorClass
+* `mirrorClassForObject` -> MirrorClass
 
   Returns `ObjectMirror`.
 
-* **direct method** `mirrorClassForInterface` -> MirrorClass
+* `mirrorClassForInterface` -> MirrorClass
 
   Returns `InterfaceMirror`.
 
-* **direct method** `mirrorClassForClass` -> MirrorClass
+* `mirrorClassForClass` -> MirrorClass
 
   Returns `ClassMirror`.
 
-* **method** `reflectee` -> Object
+#### Instance Methods
+
+* `reflectee` -> Object
 
   Returns the object being reflected, aka the reflectee.
 
-* **method** `classMirror` -> [ClassMirror](#classmirror-class)
+* `classMirror` -> [ClassMirror](#classmirror)
 
   Returns a mirror for the class of the reflectee.
 
-* **method** `behavior` -> [Behavior](#behavior-class)
+* `behavior` -> [Behavior](#behavior)
 
   Returns the behavior of the reflectee.
 
-* **method** `layout` -> [Layout](#layout-class)
+* `layout` -> [Layout](#layout)
 
   Returns the layout of the reflectee.
 
 ---
 
-### class ObjectMirror
+### ObjectMirror
 
-is Mirror
+(a Class)
 
-* **direct method** `mirrorClassFor`: Object -> MirrorClass
+#### Interfaces
+
+- [Mirror](#mirror)
+
+#### Direct Methods
+
+* `mirrorClassFor`: Object -> MirrorClass
 
   Returns `ObjectMirror`.
+  
+  Allows forcing use of `ObjectMirror` instead of the mirror the reflected
+  object would request, doing:
+  
+  ``` foolang
+  system reflection of: object in: ObjectMirror
+  ```
+  
+  instead of:
+  
+  ``` foolang
+  system reflection of: object in: Mirror
+  ```
 
 ---
 
-### class ClassMirror
+### ClassMirror
 
-is Mirror
+(a Class)
 
-* **direct method** `mirrorClassFor`: Object -> MirrorClass
+#### Interfaces
+
+- [Mirror](#mirror)
+
+#### Direct Methods
 
   Returns `ClassMirror`.
+  
+  Allows forcing use of `ClassMirror` instead of the mirror the reflected object
+  would request, doing:
+  
+  ``` foolang
+  system reflection of: object in: ClassMirror
+  ```
+  
+  instead of:
+  
+  ``` foolang
+  system reflection of: object in: Mirror
+  ```
 
-* **method** `name` -> Selector
+#### Instance Methods
+
+* `name` -> Selector
 
   Returns the name of the class being reflected.
 
-* **method** `instanceBehavior` -> [Behavior](#class-behavior)
+* `instanceBehavior` -> [Behavior](#behavior)
 
   Returns the behavior of the instances of the class.
 
-* **method** `instanceLayout` -> [Behavior](#class-behavior)
+* `instanceLayout` -> [Behavior](#behavior)
 
   Returns the layout of the instances of the class.
 
 ---
 
-### class InterfaceMirror
+### InterfaceMirror
 
-is Mirror
+(a Class)
 
-* **direct method** `mirrorClassFor`: Object -> MirrorClass
+#### Interfaces
 
-  Returns InterfaceMirror.
+- [Mirror](#mirror)
 
-* **method** `name` -> Selector
+#### Direct Methods
+
+* `mirrorClassFor`: Object -> MirrorClass
+
+  Returns `InterfaceMirror`.
+
+  Allows forcing use of `InterfaceMirror` instead of the mirror the reflected object
+  would request, doing:
+  
+  ``` foolang
+  system reflection of: object in: InterfaceMirror
+  ```
+  
+  instead of:
+  
+  ``` foolang
+  system reflection of: object in: Mirror
+  ```
+
+#### Instance Methods
+
+* `name` -> Selector
 
   Returns the name of the interface being reflected.
 
-* **method** `instanceBehavior` -> [Behavior](#class-behavior)
+* `instanceBehavior` -> [Behavior](#behavior)
 
   Returns the behavior of the instances of the class.
 
 ---
 
-### interface Protocol
+### Protocol
 
-Common ancestor of classes `Interface` and `Class`.
+(an Interface)
 
----
+Common ancestor of `Interface` and `Class`.
 
-### class Class
+* **required method** `name` -> String
 
-is Protocol
+  Returns the name of the procotol.
 
-* **direct method** `name:` name `behavior:` [Behavior](#interface-behavior)
-  `instanceBehavior:` [Behavior](#interface-behavior) `instanceLayout:`
-  [Layout](#class-layout) -> [Class](#class-class)
+* **direct method** `includes:` object -> Boolean
 
-   Constructs a new instance of `Class`, with the specified behaviors and instance
-   layout.
+  Returns `True` iff _object_ implements the protocol.
 
 ---
 
-### class Interface
+### Class
+
+(an Interface)
+
+Individual classes are instances of corresponding metaclasses, and
+[Metaclass](#metaclass) is an instance of itself. This leads to `Class` being an
+[Interface](#interface), which may seem counterintuitive.
+
+Consider:
+``` foolang
+12 class --> Integer
+Integer class --> Integer class (an anonymous metaclass)
+Integer class class --> Metaclass
+Metaclass class --> Metaclass
+```
+
+For `Class includes: anObject` to be true iff _anObject_ is any of the types
+of classes above, `Class` must be an interface: they are factually instances
+of diverse classes.
+
+#### Interfaces
+- [Protocol](#protocol)
+
+#### Dictionary
+
+* **direct method**  \
+  `name:` name  \
+  `instanceLayout:` layout  \
+  `interfaces:` interfaces  \
+  `directMethods:` directMethods  \
+  `instanceMethods:` instanceMethods  \
+  -> [Class](#class)
+
+   Constructs the class _name_, and the metaclass it is an instance of.
+   The metaclass holds the direct methods of the class, whereas the class
+   holds the instance methods of the class instances.
+   
+   The constructed class is not defined in the global environment.
+   
+   The system does not copy down any methods from specified interfaces, but does
+   validate that the specified methods fulfill the requirements, including
+   inherited ones.
+  
+   Approximately:
+   ``` foolang
+   let theMetaclass = Metaclass
+                         name: "{name} class"
+                         interfaces: [Class]
+                         methods: directMethods.
+   theMetaclass
+       newClassName: name
+       layout: instanceLayout
+       interfaces: ([Class] append: interfaces) removeDuplicates
+       methods: instanceMethods!
+   ```
+
+---
+
+### Interface (interface)
 
 is Protocol
 
-* **direct method** `name:` name `behavior:` [Behavior](#interface-behavior) `instanceBehavior:` [Behavior](#interface-behavior) -> [Interface](#class-interface)
+* **direct method**  \
+  `name:` name  \
+  `interfaces:` interfaces  \
+  `ownMethods:` ownMethods  \
+  `directMethods:` directMethods  \
+  `instanceMethods:` instanceMethods  \
+  -> [Interface](#interface)
 
-  Constructs a new instance of `Interface`, with the specified behaviors.
+  Constructs a new instance of `Interface`.
+
+  Approximately:
+  ``` foolang
+  let theMetaclass = Metaclass
+                        name: "{name} class"
+                        interfaces: [Class]
+                        methods: ownMethods
+  theMetaclass
+      newInterfaceName: name
+      interfaces: ([Interface] append: interfaces) removeDuplicates 
+      directMethods: directMethods
+      instanceMethods: instanceMethods!
+  ```
+
+---
+
+### Metaclass (class)
+
+is Class
+
+Metaclasses hold direct methods of classes and interfaces as their instance methods.
+
+* **direct method**  \
+  `name:` name  \
+  `interfaces:` interfaces  \
+  `methods:` methods  \
+  -> [Metaclass](#metaclass)
+
+  Constructs a new metaclass, which can be used to construct exactly one
+  interface or class.
+  
+  The _interfaces_ are interfaces that metaclass instances implements directly.
+  
+  The _methods_ are methods that apply to instances of the metaclass.
+  
+  The system does not copy down any methods from specified interfaces, but
+  does validate that the specified methods fulfill the requirements, including
+  inherited ones.
+  
+* **method**  \
+  `newInterfaceName:` name  \
+  `interfaces:` interfaces  \
+  `directMethods:` directMethods  \
+  `instanceMethods:` instanceMethods  \
+  -> [Interface](#interface)
+  
+  Constructs a new interface, which is an instance of the metaclass.
+  
+  The _interfaces_ are interfaces that interface implements directly.
+  
+  The _direct methods_ will become metaclass instance methods of
+  implementing protocols.
+  
+  The _instance methods_ will become instance methods of implementing classes.
+  
+  The system does not copy down any methods from specified interfaces, but
+  does validate that the specified methods fulfill the requirements, including
+  inherited ones.
+
+* **method**  \
+  `newClassName:` name  \
+  `layout:` layout  \
+  `interfaces:` interfaces  \
+  `methods:` methods  \
+  -> [Class](#class)
+  
+  Constructs a new class, which is an instance of the metaclass.
+
+  The _layout_ is the layout for instances of the new class.
+  
+  The _interfaces_ are interfaces that class implements directly.
+  
+  The _methods_ are instance methods of the class.
+  
+  The system does not copy down any methods from specified interfaces, but
+  does validate that the specified methods fulfill the requirements, including
+  inherited ones.
 
 ---
 
@@ -283,9 +496,9 @@ Examples:
    behavior implementors select: { Class includes: _ }
 ```
 
-* **method** `host` -> Procotol
+* **method** `classBehavior` -> Procotol
 
-Returns the class or interface whose behavior the receiver is.
+Returns behavior for the class.
 
 * **method** `immediateBehaviors` -> Array of: Behavior
 
