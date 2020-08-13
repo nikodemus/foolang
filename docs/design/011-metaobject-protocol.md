@@ -100,9 +100,11 @@ use with the constructed objects if so desired.
 
 ---
 
-### SystemReflection
+### System Reflection
 
 (a Class)
+
+The built-in reflection class, accessible as `System#reflection`.
 
 #### Interfaces
 
@@ -151,17 +153,13 @@ use with the constructed objects if so desired.
 
   Default implementation sends the message `#mirrorClassUsing:` to the _object_
   with the receiver. This allows eg. proxy classes to provide mirrors reflecting
-  on the proxied object instead.
-
-  Default implementations of `#mirrorClassUsing:` in `Object`, `Interface`, and
-  `Class` send `#mirrorClassForObject`, `#mirrorClassForInterface`, and
-  `#mirrorClassForClass` respectively back to the mirror interface they received.
+  on the proxied object instead. Classes implementing `Mirror` typically
+  override this to return themselves.
 
   **NOTE**: Implementations of `mirrorClassUsing:` should not directly refer to
-  classes implementing [Mirror](#mirror), that creates unnecessary
-  references to `Mirror` in them, causing compiler to think reflection may be
-  happening whenever a class implements `mirrorClassUsing:`. This can be avoided
-  using the `#mirrorClassFor*` sends.
+  classes implementing [Mirror](#mirror): that creates unnecessary references to
+  `Mirror` in them, preventing useful compiler analysis. Such references can be
+  avoided using the `#mirrorClassFor*` messages.
 
 * `mirrorClassForObject` -> MirrorClass
 
@@ -310,11 +308,13 @@ use with the constructed objects if so desired.
 
 Common ancestor of `Interface` and `Class`.
 
-* **required method** `name` -> String
+#### Direct Methods
+
+* `name` -> String
 
   Returns the name of the procotol.
 
-* **direct method** `includes:` object -> Boolean
+* `includes:` object -> Boolean
 
   Returns `True` iff _object_ implements the protocol.
 
@@ -341,12 +341,12 @@ of classes above, `Class` must be an interface: they are factually instances
 of diverse classes.
 
 #### Interfaces
+
 - [Protocol](#protocol)
 
-#### Dictionary
+#### Direct Methods
 
-* **direct method**  \
-  `name:` name  \
+* `name:` name  \
   `instanceLayout:` layout  \
   `interfaces:` interfaces  \
   `directMethods:` directMethods  \
@@ -378,12 +378,17 @@ of diverse classes.
 
 ---
 
-### Interface (interface)
+### Interface
 
-is Protocol
+(an Interface)
 
-* **direct method**  \
-  `name:` name  \
+#### Interfaces
+
+- [Protocol](#protocol)
+
+#### Direct Methods
+
+* `name:` name  \
   `interfaces:` interfaces  \
   `ownMethods:` ownMethods  \
   `directMethods:` directMethods  \
@@ -407,14 +412,19 @@ is Protocol
 
 ---
 
-### Metaclass (class)
+### Metaclass
 
-is Class
+(a Class)
 
 Metaclasses hold direct methods of classes and interfaces as their instance methods.
 
-* **direct method**  \
-  `name:` name  \
+#### Interfaces
+
+- [Class](#class)
+
+#### Direct Methods
+
+* `name:` name  \
   `interfaces:` interfaces  \
   `methods:` methods  \
   -> [Metaclass](#metaclass)
@@ -429,9 +439,10 @@ Metaclasses hold direct methods of classes and interfaces as their instance meth
   The system does not copy down any methods from specified interfaces, but
   does validate that the specified methods fulfill the requirements, including
   inherited ones.
-  
-* **method**  \
-  `newInterfaceName:` name  \
+
+#### Instance Methods
+
+* `newInterfaceName:` name  \
   `interfaces:` interfaces  \
   `directMethods:` directMethods  \
   `instanceMethods:` instanceMethods  \
@@ -450,8 +461,7 @@ Metaclasses hold direct methods of classes and interfaces as their instance meth
   does validate that the specified methods fulfill the requirements, including
   inherited ones.
 
-* **method**  \
-  `newClassName:` name  \
+* `newClassName:` name  \
   `layout:` layout  \
   `interfaces:` interfaces  \
   `methods:` methods  \
@@ -471,7 +481,7 @@ Metaclasses hold direct methods of classes and interfaces as their instance meth
 
 ---
 
-### class Behavior
+### Behavior
 
 Examples:
 ``` foolang
@@ -496,43 +506,45 @@ Examples:
    behavior implementors select: { Class includes: _ }
 ```
 
-* **method** `classBehavior` -> Procotol
+#### Instance Methods
+
+* `classBehavior` -> Procotol
 
 Returns behavior for the class.
 
-* **method** `immediateBehaviors` -> Array of: Behavior
+* `immediateBehaviors` -> Array of: Behavior
 
 Returns an array of behaviors immediate to the receiver, ie. not inherited.
 
 This corresponds to `is` declarations in class and interface definitions,
 and appears in the same order as those do.
 
-* **method** `immediateMethodDictionary` -> Dictionary from: Selector to: [Method](#interface-method)
+* `immediateMethodDictionary` -> Dictionary from: Selector to: [Method](#interface-method)
 
 Returns a dictionary which maps selectors to methods immediate to this
 behavior, ie. not inherited.
 
-* **method** `immediateImplementors` -> Array of: Protocol
+* `immediateImplementors` -> Array of: Protocol
 
 Returns an array of all protocols which immediately implement this behavior, ie.
 not through inherirance. This does not include `#host`.
 
 **NOTE**: This returns regular class and interface objects, not behaviors!
 
-* **method** `behaviours` Array of: Protocol
+* `behaviours` Array of: Protocol
 
 Returns a [C3 linearization](https://en.wikipedia.org/wiki/C3_linearization) of
 all behaviors implemented by receiver, including inherited ones. This includes
 the receiver as the first element.
 
-* **method** `methodDictionary` -> Dictionary from: Selector to: [Method](#interface-method)
+* `methodDictionary` -> Dictionary from: Selector to: [Method](#interface-method)
 
 Returns a dictionary of methods available to instances of `#host`, including
 inherited ones.
 
 Construction is done based on the `#behaviors` linearization.
 
-* **method** `implementors` -> Array of: Protocols
+* `implementors` -> Array of: Protocols
 
 Returns an array of all protocols implementing this behavior either immediately
 or through inheritance. This always includes `#host`.
@@ -541,61 +553,73 @@ or through inheritance. This always includes `#host`.
 
 ---
 
-### interface Layout
+### Layout
 
-* **method** `host` -> Class
+(a Class)
+
+#### Instance Methods
+
+* `host` -> Class
 
 Returns the class whose layout this is. (Interfaces do not have layouts, only
 behavior.)
 
-* **method** `slots` -> Array of: [Slot](#interface-slot)
+* `slots` -> Array of: [Slot](#interface-slot)
 
 Returns and array of slots in the same order as they appeared in
 the class definition.
 
-* **method** `allocate:` initialValues -> Any
+* `allocate:` initialValues -> Any
 
 Returns an instance of `#host` class with given initial values.
 
 ---
 
-### interface Slot
+### Slot
 
-* **method** `name` -> Selector
+(an Interface)
+
+#### Instance Methods
+
+* `name` -> Selector
 
 Returns the name of this slot.
 
-* **method** `type` -> Type
+* `type` -> Type
 
 Returns the type constraint of this slot.
 
-* **method** `read:` instance -> Any
+* `read:` instance -> Any
 
 Returns the value of this slot in _instance_. The returned value is of `#type`.
 
-* **method** `write:` value `to:` instance -> Any
+* `write:` value `to:` instance -> Any
 
 Writes _value_ to this slot in _instance_. Returns _value_.
 
 ---
 
-### interface Method
+### Method
 
-* **method** `selector` -> Selector
+(an Interface)
 
-* **method** `host` -> Protocol
+#### Instance Methods
+
+* `selector` -> Selector
+
+* `host` -> Protocol
 
 Returns the class or interface in which this method is defined.
 
-* **method** `argumentTypes` -> Array of: Type
+* `argumentTypes` -> Array of: Type
 
 Returns the argument types required by the method.
 
-* **method** `returnType` -> Type
+* `returnType` -> Type
 
 Returns the return type of the method.
 
-* **method** `invokeOn:` receiver `with:` arguments -> Any
+* `invokeOn:` receiver `with:` arguments -> Any
 
 Invokes the method using _receiver_ and _arguments_. Returns a value
 consistent with `#returnType`.
