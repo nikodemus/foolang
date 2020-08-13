@@ -14,12 +14,6 @@ it's here more for future reference than anything else.
 - 1983 - [Smalltalk-80: The Language and Its Implementation](http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf)
   Adale Goldberd and David Robson. 
 
-- 1989 - [Reflective Facilities in
-  Smalltalk-80](http://www.laputan.org/ref89/ref89.html) by Brian Foote and
-  Ralph E. Johnson. _A good summary, and worth considering as Foolang evolves:
-  while Foolang has a toe in the static world, metaprogramming facilities are
-  invaluable and should not be thrown out._
-
 - 1990 - [A Type System for
   Smalltalk](https://www.researchgate.net/publication/2815088_A_Type_System_for_Smalltalk)
   by Justin O. Graver and Ralph E. Johnson.
