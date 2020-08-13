@@ -1,16 +1,26 @@
-XXX issues
+### XXX Issues
 - how to express type "this must be a protocol inheriting from x"
   (not an instance, but a protocol!)
 - how to express type "constant x"
 
-XXX compromises for printing
-- #class method in Any
+### XXX Compromises (for printing, etc)
+- #classOf method in Any (should be `class`, but parsing prevents right now)
 - #name method in Class and Interface
 
-XXX decisions
-- direct methods on classes and interfaces are instance methods on metaclasses 
+### XXX Decisions
+- direct methods on classes and interfaces are instance methods on metaclasses
 - Class is an interface
 - Interface is a interface
+
+### XXX Missing
+- Layout and interface modifications via `Mirror#interfaces:`, and `Mirror#layout:`
+- MethodDictionaries should link to interfaces in order to maintain
+  their signature requirements, and have a "valid" flag somewhere.
+- No way to ask "which procotols directly implement this one", or "which
+  protocols does this one implement directly" (ie. asking about `is Foo`) since
+  that information is lost by the time the metaclasses are constructed.
+  One option would be to just pass it in as metadata, and validate that the
+  _set_ of interfaces passes in is valid, regardless of their order.
 
 # Metaobject Protocol
 
@@ -76,27 +86,66 @@ use with the constructed objects if so desired.
 
 ---
 
+### Dependee
+
+(an Interface)
+
+#### Interface Methods
+
+* **required** _onNextChange -> List of: Block
+
+  Returns the list of blocks waiting for next change notification.
+
+* **required** _onEveryChange -> List of: Block
+
+  Returns the list of blocks waiting for every change notification.
+
+* `onEveryChange:` Block
+
+  Arranges _block_ to be evaluated on every change notification.
+
+* `onNextChange:` Block
+
+  Arranges _block_ to be evaluated on next change notification, but
+  not subsequently.
+
+* `changeNotification`
+
+  Performs a change notification, evaluating appropriate blocks.
+
 ### Reflection
 
 (an Interface)
+
+!> Cannot currently ask "which interfaces does this implement directly",
+since that information is not passed through to metaobject constructors!
 
 #### Instance Methods
 
 * `reflectee` -> Object
 
-  Returns the object being reflected.
+  Returns the object being reflected, aka reflectee.
 
 * `classReflection` -> [Reflection](#reflection)
 
-  Returns a reflection for the class of the object being reflected.
-
-* `behavior` -> [Behavior](#behavior)
-
-  Returns the behavior of the reflected object.
+  Returns a reflection for the class of the reflectee.
 
 * `layout` -> [Layout](#layout)
 
-  Returns the layout of the reflected object.
+  Returns the layout of the reflectee.
+
+* `interfaces` -> Array of: [Interface](#interface)
+
+  Returns the interfaces the reflectee implements.
+
+* `methodDictionary` -> [MethodDictionary](#methoddictionary)
+
+  Returns the method dictionary of the reflectee.
+
+* `implementors` -> Array of: [Interface](#interface)
+
+  Returns an array of procotols that implement the reflectee, false
+  if the reflectee is not a protocol.
 
 ---
 
@@ -183,13 +232,17 @@ The built-in reflection class, accessible as `System#reflection`.
 
   Returns a mirror for the class of the reflectee.
 
-* `behavior` -> [Behavior](#behavior)
-
-  Returns the behavior of the reflectee.
-
 * `layout` -> [Layout](#layout)
 
   Returns the layout of the reflectee.
+
+* `interfaces` -> Array of: [Interface](#interface)
+
+  Returns the interfaces the reflectee implements.
+
+* `methodDictionary` -> [MethodDictionary](#methoddictionary)
+
+  Returns the method dictionary of the reflectee.
 
 ---
 
@@ -206,16 +259,16 @@ The built-in reflection class, accessible as `System#reflection`.
 * `mirrorClassFor`: Object -> MirrorClass
 
   Returns `ObjectMirror`.
-  
+
   Allows forcing use of `ObjectMirror` instead of the mirror the reflected
   object would request, doing:
-  
+
   ``` foolang
   system reflection of: object in: ObjectMirror
   ```
-  
+
   instead of:
-  
+
   ``` foolang
   system reflection of: object in: Mirror
   ```
@@ -233,33 +286,37 @@ The built-in reflection class, accessible as `System#reflection`.
 #### Direct Methods
 
   Returns `ClassMirror`.
-  
+
   Allows forcing use of `ClassMirror` instead of the mirror the reflected object
   would request, doing:
-  
+
   ``` foolang
   system reflection of: object in: ClassMirror
   ```
-  
+
   instead of:
-  
+
   ``` foolang
   system reflection of: object in: Mirror
   ```
 
 #### Instance Methods
 
-* `name` -> Selector
+* `name` -> String
 
-  Returns the name of the class being reflected.
+  Returns the name of the reflectee.
 
-* `instanceBehavior` -> [Behavior](#behavior)
+* `instanceLayout` -> [Layout](#layout)
 
-  Returns the behavior of the instances of the class.
+  Returns the layout of the instances of the reflectee.
 
-* `instanceLayout` -> [Behavior](#behavior)
+* `instanceInterfaces` -> Array of: [Interface](#interface)
 
-  Returns the layout of the instances of the class.
+  Returns the interfaces instances of the reflectee implement.
+
+* `instanceMethodDictionary` -> [MethodDictionary](#methoddictionary)
+
+  Returns the method dictionary of instances of the reflectee.
 
 ---
 
@@ -279,26 +336,30 @@ The built-in reflection class, accessible as `System#reflection`.
 
   Allows forcing use of `InterfaceMirror` instead of the mirror the reflected object
   would request, doing:
-  
+
   ``` foolang
   system reflection of: object in: InterfaceMirror
   ```
-  
+
   instead of:
-  
+
   ``` foolang
   system reflection of: object in: Mirror
   ```
 
 #### Instance Methods
 
-* `name` -> Selector
+* `name` -> String
 
-  Returns the name of the interface being reflected.
+  Returns the name of the reflectee.
 
-* `instanceBehavior` -> [Behavior](#behavior)
+* `instanceInterfaces` -> Array of: [Interface](#interface)
 
-  Returns the behavior of the instances of the class.
+  Returns the interfaces instances of the reflectee implement.
+
+* `instanceMethodDictionary` -> [MethodDictionary](#methoddictionary)
+
+  Returns the method dictionary of instances of the reflectee.
 
 ---
 
@@ -322,7 +383,7 @@ Common ancestor of `Interface` and `Class`.
 
 ### Class
 
-(an Interface)
+(a Class)
 
 Individual classes are instances of corresponding metaclasses, and
 [Metaclass](#metaclass) is an instance of itself. This leads to `Class` being an
@@ -336,9 +397,9 @@ Integer class class --> Metaclass
 Metaclass class --> Metaclass
 ```
 
-For `Class includes: anObject` to be true iff _anObject_ is any of the types
-of classes above, `Class` must be an interface: they are factually instances
-of diverse classes.
+Without inheritance of concrete classes, for `Class includes: anObject` to be
+true iff _anObject_ is any of the types of classes above, `Class` must be an
+interface: they are factually instances of diverse classes.
 
 #### Interfaces
 
@@ -349,31 +410,31 @@ of diverse classes.
 * `name:` name  \
   `instanceLayout:` layout  \
   `interfaces:` interfaces  \
-  `directMethods:` directMethods  \
-  `instanceMethods:` instanceMethods  \
+  `directMethodDictionary:` directMethodDictionary  \
+  `instanceMethodDictionary:` instanceMethodDictionary  \
   -> [Class](#class)
 
    Constructs the class _name_, and the metaclass it is an instance of.
    The metaclass holds the direct methods of the class, whereas the class
    holds the instance methods of the class instances.
-   
+
    The constructed class is not defined in the global environment.
-   
+
    The system does not copy down any methods from specified interfaces, but does
    validate that the specified methods fulfill the requirements, including
    inherited ones.
-  
+
    Approximately:
    ``` foolang
    let theMetaclass = Metaclass
                          name: "{name} class"
                          interfaces: [Class]
-                         methods: directMethods.
+                         methodDictionary: directMethodDictionary.
    theMetaclass
        newClassName: name
        layout: instanceLayout
        interfaces: ([Class] append: interfaces) removeDuplicates
-       methods: instanceMethods!
+       methodDictionary: instanceMethodDictionary!
    ```
 
 ---
@@ -390,9 +451,8 @@ of diverse classes.
 
 * `name:` name  \
   `interfaces:` interfaces  \
-  `ownMethods:` ownMethods  \
-  `directMethods:` directMethods  \
-  `instanceMethods:` instanceMethods  \
+  `directMethodDictionary:` [MethodDictionary](#methoddictionary)  \
+  `instanceMethodDictionary:` [MethodDictionary](#methoddictionary)  \
   -> [Interface](#interface)
 
   Constructs a new instance of `Interface`.
@@ -402,12 +462,11 @@ of diverse classes.
   let theMetaclass = Metaclass
                         name: "{name} class"
                         interfaces: [Class]
-                        methods: ownMethods
+                        methodDictionary: directMethodDictionary
   theMetaclass
       newInterfaceName: name
-      interfaces: ([Interface] append: interfaces) removeDuplicates 
-      directMethods: directMethods
-      instanceMethods: instanceMethods!
+      interfaces: ([Interface] append: interfaces) removeDuplicates
+      methodDictionary: instanceMethodDictionary!
   ```
 
 ---
@@ -424,145 +483,61 @@ Metaclasses hold direct methods of classes and interfaces as their instance meth
 
 #### Direct Methods
 
-* `name:` name  \
-  `interfaces:` interfaces  \
-  `methods:` methods  \
-  -> [Metaclass](#metaclass)
+* `name:` name `methods:` [MethodDictionary](#methoddictionary) -> [Metaclass](#metaclass)
 
   Constructs a new metaclass, which can be used to construct exactly one
   interface or class.
-  
-  The _interfaces_ are interfaces that metaclass instances implements directly.
-  
-  The _methods_ are methods that apply to instances of the metaclass.
-  
-  The system does not copy down any methods from specified interfaces, but
-  does validate that the specified methods fulfill the requirements, including
-  inherited ones.
 
 #### Instance Methods
 
-* `newInterfaceName:` name  \
-  `interfaces:` interfaces  \
-  `directMethods:` directMethods  \
-  `instanceMethods:` instanceMethods  \
-  -> [Interface](#interface)
-  
+* `newInterfaceName:` name `interfaces:` interfaces `methods:` methodDictionary -> [Interface](#interface)
+
   Constructs a new interface, which is an instance of the metaclass.
-  
-  The _interfaces_ are interfaces that interface implements directly.
-  
-  The _direct methods_ will become metaclass instance methods of
-  implementing protocols.
-  
-  The _instance methods_ will become instance methods of implementing classes.
-  
-  The system does not copy down any methods from specified interfaces, but
-  does validate that the specified methods fulfill the requirements, including
-  inherited ones.
 
-* `newClassName:` name  \
-  `layout:` layout  \
-  `interfaces:` interfaces  \
-  `methods:` methods  \
-  -> [Class](#class)
-  
+* `newClassName:` name `layout:` layout `methods:` methodDictionary -> [Class](#class)
+
   Constructs a new class, which is an instance of the metaclass.
-
-  The _layout_ is the layout for instances of the new class.
-  
-  The _interfaces_ are interfaces that class implements directly.
-  
-  The _methods_ are instance methods of the class.
-  
-  The system does not copy down any methods from specified interfaces, but
-  does validate that the specified methods fulfill the requirements, including
-  inherited ones.
 
 ---
 
-### Behavior
+### MethodDictionary
 
-Examples:
-``` foolang
--- methods on integer 42
-(system reflection of: 42 in: Mirror)
-    behavior methodDictionary
+(an Interface)
 
--- methods on all integers (same method dictionary as result as above)
-(system reflection of: Integer in: Mirror)
-    instanceBehavior methodDictionary
-
--- direct methods on Number interface
-(system reflection of: Number in: Mirror)
-   behavior methodDictionary
-
--- all classes and interfaces directly saying `is Number`
-(system reflection of: Number in: Mirror)
-   behavior immediateImplementors
-
--- all classes implementing Number, directly or indirectly
-(system reflection of: Number in: Mirror)
-   behavior implementors select: { Class includes: _ }
-```
+#### Interfaces
+- [Dependee](#dependee)
 
 #### Instance Methods
 
-* `classBehavior` -> Procotol
+* `at:` Selector `ifNone:` Block -> [Method](#method)
 
-Returns behavior for the class.
+  Returns the method associated with the _selector_, evaluating
+  the _block_ if no method is yet associated with the selector.
 
-* `immediateBehaviors` -> Array of: Behavior
+* `put:` Method `at:` Selector -> [Method](#method)
 
-Returns an array of behaviors immediate to the receiver, ie. not inherited.
+  Associated the method with the selector.
 
-This corresponds to `is` declarations in class and interface definitions,
-and appears in the same order as those do.
+  Notifies of change on the method dictionary.
 
-* `immediateMethodDictionary` -> Dictionary from: Selector to: [Method](#interface-method)
+  If there was a method already associated with the selector, also notifies of
+  change on the method.
 
-Returns a dictionary which maps selectors to methods immediate to this
-behavior, ie. not inherited.
+* `selectors` -> Array of: Selector
 
-* `immediateImplementors` -> Array of: Protocol
-
-Returns an array of all protocols which immediately implement this behavior, ie.
-not through inherirance. This does not include `#host`.
-
-**NOTE**: This returns regular class and interface objects, not behaviors!
-
-* `behaviours` Array of: Protocol
-
-Returns a [C3 linearization](https://en.wikipedia.org/wiki/C3_linearization) of
-all behaviors implemented by receiver, including inherited ones. This includes
-the receiver as the first element.
-
-* `methodDictionary` -> Dictionary from: Selector to: [Method](#interface-method)
-
-Returns a dictionary of methods available to instances of `#host`, including
-inherited ones.
-
-Construction is done based on the `#behaviors` linearization.
-
-* `implementors` -> Array of: Protocols
-
-Returns an array of all protocols implementing this behavior either immediately
-or through inheritance. This always includes `#host`.
-
-**NOTE**: This returns regular class and interface objects, not behaviors!
+  Returns selectors with methods associated with them.
 
 ---
 
 ### Layout
 
-(a Class)
+(an Interface)
 
 #### Instance Methods
 
 * `host` -> Class
 
-Returns the class whose layout this is. (Interfaces do not have layouts, only
-behavior.)
+Returns the class whose layout this is.
 
 * `slots` -> Array of: [Slot](#interface-slot)
 
@@ -571,7 +546,8 @@ the class definition.
 
 * `allocate:` initialValues -> Any
 
-Returns an instance of `#host` class with given initial values.
+Returns an instance of `#host` class with given initial values corresponding to
+slots 1:1.
 
 ---
 
@@ -605,33 +581,55 @@ Writes _value_ to this slot in _instance_. Returns _value_.
 
 #### Instance Methods
 
-* `selector` -> Selector
+* `signature` -> [Signature]
 
-* `host` -> Protocol
+Returns the signature of the method.
 
-Returns the class or interface in which this method is defined.
+* `invokeOn:` receiver `withArguments:` arguments -> Any
+
+Invokes the method using _receiver_ and _arguments_. Returns a value
+consistent with `signature returnType`.
+
+---
+
+### Signature
+
+(a Class)
+
+#### Direct Methods
+
+* `argumentTypes:` argumentTypes `returnType:` returnType ->
+  [Signature](#signature)
+
+  Returns a new signature.
+
+#### Instance Methods
 
 * `argumentTypes` -> Array of: Type
 
-Returns the argument types required by the method.
+  Returns argument types required by the signature.
 
 * `returnType` -> Type
 
-Returns the return type of the method.
+  Returns the return type promised by the signature.
 
-* `invokeOn:` receiver `with:` arguments -> Any
+* `implements:` otherSignature
 
-Invokes the method using _receiver_ and _arguments_. Returns a value
-consistent with `#returnType`.
+  Returns true iff the argument types of the signatures match exactly,
+  and that the return type of the receiver is a subtype of the return
+  type of the other signature.
 
 ---
 
 ## Summary
 
-- _"How are methods resolved?"_ Using C3 linearization.
+- _"How are methods resolved?"_ Probably using C3 linearization, but class
+  constructor is responsible - as long as they're consistent with all inherited
+  interfaces.
 - _"Is there a `super` or equivalent?"_ Not answered yet.
-- _"How to build classes and interfaces programmatically?"_ Not answered yet.
-- _"What are the metaobjects that describe these issues?"_ Partial answer.
+- _"How to build classes and interfaces programmatically?"_ By using direct
+  methods on `Class` and `Interface`, or using `Metaclass` directly.
+- _"What are the metaobjects that describe these issues?"_ See above.
 - _"How to avoid breaking encapsulation?"_ Answer: by requiring `System#mirror`
   to gain access to reflection.
 - _"How can the self-hosted interpreter access slots of the classes it
