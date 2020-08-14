@@ -1,10 +1,7 @@
 ### XXX Missing
-- Layout and interface modifications via `Mirror#interfaces:`, and `Mirror#layout:`
-- No way to ask "which procotols directly implement this one", or "which
-  protocols does this one implement directly" (ie. asking about `is Foo`) since
-  that information is lost by the time the metaclasses are constructed.
-  One option would be to just pass it in as metadata, and validate that the
-  _set_ of interfaces passes in is valid, regardless of their order.
+- Interface modifications via `Mirror#interfaces:`
+- "Which procotols directly implement this one" is not availble.
+- "Which protocols does this directly implement" is not available.
 
 # Metaobject Protocol
 
@@ -78,7 +75,7 @@ building blocks:
   Returns the class of the object. (Name will change to `class` once syntax
   allows.)
 
-### Dependee
+### ChangeSource
 
 (an Interface)
 
@@ -109,8 +106,7 @@ building blocks:
 
 (an Interface)
 
-!> Cannot currently ask "which interfaces does this implement directly",
-since that information is not passed through to metaobject constructors!
+
 
 #### Instance Methods
 
@@ -577,7 +573,8 @@ Metaclasses hold direct methods of classes and interfaces as their instance meth
 ```
 
 #### Interfaces
-- [Dependee](#dependee)
+
+- [ChangeSource](#ChangeSource)
 
 #### Direct Methods
 
@@ -605,7 +602,7 @@ Metaclasses hold direct methods of classes and interfaces as their instance meth
 
   Returns True iff the receiver is restricted to a specific object.
 
-* `restrictedTo:`
+* `restrictedTo`
 
   Returns the object to which the receiver is restricted, or raises an
   error if the the receiver is not restricted.
@@ -683,21 +680,57 @@ Metaclasses hold direct methods of classes and interfaces as their instance meth
 
 (an Interface)
 
+#### Interfaces
+
+- [ChangeSource](#changesource)
+
 #### Instance Methods
 
-* `host` -> Class
+* `readOnly`
 
-Returns the class whose layout this is.
+  Returns a read-only wrapper for the receiver, unless it is already read-only,
+  in which case it returns the receiver.
+
+* `isReadonly`
+
+  Returns True iff the receiver is read-only.
+
+* `restrictTo:` object
+
+  Returns a restriced layout which wraps slots so it so that they can only be
+  used to access the _object_.
+
+* `isRestricted`
+
+  Returns True iff the receiver is restricted to a specific object.
+
+* `restrictedTo`
+
+  Returns the object to which the receiver is restricted, or raises an
+  error if the the receiver is not restricted.
 
 * `slots` -> Array of: [Slot](#interface-slot)
 
-Returns and array of slots in the same order as they appeared in
-the class definition.
+  Returns and array of slots in the same order as they appeared in
+  the class definition.
+
+* `slots:` Array of: [Slot](#interface-slot)
+
+  Sets slots of the layout. Causes any accesses to previously allocated
+  instances with the old layout to trap, remapping to the new layout.
+
+  Slots which did not previously exist _must_ have a default value
+  block, used to compute initial value for pre-existing instances.
+
+  Notifies of change on layout.
+
+  If pre-existing slots are removed or change positions, notifies of
+  change on those slots.
 
 * `allocate:` initialValues -> Any
 
-Returns an instance of `#host` class with given initial values corresponding to
-slots 1:1.
+  Returns an instance of `#host` class with given initial values corresponding to
+  slots 1:1.
 
 ---
 
