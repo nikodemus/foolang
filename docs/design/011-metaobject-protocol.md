@@ -1,21 +1,5 @@
-### XXX Issues
-- how to express type "this must be a protocol inheriting from x"
-  (not an instance, but a protocol!)
-- how to express type "constant x"
-
-### XXX Compromises (for printing, etc)
-- #classOf method in Any (should be `class`, but parsing prevents right now)
-- #name method in Class and Interface
-
-### XXX Decisions
-- direct methods on classes and interfaces are instance methods on metaclasses
-- Class is an interface
-- Interface is a interface
-
 ### XXX Missing
 - Layout and interface modifications via `Mirror#interfaces:`, and `Mirror#layout:`
-- MethodDictionaries should link to interfaces in order to maintain
-  their signature requirements, and have a "valid" flag somewhere.
 - No way to ask "which procotols directly implement this one", or "which
   protocols does this one implement directly" (ie. asking about `is Foo`) since
   that information is lost by the time the metaclasses are constructed.
@@ -49,48 +33,56 @@
 ## Problem Description
 
 How are methods resolved? (If a class inherits two interfaces with the same
-selector, which one gets used?)
-
-Is there a `super`, or similar way to send a message to an overridden interface
-methods?
+selector, but different implementations, which one gets used?)
 
 How to build classes programmatically?
-
-What are the metaobjects that describe these issues?
 
 How to avoid breaking encapsulation so that authority of the system object isn't
 subverted by stealing authorizing objects through introspection or intercession?
 
 How can the self-hosted interpreter access slots of the classes it creates?
 
+Are there metaobjects that describe these issues, and if so, what are they?
+
 ## Proposal
 
 A simple metaobject protocol, without providing much in the way of readymade
-building blocks.
+building blocks:
 
-Access to existing metalevel objects is through `Mirror` and `Reflection`
-interfaces. (New metalevel objects can be created by baselevel code.)
-
-The `Reflection` interface is the "raw" reflective API, the general version of
-which is accessible through `System#reflection` method, thereby rooting
-the authority to do reflection in the system object.
-
-The `Mirror` interface in contrast functions as a way of making reflection
-visible to the compiler, as direct interface references are _much_ easier
-to reason about than messages and dataflow.
-
-Code constructing classes programmatically already has access to the their
-metaobjects as part of the construction, and can create mirrors for them without
-access to the system object&mdash;and is able to create a `Reflection` class for
-use with the constructed objects if so desired.
+- Direct methods on classes and interfaces are instance methods on
+  metaclasses.
+- Access to metalevel objects that allow reflection and intercession
+  is controlled through `Mirror` and `Reflection` interfaces, putting
+  the authority under system object's control and allowing compiler
+  visibility into reflection.
+- Main metaobjects are:
+  - Layouts, granting access to data.
+  - Method dictionaries, granting access to behavior.
 
 ---
+
+### Any
+
+(an Interface)
+
+#### Direct Methods
+
+* `includes:` object -> Boolean
+
+  Returns True.
+
+#### Instance Methods
+
+* `classOf` -> [Class](#class)
+
+  Returns the class of the object. (Name will change to `class` once syntax
+  allows.)
 
 ### Dependee
 
 (an Interface)
 
-#### Interface Methods
+#### Instance Methods
 
 * **required** _onNextChange -> List of: Block
 
@@ -228,13 +220,16 @@ The built-in reflection class, accessible as `System#reflection`.
 
   Returns the object being reflected, aka the reflectee.
 
-* `classMirror` -> [ClassMirror](#classmirror)
-
-  Returns a mirror for the class of the reflectee.
-
 * `layout` -> [Layout](#layout)
 
-  Returns the layout of the reflectee.
+  Returns a layout object for the reflectee.
+
+  Depending on the specific mirror class this may be read-only. Of the built-in
+  mirror classes only `ObjectMirror` returns a read-only layout.
+
+  Depending on the specific mirror class the slots in the layout may be
+  restricted to specific instances. Of the built-in mirror classes only
+  `ObjectMirror` returns a restricted layout like that.
 
 * `interfaces` -> Array of: [Interface](#interface)
 
@@ -242,7 +237,14 @@ The built-in reflection class, accessible as `System#reflection`.
 
 * `methodDictionary` -> [MethodDictionary](#methoddictionary)
 
-  Returns the method dictionary of the reflectee.
+  Returns a method dictionary object for the reflectee.
+
+  Depending on the specific mirror class this may be read-only. Of the built-in
+  mirror classes only `ObjectMirror` returns a read-only method dictionary.
+
+  Depending on the specific mirror class the methods accessed through the method
+  dictionary may be restricted to specific instances. Of the built-in mirror
+  classes only `ObjectMirror` returns a restricted method dictionary like that.
 
 ---
 
@@ -273,6 +275,26 @@ The built-in reflection class, accessible as `System#reflection`.
   system reflection of: object in: Mirror
   ```
 
+#### Instance Methods
+
+* `layout` -> [Layout](#layout)
+
+  Returns a read-only layout for the reflectee, whose slots are restricted
+  for use with the reflectee.
+
+  **Rationale**: Being granted a mirror on an instance should not grant the
+  ability to access arbitrary slots of other instances of the same class.
+
+
+* `methodDictionary` -> [MethodDictionary](#methoddictionary)
+
+  Returns a read-only method dictionary for the reflectee, restricted to the
+  reflectee.
+
+  **Rationale**: Being granted a mirror on an instance should not grant the
+  ability to change behavior of other instances of the same class, or invoke
+  internal methods on them.
+
 ---
 
 ### ClassMirror
@@ -302,21 +324,21 @@ The built-in reflection class, accessible as `System#reflection`.
 
 #### Instance Methods
 
-* `name` -> String
-
-  Returns the name of the reflectee.
-
 * `instanceLayout` -> [Layout](#layout)
 
-  Returns the layout of the instances of the reflectee.
+  Returns a layout for the instances of the reflectee.
 
 * `instanceInterfaces` -> Array of: [Interface](#interface)
 
   Returns the interfaces instances of the reflectee implement.
 
+* `methodDictionary` -> [MethodDictionary](#methoddictionary)
+
+  Returns a read-write method dictionary for the reflectee.
+
 * `instanceMethodDictionary` -> [MethodDictionary](#methoddictionary)
 
-  Returns the method dictionary of instances of the reflectee.
+  Returns a read-write method dictionary for instances of the reflectee.
 
 ---
 
@@ -349,17 +371,17 @@ The built-in reflection class, accessible as `System#reflection`.
 
 #### Instance Methods
 
-* `name` -> String
-
-  Returns the name of the reflectee.
-
 * `instanceInterfaces` -> Array of: [Interface](#interface)
 
   Returns the interfaces instances of the reflectee implement.
 
+* `methodDictionary` -> [MethodDictionary](#methoddictionary)
+
+  Returns a read-write method dictionary for the reflectee.
+
 * `instanceMethodDictionary` -> [MethodDictionary](#methoddictionary)
 
-  Returns the method dictionary of instances of the reflectee.
+  Returns a read-write method dictionary for instances of the reflectee.
 
 ---
 
@@ -424,16 +446,20 @@ interface: they are factually instances of diverse classes.
    validate that the specified methods fulfill the requirements, including
    inherited ones.
 
+   The method dictionaries may not have any requirements associated with them at
+   this time: the system will add in the requirements from inherited interfaces.
+   Requirements specific to the new class must be added afterwards.
+
    Approximately:
    ``` foolang
-   let theMetaclass = Metaclass
+   let theClassClass = Metaclass
                          name: "{name} class"
                          interfaces: [Class]
                          methodDictionary: directMethodDictionary.
-   theMetaclass
+   theClassClass
        newClassName: name
        layout: instanceLayout
-       interfaces: ([Class] append: interfaces) removeDuplicates
+       interfaces: ([Class] append: interfaces)
        methodDictionary: instanceMethodDictionary!
    ```
 
@@ -451,23 +477,44 @@ interface: they are factually instances of diverse classes.
 
 * `name:` name  \
   `interfaces:` interfaces  \
+  `ownMethodDictionary:` [MethodDictionary](#methoddictionary)  \
   `directMethodDictionary:` [MethodDictionary](#methoddictionary)  \
   `instanceMethodDictionary:` [MethodDictionary](#methoddictionary)  \
   -> [Interface](#interface)
 
-  Constructs a new instance of `Interface`.
+  Constructs a new `Interface` and its associated metaclasses and
+  metainterface.
+
+  The method dictionaries may not have any requirements associated with them at
+  this time: the system will add in the requirements from inherited interfaces.
+  Requirements specific to the new interface must be added afterwards.
 
   Approximately:
   ``` foolang
-  let theMetaclass = Metaclass
-                        name: "{name} class"
-                        interfaces: [Class]
-                        methodDictionary: directMethodDictionary
-  theMetaclass
+  let metaInterfaceClass = Metaclass
+                               name: "{name} interface class"
+                               interfaces: [Class]
+                               methodDictionary: InterfaceClassDictionary.
+  let metaInterface = metaInterfaceClass
+                          name: "{name} interface"
+                          interfaces: [Interface]
+                          methodDictionary: directMethodDictionary.
+  let interfaceMetaclass = Metaclass
+                              name: "{name} class"
+                              interfaces: [Class]
+                              methodDictionary: ownMethodDictionary.
+  interfaceMetaclass
       newInterfaceName: name
-      interfaces: ([Interface] append: interfaces) removeDuplicates
+      interfaces: ([theInterfaceInterFace] append: interfaces)
       methodDictionary: instanceMethodDictionary!
   ```
+
+#### Instance Methods
+
+* `interfaceOf`
+
+  Returns the interface object describing the receiver itself. (This the own
+  direct methods of the interface are described by this object.)
 
 ---
 
@@ -483,10 +530,14 @@ Metaclasses hold direct methods of classes and interfaces as their instance meth
 
 #### Direct Methods
 
-* `name:` name `methods:` [MethodDictionary](#methoddictionary) -> [Metaclass](#metaclass)
+* `name:` name `interfaces:` interfaces `methodDictionary:` [MethodDictionary](#methoddictionary) -> [Metaclass](#metaclass)
 
   Constructs a new metaclass, which can be used to construct exactly one
   interface or class.
+
+  The method dictionary may not have any requirements associated with it
+  this time: the system will add in the requirements from inherited interfaces.
+  Requirements specific to the metaclass must be added afterwards.
 
 #### Instance Methods
 
@@ -494,9 +545,17 @@ Metaclasses hold direct methods of classes and interfaces as their instance meth
 
   Constructs a new interface, which is an instance of the metaclass.
 
+  The method dictionary may not have any requirements associated with it
+  this time: the system will add in the requirements from inherited interfaces.
+  Requirements specific to the interface must be added afterwards.
+
 * `newClassName:` name `layout:` layout `methods:` methodDictionary -> [Class](#class)
 
   Constructs a new class, which is an instance of the metaclass.
+
+  The method dictionary may not have any requirements associated with it
+  this time: the system will add in the requirements from inherited interfaces.
+  Requirements specific to the class must be added afterwards.
 
 ---
 
@@ -504,28 +563,119 @@ Metaclasses hold direct methods of classes and interfaces as their instance meth
 
 (an Interface)
 
+```
+-- FAILS: instance grants only read-access to the instance method
+-- dictionary!
+(system reflection of: 42 in: Mirror)
+  methodDictionary put: MyMethod at: #boop
+
+-- FAILS: Bad adder signature does not match required signature.
+(system reflection of: Integer in: Mirror)
+  instanceMethodDictionary put: BadAdder at: #+
+
+(system reflection of: Number in: Mirror)
+```
+
 #### Interfaces
 - [Dependee](#dependee)
 
+#### Direct Methods
+
+* `new`
+
+  Creates a new empty method dictionary.
+
 #### Instance Methods
 
-* `at:` Selector `ifNone:` Block -> [Method](#method)
+* `readOnly`
 
-  Returns the method associated with the _selector_, evaluating
-  the _block_ if no method is yet associated with the selector.
+  Returns a read-only wrapper for the receiver, unless it is already read-only,
+  in which case it returns the receiver.
 
-* `put:` Method `at:` Selector -> [Method](#method)
+* `isReadonly`
 
-  Associated the method with the selector.
+  Returns True iff the receiver is read-only.
+
+* `restrictTo:` object
+
+  Returns a restriced method dictionary which wraps any methods read from
+  it so that they can only be invoked on the _object_.
+
+* `isRestricted`
+
+  Returns True iff the receiver is restricted to a specific object.
+
+* `restrictedTo:`
+
+  Returns the object to which the receiver is restricted, or raises an
+  error if the the receiver is not restricted.
+
+* `isComplete` -> Boolean
+
+  Returns true iff there is a method for each requirement in the dictionary.
+
+* `requirementAt:` Selector `ifNone:` Block -> [Requirement](#requirement)
+
+  Returns a requirement object describing requirements for method associated
+  with the given selector, or evaluates the block if the selector has no
+  associated requirements.
+
+* `putRequirement:` [Requirement](#requirement) `at:` Selector ->
+  [Requirement](#requirement)
+
+  Raises an error if there is a pre-existing requirement whose owning method
+  dictionary is not the receiver, of if current method associated with the
+  receiver does not fulfill the requirement.
+
+  Otherwise sets the requirement for the given selector.
+
+  Notifies of change on the method dictionary.
+
+  If there was a requirement already associated with the selector, also
+  notifies of change on the old requirement.
+
+* `removeRequirementAt:` Selector
+
+  Raises an error if there is a pre-existing requirement whose owning method
+  dictionary is not the receiver.
+
+  Otherwise removes the requirement for the given selector, if any.
+
+  Notifies of change on the method dictionary.
+
+  If there was a requirement already assocated with the selector, also
+  notifies of change on the old requirement.
+
+* `methodAt:` Selector `ifNone:` Block -> [Method](#method)
+
+  Returns the method associated with the _selector_, evaluating the _block_ if
+  no method is yet associated with the selector.
+
+* `putMethod:` Method `at:` Selector -> [Method](#method)
+
+  Verifies that the method complies with current requirements on the selector,
+  then associates the method with the selector.
 
   Notifies of change on the method dictionary.
 
   If there was a method already associated with the selector, also notifies of
   change on the method.
 
-* `selectors` -> Array of: Selector
+* `removeMethod:` Selector
 
-  Returns selectors with methods associated with them.
+  Raises a warning if there is a requirement associated with the method.
+
+  Removes the method associated with the _selector_, if any.
+
+  Notifies of change on the method dictionary.
+
+  If there was a method already associated with the selector, also notifies of
+  change on the method.
+
+* `do:` Block
+
+  Evaluates the block with each selector and requirement and method associated
+  with it. (If either requirement or method is not set, False is used instead.)
 
 ---
 
