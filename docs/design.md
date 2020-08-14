@@ -39,6 +39,7 @@ in in progress, this is the current status:
 - 008 - [Indexed Classes](design/008-indexed-classes.md)
 - 009 - [Self Hosting](design/009-self-hosting.md)
 - 010 - [Docstrings and Comments](design/010-docstrings-and-comments.md)
+- 011 - [Metaobject Protocol](design/011-metaobject-protocol.md)
 - WIP - [Tower of Babel](design/wip-tower-of-babel.md)
 
 ### Old Design Notes
