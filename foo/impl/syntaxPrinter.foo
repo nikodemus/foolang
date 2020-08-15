@@ -73,8 +73,18 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         self print: "[".
         anArray elements
             do: { |element| element visitBy: self }
-            interleaving: { self print: "," }.
+            interleaving: { self print: ", " }.
         self print: "]"!
+
+    method visitRecord: aRecord
+        self print: "\{".
+        aRecord entries
+            do: { |entry|
+                  self print: entry key.
+                  self print: " ".
+                  entry value visitBy: self }
+            interleaving: { self print: ", " }.
+        self print: "}"!
 
     method visitSeq: aSeq
         self handleBlockStart.

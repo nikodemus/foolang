@@ -147,6 +147,16 @@ class AstArray { elements }
         visitor visitArray: self!
 end
 
+class AstRecord { selector values }
+    is AstNode
+
+    method visitBy: visitor
+        visitor visitRecord: self!
+
+    method parts
+        [selector, values]!
+end
+
 class AstUndefinedMarker {}
 end
 

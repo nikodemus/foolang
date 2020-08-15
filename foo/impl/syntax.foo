@@ -65,6 +65,22 @@ class SyntaxArray { elements }
         elements!
 end
 
+class SyntaxRecordEntry { key value }
+    method checkEqual: other
+        key checkEqual: other key.
+        value checkEqual: other value!
+end
+
+class SyntaxRecord { entries }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitRecord: self!
+
+    method parts
+        entries!
+end
+
 class SyntaxSeq { first then }
     is Syntax
 

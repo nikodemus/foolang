@@ -23,6 +23,7 @@ class Tests { system ok }
 
     method run
         self
+            ; test: #testRecord1
             ; test: #testSelector1
             ; test: #testSelector2
             ; test: #testSelector3
@@ -432,6 +433,10 @@ with: {defSource}"!
     method testArray7
         self eval: "[,]"
              expect: []!
+
+    method testRecord1
+        self eval: "\{foo: 42, bar: 123}"
+             expect: {foo: 42, bar: 123}!
 
     method testBacktrace
         self load: "class BacktraceTest \{}
