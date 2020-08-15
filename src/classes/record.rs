@@ -54,6 +54,8 @@ impl fmt::Debug for Record {
 pub fn class_vtable() -> Vtable {
     let vt = Vtable::new("Record");
     vt.add_primitive_method_or_panic("perform:with:", class_record_perform_with);
+    vt.add_primitive_method_or_panic("keysIn:", class_record_keys_in);
+    vt.add_primitive_method_or_panic("at:in:", class_record_at_in);
     vt
 }
 
@@ -84,6 +86,23 @@ fn class_record_perform_with(_receiver: &Object, args: &[Object], env: &Env) -> 
             data: RefCell::new(data),
         })),
     })
+}
+
+fn class_record_keys_in(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let r: &Record = args[0].as_record("in keysIn:")?;
+    let data: Ref<HashMap<_, _>> = r.borrow();
+    let mut keys = Vec::new();
+    for (k, _) in data.iter() {
+        keys.push(env.foo.make_string(k));
+    }
+    Ok(env.foo.into_array(keys, None))
+}
+
+fn class_record_at_in(_receiver: &Object, args: &[Object], _env: &Env) -> Eval {
+    let k = args[0].as_str()?;
+    let r: &Record = args[1].as_record("record in Record#at:in:")?;
+    let data: Ref<HashMap<_, _>> = r.borrow();
+    Ok(data[k].clone())
 }
 
 fn record_perform_with(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
