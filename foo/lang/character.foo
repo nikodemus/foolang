@@ -21,23 +21,99 @@ import .object.Object
 -- FIXME: support unicode range
 class Character { code }
     is Object
+
     method isAlphanumeric
         self isAlpha or: self isDigit!
+
     method isAlpha
         (0x41 <= code and: code <= 0x5A)
             ifFalse: { 0x61 <= code and: code <= 0x7A }!
+
     method isWhitespace
         WhitespaceASCII anySatisfy: { |whitespaceCode| whitespaceCode is code }!
+
     method isHorizontalWhitespace
         HorizontalWhitespaceASCII anySatisfy: { |whitespaceCode| whitespaceCode is code }!
+
+    method isDigit: base
+        base <= 10
+            ifTrue: { 0x30 <= code and: code < 0x30 + base }
+            ifFalse: { let hexBase = base - 10.
+                       (0x30 <= code and: code < 0x40)
+                           or: (0x41 <= code and: code < 0x41 + hexBase)
+                           or: (0x61 <= code and: code < 0x61 + hexBase) }!
+
     method isDigit
-        0x30 <= code and: code <= 0x39!
+        self isDigit: 10!
+
+    method digit: base
+        (self isDigit: base)
+            ifTrue: { code < 0x40
+                          ifTrue: { return code - 0x30 }.
+                      code < 0x47
+                          ifTrue: { return (code - 0x41) + 10 }.
+                      (code - 0x61) + 10 }!
+
     method digit
-        self isDigit ifTrue: { code - 0x30 }!
+        self digit: 10!
+
     method isEquivalent: other
         code is other code!
+
     method toString
         "#<Character code: {code}>"!
+
     method isNewline
         self code is ASCII lineFeed!
+end
+
+class TestCharacter { assert }
+    direct method runTests: assert
+        (self assert: assert)
+            ; testDigit10
+            ; testDigit2
+            ; testDigit16
+                !
+
+    method testDigit10
+        assert forAll: [[0, "0"],
+                        [1, "1"],
+                        [7, "7"],
+                        [9, "9"],
+                        [False, "A"],
+                        [False, "F"],
+                        [False, "G"],
+                        [False, "a"],
+                        [False, "f"],
+                        [False, "g"]]
+               that: { |spec|
+                       spec first is (spec second character digit: 10) }
+               testing: "testDigit10"!
+
+    method testDigit2
+        assert forAll: [[0, "0"],
+                        [1, "1"],
+                        [False, "7"],
+                        [False, "A"],
+                        [False, "F"],
+                        [False, "G"],
+                        [False, "a"],
+                        [False, "f"],
+                        [False, "g"]]
+               that: { |spec|
+                       spec first is (spec second character digit: 2) }
+               testing: "testDigit2"!
+
+    method testDigit16
+        assert forAll: [[0, "0"],
+                        [7, "7"],
+                        [10, "A"],
+                        [15, "F"],
+                        [False, "G"],
+                        [10, "a"],
+                        [15, "f"],
+                        [False, "g"]]
+               that: { |spec|
+                       spec first is (spec second character digit: 16) }
+               testing: "testDigit16"!
 end

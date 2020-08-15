@@ -38,6 +38,9 @@ extend Boolean
            ifTrue: { True }
            ifFalse: { other }!
 
+    method or: other1::Boolean or: other2::Boolean
+        (self or: other1) or: other2!
+
     method not
         self
            ifTrue: { False }
