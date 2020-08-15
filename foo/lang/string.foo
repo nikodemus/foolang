@@ -7,6 +7,17 @@ extend String
     direct method default
         ""!
 
+    method < other
+        1 to: (self size min: other size)
+          do: { |index|
+                let a = (self at: index) code.
+                let b = (other at: index) code.
+                a < b
+                    ifTrue: { return True }.
+                a > b
+                    ifTrue: { return False } }.
+        self size < other size!
+
     method append: other
        other appendToString: self!
 
@@ -70,4 +81,25 @@ extend String
         let out = StringOutput new.
         n times: { out print: self }.
         out content!
+end
+
+class TestString { assert }
+
+    direct method runTests: assert
+        (self assert: assert)
+            ; testLessThan
+                !
+
+    method testLessThan
+        assert forAll: [["aQWE", "bQWE"],
+                        ["aqwe", "b"],
+                        ["a", "bqwe"]]
+               that: { |test|
+                       test first < test second }
+               testing: "String#< (1)".
+        assert false: { "asd" < "asd" }
+               testing: "String#< (2)".
+        assert true: { "asd" < "asda" }
+               testing: "String#< (3)"!
+
 end
