@@ -169,7 +169,8 @@ class BlockStartToken { precedence string first last }
             when: "|"
             then: { parser nextToken.
                     parser until: "|"
-                           do: { parameters add: (parser parseVariableName) } }.
+                           do: { parameters add: (parser parseVariableName) }.
+                    parser nextToken }.
         let body = parser parseAtPrecedence: SeqPrecedence.
         parser expect: "}".
         SyntaxBlock
