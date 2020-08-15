@@ -8,6 +8,21 @@ interface Ordered
         1 to: self size do: { |i| bytes put: (self at: i) at: i }.
         bytes!
 
+    method asArray
+        let new = Array new: self size.
+        self doWithIndex: { |each index|
+                            new put: each at: index }.
+        new!
+
+    method first
+        self at: 1!
+
+    method second
+        self at: 2!
+
+    method third
+        self at: 3!
+
     method checkEqualInternal: other
         self size == other size
             ifFalse: { self mismatch: other }.
