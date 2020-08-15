@@ -67,6 +67,12 @@ interface Ordered
                 block value: (self at: i) }.
         self!
 
+    method doWithIndex: block
+        1 to: self size
+          do: { |i|
+                block value: (self at: i) value: i }.
+        self!
+
     method with: other collect: block
         self with: other collect: block of: Object!
 

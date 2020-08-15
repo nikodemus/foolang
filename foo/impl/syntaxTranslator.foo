@@ -14,6 +14,10 @@ class SyntaxTranslator { env }
     method visitLiteral: aLiteral
         AstConstantRef value: aLiteral value!
 
+    method visitArray: anArray
+        AstArray elements: (anArray elements
+                                collect: { |each| each visitBy: self })!
+
     method visitSeq: aSeq
         -- FIXME: Would be nicer to flatten this out.
         AstSeq

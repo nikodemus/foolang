@@ -1,6 +1,7 @@
 interface SyntaxVisitor
     is Object
     required method visitLiteral: aLiteral
+    required method visitArray: anArray
     required method visitSeq: aSeq
     required method visitReturn: aReturn
     required method visitPrefixComment: aComment

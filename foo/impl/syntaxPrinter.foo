@@ -61,6 +61,13 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
     method visitLiteral: aLiteral
         self print: aLiteral value displayString!
 
+    method visitArray: anArray
+        self print: "[".
+        anArray elements
+            do: { |element| element visitBy: self }
+            interleaving: { self print: "," }.
+        self print: "]"!
+
     method visitSeq: aSeq
         self handleBlockStart.
         aSeq first visitBy: self.

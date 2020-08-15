@@ -32,6 +32,16 @@ class SyntaxLiteral { value }
         [value]!
 end
 
+class SyntaxArray { elements }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitArray: self!
+
+    method parts
+        elements!
+end
+
 class SyntaxSeq { first then }
     is Syntax
 

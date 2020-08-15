@@ -23,6 +23,13 @@ class Tests { system ok }
 
     method run
         self
+            ; test: #testArray1
+            ; test: #testArray2
+            ; test: #testArray3
+            ; test: #testArray4
+            ; test: #testArray5
+            ; test: #testArray6
+            ; test: #testArray7
             ; test: #test42
             ; test: #testPlus
             ; test: #testPrecedence1
@@ -388,6 +395,34 @@ with: {defSource}"!
         self
             parse: "class X \{} -- boop\n method bar\n 42!\n end\n"
             expect: "class X \{}\n    -- boop\n    method bar\n        42!\nend\n"!
+
+    method testArray1
+        self eval: "[1, 1+1, 3]"
+             expect: [1,2,3]!
+
+    method testArray2
+        self eval: "[1, 1+1, 3, ]"
+             expect: [1,2,3]!
+
+    method testArray3
+        self eval: "[, 1, 1+1, 3]"
+             expect: [1,2,3]!
+
+    method testArray4
+        self eval: "[, 1, 1+1, 3,]"
+             expect: [1,2,3]!
+
+    method testArray5
+        self eval: "[1]"
+             expect: [1]!
+
+    method testArray6
+        self eval: "[]"
+             expect: []!
+
+    method testArray7
+        self eval: "[,]"
+             expect: []!
 
     method testBacktrace
         self load: "class BacktraceTest \{}

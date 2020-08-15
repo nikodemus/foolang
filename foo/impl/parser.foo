@@ -86,7 +86,7 @@ end
 
 -- For CoreSyntaxTable --
 
-class UnmatchedCloseToken { precedence string first last }
+class InvalidToken { precedence string first last }
     is Token
 end
 
@@ -167,13 +167,32 @@ class BlockStartToken { precedence string first last }
         let parameters = List new.
         parser
             when: "|"
-            then: { parser until: "|"
+            then: { parser nextToken.
+                    parser until: "|"
                            do: { parameters add: (parser parseVariableName) } }.
         let body = parser parseAtPrecedence: SeqPrecedence.
         parser expect: "}".
         SyntaxBlock
             parameters: parameters
             body: body!
+end
+
+class ArrayStartToken { precedence string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        let elements = List new.
+        -- Optional leading comma
+        parser when: ","
+               then: { parser nextToken }.
+        parser until: "]"
+               do: { elements add: parser parse.
+                     -- Allow trailing comma
+                     parser unless: "]"
+                            then: { parser expect: "," } }.
+        parser expect: "]".
+        SyntaxArray
+            elements: elements!
 end
 
 class OpenParenToken { precedence string first last }
@@ -253,12 +272,13 @@ class ClassToken { precedence string first last }
         parser expect: "\{".
         parser until: "}"
                do: { slots add: parser parseVariableName }.
-
+        parser expect: "}".
         let theClass = SyntaxClass name: name slots: slots.
         let classParser = parser syntaxTable: ClassSyntaxTable.
         classParser
             until: "end"
             do: { theClass add: (classParser parseAtPrecedence: precedence) }.
+        parser expect: "end".
         parser handleSuffixCommentOf: theClass!
 
     method toString
@@ -289,6 +309,8 @@ class InterfaceToken { precedence string first last }
         interfaceParser
             until: "end"
             do: { theInterface add: (interfaceParser parseAtPrecedence: precedence) }.
+        interfaceParser
+            expect: "end".
         parser handleSuffixCommentOf: theInterface!
 
     method toString
@@ -407,9 +429,10 @@ define CoreSyntaxTable
     where: "anywhere"
     tokens:
     {
-         "}" -> SyntaxEntry tokenClass: UnmatchedCloseToken precedence: 0,
-         ")" -> SyntaxEntry tokenClass: UnmatchedCloseToken precedence: 0,
-         "]" -> SyntaxEntry tokenClass: UnmatchedCloseToken precedence: 0,
+         "}" -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
+         ")" -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
+         "]" -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
+         "," -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
          "--" -> SyntaxEntry tokenClass: CommentToken precedence: 1000
     }!
 
@@ -427,8 +450,10 @@ define ExpressionSyntaxTable
          "is" -> SyntaxEntry tokenClass: IsSuffixToken precedence: 10,
          "=" -> SyntaxEntry tokenClass: AssignmentToken precedence: 4,
          "let" -> SyntaxEntry tokenClass: LetToken precedence: 3,
-         "\{" -> SyntaxEntry tokenClass: BlockStartToken precedence: 3, -- ???
-         "(" -> SyntaxEntry tokenClass: OpenParenToken precedence: 3, -- ???
+         -- Why precedence 3 for these?
+         "\{" -> SyntaxEntry tokenClass: BlockStartToken precedence: 3,
+         "[" -> SyntaxEntry tokenClass: ArrayStartToken precedence: 3,
+         "(" -> SyntaxEntry tokenClass: OpenParenToken precedence: 3,
          "." -> SyntaxEntry tokenClass: SequenceToken precedence: 2,
          "!" -> SyntaxEntry tokenClass: BangToken precedence: 1
     }!
@@ -698,16 +723,15 @@ Source: {source}" }!
 
     method when: test then: action
         self lookahead string == test
-            ifTrue: { self nextToken. action value }!
+            ifTrue: { action value }!
+
+    method unless: test then: action
+        self lookahead string == test
+            ifFalse: { action value }!
 
     method until: test do: action
         { self lookahead string == test }
-            whileFalse: action.
-        self nextToken!
-
-    method while: test do: action
-        { self lookahead string == test }
-            whileTrue: { self nextToken. action value }!
+            whileFalse: action!
 
     method parseAtPrecedence: precedence
         self
