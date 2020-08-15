@@ -139,6 +139,13 @@ class AstInterpreter { context process }
     method visitConstant: aConstant
         aConstant value!
 
+    method visitArray: anArray
+        let new = Array new: (anArray elements size).
+        anArray elements
+            doWithIndex: { |each index|
+                           new put: (each visitBy: self) at: index }.
+        new!
+
     method visitGlobal: aGlobal
         aGlobal value!
 

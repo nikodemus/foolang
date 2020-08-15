@@ -140,6 +140,13 @@ class AstComment { comment value source }
         visitor visitComment: self!
 end
 
+class AstArray { elements }
+    is AstNode
+
+    method visitBy: visitor
+        visitor visitArray: self!
+end
+
 class AstUndefinedMarker {}
 end
 
