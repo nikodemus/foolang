@@ -4,6 +4,7 @@ interface SyntaxVisitor
     required method visitBinaryLiteral: aLiteral
     required method visitHexLiteral: aLiteral
     required method visitArray: anArray
+    required method visitRecord: aRecord
     required method visitSeq: aSeq
     required method visitReturn: aReturn
     required method visitPrefixComment: aComment

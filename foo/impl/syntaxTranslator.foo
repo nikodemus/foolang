@@ -24,6 +24,15 @@ class SyntaxTranslator { env }
         AstArray elements: (anArray elements
                                 collect: { |each| each visitBy: self })!
 
+    method visitRecord: aRecord
+        let recordName = StringOutput with: { |name|
+            aRecord entries do: { |each| name print: each key }
+        }.
+        AstRecord
+            selector: (Selector new: recordName)
+            values: (aRecord entries
+                         collect: { |each| each value visitBy: self })!
+
     method visitSeq: aSeq
         -- FIXME: Would be nicer to flatten this out.
         AstSeq

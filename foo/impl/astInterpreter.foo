@@ -146,6 +146,12 @@ class AstInterpreter { context process }
                            new put: (each visitBy: self) at: index }.
         new!
 
+    method visitRecord: aRecord
+        aRecord selector
+            sendTo: Record
+            with: (aRecord values
+                       collect: { |each| each visitBy: self })!
+
     method visitGlobal: aGlobal
         aGlobal value!
 

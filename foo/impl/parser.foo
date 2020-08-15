@@ -196,10 +196,14 @@ class AssignmentToken { precedence string first last }
             value: (parser parseAtPrecedence: SingleExpressionPrecedence)!
 end
 
-class BlockStartToken { precedence string first last }
+class OpenBraceToken { precedence string first last }
     is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
+        -- Record?
+        (TokenKeyword includes: parser lookahead)
+            ifTrue: { return self parseAsRecordWith: parser }.
+        -- Block, then
         let parameters = List new.
         parser
             when: "|"
@@ -212,6 +216,23 @@ class BlockStartToken { precedence string first last }
         SyntaxBlock
             parameters: parameters
             body: body!
+
+    method parseAsRecordWith: parser
+        let entries = List new.
+        parser
+            until: "}"
+            do: { let key = parser nextToken.
+                  (TokenKeyword includes: key)
+                      ifFalse: { Error raise: "Expected keyword, got: {key}" }.
+                  entries add: (SyntaxRecordEntry
+                                    key: key string
+                                    value: parser parse).
+                  parser unless: "}"
+                         then: { parser expect: "," } }.
+        parser expect: "}".
+        SyntaxRecord
+            entries: entries asArray!
+
 end
 
 class ArrayStartToken { precedence string first last }
@@ -499,7 +520,7 @@ define ExpressionSyntaxTable
          "=" -> SyntaxEntry tokenClass: AssignmentToken precedence: 4,
          "let" -> SyntaxEntry tokenClass: LetToken precedence: 3,
          -- Why precedence 3 for these?
-         "\{" -> SyntaxEntry tokenClass: BlockStartToken precedence: 3,
+         "\{" -> SyntaxEntry tokenClass: OpenBraceToken precedence: 3,
          "[" -> SyntaxEntry tokenClass: ArrayStartToken precedence: 3,
          "(" -> SyntaxEntry tokenClass: OpenParenToken precedence: 3,
          "." -> SyntaxEntry tokenClass: SequenceToken precedence: 2,
@@ -824,28 +845,28 @@ Source: {source}" }!
 
     method lookahead
         stack
-            ifEmpty: { stack push: self scanNext }.
+            ifEmpty: { stack push: self _scanNext }.
         stack first!
 
     method nextToken
         stack isEmpty
-            ifTrue: { self scanNext }
+            ifTrue: { self _scanNext }
             ifFalse: { stack pop }!
 
-    method scanNext
+    method _scanNext
         self skipWhitespace.
         self atEof
             ifTrue: { return TokenEof at: self position in: self }.
         self atSpecial
-            ifTrue: { return self scanSpecial }.
+            ifTrue: { return self _scanSpecial }.
         self atDigit
-            ifTrue: { return self scanNumber }.
+            ifTrue: { return self _scanNumber }.
         self atDoublequote
-            ifTrue: { return self scanString }.
+            ifTrue: { return self _scanString }.
         self atSigil
-            ifTrue: { return self scanSigil }.
+            ifTrue: { return self _scanSigil }.
         self atWord
-            ifTrue: { return self scanWord }.
+            ifTrue: { return self _scanWord }.
         Error raise: "Don't know how to scan pos: {self position} in: {source}"!
 
     method atEof
@@ -927,7 +948,7 @@ Source: {source}" }!
     method skipWhitespace
         self skipWhile: { self atWhitespace }!
 
-    method scanSpecial
+    method _scanSpecial
         -- Debug println: "/scanSpecial".
         let start = self position.
         self advance.
@@ -936,7 +957,7 @@ Source: {source}" }!
             to: start
             in: self!
 
-    method scanNumber
+    method _scanNumber
         -- Debug println: "/scanNumber".
         let start = self position.
         self advance.
@@ -957,7 +978,7 @@ Source: {source}" }!
             to: (self skipWhile: { self atDigit })
             in: self!
 
-    method scanString
+    method _scanString
         -- Debug println: "/scanString".
         self advance.
         let string = TokenString
@@ -967,14 +988,14 @@ Source: {source}" }!
         self advance.
         string!
 
-    method scanSigil
+    method _scanSigil
         -- Debug println: "/scanSigil".
         TokenSigil
             from: self position
             to: (self skipWhile: { self atSigil })
             in: self!
 
-    method scanWord
+    method _scanWord
         -- Debug println: "/scanWord".
         let first = self position.
         self skipWhile: { self atWord }.
