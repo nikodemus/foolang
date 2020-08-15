@@ -23,6 +23,9 @@ class Tests { system ok }
 
     method run
         self
+            ; test: #testSelector1
+            ; test: #testSelector2
+            ; test: #testSelector3
             ; test: #test42
             ; test: #testHex1
             ; test: #testHex2
@@ -525,6 +528,18 @@ with: {defSource}"!
     method testBinary3
         self eval: "0x0"
              expect: 0!
+
+    method testSelector1
+        self eval: "#foo"
+             expect: #foo!
+
+    method testSelector2
+        self eval: "#+"
+             expect: #+ !
+
+    method testSelector3
+        self eval: "#foo:bar:"
+             expect: #foo:bar: !
 
     method transpile: string
         let env = Environment new.

@@ -287,6 +287,16 @@ class SelfToken { precedence string first last }
         "#<SelfToken>"!
 end
 
+class LiteralToken { precedence string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        parser nextToken parseAsLiteralWith: parser!
+
+    method toString
+        "#<LiteralToken>"!
+end
+
 class ReturnToken { precedence string first last }
     is Token
 
@@ -480,6 +490,7 @@ define ExpressionSyntaxTable
     {
          "return" -> SyntaxEntry tokenClass: ReturnToken precedence: 1000,
          "self" -> SyntaxEntry tokenClass: SelfToken precedence: 1000,
+         "#" -> SyntaxEntry tokenClass: LiteralToken precedence: 1000,
          "*" -> SigilEntry precedence: 90,
          "/" -> SigilEntry precedence: 90,
          "+" -> SigilEntry precedence: 80,
@@ -567,6 +578,11 @@ class TokenSigil { precedence string first last }
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
         selector print: string.
         parameters add: parser parseVariableName!
+
+    method parseAsLiteralWith: parser
+        SyntaxLiteral
+            value: (Selector new: string)!
+
 end
 
 class TokenWord { precedence string first last }
@@ -592,6 +608,10 @@ class TokenWord { precedence string first last }
                       (TokenSigil includes: op)
                           ifFalse: { Error raise: "Expected prefix sigil, got: {op string}" }.
                       selector print: op string }!
+
+    method parseAsLiteralWith: parser
+        SyntaxLiteral
+            value: (Selector new: string)!
 
     method toString
         "#<TokenWord {string}>"!
@@ -632,6 +652,13 @@ class TokenKeyword { string first last }
                           parseAsMethodSignatureWith: parser
                           selector: selector
                           parameters: parameters }!
+
+    method parseAsLiteralWith: parser
+        let selector = StringOutput new: string.
+        { TokenKeyword includes: parser lookahead }
+            whileTrue: { selector print: parser nextToken string }.
+        SyntaxLiteral
+            value: (Selector new: selector content)!
 end
 
 define SpecialCharacters
@@ -644,6 +671,7 @@ define SpecialCharacters
      "!" character,
      "." character,
      ";" character,
+     "#" character,
      "," character]!
 
 define UnderscoreCharacter
@@ -856,6 +884,11 @@ Source: {source}" }!
 
     method atWhitespace
         self isAt: #isWhitespace!
+
+    method atChar: char
+        self atEof
+            ifTrue: { return False }.
+        (source at: self position) == char!
 
     method atChar: char1 or: char2
         self atEof
