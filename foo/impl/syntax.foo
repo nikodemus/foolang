@@ -30,6 +30,9 @@ class SyntaxLiteral { value }
 
     method parts
         [value]!
+
+    method toString
+        "#<SyntaxLiteral {value}>"!
 end
 
 class SyntaxHexLiteral { value }
