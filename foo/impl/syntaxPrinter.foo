@@ -61,6 +61,14 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
     method visitLiteral: aLiteral
         self print: aLiteral value displayString!
 
+    method visitHexLiteral: aLiteral
+        Integer printBase: 16
+                do: { self print: aLiteral value toString }!
+
+    method visitBinaryLiteral: aLiteral
+        Integer printBase: 2
+                do: { self print: aLiteral value toString }!
+
     method visitArray: anArray
         self print: "[".
         anArray elements

@@ -51,10 +51,12 @@ class TokenString { string first last }
         StringEscapes at: s ifNone: { s }!
 end
 
-class TokenDecimal { string first last }
+class TokenDecimalInteger { string first last }
     is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
+        -- Debug println: self.
+        (first <= last) assert.
         let n = 0.
         1 to: string size
           do: { |pos|
@@ -62,7 +64,41 @@ class TokenDecimal { string first last }
         SyntaxLiteral value: n!
 
     method toString
-        "#<TokenDecimal {string}>"!
+        "#<TokenDecimalInteger '{string}'>"!
+end
+
+class TokenHexInteger { string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        -- Debug println: self.
+        (first <= last + 3) assert.
+        let n = 0.
+        3 to: string size
+          do: { |pos|
+                n = n * 16 + ((string at: pos) digit: 16) }.
+        -- Want to retain the format info, hence not SyntaxLiteral.
+        SyntaxHexLiteral value: n!
+
+    method toString
+        "#<TokenHexInteger '{string}'>"!
+end
+
+class TokenBinaryInteger { string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        -- Debug println: self.
+        (first <= last + 3) assert.
+        let n = 0.
+        3 to: string size
+          do: { |pos|
+                n = n * 2 + ((string at: pos) digit: 2) }.
+        -- Want to retain the format info, hence not SyntaxLiteral.
+        SyntaxBinaryLiteral value: n!
+
+    method toString
+        "#<TokenBinaryInteger '{string}'>"!
 end
 
 class TokenEof { position }
@@ -775,7 +811,7 @@ Source: {source}" }!
         self atSpecial
             ifTrue: { return self scanSpecial }.
         self atDigit
-            ifTrue: { return self scanDecimal }.
+            ifTrue: { return self scanNumber }.
         self atDoublequote
             ifTrue: { return self scanString }.
         self atSigil
@@ -821,6 +857,12 @@ Source: {source}" }!
     method atWhitespace
         self isAt: #isWhitespace!
 
+    method atChar: char1 or: char2
+        self atEof
+            ifTrue: { return False }.
+        let here = (source at: self position).
+        here == char1 or: here == char2!
+
     method atChar: char1 notFollowedBy: char2
         self atEof
             ifTrue: { return False }.
@@ -861,10 +903,24 @@ Source: {source}" }!
             to: start
             in: self!
 
-    method scanDecimal
-        -- Debug println: "/scanDecimal".
-        TokenDecimal
-            from: self position
+    method scanNumber
+        -- Debug println: "/scanNumber".
+        let start = self position.
+        self advance.
+        (self atChar: "x" character or: "X" character)
+            ifTrue: { self advance.
+                      return TokenHexInteger
+                          from: start
+                          to: (self skipWhile: { self atWord })
+                          in: self }.
+        (self atChar: "b" character or: "B" character)
+            ifTrue: { self advance.
+                      return TokenBinaryInteger
+                          from: start
+                          to: (self skipWhile: { self atWord })
+                          in: self }.
+        TokenDecimalInteger
+            from: start
             to: (self skipWhile: { self atDigit })
             in: self!
 
