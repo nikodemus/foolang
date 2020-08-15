@@ -3,6 +3,10 @@ extend StringOutput
         let out = self new.
         out writeString: string.
         out!
+    direct method with: block
+        let out = self new.
+        block value: out.
+        out content!
     method toString
         "#<StringOutput>"!
     method print: thing

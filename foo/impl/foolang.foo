@@ -23,6 +23,13 @@ class Tests { system ok }
 
     method run
         self
+            ; test: #test42
+            ; test: #testHex1
+            ; test: #testHex2
+            ; test: #testHex3
+            ; test: #testBinary1
+            ; test: #testBinary2
+            ; test: #testBinary3
             ; test: #testArray1
             ; test: #testArray2
             ; test: #testArray3
@@ -30,7 +37,6 @@ class Tests { system ok }
             ; test: #testArray5
             ; test: #testArray6
             ; test: #testArray7
-            ; test: #test42
             ; test: #testPlus
             ; test: #testPrecedence1
             ; test: #testPrecedence2
@@ -494,7 +500,31 @@ with: {defSource}"!
 
     method testString3
         self eval: " \"foo\\nbar\" "
-             expect: "foo\nbar"!
+            expect: "foo\nbar"!
+
+    method testHex1
+        self eval: "0xfb"
+             expect: 251!
+
+    method testHex2
+        self eval: "0xfb4"
+             expect: 4020!
+
+    method testHex3
+        self eval: "0x0"
+             expect: 0!
+
+    method testBinary1
+        self eval: "0b101"
+             expect: 5!
+
+    method testBinary2
+        self eval: "0b001110"
+             expect: 14!
+
+    method testBinary3
+        self eval: "0x0"
+             expect: 0!
 
     method transpile: string
         let env = Environment new.

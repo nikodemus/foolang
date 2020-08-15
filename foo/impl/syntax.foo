@@ -32,6 +32,26 @@ class SyntaxLiteral { value }
         [value]!
 end
 
+class SyntaxHexLiteral { value }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitHexLiteral: self!
+
+    method parts
+        [value]!
+end
+
+class SyntaxBinaryLiteral { value }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitBinaryLiteral: self!
+
+    method parts
+        [value]!
+end
+
 class SyntaxArray { elements }
     is Syntax
 
