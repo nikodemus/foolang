@@ -4,11 +4,23 @@ import .object.Object
 extend Dictionary
     is Object
 
+    direct method new: capacity
+        -- Ignore hint, implement in self-hosted implementation.
+        self new!
+
     method at: key
         self at: key ifNone: { False }!
 
     method has: key
         self at: key ifNone: { return False }.
+        True!
+
+    method isEquivalent: other
+        self size is other size
+            ifFalse: { return False }.
+        self doKeys: { |key|
+                       (other at: key ifNone: { return False }) == (self at: key)
+                           ifFalse: { return False } }.
         True!
 
     method merge: other
@@ -29,17 +41,33 @@ extend Dictionary
         let copy = Dictionary new.
         self doKeys: { |key| copy put: (self at: key) at: key }.
         copy!
+end
+
+class TestDictionary { assert }
 
     direct method runTests: assert
+        (self assert: assert)
+            ; testSyntax
+            ; testPutAt
+            ; testHas
+            ; testEquality
+            ; testMerge
+                !
+
+    method testSyntax
         assert that: { let d = { 1 + 1 + 40 -> "the" append: "Answer" }.
                        (d at: 42) }
                is: "theAnswer"
-               testing: "Dictionary syntax".
+               testing: "Dictionary syntax"!
+
+    method testPutAt
         assert that: { let d = Dictionary new.
                        d put: "foo" at: "bar".
                        (d at: "bar") }
                is: "foo"
-               testing: "Dictionary#put:at: and #at:".
+               testing: "Dictionary#put:at: and #at:"!
+
+    method testHas
         assert that: { let orig = Dictionary new.
                        orig put: 1 at: "one".
                        let copy = orig copy.
@@ -47,7 +75,31 @@ extend Dictionary
                        orig put: 3 at: "three".
                        [orig at: "one", orig at: "two", orig at: "three",
                         copy at: "one", copy at: "two", copy at: "three"] }
-               equals: [1,False,3,
-                        1,2,False]
-               testing: "Dictionary#copy, Dictionary#has:"!
+        equals: [1,False,3,
+                 1,2,False]
+        testing: "Dictionary#copy, Dictionary#has:"!
+
+    method testEquality
+        assert forAll: [[True, { 1 -> 100, 2 -> 200 }, { 2 -> 200, 1 -> 100 }],
+                        [True, Dictionary new, Dictionary new],
+                        [False, { 1 -> 100, 2 -> 200 }, { 1 -> 1, 2 -> 2 }],
+                        [False, { 1 -> 100 }, { 1 -> 100, 2 -> 200 }],
+                        [False, { 1 -> 100, 2 -> 200 }, { 1 -> 100 }].
+                        [False, Dictionary new, { 1 -> 100 }],
+                        [False, { 1 -> 100 }, Dictionary new]]
+               that: { |case|
+                       case first is (case second == case third) }
+               testing: "Dictionary#=="!
+
+    method testMerge
+        assert forAll: [[Dictionary new, Dictionary new, Dictionary new],
+                        [{ 1 -> 10 }, Dictionary new, { 1 -> 10 }],
+                        [{ 1 -> 10 }, { 1 -> 10 }, Dictionary new],
+                        [{ 1 -> 10, 2 -> 20 }, { 1 -> 10 }, { 2 -> 20 }].
+                        [{ 1 -> 10, 2 -> 20 }, { 1 -> 10, 2 -> 2 }, { 2 -> 20 }]]
+               that: { |case|
+                       let mergeTo = case second.
+                       let mergeRes = mergeTo merge: case third.
+                       mergeRes is mergeTo and: case first == mergeRes }
+               testing: "Dictionary#merge:"!
 end
