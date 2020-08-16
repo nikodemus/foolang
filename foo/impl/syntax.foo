@@ -55,30 +55,32 @@ class SyntaxBinaryLiteral { value }
         [value]!
 end
 
-class SyntaxArray { elements }
+interface SyntaxCollection
     is Syntax
+
+    method parts
+        self entries!
+end
+
+class SyntaxArray { entries }
+    is SyntaxCollection
 
     method visitBy: visitor
         visitor visitArray: self!
-
-    method parts
-        elements!
-end
-
-class SyntaxRecordEntry { key value }
-    method checkEqual: other
-        key checkEqual: other key.
-        value checkEqual: other value!
 end
 
 class SyntaxRecord { entries }
-    is Syntax
+    is SyntaxCollection
 
     method visitBy: visitor
         visitor visitRecord: self!
+end
 
-    method parts
-        entries!
+class SyntaxDictionary { entries }
+    is SyntaxCollection
+
+    method visitBy: visitor
+        visitor visitDictionary: self!
 end
 
 class SyntaxSeq { first then }

@@ -71,7 +71,7 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
 
     method visitArray: anArray
         self print: "[".
-        anArray elements
+        anArray entries
             do: { |element| element visitBy: self }
             interleaving: { self print: ", " }.
         self print: "]"!
@@ -82,6 +82,16 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
             do: { |entry|
                   self print: entry key.
                   self print: " ".
+                  entry value visitBy: self }
+            interleaving: { self print: ", " }.
+        self print: "}"!
+
+    method visitDictionary: aDictionary
+        self print: "\{".
+        aDictionary entries
+            do: { |entry|
+                  entry key visitBy: self.
+                  self print: " -> ".
                   entry value visitBy: self }
             interleaving: { self print: ", " }.
         self print: "}"!
