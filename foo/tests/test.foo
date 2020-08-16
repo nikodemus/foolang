@@ -9,6 +9,7 @@ import lang.selector.TestSelector
 import lang.integer.TestInteger
 import lang.character.TestCharacter
 import lang.string.TestString
+import lang.list.TestList
 
 -- Generates signed integers small enough to add without overflowing.
 class SmallIntegers {}
@@ -77,6 +78,7 @@ class Main { assert system }
             ByteArray,
             Dictionary,
             TestArray,
+            TestList,
             TestClosure,
             TestRecord,
             TestSelector,
