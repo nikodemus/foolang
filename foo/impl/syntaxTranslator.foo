@@ -21,17 +21,24 @@ class SyntaxTranslator { env }
         self visitLiteral: aLiteral!
 
     method visitArray: anArray
-        AstArray elements: (anArray elements
-                                collect: { |each| each visitBy: self })!
+        AstArray entries: (anArray entries
+                               collect: { |each| each visitBy: self })!
 
     method visitRecord: aRecord
-        let recordName = StringOutput with: { |name|
-            aRecord entries do: { |each| name print: each key }
-        }.
+        let recordName = StringOutput
+                             with: { |out|
+                                     aRecord entries
+                                         do: { |each| out print: each key } }.
         AstRecord
-            selector: (Selector new: recordName)
-            values: (aRecord entries
-                         collect: { |each| each value visitBy: self })!
+            name: (Selector new: recordName)
+            entries: (aRecord entries
+                          collect: { |each| each value visitBy: self })!
+
+    method visitDictionary: aDictionary
+        AstDictionary
+            entries: (aDictionary entries
+                          collect: { |each| { key: (each key visitBy: self),
+                                              value: (each value visitBy: self) }})!
 
     method visitSeq: aSeq
         -- FIXME: Would be nicer to flatten this out.

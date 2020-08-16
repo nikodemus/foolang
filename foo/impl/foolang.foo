@@ -23,7 +23,10 @@ class Tests { system ok }
 
     method run
         self
+            ; test: #testDictionary1
+            ; test: #testDictionary2
             ; test: #testRecord1
+            ; test: #testRecord2
             ; test: #testSelector1
             ; test: #testSelector2
             ; test: #testSelector3
@@ -38,9 +41,6 @@ class Tests { system ok }
             ; test: #testArray2
             ; test: #testArray3
             ; test: #testArray4
-            ; test: #testArray5
-            ; test: #testArray6
-            ; test: #testArray7
             ; test: #testPlus
             ; test: #testPrecedence1
             ; test: #testPrecedence2
@@ -415,28 +415,32 @@ with: {defSource}"!
              expect: [1,2,3]!
 
     method testArray3
-        self eval: "[, 1, 1+1, 3]"
+        self eval: "[1, 1+1, 3,]"
              expect: [1,2,3]!
 
     method testArray4
-        self eval: "[, 1, 1+1, 3,]"
-             expect: [1,2,3]!
-
-    method testArray5
         self eval: "[1]"
              expect: [1]!
 
-    method testArray6
+    method testArray5
         self eval: "[]"
-             expect: []!
-
-    method testArray7
-        self eval: "[,]"
              expect: []!
 
     method testRecord1
         self eval: "\{foo: 42, bar: 123}"
              expect: {foo: 42, bar: 123}!
+
+    method testRecord2
+        self eval: "\{foo: 42, bar: 123,}"
+             expect: {foo: 42, bar: 123}!
+
+    method testDictionary1
+        self eval: "let x = 42. let y = 13. \{ x -> y, y + 1 -> x * 2 }"
+             expect: { 42 -> 13, 14 -> 84 }!
+
+    method testDictionary2
+        self eval: "let x = 42. let y = 13. \{ x -> y, y + 1 -> x * 2, }"
+             expect: { 42 -> 13, 14 -> 84 }!
 
     method testBacktrace
         self load: "class BacktraceTest \{}

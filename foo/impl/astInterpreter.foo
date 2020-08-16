@@ -140,17 +140,28 @@ class AstInterpreter { context process }
         aConstant value!
 
     method visitArray: anArray
-        let new = Array new: (anArray elements size).
-        anArray elements
+        let new = Array new: (anArray entries size).
+        anArray entries
             doWithIndex: { |each index|
                            new put: (each visitBy: self) at: index }.
         new!
 
     method visitRecord: aRecord
-        aRecord selector
+        aRecord name
             sendTo: Record
-            with: (aRecord values
+            with: (aRecord entries
                        collect: { |each| each visitBy: self })!
+
+    method visitDictionary: aDictionary
+        let theDictionary = Dictionary new: (aDictionary entries size).
+        aDictionary entries
+            do: { |each|
+                  -- Note order of evaluation!
+                  let key = each key visitBy: self.
+                  theDictionary
+                      put: (each value visitBy: self)
+                      at: key }.
+        theDictionary!
 
     method visitGlobal: aGlobal
         aGlobal value!

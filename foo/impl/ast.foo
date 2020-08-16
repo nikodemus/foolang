@@ -140,25 +140,40 @@ class AstComment { comment value source }
         visitor visitComment: self!
 end
 
-class AstArray { elements }
+class AstArray { entries }
     is AstNode
 
     method visitBy: visitor
         visitor visitArray: self!
+
+    method parts
+        entries!
 end
 
-class AstRecord { selector values }
+class AstRecord { name entries }
     is AstNode
 
     method visitBy: visitor
         visitor visitRecord: self!
 
     method parts
-        [selector, values]!
+        [name, entries]!
 end
 
-class AstUndefinedMarker {}
+class AstDictionary { entries }
+    is AstNode
+
+    method visitBy: visitor
+        visitor visitDictionary: self!
+
+    method parts
+        entries!
 end
+
+define AstUndefinedMarker
+    -- FIXME: When constant coalescing starts happening, this needs
+    -- protection.
+    ["<AstUndefineMarker>"]!
 
 class AstGlobal { name _value }
     is AstNode

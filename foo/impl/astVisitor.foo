@@ -8,6 +8,9 @@ interface AstVisitor
     required method visitComment: aComment
     required method visitBlock: aBlock
     required method visitSelf: aSelf
+    required method visitArray: a
+    required method visitRecord: a
+    required method visitArray: a
     required method visitSlotRef: aSlotRef
     required method visitSlotSet: aSlotSet
     required method visitBindLexical: aBind

@@ -184,7 +184,7 @@ class SequenceToken { precedence string first last }
     method parseAsSuffixOf: prefix with: parser
         SyntaxSeq
             first: (parser handleSuffixCommentOf: prefix)
-            then: (parser parseAtPrecedence: SeqPrecedence)!
+            then: parser parseSeq!
 end
 
 class AssignmentToken { precedence string first last }
@@ -193,7 +193,7 @@ class AssignmentToken { precedence string first last }
     method parseAsSuffixOf: prefix with: parser
         SyntaxAssign
             variable: prefix::SyntaxVariable
-            value: (parser parseAtPrecedence: SingleExpressionPrecedence)!
+            value: parser parseSingle!
 end
 
 class OpenBraceToken { precedence string first last }
@@ -202,62 +202,104 @@ class OpenBraceToken { precedence string first last }
     method parseAsPrefixWith: parser atPrecedence: _precedence
         -- Record?
         (TokenKeyword includes: parser lookahead)
-            ifTrue: { return self parseAsRecordWith: parser }.
-        -- Block, then
-        let parameters = List new.
-        parser
-            when: "|"
-            then: { parser nextToken.
-                    parser until: "|"
-                           do: { parameters add: (parser parseVariableName) }.
-                    parser nextToken }.
-        let body = parser parseAtPrecedence: SeqPrecedence.
-        parser expect: "}".
-        SyntaxBlock
-            parameters: parameters
-            body: body!
+            ifTrue: { return self _parseAsRecordWith: parser }.
 
-    method parseAsRecordWith: parser
+        -- Block OR Dictionary, cannot tell yet
+        parser when: "|"
+               do: { -- Block with parameters
+                     return self _parseAsBlockWith: parser }.
+
+        -- Could be either { expr... } OR { expr -> expr, ... }
+        let expr = parser parseSeq.
+        parser when: "->"
+               do: { -- Dictionary
+                     return self
+                         _parseAsDictionaryWith: parser
+                         _firstKey: expr }.
+        self
+            _finishBlockWith: parser
+            _parameters: []
+            _body: expr!
+
+    method _parseAsRecordWith: parser
         let entries = List new.
         parser
             until: "}"
             do: { let key = parser nextToken.
                   (TokenKeyword includes: key)
-                      ifFalse: { Error raise: "Expected keyword, got: {key}" }.
-                  entries add: (SyntaxRecordEntry
-                                    key: key string
-                                    value: parser parse).
+                      ifFalse: { Error raise: "Expected keyword in record, got: {key}" }.
+                  entries add: { key: key string,
+                                 value: parser parse }.
                   parser unless: "}"
-                         then: { parser expect: "," } }.
+                         do: { parser expect: "," } }.
         parser expect: "}".
         SyntaxRecord
             entries: entries asArray!
 
+    method _parseAsDictionaryWith: parser _firstKey: keyExpr
+        parser expect: "->".
+        let entries = List with: { key: keyExpr,
+                                   value: parser parseSeq }.
+        parser unless: ","
+               do: { parser expect: "}".
+                     return SyntaxDictionary entries: entries }.
+        parser expect: ",".
+        parser until: "}"
+               do: { entries add: { key: parser parseSeq,
+                                    value: (parser expect: "->".
+                                            parser parseSeq) }.
+                     parser unless: "}"
+                            do: { parser expect: "," } }.
+        parser expect: "}".
+        SyntaxDictionary
+            entries: entries!
+
+    method _finishBlockWith: parser _parameters: parameters _body: body
+        parser expect: "}".
+        SyntaxBlock
+            parameters: parameters
+            body: body!
+
+    method _parseAsBlockWith: parser
+        let parameters = List new.
+        parser
+            when: "|"
+            do: { parser nextToken.
+                  parser until: "|"
+                         do: { parameters add: (parser parseVariableName) }.
+                  parser nextToken }.
+        self
+            _finishBlockWith: parser
+            _parameters: parameters
+            _body: parser parseSeq!
+
+    method toString
+        "#<OpenBraceToken @{first}>"!
 end
 
 class ArrayStartToken { precedence string first last }
     is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        let elements = List new.
+        let entries = List new.
         -- Optional leading comma
         parser when: ","
-               then: { parser nextToken }.
+               do: { parser nextToken }.
         parser until: "]"
-               do: { elements add: parser parse.
+               do: { entries add: parser parse.
                      -- Allow trailing comma
                      parser unless: "]"
-                            then: { parser expect: "," } }.
+                            do: { parser expect: "," } }.
         parser expect: "]".
         SyntaxArray
-            elements: elements!
+            entries: entries!
 end
 
 class OpenParenToken { precedence string first last }
     is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        let body = parser parseAtPrecedence: SeqPrecedence.
+        let body = parser parseSeq.
         parser expect: ")".
         SyntaxParens body: body!
 end
@@ -268,7 +310,7 @@ class IsSuffixToken { precedence string first last }
     method parseAsSuffixOf: prefix with: parser
         SyntaxIs
             left: prefix
-            right: (parser parseAtPrecedence: SingleExpressionPrecedence)!
+            right: parser parseSingle!
 
     method toString
         "#<IsSuffixToken>"!
@@ -290,12 +332,12 @@ class LetToken { precedence string first last }
     method parseAsPrefixWith: parser atPrecedence: _precedence
         let name = parser parseVariableName.
         parser expect: "=".
-        let value = (parser parseAtPrecedence: SingleExpressionPrecedence).
+        let value = parser parseSingle.
         parser expect: ".".
         SyntaxLet
             name: name
             value: (parser handleSuffixCommentOf: value)
-            body: (parser parseAtPrecedence: SeqPrecedence)!
+            body: parser parseSeq!
 end
 
 class SelfToken { precedence string first last }
@@ -323,7 +365,7 @@ class ReturnToken { precedence string first last }
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxReturn
-            value: (parser parseAtPrecedence: SingleExpressionPrecedence)!
+            value: parser parseSingle!
 
     method toString
         "#<ReturnToken>"!
@@ -360,7 +402,7 @@ class DefineToken { precedence string first last }
         let definitionParser = parser syntaxTable: ExpressionSyntaxTable.
         let def = SyntaxDefine
                       name: definitionParser parseVariableName
-                      body: (definitionParser parseAtPrecedence: SeqPrecedence).
+                      body: definitionParser parseSeq.
         parser expect: "!".
         def!
 
@@ -404,7 +446,7 @@ interface MethodToken
         let bodyParser = parser syntaxTable: ExpressionSyntaxTable.
         let signature = self parseMethodSignatureWith: bodyParser.
         -- Debug println: "\n- method {signature selector}, {methodClass}".
-        let body = bodyParser parseAtPrecedence: SeqPrecedence.
+        let body = bodyParser parseSeq.
         parser expect: "!".
         body = bodyParser handleSuffixCommentOf: body.
         methodClass
@@ -474,6 +516,9 @@ class SigilEntry { precedence }
         TokenSigil!
 end
 
+define MinPrecedence
+    0!
+
 define SeqPrecedence
     1!
 
@@ -486,10 +531,7 @@ define KeywordPrecedence
 define UnknownOperatorPrecedence
     10!
 
-define UnaryPrecedence
-    1000!
-
-define PrefixPrecedence
+define MaxPrecedence
     1000!
 
 define CoreSyntaxTable
@@ -501,6 +543,7 @@ define CoreSyntaxTable
          ")" -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
          "]" -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
          "," -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
+         "->" -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
          "--" -> SyntaxEntry tokenClass: CommentToken precedence: 1000
     }!
 
@@ -524,7 +567,7 @@ define ExpressionSyntaxTable
          "[" -> SyntaxEntry tokenClass: ArrayStartToken precedence: 3,
          "(" -> SyntaxEntry tokenClass: OpenParenToken precedence: 3,
          "." -> SyntaxEntry tokenClass: SequenceToken precedence: 2,
-         "!" -> SyntaxEntry tokenClass: BangToken precedence: 1
+         "!" -> SyntaxEntry tokenClass: BangToken precedence: 1,
     }!
 
 define ToplevelSyntaxTable
@@ -585,7 +628,7 @@ class TokenSigil { precedence string first last }
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxPrefix
-            receiver: (parser parseAtPrecedence: PrefixPrecedence)
+            receiver: (parser parseAtPrecedence: MaxPrecedence)
             selector: (Selector name: string)
             source: (parser sourceFrom: first to: last)!
 
@@ -610,7 +653,7 @@ class TokenWord { precedence string first last }
     is LookupToken
 
     direct method defaultPrecedence
-        UnaryPrecedence!
+        MaxPrecedence!
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxVariable
@@ -744,23 +787,41 @@ class Parser { source::String
 
     direct method parseExpressions: source
         (self _new: source syntaxTable: ExpressionSyntaxTable)
-            parseAll: #parse!
+            _parseAll: #parse!
 
     direct method parseDefinitions: source
         (self _new: source syntaxTable: ToplevelSyntaxTable)
-            parseAll: #parsePrefix!
+            _parseAll: #parsePrefix!
 
     direct method parseMixed: source
         (self _new: source syntaxTable: MixedSyntaxTable)
-            parseAll: #parse! -- wwwhhhhaaaaa
+            _parseAll: #parse! -- wwwhhhhaaaaa
 
-    method parseAll: selector
+    method _parseAll: selector
         let syntax = List new.
         { self skipWhitespace.
           self atEof }
         whileFalse: { syntax add: (selector sendTo: self) }.
         -- syntax do: { |s| Debug println: "=> {s}" }.
         syntax!
+
+    method parse
+        self parseAtPrecedence: MinPrecedence!
+
+    method parseSingle
+        self parseAtPrecedence: SingleExpressionPrecedence!
+
+    method parseSeq
+        self parseAtPrecedence: SeqPrecedence!
+
+    method parsePrefix
+        self parseAtPrecedence: MaxPrecedence!
+
+    method parseVariableName
+        let token = self nextToken.
+        (TokenWord includes: token)
+            ifFalse: { Error raise: "Invalid variable name in self-hosted parser: {token string}" }.
+        token string!
 
     method handleSuffixCommentOf: prefix
         -- #sees: means without intervening newline!
@@ -782,18 +843,6 @@ class Parser { source::String
     method sourceFrom: first to: last
         SourceString string: source first: first last: last!
 
-    method parse
-        self parseAtPrecedence: 0!
-
-    method parsePrefix
-        self parseAtPrecedence: 1000!
-
-    method parseVariableName
-        let token = self nextToken.
-        (TokenWord includes: token)
-            ifFalse: { Error raise: "Invalid variable name in self-hosted parser: {token string}" }.
-        token string!
-
     method expect: expected
         let got = self nextToken string.
         got == expected
@@ -807,11 +856,11 @@ Source: {source}" }!
         let last = (self position + test size - 1) min: source size.
         test == (source from: self position to: last)!
 
-    method when: test then: action
+    method when: test do: action
         self lookahead string == test
             ifTrue: { action value }!
 
-    method unless: test then: action
+    method unless: test do: action
         self lookahead string == test
             ifFalse: { action value }!
 
