@@ -57,6 +57,16 @@ extend Closure
 
     method on: condition do: block
         condition withHandler: block do: self!
+
+    method catch: condition
+        Catch block: self condition: condition!
+end
+
+class Catch { block condition }
+    method value
+        block
+            on: condition
+            do: { |ex| return ex }!
 end
 
 -- For testing Closure#with:

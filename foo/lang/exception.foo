@@ -101,12 +101,25 @@ class DoesNotUnderstand { receiver selector arguments source context }
             ifFalse: { "{note}\n{source note: note}" }!
 end
 
-class TypeError { value expected }
+class TypeError { value expected source }
     is Error
+
     direct method raise: value expected: type
-        (self value: value expected: type) raise!
+        self
+            raise: value
+            expected: type
+            source: False!
+
+    direct method raise: value expected: type source: source
+        (self
+             value: value
+             expected: type
+             source: source)
+        raise!
+
     method description
         "Type error: {expected} expected, got: {value}"!
+
     method displayOn: stream
         stream print: "#<TypeError {expected}, got: {value}>"!
 end

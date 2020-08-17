@@ -71,7 +71,10 @@ interface Object
             with: arguments
             on: self!
 
+    -- Erg. This gets us a nice error, but loses the source locations I
+    -- worked to get right. BLarggkashdaskjhfklajfshd.
     direct method typecheck: value
+        -- Output debug println: "{Self} typecheck: {value}".
         (Self includes: value)
             ifTrue: { value }
             ifFalse: { TypeError raise: value expected: Self }!
@@ -83,4 +86,124 @@ end
 
 extend Interface
     is Object
+end
+
+class TestObject { assert }
+    direct method runTests: assert
+        (self assert: assert)
+            ; testTypecheck1
+            ; testTypecheck2
+            ; testTypecheck3
+            ; testTypecheck4
+            ; testTypecheck5
+            ; testTypecheck6
+            ; testTypecheck7
+            ; testTypecheck8
+            ; testTypecheck9
+            ; testTypecheck10
+            ; testTypecheck11
+            ; testTypecheck12
+                !
+
+    method eval: string
+        let compiler = Compiler new.
+        compiler parse: string onEof: { |err| Error raise: "Unexpected eof!" }.
+        compiler evaluate!
+
+    method testTypecheck1
+        assert that: { self eval: "123::Integer" }
+               is: 123
+               testing: "passing typecheck syntax".
+        assert that: { Integer typecheck: 123 }
+               is: 123
+               testing: "passing typecheck method"!
+
+    method testTypecheck2
+        assert that: { self eval: "123::String" }
+               raises: TypeError
+               where: { |ex| ex value is 123 and: ex expected is String }
+               testing: "failing typecheck syntax".
+        assert that: { self eval: "String typecheck: 123" }
+               raises: TypeError
+               where: { |ex| ex value is 123 and: ex expected is String }
+               testing: "failing typecheck method"!
+
+    method testTypecheck3
+        assert that: { self eval: "let x::Integer = 42.0. x" }
+               raises: TypeError
+               where: { |ex| ex value is 42.0 and: ex expected is Integer }
+               testing: "let binding init typecheck"!
+
+    method testTypecheck4
+        assert that: { self eval: "let x::Integer = 42. x = 1.0. x" }
+               raises: TypeError
+               where: { |ex| ex value is 1.0 and: ex expected is Integer }
+               testing: "let binding assign typecheck"!
+
+    method testTypecheck5
+        assert that: { self eval: "\{|x::Integer| x} value: 41" }
+               is: 41
+               testing: "block arg type decl ok"!
+
+    method testTypecheck6
+        assert that: { self eval: "\{|x::Integer| x} value: 41.0" }
+               raises: TypeError
+               where: { |ex| ex value is 41.0 and: ex expected is Integer }
+               testing: "block arg type decl fail"!
+
+    method testTypecheck7
+        assert that: { self eval: "\{|x::Integer y| x = y} value: 41 value: 1.0" }
+               raises: TypeError
+               where: { |ex| ex value is 1.0 and: ex expected is Integer }
+               testing: "block arg type decl assignment fail"!
+
+    method testTypecheck8
+        assert that: { self eval: "class Foo \{}
+                                      defaultConstructor foo
+                                      method zot: x::Integer
+                                          x!
+                                      method boom
+                                          self zot: 1.0!
+                                  end
+                                  Foo foo boom" }
+            raises: TypeError
+            where: { |ex| ex value is 1.0 and: ex expected is Integer }
+            testing: "method argument typecheck"!
+
+    method testTypecheck9
+        assert that: { self eval: "class Foo \{}
+                                       defaultConstructor foo
+                                       method zot: x -> Integer
+                                           x + 1!
+                                   end
+                                   Foo foo zot: 1.0" }
+            raises: TypeError
+            where: { |ex| ex value is 2.0 and: ex expected is Integer }
+            testing: "method return typecheck"!
+
+    method testTypecheck10
+        assert that: { self eval: "\{|x| -> Integer x + 1} value: 1.0" }
+               raises: TypeError
+               where: { |ex| ex value is 2.0 and: ex expected is Integer }
+               testing: "block return typecheck"!
+
+    method testTypecheck11
+        assert that: { self eval: "class Foo \{}
+                                       method zot: x::Integer
+                                           x!
+                                   end
+                                   Foo new zot: 42" }
+            is: 42
+            testing: "method argument typecheck passes"!
+
+    method testTypecheck12
+        assert that: { self eval: "class Foo \{ bar::Integer }
+                                       method foo: x
+                                           bar = bar + x.
+                                           self!
+                                   end
+                                   ((Foo bar: 41) foo: 1.0) bar" }
+            raises: TypeError
+            where: { |ex| ex value is 42.0 and: ex expected is Integer }
+            testing: "slot typecheck"!
 end
