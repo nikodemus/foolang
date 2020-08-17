@@ -24,7 +24,7 @@ class SourceString { string first last }
         let leadingContext = 2.
         let trailingContext = 2.
         let totalContext = leadingContext + trailingContext.
-        let context = List newOf: Record.
+        let context = List new.
         let lineNumber = 0.
         let inMatch = False.
         self
