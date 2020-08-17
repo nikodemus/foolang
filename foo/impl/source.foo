@@ -3,6 +3,7 @@ interface Source
 end
 
 class SourceString { string first last }
+    is Source
 
     method location
         first to: last!
