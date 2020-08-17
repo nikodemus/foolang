@@ -113,7 +113,7 @@ interface Iterable
                    block value: elt }!
 
     method elementType
-        Object!
+        Any!
 
     method equals: other
         (self is other)

@@ -133,7 +133,7 @@ fn array_element_type(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     if let Some(etype) = &receiver.as_array("Array#elementType")?.etype {
         Ok(etype.clone())
     } else {
-        env.find_global_or_unwind("Object")
+        env.find_global_or_unwind("Any")
     }
 }
 
