@@ -55,6 +55,16 @@ class SyntaxBinaryLiteral { value }
         [value]!
 end
 
+class SyntaxValueTypeDeclaration { value type }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitValueTypeDeclaration: self!
+
+    method parts
+        [value, type]!
+end
+
 interface SyntaxCollection
     is Syntax
 

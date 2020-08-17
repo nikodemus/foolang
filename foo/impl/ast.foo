@@ -150,6 +150,16 @@ class AstArray { entries }
         entries!
 end
 
+class AstTypecheck { value type }
+    is AstNode
+
+    method visitBy: visitor
+        visitor visitTypecheck: self!
+
+    method parts
+        [value, type]!
+end
+
 class AstRecord { name entries }
     is AstNode
 
