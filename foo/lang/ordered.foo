@@ -89,7 +89,7 @@ interface Ordered
         self!
 
     method with: other collect: block
-        self with: other collect: block of: Object!
+        self with: other collect: block of: Any!
 
     method with: other collect: block of: type
         self with: other collect: block as: (Self of: type)!
