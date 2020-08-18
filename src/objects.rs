@@ -172,7 +172,7 @@ impl Method {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Slot {
     pub name: String,
     pub index: usize,

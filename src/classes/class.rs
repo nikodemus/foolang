@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use crate::eval::Env;
-use crate::objects::{generic_ctor, Datum, Eval, Method, Object, Vtable};
+use crate::objects::{generic_ctor, Datum, Eval, Method, Object, Slot, Vtable};
 use crate::unwind::Unwind;
 
 pub struct Class {
@@ -64,6 +64,10 @@ impl Class {
             self.instance_vtable.add_method(name, Method::reader(index))?;
         }
         Ok(())
+    }
+
+    pub fn find_slot(&self, name: &str) -> Option<Slot> {
+        self.instance_vtable.slots().iter().find(|s| &s.name == name).cloned()
     }
 }
 
