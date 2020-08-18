@@ -4,6 +4,9 @@ import .utils.Debug
 interface Ast
     is Object
 
+    method isConstant
+        False!
+
     method debug
         Debug println: "#<AST {self}>"!
 end
@@ -206,7 +209,11 @@ class AstGlobal { name _value }
             ifTrue: { return UndefinedPolicy resolve: self name }.
         _value!
 
+    method isConstant
+        True!
+
     method value: newValue
+        (_value is AstUndefinedMarker) assert.
         _value = newValue!
 
     method visitBy: visitor
@@ -218,6 +225,9 @@ class AstConstantRef { value }
 
     method visitBy: visitor
         visitor visitConstant: self!
+
+    method isConstant
+        True!
 end
 
 class AstIs { left right }

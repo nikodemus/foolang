@@ -266,7 +266,7 @@ class OpenBraceToken { precedence string first last }
             when: "|"
             do: { parser nextToken.
                   parser until: "|"
-                         do: { parameters add: (parser parseVariableName) }.
+                         do: { parameters add: (parser parseName) }.
                   parser nextToken }.
         self
             _finishBlockWith: parser
@@ -330,14 +330,18 @@ class LetToken { precedence string first last }
     ---
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        let name = parser parseVariableName.
+        -- Debug println: "LetToken#parseAsPrefix:atPrecedence".
+        let variable = parser parseVariable.
         parser expect: "=".
         let value = parser parseSingle.
         parser expect: ".".
         SyntaxLet
-            name: name
+            variable: variable
             value: (parser handleSuffixCommentOf: value)
             body: parser parseSeq!
+
+    method toString
+        "#<LetToken>"!
 end
 
 class TypeDeclarationToken { precedence string first last }
@@ -389,11 +393,11 @@ class ClassToken { precedence string first last }
     is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        let name = parser parseVariableName.
+        let name = parser parseName.
         let slots = List new.
         parser expect: "\{".
         parser until: "}"
-               do: { slots add: parser parseVariableName }.
+               do: { slots add: parser parseName }.
         parser expect: "}".
         let theClass = SyntaxClass name: name slots: slots.
         let classParser = parser syntaxTable: ClassSyntaxTable.
@@ -413,7 +417,7 @@ class DefineToken { precedence string first last }
     method parseAsPrefixWith: parser atPrecedence: _precedence
         let definitionParser = parser syntaxTable: ExpressionSyntaxTable.
         let def = SyntaxDefine
-                      name: definitionParser parseVariableName
+                      name: definitionParser parseName
                       body: definitionParser parseSeq.
         parser expect: "!".
         def!
@@ -426,7 +430,7 @@ class InterfaceToken { precedence string first last }
     is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        let theInterface = SyntaxInterface name: parser parseVariableName.
+        let theInterface = SyntaxInterface name: parser parseName.
         let interfaceParser = parser syntaxTable: InterfaceSyntaxTable.
         interfaceParser
             until: "end"
@@ -445,7 +449,7 @@ class IsPrefixToken { precedence string first last }
     is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        SyntaxInterfaceRef name: parser parseVariableName!
+        SyntaxInterfaceRef name: parser parseName!
 
     method toString
         "#<IsPrefixToken>"!
@@ -573,12 +577,12 @@ define ExpressionSyntaxTable
          "+" -> SigilEntry precedence: 80,
          "-" -> SigilEntry precedence: 80,
          "is" -> SyntaxEntry tokenClass: IsSuffixToken precedence: 10,
-         "=" -> SyntaxEntry tokenClass: AssignmentToken precedence: 4,
          "let" -> SyntaxEntry tokenClass: LetToken precedence: 3,
          -- Why precedence 3 for these?
          "\{" -> SyntaxEntry tokenClass: OpenBraceToken precedence: 3,
          "[" -> SyntaxEntry tokenClass: ArrayStartToken precedence: 3,
          "(" -> SyntaxEntry tokenClass: OpenParenToken precedence: 3,
+         "=" -> SyntaxEntry tokenClass: AssignmentToken precedence: 2,
          "." -> SyntaxEntry tokenClass: SequenceToken precedence: 2,
          "!" -> SyntaxEntry tokenClass: BangToken precedence: 1,
     }!
@@ -654,7 +658,7 @@ class TokenSigil { precedence string first last }
 
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
         selector print: string.
-        parameters add: parser parseVariableName!
+        parameters add: parser parseName!
 
     method parseAsLiteralWith: parser
         SyntaxLiteral
@@ -723,7 +727,7 @@ class TokenKeyword { string first last }
 
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
         selector print: string.
-        parameters add: parser parseVariableName.
+        parameters add: parser parseName.
         (TokenKeyword includes: parser lookahead)
             ifTrue: { parser nextToken
                           parseAsMethodSignatureWith: parser
@@ -830,7 +834,17 @@ class Parser { source::String
     method parsePrefix
         self parseAtPrecedence: MaxPrecedence!
 
-    method parseVariableName
+    method parseVariable
+        let name = self parseName.
+        self when: "::"
+             do: { self nextToken.
+                   return SyntaxTypedVariable
+                       name: name
+                       type: self parseSingle }.
+        SyntaxUntypedVariable
+            name: name!
+
+    method parseName
         let token = self nextToken.
         (TokenWord includes: token)
             ifFalse: { Error raise: "Invalid variable name in self-hosted parser: {token string}" }.

@@ -18,11 +18,11 @@ define BuiltinGlobals
     globals put: (AstGlobal name: "String" value: String) at: "String".
     globals!
 
-class Variable { name index }
+class Variable { name type index }
     is Object
 
-    direct method name: name frame: frame
-        let var = self name: name index: frame size + 1.
+    direct method name: name type: type frame: frame
+        let var = self name: name type: type index: frame size + 1.
         frame add: var.
         var!
 
@@ -74,8 +74,11 @@ class Environment { parent    -- Enclosing environment or False
             depth: depth + 1
             globals: globals!
 
-    method addVariable: name
-        let var = Variable name: name frame: frame.
+    method addVariable: name type: type
+        let var = Variable
+                      name: name
+                      type: type
+                      frame: frame.
         Environment
             parent: self
             bindings: [var]
@@ -83,8 +86,11 @@ class Environment { parent    -- Enclosing environment or False
             depth: depth
             globals: globals!
 
+    method addVariable: name
+        self addVariable: name type: Any!
+
     method addVariables: names
-        let vars = names collect: { |name| Variable name: name frame: frame }.
+        let vars = names collect: { |name| Variable name: name type: Any frame: frame }.
         Environment
             parent: self
             bindings: vars
