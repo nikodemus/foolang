@@ -23,6 +23,8 @@ class Tests { system ok }
 
     method run
         self
+            ; test: #testTypeDecl1
+            ; test: #testTypeDecl2
             ; test: #testDictionary1
             ; test: #testDictionary2
             ; test: #testRecord1
@@ -133,6 +135,19 @@ pretty:\n{pretty}" }!
         (result == expected)
             ifFalse: { Error raise: "Expected {expected}, got: {result}
 from: '{exprSource}'" }!
+
+    method eval: exprSource expectError: errorType where: test
+        self checkParsingBy: { |source| Parser parseExpressions: source }
+             for: exprSource.
+        let result = False.
+        { result = Environment new eval: exprSource }
+            on: errorType
+            do: { |e|
+                  (test value: e)
+                      ifTrue: { return True }
+                      ifFalse: { Error raise: "Expected error did not pass test." }}.
+        Error raise: "Expected error, got: {result}"!
+
 
     method load: defSource eval: exprSource
         -- Debug println: "/parseDef".
@@ -567,6 +582,16 @@ with: {defSource}"!
         (system files path: "host/generated_main.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f writeString: c main }!
+
+    method testTypeDecl1
+        self eval: "42::Integer"
+             expect: 42!
+
+    method testTypeDecl2
+        self eval: "42::String"
+             expectError: TypeError
+             where: { |e|
+                      e value is 42 and: e expected is String }!
 
     method testTranspile
         self transpile: "let x = 20.

@@ -20,6 +20,11 @@ class SyntaxTranslator { env }
     method visitBinaryLiteral: aLiteral
         self visitLiteral: aLiteral!
 
+    method visitValueTypeDeclaration: aNode
+        AstTypecheck
+            value: (aNode value visitBy: self)
+            type: (aNode type visitBy: self)!
+
     method visitArray: anArray
         AstArray entries: (anArray entries
                                collect: { |each| each visitBy: self })!

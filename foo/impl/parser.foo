@@ -340,6 +340,18 @@ class LetToken { precedence string first last }
             body: parser parseSeq!
 end
 
+class TypeDeclarationToken { precedence string first last }
+    is Token
+
+    method parseAsSuffixOf: prefix with: parser
+        SyntaxValueTypeDeclaration
+            value: prefix
+            type: (parser parseSingle)!
+
+    method toString
+        "#<TypeDeclarationToken>"!
+end
+
 class SelfToken { precedence string first last }
     is Token
 
@@ -555,6 +567,7 @@ define ExpressionSyntaxTable
          "return" -> SyntaxEntry tokenClass: ReturnToken precedence: 1000,
          "self" -> SyntaxEntry tokenClass: SelfToken precedence: 1000,
          "#" -> SyntaxEntry tokenClass: LiteralToken precedence: 1000,
+         "::" -> SyntaxEntry tokenClass: TypeDeclarationToken precedence: 1000,
          "*" -> SigilEntry precedence: 90,
          "/" -> SigilEntry precedence: 90,
          "+" -> SigilEntry precedence: 80,

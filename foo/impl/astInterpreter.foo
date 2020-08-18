@@ -136,6 +136,11 @@ class AstInterpreter { context process }
         { AstInterpreter eval: astMethod body with: context }
             finally: { context invalidate } !
 
+    method visitTypecheck: aNode
+        let value = aNode value visitBy: self.
+        let type = aNode type visitBy: self.
+        type typecheck: value!
+
     method visitConstant: aConstant
         aConstant value!
 

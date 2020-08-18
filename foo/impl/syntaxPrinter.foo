@@ -69,6 +69,11 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         Integer printBase: 2
                 do: { self print: aLiteral value toString }!
 
+    method visitValueTypeDeclaration: aNode
+        aNode value visitBy: self.
+        self print: "::".
+        aNode type visitBy: self!
+
     method visitArray: anArray
         self print: "[".
         anArray entries

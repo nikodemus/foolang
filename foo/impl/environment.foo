@@ -14,6 +14,8 @@ define BuiltinGlobals
     globals put: (AstGlobal name: "True" value: True) at: "True".
     globals put: (AstGlobal name: "False" value: False) at: "False".
     globals put: (AstGlobal name: "Object" value: Object) at: "Object".
+    globals put: (AstGlobal name: "Integer" value: Integer) at: "Integer".
+    globals put: (AstGlobal name: "String" value: String) at: "String".
     globals!
 
 class Variable { name index }

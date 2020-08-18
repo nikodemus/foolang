@@ -119,6 +119,22 @@ class Assert { output failed }
             using: { |actual expected| actual is expected }
             testing: thing!
 
+    method _test: test _catching: ex
+        { test
+            on: ex
+            do: { |e|
+                  Output debug println: "caught {ex} = {e}".
+                  return e } }!
+
+    method that: condition raises: ex where: test testing: thing
+        self
+            that: (condition catch: ex)
+            matches: False
+            using: { |actual _|
+                     (ex includes: actual)
+                         ifTrue: { test value: actual } }
+            testing: thing!
+
     method that: condition equals: value testing: thing
         self
             that: condition
