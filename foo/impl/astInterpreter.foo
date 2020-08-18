@@ -217,7 +217,7 @@ class AstInterpreter { context process }
 
     method visitSlotSet: aSlotSet
         context receiver
-            __put: (aSlotSet value visitBy: self)
+            __put: (aSlotSet slot type typecheck: (aSlotSet value visitBy: self))
             __atSlot: aSlotSet slot index - 1!
 
     method visitBindLexical: aBind

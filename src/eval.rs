@@ -741,7 +741,7 @@ impl Env {
             Some(res) => res.source_expr(&assign.value),
             None => {
                 if let Some(receiver) = self.receiver() {
-                    if let Some(slot) = receiver.slots().get(&assign.name) {
+                    if let Some(slot) = receiver.slots().iter().find(|s| &s.name == &assign.name) {
                         return write_instance_variable(&receiver, slot, value, self)
                             .source_expr(&assign.value);
                     }
@@ -768,7 +768,7 @@ impl Env {
                 Some(value) => return Ok(value),
                 None => {
                     if let Some(receiver) = self.receiver() {
-                        if let Some(slot) = receiver.slots().get(&var.name) {
+                        if let Some(slot) = receiver.slots().iter().find(|s| &s.name == &var.name) {
                             return read_instance_variable(&receiver, slot.index);
                         }
                     }

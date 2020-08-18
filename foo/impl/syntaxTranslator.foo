@@ -1,5 +1,6 @@
 import .ast.*
 import .syntaxVisitor.SyntaxVisitor
+import .syntax.Syntax
 
 class SyntaxTranslator { env }
     is SyntaxVisitor
@@ -156,11 +157,18 @@ class SyntaxTranslator { env }
             frameSize: bodyEnv frame size!
 
     method visitClass: aClass
-        let instanceMethodVisitor = SyntaxTranslator env: (env addSlots: aClass slots).
-         -- FIXME: should fetch interface object instead of using the name
+        let slots = aClass slots collect: { |slot::Syntax|
+                                            let type = slot type visitBy: self.
+                                            type isConstant
+                                                ifFalse: { Error raise: "non-constant type declaration in let" }.
+                                            { name: slot name,
+                                              type: type value } }.
+        let instanceMethodVisitor = SyntaxTranslator
+                                        env: (env addSlots: slots).
+        -- FIXME: should fetch interface object instead of using the name
         AstClass
             name: aClass name
-            slots: aClass slots
+            slots: slots
             interfaces: (aClass interfaces
                              collect: { |i| i visitBy: self })
             directMethods: (aClass directMethods

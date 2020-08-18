@@ -103,9 +103,10 @@ class AstClass { name slots interfaces directMethods instanceMethods isDefined }
         isDefined = True!
 
     method eval
+        -- Debug println: "slots: {(slots collect: #type) asArray displayString}".
         Class
             new: name
-            slots: (Array from: slots)
+            slots: slots asArray
             interfaces: (Array from: (interfaces collect: #value))
             directMethods: (Array from: directMethods)
             instanceMethods: (Array from: instanceMethods)!
