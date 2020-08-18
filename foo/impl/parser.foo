@@ -397,7 +397,7 @@ class ClassToken { precedence string first last }
         let slots = List new.
         parser expect: "\{".
         parser until: "}"
-               do: { slots add: parser parseName }.
+               do: { slots add: parser parseVariable }.
         parser expect: "}".
         let theClass = SyntaxClass name: name slots: slots.
         let classParser = parser syntaxTable: ClassSyntaxTable.

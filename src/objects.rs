@@ -172,8 +172,9 @@ impl Method {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Slot {
+    pub name: String,
     pub index: usize,
     pub typed: Option<Object>,
 }
@@ -181,7 +182,7 @@ pub struct Slot {
 pub struct Vtable {
     pub name: String,
     pub methods: RefCell<HashMap<String, Method>>,
-    pub slots: RefCell<HashMap<String, Slot>>,
+    pub slots: RefCell<Vec<Slot>>,
     pub interfaces: RefCell<HashSet<Rc<Vtable>>>,
     pub implementations: RefCell<HashSet<Rc<Vtable>>>,
 }
@@ -202,7 +203,7 @@ impl Vtable {
         Vtable {
             name: class.to_string(),
             methods: RefCell::new(HashMap::new()),
-            slots: RefCell::new(HashMap::new()),
+            slots: RefCell::new(Vec::new()),
             interfaces: RefCell::new(HashSet::new()),
             implementations: RefCell::new(HashSet::new()),
         }
@@ -233,16 +234,15 @@ impl Vtable {
     }
 
     pub fn add_slot(&self, name: &str, index: usize, typed: Option<Object>) {
-        self.slots.borrow_mut().insert(
-            name.to_string(),
-            Slot {
-                index,
-                typed,
-            },
-        );
+        self.slots.borrow_mut().push(Slot {
+            name: name.to_string(),
+            index,
+            typed,
+        });
+        self.slots.borrow_mut().sort_by(|a, b| a.index.cmp(&b.index));
     }
 
-    pub fn slots(&self) -> Ref<HashMap<String, Slot>> {
+    pub fn slots(&self) -> Ref<Vec<Slot>> {
         self.slots.borrow()
     }
 
@@ -966,11 +966,7 @@ impl Object {
         Ok(self.clone())
     }
 
-    pub fn slots(&self) -> Ref<HashMap<String, Slot>> {
-        self.vtable.slots()
-    }
-
-    pub fn methods(&self) -> Ref<HashMap<String, Slot>> {
+    pub fn slots(&self) -> Ref<Vec<Slot>> {
         self.vtable.slots()
     }
 
@@ -1460,12 +1456,23 @@ impl fmt::Debug for Object {
     }
 }
 
-pub fn generic_ctor(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
+pub fn generic_ctor(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let class = receiver.as_class_ref()?;
+    let mut instance_variables = Vec::with_capacity(args.len());
+    for (slot, arg) in class.instance_vtable.slots.borrow().iter().zip(args) {
+        let mut val = arg.clone();
+        if let Some(slot_type) = &slot.typed {
+            // println!("{}.{} :: {} = {}",
+            //          &class.instance_vtable.name,
+            //          &slot.name, &slot_type, &val);
+            val = slot_type.send("typecheck:", &[val], env)?
+        }
+        instance_variables.push(val);
+    }
     Ok(Object {
         vtable: Rc::clone(&class.instance_vtable),
         datum: Datum::Instance(Rc::new(Instance {
-            instance_variables: RefCell::new(args.iter().map(|x| (*x).to_owned()).collect()),
+            instance_variables: RefCell::new(instance_variables),
         })),
     })
 }

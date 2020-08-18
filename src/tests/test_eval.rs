@@ -272,15 +272,17 @@ fn test_class1() {
     let class = obj.as_class_ref().unwrap();
     assert_eq!(class.instance_vtable.name, "Point");
     assert_eq!(
-        class.instance_vtable.slots()["x"],
+        class.find_slot("x").unwrap(),
         Slot {
+            name: String::from("x"),
             index: 0,
             typed: None,
         }
     );
     assert_eq!(
-        class.instance_vtable.slots()["y"],
+        class.find_slot("y").unwrap(),
         Slot {
+            name: String::from("y"),
             index: 1,
             typed: None,
         }

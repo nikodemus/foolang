@@ -95,7 +95,7 @@ class DoesNotUnderstand { receiver selector arguments source context }
              context: context)
         raise!
     method description
-        let note = "{receiver} does not understand: {selector}".
+        let note = "{receiver displayString} does not understand: {selector}".
         source is False
             ifTrue: { note }
             ifFalse: { "{note}\n{source note: note}" }!
@@ -118,7 +118,7 @@ class TypeError { value expected source }
         raise!
 
     method description
-        "Type error: {expected} expected, got: {value}"!
+        "Type error: {expected} expected, got: {value displayString}"!
 
     method displayOn: stream
         stream print: "#<TypeError {expected}, got: {value}>"!

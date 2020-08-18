@@ -28,6 +28,9 @@ class Tests { system ok }
             ; test: #testTypeDecl3
             ; test: #testTypeDecl4
             ; test: #testTypeDecl5
+            ; test: #testTypeDecl6
+            ; test: #testTypeDecl7
+            ; test: #testTypeDecl8
             ; test: #testDictionary1
             ; test: #testDictionary2
             ; test: #testRecord1
@@ -611,6 +614,33 @@ with: {defSource}"!
              expectError: TypeError
              where: { |e|
                       e value is 123 and: e expected is String }!
+
+    method testTypeDecl6
+        self load: "class Foo \{ baz::Integer }
+                       method quux
+                          baz!
+                   end"
+            eval: "(Foo baz: 42) quux"
+            expect: 42!
+
+    method testTypeDecl7
+        self load: "class Foo \{ bar::String }
+                    end"
+            eval: "Foo bar: 42"
+            expectError: TypeError
+            where: { |e|
+                     e value is 42 and: e expected is String }!
+
+    method testTypeDecl8
+        self load: "class Foo \{ bar::String }
+                        method boop: x
+                            bar = x!
+                    end"
+
+            eval: "(Foo bar: \"beep\") boop: 42"
+            expectError: TypeError
+            where: { |e|
+                     e value is 42 and: e expected is String }!
 
     method testTranspile
         self transpile: "let x = 20.

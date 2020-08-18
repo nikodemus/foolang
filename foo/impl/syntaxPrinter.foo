@@ -240,7 +240,7 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
             ifNotEmpty: { self print: " ".
                           aClass slots
                               do: { |slot|
-                                    self print: slot.
+                                    slot visitBy: self.
                                     self print: " " }}.
         self print: "}".
         self _visitMethods: aClass.

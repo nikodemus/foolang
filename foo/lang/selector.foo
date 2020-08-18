@@ -42,7 +42,8 @@ class Selector { name }
         name sendTo: receiver with: []!
 
     method sendTo: receiver with: arguments
-        name sendTo: receiver with: (Array from: arguments)!
+        -- Output debug println: "{receiver} <= {name} {arguments}".
+        name sendTo: receiver with: arguments asArray!
 
     method value: value
         self sendTo: value!

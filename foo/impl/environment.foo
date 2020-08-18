@@ -30,14 +30,14 @@ class Variable { name type index }
         AstLexicalRef variable: self frameOffset: offset!
 end
 
-class Slot { name index }
+class Slot { name index type }
     is Object
 
-    direct method forEachName: names
+    direct method forEachVar: vars
         let n = 0.
-        names collect: { |name|
-                         n = n + 1.
-                         Slot name: name index: n }!
+        vars collect: { |var|
+                        n = n + 1.
+                        Slot name: var name index: n type: var type }!
 
     method referenceUpwards: offset
         AstSlotRef slot: self!
@@ -98,8 +98,8 @@ class Environment { parent    -- Enclosing environment or False
             depth: depth
             globals: globals!
 
-    method addSlots: names
-        let slots = Slot forEachName: names.
+    method addSlots: slotVariables
+        let slots = Slot forEachVar: slotVariables.
         Environment
             parent: self
             bindings: slots

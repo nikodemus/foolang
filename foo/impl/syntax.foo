@@ -20,6 +20,11 @@ interface Syntax
         let out = StringOutput new.
         SyntaxPrinter print: self to: out.
         out content!
+
+    method displayOn: stream
+        stream print: "#<Syntax ".
+        self printOn: stream.
+        stream print: ">"!
 end
 
 class SyntaxLiteral { value }
@@ -248,7 +253,7 @@ class SyntaxVariable { name::String }
         [name]!
 end
 
-class SyntaxAssign { variable::String value }
+class SyntaxAssign { variable value }
     is Syntax
 
     method visitBy: visitor

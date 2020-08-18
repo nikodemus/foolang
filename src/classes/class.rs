@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use crate::eval::Env;
-use crate::objects::{generic_ctor, Datum, Eval, Method, Object, Vtable};
+use crate::objects::{generic_ctor, Datum, Eval, Method, Object, Slot, Vtable};
 use crate::unwind::Unwind;
 
 pub struct Class {
@@ -65,6 +65,10 @@ impl Class {
         }
         Ok(())
     }
+
+    pub fn find_slot(&self, name: &str) -> Option<Slot> {
+        self.instance_vtable.slots().iter().find(|s| &s.name == name).cloned()
+    }
 }
 
 pub fn class_vtable() -> Vtable {
@@ -95,10 +99,11 @@ fn class_new_(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
         .iter()
         .enumerate()
     {
-        let name = slot.as_str()?;
-        selector.push_str(name);
+        let name = slot.send("name", &[], env)?;
+        let type_obj = slot.send("type", &[], env)?;
+        selector.push_str(name.as_str()?);
         selector.push_str(":");
-        class.add_slot(name, i, None)?;
+        class.add_slot(name.as_str()?, i, Some(type_obj))?;
     }
     if selector.is_empty() {
         selector.push_str("new");
