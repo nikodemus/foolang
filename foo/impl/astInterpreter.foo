@@ -221,8 +221,10 @@ class AstInterpreter { context process }
             __atSlot: aSlotSet slot index - 1!
 
     method visitBindLexical: aBind
+        let type = aBind variable type.
+        let value = aBind value visitBy: self.
         context
-            put: (aBind value visitBy: self)
+            put: (type typecheck: value)
             at: aBind variable index
             inFrame: 0.
         aBind body visitBy: self!
@@ -235,8 +237,10 @@ class AstInterpreter { context process }
 
     method visitLexicalSet: aSet
         -- Debug println: "set: {aSet variable}".
+        let type = aSet variable type.
+        let value = aSet value visitBy: self.
         context
-            put: (aSet value visitBy: self)
+            put: (type typecheck: value)
             at: aSet variable index
             inFrame: aSet frameOffset!
 end

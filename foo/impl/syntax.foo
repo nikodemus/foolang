@@ -180,7 +180,8 @@ class SyntaxKeyword { receiver selector arguments source }
         visitor visitKeywordMessage: self!
 
     method parts
-        -- Source left out intentionally, since it doesn't need to compere equal.
+        -- Source left out intentionally, since it doesn't need to compere equal,
+        -- and might not do so after pretty-printing.
         [receiver, selector, arguments]!
 end
 
@@ -194,14 +195,37 @@ class SyntaxIs { left right }
         [left, right]!
 end
 
-class SyntaxLet { name value body }
+class SyntaxUntypedVariable { name }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitUntypedVariable: self!
+
+    method type
+        SyntaxLiteral value: Any!
+
+    method parts
+        [name]!
+end
+
+class SyntaxTypedVariable { name type }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitTypedVariable: self!
+
+    method parts
+        [name]!
+end
+
+class SyntaxLet { variable value body }
     is Syntax
 
     method visitBy: visitor
         visitor visitLet: self!
 
     method parts
-        [value, name, body]!
+        [variable, value, body]!
 end
 
 class SyntaxSelf {}

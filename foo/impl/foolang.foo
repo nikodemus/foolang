@@ -25,6 +25,9 @@ class Tests { system ok }
         self
             ; test: #testTypeDecl1
             ; test: #testTypeDecl2
+            ; test: #testTypeDecl3
+            ; test: #testTypeDecl4
+            ; test: #testTypeDecl5
             ; test: #testDictionary1
             ; test: #testDictionary2
             ; test: #testRecord1
@@ -145,7 +148,7 @@ from: '{exprSource}'" }!
             do: { |e|
                   (test value: e)
                       ifTrue: { return True }
-                      ifFalse: { Error raise: "Expected error did not pass test." }}.
+                      ifFalse: { Error raise: "Expected error did not pass test, got: {e}" }}.
         Error raise: "Expected error, got: {result}"!
 
 
@@ -592,6 +595,22 @@ with: {defSource}"!
              expectError: TypeError
              where: { |e|
                       e value is 42 and: e expected is String }!
+
+    method testTypeDecl3
+        self eval: "let x::Integer = 12. 12 + 30"
+             expect: 42!
+
+    method testTypeDecl4
+        self eval: "let x::String = 12. 12 + 30"
+             expectError: TypeError
+             where: { |e|
+                      e value is 12 and: e expected is String }!
+
+    method testTypeDecl5
+        self eval: "let x::String = \"foo\". x = 123"
+             expectError: TypeError
+             where: { |e|
+                      e value is 123 and: e expected is String }!
 
     method testTranspile
         self transpile: "let x = 20.

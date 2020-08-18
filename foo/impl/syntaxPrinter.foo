@@ -160,13 +160,21 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
     method visitLet: aLet
         self handleBlockStart.
         self print: "let ".
-        self print: aLet name.
+        aLet variable visitBy: self.
         self print: " = ".
         aLet value visitBy: self.
         self print: ".".
         self handleSuffixComment.
         self newline.
         aLet body visitBy: self!
+
+    method visitTypedVariable: aVar
+        self print: aVar name.
+        self print: "::".
+        aVar type visitBy: self!
+
+    method visitUntypedVariable: aVar
+        self print: aVar name!
 
     method visitSelf: aSelf
         self print: "self"!

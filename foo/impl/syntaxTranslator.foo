@@ -11,6 +11,9 @@ class SyntaxTranslator { env }
     method addVariable: name
         SyntaxTranslator env: (env addVariable: name)!
 
+    method addVariable: name type: type
+        SyntaxTranslator env: (env addVariable: name type: type)!
+
     method visitLiteral: aLiteral
         AstConstantRef value: aLiteral value!
 
@@ -67,9 +70,14 @@ class SyntaxTranslator { env }
             source: aComment source!
 
     method visitLet: aLet
-        let bodyVisitor = self addVariable: aLet name.
+        let varType = aLet variable type visitBy: self.
+        varType isConstant
+            ifFalse: { Error raise: "non-constant type declaration in let" }.
+        let bodyVisitor = self addVariable: aLet variable name
+                               type: varType value.
         let var = bodyVisitor env bindings first.
-        (var name == aLet name) assert.
+        (var name == aLet variable name) assert.
+        (var type == varType value) assert.
         AstBindLexical
             variable: var
             value: (aLet value visitBy: self)
