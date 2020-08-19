@@ -90,7 +90,26 @@ class Environment { parent    -- Enclosing environment or False
         self addVariable: name type: Any!
 
     method addVariables: names
-        let vars = names collect: { |name| Variable name: name type: Any frame: frame }.
+        let vars = names collect: { |name|
+                                    Variable
+                                        name: name
+                                        type: Any
+                                        frame: frame }.
+        Environment
+            parent: self
+            bindings: vars
+            frame: frame
+            depth: depth
+            globals: globals!
+
+    method addVariables: names types: types
+        (names size is types size) assert.
+        let vars = names with: types
+                         collect: { |name type|
+                                    Variable
+                                        name: name
+                                        type: type
+                                        frame: frame }.
         Environment
             parent: self
             bindings: vars

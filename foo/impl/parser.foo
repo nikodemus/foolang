@@ -461,8 +461,10 @@ interface MethodToken
     method parseWith: parser as: methodClass
         let bodyParser = parser syntaxTable: ExpressionSyntaxTable.
         let signature = self parseMethodSignatureWith: bodyParser.
-        -- Debug println: "\n- method {signature selector}, {methodClass}".
+        -- Debug println: "\n- method {signature selector}, {signature parameters}, {methodClass}".
+        -- Debug println: "lookahead: {bodyParser lookahead string}".
         let body = bodyParser parseSeq.
+        -- Debug println: "body: {body}".
         parser expect: "!".
         body = bodyParser handleSuffixCommentOf: body.
         methodClass
@@ -658,7 +660,7 @@ class TokenSigil { precedence string first last }
 
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
         selector print: string.
-        parameters add: parser parseName!
+        parameters add: parser parseVariable!
 
     method parseAsLiteralWith: parser
         SyntaxLiteral
@@ -727,7 +729,7 @@ class TokenKeyword { string first last }
 
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
         selector print: string.
-        parameters add: parser parseName.
+        parameters add: parser parseVariable.
         (TokenKeyword includes: parser lookahead)
             ifTrue: { parser nextToken
                           parseAsMethodSignatureWith: parser
@@ -840,7 +842,7 @@ class Parser { source::String
              do: { self nextToken.
                    return SyntaxTypedVariable
                        name: name
-                       type: self parseSingle }.
+                       type: self parsePrefix }.
         SyntaxUntypedVariable
             name: name!
 

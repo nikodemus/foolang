@@ -31,6 +31,12 @@ class Tests { system ok }
             ; test: #testTypeDecl6
             ; test: #testTypeDecl7
             ; test: #testTypeDecl8
+            ; test: #testTypeDecl9
+            ; test: #testTypeDecl10
+            ; test: #testTypeDecl11
+            ; test: #testTypeDecl12
+            ; test: #testTypeDecl13
+            ; test: #testTypeDecl14
             ; test: #testDictionary1
             ; test: #testDictionary2
             ; test: #testRecord1
@@ -641,6 +647,64 @@ with: {defSource}"!
             expectError: TypeError
             where: { |e|
                      e value is 42 and: e expected is String }!
+
+    method testTypeDecl9
+        self load: "class Foo \{}
+                        direct method bar: x::Integer
+                            x + 1!
+                    end"
+            eval: "Foo bar: 41"
+            expect: 42!
+
+    method testTypeDecl10
+        self load: "class Foo \{}
+                        direct method bar: x::String
+                            x at: 1!
+                    end"
+            eval: "Foo bar: 41"
+            expectError: TypeError
+            where: { |e|
+                     e value is 41 and: e expected is String }!
+
+    method testTypeDecl11
+        self load: "class Foo \{}
+                        direct method @ x::Integer
+                            x + 1!
+                    end"
+            eval: "Foo @ 41"
+            expect: 42!
+
+    method testTypeDecl12
+        self load: "class Foo \{}
+                        direct method @ x::String
+                            x at: 1!
+                    end"
+            eval: "Foo @ 41"
+            expectError: TypeError
+            where: { |e|
+                     e value is 41 and: e expected is String }!
+
+    method testTypeDecl13
+        self load: "class Foo \{}
+                        direct method @ x::String
+                            let res = (x at: 1) code.
+                            x = \"ok\".
+                            [res, x]!
+                    end"
+            eval: "Foo @ \"a\""
+            expect: [97, "ok"]!
+
+    method testTypeDecl14
+        self load: "class Foo \{}
+                        direct method @ x::String
+                            let res = (x at: 1) code.
+                            x = res.
+                            [res, x]!
+                    end"
+            eval: "Foo @ \"a\""
+            expectError: TypeError
+            where: { |e|
+                     e value is 97 and: e expected is String }!
 
     method testTranspile
         self transpile: "let x = 20.

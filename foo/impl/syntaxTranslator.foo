@@ -71,14 +71,10 @@ class SyntaxTranslator { env }
             source: aComment source!
 
     method visitLet: aLet
-        let varType = aLet variable type visitBy: self.
-        varType isConstant
-            ifFalse: { Error raise: "non-constant type declaration in let" }.
         let bodyVisitor = self addVariable: aLet variable name
-                               type: varType value.
+                               type: (self _resolveType: aLet variable type).
         let var = bodyVisitor env bindings first.
         (var name == aLet variable name) assert.
-        (var type == varType value) assert.
         AstBindLexical
             variable: var
             value: (aLet value visitBy: self)
@@ -147,22 +143,32 @@ class SyntaxTranslator { env }
             body: (aDefine body visitBy: bodyVisitor)
             frameSize: bodyVisitor env frame size!
 
+    method _resolveType: aType
+        let ast = aType visitBy: self.
+        ast isConstant
+            ifFalse: { Error raise: "non-constant type declaration" }.
+        ast value!
+
     method visitMethod: aMethod
         let signature = aMethod signature.
-        let bodyEnv = env newFrame addVariables: signature parameters.
+        let bodyEnv = env newFrame
+                          addVariables: (signature parameters collect: #name)
+                          types: (signature parameters
+                                      collect: { |each|
+                                                 self _resolveType: each type }).
+        let argumentVariables = bodyEnv bindings.
+        (argumentVariables size is signature parameters size) assert.
         AstMethod
+            -- FIXME: Methods should not know their selectors!
             selector: signature selector
-            argumentCount: signature parameters size
+            argumentVariables: argumentVariables
             body: (aMethod body visitBy: (SyntaxTranslator env: bodyEnv))
             frameSize: bodyEnv frame size!
 
     method visitClass: aClass
         let slots = aClass slots collect: { |slot::Syntax|
-                                            let type = slot type visitBy: self.
-                                            type isConstant
-                                                ifFalse: { Error raise: "non-constant type declaration in let" }.
                                             { name: slot name,
-                                              type: type value } }.
+                                              type: (self _resolveType: slot type) } }.
         let instanceMethodVisitor = SyntaxTranslator
                                         env: (env addSlots: slots).
         -- FIXME: should fetch interface object instead of using the name
