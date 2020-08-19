@@ -112,23 +112,29 @@ class AstClass { name slots interfaces directMethods instanceMethods isDefined }
             instanceMethods: (Array from: instanceMethods)!
 end
 
-class AstMethod { name argumentCount body frameSize }
+class AstMethod { name argumentVariables body frameSize }
     is Object
+
     direct method selector: selector
-                  argumentCount: argumentCount
+                  argumentVariables: argumentVariables
                   body: body
                   frameSize: frameSize
         self name: selector name
-             argumentCount: argumentCount
+             argumentVariables: argumentVariables
              body: body
              frameSize: frameSize!
+
     method selector
         Selector name: name!
+
     method invoke: arguments on: receiver
         AstInterpreter
             invokeMethod: self
             on: receiver
             with: arguments!
+
+    method argumentCount
+        argumentVariables size!
 end
 
 interface AstNode

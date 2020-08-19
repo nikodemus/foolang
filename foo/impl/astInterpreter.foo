@@ -124,8 +124,11 @@ class AstInterpreter { context process }
         let nArgs = arguments size.
         astMethod argumentCount is nArgs
             ifFalse: { Error raise: "Self-hosted method argument count mismatch!" }.
-        1 to: nArgs
-          do: { |i| frame put: (arguments at: i) at: i }.
+        astMethod argumentVariables
+            do: { |var|
+                  let index = var index.
+                  frame put: (var type typecheck: (arguments at: index))
+                        at: index }.
         let context = InterpreterContext
                           sender: $context
                           receiver: receiver

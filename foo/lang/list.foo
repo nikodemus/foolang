@@ -20,10 +20,20 @@ class List { size data }
         size = size - 1.
         first!
 
+    method printOn: stream
+        "[" printOn: stream.
+        self do: { |each| each printOn: stream }
+             interleaving: { ", " printOn: stream }.
+        "] asList" printOn: stream!
+
+    method displayOn: stream
+        "[" printOn: stream.
+        self do: { |each| each displayOn: stream }
+             interleaving: { ", " displayOn: stream }.
+        "] asList" printOn: stream!
+
     method toString
-        self isEmpty
-            ifTrue: { "List from: []" }
-            ifFalse: { "List from: {data from: 1 to: self size}" }!
+        StringOutput with: { |out| self printOn: out }!
 
     direct method from: collection
         let new = self withCapacity: collection size.
@@ -134,7 +144,7 @@ class List { size data }
         n!
 
     method with: list collect: block
-        let size = self checkSize: list.
+        let size = (size min: list size).
         let result = List withCapacity: size.
         1 to: size
           do: { |i|

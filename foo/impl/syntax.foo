@@ -211,6 +211,10 @@ class SyntaxUntypedVariable { name }
 
     method parts
         [name]!
+
+    method toString
+        "#<SyntaxVariable {name}>"!
+
 end
 
 class SyntaxTypedVariable { name type }
@@ -221,6 +225,9 @@ class SyntaxTypedVariable { name type }
 
     method parts
         [name]!
+
+    method toString
+        "#<SyntaxVariable {name}::{type}>"!
 end
 
 class SyntaxLet { variable value body }
