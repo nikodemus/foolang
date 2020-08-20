@@ -11,7 +11,7 @@ interface Token
             first: first last: last!
 
     method precedence
-        False!
+        -1!
 
     method parseAsSuffixOf: prefix with: parser
         Error raise: "Cannot parse {self} (@{self first}) in suffix position {parser syntaxTable where}! (self-hosted parser)"!
@@ -204,10 +204,15 @@ class OpenBraceToken { precedence string first last }
         (TokenKeyword includes: parser lookahead)
             ifTrue: { return self _parseAsRecordWith: parser }.
 
-        -- Block OR Dictionary, cannot tell yet
+        -- Block OR Dictionary
+
+        -- Block with parameters
         parser when: "|"
-               do: { -- Block with parameters
-                     return self _parseAsBlockWith: parser }.
+               do: { return self _parseAsBlockWith: parser }.
+
+        -- Block with return type and no parameters
+        parser when: "->"
+               do: { return self _parseAsBlockWith: parser }.
 
         -- Could be either { expr... } OR { expr -> expr, ... }
         let expr = parser parseSeq.
@@ -219,6 +224,7 @@ class OpenBraceToken { precedence string first last }
         self
             _finishBlockWith: parser
             _parameters: []
+            _returnType: False
             _body: expr!
 
     method _parseAsRecordWith: parser
@@ -254,10 +260,14 @@ class OpenBraceToken { precedence string first last }
         SyntaxDictionary
             entries: entries!
 
-    method _finishBlockWith: parser _parameters: parameters _body: body
+    method _finishBlockWith: parser
+           _parameters: parameters
+           _returnType: returnType
+           _body: body
         parser expect: "}".
         SyntaxBlock
             parameters: parameters
+            returnType: returnType
             body: body!
 
     method _parseAsBlockWith: parser
@@ -268,9 +278,15 @@ class OpenBraceToken { precedence string first last }
                   parser until: "|"
                          do: { parameters add: (parser parseVariable) }.
                   parser nextToken }.
+        let returnType = False.
+        parser
+            when: "->"
+            do: { parser nextToken.
+                  returnType = parser parsePrefix }.
         self
             _finishBlockWith: parser
             _parameters: parameters
+            _returnType: returnType
             _body: parser parseSeq!
 
     method toString
@@ -461,7 +477,7 @@ interface MethodToken
     method parseWith: parser as: methodClass
         let bodyParser = parser syntaxTable: ExpressionSyntaxTable.
         let signature = self parseMethodSignatureWith: bodyParser.
-        -- Debug println: "\n- method {signature selector}, {signature parameters}, {methodClass}".
+        -- Debug println: "\n- method {signature selector}, {signature parameters}, {methodClass} -> {signature returnType}".
         -- Debug println: "lookahead: {bodyParser lookahead string}".
         let body = bodyParser parseSeq.
         -- Debug println: "body: {body}".
@@ -474,13 +490,14 @@ interface MethodToken
     method parseMethodSignatureWith: parser
         let selector = StringOutput new.
         let parameters = List new.
-        parser nextToken
+        let returnType = parser nextToken
             parseAsMethodSignatureWith: parser
             selector: selector
             parameters: parameters.
         MethodSignature
             selector: (Selector new: selector content)
-            parameters: parameters!
+            parameters: parameters
+            returnType: returnType!
 
     method toString
         "#<MethodToken>"!
@@ -659,8 +676,13 @@ class TokenSigil { precedence string first last }
             source: (parser sourceFrom: first to: last)!
 
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
+        -- Debug println: "TokenSigil#parseAsMethodSignatureWith:selector:parameters:".
         selector print: string.
-        parameters add: parser parseVariable!
+        parameters add: parser parseVariable.
+        parser when: "->"
+               do: { parser expect: "->".
+                     return parser parsePrefix }.
+        False!
 
     method parseAsLiteralWith: parser
         SyntaxLiteral
@@ -685,12 +707,17 @@ class TokenWord { precedence string first last }
             source: (parser sourceFrom: first to: last)!
 
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
+        -- Debug println: "TokenWord#parseAsMethodSignatureWith:selector:parameters:".
         selector print: string.
         string == "prefix"
             ifTrue: { let op = parser nextToken.
                       (TokenSigil includes: op)
                           ifFalse: { Error raise: "Expected prefix sigil, got: {op string}" }.
-                      selector print: op string }!
+                      selector print: op string }.
+        parser when: "->"
+               do:{ parser expect: "->".
+                    return parser parsePrefix }.
+        False!
 
     method parseAsLiteralWith: parser
         SyntaxLiteral
@@ -728,13 +755,18 @@ class TokenKeyword { string first last }
             source: (parser sourceFrom: first to: last)!
 
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
+        -- Debug println: "TokenKeyord#parseAsMethodSignatureWith:selector:parameters:".
         selector print: string.
         parameters add: parser parseVariable.
         (TokenKeyword includes: parser lookahead)
-            ifTrue: { parser nextToken
+            ifTrue: { return parser nextToken
                           parseAsMethodSignatureWith: parser
                           selector: selector
-                          parameters: parameters }!
+                          parameters: parameters }.
+        parser when: "->"
+               do: { parser expect: "->".
+                     return parser parsePrefix }.
+        False!
 
     method parseAsLiteralWith: parser
         let selector = StringOutput new: string.

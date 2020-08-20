@@ -280,14 +280,14 @@ class SyntaxParens { body }
         [body]!
 end
 
-class SyntaxBlock { parameters body }
+class SyntaxBlock { parameters returnType body }
     is Syntax
 
     method visitBy: visitor
         visitor visitBlock: self!
 
     method parts
-        [parameters, body]!
+        [parameters, returnType, body]!
 end
 
 class SyntaxDefine { name body }
@@ -396,9 +396,11 @@ class SyntaxDirectMethod { signature body }
         "#<SyntaxDirectMethod {self selector}>"!
 end
 
-class MethodSignature { selector parameters }
+class MethodSignature { selector parameters returnType }
     is Object
 
     method isEquivalent: other
-        selector == other selector and: parameters == other parameters!
+        selector == other selector
+            and: parameters == other parameters
+            and: returnType == other returnType!
 end

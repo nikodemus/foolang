@@ -72,7 +72,8 @@ class AstBlockClosure { context block }
         let frame = Array new: block frameSize.
         let nArgs = arguments size.
         block argumentCount is nArgs
-            ifFalse: { Error raise: "Self-hostend block argument count mismatch!" }.
+            ifFalse: { Error
+                           raise: "Self-hosted block wants {block argumentCount}, got {nArgs} arguments. {block argumentVariables collect: #name}" }.
         block argumentVariables
             do: { |var|
                   let index = var index.
@@ -85,8 +86,12 @@ class AstBlockClosure { context block }
                           frameContext: context
                           frame: frame
                           returnBlock: context returnBlock.
-        { AstInterpreter eval: block body with: context }
-            finally: { context invalidate } !
+        { let ret = AstInterpreter eval: block body with: context.
+          let type = block returnType.
+          type is False
+              ifTrue: { ret }
+              ifFalse: { type typecheck: ret } }
+        finally: { context invalidate } !
 end
 
 -- Used to pass process and context through host frames by visitSend
@@ -139,8 +144,12 @@ class AstInterpreter { context process }
                           frameContext: $context
                           frame: frame
                           returnBlock: { |value| return value }.
-        { AstInterpreter eval: astMethod body with: context }
-            finally: { context invalidate } !
+        { let ret = AstInterpreter eval: astMethod body with: context.
+          let type = astMethod returnType.
+          type is False
+              ifTrue: { ret }
+              ifFalse: { return type typecheck: ret } }
+        finally: { context invalidate } !
 
     method visitTypecheck: aNode
         let value = aNode value visitBy: self.

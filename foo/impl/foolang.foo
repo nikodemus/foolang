@@ -40,6 +40,12 @@ class Tests { system ok }
             ; test: #testTypeDecl15
             ; test: #testTypeDecl16
             ; test: #testTypeDecl17
+            ; test: #testTypeDecl18
+            ; test: #testTypeDecl19
+            ; test: #testTypeDecl20
+            ; test: #testTypeDecl21
+            ; test: #testTypeDecl22
+            ; test: #testTypeDecl23
             ; test: #testDictionary1
             ; test: #testDictionary2
             ; test: #testRecord1
@@ -110,12 +116,11 @@ class Tests { system ok }
         let output = StringOutput new.
         -- Debug println: "/pretty".
         syntaxList do: { |syntax|
-                         -- Debug println: "".
-                         -- SyntaxPrinter print: syntax to: Output debug.
-                         output print: syntax toString }.
+                         SyntaxPrinter print: syntax to: output }.
         let printed = output content.
+        -- Debug println: printed.
         -- Debug println: "/parse2 + compare".
-        { syntaxList checkEqual: (block value: source) }
+        { syntaxList checkEqual: (block value: printed) }
             on: Error
             do: { |err|
                   panic "CST print/parse inconsistency!
@@ -165,7 +170,7 @@ from: '{exprSource}'" }!
 
 
     method load: defSource eval: exprSource
-        -- Debug println: "/parseDef".
+        -- Debug println: "\n/parseDef".
         self checkParsingBy: { |source| Parser parseDefinitions: source }
              for: defSource.
         -- Debug println: "/parseExpr".
@@ -724,6 +729,44 @@ with: {defSource}"!
              expectError: TypeError
              where: { |e|
                       e value is 2 and: e expected is String }!
+
+    method testTypeDecl18
+        self load: "class Foo \{}
+                       direct method bar -> Integer
+                           42!
+                    end"
+            eval: "Foo bar"
+            expect: 42!
+
+    method testTypeDecl19
+        self load: "class Foo \{}
+                       direct method bar -> Integer
+                           \"oops\"!
+                    end"
+            eval: "Foo bar"
+            expectError: TypeError
+            where: { |e|
+                     e value is "oops" and: e expected is Integer }!
+
+    method testTypeDecl20
+        self eval: "\{ -> Integer 42 } value"
+             expect: 42!
+
+    method testTypeDecl21
+        self eval: "\{ |x| -> Integer x * 2 } value: 21"
+             expect: 42!
+
+    method testTypeDecl22
+        self eval: "\{ -> String 42 } value"
+             expectError: TypeError
+             where: { |e|
+                      e value is 42 and: e expected is String }!
+
+    method testTypeDecl23
+        self eval: "\{ |x| -> String x * 2 } value: 21"
+             expectError: TypeError
+             where: { |e|
+                      e value is 42 and: e expected is String }!
 
     method testTranspile
         self transpile: "let x = 20.
