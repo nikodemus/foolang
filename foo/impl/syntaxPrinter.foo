@@ -116,7 +116,9 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
     method visitPrefixComment: aComment
         self handleBlockStart.
         let valueVisitor = self indentHere.
-        self print: "--{aComment comment}".
+        aComment block
+            ifTrue: { self visitBlockComment: aComment }
+            ifFalse: { self visitLineComment: aComment }.
         valueVisitor newline.
         aComment value visitBy: valueVisitor!
 
@@ -215,11 +217,35 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         aDefine body visitBy: bodyVisitor.
         self println: "!"!
 
+    method visitLineComment: comment
+        self print: "--".
+        self print: comment comment!
+
+    method visitBlockComment: comment
+        let lines = comment comment.
+        -- Inline blocks
+        lines size is 1
+            ifTrue: { return self print: "--- {lines first} ---" }.
+        -- Multiline blocks, normalizing them so that fences are
+        -- on their own lines.
+        let first = lines first == ""
+                        ifTrue: { 2 }
+                        ifFalse: { 1 }.
+        let last = lines last == ""
+                        ifTrue: { lines size - 1 }
+                        ifFalse: { lines size }.
+        self print: "---".
+        first to: last
+              do: { |i|
+                    self newline.
+                    self print: (lines at: i) }.
+        self print: "\n---"!
+
     method visitMethod: aMethod
         -- Debug println: "/pp method {aMethod signature selector}".
         aMethod comment is False
-            ifFalse: { self print: "--".
-                       self println: aMethod comment }.
+            ifFalse: { aMethod comment visitBy: self.
+                       self newline }.
         self print: "method".
         let signature = aMethod signature.
         signature parameters isEmpty
