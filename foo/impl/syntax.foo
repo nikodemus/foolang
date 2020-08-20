@@ -7,9 +7,29 @@ interface Syntax
 
     required method parts
 
+    method withBlockComment: lines commentSource: source
+        SyntaxPrefixComment
+            comment: lines
+            value: self
+            source: source
+            block: True!
+
+    method withPrefixComment: comment::String commentSource: source
+        SyntaxPrefixComment
+            comment: comment
+            value: self
+            source: source!
+
+    method withSuffixComment: comment::String commentSource: source
+        SyntaxSuffixComment
+            comment: comment
+            value: self
+            source: source!
+
     method checkEqualInternal: other
         self parts with: other parts
-                   do: #checkEqual:!
+                   do: { |a b|
+                         a checkEqual: b }!
 
     method isEquivalent: other
         self parts with: other parts
@@ -18,7 +38,9 @@ interface Syntax
 
     method toString
         let out = StringOutput new.
-        SyntaxPrinter print: self to: out.
+        { SyntaxPrinter print: self to: out }
+            on: Error
+            do: { return "#<Syntax <cannot print>>" }.
         out content!
 
     method displayOn: stream
@@ -118,15 +140,22 @@ class SyntaxReturn { value }
         [value]!
 end
 
-class SyntaxPrefixComment { comment value source }
+class SyntaxPrefixComment { comment value source block }
     is Syntax
+
+    direct method comment: comment value: value source: source
+        self
+            comment: comment
+            value: value
+            source: source
+            block: False!
 
     method visitBy: visitor
         visitor visitPrefixComment: self!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
-        [self comment, self value]!
+        [comment, value]!
 end
 
 class SyntaxSuffixComment { comment value source }
@@ -138,6 +167,31 @@ class SyntaxSuffixComment { comment value source }
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
         [comment, value]!
+end
+
+class SyntaxLineComment { comment source }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitLineComment: self!
+
+    method parts
+        -- Source left out intentionally, since it doesn't need to compere equal.
+        [comment]!
+
+    method string
+        comment!
+end
+
+class SyntaxBlockComment { lines source }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitBlockComment: self!
+
+    method parts
+        -- Source left out intentionally, since it doesn't need to compere equal.
+        [lines]!
 end
 
 class SyntaxPrefix { receiver selector source }
@@ -366,6 +420,24 @@ interface SyntaxMethod
     is Syntax
     is DefinitionPart
 
+    direct method signature: signature body: body
+        self
+            comment: False
+            signature: signature
+            body: body!
+
+    method withBlockComment: lines commentSource: aSource
+        self comment: (SyntaxBlockComment
+                           comment: lines
+                           source: aSource).
+        self!
+
+    method withPrefixComment: aString::String commentSource: aSource
+        self comment: (SyntaxLineComment
+                           comment: aString
+                           source: aSource).
+        self!
+
     method selector
         self signature selector!
 
@@ -376,18 +448,24 @@ interface SyntaxMethod
         [self signature, self body]!
 end
 
-class SyntaxInstanceMethod { signature body }
+class SyntaxInstanceMethod { comment signature body }
     is SyntaxMethod
 
     method addTo: thing
         thing instanceMethods add: self!
 
+    method comment: aSpec
+        comment = aSpec!
+
     method toString
         "#<SyntaxInstanceMethod {self selector}>"!
 end
 
-class SyntaxDirectMethod { signature body }
+class SyntaxDirectMethod { comment signature body }
     is SyntaxMethod
+
+    method comment: aSpec
+        comment = aSpec!
 
     method addTo: thing
         thing directMethods add: self!

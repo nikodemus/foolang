@@ -126,7 +126,7 @@ class InvalidToken { precedence string first last }
     is Token
 end
 
-class CommentToken { precedence string first last }
+class LineCommentToken { precedence string first last }
     is Token
     ---
     See also: special handlings in SequenceToken and LetToken to parse
@@ -155,16 +155,27 @@ class CommentToken { precedence string first last }
         --    bar quux
         --
         -- where the comment is reached while parsing at SeqPrecedence!
-        SyntaxPrefixComment
-            comment: parser readline
-            value: (parser parseAtPrecedence: precedence)
-            source: (parser sourceFrom: first to: last)!
+        let comment = parser readline.
+        (parser parseAtPrecedence: precedence)
+            withPrefixComment: comment
+            commentSource: (parser sourceFrom: first to: last)!
 
     method parseAsSuffixOf: prefix with: parser
-        SyntaxSuffixComment
-            comment: parser readline
-            value: prefix
-            source: (parser sourceFrom: first to: last)!
+        prefix
+            withSuffixComment: parser readline
+            commentSource: (parser sourceFrom: first to: last)!
+end
+
+class BlockCommentToken { precedence string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: precedence
+        let fence = parser find: "---".
+        (parser parseAtPrecedence: precedence)
+            withBlockComment: ((parser from: last + 1 to: fence) lines
+                                   collect: #trimRight)
+            commentSource: (parser sourceFrom: last + 1 to: fence)!
+
 end
 
 -- For ExpressionSyntaxTable --
@@ -574,12 +585,13 @@ define CoreSyntaxTable
     where: "anywhere"
     tokens:
     {
+         "---" -> SyntaxEntry tokenClass: BlockCommentToken precedence: 0,
          "}" -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
          ")" -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
          "]" -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
          "," -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
          "->" -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
-         "--" -> SyntaxEntry tokenClass: CommentToken precedence: 1000
+         "--" -> SyntaxEntry tokenClass: LineCommentToken precedence: 1000
     }!
 
 define ExpressionSyntaxTable
@@ -813,6 +825,10 @@ class Parser { source::String
     method position
         positionBox first!
 
+    method position: pos
+        positionBox put: pos at: 1.
+        pos!
+
     method toString
         "#<Parser position: {self position}>"!
 
@@ -900,6 +916,9 @@ class Parser { source::String
         self atEof
             ifFalse: { self advance }.
         source from: start to: stop!
+
+    method from: first to: last
+        source from: first to: last!
 
     method sourceFrom: first to: last
         SourceString string: source first: first last: last!
@@ -995,6 +1014,18 @@ Source: {source}" }!
 
     method atDoublequote
         self isAt: { |char| char == DoublequoteCharacter }!
+
+    method find: aString
+        let start = self position.
+        { aString
+              allSatisfy: { |s|
+                            self atEof
+                                ifTrue: { Error raise: "End of file while waiting for {aString}" }.
+                            (self atChar: s character)
+                                ifTrue: { self advance.
+                                          True } } }
+        whileFalse: { start = self position: start + 1 }.
+        start - 1!
 
     method atWord
         self isAt: { |char|
@@ -1123,6 +1154,6 @@ Source: {source}" }!
     method advance
         self position <= last
             ifFalse: { panic "Tried to advance beyond end: \"{source}\"" }.
-        positionBox put: self position + 1 at: 1!
+        self position: (self position + 1)!
 
 end

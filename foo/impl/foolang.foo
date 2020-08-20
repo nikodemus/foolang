@@ -23,6 +23,17 @@ class Tests { system ok }
 
     method run
         self
+            ; test: #testComment1
+            ; test: #testComment2
+            ; test: #testComment3
+            ; test: #testComment4
+            ; test: #testComment5
+            ; test: #testComment6
+            ; test: #testComment7
+            ; test: #testComment8
+            ; test: #testComment9
+            ; test: #testComment10
+            ; test: #testComment11
             ; test: #testTypeDecl1
             ; test: #testTypeDecl2
             ; test: #testTypeDecl3
@@ -97,14 +108,6 @@ class Tests { system ok }
             ; test: #testString1
             ; test: #testString2
             ; test: #testString3
-            ; test: #testComment1
-            ; test: #testComment2
-            ; test: #testComment3
-            ; test: #testComment4
-            ; test: #testComment5
-            ; test: #testComment6
-            ; test: #testComment7
-            ; test: #testComment8 -- ; test: #testComment9
             ; test: #testTranspile
                .
         self!
@@ -113,8 +116,8 @@ class Tests { system ok }
         -- Check Syntax print/parse consistency.
         -- Debug println: "/parse1".
         let syntaxList = block value: source.
-        let output = StringOutput new.
         -- Debug println: "/pretty".
+        let output = StringOutput new.
         syntaxList do: { |syntax|
                          SyntaxPrinter print: syntax to: output }.
         let printed = output content.
@@ -130,8 +133,11 @@ problem: {err description}" }!
 
     method parse: source expect: pretty
         -- Checks that parse pretty-prints as expected
+        -- Debug println: "\n/parse source".
         let syntaxList1 = Parser parseMixed: source.
+        -- Debug println: "\n/parse pretty".
         let syntaxList2 = Parser parseMixed: pretty.
+        -- Debug println: "/check".
         { syntaxList1 checkEqual: syntaxList2 }
             on: Error
             do: { |err|
@@ -440,6 +446,19 @@ with: {defSource}"!
         self
             parse: "class X \{} -- boop\n method bar\n 42!\n end\n"
             expect: "class X \{}\n    -- boop\n    method bar\n        42!\nend\n"!
+
+    method testComment10
+        -- block comment
+        self eval: "---
+                    This is a test.
+                    ---
+                    42"
+            expect: 42!
+
+    method testComment11
+        -- block comment
+        self parse: "---\nThis is a test.\n---\n      42"
+            expect: "---\nThis is a test.\n---\n42"!
 
     method testArray1
         self eval: "[1, 1+1, 3]"

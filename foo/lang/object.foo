@@ -35,9 +35,7 @@ interface Object
         self printOn: stream!
 
     method displayString
-        let out = StringOutput new.
-        self displayOn: out.
-        out content!
+        StringOutput with: { |out| self displayOn: out }!
 
     method checkEqual: other
         (Self includes: other)
@@ -48,14 +46,11 @@ interface Object
         self == other
             ifFalse: { self mismatch: other }!
 
-    method debug
-        self toString!
-
     method mismatch: other
         let err = StringOutput new.
-        err print: self debug.
+        err print: self displayString.
         err print: " <==> ".
-        err print: other debug.
+        err print: other displayString.
         Error raise: "Mismatch: {err content}"!
 
     -- FIXME: Would be infinitely preferable for the host to handle this
