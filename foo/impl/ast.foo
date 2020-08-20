@@ -270,22 +270,25 @@ class AstSend {
         visitor visitSend: self!
 end
 
-class AstBlock { body argumentCount frameSize }
+class AstBlock { body argumentVariables frameSize }
     is AstNode
 
     method selector
-        argumentCount is 0
+        self argumentCount is 0
             ifTrue: { return #value }.
-        argumentCount is 1
+        self argumentCount is 1
             ifTrue: { return #value: }.
-        argumentCount is 2
+        self argumentCount is 2
             ifTrue: { return #value:value: }.
-        argumentCount is 3
+        self argumentCount is 3
             ifTrue: { return #value:value:value: }.
         #apply:!
 
     method visitBy: visitor
         visitor visitBlock: self!
+
+    method argumentCount
+        argumentVariables size!
 end
 
 class AstSelfRef {}

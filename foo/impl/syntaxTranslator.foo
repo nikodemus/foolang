@@ -130,10 +130,16 @@ class SyntaxTranslator { env }
         aParens body visitBy: self!
 
     method visitBlock: aBlock
-        let bodyEnv = env newFrame addVariables: aBlock parameters.
+        let bodyEnv = env newFrame
+                          addVariables: (aBlock parameters collect: #name)
+                          types: (aBlock parameters
+                                      collect: { |each|
+                                                 self _resolveType: each type }).
+        let argumentVariables = bodyEnv bindings.
+        (argumentVariables size is aBlock parameters size) assert.
         AstBlock
             body: (aBlock body visitBy: (SyntaxTranslator env: bodyEnv))
-            argumentCount: aBlock parameters size
+            argumentVariables: argumentVariables
             frameSize: bodyEnv frame size!
 
     method visitDefine: aDefine
