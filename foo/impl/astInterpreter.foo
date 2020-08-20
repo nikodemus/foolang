@@ -73,8 +73,11 @@ class AstBlockClosure { context block }
         let nArgs = arguments size.
         block argumentCount is nArgs
             ifFalse: { Error raise: "Self-hostend block argument count mismatch!" }.
-        1 to: nArgs
-          do: { |i| frame put: (arguments at: i) at: i }.
+        block argumentVariables
+            do: { |var|
+                  let index = var index.
+                  frame put: (var type typecheck: (arguments at: index))
+                        at: index }.
         let context = InterpreterContext
                           sender: $context
                           receiver: context receiver

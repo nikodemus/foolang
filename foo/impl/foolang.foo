@@ -37,6 +37,9 @@ class Tests { system ok }
             ; test: #testTypeDecl12
             ; test: #testTypeDecl13
             ; test: #testTypeDecl14
+            ; test: #testTypeDecl15
+            ; test: #testTypeDecl16
+            ; test: #testTypeDecl17
             ; test: #testDictionary1
             ; test: #testDictionary2
             ; test: #testRecord1
@@ -705,6 +708,22 @@ with: {defSource}"!
             expectError: TypeError
             where: { |e|
                      e value is 97 and: e expected is String }!
+
+    method testTypeDecl15
+        self eval: "\{ |x::Integer| x } value: 42"
+             expect: 42!
+
+    method testTypeDecl16
+        self eval: "\{ |x::String| x } value: 42"
+             expectError: TypeError
+             where: { |e|
+                      e value is 42 and: e expected is String }!
+
+    method testTypeDecl17
+        self eval: "\{ |x::String| x = x size. x } value: \"ok\""
+             expectError: TypeError
+             where: { |e|
+                      e value is 2 and: e expected is String }!
 
     method testTranspile
         self transpile: "let x = 20.

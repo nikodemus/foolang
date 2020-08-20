@@ -266,7 +266,7 @@ class OpenBraceToken { precedence string first last }
             when: "|"
             do: { parser nextToken.
                   parser until: "|"
-                         do: { parameters add: (parser parseName) }.
+                         do: { parameters add: (parser parseVariable) }.
                   parser nextToken }.
         self
             _finishBlockWith: parser
