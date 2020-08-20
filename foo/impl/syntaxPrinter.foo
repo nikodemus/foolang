@@ -244,7 +244,7 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
                                     slot visitBy: self.
                                     self print: " " }}.
         self print: "}".
-        self _visitMethods: aClass.
+        self _visitTypeBody: aClass.
         self newline.
         self print: "end".
         self handleSuffixComment.
@@ -256,23 +256,27 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
     method visitInterface: anInterface
         self print: "interface ".
         self print: anInterface name.
-        self _visitMethods: anInterface.
+        self _visitTypeBody: anInterface.
         self newline.
         self print: "end".
         self handleSuffixComment.
         self newline!
 
-    method _visitMethods: aType
+    method _visitTypeBody: aType
         -- Debug println: "/pp methods of {aType name}".
-        let methodVisitor = self indentBody.
+        let bodyVisitor = self indentBody.
+        aType interfaces
+            do: { |each|
+                  bodyVisitor newline.
+                  each visitBy: bodyVisitor }.
         aType directMethods
             do: { |m|
-                  methodVisitor newline.
-                  methodVisitor print: "direct ".
-                  m visitBy: methodVisitor }.
+                  bodyVisitor newline.
+                  bodyVisitor print: "direct ".
+                  m visitBy: bodyVisitor }.
         aType instanceMethods
             do: { |m|
-                  methodVisitor newline.
-                  m visitBy: methodVisitor }!
+                  bodyVisitor newline.
+                  m visitBy: bodyVisitor }!
 
 end

@@ -110,12 +110,11 @@ class Tests { system ok }
         let output = StringOutput new.
         -- Debug println: "/pretty".
         syntaxList do: { |syntax|
-                         -- Debug println: "".
-                         -- SyntaxPrinter print: syntax to: Output debug.
-                         output print: syntax toString }.
+                         SyntaxPrinter print: syntax to: output }.
         let printed = output content.
+        -- Debug println: printed.
         -- Debug println: "/parse2 + compare".
-        { syntaxList checkEqual: (block value: source) }
+        { syntaxList checkEqual: (block value: printed) }
             on: Error
             do: { |err|
                   panic "CST print/parse inconsistency!
