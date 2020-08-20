@@ -35,9 +35,7 @@ interface Object
         self printOn: stream!
 
     method displayString
-        let out = StringOutput new.
-        self displayOn: out.
-        out content!
+        StringOutput with: { |out| self displayOn: out }!
 
     method checkEqual: other
         (Self includes: other)
