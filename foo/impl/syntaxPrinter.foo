@@ -217,6 +217,9 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
 
     method visitMethod: aMethod
         -- Debug println: "/pp method {aMethod signature selector}".
+        aMethod comment is False
+            ifFalse: { self print: "--".
+                       self println: aMethod comment }.
         self print: "method".
         let signature = aMethod signature.
         signature parameters isEmpty

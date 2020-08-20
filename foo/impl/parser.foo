@@ -155,16 +155,15 @@ class CommentToken { precedence string first last }
         --    bar quux
         --
         -- where the comment is reached while parsing at SeqPrecedence!
-        SyntaxPrefixComment
-            comment: parser readline
-            value: (parser parseAtPrecedence: precedence)
-            source: (parser sourceFrom: first to: last)!
+        let comment = parser readline.
+        (parser parseAtPrecedence: precedence)
+            withPrefixComment: comment
+            commentSource: (parser sourceFrom: first to: last)!
 
     method parseAsSuffixOf: prefix with: parser
-        SyntaxSuffixComment
-            comment: parser readline
-            value: prefix
-            source: (parser sourceFrom: first to: last)!
+        prefix
+            withSuffixComment: parser readline
+            commentSource: (parser sourceFrom: first to: last)!
 end
 
 -- For ExpressionSyntaxTable --

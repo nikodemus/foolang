@@ -23,6 +23,15 @@ class Tests { system ok }
 
     method run
         self
+            ; test: #testComment1
+            ; test: #testComment2
+            ; test: #testComment3
+            ; test: #testComment4
+            ; test: #testComment5
+            ; test: #testComment6
+            ; test: #testComment7
+            ; test: #testComment8
+            ; test: #testComment9
             ; test: #testTypeDecl1
             ; test: #testTypeDecl2
             ; test: #testTypeDecl3
@@ -97,14 +106,6 @@ class Tests { system ok }
             ; test: #testString1
             ; test: #testString2
             ; test: #testString3
-            ; test: #testComment1
-            ; test: #testComment2
-            ; test: #testComment3
-            ; test: #testComment4
-            ; test: #testComment5
-            ; test: #testComment6
-            ; test: #testComment7
-            ; test: #testComment8 -- ; test: #testComment9
             ; test: #testTranspile
                .
         self!

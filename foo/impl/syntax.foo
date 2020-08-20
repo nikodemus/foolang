@@ -7,6 +7,18 @@ interface Syntax
 
     required method parts
 
+    method withPrefixComment: comment commentSource: source
+        SyntaxPrefixComment
+            comment: comment
+            value: self
+            source: source!
+
+    method withSuffixComment: comment commentSource: source
+        SyntaxSuffixComment
+            comment: comment
+            value: self
+            source: source!
+
     method checkEqualInternal: other
         self parts with: other parts
                    do: #checkEqual:!
@@ -366,6 +378,16 @@ interface SyntaxMethod
     is Syntax
     is DefinitionPart
 
+    direct method signature: signature body: body
+        self
+            comment: False
+            signature: signature
+            body: body!
+
+    method withPrefixComment: aComment commentSource: _aSource
+        comment = aComment.
+        self!
+
     method selector
         self signature selector!
 
@@ -376,7 +398,7 @@ interface SyntaxMethod
         [self signature, self body]!
 end
 
-class SyntaxInstanceMethod { signature body }
+class SyntaxInstanceMethod { comment signature body }
     is SyntaxMethod
 
     method addTo: thing
@@ -386,7 +408,7 @@ class SyntaxInstanceMethod { signature body }
         "#<SyntaxInstanceMethod {self selector}>"!
 end
 
-class SyntaxDirectMethod { signature body }
+class SyntaxDirectMethod { comment signature body }
     is SyntaxMethod
 
     method addTo: thing
