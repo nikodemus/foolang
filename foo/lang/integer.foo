@@ -48,10 +48,19 @@ extend Integer
     method to: other
         self to: other by: 1!
 
+    method downTo: other
+        self to: other by: -1!
+
     method to: other do: block
         let i = self.
         { i <= other }
-           whileTrue: { block value: i. i = i + 1 }.
+            whileTrue: { block value: i. i = i + 1 }.
+        self!
+
+    method downTo: other do: block
+        let i = self.
+        { i >= other }
+            whileTrue: { block value: i. i = i - 1 }.
         self!
 
     method times: block
