@@ -204,10 +204,15 @@ class OpenBraceToken { precedence string first last }
         (TokenKeyword includes: parser lookahead)
             ifTrue: { return self _parseAsRecordWith: parser }.
 
-        -- Block OR Dictionary, cannot tell yet
+        -- Block OR Dictionary
+
+        -- Block with parameters
         parser when: "|"
-               do: { -- Block with parameters
-                     return self _parseAsBlockWith: parser }.
+               do: { return self _parseAsBlockWith: parser }.
+
+        -- Block with return type and no parameters
+        parser when: "->"
+               do: { return self _parseAsBlockWith: parser }.
 
         -- Could be either { expr... } OR { expr -> expr, ... }
         let expr = parser parseSeq.
@@ -219,6 +224,7 @@ class OpenBraceToken { precedence string first last }
         self
             _finishBlockWith: parser
             _parameters: []
+            _returnType: False
             _body: expr!
 
     method _parseAsRecordWith: parser
@@ -254,10 +260,14 @@ class OpenBraceToken { precedence string first last }
         SyntaxDictionary
             entries: entries!
 
-    method _finishBlockWith: parser _parameters: parameters _body: body
+    method _finishBlockWith: parser
+           _parameters: parameters
+           _returnType: returnType
+           _body: body
         parser expect: "}".
         SyntaxBlock
             parameters: parameters
+            returnType: returnType
             body: body!
 
     method _parseAsBlockWith: parser
@@ -268,9 +278,15 @@ class OpenBraceToken { precedence string first last }
                   parser until: "|"
                          do: { parameters add: (parser parseVariable) }.
                   parser nextToken }.
+        let returnType = False.
+        parser
+            when: "->"
+            do: { parser nextToken.
+                  returnType = parser parsePrefix }.
         self
             _finishBlockWith: parser
             _parameters: parameters
+            _returnType: returnType
             _body: parser parseSeq!
 
     method toString

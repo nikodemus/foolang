@@ -201,6 +201,10 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
                               do: { |param| param visitBy: self }
                               interleaving: { self print: " " }.
                           self print: "| " }.
+        aBlock returnType is False
+            ifFalse: { self print: " -> ".
+                       aBlock returnType visitBy: self.
+                       self print: " " }.
         aBlock body visitBy: bodyPrinter.
         self print: " }"!
 

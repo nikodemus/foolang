@@ -42,6 +42,10 @@ class Tests { system ok }
             ; test: #testTypeDecl17
             ; test: #testTypeDecl18
             ; test: #testTypeDecl19
+            ; test: #testTypeDecl20
+            ; test: #testTypeDecl21
+            ; test: #testTypeDecl22
+            ; test: #testTypeDecl23
             ; test: #testDictionary1
             ; test: #testDictionary2
             ; test: #testRecord1
@@ -743,6 +747,26 @@ with: {defSource}"!
             expectError: TypeError
             where: { |e|
                      e value is "oops" and: e expected is Integer }!
+
+    method testTypeDecl20
+        self eval: "\{ -> Integer 42 } value"
+             expect: 42!
+
+    method testTypeDecl21
+        self eval: "\{ |x| -> Integer x * 2 } value: 21"
+             expect: 42!
+
+    method testTypeDecl22
+        self eval: "\{ -> String 42 } value"
+             expectError: TypeError
+             where: { |e|
+                      e value is 42 and: e expected is String }!
+
+    method testTypeDecl23
+        self eval: "\{ |x| -> String x * 2 } value: 21"
+             expectError: TypeError
+             where: { |e|
+                      e value is 42 and: e expected is String }!
 
     method testTranspile
         self transpile: "let x = 20.

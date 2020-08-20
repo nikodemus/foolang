@@ -140,6 +140,7 @@ class SyntaxTranslator { env }
         AstBlock
             body: (aBlock body visitBy: (SyntaxTranslator env: bodyEnv))
             argumentVariables: argumentVariables
+            returnType: (self _resolveType: aBlock returnType)
             frameSize: bodyEnv frame size!
 
     method visitDefine: aDefine

@@ -272,7 +272,7 @@ class AstSend {
         visitor visitSend: self!
 end
 
-class AstBlock { body argumentVariables frameSize }
+class AstBlock { body argumentVariables returnType frameSize }
     is AstNode
 
     method selector
