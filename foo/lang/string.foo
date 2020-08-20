@@ -21,6 +21,19 @@ extend String
     method append: other
        other appendToString: self!
 
+    method trimRight
+        self trimRight: #isWhitespace!
+
+    method trimRight: block
+        let size = self size.
+        size downTo: 1
+             do: { |index|
+                   (block value: (self at: index))
+                       ifFalse: { index is size
+                                      ifTrue: { return self }
+                                      ifFalse: { return self from: 1 to: index } } }.
+        ""!
+
     method newline
         "\n" appendToString: self!
 
@@ -63,24 +76,38 @@ extend String
                        ifFalse: { out print: sX } }.
         out content!
 
+    method lines
+        let lines = List new.
+        self doLines: { |line| lines add: line }.
+        lines!
+
     method doLines: block
-        let from = False.
-        1 to: self size
-          do: { |index|
-                let c = self at: index.
-                c isNewline
-                    ifTrue: { from is False
-                                  ifTrue: { block value: "" }
-                                  ifFalse: { block value: (self from: from to: index - 1).
-                                             from = False } }
-                   ifFalse: { from is False
-                                  ifTrue: { from = index } } }.
+        self isEmpty
+            ifTrue: { block value: self.
+                      return self }.
+        let from = 1.
+        let i = 1.
+        { i <= self size }
+            whileTrue: { let c = self at: i.
+                         c isNewline
+                             ifTrue: { block value: (self from: from to: i - 1).
+                                       i = i + 1.
+                                       from = i }
+                             ifFalse: { i = i + 1 } }.
+        (self at: self size) isNewline
+            ifTrue: { block value: "" }.
+        from <= self size
+            ifTrue: { block value: (self from: from to: self size) }.
         self!
 
     method repeat: n
         let out = StringOutput new.
         n times: { out print: self }.
         out content!
+
+    method debug
+        self displayString!
+
 end
 
 class TestString { assert }
@@ -88,7 +115,28 @@ class TestString { assert }
     direct method runTests: assert
         (self assert: assert)
             ; testLessThan
+            ; testTrimRight
+            ; testLines
                 !
+
+    method testLines
+        assert forAll: [["foo\nbar", ["foo", "bar"]],
+                        ["foo", ["foo"]],
+                        ["", [""]],
+                        ["\n", ["", ""]]]
+               that: { |test|
+                       test first lines == test second asList }
+               testing: "String#lines"!
+
+    method testTrimRight
+        assert forAll: [["foo", "foo"],
+                        [" foo", " foo"],
+                        [" foo ", " foo"],
+                        ["foo   ", "foo"],
+                        ["foo\n", "foo"]]
+               that: { |test|
+                       test first trimRight == test second }
+               testing: "String#trimRight"!
 
     method testLessThan
         assert forAll: [["aQWE", "bQWE"],
