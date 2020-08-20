@@ -225,6 +225,9 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
                                           self print: " ".
                                           let param =  signature parameters at: index.
                                           param visitBy: self } }.
+        signature returnType is False
+            ifFalse: { self print: " -> ".
+                       signature returnType visitBy: self }.
         let bodyVisitor = self indentBody.
         bodyVisitor println: "".
         aMethod body visitBy: bodyVisitor.

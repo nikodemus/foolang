@@ -150,6 +150,8 @@ class SyntaxTranslator { env }
             frameSize: bodyVisitor env frame size!
 
     method _resolveType: aType
+        aType is False
+            ifTrue: { return False }.
         let ast = aType visitBy: self.
         ast isConstant
             ifFalse: { Error raise: "non-constant type declaration" }.
@@ -168,6 +170,7 @@ class SyntaxTranslator { env }
             -- FIXME: Methods should not know their selectors!
             selector: signature selector
             argumentVariables: argumentVariables
+            returnType: (self _resolveType: signature returnType)
             body: (aMethod body visitBy: (SyntaxTranslator env: bodyEnv))
             frameSize: bodyEnv frame size!
 

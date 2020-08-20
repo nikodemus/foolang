@@ -112,15 +112,17 @@ class AstClass { name slots interfaces directMethods instanceMethods isDefined }
             instanceMethods: (Array from: instanceMethods)!
 end
 
-class AstMethod { name argumentVariables body frameSize }
+class AstMethod { name argumentVariables returnType body frameSize }
     is Object
 
     direct method selector: selector
                   argumentVariables: argumentVariables
+                  returnType: returnType
                   body: body
                   frameSize: frameSize
         self name: selector name
              argumentVariables: argumentVariables
+             returnType: returnType
              body: body
              frameSize: frameSize!
 

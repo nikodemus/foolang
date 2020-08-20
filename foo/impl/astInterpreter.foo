@@ -139,8 +139,12 @@ class AstInterpreter { context process }
                           frameContext: $context
                           frame: frame
                           returnBlock: { |value| return value }.
-        { AstInterpreter eval: astMethod body with: context }
-            finally: { context invalidate } !
+        { let ret = AstInterpreter eval: astMethod body with: context.
+          let type = astMethod returnType.
+          type is False
+              ifTrue: { ret }
+              ifFalse: { return type typecheck: ret } }
+        finally: { context invalidate } !
 
     method visitTypecheck: aNode
         let value = aNode value visitBy: self.

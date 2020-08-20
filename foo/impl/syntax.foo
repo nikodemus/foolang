@@ -396,9 +396,11 @@ class SyntaxDirectMethod { signature body }
         "#<SyntaxDirectMethod {self selector}>"!
 end
 
-class MethodSignature { selector parameters }
+class MethodSignature { selector parameters returnType }
     is Object
 
     method isEquivalent: other
-        selector == other selector and: parameters == other parameters!
+        selector == other selector
+            and: parameters == other parameters
+            and: returnType == other returnType!
 end

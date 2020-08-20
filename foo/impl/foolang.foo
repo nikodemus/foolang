@@ -40,6 +40,8 @@ class Tests { system ok }
             ; test: #testTypeDecl15
             ; test: #testTypeDecl16
             ; test: #testTypeDecl17
+            ; test: #testTypeDecl18
+            ; test: #testTypeDecl19
             ; test: #testDictionary1
             ; test: #testDictionary2
             ; test: #testRecord1
@@ -164,7 +166,7 @@ from: '{exprSource}'" }!
 
 
     method load: defSource eval: exprSource
-        -- Debug println: "/parseDef".
+        -- Debug println: "\n/parseDef".
         self checkParsingBy: { |source| Parser parseDefinitions: source }
              for: defSource.
         -- Debug println: "/parseExpr".
@@ -723,6 +725,24 @@ with: {defSource}"!
              expectError: TypeError
              where: { |e|
                       e value is 2 and: e expected is String }!
+
+    method testTypeDecl18
+        self load: "class Foo \{}
+                       direct method bar -> Integer
+                           42!
+                    end"
+            eval: "Foo bar"
+            expect: 42!
+
+    method testTypeDecl19
+        self load: "class Foo \{}
+                       direct method bar -> Integer
+                           \"oops\"!
+                    end"
+            eval: "Foo bar"
+            expectError: TypeError
+            where: { |e|
+                     e value is "oops" and: e expected is Integer }!
 
     method testTranspile
         self transpile: "let x = 20.
