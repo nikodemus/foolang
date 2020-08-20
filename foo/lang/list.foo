@@ -3,8 +3,6 @@ import .array.Specialized
 import .collection.Collection
 import .ordered.Ordered
 
-
-
 class List { size data }
     is Ordered
     is Collection
@@ -29,11 +27,16 @@ class List { size data }
     method displayOn: stream
         "[" printOn: stream.
         self do: { |each| each displayOn: stream }
-             interleaving: { ", " displayOn: stream }.
-        "] asList" printOn: stream!
+             interleaving: { ", " printOn: stream }.
+        "] asList" printOn: stream.
+        self elementType is Any
+            ifFalse: { "Of: {self elementType}" printOn: stream }!
 
     method toString
         StringOutput with: { |out| self printOn: out }!
+
+    method displayString
+        StringOutput with: { |out| self displayOn: out }!
 
     direct method from: collection
         let new = self withCapacity: collection size.
@@ -101,20 +104,6 @@ class List { size data }
     method clear
         size = 0.
         self!
-
-    method _emitOn: stream using: block
-        self elementType is Object
-            ifTrue: { stream print: "List from: [" }
-            ifFalse: { stream print: "List of: {self elementType} from: [" }.
-        self do: { |x| block value: x }
-             interleaving: { stream print: ", " }.
-        stream print: "]"!
-
-    method displayOn: stream
-        self _emitOn: stream using: { |x| x displayOn: stream }!
-
-    method printOn: stream
-        self _emitOn: stream using: { |x| x printOn: stream }!
 
     method concat: other
         let new = List withCapacity: self size + other size.
