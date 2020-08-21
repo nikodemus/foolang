@@ -34,6 +34,9 @@ class Tests { system ok }
             ; test: #testComment9
             ; test: #testComment10
             ; test: #testComment11
+            ; test: #testComment12
+            ; test: #testComment13
+            ; test: #testComment14
             ; test: #testTypeDecl1
             ; test: #testTypeDecl2
             ; test: #testTypeDecl3
@@ -145,9 +148,10 @@ problem: {err description}" }!
 source:\n{source}
 pretty:\n{pretty}
 problem: {err description}" }.
-        let output = StringOutput new.
-        syntaxList1 do: { |syntax| output print: syntax toString }.
-        let printed = output content.
+        let printed
+            = StringOutput
+                  with: { |out|
+                          syntaxList1 do: { |syntax| SyntaxPrinter print: syntax to: out } }.
         printed == pretty
             ifFalse: { Error raise: "print inconsistent with desired pretty-print!
 source:\n{source}
@@ -459,6 +463,24 @@ with: {defSource}"!
         -- block comment
         self parse: "---\nThis is a test.\n---\n      42"
             expect: "---\nThis is a test.\n---\n42"!
+
+    method testComment12
+        -- Line comment without space after
+        self eval: "--> 42\n 42"
+             expect: 42!
+
+    method testComment13
+        -- Block comment without space after
+        self eval: "---XXX 42--- 42"
+             expect: 42!
+
+    method testComment14
+        -- long comment fences
+        self eval: "----
+                    --- This is a test.
+                    ----
+                    42"
+            expect: 42!
 
     method testArray1
         self eval: "[1, 1+1, 3]"

@@ -3,16 +3,18 @@ import .syntaxPrinter.SyntaxPrinter
 interface Syntax
     is Object
 
+    required method kind
+
     required method visitBy: visitor
 
     required method parts
 
-    method withBlockComment: lines commentSource: source
+    method withBlockComment: lines fence: fence commentSource: source
         SyntaxPrefixComment
             comment: lines
             value: self
             source: source
-            block: True!
+            fence: fence!
 
     method withPrefixComment: comment::String commentSource: source
         SyntaxPrefixComment
@@ -37,20 +39,22 @@ interface Syntax
         True!
 
     method toString
-        let out = StringOutput new.
-        { SyntaxPrinter print: self to: out }
-            on: Error
-            do: { return "#<Syntax <cannot print>>" }.
-        out content!
+        StringOutput with: { |out| self displayOn: out }!
 
     method displayOn: stream
-        stream print: "#<Syntax ".
-        self printOn: stream.
+        stream print: "#<{self kind} ".
+        { SyntaxPrinter print: self to: stream }
+            on: Error
+            do: { out print: "<error printing>>".
+                  return self }.
         stream print: ">"!
 end
 
 class SyntaxLiteral { value }
     is Syntax
+
+    method kind
+        "SyntaxLiteral"!
 
     method visitBy: visitor
         visitor visitLiteral: self!
@@ -65,6 +69,9 @@ end
 class SyntaxHexLiteral { value }
     is Syntax
 
+    method kind
+        "SyntaxHexLiteral"!
+
     method visitBy: visitor
         visitor visitHexLiteral: self!
 
@@ -75,6 +82,9 @@ end
 class SyntaxBinaryLiteral { value }
     is Syntax
 
+    method kind
+        "SyntaxBinaryLiteral"!
+
     method visitBy: visitor
         visitor visitBinaryLiteral: self!
 
@@ -84,6 +94,9 @@ end
 
 class SyntaxValueTypeDeclaration { value type }
     is Syntax
+
+    method kind
+        "SyntaxValueTypeDeclaration"!
 
     method visitBy: visitor
         visitor visitValueTypeDeclaration: self!
@@ -102,12 +115,18 @@ end
 class SyntaxArray { entries }
     is SyntaxCollection
 
+    method kind
+        "SyntaxArray"!
+
     method visitBy: visitor
         visitor visitArray: self!
 end
 
 class SyntaxRecord { entries }
     is SyntaxCollection
+
+    method kind
+        "SyntaxRecord"!
 
     method visitBy: visitor
         visitor visitRecord: self!
@@ -116,12 +135,18 @@ end
 class SyntaxDictionary { entries }
     is SyntaxCollection
 
+    method kind
+        "SyntaxDictionary"!
+
     method visitBy: visitor
         visitor visitDictionary: self!
 end
 
 class SyntaxSeq { first then }
     is Syntax
+
+    method kind
+        "SyntaxSeq"!
 
     method visitBy: visitor
         visitor visitSeq: self!
@@ -133,6 +158,9 @@ end
 class SyntaxReturn { value }
     is Syntax
 
+    method kind
+        "SyntaxReturn"!
+
     method visitBy: visitor
         visitor visitReturn: self!
 
@@ -140,15 +168,18 @@ class SyntaxReturn { value }
         [value]!
 end
 
-class SyntaxPrefixComment { comment value source block }
+class SyntaxPrefixComment { comment value source fence }
     is Syntax
+
+    method kind
+        "SyntaxPrefixComment"!
 
     direct method comment: comment value: value source: source
         self
             comment: comment
             value: value
             source: source
-            block: False!
+            fence: False!
 
     method visitBy: visitor
         visitor visitPrefixComment: self!
@@ -156,10 +187,16 @@ class SyntaxPrefixComment { comment value source block }
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
         [comment, value]!
+
+    method displayString
+        "#<SyntaxPrefixComment value: {value}>"!
 end
 
 class SyntaxSuffixComment { comment value source }
     is Syntax
+
+    method kind
+        "SyntaxSuffixComment"!
 
     method visitBy: visitor
         visitor visitSuffixComment: self!
@@ -167,10 +204,16 @@ class SyntaxSuffixComment { comment value source }
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
         [comment, value]!
+
+    method displayString
+        "#<SyntaxSuffixComment value: {value}>"!
 end
 
 class SyntaxLineComment { comment source }
     is Syntax
+
+    method kind
+        "SyntaxLineComment"!
 
     method visitBy: visitor
         visitor visitLineComment: self!
@@ -181,10 +224,16 @@ class SyntaxLineComment { comment source }
 
     method string
         comment!
+
+    method displayString
+        "#<SyntaxLineComment {comment}>"!
 end
 
-class SyntaxBlockComment { lines source }
+class SyntaxBlockComment { fence lines source }
     is Syntax
+
+    method kind
+        "SyntaxBlockComment"!
 
     method visitBy: visitor
         visitor visitBlockComment: self!
@@ -192,10 +241,16 @@ class SyntaxBlockComment { lines source }
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
         [lines]!
+
+    method displayString
+        "#<SyntaxBlockComment {lines}>"!
 end
 
 class SyntaxPrefix { receiver selector source }
     is Syntax
+
+    method kind
+        "SyntaxPrefix"!
 
     method visitBy: visitor
         visitor visitPrefixMessage: self!
@@ -207,6 +262,9 @@ end
 
 class SyntaxUnary { receiver selector source }
     is Syntax
+
+    method kind
+        "SyntaxUnary"!
 
     method visitBy: visitor
         visitor visitUnaryMessage: self!
@@ -222,6 +280,9 @@ end
 class SyntaxBinary { receiver selector argument source }
     is Syntax
 
+    method kind
+        "SyntaxBinary"!
+
     method visitBy: visitor
         visitor visitBinaryMessage: self!
 
@@ -235,6 +296,9 @@ end
 class SyntaxKeyword { receiver selector arguments source }
     is Syntax
 
+    method kind
+        "SyntaxKeyword"!
+
     method visitBy: visitor
         visitor visitKeywordMessage: self!
 
@@ -247,6 +311,9 @@ end
 class SyntaxIs { left right }
     is Syntax
 
+    method kind
+        "SyntaxIs"!
+
     method visitBy: visitor
         visitor visitIs: self!
 
@@ -257,6 +324,9 @@ end
 class SyntaxUntypedVariable { name }
     is Syntax
 
+    method kind
+        "SyntaxUntypedVariable"!
+
     method visitBy: visitor
         visitor visitUntypedVariable: self!
 
@@ -265,27 +335,26 @@ class SyntaxUntypedVariable { name }
 
     method parts
         [name]!
-
-    method toString
-        "#<SyntaxVariable {name}>"!
-
 end
 
 class SyntaxTypedVariable { name type }
     is Syntax
+
+    method kind
+        "SyntaxTypedVariable"!
 
     method visitBy: visitor
         visitor visitTypedVariable: self!
 
     method parts
         [name]!
-
-    method toString
-        "#<SyntaxVariable {name}::{type}>"!
 end
 
 class SyntaxLet { variable value body }
     is Syntax
+
+    method kind
+        "SyntaxLet"!
 
     method visitBy: visitor
         visitor visitLet: self!
@@ -297,6 +366,9 @@ end
 class SyntaxSelf {}
     is Syntax
 
+    method kind
+        "SyntaxSelf"!
+
     method visitBy: visitor
         visitor visitSelf: self!
 
@@ -306,6 +378,9 @@ end
 
 class SyntaxVariable { name::String }
     is Syntax
+
+    method kind
+        "SyntaxVariable"!
 
     method visitBy: visitor
         visitor visitVariable: self!
@@ -317,6 +392,9 @@ end
 class SyntaxAssign { variable value }
     is Syntax
 
+    method kind
+        "SyntaxAssign"!
+
     method visitBy: visitor
         visitor visitAssign: self!
 
@@ -326,6 +404,9 @@ end
 
 class SyntaxParens { body }
     is Syntax
+
+    method kind
+        "SyntaxParens"!
 
     method visitBy: visitor
         visitor visitParens: self!
@@ -337,6 +418,9 @@ end
 class SyntaxBlock { parameters returnType body }
     is Syntax
 
+    method kind
+        "SyntaxBlock"!
+
     method visitBy: visitor
         visitor visitBlock: self!
 
@@ -347,6 +431,9 @@ end
 class SyntaxDefine { name body }
     is Syntax
 
+    method kind
+        "SyntaxDefine"!
+
     method visitBy: visitor
         visitor visitDefine: self!
 
@@ -356,6 +443,9 @@ end
 
 class SyntaxClass { name slots interfaces directMethods instanceMethods }
     is Syntax
+
+    method kind
+        "SyntaxClass"!
 
     direct method name: name slots: slots
         self
@@ -377,6 +467,9 @@ end
 
 class SyntaxInterface { name interfaces directMethods instanceMethods }
     is Syntax
+
+    method kind
+        "SyntaxInterface"!
 
     direct method name: name
         self
@@ -403,6 +496,9 @@ class SyntaxInterfaceRef { name }
     is Syntax
     is DefinitionPart
 
+    method kind
+        "SyntaxInterfaceRef"!
+
     method addTo: definition
         definition interfaces add: self!
 
@@ -411,9 +507,6 @@ class SyntaxInterfaceRef { name }
 
     method parts
         [name]!
-
-    method toString
-        "#<SyntaxInterfaceRef {name}>"!
 end
 
 interface SyntaxMethod
@@ -426,8 +519,9 @@ interface SyntaxMethod
             signature: signature
             body: body!
 
-    method withBlockComment: lines commentSource: aSource
+    method withBlockComment: lines fence: fence commentSource: aSource
         self comment: (SyntaxBlockComment
+                           fence: fence
                            comment: lines
                            source: aSource).
         self!
@@ -451,31 +545,34 @@ end
 class SyntaxInstanceMethod { comment signature body }
     is SyntaxMethod
 
+    method kind
+        "SyntaxInstanceMethod"!
+
     method addTo: thing
         thing instanceMethods add: self!
 
     method comment: aSpec
         comment = aSpec!
-
-    method toString
-        "#<SyntaxInstanceMethod {self selector}>"!
 end
 
 class SyntaxDirectMethod { comment signature body }
     is SyntaxMethod
+
+    method kind
+        "SyntaxDirectMethod"!
 
     method comment: aSpec
         comment = aSpec!
 
     method addTo: thing
         thing directMethods add: self!
-
-    method toString
-        "#<SyntaxDirectMethod {self selector}>"!
 end
 
 class MethodSignature { selector parameters returnType }
     is Object
+
+    method kind
+        "MethodSignature"!
 
     method isEquivalent: other
         selector == other selector

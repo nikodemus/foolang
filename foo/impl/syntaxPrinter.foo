@@ -116,9 +116,9 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
     method visitPrefixComment: aComment
         self handleBlockStart.
         let valueVisitor = self indentHere.
-        aComment block
-            ifTrue: { self visitBlockComment: aComment }
-            ifFalse: { self visitLineComment: aComment }.
+        aComment fence is False
+            ifTrue: { self visitLineComment: aComment }
+            ifFalse: { self visitBlockComment: aComment }.
         valueVisitor newline.
         aComment value visitBy: valueVisitor!
 
@@ -225,7 +225,10 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         let lines = comment comment.
         -- Inline blocks
         lines size is 1
-            ifTrue: { return self print: "--- {lines first} ---" }.
+            ifTrue: { self print: comment fence.
+                      self print: lines first.
+                      self print: comment fence.
+                      return self }.
         -- Multiline blocks, normalizing them so that fences are
         -- on their own lines.
         let first = lines first == ""
@@ -234,12 +237,13 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         let last = lines last == ""
                         ifTrue: { lines size - 1 }
                         ifFalse: { lines size }.
-        self print: "---".
+        self print: comment fence.
         first to: last
               do: { |i|
                     self newline.
                     self print: (lines at: i) }.
-        self print: "\n---"!
+        self newline.
+        self print: comment fence!
 
     method visitMethod: aMethod
         -- Debug println: "/pp method {aMethod signature selector}".
