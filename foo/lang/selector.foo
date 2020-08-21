@@ -13,6 +13,9 @@ class Selector { name }
     direct method new: name
         self name: name!
 
+    method < other
+        self name < other name!
+
     method isKeyword
         name find: { |c| c == ":" }
              ifNone: { return False }.
@@ -50,6 +53,9 @@ class Selector { name }
 
     method value: receiver value: argument
         self sendTo: receiver with: [argument]!
+
+    method startsWith: part
+        self name startsWith: part!
 
     method parts
         let parts = List new.

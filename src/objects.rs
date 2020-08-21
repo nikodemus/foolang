@@ -1334,6 +1334,7 @@ impl Object {
                 &args[0],
                 args[1].as_usize("#__put:__atSlot:")?,
             ),
+            None if selector == "doSelectors:" => generic_do_selectors(self, args, env),
             None if selector == "toString" => generic_to_string(self, args, env),
             None if selector == "typecheck:" => generic_typecheck(self, args, env),
             None if selector == "includes:" => generic_class_includes(self, args, env),
@@ -1500,6 +1501,19 @@ fn generic_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
         }
         _ => Ok(env.foo.into_string(format!("{}", receiver))),
     }
+}
+
+fn generic_do_selectors(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let methods = receiver.vtable.methods.borrow();
+    let selector = env.find_global_or_unwind("Selector")?;
+    for method in methods.keys() {
+        args[0].send(
+            "value:",
+            &[selector.send("new:", &[env.foo.make_string(method)], env)?],
+            env,
+        )?;
+    }
+    Ok(receiver.clone())
 }
 
 fn generic_class_includes(receiver: &Object, args: &[Object], env: &Env) -> Eval {
