@@ -131,102 +131,75 @@ extend Array
        self collect: { |elt| left * elt }!
 end
 
-class TestArray {}
-    direct method testEquality: assert
-        assert true: { [1, 2, 3] == [1, 2, 3] }
-               testing: "Array#== (true 1)".
-        assert true: { [1, 2, [3, 4]] == [1, 2, [3, 4]] }
-               testing: "Array#== (true 2)".
-        assert false: { [1, 2, 4] == [1, 2, 3] }
-               testing: "Array#== (false 1)".
-        assert false: { [1, 2, 3, 4] == [1, 2, 3] }
-               testing: "Array#== (false 2)".
-        assert false: { ["one", 2, 3] == [1, "two", 3] }
-               testing: "Array#== (false 3)".
-        self!
+class TestArray { assert }
 
-    direct method testSort: assert
-        assert that: { [] sort }
-               equals: []
-               testing: "sort, empty".
-        assert that: { [1] sort }
-               equals: [1]
-               testing: "sort, singular".
-        assert that: { [1, 1] sort }
-               equals: [1, 1]
-               testing: "sort, two identical".
-        assert that: { [1, 2] sort }
-               equals: [1, 2]
-               testing: "sort, two in order".
-        assert that: { [2, 1] sort }
-               equals: [1, 2]
-               testing: "sort, two in reverse order".
-        assert that: { [1, 2, 3] sort }
-               equals: [1, 2, 3]
-               testing: "sort, three in order".
-        assert that: { [3, 2, 1] sort }
-               equals: [1, 2, 3]
-               testing: "sort, three in reverse order".
-        assert that: { [9, 2, 1, 8, 7, 3, 5, 4, 6, 0] sort }
-               equals: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-               testing: "sort, ten".
-        self!
+    method equalityCases
+        [[ [1,2,3], [1,2,3], True ],
+         [ [1, 2, [3, 4]], [1, 2, [3, 4]], True ],
+         [ [1, 2, 4], [1, 2, 3], False ],
+         [ [1, 2, 3, 4], [1, 2, 3], False ],
+         [ ["one", 2, 3], [1, "two", 3], False ]]!
 
-    direct method testReverse: assert
-        assert that: { let a = [].
-                       a reverse.
-                       a }
-               equals: []
-               testing: "reverse array (empty)".
-        assert that: { let a = [1].
-                       a reverse.
-                       a }
-               equals: [1]
-               testing: "reverse array (1)".
-        assert that: { let a = [1,2].
-                       a reverse.
-                       a }
-               equals: [2,1]
-               testing: "reverse array (2)".
-        assert that: { let a = [1,2,3].
-                       a reverse.
-                       a }
-               equals: [3,2,1]
-               testing: "reverse array (3)".
-        assert that: { let a = [1,2,3].
-                       a reverse }
-               equals: [3,2,1]
-               testing: "reverse array, retval (3)".
-        self!
+    method testEquality
+        assert forAll: self equalityCases
+               that: { |case|
+                       (case first == case second) is case third }
+               testing: "Array#=="!
 
-    direct method testReversed: assert
-        assert that: { let a = [].
-                       a reversed }
-               equals: []
-               testing: "reversed array (empty)".
-        assert that: { let a = [1].
-                       a reversed }
-               equals: [1]
-               testing: "reversed array (1)".
-        assert that: { let a = [1,2].
-                       a reversed }
-               equals: [2,1]
-               testing: "reversed array (2)".
-        assert that: { let a = [1,2,3].
-                       a reversed }
-               equals: [3,2,1]
-               testing: "reversed array (3)".
-        assert that: { let a = [1,2,3].
-                       a reversed.
-                       a }
-               equals: [1,2,3]
-               testing: "reversed array, side-effect (3)".
-        self!
+    method sortingCases
+        [[ [], [] ],
+         [ [1], [1] ],
+         [ [1, 1], [1, 1] ],
+         [ [1, 2], [1, 2] ],
+         [ [2, 1], [1, 2] ],
+         [ [1, 2, 3], [1, 2, 3] ],
+         [ [3, 2, 1], [1, 2, 3] ],
+         [ [2, 1, 3], [1, 2, 3] ],
+         [ [1, 3, 2], [1, 2, 3] ],
+         [ [9, 2, 1, 8, 7, 3, 5, 4, 6, 0],
+           [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] ]]!
+
+    method testSort
+        assert forAll: self sortingCases
+               that: { |case|
+                       case first sort == case second }
+               testing: "Array#sort return value".
+        assert forAll: self sortingCases
+               that: { |case|
+                       case first sort.
+                       case first == case second }
+               testing: "Array#sort side effect"!
+
+    method reverseCases
+        [[ [], [] ],
+         [ [1], [1] ],
+         [ [1, 2], [2, 1] ],
+         [ [1, 2, 3], [3, 2, 1] ]]!
+
+    method testReverse
+        assert forAll: self reverseCases
+               that: { |case|
+                       case first reverse == case second }
+               testing: "Array#reverse return value".
+        assert forAll: self reverseCases
+               that: { |case|
+                       case first reverse.
+                       case first == case second }
+               testing: "Array#reverse side effect"!
+
+    method testReversed
+        assert forAll: self reverseCases
+               that: { |case|
+                       case first reversed == case second }
+               testing: "Array#reversed return value".
+        assert forAll: self reverseCases
+               that: { |case|
+                       let orig = case first copy.
+                       case first reversed.
+                       case first == orig }
+               testing: "Array#reversed no side effect"!
 
     direct method runTests: assert
-        self testEquality: assert.
-        self testSort: assert.
-        self testReverse: assert.
-        self testReversed: assert.
-        self!
+        assert runAllTests: (self assert: assert)!
+
 end
