@@ -89,6 +89,18 @@ class Assert { output failed }
     direct method reportingTo: output
         self output: output failed: False!
 
+    method runAllTests: object
+        let list = List new.
+        object doSelectors: { |selector|
+                              (selector startsWith: "test")
+                                  ifTrue: { list add: selector } }.
+        list isEmpty
+            ifTrue: { Error raise: "Not tests for {object}!" }.
+        list sort
+            do: { |each|
+                  each sendTo: object }.
+        self!
+
     method report: testResult
         testResult reportOn: output!
 

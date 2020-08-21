@@ -10,7 +10,7 @@ class Tests { system ok }
     direct method runIn: system
         (self system: system ok: True) run!
 
-    method test: selector
+    method runTest: selector
         { Debug print: selector name.
           selector sendTo: self.
           Debug println: " ok" }
@@ -22,97 +22,11 @@ class Tests { system ok }
         True!
 
     method run
-        self
-            ; test: #testComment1
-            ; test: #testComment2
-            ; test: #testComment3
-            ; test: #testComment4
-            ; test: #testComment5
-            ; test: #testComment6
-            ; test: #testComment7
-            ; test: #testComment8
-            ; test: #testComment9
-            ; test: #testComment10
-            ; test: #testComment11
-            ; test: #testComment12
-            ; test: #testComment13
-            ; test: #testComment14
-            ; test: #testTypeDecl1
-            ; test: #testTypeDecl2
-            ; test: #testTypeDecl3
-            ; test: #testTypeDecl4
-            ; test: #testTypeDecl5
-            ; test: #testTypeDecl6
-            ; test: #testTypeDecl7
-            ; test: #testTypeDecl8
-            ; test: #testTypeDecl9
-            ; test: #testTypeDecl10
-            ; test: #testTypeDecl11
-            ; test: #testTypeDecl12
-            ; test: #testTypeDecl13
-            ; test: #testTypeDecl14
-            ; test: #testTypeDecl15
-            ; test: #testTypeDecl16
-            ; test: #testTypeDecl17
-            ; test: #testTypeDecl18
-            ; test: #testTypeDecl19
-            ; test: #testTypeDecl20
-            ; test: #testTypeDecl21
-            ; test: #testTypeDecl22
-            ; test: #testTypeDecl23
-            ; test: #testDictionary1
-            ; test: #testDictionary2
-            ; test: #testRecord1
-            ; test: #testRecord2
-            ; test: #testSelector1
-            ; test: #testSelector2
-            ; test: #testSelector3
-            ; test: #test42
-            ; test: #testHex1
-            ; test: #testHex2
-            ; test: #testHex3
-            ; test: #testBinary1
-            ; test: #testBinary2
-            ; test: #testBinary3
-            ; test: #testArray1
-            ; test: #testArray2
-            ; test: #testArray3
-            ; test: #testArray4
-            ; test: #testPlus
-            ; test: #testPrecedence1
-            ; test: #testPrecedence2
-            ; test: #testPrefixMethod
-            ; test: #testUnaryMethod
-            ; test: #testKeywordMethod
-            ; test: #testIs
-            ; test: #testLet
-            ; test: #testParens
-            ; test: #testAssign1
-            ; test: #testAssign2
-            ; test: #testSimpleBlock
-            ; test: #testArgBlock
-            ; test: #testBlockClosure
-            ; test: #testSimpleClass
-            ; test: #testClassWithMethod
-            ; test: #testSlotAssign
-            ; test: #testClassWithPrefixMethod
-            ; test: #testTwoClasses
-            ; test: #testDefine
-            ; test: #testBlockInMethod
-            ; test: #testDirectMethod
-            ; test: #testReturn
-            ; test: #testAstSource
-            ; test: #testOutOfOrderDefine
-            ; test: #testOutOfOrderClasses
-            ; test: #testInterface1
-            ; test: #testInterface2
-            ; test: #testInterface3
-            ; test: #testBacktrace
-            ; test: #testString1
-            ; test: #testString2
-            ; test: #testString3
-            ; test: #testTranspile
-               .
+        let list = List new.
+        self doSelectors: { |selector|
+                            (selector startsWith: "test")
+                                ifTrue: { list add: selector } }.
+        list sort do: { |each| self runTest: each }.
         self!
 
     method checkParsingBy: block for: source
