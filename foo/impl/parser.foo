@@ -126,8 +126,28 @@ class InvalidToken { precedence string first last }
     is Token
 end
 
-class LineCommentToken { precedence string first last }
+interface TokenComment
+
+    direct method from: first to: last in: parser
+        last - first < 2
+            ifTrue: { LineCommentToken
+                          first: first
+                          last: last }
+            ifFalse: { BlockCommentToken
+                           string: (parser from: first to: last)
+                           first: first
+                           last: last }!
+end
+
+class LineCommentToken { first last }
     is Token
+
+    method precedence
+        MaxPrecedence!
+
+    method string
+        "--"!
+
     ---
     See also: special handlings in SequenceToken and LetToken to parse
 
@@ -166,15 +186,24 @@ class LineCommentToken { precedence string first last }
             commentSource: (parser sourceFrom: first to: last)!
 end
 
-class BlockCommentToken { precedence string first last }
+class BlockCommentToken { string first last }
     is Token
 
+    method precedence
+        MinPrecedence!
+
     method parseAsPrefixWith: parser atPrecedence: precedence
-        let fence = parser find: "---".
-        (parser parseAtPrecedence: precedence)
-            withBlockComment: ((parser from: last + 1 to: fence) lines
-                                   collect: #trimRight)
-            commentSource: (parser sourceFrom: last + 1 to: fence)!
+        let endFence = parser find: string.
+        let expr = (parser parseAtPrecedence: precedence).
+        let origLines = (parser from: last + 1 to: endFence) lines.
+        -- Block comments on one line don't get trimmed.
+        let lines = origLines size > 1
+                        ifTrue: { origLines collect: #trimRight }
+                        ifFalse: { origLines }.
+        expr
+            withBlockComment: lines
+            fence: string
+            commentSource: (parser sourceFrom: last + 1 to: endFence)!
 
 end
 
@@ -585,13 +614,11 @@ define CoreSyntaxTable
     where: "anywhere"
     tokens:
     {
-         "---" -> SyntaxEntry tokenClass: BlockCommentToken precedence: 0,
          "}" -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
          ")" -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
          "]" -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
          "," -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
          "->" -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
-         "--" -> SyntaxEntry tokenClass: LineCommentToken precedence: 1000
     }!
 
 define ExpressionSyntaxTable
@@ -653,7 +680,7 @@ interface LookupToken
     is Token
 
     direct method from: first to: last in: parser
-        let tokenString = parser source from: first to: last.
+        let tokenString = parser from: first to: last.
         -- Figure out the correct tokenclass using current syntax.
         let entry = parser syntaxTable tokens
                         at: tokenString
@@ -813,6 +840,9 @@ define EscapeCharacter
 define ColonCharacter
     ":" character!
 
+define DashCharacter
+    "-" character!
+
 -- FIXME: Broken for unicode input!
 class Parser { source::String
                positionBox
@@ -959,7 +989,7 @@ Source: {source}" }!
     method parseSuffixOf: prefix with: precedence
         let expr = prefix.
 
-        { -- Debug println: "expr: {expr}, precedence={precedence}, next={self lookahead}?, nextPrecedence={self nextPrecedence}".
+        { -- Debug println: "expr: {expr displayString}, precedence={precedence}, next={self lookahead}?, nextPrecedence={self nextPrecedence}".
           precedence < self nextPrecedence }
         whileTrue: { -- Debug println: " -> go".
                      expr = self parseSuffixOf: expr }.
@@ -992,6 +1022,8 @@ Source: {source}" }!
             ifTrue: { return self _scanNumber }.
         self atDoublequote
             ifTrue: { return self _scanString }.
+        self atComment
+            ifTrue: { return self _scanComment }.
         self atSigil
             ifTrue: { return self _scanSigil }.
         self atWord
@@ -1014,6 +1046,16 @@ Source: {source}" }!
 
     method atDoublequote
         self isAt: { |char| char == DoublequoteCharacter }!
+
+    method atComment
+        self atChar: DashCharacter and: DashCharacter!
+
+    method _scanComment
+        -- Debug println: "Parser#_scanComment".
+        TokenComment
+            from: self position
+            to: (self skipWhile: { self atChar: DashCharacter })
+            in: self!
 
     method find: aString
         let start = self position.
@@ -1057,6 +1099,14 @@ Source: {source}" }!
             ifTrue: { return False }.
         let here = (source at: self position).
         here == char1 or: here == char2!
+
+    method atChar: char1 and: char2
+        self atEof
+            ifTrue: { return False }.
+        (source at: self position) == char1
+            ifFalse: { return False }.
+        (self position + 1 > last)
+            ifFalse: { ((source at: self position + 1) == char2) }!
 
     method atChar: char1 notFollowedBy: char2
         self atEof
@@ -1130,7 +1180,6 @@ Source: {source}" }!
         string!
 
     method _scanSigil
-        -- Debug println: "/scanSigil".
         TokenSigil
             from: self position
             to: (self skipWhile: { self atSigil })
