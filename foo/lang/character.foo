@@ -3,6 +3,14 @@ import .test.TestSuite
 define ASCII
     {space: 0x20,
      tab: 0x09,
+     digit0: 0x30,
+     digit9: 0x39,
+     upperA: 0x41,
+     upperF: 0x46,
+     upperZ: 0x5A,
+     lowerA: 0x61,
+     lowerF: 0x66,
+     lowerZ: 0x7A,
      lineFeed: 0x0A,
      formFeed: 0x0C,
      carriageReturn: 0x0D}!
@@ -28,8 +36,8 @@ class Character { code }
         self isAlpha or: self isDigit!
 
     method isAlpha
-        (0x41 <= code and: code <= 0x5A)
-            ifFalse: { 0x61 <= code and: code <= 0x7A }!
+        (ASCII upperA <= code and: code <= ASCII upperZ)
+            ifFalse: { ASCII lowerA <= code and: code <= ASCII lowerZ }!
 
     method isWhitespace
         WhitespaceASCII anySatisfy: { |whitespaceCode| whitespaceCode is code }!
@@ -39,22 +47,24 @@ class Character { code }
 
     method isDigit: base
         base <= 10
-            ifTrue: { 0x30 <= code and: code < 0x30 + base }
+            ifTrue: { ASCII digit0 <= code and: code < ASCII digit0 + base }
             ifFalse: { let hexBase = base - 10.
-                       (0x30 <= code and: code < 0x40)
-                           or: (0x41 <= code and: code < 0x41 + hexBase)
-                           or: (0x61 <= code and: code < 0x61 + hexBase) }!
+                       (ASCII digit0 <= code and: code <= ASCII digit9)
+                           or: (ASCII upperA <= code
+                                    and: code < ASCII upperA + hexBase)
+                           or: (ASCII lowerA <= code
+                                    and: code < ASCII lowerA + hexBase) }!
 
     method isDigit
         self isDigit: 10!
 
     method digit: base
         (self isDigit: base)
-            ifTrue: { code < 0x40
-                          ifTrue: { return code - 0x30 }.
-                      code < 0x47
-                          ifTrue: { return (code - 0x41) + 10 }.
-                      (code - 0x61) + 10 }!
+            ifTrue: { code <= ASCII digit9
+                          ifTrue: { return code - ASCII digit0 }.
+                      code <= ASCII upperF
+                          ifTrue: { return (code - ASCII upperA) + 10 }.
+                      (code - ASCII lowerA) + 10 }!
 
     method digit
         self digit: 10!
@@ -100,7 +110,7 @@ class TestCharacter { assert }
          ["F", 15]]!
 
     method nonDigitCases
-        ["g", "G", ".", " ", "-"]!
+        "ghijlkmopqrstuxyz!@#$%^&*()?><| "!
 
     method digitTest: base
         assert forAll: self digitCases
@@ -123,4 +133,95 @@ class TestCharacter { assert }
 
     method testDigit16
         self digitTest: 16!
+
+    method allAlphas
+        "abcdefghijklmnopqrstuvxyzABCDEFGHIJKLMNOPQRSTUVXYZ"!
+
+    method allNumeric
+        "0123456789"!
+
+    method nonAlphasAndNonNumerics
+        "!@#$%^&*()_+?><| \n\r\t"!
+
+    method allWhitespace
+        -- ...except formfeed
+        " \t\n\r"!
+
+    method allHorizontalWhitespace
+        " \t"!
+
+    method allNonHorizontalWhitespace
+        -- ...except formfeed
+        "\n\r"!
+
+    method nonWhitespace
+        "1234567890-=`qwertyuiop[]asdfghjkl;'\\zxcvbnm,./~!@#$%^&*()_+QWERTYUIOP\{}ASDFGHJKL:\"|ZXCVBNM<>?"!
+
+    method testIsAlphanumeric
+        assert forAll: self allNumeric
+               that: { |s|
+                       s character isAlphanumeric }
+               testing: "Character#isAlphanumeric for numeric".
+        assert forAll: self allAlphas
+               that: { |s|
+                       s character isAlphanumeric }
+               testing: "Character#isAlphanumeric for alpha".
+        assert forAll: self nonAlphasAndNonNumerics
+               that: { |s|
+                       s character isAlphanumeric not }
+               testing: "Character#isAlphanumeric for non-alpha, non-numeric"!
+
+    method testIsAlpha
+        assert forAll: self allNumeric
+               that: { |s|
+                       s character isAlpha not }
+               testing: "Character#isAlpha for numeric".
+        assert forAll: self allAlphas
+               that: { |s|
+                       s character isAlpha }
+               testing: "Character#isAlpha for alpha".
+        assert forAll: self nonAlphasAndNonNumerics
+               that: { |s|
+                       s character isAlpha not }
+               testing: "Character#isAlpha for non-alpha, non-numeric"!
+
+    method testIsDigit
+        assert forAll: self allNumeric
+               that: { |s|
+                       s character isDigit }
+               testing: "Character#isDigit for numeric".
+        assert forAll: self allAlphas
+               that: { |s|
+                       s character isDigit not }
+               testing: "Character#isDigit for alpha".
+        assert forAll: self nonAlphasAndNonNumerics
+               that: { |s|
+                       s character isDigit not }
+               testing: "Character#isDigit for non-alpha, non-numeric"!
+
+
+    method testIsWhitespace
+        assert forAll: self allWhitespace
+               that: { |s|
+                       s character isWhitespace }
+               testing: "Character#isWhitespace for whitespace".
+        assert forAll: self nonWhitespace
+               that: { |s|
+                       s character isWhitespace not }
+               testing: "Character#isWhitespace for non-whitespace"!
+
+    method testIsHorizintalWhitespace
+        assert forAll: self allNonHorizontalWhitespace
+               that: { |s|
+                       s character isHorizontalWhitespace not }
+               testing: "Character#isHorizontalWhitespace for non-horizontal whitespace".
+        assert forAll: self allHorizontalWhitespace
+               that: { |s|
+                       s character isHorizontalWhitespace }
+               testing: "Character#isHorizontalWhitespace for horizontal whitespace".
+        assert forAll: self nonWhitespace
+               that: { |s|
+                       s character isHorizontalWhitespace not }
+               testing: "Character#isHorizontalWhitespace for non-whitespace"!
+
 end
