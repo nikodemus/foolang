@@ -1,3 +1,5 @@
+import .test.TestSuite
+
 define ASCII
     {space: 0x20,
      tab: 0x09,
@@ -68,52 +70,57 @@ class Character { code }
 end
 
 class TestCharacter { assert }
+    is TestSuite
+
     direct method runTests: assert
-        (self assert: assert)
-            ; testDigit10
-            ; testDigit2
-            ; testDigit16
-                !
+        (self assert: assert) runTests!
+
+    method digitCases
+        [["0", 0],
+         ["1", 1],
+         ["2", 2],
+         ["3", 3],
+         ["4", 4],
+         ["5", 5],
+         ["6", 6],
+         ["7", 7],
+         ["8", 8],
+         ["9", 9],
+         ["a", 10],
+         ["b", 11],
+         ["c", 12],
+         ["d", 13],
+         ["e", 14],
+         ["f", 15],
+         ["A", 10],
+         ["B", 11],
+         ["C", 12],
+         ["D", 13],
+         ["E", 14],
+         ["F", 15]]!
+
+    method nonDigitCases
+        ["g", "G", ".", " ", "-"]!
+
+    method digitTest: base
+        assert forAll: self digitCases
+               that: { |case|
+                       let digit = case first character digit: base.
+                       case second < base
+                           ifTrue: { digit is case second }
+                           ifFalse: { digit is False } }
+               testing: "Character#digit: {base}, digitCases".
+        assert forAll: self nonDigitCases
+               that: { |case|
+                       (case character digit: base) is False }
+               testing: "Character#digit: {base}, nonDigitCases"!
 
     method testDigit10
-        assert forAll: [[0, "0"],
-                        [1, "1"],
-                        [7, "7"],
-                        [9, "9"],
-                        [False, "A"],
-                        [False, "F"],
-                        [False, "G"],
-                        [False, "a"],
-                        [False, "f"],
-                        [False, "g"]]
-               that: { |spec|
-                       spec first is (spec second character digit: 10) }
-               testing: "testDigit10"!
+        self digitTest: 10!
 
     method testDigit2
-        assert forAll: [[0, "0"],
-                        [1, "1"],
-                        [False, "7"],
-                        [False, "A"],
-                        [False, "F"],
-                        [False, "G"],
-                        [False, "a"],
-                        [False, "f"],
-                        [False, "g"]]
-               that: { |spec|
-                       spec first is (spec second character digit: 2) }
-               testing: "testDigit2"!
+        self digitTest: 2!
 
     method testDigit16
-        assert forAll: [[0, "0"],
-                        [7, "7"],
-                        [10, "A"],
-                        [15, "F"],
-                        [False, "G"],
-                        [10, "a"],
-                        [15, "f"],
-                        [False, "g"]]
-               that: { |spec|
-                       spec first is (spec second character digit: 16) }
-               testing: "testDigit16"!
+        self digitTest: 16!
 end
