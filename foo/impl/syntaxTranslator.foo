@@ -18,12 +18,6 @@ class SyntaxTranslator { env }
     method visitLiteral: aLiteral
         AstConstantRef value: aLiteral value!
 
-    method visitHexLiteral: aLiteral
-        self visitLiteral: aLiteral!
-
-    method visitBinaryLiteral: aLiteral
-        self visitLiteral: aLiteral!
-
     method visitValueTypeDeclaration: aNode
         AstTypecheck
             value: (aNode value visitBy: self)

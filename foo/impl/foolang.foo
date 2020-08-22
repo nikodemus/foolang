@@ -717,6 +717,14 @@ with: {defSource}"!
              where: { |e|
                       e value is 42 and: e expected is String }!
 
+    method testFloat1
+        self eval: "123.123"
+             expect: 123.123!
+
+    method testFloat2
+        self eval: "1.1e2"
+             expect: 110.0!
+
     method testTranspile
         self transpile: "let x = 20.
                          let b1 = \{ x + 11 * 2 }.

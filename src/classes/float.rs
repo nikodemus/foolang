@@ -1,7 +1,24 @@
 use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
+use crate::unwind::Unwind;
 
-pub fn vtable() -> Vtable {
+use std::str::FromStr;
+
+pub fn class_vtable() -> Vtable {
+    let vt = Vtable::new("Float class");
+    vt.add_primitive_method_or_panic("parse:", float_class_parse_);
+    vt
+}
+
+fn float_class_parse_(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let s = args[0].as_str()?;
+    match f64::from_str(s) {
+        Ok(f) => Ok(env.foo.make_float(f)),
+        Err(_) => Unwind::error(&format!("Cannot parse as float: {}", s)),
+    }
+}
+
+pub fn instance_vtable() -> Vtable {
     let vt = Vtable::new("Float");
     vt.add_primitive_method_or_panic("floatAdd:", float_float_add);
     vt.add_primitive_method_or_panic("floatDiv:", float_float_div);

@@ -50,8 +50,14 @@ interface Syntax
         stream print: ">"!
 end
 
+interface Literal
+    required method value
+    required method valueDisplayString
+end
+
 class SyntaxLiteral { value }
     is Syntax
+    is Literal
 
     method kind
         "SyntaxLiteral"!
@@ -62,21 +68,44 @@ class SyntaxLiteral { value }
     method parts
         [value]!
 
-    method toString
-        "#<SyntaxLiteral {value}>"!
+    method valueDisplayString
+        value displayString!
 end
+
+class SyntaxFloatLiteral { string value }
+    is Syntax
+    is Literal
+
+    method kind
+        "SyntaxFloatLiteral"!
+
+    method visitBy: visitor
+        visitor visitLiteral: self!
+
+    method parts
+        [value]!
+
+    method valueDisplayString
+        string!
+end
+
 
 class SyntaxHexLiteral { value }
     is Syntax
+    is Literal
 
     method kind
         "SyntaxHexLiteral"!
 
     method visitBy: visitor
-        visitor visitHexLiteral: self!
+        visitor visitLiteral: self!
 
     method parts
         [value]!
+
+    method valueDisplayString
+        Integer printBase: 16
+                do: { value toString }!
 end
 
 class SyntaxBinaryLiteral { value }
@@ -86,10 +115,14 @@ class SyntaxBinaryLiteral { value }
         "SyntaxBinaryLiteral"!
 
     method visitBy: visitor
-        visitor visitBinaryLiteral: self!
+        visitor visitLiteral: self!
 
     method parts
         [value]!
+
+    method valueDisplayString
+        Integer printBase: 2
+                do: { value toString }!
 end
 
 class SyntaxValueTypeDeclaration { value type }
