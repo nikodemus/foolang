@@ -1,8 +1,6 @@
 interface SyntaxVisitor
     is Object
     required method visitLiteral: aLiteral
-    required method visitBinaryLiteral: aLiteral
-    required method visitHexLiteral: aLiteral
     required method visitArray: syntax
     required method visitRecord: syntax
     required method visitArray: syntax

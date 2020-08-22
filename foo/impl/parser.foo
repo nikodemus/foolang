@@ -48,7 +48,18 @@ class TokenString { string first last }
         SyntaxLiteral value: out content!
 
     method escape: s
-        StringEscapes at: s ifNone: { s }!
+        StringEscapes
+            at: s
+            ifNone: { s }!
+end
+
+class TokenFloat { string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        SyntaxFloatLiteral
+            string: string
+            value: (Float parse: string)!
 end
 
 class TokenDecimalInteger { string first last }
@@ -843,6 +854,9 @@ define ColonCharacter
 define DashCharacter
     "-" character!
 
+define DotCharacter
+    "." character!
+
 -- FIXME: Broken for unicode input!
 class Parser { source::String
                positionBox
@@ -1116,6 +1130,24 @@ Source: {source}" }!
         (self position + 1 > last)
             ifFalse: { ((source at: self position + 1) == char2) not }!
 
+    method atChar: char1 andThenNot: test
+        self atEof
+            ifTrue: { return False }.
+        (source at: self position) == char1
+            ifFalse: { return False }.
+        (self position + 1 > last)
+            ifFalse: { (test value: (source at: self position + 1))
+                           not }!
+
+    method atAnyOf: string
+        self atEof
+            ifTrue: { return False }.
+        1 to: string size
+          do: { |index|
+                (self atChar: (string at: index))
+                    ifTrue: { return True } }.
+        False!
+
     method afterEscape
         self atEscape: self position - 1!
 
@@ -1164,10 +1196,28 @@ Source: {source}" }!
                           from: start
                           to: (self skipWhile: { self atWord })
                           in: self }.
-        TokenDecimalInteger
-            from: start
-            to: (self skipWhile: { self atDigit })
-            in: self!
+        let integerEnd = self skipWhile: { self atDigit }.
+        let isFloat
+            = (self atChar: DotCharacter andThenNot: #isWhitespace)
+                ifTrue: { self advance.
+                          self skipWhile: { self atDigit }.
+                          True }.
+        isFloat = (self atAnyOf: "eE")
+                  ifTrue: { self advance.
+                            (self atAnyOf: "-+")
+                                ifTrue: { self advance }.
+                            self skipWhile: { self atWord }.
+                            True }
+                  ifFalse: { isFloat }.
+        isFloat
+            ifTrue: { TokenFloat
+                          from: start
+                          to: (self position - 1)
+                          in: self}
+            ifFalse: { TokenDecimalInteger
+                           from: start
+                           to: integerEnd
+                           in: self }!
 
     method _scanString
         -- Debug println: "/scanString".
