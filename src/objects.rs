@@ -1334,7 +1334,7 @@ impl Object {
                 &args[0],
                 args[1].as_usize("#__put:__atSlot:")?,
             ),
-            None if selector == "doSelectors:" => generic_do_selectors(self, args, env),
+            None if selector == "__doSelectors:" => generic_do_selectors(self, args, env),
             None if selector == "toString" => generic_to_string(self, args, env),
             None if selector == "typecheck:" => generic_typecheck(self, args, env),
             None if selector == "includes:" => generic_class_includes(self, args, env),

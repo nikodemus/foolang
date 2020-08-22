@@ -5,10 +5,12 @@ import .syntaxTranslator.SyntaxTranslator
 import .syntaxPrinter.SyntaxPrinter
 import .cTranspiler.CTranspiler
 
-class Tests { system ok }
+class TestSelfHosting { system ok }
+    is TestSuite
 
     direct method runIn: system
-        (self system: system ok: True) run!
+        let tests = (self system: system ok: True).
+        tests doTests: { |each| tests runTest: each }!
 
     method runTest: selector
         { Debug print: selector name.
@@ -20,14 +22,6 @@ class Tests { system ok }
                   ok = False.
                   return False }.
         True!
-
-    method run
-        let list = List new.
-        self doSelectors: { |selector|
-                            (selector startsWith: "test")
-                                ifTrue: { list add: selector } }.
-        list sort do: { |each| self runTest: each }.
-        self!
 
     method checkParsingBy: block for: source
         -- Check Syntax print/parse consistency.
@@ -735,7 +729,7 @@ end
 class Main {}
     direct method run: cmd in: system
         system output
-            println: ((Tests runIn: system) ok
+            println: ((TestSelfHosting runIn: system) ok
                           ifTrue: { "All tests ok!" }
                           ifFalse: { "Tests failed!" })!
 end

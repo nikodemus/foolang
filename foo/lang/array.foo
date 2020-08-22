@@ -1,6 +1,7 @@
 import .iterable.Iterator
 import .iterable.Iterable
 import .ordered.Ordered
+import .test.TestSuite
 
 class ArrayIterator { array index }
     is Iterator
@@ -132,6 +133,7 @@ extend Array
 end
 
 class TestArray { assert }
+    is TestSuite
 
     method equalityCases
         [[ [1,2,3], [1,2,3], True ],
@@ -200,6 +202,6 @@ class TestArray { assert }
                testing: "Array#reversed no side effect"!
 
     direct method runTests: assert
-        assert runAllTests: (self assert: assert)!
+        (self assert: assert) runTests!
 
 end

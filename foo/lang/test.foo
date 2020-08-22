@@ -1,0 +1,15 @@
+interface TestSuite
+    method runTests
+        self doTests: { |each| each sendTo: self }.
+        self!
+
+    method doTests: block
+        let list = List new.
+        self __doSelectors: { |selector|
+                              (selector startsWith: "test")
+                                  ifTrue: { list add: selector } }.
+        list isEmpty
+            ifTrue: { Error raise: "Not tests for {self}!" }.
+        list sort do: block.
+        self!
+end
