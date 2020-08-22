@@ -1,20 +1,22 @@
 # Foolang Code of Conduct
 
-**Why does a one person project need a code of conduct?!**
+Foolang is currently a one person project. I have strong views about what it is
+about, and where it should go.
 
-1. Because hopefully Foolang won't remain a one person project forever.
-2. Because having a code of conduct should not be a special thing.
+However: _anyone_ is welcome to join, regardless of you age, body size,
+disability, ethnicity, sex characteristics, gender identity and expression,
+level of experience, education, socio-economic status, nationality, personal
+appearance, race, religion, or sexual identity and orientation.
 
-**Foolang Code of Conduct**
-
-Foolang pledges to making participation in the project a harassment-free
-experience for everyone, regardless of age, body size, disability, ethnicity,
-sex characteristics, gender identity and expression, level of experience,
-education, socio-economic status, nationality, personal appearance, race,
-religion, or sexual identity and orientation.
+I pledge to make you participation in the project a harassment-free experience,
+by:
+- being kind and emphathetic.
+- being respectful of your differing opinions, viewpoints, and experiences.
+- accepting responsibility for my mistakes, apologizing to those
+  affected, and learning from experience.
 
 So, welcome.
 
+Signed,
 
-
-
+   Nikodemus Siivola
