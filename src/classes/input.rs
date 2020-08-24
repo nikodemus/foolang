@@ -2,7 +2,7 @@ use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
 
 pub fn vtable() -> Vtable {
-    let vt = Vtable::new("Input");
+    let vt = Vtable::for_instance("Input");
     vt.add_primitive_method_or_panic("readline", input_readline);
     vt
 }

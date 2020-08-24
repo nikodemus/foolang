@@ -52,13 +52,13 @@ impl fmt::Debug for ByteArray {
 }
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("ByteArray");
+    let vt = Vtable::for_class("ByteArray");
     vt.add_primitive_method_or_panic("new:", class_byte_array_new);
     vt
 }
 
 pub fn instance_vtable() -> Vtable {
-    let vt = Vtable::new("ByteArray");
+    let vt = Vtable::for_instance("ByteArray");
     vt.add_primitive_method_or_panic("at:", byte_array_at);
     vt.add_primitive_method_or_panic("put:at:", byte_array_put_at);
     vt.add_primitive_method_or_panic("size", byte_array_size);

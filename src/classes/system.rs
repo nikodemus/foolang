@@ -8,7 +8,7 @@ use crate::objects::{Eval, Object, Vtable};
 use crate::unwind::Unwind;
 
 pub fn vtable() -> Vtable {
-    let vt = Vtable::new("System");
+    let vt = Vtable::for_instance("System");
     vt.add_primitive_method_or_panic("abort", system_abort);
     vt.add_primitive_method_or_panic("clock", system_clock);
     vt.add_primitive_method_or_panic("currentDirectory", system_current_directory);

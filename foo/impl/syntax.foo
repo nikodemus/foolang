@@ -3,8 +3,6 @@ import .syntaxPrinter.SyntaxPrinter
 interface Syntax
     is Object
 
-    required method kind
-
     required method visitBy: visitor
 
     required method parts
@@ -39,10 +37,10 @@ interface Syntax
         True!
 
     method toString
-        StringOutput with: { |out| self displayOn: out }!
+        self displayString!
 
     method displayOn: stream
-        stream print: "#<{self kind} ".
+        stream print: "#<{self classOf name} ".
         { SyntaxPrinter print: self to: stream }
             on: Error
             do: { out print: "<error printing>>".
@@ -59,9 +57,6 @@ class SyntaxLiteral { value }
     is Syntax
     is Literal
 
-    method kind
-        "SyntaxLiteral"!
-
     method visitBy: visitor
         visitor visitLiteral: self!
 
@@ -75,9 +70,6 @@ end
 class SyntaxFloatLiteral { string value }
     is Syntax
     is Literal
-
-    method kind
-        "SyntaxFloatLiteral"!
 
     method visitBy: visitor
         visitor visitLiteral: self!
@@ -94,9 +86,6 @@ class SyntaxHexLiteral { value }
     is Syntax
     is Literal
 
-    method kind
-        "SyntaxHexLiteral"!
-
     method visitBy: visitor
         visitor visitLiteral: self!
 
@@ -111,9 +100,6 @@ end
 class SyntaxBinaryLiteral { value }
     is Syntax
 
-    method kind
-        "SyntaxBinaryLiteral"!
-
     method visitBy: visitor
         visitor visitLiteral: self!
 
@@ -127,9 +113,6 @@ end
 
 class SyntaxValueTypeDeclaration { value type }
     is Syntax
-
-    method kind
-        "SyntaxValueTypeDeclaration"!
 
     method visitBy: visitor
         visitor visitValueTypeDeclaration: self!
@@ -148,18 +131,12 @@ end
 class SyntaxArray { entries }
     is SyntaxCollection
 
-    method kind
-        "SyntaxArray"!
-
     method visitBy: visitor
         visitor visitArray: self!
 end
 
 class SyntaxRecord { entries }
     is SyntaxCollection
-
-    method kind
-        "SyntaxRecord"!
 
     method visitBy: visitor
         visitor visitRecord: self!
@@ -168,18 +145,12 @@ end
 class SyntaxDictionary { entries }
     is SyntaxCollection
 
-    method kind
-        "SyntaxDictionary"!
-
     method visitBy: visitor
         visitor visitDictionary: self!
 end
 
 class SyntaxSeq { first then }
     is Syntax
-
-    method kind
-        "SyntaxSeq"!
 
     method visitBy: visitor
         visitor visitSeq: self!
@@ -191,9 +162,6 @@ end
 class SyntaxReturn { value }
     is Syntax
 
-    method kind
-        "SyntaxReturn"!
-
     method visitBy: visitor
         visitor visitReturn: self!
 
@@ -204,9 +172,6 @@ end
 class SyntaxPanic { value }
     is Syntax
 
-    method kind
-        "SyntaxPanic"!
-
     method visitBy: visitor
         visitor visitPanic: self!
 
@@ -216,9 +181,6 @@ end
 
 class SyntaxPrefixComment { comment value source fence }
     is Syntax
-
-    method kind
-        "SyntaxPrefixComment"!
 
     direct method comment: comment value: value source: source
         self
@@ -241,9 +203,6 @@ end
 class SyntaxSuffixComment { comment value source }
     is Syntax
 
-    method kind
-        "SyntaxSuffixComment"!
-
     method visitBy: visitor
         visitor visitSuffixComment: self!
 
@@ -257,9 +216,6 @@ end
 
 class SyntaxLineComment { comment source }
     is Syntax
-
-    method kind
-        "SyntaxLineComment"!
 
     method visitBy: visitor
         visitor visitLineComment: self!
@@ -278,9 +234,6 @@ end
 class SyntaxBlockComment { fence lines source }
     is Syntax
 
-    method kind
-        "SyntaxBlockComment"!
-
     method visitBy: visitor
         visitor visitBlockComment: self!
 
@@ -295,9 +248,6 @@ end
 class SyntaxPrefix { receiver selector source }
     is Syntax
 
-    method kind
-        "SyntaxPrefix"!
-
     method visitBy: visitor
         visitor visitPrefixMessage: self!
 
@@ -309,9 +259,6 @@ end
 class SyntaxUnary { receiver selector source }
     is Syntax
 
-    method kind
-        "SyntaxUnary"!
-
     method visitBy: visitor
         visitor visitUnaryMessage: self!
 
@@ -319,15 +266,10 @@ class SyntaxUnary { receiver selector source }
         -- Source left out intentionally, since it doesn't need to compere equal.
         [receiver, selector]!
 
-    method toString
-        "#<SyntaxUnary {selector} receiver: {receiver}>"!
 end
 
 class SyntaxBinary { receiver selector argument source }
     is Syntax
-
-    method kind
-        "SyntaxBinary"!
 
     method visitBy: visitor
         visitor visitBinaryMessage: self!
@@ -342,9 +284,6 @@ end
 class SyntaxKeyword { receiver selector arguments source }
     is Syntax
 
-    method kind
-        "SyntaxKeyword"!
-
     method visitBy: visitor
         visitor visitKeywordMessage: self!
 
@@ -357,9 +296,6 @@ end
 class SyntaxIs { left right }
     is Syntax
 
-    method kind
-        "SyntaxIs"!
-
     method visitBy: visitor
         visitor visitIs: self!
 
@@ -369,9 +305,6 @@ end
 
 class SyntaxUntypedVariable { name }
     is Syntax
-
-    method kind
-        "SyntaxUntypedVariable"!
 
     method visitBy: visitor
         visitor visitUntypedVariable: self!
@@ -386,9 +319,6 @@ end
 class SyntaxTypedVariable { name type }
     is Syntax
 
-    method kind
-        "SyntaxTypedVariable"!
-
     method visitBy: visitor
         visitor visitTypedVariable: self!
 
@@ -398,9 +328,6 @@ end
 
 class SyntaxLet { variable value body }
     is Syntax
-
-    method kind
-        "SyntaxLet"!
 
     method visitBy: visitor
         visitor visitLet: self!
@@ -412,9 +339,6 @@ end
 class SyntaxSelf {}
     is Syntax
 
-    method kind
-        "SyntaxSelf"!
-
     method visitBy: visitor
         visitor visitSelf: self!
 
@@ -424,9 +348,6 @@ end
 
 class SyntaxVariable { name::String }
     is Syntax
-
-    method kind
-        "SyntaxVariable"!
 
     method visitBy: visitor
         visitor visitVariable: self!
@@ -438,9 +359,6 @@ end
 class SyntaxAssign { variable value }
     is Syntax
 
-    method kind
-        "SyntaxAssign"!
-
     method visitBy: visitor
         visitor visitAssign: self!
 
@@ -450,9 +368,6 @@ end
 
 class SyntaxParens { body }
     is Syntax
-
-    method kind
-        "SyntaxParens"!
 
     method visitBy: visitor
         visitor visitParens: self!
@@ -464,9 +379,6 @@ end
 class SyntaxBlock { parameters returnType body }
     is Syntax
 
-    method kind
-        "SyntaxBlock"!
-
     method visitBy: visitor
         visitor visitBlock: self!
 
@@ -477,9 +389,6 @@ end
 class SyntaxDefine { name body }
     is Syntax
 
-    method kind
-        "SyntaxDefine"!
-
     method visitBy: visitor
         visitor visitDefine: self!
 
@@ -489,9 +398,6 @@ end
 
 class SyntaxClass { name slots interfaces directMethods instanceMethods }
     is Syntax
-
-    method kind
-        "SyntaxClass"!
 
     direct method name: name slots: slots
         self
@@ -514,9 +420,6 @@ end
 class SyntaxInterface { name interfaces directMethods instanceMethods }
     is Syntax
 
-    method kind
-        "SyntaxInterface"!
-
     direct method name: name
         self
             name: name
@@ -534,6 +437,26 @@ class SyntaxInterface { name interfaces directMethods instanceMethods }
         [name, interfaces, directMethods, instanceMethods]!
 end
 
+class SyntaxExtend { name interfaces directMethods instanceMethods }
+    is Syntax
+
+    direct method name: name
+        self
+            name: name
+            interfaces: List new
+            directMethods: List new
+            instanceMethods: List new!
+
+    method add: part
+        part addTo: self!
+
+    method visitBy: visitor
+        visitor visitExtend: self!
+
+    method parts
+        [name, interfaces, directMethods, instanceMethods]!
+end
+
 interface DefinitionPart
    required method addTo: definition
 end
@@ -541,9 +464,6 @@ end
 class SyntaxInterfaceRef { name }
     is Syntax
     is DefinitionPart
-
-    method kind
-        "SyntaxInterfaceRef"!
 
     method addTo: definition
         definition interfaces add: self!
@@ -591,9 +511,6 @@ end
 class SyntaxInstanceMethod { comment signature body }
     is SyntaxMethod
 
-    method kind
-        "SyntaxInstanceMethod"!
-
     method addTo: thing
         thing instanceMethods add: self!
 
@@ -604,9 +521,6 @@ end
 class SyntaxDirectMethod { comment signature body }
     is SyntaxMethod
 
-    method kind
-        "SyntaxDirectMethod"!
-
     method comment: aSpec
         comment = aSpec!
 
@@ -616,9 +530,6 @@ end
 
 class MethodSignature { selector parameters returnType }
     is Object
-
-    method kind
-        "MethodSignature"!
 
     method isEquivalent: other
         selector == other selector

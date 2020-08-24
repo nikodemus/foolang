@@ -5,7 +5,7 @@ use crate::unwind::Unwind;
 use std::str::FromStr;
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("Float class");
+    let vt = Vtable::for_class("Float class");
     vt.add_primitive_method_or_panic("parse:", float_class_parse_);
     vt
 }
@@ -19,7 +19,7 @@ fn float_class_parse_(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
 }
 
 pub fn instance_vtable() -> Vtable {
-    let vt = Vtable::new("Float");
+    let vt = Vtable::for_instance("Float");
     vt.add_primitive_method_or_panic("floatAdd:", float_float_add);
     vt.add_primitive_method_or_panic("floatDiv:", float_float_div);
     vt.add_primitive_method_or_panic("floatEq:", float_float_eq);

@@ -44,13 +44,13 @@ pub fn make_compiler(foo: &Foolang) -> Object {
 }
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("Compiler");
+    let vt = Vtable::for_class("Compiler");
     vt.add_primitive_method_or_panic("new", class_compiler_new);
     vt
 }
 
 pub fn instance_vtable() -> Vtable {
-    let vt = Vtable::new("Compiler");
+    let vt = Vtable::for_instance("Compiler");
     vt.add_primitive_method_or_panic("define:as:", compiler_define_as);
     vt.add_primitive_method_or_panic("evaluate", compiler_evaluate);
     vt.add_primitive_method_or_panic("parse:", compiler_parse);

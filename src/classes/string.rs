@@ -3,7 +3,7 @@ use crate::objects::{Eval, Object, Vtable};
 use crate::unwind::Unwind;
 
 pub fn instance_vtable() -> Vtable {
-    let vt = Vtable::new("String");
+    let vt = Vtable::for_instance("String");
     vt.add_primitive_method_or_panic("appendToString:", string_append_to_string);
     vt.add_primitive_method_or_panic("toString", string_to_string);
     vt.add_primitive_method_or_panic("size", string_size);
@@ -16,7 +16,7 @@ pub fn instance_vtable() -> Vtable {
 }
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("String");
+    let vt = Vtable::for_class("String");
     vt.add_primitive_method_or_panic("new", class_string_new);
     vt
 }
