@@ -52,6 +52,9 @@ class SyntaxTranslator { env }
     method visitReturn: aReturn
         AstReturn value: (aReturn value visitBy: self)!
 
+    method visitPanic: aPanic
+        AstPanic value: (aPanic value visitBy: self)!
+
     method visitPrefixComment: aComment
         AstComment
             comment: aComment comment

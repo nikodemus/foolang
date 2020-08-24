@@ -443,6 +443,17 @@ class LiteralToken { precedence string first last }
         "#<LiteralToken>"!
 end
 
+class PanicToken { precedence string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        SyntaxPanic
+            value: parser parseSingle!
+
+    method toString
+        "#<PanicToken>"!
+end
+
 class ReturnToken { precedence string first last }
     is Token
 
@@ -637,6 +648,7 @@ define ExpressionSyntaxTable
     where: "in an expression"
     tokens:
     {
+         "panic" -> SyntaxEntry tokenClass: PanicToken precedence: 1000,
          "return" -> SyntaxEntry tokenClass: ReturnToken precedence: 1000,
          "self" -> SyntaxEntry tokenClass: SelfToken precedence: 1000,
          "#" -> SyntaxEntry tokenClass: LiteralToken precedence: 1000,

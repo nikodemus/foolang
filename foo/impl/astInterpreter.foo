@@ -196,6 +196,9 @@ class AstInterpreter { context process }
     method visitReturn: aReturn
         context returnBlock value: (aReturn value visitBy: self)!
 
+    method visitPanic: aPanic
+        panic (aPanic value visitBy: self)!
+
     method visitSend: aSend
         let selector = aSend selector.
         let object = aSend receiver visitBy: self.

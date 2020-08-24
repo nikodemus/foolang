@@ -725,6 +725,12 @@ with: {defSource}"!
         self eval: "1.1e2"
              expect: 110.0!
 
+    method testPanic1
+        { self eval: "panic \"foo\"" expect: #nothing. return False }
+            onPanic: { |p|
+                       (p description == "foo") assert.
+                       return True }!
+
     method testTranspile
         self transpile: "let x = 20.
                          let b1 = \{ x + 11 * 2 }.

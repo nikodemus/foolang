@@ -105,6 +105,10 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         self print: "return ".
         aReturn value visitBy: self!
 
+    method visitPanic: aPanic
+        self print: "panic ".
+        aPanic value visitBy: self!
+
     method visitPrefixComment: aComment
         self handleBlockStart.
         let valueVisitor = self indentHere.

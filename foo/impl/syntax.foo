@@ -201,6 +201,19 @@ class SyntaxReturn { value }
         [value]!
 end
 
+class SyntaxPanic { value }
+    is Syntax
+
+    method kind
+        "SyntaxPanic"!
+
+    method visitBy: visitor
+        visitor visitPanic: self!
+
+    method parts
+        [value]!
+end
+
 class SyntaxPrefixComment { comment value source fence }
     is Syntax
 
