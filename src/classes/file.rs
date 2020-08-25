@@ -75,11 +75,11 @@ pub fn as_file<'a>(obj: &'a Object, ctx: &str) -> Result<&'a File, Unwind> {
 }
 
 pub fn class_vtable() -> Vtable {
-    Vtable::new("File")
+    Vtable::for_class("File")
 }
 
 pub fn instance_vtable() -> Vtable {
-    let vt = Vtable::new("File");
+    let vt = Vtable::for_instance("File");
     vt.add_primitive_method_or_panic("create", file_create);
     vt.add_primitive_method_or_panic("createOrOpen", file_create_or_open);
     vt.add_primitive_method_or_panic("forAppend", file_for_append);

@@ -52,7 +52,7 @@ impl fmt::Debug for Record {
 }
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("Record");
+    let vt = Vtable::for_class("Record");
     vt.add_primitive_method_or_panic("perform:with:", class_record_perform_with);
     vt.add_primitive_method_or_panic("keysIn:", class_record_keys_in);
     vt.add_primitive_method_or_panic("at:in:", class_record_at_in);
@@ -60,7 +60,7 @@ pub fn class_vtable() -> Vtable {
 }
 
 pub fn instance_vtable() -> Vtable {
-    let vt = Vtable::new("Record");
+    let vt = Vtable::for_instance("Record");
     vt.add_primitive_method_or_panic("perform:with:", record_perform_with);
     vt.add_primitive_method_or_panic("displayOn:", record_display_on);
     vt

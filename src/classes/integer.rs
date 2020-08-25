@@ -2,7 +2,7 @@ use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
 
 pub fn vtable() -> Vtable {
-    let vt = Vtable::new("Integer");
+    let vt = Vtable::for_instance("Integer");
     vt.add_primitive_method_or_panic("asFloat", integer_as_float);
     vt.add_primitive_method_or_panic("integerAdd:", integer_integer_add);
     vt.add_primitive_method_or_panic("integerDiv:", integer_integer_div);

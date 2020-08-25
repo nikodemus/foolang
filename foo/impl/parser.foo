@@ -521,6 +521,23 @@ class InterfaceToken { precedence string first last }
         "#<InterfaceToken>"!
 end
 
+class ExtendToken { precedence string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        let theExtend = SyntaxExtend name: parser parseName.
+        let extendParser = parser syntaxTable: ExtendSyntaxTable.
+        extendParser
+            until: "end"
+            do: { theExtend add: (extendParser parseAtPrecedence: precedence) }.
+        extendParser
+            expect: "end".
+        parser handleSuffixCommentOf: theExtend!
+
+    method toString
+        "#<ExtendToken>"!
+end
+
 -- For ClassSyntaxTable and InterfaceSyntaxTable --
 
 class IsPrefixToken { precedence string first last }
@@ -675,7 +692,9 @@ define ToplevelSyntaxTable
     {
          "define" -> SyntaxEntry tokenClass: DefineToken precedence: 1000,
          "class" -> SyntaxEntry tokenClass: ClassToken precedence: 1000,
-         "interface" -> SyntaxEntry tokenClass: InterfaceToken precedence: 1000
+         "interface" -> SyntaxEntry tokenClass: InterfaceToken precedence: 1000,
+         "extend" -> SyntaxEntry tokenClass: ExtendToken precedence: 1000
+
     }!
 
 define MixedSyntaxTable
@@ -697,6 +716,12 @@ define ClassSyntaxTable
 define InterfaceSyntaxTable
     ClassSyntaxTable
     where: "in an interface"
+    tokens: Dictionary new!
+
+-- Currently same as ClassSyntaxTable, but may diverge.
+define ExtendSyntaxTable
+    ClassSyntaxTable
+    where: "in an extend"
     tokens: Dictionary new!
 
 interface LookupToken

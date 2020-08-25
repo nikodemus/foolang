@@ -90,7 +90,7 @@ impl Closure {
 }
 
 pub fn vtable() -> Vtable {
-    let vt = Vtable::new("Closure");
+    let vt = Vtable::for_instance("Closure");
     // FUNDAMENTAL
     vt.add_primitive_method_or_panic("apply:", closure_apply_array);
     vt.add_primitive_method_or_panic("signature", closure_signature);

@@ -3,11 +3,11 @@ use crate::objects::{Eval, Object, Vtable};
 use crate::time::TimeInfo;
 
 pub fn class_vtable() -> Vtable {
-    Vtable::new("Clock")
+    Vtable::for_class("Clock")
 }
 
 pub fn instance_vtable() -> Vtable {
-    let vt = Vtable::new("Clock");
+    let vt = Vtable::for_instance("Clock");
     vt.add_primitive_method_or_panic("time", clock_time);
     vt.add_primitive_method_or_panic("toString", clock_to_string);
     vt

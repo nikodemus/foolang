@@ -34,14 +34,11 @@ impl Binding {
             value: ok,
         })
     }
-    pub fn assign(&mut self, value: Object, env: &Env) -> Eval {
-        let ok = if let Some(typed) = &self.typed {
-            typed.send("typecheck:", &[value], env)?
-        } else {
-            value
-        };
-        self.value = ok.clone();
-        Ok(ok)
+    pub fn check_assign(&self, value: &Object, env: &Env) -> Result<(), Unwind> {
+        if let Some(typed) = &self.typed {
+            typed.send("typecheck:", std::slice::from_ref(value), env)?;
+        }
+        Ok(())
     }
 }
 
@@ -167,13 +164,23 @@ impl EnvRef {
         self.add_binding(name, Binding::untyped(value));
     }
     fn set(&self, name: &str, value: Object, env: &Env) -> Option<Eval> {
-        let mut frame = self.frame.borrow_mut();
-        match frame.symbols.get_mut(name) {
-            Some(binding) => Some(binding.assign(value, env)),
-            None => match &frame.parent {
-                Some(parent) => parent.set(name, value, env),
-                None => None,
+        match self.frame.borrow().symbols.get(name) {
+            Some(binding) => {
+                if let Err(e) = binding.check_assign(&value, env) {
+                    return Some(Err(e));
+                }
+            }
+            None => match &self.frame.borrow().parent {
+                Some(parent) => return parent.set(name, value, env),
+                None => return None,
             },
+        }
+        match self.frame.borrow_mut().symbols.get_mut(name) {
+            Some(binding) => {
+                binding.value = value.clone();
+                Some(Ok(value))
+            }
+            _ => std::unreachable!(),
         }
     }
     fn get(&self, name: &str) -> Option<Object> {

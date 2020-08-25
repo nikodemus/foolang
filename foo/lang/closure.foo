@@ -58,6 +58,11 @@ extend Closure
     method on: condition do: block
         condition withHandler: block do: self!
 
+    method on: cond1 do: block1
+           on: cond2 do: block2
+        cond2 withHandler: block2
+              do: { cond1 withHandler: block1 do: self }!
+
     method catch: condition
         Catch block: self condition: condition!
 end

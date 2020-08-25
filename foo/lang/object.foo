@@ -1,5 +1,7 @@
 -- Should this be "Standard" or "StandardObject" instead?
 
+-- import .selector.Selector
+
 -- Should be able to specify non-inherited methods for
 -- cases like #default. (direct method?)
 interface Object
@@ -27,6 +29,9 @@ interface Object
 
     direct method displayOn: stream
         self printOn: stream!
+
+    direct method displayString
+        StringOutput with: { |out| self displayOn: out }!
 
     method printOn: stream
         stream print: self toString!

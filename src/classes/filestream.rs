@@ -60,11 +60,11 @@ impl fmt::Debug for FileStream {
 }
 
 pub fn class_vtable() -> Vtable {
-    Vtable::new("FileStream")
+    Vtable::for_class("FileStream")
 }
 
 pub fn instance_vtable() -> Vtable {
-    let vt = Vtable::new("FileStream");
+    let vt = Vtable::for_instance("FileStream");
     vt.add_primitive_method_or_panic("close", filestream_close);
     vt.add_primitive_method_or_panic("flush", filestream_flush);
     vt.add_primitive_method_or_panic("isClosed", filestream_is_closed);

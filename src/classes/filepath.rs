@@ -44,11 +44,11 @@ pub fn as_filepath<'a>(obj: &'a Object, ctx: &str) -> Result<&'a FilePath, Unwin
 }
 
 pub fn class_vtable() -> Vtable {
-    Vtable::new("FilePath")
+    Vtable::for_class("FilePath")
 }
 
 pub fn instance_vtable() -> Vtable {
-    let vt = Vtable::new("FilePath");
+    let vt = Vtable::for_instance("FilePath");
     vt.add_primitive_method_or_panic("deleteFile", filepath_delete_file);
     vt.add_primitive_method_or_panic("exists", filepath_exists);
     vt.add_primitive_method_or_panic("file", filepath_file);

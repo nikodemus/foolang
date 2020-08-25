@@ -2,13 +2,13 @@ use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("Output");
+    let vt = Vtable::for_class("Output");
     vt.add_primitive_method_or_panic("debug", class_output_debug);
     vt
 }
 
 pub fn instance_vtable() -> Vtable {
-    let vt = Vtable::new("Output");
+    let vt = Vtable::for_instance("Output");
     vt.add_primitive_method_or_panic("flush", output_flush);
     vt.add_primitive_method_or_panic("writeString:", output_write_string);
     vt.add_primitive_method_or_panic("toString", output_to_string);

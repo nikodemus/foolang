@@ -2,11 +2,11 @@ use crate::eval::Env;
 use crate::objects::{Eval, Object, Vtable};
 
 pub fn class_vtable() -> Vtable {
-    Vtable::new("Time")
+    Vtable::for_class("Time")
 }
 
 pub fn instance_vtable() -> Vtable {
-    let vt = Vtable::new("Time");
+    let vt = Vtable::for_instance("Time");
     vt.add_primitive_method_or_panic("addTime:", time_add_time);
     vt.add_primitive_method_or_panic("subTime:", time_sub_time);
     vt.add_primitive_method_or_panic("real", time_real);

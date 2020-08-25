@@ -139,19 +139,26 @@ class Environment { parent    -- Enclosing environment or False
         binding referenceUpwards: use - depth!
 
     method load: string
-        let defs = Dictionary new.
+        let envDefs = Dictionary new.
+        let pendingDefs = List new.
         (Parser parseDefinitions: string)
             do: { |syntax|
+                  -- Debug println: "translate: {syntax}".
                   AllowReferenceToUndefined
                       do: { let def::AstDefinition
                                 = SyntaxTranslator
                                     translate: syntax
                                     in: (self toplevel).
-                             defs put: def at: def name } }.
+                            def isCanonical
+                                ifTrue: { envDefs put: def at: def name }.
+                            pendingDefs add: def } }.
         ResolveUndefinedsWith
-            definitions: defs
+            definitions: envDefs
             in: self
-            do: { defs doValues: { |def| def defineIn: self } }.
+            do: { pendingDefs
+                      do: { |def|
+                            -- Debug println: "define: {def}".
+                            def defineIn: self } }.
         self checkGlobals.
         self!
 

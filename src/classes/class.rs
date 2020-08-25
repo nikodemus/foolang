@@ -1,12 +1,14 @@
+use std::cell::RefCell;
 use std::cmp::Eq;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use crate::eval::Env;
-use crate::objects::{generic_ctor, Datum, Eval, Method, Object, Slot, Vtable};
+use crate::objects::{Datum, Eval, Instance, Method, Object, Slot, Vtable};
 use crate::unwind::Unwind;
 
 pub struct Class {
+    pub class_vtable: Rc<Vtable>,
     pub instance_vtable: Rc<Vtable>,
     pub interface: bool,
 }
@@ -27,19 +29,23 @@ impl Hash for Class {
 
 impl Class {
     pub fn new_class(name: &str) -> Object {
+        let class_vtable = Rc::new(Vtable::for_class(&format!("class {}", name)));
         Object {
-            vtable: Rc::new(Vtable::new(&format!("class {}", name))),
+            vtable: class_vtable.clone(),
             datum: Datum::Class(Rc::new(Class {
-                instance_vtable: Rc::new(Vtable::new(name)),
+                class_vtable,
+                instance_vtable: Rc::new(Vtable::for_instance(name)),
                 interface: false,
             })),
         }
     }
     pub fn new_interface(name: &str) -> Object {
+        let class_vtable = Rc::new(Vtable::for_class(&format!("interface {}", name)));
         Object {
-            vtable: Rc::new(Vtable::new(&format!("interface {}", name))),
+            vtable: class_vtable.clone(),
             datum: Datum::Class(Rc::new(Class {
-                instance_vtable: Rc::new(Vtable::new(name)),
+                class_vtable,
+                instance_vtable: Rc::new(Vtable::for_instance(name)),
                 interface: true,
             })),
         }
@@ -48,10 +54,12 @@ impl Class {
         let class = Object {
             vtable: Rc::clone(class_vtable),
             datum: Datum::Class(Rc::new(Class {
+                class_vtable: class_vtable.clone(),
                 instance_vtable: Rc::clone(instance_vtable),
                 interface: false,
             })),
         };
+
         class
     }
 
@@ -72,27 +80,161 @@ impl Class {
 }
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("Class");
+    let vt = Vtable::raw("Class");
     vt.add_primitive_method_or_panic(
         "new:slots:interfaces:directMethods:instanceMethods:",
         class_new_,
     );
+    vt.add_primitive_method_or_panic("classOf", generic_class_class);
+    vt.add_primitive_method_or_panic("includes:", class_includes_);
+    vt.add_primitive_method_or_panic("typecheck:", class_typecheck_);
+    vt.add_primitive_method_or_panic("name", generic_class_name);
     vt
 }
 
 pub fn interface_vtable() -> Vtable {
-    let vt = Vtable::new("Interface");
+    let vt = Vtable::raw("Interface");
     vt.add_primitive_method_or_panic(
         "new:interfaces:directMethods:instanceMethods:",
         interface_new_,
     );
+    vt.add_primitive_method_or_panic("classOf", generic_class_class);
+    vt.add_primitive_method_or_panic("includes:", interface_includes_);
+    vt.add_primitive_method_or_panic("typecheck:", interface_typecheck_);
+    vt.add_primitive_method_or_panic("name", generic_class_name);
     vt
 }
 
+// Is the argument a class?
+fn is_class(argument: &Object) -> bool {
+    match &argument.datum {
+        Datum::Class(class) => !class.interface,
+        _ => false,
+    }
+}
+
+// Is the argument an interface?
+fn is_interface(argument: &Object) -> bool {
+    match &argument.datum {
+        Datum::Class(class) => class.interface,
+        _ => false,
+    }
+}
+
+fn class_includes_(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_boolean(is_class(&args[0])))
+}
+
+fn class_typecheck_(_receiver: &Object, args: &[Object], _env: &Env) -> Eval {
+    let arg = &args[0];
+    if is_class(arg) {
+        Ok(arg.clone())
+    } else {
+        Unwind::type_error(arg.clone(), String::from("Class"))
+    }
+}
+
+fn interface_includes_(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_boolean(is_interface(&args[0])))
+}
+
+fn interface_typecheck_(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let arg = &args[0];
+    if is_interface(arg) {
+        Ok(arg.clone())
+    } else {
+        env.find_global_or_unwind("TypeError")?.send(
+            "raise:expected:",
+            &[args[0].clone(), receiver.clone()],
+            env,
+        )
+    }
+}
+
+// FIXME: Doesn't match the MOP plan
+pub fn generic_class_class(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    env.find_global_or_unwind("Class")
+}
+
+pub fn generic_class_name(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_string(&receiver.as_class_ref()?.instance_vtable.name))
+}
+
+pub fn generic_instance_class(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    // FIXME: terrible, should store class in vt -- then class_class could also
+    // go away -- alternatively this could be always an interpreted method
+    // returning a constant.
+    env.find_global_or_unwind(&receiver.vtable.name)
+}
+
+pub fn generic_class_typecheck_(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let class = receiver.as_class_ref()?;
+    let arg = &args[0];
+    if arg.is_type(&class.instance_vtable) {
+        Ok(arg.clone())
+    } else {
+        env.find_global_or_unwind("TypeError")?.send(
+            "raise:expected:",
+            &[arg.clone(), receiver.clone()],
+            env,
+        )
+    }
+}
+
+pub fn generic_class_includes_(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let class = receiver.as_class_ref()?;
+    Ok(env.foo.make_boolean(args[0].is_type(&class.instance_vtable)))
+}
+
+pub fn generic_class_add_direct_method_(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let method = &args[0];
+    let class = receiver.as_class_ref()?;
+    class
+        .class_vtable
+        .add_method(method.send("name", &[], env)?.as_str()?, Method::object(method))?;
+    Ok(receiver.clone())
+}
+
+pub fn generic_class_add_instance_method_(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let method = &args[0];
+    let class = receiver.as_class_ref()?;
+    class
+        .instance_vtable
+        .add_method(method.send("name", &[], env)?.as_str()?, Method::object(method))?;
+    Ok(receiver.clone())
+}
+
+pub fn generic_class_add_interface_(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
+    receiver.add_interface_object(&args[0])?;
+    Ok(receiver.clone())
+}
+
+pub fn generic_class_new_(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let class = receiver.as_class_ref()?;
+    let mut instance_variables = Vec::with_capacity(args.len());
+    for (slot, arg) in class.instance_vtable.slots.borrow().iter().zip(args) {
+        let mut val = arg.clone();
+        if let Some(slot_type) = &slot.typed {
+            // println!("{}.{} :: {} = {}",
+            //          &class.instance_vtable.name,
+            //          &slot.name, &slot_type, &val);
+            val = slot_type.send("typecheck:", &[val], env)?
+        }
+        instance_variables.push(val);
+    }
+    Ok(Object {
+        vtable: Rc::clone(&class.instance_vtable),
+        datum: Datum::Instance(Rc::new(Instance {
+            instance_variables: RefCell::new(instance_variables),
+        })),
+    })
+}
+
+// FIXME: duplicates logic in Foolang::make_class()
 fn class_new_(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let class_object = Class::new_class(args[0].as_str()?);
     let class = class_object.as_class_ref()?;
-    let mut selector = String::new();
+    let mut ctor = String::new();
     for (i, slot) in args[1]
         .as_array("slots in Class#new:slots:interfaces:directMethods:InstanceMethods:")?
         .borrow()
@@ -101,14 +243,14 @@ fn class_new_(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
     {
         let name = slot.send("name", &[], env)?;
         let type_obj = slot.send("type", &[], env)?;
-        selector.push_str(name.as_str()?);
-        selector.push_str(":");
+        ctor.push_str(name.as_str()?);
+        ctor.push_str(":");
         class.add_slot(name.as_str()?, i, Some(type_obj))?;
     }
-    if selector.is_empty() {
-        selector.push_str("new");
+    if ctor.is_empty() {
+        ctor.push_str("new");
     }
-    class_object.add_primitive_class_method(&selector, generic_ctor)?;
+    class.class_vtable.add_ctor(&ctor);
     for each_interface in args[2]
         .as_array("interfaces in Class:new:slots:interfaces:directMethods:instanceMethods:")?
         .borrow()

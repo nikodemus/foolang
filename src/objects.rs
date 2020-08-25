@@ -199,14 +199,45 @@ pub fn vt_add_interface(target: &Rc<Vtable>, interface_vt: &Rc<Vtable>) {
 }
 
 impl Vtable {
-    pub fn new(class: &str) -> Vtable {
+    pub fn raw(name: &str) -> Vtable {
         Vtable {
-            name: class.to_string(),
+            name: name.to_string(),
             methods: RefCell::new(HashMap::new()),
             slots: RefCell::new(Vec::new()),
             interfaces: RefCell::new(HashSet::new()),
             implementations: RefCell::new(HashSet::new()),
         }
+    }
+
+    pub fn for_instance(name: &str) -> Vtable {
+        let vt = Vtable::raw(name);
+        vt.add_primitive_method_or_panic("classOf", classes::class::generic_instance_class);
+        vt
+    }
+
+    pub fn for_class(name: &str) -> Vtable {
+        let vt = Vtable::raw(name);
+        vt.add_primitive_method_or_panic("classOf", classes::class::generic_class_class);
+        vt.add_primitive_method_or_panic("includes:", classes::class::generic_class_includes_);
+        vt.add_primitive_method_or_panic("typecheck:", classes::class::generic_class_typecheck_);
+        vt.add_primitive_method_or_panic("name", classes::class::generic_class_name);
+        vt.add_primitive_method_or_panic(
+            "__addDirectMethod:",
+            classes::class::generic_class_add_direct_method_,
+        );
+        vt.add_primitive_method_or_panic(
+            "__addInstanceMethod:",
+            classes::class::generic_class_add_instance_method_,
+        );
+        vt.add_primitive_method_or_panic(
+            "__addInterface:",
+            classes::class::generic_class_add_interface_,
+        );
+        vt
+    }
+
+    pub fn add_ctor(&self, name: &str) {
+        self.add_primitive_method_or_panic(name, classes::class::generic_class_new_);
     }
 
     pub fn add_method(&self, selector: &str, method: Method) -> Result<(), Unwind> {
@@ -635,7 +666,7 @@ impl Foolang {
             class_vtable: Rc::new(classes::class::class_vtable()),
             clock_class_vtable: Rc::new(classes::clock::class_vtable()),
             clock_vtable: Rc::new(classes::clock::instance_vtable()),
-            closure_class_vtable: Rc::new(Vtable::new("Closure")),
+            closure_class_vtable: Rc::new(Vtable::for_class("Closure")),
             closure_vtable: Rc::new(classes::closure::vtable()),
             compiler_class_vtable: Rc::new(classes::compiler::class_vtable()),
             compiler_vtable: Rc::new(classes::compiler::instance_vtable()),
@@ -649,9 +680,9 @@ impl Foolang {
             filestream_vtable: Rc::new(classes::filestream::instance_vtable()),
             float_class_vtable: Rc::new(classes::float::class_vtable()),
             float_vtable: Rc::new(classes::float::instance_vtable()),
-            input_class_vtable: Rc::new(Vtable::new("Input")),
+            input_class_vtable: Rc::new(Vtable::for_class("Input")),
             input_vtable: Rc::new(classes::input::vtable()),
-            integer_class_vtable: Rc::new(Vtable::new("Integer")),
+            integer_class_vtable: Rc::new(Vtable::for_class("Integer")),
             integer_vtable: Rc::new(classes::integer::vtable()),
             interface_vtable: Rc::new(classes::class::interface_vtable()),
             output_class_vtable: Rc::new(classes::output::class_vtable()),
@@ -736,13 +767,14 @@ impl Foolang {
 
     // FIXME: inconsistent return type vs other make_foo methods.
     // Should others be Eval as well?
+    // FIXME: duplicates logic in classes::class::class_new_
     pub fn make_class(&self, def: &ClassDef, env: &Env) -> Eval {
         let class_object = Class::new_class(&def.name);
         let class = class_object.as_class_ref()?;
         for (i, var) in def.instance_variables.iter().enumerate() {
             class.add_slot(&var.name, i, env.maybe_type(&var.typename)?)?;
         }
-        class_object.add_primitive_class_method(&def.constructor(), generic_ctor)?;
+        class.class_vtable.add_ctor(&def.constructor());
         for method in &def.class_methods {
             class_object.add_interpreted_class_method(env, method)?;
         }
@@ -945,7 +977,7 @@ impl Object {
         false
     }
 
-    fn typecheck(&self, typevt: &Rc<Vtable>) -> Eval {
+    pub fn typecheck(&self, typevt: &Rc<Vtable>) -> Eval {
         if self.is_type(typevt) {
             Ok(self.clone())
         } else {
@@ -1336,9 +1368,6 @@ impl Object {
             ),
             None if selector == "__doSelectors:" => generic_do_selectors(self, args, env),
             None if selector == "toString" => generic_to_string(self, args, env),
-            None if selector == "typecheck:" => generic_typecheck(self, args, env),
-            None if selector == "includes:" => generic_class_includes(self, args, env),
-            None if selector == "className" => Ok(env.foo.make_string(&self.vtable.name)),
             None => {
                 // println!("known: {:?}", self.vtable.selectors());
                 let not_understood = vec![env.foo.make_string(selector), env.foo.make_array(args)];
@@ -1401,7 +1430,7 @@ impl fmt::Display for Object {
                 if class.interface {
                     write!(f, "#<interface {}>", self.vtable.name)
                 } else {
-                    write!(f, "#<{}>", self.vtable.name)
+                    write!(f, "#<class {}>", self.vtable.name)
                 }
             }
             Datum::Clock => write!(f, "#<Clock>"),
@@ -1457,31 +1486,17 @@ impl fmt::Debug for Object {
     }
 }
 
-pub fn generic_ctor(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let class = receiver.as_class_ref()?;
-    let mut instance_variables = Vec::with_capacity(args.len());
-    for (slot, arg) in class.instance_vtable.slots.borrow().iter().zip(args) {
-        let mut val = arg.clone();
-        if let Some(slot_type) = &slot.typed {
-            // println!("{}.{} :: {} = {}",
-            //          &class.instance_vtable.name,
-            //          &slot.name, &slot_type, &val);
-            val = slot_type.send("typecheck:", &[val], env)?
-        }
-        instance_variables.push(val);
-    }
-    Ok(Object {
-        vtable: Rc::clone(&class.instance_vtable),
-        datum: Datum::Instance(Rc::new(Instance {
-            instance_variables: RefCell::new(instance_variables),
-        })),
-    })
-}
-
 fn generic_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     match &receiver.datum {
         Datum::Class(class) => {
             Ok(env.foo.into_string(format!("#<class {}>", &class.instance_vtable.name)))
+        }
+        Datum::Boolean(maybe) => {
+            if *maybe {
+                Ok(env.foo.make_string("True"))
+            } else {
+                Ok(env.foo.make_string("False"))
+            }
         }
         Datum::Instance(instance) => {
             let mut info = String::new();
@@ -1514,16 +1529,6 @@ fn generic_do_selectors(receiver: &Object, args: &[Object], env: &Env) -> Eval {
         )?;
     }
     Ok(receiver.clone())
-}
-
-fn generic_class_includes(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let class = receiver.as_class_ref()?;
-    Ok(env.foo.make_boolean(args[0].is_type(&class.instance_vtable)))
-}
-
-fn generic_typecheck(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
-    let class = receiver.as_class_ref()?;
-    args[0].typecheck(&class.instance_vtable)
 }
 
 pub fn read_instance_variable(receiver: &Object, index: usize) -> Eval {

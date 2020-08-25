@@ -43,6 +43,7 @@ interface AstDefinition
                            with: self
                            do: { { environment define: name value: self eval }
                                      after: { self markDefined } } } !
+
 end
 
 class AstDefine { name body frameSize isDefined }
@@ -56,6 +57,53 @@ class AstDefine { name body frameSize isDefined }
 
     method eval
         AstInterpreter evalDefine: body frameSize: frameSize!
+
+    method isCanonical
+        True!
+
+    method toString
+        "#<AstDefine {name}>"!
+end
+
+class AstExtend { name interfaces directMethods instanceMethods isDefined }
+    is AstDefinition
+
+    direct method name: name
+                  interfaces: interfaces
+                  directMethods: directMethods
+                  instanceMethods: instanceMethods
+        self
+            name: name
+            interfaces: interfaces
+            directMethods: directMethods
+            instanceMethods: instanceMethods
+            isDefined: False!
+
+    method defineIn: environment
+        self isDefined
+            ifFalse: { -- FIXME: This should use a mirror for host, or
+                       -- existing metaobjects for self-hosted classes.
+                       DefinitionsInProgress
+                           with: self
+                           do: { let target = (environment globals at: name) value.
+                                 interfaces do: { |each| target __addInterface: each value }.
+                                 directMethods do: { |each| target __addDirectMethod: each }.
+                                 instanceMethods do: { |each| target __addInstanceMethod: each }.
+                                 self markDefined.
+                                 target } }.
+        (environment globals at: name) value!
+
+    method markDefined
+        isDefined = True!
+
+    method isCanonical
+        False!
+
+    method eval
+        panic "never, extend is different!"!
+
+    method toString
+        "#<AstExtend {name}>"!
 end
 
 class AstInterface { name interfaces directMethods instanceMethods isDefined }
@@ -81,6 +129,12 @@ class AstInterface { name interfaces directMethods instanceMethods isDefined }
             interfaces: (Array from: (interfaces collect: #value))
             directMethods: (Array from: directMethods)
             instanceMethods: (Array from: instanceMethods)!
+
+    method isCanonical
+        True!
+
+    method toString
+        "#<AstInterface {name}>"!
 end
 
 class AstClass { name slots interfaces directMethods instanceMethods isDefined }
@@ -110,6 +164,12 @@ class AstClass { name slots interfaces directMethods instanceMethods isDefined }
             interfaces: (Array from: (interfaces collect: #value))
             directMethods: (Array from: directMethods)
             instanceMethods: (Array from: instanceMethods)!
+
+    method isCanonical
+        True!
+
+    method toString
+        "#<AstClass {name}>"!
 end
 
 class AstMethod { name argumentVariables returnType body frameSize }

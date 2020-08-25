@@ -44,6 +44,18 @@ interface Error
         stream print: "Error: {self description}>"!
     method displayOn: stream
         stream print: "#<Error {self description}>"!
+    method description
+        { self _description }
+            on: DoesNotUnderstand
+            do: { |e|
+                  -- Trying to print the receiver is likely the problem, but selector
+                  -- should be safe, right?
+                  (Selector includes: e selector)
+                      ifTrue: { return "<<{e receiver} DoesNotUnderstand {e selector} when printing Error description!>>" } }
+            on: Error
+            do: { |e|
+                  -- Catchall
+                  return "<<Error when printing Error description!>>" }!
 end
 
 define $return
@@ -57,14 +69,16 @@ interface ValueError
         let $return = { |value| return value }.
         $error raise: self.
         panic "$error fallthrough!"!
+    method _description
+        "ValueError: {value displayString}"!
 end
 
-
-
-class SimpleError { description }
+class SimpleError { _description }
     is Error
+    method _description
+        _description!
     direct method raise: description
-        (self description: description) raise!
+        (self _description: description) raise!
 end
 
 class DoesNotUnderstand { receiver selector arguments source context }
@@ -94,7 +108,7 @@ class DoesNotUnderstand { receiver selector arguments source context }
              source: source
              context: context)
         raise!
-    method description
+    method _description
         let note = "{receiver displayString} does not understand: {selector}".
         source is False
             ifTrue: { note }
@@ -117,8 +131,8 @@ class TypeError { value expected source }
              source: source)
         raise!
 
-    method description
-        "Type error: {expected} expected, got: {value displayString}"!
+    method _description
+        "Type error: {expected name} expected, got {value classOf name}: {value displayString}"!
 
     method displayOn: stream
         stream print: "#<TypeError {expected}, got: {value}>"!
@@ -128,7 +142,7 @@ class DivideByZero { value }
     is ValueError
     direct method raise: value
         (self value: value) raise!
-    method description
+    method _description
         "Divide by zero: {value} cannot be divided by zero"!
     method displayOn: stream
         stream print: "#<DivideByZero {value}>"!
@@ -138,7 +152,7 @@ class IteratorExhausted { value }
     is Error
     direct method raise: value
         (self value: value) raise!
-    method description
+    method _description
         "Iterator exhausted: {value}"!
     method displayOn: stream
         stream print: "#<IteratorExhausted {value}>"!

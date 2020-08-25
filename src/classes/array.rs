@@ -102,13 +102,13 @@ fn array_of(receiver: &Object, args: &[Object], env: &Env) -> Eval {
 }
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("Array");
+    let vt = Vtable::for_class("Array");
     vt.add_primitive_method_or_panic("of:new:value:", class_array_of_new_value);
     vt
 }
 
 pub fn instance_vtable() -> Vtable {
-    let vt = Vtable::new("Array");
+    let vt = Vtable::for_instance("Array");
     vt.add_primitive_method_or_panic("of:", array_of);
     vt.add_primitive_method_or_panic("at:", array_at);
     vt.add_primitive_method_or_panic("put:at:", array_put_at);

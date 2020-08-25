@@ -36,7 +36,7 @@ impl Hash for Random {
 }
 
 pub fn instance_vtable() -> Vtable {
-    let vt = Vtable::new("Random");
+    let vt = Vtable::for_instance("Random");
     vt.add_primitive_method_or_panic("integer", random_integer);
     vt.add_primitive_method_or_panic("float", random_float);
     vt.add_primitive_method_or_panic("boolean", random_boolean);
@@ -44,7 +44,7 @@ pub fn instance_vtable() -> Vtable {
 }
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("Random");
+    let vt = Vtable::for_class("Random");
     vt.add_primitive_method_or_panic("new", class_random_new);
     vt.add_primitive_method_or_panic("new:", class_random_new_arg);
     vt

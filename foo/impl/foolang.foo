@@ -552,33 +552,33 @@ with: {defSource}"!
             forWrite truncateExisting
                 createOrOpen: { |f| f writeString: c main }!
 
-    method testTypeDecl1
+    method testTypeDecl01
         self eval: "42::Integer"
              expect: 42!
 
-    method testTypeDecl2
+    method testTypeDecl02
         self eval: "42::String"
              expectError: TypeError
              where: { |e|
                       e value is 42 and: e expected is String }!
 
-    method testTypeDecl3
+    method testTypeDecl03
         self eval: "let x::Integer = 12. 12 + 30"
              expect: 42!
 
-    method testTypeDecl4
+    method testTypeDecl04
         self eval: "let x::String = 12. 12 + 30"
              expectError: TypeError
              where: { |e|
                       e value is 12 and: e expected is String }!
 
-    method testTypeDecl5
+    method testTypeDecl05
         self eval: "let x::String = \"foo\". x = 123"
              expectError: TypeError
              where: { |e|
                       e value is 123 and: e expected is String }!
 
-    method testTypeDecl6
+    method testTypeDecl06
         self load: "class Foo \{ baz::Integer }
                        method quux
                           baz!
@@ -586,7 +586,7 @@ with: {defSource}"!
             eval: "(Foo baz: 42) quux"
             expect: 42!
 
-    method testTypeDecl7
+    method testTypeDecl07
         self load: "class Foo \{ bar::String }
                     end"
             eval: "Foo bar: 42"
@@ -594,7 +594,7 @@ with: {defSource}"!
             where: { |e|
                      e value is 42 and: e expected is String }!
 
-    method testTypeDecl8
+    method testTypeDecl08
         self load: "class Foo \{ bar::String }
                         method boop: x
                             bar = x!
@@ -605,7 +605,7 @@ with: {defSource}"!
             where: { |e|
                      e value is 42 and: e expected is String }!
 
-    method testTypeDecl9
+    method testTypeDecl09
         self load: "class Foo \{}
                         direct method bar: x::Integer
                             x + 1!
@@ -730,6 +730,37 @@ with: {defSource}"!
             onPanic: { |p|
                        (p description == "foo") assert.
                        return True }!
+
+    method testExtend1
+        self load: "class Foo \{}
+                    end
+                    extend Foo
+                        direct method bar
+                           42!
+                    end"
+            eval: "Foo bar"
+            expect: 42!
+
+    method testExtend2
+        self load: "class Foo \{}
+                    end
+                    extend Foo
+                        method bar
+                           42!
+                    end"
+            eval: "Foo new bar"
+            expect: 42!
+
+    method testExtend3
+        self load: "interface Foo
+                    end
+                    extend Integer
+                        is Foo
+                        method foofoo
+                           123!
+                    end"
+            eval: "[Foo includes: 42, 42 foofoo]"
+            expect: [True, 123]!
 
     method testTranspile
         self transpile: "let x = 20.

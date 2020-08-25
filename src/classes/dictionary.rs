@@ -52,13 +52,13 @@ impl fmt::Debug for Dictionary {
 }
 
 pub fn class_vtable() -> Vtable {
-    let vt = Vtable::new("Dictionary");
+    let vt = Vtable::for_class("Dictionary");
     vt.add_primitive_method_or_panic("new", class_dictionary_new);
     vt
 }
 
 pub fn instance_vtable() -> Vtable {
-    let vt = Vtable::new("Dictionary");
+    let vt = Vtable::for_instance("Dictionary");
     vt.add_primitive_method_or_panic("at:ifNone:", dictionary_at_if_none);
     vt.add_primitive_method_or_panic("doKeys:", dictionary_do_keys);
     vt.add_primitive_method_or_panic("has:", dictionary_has);
