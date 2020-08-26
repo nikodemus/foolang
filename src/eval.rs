@@ -87,6 +87,7 @@ impl EnvRef {
             })),
         }
     }
+
     pub fn enclose(&self) -> EnvRef {
         EnvRef {
             frame: Rc::new(RefCell::new(EnvFrame {
@@ -98,6 +99,7 @@ impl EnvRef {
             })),
         }
     }
+
     fn extend(&self, symbols: SymbolTable, receiver: Option<&Object>) -> EnvRef {
         let env_ref = EnvRef {
             frame: Rc::new(RefCell::new(EnvFrame {
@@ -353,6 +355,10 @@ impl Env {
             foo: self.foo.clone(),
         }
     }
+    /// Creates a new environment toplevel environment
+    fn toplevel_env(&self) -> Env {
+        self.foo.toplevel_env()
+    }
 
     /// Creates a new environment enclosed by this one, containing one additional
     /// binding.
@@ -553,7 +559,7 @@ impl Env {
                 return Ok(module.clone());
             }
         }
-        let env = self.foo.load_module_into(&file, self.enclose())?;
+        let env = self.foo.load_module_into(&file, self.toplevel_env())?;
         self.foo.modules.borrow_mut().insert(file.clone(), env.clone());
         Ok(env)
     }
@@ -581,6 +587,7 @@ impl Env {
     }
 
     fn do_import(&self, import: &ImportDef) -> Eval {
+        assert!(self.is_toplevel());
         let n = self.env_ref.frame.borrow().symbols.len();
         let module = &self.load_module(&import.path)?.env_ref;
         assert_eq!(n, self.env_ref.frame.borrow().symbols.len());

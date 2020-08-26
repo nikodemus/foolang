@@ -1,5 +1,67 @@
-import .undefinedPolicy.UndefinedPolicy
 import .utils.Debug
+import .astInterpreter.AstInterpreter
+
+class StandardUndefinedPolicy {}
+    -- Called during translation when encountering an undefined variable
+    -- This particular method gets called when an undefined variable is
+    -- encountered outside a definition.
+    direct method reference: name in: environment
+        Error raise: "Undefined variable: {name}"!
+
+    -- Called during evaluation when encountering a lazily resolved undefined
+    -- variable. This particilar method should never be called.
+    direct method resolve: name
+        panic "Unresolved undefined variable: `{name}`! This should not happen."!
+end
+
+define $UndefinedPolicy
+    StandardUndefinedPolicy!
+
+class AllowReferenceToUndefined {}
+    -- During translation of definitions we allow references to undefined
+    -- variables.
+    direct method reference: name in: env
+        let global = (AstGlobal name: name).
+        env globals
+            put: global
+            at: name.
+        return global!
+
+    direct method resolve: name
+        StandardUndefinedPolicy resolve: name!
+
+    direct method do: block
+        let $UndefinedPolicy = self.
+        block value!
+end
+
+class ResolveUndefinedsWith { definitions environment }
+    direct method definitions: definitions in: environment do: block
+        (self definitions: definitions environment: environment)
+            do: block!
+
+    method reference: name in: environment
+        StandardUndefinedPolicy reference: name in: environment!
+
+    -- During evaluation of definition bodies we resolve undefineds to
+    -- as-of-yet evaluated definitions.
+    method resolve: name
+        (definitions
+             at: name
+             ifNone: { panic "WTD". StandardUndefinedPolicy reference: name in: environment })
+        defineIn: environment!
+
+    method do: block
+        let $UndefinedPolicy = self.
+        block value!
+end
+
+class UndefinedPolicy {}
+    direct method reference: name in: environment
+        $UndefinedPolicy reference: name in: environment!
+    direct method resolve: name
+        $UndefinedPolicy resolve: name!
+end
 
 interface Ast
     is Object
@@ -36,6 +98,9 @@ interface AstDefinition
     required method markDefined
     required method eval
 
+    method do: block
+        block value: self!
+
     method defineIn: environment
         self isDefined
             ifTrue: { (environment globals at: name) value }
@@ -44,6 +109,18 @@ interface AstDefinition
                            do: { { environment define: name value: self eval }
                                      after: { self markDefined } } } !
 
+end
+
+class AstDefinitionList { list }
+    is AstDefinition
+    method isDefined
+        panic "never"!
+    method markDefined
+        panic "never"!
+    method eval
+        panic "never"!
+    method do: block
+        list do: block!
 end
 
 class AstDefine { name body frameSize isDefined }
@@ -63,6 +140,24 @@ class AstDefine { name body frameSize isDefined }
 
     method toString
         "#<AstDefine {name}>"!
+end
+
+class AstImport { spec isDefined }
+    is AstDefinition
+
+    direct method spec: spec
+        self
+            spec: spec
+            isDefined: False!
+
+    method markDefined
+        isDefined = True!
+
+    method isCanonical
+        False!
+
+    method eval
+        self!
 end
 
 class AstExtend { name interfaces directMethods instanceMethods isDefined }

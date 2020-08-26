@@ -43,7 +43,8 @@ interface Syntax
         stream print: "#<{self classOf name} ".
         { SyntaxPrinter print: self to: stream }
             on: Error
-            do: { out print: "<error printing>>".
+            do: { |e|
+                  stream print: "<error printing: {e description}>>".
                   return self }.
         stream print: ">"!
 end
@@ -291,6 +292,26 @@ class SyntaxKeyword { receiver selector arguments source }
         -- Source left out intentionally, since it doesn't need to compere equal,
         -- and might not do so after pretty-printing.
         [receiver, selector, arguments]!
+end
+
+class SyntaxImport { module body }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitImport: self!
+
+    method parts
+        [module, body]!
+end
+
+class SyntaxExternalRef { module name }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitExternalRef: self!
+
+    method parts
+        [module, name]!
 end
 
 class SyntaxIs { left right }

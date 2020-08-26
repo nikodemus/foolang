@@ -15,6 +15,9 @@ class SyntaxTranslator { env }
     method addVariable: name type: type
         SyntaxTranslator env: (env addVariable: name type: type)!
 
+    method addImport: module
+        SyntaxTranslator env: (env addModule: module)!
+
     method visitLiteral: aLiteral
         AstConstantRef value: aLiteral value!
 
@@ -147,6 +150,14 @@ class SyntaxTranslator { env }
             body: (aDefine body visitBy: bodyVisitor)
             frameSize: bodyVisitor env frame size!
 
+    method visitImport: anImport
+        -- Currently assuming simple prefix import: "import foo"
+        let bodyVisitor = self addImport: anImport module.
+        bodyVisitor _visitEach: anImport body!
+
+    method visitExternalRef: aRef
+        env reference: aRef name inModule: aRef module!
+
     method _resolveType: aType
         aType is False
             ifTrue: { return False }.
@@ -171,9 +182,6 @@ class SyntaxTranslator { env }
             returnType: (self _resolveType: signature returnType)
             body: (aMethod body visitBy: (SyntaxTranslator env: bodyEnv))
             frameSize: bodyEnv frame size!
-
-    method _visitEach: collection
-        collection collect: { |each| each visitBy: self }!
 
     method visitClass: aClass
         let slots = aClass slots collect: { |slot::Syntax|

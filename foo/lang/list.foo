@@ -73,6 +73,12 @@ class List { size data }
         size = size + 1.
         self!
 
+    method from: first to: last
+        let list = List withCapacity: (last - first + 1).
+        first to: last
+              do: { |index| list add: (self at: index) }.
+        list!
+
     method pop
         size > 0
             ifTrue: { let elt = data at: size.

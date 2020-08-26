@@ -15,6 +15,11 @@ extend Dictionary
         self at: key ifNone: { return False }.
         True!
 
+    method at: key ifNonePut: block
+        self at: key ifNone: { let new = block value.
+                               self put: new at: key.
+                               return new }!
+
     method isEquivalent: other
         self size is other size
             ifFalse: { return False }.

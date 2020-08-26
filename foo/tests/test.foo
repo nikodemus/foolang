@@ -12,6 +12,7 @@ import lang.string.TestString
 import lang.list.TestList
 import lang.dictionary.TestDictionary
 import lang.object.TestObject
+import lang.ordered.TestOrdered
 
 -- Generates signed integers small enough to add without overflowing.
 class SmallIntegers {}
@@ -85,6 +86,7 @@ class Main { assert system }
             TestInteger,
             TestList,
             TestObject,
+            TestOrdered,
             TestRecord,
             TestSelector,
             TestString,
