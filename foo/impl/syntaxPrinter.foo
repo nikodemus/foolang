@@ -11,6 +11,9 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
                              blockStart: False
                              suffixComment: False)!
 
+    method toString
+        "#<SyntaxPrinter>"!
+
     method indentBody
         SyntaxPrinter
             output: output
@@ -212,6 +215,13 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         bodyVisitor println: aDefine name.
         aDefine body visitBy: bodyVisitor.
         self println: "!"!
+
+    method visitImport: anImport
+        self println: "import {anImport module}".
+        self _visitEach: anImport body!
+
+    method visitExternalRef: aRef
+        self print: "{aRef module}.{aRef name}"!
 
     method visitLineComment: comment
         self print: "--".

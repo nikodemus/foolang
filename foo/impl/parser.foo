@@ -20,9 +20,10 @@ interface Token
         Error raise: "Cannot parse {self} (@{self first}) in prefix position position {parser syntaxTable where}! (self-hosted parser)"!
 
     method toString
-        "#<Token \"{self string}\">"!
+        "#<{self classOf name} \"{self string}\" @ {self first}>"!
 
     required method string
+    required method first
 end
 
 define StringEscapes
@@ -73,9 +74,6 @@ class TokenDecimalInteger { string first last }
           do: { |pos|
                 n = n * 10 + (string at: pos) digit }.
         SyntaxLiteral value: n!
-
-    method toString
-        "#<TokenDecimalInteger '{string}'>"!
 end
 
 class TokenHexInteger { string first last }
@@ -90,9 +88,6 @@ class TokenHexInteger { string first last }
                 n = n * 16 + ((string at: pos) digit: 16) }.
         -- Want to retain the format info, hence not SyntaxLiteral.
         SyntaxHexLiteral value: n!
-
-    method toString
-        "#<TokenHexInteger '{string}'>"!
 end
 
 class TokenBinaryInteger { string first last }
@@ -107,9 +102,6 @@ class TokenBinaryInteger { string first last }
                 n = n * 2 + ((string at: pos) digit: 2) }.
         -- Want to retain the format info, hence not SyntaxLiteral.
         SyntaxBinaryLiteral value: n!
-
-    method toString
-        "#<TokenBinaryInteger '{string}'>"!
 end
 
 class TokenEof { position }
@@ -339,9 +331,6 @@ class OpenBraceToken { precedence string first last }
             _parameters: parameters
             _returnType: returnType
             _body: parser parseSeq!
-
-    method toString
-        "#<OpenBraceToken @{first}>"!
 end
 
 class ArrayStartToken { precedence string first last }
@@ -378,9 +367,6 @@ class IsSuffixToken { precedence string first last }
         SyntaxIs
             left: prefix
             right: parser parseSingle!
-
-    method toString
-        "#<IsSuffixToken>"!
 end
 
 class LetToken { precedence string first last }
@@ -406,9 +392,6 @@ class LetToken { precedence string first last }
             variable: variable
             value: (parser handleSuffixCommentOf: value)
             body: parser parseSeq!
-
-    method toString
-        "#<LetToken>"!
 end
 
 class TypeDeclarationToken { precedence string first last }
@@ -418,9 +401,6 @@ class TypeDeclarationToken { precedence string first last }
         SyntaxValueTypeDeclaration
             value: prefix
             type: (parser parseSingle)!
-
-    method toString
-        "#<TypeDeclarationToken>"!
 end
 
 class SelfToken { precedence string first last }
@@ -428,9 +408,6 @@ class SelfToken { precedence string first last }
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxSelf new!
-
-    method toString
-        "#<SelfToken>"!
 end
 
 class LiteralToken { precedence string first last }
@@ -438,9 +415,6 @@ class LiteralToken { precedence string first last }
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
         parser nextToken parseAsLiteralWith: parser!
-
-    method toString
-        "#<LiteralToken>"!
 end
 
 class PanicToken { precedence string first last }
@@ -449,9 +423,6 @@ class PanicToken { precedence string first last }
     method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxPanic
             value: parser parseSingle!
-
-    method toString
-        "#<PanicToken>"!
 end
 
 class ReturnToken { precedence string first last }
@@ -460,9 +431,6 @@ class ReturnToken { precedence string first last }
     method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxReturn
             value: parser parseSingle!
-
-    method toString
-        "#<ReturnToken>"!
 end
 
 -- For ToplevelSyntaxTable --
@@ -484,9 +452,6 @@ class ClassToken { precedence string first last }
             do: { theClass add: (classParser parseAtPrecedence: precedence) }.
         parser expect: "end".
         parser handleSuffixCommentOf: theClass!
-
-    method toString
-        "#<ClassToken>"!
 end
 
 class DefineToken { precedence string first last }
@@ -499,9 +464,6 @@ class DefineToken { precedence string first last }
                       body: definitionParser parseSeq.
         parser expect: "!".
         def!
-
-    method toString
-        "#<DefineToken>"!
 end
 
 class InterfaceToken { precedence string first last }
@@ -516,9 +478,6 @@ class InterfaceToken { precedence string first last }
         interfaceParser
             expect: "end".
         parser handleSuffixCommentOf: theInterface!
-
-    method toString
-        "#<InterfaceToken>"!
 end
 
 class ExtendToken { precedence string first last }
@@ -533,9 +492,6 @@ class ExtendToken { precedence string first last }
         extendParser
             expect: "end".
         parser handleSuffixCommentOf: theExtend!
-
-    method toString
-        "#<ExtendToken>"!
 end
 
 -- For ClassSyntaxTable and InterfaceSyntaxTable --
@@ -545,9 +501,6 @@ class IsPrefixToken { precedence string first last }
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxInterfaceRef name: parser parseName!
-
-    method toString
-        "#<IsPrefixToken>"!
 end
 
 interface MethodToken
@@ -577,9 +530,6 @@ interface MethodToken
             selector: (Selector new: selector content)
             parameters: parameters
             returnType: returnType!
-
-    method toString
-        "#<MethodToken>"!
 end
 
 class InstanceMethodToken { precedence string first last }
@@ -587,9 +537,6 @@ class InstanceMethodToken { precedence string first last }
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
         self parseWith: parser as: SyntaxInstanceMethod!
-
-    method toString
-        "#<InstanceMethodToken>"!
 end
 
 class DirectMethodToken { precedence string first last }
@@ -598,20 +545,31 @@ class DirectMethodToken { precedence string first last }
     method parseAsPrefixWith: parser atPrecedence: _precedence
         parser expect: "method".
         self parseWith: parser as: SyntaxDirectMethod!
-
-    method toString
-        "#<DirectMethodToken>"!
 end
 
 class BangToken { precedence string first last }
     is Token
+end
 
-    method toString
-        "#<BangToken>"!
+class ImportToken { precedence string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        parser skipWhitespace.
+        let specFirst = parser position.
+        let specLast = parser skipWhile: { parser atWhitespace not }.
+        SyntaxImport
+            module: (parser from: specFirst to: specLast)
+            body: parser parseDefinitions!
 end
 
 class SyntaxTable { where tokens }
     is Object
+
+    method where: newWhere tokens: newTokens
+        SyntaxTable
+            where: newWhere
+            tokens: (tokens copy merge: newTokens)!
 
     method where: newWhere tokens: newTokens
         SyntaxTable
@@ -657,7 +615,7 @@ define CoreSyntaxTable
          ")" -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
          "]" -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
          "," -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
-         "->" -> SyntaxEntry tokenClass: InvalidToken precedence: 0,
+         "->" -> SyntaxEntry tokenClass: InvalidToken precedence: 0
     }!
 
 define ExpressionSyntaxTable
@@ -682,7 +640,7 @@ define ExpressionSyntaxTable
          "(" -> SyntaxEntry tokenClass: OpenParenToken precedence: 3,
          "=" -> SyntaxEntry tokenClass: AssignmentToken precedence: 2,
          "." -> SyntaxEntry tokenClass: SequenceToken precedence: 2,
-         "!" -> SyntaxEntry tokenClass: BangToken precedence: 1,
+         "!" -> SyntaxEntry tokenClass: BangToken precedence: 1
     }!
 
 define ToplevelSyntaxTable
@@ -690,11 +648,11 @@ define ToplevelSyntaxTable
     where: "at toplevel"
     tokens:
     {
+         "import" -> SyntaxEntry tokenClass: ImportToken precedence: 1000,
          "define" -> SyntaxEntry tokenClass: DefineToken precedence: 1000,
          "class" -> SyntaxEntry tokenClass: ClassToken precedence: 1000,
          "interface" -> SyntaxEntry tokenClass: InterfaceToken precedence: 1000,
          "extend" -> SyntaxEntry tokenClass: ExtendToken precedence: 1000
-
     }!
 
 define MixedSyntaxTable
@@ -741,6 +699,9 @@ interface LookupToken
             string: tokenString
             first: first
             last: last!
+
+    -- FIXME: Current host doesn't support required direct methods
+    -- required direct method tokenClassIn: table
 end
 
 class TokenSigil { precedence string first last }
@@ -784,6 +745,13 @@ class TokenWord { precedence string first last }
         MaxPrecedence!
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
+        (parser atChar: DotCharacter andThenNot: #isWhitespace)
+            ifTrue: { parser advance.
+                      let nameFirst = parser position.
+                      let nameLast = parser skipWhile: { parser atWhitespace not }.
+                      return SyntaxExternalRef
+                          module: string
+                          name: (parser from: nameFirst to: nameLast ) }.
         SyntaxVariable
             name: string!
 
@@ -939,11 +907,14 @@ class Parser { source::String
 
     direct method parseDefinitions: source
         (self _new: source syntaxTable: ToplevelSyntaxTable)
-            _parseAll: #parsePrefix!
+            parseDefinitions!
 
     direct method parseMixed: source
         (self _new: source syntaxTable: MixedSyntaxTable)
             _parseAll: #parse! -- wwwhhhhaaaaa
+
+    method parseDefinitions
+        self _parseAll: #parsePrefix!
 
     method _parseAll: selector
         let syntax = List new.
@@ -980,7 +951,7 @@ class Parser { source::String
         (TokenWord includes: token)
             ifFalse: { Error raise: "Invalid variable name in self-hosted parser: {token string}" }.
         token string!
-
+ 
     method handleSuffixCommentOf: prefix
         -- #sees: means without intervening newline!
         (self sees: "--")
@@ -1167,14 +1138,16 @@ Source: {source}" }!
         (self position + 1 > last)
             ifFalse: { ((source at: self position + 1) == char2) not }!
 
-    method atChar: char1 andThenNot: test
+    method atChar: char1 andThen: test
         self atEof
             ifTrue: { return False }.
         (source at: self position) == char1
             ifFalse: { return False }.
         (self position + 1 > last)
-            ifFalse: { (test value: (source at: self position + 1))
-                           not }!
+            ifFalse: { (test value: (source at: self position + 1)) }!
+
+    method atChar: char1 andThenNot: testNot
+        self atChar: char1 andThen: { |char| (testNot value: char) not }!
 
     method atAnyOf: string
         self atEof

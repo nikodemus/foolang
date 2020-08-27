@@ -1,4 +1,5 @@
 import .iterable.Iterable
+import .test.TestSuite
 
 interface Ordered
     is Iterable
@@ -22,6 +23,12 @@ interface Ordered
 
     method third
         self at: 3!
+
+    method last
+        self at: self size!
+
+    method butlast
+        self from: 1 to: (self size - 1)!
 
     method checkEqualInternal: other
         self size == other size
@@ -68,13 +75,31 @@ interface Ordered
                 new put: (block value: (self at: i)) at: i }.
         new!
 
+    -- FIXME: Inconsistency between split:do: and splitBy:
+    -- ...the use-cases are different, but at least the idea should be
+    -- made clear in the names.
     method split: byBlock do: block
         let cursor = 1.
         1 to: self size
           do: { |index|
                 (byBlock value: (self at: index))
                     ifTrue: { block value: (self from: cursor to: index).
-                              cursor = index + 1 } }!
+                              cursor = index + 1 } }.
+        cursor <= self size
+            ifTrue: { block value: (self from: cursor to: self size) }!
+
+    method splitBy: element
+        self isEmpty
+            ifTrue: { return [self] }.
+        let list = List new.
+        let cursor = 1.
+        1 to: self size
+          do: { |index|
+                ((self at: index) == element)
+                    ifTrue: { list add: (self from: cursor to: index - 1).
+                              cursor = index + 1 } }.
+        list add: (self from: cursor to: self size).
+        list!
 
     method do: block
         1 to: self size
@@ -178,4 +203,25 @@ interface Ordered
         self put: tmp at: j.
         self!
 
+end
+
+class TestOrdered { assert }
+    is TestSuite
+    direct method runTests: assert
+        (self assert: assert) runTests!
+
+    method splitCases
+        [ ["", [""]],
+          [":", ["", ""]],
+          ["foo", ["foo"]],
+          ["foo:bar", ["foo", "bar"]],
+          ["foo:bar:", ["foo", "bar", ""]],
+          [":foo:bar:", ["", "foo", "bar", ""]] ]!
+
+    method testSplitDo
+        assert forAll: self splitCases
+               that: { |case|
+                       let split = (case first splitBy: ":" character) asArray.
+                       split == case second }
+               testing: "Ordered#splitBy:"!
 end

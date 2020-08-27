@@ -87,25 +87,35 @@ from: '{exprSource}'" }!
         Error raise: "Expected error, got: {result}"!
 
 
-    method load: defSource eval: exprSource
+    method modules: modules load: defSource eval: exprSource
         -- Debug println: "\n/parseDef".
         self checkParsingBy: { |source| Parser parseDefinitions: source }
              for: defSource.
         -- Debug println: "/parseExpr".
         self checkParsingBy: { |source| Parser parseExpressions: source }
              for: exprSource.
-        let env = Environment new.
+        let env = Environment modules: modules.
         -- Debug println: "/load".
         env load: defSource.
         -- Debug println: "/eval".
         env eval: exprSource!
 
-    method load: defSource eval: exprSource expect: expected
-        let result = self load: defSource eval: exprSource.
+    method load: defSource eval: exprSource
+        self
+            modules: Dictionary new
+            load: defSource
+            eval: exprSource!
+
+    method modules: modules load: defSource eval: exprSource expect: expected
+        let result = self
+                         modules: modules
+                         load: defSource
+                         eval: exprSource.
         (result == expected)
             ifFalse: { Error raise: "Expected {expected}, got: {result}
-from: {exprSource}
-with: {defSource}" }!
+eval: {exprSource}
+load: {defSource}
+modules: {dict}" }!
 
     method load: defSource eval: exprSource expectError: type where: test
         { self load: defSource eval: exprSource }
@@ -114,11 +124,18 @@ with: {defSource}" }!
                   (test value: err)
                       ifTrue: { return True }
                       ifFalse: { Error raise: "Error did not match expectations: {err description}
-from: {exprSource}
-with: {defSource}" }}.
+eval: {exprSource}
+load: {defSource}" }}.
         Error raise: "Expected error, didn't get one
-from: {exprSource}
-with: {defSource}"!
+eval: {exprSource}
+load: {defSource}"!
+
+    method load: defSource eval: exprSource expect: expected
+        self
+            modules: Dictionary new
+            load: defSource
+            eval: exprSource
+            expect: expected!
 
     method testInterface1
         self load: "interface TestInterface1
@@ -761,6 +778,19 @@ with: {defSource}"!
                     end"
             eval: "[Foo includes: 42, 42 foofoo]"
             expect: [True, 123]!
+
+    method test1Import1
+        self modules: { "foo" -> "class Foo \{}
+                                     method fooInModule
+                                        42!
+                                  end" }
+             load: "import foo
+                    class Foo \{}
+                       method fooInHere
+                           foo.Foo new fooInModule!
+                    end"
+             eval: "Foo new fooInHere"
+             expect: 42!
 
     method testTranspile
         self transpile: "let x = 20.

@@ -5,9 +5,10 @@ import .ast.AstGlobal
 import .ast.AstLexicalRef
 import .ast.AstSlotRef
 import .ast.AstDefinition
-import .undefinedPolicy.UndefinedPolicy
-import .undefinedPolicy.AllowReferenceToUndefined
-import .undefinedPolicy.ResolveUndefinedsWith
+import .ast.UndefinedPolicy
+import .ast.AllowReferenceToUndefined
+import .ast.ResolveUndefinedsWith
+import .parser.Parser
 
 define BuiltinGlobals
     let globals = Dictionary new.
@@ -43,11 +44,41 @@ class Slot { name index type }
         AstSlotRef slot: self!
 end
 
+class ModuleDictionary { available translated }
+    direct method new
+        self available: Dictionary new
+             translated: Dictionary new!
+
+    direct method new: available
+        self available: available
+             translated: Dictionary new!
+
+    method at: name
+        self translated
+            at: name
+            ifNonePut: { self _translate: name }!
+
+    method _translate: name
+        let source
+            = self available
+                at: name
+                ifNone: { Error raise: "Unknown module: {name}" }.
+        Environment new load: source!
+end
+
+class ModuleBinding { name module }
+    method referenceUpwards: _
+        self!
+    method reference: definition
+        module reference: definition!
+end
+
 class Environment { parent    -- Enclosing environment or False
                     bindings  -- Variables and slots in this environment
                     frame     -- Variables in this frame
                     depth     -- Number of enclosing frames, including this one
-                    globals } -- Dictionary of globals
+                    globals   -- Dictionary of globals
+                    modules } -- ModuleDictionary
     is Object
 
     direct method new
@@ -56,7 +87,17 @@ class Environment { parent    -- Enclosing environment or False
             bindings: []
             frame: List new
             depth: 1
-            globals: BuiltinGlobals copy!
+            globals: BuiltinGlobals copy
+            modules: ModuleDictionary new!
+
+    direct method modules: modules
+        Environment
+            parent: False
+            bindings: []
+            frame: List new
+            depth: 1
+            globals: BuiltinGlobals copy
+            modules: (ModuleDictionary new: modules)!
 
     method toplevel
         Environment
@@ -64,7 +105,21 @@ class Environment { parent    -- Enclosing environment or False
             bindings: []
             frame: List new
             depth: 1
-            globals: globals!
+            globals: globals
+            modules: modules!
+
+    method addModule: moduleName
+        (self depth is 1) assert.
+        let mod = ModuleBinding
+                      name: moduleName
+                      module: (modules at: moduleName).
+        Environment
+            parent: self
+            bindings: [mod]
+            frame: List new
+            depth: 1
+            globals: globals
+            modules: modules!
 
     method newFrame
         Environment
@@ -72,7 +127,8 @@ class Environment { parent    -- Enclosing environment or False
             bindings: []
             frame: List new
             depth: depth + 1
-            globals: globals!
+            globals: globals
+            modules: modules!
 
     method addVariable: name type: type
         let var = Variable
@@ -84,7 +140,8 @@ class Environment { parent    -- Enclosing environment or False
             bindings: [var]
             frame: frame
             depth: depth
-            globals: globals!
+            globals: globals
+            modules: modules!
 
     method addVariable: name
         self addVariable: name type: Any!
@@ -100,7 +157,8 @@ class Environment { parent    -- Enclosing environment or False
             bindings: vars
             frame: frame
             depth: depth
-            globals: globals!
+            globals: globals
+            modules: modules!
 
     method addVariables: names types: types
         (names size is types size) assert.
@@ -115,7 +173,8 @@ class Environment { parent    -- Enclosing environment or False
             bindings: vars
             frame: frame
             depth: depth
-            globals: globals!
+            globals: globals
+            modules: modules!
 
     method addSlots: slotVariables
         let slots = Slot forEachVar: slotVariables.
@@ -124,10 +183,18 @@ class Environment { parent    -- Enclosing environment or False
             bindings: slots
             frame: frame
             depth: depth
-            globals: globals!
+            globals: globals
+            modules: modules!
 
     method reference: name
         self reference: name from: depth!
+
+    method reference: name inModule: module
+        -- FIXME: should keep this distinct from regular bindings, now
+        -- let foo ... will shadow import foo, even if the latter cannot
+        -- be used on its own
+        (self reference: module from: depth)
+            reference: name!
 
     method reference: name from: use
         -- Debug println: "ref? {name} at {depth}?".
@@ -145,13 +212,13 @@ class Environment { parent    -- Enclosing environment or False
             do: { |syntax|
                   -- Debug println: "translate: {syntax}".
                   AllowReferenceToUndefined
-                      do: { let def::AstDefinition
-                                = SyntaxTranslator
-                                    translate: syntax
-                                    in: (self toplevel).
-                            def isCanonical
-                                ifTrue: { envDefs put: def at: def name }.
-                            pendingDefs add: def } }.
+                      do: { (SyntaxTranslator
+                                 translate: syntax
+                                 in: (self toplevel))
+                            do: { |def|
+                                  def isCanonical
+                                      ifTrue: { envDefs put: def at: def name }.
+                                  pendingDefs add: def } } }.
         ResolveUndefinedsWith
             definitions: envDefs
             in: self
@@ -164,6 +231,9 @@ class Environment { parent    -- Enclosing environment or False
 
     direct method eval: string
         self new eval: string!
+
+    direct method load: string
+        self new load: string!
 
     method eval: string
         let toplevelEnv = self toplevel.
