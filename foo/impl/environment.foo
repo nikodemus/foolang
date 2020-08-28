@@ -61,17 +61,24 @@ class ModuleDictionary { available translated }
         self available: available
              translated: Dictionary new!
 
-    method at: name
+    method at: name relative: relative
         self translated
             at: name
-            ifNonePut: { self _translate: name }!
+            ifNonePut: { self _translate: name _relative: relative }!
 
-    method _translate: name
+    method _translate: name _relative: relative
+        let path = relative
+                       ifTrue: { "./{name}" }
+                       ifFalse: { name }.
         let source
             = self available
-                at: name
+                at: path
                 ifNone: { Error raise: "Unknown module: {name}" }.
-        Environment new load: source!
+        { Environment new load: source }
+            on: Error
+            do: { |e|
+                  let maybeDot = relative ifTrue: { "." } ifFalse: { "" }.
+                  Error raise: "Error loading module {maybeDot}{name}:\n{e description}" }!
 end
 
 class ModuleBinding { name module }
@@ -116,11 +123,11 @@ class Environment { parent    -- Enclosing environment or False
             globals: globals
             modules: modules!
 
-    method import: moduleName
+    method import: moduleName relative: relative
         (self depth is 1) assert.
         let mod = ModuleBinding
                       name: moduleName
-                      module: (modules at: moduleName).
+                      module: (modules at: moduleName relative: relative).
         Environment
             parent: self
             bindings: [mod]
@@ -129,9 +136,9 @@ class Environment { parent    -- Enclosing environment or False
             globals: globals
             modules: modules!
 
-    method import: name from: moduleName
+    method import: name from: moduleName relative: relative
         (self depth is 1) assert.
-        let global = (modules at: moduleName) reference: name.
+        let global = (modules at: moduleName relative: relative) reference: name.
         Environment
             parent: self
             bindings: [global]
@@ -140,9 +147,9 @@ class Environment { parent    -- Enclosing environment or False
             globals: globals
             modules: modules!
 
-    method importAll: moduleName
+    method importAll: moduleName relative: relative
         (self depth is 1) assert.
-        let module = (modules at: moduleName).
+        let module = (modules at: moduleName relative: relative).
         let bindings = List new.
         module globals
             doKeys: { |name|

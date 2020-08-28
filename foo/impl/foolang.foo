@@ -115,7 +115,7 @@ from: '{exprSource}'" }!
             ifFalse: { Error raise: "Expected {expected}, got: {result}
 eval: {exprSource}
 load: {defSource}
-modules: {dict}" }!
+modules: {modules}" }!
 
     method load: defSource eval: exprSource expectError: type where: test
         { self load: defSource eval: exprSource }
@@ -779,7 +779,7 @@ load: {defSource}"!
             eval: "[Foo includes: 42, 42 foofoo]"
             expect: [True, 123]!
 
-    method test1Import1
+    method testImport1
         -- prefix import
         self modules: { "foo" -> "class Foo \{}
                                      method fooInModule
@@ -793,7 +793,7 @@ load: {defSource}"!
              eval: "Foo new fooInHere"
              expect: 42!
 
-    method test1Import2
+    method testImport2
         -- name import
         self modules: { "foo" -> "define Foo 42!" }
              load: "import foo.Foo
@@ -801,7 +801,7 @@ load: {defSource}"!
              eval: "Bar"
              expect: 42!
 
-    method test1Import3
+    method testImport3
         -- name import: other names don't shadow pre-existing
         self modules: { "foo" -> "define Foo 42!
                                   define Quux 0!" }
@@ -811,7 +811,7 @@ load: {defSource}"!
              eval: "Bar + Quux"
              expect: 165!
 
-    method test1Import4
+    method testImport4
         -- wildcard import
         self modules: { "foo" -> "define Foo 1!
                                   define Bar 2!" }
@@ -822,6 +822,18 @@ load: {defSource}"!
                    end"
             eval: "Test value"
             expect: 3!
+
+    method testImport5
+        -- relative import
+        self modules: { "foo" -> "define Foo 21!",
+                        "bar" -> "define Bar 0!",
+                        "./foo" -> "define Foo 0!",
+                        "./bar" -> "define Bar 2!"}
+             load: "import foo
+                    import .bar
+                    define Test foo.Foo * bar.Bar!"
+             eval: "Test"
+             expect: 42!
 
     method testTranspile
         self transpile: "let x = 20.

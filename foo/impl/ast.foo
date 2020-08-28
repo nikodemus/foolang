@@ -48,7 +48,7 @@ class ResolveUndefinedsWith { definitions environment }
     method resolve: name
         (definitions
              at: name
-             ifNone: { panic "WTD". StandardUndefinedPolicy reference: name in: environment })
+             ifNone: { StandardUndefinedPolicy reference: name in: environment })
         defineIn: environment!
 
     method do: block
@@ -113,6 +113,8 @@ end
 
 class AstDefinitionList { list }
     is AstDefinition
+    direct method new: list
+        self list: list!
     method isDefined
         panic "never"!
     method markDefined
@@ -120,7 +122,7 @@ class AstDefinitionList { list }
     method eval
         panic "never"!
     method do: block
-        list do: block!
+        list do: { |each| each do: block }!
 end
 
 class AstDefine { name body frameSize isDefined }
