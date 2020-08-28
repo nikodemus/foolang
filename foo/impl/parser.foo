@@ -562,14 +562,20 @@ class ImportToken { precedence string first last }
         let parts = spec splitBy: DotCharacter.
         let body = parser parseDefinitions.
         -- FIXME: Syntax change imminent
-        parts size > 1
-            ifTrue: { SyntaxNameImport
-                          name: parts last
-                          module: ("." join: parts butlast)
-                          body: body }
-            ifFalse: { SyntaxModuleImport
-                           module: spec
-                           body: body }!
+        parts size is 1
+            ifTrue: { return SyntaxModuleImport
+                          module: spec
+                          body: body }.
+        let name = parts last.
+        let module = ("." join: parts butlast).
+        name == "*"
+            ifTrue: { return SyntaxWildcardImport
+                          module: module
+                          body: body }.
+        SyntaxNameImport
+            name: name
+            module: module
+            body: body!
 end
 
 class SyntaxTable { where tokens }

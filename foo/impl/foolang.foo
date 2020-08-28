@@ -801,6 +801,28 @@ load: {defSource}"!
              eval: "Bar"
              expect: 42!
 
+    method test1Import3
+        -- name import: other names don't shadow pre-existing
+        self modules: { "foo" -> "define Foo 42!
+                                  define Quux 0!" }
+             load: "define Quux 123!
+                    import foo.Foo
+                    define Bar Foo!"
+             eval: "Bar + Quux"
+             expect: 165!
+
+    method test1Import4
+        -- wildcard import
+        self modules: { "foo" -> "define Foo 1!
+                                  define Bar 2!" }
+            load: "import foo.*
+                   class Test \{}
+                      direct method value
+                          Foo + Bar!
+                   end"
+            eval: "Test value"
+            expect: 3!
+
     method testTranspile
         self transpile: "let x = 20.
                          let b1 = \{ x + 11 * 2 }.
