@@ -216,8 +216,12 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         aDefine body visitBy: bodyVisitor.
         self println: "!"!
 
-    method visitImport: anImport
+    method visitModuleImport: anImport
         self println: "import {anImport module}".
+        self _visitEach: anImport body!
+
+    method visitNameImport: anImport
+        self println: "import {anImport module}.{anImport name}".
         self _visitEach: anImport body!
 
     method visitExternalRef: aRef

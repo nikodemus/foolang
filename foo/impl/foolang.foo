@@ -780,6 +780,7 @@ load: {defSource}"!
             expect: [True, 123]!
 
     method test1Import1
+        -- prefix import
         self modules: { "foo" -> "class Foo \{}
                                      method fooInModule
                                         42!
@@ -790,6 +791,14 @@ load: {defSource}"!
                            foo.Foo new fooInModule!
                     end"
              eval: "Foo new fooInHere"
+             expect: 42!
+
+    method test1Import2
+        -- name import
+        self modules: { "foo" -> "define Foo 42!" }
+             load: "import foo.Foo
+                    define Bar Foo!"
+             eval: "Bar"
              expect: 42!
 
     method testTranspile

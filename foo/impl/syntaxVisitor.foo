@@ -4,28 +4,29 @@ interface SyntaxVisitor
     method _visitEach: collection
         collection collect: { |each| each visitBy: self }!
 
-    required method visitLiteral: aLiteral
     required method visitArray: syntax
-    required method visitRecord: syntax
     required method visitArray: syntax
-    required method visitSeq: aSeq
-    required method visitReturn: aReturn
-    required method visitImport: aNode
-    required method visitPrefixComment: aComment
-    required method visitSuffixComment: aComment
-    required method visitLet: aLet
-    required method visitPrefixMessage: aMessage
-    required method visitUnaryMessage: aMessage
-    required method visitBinaryMessage: aMessage
-    required method visitKeywordMessage: aMessage
-    required method visitIs: anIs
-    required method visitSelf: aSelf
-    required method visitVariable: aVariable
     required method visitAssign: anAssign
-    required method visitParens: aParens
+    required method visitBinaryMessage: aMessage
     required method visitBlock: aBlock
-    required method visitDefine: aDefine
-    required method visitMethod: aMethod
     required method visitClass: aClass
+    required method visitDefine: aDefine
+    required method visitNameImport: aNode
+    required method visitModuleImport: aNode
     required method visitInterface: anInterface
+    required method visitIs: anIs
+    required method visitKeywordMessage: aMessage
+    required method visitLet: aLet
+    required method visitLiteral: aLiteral
+    required method visitMethod: aMethod
+    required method visitParens: aParens
+    required method visitPrefixComment: aComment
+    required method visitPrefixMessage: aMessage
+    required method visitRecord: syntax
+    required method visitReturn: aReturn
+    required method visitSelf: aSelf
+    required method visitSeq: aSeq
+    required method visitSuffixComment: aComment
+    required method visitUnaryMessage: aMessage
+    required method visitVariable: aVariable
 end

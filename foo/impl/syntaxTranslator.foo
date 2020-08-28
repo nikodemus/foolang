@@ -15,8 +15,11 @@ class SyntaxTranslator { env }
     method addVariable: name type: type
         SyntaxTranslator env: (env addVariable: name type: type)!
 
-    method addImport: module
-        SyntaxTranslator env: (env addModule: module)!
+    method import: module
+        SyntaxTranslator env: (env import: module)!
+
+    method import: name from: module
+        SyntaxTranslator env: (env import: name from: module)!
 
     method visitLiteral: aLiteral
         AstConstantRef value: aLiteral value!
@@ -150,9 +153,12 @@ class SyntaxTranslator { env }
             body: (aDefine body visitBy: bodyVisitor)
             frameSize: bodyVisitor env frame size!
 
-    method visitImport: anImport
-        -- Currently assuming simple prefix import: "import foo"
-        let bodyVisitor = self addImport: anImport module.
+    method visitModuleImport: anImport
+        let bodyVisitor = self import: anImport module.
+        bodyVisitor _visitEach: anImport body!
+
+    method visitNameImport: anImport
+        let bodyVisitor = self import: anImport name from: anImport module.
         bodyVisitor _visitEach: anImport body!
 
     method visitExternalRef: aRef
