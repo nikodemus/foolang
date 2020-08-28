@@ -10,6 +10,7 @@ import .ast.AllowReferenceToUndefined
 import .ast.ResolveUndefinedsWith
 import .parser.Parser
 
+-- FIXME: cannot differentiate from local definitions!
 define BuiltinGlobals
     let globals = Dictionary new.
     globals put: (AstGlobal name: "True" value: True) at: "True".
@@ -134,6 +135,22 @@ class Environment { parent    -- Enclosing environment or False
         Environment
             parent: self
             bindings: [global]
+            frame: List new
+            depth: 1
+            globals: globals
+            modules: modules!
+
+    method importAll: moduleName
+        (self depth is 1) assert.
+        let module = (modules at: moduleName).
+        let bindings = List new.
+        module globals
+            doKeys: { |name|
+                      (name startsWith: "_")
+                          ifFalse: { bindings add: (module reference: name) } }.
+        Environment
+            parent: self
+            bindings: bindings
             frame: List new
             depth: 1
             globals: globals

@@ -13,6 +13,7 @@ interface SyntaxVisitor
     required method visitDefine: aDefine
     required method visitNameImport: aNode
     required method visitModuleImport: aNode
+    required method visitWildcardImport: aNode
     required method visitInterface: anInterface
     required method visitIs: anIs
     required method visitKeywordMessage: aMessage

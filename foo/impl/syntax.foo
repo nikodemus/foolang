@@ -314,6 +314,16 @@ class SyntaxNameImport { name module body }
         [name, module, body]!
 end
 
+class SyntaxWildcardImport { module body }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitWildcardImport: self!
+
+    method parts
+        [module, body]!
+end
+
 class SyntaxExternalRef { module name }
     is Syntax
 

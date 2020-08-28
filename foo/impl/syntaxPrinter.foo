@@ -224,6 +224,10 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         self println: "import {anImport module}.{anImport name}".
         self _visitEach: anImport body!
 
+    method visitWildcardImport: anImport
+        self println: "import {anImport module}.*".
+        self _visitEach: anImport body!
+
     method visitExternalRef: aRef
         self print: "{aRef module}.{aRef name}"!
 
