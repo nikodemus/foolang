@@ -44,6 +44,13 @@ class Slot { name index type }
         AstSlotRef slot: self!
 end
 
+class Constant { name value }
+    is Object
+
+    method referenceUpwards: _offset
+        AstConstantRef value: value!
+end
+
 class ModuleDictionary { available translated }
     direct method new
         self available: Dictionary new
@@ -108,7 +115,7 @@ class Environment { parent    -- Enclosing environment or False
             globals: globals
             modules: modules!
 
-    method addModule: moduleName
+    method import: moduleName
         (self depth is 1) assert.
         let mod = ModuleBinding
                       name: moduleName
@@ -116,6 +123,17 @@ class Environment { parent    -- Enclosing environment or False
         Environment
             parent: self
             bindings: [mod]
+            frame: List new
+            depth: 1
+            globals: globals
+            modules: modules!
+
+    method import: name from: moduleName
+        (self depth is 1) assert.
+        let global = (modules at: moduleName) reference: name.
+        Environment
+            parent: self
+            bindings: [global]
             frame: List new
             depth: 1
             globals: globals

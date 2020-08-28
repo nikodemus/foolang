@@ -63,6 +63,11 @@ extend String
                     ifFalse: { return False } }.
         True!
 
+    method join: iterable
+        StringOutput with: { |out|
+                             iterable do: { |each| out print: each }
+                                      interleaving: { out print: self } }!
+
     method character
         self size == 1
             ifTrue: { self at: 1 }

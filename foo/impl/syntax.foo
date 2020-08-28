@@ -294,14 +294,24 @@ class SyntaxKeyword { receiver selector arguments source }
         [receiver, selector, arguments]!
 end
 
-class SyntaxImport { module body }
+class SyntaxModuleImport { module body }
     is Syntax
 
     method visitBy: visitor
-        visitor visitImport: self!
+        visitor visitModuleImport: self!
 
     method parts
         [module, body]!
+end
+
+class SyntaxNameImport { name module body }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitNameImport: self!
+
+    method parts
+        [name, module, body]!
 end
 
 class SyntaxExternalRef { module name }

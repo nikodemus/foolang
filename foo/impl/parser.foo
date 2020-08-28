@@ -558,9 +558,18 @@ class ImportToken { precedence string first last }
         parser skipWhitespace.
         let specFirst = parser position.
         let specLast = parser skipWhile: { parser atWhitespace not }.
-        SyntaxImport
-            module: (parser from: specFirst to: specLast)
-            body: parser parseDefinitions!
+        let spec = parser from: specFirst to: specLast.
+        let parts = spec splitBy: DotCharacter.
+        let body = parser parseDefinitions.
+        -- FIXME: Syntax change imminent
+        parts size > 1
+            ifTrue: { SyntaxNameImport
+                          name: parts last
+                          module: ("." join: parts butlast)
+                          body: body }
+            ifFalse: { SyntaxModuleImport
+                           module: spec
+                           body: body }!
 end
 
 class SyntaxTable { where tokens }

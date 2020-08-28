@@ -382,6 +382,9 @@ class AstGlobal { name _value }
 
     method visitBy: visitor
         visitor visitGlobal: self!
+
+    method referenceUpwards: _offset
+        self!
 end
 
 class AstConstantRef { value }
