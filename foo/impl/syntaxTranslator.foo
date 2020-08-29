@@ -15,14 +15,21 @@ class SyntaxTranslator { env }
     method addVariable: name type: type
         SyntaxTranslator env: (env addVariable: name type: type)!
 
-    method import: module
-        SyntaxTranslator env: (env import: module)!
+    method import: module relative: relative
+        SyntaxTranslator env: (env
+                                   import: module
+                                   relative: relative)!
 
-    method import: name from: module
-        SyntaxTranslator env: (env import: name from: module)!
+    method import: name from: module relative: relative
+        SyntaxTranslator env: (env
+                                   import: name
+                                   from: module
+                                   relative: relative)!
 
-    method importAll: module
-        SyntaxTranslator env: (env importAll: module)!
+    method importAll: module relative: relative
+        SyntaxTranslator env: (env
+                                   importAll: module
+                                   relative: relative)!
 
     method visitLiteral: aLiteral
         AstConstantRef value: aLiteral value!
@@ -157,16 +164,26 @@ class SyntaxTranslator { env }
             frameSize: bodyVisitor env frame size!
 
     method visitModuleImport: anImport
-        let bodyVisitor = self import: anImport module.
-        bodyVisitor _visitEach: anImport body!
+        let bodyVisitor = self
+                              import: anImport module
+                              relative: anImport relative.
+        AstDefinitionList
+            new: (bodyVisitor _visitEach: anImport body)!
 
     method visitNameImport: anImport
-        let bodyVisitor = self import: anImport name from: anImport module.
-        bodyVisitor _visitEach: anImport body!
+        let bodyVisitor = self
+                              import: anImport name
+                              from: anImport module
+                              relative: anImport relative.
+        AstDefinitionList
+            new: (bodyVisitor _visitEach: anImport body)!
 
     method visitWildcardImport: anImport
-        let bodyVisitor = self importAll: anImport module.
-        bodyVisitor _visitEach: anImport body!
+        let bodyVisitor = self
+                              importAll: anImport module
+                              relative: anImport relative.
+        AstDefinitionList
+            new: (bodyVisitor _visitEach: anImport body)!
 
     method visitExternalRef: aRef
         env reference: aRef name inModule: aRef module!

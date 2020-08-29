@@ -20,6 +20,17 @@ extend Dictionary
                                self put: new at: key.
                                return new }!
 
+    method toString
+        StringOutput with: { |out|
+                             out print: "\{ ".
+                             self keys sort
+                                 do: { |each|
+                                       out display: each.
+                                       out print: " -> ".
+                                       out display: (self at: each) }
+                                 interleaving: { out println: "," }.
+                             out print: " }" }!
+
     method isEquivalent: other
         self size is other size
             ifFalse: { return False }.

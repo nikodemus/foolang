@@ -294,17 +294,17 @@ class SyntaxKeyword { receiver selector arguments source }
         [receiver, selector, arguments]!
 end
 
-class SyntaxModuleImport { module body }
+class SyntaxModuleImport { module relative body }
     is Syntax
 
     method visitBy: visitor
         visitor visitModuleImport: self!
 
     method parts
-        [module, body]!
+        [module, relative, body]!
 end
 
-class SyntaxNameImport { name module body }
+class SyntaxNameImport { name module relative body }
     is Syntax
 
     method visitBy: visitor
@@ -314,7 +314,7 @@ class SyntaxNameImport { name module body }
         [name, module, body]!
 end
 
-class SyntaxWildcardImport { module body }
+class SyntaxWildcardImport { module relative body }
     is Syntax
 
     method visitBy: visitor
