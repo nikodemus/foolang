@@ -33,6 +33,9 @@ it's here more for future reference than anything else.
   paper](http://www.wirfs-brock.com/allen/talks/oopsla96dclslides.pdf), and a
   shorter paper with the same title from [Smalltalk Solutions
   97](https://web.archive.org/web/20200301140324/https://www.instantiations.com/vast/files/archive/Smalltalk-Solutions97/SSDCL1.HTM).
+  _These papers describe a model very closely aligned with Foolang's.
+  Only major difference is that in Foolang all globals are immutable
+  during program execution. Very much worth reading._
 
 - 1997 - [Smalltalk ANSI Standard
   (draft)](https://web.archive.org/web/20200301135851/http://www.math.sfedu.ru/smalltalk/standard/index.html.en)
