@@ -32,6 +32,9 @@ import .object.Object
 class Character { code }
     is Object
 
+    method isLowercase
+        ASCII lowerA <= code and: code <= ASCII lowerZ!
+
     method isAlphanumeric
         self isAlpha or: self isDigit!
 

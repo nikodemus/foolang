@@ -62,14 +62,17 @@ class ModuleDictionary { available translated }
              translated: Dictionary new!
 
     method at: name relative: relative
+        let path = "/" join: name.
         self translated
-            at: name
+            at: path
             ifNonePut: { self _translate: name _relative: relative }!
 
     method _translate: name _relative: relative
+        let path = "/" join: name.
         let path = relative
-                       ifTrue: { "./{name}" }
-                       ifFalse: { name }.
+                       ifTrue: { "./{path}" }
+                       ifFalse: { path }.
+        let name = "." join: name.
         let source
             = self available
                 at: path
@@ -126,7 +129,7 @@ class Environment { parent    -- Enclosing environment or False
     method import: moduleName relative: relative
         (self depth is 1) assert.
         let mod = ModuleBinding
-                      name: moduleName
+                      name: moduleName last
                       module: (modules at: moduleName relative: relative).
         Environment
             parent: self

@@ -354,7 +354,7 @@ define AstUndefinedMarker
     -- protection.
     ["<AstUndefineMarker>"]!
 
-class AstGlobal { name _value }
+class AstGlobal { name::String _value }
     is AstNode
 
     direct method name: name
@@ -387,6 +387,9 @@ class AstGlobal { name _value }
 
     method referenceUpwards: _offset
         self!
+
+    method toString
+        "#<{self classOf name} {name}: {_value}>"!
 end
 
 class AstConstantRef { value }

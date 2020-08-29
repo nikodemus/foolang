@@ -835,6 +835,17 @@ load: {defSource}"!
              eval: "Test"
              expect: 42!
 
+    method testImport6
+        -- submodule import
+        self modules: { "foo/bar" -> "define Quux 42!",
+                        "foo/zot" -> "define Beep 123!" }
+             load: "import foo.bar.Quux
+                    import foo.zot
+                    define A Quux!
+                    define B zot.Beep!"
+             eval: "A + B"
+             expect: 165!
+
     method testTranspile
         self transpile: "let x = 20.
                          let b1 = \{ x + 11 * 2 }.

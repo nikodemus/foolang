@@ -216,29 +216,37 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         aDefine body visitBy: bodyVisitor.
         self println: "!"!
 
+    method _printModule: path
+        self print: ("." join: path)!
+
     method visitModuleImport: anImport
         self print: "import ".
         anImport relative
             ifTrue: { self print: "." }.
-        self println: anImport module.
+        self _printModule: anImport module.
+        self newline.
         self _visitEach: anImport body!
 
     method visitNameImport: anImport
         self print: "import ".
         anImport relative
             ifTrue: { self print: "." }.
-        self println: "{anImport module}.{anImport name}".
+        self _printModule: anImport module.
+        self println: ".{anImport name}".
         self _visitEach: anImport body!
 
     method visitWildcardImport: anImport
         self print: "import ".
         anImport relative
             ifTrue: { self print: "." }.
-        self println: "{anImport module}.*".
+        self _printModule: anImport module.
+        self println: ".*".
         self _visitEach: anImport body!
 
     method visitExternalRef: aRef
-        self print: "{aRef module}.{aRef name}"!
+        self print: aRef module.
+        self print: ".".
+        self print: aRef name!
 
     method visitLineComment: comment
         self print: "--".
