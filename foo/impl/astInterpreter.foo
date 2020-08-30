@@ -233,7 +233,10 @@ class AstInterpreter { context process }
             context: context
             block: aBlock!
 
-    method visitSelf: aSelf
+    method visitSelfClass: aSelf
+        context receiver classOf!
+
+    method visitSelfInstance: aSelf
         context receiver!
 
     method visitSlotRef: aSlotRef

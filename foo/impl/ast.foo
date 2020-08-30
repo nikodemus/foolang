@@ -479,11 +479,18 @@ class AstBlock { body argumentVariables returnType frameSize }
         argumentVariables size!
 end
 
-class AstSelfRef {}
+class AstSelfInstanceRef {}
     is AstNode
 
     method visitBy: visitor
-        visitor visitSelf: self!
+        visitor visitSelfInstance: self!
+end
+
+class AstSelfClassRef {}
+    is AstNode
+
+    method visitBy: visitor
+        visitor visitSelfClass: self!
 end
 
 class AstSlotRef { slot }

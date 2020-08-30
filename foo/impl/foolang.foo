@@ -219,6 +219,20 @@ end
             expectError: RequiredMethodMissing
             where: { |e| e selector == #fooxx }!
 
+    method testInterface6
+        -- Self
+        self load: "interface TestInterface6
+                        method foo
+                           Self bar!
+                    end
+                    class TestInterface6Impl \{}
+                        is TestInterface6
+                        direct method bar
+                           42!
+                    end"
+            eval: "TestInterface6Impl new foo"
+            expect: 42!
+
     method test42
         self eval: "42" expect: 42!
 

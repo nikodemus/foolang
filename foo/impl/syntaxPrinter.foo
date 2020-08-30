@@ -177,7 +177,10 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
     method visitUntypedVariable: aVar
         self print: aVar name!
 
-    method visitSelf: aSelf
+    method visitSelfClass: aSelf
+        self print: "Self"!
+
+    method visitSelfInstance: aSelf
         self print: "self"!
 
     method visitVariable: aVariable

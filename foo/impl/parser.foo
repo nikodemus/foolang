@@ -403,11 +403,18 @@ class TypeDeclarationToken { precedence string first last }
             type: (parser parseSingle)!
 end
 
-class SelfToken { precedence string first last }
+class SelfInstanceToken { precedence string first last }
     is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        SyntaxSelf new!
+        SyntaxSelfInstance new!
+end
+
+class SelfClassToken { precedence string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        SyntaxSelfClass new!
 end
 
 class LiteralToken { precedence string first last }
@@ -679,7 +686,8 @@ define ExpressionSyntaxTable
     {
          "panic" -> SyntaxEntry tokenClass: PanicToken precedence: 1000,
          "return" -> SyntaxEntry tokenClass: ReturnToken precedence: 1000,
-         "self" -> SyntaxEntry tokenClass: SelfToken precedence: 1000,
+         "self" -> SyntaxEntry tokenClass: SelfInstanceToken precedence: 1000,
+         "Self" -> SyntaxEntry tokenClass: SelfClassToken precedence: 1000,
          "#" -> SyntaxEntry tokenClass: LiteralToken precedence: 1000,
          "::" -> SyntaxEntry tokenClass: TypeDeclarationToken precedence: 1000,
          "*" -> SigilEntry precedence: 90,

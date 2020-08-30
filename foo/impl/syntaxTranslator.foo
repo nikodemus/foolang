@@ -126,8 +126,11 @@ class SyntaxTranslator { env }
             left: (anIs left visitBy: self)
             right: (anIs right visitBy: self)!
 
-    method visitSelf: aSelf
-        AstSelfRef new!
+    method visitSelfInstance: aSelf
+        AstSelfInstanceRef new!
+
+    method visitSelfClass: aSelf
+        AstSelfClassRef new!
 
     method visitVariable: aVariable
         env reference: aVariable name!

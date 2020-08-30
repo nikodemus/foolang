@@ -377,11 +377,21 @@ class SyntaxLet { variable value body }
         [variable, value, body]!
 end
 
-class SyntaxSelf {}
+class SyntaxSelfInstance {}
     is Syntax
 
     method visitBy: visitor
-        visitor visitSelf: self!
+        visitor visitSelfInstance: self!
+
+    method parts
+        []!
+end
+
+class SyntaxSelfClass {}
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitSelfClass: self!
 
     method parts
         []!
