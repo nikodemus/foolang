@@ -10,15 +10,27 @@ import .ast.AllowReferenceToUndefined
 import .ast.ResolveUndefinedsWith
 import .parser.Parser
 
+class Builtins { globals }
+    method define: builtin
+        let name = builtin name.
+        globals put: (AstGlobal name: name value: builtin) at: name!
+end
+
 -- FIXME: cannot differentiate from local definitions!
 define BuiltinGlobals
-    let globals = Dictionary new.
-    globals put: (AstGlobal name: "True" value: True) at: "True".
-    globals put: (AstGlobal name: "False" value: False) at: "False".
-    globals put: (AstGlobal name: "Object" value: Object) at: "Object".
-    globals put: (AstGlobal name: "Integer" value: Integer) at: "Integer".
-    globals put: (AstGlobal name: "String" value: String) at: "String".
-    globals!
+    let builtins = Builtins globals: Dictionary new.
+    builtins define: Boolean.
+    builtins define: DoesNotUnderstand.
+    builtins define: Error.
+    builtins define: False.
+    builtins define: Integer.
+    builtins define: Object.
+    builtins define: Selector.
+    builtins define: String.
+    builtins define: StringOutput.
+    builtins define: True.
+    builtins define: TypeError.
+    builtins globals!
 
 class Variable { name type index }
     is Object

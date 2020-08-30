@@ -895,18 +895,21 @@ load: {defSource}"!
              eval: "Test test"
              expect: True!
 
----
-    method testPrelude_Array
+    method no_test1Prelude_Object
         let lang = system files path: "foo/lang".
-        self modules: { "any" -> lang path: "array.foo" } asFileModules
-             load: "import array.Array
+        self modules: { "object" -> lang path: "object.foo" } asFileModules
+             load: "import object
+                    class X \{ y }
+                        -- is object.Object
+                        method isEquivalent: other -> Boolean
+                           self y == other y!
+                    end
                     class Test \{}
                        direct method test
-                          Any includes: 42!
+                           X y: 42 == X y: 42!
                     end"
              eval: "Test test"
              expect: True!
----
 
     method testTranspile
         self transpile: "let x = 20.
