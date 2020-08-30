@@ -565,21 +565,20 @@ class ImportToken { precedence string first last }
                                      True }.
         let body = parser parseDefinitions.
         -- FIXME: Syntax change imminent
-        parts size is 1
+        parts last first isLowercase
             ifTrue: { return SyntaxModuleImport
-                          module: parts first
+                          module: parts
                           relative: relative
                           body: body }.
         let name = parts last.
-        let module = ("." join: parts butlast).
         name == "*"
             ifTrue: { return SyntaxWildcardImport
-                          module: module
+                          module: parts butlast
                           relative: relative
                           body: body }.
         SyntaxNameImport
             name: name
-            module: module
+            module: parts butlast
             relative: relative
             body: body!
 end
@@ -773,9 +772,12 @@ class TokenWord { precedence string first last }
                                          skipWhile: { (parser atWhitespace
                                                            or: (parser atChar: BangCharacter))
                                                       not }.
+                      let parts = (parser from: first to: nameLast)
+                                      splitBy: DotCharacter.
+                      (parts size is 2) assert.
                       return SyntaxExternalRef
-                          module: string
-                          name: (parser from: nameFirst to: nameLast) }.
+                          module: parts first
+                          name: parts second }.
         SyntaxVariable
             name: string!
 
