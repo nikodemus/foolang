@@ -113,7 +113,7 @@ from: '{exprSource}'" }!
                       ifFalse: { Error raise: "Expected error did not pass test, got: {e}" }}.
         Error raise: "Expected error, got: {result}"!
 
-    method without: globals modules: modules load: defSource eval: exprSource
+    method without: builtins modules: modules load: defSource eval: exprSource
         -- Debug println: "\n/parseDef".
         self checkParsingBy: { |source| Parser parseDefinitions: source }
              for: defSource.
@@ -121,7 +121,7 @@ from: '{exprSource}'" }!
         self checkParsingBy: { |source| Parser parseExpressions: source }
              for: exprSource.
         let env = Environment modules: modules.
-        env removeGlobals: globals.
+        env removeBuiltins: builtins.
         -- Debug println: "/load".
         env load: defSource.
         -- Debug println: "/eval".
@@ -133,13 +133,13 @@ from: '{exprSource}'" }!
             load: defSource
             eval: exprSource!
 
-    method without: globals
+    method without: builtins
            modules: modules
            load: defSource
            eval: exprSource
            expect: expected
         let result = self
-                         without: globals
+                         without: builtins
                          modules: modules
                          load: defSource
                          eval: exprSource.
