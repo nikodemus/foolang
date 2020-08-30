@@ -304,9 +304,25 @@ end
 
 class AstComment { comment value source }
     is AstNode
+    is AstDefinition
 
     method visitBy: visitor
         visitor visitComment: self!
+
+    method eval
+        panic "AstComment#eval"!
+
+    method markDefined
+        panic "AstComment#markDefined"!
+
+    method isDefined
+        panic "AstComment#isDefined"!
+
+    method isCanonical
+        panic "AstComment#isCanonical"!
+
+    method do: block
+        value do: block!
 end
 
 class AstArray { entries }

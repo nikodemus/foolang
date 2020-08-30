@@ -867,6 +867,23 @@ load: {defSource}"!
              eval: "A + B"
              expect: 165!
 
+    method testImport7
+        -- leading comments at toplevel
+        self modules: { "foo/bar" -> "-- comment 1
+                                      define Quux 42!",
+                        "foo/zot" -> "-- comment 2
+                                      define Beep 123!" } asStringModules
+             load: "-- comment 3
+                    import foo.bar.Quux
+                    -- comment 4
+                    import foo.zot
+                    -- comment 5
+                    define A Quux!
+                    -- comment 6
+                    define B zot.Beep!"
+             eval: "A + B"
+             expect: 165!
+
     method testPrelude_Any
         let lang = system files path: "foo/lang".
         self modules: { "any" -> lang path: "any.foo" } asFileModules
