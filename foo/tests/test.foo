@@ -11,7 +11,7 @@ import lang.character.TestCharacter
 import lang.string.TestString
 import lang.list.TestList
 import lang.dictionary.TestDictionary
-import lang.object.TestObject
+import lang.test_object.TestObject
 import lang.ordered.TestOrdered
 
 -- Generates signed integers small enough to add without overflowing.
