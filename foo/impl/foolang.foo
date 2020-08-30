@@ -183,6 +183,26 @@ load: {defSource}"!
             eval: "TestInterface3 includes: (TestInterface3Impl new foo)"
             expect: True!
 
+    method test1Interface4
+        -- pretty-print
+        self parse: "interface TestInterface4
+                        required direct method fooR
+                        direct method foo
+                            42!
+                        required method barR
+                        method bar
+                            42!
+                    end"
+             expect: "interface TestInterface4
+    required direct method fooR
+    required method barR
+    direct method foo
+        42!
+    method bar
+        42!
+end
+"!
+
     method test42
         self eval: "42" expect: 42!
 

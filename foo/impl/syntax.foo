@@ -545,6 +545,15 @@ interface SyntaxMethod
     method visitBy: visitor
         visitor visitMethod: self!
 
+    method isRequired
+        body is False!
+
+    method isDefined
+        self isRequired not!
+
+    method isDirect
+        False!
+
     method parts
         [self signature, self body]!
 end
@@ -567,6 +576,9 @@ class SyntaxDirectMethod { comment signature body }
 
     method addTo: thing
         thing directMethods add: self!
+
+    method isDirect
+        True!
 end
 
 class MethodSignature { selector parameters returnType }
@@ -576,4 +588,22 @@ class MethodSignature { selector parameters returnType }
         selector == other selector
             and: parameters == other parameters
             and: returnType == other returnType!
+
+    method toString
+        StringOutput with: { |out|
+                             out print: "#<MethodSignature".
+                             parameters isEmpty
+                                 ifTrue: { out print: " ".
+                                           out print: selector name }
+                                 ifFalse: { selector parts
+                                                with: parameters
+                                                do: { |s t|
+                                                      out print: " ".
+                                                      out print: s.
+                                                      out print: " ".
+                                                      out print: t } }.
+                             returnType is False
+                                 ifFalse: { out print: " -> ".
+                                            out print: returnType }.
+                             out print: ">" }!
 end
