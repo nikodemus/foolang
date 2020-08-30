@@ -44,6 +44,8 @@ interface Error
         stream print: "Error: {self description}>"!
     method displayOn: stream
         stream print: "#<Error {self description}>"!
+    method backtrace
+        False!
     method description
         { self _description }
             on: DoesNotUnderstand
@@ -81,6 +83,21 @@ class SimpleError { _description }
         (self _description: description) raise!
 end
 
+class RequiredMethodMissing { from selector isDirect }
+    is Error
+    direct method raise: selector on: instance isDirect: isDirect
+        (self
+             from: instance classOf
+             selector: selector
+             isDirect: isDirect)
+        raise!
+    method _description
+        let maybeDirect = self isDirect
+                              ifTrue: { "direct " }
+                              ifFalse: { "" }.
+        "Required {maybeDirect}method {selector} missing from {from}"!
+end
+
 class DoesNotUnderstand { receiver selector arguments source context }
     is Error
     direct method raise: selector with: arguments on: receiver
@@ -108,8 +125,12 @@ class DoesNotUnderstand { receiver selector arguments source context }
              source: source
              context: context)
         raise!
+    method backtrace
+        context is False
+            ifTrue: { False }
+            ifFalse: { context bactrace }!
     method _description
-        let note = "{receiver displayString} does not understand: {selector}".
+        let note = "{receiver displayString} does not understand: {selector} with: {arguments displayString}".
         source is False
             ifTrue: { note }
             ifFalse: { "{note}\n{source note: note}" }!

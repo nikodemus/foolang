@@ -146,7 +146,8 @@ modules: {modules}" }!
                       ifTrue: { return True }
                       ifFalse: { Error raise: "Error did not match expectations: {err description}
 eval: {exprSource}
-load: {defSource}" }}.
+load: {defSource}
+backtrace: {err backtrace}" }}.
         Error raise: "Expected error, didn't get one
 eval: {exprSource}
 load: {defSource}"!
@@ -183,7 +184,7 @@ load: {defSource}"!
             eval: "TestInterface3 includes: (TestInterface3Impl new foo)"
             expect: True!
 
-    method test1Interface4
+    method testInterface4
         -- pretty-print
         self parse: "interface TestInterface4
                         required direct method fooR
@@ -201,7 +202,22 @@ load: {defSource}"!
     method bar
         42!
 end
-"!
+"
+                !
+
+    method testInterface5
+        self load: "interface TestInterface5
+                        required method fooxx
+                        method bar
+                            self fooxx!
+                    end
+                    class TestInterface5Impl \{}
+                        is Object
+                        is TestInterface5
+                    end"
+            eval: "TestInterface5Impl new bar"
+            expectError: RequiredMethodMissing
+            where: { |e| e selector == #fooxx }!
 
     method test42
         self eval: "42" expect: 42!

@@ -210,8 +210,11 @@ class SyntaxTranslator { env }
             selector: signature selector
             argumentVariables: argumentVariables
             returnType: (self _resolveType: signature returnType)
-            body: (aMethod body visitBy: (SyntaxTranslator env: bodyEnv))
-            frameSize: bodyEnv frame size!
+            body: (aMethod body is False
+                       ifTrue: { False }
+                       ifFalse: { (aMethod body visitBy: (SyntaxTranslator env: bodyEnv)) })
+            frameSize: bodyEnv frame size
+            isDirect: aMethod isDirect!
 
     method visitClass: aClass
         let slots = aClass slots collect: { |slot::Syntax|

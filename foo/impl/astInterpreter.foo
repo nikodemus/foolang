@@ -128,6 +128,12 @@ class AstInterpreter { context process }
             finally: { context invalidate } !
 
     direct method invokeMethod: astMethod on: receiver with: arguments
+        astMethod isDefined
+            ifFalse: { -- required method not defined in implementation
+                       RequiredMethodMissing
+                           raise: astMethod selector
+                           on: receiver
+                           isDirect: astMethod isDirect }.
         let frame = Array new: astMethod frameSize.
         let nArgs = arguments size.
         astMethod argumentCount is nArgs

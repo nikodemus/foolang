@@ -255,12 +255,20 @@ class AstClass { name slots interfaces directMethods instanceMethods isDefined }
 
     method eval
         -- Debug println: "slots: {(slots collect: #type) asArray displayString}".
-        Class
+        let theClass = Class
             new: name
             slots: slots asArray
             interfaces: (Array from: (interfaces collect: #value))
             directMethods: (Array from: directMethods)
-            instanceMethods: (Array from: instanceMethods)!
+            instanceMethods: (Array from: instanceMethods).
+        theClass __addInstanceMethod: (AstMethod
+                                           selector: #classOf
+                                           argumentVariables: []
+                                           returnType: Any
+                                           body: (AstConstantRef value: theClass)
+                                           frameSize: 0
+                                           isDirect: False).
+        theClass!
 
     method isCanonical
         True!
@@ -269,28 +277,20 @@ class AstClass { name slots interfaces directMethods instanceMethods isDefined }
         "#<AstClass {name}>"!
 end
 
-class AstMethod { name argumentVariables returnType body frameSize }
+class AstMethod { selector argumentVariables returnType body frameSize isDirect }
     is Object
 
-    direct method selector: selector
-                  argumentVariables: argumentVariables
-                  returnType: returnType
-                  body: body
-                  frameSize: frameSize
-        self name: selector name
-             argumentVariables: argumentVariables
-             returnType: returnType
-             body: body
-             frameSize: frameSize!
-
-    method selector
-        Selector name: name!
+    method name
+        selector name!
 
     method invoke: arguments on: receiver
         AstInterpreter
             invokeMethod: self
             on: receiver
             with: arguments!
+
+    method isDefined
+        (body is False) not!
 
     method argumentCount
         argumentVariables size!
