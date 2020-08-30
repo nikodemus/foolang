@@ -113,7 +113,7 @@ from: '{exprSource}'" }!
                       ifFalse: { Error raise: "Expected error did not pass test, got: {e}" }}.
         Error raise: "Expected error, got: {result}"!
 
-    method modules: modules load: defSource eval: exprSource
+    method without: globals modules: modules load: defSource eval: exprSource
         -- Debug println: "\n/parseDef".
         self checkParsingBy: { |source| Parser parseDefinitions: source }
              for: defSource.
@@ -121,6 +121,7 @@ from: '{exprSource}'" }!
         self checkParsingBy: { |source| Parser parseExpressions: source }
              for: exprSource.
         let env = Environment modules: modules.
+        env removeGlobals: globals.
         -- Debug println: "/load".
         env load: defSource.
         -- Debug println: "/eval".
@@ -132,8 +133,13 @@ from: '{exprSource}'" }!
             load: defSource
             eval: exprSource!
 
-    method modules: modules load: defSource eval: exprSource expect: expected
+    method without: globals
+           modules: modules
+           load: defSource
+           eval: exprSource
+           expect: expected
         let result = self
+                         without: globals
                          modules: modules
                          load: defSource
                          eval: exprSource.
@@ -142,6 +148,21 @@ from: '{exprSource}'" }!
 eval: {exprSource}
 load: {defSource}
 modules: {modules}" }!
+
+    method modules: modules load: defSource eval: exprSource expect: expected
+        self
+            without: []
+            modules: modules
+            load: defSource
+            eval: exprSource
+            expect: expected!
+
+    method modules: modules load: defSource eval: exprSource
+        self
+            without: []
+            modules: modules
+            load: defSource
+            eval: exprSource!
 
     method load: defSource eval: exprSource expectError: type where: test
         { self load: defSource eval: exprSource }
@@ -952,9 +973,10 @@ end
             eval: "Test new foo"
             expect: 42!
 
-    method testPrelude_Any
+    method test1Prelude_Any
         let lang = system files path: "foo/lang".
-        self modules: { "any" -> lang path: "any.foo" } asFileModules
+        self without: ["Any"]
+             modules: { "any" -> lang path: "any.foo" } asFileModules
              load: "import any.Any
                     class Test \{}
                        direct method test
@@ -963,9 +985,10 @@ end
              eval: "Test test"
              expect: True!
 
-    method no_test1Prelude_Object
+    method test1Prelude_Object
         let lang = system files path: "foo/lang".
-        self modules: { "object" -> lang path: "object.foo" } asFileModules
+        self without: ["Object"]
+             modules: { "object" -> lang path: "object.foo" } asFileModules
              load: "import object
                     class X \{ y }
                         is object.Object

@@ -19,6 +19,7 @@ end
 -- FIXME: cannot differentiate from local definitions!
 define BuiltinGlobals
     let builtins = Builtins globals: Dictionary new.
+    builtins define: Any.
     builtins define: Boolean.
     builtins define: DoesNotUnderstand.
     builtins define: Error.
@@ -73,13 +74,13 @@ class ModuleDictionary { available translated }
         self available: available
              translated: Dictionary new!
 
-    method at: name relative: relative
+    method at: name relative: relative in: env
         let path = "/" join: name.
         self translated
             at: path
-            ifNonePut: { self _translate: name _relative: relative }!
+            ifNonePut: { self _translate: name _relative: relative _in: env }!
 
-    method _translate: name _relative: relative
+    method _translate: name _relative: relative _in: env
         let path = "/" join: name.
         let path = relative
                        ifTrue: { "./{path}" }
@@ -89,7 +90,7 @@ class ModuleDictionary { available translated }
             = self available
                 at: path
                 ifNone: { Error raise: "Unknown module: {name}" }.
-        { Environment new load: source }
+        { env toplevel load: source }
             on: Error
             do: { |e|
                   let maybeDot = relative ifTrue: { "." } ifFalse: { "" }.
@@ -138,11 +139,14 @@ class Environment { parent    -- Enclosing environment or False
             globals: globals
             modules: modules!
 
+    method removeGlobals: names
+        globals removeAll: names!
+
     method import: moduleName relative: relative
         (self depth is 1) assert.
         let mod = ModuleBinding
                       name: moduleName last
-                      module: (modules at: moduleName relative: relative).
+                      module: (modules at: moduleName relative: relative in: self).
         Environment
             parent: self
             bindings: [mod]
@@ -153,7 +157,8 @@ class Environment { parent    -- Enclosing environment or False
 
     method import: name from: moduleName relative: relative
         (self depth is 1) assert.
-        let global = (modules at: moduleName relative: relative) reference: name.
+        let global = (modules at: moduleName relative: relative in: self)
+                         reference: name.
         Environment
             parent: self
             bindings: [global]
@@ -164,7 +169,7 @@ class Environment { parent    -- Enclosing environment or False
 
     method importAll: moduleName relative: relative
         (self depth is 1) assert.
-        let module = (modules at: moduleName relative: relative).
+        let module = (modules at: moduleName relative: relative in: self).
         let bindings = List new.
         module globals
             doKeys: { |name|
@@ -265,6 +270,7 @@ class Environment { parent    -- Enclosing environment or False
     method load: string
         let envDefs = Dictionary new.
         let pendingDefs = List new.
+        -- Debug println: "LOAD TO\n{globals displayString}".
         (Parser parseDefinitions: string)
             do: { |syntax|
                   -- Debug println: "translate: {syntax}".
@@ -317,6 +323,7 @@ class Environment { parent    -- Enclosing environment or False
         UndefinedPolicy reference: name in: self!
 
     method define: name value: value
+        -- Debug println: "Environment#define:value: {name}".
         let global = globals
                          at: name
                          ifNone: { globals
@@ -326,6 +333,6 @@ class Environment { parent    -- Enclosing environment or False
         global isUndefined
             ifTrue: { global value: value.
                       value }
-            ifFalse: { Error raise: "Cannot redefined a global: {name}" }!
+            ifFalse: { Error raise: "Cannot redefine a global: {name}" }!
 
 end
