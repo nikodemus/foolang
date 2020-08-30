@@ -1,19 +1,10 @@
+import .test.TestSuite
+
 class TestObject { assert }
+    is TestSuite
+
     direct method runTests: assert
-        (self assert: assert)
-            ; testTypecheck1
-            ; testTypecheck2
-            ; testTypecheck3
-            ; testTypecheck4
-            ; testTypecheck5
-            ; testTypecheck6
-            ; testTypecheck7
-            ; testTypecheck8
-            ; testTypecheck9
-            ; testTypecheck10
-            ; testTypecheck11
-            ; testTypecheck12
-                !
+        (self assert: assert) runTests!
 
     method eval: string
         let compiler = Compiler new.
