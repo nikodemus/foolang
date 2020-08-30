@@ -126,14 +126,17 @@ class SyntaxTranslator { env }
             left: (anIs left visitBy: self)
             right: (anIs right visitBy: self)!
 
-    method visitSelf: aSelf
-        AstSelfRef new!
+    method visitSelfInstance: aSelf
+        AstSelfInstanceRef new!
+
+    method visitSelfClass: aSelf
+        AstSelfClassRef new!
 
     method visitVariable: aVariable
         env reference: aVariable name!
 
     method visitInterfaceRef: aRef
-        env global: aRef name!
+        aRef name visitBy: self!
 
     method visitAssign: anAssign
         (env reference: anAssign variable name)
@@ -210,8 +213,11 @@ class SyntaxTranslator { env }
             selector: signature selector
             argumentVariables: argumentVariables
             returnType: (self _resolveType: signature returnType)
-            body: (aMethod body visitBy: (SyntaxTranslator env: bodyEnv))
-            frameSize: bodyEnv frame size!
+            body: (aMethod body is False
+                       ifTrue: { False }
+                       ifFalse: { (aMethod body visitBy: (SyntaxTranslator env: bodyEnv)) })
+            frameSize: bodyEnv frame size
+            isDirect: aMethod isDirect!
 
     method visitClass: aClass
         let slots = aClass slots collect: { |slot::Syntax|

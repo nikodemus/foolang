@@ -1,4 +1,5 @@
 interface AstVisitor
+    is Object
     required method visitConstant: aConstant
     required method visitGlobal: aGlobal
     required method visitIs: anIs
@@ -7,7 +8,8 @@ interface AstVisitor
     required method visitSend: aSend
     required method visitComment: aComment
     required method visitBlock: aBlock
-    required method visitSelf: aSelf
+    required method visitSelfClass: aSelf
+    required method visitSelfInstance: aSelf
     required method visitArray: a
     required method visitRecord: a
     required method visitArray: a

@@ -185,6 +185,7 @@ pub struct Vtable {
     pub slots: RefCell<Vec<Slot>>,
     pub interfaces: RefCell<HashSet<Rc<Vtable>>>,
     pub implementations: RefCell<HashSet<Rc<Vtable>>>,
+    pub class: RefCell<Option<Object>>,
 }
 
 // Cannot be a method since requires access to target Rc.
@@ -206,6 +207,7 @@ impl Vtable {
             slots: RefCell::new(Vec::new()),
             interfaces: RefCell::new(HashSet::new()),
             implementations: RefCell::new(HashSet::new()),
+            class: RefCell::new(None),
         }
     }
 

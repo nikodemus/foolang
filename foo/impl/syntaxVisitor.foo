@@ -11,23 +11,24 @@ interface SyntaxVisitor
     required method visitBlock: aBlock
     required method visitClass: aClass
     required method visitDefine: aDefine
-    required method visitNameImport: aNode
-    required method visitModuleImport: aNode
-    required method visitWildcardImport: aNode
     required method visitInterface: anInterface
     required method visitIs: anIs
     required method visitKeywordMessage: aMessage
     required method visitLet: aLet
     required method visitLiteral: aLiteral
     required method visitMethod: aMethod
+    required method visitModuleImport: aNode
+    required method visitNameImport: aNode
     required method visitParens: aParens
     required method visitPrefixComment: aComment
     required method visitPrefixMessage: aMessage
     required method visitRecord: syntax
     required method visitReturn: aReturn
-    required method visitSelf: aSelf
+    required method visitSelfClass: aSelf
+    required method visitSelfInstance: aSelf
     required method visitSeq: aSeq
     required method visitSuffixComment: aComment
     required method visitUnaryMessage: aMessage
     required method visitVariable: aVariable
+    required method visitWildcardImport: aNode
 end

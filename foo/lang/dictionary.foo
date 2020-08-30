@@ -44,6 +44,10 @@ extend Dictionary
                         self put: (other at: key) at: key }.
         self!
 
+    method removeAll: iter
+        iter do: { |each| self remove: each }.
+        self!
+
     method keys
         let keys = List new.
         self doKeys: { |key| keys add: key }.

@@ -30,14 +30,17 @@ impl Hash for Class {
 impl Class {
     pub fn new_class(name: &str) -> Object {
         let class_vtable = Rc::new(Vtable::for_class(&format!("class {}", name)));
-        Object {
+        let instance_vtable = Rc::new(Vtable::for_instance(name));
+        let class = Object {
             vtable: class_vtable.clone(),
             datum: Datum::Class(Rc::new(Class {
                 class_vtable,
-                instance_vtable: Rc::new(Vtable::for_instance(name)),
+                instance_vtable: instance_vtable.clone(),
                 interface: false,
             })),
-        }
+        };
+        instance_vtable.class.borrow_mut().replace(class.clone());
+        class
     }
     pub fn new_interface(name: &str) -> Object {
         let class_vtable = Rc::new(Vtable::for_class(&format!("interface {}", name)));
@@ -59,7 +62,7 @@ impl Class {
                 interface: false,
             })),
         };
-
+        instance_vtable.class.borrow_mut().replace(class.clone());
         class
     }
 
@@ -143,6 +146,7 @@ fn interface_typecheck_(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     if is_interface(arg) {
         Ok(arg.clone())
     } else {
+        // panic!("boom");
         env.find_global_or_unwind("TypeError")?.send(
             "raise:expected:",
             &[args[0].clone(), receiver.clone()],
@@ -161,10 +165,10 @@ pub fn generic_class_name(receiver: &Object, _args: &[Object], env: &Env) -> Eva
 }
 
 pub fn generic_instance_class(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    // FIXME: terrible, should store class in vt -- then class_class could also
-    // go away -- alternatively this could be always an interpreted method
-    // returning a constant.
-    env.find_global_or_unwind(&receiver.vtable.name)
+    match *receiver.vtable.class.borrow() {
+        Some(ref class) => Ok(class.clone()),
+        None => Ok(env.foo.make_boolean(false)),
+    }
 }
 
 pub fn generic_class_typecheck_(receiver: &Object, args: &[Object], env: &Env) -> Eval {
@@ -173,6 +177,7 @@ pub fn generic_class_typecheck_(receiver: &Object, args: &[Object], env: &Env) -
     if arg.is_type(&class.instance_vtable) {
         Ok(arg.clone())
     } else {
+        // panic!("boom");
         env.find_global_or_unwind("TypeError")?.send(
             "raise:expected:",
             &[arg.clone(), receiver.clone()],

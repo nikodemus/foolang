@@ -62,6 +62,7 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("at:ifNone:", dictionary_at_if_none);
     vt.add_primitive_method_or_panic("doKeys:", dictionary_do_keys);
     vt.add_primitive_method_or_panic("has:", dictionary_has);
+    vt.add_primitive_method_or_panic("remove:", dictionary_remove);
     vt.add_primitive_method_or_panic("put:at:", dictionary_put_at);
     vt.add_primitive_method_or_panic("size", dictionary_size);
     vt
@@ -118,6 +119,11 @@ fn dictionary_put_at(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
         .as_dictionary("in Dictionary#put:at:")?
         .borrow_mut()
         .insert(args[1].clone(), args[0].clone());
+    Ok(receiver.clone())
+}
+
+fn dictionary_remove(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
+    receiver.as_dictionary("in Dictionary#remove:")?.borrow_mut().remove(&args[0]);
     Ok(receiver.clone())
 }
 

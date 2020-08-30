@@ -10,15 +10,28 @@ import .ast.AllowReferenceToUndefined
 import .ast.ResolveUndefinedsWith
 import .parser.Parser
 
+class Builtin { globals }
+    method define: builtin
+        let name = builtin name.
+        globals put: (AstGlobal name: name value: builtin) at: name!
+end
+
 -- FIXME: cannot differentiate from local definitions!
-define BuiltinGlobals
-    let globals = Dictionary new.
-    globals put: (AstGlobal name: "True" value: True) at: "True".
-    globals put: (AstGlobal name: "False" value: False) at: "False".
-    globals put: (AstGlobal name: "Object" value: Object) at: "Object".
-    globals put: (AstGlobal name: "Integer" value: Integer) at: "Integer".
-    globals put: (AstGlobal name: "String" value: String) at: "String".
-    globals!
+define Builtins
+    let builtin = Builtin globals: Dictionary new.
+    builtin define: Any.
+    builtin define: Boolean.
+    builtin define: DoesNotUnderstand.
+    builtin define: Error.
+    builtin define: False.
+    builtin define: Integer.
+    builtin define: Object.
+    builtin define: Selector.
+    builtin define: String.
+    builtin define: StringOutput.
+    builtin define: True.
+    builtin define: TypeError.
+    builtin globals!
 
 class Variable { name type index }
     is Object
@@ -53,6 +66,8 @@ class Constant { name value }
 end
 
 class ModuleDictionary { available translated }
+    is Object
+
     direct method new
         self available: Dictionary new
              translated: Dictionary new!
@@ -61,13 +76,13 @@ class ModuleDictionary { available translated }
         self available: available
              translated: Dictionary new!
 
-    method at: name relative: relative
+    method at: name relative: relative in: env
         let path = "/" join: name.
         self translated
             at: path
-            ifNonePut: { self _translate: name _relative: relative }!
+            ifNonePut: { self _translate: name _relative: relative _in: env }!
 
-    method _translate: name _relative: relative
+    method _translate: name _relative: relative _in: env
         let path = "/" join: name.
         let path = relative
                        ifTrue: { "./{path}" }
@@ -77,7 +92,8 @@ class ModuleDictionary { available translated }
             = self available
                 at: path
                 ifNone: { Error raise: "Unknown module: {name}" }.
-        { Environment new load: source }
+        { (Environment builtins: (env builtins))
+              load: source }
             on: Error
             do: { |e|
                   let maybeDot = relative ifTrue: { "." } ifFalse: { "" }.
@@ -96,75 +112,46 @@ class Environment { parent    -- Enclosing environment or False
                     frame     -- Variables in this frame
                     depth     -- Number of enclosing frames, including this one
                     globals   -- Dictionary of globals
+                    builtins  -- Dictionary of builtins
                     modules } -- ModuleDictionary
     is Object
 
     direct method new
-        Environment
-            parent: False
-            bindings: []
-            frame: List new
-            depth: 1
-            globals: BuiltinGlobals copy
+        self
+            builtins: Builtins copy!
+
+    direct method builtins: builtins
+        self
+            builtins: builtins
             modules: ModuleDictionary new!
 
     direct method modules: modules
-        Environment
-            parent: False
-            bindings: []
-            frame: List new
-            depth: 1
-            globals: BuiltinGlobals copy
+        self
+            builtins: Builtins copy
             modules: (ModuleDictionary new: modules)!
 
-    method toplevel
+    direct method builtins: builtins modules: modules
         Environment
             parent: False
             bindings: []
             frame: List new
             depth: 1
-            globals: globals
+            globals: Dictionary new
+            builtins: builtins
             modules: modules!
 
-    method import: moduleName relative: relative
-        (self depth is 1) assert.
-        let mod = ModuleBinding
-                      name: moduleName last
-                      module: (modules at: moduleName relative: relative).
-        Environment
-            parent: self
-            bindings: [mod]
-            frame: List new
-            depth: 1
-            globals: globals
-            modules: modules!
-
-    method import: name from: moduleName relative: relative
-        (self depth is 1) assert.
-        let global = (modules at: moduleName relative: relative) reference: name.
-        Environment
-            parent: self
-            bindings: [global]
-            frame: List new
-            depth: 1
-            globals: globals
-            modules: modules!
-
-    method importAll: moduleName relative: relative
-        (self depth is 1) assert.
-        let module = (modules at: moduleName relative: relative).
-        let bindings = List new.
-        module globals
-            doKeys: { |name|
-                      (name startsWith: "_")
-                          ifFalse: { bindings add: (module reference: name) } }.
+    method toplevel: bindings
         Environment
             parent: self
             bindings: bindings
             frame: List new
             depth: 1
             globals: globals
+            builtins: builtins
             modules: modules!
+
+    method toplevel
+        self toplevel: []!
 
     method newFrame
         Environment
@@ -173,63 +160,76 @@ class Environment { parent    -- Enclosing environment or False
             frame: List new
             depth: depth + 1
             globals: globals
+            builtins: builtins
             modules: modules!
 
-    method addVariable: name type: type
-        let var = Variable
-                      name: name
-                      type: type
-                      frame: frame.
+    method augment: bindings
         Environment
             parent: self
-            bindings: [var]
+            bindings: bindings
             frame: frame
             depth: depth
             globals: globals
+            builtins: builtins
             modules: modules!
+
+    method removeBuiltins: names
+        builtins removeAll: names!
+
+    method import: moduleName relative: relative
+        (self depth is 1) assert.
+        let module = modules
+                         at: moduleName
+                         relative: relative
+                         in: self.
+        -- Debug println: "import: {moduleName}".
+        self toplevel: [ModuleBinding
+                            name: moduleName last
+                            module: module]!
+
+    method import: name from: moduleName relative: relative
+        (self depth is 1) assert.
+        let global = (modules at: moduleName relative: relative in: self)
+                         reference: name.
+        self toplevel: [global]!
+
+    method importAll: moduleName relative: relative
+        (self depth is 1) assert.
+        let module = (modules at: moduleName relative: relative in: self).
+        let bindings = List new.
+        module globals
+            doKeys: { |name|
+                      (name startsWith: "_")
+                          ifFalse: { bindings add: (module reference: name) } }.
+        self toplevel: bindings!
+
+    method addVariable: name type: type
+        self augment: [Variable
+                           name: name
+                           type: type
+                           frame: frame]!
 
     method addVariable: name
         self addVariable: name type: Any!
 
     method addVariables: names
-        let vars = names collect: { |name|
-                                    Variable
-                                        name: name
-                                        type: Any
-                                        frame: frame }.
-        Environment
-            parent: self
-            bindings: vars
-            frame: frame
-            depth: depth
-            globals: globals
-            modules: modules!
+        self augment: (names collect: { |each|
+                                        Variable
+                                            name: each
+                                            type: Any
+                                            frame: frame })!
 
     method addVariables: names types: types
         (names size is types size) assert.
-        let vars = names with: types
-                         collect: { |name type|
-                                    Variable
-                                        name: name
-                                        type: type
-                                        frame: frame }.
-        Environment
-            parent: self
-            bindings: vars
-            frame: frame
-            depth: depth
-            globals: globals
-            modules: modules!
+        self augment: (names with: types
+                             collect: { |name type|
+                                        Variable
+                                            name: name
+                                            type: type
+                                            frame: frame })!
 
     method addSlots: slotVariables
-        let slots = Slot forEachVar: slotVariables.
-        Environment
-            parent: self
-            bindings: slots
-            frame: frame
-            depth: depth
-            globals: globals
-            modules: modules!
+        self augment: (Slot forEachVar: slotVariables)!
 
     method reference: name
         self reference: name from: depth!
@@ -243,6 +243,7 @@ class Environment { parent    -- Enclosing environment or False
 
     method reference: name from: use
         -- Debug println: "ref? {name} at {depth}?".
+        -- Debug println: "bindings: {bindings collect: #name}".
         let binding = bindings
                           find: { |binding| binding name == name }
                           ifNone: { parent is False
@@ -251,6 +252,7 @@ class Environment { parent    -- Enclosing environment or False
         binding referenceUpwards: use - depth!
 
     method load: string
+        -- Debug println: "Environment#load:".
         let envDefs = Dictionary new.
         let pendingDefs = List new.
         (Parser parseDefinitions: string)
@@ -272,7 +274,8 @@ class Environment { parent    -- Enclosing environment or False
                             -- Debug println: "define: {def}".
                             def defineIn: self } }.
         self checkGlobals.
-        self!
+        -- Debug println: "Environment#load: OK".
+        return self!
 
     direct method eval: string
         self new eval: string!
@@ -281,6 +284,7 @@ class Environment { parent    -- Enclosing environment or False
         self new load: string!
 
     method eval: string
+        -- Debug println: "Environment#eval: {string displayString}".
         let toplevelEnv = self toplevel.
         let res = False.
         (Parser parseExpressions: string)
@@ -297,12 +301,21 @@ class Environment { parent    -- Enclosing environment or False
                                 ifTrue: { Error raise: "Undefined variable: {global name}" } }!
 
     method global: name
-        globals at: name ifNone: { self undefined: name }!
+        -- Debug println: "Environment#global: {name}".
+        -- Debug println: "has:\n{globals displayString}".
+        builtins
+            at: name
+            ifNone: { globals
+                          at: name
+                          ifNone: { self undefined: name } }!
 
     method undefined: name
         UndefinedPolicy reference: name in: self!
 
     method define: name value: value
+        -- Debug println: "Environment#define:value: {name}".
+        (builtins has: name)
+            ifTrue: { Error raise: "Cannot redefine a builtin: {name}" }.
         let global = globals
                          at: name
                          ifNone: { globals
@@ -312,6 +325,6 @@ class Environment { parent    -- Enclosing environment or False
         global isUndefined
             ifTrue: { global value: value.
                       value }
-            ifFalse: { Error raise: "Cannot redefined a global: {name}" }!
+            ifFalse: { Error raise: "Cannot redefine a global: {name}" }!
 
 end

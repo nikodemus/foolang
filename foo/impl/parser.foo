@@ -403,11 +403,18 @@ class TypeDeclarationToken { precedence string first last }
             type: (parser parseSingle)!
 end
 
-class SelfToken { precedence string first last }
+class SelfInstanceToken { precedence string first last }
     is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        SyntaxSelf new!
+        SyntaxSelfInstance new!
+end
+
+class SelfClassToken { precedence string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        SyntaxSelfClass new!
 end
 
 class LiteralToken { precedence string first last }
@@ -446,11 +453,13 @@ class ClassToken { precedence string first last }
                do: { slots add: parser parseVariable }.
         parser expect: "}".
         let theClass = SyntaxClass name: name slots: slots.
-        let classParser = parser syntaxTable: ClassSyntaxTable.
-        classParser
-            until: "end"
-            do: { theClass add: (classParser parseAtPrecedence: precedence) }.
-        parser expect: "end".
+        parser withSyntaxTable: ClassSyntaxTable
+               do: { parser
+                         until: "end"
+                         do: { theClass
+                                   add: (parser parseAtPrecedence: precedence) }.
+                     parser
+                         expect: "end" }.
         parser handleSuffixCommentOf: theClass!
 end
 
@@ -458,12 +467,13 @@ class DefineToken { precedence string first last }
     is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        let definitionParser = parser syntaxTable: ExpressionSyntaxTable.
-        let def = SyntaxDefine
-                      name: definitionParser parseName
-                      body: definitionParser parseSeq.
-        parser expect: "!".
-        def!
+        parser withSyntaxTable: ExpressionSyntaxTable
+               do: { let def = SyntaxDefine
+                                   name: parser parseName
+                                   body: parser parseSeq.
+                     parser
+                         expect: "!".
+                     def }!
 end
 
 class InterfaceToken { precedence string first last }
@@ -471,12 +481,13 @@ class InterfaceToken { precedence string first last }
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
         let theInterface = SyntaxInterface name: parser parseName.
-        let interfaceParser = parser syntaxTable: InterfaceSyntaxTable.
-        interfaceParser
-            until: "end"
-            do: { theInterface add: (interfaceParser parseAtPrecedence: precedence) }.
-        interfaceParser
-            expect: "end".
+        parser withSyntaxTable: InterfaceSyntaxTable
+               do: { parser
+                         until: "end"
+                         do: { theInterface
+                                   add: (parser parseAtPrecedence: precedence) }.
+                     parser
+                         expect: "end" }.
         parser handleSuffixCommentOf: theInterface!
 end
 
@@ -485,12 +496,13 @@ class ExtendToken { precedence string first last }
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
         let theExtend = SyntaxExtend name: parser parseName.
-        let extendParser = parser syntaxTable: ExtendSyntaxTable.
-        extendParser
-            until: "end"
-            do: { theExtend add: (extendParser parseAtPrecedence: precedence) }.
-        extendParser
-            expect: "end".
+        parser withSyntaxTable: ExtendSyntaxTable
+               do: { parser
+                         until: "end"
+                         do: { theExtend
+                                   add: (parser parseAtPrecedence: precedence) }.
+                     parser
+                         expect: "end" }.
         parser handleSuffixCommentOf: theExtend!
 end
 
@@ -500,26 +512,35 @@ class IsPrefixToken { precedence string first last }
     is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        SyntaxInterfaceRef name: parser parseName!
+        let name = parser parsePrefixAtPrecedence: precedence.
+        SyntaxInterfaceRef name: name!
 end
 
 interface MethodToken
     is Token
 
-    method parseWith: parser as: methodClass
-        let bodyParser = parser syntaxTable: ExpressionSyntaxTable.
-        let signature = self parseMethodSignatureWith: bodyParser.
-        -- Debug println: "\n- method {signature selector}, {signature parameters}, {methodClass} -> {signature returnType}".
-        -- Debug println: "lookahead: {bodyParser lookahead string}".
-        let body = bodyParser parseSeq.
-        -- Debug println: "body: {body}".
-        parser expect: "!".
-        body = bodyParser handleSuffixCommentOf: body.
-        methodClass
-                signature: signature
-                body: body!
+    method parseRequiredWith: parser as: methodClass
+        parser withSyntaxTable: ExpressionSyntaxTable
+               do: { let signature = self _parseMethodSignatureWith: parser.
+                     let theMethod = methodClass
+                                         signature: signature
+                                         body: False.
+                     parser handleSuffixCommentOf: theMethod }!
 
-    method parseMethodSignatureWith: parser
+    method parseMethodWith: parser as: methodClass
+        parser withSyntaxTable: ExpressionSyntaxTable
+               do: { let signature = self _parseMethodSignatureWith: parser.
+                     -- Debug println: "\n- method {signature selector}, {signature parameters}, {methodClass} -> {signature returnType}".
+                     -- Debug println: "lookahead: {bodyParser lookahead string}".
+                     let body = parser parseSeq.
+                     -- Debug println: "body: {body}".
+                     parser expect: "!".
+                     body = parser handleSuffixCommentOf: body.
+                     methodClass
+                         signature: signature
+                         body: body }!
+
+    method _parseMethodSignatureWith: parser
         let selector = StringOutput new.
         let parameters = List new.
         let returnType = parser nextToken
@@ -536,7 +557,9 @@ class InstanceMethodToken { precedence string first last }
     is MethodToken
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        self parseWith: parser as: SyntaxInstanceMethod!
+        self
+            parseMethodWith: parser
+            as: SyntaxInstanceMethod!
 end
 
 class DirectMethodToken { precedence string first last }
@@ -544,7 +567,26 @@ class DirectMethodToken { precedence string first last }
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
         parser expect: "method".
-        self parseWith: parser as: SyntaxDirectMethod!
+        self
+            parseMethodWith: parser
+            as: SyntaxDirectMethod!
+end
+
+class RequiredMethodToken { precedence string first last }
+    is MethodToken
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        parser when: "method"
+               do: { parser expect: "method".
+                     return self
+                         parseRequiredWith: parser
+                         as: SyntaxInstanceMethod }.
+        parser when: "direct"
+               do: { parser expect: "direct".
+                     parser expect: "method".
+                     return self
+                         parseRequiredWith: parser
+                         as: SyntaxDirectMethod }.
+        Error raise: "Syntax error, expected 'method' or 'direct method' after 'required'."!
 end
 
 class BangToken { precedence string first last }
@@ -645,7 +687,8 @@ define ExpressionSyntaxTable
     {
          "panic" -> SyntaxEntry tokenClass: PanicToken precedence: 1000,
          "return" -> SyntaxEntry tokenClass: ReturnToken precedence: 1000,
-         "self" -> SyntaxEntry tokenClass: SelfToken precedence: 1000,
+         "self" -> SyntaxEntry tokenClass: SelfInstanceToken precedence: 1000,
+         "Self" -> SyntaxEntry tokenClass: SelfClassToken precedence: 1000,
          "#" -> SyntaxEntry tokenClass: LiteralToken precedence: 1000,
          "::" -> SyntaxEntry tokenClass: TypeDeclarationToken precedence: 1000,
          "*" -> SigilEntry precedence: 90,
@@ -690,11 +733,13 @@ define ClassSyntaxTable
          "direct" -> SyntaxEntry tokenClass: DirectMethodToken precedence: 1000
     }!
 
--- Currently same as ClassSyntaxTable, but will diverge with required methods, etc
 define InterfaceSyntaxTable
     ClassSyntaxTable
     where: "in an interface"
-    tokens: Dictionary new!
+    tokens:
+    {
+         "required" -> SyntaxEntry tokenClass: RequiredMethodToken precedence: 1000
+    }!
 
 -- Currently same as ClassSyntaxTable, but may diverge.
 define ExtendSyntaxTable
@@ -713,7 +758,7 @@ interface LookupToken
                         ifNone: { SyntaxEntry
                                       tokenClass: self
                                       precedence: (self defaultPrecedence) }.
-        -- Debug println: "token '{tokenString}' --> {tokenClass}".
+        -- Debug println: "token '{tokenString}' --> {entry tokenClass name}".
         entry tokenClass
             precedence: entry precedence
             string: tokenString
@@ -775,9 +820,12 @@ class TokenWord { precedence string first last }
                       let parts = (parser from: first to: nameLast)
                                       splitBy: DotCharacter.
                       (parts size is 2) assert.
-                      return SyntaxExternalRef
+                      -- Debug println: "XXX: {parts}".
+                      let ref = SyntaxExternalRef
                           module: parts first
-                          name: parts second }.
+                          name: parts second.
+                      -- Debug println: "OK: {ref}".
+                      return ref }.
         SyntaxVariable
             name: string!
 
@@ -803,9 +851,6 @@ class TokenWord { precedence string first last }
     method parseAsLiteralWith: parser
         SyntaxLiteral
             value: (Selector new: string)!
-
-    method toString
-        "#<TokenWord {string}>"!
 end
 
 class TokenKeyword { string first last }
@@ -893,7 +938,7 @@ define BangCharacter
 
 -- FIXME: Broken for unicode input!
 class Parser { source::String
-               positionBox
+               _position::Integer
                first::Integer
                last::Integer
                stack::List -- for lookahead
@@ -901,11 +946,10 @@ class Parser { source::String
     is Object
 
     method position
-        positionBox first!
+        _position!
 
     method position: pos
-        positionBox put: pos at: 1.
-        pos!
+        _position = pos!
 
     method toString
         "#<Parser position: {self position}>"!
@@ -915,20 +959,20 @@ class Parser { source::String
             ifEmpty: { Error raise: "Cannot parse empty string!" }.
         self
             source: source
-            positionBox: [1]
+            _position: 1
             first: 1
             last: (source size)
             stack: List new
             syntaxTable: syntaxTable!
 
-    method syntaxTable: newSyntaxTable
-        Parser
-            source: source
-            positionBox: positionBox
-            first: first
-            last: (source size)
-            stack: stack
-            syntaxTable: newSyntaxTable!
+    method withSyntaxTable: newSyntaxTable do: block
+        -- You know what would be nice: dynamically bound instance variables.
+        let prevTable = syntaxTable.
+        syntaxTable = newSyntaxTable.
+        self _clearLookahead.
+        block
+            finally: { syntaxTable = prevTable.
+                       self _clearLookahead }!
 
     direct method parseExpressions: source
         (self _new: source syntaxTable: ExpressionSyntaxTable)
@@ -963,7 +1007,7 @@ class Parser { source::String
         self parseAtPrecedence: SeqPrecedence!
 
     method parsePrefix
-        self parseAtPrecedence: MaxPrecedence!
+        self parsePrefixAtPrecedence: MaxPrecedence!
 
     method parseVariable
         let name = self parseName.
@@ -1040,7 +1084,7 @@ Source: {source}" }!
     method parseSuffixOf: prefix with: precedence
         let expr = prefix.
 
-        { -- Debug println: "expr: {expr displayString}, precedence={precedence}, next={self lookahead}?, nextPrecedence={self nextPrecedence}".
+        { -- Debug println: "expr: {expr displayString}, precedence={precedence}, next={self lookahead}?, nextPrecedence={self nextPrecedence} in: {syntaxTable where}".
           precedence < self nextPrecedence }
         whileTrue: { -- Debug println: " -> go".
                      expr = self parseSuffixOf: expr }.
@@ -1057,6 +1101,11 @@ Source: {source}" }!
         stack
             ifEmpty: { stack push: self _scanNext }.
         stack first!
+
+    method _clearLookahead
+        stack
+            ifNotEmpty: { self position: stack first first.
+                          stack clear }!
 
     method nextToken
         stack isEmpty

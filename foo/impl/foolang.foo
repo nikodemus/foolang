@@ -5,6 +5,28 @@ import .syntaxTranslator.SyntaxTranslator
 import .syntaxPrinter.SyntaxPrinter
 import .cTranspiler.CTranspiler
 
+class StringModuleDictionary { _dict }
+    direct method new: dict
+        self _dict: dict!
+    method at: path ifNone: block
+        _dict at: path ifNone: block!
+end
+
+class FileModuleDictionary { _dict }
+    direct method new: dict
+        self _dict: dict!
+    method at: path ifNone: block
+        (_dict at: path ifNone: block)
+            file forRead open: { |f| f readString }!
+end
+
+extend Dictionary
+    method asStringModules
+        StringModuleDictionary new: self!
+    method asFileModules
+        FileModuleDictionary new: self!
+end
+
 class TestSelfHosting { system ok }
     is TestSuite
 
@@ -26,21 +48,26 @@ class TestSelfHosting { system ok }
     method checkParsingBy: block for: source
         -- Check Syntax print/parse consistency.
         -- Debug println: "/parse1".
-        let syntaxList = block value: source.
+        let syntaxList1 = block value: source.
         -- Debug println: "/pretty".
-        let output = StringOutput new.
-        syntaxList do: { |syntax|
-                         SyntaxPrinter print: syntax to: output }.
-        let printed = output content.
-        -- Debug println: printed.
-        -- Debug println: "/parse2 + compare".
-        { syntaxList checkEqual: (block value: printed) }
-            on: Error
-            do: { |err|
-                  panic "CST print/parse inconsistency!
+        let pretty = StringOutput
+                         with: { |out|
+                                 syntaxList1
+                                     do: { |syntax|
+                                           SyntaxPrinter print: syntax to: out } }.
+        -- Debug println: "/parse2".
+        let syntaxList2 = block value: pretty.
+        -- Debug println: pretty.
+        -- Debug println: "/compare".
+        let res = { syntaxList1 checkEqual: syntaxList2 }
+                      on: Error
+                      do: { |err|
+                            panic "CST print/parse inconsistency!
 original:\n{source}
-printed:\n{printed}
-problem: {err description}" }!
+printed:\n{pretty}
+problem: {err description}" }.
+        -- Debug println: "/done".
+        res!
 
     method parse: source expect: pretty
         -- Checks that parse pretty-prints as expected
@@ -86,8 +113,7 @@ from: '{exprSource}'" }!
                       ifFalse: { Error raise: "Expected error did not pass test, got: {e}" }}.
         Error raise: "Expected error, got: {result}"!
 
-
-    method modules: modules load: defSource eval: exprSource
+    method without: builtins modules: modules load: defSource eval: exprSource
         -- Debug println: "\n/parseDef".
         self checkParsingBy: { |source| Parser parseDefinitions: source }
              for: defSource.
@@ -95,6 +121,7 @@ from: '{exprSource}'" }!
         self checkParsingBy: { |source| Parser parseExpressions: source }
              for: exprSource.
         let env = Environment modules: modules.
+        env removeBuiltins: builtins.
         -- Debug println: "/load".
         env load: defSource.
         -- Debug println: "/eval".
@@ -106,8 +133,13 @@ from: '{exprSource}'" }!
             load: defSource
             eval: exprSource!
 
-    method modules: modules load: defSource eval: exprSource expect: expected
+    method without: builtins
+           modules: modules
+           load: defSource
+           eval: exprSource
+           expect: expected
         let result = self
+                         without: builtins
                          modules: modules
                          load: defSource
                          eval: exprSource.
@@ -117,6 +149,21 @@ eval: {exprSource}
 load: {defSource}
 modules: {modules}" }!
 
+    method modules: modules load: defSource eval: exprSource expect: expected
+        self
+            without: []
+            modules: modules
+            load: defSource
+            eval: exprSource
+            expect: expected!
+
+    method modules: modules load: defSource eval: exprSource
+        self
+            without: []
+            modules: modules
+            load: defSource
+            eval: exprSource!
+
     method load: defSource eval: exprSource expectError: type where: test
         { self load: defSource eval: exprSource }
             on: type
@@ -125,7 +172,8 @@ modules: {modules}" }!
                       ifTrue: { return True }
                       ifFalse: { Error raise: "Error did not match expectations: {err description}
 eval: {exprSource}
-load: {defSource}" }}.
+load: {defSource}
+backtrace: {err backtrace}" }}.
         Error raise: "Expected error, didn't get one
 eval: {exprSource}
 load: {defSource}"!
@@ -161,6 +209,55 @@ load: {defSource}"!
                     end"
             eval: "TestInterface3 includes: (TestInterface3Impl new foo)"
             expect: True!
+
+    method testInterface4
+        -- pretty-print
+        self parse: "interface TestInterface4
+                        required direct method fooR
+                        direct method foo
+                            42!
+                        required method barR
+                        method bar
+                            42!
+                    end"
+             expect: "interface TestInterface4
+    required direct method fooR
+    required method barR
+    direct method foo
+        42!
+    method bar
+        42!
+end
+"
+                !
+
+    method testInterface5
+        self load: "interface TestInterface5
+                        required method fooxx
+                        method bar
+                            self fooxx!
+                    end
+                    class TestInterface5Impl \{}
+                        is Object
+                        is TestInterface5
+                    end"
+            eval: "TestInterface5Impl new bar"
+            expectError: RequiredMethodMissing
+            where: { |e| e selector == #fooxx }!
+
+    method testInterface6
+        -- Self
+        self load: "interface TestInterface6
+                        method foo
+                           Self bar!
+                    end
+                    class TestInterface6Impl \{}
+                        is TestInterface6
+                        direct method bar
+                           42!
+                    end"
+            eval: "TestInterface6Impl new foo"
+            expect: 42!
 
     method test42
         self eval: "42" expect: 42!
@@ -784,7 +881,7 @@ load: {defSource}"!
         self modules: { "foo" -> "class Foo \{}
                                      method fooInModule
                                         42!
-                                  end" }
+                                  end" } asStringModules
              load: "import foo
                     class Foo \{}
                        method fooInHere
@@ -795,7 +892,7 @@ load: {defSource}"!
 
     method testImport2
         -- name import
-        self modules: { "foo" -> "define Foo 42!" }
+        self modules: { "foo" -> "define Foo 42!" } asStringModules
              load: "import foo.Foo
                     define Bar Foo!"
              eval: "Bar"
@@ -804,7 +901,7 @@ load: {defSource}"!
     method testImport3
         -- name import: other names don't shadow pre-existing
         self modules: { "foo" -> "define Foo 42!
-                                  define Quux 0!" }
+                                  define Quux 0!" } asStringModules
              load: "define Quux 123!
                     import foo.Foo
                     define Bar Foo!"
@@ -814,7 +911,7 @@ load: {defSource}"!
     method testImport4
         -- wildcard import
         self modules: { "foo" -> "define Foo 1!
-                                  define Bar 2!" }
+                                  define Bar 2!" } asStringModules
             load: "import foo.*
                    class Test \{}
                       direct method value
@@ -828,7 +925,7 @@ load: {defSource}"!
         self modules: { "foo" -> "define Foo 21!",
                         "bar" -> "define Bar 0!",
                         "./foo" -> "define Foo 0!",
-                        "./bar" -> "define Bar 2!"}
+                        "./bar" -> "define Bar 2!"} asStringModules
              load: "import foo
                     import .bar
                     define Test foo.Foo * bar.Bar!"
@@ -838,13 +935,72 @@ load: {defSource}"!
     method testImport6
         -- submodule import
         self modules: { "foo/bar" -> "define Quux 42!",
-                        "foo/zot" -> "define Beep 123!" }
+                        "foo/zot" -> "define Beep 123!" } asStringModules
              load: "import foo.bar.Quux
                     import foo.zot
                     define A Quux!
                     define B zot.Beep!"
              eval: "A + B"
              expect: 165!
+
+    method testImport7
+        -- leading comments at toplevel
+        self modules: { "foo/bar" -> "-- comment 1
+                                      define Quux 42!",
+                        "foo/zot" -> "-- comment 2
+                                      define Beep 123!" } asStringModules
+             load: "-- comment 3
+                    import foo.bar.Quux
+                    -- comment 4
+                    import foo.zot
+                    -- comment 5
+                    define A Quux!
+                    -- comment 6
+                    define B zot.Beep!"
+             eval: "A + B"
+             expect: 165!
+
+    method testImport8
+        -- prefix import in an 'is'
+        self modules: { "foo" -> "interface Foo
+                                     method foo
+                                        42!
+                                  end" }
+            load: "import foo
+                   class Test \{}
+                      is foo.Foo
+                   end"
+            eval: "Test new foo"
+            expect: 42!
+
+    method test1Prelude_Any
+        let lang = system files path: "foo/lang".
+        self without: ["Any"]
+             modules: { "any" -> lang path: "any.foo" } asFileModules
+             load: "import any.Any
+                    class Test \{}
+                       direct method test
+                          Any includes: 42!
+                    end"
+             eval: "Test test"
+             expect: True!
+
+    method test1Prelude_Object
+        let lang = system files path: "foo/lang".
+        self without: ["Object"]
+             modules: { "object" -> lang path: "object.foo" } asFileModules
+             load: "import object
+                    class X \{ y }
+                        is object.Object
+                        method isEquivalent: other -> Boolean
+                           self y == other y!
+                    end
+                    class Test \{}
+                       direct method test
+                           (X y: 42) == (X y: 42)!
+                    end"
+             eval: "Test test"
+             expect: True!
 
     method testTranspile
         self transpile: "let x = 20.

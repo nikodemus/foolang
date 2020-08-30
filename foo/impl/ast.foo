@@ -103,11 +103,14 @@ interface AstDefinition
 
     method defineIn: environment
         self isDefined
-            ifTrue: { (environment globals at: name) value }
             ifFalse: { DefinitionsInProgress
                            with: self
-                           do: { { environment define: name value: self eval }
-                                     after: { self markDefined } } } !
+                           do: { { -- Debug println: "define: 1 {name}".
+                                   let val = self eval.
+                                   -- Debug println: "define: 2 {val}".
+                                   environment define: name value: val }
+                                     after: { self markDefined } } }.
+        (environment globals at: name) value!
 
 end
 
@@ -182,13 +185,13 @@ class AstExtend { name interfaces directMethods instanceMethods isDefined }
                        -- existing metaobjects for self-hosted classes.
                        DefinitionsInProgress
                            with: self
-                           do: { let target = (environment globals at: name) value.
+                           do: { let target = (environment global: name) value.
                                  interfaces do: { |each| target __addInterface: each value }.
                                  directMethods do: { |each| target __addDirectMethod: each }.
                                  instanceMethods do: { |each| target __addInstanceMethod: each }.
                                  self markDefined.
                                  target } }.
-        (environment globals at: name) value!
+        (environment global: name) value!
 
     method markDefined
         isDefined = True!
@@ -269,28 +272,20 @@ class AstClass { name slots interfaces directMethods instanceMethods isDefined }
         "#<AstClass {name}>"!
 end
 
-class AstMethod { name argumentVariables returnType body frameSize }
+class AstMethod { selector argumentVariables returnType body frameSize isDirect }
     is Object
 
-    direct method selector: selector
-                  argumentVariables: argumentVariables
-                  returnType: returnType
-                  body: body
-                  frameSize: frameSize
-        self name: selector name
-             argumentVariables: argumentVariables
-             returnType: returnType
-             body: body
-             frameSize: frameSize!
-
-    method selector
-        Selector name: name!
+    method name
+        selector name!
 
     method invoke: arguments on: receiver
         AstInterpreter
             invokeMethod: self
             on: receiver
             with: arguments!
+
+    method isDefined
+        (body is False) not!
 
     method argumentCount
         argumentVariables size!
@@ -304,9 +299,25 @@ end
 
 class AstComment { comment value source }
     is AstNode
+    is AstDefinition
 
     method visitBy: visitor
         visitor visitComment: self!
+
+    method eval
+        panic "AstComment#eval"!
+
+    method markDefined
+        panic "AstComment#markDefined"!
+
+    method isDefined
+        panic "AstComment#isDefined"!
+
+    method isCanonical
+        panic "AstComment#isCanonical"!
+
+    method do: block
+        value do: block!
 end
 
 class AstArray { entries }
@@ -463,11 +474,18 @@ class AstBlock { body argumentVariables returnType frameSize }
         argumentVariables size!
 end
 
-class AstSelfRef {}
+class AstSelfInstanceRef {}
     is AstNode
 
     method visitBy: visitor
-        visitor visitSelf: self!
+        visitor visitSelfInstance: self!
+end
+
+class AstSelfClassRef {}
+    is AstNode
+
+    method visitBy: visitor
+        visitor visitSelfClass: self!
 end
 
 class AstSlotRef { slot }

@@ -177,7 +177,10 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
     method visitUntypedVariable: aVar
         self print: aVar name!
 
-    method visitSelf: aSelf
+    method visitSelfClass: aSelf
+        self print: "Self"!
+
+    method visitSelfInstance: aSelf
         self print: "self"!
 
     method visitVariable: aVariable
@@ -281,6 +284,10 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         aMethod comment is False
             ifFalse: { aMethod comment visitBy: self.
                        self newline }.
+        aMethod isRequired
+            ifTrue: { self print: "required " }.
+        aMethod isDirect
+            ifTrue: { self print: "direct " }.
         self print: "method".
         let signature = aMethod signature.
         signature parameters isEmpty
@@ -296,12 +303,13 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         signature returnType is False
             ifFalse: { self print: " -> ".
                        signature returnType visitBy: self }.
-        let bodyVisitor = self indentBody.
-        bodyVisitor println: "".
-        aMethod body visitBy: bodyVisitor.
-        bodyVisitor print: "!".
-        -- no newline!
-        bodyVisitor handleSuffixComment!
+        aMethod isRequired
+            ifFalse: { let bodyVisitor = self indentBody.
+                       bodyVisitor println: "".
+                       aMethod body visitBy: bodyVisitor.
+                       bodyVisitor print: "!".
+                       -- no newline!
+                       bodyVisitor handleSuffixComment }!
 
     method visitClass: aClass
         -- Debug println: "/pp class {aClass name}".
@@ -322,7 +330,8 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         self newline!
 
     method visitInterfaceRef: aRef
-        self println: "is {aRef name}"!
+        self println: "is ".
+        aRef name visitBy: self!
 
     method visitInterface: anInterface
         self print: "interface ".
@@ -349,12 +358,19 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
             do: { |each|
                   bodyVisitor newline.
                   each visitBy: bodyVisitor }.
-        aType directMethods
+        (aType directMethods select: #isRequired)
             do: { |m|
                   bodyVisitor newline.
-                  bodyVisitor print: "direct ".
                   m visitBy: bodyVisitor }.
-        aType instanceMethods
+        (aType instanceMethods select: #isRequired)
+            do: { |m|
+                  bodyVisitor newline.
+                  m visitBy: bodyVisitor }.
+        (aType directMethods select: #isDefined)
+            do: { |m|
+                  bodyVisitor newline.
+                  m visitBy: bodyVisitor }.
+        (aType instanceMethods select: #isDefined)
             do: { |m|
                   bodyVisitor newline.
                   m visitBy: bodyVisitor }!
