@@ -136,7 +136,7 @@ class SyntaxTranslator { env }
         env reference: aVariable name!
 
     method visitInterfaceRef: aRef
-        env global: aRef name!
+        aRef name visitBy: self!
 
     method visitAssign: anAssign
         (env reference: anAssign variable name)

@@ -284,7 +284,8 @@ class Environment { parent    -- Enclosing environment or False
                             -- Debug println: "define: {def}".
                             def defineIn: self } }.
         self checkGlobals.
-        self!
+        -- Debug println: "Environment#load: --> ok".
+        return self!
 
     direct method eval: string
         self new eval: string!
@@ -293,6 +294,7 @@ class Environment { parent    -- Enclosing environment or False
         self new load: string!
 
     method eval: string
+        -- Debug println: "Environment#eval: {string displayString}".
         let toplevelEnv = self toplevel.
         let res = False.
         (Parser parseExpressions: string)

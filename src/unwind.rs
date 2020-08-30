@@ -89,6 +89,7 @@ impl fmt::Display for Unwind {
 impl Unwind {
     // FIXME: The vtable as expected, extract name here.
     pub fn type_error<T>(value: Object, expected: String) -> Result<T, Unwind> {
+        // panic!("boom");
         Err(Unwind::Panic(
             Error::TypeError(TypeError {
                 value,
@@ -103,6 +104,7 @@ impl Unwind {
         value: Object,
         expected: String,
     ) -> Result<T, Unwind> {
+        // panic!("boom");
         let code = source_location.code();
         let unwind = Unwind::Panic(
             Error::TypeError(TypeError {

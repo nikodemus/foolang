@@ -103,11 +103,14 @@ interface AstDefinition
 
     method defineIn: environment
         self isDefined
-            ifTrue: { (environment globals at: name) value }
             ifFalse: { DefinitionsInProgress
                            with: self
-                           do: { { environment define: name value: self eval }
-                                     after: { self markDefined } } } !
+                           do: { { -- Debug println: "define: 1 {name}".
+                                   let val = self eval.
+                                   -- Debug println: "define: 2 {val}".
+                                   environment define: name value: val }
+                                     after: { self markDefined } } }.
+        (environment globals at: name) value!
 
 end
 
@@ -255,20 +258,12 @@ class AstClass { name slots interfaces directMethods instanceMethods isDefined }
 
     method eval
         -- Debug println: "slots: {(slots collect: #type) asArray displayString}".
-        let theClass = Class
+        Class
             new: name
             slots: slots asArray
             interfaces: (Array from: (interfaces collect: #value))
             directMethods: (Array from: directMethods)
-            instanceMethods: (Array from: instanceMethods).
-        theClass __addInstanceMethod: (AstMethod
-                                           selector: #classOf
-                                           argumentVariables: []
-                                           returnType: Any
-                                           body: (AstConstantRef value: theClass)
-                                           frameSize: 0
-                                           isDirect: False).
-        theClass!
+            instanceMethods: (Array from: instanceMethods)!
 
     method isCanonical
         True!

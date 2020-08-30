@@ -330,7 +330,8 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         self newline!
 
     method visitInterfaceRef: aRef
-        self println: "is {aRef name}"!
+        self println: "is ".
+        aRef name visitBy: self!
 
     method visitInterface: anInterface
         self print: "interface ".

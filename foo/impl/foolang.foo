@@ -48,21 +48,26 @@ class TestSelfHosting { system ok }
     method checkParsingBy: block for: source
         -- Check Syntax print/parse consistency.
         -- Debug println: "/parse1".
-        let syntaxList = block value: source.
+        let syntaxList1 = block value: source.
         -- Debug println: "/pretty".
-        let output = StringOutput new.
-        syntaxList do: { |syntax|
-                         SyntaxPrinter print: syntax to: output }.
-        let printed = output content.
-        -- Debug println: printed.
-        -- Debug println: "/parse2 + compare".
-        { syntaxList checkEqual: (block value: printed) }
-            on: Error
-            do: { |err|
-                  panic "CST print/parse inconsistency!
+        let pretty = StringOutput
+                         with: { |out|
+                                 syntaxList1
+                                     do: { |syntax|
+                                           SyntaxPrinter print: syntax to: out } }.
+        -- Debug println: "/parse2".
+        let syntaxList2 = block value: pretty.
+        -- Debug println: pretty.
+        -- Debug println: "/compare".
+        let res = { syntaxList1 checkEqual: syntaxList2 }
+                      on: Error
+                      do: { |err|
+                            panic "CST print/parse inconsistency!
 original:\n{source}
-printed:\n{printed}
-problem: {err description}" }!
+printed:\n{pretty}
+problem: {err description}" }.
+        -- Debug println: "/done".
+        res!
 
     method parse: source expect: pretty
         -- Checks that parse pretty-prints as expected
@@ -934,6 +939,19 @@ end
              eval: "A + B"
              expect: 165!
 
+    method testImport8
+        -- prefix import in an 'is'
+        self modules: { "foo" -> "interface Foo
+                                     method foo
+                                        42!
+                                  end" }
+            load: "import foo
+                   class Test \{}
+                      is foo.Foo
+                   end"
+            eval: "Test new foo"
+            expect: 42!
+
     method testPrelude_Any
         let lang = system files path: "foo/lang".
         self modules: { "any" -> lang path: "any.foo" } asFileModules
@@ -950,13 +968,13 @@ end
         self modules: { "object" -> lang path: "object.foo" } asFileModules
              load: "import object
                     class X \{ y }
-                        -- is object.Object
+                        is object.Object
                         method isEquivalent: other -> Boolean
                            self y == other y!
                     end
                     class Test \{}
                        direct method test
-                           X y: 42 == X y: 42!
+                           (X y: 42) == (X y: 42)!
                     end"
              eval: "Test test"
              expect: True!

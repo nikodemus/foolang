@@ -78,4 +78,5 @@ interface Object
         (Self includes: value)
             ifTrue: { value }
             ifFalse: { TypeError raise: value expected: Self }!
+
 end

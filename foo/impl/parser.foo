@@ -512,7 +512,8 @@ class IsPrefixToken { precedence string first last }
     is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        SyntaxInterfaceRef name: parser parseName!
+        let name = parser parsePrefixAtPrecedence: precedence.
+        SyntaxInterfaceRef name: name!
 end
 
 interface MethodToken
@@ -819,9 +820,12 @@ class TokenWord { precedence string first last }
                       let parts = (parser from: first to: nameLast)
                                       splitBy: DotCharacter.
                       (parts size is 2) assert.
-                      return SyntaxExternalRef
+                      -- Debug println: "XXX: {parts}".
+                      let ref = SyntaxExternalRef
                           module: parts first
-                          name: parts second }.
+                          name: parts second.
+                      -- Debug println: "OK: {ref}".
+                      return ref }.
         SyntaxVariable
             name: string!
 
@@ -1003,7 +1007,7 @@ class Parser { source::String
         self parseAtPrecedence: SeqPrecedence!
 
     method parsePrefix
-        self parseAtPrecedence: MaxPrecedence!
+        self parsePrefixAtPrecedence: MaxPrecedence!
 
     method parseVariable
         let name = self parseName.
