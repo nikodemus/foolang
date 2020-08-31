@@ -365,18 +365,20 @@ define AstUndefinedMarker
     -- protection.
     ["<AstUndefineMarker>"]!
 
-class AstGlobal { name::String _value }
+class AstGlobal { name::String _value sources }
     is AstNode
 
     direct method name: name
         self
             name: name
-            value: AstUndefinedMarker!
+            _value: AstUndefinedMarker
+            sources: List new!
 
     direct method name: name value: value
         self
             name: name
-            _value: value!
+            _value: value
+            sources: List new!
 
     method isUndefined
         _value is AstUndefinedMarker!
@@ -401,6 +403,17 @@ class AstGlobal { name::String _value }
 
     method toString
         "#<{self classOf name} {name}: {_value}>"!
+
+    method warnIfUndefined
+        self isUndefined
+            ifTrue: { let note = "Undefined variable: {name}".
+                      (sources isEmpty not) assert.
+                      Output debug
+                          println: "\nWARNING: {note}\n{sources first note: note}" }!
+
+    method withSource: sourceLocation
+        sources add: sourceLocation.
+        self!
 end
 
 class AstConstantRef { value }
@@ -488,8 +501,13 @@ class AstSelfClassRef {}
         visitor visitSelfClass: self!
 end
 
-class AstSlotRef { slot }
+class AstSlotRef { slot source }
     is AstNode
+
+    direct method slot: slot
+        self
+            slot: slot
+            source: False!
 
     method visitBy: visitor
         visitor visitSlotRef: self!
@@ -498,6 +516,11 @@ class AstSlotRef { slot }
         AstSlotSet
             slot: slot
             value: value!
+
+    method withSource: sourceLocation
+        (source is False) assert.
+        source = sourceLocation.
+        self!
 end
 
 class AstSlotSet { slot value }
@@ -514,8 +537,19 @@ class AstBindLexical { variable value body }
         visitor visitBindLexical: self!
 end
 
-class AstLexicalRef { variable frameOffset::Integer }
+class AstLexicalRef { variable frameOffset::Integer source }
     is AstNode
+
+    direct method variable: variable frameOffset: offset
+        self
+            variable: variable
+            frameOffset: offset
+            source: False!
+
+    method withSource: newSource
+        (source is False) assert.
+        source = newSource.
+        self!
 
     method visitBy: visitor
         visitor visitLexicalRef: self!

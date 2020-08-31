@@ -133,13 +133,14 @@ class SyntaxTranslator { env }
         AstSelfClassRef new!
 
     method visitVariable: aVariable
-        env reference: aVariable name!
+        (env reference: aVariable name)
+            withSource: aVariable source!
 
     method visitInterfaceRef: aRef
         aRef name visitBy: self!
 
     method visitAssign: anAssign
-        (env reference: anAssign variable name)
+        (anAssign variable visitBy: self)
             assign: (anAssign value visitBy: self)!
 
     method visitParens: aParens

@@ -106,8 +106,8 @@ end
 class ModuleBinding { name module }
     method referenceUpwards: _
         self!
-    method reference: definition
-        module reference: definition!
+    method global: name
+        module global: name!
 end
 
 class Environment { parent    -- Enclosing environment or False
@@ -193,7 +193,7 @@ class Environment { parent    -- Enclosing environment or False
     method import: name from: moduleName relative: relative
         (self depth is 1) assert.
         let global = (modules at: moduleName relative: relative in: self)
-                         reference: name.
+                         global: name.
         self toplevel: [global]!
 
     method importAll: moduleName relative: relative
@@ -203,7 +203,7 @@ class Environment { parent    -- Enclosing environment or False
         module globals
             doKeys: { |name|
                       (name startsWith: "_")
-                          ifFalse: { bindings add: (module reference: name) } }.
+                          ifFalse: { bindings add: (module global: name) } }.
         self toplevel: bindings!
 
     method addVariable: name type: type
@@ -242,17 +242,20 @@ class Environment { parent    -- Enclosing environment or False
         -- let foo ... will shadow import foo, even if the latter cannot
         -- be used on its own
         (self reference: module from: depth)
-            reference: name!
+            global: name!
 
-    method reference: name from: use
+    method reference: name from: useDepth
         -- Debug println: "ref? {name} at {depth}?".
         -- Debug println: "bindings: {bindings collect: #name}".
         let binding = bindings
                           find: { |binding| binding name == name }
                           ifNone: { parent is False
-                                        ifTrue: { return self global: name }
-                                        ifFalse: { return parent reference: name from: use }}.
-        binding referenceUpwards: use - depth!
+                                        ifTrue: { return self
+                                                      global: name }
+                                        ifFalse: { return parent
+                                                       reference: name
+                                                       from: useDepth } }.
+        binding referenceUpwards: useDepth - depth!
 
     method load: string
         -- Debug println: "Environment#load:".
@@ -299,9 +302,7 @@ class Environment { parent    -- Enclosing environment or False
         res!
 
     method checkGlobals
-        globals doValues: { |global|
-                            global isUndefined
-                                ifTrue: { Error raise: "Undefined variable: {global name}" } }!
+        globals doValues: #warnIfUndefined!
 
     method global: name
         -- Debug println: "Environment#global: {name}".
