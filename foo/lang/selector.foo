@@ -1,5 +1,5 @@
 import .string.String
-import .closure.Composable
+import .closure.Block
 
 define ColonCharacter
     ":" character!
@@ -8,7 +8,23 @@ define UnderscoreCharacter
     "_" character!
 
 class Selector { name }
-    is Composable
+    is Block
+
+    method apply: arguments
+        self sendTo: arguments first with: arguments rest!
+
+    method arity
+        self isKeyword
+            ifTrue: { return 1 + (name count: { |c| c == ":" }) }.
+        self isSymbol
+            ifTrue: { return 2 }.
+        1!
+
+    method loop
+        Error raise: "Cannot use #loop on {self}."!
+
+    method finally: cleanup
+        Error raise: "Cannot use #finally: on {self}."!
 
     direct method new: name
         self name: name!
@@ -34,25 +50,12 @@ class Selector { name }
             ifTrue: { return False }.
         True!
 
-    method arity
-        self isKeyword
-            ifTrue: { return 1 + (name count: { |c| c == ":" }) }.
-        self isSymbol
-            ifTrue: { return 2 }.
-        1!
-
     method sendTo: receiver
         name sendTo: receiver with: []!
 
     method sendTo: receiver with: arguments
         -- Output debug println: "{receiver} <= {name} {arguments}".
         name sendTo: receiver with: arguments asArray!
-
-    method value: value
-        self sendTo: value!
-
-    method value: receiver value: argument
-        self sendTo: receiver with: [argument]!
 
     method startsWith: part
         self name startsWith: part!

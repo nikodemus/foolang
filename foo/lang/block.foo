@@ -1,0 +1,145 @@
+import .object.Object
+
+interface Block
+    is Object
+
+    -- Note: implementing #value methods directly is very
+    -- likely worth it!
+
+    required method apply: arguments
+    required method arity
+
+    -- Note: COULD delegate these to host BlockClosure loop
+    -- and finally, but currently extending the existing
+    -- class will overwrite.
+    --
+    -- FIXME: Split into PrimitiveBlock and Block
+    -- former has these as required, and latter implements
+    -- them on top of {}.
+
+    required method loop
+    required method finally: cleanup
+
+    -- Delegation to #apply
+
+    method value
+        self apply: []!
+
+    method value: arg1
+        self apply: [arg1]!
+
+    method value: arg1 value: arg2
+        self apply: [arg1, arg2]!
+
+    method value: arg1 value: arg2 value: arg3
+        self apply: [arg1, arg2, arg3]!
+
+    -- Delegation to #loop
+
+    method whileTrue: body
+        let r = False.
+        { self value is True
+              ifFalse: { return r }.
+          r = body value }
+        loop!
+
+    method whileFalse: body
+        let r = False.
+        { self value is False
+              ifFalse: { return r }.
+          r = body value }
+        loop!
+
+    method whileTrue
+        { self value is True
+              ifFalse: { return False } }
+        loop!
+
+    method whileFalse
+        { self value is False
+              ifFalse: { return False } }
+        loop!
+
+    -- Miscellany
+
+    method displayOn: stream
+        stream print: self toString!
+
+    method after: block
+        let res = self value.
+        block value.
+        res!
+
+    method with: value
+        -- Deserves a better verb than close, should probably
+        -- steal python's __enter__ and __exit__ style names.
+        -- and protocol.
+        { self value: value } finally: { value close }!
+
+    method ascending
+        { |a b| (self value: a) < (self value: b) }!
+
+    method descending
+        { |a b| (self value: a) > (self value: b) }!
+
+    method on: condition do: block
+        condition withHandler: block do: self!
+
+    method on: cond1 do: block1
+           on: cond2 do: block2
+        cond2 withHandler: block2
+              do: { cond1 withHandler: block1 do: self }!
+
+    method catch: condition
+        Catch
+            block: self
+            condition: condition!
+
+    method then: then
+        BlockComposition
+            block: self
+            continuation: then!
+end
+
+class Catch { block condition }
+    is Block
+
+    method apply: arguments
+        { block apply: arguments }
+            on: condition
+            do: { |ex| return ex }!
+
+    method arity
+        block arity!
+
+    method loop
+        -- CONSIDER: This is a bit funky. Should Catch just signal
+        -- an error on #loop instead? Or should this _handle_ the
+        -- condition in a loop?
+        { block loop }
+            on: condition
+            do: { |ex| return ex }!
+
+    method finally: cleanup
+        { block finally: cleanup }
+            on: condition
+            do: { |ex| return ex }!
+
+end
+
+class BlockComposition { block continuation }
+    is Block
+
+    method apply: arguments
+        continuation value: (block apply: arguments)!
+
+    method arity
+        block arity!
+
+    method loop
+        { self value } loop!
+
+    method finally: cleanup
+        { self value }
+            finally: cleanup!
+end

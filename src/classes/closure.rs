@@ -94,14 +94,10 @@ pub fn vtable() -> Vtable {
     // FUNDAMENTAL
     vt.add_primitive_method_or_panic("apply:", closure_apply_array);
     vt.add_primitive_method_or_panic("signature", closure_signature);
+    vt.add_primitive_method_or_panic("finally:", closure_finally);
     vt.add_primitive_method_or_panic("arity", closure_arity);
     vt.add_primitive_method_or_panic("onPanic:", closure_on_panic);
-    vt.add_primitive_method_or_panic("finally:", closure_finally);
-    vt.add_primitive_method_or_panic("value", closure_apply_values);
-    vt.add_primitive_method_or_panic("value:", closure_apply_values);
-    vt.add_primitive_method_or_panic("value:value:", closure_apply_values);
-    vt.add_primitive_method_or_panic("value:value:value:", closure_apply_values);
-    vt.add_primitive_method_or_panic("whileTrue:", closure_while_true);
+    vt.add_primitive_method_or_panic("loop", closure_loop);
     vt
 }
 
@@ -129,10 +125,6 @@ fn closure_arity(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_integer(receiver.closure_ref().params.len() as i64))
 }
 
-fn closure_apply_values(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
-    receiver.closure_ref().apply(None, args)
-}
-
 fn closure_finally(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
     let res = receiver.closure_ref().apply(None, &[]);
     args[0].closure_ref().apply(None, &[])?;
@@ -157,15 +149,8 @@ fn closure_on_panic(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     }
 }
 
-fn closure_while_true(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let t = env.foo.make_boolean(true);
-    // FIXME: Should initialize to nil
-    let mut r = env.foo.make_boolean(false);
+fn closure_loop(receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
     loop {
-        if receiver.closure_ref().apply(None, &[])? == t {
-            r = args[0].closure_ref().apply(None, &[])?
-        } else {
-            return Ok(r);
-        }
+        receiver.closure_ref().apply(None, &[])?;
     }
 }

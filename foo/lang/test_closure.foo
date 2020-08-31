@@ -1,0 +1,126 @@
+import .test.TestSuite
+
+-- For testing Closure#with:
+class _Closable { closed }
+    method close
+        closed = True!
+end
+
+class TestSelfRefInClosure { cookie }
+    direct method test
+        (self cookie: 132132132) test!
+    method test
+        { self cookie is cookie } value!
+end
+
+class TestClosure { assert }
+    is TestSuite
+
+    direct method runTests: assert
+        (self assert: assert) runTests!
+
+    method testSignature
+        assert forAll: [
+            [{ 42 }, []],
+            [{ || 42 }, []],
+            [{ |x| x }, [Any]],
+            [{ |x::Integer z y::Object| x + y }, [Integer, Any, Object]]
+        ]
+            that: { |case|
+                    case first signature == case second }
+            testing: "Closure#signature"!
+
+    method testArity
+        assert forAll: [
+            [{ 42 }, 0],
+            [{ || 42 }, 0],
+            [{ |x| x }, 1],
+            [{ |x y| x + y }, 2]
+        ]
+            that: { |case|
+                    case first arity is case second }
+            testing: "Closure#arity"!
+
+    method testSelfRefInClosure
+        assert true: { TestSelfRefInClosure test }
+               testing: "reference to self inside closure"!
+
+    method testApplication
+        assert true: { 1 == { 1 } value }
+               testing: "Closure#value"!
+
+    method testOnPanic
+        assert true: { { panic "Foo". False }
+                         onPanic: { |p| True } }
+               testing: "Closure#onPanic"!
+
+    method testFinally
+        assert true: { let flag = False.
+                       { { panic "Foo". False }
+                             finally: { flag = True } }
+                       onPanic: { |p| flag } }
+               testing: "Closure#finally"!
+
+    method testWhileTrue
+        let a = 0.
+        assert that: { { a < 10 } whileTrue: { a = a + 1 }. a }
+               is: 10
+               testing: "Closure#whileTrue:".
+        let b = 0.
+        assert that: { { b = b + 1. b < 10 } whileTrue. b }
+               is: 10
+               testing: "Closure#whileTrue"!
+
+    method testWhileFalse
+        let a = 0.
+        assert that: { { a == 10 } whileFalse: { a = a + 1 }. a }
+               is: 10
+               testing: "Closure#whileFalse:".
+        let b = 0.
+        assert that: { { b = b + 1. b == 10 } whileFalse. b }
+               is: 10
+               testing: "Closure#whileFalse"!
+
+    method auxTestLoop
+        let a = 0.
+        { a = a + 1. a == 10 ifTrue: { return a } } loop!
+
+    method testLoop
+        let a = 0.
+        assert that: { self auxTestLoop }
+               is: 10
+               testing: "Closure#loop"!
+
+    method testWith
+        assert false: { (_Closable closed: False) closed }
+               testing: "Closure#with: (sanity check)".
+        assert that: { let obj = _Closable closed: False.
+                       let res = { |arg| 42 } with: obj.
+                       [obj closed, res] }
+               equals: [True, 42]
+               testing: "Closure#with: (normal)".
+        assert that: { let obj = _Closable closed: False.
+                       let res = { { |arg| panic "Bang" } with: obj }
+                                     onPanic: { |p| 104 }.
+                       [obj closed, res] }
+               equals: [True, 104]
+               testing: "Closure#with: (unwind)"!
+
+    method testAscending
+        assert that: { ["a", "aaaa", "aa", "", "aaa"]
+                           sort: { |array| array size } ascending }
+               equals: ["", "a", "aa", "aaa", "aaaa"]
+               testing: "Closure#ascending"!
+
+    method testDescending
+        assert that: { ["a", "aaaa", "aa", "", "aaa"]
+                           sort: { |array| array size } descending }
+               equals: ["aaaa", "aaa", "aa", "a", ""]
+               testing: "Closure#descending"!
+
+    method testApply
+        assert that: { { |x y| x + y } apply: [1, 2] }
+               equals: 3
+               testing: "Closure#apply:"!
+
+end
