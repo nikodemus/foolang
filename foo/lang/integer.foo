@@ -12,6 +12,9 @@ extend Integer
         let $IntegerPrintBase = base.
         block value!
 
+    method truncate
+        self!
+
     method printOn: stream in: base radix: printRadix
         self < 0
             ifTrue: { stream print: "-".
@@ -41,9 +44,6 @@ extend Integer
 
     method toString
         StringOutput with: { |s| self printOn: s }!
-
-    method asInteger
-        self!
 
     method to: other
         self to: other by: 1!

@@ -11,6 +11,8 @@ import lang.selector.TestSelector
 import lang.string.TestString
 import lang.test_array.TestArray
 import lang.test_array.TestArrayAsIterable
+import lang.test_byteArray.TestByteArray
+import lang.test_byteArray.TestByteArrayAsIterable
 import lang.test_character.TestCharacter
 import lang.test_closure.TestClosure
 import lang.test_list.TestList
@@ -81,9 +83,10 @@ class Main { assert system }
 
     method test
         [
-            ByteArray,
             TestArray,
             TestArrayAsIterable,
+            TestByteArray,
+            TestByteArrayAsIterable,
             TestCharacter,
             TestClosure,
             TestDictionary,

@@ -83,9 +83,9 @@ interface TestIterable
                            as: List }
                equals: [] asList
                testing: "with:collect:as: (empty)".
-        assert that: { ((self make: [100, 200, 300])
-                           with: [10, 2, 300, 1000]
-                           collect: { |each1 each2| (each1 / each2) asInteger }
+        assert that: { ((self make: [10, 20, 30])
+                           with: [10, 2, 0.3, 1000]
+                           collect: { |each1 each2| (each1 / each2) truncate }
                            as: List)
                        sort }
                equals: [1, 10, 100] asList
@@ -98,9 +98,9 @@ interface TestIterable
                            into: [123] asList }
                equals: [123] asList
                testing: "with:collect:into: (empty)".
-        assert that: { ((self make: [100, 200, 300])
-                           with: [10, 2, 300, 1000]
-                           collect: { |each1 each2| (each1 / each2) asInteger }
+        assert that: { ((self make: [10, 20, 30])
+                           with: [10, 2, 0.3, 1000]
+                           collect: { |each1 each2| (each1 / each2) truncate }
                            into: [123] asList)
                        sort }
                equals: [1, 10, 100, 123] asList
@@ -146,7 +146,7 @@ interface TestIterable
                equals: (self make: [1,2])
                testing: "with:do: (empty)".
         assert that: { let elts = List new.
-                       let iter = self make: [100, 20, 3000].
+                       let iter = self make: [100, 20, 200].
                        let res = iter
                                      with: [1, 2]
                                      do: { |each1 each2|
@@ -165,7 +165,7 @@ interface TestIterable
                equals: (self make: [])
                testing: "with:do:ifExhausted: (empty)".
         assert that: { let elts = List new.
-                       let iter = self make: [10,200,3000,40000].
+                       let iter = self make: [10,200,210,220].
                        let res = iter
                                      with: [10, 20]
                                      do: { |each1 each2|
@@ -174,7 +174,7 @@ interface TestIterable
                        res is iter
                            ifFalse: { panic "oops" }.
                        elts }
-               equals: [1, 10, 300, 4000 ] asList
+               equals: [1, 10, 21, 22 ] asList
                testing: "with:do:ifExhausted: (size 4)"!
 
     method testEquals
@@ -277,6 +277,9 @@ interface TestIterable
                testing: "isEmpty (false)"!
 
     method testMaxArg
+        ((self make: []) elementType includes: "x")
+            ifFalse: { return False }.
+        -- Run only if we can store strings.
         assert that: { (self make: ["a", "bb", "ccc", "d"]) max: { |each| each size } }
                equals: "ccc"
                testing: "max:"!
@@ -287,13 +290,15 @@ interface TestIterable
                testing: "max"!
 
     method testMinArg
+        ((self make: []) elementType includes: "x")
+            ifFalse: { return False }.
         assert that: { (self make: ["aa", "bb", "ccc", "x", "dd", "fff"]) min: { |each| each size } }
                equals: "x"
                testing: "min:"!
 
     method testMin
-        assert that: { (self make: [1, -100, 1, 1]) min }
-               equals: -100
+        assert that: { (self make: [10, 7, 11, 100, 123]) min }
+               equals: 7
                testing: "min"!
 
     method testReduce

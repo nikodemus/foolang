@@ -1,0 +1,31 @@
+import .byteArray.ByteArray
+import .test.TestSuite
+import .test_iterable.TestIterable
+
+class TestByteArray { assert }
+    is TestSuite
+
+    direct method runTests: assert
+        (self assert: assert) runTests!
+
+    method testBasic
+        assert forAll: (1 to: 10)
+               that: { |n|
+                       let bytes = ByteArray new: n.
+                       let p = n / 2 + 1.
+                       let old = bytes at: p.
+                       bytes put: n at: p.
+                       let new = bytes at: p.
+                       (bytes size == n)
+                           and: (old == 0)
+                           and: (new == n)
+                           and: (n > 0) }
+               testing: "ByteArray creation and access"!
+end
+
+class TestByteArrayAsIterable { assert }
+    is TestIterable
+
+    method make: elements
+        ByteArray from: elements!
+end
