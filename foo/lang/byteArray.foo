@@ -1,12 +1,8 @@
 import .ordered.Ordered
-import .array.ArrayIterator
 import .object.Object
 
 extend ByteArray
     is Ordered
-
-    method iterator
-        ArrayIterator new: self!
 
     method displayOn: stream
         stream print: self toString!

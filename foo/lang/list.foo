@@ -2,6 +2,7 @@ import .array.Array
 import .array.Specialized
 import .collection.Collection
 import .ordered.Ordered
+import .iterable.Iterator
 
 class List { size data }
     is Ordered
@@ -41,6 +42,11 @@ class List { size data }
     direct method from: collection
         let new = self withCapacity: collection size.
         collection do: { |elt| new add: elt }.
+        new!
+
+    direct method new: size
+        let new = self withCapacity: size.
+        1 to: size do: { |_| new push: False }.
         new!
 
     direct method new: size value: init

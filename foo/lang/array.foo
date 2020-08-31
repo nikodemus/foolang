@@ -2,23 +2,6 @@ import .iterable.Iterator
 import .iterable.Iterable
 import .ordered.Ordered
 
-class ArrayIterator { array index }
-    is Iterator
-
-    direct method new: array
-        self array: array index: 1!
-
-    method nextIfNone: block
-        let next = index > array size
-            ifTrue: { return block value }
-            ifFalse: { array at: index }.
-        index = index + 1.
-        next!
-
-    method hasNext
-        index <= array size!
-end
-
 class Specialized { containerClass elementType }
     direct method class: containerClass of: elementType
         self containerClass: containerClass elementType: elementType!
@@ -83,9 +66,6 @@ extend Array
 
     method broadcast: block to: collection
         collection with: self collect: block!
-
-    method iterator
-        ArrayIterator new: self!
 
     method elementType
         -- KLUDGE: otherwise Iterator#elementType:
