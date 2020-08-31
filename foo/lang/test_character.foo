@@ -1,0 +1,149 @@
+import .test.TestSuite
+import .character.Character
+
+class TestCharacter { assert }
+    is TestSuite
+
+    direct method runTests: assert
+        (self assert: assert) runTests!
+
+    method digitCases
+        [["0", 0],
+         ["1", 1],
+         ["2", 2],
+         ["3", 3],
+         ["4", 4],
+         ["5", 5],
+         ["6", 6],
+         ["7", 7],
+         ["8", 8],
+         ["9", 9],
+         ["a", 10],
+         ["b", 11],
+         ["c", 12],
+         ["d", 13],
+         ["e", 14],
+         ["f", 15],
+         ["A", 10],
+         ["B", 11],
+         ["C", 12],
+         ["D", 13],
+         ["E", 14],
+         ["F", 15]]!
+
+    method nonDigitCases
+        "ghijlkmopqrstuxyz!@#$%^&*()?><| "!
+
+    method digitTest: base
+        assert forAll: self digitCases
+               that: { |case|
+                       let digit = case first character digit: base.
+                       case second < base
+                           ifTrue: { digit is case second }
+                           ifFalse: { digit is False } }
+               testing: "Character#digit: {base}, digitCases".
+        assert forAll: self nonDigitCases
+               that: { |case|
+                       (case character digit: base) is False }
+               testing: "Character#digit: {base}, nonDigitCases"!
+
+    method testDigit10
+        self digitTest: 10!
+
+    method testDigit2
+        self digitTest: 2!
+
+    method testDigit16
+        self digitTest: 16!
+
+    method allAlphas
+        "abcdefghijklmnopqrstuvxyzABCDEFGHIJKLMNOPQRSTUVXYZ"!
+
+    method allNumeric
+        "0123456789"!
+
+    method nonAlphasAndNonNumerics
+        "!@#$%^&*()_+?><| \n\r\t"!
+
+    method allWhitespace
+        -- ...except formfeed
+        " \t\n\r"!
+
+    method allHorizontalWhitespace
+        " \t"!
+
+    method allNonHorizontalWhitespace
+        -- ...except formfeed
+        "\n\r"!
+
+    method nonWhitespace
+        "1234567890-=`qwertyuiop[]asdfghjkl;'\\zxcvbnm,./~!@#$%^&*()_+QWERTYUIOP\{}ASDFGHJKL:\"|ZXCVBNM<>?"!
+
+    method testIsAlphanumeric
+        assert forAll: self allNumeric
+               that: { |s|
+                       s character isAlphanumeric }
+               testing: "Character#isAlphanumeric for numeric".
+        assert forAll: self allAlphas
+               that: { |s|
+                       s character isAlphanumeric }
+               testing: "Character#isAlphanumeric for alpha".
+        assert forAll: self nonAlphasAndNonNumerics
+               that: { |s|
+                       s character isAlphanumeric not }
+               testing: "Character#isAlphanumeric for non-alpha, non-numeric"!
+
+    method testIsAlpha
+        assert forAll: self allNumeric
+               that: { |s|
+                       s character isAlpha not }
+               testing: "Character#isAlpha for numeric".
+        assert forAll: self allAlphas
+               that: { |s|
+                       s character isAlpha }
+               testing: "Character#isAlpha for alpha".
+        assert forAll: self nonAlphasAndNonNumerics
+               that: { |s|
+                       s character isAlpha not }
+               testing: "Character#isAlpha for non-alpha, non-numeric"!
+
+    method testIsDigit
+        assert forAll: self allNumeric
+               that: { |s|
+                       s character isDigit }
+               testing: "Character#isDigit for numeric".
+        assert forAll: self allAlphas
+               that: { |s|
+                       s character isDigit not }
+               testing: "Character#isDigit for alpha".
+        assert forAll: self nonAlphasAndNonNumerics
+               that: { |s|
+                       s character isDigit not }
+               testing: "Character#isDigit for non-alpha, non-numeric"!
+
+
+    method testIsWhitespace
+        assert forAll: self allWhitespace
+               that: { |s|
+                       s character isWhitespace }
+               testing: "Character#isWhitespace for whitespace".
+        assert forAll: self nonWhitespace
+               that: { |s|
+                       s character isWhitespace not }
+               testing: "Character#isWhitespace for non-whitespace"!
+
+    method testIsHorizintalWhitespace
+        assert forAll: self allNonHorizontalWhitespace
+               that: { |s|
+                       s character isHorizontalWhitespace not }
+               testing: "Character#isHorizontalWhitespace for non-horizontal whitespace".
+        assert forAll: self allHorizontalWhitespace
+               that: { |s|
+                       s character isHorizontalWhitespace }
+               testing: "Character#isHorizontalWhitespace for horizontal whitespace".
+        assert forAll: self nonWhitespace
+               that: { |s|
+                       s character isHorizontalWhitespace not }
+               testing: "Character#isHorizontalWhitespace for non-whitespace"!
+
+end

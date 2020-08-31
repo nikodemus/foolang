@@ -7,7 +7,7 @@ import lang.filepath.TestFilePath
 import lang.filestream.TestFileStream
 import lang.selector.TestSelector
 import lang.integer.TestInteger
-import lang.character.TestCharacter
+import lang.test_character.TestCharacter
 import lang.string.TestString
 import lang.list.TestList
 import lang.dictionary.TestDictionary
