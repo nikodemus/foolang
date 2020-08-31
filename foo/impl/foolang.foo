@@ -973,7 +973,7 @@ end
             eval: "Test new foo"
             expect: 42!
 
-    method test1Prelude_Any
+    method testPrelude_Any
         let lang = system files path: "foo/lang".
         self without: ["Any"]
              modules: { "any" -> lang path: "any.foo" } asFileModules
@@ -985,7 +985,7 @@ end
              eval: "Test test"
              expect: True!
 
-    method test1Prelude_Object
+    method testPrelude_Object
         let lang = system files path: "foo/lang".
         self without: ["Object"]
              modules: { "object" -> lang path: "object.foo" } asFileModules
@@ -1002,7 +1002,7 @@ end
              eval: "Test test"
              expect: True!
 
-    method test1Prelude_Character
+    method testPrelude_Character
         let lang = system files path: "foo/lang".
         self without: ["Character", "Object"]
              modules: { "./object" -> lang path: "object.foo",
@@ -1023,6 +1023,17 @@ end
                     end"
              eval: "[Test testError, Test testOk]"
              expect: [#gotcha, True]!
+
+    method testPrelude_Interval
+        let lang = system files path: "foo/lang".
+        self without: ["Interval", "Object"]
+             modules: { "./object" -> lang path: "object.foo",
+                        "interval" -> lang path: "interval.foo" } asFileModules
+             load: "import interval
+                    define ThousandBy10
+                        interval.Interval from: 1 to: 1000 by: 10!"
+             eval: "ThousandBy10 size"
+             expect: 100!
 
     method testTranspile
         self transpile: "let x = 20.
