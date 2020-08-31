@@ -1002,6 +1002,28 @@ end
              eval: "Test test"
              expect: True!
 
+    method test1Prelude_Character
+        let lang = system files path: "foo/lang".
+        self without: ["Character", "Object"]
+             modules: { "./object" -> lang path: "object.foo",
+                        "character" -> lang path: "character.foo" } asFileModules
+             load: "import character
+                    class X \{ c::character.Character }
+                    end
+                    class Test \{}
+                       direct method testError
+                           \{ X c: 42 }
+                              on: TypeError
+                              do: \{ |e| return #gotcha }!
+                       direct method testOk
+                           -- Need to take some care to avoid constructing
+                           -- a host character!
+                           let aCode = \"a\" character code.
+                           (X c: (character.Character code: aCode)) c code == 0x61!
+                    end"
+             eval: "[Test testError, Test testOk]"
+             expect: [#gotcha, True]!
+
     method testTranspile
         self transpile: "let x = 20.
                          let b1 = \{ x + 11 * 2 }.

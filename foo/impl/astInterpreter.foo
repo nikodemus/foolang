@@ -63,15 +63,21 @@ class InterpreterContext {
 end
 
 class AstBlockClosure { context block }
-    is Object
-    method value
-        self apply: []!
-    method value: arg
-        self apply: [arg]!
+    is Block
+
+    method loop
+        { self value } loop!
+
+    method finally: cleanup
+        { self value } finally: cleanup!
+
+    method arity
+        block argumentCount!
+
     method apply: arguments
         let frame = Array new: block frameSize.
         let nArgs = arguments size.
-        block argumentCount is nArgs
+        self arity is nArgs
             ifFalse: { Error
                            raise: "Self-hosted block wants {block argumentCount}, got {nArgs} arguments. {block argumentVariables collect: #name}" }.
         block argumentVariables
