@@ -820,14 +820,14 @@ class TokenWord { precedence string first last }
                       let parts = (parser from: first to: nameLast)
                                       splitBy: DotCharacter.
                       (parts size is 2) assert.
-                      -- Debug println: "XXX: {parts}".
                       let ref = SyntaxExternalRef
                           module: parts first
-                          name: parts second.
-                      -- Debug println: "OK: {ref}".
+                          name: parts second
+                          source: (parser sourceFrom: first to: nameLast).
                       return ref }.
         SyntaxVariable
-            name: string!
+            name: string
+            source: (parser sourceFrom: first to: last)!
 
     method parseAsSuffixOf: prefix with: parser
         SyntaxUnary

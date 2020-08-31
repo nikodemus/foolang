@@ -65,6 +65,7 @@ interface Collection
         self _initSize: size value: self elementType default!
 
     method _initSize: size value: value
+        let new = self withCapacity: size.
         size times: { new add: value }.
         self!
 
@@ -74,6 +75,9 @@ interface Collection
     method addAll: iterable
         self reserveCapacity: (self size + iterable sizeEstimate).
         iterable do: { |each| self add: each }.
+        self!
+
+    method reserveCapacity: size
         self!
 
     method as: type
@@ -148,14 +152,14 @@ interface Collection
         result!
 
     method reject: block
-        let selection = Array withCapacity: 4.
+        let selection = Self withCapacity: (self size / 2 + 1) truncate.
         self do: { |elt|
                    (block value: elt) is True
                        ifFalse: { selection push: elt } }.
         selection!
 
     method select: block
-        let selection = Array withCapacity: 4.
+        let selection = Self withCapacity: (self size / 2 + 1) truncate.
         self do: { |elt|
                    (block value: elt) is True
                        ifTrue: { selection push: elt } }.

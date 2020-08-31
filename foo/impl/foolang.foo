@@ -973,7 +973,11 @@ end
             eval: "Test new foo"
             expect: 42!
 
-    method testPrelude_Any
+
+    -- prelude tests numbered so that they sort in order
+    -- of complexity
+
+    method testPrelude_1_Any
         let lang = system files path: "foo/lang".
         self without: ["Any"]
              modules: { "any" -> lang path: "any.foo" } asFileModules
@@ -985,7 +989,7 @@ end
              eval: "Test test"
              expect: True!
 
-    method testPrelude_Object
+    method testPrelude_2_Object
         let lang = system files path: "foo/lang".
         self without: ["Object"]
              modules: { "object" -> lang path: "object.foo" } asFileModules
@@ -1002,7 +1006,7 @@ end
              eval: "Test test"
              expect: True!
 
-    method testPrelude_Character
+    method testPrelude_3_Character
         let lang = system files path: "foo/lang".
         self without: ["Character", "Object"]
              modules: { "./object" -> lang path: "object.foo",
@@ -1024,7 +1028,7 @@ end
              eval: "[Test testError, Test testOk]"
              expect: [#gotcha, True]!
 
-    method testPrelude_Interval
+    method testPrelude_4_Interval
         let lang = system files path: "foo/lang".
         self without: ["Interval", "Object"]
              modules: { "./object" -> lang path: "object.foo",
@@ -1035,7 +1039,7 @@ end
              eval: "ThousandBy10 size"
              expect: 100!
 
-    method testPrelude_Iterable
+    method testPrelude_5_Iterable
         let lang = system files path: "foo/lang".
         self without: ["Iterable", "Object"]
              modules: { "./object" -> lang path: "object.foo",
@@ -1048,6 +1052,35 @@ end
                     end"
              eval: "MyIterable new collect: #abs as: List"
              expect: [1,2,3] asList!
+
+    method testPrelude_6_Collection
+        let lang = system files path: "foo/lang".
+        self without: ["Collection", "Iterable", "Object"]
+             modules: { "./object" -> lang path: "object.foo",
+                        "./iterable" -> lang path: "iterable.foo",
+                        "collection" -> lang path: "collection.foo" } asFileModules
+             load: "import collection
+                    class MyCollection \{ data }
+                        is collection.Collection
+                        direct method new
+                            self data: List new!
+                        method iterator
+                            data iterator!
+                        method add: elt
+                            data add: elt.
+                            self!
+                        method size
+                            data size!
+                        method clear
+                            data clear.
+                            self!
+                    end"
+             eval: "let coll = MyCollection new.
+                    coll addAll: [1,2,3].
+                    let res = coll data copy.
+                    coll clear.
+                    [res, coll isEmpty]"
+             expect: [[1,2,3] asList, True]!
 
     method testTranspile
         self transpile: "let x = 20.

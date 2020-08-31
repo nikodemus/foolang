@@ -324,13 +324,14 @@ class SyntaxWildcardImport { module relative body }
         [module, body]!
 end
 
-class SyntaxExternalRef { module name }
+class SyntaxExternalRef { module name source }
     is Syntax
 
     method visitBy: visitor
         visitor visitExternalRef: self!
 
     method parts
+        -- Source ignored, since that can change with pretty-printing.
         [module, name]!
 end
 
@@ -397,13 +398,14 @@ class SyntaxSelfClass {}
         []!
 end
 
-class SyntaxVariable { name::String }
+class SyntaxVariable { name::String source }
     is Syntax
 
     method visitBy: visitor
         visitor visitVariable: self!
 
     method parts
+        -- Source ignored, since that can change with pretty-printing.
         [name]!
 end
 
