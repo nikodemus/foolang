@@ -89,8 +89,8 @@ fn test_addmul_integer() {
 }
 
 #[test]
-fn test_integer_as_integer() {
-    assert_eq!(eval_ok("42 asInteger").integer(), 42);
+fn test_integer_truncate() {
+    assert_eq!(eval_ok("42 truncate").integer(), 42);
 }
 
 #[test]
