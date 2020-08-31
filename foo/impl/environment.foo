@@ -92,8 +92,10 @@ class ModuleDictionary { available translated }
             = self available
                 at: path
                 ifNone: { Error raise: "Unknown module: {name}" }.
-        { (Environment builtins: (env builtins))
-              load: source }
+        { (Environment
+               builtins: env builtins
+               modules: self)
+          load: source }
             on: Error
             do: { |e|
                   let maybeDot = relative ifTrue: { "." } ifFalse: { "" }.
