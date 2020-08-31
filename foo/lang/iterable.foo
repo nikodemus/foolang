@@ -4,7 +4,9 @@ interface Iterator
     required method hasNext
 
     method next
-        self nextIfNone: { IteratorExhausted raise: self }!
+        self nextIfNone: { -- IteratorExhausted raise: self
+                           -- FIXME!
+                           panic "IteratorExhausted!" }!
 
     method skip
         self next.
@@ -44,12 +46,12 @@ iterator every time and won't perform as well.
 
 All other methods are implemented on top of these ones.
 ---
--- required method iterator
-
 import .object.Object
 
 interface Iterable
     is Object
+
+    required method iterator
 
     method allSatisfy: block
         self do: { |each|
@@ -73,6 +75,9 @@ interface Iterable
         self do: { |each|
                    collection add: (block value: each) }.
         collection!
+
+    method collect: block as: type
+        self collect: block into: type new!
 
     method with: iterable collect: block into: collection
         self

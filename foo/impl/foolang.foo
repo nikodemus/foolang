@@ -1035,6 +1035,20 @@ end
              eval: "ThousandBy10 size"
              expect: 100!
 
+    method testPrelude_Iterable
+        let lang = system files path: "foo/lang".
+        self without: ["Iterable", "Object"]
+             modules: { "./object" -> lang path: "object.foo",
+                        "iterable" -> lang path: "iterable.foo" } asFileModules
+             load: "import iterable
+                    class MyIterable \{}
+                        is iterable.Iterable
+                        method iterator
+                            [1, -2, 3] iterator!
+                    end"
+             eval: "MyIterable new collect: #abs as: List"
+             expect: [1,2,3] asList!
+
     method testTranspile
         self transpile: "let x = 20.
                          let b1 = \{ x + 11 * 2 }.
