@@ -1,0 +1,116 @@
+import .list.List
+import .test.TestSuite
+import .test_iterable.TestIterable
+
+class TestList { assert }
+    is TestSuite
+
+    direct method runTests: assert
+        (self assert: assert) runTests!
+
+    method testArrayAsList
+        assert true: { List includes: [1,2,3] asList }
+               testing: "Array#asList for List".
+        assert that: { [1,2,3] asList asArray }
+               equals: [1,2,3]
+               testing: "Array#asList#asArray, for List"!
+
+    method testEquality
+        assert true: { [1, 2, 3] asList == [1, 2, 3] asList }
+               testing: "List#== (true 1)".
+        assert true: { [1, 2, [3, 4]] asList == [1, 2, [3, 4]] asList }
+               testing: "List#== (true 2)".
+        assert false: { [1, 2, 4] asList == [1, 2, 3] asList }
+               testing: "List#== (false 1)".
+        assert false: { [1, 2, 3, 4] asList == [1, 2, 3] asList }
+               testing: "List#== (false 2)".
+        assert false: { ["one", 2, 3] asList == [1, "two", 3] asList }
+               testing: "List#== (false 3)"!
+
+    method testSort
+        assert that: { [] asList sort }
+               equals: [] asList
+               testing: "List#sort, empty".
+        assert that: { [1] asList sort }
+               equals: [1] asList
+               testing: "List#sort, singular".
+        assert that: { [1, 1] asList sort }
+               equals: [1, 1] asList
+               testing: "List#sort, two identical".
+        assert that: { [1, 2] asList sort }
+               equals: [1, 2] asList
+               testing: "List#sort, two in order".
+        assert that: { [2, 1] asList sort }
+               equals: [1, 2] asList
+               testing: "List#sort, two in reverse order".
+        assert that: { [1, 2, 3] asList sort }
+               equals: [1, 2, 3] asList
+               testing: "List#sort, three in order".
+        assert that: { [3, 2, 1] asList sort }
+               equals: [1, 2, 3] asList
+               testing: "List#sort, three in reverse order".
+        assert that: { [9, 2, 1, 8, 7, 3, 5, 4, 6, 0] asList sort }
+               equals: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] asList
+               testing: "List#sort, ten"!
+
+    method testReverse
+        assert that: { let a = [] asList.
+                       a reverse.
+                       a }
+               equals: [] asList
+               testing: "List#reverse (empty)".
+        assert that: { let a = [1] asList.
+                       a reverse.
+                       a }
+               equals: [1] asList
+               testing: "List#reverse (1)".
+        assert that: { let a = [1,2] asList.
+                       a reverse.
+                       a }
+               equals: [2,1] asList
+               testing: "List#reverse (2)".
+        assert that: { let a = [1,2,3] asList.
+                       a reverse.
+                       a }
+               equals: [3,2,1] asList
+               testing: "List#reverse (3)".
+        assert that: { let a = [1,2,3] asList.
+                       a reverse }
+               equals: [3,2,1] asList
+               testing: "List#reverse, retval (3)"!
+
+    method testReversed
+        assert that: { let a = [] asList.
+                       a reversed }
+               equals: [] asList
+               testing: "List#reversed (empty)".
+        assert that: { let a = [1] asList.
+                       a reversed }
+               equals: [1] asList
+               testing: "List#reversed (1)".
+        assert that: { let a = [1,2] asList.
+                       a reversed }
+               equals: [2,1] asList
+               testing: "List#reversed (2)".
+        assert that: { let a = [1,2,3] asList.
+                       a reversed }
+               equals: [3,2,1] asList
+               testing: "List#reversed (3)".
+        assert that: { let a = [1,2,3] asList.
+                       a reversed.
+                       a }
+               equals: [1,2,3] asList
+               testing: "List#reversed, side-effect (3)"!
+
+    method testWith
+        assert that: { List with: 123 }
+               equals: [123] asList
+               testing: "List with:"!
+end
+
+class TestListAsIterable { assert }
+    is TestIterable
+
+    method make: elements
+        List from: elements!
+end

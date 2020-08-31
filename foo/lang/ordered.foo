@@ -1,5 +1,24 @@
 import .iterable.Iterable
+import .iterable.Iterator
 import .test.TestSuite
+
+class OrderedIterator { object index }
+    is Iterator
+
+    direct method new: object
+        self object: object index: 1!
+
+    method nextIfNone: block
+
+        let next = index > object size
+            ifTrue: { return block value }
+            ifFalse: { object at: index }.
+        index = index + 1.
+        next!
+
+    method hasNext
+        index <= object size!
+end
 
 interface Ordered
     is Iterable
@@ -14,6 +33,9 @@ interface Ordered
         self doWithIndex: { |each index|
                             new put: each at: index }.
         new!
+
+    method iterator
+        OrderedIterator new: self!
 
     method first
         self at: 1!
@@ -72,11 +94,11 @@ interface Ordered
 
     method collect: block as: type
         let n = self size.
-        let new = type new: self size.
+        let coll = type new: self size.
         1 to: n
           do: { |i|
-                new put: (block value: (self at: i)) at: i }.
-        new!
+                coll put: (block value: (self at: i)) at: i }.
+        coll!
 
     -- FIXME: Inconsistency between split:do: and splitBy:
     -- ...the use-cases are different, but at least the idea should be
@@ -133,7 +155,7 @@ interface Ordered
         new!
 
     method with: other do: block
-        1 to: self size
+        1 to: (self size min: other size)
           do: { |i| block value: (self at: i) value: (other at: i) }.
         self!
 

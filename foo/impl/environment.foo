@@ -25,6 +25,7 @@ define Builtins
     builtin define: Error.
     builtin define: False.
     builtin define: Integer.
+    builtin define: List.
     builtin define: Object.
     builtin define: Selector.
     builtin define: String.

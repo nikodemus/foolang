@@ -18,7 +18,7 @@ class Interval { from to by }
     method size
        by == 1
           ifTrue: { 1 + to - from }
-          ifFalse: { (1 + to - from) asInteger / by }!
+          ifFalse: { (1 + to - from) truncate / by }!
     method displayOn: stream
        by == 1
          ifTrue: { stream print: "#<Interval {from} to: {to}>" }
