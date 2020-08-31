@@ -21,7 +21,7 @@ fn output_flush(receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
 }
 
 fn class_output_debug(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    Ok(env.foo.make_output("debug", Box::new(std::io::stdout())))
+    Ok(env.foo.make_output("debug", Box::new(std::io::stderr())))
 }
 
 fn output_write_string(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
