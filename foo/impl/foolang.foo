@@ -1002,7 +1002,6 @@ end
              eval: "Test test"
              expect: True!
 
----
     method test1Prelude_Character
         let lang = system files path: "foo/lang".
         self without: ["Character", "Object"]
@@ -1017,11 +1016,14 @@ end
                               on: TypeError
                               do: \{ |e| return #gotcha }!
                        direct method testOk
-                           (X c: \"a\" character) x code == 0x61!
+                           -- Need to take some care to avoid constructing
+                           -- a host character!
+                           let aCode = \"a\" character code.
+                           (X c: (character.Character code: aCode)) c code == 0x61!
                     end"
              eval: "[Test testError, Test testOk]"
              expect: [#gotcha, True]!
----
+
     method testTranspile
         self transpile: "let x = 20.
                          let b1 = \{ x + 11 * 2 }.
