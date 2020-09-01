@@ -58,7 +58,9 @@ interface Object
         err print: other displayString.
         Error raise: "Mismatch: {err content}"!
 
-    -- FIXME: Would be infinitely preferable for the host to handle this
+    -- FIXME: Would be infinitely preferable for the host to handle this,
+    -- in order to provide the source context -- but that takes a bit of
+    -- doing.
     direct method perform: selector with: arguments
         DoesNotUnderstand
             raise: (Selector new: selector)

@@ -26,6 +26,9 @@ interface Token
     method toString
         "#<{self classOf name} \"{self string}\" @ {self first}>"!
 
+    method parseAsVariableWith: parser
+        Error raise: "Invalid variable in self-hosted parser: {string} ({self classOf name})"!
+
     required method string
     required method first
 end
@@ -407,6 +410,19 @@ class TypeDeclarationToken { precedence string first last }
             type: (parser parseSingle)!
 end
 
+class DynamicVariableToken { precedence string first last }
+    is Token
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        let name = parser parseName: "a dynamic variable".
+        SyntaxDynamicVariable
+            name: "${name}"
+            source: (parser sourceFrom: first to: parser position - 1)!
+
+    method parseAsVariableWith: parser
+        self parseAsPrefixWith: parser atPrecedence: precedence!
+end
+
 class SelfInstanceToken { precedence string first last }
     is Token
 
@@ -450,7 +466,7 @@ class ClassToken { precedence string first last }
     is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        let name = parser parseName.
+        let name = parser parseName: "a class".
         let slots = List new.
         parser expect: "\{".
         parser until: "}"
@@ -473,7 +489,7 @@ class DefineToken { precedence string first last }
     method parseAsPrefixWith: parser atPrecedence: _precedence
         parser withSyntaxTable: ExpressionSyntaxTable
                do: { let def = SyntaxDefine
-                                   name: parser parseName
+                                   variable: parser parseVariable
                                    body: parser parseSeq.
                      parser
                          expect: "!".
@@ -484,7 +500,7 @@ class InterfaceToken { precedence string first last }
     is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        let theInterface = SyntaxInterface name: parser parseName.
+        let theInterface = SyntaxInterface name: (parser parseName: "an interface").
         parser withSyntaxTable: InterfaceSyntaxTable
                do: { parser
                          until: "end"
@@ -499,7 +515,7 @@ class ExtendToken { precedence string first last }
     is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        let theExtend = SyntaxExtend name: parser parseName.
+        let theExtend = SyntaxExtend name: (parser parseName: "an extension").
         parser withSyntaxTable: ExtendSyntaxTable
                do: { parser
                          until: "end"
@@ -695,6 +711,7 @@ define ExpressionSyntaxTable
          "Self" -> SyntaxEntry tokenClass: SelfClassToken precedence: 1000,
          "#" -> SyntaxEntry tokenClass: LiteralToken precedence: 1000,
          "::" -> SyntaxEntry tokenClass: TypeDeclarationToken precedence: 1000,
+         "$" -> SyntaxEntry tokenClass: DynamicVariableToken precedence: 1000,
          "*" -> SigilEntry precedence: 90,
          "/" -> SigilEntry precedence: 90,
          "+" -> SigilEntry precedence: 80,
@@ -833,6 +850,15 @@ class TokenWord { precedence string first last }
             name: string
             source: (parser sourceFrom: first to: last)!
 
+    method parseAsVariableWith: parser
+        parser when: "::"
+               do: { parser nextToken.
+                     return SyntaxTypedVariable
+                         name: string
+                         type: parser parsePrefix }.
+        SyntaxUntypedVariable
+            name: string!
+
     method parseAsSuffixOf: prefix with: parser
         SyntaxUnary
             receiver: prefix
@@ -937,6 +963,9 @@ define DashCharacter
 define DotCharacter
     "." character!
 
+define DollarCharacter
+    "$" character!
+
 define BangCharacter
     "!" character!
 
@@ -1014,19 +1043,12 @@ class Parser { source::String
         self parsePrefixAtPrecedence: MaxPrecedence!
 
     method parseVariable
-        let name = self parseName.
-        self when: "::"
-             do: { self nextToken.
-                   return SyntaxTypedVariable
-                       name: name
-                       type: self parsePrefix }.
-        SyntaxUntypedVariable
-            name: name!
+        self nextToken parseAsVariableWith: self!
 
-    method parseName
+    method parseName: context
         let token = self nextToken.
         (TokenWord includes: token)
-            ifFalse: { Error raise: "Invalid variable name in self-hosted parser: {token string}" }.
+            ifFalse: { Error raise: "Invalid name for {context} in self-hosted parser: {token string}" }.
         token string!
  
     method handleSuffixCommentOf: prefix

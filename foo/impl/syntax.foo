@@ -44,8 +44,12 @@ interface Syntax
         { SyntaxPrinter print: self to: stream }
             on: Error
             do: { |e|
-                  stream print: "<error printing: {e description}>>".
-                  return self }.
+                  { stream print: "<error printing: {e description}>>".
+                    return self }
+                      on: Error
+                      do: { |e|
+                            stream print: "<error printing>>".
+                            return self } }.
         stream print: ">"!
 end
 
@@ -354,15 +358,8 @@ class SyntaxUntypedVariable { name }
     method type
         SyntaxLiteral value: Any!
 
-    method parts
-        [name]!
-end
-
-class SyntaxTypedVariable { name type }
-    is Syntax
-
-    method visitBy: visitor
-        visitor visitTypedVariable: self!
+    method isDynamic
+        False!
 
     method parts
         [name]!
@@ -372,7 +369,9 @@ class SyntaxLet { variable value body }
     is Syntax
 
     method visitBy: visitor
-        visitor visitLet: self!
+        variable isDynamic
+            ifTrue: { visitor visitDynamicLet: self }
+            ifFalse: { visitor visitLet: self }!
 
     method parts
         [variable, value, body]!
@@ -403,6 +402,41 @@ class SyntaxVariable { name::String source }
 
     method visitBy: visitor
         visitor visitVariable: self!
+
+    method isDynamic
+        False!
+
+    method parts
+        -- Source ignored, since that can change with pretty-printing.
+        [name]!
+end
+
+-- FIXME: missing source, could probably unify with SyntaxVariable
+-- and SyntaxDynamicVariable.
+class SyntaxTypedVariable { name type }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitTypedVariable: self!
+
+    method isDynamic
+        False!
+
+    method parts
+        [name]!
+end
+
+class SyntaxDynamicVariable { name::String source }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitDynamicVariable: self!
+
+    method isDynamic
+        True!
+
+    method type
+        SyntaxLiteral value: Any!
 
     method parts
         -- Source ignored, since that can change with pretty-printing.
@@ -439,14 +473,14 @@ class SyntaxBlock { parameters returnType body }
         [parameters, returnType, body]!
 end
 
-class SyntaxDefine { name body }
+class SyntaxDefine { variable body }
     is Syntax
 
     method visitBy: visitor
         visitor visitDefine: self!
 
     method parts
-        [name, body]!
+        [variable, body]!
 end
 
 class SyntaxClass { name slots interfaces directMethods instanceMethods }

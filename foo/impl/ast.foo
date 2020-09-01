@@ -8,6 +8,9 @@ class StandardUndefinedPolicy {}
     direct method reference: name in: environment
         Error raise: "Undefined variable: {name}"!
 
+    direct method referenceDynamic: name in: environment
+        self reference: name in: environment!
+
     -- Called during evaluation when encountering a lazily resolved undefined
     -- variable. This particilar method should never be called.
     direct method resolve: name
@@ -27,6 +30,13 @@ class AllowReferenceToUndefined {}
             at: name.
         return global!
 
+    direct method referenceDynamic: name in: env
+        let dynamic = (AstDynamic name: name).
+        env globals
+            put: dynamic
+            at: name.
+        return dynamic!
+
     direct method resolve: name
         StandardUndefinedPolicy resolve: name!
 
@@ -42,6 +52,9 @@ class ResolveUndefinedsWith { definitions environment }
 
     method reference: name in: environment
         StandardUndefinedPolicy reference: name in: environment!
+
+    method referenceDynamic: name in: environment
+        StandardUndefinedPolicy referenceDynamic: name in: environment!
 
     -- During evaluation of definition bodies we resolve undefineds to
     -- as-of-yet evaluated definitions.
@@ -59,6 +72,8 @@ end
 class UndefinedPolicy {}
     direct method reference: name in: environment
         $UndefinedPolicy reference: name in: environment!
+    direct method referenceDynamic: name in: environment
+        $UndefinedPolicy referenceDynamic: name in: environment!
     direct method resolve: name
         $UndefinedPolicy resolve: name!
 end
@@ -128,11 +143,16 @@ class AstDefinitionList { list }
         list do: { |each| each do: block }!
 end
 
-class AstDefine { name body frameSize isDefined }
+class AstDefine { name body frameSize isDynamic isDefined }
     is AstDefinition
 
-    direct method name: name body: body frameSize: frameSize
-        self name: name body: body frameSize: frameSize isDefined: False!
+    direct method name: name body: body frameSize: frameSize isDynamic: isDynamic
+        self
+            name: name
+            body: body
+            frameSize: frameSize
+            isDynamic: isDynamic
+            isDefined: False!
 
     method markDefined
         isDefined = True!
@@ -365,7 +385,7 @@ define AstUndefinedMarker
     -- protection.
     ["<AstUndefineMarker>"]!
 
-class AstGlobal { name::String _value sources }
+interface AstGlobalVariable
     is AstNode
 
     direct method name: name
@@ -414,6 +434,21 @@ class AstGlobal { name::String _value sources }
     method withSource: sourceLocation
         sources add: sourceLocation.
         self!
+end
+
+class AstGlobal { name::String _value sources }
+    is AstGlobalVariable
+end
+
+class AstDynamic { name::String _value sources }
+    is AstGlobalVariable
+
+    method bind: newValue in: block
+        let oldValue = _value.
+        _value = newValue.
+        { block value }
+            finally: { _value = oldValue }!
+
 end
 
 class AstConstantRef { value }
@@ -535,6 +570,13 @@ class AstBindLexical { variable value body }
 
     method visitBy: visitor
         visitor visitBindLexical: self!
+end
+
+class AstBindDynamic { variable value body }
+    is AstNode
+
+    method visitBy: visitor
+        visitor visitBindDynamic: self!
 end
 
 class AstLexicalRef { variable frameOffset::Integer source }

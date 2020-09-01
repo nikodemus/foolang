@@ -839,6 +839,18 @@ end
         self eval: "1.1e2"
              expect: 110.0!
 
+    method testDynamicBinding1
+        self load: "define $foo 0!
+                    class Test \{}
+                        direct method inner
+                            $foo!
+                        direct method test: x
+                            let $foo = x.
+                            self inner!
+                    end"
+            eval: "Test test: 42"
+            expect: 42!
+
     method testPanic1
         { self eval: "panic \"foo\"" expect: #nothing. return False }
             onPanic: { |p|
@@ -972,7 +984,6 @@ end
                    end"
             eval: "Test new foo"
             expect: 42!
-
 
     -- prelude tests numbered so that they sort in order
     -- of complexity

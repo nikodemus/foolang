@@ -93,6 +93,13 @@ class SyntaxTranslator { env }
             value: (aLet value visitBy: self)
             body: (aLet body visitBy: bodyVisitor)!
 
+    method visitDynamicLet: aLet
+        let var = aLet variable visitBy: self.
+        AstBindDynamic
+            variable: var
+            value: (aLet value visitBy: self)
+            body: (aLet body visitBy: self)!
+
     method visitPrefixMessage: aMessage
         AstSend
             receiver: (aMessage receiver visitBy: self)
@@ -136,6 +143,10 @@ class SyntaxTranslator { env }
         (env reference: aVariable name)
             withSource: aVariable source!
 
+    method visitDynamicVariable: aVariable
+        (env dynamic: aVariable name)
+            withSource: aVariable source!
+                
     method visitInterfaceRef: aRef
         aRef name visitBy: self!
 
@@ -163,9 +174,10 @@ class SyntaxTranslator { env }
     method visitDefine: aDefine
         let bodyVisitor = SyntaxTranslator env: env newFrame.
         AstDefine
-            name: aDefine name
+            name: aDefine variable name
             body: (aDefine body visitBy: bodyVisitor)
-            frameSize: bodyVisitor env frame size!
+            frameSize: bodyVisitor env frame size
+            isDynamic: aDefine variable isDynamic!
 
     method visitModuleImport: anImport
         let bodyVisitor = self

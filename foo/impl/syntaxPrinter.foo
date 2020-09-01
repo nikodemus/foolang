@@ -158,6 +158,9 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         self print: " is ".
         anIs right visitBy: self!
 
+    method visitDynamicLet: aLet
+        self visitLet: aLet!
+
     method visitLet: aLet
         self handleBlockStart.
         self print: "let ".
@@ -184,6 +187,9 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         self print: "self"!
 
     method visitVariable: aVariable
+        self print: aVariable name!
+
+    method visitDynamicVariable: aVariable
         self print: aVariable name!
 
     method visitAssign: anAssign
@@ -215,7 +221,8 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
     method visitDefine: aDefine
         self print: "define ".
         let bodyVisitor = self indentBody.
-        bodyVisitor println: aDefine name.
+        aDefine variable visitBy: bodyVisitor.
+        self newline.
         aDefine body visitBy: bodyVisitor.
         self println: "!"!
 
