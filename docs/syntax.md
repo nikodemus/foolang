@@ -1,5 +1,35 @@
 # Foolang Syntax
 
+Foolang syntax is still a moving target, but this document tries to remain up
+to date.
+
+## Example
+
+```
+interface Animal
+   required method description
+   method pet
+      -- Unpettable Animals should override this!
+      "The {self description} looks at you blandly."!
+end
+
+class Dog { name }
+   is Animal
+   direct method unnamed
+      self name: False!
+   method description
+     name is False
+       ifTrue: { "small anonymous dog" }
+       ifFalse: { "small dog called {name}" }!
+end
+
+let dog1 = Dog unnamed.
+dog1 pet --> "The small anomymous dog looks at you blandly."
+
+let dog2 = Dog name: "Spot".
+dog2 pet --> "The small dog called Spot looks at you blandly."
+```
+
 ## Aesthetic
 
 The syntax tries to minimize the amount of visual noise from puctuation, and be
@@ -19,9 +49,6 @@ end     is      required
 This restricts their use as both messages and as variables.
 
 All other reserved words except `is` are used in prefix position.
-
-!> Current design intention is to get rid of reserved words for the most parts,
-but these still remain.
 
 ## Comments
 
@@ -160,9 +187,6 @@ they have "conventional precedence" _unlike Smalltalk_:
 4. `< <= > >= ==`
 5. All other non-alphabetic message operators.
 
-!> Current precedence rules and implementation is a placeholder: Foolang is
-intended to have non-transitive user-extensible operator precedence.
-
 Keyword messages have the lowest precedence.
 
 ## Compound Expressions
@@ -179,11 +203,6 @@ objectB bar
 
 A sequence of expressions like this is an expression that evaluates to the value
 of the last subexpression, ie. `objectB bar` in the example above.
-
-?> Foolang very much wanted to use newlines as separators, but it turns out
-that that there are far too many places where a human would want to enter
-a newline that doesn't terminate the expression. If things change and stars
-align that might still happen.
 
 ## Local Variables
 
