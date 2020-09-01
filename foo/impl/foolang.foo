@@ -1093,6 +1093,28 @@ end
                     [res, coll isEmpty]"
              expect: [[1,2,3] asList, True]!
 
+    method testPrelude_7_Block
+        let lang = system files path: "foo/lang".
+        self without: ["Block", "Object"]
+             modules: { "./object" -> lang path: "object.foo",
+                        "block" -> lang path: "block.foo" } asFileModules
+             load: "import block
+                    class MyBlock \{ data }
+                        is block.Block
+                        method apply: arguments
+                            data with: arguments collect: \{ |a b| a + b } as: List!
+                        method finally: cleanup
+                            \{ self value }
+                                finally: cleanup!
+                        method arity
+                            data size!
+                        method loop
+                            panic \"nope\"!
+                    end"
+             eval: "let b = MyBlock data: [1,10,100].
+                    b value: 1 value: 2 value: 3"
+             expect: [2,12,103] asList!
+
     method testTranspile
         self transpile: "let x = 20.
                          let b1 = \{ x + 11 * 2 }.
