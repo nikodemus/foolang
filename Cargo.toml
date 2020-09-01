@@ -16,7 +16,7 @@ name = "foo"
 path = "src/main.rs"
 
 [profile.dev]
-opt-level = 1
+opt-level = 2
 
 [dependencies]
 regex = "1.*.*"

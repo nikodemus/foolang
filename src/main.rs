@@ -1,6 +1,3 @@
-// rouille uses try!, silence deprecation warnings for now
-#![allow(deprecated)]
-
 use clap::{App, Arg};
 use foolang::objects::Foolang;
 use foolang::time::TimeInfo;
@@ -38,7 +35,7 @@ fn main() {
     // This is easier then controlling the main thread stack size.
     std::thread::Builder::new()
         .name(String::from("foo_main"))
-        .stack_size(8 * 1024 * 1024)
+        .stack_size(4 * 1024 * 1024)
         .spawn(foo_main)
         .unwrap()
         .join()
