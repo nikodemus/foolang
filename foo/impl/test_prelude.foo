@@ -25,15 +25,16 @@ class TestPrelude { system ok }
              load: "import object
                     class X \{ y }
                         is object.Object
-                        method isEquivalent: other -> Boolean
-                           self y == other y!
+                        method displayOn: out
+                           out print: \"X=\".
+                           out print: y!
                     end
                     class Test \{}
                        direct method test
-                           (X y: 42) == (X y: 42)!
+                           (X y: 42) displayString!
                     end"
              eval: "Test test"
-             expect: True!
+             expect: "X=42"!
 
     method testPrelude_2_Character
         let lang = system files path: "foo/lang".
@@ -133,7 +134,7 @@ class TestPrelude { system ok }
                     b value: 1 value: 2 value: 3"
              expect: [2,12,103] asList!
 
-    method test1Prelude_7_Exception
+    method testPrelude_7_Exception
         let lang = system files path: "foo/lang".
         self without: ["Error", "TypeError", "DoesNotUnderstand", "Object"]
              modules: { "./object" -> lang path: "object.foo",
@@ -147,6 +148,19 @@ class TestPrelude { system ok }
              eval: "(\{ MyError new raise } catch: MyError) value description"
              expect: "Oops"!
 
+    method testPrelude_8_Boolean
+        let lang = system files path: "foo/lang".
+        self without: ["Boolean", "True", "False", "Object"]
+             modules: { "./object" -> lang path: "object.foo",
+                        "boolean0" -> lang path: "boolean0.foo" } asFileModules
+             load: "import boolean0
+                    class Test \{}
+                        direct method test
+                           boolean0.True
+                               ifTrue: \{ 42 }!
+                    end"
+             eval: "Test test"
+             expect: 42!
 end
 
 class Main {}

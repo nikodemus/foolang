@@ -6,22 +6,11 @@
 -- cases like #default. (direct method?)
 
 interface Object
-    direct method default
-        False!
-
     direct method isEquivalent: other
-        self is other!
-
-    direct method == other -> Boolean
         self is other!
 
     method isEquivalent: other
         self is other!
-
-    method == other -> Boolean
-        (Self includes: other)
-            ifTrue: { self isEquivalent: other }
-            ifFalse: { False }!
 
     direct method printOn: stream
         stream print: self toString!
