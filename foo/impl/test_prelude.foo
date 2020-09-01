@@ -1,0 +1,159 @@
+import .test_self_hosting.TestSelfHosting
+
+class TestPrelude { system ok }
+    is TestSelfHosting
+
+    -- prelude tests numbered so that they sort in order
+    -- of complexity
+
+    method testPrelude_0_Any
+        let lang = system files path: "foo/lang".
+        self without: ["Any"]
+             modules: { "any" -> lang path: "any.foo" } asFileModules
+             load: "import any.Any
+                    class Test \{}
+                       direct method test
+                          Any includes: 42!
+                    end"
+             eval: "Test test"
+             expect: True!
+
+    method testPrelude_1_Object
+        let lang = system files path: "foo/lang".
+        self without: ["Object"]
+             modules: { "object" -> lang path: "object.foo" } asFileModules
+             load: "import object
+                    class X \{ y }
+                        is object.Object
+                        method isEquivalent: other -> Boolean
+                           self y == other y!
+                    end
+                    class Test \{}
+                       direct method test
+                           (X y: 42) == (X y: 42)!
+                    end"
+             eval: "Test test"
+             expect: True!
+
+    method testPrelude_2_Character
+        let lang = system files path: "foo/lang".
+        self without: ["Character", "Object"]
+             modules: { "./object" -> lang path: "object.foo",
+                        "character" -> lang path: "character.foo" } asFileModules
+             load: "import character
+                    class X \{ c::character.Character }
+                    end
+                    class Test \{}
+                       direct method testError
+                           \{ X c: 42 }
+                              on: TypeError
+                              do: \{ |e| return #gotcha }!
+                       direct method testOk
+                           -- Need to take some care to avoid constructing
+                           -- a host character!
+                           let aCode = \"a\" character code.
+                           (X c: (character.Character code: aCode)) c code == 0x61!
+                    end"
+             eval: "[Test testError, Test testOk]"
+             expect: [#gotcha, True]!
+
+    method testPrelude_3_Interval
+        let lang = system files path: "foo/lang".
+        self without: ["Interval", "Object"]
+             modules: { "./object" -> lang path: "object.foo",
+                        "interval" -> lang path: "interval.foo" } asFileModules
+             load: "import interval
+                    define ThousandBy10
+                        interval.Interval from: 1 to: 1000 by: 10!"
+             eval: "ThousandBy10 size"
+             expect: 100!
+
+    method testPrelude_4_Iterable
+        let lang = system files path: "foo/lang".
+        self without: ["Iterable", "Object"]
+             modules: { "./object" -> lang path: "object.foo",
+                        "iterable" -> lang path: "iterable.foo" } asFileModules
+             load: "import iterable
+                    class MyIterable \{}
+                        is iterable.Iterable
+                        method iterator
+                            [1, -2, 3] iterator!
+                    end"
+             eval: "MyIterable new collect: #abs as: List"
+             expect: [1,2,3] asList!
+
+    method testPrelude_5_Collection
+        let lang = system files path: "foo/lang".
+        self without: ["Collection", "Iterable", "Object"]
+             modules: { "./object" -> lang path: "object.foo",
+                        "./iterable" -> lang path: "iterable.foo",
+                        "collection" -> lang path: "collection.foo" } asFileModules
+             load: "import collection
+                    class MyCollection \{ data }
+                        is collection.Collection
+                        direct method new
+                            self data: List new!
+                        method iterator
+                            data iterator!
+                        method add: elt
+                            data add: elt.
+                            self!
+                        method size
+                            data size!
+                        method clear
+                            data clear.
+                            self!
+                    end"
+             eval: "let coll = MyCollection new.
+                    coll addAll: [1,2,3].
+                    let res = coll data copy.
+                    coll clear.
+                    [res, coll isEmpty]"
+             expect: [[1,2,3] asList, True]!
+
+    method testPrelude_6_Block
+        let lang = system files path: "foo/lang".
+        self without: ["Block", "Object"]
+             modules: { "./object" -> lang path: "object.foo",
+                        "block" -> lang path: "block.foo" } asFileModules
+             load: "import block
+                    class MyBlock \{ data }
+                        is block.Block
+                        method apply: arguments
+                            data with: arguments collect: \{ |a b| a + b } as: List!
+                        method finally: cleanup
+                            \{ self value }
+                                finally: cleanup!
+                        method arity
+                            data size!
+                        method loop
+                            panic \"nope\"!
+                    end"
+             eval: "let b = MyBlock data: [1,10,100].
+                    b value: 1 value: 2 value: 3"
+             expect: [2,12,103] asList!
+
+    method test1Prelude_7_Exception
+        let lang = system files path: "foo/lang".
+        self without: ["Error", "TypeError", "DoesNotUnderstand", "Object"]
+             modules: { "./object" -> lang path: "object.foo",
+                        "exception" -> lang path: "exception.foo" } asFileModules
+             load: "import exception
+                    class MyError \{}
+                        is exception.Error
+                        method _description
+                           \"Oops\"!
+                    end"
+             eval: "(\{ MyError new raise } catch: MyError) value description"
+             expect: "Oops"!
+
+end
+
+class Main {}
+    direct method run: cmd in: system
+        (TestPrelude runIn: system) ok
+            ifTrue: { system output println: "All tests ok!".
+                      system exit }
+            ifFalse: { system output println: "Tests failed!".
+                       system exit: 1 }!
+end

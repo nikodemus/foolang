@@ -1046,11 +1046,8 @@ class Parser { source::String
         self nextToken parseAsVariableWith: self!
 
     method parseName: context
-        let token = self nextToken.
-        (TokenWord includes: token)
-            ifFalse: { Error raise: "Invalid name for {context} in self-hosted parser: {token string}" }.
-        token string!
- 
+        self nextToken string!
+
     method handleSuffixCommentOf: prefix
         -- #sees: means without intervening newline!
         (self sees: "--")

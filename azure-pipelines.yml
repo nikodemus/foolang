@@ -10,6 +10,10 @@ strategy:
 pool:
   vmImage: '$(imageName)'
 
+variables:
+- name: "RUST_BACKTRACE"
+  value: 1
+
 steps:
   - script: |
       curl https://sh.rustup.rs -sSf | sh -s -- -y

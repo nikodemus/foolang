@@ -5,9 +5,17 @@ use predicates::prelude::*;
 type Test = Result<(), Box<dyn std::error::Error>>;
 
 #[test]
-fn test_self_hosted() -> Test {
+fn test_self_hosted_foolang() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
-    cmd.arg("foo/impl/foolang.foo");
+    cmd.arg("foo/impl/test_foolang.foo");
+    cmd.assert().success().stdout("All tests ok!\n");
+    Ok(())
+}
+
+#[test]
+fn test_self_hosted_prelude() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/impl/test_prelude.foo");
     cmd.assert().success().stdout("All tests ok!\n");
     Ok(())
 }
