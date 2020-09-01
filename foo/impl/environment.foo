@@ -313,8 +313,16 @@ class Environment { parent    -- Enclosing environment or False
                           at: name
                           ifNone: { self undefined: name } }!
 
+    method dynamic: name
+        globals
+            at: name
+            ifNone: { self undefinedDynamic: name }!
+
     method undefined: name
         UndefinedPolicy reference: name in: self!
+
+    method undefinedDynamic: name
+        UndefinedPolicy referenceDynamic: name in: self!
 
     method define: name value: value
         -- Debug println: "Environment#define:value: {name}".

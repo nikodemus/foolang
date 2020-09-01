@@ -253,6 +253,11 @@ class AstInterpreter { context process }
             __put: (aSlotSet slot type typecheck: (aSlotSet value visitBy: self))
             __atSlot: aSlotSet slot index - 1!
 
+    method visitBindDynamic: aBind
+        aBind variable
+            bind: (aBind value visitBy: self)
+            in: { aBind body visitBy: self }!
+
     method visitBindLexical: aBind
         let type = aBind variable type.
         let value = aBind value visitBy: self.

@@ -839,7 +839,7 @@ end
         self eval: "1.1e2"
              expect: 110.0!
 
-    method test1DynamicBinding1
+    method testDynamicBinding1
         self load: "define $foo 0!
                     class Test \{}
                         direct method inner
