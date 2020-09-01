@@ -257,7 +257,7 @@ class SyntaxTranslator { env }
     method visitExtend: anExtend
         -- FIXME: should fetch interface object instead of using the name
         AstExtend
-            name: anExtend name
+            type: (env reference: anExtend name)
             interfaces: (self _visitEach: anExtend interfaces)
             directMethods: (self _visitEach: anExtend directMethods)
             instanceMethods: (self _visitEach: anExtend instanceMethods)!

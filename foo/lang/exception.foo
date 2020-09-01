@@ -178,3 +178,31 @@ class IteratorExhausted { value }
     method displayOn: stream
         stream print: "#<IteratorExhausted {value}>"!
 end
+
+extend Object
+    -- FIXME: Would be infinitely preferable for the host to handle this,
+    -- in order to provide the source context -- but that takes a bit of
+    -- doing.
+    direct method perform: selector with: arguments
+        DoesNotUnderstand
+            raise: (Selector new: selector)
+            with: arguments
+            on: self!
+
+    method perform: selector with: arguments
+        DoesNotUnderstand
+            raise: (Selector new: selector)
+            with: arguments
+            on: self!
+
+    -- Erg. This gets us a nice error, but loses the source locations I
+    -- worked to get right. BLarggkashdaskjhfklajfshd.
+    direct method typecheck: value
+        -- Output debug println: "{Self} typecheck: {value}".
+        (Self includes: value)
+            ifTrue: { value }
+            ifFalse: { TypeError raise: value expected: Self }!
+
+    method error: message
+        Error raise: message!
+end

@@ -4,11 +4,10 @@
 
 -- Should be able to specify non-inherited methods for
 -- cases like #default. (direct method?)
+
 interface Object
     direct method default
-        self is Object
-            ifTrue: { False }
-            ifFalse: { Error raise: "No default value for {self}" }!
+        False!
 
     direct method isEquivalent: other
         self is other!
@@ -56,29 +55,5 @@ interface Object
         err print: self displayString.
         err print: " <==> ".
         err print: other displayString.
-        Error raise: "Mismatch: {err content}"!
-
-    -- FIXME: Would be infinitely preferable for the host to handle this,
-    -- in order to provide the source context -- but that takes a bit of
-    -- doing.
-    direct method perform: selector with: arguments
-        DoesNotUnderstand
-            raise: (Selector new: selector)
-            with: arguments
-            on: self!
-
-    method perform: selector with: arguments
-        DoesNotUnderstand
-            raise: (Selector new: selector)
-            with: arguments
-            on: self!
-
-    -- Erg. This gets us a nice error, but loses the source locations I
-    -- worked to get right. BLarggkashdaskjhfklajfshd.
-    direct method typecheck: value
-        -- Output debug println: "{Self} typecheck: {value}".
-        (Self includes: value)
-            ifTrue: { value }
-            ifFalse: { TypeError raise: value expected: Self }!
-
+        panic "Mismatch: {err content}"!
 end

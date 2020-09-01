@@ -988,7 +988,7 @@ end
     -- prelude tests numbered so that they sort in order
     -- of complexity
 
-    method testPrelude_1_Any
+    method testPrelude_0_Any
         let lang = system files path: "foo/lang".
         self without: ["Any"]
              modules: { "any" -> lang path: "any.foo" } asFileModules
@@ -1000,7 +1000,7 @@ end
              eval: "Test test"
              expect: True!
 
-    method testPrelude_2_Object
+    method testPrelude_1_Object
         let lang = system files path: "foo/lang".
         self without: ["Object"]
              modules: { "object" -> lang path: "object.foo" } asFileModules
@@ -1017,7 +1017,7 @@ end
              eval: "Test test"
              expect: True!
 
-    method testPrelude_3_Character
+    method testPrelude_2_Character
         let lang = system files path: "foo/lang".
         self without: ["Character", "Object"]
              modules: { "./object" -> lang path: "object.foo",
@@ -1039,7 +1039,7 @@ end
              eval: "[Test testError, Test testOk]"
              expect: [#gotcha, True]!
 
-    method testPrelude_4_Interval
+    method testPrelude_3_Interval
         let lang = system files path: "foo/lang".
         self without: ["Interval", "Object"]
              modules: { "./object" -> lang path: "object.foo",
@@ -1050,7 +1050,7 @@ end
              eval: "ThousandBy10 size"
              expect: 100!
 
-    method testPrelude_5_Iterable
+    method testPrelude_4_Iterable
         let lang = system files path: "foo/lang".
         self without: ["Iterable", "Object"]
              modules: { "./object" -> lang path: "object.foo",
@@ -1064,7 +1064,7 @@ end
              eval: "MyIterable new collect: #abs as: List"
              expect: [1,2,3] asList!
 
-    method testPrelude_6_Collection
+    method testPrelude_5_Collection
         let lang = system files path: "foo/lang".
         self without: ["Collection", "Iterable", "Object"]
              modules: { "./object" -> lang path: "object.foo",
@@ -1093,7 +1093,7 @@ end
                     [res, coll isEmpty]"
              expect: [[1,2,3] asList, True]!
 
-    method testPrelude_7_Block
+    method testPrelude_6_Block
         let lang = system files path: "foo/lang".
         self without: ["Block", "Object"]
              modules: { "./object" -> lang path: "object.foo",
@@ -1114,6 +1114,20 @@ end
              eval: "let b = MyBlock data: [1,10,100].
                     b value: 1 value: 2 value: 3"
              expect: [2,12,103] asList!
+
+    method test1Prelude_7_Exception
+        let lang = system files path: "foo/lang".
+        self without: ["Error", "TypeError", "DoesNotUnderstand", "Object"]
+             modules: { "./object" -> lang path: "object.foo",
+                        "exception" -> lang path: "exception.foo" } asFileModules
+             load: "import exception
+                    class MyError \{}
+                        is exception.Error
+                        method _description
+                           \"Oops\"!
+                    end"
+             eval: "(\{ MyError new raise } catch: MyError) value description"
+             expect: "Oops"!
 
     method testTranspile
         self transpile: "let x = 20.
