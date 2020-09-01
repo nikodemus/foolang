@@ -35,7 +35,7 @@ fn main() {
     // This is easier then controlling the main thread stack size.
     std::thread::Builder::new()
         .name(String::from("foo_main"))
-        .stack_size(4 * 1024 * 1024)
+        .stack_size(2 * 1024 * 1024)
         .spawn(foo_main)
         .unwrap()
         .join()

@@ -1,0 +1,796 @@
+import .test_self_hosting.TestSelfHosting
+
+class TestFoolang { system ok }
+    is TestSelfHosting
+
+    method testInterface1
+        self load: "interface TestInterface1
+                        direct method answer
+                           42!
+                    end"
+            eval: "TestInterface1 answer"
+            expect: 42!
+
+    method testInterface2
+        self load: "interface TestInterface2
+                    end"
+            eval: "TestInterface2 includes: 42"
+            expect: False!
+
+    method testInterface3
+        self load: "interface TestInterface3
+                        method foo
+                            self!
+                    end
+                    class TestInterface3Impl \{}
+                        is TestInterface3
+                    end"
+            eval: "TestInterface3 includes: (TestInterface3Impl new foo)"
+            expect: True!
+
+    method testInterface4
+        -- pretty-print
+        self parse: "interface TestInterface4
+                        required direct method fooR
+                        direct method foo
+                            42!
+                        required method barR
+                        method bar
+                            42!
+                    end"
+             expect: "interface TestInterface4
+    required direct method fooR
+    required method barR
+    direct method foo
+        42!
+    method bar
+        42!
+end
+"
+                !
+
+    method testInterface5
+        self load: "interface TestInterface5
+                        required method fooxx
+                        method bar
+                            self fooxx!
+                    end
+                    class TestInterface5Impl \{}
+                        is Object
+                        is TestInterface5
+                    end"
+            eval: "TestInterface5Impl new bar"
+            expectError: RequiredMethodMissing
+            where: { |e| e selector == #fooxx }!
+
+    method testInterface6
+        -- Self
+        self load: "interface TestInterface6
+                        method foo
+                           Self bar!
+                    end
+                    class TestInterface6Impl \{}
+                        is TestInterface6
+                        direct method bar
+                           42!
+                    end"
+            eval: "TestInterface6Impl new foo"
+            expect: 42!
+
+    method test42
+        self eval: "42" expect: 42!
+
+    method testPlus
+        self eval: "100 + 1000 + 10 + 1" expect: 1111!
+
+    method testPrecedence1
+        self eval: "12 + 10 * 10 - 1" expect: 111!
+
+    method testPrecedence2
+        self eval: "let x = -40. let y = -2. x abs + y abs" expect: 42!
+
+    method testPrefixMethod
+        self eval: "- 42" expect: -42!
+
+    method testUnaryMethod
+        self eval: "- 42 abs" expect: 42!
+
+    method testKeywordMethod
+        self eval: "1 to: 10 by: 2" expect: (1 to: 10 by: 2)!
+
+    method testIs
+        self eval: "1 is 1" expect: True.
+        self eval: "1 is 2" expect: False!
+
+    method testLet
+        self eval: "let x = 1. x + x"
+             expect: 2!
+
+    method testParens
+        self eval: "(1 + 1) * 2"
+             expect: 4!
+
+    method testAssign1
+        self eval: "let x = 20. x = x + 1. x * 2"
+             expect: 42!
+
+    method testAssign2
+        self eval: "let y = 0.
+                    let x = 20.
+                    (let x = 2000. x = x + 100. y = x * 2).
+                    x = x + 1. y + x * 2"
+            expect: 4242!
+
+    method testSimpleBlock
+        self eval: "\{ 32 + 10 } value"
+             expect: 42!
+
+    method testArgBlock
+        self eval: "\{ |x| x + 1 } value: 41"
+             expect: 42!
+
+    method testBlockClosure
+        self eval: "let block = (let x = 21. \{ x = x * 2 }).
+                    let x = 0.
+                    block value. block value"
+            expect: 84!
+
+    method testDefine
+        self load: "define FourtyTwoForTestDefine
+                       42!"
+             eval: "FourtyTwoForTestDefine"
+             expect: 42!
+
+    method testSimpleClass
+        self load: "class MyClass \{ x } is Object end"
+             eval: "let c = MyClass x: 42. c x"
+             expect: 42.
+         self load: "class MyClass \{ x y } is Object end"
+             eval: "let c = MyClass x: 40 y: 2. c x + c y"
+             expect: 42!
+
+    method testClassWithMethod
+        self load: "class MyClass \{ slot }
+                        method foo: x
+                           slot + x!
+                    end"
+             eval: "(MyClass slot: 40) foo: 2"
+             expect: 42!
+
+    method testSlotAssign
+        self load: "class MyClass \{ slot }
+                        method bar
+                           slot = slot * 2!
+                        method foo
+                           self bar.
+                           slot!
+                    end"
+             eval: "(MyClass slot: 21) foo"
+             expect: 42!
+
+    method testClassWithPrefixMethod
+        self load: "class MyClass \{ slot }
+                        method prefix%
+                            slot * slot!
+                    end"
+             eval: "%(MyClass slot: -2)"
+             expect: 4!
+
+    method testTwoClasses
+        self load: "class Class1 \{ slot }
+                        is Object
+                        method foo: x
+                           x bar + slot * 2!
+                    end
+                    class Class2 \{ slot }
+                        is Object
+                        method bar
+                           slot!
+                        method foo: y
+                           y foo: self!
+                    end"
+             eval: "(Class2 slot: 2) foo: (Class1 slot: 20)"
+             expect: 42!
+
+    method testBlockInMethod
+        self load: "class ClassAA \{ slot }
+                        method capture: x
+                           \{ x }!
+                        method captureSlot
+                           \{ slot }!
+                        method capture
+                           let z = 2.
+                           \{ (self captureSlot) value + (self capture: z) value }!
+                    end
+                    class ClassBB \{ slot }
+                        method ctor: x
+                           \{ (ClassAA slot: x + slot) }!
+                        method run: x
+                           (self ctor: x * 2) value capture value!
+                    end"
+             eval: "(ClassBB slot: 20) run: 10"
+             expect: 42!
+
+    method testDirectMethod
+        self load: "class ClassDirectMethod \{}
+                        direct method gimme1
+                            self new gimme2!
+                        method gimme2
+                            42!
+                    end"
+             eval: "ClassDirectMethod gimme1"
+             expect: 42!
+
+    method testReturn
+        self load: "class ReturnTest \{}
+                        direct method test: ok
+                            ok
+                               ifTrue: \{ return 42 }.
+                            666!
+                    end"
+            eval: "ReturnTest test: True"
+            expect: 42!
+
+    method testComment1
+        -- Prefix comment to let value
+        self
+            parse: "           let x = -- boop\n 21.     x     *  2"
+            expect: "let x = -- boop\n        21.\nx * 2"!
+
+    method testComment2
+        -- Suffix comment to let value
+        self
+            parse: "let x = 21 -- boop\n.\nx * 2"
+            expect: "let x = 21. -- boop\nx * 2".
+        self
+            parse: "let x = 21. -- boop\n\nx * 2"
+            expect: "let x = 21. -- boop\nx * 2"!
+
+    method testComment3
+        -- Prefix comment in sequence
+        self
+            parse: "    doo daa.\n    -- boop\n   self bar. \n x * 2"
+            expect: "doo daa.\n-- boop\nself bar.\nx * 2"!
+
+    method testComment4
+        -- Suffix comment in sequence
+        self
+            parse: "self bar. -- boop\n x * 2"
+            expect: "self bar. -- boop\nx * 2".
+        self
+            parse: "self bar -- boop\n. x * 2"
+            expect: "self bar. -- boop\nx * 2"!
+
+    method testComment5
+        -- Prefix comment to class
+        self
+            parse: "-- boop\n    class   X   \{}   end"
+            expect: "-- boop\nclass X \{}\nend\n"!
+
+    method testComment6
+        -- Suffix comment to class
+        self
+            parse: "class   X   \{}   end -- boop"
+            expect: "class X \{}\nend -- boop\n"!
+
+    method testComment7
+        -- Suffix comment to method signature == prefix comment to body
+        self
+            parse: "class   X   \{}method bar -- boop\n42!\nend"
+            expect: "class X \{}\n    method bar\n        -- boop\n        42!\nend\n"!
+
+    method testComment8
+        -- Suffix comment to method body
+        self
+            parse: "class X \{} method bar\n42! -- boop\nend"
+            expect: "class X \{}\n    method bar\n        42! -- boop\nend\n"!
+
+    method testComment9
+        -- Prefix comment to method (does not work currently!)
+        self
+            parse: "class X \{} -- boop\n method bar\n 42!\n end\n"
+            expect: "class X \{}\n    -- boop\n    method bar\n        42!\nend\n"!
+
+    method testComment10
+        -- block comment
+        self eval: "---
+                    This is a test.
+                    ---
+                    42"
+            expect: 42!
+
+    method testComment11
+        -- block comment
+        self parse: "---\nThis is a test.\n---\n      42"
+            expect: "---\nThis is a test.\n---\n42"!
+
+    method testComment12
+        -- Line comment without space after
+        self eval: "--> 42\n 42"
+             expect: 42!
+
+    method testComment13
+        -- Block comment without space after
+        self eval: "---XXX 42--- 42"
+             expect: 42!
+
+    method testComment14
+        -- long comment fences
+        self eval: "----
+                    --- This is a test.
+                    ----
+                    42"
+            expect: 42!
+
+    method testArray1
+        self eval: "[1, 1+1, 3]"
+             expect: [1,2,3]!
+
+    method testArray2
+        self eval: "[1, 1+1, 3, ]"
+             expect: [1,2,3]!
+
+    method testArray3
+        self eval: "[1, 1+1, 3,]"
+             expect: [1,2,3]!
+
+    method testArray4
+        self eval: "[1]"
+             expect: [1]!
+
+    method testArray5
+        self eval: "[]"
+             expect: []!
+
+    method testRecord1
+        self eval: "\{foo: 42, bar: 123}"
+             expect: {foo: 42, bar: 123}!
+
+    method testRecord2
+        self eval: "\{foo: 42, bar: 123,}"
+             expect: {foo: 42, bar: 123}!
+
+    method testDictionary1
+        self eval: "let x = 42. let y = 13. \{ x -> y, y + 1 -> x * 2 }"
+             expect: { 42 -> 13, 14 -> 84 }!
+
+    method testDictionary2
+        self eval: "let x = 42. let y = 13. \{ x -> y, y + 1 -> x * 2, }"
+             expect: { 42 -> 13, 14 -> 84 }!
+
+    method testBacktrace
+        self load: "class BacktraceTest \{}
+                        is Object
+                        method bang: block
+                           block value!
+                        method foo
+                            self bang: \{ self nope }!
+                        method bar
+                           self foo!
+                        direct method test
+                           self new bar!
+                    end"
+            eval: "BacktraceTest test"
+            expectError: DoesNotUnderstand
+            where: { |e|
+                     e selector == #nope
+                         ifTrue: { let bt = e context backtrace.
+                                   let selectors = bt collect: { |f| f selector :: Selector }.
+                                   selectors isEquivalent: [#value, #bang:, #foo, #bar, #test] }}!
+
+    method testAstSource
+        self load: "class SourceTest \{}
+                         is Object
+                         method foo
+                            let x = 1 + 2.
+                            self bar: x
+                                 quux: x.
+                            self quux.
+                            self zot.
+                            2 + 3!
+                    end"
+            eval: "SourceTest new foo"
+            expectError: DoesNotUnderstand
+            where: { |e|
+                     -- FIXME: this is only for "bar:", should include the
+                     -- whole selector!
+                     e source location == (168 to: 171) } !
+
+    method testOutOfOrderDefine
+        self load: "define Two
+                       One + One!
+                    define One
+                       1!"
+            eval: "Two"
+            expect: 2!
+
+    method testOutOfOrderClasses
+        self load: "class Two \{}
+                       direct method fini
+                          42!
+                       method test
+                          One new test!
+                    end
+                    class One \{}
+                      method test
+                          Two fini!
+                    end"
+            eval: "Two new test"
+            expect: 42!
+
+    method testString1
+        self eval: " \"foo\" "
+             expect: "foo"!
+
+    method testString2
+        self eval: " \"foo\\\"bar\" "
+             expect: "foo\"bar"!
+
+    method testString3
+        self eval: " \"foo\\nbar\" "
+            expect: "foo\nbar"!
+
+    method testHex1
+        self eval: "0xfb"
+             expect: 251!
+
+    method testHex2
+        self eval: "0xfb4"
+             expect: 4020!
+
+    method testHex3
+        self eval: "0x0"
+             expect: 0!
+
+    method testBinary1
+        self eval: "0b101"
+             expect: 5!
+
+    method testBinary2
+        self eval: "0b001110"
+             expect: 14!
+
+    method testBinary3
+        self eval: "0x0"
+             expect: 0!
+
+    method testSelector1
+        self eval: "#foo"
+             expect: #foo!
+
+    method testSelector2
+        self eval: "#+"
+             expect: #+ !
+
+    method testSelector3
+        self eval: "#foo:bar:"
+             expect: #foo:bar: !
+
+    method testTypeDecl01
+        self eval: "42::Integer"
+             expect: 42!
+
+    method testTypeDecl02
+        self eval: "42::String"
+             expectError: TypeError
+             where: { |e|
+                      e value is 42 and: e expected is String }!
+
+    method testTypeDecl03
+        self eval: "let x::Integer = 12. 12 + 30"
+             expect: 42!
+
+    method testTypeDecl04
+        self eval: "let x::String = 12. 12 + 30"
+             expectError: TypeError
+             where: { |e|
+                      e value is 12 and: e expected is String }!
+
+    method testTypeDecl05
+        self eval: "let x::String = \"foo\". x = 123"
+             expectError: TypeError
+             where: { |e|
+                      e value is 123 and: e expected is String }!
+
+    method testTypeDecl06
+        self load: "class Foo \{ baz::Integer }
+                       method quux
+                          baz!
+                   end"
+            eval: "(Foo baz: 42) quux"
+            expect: 42!
+
+    method testTypeDecl07
+        self load: "class Foo \{ bar::String }
+                    end"
+            eval: "Foo bar: 42"
+            expectError: TypeError
+            where: { |e|
+                     e value is 42 and: e expected is String }!
+
+    method testTypeDecl08
+        self load: "class Foo \{ bar::String }
+                        method boop: x
+                            bar = x!
+                    end"
+
+            eval: "(Foo bar: \"beep\") boop: 42"
+            expectError: TypeError
+            where: { |e|
+                     e value is 42 and: e expected is String }!
+
+    method testTypeDecl09
+        self load: "class Foo \{}
+                        direct method bar: x::Integer
+                            x + 1!
+                    end"
+            eval: "Foo bar: 41"
+            expect: 42!
+
+    method testTypeDecl10
+        self load: "class Foo \{}
+                        direct method bar: x::String
+                            x at: 1!
+                    end"
+            eval: "Foo bar: 41"
+            expectError: TypeError
+            where: { |e|
+                     e value is 41 and: e expected is String }!
+
+    method testTypeDecl11
+        self load: "class Foo \{}
+                        direct method @ x::Integer
+                            x + 1!
+                    end"
+            eval: "Foo @ 41"
+            expect: 42!
+
+    method testTypeDecl12
+        self load: "class Foo \{}
+                        direct method @ x::String
+                            x at: 1!
+                    end"
+            eval: "Foo @ 41"
+            expectError: TypeError
+            where: { |e|
+                     e value is 41 and: e expected is String }!
+
+    method testTypeDecl13
+        self load: "class Foo \{}
+                        direct method @ x::String
+                            let res = (x at: 1) code.
+                            x = \"ok\".
+                            [res, x]!
+                    end"
+            eval: "Foo @ \"a\""
+            expect: [97, "ok"]!
+
+    method testTypeDecl14
+        self load: "class Foo \{}
+                        direct method @ x::String
+                            let res = (x at: 1) code.
+                            x = res.
+                            [res, x]!
+                    end"
+            eval: "Foo @ \"a\""
+            expectError: TypeError
+            where: { |e|
+                     e value is 97 and: e expected is String }!
+
+    method testTypeDecl15
+        self eval: "\{ |x::Integer| x } value: 42"
+             expect: 42!
+
+    method testTypeDecl16
+        self eval: "\{ |x::String| x } value: 42"
+             expectError: TypeError
+             where: { |e|
+                      e value is 42 and: e expected is String }!
+
+    method testTypeDecl17
+        self eval: "\{ |x::String| x = x size. x } value: \"ok\""
+             expectError: TypeError
+             where: { |e|
+                      e value is 2 and: e expected is String }!
+
+    method testTypeDecl18
+        self load: "class Foo \{}
+                       direct method bar -> Integer
+                           42!
+                    end"
+            eval: "Foo bar"
+            expect: 42!
+
+    method testTypeDecl19
+        self load: "class Foo \{}
+                       direct method bar -> Integer
+                           \"oops\"!
+                    end"
+            eval: "Foo bar"
+            expectError: TypeError
+            where: { |e|
+                     e value is "oops" and: e expected is Integer }!
+
+    method testTypeDecl20
+        self eval: "\{ -> Integer 42 } value"
+             expect: 42!
+
+    method testTypeDecl21
+        self eval: "\{ |x| -> Integer x * 2 } value: 21"
+             expect: 42!
+
+    method testTypeDecl22
+        self eval: "\{ -> String 42 } value"
+             expectError: TypeError
+             where: { |e|
+                      e value is 42 and: e expected is String }!
+
+    method testTypeDecl23
+        self eval: "\{ |x| -> String x * 2 } value: 21"
+             expectError: TypeError
+             where: { |e|
+                      e value is 42 and: e expected is String }!
+
+    method testFloat1
+        self eval: "123.123"
+             expect: 123.123!
+
+    method testFloat2
+        self eval: "1.1e2"
+             expect: 110.0!
+
+    method testDynamicBinding1
+        self load: "define $foo 0!
+                    class Test \{}
+                        direct method inner
+                            $foo!
+                        direct method test: x
+                            let $foo = x.
+                            self inner!
+                    end"
+            eval: "Test test: 42"
+            expect: 42!
+
+    method testPanic1
+        { self eval: "panic \"foo\"" expect: #nothing. return False }
+            onPanic: { |p|
+                       (p description == "foo") assert.
+                       return True }!
+
+    method testExtend1
+        self load: "class Foo \{}
+                    end
+                    extend Foo
+                        direct method bar
+                           42!
+                    end"
+            eval: "Foo bar"
+            expect: 42!
+
+    method testExtend2
+        self load: "class Foo \{}
+                    end
+                    extend Foo
+                        method bar
+                           42!
+                    end"
+            eval: "Foo new bar"
+            expect: 42!
+
+    method testExtend3
+        self load: "interface Foo
+                    end
+                    extend Integer
+                        is Foo
+                        method foofoo
+                           123!
+                    end"
+            eval: "[Foo includes: 42, 42 foofoo]"
+            expect: [True, 123]!
+
+    method testImport1
+        -- prefix import
+        self modules: { "foo" -> "class Foo \{}
+                                     method fooInModule
+                                        42!
+                                  end" } asStringModules
+             load: "import foo
+                    class Foo \{}
+                       method fooInHere
+                           foo.Foo new fooInModule!
+                    end"
+             eval: "Foo new fooInHere"
+             expect: 42!
+
+    method testImport2
+        -- name import
+        self modules: { "foo" -> "define Foo 42!" } asStringModules
+             load: "import foo.Foo
+                    define Bar Foo!"
+             eval: "Bar"
+             expect: 42!
+
+    method testImport3
+        -- name import: other names don't shadow pre-existing
+        self modules: { "foo" -> "define Foo 42!
+                                  define Quux 0!" } asStringModules
+             load: "define Quux 123!
+                    import foo.Foo
+                    define Bar Foo!"
+             eval: "Bar + Quux"
+             expect: 165!
+
+    method testImport4
+        -- wildcard import
+        self modules: { "foo" -> "define Foo 1!
+                                  define Bar 2!" } asStringModules
+            load: "import foo.*
+                   class Test \{}
+                      direct method value
+                          Foo + Bar!
+                   end"
+            eval: "Test value"
+            expect: 3!
+
+    method testImport5
+        -- relative import
+        self modules: { "foo" -> "define Foo 21!",
+                        "bar" -> "define Bar 0!",
+                        "./foo" -> "define Foo 0!",
+                        "./bar" -> "define Bar 2!"} asStringModules
+             load: "import foo
+                    import .bar
+                    define Test foo.Foo * bar.Bar!"
+             eval: "Test"
+             expect: 42!
+
+    method testImport6
+        -- submodule import
+        self modules: { "foo/bar" -> "define Quux 42!",
+                        "foo/zot" -> "define Beep 123!" } asStringModules
+             load: "import foo.bar.Quux
+                    import foo.zot
+                    define A Quux!
+                    define B zot.Beep!"
+             eval: "A + B"
+             expect: 165!
+
+    method testImport7
+        -- leading comments at toplevel
+        self modules: { "foo/bar" -> "-- comment 1
+                                      define Quux 42!",
+                        "foo/zot" -> "-- comment 2
+                                      define Beep 123!" } asStringModules
+             load: "-- comment 3
+                    import foo.bar.Quux
+                    -- comment 4
+                    import foo.zot
+                    -- comment 5
+                    define A Quux!
+                    -- comment 6
+                    define B zot.Beep!"
+             eval: "A + B"
+             expect: 165!
+
+    method testImport8
+        -- prefix import in an 'is'
+        self modules: { "foo" -> "interface Foo
+                                     method foo
+                                        42!
+                                  end" }
+            load: "import foo
+                   class Test \{}
+                      is foo.Foo
+                   end"
+            eval: "Test new foo"
+            expect: 42!
+end
+
+class Main {}
+    direct method run: cmd in: system
+        (TestFoolang runIn: system) ok
+            ifTrue: { system output println: "All tests ok!".
+                      system exit }
+            ifFalse: { system output println: "Tests failed!".
+                       system exit: 1 }!
+end

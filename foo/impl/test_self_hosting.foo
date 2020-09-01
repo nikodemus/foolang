@@ -1,0 +1,213 @@
+import .environment.Environment
+import .parser.Parser
+import .utils.Debug
+import .syntaxTranslator.SyntaxTranslator
+import .syntaxPrinter.SyntaxPrinter
+import .cTranspiler.CTranspiler
+
+class StringModuleDictionary { _dict }
+    direct method new: dict
+        self _dict: dict!
+    method at: path ifNone: block
+        _dict at: path ifNone: block!
+end
+
+class FileModuleDictionary { _dict }
+    direct method new: dict
+        self _dict: dict!
+    method at: path ifNone: block
+        (_dict at: path ifNone: block)
+            file forRead open: { |f| f readString }!
+end
+
+extend Dictionary
+    method asStringModules
+        StringModuleDictionary new: self!
+    method asFileModules
+        FileModuleDictionary new: self!
+end
+
+interface TestSelfHosting
+    is TestSuite
+
+    direct method runIn: system
+        let tests = (self system: system ok: True).
+        tests doTests: { |each| tests runTest: each }!
+
+    method runTest: selector
+        { Debug print: selector name.
+          selector sendTo: self.
+          Debug println: " ok" }
+            on: Error
+            do: { |e|
+                  Debug println: " FAILED:\n{e description}".
+                  ok = False.
+                  return False }.
+        True!
+
+    method checkParsingBy: block for: source
+        -- Check Syntax print/parse consistency.
+        -- Debug println: "/parse1".
+        let syntaxList1 = block value: source.
+        -- Debug println: "/pretty".
+        let pretty = StringOutput
+                         with: { |out|
+                                 syntaxList1
+                                     do: { |syntax|
+                                           SyntaxPrinter print: syntax to: out } }.
+        -- Debug println: "/parse2".
+        let syntaxList2 = block value: pretty.
+        -- Debug println: pretty.
+        -- Debug println: "/compare".
+        let res = { syntaxList1 checkEqual: syntaxList2 }
+                      on: Error
+                      do: { |err|
+                            panic "CST print/parse inconsistency!
+original:\n{source}
+printed:\n{pretty}
+problem: {err description}" }.
+        -- Debug println: "/done".
+        res!
+
+    method parse: source expect: pretty
+        -- Checks that parse pretty-prints as expected
+        -- Debug println: "\n/parse source".
+        let syntaxList1 = Parser parseMixed: source.
+        -- Debug println: "\n/parse pretty".
+        let syntaxList2 = Parser parseMixed: pretty.
+        -- Debug println: "/check".
+        { syntaxList1 checkEqual: syntaxList2 }
+            on: Error
+            do: { |err|
+                  Error raise: "parse inconsistent with desired pretty-print!
+source:\n{source}
+pretty:\n{pretty}
+problem: {err description}" }.
+        let printed
+            = StringOutput
+                  with: { |out|
+                          syntaxList1 do: { |syntax| SyntaxPrinter print: syntax to: out } }.
+        printed == pretty
+            ifFalse: { Error raise: "print inconsistent with desired pretty-print!
+source:\n{source}
+printed:\n{printed}
+pretty:\n{pretty}" }!
+
+    method eval: exprSource expect: expected
+        self checkParsingBy: { |source| Parser parseExpressions: source }
+             for: exprSource.
+        let result = Environment new eval: exprSource.
+        (result == expected)
+            ifFalse: { Error raise: "Expected {expected}, got: {result}
+from: '{exprSource}'" }!
+
+    method eval: exprSource expectError: errorType where: test
+        self checkParsingBy: { |source| Parser parseExpressions: source }
+             for: exprSource.
+        let result = False.
+        { result = Environment new eval: exprSource }
+            on: errorType
+            do: { |e|
+                  (test value: e)
+                      ifTrue: { return True }
+                      ifFalse: { Error raise: "Expected error did not pass test, got: {e}" }}.
+        Error raise: "Expected error, got: {result}"!
+
+    method without: builtins modules: modules load: defSource eval: exprSource
+        -- Debug println: "\n/parseDef".
+        self checkParsingBy: { |source| Parser parseDefinitions: source }
+             for: defSource.
+        -- Debug println: "/parseExpr".
+        self checkParsingBy: { |source| Parser parseExpressions: source }
+             for: exprSource.
+        let env = Environment modules: modules.
+        env removeBuiltins: builtins.
+        -- Debug println: "/load".
+        env load: defSource.
+        -- Debug println: "/eval".
+        env eval: exprSource!
+
+    method load: defSource eval: exprSource
+        self
+            modules: Dictionary new
+            load: defSource
+            eval: exprSource!
+
+    method without: builtins
+           modules: modules
+           load: defSource
+           eval: exprSource
+           expect: expected
+        let result = self
+                         without: builtins
+                         modules: modules
+                         load: defSource
+                         eval: exprSource.
+        (result == expected)
+            ifFalse: { Error raise: "Expected {expected}, got: {result}
+eval: {exprSource}
+load: {defSource}
+modules: {modules}" }!
+
+    method modules: modules load: defSource eval: exprSource expect: expected
+        self
+            without: []
+            modules: modules
+            load: defSource
+            eval: exprSource
+            expect: expected!
+
+    method modules: modules load: defSource eval: exprSource
+        self
+            without: []
+            modules: modules
+            load: defSource
+            eval: exprSource!
+
+    method load: defSource eval: exprSource expectError: type where: test
+        { self load: defSource eval: exprSource }
+            on: type
+            do: { |err|
+                  (test value: err)
+                      ifTrue: { return True }
+                      ifFalse: { Error raise: "Error did not match expectations: {err description}
+eval: {exprSource}
+load: {defSource}
+backtrace: {err backtrace}" }}.
+        Error raise: "Expected error, didn't get one
+eval: {exprSource}
+load: {defSource}"!
+
+    method load: defSource eval: exprSource expect: expected
+        self
+            modules: Dictionary new
+            load: defSource
+            eval: exprSource
+            expect: expected!
+
+    method transpile: string
+        let env = Environment new.
+        let cst = Parser parseExpressions: string.
+        let ast = cst collect: { |syntax|
+                                 SyntaxTranslator
+                                     translate: syntax
+                                     in: env }.
+        let c = CTranspiler transpile: ast in: env.
+        (system files path: "host/generated_selectors.h")
+            forWrite truncateExisting
+                createOrOpen: { |f| f writeString: c selectors }.
+        (system files path: "host/generated_blocks.c")
+            forWrite truncateExisting
+                createOrOpen: { |f| f writeString: c blocks }.
+        (system files path: "host/generated_main.c")
+            forWrite truncateExisting
+                createOrOpen: { |f| f writeString: c main }!
+
+    method no_testTranspile
+        self transpile: "let x = 20.
+                         let b1 = \{ x + 11 * 2 }.
+                         let b2 = \{ let x = 0. b1 value }.
+                         let x = 1.
+                         b2 value debug"!
+
+end
