@@ -49,6 +49,14 @@ end
 ### Done
 
 <span class="done">&check;</span>
+**Lexically scoped object language**: everything is an object. Names are
+scoped lexically. Smalltalk-style blocks are lexical closures.
+
+<span class="done">&check;</span>
+**Ergonomic syntax**: while Foolang syntax is not _quite_ as minimal as
+Smalltalk's it is very simple and ergonomic.
+
+<span class="done">&check;</span>
 **No ambient authority**: all OS interfaces must be passed through dependency
 injection, starting from the [system object](system.md) passed to
 `Main##run:in:`&mdash;there is no such thing as a globally accessible `File` or
@@ -56,18 +64,13 @@ injection, starting from the [system object](system.md) passed to
 it should yet!)
 
 <span class="done">&check;</span>
+**Reified types**: Types like _Integer_ are runtime objects capable of
+responding to messages.
+
+<span class="done">&check;</span>
 **Optional typing & typechecks**: all expressions can
 be annotated with types, including method parameters and return values.
 Currently these types are checked at runtime. 
-
-<span class="done">&check;</span> **Interactive development**: Foolang supports
-a dynamic and interactive way of working: in development mode existing methods
-can be redefined and new classes added while the program is running.
-
-<span class="done">&check;</span>
-**Lexical closures**: Foolang has Smalltalk-style blocks that are full
-closures. Currently class definitions and methods can only appear at the
-top level and as such methods are never closures in that sense. 
 
 <span class="done">&check;</span>
 **Multiple inheritance of interfaces**: classes can inherit from multiple
@@ -82,12 +85,34 @@ but do not yet support explicit conflict resolution. (See
 instantiable classes cannot be inherited from in Foolang.
 
 <span class="done">&check;</span>
+**Non-local returns**: Foolang supports Smalltalk-style non-local returns
+from closures, allowing simple implementations for powerful control structures.
+ 
+<span class="done">&check;</span>
 **Dynamic bindings**: dynamic bindings combined with lexical closures
 allow powerful error handling to be implemented in user code,
 implementation of interesting paradigms like context oriented programming,
 and make dependency injection easier.
 
+<span class="done">&check;</span>
+**Condition system**: Foolang' exception/error handling is inspired by
+Common Lisp's acclaimed condition system: errors can be handled without
+unwinding the stack when appropriate.
+
+<span class="done">&check;</span>
+**Interactive development**: Foolang supports
+a dynamic and interactive way of working: in development mode existing methods
+can be redefined and new classes added while the program is running.
+
 ### Pending
+
+<span class="todo">&cross;</span>
+**Self-Hosted**: self-hosted parser and interpreter are almost complete,
+work on self-hosted transpiler to C for bootstrap is about to start.
+
+<span class="todo">&cross;</span> **Compiled**: Foolang is intended to be
+capable of producing native, monolithic executables&mdash;without compromising
+the interactive development experience.
 
 <span class="todo">&cross;</span>
 **Extensible syntax & code generation**: Foolang is intended to offer a
@@ -98,12 +123,6 @@ syntactic convenience and ability to generate code.
 **Type inference**: while Foolang's typesystem should be considered
 weaksouce by today's standards doing basic type inference is critical for
 the intendend functionality.
-
-<span class="todo">&cross;</span>
-**Compiled**: once boostrap implementation and the language have stabilized
-sufficiently, Foolang efforts will focus on a native compiler producing
-monolithic executables&mdash;but this must not compromise the interactive
-development experience.
 
 <span class="todo">&cross;</span>
 **Performant**: type-annotated and compiled Foolang code should perform about as well
