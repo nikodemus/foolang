@@ -14,10 +14,14 @@ interface Token
         -1!
 
     method parseAsSuffixOf: prefix with: parser
-        Error raise: "Cannot parse {self} (@{self first}) in suffix position {parser syntaxTable where}! (self-hosted parser)"!
+        let note = "Cannot parse".
+        Error raise: "{note}: '{self string}' in suffix position {parser syntaxTable where}:
+{(parser sourceFrom: self first to: self last) note: note}"!
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        Error raise: "Cannot parse {self} (@{self first}) in prefix position position {parser syntaxTable where}! (self-hosted parser)"!
+        let note = "Cannot parse".
+        Error raise: "{note} '{self string}' in prefix position {parser syntaxTable where}:
+{(parser sourceFrom: self first to: self last) note: note}"!
 
     method toString
         "#<{self classOf name} \"{self string}\" @ {self first}>"!
