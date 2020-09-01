@@ -339,10 +339,10 @@ fn test_does_not_understand_location() -> Test {
     cmd.arg("foo/tests/test_does_not_understand_location.foo");
     // FIXME: Error points to class
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
-        "ERROR: class DoesNotUnderstandError does not understand: noSuchMethod []
+        "ERROR: DoesNotUnderstandError classOf does not understand: noSuchMethod []
 061     direct method oops
 062         self noSuchMethod!
-                 ^^^^^^^^^^^^ class DoesNotUnderstandError does not understand: noSuchMethod []
+                 ^^^^^^^^^^^^ DoesNotUnderstandError classOf does not understand: noSuchMethod []
 063 end",
     ));
     Ok(())

@@ -29,7 +29,7 @@ impl Hash for Class {
 
 impl Class {
     pub fn new_class(name: &str) -> Object {
-        let class_vtable = Rc::new(Vtable::for_class(&format!("class {}", name)));
+        let class_vtable = Rc::new(Vtable::for_class(name));
         let instance_vtable = Rc::new(Vtable::for_instance(name));
         let class = Object {
             vtable: class_vtable.clone(),
@@ -43,7 +43,7 @@ impl Class {
         class
     }
     pub fn new_interface(name: &str) -> Object {
-        let class_vtable = Rc::new(Vtable::for_class(&format!("interface {}", name)));
+        let class_vtable = Rc::new(Vtable::for_class(name));
         Object {
             vtable: class_vtable.clone(),
             datum: Datum::Class(Rc::new(Class {
@@ -155,9 +155,20 @@ fn interface_typecheck_(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     }
 }
 
-// FIXME: Doesn't match the MOP plan
-pub fn generic_class_class(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    env.find_global_or_unwind("Class")
+pub fn generic_class_class(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    if let Some(ref class) = *receiver.vtable.class.borrow() {
+        return Ok(class.clone());
+    }
+    let metaclass = Object {
+        vtable: env.foo.class_vtable.clone(),
+        datum: Datum::Class(Rc::new(Class {
+            class_vtable: env.foo.class_vtable.clone(),
+            instance_vtable: receiver.vtable.clone(),
+            interface: false,
+        })),
+    };
+    receiver.vtable.class.borrow_mut().replace(metaclass.clone());
+    Ok(metaclass)
 }
 
 pub fn generic_class_name(receiver: &Object, _args: &[Object], env: &Env) -> Eval {

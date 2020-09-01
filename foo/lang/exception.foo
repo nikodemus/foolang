@@ -130,7 +130,7 @@ class DoesNotUnderstand { receiver selector arguments source context }
             ifTrue: { False }
             ifFalse: { context bactrace }!
     method _description
-        let note = "{receiver displayString} does not understand: {selector} with: {arguments displayString}".
+        let note = "Instances of {receiver classOf} do not understand: {selector}".
         source is False
             ifTrue: { note }
             ifFalse: { "{note}\n{source note: note}" }!

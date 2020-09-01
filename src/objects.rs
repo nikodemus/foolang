@@ -218,7 +218,7 @@ impl Vtable {
     }
 
     pub fn for_class(name: &str) -> Vtable {
-        let vt = Vtable::raw(name);
+        let vt = Vtable::raw(&format!("{} classOf", name));
         vt.add_primitive_method_or_panic("classOf", classes::class::generic_class_class);
         vt.add_primitive_method_or_panic("includes:", classes::class::generic_class_includes_);
         vt.add_primitive_method_or_panic("typecheck:", classes::class::generic_class_typecheck_);
@@ -1428,13 +1428,7 @@ impl fmt::Display for Object {
             Datum::Boolean(true) => write!(f, "True"),
             Datum::Boolean(false) => write!(f, "False"),
             Datum::ByteArray(byte_array) => write!(f, "{:?}", byte_array),
-            Datum::Class(class) => {
-                if class.interface {
-                    write!(f, "#<interface {}>", self.vtable.name)
-                } else {
-                    write!(f, "#<class {}>", self.vtable.name)
-                }
-            }
+            Datum::Class(_class) => write!(f, "{}", self.vtable.name),
             Datum::Clock => write!(f, "#<Clock>"),
             Datum::Closure(x) => write!(f, "#<closure {:?}>", x.params),
             Datum::Compiler(_) => write!(f, "#<Compiler>"),
@@ -1490,9 +1484,7 @@ impl fmt::Debug for Object {
 
 fn generic_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     match &receiver.datum {
-        Datum::Class(class) => {
-            Ok(env.foo.into_string(format!("#<class {}>", &class.instance_vtable.name)))
-        }
+        Datum::Class(class) => Ok(env.foo.make_string(&class.instance_vtable.name)),
         Datum::Boolean(maybe) => {
             if *maybe {
                 Ok(env.foo.make_string("True"))
