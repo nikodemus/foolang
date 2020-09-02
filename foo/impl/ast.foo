@@ -13,8 +13,14 @@ class StandardUndefinedPolicy {}
 
     -- Called during evaluation when encountering a lazily resolved undefined
     -- variable. This particilar method should never be called.
-    direct method resolve: name
-        panic "Unresolved undefined variable: `{name}`! This should not happen."!
+    direct method resolve: name for: node
+        let locations = StringOutput
+                            with: { |out|
+                                    node sources
+                                        do: { |source|
+                                              out newline.
+                                              out println: (source note: "here") } }.
+        panic "Unresolved undefined variable: `{name}`! This should not happen.{locations}"!
 end
 
 define $UndefinedPolicy
@@ -37,8 +43,8 @@ class AllowReferenceToUndefined {}
             at: name.
         return dynamic!
 
-    direct method resolve: name
-        StandardUndefinedPolicy resolve: name!
+    direct method resolve: name for: node
+        StandardUndefinedPolicy resolve: name for: node!
 
     direct method do: block
         let $UndefinedPolicy = self.
@@ -58,7 +64,7 @@ class ResolveUndefinedsWith { definitions environment }
 
     -- During evaluation of definition bodies we resolve undefineds to
     -- as-of-yet evaluated definitions.
-    method resolve: name
+    method resolve: name for: node
         (definitions
              at: name
              ifNone: { StandardUndefinedPolicy reference: name in: environment })
@@ -74,8 +80,8 @@ class UndefinedPolicy {}
         $UndefinedPolicy reference: name in: environment!
     direct method referenceDynamic: name in: environment
         $UndefinedPolicy referenceDynamic: name in: environment!
-    direct method resolve: name
-        $UndefinedPolicy resolve: name!
+    direct method resolve: name for: node
+        $UndefinedPolicy resolve: name for: node!
 end
 
 interface Ast
@@ -120,7 +126,7 @@ interface AstDefinition
         self isDefined
             ifFalse: { DefinitionsInProgress
                            with: self
-                           do: { { -- Debug println: "define: 1 {name}".
+                           do: { { -- Debug println: "define: 1 {self name}".
                                    let val = self eval.
                                    -- Debug println: "define: 2 {val}".
                                    environment define: name value: val }
@@ -164,7 +170,7 @@ class AstDefine { name body frameSize isDynamic isDefined }
         True!
 
     method toString
-        "#<AstDefine {name}>"!
+        "#<AstDefine {self name}>"!
 end
 
 class AstImport { spec isDefined }
@@ -222,7 +228,7 @@ class AstExtend { type interfaces directMethods instanceMethods isDefined }
         panic "never, extend is different!"!
 
     method toString
-        "#<AstExtend {name}>"!
+        "#<AstExtend {type name}>"!
 end
 
 class AstInterface { name interfaces directMethods instanceMethods isDefined }
@@ -279,7 +285,11 @@ class AstClass { name slots interfaces directMethods instanceMethods isDefined }
         -- Debug println: "slots: {(slots collect: #type) asArray displayString}".
         Class
             new: name
-            slots: slots asArray
+            slots: (slots
+                        collect: { |each|
+                                     { name: each name,
+                                       type: each type value } }
+                        as: Array)
             interfaces: (Array from: (interfaces collect: #value))
             directMethods: (Array from: directMethods)
             instanceMethods: (Array from: instanceMethods)!
@@ -404,7 +414,7 @@ interface AstGlobalVariable
 
     method value
         self isUndefined
-            ifTrue: { return UndefinedPolicy resolve: self name }.
+            ifTrue: { return UndefinedPolicy resolve: self name for: self }.
         _value!
 
     method isConstant
@@ -421,11 +431,11 @@ interface AstGlobalVariable
         self!
 
     method toString
-        "#<{self classOf name} {name}: {_value}>"!
+        "#<{self classOf name} {self name}: {_value}>"!
 
     method warnIfUndefined
         self isUndefined
-            ifTrue: { let note = "Undefined variable: {name}".
+            ifTrue: { let note = "Undefined variable: {self name}".
                       (sources isEmpty not) assert.
                       Output debug
                           println: "\nWARNING: {note}\n{sources first note: note}" }!

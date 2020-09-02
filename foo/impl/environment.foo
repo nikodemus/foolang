@@ -213,13 +213,14 @@ class Environment { parent    -- Enclosing environment or False
                            frame: frame]!
 
     method addVariable: name
-        self addVariable: name type: Any!
+        self addVariable: name type: { value: Any }!
 
     method addVariables: names
+        let type = { value: Any }.
         self augment: (names collect: { |each|
                                         Variable
                                             name: each
-                                            type: Any
+                                            type: type
                                             frame: frame })!
 
     method addVariables: names types: types
@@ -269,6 +270,8 @@ class Environment { parent    -- Enclosing environment or False
                                  translate: syntax
                                  in: (self toplevel))
                             do: { |def|
+                                  -- Debug print: "save: ".
+                                  -- Debug println: "{def}".
                                   def isCanonical
                                       ifTrue: { envDefs put: def at: def name }.
                                   pendingDefs add: def } } }.
@@ -277,7 +280,7 @@ class Environment { parent    -- Enclosing environment or False
             in: self
             do: { pendingDefs
                       do: { |def|
-                            -- Debug println: "define: {def}".
+                            -- Debug println: "define: {def} with: {envDefs keys sort asArray}".
                             def defineIn: self } }.
         self checkGlobals.
         -- Debug println: "Environment#load: OK".

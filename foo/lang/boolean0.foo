@@ -1,10 +1,12 @@
+-- This is only loaded on self-hosted version. The bootstrap host
+-- loads just boolean.foo instead!
+
 import .object.Object
 
-extend Boolean
+interface Boolean
     is Object
 
-    direct method default
-        False!
+    required method ifTrue: trueBlock ifFalse: falseBlock
 
     method assert: what
         self ifFalse: { panic "{what} assertion failed!" }!
@@ -18,7 +20,7 @@ extend Boolean
     method isEquivalent: other
         self is other!
 
-    method and: other::Boolean
+    method and: other
         self
            ifTrue: { other }
            ifFalse: { False }!
@@ -33,12 +35,12 @@ extend Boolean
            ifTrue: { other1 and: other2 and: other3 }
            ifFalse: { False }!
 
-    method or: other::Boolean
+    method or: other
         self
            ifTrue: { True }
            ifFalse: { other }!
 
-    method or: other1::Boolean or: other2::Boolean
+    method or: other1 or: other2
         (self or: other1) or: other2!
 
     method not
@@ -71,6 +73,24 @@ extend Boolean
     method displayOn: stream
         stream print: self toString!
 end
+
+class BooleanTrue {}
+    is Boolean
+    method ifTrue: trueBlock ifFalse: falseBlock
+        trueBlock value!
+end
+
+class BooleanFalse {}
+    is Boolean
+    method ifTrue: trueBlock ifFalse: falseBlock
+        falseBlock value!
+end
+
+define True
+    BooleanTrue new!
+
+define False
+    BooleanFalse new!
 
 extend Object
     direct method default

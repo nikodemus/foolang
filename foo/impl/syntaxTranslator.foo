@@ -85,7 +85,7 @@ class SyntaxTranslator { env }
 
     method visitLet: aLet
         let bodyVisitor = self addVariable: aLet variable name
-                               type: (self _resolveType: aLet variable type).
+                               type: (self _visitType: aLet variable type).
         let var = bodyVisitor env bindings first.
         (var name == aLet variable name) assert.
         AstBindLexical
@@ -162,13 +162,13 @@ class SyntaxTranslator { env }
                           addVariables: (aBlock parameters collect: #name)
                           types: (aBlock parameters
                                       collect: { |each|
-                                                 self _resolveType: each type }).
+                                                 self _visitType: each type }).
         let argumentVariables = bodyEnv bindings.
         (argumentVariables size is aBlock parameters size) assert.
         AstBlock
             body: (aBlock body visitBy: (SyntaxTranslator env: bodyEnv))
             argumentVariables: argumentVariables
-            returnType: (self _resolveType: aBlock returnType)
+            returnType: (self _visitType: aBlock returnType)
             frameSize: bodyEnv frame size!
 
     method visitDefine: aDefine
@@ -204,13 +204,13 @@ class SyntaxTranslator { env }
     method visitExternalRef: aRef
         env reference: aRef name inModule: aRef module!
 
-    method _resolveType: aType
+    method _visitType: aType
         aType is False
-            ifTrue: { return False }.
+            ifTrue: { return { value: False } }.
         let ast = aType visitBy: self.
         ast isConstant
             ifFalse: { Error raise: "non-constant type declaration" }.
-        ast value!
+        ast!
 
     method visitMethod: aMethod
         let signature = aMethod signature.
@@ -218,14 +218,14 @@ class SyntaxTranslator { env }
                           addVariables: (signature parameters collect: #name)
                           types: (signature parameters
                                       collect: { |each|
-                                                 self _resolveType: each type }).
+                                                 self _visitType: each type }).
         let argumentVariables = bodyEnv bindings.
         (argumentVariables size is signature parameters size) assert.
         AstMethod
             -- FIXME: Methods should not know their selectors!
             selector: signature selector
             argumentVariables: argumentVariables
-            returnType: (self _resolveType: signature returnType)
+            returnType: (self _visitType: signature returnType)
             body: (aMethod body is False
                        ifTrue: { False }
                        ifFalse: { (aMethod body visitBy: (SyntaxTranslator env: bodyEnv)) })
@@ -235,7 +235,7 @@ class SyntaxTranslator { env }
     method visitClass: aClass
         let slots = aClass slots collect: { |slot::Syntax|
                                             { name: slot name,
-                                              type: (self _resolveType: slot type) } }.
+                                              type: (self _visitType: slot type) } }.
         let instanceMethodVisitor = SyntaxTranslator
                                         env: (env addSlots: slots).
         -- FIXME: should fetch interface object instead of using the name

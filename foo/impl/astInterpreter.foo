@@ -83,7 +83,7 @@ class AstBlockClosure { context block }
         block argumentVariables
             do: { |var|
                   let index = var index.
-                  frame put: (var type typecheck: (arguments at: index))
+                  frame put: (var type value typecheck: (arguments at: index))
                         at: index }.
         let context = InterpreterContext
                           sender: $context
@@ -93,7 +93,7 @@ class AstBlockClosure { context block }
                           frame: frame
                           returnBlock: context returnBlock.
         { let ret = AstInterpreter eval: block body with: context.
-          let type = block returnType.
+          let type = block returnType value.
           type is False
               ifTrue: { ret }
               ifFalse: { type typecheck: ret } }
@@ -147,7 +147,7 @@ class AstInterpreter { context process }
         astMethod argumentVariables
             do: { |var|
                   let index = var index.
-                  frame put: (var type typecheck: (arguments at: index))
+                  frame put: (var type value typecheck: (arguments at: index))
                         at: index }.
         let context = InterpreterContext
                           sender: $context
@@ -157,7 +157,7 @@ class AstInterpreter { context process }
                           frame: frame
                           returnBlock: { |value| return value }.
         { let ret = AstInterpreter eval: astMethod body with: context.
-          let type = astMethod returnType.
+          let type = astMethod returnType value.
           type is False
               ifTrue: { ret }
               ifFalse: { return type typecheck: ret } }
@@ -250,7 +250,8 @@ class AstInterpreter { context process }
 
     method visitSlotSet: aSlotSet
         context receiver
-            __put: (aSlotSet slot type typecheck: (aSlotSet value visitBy: self))
+            __put: (aSlotSet slot type value
+                        typecheck: (aSlotSet value visitBy: self))
             __atSlot: aSlotSet slot index - 1!
 
     method visitBindDynamic: aBind
@@ -259,7 +260,7 @@ class AstInterpreter { context process }
             in: { aBind body visitBy: self }!
 
     method visitBindLexical: aBind
-        let type = aBind variable type.
+        let type = aBind variable type value.
         let value = aBind value visitBy: self.
         context
             put: (type typecheck: value)
@@ -275,7 +276,7 @@ class AstInterpreter { context process }
 
     method visitLexicalSet: aSet
         -- Debug println: "set: {aSet variable}".
-        let type = aSet variable type.
+        let type = aSet variable type value.
         let value = aSet value visitBy: self.
         context
             put: (type typecheck: value)
