@@ -373,7 +373,7 @@ class IsSuffixToken { precedence string first last }
     method parseAsSuffixOf: prefix with: parser
         SyntaxIs
             left: prefix
-            right: parser parseSingle!
+            right: (parser parseAtPrecedence: precedence)!
 end
 
 class LetToken { precedence string first last }
