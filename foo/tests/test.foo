@@ -5,7 +5,6 @@ import lang.dictionary.TestDictionary
 import lang.filepath.TestFilePath
 import lang.filestream.TestFileStream
 import lang.integer.TestInteger
-import lang.ordered.TestOrdered
 import lang.record.TestRecord
 import lang.selector.TestSelector
 import lang.string.TestString
@@ -18,6 +17,7 @@ import lang.test_closure.TestClosure
 import lang.test_list.TestList
 import lang.test_list.TestListAsIterable
 import lang.test_object.TestObject
+import lang.test_ordered.TestOrdered
 
 -- Generates signed integers small enough to add without overflowing.
 class SmallIntegers {}

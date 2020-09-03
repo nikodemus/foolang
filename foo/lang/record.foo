@@ -4,7 +4,7 @@ extend Record
     method isEquivalent: other
         let keys = (Record keysIn: self) sorted.
         keys == (Record keysIn: other) sorted
-            ifFalse: { Output debug println: "my: {keys} other: {(Record keysIn: other) sorted}".
+            ifFalse: { -- Output debug println: "my: {keys} other: {(Record keysIn: other) sorted}".
                        return False }.
         keys
             allSatisfy: { |each|
