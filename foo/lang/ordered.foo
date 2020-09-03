@@ -22,6 +22,9 @@ end
 interface Ordered
     is Iterable
 
+    required method size
+    required method at: index
+
     method bytes
         let bytes = ByteArray new: self size.
         1 to: self size do: { |i| bytes put: (self at: i) at: i }.

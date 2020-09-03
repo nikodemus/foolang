@@ -161,6 +161,30 @@ class TestPrelude { system ok onFailure }
                     end"
              eval: "Test test"
              expect: 42!
+
+    method testPrelude_9_Ordered
+        let lang = system files path: "foo/lang".
+        self without: ["Ordered", "Iterable", "Iterator", "Object"]
+             modules: { "./object" -> lang path: "object.foo",
+                        "./iterable" -> lang path: "iterable.foo",
+                        "ordered" -> lang path: "ordered.foo" } asFileModules
+             load: "import ordered
+
+                    class Triple \{ a b c }
+                        is ordered.Ordered
+                        method size
+                           3!
+                        method at: index
+                           index is 1
+                              ifTrue: \{ return a }.
+                           index is 2
+                              ifTrue: \{ return b }.
+                           index is 3
+                              ifTrue: \{ return c }.
+                           panic \"oops\"!
+                    end"
+             eval: "(Triple a: 1 b: 2 c: 3) sum"
+             expect: 6!
 end
 
 class Main {}

@@ -20,6 +20,8 @@ end
 define Builtins
     let builtin = Builtin globals: Dictionary new.
     builtin define: Any.
+    builtin define: Array.
+    builtin define: ByteArray.
     builtin define: Boolean.
     builtin define: DoesNotUnderstand.
     builtin define: Error.
