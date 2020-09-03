@@ -30,9 +30,15 @@ end
 interface TestSelfHosting
     is TestSuite
 
-    direct method runIn: system
-        let tests = (self system: system ok: True).
+    direct method runIn: system onFailure: block
+        let tests = (self
+                        system: system
+                        ok: True
+                        onFailure: block).
         tests doTests: { |each| tests runTest: each }!
+
+    direct method runIn: system
+        self runIn: system onFailure: { True }!
 
     method runTest: selector
         { Debug print: selector name.
@@ -41,6 +47,7 @@ interface TestSelfHosting
             on: Error
             do: { |e|
                   Debug println: " FAILED:\n{e description}".
+                  onFailure value.
                   ok = False.
                   return False }.
         True!

@@ -1,6 +1,6 @@
 import .test_self_hosting.TestSelfHosting
 
-class TestFoolang { system ok }
+class TestFoolang { system ok onFailure }
     is TestSelfHosting
 
     method testInterface1
@@ -790,11 +790,17 @@ end
             expect: 42!
 end
 
-class Main {}
+class Main { system }
     direct method run: cmd in: system
-        (TestFoolang runIn: system) ok
-            ifTrue: { system output println: "All tests ok!".
-                      system exit }
-            ifFalse: { system output println: "Tests failed!".
-                       system exit: 1 }!
+        (self system: system) run!
+    method run
+        (TestFoolang runIn: system onFailure: { self fail }) ok
+            ifTrue: { self pass }
+            ifFalse: { self fail }!
+    method fail
+        system output println: "Tests failed!".
+        system exit: 1!
+    method pass
+        system output println: "All tests ok!".
+        system exit!
 end

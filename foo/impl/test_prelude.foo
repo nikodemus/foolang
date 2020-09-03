@@ -1,6 +1,6 @@
 import .test_self_hosting.TestSelfHosting
 
-class TestPrelude { system ok }
+class TestPrelude { system ok onFailure }
     is TestSelfHosting
 
     -- prelude tests numbered so that they sort in order
