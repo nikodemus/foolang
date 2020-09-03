@@ -102,6 +102,10 @@ end
         self eval: "1 is 1" expect: True.
         self eval: "1 is 2" expect: False!
 
+    method testIsVsKeywordPrecedence
+        self eval: "1 is 1 ifTrue: \{ 123 } ifFalse: \{ 0 }" expect: 123.
+        self eval: "1 is 2 ifTrue: \{ 0 } ifFalse: \{ 123 }" expect: 123!
+
     method testLet
         self eval: "let x = 1. x + x"
              expect: 2!
