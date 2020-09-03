@@ -1,6 +1,5 @@
 import .iterable.Iterable
 import .iterable.Iterator
-import .test.TestSuite
 
 class OrderedIterator { object index }
     is Iterator
@@ -228,25 +227,4 @@ interface Ordered
         self put: tmp at: j.
         self!
 
-end
-
-class TestOrdered { assert }
-    is TestSuite
-    direct method runTests: assert
-        (self assert: assert) runTests!
-
-    method splitCases
-        [ ["", [""]],
-          [":", ["", ""]],
-          ["foo", ["foo"]],
-          ["foo:bar", ["foo", "bar"]],
-          ["foo:bar:", ["foo", "bar", ""]],
-          [":foo:bar:", ["", "foo", "bar", ""]] ]!
-
-    method testSplitDo
-        assert forAll: self splitCases
-               that: { |case|
-                       let split = (case first splitBy: ":" character) asArray.
-                       split == case second }
-               testing: "Ordered#splitBy:"!
 end

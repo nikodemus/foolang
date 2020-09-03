@@ -1,0 +1,22 @@
+import .test.TestSuite
+
+class TestOrdered { assert }
+    is TestSuite
+    direct method runTests: assert
+        (self assert: assert) runTests!
+
+    method splitCases
+        [ ["", [""]],
+          [":", ["", ""]],
+          ["foo", ["foo"]],
+          ["foo:bar", ["foo", "bar"]],
+          ["foo:bar:", ["foo", "bar", ""]],
+          [":foo:bar:", ["", "foo", "bar", ""]] ]!
+
+    method testSplitDo
+        assert forAll: self splitCases
+               that: { |case|
+                       let split = (case first splitBy: ":" character) asArray.
+                       split == case second }
+               testing: "Ordered#splitBy:"!
+end
