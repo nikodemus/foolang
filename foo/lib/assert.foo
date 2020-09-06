@@ -11,7 +11,7 @@ class TestFailure { case input expected result }
     method reportOn: output
         let valueMessage = input is Nothing
                                ifTrue: { "" }
-                               ifFalse: { " on {input}" }.
+                               ifFalse: { " on {input displayString}" }.
         let resultMessage = expected is Nothing
                                 ifTrue: { "" }
                                 ifFalse: { ", expected '{expected}', got '{result}'" }.
@@ -85,9 +85,17 @@ class TestCase { name condition successCount failureCount errorCount }
 end
 
 class Assert { output failed }
+    is Object
 
     direct method reportingTo: output
         self output: output failed: False!
+
+    direct method runSuite: suite in: system
+        let assert = self reportingTo: system output.
+        let tests = suite assert: assert.
+        system output println: tests classOf name.
+        tests runTests.
+        assert!
 
     method report: testResult
         testResult reportOn: output!
@@ -100,6 +108,9 @@ class Assert { output failed }
         inputs do: { |input| self report: (test tryOn: input) }.
         self summarize: test.
         failed = failed or: test failed!
+
+    method passed
+        failed not!
 
     method exitCode
         failed
