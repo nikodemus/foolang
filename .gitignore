@@ -5,3 +5,7 @@ site/**
 **/\#*
 **/.\#*
 generated_*.*
+*.exe
+*.ilk
+*.pdb
+a.out
