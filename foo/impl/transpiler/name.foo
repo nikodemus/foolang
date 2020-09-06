@@ -1,0 +1,50 @@
+---
+Selector mangling for transpiler.
+
+Underscores written as __.
+Symbols prefixed with _ and translated using SymbolNames.
+Keyword parts suffixed with _.
+---
+
+define SymbolNames
+    { "+" -> "add",
+      "*" -> "mul",
+      "/" -> "div",
+      "-" -> "sub",
+      "%" -> "mod" }!
+
+class Name {}
+    is Object
+
+    direct method mangle: selector
+        StringOutput
+            with: { |out|
+                    out print: "FOO_".
+                    selector isSymbol
+                        ifTrue: { self _mangleSymbol: selector to: out }.
+                    selector isUnary
+                        ifTrue: { self _mangleUnary: selector to: out }.
+                    selector isKeyword
+                        ifTrue: { self _mangleKeyword: selector to: out } }!
+
+    direct method _mangleSymbol: selector to: out
+        out print: "_".
+        out print: (SymbolNames at: selector name)!
+
+    direct method _mangleUnary: selector to: out
+        self _mangleName: selector name to: out!
+
+    direct method _mangleKeyword: selector to: out
+        selector parts
+            do: { |part|
+                  self _mangleName: (part butlast) to: out.
+                  out print: "_" }!
+
+    direct method _mangleName: name to: out
+        name do: { |s|
+                   s == "_" ifTrue: { out print: s }.
+                   out print: s }!
+
+    direct method displayOn: out
+        out print: "Name selector: {selector}"!
+end

@@ -283,15 +283,15 @@ struct Foo foo_Integer_method_mul(struct FooContext* ctx,
 struct FooMethodArray FOO_IntegerBuiltinMethods =
   {
    .size = 3,
-   .data = { (struct FooMethod){ .selector = &FOO_SELECTOR__debug,
+   .data = { (struct FooMethod){ .selector = &FOO_debug,
                                  .argCount = 0,
                                  .frameSize = 0,
                                  .function = &foo_Integer_method_debug },
-             (struct FooMethod){ .selector = &FOO_SELECTOR_add,
+             (struct FooMethod){ .selector = &FOO__add,
                                  .argCount = 1,
                                  .frameSize = 1,
                                  .function = &foo_Integer_method_add },
-             (struct FooMethod){ .selector = &FOO_SELECTOR_mul,
+             (struct FooMethod){ .selector = &FOO__mul,
                                  .argCount = 1,
                                  .frameSize = 1,
                                  .function = &foo_Integer_method_mul }}
@@ -315,7 +315,7 @@ struct Foo foo_Block_method_value(struct FooContext* ctx, size_t nargs, va_list 
 struct FooMethodArray FOO_BlockBuiltinMethods =
   {
    .size = 1,
-   .data = { (struct FooMethod){ .selector = &FOO_SELECTOR__value,
+   .data = { (struct FooMethod){ .selector = &FOO_value,
                                  .argCount = 0,
                                  .frameSize = 0,
                                  .function = &foo_Block_method_value } }
