@@ -1,5 +1,8 @@
 import .transpiler.name.Name
 
+define BuiltinSelectors
+    [#debug, #+, #*, #value]!
+
 class SelectorMap { names }
     direct method new
         self names: Dictionary new!
@@ -10,6 +13,7 @@ class SelectorMap { names }
             ifNonePut: { Name mangle: selector }!
 
     method do: block
+        BuiltinSelectors do: { |each| self map: each }.
         names do: block!
 end
 
