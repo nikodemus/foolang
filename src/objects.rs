@@ -747,7 +747,17 @@ impl Foolang {
 
     pub fn load_module_into(&self, file: &Path, env: Env) -> Result<Env, Unwind> {
         // println!("load: {:?}", file);
-        let res = env.load_file(&file, &fs::canonicalize(file).unwrap().parent().unwrap());
+        let f = match fs::canonicalize(file) {
+            Ok(f) => f,
+            Err(err) => {
+                return Unwind::error(&format!(
+                    "Cannot canonicalize path: {} ({})",
+                    file.display(),
+                    err
+                ))
+            }
+        };
+        let res = env.load_file(&file, &f.parent().unwrap());
         // println!(" => {:?} load ok", file);
         res
     }
