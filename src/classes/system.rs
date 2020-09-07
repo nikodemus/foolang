@@ -1,3 +1,4 @@
+use std::process::Command;
 use std::{thread, time};
 
 use getrandom;
@@ -11,6 +12,7 @@ pub fn vtable() -> Vtable {
     let vt = Vtable::for_instance("System");
     vt.add_primitive_method_or_panic("abort", system_abort);
     vt.add_primitive_method_or_panic("clock", system_clock);
+    vt.add_primitive_method_or_panic("command:", system_command);
     vt.add_primitive_method_or_panic("currentDirectory", system_current_directory);
     vt.add_primitive_method_or_panic("exit", system_exit);
     vt.add_primitive_method_or_panic("exit:", system_exit_arg);
@@ -33,6 +35,26 @@ fn system_abort(_receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
 
 fn system_clock(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_clock())
+}
+
+fn system_command(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let output = if cfg!(target_os = "windows") {
+        Command::new("cmd").args(&["/C", args[0].as_str()?]).output()
+    } else {
+        Command::new("sh").args(&["-c", args[0].as_str()?]).output()
+    };
+    match output {
+        Ok(output) if output.status.success() => Ok(env.foo.make_string(
+            std::str::from_utf8(&output.stdout).expect("Command output was not UTF-8"),
+        )),
+        Ok(output) => Unwind::error(&format!(
+            "Command exited with error: {:?}\n---\nstdout:\n{}\n---\nstderr:\n{}",
+            args[0],
+            std::str::from_utf8(&output.stdout).expect("Command stdout was not UTF-8"),
+            std::str::from_utf8(&output.stderr).expect("Command stderr was not UTF-8")
+        )),
+        Err(err) => Unwind::error(&format!("Could not execute: {:?} ({})", args[0], err)),
+    }
 }
 
 fn system_current_directory(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {

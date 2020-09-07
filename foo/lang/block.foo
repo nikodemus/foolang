@@ -22,6 +22,11 @@ interface Block
 
     -- Delegation to #apply
 
+    method cull: arg1
+        self arity is 1
+            ifTrue: { self apply: [arg1] }
+            ifFalse: { self apply: [] }!
+
     method value
         self apply: []!
 

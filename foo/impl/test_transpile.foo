@@ -1,0 +1,89 @@
+import .cTranspiler.CTranspiler
+import .environment.Environment
+import .parser.Parser
+import .syntaxTranslator.SyntaxTranslator
+
+import .utils.Debug
+
+import lib.assert.Assert
+
+import .test_self_hosting.TestSelfHosting
+import .transpiler.test_name.TestName
+
+class TestTranspileWrapper { system }
+    method assert: assert
+        TestTranspile
+            assert: assert
+            system: system!
+end
+
+class TestTranspile { assert system }
+    is TestSelfHosting
+
+    direct method system: system
+        TestTranspileWrapper system: system!
+
+    method transpile: string
+        let env = Environment new.
+        let cst = Parser parseExpressions: string.
+        let ast = cst collect: { |syntax|
+                                 SyntaxTranslator
+                                     translate: syntax
+                                     in: env }.
+        let c = CTranspiler transpile: ast in: env.
+        (system files path: "host/generated_selectors.h")
+            forWrite truncateExisting
+                createOrOpen: { |f| f writeString: c selectors }.
+        (system files path: "host/generated_blocks.c")
+            forWrite truncateExisting
+                createOrOpen: { |f| f writeString: c blocks }.
+        (system files path: "host/generated_main.c")
+            forWrite truncateExisting
+                createOrOpen: { |f| f writeString: c main }.
+        let tmpExe = "tmp_transpile_test.exe".
+        let path = system currentDirectory path: tmpExe.
+        path ifExists: #deleteFile.
+        path exists not assert.
+        system command: "clang -o {path} -g -Wall --std=c17 host/main.c".
+        path exists assert.
+        system command: path toString!
+
+    method transpile: string expect: output
+        assert that: { self transpile: string }
+               equals: output
+               testing: "transpile -> {output}"!
+
+    method testLiteralInteger
+        self transpile: "123 debug"
+             expect: "#<Integer 123>"!
+
+    method testBinary
+        self transpile: "(10 + 100 + 1) debug"
+             expect: "#<Integer 111>"!
+
+    method testLet
+        self transpile: "let x = 21.
+                         let y = 2.
+                         (x * y) debug"
+             expect: "#<Integer 42>"!
+
+    method testBlock
+        self transpile: "let x = 20.
+                         let b1 = \{ x + 11 * 2 }.
+                         let b2 = \{ let x = 0. b1 value }.
+                         let x = 1.
+                         b2 value debug"
+             expect: "#<Integer 42>"!
+end
+
+class Main {}
+    direct method run: cmd in: system
+        let ok = True.
+        [ TestName,
+          (TestTranspile system: system) ]
+        do: { |each|
+              ok = ok and: (Assert runSuite: each in: system) passed }.
+        ok
+            ifTrue: { system exit }
+            ifFalse: { system exit: 1 }!
+end

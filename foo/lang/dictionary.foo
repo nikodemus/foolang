@@ -18,7 +18,7 @@ extend Dictionary
     method at: key ifNonePut: block
         self at: key ifNone: { let new = block value.
                                self put: new at: key.
-                               return new }!
+                               new }!
 
     method toString
         StringOutput with: { |out|
@@ -53,13 +53,24 @@ extend Dictionary
         self doKeys: { |key| keys add: key }.
         keys!
 
+    method do: block
+        self doKeys: { |key|
+                       block
+                           value: key
+                           value: (self at: key) }!
+
     method doValues: block
-        self doKeys: { |key| block value: (self at: key) }.
+        self doKeys: { |key|
+                       block
+                           value: (self at: key) }.
         self!
 
     method copy
         let copy = Dictionary new.
-        self doKeys: { |key| copy put: (self at: key) at: key }.
+        self doKeys: { |key|
+                       copy
+                           put: (self at: key)
+                           at: key }.
         copy!
 end
 
@@ -122,4 +133,14 @@ class TestDictionary { assert }
                        let mergeRes = mergeTo merge: case third.
                        mergeRes is mergeTo and: case first == mergeRes }
                testing: "Dictionary#merge:"!
+
+    method testDo
+        assert true: { let d = { 1 -> 100, 2 -> 200 }.
+                       let sk = 0.
+                       let sv = 0.
+                       d do: { |k v|
+                               sk = sk + k.
+                               sv = sv + v}.
+                       sk == 3 and: sv == 300 }
+               testing: "Dictionary#do:"!
 end

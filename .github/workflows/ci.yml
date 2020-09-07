@@ -1,0 +1,71 @@
+name: "CI"
+on: [push]
+defaults:
+  run:
+    shell: bash
+
+jobs:
+
+  bootstrap-and-test:
+    name: "Bootstrap and test"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      # Clang is installed on the Windows image, but is not in path.
+      - name: Extend path
+        run: echo '::add-path::C:\msys64\mingw64\bin'
+        if: ${{ runner.os == 'Windows' }}
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: rustfmt
+
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+
+      - name: Check formatting
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all
+
+      - name: Test large
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -- --ignored
+
+  test-foolang-mode:
+    name: "Test foolang Emacs mode"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install Emacs
+        run: |
+          sudo add-apt-repository -y ppa:kelleyk/emacs
+          sudo apt-get install -y emacs26-nox
+
+      - name: Test foolang-mode
+        run: ./test-elisp.sh

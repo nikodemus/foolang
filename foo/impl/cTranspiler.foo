@@ -1,31 +1,20 @@
-define DefaultCNames
-    let names = Dictionary new.
-    names put: "FOO_SELECTOR_add" at: "+".
-    names put: "FOO_SELECTOR_mul" at: "*".
-    names!
+import .transpiler.name.Name
 
-class SelectorMap { cnames }
+define BuiltinSelectors
+    [#debug, #+, #*, #value]!
+
+class SelectorMap { names }
     direct method new
-        self cnames: Dictionary new!
+        self names: Dictionary new!
 
     method map: selector
-        let name = selector name.
-        cnames
-            at: name
-            ifNone: { let default = self _default: name.
-                      cnames put: default at: name.
-                      default }!
+        names
+            at: selector name
+            ifNonePut: { Name mangle: selector }!
 
     method do: block
-        cnames doKeys: { |name|
-                         block
-                             value: name
-                             value: (cnames at: name) }!
-
-    method _default: name
-        DefaultCNames
-            at: name
-            ifNone: { "FOO_SELECTOR__{name}" }!
+        BuiltinSelectors do: { |each| self map: each }.
+        names do: block!
 end
 
 class CTranspiler { output selectorMap blockFunctions }

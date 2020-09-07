@@ -1,0 +1,30 @@
+import lib.assert.Assert
+import .name.Name
+
+class TestName { assert }
+    is TestSuite
+
+    direct method runTests: assert
+        (self assert: assert) runTests!
+
+    method cases
+        [ [ #bar, "FOO_bar" ],
+          [ #bar_, "FOO_bar__" ],
+          [ #bar_zoom, "FOO_bar__zoom" ],
+          [ #bar_zoom_, "FOO_bar__zoom__" ],
+          [ #bar:, "FOO_bar_" ],
+          [ #bar:zoom:, "FOO_bar_zoom_" ],
+          [ #+, "FOO__add" ] ]!
+
+    method testMangle
+        assert forAll: self cases
+               that: { |case|
+                       (Name mangle: case first) == case second }
+               testing: "Name mangle:"!
+end
+
+class Main {}
+    direct method run: cmd in: system
+        let tests = Assert runSuite: TestName in: system.
+        system exit: tests exitCode!
+end

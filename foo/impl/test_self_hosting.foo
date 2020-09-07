@@ -192,29 +192,4 @@ load: {defSource}"!
             eval: exprSource
             expect: expected!
 
-    method transpile: string
-        let env = Environment new.
-        let cst = Parser parseExpressions: string.
-        let ast = cst collect: { |syntax|
-                                 SyntaxTranslator
-                                     translate: syntax
-                                     in: env }.
-        let c = CTranspiler transpile: ast in: env.
-        (system files path: "host/generated_selectors.h")
-            forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c selectors }.
-        (system files path: "host/generated_blocks.c")
-            forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c blocks }.
-        (system files path: "host/generated_main.c")
-            forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c main }!
-
-    method no_testTranspile
-        self transpile: "let x = 20.
-                         let b1 = \{ x + 11 * 2 }.
-                         let b2 = \{ let x = 0. b1 value }.
-                         let x = 1.
-                         b2 value debug"!
-
 end
