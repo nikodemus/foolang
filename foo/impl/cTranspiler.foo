@@ -1,8 +1,20 @@
 import .transpiler.name.Name
 
+define BlockMethods
+    { #value -> {args: [],
+                 body: "return foo_apply(ctx, nargs, args);"} }!
+
+define IntegerMethods
+    { #+ -> {args: [Integer],
+             body: "return foo_Integer_new(ctx->receiver.datum.int64 + arg1.datum.int64);"},
+      #* -> {args: [Integer],
+             body: "return foo_Integer_new(ctx->receiver.datum.int64 * arg1.datum.int64);"},
+      #debug -> {args: [Integer],
+                 body: "printf(\"#<Integer %\" PRId64 \">\", ctx->receiver.datum.int64);\nreturn ctx->receiver;"} }!
+
 define BuiltinClasses
-    [{name: "Integer", selectors: [#+, #*, #debug]},
-     {name: "Block", selectors: [#value]}]!
+    [{name: "Integer", methods: IntegerMethods},
+     {name: "Block", methods: BlockMethods}]!
 
 class SelectorMap { names }
     direct method new
@@ -58,25 +70,42 @@ class CTranspiler { output selectorMap blockFunctions }
                         do: { |each| self _generateClass: each to: out } }!
 
     method _generateClass: aClass to: stream
-        let selectors = aClass selectors.
+        let methods = aClass methods.
+        -- 1. Method functions
+        methods
+            do: { |selector methodInfo|
+                  stream println: "struct Foo {Name mangleMethod: selector in: aClass}".
+                  stream println: "    (struct FooContext* ctx, size_t nargs, va_list args)".
+                  stream println: "\{".
+                  stream println: "    (void)ctx;".
+                  stream println: "    (void)nargs;".
+                  stream println: "    (void)args;".
+                  let args = methodInfo args.
+                  args
+                      doWithIndex: { |argType index|
+                                     stream println: "    struct Foo arg{index} = foo_vtable_typecheck(&{Name mangleVtable: (args at: index)}, va_arg(args, struct Foo));" }.
+                  stream print: "    ".
+                  stream println: (methodInfo body replace: "\n" with: "\n    ").
+                  stream println: "}".
+                  stream newline }.
+        -- 2. MethodArray
         let methodArrayName = "FOO_{aClass name}Methods".
-        -- 1. MethodArray
         stream println: "struct FooMethodArray {methodArrayName} = ".
         stream println: "\{".
-        stream println: "    .size = {selectors size},".
+        stream println: "    .size = {methods size},".
         stream println: "    .data = \{".
-        selectors
-            do: { |each|
-                  let arity = each arity - 1. -- Selector arity is one greater!
-                  stream println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each},".
-                  stream println: "                            .argCount = {arity},".
-                  stream println: "                            .frameSize = {arity},".
-                  stream println: "                            .function = &foomethod_{aClass name}_{Name mangle: each} }," }.
+        methods
+            doKeys: { |each|
+                      let arity = each arity - 1. -- Selector arity is one greater!
+                      stream println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each},".
+                      stream println: "                            .argCount = {arity},".
+                      stream println: "                            .frameSize = {arity},".
+                      stream println: "                            .function = &{Name mangleMethod: each in: aClass} }," }.
         stream println: "    }".
         stream println: "};".
         stream newline.
-        -- 2. Vtable
-        stream println: "struct FooVtable FOO_{aClass name}Vtable = ".
+        -- 3. Vtable
+        stream println: "struct FooVtable {Name mangleVtable: aClass} = ".
         stream println: "\{".
         stream println: "    .name = &FOO_CSTRING({aClass name displayString}),".
         stream println: "    .methods = &{methodArrayName}".
