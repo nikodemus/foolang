@@ -1,7 +1,8 @@
 import .transpiler.name.Name
 
-define BuiltinSelectors
-    [#debug, #+, #*, #value]!
+define BuiltinClasses
+    [{name: "Integer", selectors: [#+, #*, #debug]},
+     {name: "Block", selectors: [#value]}]!
 
 class SelectorMap { names }
     direct method new
@@ -10,10 +11,9 @@ class SelectorMap { names }
     method map: selector
         names
             at: selector name
-            ifNonePut: { Name mangle: selector }!
+            ifNonePut: { Name mangle: selector prefix: "FOO_" }!
 
     method do: block
-        BuiltinSelectors do: { |each| self map: each }.
         names do: block!
 end
 
@@ -27,9 +27,10 @@ class CTranspiler { output selectorMap blockFunctions }
         visitor initContext: env frame size.
         ast do: { |node| node visitBy: visitor }.
         visitor output println: ";".
-        {selectors: visitor generateSelectors,
-         blocks: visitor generateBlocks,
-         main: visitor output content}!
+        { main: visitor output content,
+          blocks: visitor generateBlocks,
+          classes: visitor generateClasses,
+          selectors: visitor generateSelectors }!
 
     method initContext: frameSize
         output
@@ -50,10 +51,42 @@ class CTranspiler { output selectorMap blockFunctions }
         output println: "struct FooSelector* FOO_InternedSelectors = {prev};".
         output content!
 
+    method generateClasses
+        StringOutput
+            with: { |out|
+                    BuiltinClasses
+                        do: { |each| self _generateClass: each to: out } }!
+
+    method _generateClass: aClass to: stream
+        let selectors = aClass selectors.
+        let methodArrayName = "FOO_{aClass name}Methods".
+        -- 1. MethodArray
+        stream println: "struct FooMethodArray {methodArrayName} = ".
+        stream println: "\{".
+        stream println: "    .size = {selectors size},".
+        stream println: "    .data = \{".
+        selectors
+            do: { |each|
+                  let arity = each arity - 1. -- Selector arity is one greater!
+                  stream println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each},".
+                  stream println: "                            .argCount = {arity},".
+                  stream println: "                            .frameSize = {arity},".
+                  stream println: "                            .function = &foomethod_{aClass name}_{Name mangle: each} }," }.
+        stream println: "    }".
+        stream println: "};".
+        stream newline.
+        -- 2. Vtable
+        stream println: "struct FooVtable FOO_{aClass name}Vtable = ".
+        stream println: "\{".
+        stream println: "    .name = &FOO_CSTRING({aClass name displayString}),".
+        stream println: "    .methods = &{methodArrayName}".
+        stream println: "};".
+        stream newline!
+
     method generateBlocks
-        let output = StringOutput new.
-        blockFunctions do: { |block| output println: block }.
-        output content!
+        StringOutput
+            with: { |out|
+                    blockFunctions do: { |block| out println: block } }!
 
     method selectorCName: selector
         self selectorMap map: selector!
@@ -64,7 +97,7 @@ class CTranspiler { output selectorMap blockFunctions }
         -- same id.
         blockFunctions add: False.
         let index = blockFunctions size.
-        let cname = "foo_block_id{index}".
+        let cname = "fooblock_id{index}".
         output print: "struct Foo ".
         output print: cname.
         output println: " (struct FooContext* context) \{".

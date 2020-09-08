@@ -43,7 +43,7 @@ void* foo_alloc(size_t n, size_t size) {
   if (new) {
     return new;
   } else {
-    foo_abort("foo_alloc_failed");
+    foo_abort("foo_alloc failed!");
   }
 }
 
@@ -258,7 +258,7 @@ struct Foo foo_Integer_new(int64_t n) {
   return (struct Foo){ .vtable = &FOO_IntegerVtable, .datum = { .int64 = n } };
 }
 
-struct Foo foo_Integer_method_debug(struct FooContext* ctx,
+struct Foo foomethod_Integer_debug(struct FooContext* ctx,
                                     __attribute__ ((unused)) size_t nargs,
                                     __attribute__ ((unused)) va_list args) {
   struct Foo receiver = ctx->receiver;
@@ -266,66 +266,28 @@ struct Foo foo_Integer_method_debug(struct FooContext* ctx,
   return receiver;
 }
 
-struct Foo foo_Integer_method_add(struct FooContext* ctx,
+struct Foo foomethod_Integer__add(struct FooContext* ctx,
                                   __attribute__ ((unused)) size_t nargs,
                                   va_list args) {
   struct Foo arg = foo_vtable_typecheck(&FOO_IntegerVtable, va_arg(args, struct Foo));
   return foo_Integer_new(ctx->receiver.datum.int64 + arg.datum.int64);
 }
 
-struct Foo foo_Integer_method_mul(struct FooContext* ctx,
+struct Foo foomethod_Integer__mul(struct FooContext* ctx,
                                   __attribute__ ((unused)) size_t nargs,
                                   va_list args) {
   struct Foo arg = foo_vtable_typecheck(&FOO_IntegerVtable, va_arg(args, struct Foo));
   return foo_Integer_new(ctx->receiver.datum.int64 * arg.datum.int64);
 }
 
-struct FooMethodArray FOO_IntegerBuiltinMethods =
-  {
-   .size = 3,
-   .data = { (struct FooMethod){ .selector = &FOO_debug,
-                                 .argCount = 0,
-                                 .frameSize = 0,
-                                 .function = &foo_Integer_method_debug },
-             (struct FooMethod){ .selector = &FOO__add,
-                                 .argCount = 1,
-                                 .frameSize = 1,
-                                 .function = &foo_Integer_method_add },
-             (struct FooMethod){ .selector = &FOO__mul,
-                                 .argCount = 1,
-                                 .frameSize = 1,
-                                 .function = &foo_Integer_method_mul }}
-  };
-
-struct FooVtable FOO_IntegerVtable =
-  {
-   .name = &FOO_CSTRING("Integer"),
-   .methods = &FOO_IntegerBuiltinMethods
-  };
-
-struct Foo foo_Block_method_value(struct FooContext* ctx, size_t nargs, va_list args) {
+struct Foo foomethod_Block_value(struct FooContext* ctx, size_t nargs, va_list args) {
   struct FooBlock* block = ctx->receiver.datum.block;
   struct FooContext* context = foo_context_new_block(block, nargs);
-  FOO_DEBUG("value 1\n");
   foo_vargs_to_frame(nargs, args, context->frame);
-  FOO_DEBUG("value 2\n");
   return block->function(context);
 }
 
-struct FooMethodArray FOO_BlockBuiltinMethods =
-  {
-   .size = 1,
-   .data = { (struct FooMethod){ .selector = &FOO_value,
-                                 .argCount = 0,
-                                 .frameSize = 0,
-                                 .function = &foo_Block_method_value } }
-  };
-
-struct FooVtable FOO_BlockVtable =
-  {
-   .name = &FOO_CSTRING("Block"),
-   .methods = &FOO_BlockBuiltinMethods
-  };
+#include "generated_classes.c"
 
 int main() {
   #include "generated_main.c"
