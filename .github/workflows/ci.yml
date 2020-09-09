@@ -14,20 +14,26 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      # Clang is installed on the Windows image, but is not in path.
-      - name: Extend path
-        run: echo '::add-path::C:\msys64\mingw64\bin'
-        if: ${{ runner.os == 'Windows' }}
-
-      - name: Checkout
-        uses: actions/checkout@v2
-
       - name: Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           components: rustfmt
+
+      # Clang is installed on the Windows image, but is not in path.
+      - name: Extend path
+        run: echo '::add-path::C:\msys64\mingw64\bin'
+        if: ${{ runner.os == 'Windows' }}
+
+      - name: Clang version
+        run: clang --version
+
+      - name: Rustc version
+        run: rustc --version
+
+      - name: Checkout
+        uses: actions/checkout@v2
 
       - name: Cache dependencies
         uses: actions/cache@v2
