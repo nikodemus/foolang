@@ -1,15 +1,15 @@
 import .transpiler.name.Name
 
 define BlockMethods
-    { #value -> {args: [],
+    { #value -> {signature: [],
                  body: "return foo_apply(ctx, nargs, args);"} }!
 
 define IntegerMethods
-    { #+ -> {args: [Integer],
+    { #+ -> {signature: [Integer],
              body: "return foo_Integer_new(ctx->receiver.datum.int64 + arg1.datum.int64);"},
-      #* -> {args: [Integer],
+      #* -> {signature: [Integer],
              body: "return foo_Integer_new(ctx->receiver.datum.int64 * arg1.datum.int64);"},
-      #debug -> {args: [Integer],
+      #debug -> {signature: [],
                  body: "printf(\"#<Integer %\" PRId64 \">\", ctx->receiver.datum.int64);\nreturn ctx->receiver;"} }!
 
 define BuiltinClasses
@@ -80,10 +80,12 @@ class CTranspiler { output selectorMap blockFunctions }
                   stream println: "    (void)ctx;".
                   stream println: "    (void)nargs;".
                   stream println: "    (void)args;".
-                  let args = methodInfo args.
-                  args
+                  let signature = methodInfo signature.
+                  (selector arity - 1 == signature size) assert.
+                  signature
                       doWithIndex: { |argType index|
-                                     stream println: "    struct Foo arg{index} = foo_vtable_typecheck(&{Name mangleVtable: (args at: index)}, va_arg(args, struct Foo));" }.
+                                     stream println: "    struct Foo arg{index} = foo_vtable_typecheck(&{Name mangleVtable: (signature at: index)}, va_arg(args, struct Foo));".
+                                     stream println: "    (void)arg{index};" }.
                   stream print: "    ".
                   stream println: (methodInfo body replace: "\n" with: "\n    ").
                   stream println: "}".

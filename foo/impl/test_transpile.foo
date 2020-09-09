@@ -47,7 +47,7 @@ class TestTranspile { assert system }
         let path = system currentDirectory path: tmpExe.
         path ifExists: #deleteFile.
         path exists not assert.
-        system command: "clang -o {path} -g -Wall --std=c17 host/main.c".
+        system command: "clang -o {path} -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer -g -Wall --std=c17 host/main.c".
         path exists assert.
         system command: path toString!
 
