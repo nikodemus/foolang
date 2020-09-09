@@ -16,16 +16,25 @@ define SymbolNames
 class Name {}
     is Object
 
-    direct method mangle: selector
+    direct method mangle: selector prefix: prefix
         StringOutput
             with: { |out|
-                    out print: "FOO_".
+                    out print: prefix.
                     selector isSymbol
                         ifTrue: { self _mangleSymbol: selector to: out }.
                     selector isUnary
                         ifTrue: { self _mangleUnary: selector to: out }.
                     selector isKeyword
                         ifTrue: { self _mangleKeyword: selector to: out } }!
+
+    direct method mangle: selector
+        self mangle: selector prefix: ""!
+
+    direct method mangleMethod: selector in: aClass
+        "foomethod_{aClass name}_{self mangle: selector}"!
+
+    direct method mangleVtable: aClass
+        "FooVtable_{aClass name}"!
 
     direct method _mangleSymbol: selector to: out
         out print: "_".

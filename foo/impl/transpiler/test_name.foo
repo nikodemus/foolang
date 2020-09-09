@@ -16,10 +16,10 @@ class TestName { assert }
           [ #bar:zoom:, "FOO_bar_zoom_" ],
           [ #+, "FOO__add" ] ]!
 
-    method testMangle
+    method testManglePrefix
         assert forAll: self cases
                that: { |case|
-                       (Name mangle: case first) == case second }
+                       (Name mangle: case first prefix: "FOO_") == case second }
                testing: "Name mangle:"!
 end
 
