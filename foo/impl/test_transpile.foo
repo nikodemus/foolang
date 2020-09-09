@@ -47,7 +47,13 @@ class TestTranspile { assert system }
         let path = system currentDirectory path: tmpExe.
         path ifExists: #deleteFile.
         path exists not assert.
-        system command: "clang -o {path} -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer -g -Wall --std=c17 host/main.c".
+        -- KLUDGE: Windows CI host linker cannot find the sanitizer libraries,
+        -- so we conditionalize on the environment and host.
+        let sanitizerOptions
+            = (((system getenv: "GITHUB_ACTION") is False) or: system isUnix)
+                ifTrue: { "-fsanitize=address -fsanitize=undefined" }
+                ifFalse: { "" }.
+        system command: "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall --std=c17 host/main.c".
         path exists assert.
         system command: path toString!
 
