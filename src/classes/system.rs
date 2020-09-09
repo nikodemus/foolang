@@ -17,7 +17,10 @@ pub fn vtable() -> Vtable {
     vt.add_primitive_method_or_panic("exit", system_exit);
     vt.add_primitive_method_or_panic("exit:", system_exit_arg);
     vt.add_primitive_method_or_panic("files", system_files);
+    vt.add_primitive_method_or_panic("getenv:", system_getenv);
     vt.add_primitive_method_or_panic("input", system_input);
+    vt.add_primitive_method_or_panic("isWindows", system_is_windows);
+    vt.add_primitive_method_or_panic("isUnix", system_is_unix);
     vt.add_primitive_method_or_panic("output", system_output);
     vt.add_primitive_method_or_panic("output:", system_output_arg);
     vt.add_primitive_method_or_panic("random", system_random);
@@ -73,8 +76,25 @@ fn system_files(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     classes::filepath::make_root_filepath(env)
 }
 
+fn system_getenv(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let name = args[0].as_str()?;
+    match std::env::var(name) {
+        Ok(s) => Ok(env.foo.into_string(s)),
+        Err(std::env::VarError::NotPresent) => Ok(env.foo.make_boolean(false)),
+        Err(_) => Unwind::error(&format!("Value of {} is not value UTF-8", name)),
+    }
+}
+
 fn system_input(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_input("stdin", Box::new(std::io::stdin())))
+}
+
+fn system_is_unix(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_boolean(cfg!(target_family = "unix")))
+}
+
+fn system_is_windows(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_boolean(cfg!(target_family = "windows")))
 }
 
 fn system_output(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
