@@ -1,16 +1,9 @@
 import .transpiler.name.Name
+import .transpiler.integer.IntegerMethods
 
 define BlockMethods
     { #value -> {signature: [],
                  body: "return foo_apply(ctx, nargs, args);"} }!
-
-define IntegerMethods
-    { #+ -> {signature: [Integer],
-             body: "return foo_Integer_new(ctx->receiver.datum.int64 + arg1.datum.int64);"},
-      #* -> {signature: [Integer],
-             body: "return foo_Integer_new(ctx->receiver.datum.int64 * arg1.datum.int64);"},
-      #debug -> {signature: [],
-                 body: "printf(\"#<Integer %\" PRId64 \">\", ctx->receiver.datum.int64);\nreturn ctx->receiver;"} }!
 
 define BuiltinClasses
     [{name: "Integer", methods: IntegerMethods},
@@ -23,7 +16,7 @@ class SelectorMap { names }
     method map: selector
         names
             at: selector name
-            ifNonePut: { Name mangle: selector prefix: "FOO_" }!
+            ifNonePut: { Name mangleSelector: selector }!
 
     method do: block
         names do: block!
