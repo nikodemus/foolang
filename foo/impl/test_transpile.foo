@@ -24,13 +24,8 @@ class TestTranspile { assert system }
         TestTranspileWrapper system: system!
 
     method transpile: string
-        let env = Environment new.
-        let cst = Parser parseExpressions: string.
-        let ast = cst collect: { |syntax|
-                                 SyntaxTranslator
-                                     translate: syntax
-                                     in: env }.
-        let c = CTranspiler transpile: ast in: env.
+        let env = Environment new load: string.
+        let c = CTranspiler transpile: env globals values in: env.
         (system files path: "host/generated_selectors.h")
             forWrite truncateExisting
                 createOrOpen: { |f| f writeString: c selectors }.
@@ -62,27 +57,40 @@ class TestTranspile { assert system }
                equals: output
                testing: "transpile -> {output}"!
 
-    method no_testLiteralInteger
-        self transpile: "123 debug"
+    method testLiteralInteger
+        self transpile: "class Main \{}
+                             direct method run -- FIXME: : cmd in: sys
+                                 123 debug!
+                         end"
              expect: "#<Integer 123>"!
 
-    method no_testBinary
-        self transpile: "(10 + 100 + 1) debug"
+    method testBinary
+        self transpile: "class Main \{}
+                             direct method run
+                                 (10 + 100 + 1) debug!
+                         end"
              expect: "#<Integer 111>"!
 
-    method no_testLet
-        self transpile: "let x = 21.
-                         let y = 2.
-                         (x * y) debug"
+    method testLet
+        self transpile: "class Main \{}
+                             direct method run
+                                 let x = 21.
+                                 let y = 2.
+                                 (x * y) debug!
+                        end"
              expect: "#<Integer 42>"!
 
     method testBlock
-        self transpile: "let x = 20.
-                         let b1 = \{ x + 11 * 2 }.
-                         let b2 = \{ let x = 0. b1 value }.
-                         let x = 1.
-                         b2 value debug"
+        self transpile: "class Main \{}
+                             direct method run
+                                 let x = 20.
+                                 let b1 = \{ x + 11 * 2 }.
+                                 let b2 = \{ let x = 0. b1 value }.
+                                 let x = 1.
+                                 b2 value debug!
+                         end"
              expect: "#<Integer 42>"!
+
 end
 
 class Main {}

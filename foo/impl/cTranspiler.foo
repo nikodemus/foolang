@@ -1,5 +1,6 @@
 import .transpiler.name.Name
 import .transpiler.integer.IntegerMethods
+import .ast.AstClass
 
 define BlockMethods
     { #value -> {signature: [],
@@ -24,22 +25,28 @@ end
 
 class CTranspiler { output selectorMap blockFunctions }
 
-    direct method transpile: ast in: env
+    direct method transpile: globals in: env
         let visitor = self
                           output: StringOutput new
                           selectorMap: SelectorMap new
                           blockFunctions: List new.
-        visitor initContext: env frame size.
-        ast do: { |node| node visitBy: visitor }.
-        visitor output println: ";".
+        -- FIXME: visit Main, and it's dependencies only
+        globals do: { |each| each definition visitBy: visitor }.
+        visitor generateMain.
         { main: visitor output content,
           blocks: visitor generateBlocks,
           classes: visitor generateClasses,
           selectors: visitor generateSelectors }!
 
-    method initContext: frameSize
-        output
-            println: "struct FooContext* context = foo_context_new_main({frameSize}ul);"!
+    method generateMain
+        output println: "int main".
+        output println: "    (int argc, char** argv)".
+        output println: "\{".
+        output println: "    struct FooContext* ctx = foo_context_new_main(0ul);".
+        let main = Name mangleGlobal: {name: "Main"}.
+        output println: "    foo_send(ctx, &{Name mangleSelector: #run}, {main}, 0);".
+        output println: "    return 0;".
+        output println: "}"!
 
     method generateSelectors
         let output = StringOutput new.
@@ -67,7 +74,7 @@ class CTranspiler { output selectorMap blockFunctions }
         -- 1. Method functions
         methods
             do: { |selector methodInfo|
-                  stream println: "struct Foo {Name mangleMethod: selector in: aClass}".
+                  stream println: "struct Foo {Name mangleInstanceMethod: selector in: aClass}".
                   stream println: "    (struct FooContext* ctx, size_t nargs, va_list args)".
                   stream println: "\{".
                   stream println: "    (void)ctx;".
@@ -77,7 +84,7 @@ class CTranspiler { output selectorMap blockFunctions }
                   (selector arity - 1 == signature size) assert.
                   signature
                       doWithIndex: { |argType index|
-                                     stream println: "    struct Foo arg{index} = foo_vtable_typecheck(&{Name mangleVtable: (signature at: index)}, va_arg(args, struct Foo));".
+                                     stream println: "    struct Foo arg{index} = foo_vtable_typecheck(&{Name mangleInstanceVtable: (signature at: index)}, va_arg(args, struct Foo));".
                                      stream println: "    (void)arg{index};" }.
                   stream print: "    ".
                   stream println: (methodInfo body replace: "\n" with: "\n    ").
@@ -95,12 +102,12 @@ class CTranspiler { output selectorMap blockFunctions }
                       stream println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each},".
                       stream println: "                            .argCount = {arity},".
                       stream println: "                            .frameSize = {arity},".
-                      stream println: "                            .function = &{Name mangleMethod: each in: aClass} }," }.
+                      stream println: "                            .function = &{Name mangleInstanceMethod: each in: aClass} }," }.
         stream println: "    }".
         stream println: "};".
         stream newline.
         -- 3. Vtable
-        stream println: "struct FooVtable {Name mangleVtable: aClass} = ".
+        stream println: "struct FooVtable {Name mangleInstanceVtable: aClass} = ".
         stream println: "\{".
         stream println: "    .name = &FOO_CSTRING({aClass name displayString}),".
         stream println: "    .methods = &{methodArrayName}".
@@ -124,7 +131,7 @@ class CTranspiler { output selectorMap blockFunctions }
         let cname = "fooblock_id{index}".
         output print: "struct Foo ".
         output print: cname.
-        output println: " (struct FooContext* context) \{".
+        output println: " (struct FooContext* ctx) \{".
         output print: "return ".
         let blockVisitor = CTranspiler
                                output: output
@@ -135,6 +142,98 @@ class CTranspiler { output selectorMap blockFunctions }
         blockFunctions put: output content at: index.
         cname!
 
+    method visitClassDefinition: aClass
+        aClass directMethods
+            do: { |each|
+                  self
+                      _generateMethod: each
+                      _in: aClass
+                      _as: (Name mangleDirectMethod: each selector in: aClass) }.
+        aClass instanceMethods
+            do: { |each|
+                  self
+                      _generateMethod: each
+                      _in: aClass
+                      _as: (Name mangleInstanceMethod: each selector in: aClass) }.
+        -- Direct Method Array
+        let directMethodArrayName = "FOO_{aClass name}DirectMethods".
+        output println: "struct FooMethodArray {directMethodArrayName} =".
+        output println: "\{".
+        output println: "    .size = {aClass directMethods size},".
+        output println: "    .data = \{".
+        aClass directMethods
+            do: { |each|
+                  output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
+                  output println: "                            .argCount = {each arity},".
+                  output println: "                            .frameSize = {each frameSize},".
+                  output println: "                            .function = &{Name mangleDirectMethod: each selector in: aClass} }," }.
+        output println: "    }".
+        output println: "};".
+        output newline.
+        -- Instance Method Array
+        let instanceMethodArrayName = "FOO_{aClass name}InstanceMethods".
+        output println: "struct FooMethodArray {instanceMethodArrayName} =".
+        output println: "\{".
+        output println: "    .size = {aClass instanceMethods size},".
+        output println: "    .data = \{".
+        aClass instanceMethods
+            do: { |each|
+                  output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
+                  output println: "                            .argCount = {each arity},".
+                  output println: "                            .frameSize = {each frameSize},".
+                  output println: "                            .function = &{Name mangleInstanceMethod: each selector in: aClass} }," }.
+        output println: "    }".
+        output println: "};".
+        output newline.
+        -- Class Vtable
+        let classVtableName = Name mangleClassVtable: aClass.
+        output println: "struct FooVtable {classVtableName} = ".
+        output println: "\{".
+        output println: "    .name = &FOO_CSTRING({aClass name displayString}\" class\"),".
+        output println: "    .methods = &{directMethodArrayName}".
+        output println: "};".
+        output newline.
+        -- Instance Vtable
+        let instanceVtableName = Name mangleInstanceVtable: aClass.
+        output println: "struct FooVtable {instanceVtableName} = ".
+        output println: "\{".
+        output println: "    .name = &FOO_CSTRING({aClass name displayString}),".
+        output println: "    .methods = &{instanceMethodArrayName}".
+        output println: "};".
+        output newline.
+        -- Class struct
+        let className = "FooClass_{aClass name}".
+        output println: "struct FooClass {className} = ".
+        output println: "\{".
+        output println: "    .instanceVtable = &{instanceVtableName}".
+        output println: "};".
+        output newline.
+        -- Class object
+        let globalName = Name mangleGlobal: aClass.
+        output println: "struct Foo {globalName} =".
+        output println: "\{".
+        output println: "    .vtable = &{classVtableName},".
+        output println: "    .datum = \{ .class = &{className} }".
+        output println: "};".
+        output newline!
+
+    method _generateMethod: aMethod _in: aClass _as: mangledName
+        output print: "struct Foo ".
+        output println: mangledName.
+        output println: "    (struct FooContext* ctx, size_t nargs, va_list args)".
+        output println: "\{".
+        output println: "    (void)ctx;".
+        output println: "    (void)nargs;".
+        output println: "    (void)args;".
+        output print: "    return ".
+        aMethod body visitBy: self.
+        output println: ";".
+        output println: "}"!
+
+    method visitComment: aComment
+        -- FIXME: Include comments in generated source.
+        aComment value visitBy: self!
+
     method visitConstant: aConstant
         let value = aConstant value.
         (Integer includes: value)
@@ -142,7 +241,7 @@ class CTranspiler { output selectorMap blockFunctions }
         Error raise: "Don't know how to transpile constant `{value}` into C."!
 
     method visitSend: aSend
-        output print: "foo_send(context, &".
+        output print: "foo_send(ctx, &".
         output print: (self selectorCName: aSend selector).
         output print: ", ".
         aSend receiver visitBy: self.
@@ -156,17 +255,17 @@ class CTranspiler { output selectorMap blockFunctions }
         output print: ")"!
 
     method visitBindLexical: aBind
-        output print: "(\{ context->frame[{aBind variable index - 1}ul] = ".
+        output print: "(\{ ctx->frame[{aBind variable index - 1}ul] = ".
         aBind value visitBy: self.
         output print: ";".
         aBind body visitBy: self.
         output print: "; })"!
 
     method visitLexicalRef: aRef
-        output print: "foo_lexical_ref(context, {aRef variable index - 1}ul, {aRef frameOffset}ul)"!
+        output print: "foo_lexical_ref(ctx, {aRef variable index - 1}ul, {aRef frameOffset}ul)"!
 
     method visitBlock: aBlock
-        output print: "foo_block_new(context, ".
+        output print: "foo_block_new(ctx, ".
         output print: (self blockCName: aBlock).
         output print: ", ".
         output print: aBlock argumentCount.
