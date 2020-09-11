@@ -11,13 +11,19 @@ define SymbolNames
       "*" -> "mul",
       "/" -> "div",
       "-" -> "sub",
-      "%" -> "mod" }!
+      "%" -> "mod",
+      "==" -> "eq",
+      ">" -> "gt",
+      ">=" -> "gte",
+      "<" -> "lt",
+      "<=" -> "lte"
+      }!
 
 class Name {}
     is Object
 
     direct method mangle: selector prefix: prefix
-        StringOutput
+        let res = StringOutput
             with: { |out|
                     out print: prefix.
                     selector isSymbol
@@ -25,10 +31,15 @@ class Name {}
                     selector isUnary
                         ifTrue: { self _mangleUnary: selector to: out }.
                     selector isKeyword
-                        ifTrue: { self _mangleKeyword: selector to: out } }!
+                        ifTrue: { self _mangleKeyword: selector to: out } }.
+       -- Output debug println: "mangle: {selector} prefix: {prefix} -> {res}".
+       res!
 
     direct method mangle: selector
         self mangle: selector prefix: ""!
+
+    direct method mangleSelector: selector
+        self mangle: selector prefix: "FOO_"!
 
     direct method mangleMethod: selector in: aClass
         "foomethod_{aClass name}_{self mangle: selector}"!
@@ -38,7 +49,9 @@ class Name {}
 
     direct method _mangleSymbol: selector to: out
         out print: "_".
-        out print: (SymbolNames at: selector name)!
+        out print: (SymbolNames
+                        at: selector name
+                        ifNone: { Error raise: "Don't know how to mangle this: {selector}" })!
 
     direct method _mangleUnary: selector to: out
         self _mangleName: selector name to: out!
