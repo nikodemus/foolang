@@ -1,89 +1,6 @@
 import .utils.Debug
 import .astInterpreter.AstInterpreter
 
-class StandardUndefinedPolicy {}
-    -- Called during translation when encountering an undefined variable
-    -- This particular method gets called when an undefined variable is
-    -- encountered outside a definition.
-    direct method reference: name in: environment
-        Error raise: "Undefined variable: {name}\nAvailable: {environment globals keys sort}"!
-
-    direct method referenceDynamic: name in: environment
-        self reference: name in: environment!
-
-    -- Called during evaluation when encountering a lazily resolved undefined
-    -- variable. This particilar method should never be called.
-    direct method resolve: name for: node
-        let locations = StringOutput
-                            with: { |out|
-                                    node sources
-                                        do: { |source|
-                                              out newline.
-                                              out println: (source note: "here") } }.
-        panic "Unresolved undefined variable: `{name}`! This should not happen.{locations}"!
-end
-
-define $UndefinedPolicy
-    StandardUndefinedPolicy!
-
-class AllowReferenceToUndefined {}
-    -- During translation of definitions we allow references to undefined
-    -- variables.
-    direct method reference: name in: env
-        let global = (AstGlobal name: name).
-        env globals
-            put: global
-            at: name.
-        return global!
-
-    direct method referenceDynamic: name in: env
-        let dynamic = (AstDynamic name: name).
-        env globals
-            put: dynamic
-            at: name.
-        return dynamic!
-
-    direct method resolve: name for: node
-        StandardUndefinedPolicy resolve: name for: node!
-
-    direct method do: block
-        let $UndefinedPolicy = self.
-        block value!
-end
-
-class ResolveUndefinedsWith { definitions environment }
-    direct method definitions: definitions in: environment do: block
-        (self definitions: definitions environment: environment)
-            do: block!
-
-    method reference: name in: environment
-        StandardUndefinedPolicy reference: name in: environment!
-
-    method referenceDynamic: name in: environment
-        StandardUndefinedPolicy referenceDynamic: name in: environment!
-
-    -- During evaluation of definition bodies we resolve undefineds to
-    -- as-of-yet evaluated definitions.
-    method resolve: name for: node
-        (definitions
-             at: name
-             ifNone: { StandardUndefinedPolicy reference: name in: environment })
-        defineIn: environment!
-
-    method do: block
-        let $UndefinedPolicy = self.
-        block value!
-end
-
-class UndefinedPolicy {}
-    direct method reference: name in: environment
-        $UndefinedPolicy reference: name in: environment!
-    direct method referenceDynamic: name in: environment
-        $UndefinedPolicy referenceDynamic: name in: environment!
-    direct method resolve: name for: node
-        $UndefinedPolicy resolve: name for: node!
-end
-
 interface Ast
     is Object
 
@@ -115,138 +32,87 @@ end
 interface AstDefinition
     is Object
 
-    required method isDefined
-    required method markDefined
-    required method eval
+    method eval
+        Error raise: "{self classOf name}#eval -- should not happend!"!
+
+    method defineIn: env
+        Error raise: "{self classOf name}#defineIn: -- should not happen!"!
+
+    method global
+        AstGlobal name: name!
 
     method do: block
         block value: self!
-
-    method defineIn: environment
-        self isDefined
-            ifFalse: { DefinitionsInProgress
-                           with: self
-                           do: { { -- Debug println: "define: 1 {self name}".
-                                   let val = self eval.
-                                   -- Debug println: "define: 2 {val}".
-                                   environment define: name value: val }
-                                     after: { self markDefined } } }.
-        (environment globals at: name) value!
-
 end
 
 class AstDefinitionList { list }
     is AstDefinition
     direct method new: list
         self list: list!
-    method isDefined
-        panic "never"!
-    method markDefined
-        panic "never"!
-    method eval
-        panic "never"!
     method do: block
         list do: { |each| each do: block }!
+    method defineIn: env
+        self do: { |each| each defineIn: env }!
 end
 
-class AstDefine { name body frameSize isDynamic isDefined }
+class AstDefine { name body frameSize isDynamic }
     is AstDefinition
 
-    direct method name: name body: body frameSize: frameSize isDynamic: isDynamic
-        self
-            name: name
-            body: body
-            frameSize: frameSize
-            isDynamic: isDynamic
-            isDefined: False!
+    method defineIn: env
+        env define: name as: self!
 
-    method markDefined
-        isDefined = True!
+    method global
+        isDynamic
+            ifTrue: { AstDynamic name: name }
+            ifFalse: { AstGlobal name: name }!
 
     method eval
         AstInterpreter evalDefine: body frameSize: frameSize!
-
-    method isCanonical
-        True!
 
     method toString
         "#<AstDefine {self name}>"!
 end
 
-class AstImport { spec isDefined }
+class AstImport { spec }
     is AstDefinition
 
-    direct method spec: spec
-        self
-            spec: spec
-            isDefined: False!
-
-    method markDefined
-        isDefined = True!
-
-    method isCanonical
-        False!
+    method defineIn: env
+        self!
 
     method eval
         self!
+
+    method toString
+        "#<AstImport {spec}>"!
 end
 
-class AstExtend { type interfaces directMethods instanceMethods isDefined }
+class AstExtend { type interfaces directMethods instanceMethods }
     is AstDefinition
 
-    direct method type: type
-                  interfaces: interfaces
-                  directMethods: directMethods
-                  instanceMethods: instanceMethods
-        self
-            type: type
-            interfaces: interfaces
-            directMethods: directMethods
-            instanceMethods: instanceMethods
-            isDefined: False!
-
-    method defineIn: environment
-        self isDefined
-            ifFalse: { -- FIXME: This should use a mirror for host, or
-                       -- existing metaobjects for self-hosted classes.
-                       DefinitionsInProgress
-                           with: self
-                           do: { let target = type value.
-                                 interfaces do: { |each| target __addInterface: each value }.
-                                 directMethods do: { |each| target __addDirectMethod: each }.
-                                 instanceMethods do: { |each| target __addInstanceMethod: each }.
-                                 self markDefined } }.
-        type value!
-
-    method markDefined
-        isDefined = True!
-
-    method isCanonical
-        False!
+    method defineIn: env
+        -- FIXME: This should use a mirror for host, or
+        -- existing metaobjects for self-hosted classes.
+        --
+        -- FIXME: Does this mean we should resolve name in env instead
+        -- of the way it is now done?
+        let target = type value.
+        interfaces do: { |each| target __addInterface: each value }.
+        directMethods do: { |each| target __addDirectMethod: each }.
+        instanceMethods do: { |each| target __addInstanceMethod: each }.
+        target!
 
     method eval
-        panic "never, extend is different!"!
+        Error raise: "AstExtend#eval -- should not happen"!
 
     method toString
         "#<AstExtend {type name}>"!
 end
 
-class AstInterface { name interfaces directMethods instanceMethods isDefined }
+class AstInterface { name interfaces directMethods instanceMethods }
     is AstDefinition
 
-    direct method name: name
-                  interfaces: interfaces
-                  directMethods: directMethods
-                  instanceMethods: instanceMethods
-        self
-            name: name
-            interfaces: interfaces
-            directMethods: directMethods
-            instanceMethods: instanceMethods
-            isDefined: False!
-
-    method markDefined
-        isDefined = True!
+    method defineIn: env
+        env define: name as: self!
 
     method eval
         Interface
@@ -255,31 +121,15 @@ class AstInterface { name interfaces directMethods instanceMethods isDefined }
             directMethods: (Array from: directMethods)
             instanceMethods: (Array from: instanceMethods)!
 
-    method isCanonical
-        True!
-
     method toString
         "#<AstInterface {name}>"!
 end
 
-class AstClass { name slots interfaces directMethods instanceMethods isDefined }
+class AstClass { name slots interfaces directMethods instanceMethods }
     is AstDefinition
 
-    direct method name: name
-                  slots: slots
-                  interfaces: interfaces
-                  directMethods: directMethods
-                  instanceMethods: instanceMethods
-        self
-            name: name
-            slots: slots
-            interfaces: interfaces
-            directMethods: directMethods
-            instanceMethods: instanceMethods
-            isDefined: False!
-
-    method markDefined
-        isDefined = True!
+    method defineIn: env
+        env define: name as: self!
 
     method eval
         -- Debug println: "slots: {(slots collect: #type) asArray displayString}".
@@ -293,9 +143,6 @@ class AstClass { name slots interfaces directMethods instanceMethods isDefined }
             interfaces: (Array from: (interfaces collect: #value))
             directMethods: (Array from: directMethods)
             instanceMethods: (Array from: instanceMethods)!
-
-    method isCanonical
-        True!
 
     method toString
         "#<AstClass {name}>"!
@@ -333,17 +180,11 @@ class AstComment { comment value source }
     method visitBy: visitor
         visitor visitComment: self!
 
+    method defineIn: env
+        value defineIn: env!
+
     method eval
-        panic "AstComment#eval"!
-
-    method markDefined
-        panic "AstComment#markDefined"!
-
-    method isDefined
-        panic "AstComment#isDefined"!
-
-    method isCanonical
-        panic "AstComment#isCanonical"!
+        value eval!
 
     method do: block
         value do: block!
@@ -389,10 +230,14 @@ class AstDictionary { entries }
         entries!
 end
 
-define AstUndefinedMarker
-    -- FIXME: When constant coalescing starts happening, this needs
-    -- protection.
-    ["<AstUndefineMarker>"]!
+class AstValueMarker { string }
+    method toString
+        string!
+end
+
+define AstUndefined AstValueMarker string: "<undefined>"!
+define AstPending AstValueMarker string: "<pending>"!
+define AstInProgress AstValueMarker string: "<in-progress>"!
 
 interface AstGlobalVariable
     is AstNode
@@ -400,29 +245,52 @@ interface AstGlobalVariable
     direct method name: name
         self
             name: name
-            _value: AstUndefinedMarker
+            _value: AstUndefined
+            _definition: False
             sources: List new!
 
-    direct method name: name value: value
+    direct method name: name definition: definition
         self
             name: name
-            _value: value
+            _value: AstPending
+            _definition: definition
             sources: List new!
 
+    method def
+        _definition!
+
     method isUndefined
-        _value is AstUndefinedMarker!
+        _definition is False!
+
+    method isDefined
+        self isUndefined not!
+
+    method definition
+        self assertDefined: True.
+        _definition!
+
+    method define: definition
+        self assertDefined: False.
+        _value = AstPending.
+        _definition = definition!
+
+    method assertDefined: wanted
+        self isDefined is wanted
+            ifFalse: { wanted
+                           ifTrue: { Error raise: "Undefined global: {name}" }
+                           ifFalse: { Error raise: "Global is already defined: {name}" } }!
 
     method value
-        self isUndefined
-            ifTrue: { return UndefinedPolicy resolve: self name for: self }.
+        self assertDefined: True.
+        _value is AstInProgress
+            ifTrue: { Error raise: "Cyclic definition: {self name}" }.
+        _value is AstPending
+            ifTrue: { _value = AstInProgress.
+                      _value = _definition eval }.
         _value!
 
     method isConstant
         True!
-
-    method value: newValue
-        (_value is AstUndefinedMarker) assert.
-        _value = newValue!
 
     method visitBy: visitor
         visitor visitGlobal: self!
@@ -431,7 +299,12 @@ interface AstGlobalVariable
         self!
 
     method toString
-        "#<{self classOf name} {self name}: {_value}>"!
+        "#<{self classOf name} {self name}: {self _info}>"!
+
+    method _info
+        self isUndefined
+            ifTrue: { "<undefined>" }.
+        _value!
 
     method warnIfUndefined
         self isUndefined
@@ -445,11 +318,13 @@ interface AstGlobalVariable
         self!
 end
 
-class AstGlobal { name::String _value sources }
+class AstGlobal { name::String _value _definition sources }
     is AstGlobalVariable
+    method bind: newValue in: block
+        self error: "Cannot bind a lexical global: {name}"!
 end
 
-class AstDynamic { name::String _value sources }
+class AstDynamic { name::String _value _definition sources }
     is AstGlobalVariable
 
     method bind: newValue in: block
