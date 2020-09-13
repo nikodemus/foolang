@@ -1,4 +1,5 @@
 import .test_self_hosting.TestSelfHosting
+import .utils.Debug
 
 class TestFoolang { system ok onFailure }
     is TestSelfHosting
@@ -396,9 +397,10 @@ end
             eval: "SourceTest new foo"
             expectError: DoesNotUnderstand
             where: { |e|
-                     -- FIXME: this is only for "bar:", should include the
-                     -- whole selector!
-                     e source location == (168 to: 171) } !
+                     (e selector == #bar:quux:)
+                         ifTrue: { -- FIXME: this is only for "bar:", should include the
+                                   -- whole selector!
+                                   e source location == (168 to: 171) } }!
 
     method testOutOfOrderDefine
         self load: "define Two

@@ -42,8 +42,9 @@ interface TestSelfHosting
 
     method runTest: selector
         { Debug print: selector name.
+          Debug print: " ".
           selector sendTo: self.
-          Debug println: " ok" }
+          Debug println: "ok" }
             on: Error
             do: { |e|
                   Debug println: " FAILED:\n{e description}".
@@ -111,8 +112,7 @@ from: '{exprSource}'" }!
     method eval: exprSource expectError: errorType where: test
         self checkParsingBy: { |source| Parser parseExpressions: source }
              for: exprSource.
-        let result = False.
-        { result = Environment new eval: exprSource }
+        let result = { Environment new eval: exprSource }
             on: errorType
             do: { |e|
                   (test value: e)

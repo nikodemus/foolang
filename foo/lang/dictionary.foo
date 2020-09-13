@@ -28,7 +28,8 @@ extend Dictionary
                                        out display: each.
                                        out print: " -> ".
                                        out display: (self at: each) }
-                                 interleaving: { out println: "," }.
+                                 interleaving: { out println: ",".
+                                                 out print: "  " }.
                              out print: " }" }!
 
     method isEquivalent: other

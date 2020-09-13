@@ -2,39 +2,46 @@ import .syntaxTranslator.SyntaxTranslator
 import .astInterpreter.AstInterpreter
 import .utils.Debug
 import .ast.AstGlobal
+import .ast.AstDynamic
 import .ast.AstLexicalRef
 import .ast.AstSlotRef
 import .ast.AstDefinition
-import .ast.UndefinedPolicy
-import .ast.AllowReferenceToUndefined
-import .ast.ResolveUndefinedsWith
 import .parser.Parser
 
-class Builtin { globals }
+class Builtin { value }
+    method eval
+        value!
+end
+
+class Globals { dictionary }
+    direct method new
+        self dictionary: Dictionary new!
     method define: builtin
         let name = builtin name.
-        globals put: (AstGlobal name: name value: builtin) at: name!
+        dictionary
+            put: (AstGlobal name: name definition: (Builtin value: builtin))
+            at: name!
 end
 
 -- FIXME: cannot differentiate from local definitions!
 define Builtins
-    let builtin = Builtin globals: Dictionary new.
-    builtin define: Any.
-    builtin define: Array.
-    builtin define: ByteArray.
-    builtin define: Boolean.
-    builtin define: DoesNotUnderstand.
-    builtin define: Error.
-    builtin define: False.
-    builtin define: Integer.
-    builtin define: List.
-    builtin define: Object.
-    builtin define: Selector.
-    builtin define: String.
-    builtin define: StringOutput.
-    builtin define: True.
-    builtin define: TypeError.
-    builtin globals!
+    Globals new
+    ; define: Any
+    ; define: Array
+    ; define: ByteArray
+    ; define: Boolean
+    ; define: DoesNotUnderstand
+    ; define: Error
+    ; define: False
+    ; define: Integer
+    ; define: List
+    ; define: Object
+    ; define: Selector
+    ; define: String
+    ; define: StringOutput
+    ; define: True
+    ; define: TypeError
+    ; dictionary!
 
 class Variable { name type index }
     is Object
@@ -267,23 +274,12 @@ class Environment { parent    -- Enclosing environment or False
         (Parser parseDefinitions: string)
             do: { |syntax|
                   -- Debug println: "translate: {syntax}".
-                  AllowReferenceToUndefined
-                      do: { (SyntaxTranslator
-                                 translate: syntax
-                                 in: (self toplevel))
-                            do: { |def|
-                                  -- Debug print: "save: ".
-                                  -- Debug println: "{def}".
-                                  def isCanonical
-                                      ifTrue: { envDefs put: def at: def name }.
-                                  pendingDefs add: def } } }.
-        ResolveUndefinedsWith
-            definitions: envDefs
-            in: self
-            do: { pendingDefs
-                      do: { |def|
-                            -- Debug println: "define: {def} with: {envDefs keys sort asArray}".
-                            def defineIn: self } }.
+                  (SyntaxTranslator
+                       translate: syntax
+                       in: (self toplevel))
+                  do: { |def|
+                        -- Debug println: "def: {def}".
+                        def defineIn: self } }.
         self checkGlobals.
         -- Debug println: "Environment#load: OK".
         return self!
@@ -311,37 +307,27 @@ class Environment { parent    -- Enclosing environment or False
 
     method global: name
         -- Debug println: "Environment#global: {name}".
-        -- Debug println: "has:\n{globals displayString}".
+        -- Debug println: "has builtins:\n{builtins}".
+        -- Debug println: "has globals:\n{globals displayString}".
         builtins
             at: name
             ifNone: { globals
                           at: name
-                          ifNone: { self undefined: name } }!
+                          ifNonePut: { AstGlobal name: name } }!
 
     method dynamic: name
+        -- Debug println: "Environment#dynamic: {name}".
         globals
             at: name
-            ifNone: { self undefinedDynamic: name }!
+            ifNonePut: { AstDynamic name: name }!
 
-    method undefined: name
-        UndefinedPolicy reference: name in: self!
-
-    method undefinedDynamic: name
-        UndefinedPolicy referenceDynamic: name in: self!
-
-    method define: name value: value
-        -- Debug println: "Environment#define:value: {name}".
+    method define: name as: definition
+        -- Debug println: "Environment#define:as: {name}".
         (builtins has: name)
             ifTrue: { Error raise: "Cannot redefine a builtin: {name}" }.
         let global = globals
                          at: name
-                         ifNone: { globals
-                                       put: (AstGlobal name: name value: value)
-                                       at: name.
-                                   return value }.
-        global isUndefined
-            ifTrue: { global value: value.
-                      value }
-            ifFalse: { Error raise: "Cannot redefine a global: {name}" }!
+                         ifNonePut: { definition global }.
+        global define: definition!
 
 end
