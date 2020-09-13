@@ -277,9 +277,7 @@ class Environment { parent    -- Enclosing environment or False
                   (SyntaxTranslator
                        translate: syntax
                        in: (self toplevel))
-                  do: { |def|
-                        -- Debug println: "def: {def}".
-                        def defineIn: self } }.
+                  defineIn: self }.
         self checkGlobals.
         -- Debug println: "Environment#load: OK".
         return self!

@@ -11,24 +11,6 @@ interface Ast
         Debug println: "#<AST {self}>"!
 end
 
-define $DefinitionsInProgress
-    False!
-
-class DefinitionsInProgress { this next }
-    direct method with: definition do: block
-        let old = $DefinitionsInProgress.
-        old is False
-            ifFalse: { old checkCycle: definition }.
-        let $DefinitionsInProgress = DefinitionsInProgress this: definition next: old.
-        block value!
-
-    method checkCycle: definition
-        this is definition
-            ifTrue: { Error raise: "Cyclic definition!" }.
-        next is False
-            ifFalse: { next checkCycle: definition }!
-end
-
 interface AstDefinition
     is Object
 
@@ -39,20 +21,17 @@ interface AstDefinition
         Error raise: "{self classOf name}#defineIn: -- should not happen!"!
 
     method global
-        AstGlobal name: name!
-
-    method do: block
-        block value: self!
+        AstGlobal name: self name!
 end
 
 class AstDefinitionList { list }
     is AstDefinition
+
     direct method new: list
         self list: list!
-    method do: block
-        list do: { |each| each do: block }!
+
     method defineIn: env
-        self do: { |each| each defineIn: env }!
+        list do: { |each| each defineIn: env }!
 end
 
 class AstDefine { name body frameSize isDynamic }
@@ -100,9 +79,6 @@ class AstExtend { type interfaces directMethods instanceMethods }
         directMethods do: { |each| target __addDirectMethod: each }.
         instanceMethods do: { |each| target __addInstanceMethod: each }.
         target!
-
-    method eval
-        Error raise: "AstExtend#eval -- should not happen"!
 
     method toString
         "#<AstExtend {type name}>"!
@@ -186,8 +162,8 @@ class AstComment { comment value source }
     method eval
         value eval!
 
-    method do: block
-        value do: block!
+    method parts
+        [comment, value]!
 end
 
 class AstArray { entries }
