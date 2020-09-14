@@ -54,6 +54,11 @@ extend Dictionary
         self doKeys: { |key| keys add: key }.
         keys!
 
+    method values
+        let values = List new.
+        self doValues: { |val| values add: val }.
+        values!
+
     method do: block
         self doKeys: { |key|
                        block

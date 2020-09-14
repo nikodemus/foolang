@@ -41,11 +41,20 @@ class Name {}
     direct method mangleSelector: selector
         self mangle: selector prefix: "FOO_"!
 
-    direct method mangleMethod: selector in: aClass
-        "foomethod_{aClass name}_{self mangle: selector}"!
+    direct method mangleInstanceMethod: selector in: aClass
+        "fooInstanceMethod_{aClass name}_{self mangle: selector}"!
 
-    direct method mangleVtable: aClass
-        "FooVtable_{aClass name}"!
+    direct method mangleDirectMethod: selector in: aClass
+        "fooDirectMethod_{aClass name}_{self mangle: selector}"!
+
+    direct method mangleClassVtable: aClass
+        "FooClassVtable_{aClass name}"!
+
+    direct method mangleInstanceVtable: aClass
+        "FooInstanceVtable_{aClass name}"!
+
+    direct method mangleGlobal: aGlobal
+        "FooGlobal_{aGlobal name}"!
 
     direct method _mangleSymbol: selector to: out
         out print: "_".

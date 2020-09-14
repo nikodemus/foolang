@@ -15,7 +15,7 @@
   ((type*)foo_alloc((n), sizeof(type)))
 
 #if 0
-# define FOO_DEBUG(...) { printf(__VA_ARGS__); fflush(stdout); }
+# define FOO_DEBUG(...) { printf(__VA_ARGS__); printf("\n"); fflush(stdout); }
 #else
 # define FOO_DEBUG(...)
 #endif
@@ -49,12 +49,13 @@ void* foo_alloc(size_t n, size_t size) {
 
 struct FooVtable;
 struct FooBlock;
+struct FooClass;
 
 union FooDatum {
   struct Foo* object;
   struct FooBlock* block;
+  struct FooClass* class;
   int64_t int64;
-
 };
 
 struct Foo {
@@ -199,6 +200,11 @@ struct FooVtable {
   struct FooMethodArray* methods;
 };
 
+struct FooClass {
+  // struct FooSlotArray* instanceSlots;
+  struct FooVtable* instanceVtable;
+};
+
 struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj) {
   if (vtable == obj.vtable) {
     return obj;
@@ -210,7 +216,7 @@ struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj) {
 
 struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, const struct FooSelector* selector) {
   struct FooMethodArray* methods = vtable->methods;
-  FOO_DEBUG("/foo_vtable_find_method(%s#%s)\n", vtable->name.data, selector->name->data);
+  FOO_DEBUG("/foo_vtable_find_method(%s#%s)\n", vtable->name->data, selector->name->data);
   assert(methods);
   for (size_t i = 0; i < methods->size; ++i) {
     struct FooMethod* method = &methods->data[i];
@@ -237,8 +243,9 @@ struct Foo foo_send(struct FooContext* sender,
   }
 }
 
-struct FooVtable FooVtable_Integer;
-struct FooVtable FooVtable_Block;
+// FIXME: These forward declarations should be generated
+struct FooVtable FooInstanceVtable_Integer;
+struct FooVtable FooInstanceVtable_Block;
 
 struct Foo foo_block_new(struct FooContext* context,
                          FooBlockFunction function,
@@ -249,11 +256,11 @@ struct Foo foo_block_new(struct FooContext* context,
   block->function = function;
   block->argCount = argCount;
   block->frameSize = frameSize;
-  return (struct Foo){ .vtable = &FooVtable_Block, .datum = { .block = block } };
+  return (struct Foo){ .vtable = &FooInstanceVtable_Block, .datum = { .block = block } };
 }
 
 struct Foo foo_Integer_new(int64_t n) {
-  return (struct Foo){ .vtable = &FooVtable_Integer, .datum = { .int64 = n } };
+  return (struct Foo){ .vtable = &FooInstanceVtable_Integer, .datum = { .int64 = n } };
 }
 
 struct Foo foo_apply(struct FooContext* ctx, size_t nargs, va_list args) {
@@ -267,7 +274,4 @@ struct Foo foo_apply(struct FooContext* ctx, size_t nargs, va_list args) {
 
 #include "generated_classes.c"
 
-int main() {
-  #include "generated_main.c"
-  return 0;
-}
+#include "generated_main.c"

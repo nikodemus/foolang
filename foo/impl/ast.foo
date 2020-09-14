@@ -120,6 +120,9 @@ class AstClass { name slots interfaces directMethods instanceMethods }
             directMethods: (Array from: directMethods)
             instanceMethods: (Array from: instanceMethods)!
 
+    method visitBy: visitor
+        visitor visitClassDefinition: self!
+
     method toString
         "#<AstClass {name}>"!
 end
@@ -129,6 +132,9 @@ class AstMethod { selector argumentVariables returnType body frameSize isDirect 
 
     method name
         selector name!
+
+    method arity
+        argumentVariables size!
 
     method invoke: arguments on: receiver
         AstInterpreter
@@ -232,9 +238,6 @@ interface AstGlobalVariable
             _definition: definition
             sources: List new!
 
-    method def
-        _definition!
-
     method isUndefined
         _definition is False!
 
@@ -296,8 +299,6 @@ end
 
 class AstGlobal { name::String _value _definition sources }
     is AstGlobalVariable
-    method bind: newValue in: block
-        self error: "Cannot bind a lexical global: {name}"!
 end
 
 class AstDynamic { name::String _value _definition sources }
