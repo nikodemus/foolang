@@ -163,7 +163,7 @@ class CTranspiler { output selectorMap blockFunctions }
         output println: "    .slots = \{".
         aClass slots
             do: { |each|
-                  output println: "        \{ .name = FOO_CSTRING({each name displayString}) }," }.
+                  output println: "        \{ .name = &FOO_CSTRING({each name displayString}) }," }.
         output println: "    }".
         output println: "};".
         output newline.
@@ -261,6 +261,25 @@ class CTranspiler { output selectorMap blockFunctions }
         aMethod body visitBy: self.
         output println: ";".
         output println: "}"!
+
+    method visitSeq: seq
+        output print: "(\{ ".
+        seq first visitBy: self.
+        output print: "; ".
+        seq then visitBy: self.
+        output print: "; })"!
+
+    method visitSlotSet: set
+        output print: "(ctx->receiver.datum.object[".
+        output print: (set slot index - 1).
+        output print: "] = ".
+        set value visitBy: self.
+        output print: ")"!
+
+    method visitSlotRef: ref
+        output print: "ctx->receiver.datum.object[".
+        output print: (ref slot index - 1).
+        output print: "]"!
 
     method visitComment: aComment
         -- FIXME: Include comments in generated source.
