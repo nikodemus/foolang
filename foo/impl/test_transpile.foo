@@ -108,6 +108,19 @@ class TestTranspile { assert system }
                                  42!
                          end"
             expect: "#<Integer 42>"!
+
+    method testSlots
+        self transpile: "class Main \{ x }
+                             direct method run
+                                 let instance = self x: 21.
+                                 instance double.
+                                 instance read debug!
+                             method double
+                                 x = x * 2!
+                             method read
+                                 x!
+                         end"
+            expect: "#<Integer 42>"!
 end
 
 class Main {}
