@@ -20,7 +20,7 @@
 # define FOO_DEBUG(...)
 #endif
 
-#define FOO_PANIC(...) { printf("PANIC" __VA_ARGS__); fflush(stdout); _Exit(1); }
+#define FOO_PANIC(...) { printf("PANIC: " __VA_ARGS__); fflush(stdout); _Exit(1); }
 
 void foo_unimplemented(const char* message) __attribute__ ((noreturn));
 void foo_unimplemented(const char* message) {
@@ -109,6 +109,15 @@ struct FooSelector* foo_intern(const struct FooCString* name) {
 struct FooArray {
   size_t size;
   struct Foo data[];
+};
+
+struct FooSlot {
+  const struct FooCString* name;
+};
+
+struct FooLayout {
+  size_t size;
+  struct FooSlot slots[];
 };
 
 struct FooContext {
@@ -239,7 +248,8 @@ struct Foo foo_send(struct FooContext* sender,
     struct FooContext* context = foo_context_new_method(method, sender, receiver, nargs);
     return method->function(context, nargs, arguments);
   } else {
-    FOO_PANIC("foo_send: receiver does not understand message");
+    FOO_PANIC("%s does not understand: #%s",
+              receiver.vtable->name->data, selector->name->data);
   }
 }
 

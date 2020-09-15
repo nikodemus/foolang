@@ -99,6 +99,15 @@ class TestTranspile { assert system }
                                  42!
                          end"
             expect: "#<Integer 42>"!
+
+    method testCtor
+        self transpile: "class Main \{}
+                             direct method run
+                                 self new foo debug!
+                             method foo
+                                 42!
+                         end"
+            expect: "#<Integer 42>"!
 end
 
 class Main {}

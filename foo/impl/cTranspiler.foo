@@ -155,13 +155,46 @@ class CTranspiler { output selectorMap blockFunctions }
                       _generateMethod: each
                       _in: aClass
                       _as: (Name mangleInstanceMethod: each selector in: aClass) }.
+        -- Layout
+        let layoutName = "FooLayout_{aClass name}".
+        output println: "struct FooLayout {layoutName} =".
+        output println: "\{".
+        output println: "    .size = {aClass slots size},".
+        output println: "    .slots = \{".
+        aClass slots
+            do: { |each|
+                  output println: "        \{ .name = FOO_CSTRING({each name displayString}) }," }.
+        output println: "    }".
+        output println: "};".
+        output newline.
+        -- Constructor
+        let instanceVtableName = Name mangleInstanceVtable: aClass.
+        let ctor = aClass constructor.
+        let ctorName = Name mangleDirectMethod: ctor in: aClass.
+        output println: "struct FooVtable {instanceVtableName};". -- forward decl
+        output newline.
+        output print: "struct Foo ".
+        output println: ctorName.
+        output println: "    (struct FooContext* ctx, size_t nargs, va_list args)".
+        output println: "\{".
+        output println: "    (void)ctx;".
+        output println: "    (void)nargs;".
+        output println: "    (void)args;".
+        output println: "    struct Foo* new = FOO_ALLOC_ARRAY({aClass slots size}, struct Foo);".
+        output println: "    for (int i = 0; i < {aClass slots size}; ++i)".
+        output println: "        new[i] = va_arg(args, struct Foo);".
+        output println: "    return (struct Foo)\{ .vtable = &{instanceVtableName}, .datum = \{ .object = new } };".
+        output println: "}".
+        output newline.
         -- Direct Method Array
         let directMethodArrayName = "FOO_{aClass name}DirectMethods".
+        let directMethods = aClass directMethods copy.
+        directMethods push: { selector: ctor, arity: aClass slots size, frameSize: 0 }.
         output println: "struct FooMethodArray {directMethodArrayName} =".
         output println: "\{".
-        output println: "    .size = {aClass directMethods size},".
+        output println: "    .size = {directMethods size},".
         output println: "    .data = \{".
-        aClass directMethods
+        directMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                   output println: "                            .argCount = {each arity},".
@@ -194,7 +227,6 @@ class CTranspiler { output selectorMap blockFunctions }
         output println: "};".
         output newline.
         -- Instance Vtable
-        let instanceVtableName = Name mangleInstanceVtable: aClass.
         output println: "struct FooVtable {instanceVtableName} = ".
         output println: "\{".
         output println: "    .name = &FOO_CSTRING({aClass name displayString}),".
