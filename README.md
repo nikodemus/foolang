@@ -2,23 +2,20 @@
 
 ![CI](https://github.com/nikodemus/foolang/workflows/CI/badge.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> _This is a toy language implemented by a single person&mdash;use for quiet
-> enjoyment only._
-
-**_The Foo Programming Language_**
+**This is a toy language implemented by a single person&mdash;use for quiet enjoyment only.**
 
 Foolang is a Smalltalk-inspired language that, like all new languages, has what
 you might generously call _somewhat optimistic aspirations_:
 
-- _Elegance and power of Smalltalk and Self:_ Smalltalk-like syntax, deep object
-  orientation, and late binding._
+- **_Elegance and power of Smalltalk and Self:_** Smalltalk-like syntax, deep object
+  orientation, and late binding.
 
-- _Performance of C++:_ Support for early binding when you need it so that the
+- **_Performance of C++:_** Support for early binding when you need it so that the
   compiler can go to town. Low-level operations which allow eliding overflow
-  checking in tight loops, etc._
+  checking in tight loops, etc.
 
-- _Fault tolerance of Erlang:_ Agent-model, isolated heaps, and supervisors.
-  No undefined behaviour._
+- **_Fault tolerance of Erlang:_** Agent-model, isolated heaps, and supervisors.
+  No undefined behaviour.
 
 **_"Are we there yet?"_**
 
