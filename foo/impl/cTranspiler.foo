@@ -254,6 +254,9 @@ class CTranspiler { output selectorMap blockFunctions }
                   arg visitBy: self }.
         output print: ")"!
 
+    method visitSelfInstance: aSelf
+        output print: "ctx->receiver"!
+
     method visitBindLexical: aBind
         output print: "(\{ ctx->frame[{aBind variable index - 1}ul] = ".
         aBind value visitBy: self.
