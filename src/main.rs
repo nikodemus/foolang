@@ -4,7 +4,7 @@ use foolang::time::TimeInfo;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-fn oops(what: String, app: Option<&App>) -> ! {
+fn oops<T: std::fmt::Display>(what: T, app: Option<&App>) -> ! {
     println!("FATAL - {}\n---", what);
     if app.is_some() {
         app.unwrap().clone().print_help().unwrap();
@@ -104,7 +104,7 @@ fn foo_main() {
         };
         let foo = match Foolang::new(prelude, module_roots) {
             Ok(foo) => foo,
-            Err(err) => oops(err.to_string(), Some(&app)),
+            Err(err) => oops(err, Some(&app)),
         };
         let command = foo.into_array(
             matches
@@ -115,7 +115,7 @@ fn foo_main() {
         // FIXME: pass in env and argv to run
         match foo.run(&program, command) {
             Ok(_) => std::process::exit(0),
-            Err(err) => oops(err.to_string(), Some(&app)),
+            Err(err) => oops(err, Some(&app)),
         }
     }
 }

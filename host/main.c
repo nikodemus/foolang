@@ -111,6 +111,15 @@ struct FooArray {
   struct Foo data[];
 };
 
+struct FooSlot {
+  const struct FooCString* name;
+};
+
+struct FooLayout {
+  size_t size;
+  struct FooSlot slots[];
+};
+
 struct FooContext {
   const char* info;
   struct FooContext* sender;

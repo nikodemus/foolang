@@ -120,6 +120,16 @@ class AstClass { name slots interfaces directMethods instanceMethods }
             directMethods: (Array from: directMethods)
             instanceMethods: (Array from: instanceMethods)!
 
+    method constructor
+        slots
+            ifEmpty: { #new }
+            ifNotEmpty: { Selector
+                              new: (StringOutput
+                                        with: { |out|
+                                                slots do: { |each|
+                                                            out print: each name.
+                                                            out print: ":" } }) }!
+
     method visitBy: visitor
         visitor visitClassDefinition: self!
 
