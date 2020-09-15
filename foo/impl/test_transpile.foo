@@ -121,6 +121,19 @@ class TestTranspile { assert system }
                                  x!
                          end"
             expect: "#<Integer 42>"!
+
+    method testNonLocalReturn
+        self transpile: "class Main \{}
+                             direct method run
+                                 self foo debug!
+                             direct method foo
+                                 self bar: \{ |x| return x }.
+                                 13!
+                             direct method bar: block
+                                 block value: 42!
+                         end"
+            expect: "#<Integer 42>"!
+
 end
 
 class Main {}
