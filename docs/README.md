@@ -9,13 +9,23 @@
 Foolang is a Smalltalk-inspired language that, like all new languages,
 has what you might generously call _somewhat optimistic aspirations_:
 
-- Elegance and power of Smalltalk
-- Performance of C++
-- Fault tolerance of Erlang
+- _Elegance and power of Smalltalk and Self:_ Smalltalk-like syntax, deep object
+  orientation, and late binding as default._
+
+- _Performance of C++:_ Easy and convenient early binding when you need it, so
+  that the compiler can go to town. Low-level operations which allow eliding
+  overflow checking in tight loops, etc._
+
+- _Fault tolerance of Erlang:_ Agent-model, isolated heaps, and supervisors.
+  No undefined behaviour._
 
 **_"Are we there yet?"_**
 
 Nope.
+
+Syntax is still settling down, early binding support isn't quite there, there is
+no compiler yet, and many things which should be first class objects aren't yet,
+etc.
 
 **_"When we going to get there?"_**
 
@@ -70,7 +80,7 @@ responding to messages.
 <span class="done">&check;</span>
 **Optional typing & typechecks**: all expressions can
 be annotated with types, including method parameters and return values.
-Currently these types are checked at runtime. 
+Currently these types are checked at runtime.
 
 <span class="done">&check;</span>
 **Multiple inheritance of interfaces**: classes can inherit from multiple
@@ -87,7 +97,7 @@ instantiable classes cannot be inherited from in Foolang.
 <span class="done">&check;</span>
 **Non-local returns**: Foolang supports Smalltalk-style non-local returns
 from closures, allowing simple implementations for powerful control structures.
- 
+
 <span class="done">&check;</span>
 **Dynamic bindings**: dynamic bindings combined with lexical closures
 allow powerful error handling to be implemented in user code,

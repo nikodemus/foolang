@@ -2,10 +2,37 @@
 
 ![CI](https://github.com/nikodemus/foolang/workflows/CI/badge.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-The main [Foolang website](https://foolang.org) is https://foolang.org, containing
-syntax, design notes, aspirations, etc.
+> _This is a toy language implemented by a single person&mdash;use for quiet
+> enjoyment only._
 
-"Hello world" looks like this:
+**_The Foo Programming Language_**
+
+Foolang is a Smalltalk-inspired language that, like all new languages, has what
+you might generously call _somewhat optimistic aspirations_:
+
+- _Elegance and power of Smalltalk and Self:_ Smalltalk-like syntax, deep object
+  orientation, and late binding._
+
+- _Performance of C++:_ Support for early binding when you need it so that the
+  compiler can go to town. Low-level operations which allow eliding overflow
+  checking in tight loops, etc._
+
+- _Fault tolerance of Erlang:_ Agent-model, isolated heaps, and supervisors.
+  No undefined behaviour._
+
+**_"Are we there yet?"_**
+
+Nope.
+
+Syntax is still settling down, early binding support isn't quite there, there is
+no compiler yet, and many things which should be first class objects aren't yet,
+etc.
+
+**_"When we going to get there?"_**
+
+Someday!
+
+## Hello World
 
 ``` foolang
 class Main {}
@@ -14,12 +41,13 @@ class Main {}
 end
 ```
 
-0.1.0 release pronounced the bootstrap interpreter good enough. Current work is
-focused on a self-hosted interpreter and C transpiler&mdash;the Rust
-implementation likely to go the way of the dodo by 0.2.0.
+## More Information
+
+The main [Foolang website](https://foolang.org) is https://foolang.org, containing
+syntax, design notes, aspirations, etc.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for information on how to contribute.
-You'll be the first, so it'll be interesting to see how that works out!
+You'll be the first. :)
 
 Repository organization:
 
