@@ -9,15 +9,14 @@
 Foolang is a Smalltalk-inspired language that, like all new languages,
 has what you might generously call _somewhat optimistic aspirations_:
 
-- _Elegance and power of Smalltalk and Self:_ Smalltalk-like syntax, deep object
-  orientation, and late binding as default._
+- **_Elegance and power of Smalltalk and Self:_** Smalltalk-like syntax, deep object
+  orientation, and late binding as default.
 
-- _Performance of C++:_ Easy and convenient early binding when you need it, so
+- **_Performance of C++:_** Support for early binding when you need it, so
   that the compiler can go to town. Low-level operations which allow eliding
-  overflow checking in tight loops, etc._
+  overflow checking in tight loops, etc.
 
-- _Fault tolerance of Erlang:_ Agent-model, isolated heaps, and supervisors.
-  No undefined behaviour._
+- **_Fault tolerance of Erlang:_** Agent-model, isolated heaps, and supervisors.
 
 **_"Are we there yet?"_**
 
