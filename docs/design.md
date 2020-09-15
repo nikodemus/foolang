@@ -2,15 +2,20 @@
 
 ## Design Priorities
 
-1. **Safety**: No memory errors. No race conditions, kinda. No ambient
+1. **Safety**: No memory errors. No memory race conditions. No ambient
    authority. No undefined behaviour. Fault-tolerant applications.
 
 2. **Ergonomics**: Code should be a pleasure to read and write.
 
-3. **Performance**: Code with type annotations should run on par with -O0
-   compiled "equivalent" C or C++. As long as the compiler backend doesn't
-   exist this is by necessity based on handwaving: _"that should be easy
-   enough to handle!"_
+3. **Performance**: Code with class type annotations should run on par with -O0
+   compiled "equivalent" C or C++.
+   
+   As long as the compiler backend doesn't exist this is by necessity based on
+   handwaving: _"that should be easy enough to handle!"_
+   
+   Assumption is that matching performance -O3 code is mostly a question of
+   having a good LLVM backend and some specific primitive methods to gain type
+   the leverage C and C++ get from undefined behaviour.
 
 4. **Uniformity**: Built-in code should not be privileged over user code.
    This is sometimes called growability: most of the language should
