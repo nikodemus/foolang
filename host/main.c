@@ -15,7 +15,7 @@
   ((type*)foo_alloc((n), sizeof(type)))
 
 #if 0
-# define FOO_DEBUG(...) { printf(__VA_ARGS__); printf("\n"); fflush(stdout); }
+# define FOO_DEBUG(...) { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); fflush(stderr); }
 #else
 # define FOO_DEBUG(...)
 #endif
@@ -218,14 +218,14 @@ struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj) {
   if (vtable == obj.vtable) {
     return obj;
   } else {
-    FOO_PANIC("Type error! Wanted: %s, got: %s\n",
+    FOO_PANIC("Type error! Wanted: %s, got: %s",
               vtable->name->data, obj.vtable->name->data);
   }
 }
 
 struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, const struct FooSelector* selector) {
   struct FooMethodArray* methods = vtable->methods;
-  FOO_DEBUG("/foo_vtable_find_method(%s#%s)\n", vtable->name->data, selector->name->data);
+  FOO_DEBUG("/foo_vtable_find_method(%s#%s)", vtable->name->data, selector->name->data);
   assert(methods);
   for (size_t i = 0; i < methods->size; ++i) {
     struct FooMethod* method = &methods->data[i];
@@ -239,7 +239,7 @@ struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, const s
 struct Foo foo_send(struct FooContext* sender,
                     const struct FooSelector* selector,
                     struct Foo receiver, size_t nargs, ...) {
-  FOO_DEBUG("/foo_send(?, %s, ...)\n", selector->name->data);
+  FOO_DEBUG("/foo_send(?, %s, ...)", selector->name->data);
   va_list arguments;
   va_start(arguments, nargs);
   assert(receiver.vtable);
