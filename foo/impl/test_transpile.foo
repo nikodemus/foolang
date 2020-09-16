@@ -151,7 +151,11 @@ class Main {}
         [ TestName,
           (TestTranspile system: system) ]
         do: { |each|
-              ok = ok and: (Assert runSuite: each in: system) passed }.
+              ok = ok and: (Assert
+                                runSuite: each
+                                in: system
+                                onFailure: { system exit: 1 })
+              passed }.
         ok
             ifTrue: { system exit }
             ifFalse: { system exit: 1 }!
