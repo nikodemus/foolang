@@ -1,7 +1,11 @@
 interface TestSuite
     method runTests
-        self doTests: { |each| each sendTo: self }.
+        self doTests: { |each| self runTest: each }.
         self!
+
+    method runTest: test
+        Output debug println: "- {test name}".
+        test sendTo: self!
 
     method doTests: block
         let list = List new.

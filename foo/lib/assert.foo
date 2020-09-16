@@ -91,10 +91,16 @@ class Assert { output failed }
         self output: output failed: False!
 
     direct method runSuite: suite in: system
+        self runSuite: suite in: system onFailure: { self }!
+
+    direct method runSuite: suite in: system onFailure: failBlock
         let assert = self reportingTo: system output.
         let tests = suite assert: assert.
         system output println: tests classOf name.
-        tests runTests.
+        tests doTests: { |each|
+                         tests runTest: each.
+                         assert failed
+                             ifTrue: failBlock }.
         assert!
 
     method report: testResult

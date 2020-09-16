@@ -40,19 +40,6 @@ interface TestSelfHosting
     direct method runIn: system
         self runIn: system onFailure: { True }!
 
-    method runTest: selector
-        { Debug print: selector name.
-          Debug print: " ".
-          selector sendTo: self.
-          Debug println: "ok" }
-            on: Error
-            do: { |e|
-                  Debug println: " FAILED:\n{e description}".
-                  onFailure value.
-                  ok = False.
-                  return False }.
-        True!
-
     method checkParsingBy: block for: source
         -- Check Syntax print/parse consistency.
         -- Debug println: "/parse1".

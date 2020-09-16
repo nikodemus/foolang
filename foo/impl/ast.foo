@@ -143,9 +143,6 @@ class AstMethod { selector argumentVariables returnType body frameSize isDirect 
     method name
         selector name!
 
-    method arity
-        argumentVariables size!
-
     method invoke: arguments on: receiver
         AstInterpreter
             invokeMethod: self
@@ -154,6 +151,11 @@ class AstMethod { selector argumentVariables returnType body frameSize isDirect 
 
     method isDefined
         (body is False) not!
+
+    -- FIXME: duplicate methods below
+
+    method arity
+        argumentVariables size!
 
     method argumentCount
         argumentVariables size!

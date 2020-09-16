@@ -3,8 +3,14 @@ import .transpiler.integer.IntegerMethods
 import .ast.AstClass
 
 define BlockMethods
-    { #value -> {signature: [],
-                 body: "return foo_apply(ctx, nargs, args);"} }!
+    { #value
+          -> {signature: [],
+              body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
+return ctx->receiver.datum.block->function(block_ctx);"},
+      #value:
+          -> {signature: [Any],
+              body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
+return ctx->receiver.datum.block->function(block_ctx);"}}!
 
 define BuiltinClasses
     [{name: "Integer", methods: IntegerMethods},
@@ -84,8 +90,9 @@ class CTranspiler { output selectorMap blockFunctions }
                   (selector arity - 1 == signature size) assert.
                   signature
                       doWithIndex: { |argType index|
-                                     stream println: "    struct Foo arg{index} = foo_vtable_typecheck(&{Name mangleInstanceVtable: (signature at: index)}, va_arg(args, struct Foo));".
-                                     stream println: "    (void)arg{index};" }.
+                                     argType is Any
+                                         ifTrue: { stream println: "    ctx->frame[{index}-1] = va_arg(args, struct Foo);" }
+                                         ifFalse: { stream println: "    ctx->frame[{index}-1] = foo_vtable_typecheck(&{Name mangleInstanceVtable: (signature at: index)}, va_arg(args, struct Foo));" } }.
                   stream print: "    ".
                   stream println: (methodInfo body replace: "\n" with: "\n    ").
                   stream println: "}".
@@ -257,6 +264,12 @@ class CTranspiler { output selectorMap blockFunctions }
         output println: "    (void)ctx;".
         output println: "    (void)nargs;".
         output println: "    (void)args;".
+        aMethod argumentVariables
+            doWithIndex: { |var index|
+                           let type = var type value.
+                           type is Any
+                               ifTrue: { output println: "    ctx->frame[{index}-1] = va_arg(args, struct Foo);" }
+                               ifFalse: { output println: "    ctx->frame[{index}-1] = foo_vtable_typecheck(&{Name mangleInstanceVtable: type}, va_arg(args, struct Foo));" } }.
         output print: "    return ".
         aMethod body visitBy: self.
         output println: ";".
@@ -280,6 +293,11 @@ class CTranspiler { output selectorMap blockFunctions }
         output print: "ctx->receiver.datum.object[".
         output print: (ref slot index - 1).
         output print: "]"!
+
+    method visitReturn: ret
+        output print: "foo_return(ctx, ".
+        ret value visitBy: self.
+        output print: ")"!
 
     method visitComment: aComment
         -- FIXME: Include comments in generated source.

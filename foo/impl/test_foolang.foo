@@ -790,6 +790,7 @@ end
                    end"
             eval: "Test new foo"
             expect: 42!
+
 end
 
 class Main { system }

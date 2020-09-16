@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <setjmp.h>
 #include <errno.h>
 #include <stdarg.h>
 #undef NDEBUG
@@ -15,7 +16,7 @@
   ((type*)foo_alloc((n), sizeof(type)))
 
 #if 0
-# define FOO_DEBUG(...) { printf(__VA_ARGS__); printf("\n"); fflush(stdout); }
+# define FOO_DEBUG(...) { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); fflush(stderr); }
 #else
 # define FOO_DEBUG(...)
 #endif
@@ -120,32 +121,43 @@ struct FooLayout {
   struct FooSlot slots[];
 };
 
+// FIXME: Terribly messy
 struct FooContext {
   const char* info;
   struct FooContext* sender;
   struct Foo receiver;
+  size_t size;
   struct Foo* frame;
+  struct FooContext* return_context;
+  jmp_buf* ret;
+  struct Foo ret_value;
 };
+
+char* foo_debug_context(struct FooContext* ctx) {
+  const int size = 1024;
+  char* s = (char*)malloc(size+1);
+  assert(s);
+  snprintf(s, size, "{ .info = %s, .size = %zu, .frame = %p, .ret = %p }",
+           ctx->info, ctx->size, ctx->frame, ctx->ret);
+  return s;
+}
 
 typedef struct Foo (*FooMethodFunction)(struct FooContext*, size_t, va_list);
 typedef struct Foo (*FooBlockFunction)(struct FooContext*);
 
 struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t frame) {
+  FOO_DEBUG("/lexical_ref(index=%zu, frame=%zu)", index, frame);
   while (frame > 0) {
     assert(context->sender);
     context = context->sender;
     --frame;
   }
-  return context->frame[index];
+  struct Foo res = context->frame[index];
+  assert(res.vtable);
+  return res;
 }
 struct Foo* foo_frame_new(size_t size) {
   return FOO_ALLOC_ARRAY(size, struct Foo);
-}
-
-void foo_vargs_to_frame(size_t nargs, va_list vargs, struct Foo* frame) {
-  for (size_t i = 0; i < nargs; ++i) {
-    frame[i] = va_arg(vargs, struct Foo);
-  }
 }
 
 struct FooMethod {
@@ -169,6 +181,7 @@ struct FooContext* foo_context_new_main(size_t frameSize) {
   context->info = "main";
   context->sender = NULL;
   context->receiver = foo_Integer_new(0); // should be: Main
+  context->size = frameSize;
   context->frame = foo_frame_new(frameSize);
   return context;
 }
@@ -182,20 +195,27 @@ struct FooContext* foo_context_new_method(struct FooMethod* method, struct FooCo
   context->info = "method";
   context->sender = sender;
   context->receiver = receiver;
+  context->size = method->frameSize;
   context->frame = foo_frame_new(method->frameSize);
+  context->return_context = context;
   return context;
 }
 
-struct FooContext* foo_context_new_block(struct FooBlock* block, size_t nargs) {
-  if (block->argCount != nargs) {
-    FOO_PANIC("Wrong number of arguments to block. Wanted: %zu, got: %zu.",
-              block->argCount, nargs);
-  }
+void foo_context_method_unwind(struct FooContext** ctx) {
+  (*ctx)->ret = NULL;
+}
+
+struct FooContext* foo_context_new_block(struct FooContext* ctx) {
   struct FooContext* context = FOO_ALLOC(struct FooContext);
+  struct FooBlock* block = ctx->receiver.datum.block;
   context->info = "block";
   context->sender = block->context;
   context->receiver = block->context->receiver;
+  context->size = block->frameSize;
   context->frame = foo_frame_new(block->frameSize);
+  context->return_context = context->sender;
+  for (size_t i = 0; i < block->argCount; ++i)
+    context->frame[i] = ctx->frame[i];
   return context;
 }
 
@@ -215,17 +235,18 @@ struct FooClass {
 };
 
 struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj) {
-  if (vtable == obj.vtable) {
+  if (vtable == obj.vtable)
     return obj;
-  } else {
-    FOO_PANIC("Type error! Wanted: %s, got: %s\n",
-              vtable->name->data, obj.vtable->name->data);
-  }
+  assert(vtable);
+  assert(obj.vtable);
+  FOO_PANIC("Type error! Wanted: %s, got: %s",
+            vtable->name->data, obj.vtable->name->data);
 }
 
 struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, const struct FooSelector* selector) {
+  assert(vtable);
   struct FooMethodArray* methods = vtable->methods;
-  FOO_DEBUG("/foo_vtable_find_method(%s#%s)\n", vtable->name->data, selector->name->data);
+  // FOO_DEBUG("/foo_vtable_find_method(%s#%s)", vtable->name->data, selector->name->data);
   assert(methods);
   for (size_t i = 0; i < methods->size; ++i) {
     struct FooMethod* method = &methods->data[i];
@@ -236,17 +257,40 @@ struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, const s
   return NULL;
 }
 
+struct Foo foo_return(struct FooContext* ctx, struct Foo value) __attribute__ ((noreturn));
+struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
+  FOO_DEBUG("/foo_return(...)");
+  if (ctx->return_context->ret) {
+    ctx->return_context->ret_value = value;
+    longjmp(*ctx->return_context->ret, 1);
+    FOO_PANIC("longjmp() fell through!")
+  } else {
+    FOO_PANIC("Cannot return from here: %s", foo_debug_context(ctx));
+  }
+}
+
 struct Foo foo_send(struct FooContext* sender,
                     const struct FooSelector* selector,
                     struct Foo receiver, size_t nargs, ...) {
-  FOO_DEBUG("/foo_send(?, %s, ...)\n", selector->name->data);
+  FOO_DEBUG("/foo_send(?, %s, ...)", selector->name->data);
   va_list arguments;
   va_start(arguments, nargs);
   assert(receiver.vtable);
   struct FooMethod* method = foo_vtable_find_method(receiver.vtable, selector);
   if (method) {
-    struct FooContext* context = foo_context_new_method(method, sender, receiver, nargs);
-    return method->function(context, nargs, arguments);
+    struct FooContext* context __attribute__((cleanup(foo_context_method_unwind)));
+    context = foo_context_new_method(method, sender, receiver, nargs);
+    jmp_buf ret;
+    context->ret = &ret;
+    int jmp = setjmp(ret);
+    if (jmp) {
+      FOO_DEBUG("/foo_send -> non-local return from %s", selector->name->data);
+      return context->ret_value;
+    } else {
+      struct Foo res = method->function(context, nargs, arguments);
+      FOO_DEBUG("/foo_send -> local return from %s", selector->name->data);
+      return res;
+    }
   } else {
     FOO_PANIC("%s does not understand: #%s",
               receiver.vtable->name->data, selector->name->data);
@@ -271,13 +315,6 @@ struct Foo foo_block_new(struct FooContext* context,
 
 struct Foo foo_Integer_new(int64_t n) {
   return (struct Foo){ .vtable = &FooInstanceVtable_Integer, .datum = { .int64 = n } };
-}
-
-struct Foo foo_apply(struct FooContext* ctx, size_t nargs, va_list args) {
-  struct FooBlock* block = ctx->receiver.datum.block;
-  struct FooContext* context = foo_context_new_block(block, nargs);
-  foo_vargs_to_frame(nargs, args, context->frame);
-  return block->function(context);
 }
 
 #include "generated_blocks.c"
