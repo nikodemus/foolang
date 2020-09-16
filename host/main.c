@@ -124,6 +124,7 @@ struct FooContext {
   const char* info;
   struct FooContext* sender;
   struct Foo receiver;
+  size_t size;
   struct Foo* frame;
 };
 
@@ -131,6 +132,7 @@ typedef struct Foo (*FooMethodFunction)(struct FooContext*, size_t, va_list);
 typedef struct Foo (*FooBlockFunction)(struct FooContext*);
 
 struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t frame) {
+  FOO_DEBUG("lexical_ref(index=%zu, frame=%zu)", index, frame);
   while (frame > 0) {
     assert(context->sender);
     context = context->sender;
@@ -142,12 +144,6 @@ struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t fram
 }
 struct Foo* foo_frame_new(size_t size) {
   return FOO_ALLOC_ARRAY(size, struct Foo);
-}
-
-void foo_vargs_to_frame(size_t nargs, va_list vargs, struct Foo* frame) {
-  for (size_t i = 0; i < nargs; ++i) {
-    frame[i] = va_arg(vargs, struct Foo);
-  }
 }
 
 struct FooMethod {
@@ -171,6 +167,7 @@ struct FooContext* foo_context_new_main(size_t frameSize) {
   context->info = "main";
   context->sender = NULL;
   context->receiver = foo_Integer_new(0); // should be: Main
+  context->size = frameSize;
   context->frame = foo_frame_new(frameSize);
   return context;
 }
@@ -184,6 +181,7 @@ struct FooContext* foo_context_new_method(struct FooMethod* method, struct FooCo
   context->info = "method";
   context->sender = sender;
   context->receiver = receiver;
+  context->size = method->frameSize;
   context->frame = foo_frame_new(method->frameSize);
   return context;
 }
@@ -197,6 +195,7 @@ struct FooContext* foo_context_new_block(struct FooBlock* block, size_t nargs) {
   context->info = "block";
   context->sender = block->context;
   context->receiver = block->context->receiver;
+  context->size = block->frameSize;
   context->frame = foo_frame_new(block->frameSize);
   return context;
 }
@@ -273,13 +272,6 @@ struct Foo foo_block_new(struct FooContext* context,
 
 struct Foo foo_Integer_new(int64_t n) {
   return (struct Foo){ .vtable = &FooInstanceVtable_Integer, .datum = { .int64 = n } };
-}
-
-struct Foo foo_apply(struct FooContext* ctx, size_t nargs, va_list args) {
-  struct FooBlock* block = ctx->receiver.datum.block;
-  struct FooContext* context = foo_context_new_block(block, nargs);
-  foo_vargs_to_frame(nargs, args, context->frame);
-  return block->function(context);
 }
 
 #include "generated_blocks.c"

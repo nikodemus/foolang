@@ -80,6 +80,15 @@ class TestTranspile { assert system }
                         end"
              expect: "#<Integer 42>"!
 
+    method testKeyword
+        self transpile: "class Main \{}
+                             direct method run
+                                 (self add: 40 and: 2) debug!
+                             direct method add: x and: y
+                                 x + y!
+                        end"
+             expect: "#<Integer 42>"!
+
     method testBlock
         self transpile: "class Main \{}
                              direct method run
