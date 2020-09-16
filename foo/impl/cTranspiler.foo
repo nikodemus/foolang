@@ -5,12 +5,11 @@ import .ast.AstClass
 define BlockMethods
     { #value
           -> {signature: [],
-              body: "struct FooContext* block_ctx = foo_context_new_block(ctx->receiver.datum.block, 0);
+              body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
 return ctx->receiver.datum.block->function(block_ctx);"},
       #value:
           -> {signature: [Any],
-              body: "struct FooContext* block_ctx = foo_context_new_block(ctx->receiver.datum.block, 1);
-block_ctx->frame[0] = ctx->frame[0];
+              body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
 return ctx->receiver.datum.block->function(block_ctx);"}}!
 
 define BuiltinClasses
@@ -294,6 +293,11 @@ class CTranspiler { output selectorMap blockFunctions }
         output print: "ctx->receiver.datum.object[".
         output print: (ref slot index - 1).
         output print: "]"!
+
+    method visitReturn: ret
+        output print: "foo_return(ctx, ".
+        ret value visitBy: self.
+        output print: ")"!
 
     method visitComment: aComment
         -- FIXME: Include comments in generated source.

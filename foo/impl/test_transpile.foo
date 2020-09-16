@@ -136,8 +136,7 @@ class TestTranspile { assert system }
                              direct method run
                                  self foo debug!
                              direct method foo
-                                 self bar: \{ |x| return x }.
-                                 13!
+                                 100 + (self bar: \{ |x| return x })!
                              direct method bar: block
                                  block value: 42!
                          end"
