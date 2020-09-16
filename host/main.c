@@ -136,7 +136,9 @@ struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t fram
     context = context->sender;
     --frame;
   }
-  return context->frame[index];
+  struct Foo res = context->frame[index];
+  assert(res.vtable);
+  return res;
 }
 struct Foo* foo_frame_new(size_t size) {
   return FOO_ALLOC_ARRAY(size, struct Foo);
