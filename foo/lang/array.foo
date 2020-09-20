@@ -55,6 +55,13 @@ extend Array
     method asList
         List from: self!
 
+    method append: other
+        let n = self size + other size.
+        Array of: (self elementType) new: n
+            ; replaceFrom: 1 to: self size with: self startingAt: 1
+            ; replaceFrom: self size + 1 to: n with: other startingAt: 1
+            ; yourself!
+
     method + x
         x broadcast: {|a b| a + b} to: self!
     method - x

@@ -30,6 +30,9 @@ interface Object
     method displayString
         StringOutput with: { |out| self displayOn: out }!
 
+    method yourself
+        self!
+
     method checkEqual: other
         (Self includes: other)
             ifTrue: { return self checkEqualInternal: other }.

@@ -1,6 +1,7 @@
 import .lang.any.Any
 import .lang.array.Array
 import .lang.block.Block
+import .lang.block.Function
 import .lang.boolean.Boolean
 import .lang.byteArray.ByteArray
 import .lang.character.Character

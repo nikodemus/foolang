@@ -58,18 +58,7 @@ class TestPrelude { system ok onFailure }
              eval: "[Test testError, Test testOk]"
              expect: [#gotcha, True]!
 
-    method testPrelude_3_Interval
-        let lang = system files path: "foo/lang".
-        self without: ["Interval", "Object"]
-             modules: { "./object" -> lang path: "object.foo",
-                        "interval" -> lang path: "interval.foo" } asFileModules
-             load: "import interval
-                    define ThousandBy10
-                        interval.Interval from: 1 to: 1000 by: 10!"
-             eval: "ThousandBy10 size"
-             expect: 100!
-
-    method testPrelude_4_Iterable
+    method testPrelude_3_Iterable
         let lang = system files path: "foo/lang".
         self without: ["Iterable", "Object"]
              modules: { "./object" -> lang path: "object.foo",
@@ -82,6 +71,18 @@ class TestPrelude { system ok onFailure }
                     end"
              eval: "MyIterable new collect: #abs as: List"
              expect: [1,2,3] asList!
+
+    method testPrelude_4_Interval
+        let lang = system files path: "foo/lang".
+        self without: ["Interval", "Object"]
+             modules: { "./object" -> lang path: "object.foo",
+                        "./iterable" -> lang path: "iterable.foo",
+                        "interval" -> lang path: "interval.foo" } asFileModules
+             load: "import interval
+                    define ThousandBy10
+                        interval.Interval from: 1 to: 1000 by: 10!"
+             eval: "ThousandBy10 size"
+             expect: 100!
 
     method testPrelude_5_Collection
         let lang = system files path: "foo/lang".
