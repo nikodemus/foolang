@@ -25,6 +25,9 @@ interface Ordered
     required method size
     required method at: index
 
+    method at: index put: elt
+        self put: elt at: index!
+
     method bytes
         let bytes = ByteArray new: self size.
         1 to: self size do: { |i| bytes put: (self at: i) at: i }.
@@ -174,6 +177,14 @@ interface Ordered
             inject: 0
             into: { |res a b|
                     res + (block value: a value: b) }!
+
+    method replaceFrom: first to: last with: source startingAt: sourceFirst
+        let j = sourceFirst.
+        first to: last
+              do: { |i|
+                    self at: i put: (source at: j).
+                    j = j + 1 }.
+        self!
 
     method reverse
         let n = self size.
