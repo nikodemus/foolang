@@ -6,6 +6,7 @@ define ASCII
      upperA: 0x41,
      upperF: 0x46,
      upperZ: 0x5A,
+     underscore: 0x5F,
      lowerA: 0x61,
      lowerF: 0x66,
      lowerZ: 0x7A,
@@ -24,6 +25,8 @@ define WhitespaceASCII
      ASCII formFeed,
      ASCII carriageReturn]!
 
+
+
 import .object.Object
 
 -- FIXME: support unicode range
@@ -39,6 +42,11 @@ class Character { code }
     method isAlpha
         (ASCII upperA <= code and: code <= ASCII upperZ)
             ifFalse: { ASCII lowerA <= code and: code <= ASCII lowerZ }!
+
+    method isSymbol
+        code == ASCII underscore
+            ifTrue: { False }
+            ifFalse: { self isAlpha not }!
 
     method isWhitespace
         WhitespaceASCII anySatisfy: { |whitespaceCode| whitespaceCode is code }!

@@ -38,10 +38,13 @@ class Selector { name }
         True!
 
     method isSymbol
-        let char = name at: 1.
-        char == UnderscoreCharacter
-            ifTrue: { False }
-            ifFalse: { char isAlpha not }!
+        (name at: 1) isSymbol!
+
+    method isPrefix
+        ((name size > 6) and: (name startsWith: "prefix"))
+            -- Good enough until https://github.com/nikodemus/foolang/issues/331
+            -- is implemented.
+            ifTrue: { (name at: 7) isSymbol }!
 
     method isUnary
         self isSymbol
@@ -71,8 +74,12 @@ class Selector { name }
     method isEquivalent: other
         name == other name!
 
+    method printOn: stream
+        stream print: "#".
+        stream print: name!
+
     method toString
-        "#{name}"!
+        StringOutput with: { |out| self printOn: out }!
 end
 
 class TestSelector { assert }

@@ -2,6 +2,9 @@ import .name.Name
 
 define IntegerMethods
     { -- FIXME: The binary methods here should be generated from lang.number.foo
+      (Selector name: "prefix-")
+          -> { signature: [],
+               body: "return foo_Integer_new(- ctx->receiver.datum.int64);" },
       #+
           -> { signature: [Integer],
                body: "return foo_send(ctx, &{Name mangleSelector: #addNumber:}, ctx->frame[0], 1, ctx->receiver);" },
