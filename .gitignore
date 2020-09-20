@@ -9,3 +9,5 @@ generated_*.*
 *.ilk
 *.pdb
 a.out
+*.lib
+*.exp
