@@ -7,16 +7,14 @@ Keyword parts suffixed with _.
 ---
 
 define SymbolNames
-    { "+" -> "add",
-      "*" -> "mul",
-      "/" -> "div",
-      "-" -> "sub",
-      "%" -> "mod",
-      "==" -> "eq",
-      ">" -> "gt",
-      ">=" -> "gte",
-      "<" -> "lt",
-      "<=" -> "lte"
+    { "+" -> "_add",
+      "*" -> "_mul",
+      "/" -> "_div",
+      "-" -> "_sub",
+      "%" -> "_mod",
+      "=" -> "_eq",
+      ">" -> "_gt",
+      "<" -> "_lt",
       }!
 
 class Name {}
@@ -24,16 +22,21 @@ class Name {}
 
     direct method mangle: selector prefix: prefix
         let res = StringOutput
-            with: { |out|
-                    out print: prefix.
-                    selector isSymbol
-                        ifTrue: { self _mangleSymbol: selector to: out }.
-                    selector isUnary
-                        ifTrue: { self _mangleUnary: selector to: out }.
-                    selector isKeyword
-                        ifTrue: { self _mangleKeyword: selector to: out } }.
-       -- Output debug println: "mangle: {selector} prefix: {prefix} -> {res}".
-       res!
+                      with: { |out|
+                              out print: prefix.
+                              self _mangle: selector to: out }.
+        -- Output debug println: "mangle: {selector} prefix: {prefix} -> {res}".
+        res!
+
+    direct method _mangle: selector to: out
+        selector isPrefix
+            ifTrue: { out print: "_".
+                      return self _mangleSymbol: selector to: out }.
+        selector isSymbol
+            ifTrue: { return self _mangleSymbol: selector to: out }.
+        selector isKeyword
+            ifTrue: { return self _mangleKeyword: selector to: out }.
+        self _mangleUnary: selector to: out!
 
     direct method mangle: selector
         self mangle: selector prefix: ""!
@@ -57,10 +60,11 @@ class Name {}
         "FooGlobal_{aGlobal name}"!
 
     direct method _mangleSymbol: selector to: out
-        out print: "_".
-        out print: (SymbolNames
-                        at: selector name
-                        ifNone: { Error raise: "Don't know how to mangle this: {selector}" })!
+        selector name
+            do: { |each|
+                  out print: (SymbolNames
+                                  at: each
+                                  ifNone: { each }) }!
 
     direct method _mangleUnary: selector to: out
         self _mangleName: selector name to: out!

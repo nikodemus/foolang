@@ -85,6 +85,12 @@ extend Array
     method printOn: stream
         self _emitOn: stream using: { |x| x printOn: stream }!
 
+    method displayString
+        StringOutput with: { |out| self displayOn: out }!
+
+    method toString
+        StringOutput with: { |out| self printOn: out }!
+
     method dot: other
         self with: other sum: { |a b| a * b }!
 

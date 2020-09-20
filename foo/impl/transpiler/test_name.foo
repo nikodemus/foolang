@@ -13,12 +13,14 @@ class TestName { assert }
           [ #bar_zoom, "FOO_bar__zoom" ],
           [ #bar_zoom_, "FOO_bar__zoom__" ],
           [ #bar:, "FOO_bar_" ],
+          [ Selector new: "prefix-", "FOO__prefix_sub" ],
           [ #bar:zoom:, "FOO_bar_zoom_" ],
           [ #+, "FOO__add" ] ]!
 
     method testManglePrefix
         assert forAll: self cases
                that: { |case|
+                       -- Output debug println: (Name mangle: case first prefix: "FOO_").
                        (Name mangle: case first prefix: "FOO_") == case second }
                testing: "Name mangle:"!
 end
