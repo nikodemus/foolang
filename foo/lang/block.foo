@@ -1,24 +1,12 @@
 import .object.Object
 
-interface Block
+interface Function
     is Object
-
     -- Note: implementing #value methods directly is very
     -- likely worth it!
 
     required method apply: arguments
     required method arity
-
-    -- Note: COULD delegate these to host BlockClosure loop
-    -- and finally, but currently extending the existing
-    -- class will overwrite.
-    --
-    -- FIXME: Split into PrimitiveBlock and Block
-    -- former has these as required, and latter implements
-    -- them on top of {}.
-
-    required method loop
-    required method finally: cleanup
 
     -- Delegation to #apply
 
@@ -38,6 +26,16 @@ interface Block
 
     method value: arg1 value: arg2 value: arg3
         self apply: [arg1, arg2, arg3]!
+
+    method displayOn: stream
+        stream print: self toString!
+end
+
+interface Block
+    is Function
+
+    required method loop
+    required method finally: cleanup
 
     -- Delegation to #loop
 
@@ -66,9 +64,6 @@ interface Block
         loop!
 
     -- Miscellany
-
-    method displayOn: stream
-        stream print: self toString!
 
     method after: block
         let res = self value.
@@ -107,7 +102,7 @@ interface Block
 end
 
 class Catch { block condition }
-    is Block
+    is Function
 
     method apply: arguments
         { block apply: arguments }
@@ -116,35 +111,14 @@ class Catch { block condition }
 
     method arity
         block arity!
-
-    method loop
-        -- CONSIDER: This is a bit funky. Should Catch just signal
-        -- an error on #loop instead? Or should this _handle_ the
-        -- condition in a loop?
-        { block loop }
-            on: condition
-            do: { |ex| return ex }!
-
-    method finally: cleanup
-        { block finally: cleanup }
-            on: condition
-            do: { |ex| return ex }!
-
 end
 
-class BlockComposition { block continuation }
-    is Block
+class Composition { block continuation }
+    is Function
 
     method apply: arguments
         continuation value: (block apply: arguments)!
 
     method arity
         block arity!
-
-    method loop
-        { self value } loop!
-
-    method finally: cleanup
-        { self value }
-            finally: cleanup!
 end
