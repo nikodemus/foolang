@@ -275,6 +275,9 @@ class CTranspiler { output selectorMap blockFunctions }
         output println: ";".
         output println: "}"!
 
+    method visitGlobal: aGlobal
+        output print: (Name mangleGlobal: aGlobal)!
+
     method visitSeq: seq
         output print: "(\{ ".
         seq first visitBy: self.
