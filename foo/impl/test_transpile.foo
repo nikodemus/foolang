@@ -109,6 +109,17 @@ class TestTranspile { assert system }
                          end"
             expect: "#<Integer 42>"!
 
+    method testMyClass
+        self transpile: "class MyClass \{}
+                             direct method test
+                                 123!
+                         end
+                         class Main \{}
+                             direct method run
+                                 MyClass test debug!
+                         end"
+            expect: "#<Integer 123>"!
+
     method testCtor
         self transpile: "class Main \{}
                              direct method run

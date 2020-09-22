@@ -37,12 +37,16 @@ class CTranspiler { output selectorMap blockFunctions }
                           selectorMap: SelectorMap new
                           blockFunctions: List new.
         -- FIXME: visit Main, and it's dependencies only
+        globals do: { |each| visitor forwardDeclarationFor: each }.
         globals do: { |each| each definition visitBy: visitor }.
         visitor generateMain.
         { main: visitor output content,
           blocks: visitor generateBlocks,
           classes: visitor generateClasses,
           selectors: visitor generateSelectors }!
+
+    method forwardDeclarationFor: aGlobal
+        output println: "struct Foo {Name mangleGlobal: aGlobal};"!
 
     method generateMain
         output println: "int main".
@@ -274,6 +278,9 @@ class CTranspiler { output selectorMap blockFunctions }
         aMethod body visitBy: self.
         output println: ";".
         output println: "}"!
+
+    method visitGlobal: aGlobal
+        output print: (Name mangleGlobal: aGlobal)!
 
     method visitSeq: seq
         output print: "(\{ ".
