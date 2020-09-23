@@ -127,6 +127,10 @@ class TestTranspile2 { assert system }
                                  242!
                          end"
             expect: "#<Integer 242>"!
+end
+
+class TestTranspile3 { assert system }
+    is TranspilerTest
 
     method testMyClass
         self transpile: "class MyClass \{}
@@ -185,9 +189,12 @@ end
 
 class Main {}
     direct method run: cmd in: system
-        let tests = { "name" -> TestName,
-                      "transpile1" -> TestTranspile1 system: system,
-                      "transpile2" -> TestTranspile2 system: system }.
+        let tests = {
+            "name" -> TestName,
+            "transpile1" -> TestTranspile1 system: system,
+            "transpile2" -> TestTranspile2 system: system,
+            "transpile3" -> TestTranspile3 system: system
+        }.
         cmd do: { |name|
                   Assert
                       runSuite: (tests at: name)
