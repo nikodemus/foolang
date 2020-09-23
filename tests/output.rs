@@ -21,10 +21,34 @@ fn test_self_hosted_prelude() -> Test {
 }
 
 #[test]
-fn test_self_hosted_transpiler() -> Test {
+fn test_self_hosted_transpiler0() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/impl/test_transpile.foo");
     cmd.arg("--use=foo/lib");
+    cmd.arg("--");
+    cmd.arg("name");
+    cmd.assert().success();
+    Ok(())
+}
+
+#[test]
+fn test_self_hosted_transpiler1() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/impl/test_transpile.foo");
+    cmd.arg("--use=foo/lib");
+    cmd.arg("--");
+    cmd.arg("transpile1");
+    cmd.assert().success();
+    Ok(())
+}
+
+#[test]
+fn test_self_hosted_transpiler2() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/impl/test_transpile.foo");
+    cmd.arg("--use=foo/lib");
+    cmd.arg("--");
+    cmd.arg("transpile2");
     cmd.assert().success();
     Ok(())
 }

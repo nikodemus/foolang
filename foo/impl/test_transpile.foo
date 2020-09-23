@@ -10,18 +10,18 @@ import lib.assert.Assert
 import .test_self_hosting.TestSelfHosting
 import .transpiler.test_name.TestName
 
-class TestTranspileWrapper { system }
+class TestTranspileWrapper { test system }
     method assert: assert
-        TestTranspile
+        test
             assert: assert
             system: system!
 end
 
-class TestTranspile { assert system }
-    is TestSelfHosting
+interface TranspilerTest
+    is TestSuite
 
     direct method system: system
-        TestTranspileWrapper system: system!
+        TestTranspileWrapper test: self system: system!
 
     method transpile: string
         let env = Environment new load: string.
@@ -56,6 +56,10 @@ class TestTranspile { assert system }
         assert that: { self transpile: string }
                equals: output
                testing: "transpile -> {output}"!
+end
+
+class TestTranspile1 { assert system }
+    is TranspilerTest
 
     method testLiteralInteger
         self transpile: "class Main \{}
@@ -99,6 +103,10 @@ class TestTranspile { assert system }
                                  b2 value debug!
                          end"
             expect: "#<Integer 42>"!
+end
+
+class TestTranspile2 { assert system }
+    is TranspilerTest
 
     method testSelf
         self transpile: "class Main \{}
@@ -177,16 +185,13 @@ end
 
 class Main {}
     direct method run: cmd in: system
-        let ok = True.
-        [ TestName,
-          (TestTranspile system: system) ]
-        do: { |each|
-              ok = ok and: (Assert
-                                runSuite: each
-                                in: system
-                                onFailure: { system exit: 1 })
-              passed }.
-        ok
-            ifTrue: { system exit }
-            ifFalse: { system exit: 1 }!
+        let tests = { "name" -> TestName,
+                      "transpile1" -> TestTranspile1 system: system,
+                      "transpile2" -> TestTranspile2 system: system }.
+        cmd do: { |name|
+                  Assert
+                      runSuite: (tests at: name)
+                      in: system
+                      onFailure: { system exit: 1 } }.
+        system exit!
 end
