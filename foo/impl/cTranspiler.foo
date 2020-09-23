@@ -12,9 +12,36 @@ return ctx->receiver.datum.block->function(block_ctx);"},
               body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
 return ctx->receiver.datum.block->function(block_ctx);"}}!
 
+class BuiltinMethod { selector definition }
+    direct method forEach: builtins
+        let list = List new.
+        builtins
+            do: { |selector definition|
+                  list push: (self
+                                  selector: selector
+                                  definition: definition) }.
+        list!
+    method isBuiltin
+        True!
+    method arity
+        definition signature size!
+    method frameSize
+        self arity!
+    method signature
+        definition signature!
+    method body
+        definition body!
+end
+
 define BuiltinClasses
-    [{name: "Integer", methods: IntegerMethods},
-     {name: "Block", methods: BlockMethods}]!
+    [{name: "Integer",
+      isBuiltin: True,
+      directMethods: [],
+      instanceMethods: (BuiltinMethod forEach: IntegerMethods)},
+     {name: "Block",
+      isBuiltin: True,
+      directMethods: [],
+      instanceMethods: (BuiltinMethod forEach: BlockMethods)}]!
 
 class SelectorMap { names }
     direct method new
@@ -76,54 +103,13 @@ class CTranspiler { output selectorMap blockFunctions }
     method generateClasses
         StringOutput
             with: { |out|
+                    let builtinVisitor = CTranspiler
+                                             output: out
+                                             selectorMap: selectorMap
+                                             blockFunctions: blockFunctions.
                     BuiltinClasses
-                        do: { |each| self _generateClass: each to: out } }!
-
-    method _generateClass: aClass to: stream
-        let methods = aClass methods.
-        -- 1. Method functions
-        methods
-            do: { |selector methodInfo|
-                  stream println: "struct Foo {Name mangleInstanceMethod: selector in: aClass}".
-                  stream println: "    (struct FooContext* ctx, size_t nargs, va_list args)".
-                  stream println: "\{".
-                  stream println: "    (void)ctx;".
-                  stream println: "    (void)nargs;".
-                  stream println: "    (void)args;".
-                  let signature = methodInfo signature.
-                  (selector arity - 1 == signature size) assert.
-                  signature
-                      doWithIndex: { |argType index|
-                                     argType is Any
-                                         ifTrue: { stream println: "    ctx->frame[{index}-1] = va_arg(args, struct Foo);" }
-                                         ifFalse: { stream println: "    ctx->frame[{index}-1] = foo_vtable_typecheck(&{Name mangleInstanceVtable: (signature at: index)}, va_arg(args, struct Foo));" } }.
-                  stream print: "    ".
-                  stream println: (methodInfo body replace: "\n" with: "\n    ").
-                  stream println: "}".
-                  stream newline }.
-        -- 2. MethodArray
-        let methodArrayName = "FOO_{aClass name}Methods".
-        stream println: "struct FooMethodArray {methodArrayName} = ".
-        stream println: "\{".
-        stream println: "    .size = {methods size},".
-        stream println: "    .data = \{".
-        methods
-            doKeys: { |each|
-                      let arity = each arity - 1. -- Selector arity is one greater!
-                      stream println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each},".
-                      stream println: "                            .argCount = {arity},".
-                      stream println: "                            .frameSize = {arity},".
-                      stream println: "                            .function = &{Name mangleInstanceMethod: each in: aClass} }," }.
-        stream println: "    }".
-        stream println: "};".
-        stream newline.
-        -- 3. Vtable
-        stream println: "struct FooVtable {Name mangleInstanceVtable: aClass} = ".
-        stream println: "\{".
-        stream println: "    .name = &FOO_CSTRING({aClass name displayString}),".
-        stream println: "    .methods = &{methodArrayName}".
-        stream println: "};".
-        stream newline!
+                        do: { |each|
+                              builtinVisitor visitClassDefinition: each } }!
 
     method generateBlocks
         StringOutput
@@ -154,7 +140,8 @@ class CTranspiler { output selectorMap blockFunctions }
         cname!
 
     method visitClassDefinition: aClass
-        aClass directMethods
+        let directMethods = aClass directMethods copy. -- Augmented later with ctor
+        directMethods
             do: { |each|
                   self
                       _generateMethod: each
@@ -166,41 +153,43 @@ class CTranspiler { output selectorMap blockFunctions }
                       _generateMethod: each
                       _in: aClass
                       _as: (Name mangleInstanceMethod: each selector in: aClass) }.
-        -- Layout
-        let layoutName = "FooLayout_{aClass name}".
-        output println: "struct FooLayout {layoutName} =".
-        output println: "\{".
-        output println: "    .size = {aClass slots size},".
-        output println: "    .slots = \{".
-        aClass slots
-            do: { |each|
-                  output println: "        \{ .name = &FOO_CSTRING({each name displayString}) }," }.
-        output println: "    }".
-        output println: "};".
-        output newline.
-        -- Constructor
         let instanceVtableName = Name mangleInstanceVtable: aClass.
-        let ctor = aClass constructor.
-        let ctorName = Name mangleDirectMethod: ctor in: aClass.
-        output println: "struct FooVtable {instanceVtableName};". -- forward decl
-        output newline.
-        output print: "struct Foo ".
-        output println: ctorName.
-        output println: "    (struct FooContext* ctx, size_t nargs, va_list args)".
-        output println: "\{".
-        output println: "    (void)ctx;".
-        output println: "    (void)nargs;".
-        output println: "    (void)args;".
-        output println: "    struct Foo* new = FOO_ALLOC_ARRAY({aClass slots size}, struct Foo);".
-        output println: "    for (int i = 0; i < {aClass slots size}; ++i)".
-        output println: "        new[i] = va_arg(args, struct Foo);".
-        output println: "    return (struct Foo)\{ .vtable = &{instanceVtableName}, .datum = \{ .object = new } };".
-        output println: "}".
-        output newline.
+        aClass isBuiltin
+            ifFalse: {
+                -- Layout
+                let layoutName = "FooLayout_{aClass name}".
+                output println: "struct FooLayout {layoutName} =".
+                output println: "\{".
+                output println: "    .size = {aClass slots size},".
+                output println: "    .slots = \{".
+                aClass slots
+                    do: { |each|
+                          output println: "        \{ .name = &FOO_CSTRING({each name displayString}) }," }.
+                output println: "    }".
+                output println: "};".
+                output newline.
+                -- Constructor
+                let ctor = aClass constructor.
+                directMethods push: { selector: ctor, arity: aClass slots size, frameSize: 0 }.
+                let ctorName = Name mangleDirectMethod: ctor in: aClass.
+                output println: "struct FooVtable {instanceVtableName};". -- forward decl
+                output newline.
+                output print: "struct Foo ".
+                output println: ctorName.
+                output println: "    (struct FooContext* ctx, size_t nargs, va_list args)".
+                output println: "\{".
+                output println: "    (void)ctx;".
+                output println: "    (void)nargs;".
+                output println: "    (void)args;".
+                output println: "    struct Foo* new = FOO_ALLOC_ARRAY({aClass slots size}, struct Foo);".
+                output println: "    for (int i = 0; i < {aClass slots size}; ++i)".
+                output println: "        new[i] = va_arg(args, struct Foo);".
+                output println: "    return (struct Foo)\{ .vtable = &{instanceVtableName}, .datum = \{ .object = new } };".
+                output println: "}".
+                output newline
+            }.
         -- Direct Method Array
         let directMethodArrayName = "FOO_{aClass name}DirectMethods".
-        let directMethods = aClass directMethods copy.
-        directMethods push: { selector: ctor, arity: aClass slots size, frameSize: 0 }.
         output println: "struct FooMethodArray {directMethodArrayName} =".
         output println: "\{".
         output println: "    .size = {directMethods size},".
@@ -238,10 +227,13 @@ class CTranspiler { output selectorMap blockFunctions }
         output println: "};".
         output newline.
         -- Instance Vtable
+        let globalName = Name mangleGlobal: aClass.
+        output println: "struct Foo {globalName};".
         output println: "struct FooVtable {instanceVtableName} = ".
         output println: "\{".
         output println: "    .name = &FOO_CSTRING({aClass name displayString}),".
-        output println: "    .methods = &{instanceMethodArrayName}".
+        output println: "    .methods = &{instanceMethodArrayName},".
+        output println: "    .classptr = &{globalName}".
         output println: "};".
         output newline.
         -- Class struct
@@ -252,7 +244,6 @@ class CTranspiler { output selectorMap blockFunctions }
         output println: "};".
         output newline.
         -- Class object
-        let globalName = Name mangleGlobal: aClass.
         output println: "struct Foo {globalName} =".
         output println: "\{".
         output println: "    .vtable = &{classVtableName},".
@@ -268,16 +259,20 @@ class CTranspiler { output selectorMap blockFunctions }
         output println: "    (void)ctx;".
         output println: "    (void)nargs;".
         output println: "    (void)args;".
-        aMethod argumentVariables
-            doWithIndex: { |var index|
-                           let type = var type value.
+        aMethod signature
+            doWithIndex: { |type index|
                            type is Any
                                ifTrue: { output println: "    ctx->frame[{index}-1] = va_arg(args, struct Foo);" }
                                ifFalse: { output println: "    ctx->frame[{index}-1] = foo_vtable_typecheck(&{Name mangleInstanceVtable: type}, va_arg(args, struct Foo));" } }.
-        output print: "    return ".
-        aMethod body visitBy: self.
-        output println: ";".
-        output println: "}"!
+        aMethod isBuiltin
+            ifTrue: {  output print: "    ".
+                       output println: (aMethod body replace: "\n" with: "\n    ").
+                       output println: "}" }
+            ifFalse: { output print: "    return ".
+                       aMethod body visitBy: self.
+                       output println: ";".
+                       output println: "}" }.
+        output newline!
 
     method visitGlobal: aGlobal
         output print: (Name mangleGlobal: aGlobal)!
@@ -332,6 +327,9 @@ class CTranspiler { output selectorMap blockFunctions }
 
     method visitSelfInstance: aSelf
         output print: "ctx->receiver"!
+
+    method visitSelfClass: aSelf
+        output print: "*ctx->receiver.vtable->classptr"!
 
     method visitBindLexical: aBind
         output print: "(\{ ctx->frame[{aBind variable index - 1}ul] = ".

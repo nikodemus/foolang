@@ -1,6 +1,7 @@
 use assert_cmd::Command;
 use predicates;
 use predicates::prelude::*;
+use serial_test::serial;
 
 type Test = Result<(), Box<dyn std::error::Error>>;
 
@@ -21,10 +22,49 @@ fn test_self_hosted_prelude() -> Test {
 }
 
 #[test]
-fn test_self_hosted_transpiler() -> Test {
+#[serial]
+fn test_self_hosted_transpiler0() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/impl/test_transpile.foo");
     cmd.arg("--use=foo/lib");
+    cmd.arg("--");
+    cmd.arg("name");
+    cmd.assert().success();
+    Ok(())
+}
+
+#[test]
+#[serial]
+fn test_self_hosted_transpiler1() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/impl/test_transpile.foo");
+    cmd.arg("--use=foo/lib");
+    cmd.arg("--");
+    cmd.arg("transpile1");
+    cmd.assert().success();
+    Ok(())
+}
+
+#[test]
+#[serial]
+fn test_self_hosted_transpiler2() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/impl/test_transpile.foo");
+    cmd.arg("--use=foo/lib");
+    cmd.arg("--");
+    cmd.arg("transpile2");
+    cmd.assert().success();
+    Ok(())
+}
+
+#[test]
+#[serial]
+fn test_self_hosted_transpiler3() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/impl/test_transpile.foo");
+    cmd.arg("--use=foo/lib");
+    cmd.arg("--");
+    cmd.arg("transpile3");
     cmd.assert().success();
     Ok(())
 }

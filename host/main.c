@@ -201,7 +201,7 @@ struct FooContext* foo_context_new_method(struct FooMethod* method, struct FooCo
   return context;
 }
 
-void foo_context_method_unwind(struct FooContext** ctx) {
+void foo_context_method_unwind(volatile struct FooContext** ctx) {
   (*ctx)->ret = NULL;
 }
 
@@ -227,10 +227,11 @@ struct FooMethodArray {
 struct FooVtable {
   struct FooCString* name;
   struct FooMethodArray* methods;
+  struct Foo* classptr;
 };
 
 struct FooClass {
-  // struct FooSlotArray* instanceSlots;
+  // struct FooLayout* instanceSlots;
   struct FooVtable* instanceVtable;
 };
 
@@ -278,7 +279,7 @@ struct Foo foo_send(struct FooContext* sender,
   assert(receiver.vtable);
   struct FooMethod* method = foo_vtable_find_method(receiver.vtable, selector);
   if (method) {
-    struct FooContext* context __attribute__((cleanup(foo_context_method_unwind)));
+    volatile struct FooContext* context __attribute__((cleanup(foo_context_method_unwind)));
     context = foo_context_new_method(method, sender, receiver, nargs);
     jmp_buf ret;
     context->ret = &ret;
@@ -287,7 +288,7 @@ struct Foo foo_send(struct FooContext* sender,
       FOO_DEBUG("/foo_send -> non-local return from %s", selector->name->data);
       return context->ret_value;
     } else {
-      struct Foo res = method->function(context, nargs, arguments);
+      struct Foo res = method->function((struct FooContext*)context, nargs, arguments);
       FOO_DEBUG("/foo_send -> local return from %s", selector->name->data);
       return res;
     }
