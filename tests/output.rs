@@ -1,6 +1,7 @@
 use assert_cmd::Command;
 use predicates;
 use predicates::prelude::*;
+use serial_test::serial;
 
 type Test = Result<(), Box<dyn std::error::Error>>;
 
@@ -21,6 +22,7 @@ fn test_self_hosted_prelude() -> Test {
 }
 
 #[test]
+#[serial]
 fn test_self_hosted_transpiler0() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/impl/test_transpile.foo");
@@ -32,6 +34,7 @@ fn test_self_hosted_transpiler0() -> Test {
 }
 
 #[test]
+#[serial]
 fn test_self_hosted_transpiler1() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/impl/test_transpile.foo");
@@ -43,6 +46,7 @@ fn test_self_hosted_transpiler1() -> Test {
 }
 
 #[test]
+#[serial]
 fn test_self_hosted_transpiler2() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/impl/test_transpile.foo");
