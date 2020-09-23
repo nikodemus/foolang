@@ -227,10 +227,11 @@ struct FooMethodArray {
 struct FooVtable {
   struct FooCString* name;
   struct FooMethodArray* methods;
+  struct Foo* classptr;
 };
 
 struct FooClass {
-  // struct FooSlotArray* instanceSlots;
+  // struct FooLayout* instanceSlots;
   struct FooVtable* instanceVtable;
 };
 
