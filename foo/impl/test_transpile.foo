@@ -78,31 +78,31 @@ class TestTranspile1 { assert system }
     method testLet
         self transpile: "class Main \{}
                              direct method run
-                                 let x = 21.
+                                 let x = 22.
                                  let y = 2.
                                  (x * y) debug!
                         end"
-             expect: "#<Integer 42>"!
+             expect: "#<Integer 44>"!
 
     method testKeyword
         self transpile: "class Main \{}
                              direct method run
-                                 (self add: 40 and: 2) debug!
+                                 (self add: 40 and: 5) debug!
                              direct method add: x and: y
                                  x + y!
                         end"
-             expect: "#<Integer 42>"!
+             expect: "#<Integer 45>"!
 
     method testBlock
         self transpile: "class Main \{}
                              direct method run
-                                 let x = 20.
+                                 let x = 200.
                                  let b1 = \{ x + 11 * 2 }.
                                  let b2 = \{ let x = 0. b1 value }.
                                  let x = 1.
                                  b2 value debug!
                          end"
-            expect: "#<Integer 42>"!
+            expect: "#<Integer 222>"!
 end
 
 class TestTranspile2 { assert system }
@@ -113,9 +113,9 @@ class TestTranspile2 { assert system }
                              direct method run
                                  self foo debug!
                              direct method foo
-                                 42!
+                                 142!
                          end"
-            expect: "#<Integer 42>"!
+            expect: "#<Integer 142>"!
 
     method testSelfClass
         self transpile: "class Main \{}
@@ -124,9 +124,9 @@ class TestTranspile2 { assert system }
                              method foo
                                  Self bar!
                              direct method bar
-                                 42!
+                                 242!
                          end"
-            expect: "#<Integer 42>"!
+            expect: "#<Integer 242>"!
 
     method testMyClass
         self transpile: "class MyClass \{}
@@ -144,14 +144,14 @@ class TestTranspile2 { assert system }
                              direct method run
                                  self new foo debug!
                              method foo
-                                 42!
+                                 542!
                          end"
-            expect: "#<Integer 42>"!
+            expect: "#<Integer 542>"!
 
     method testSlots
         self transpile: "class Main \{ x }
                              direct method run
-                                 let instance = self x: 21.
+                                 let instance = self x: 1021.
                                  instance double.
                                  instance read debug!
                              method double
@@ -159,7 +159,7 @@ class TestTranspile2 { assert system }
                              method read
                                  x!
                          end"
-            expect: "#<Integer 42>"!
+            expect: "#<Integer 2042>"!
 
     method testNonLocalReturn
         self transpile: "class Main \{}
@@ -168,9 +168,9 @@ class TestTranspile2 { assert system }
                              direct method foo
                                  100 + (self bar: \{ |x| return x })!
                              direct method bar: block
-                                 block value: 42!
+                                 block value: 420!
                          end"
-            expect: "#<Integer 42>"!
+            expect: "#<Integer 420>"!
 
     method testPrefixMethod
         self transpile: "class Main \{}
