@@ -7,6 +7,9 @@ interface Syntax
 
     required method parts
 
+    method addTo: definition
+        Error raise: "{self} is not valid component of {definition}"!
+
     method withBlockComment: lines fence: fence commentSource: source
         SyntaxPrefixComment
             comment: lines

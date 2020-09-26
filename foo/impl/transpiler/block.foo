@@ -1,0 +1,9 @@
+define BlockMethods
+    { #value
+          -> {signature: [],
+              body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
+return ctx->receiver.datum.block->function(block_ctx);"},
+      #value:
+          -> {signature: [Any],
+              body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
+return ctx->receiver.datum.block->function(block_ctx);"}}!

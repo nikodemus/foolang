@@ -1,16 +1,8 @@
 import .transpiler.name.Name
-import .transpiler.integer.IntegerMethods
+import .transpiler.integer
+import .transpiler.block
+import .transpiler.boolean
 import .ast.AstClass
-
-define BlockMethods
-    { #value
-          -> {signature: [],
-              body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
-return ctx->receiver.datum.block->function(block_ctx);"},
-      #value:
-          -> {signature: [Any],
-              body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
-return ctx->receiver.datum.block->function(block_ctx);"}}!
 
 class BuiltinMethod { selector definition }
     direct method forEach: builtins
@@ -33,15 +25,30 @@ class BuiltinMethod { selector definition }
         definition body!
 end
 
+class BuiltinClass { name directMethods instanceMethods }
+    direct method new: name
+                  directMethods: directMethods
+                  instanceMethods: instanceMethods
+        self name: name
+             directMethods: (BuiltinMethod forEach: directMethods)
+             instanceMethods: (BuiltinMethod forEach: instanceMethods)!
+    method isBuiltin
+        True!
+end
+
 define BuiltinClasses
-    [{name: "Integer",
-      isBuiltin: True,
-      directMethods: [],
-      instanceMethods: (BuiltinMethod forEach: IntegerMethods)},
-     {name: "Block",
-      isBuiltin: True,
-      directMethods: [],
-      instanceMethods: (BuiltinMethod forEach: BlockMethods)}]!
+    [BuiltinClass
+         new: "Integer"
+         directMethods: []
+         instanceMethods: integer.IntegerMethods,
+     BuiltinClass
+         new: "Block"
+         directMethods: []
+         instanceMethods: block.BlockMethods,
+     BuiltinClass
+         new: "Boolean"
+         directMethods: boolean.DirectMethods
+         instanceMethods: boolean.InstanceMethods]!
 
 class SelectorMap { names }
     direct method new
@@ -140,6 +147,21 @@ class CTranspiler { output selectorMap blockFunctions }
         cname!
 
     method visitClassDefinition: aClass
+        let classNote = aClass isBuiltin
+                       ifTrue: { "{aClass name} (builtin)" }
+                       ifFalse: { aClass name }.
+        output println: "/**
+ * {classNote}
+ *
+ */".
+        -- Forward declarations for methods to use.
+        let instanceVtableName = Name mangleInstanceVtable: aClass.
+        output println: "struct FooVtable {instanceVtableName};".
+        let classVtableName = Name mangleClassVtable: aClass.
+        output println: "struct FooVtable {classVtableName};".
+        let globalName = Name mangleGlobal: aClass.
+        output println: "struct Foo {globalName};".
+        output newline.
         let directMethods = aClass directMethods copy. -- Augmented later with ctor
         directMethods
             do: { |each|
@@ -153,7 +175,6 @@ class CTranspiler { output selectorMap blockFunctions }
                       _generateMethod: each
                       _in: aClass
                       _as: (Name mangleInstanceMethod: each selector in: aClass) }.
-        let instanceVtableName = Name mangleInstanceVtable: aClass.
         aClass isBuiltin
             ifFalse: {
                 -- Layout
@@ -219,7 +240,6 @@ class CTranspiler { output selectorMap blockFunctions }
         output println: "};".
         output newline.
         -- Class Vtable
-        let classVtableName = Name mangleClassVtable: aClass.
         output println: "struct FooVtable {classVtableName} = ".
         output println: "\{".
         output println: "    .name = &FOO_CSTRING({aClass name displayString}\" class\"),".
@@ -227,8 +247,6 @@ class CTranspiler { output selectorMap blockFunctions }
         output println: "};".
         output newline.
         -- Instance Vtable
-        let globalName = Name mangleGlobal: aClass.
-        output println: "struct Foo {globalName};".
         output println: "struct FooVtable {instanceVtableName} = ".
         output println: "\{".
         output println: "    .name = &FOO_CSTRING({aClass name displayString}),".
