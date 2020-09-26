@@ -21,13 +21,11 @@ you might generously call _somewhat optimistic aspirations_:
 
 Nope.
 
-Syntax is still settling down, early binding support isn't quite there, there is
-no compiler yet, and many things which should be first class objects aren't yet,
-etc.
+Syntax is still settling down, early binding support isn't quite there, compiler is a work-in-progress trivial transpiler, agents and threads haven't even been started, and many things which should be first class objects aren't yet, etc.
 
 **_"When we going to get there?"_**
 
-Someday!
+I hope so!
 
 ## Hello World
 
