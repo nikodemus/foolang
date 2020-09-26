@@ -7,6 +7,7 @@
 #include <setjmp.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #undef NDEBUG
 #include <assert.h>
 
@@ -57,6 +58,7 @@ union FooDatum {
   struct FooBlock* block;
   struct FooClass* class;
   int64_t int64;
+  bool boolean;
 };
 
 struct Foo {
@@ -298,7 +300,8 @@ struct Foo foo_send(struct FooContext* sender,
   }
 }
 
-// FIXME: These forward declarations should be generated
+// Forward declarations for vtables are in generated_classes, but we're going
+// to define a few builtin ctors first that need some of them.
 struct FooVtable FooInstanceVtable_Integer;
 struct FooVtable FooInstanceVtable_Block;
 
@@ -317,6 +320,7 @@ struct Foo foo_block_new(struct FooContext* context,
 struct Foo foo_Integer_new(int64_t n) {
   return (struct Foo){ .vtable = &FooInstanceVtable_Integer, .datum = { .int64 = n } };
 }
+
 
 #include "generated_blocks.c"
 

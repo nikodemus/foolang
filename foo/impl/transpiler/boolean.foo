@@ -1,0 +1,26 @@
+import .name.Name
+
+define DirectMethods
+    { #true
+          -> { signature: [],
+               body: "return (struct Foo)\{ .vtable = &{Name mangleInstanceVtable: Boolean}, .datum = \{ .boolean = true } };" },
+      #false
+          -> { signature: [],
+               body: "return (struct Foo)\{ .vtable = &{Name mangleInstanceVtable: Boolean}, .datum = \{ .boolean = false } };" },
+      #debug
+          -> { signature: [],
+               body: "printf(\"#<Class Boolean>\");
+return ctx->receiver;" } }!
+
+define InstanceMethods
+    { #ifTrue:ifFalse:
+          -> { signature: [Block, Block],
+               body: "if (ctx->receiver.datum.boolean) \{
+    return foo_send(ctx, &{Name mangleSelector: #value}, ctx->frame[0], 0);
+} else \{
+    return foo_send(ctx, &{Name mangleSelector: #value}, ctx->frame[1], 0);
+}" },
+      #debug
+          -> { signature: [],
+               body: "printf(\"#<Boolean %s>\", ctx->receiver.datum.boolean ? \"True\" : \"False\");
+return ctx->receiver;" } }!

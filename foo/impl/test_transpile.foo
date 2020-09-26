@@ -127,6 +127,26 @@ class TestTranspile2 { assert system }
                                  242!
                          end"
             expect: "#<Integer 242>"!
+
+    method testBooleanDebug
+        self transpile: "class Main \{}
+                             direct method run
+                                 Boolean true debug.
+                                 Boolean false debug!
+                         end"
+            expect: "#<Boolean True>#<Boolean False>"!
+
+    method testBooleanIfTrueIfFalse
+        self transpile: "class Main \{}
+                             direct method run
+                                 Boolean true
+                                     ifTrue: \{ 42 debug }
+                                     ifFalse: \{ 13 debug }.
+                                 Boolean false
+                                     ifTrue: \{ 13 debug }
+                                     ifFalse: \{ 42 debug }!
+                         end"
+            expect: "#<Integer 42>#<Integer 42>"!
 end
 
 class TestTranspile3 { assert system }
