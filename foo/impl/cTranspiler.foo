@@ -295,6 +295,16 @@ class CTranspiler { output selectorMap blockFunctions }
     method visitGlobal: aGlobal
         output print: (Name mangleGlobal: aGlobal)!
 
+    method visitIs: anIs
+        output print: "(\{ struct Foo left = ".
+        anIs left visitBy: self.
+        output print: "; ".
+        output print: "struct Foo right = ".
+        anIs right visitBy: self.
+        output print: "; ".
+        output print: "(struct Foo)\{ .vtable = &{Name mangleInstanceVtable: Boolean}, .datum = \{ .boolean = (left.vtable == right.vtable && left.datum.int64 == right.datum.int64) } }; ".
+        output print: "})"!
+
     method visitSeq: seq
         output print: "(\{ ".
         seq first visitBy: self.

@@ -147,6 +147,21 @@ class TestTranspile2 { assert system }
                                      ifFalse: \{ 42 debug }!
                          end"
             expect: "#<Integer 42>#<Integer 42>"!
+
+    method testIs
+        self transpile: "class Main \{}
+                             direct method run
+                                 let b1 = { 123 }.
+                                 let b2 = { 42 }.
+                                 (b1 is b2) debug.
+                                 (1 is b1) debug.
+                                 (b1 is 1) debug.
+                                 (1 is 2) debug.
+                                 (1 is 1) debug.
+                                 (b1 is b1) debug.
+                                 (b2 is b2) debug!
+                         end"
+            expect: "#<Boolean False>#<Boolean False>#<Boolean False>#<Boolean False>#<Boolean True>#<Boolean True>#<Boolean True>"!
 end
 
 class TestTranspile3 { assert system }
