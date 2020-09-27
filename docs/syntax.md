@@ -1,7 +1,7 @@
 # Foolang Syntax
 
-Foolang syntax is still a moving target, but this document tries to remain up
-to date.
+Foolang syntax is still a moving target, but this document tries to remain up to
+date.
 
 ## Example
 
@@ -15,7 +15,7 @@ end
 
 class Dog { name }
    is Animal
-   direct method unnamed
+   direct method nameless
       self name: False!
    method description
      name is False
@@ -23,7 +23,7 @@ class Dog { name }
        ifFalse: { "small dog called {name}" }!
 end
 
-let dog1 = Dog unnamed.
+let dog1 = Dog nameless.
 dog1 pet --> "The small anomymous dog looks at you blandly."
 
 let dog2 = Dog name: "Spot".
@@ -32,7 +32,7 @@ dog2 pet --> "The small dog called Spot looks at you blandly."
 
 ## Aesthetic
 
-The syntax tries to minimize the amount of visual noise from puctuation, and be
+The syntax tries to minimize the amount of visual noise from punctuation, and be
 easy to read out loud and understand when read out loud: order of operations
 should by large match the reading order.
 
@@ -49,6 +49,10 @@ end     is      required
 This restricts their use as both messages and as variables.
 
 All other reserved words except `is` are used in prefix position.
+
+!> There is currently a mismatch in restricted words between bootstrap
+interpreter self hosted interpreter / transpiler. The plan is to reduce number
+of reserved words to minimum&mdash;possibly even zero.
 
 ## Comments
 
@@ -82,6 +86,13 @@ prefixed with `--|`.
 
 ``` foolang
 4 append: 2 --| ERROR: 4 does not understand append: 2
+```
+
+Similarly end of line comments describing output are conventionally
+prefixed with `--:`.
+
+``` foolang
+out println: "Hello {name upcase}!" --: Hello JOE!
 ```
 
 ## Literals
@@ -123,7 +134,7 @@ syntax.
 
 Messages are sent by simple concatenation, Smalltalk-style.
 
-Unary prefix message with selector `-` to `x`:
+Prefix message with selector `-` to `x`:
 ``` foolang
 -x
 ```
