@@ -139,8 +139,8 @@ char* foo_debug_context(struct FooContext* ctx) {
   const int size = 1024;
   char* s = (char*)malloc(size+1);
   assert(s);
-  snprintf(s, size, "{ .info = %s, .size = %zu, .frame = %p, .ret = %p }",
-           ctx->info, ctx->size, ctx->frame, ctx->ret);
+  snprintf(s, size, "{ .info = %s, .size = %zu, .frame = %p, .return_context = %p }",
+           ctx->info, ctx->size, ctx->frame, ctx->return_context);
   return s;
 }
 
@@ -176,7 +176,14 @@ struct FooBlock {
   FooBlockFunction function;
 };
 
+// Forward declarations for vtables are in generated_classes, but we're going
+// to define a few builtin ctors first that need some of them.
+struct FooVtable FooInstanceVtable_Integer;
+struct FooVtable FooInstanceVtable_Block;
 struct Foo foo_Integer_new(int64_t n);
+struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj);
+struct FooContext* foo_context_new_block(struct FooContext* ctx);
+struct FooContext* foo_context_new_unwind(struct FooContext* ctx);
 
 struct FooContext* foo_context_new_main(size_t frameSize) {
   struct FooContext* context = FOO_ALLOC(struct FooContext);
@@ -204,7 +211,14 @@ struct FooContext* foo_context_new_method(struct FooMethod* method, struct FooCo
 }
 
 void foo_context_method_unwind(volatile struct FooContext** ctx) {
+  FOO_DEBUG("method unwind");
   (*ctx)->ret = NULL;
+}
+
+void foo_context_block_unwind(volatile struct FooContext** ctx) {
+  FOO_DEBUG("block unwind");
+  struct FooContext* block_ctx = foo_context_new_unwind((struct FooContext*)*ctx);
+  block_ctx->receiver.datum.block->function(block_ctx);
 }
 
 struct FooContext* foo_context_new_block(struct FooContext* ctx) {
@@ -215,8 +229,23 @@ struct FooContext* foo_context_new_block(struct FooContext* ctx) {
   context->receiver = block->context->receiver;
   context->size = block->frameSize;
   context->frame = foo_frame_new(block->frameSize);
-  context->return_context = context->sender;
+  context->return_context = context->sender->return_context;
   for (size_t i = 0; i < block->argCount; ++i)
+    context->frame[i] = ctx->frame[i];
+  return context;
+}
+
+struct FooContext* foo_context_new_unwind(struct FooContext* ctx) {
+  struct FooContext* context = FOO_ALLOC(struct FooContext);
+  struct Foo blockObj = foo_vtable_typecheck(&FooInstanceVtable_Block, ctx->frame[0]);
+  struct FooBlock* block = blockObj.datum.block;
+  context->info = "#finally:";
+  context->receiver = blockObj;
+  context->sender = block->context;
+  context->size = block->frameSize;
+  context->frame = foo_frame_new(context->size);
+  context->return_context = context->sender->return_context;
+  for (size_t i = 0; i < context->receiver.datum.block->argCount; ++i)
     context->frame[i] = ctx->frame[i];
   return context;
 }
@@ -262,7 +291,7 @@ struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, const s
 
 struct Foo foo_return(struct FooContext* ctx, struct Foo value) __attribute__ ((noreturn));
 struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
-  FOO_DEBUG("/foo_return(...)");
+  FOO_DEBUG("/foo_return(%s...)", foo_debug_context(ctx));
   if (ctx->return_context->ret) {
     ctx->return_context->ret_value = value;
     longjmp(*ctx->return_context->ret, 1);
@@ -299,11 +328,6 @@ struct Foo foo_send(struct FooContext* sender,
               receiver.vtable->name->data, selector->name->data);
   }
 }
-
-// Forward declarations for vtables are in generated_classes, but we're going
-// to define a few builtin ctors first that need some of them.
-struct FooVtable FooInstanceVtable_Integer;
-struct FooVtable FooInstanceVtable_Block;
 
 struct Foo foo_block_new(struct FooContext* context,
                          FooBlockFunction function,
