@@ -123,31 +123,30 @@ struct FooLayout {
   struct FooSlot slots[];
 };
 
-union FooReturnOrContext {
-  struct FooContext* context;
-  jmp_buf* ret;
-};
-
-// FIXME: Terribly messy
 struct FooContext {
   const char* info;
   struct Foo receiver;
   struct FooContext* sender;
   struct FooContext* outer_context;
+  // For methods this is jmp_buf*, for others this is cleanup or NULL.
+  void* cleanup_or_ret;
   size_t size;
-  // FIXME: Allocate inline?
-  struct Foo* frame;
-  // FIXME: Could pun this into outer_context.
-  jmp_buf* ret;
-  struct FooContext* cleanup;
+  struct Foo frame[];
 };
+
+struct FooContext* foo_alloc_context(size_t size) {
+  struct FooContext* ctx
+    = foo_alloc(1, sizeof(struct FooContext) + size * sizeof(struct Foo));
+  ctx->size = size;
+  return ctx;
+}
 
 char* foo_debug_context(struct FooContext* ctx) {
   const int size = 1024;
   char* s = (char*)malloc(size+1);
   assert(s);
-  snprintf(s, size, "{ .info = %s, .size = %zu, .frame = %p, .outer_context = %p }",
-           ctx->info, ctx->size, ctx->frame, ctx->outer_context);
+  snprintf(s, size, "{ .info = %s, .size = %zu, .outer_context = %p }",
+           ctx->info, ctx->size, ctx->outer_context);
   return s;
 }
 
@@ -165,9 +164,6 @@ struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t fram
   struct Foo res = context->frame[index];
   assert(res.vtable);
   return res;
-}
-struct Foo* foo_frame_new(size_t size) {
-  return FOO_ALLOC_ARRAY(size, struct Foo);
 }
 
 struct FooMethod {
@@ -193,38 +189,34 @@ struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj);
 struct FooContext* foo_context_new_block(struct FooContext* ctx);
 
 struct FooContext* foo_context_new_main(size_t frameSize) {
-  struct FooContext* context = FOO_ALLOC(struct FooContext);
+  struct FooContext* context = foo_alloc_context(frameSize);
   context->info = "main";
   context->sender = NULL;
   context->receiver = foo_Integer_new(0); // should be: Main
   context->size = frameSize;
-  context->frame = foo_frame_new(frameSize);
+  context->outer_context = NULL;
   return context;
 }
 
-struct FooContext* foo_context_new_method(struct FooMethod* method, struct FooContext* sender, struct Foo receiver, size_t nargs) {
+struct FooContext* foo_context_new_method(const struct FooMethod* method, struct FooContext* sender, struct Foo receiver, size_t nargs) {
   if (method->argCount != nargs) {
     FOO_PANIC("Wrong number of arguments to %s. Wanted: %zu, got: %zu.",
               method->selector->name->data, method->argCount, nargs);
   }
-  struct FooContext* context = FOO_ALLOC(struct FooContext);
+  struct FooContext* context = foo_alloc_context(method->frameSize);
   context->info = "method";
   context->sender = sender;
   context->receiver = receiver;
-  context->size = method->frameSize;
-  context->frame = foo_frame_new(method->frameSize);
   context->outer_context = NULL;
   return context;
 }
 
 struct FooContext* foo_context_new_block(struct FooContext* ctx) {
-  struct FooContext* context = FOO_ALLOC(struct FooContext);
   struct FooBlock* block = ctx->receiver.datum.block;
+  struct FooContext* context = foo_alloc_context(block->frameSize);
   context->info = "block";
   context->sender = ctx;
   context->receiver = block->context->receiver;
-  context->size = block->frameSize;
-  context->frame = foo_frame_new(block->frameSize);
   context->outer_context = block->context;
   for (size_t i = 0; i < block->argCount; ++i)
     context->frame[i] = ctx->frame[i];
@@ -232,12 +224,10 @@ struct FooContext* foo_context_new_block(struct FooContext* ctx) {
 }
 
 struct FooContext* foo_context_new_unwind(struct FooContext* ctx, struct FooBlock* block) {
-  struct FooContext* context = FOO_ALLOC(struct FooContext);
+  struct FooContext* context = foo_alloc_context(block->frameSize);
   context->info = "#finally:";
   context->sender = ctx;
   context->receiver = block->context->receiver;
-  context->size = block->frameSize;
-  context->frame = foo_frame_new(context->size);
   context->outer_context = block->context;
   assert(block->argCount == 0);
   return context;
@@ -251,15 +241,11 @@ void foo_cleanup(struct FooContext* ctx) {
   block->function(block_ctx);
 }
 
-struct FooMethodArray {
-  size_t size;
-  struct FooMethod data[];
-};
-
 struct FooVtable {
   struct FooCString* name;
-  struct FooMethodArray* methods;
   struct Foo* classptr;
+  size_t size;
+  struct FooMethod methods[];
 };
 
 struct FooClass {
@@ -276,13 +262,11 @@ struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj) {
             vtable->name->data, obj.vtable->name->data);
 }
 
-struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, const struct FooSelector* selector) {
+const struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, const struct FooSelector* selector) {
   assert(vtable);
-  struct FooMethodArray* methods = vtable->methods;
   // FOO_DEBUG("/foo_vtable_find_method(%s#%s)", vtable->name->data, selector->name->data);
-  assert(methods);
-  for (size_t i = 0; i < methods->size; ++i) {
-    struct FooMethod* method = &methods->data[i];
+  for (size_t i = 0; i < vtable->size; ++i) {
+    const struct FooMethod* method = &vtable->methods[i];
     if (method->selector == selector) {
       return method;
     }
@@ -295,13 +279,13 @@ struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
   FOO_DEBUG("/foo_return(%s...)", foo_debug_context(ctx));
   struct FooContext* return_context = ctx;
   while (return_context->outer_context) {
-    if (return_context->cleanup) {
-      foo_cleanup(return_context->cleanup);
+    if (return_context->cleanup_or_ret) {
+      foo_cleanup(return_context->cleanup_or_ret);
     }
     return_context = return_context->outer_context;
   }
   return_context->receiver = value;
-  longjmp(*return_context->ret, 1);
+  longjmp(*(jmp_buf*)return_context->cleanup_or_ret, 1);
   FOO_PANIC("longjmp() fell through!")
 }
 
@@ -312,11 +296,11 @@ struct Foo foo_send(struct FooContext* sender,
   va_list arguments;
   va_start(arguments, nargs);
   assert(receiver.vtable);
-  struct FooMethod* method = foo_vtable_find_method(receiver.vtable, selector);
+  const struct FooMethod* method = foo_vtable_find_method(receiver.vtable, selector);
   if (method) {
     struct FooContext* context = foo_context_new_method(method, sender, receiver, nargs);
     jmp_buf ret;
-    context->ret = &ret;
+    context->cleanup_or_ret = &ret;
     int jmp = setjmp(ret);
     if (jmp) {
       FOO_DEBUG("/foo_send -> non-local return from %s", selector->name->data);

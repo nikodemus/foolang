@@ -220,12 +220,12 @@ class CTranspiler { output selectorMap blockFunctions }
                 output println: "}".
                 output newline
             }.
-        -- Direct Method Array
-        let directMethodArrayName = "FOO_{aClass name}DirectMethods".
-        output println: "struct FooMethodArray {directMethodArrayName} =".
+        -- Class Vtable
+        output println: "struct FooVtable {classVtableName} = ".
         output println: "\{".
+        output println: "    .name = &FOO_CSTRING({aClass name displayString}\" class\"),".
         output println: "    .size = {directMethods size},".
-        output println: "    .data = \{".
+        output println: "    .methods = \{".
         directMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
@@ -235,12 +235,13 @@ class CTranspiler { output selectorMap blockFunctions }
         output println: "    }".
         output println: "};".
         output newline.
-        -- Instance Method Array
-        let instanceMethodArrayName = "FOO_{aClass name}InstanceMethods".
-        output println: "struct FooMethodArray {instanceMethodArrayName} =".
+        -- Instance Vtable
+        output println: "struct FooVtable {instanceVtableName} = ".
         output println: "\{".
+        output println: "    .name = &FOO_CSTRING({aClass name displayString}),".
+        output println: "    .classptr = &{globalName},".
         output println: "    .size = {aClass instanceMethods size},".
-        output println: "    .data = \{".
+        output println: "    .methods = \{".
         aClass instanceMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
@@ -248,21 +249,6 @@ class CTranspiler { output selectorMap blockFunctions }
                   output println: "                            .frameSize = {each frameSize},".
                   output println: "                            .function = &{Name mangleInstanceMethod: each selector in: aClass} }," }.
         output println: "    }".
-        output println: "};".
-        output newline.
-        -- Class Vtable
-        output println: "struct FooVtable {classVtableName} = ".
-        output println: "\{".
-        output println: "    .name = &FOO_CSTRING({aClass name displayString}\" class\"),".
-        output println: "    .methods = &{directMethodArrayName}".
-        output println: "};".
-        output newline.
-        -- Instance Vtable
-        output println: "struct FooVtable {instanceVtableName} = ".
-        output println: "\{".
-        output println: "    .name = &FOO_CSTRING({aClass name displayString}),".
-        output println: "    .methods = &{instanceMethodArrayName},".
-        output println: "    .classptr = &{globalName}".
         output println: "};".
         output newline.
         -- Class struct

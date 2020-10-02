@@ -21,64 +21,50 @@ fn test_self_hosted_prelude() -> Test {
     Ok(())
 }
 
-#[test]
-#[serial]
-fn test_self_hosted_transpiler0() -> Test {
+fn run_test_transpile(name: &str) -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/impl/test_transpile.foo");
     cmd.arg("--use=foo/lib");
     cmd.arg("--");
-    cmd.arg("name");
+    cmd.arg(name);
     cmd.assert().success();
     Ok(())
+}
+
+#[test]
+#[serial]
+fn test_self_hosted_transpiler0() -> Test {
+    run_test_transpile("name")
 }
 
 #[test]
 #[serial]
 fn test_self_hosted_transpiler1() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
-    cmd.arg("foo/impl/test_transpile.foo");
-    cmd.arg("--use=foo/lib");
-    cmd.arg("--");
-    cmd.arg("transpile1");
-    cmd.assert().success();
-    Ok(())
+    run_test_transpile("transpile1")
 }
 
 #[test]
 #[serial]
 fn test_self_hosted_transpiler2() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
-    cmd.arg("foo/impl/test_transpile.foo");
-    cmd.arg("--use=foo/lib");
-    cmd.arg("--");
-    cmd.arg("transpile2");
-    cmd.assert().success();
-    Ok(())
+    run_test_transpile("transpile2")
 }
 
 #[test]
 #[serial]
 fn test_self_hosted_transpiler3() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
-    cmd.arg("foo/impl/test_transpile.foo");
-    cmd.arg("--use=foo/lib");
-    cmd.arg("--");
-    cmd.arg("transpile3");
-    cmd.assert().success();
-    Ok(())
+    run_test_transpile("transpile3")
 }
 
 #[test]
 #[serial]
 fn test_self_hosted_transpiler4() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
-    cmd.arg("foo/impl/test_transpile.foo");
-    cmd.arg("--use=foo/lib");
-    cmd.arg("--");
-    cmd.arg("transpile4");
-    cmd.assert().success();
-    Ok(())
+    run_test_transpile("transpile4")
+}
+
+#[test]
+#[serial]
+fn test_self_hosted_transpiler5() -> Test {
+    run_test_transpile("transpile5")
 }
 
 #[test]
