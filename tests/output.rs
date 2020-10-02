@@ -70,6 +70,18 @@ fn test_self_hosted_transpiler3() -> Test {
 }
 
 #[test]
+#[serial]
+fn test_self_hosted_transpiler4() -> Test {
+    let mut cmd = Command::cargo_bin("foo")?;
+    cmd.arg("foo/impl/test_transpile.foo");
+    cmd.arg("--use=foo/lib");
+    cmd.arg("--");
+    cmd.arg("transpile4");
+    cmd.assert().success();
+    Ok(())
+}
+
+#[test]
 fn example_hello() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/examples/hello.foo");

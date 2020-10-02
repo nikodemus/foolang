@@ -119,9 +119,15 @@ class CTranspiler { output selectorMap blockFunctions }
                               builtinVisitor visitClassDefinition: each } }!
 
     method generateBlocks
-        StringOutput
-            with: { |out|
-                    blockFunctions do: { |block| out println: block } }!
+        StringOutput with: { |out|
+                             self generateBlocksOn: out }!
+
+    method generateBlocksOn: out
+        blockFunctions do: { |block|
+                             out println: block declaration }.
+        out newline.
+        blockFunctions do: { |block|
+                             out println: block definition }!
 
     method selectorCName: selector
         self selectorMap map: selector!
@@ -133,17 +139,22 @@ class CTranspiler { output selectorMap blockFunctions }
         blockFunctions add: False.
         let index = blockFunctions size.
         let cname = "fooblock_id{index}".
-        output print: "struct Foo ".
-        output print: cname.
-        output println: " (struct FooContext* ctx) \{".
-        output print: "return ".
+        let signature = StringOutput with: { |out|
+                                             out print: "struct Foo ".
+                                             out print: cname.
+                                             out print: "(struct FooContext* ctx)" }.
+        output print: signature.
+        output println: " \{".
+        output print: "    return ".
         let blockVisitor = CTranspiler
                                output: output
                                selectorMap: selectorMap
                                blockFunctions: blockFunctions.
         block body visitBy: blockVisitor.
         output println: ";\n}".
-        blockFunctions put: output content at: index.
+        blockFunctions
+            put: {declaration: "{signature};", definition: output content}
+            at: index.
         cname!
 
     method visitClassDefinition: aClass
@@ -280,8 +291,8 @@ class CTranspiler { output selectorMap blockFunctions }
         aMethod signature
             doWithIndex: { |type index|
                            type is Any
-                               ifTrue: { output println: "    ctx->frame[{index}-1] = va_arg(args, struct Foo);" }
-                               ifFalse: { output println: "    ctx->frame[{index}-1] = foo_vtable_typecheck(&{Name mangleInstanceVtable: type}, va_arg(args, struct Foo));" } }.
+                               ifTrue: { output println: "    ctx->frame[{index-1}ul] = va_arg(args, struct Foo);" }
+                               ifFalse: { output println: "    ctx->frame[{index-1}ul] = foo_vtable_typecheck(&{Name mangleInstanceVtable: type}, va_arg(args, struct Foo));" } }.
         aMethod isBuiltin
             ifTrue: {  output print: "    ".
                        output println: (aMethod body replace: "\n" with: "\n    ").
