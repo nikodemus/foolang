@@ -21,6 +21,16 @@ git ls-files foo \
     | xargs wc -l \
     | awk 'END { print "Foolang   " $1 }'
 
+git ls-files host \
+    | grep -E '.c$' \
+    | xargs wc -l \
+    | awk 'END { print "C         " $1 }'
+
+git ls-files elisp \
+    | grep -E '.el$' \
+    | xargs wc -l \
+    | awk 'END { print "Elisp     " $1 }'
+
 git ls-files docs \
     | grep -E '.(md)$' \
     | xargs wc -l \
