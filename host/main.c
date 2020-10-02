@@ -198,7 +198,7 @@ struct FooContext* foo_context_new_main(size_t frameSize) {
   return context;
 }
 
-struct FooContext* foo_context_new_method(struct FooMethod* method, struct FooContext* sender, struct Foo receiver, size_t nargs) {
+struct FooContext* foo_context_new_method(const struct FooMethod* method, struct FooContext* sender, struct Foo receiver, size_t nargs) {
   if (method->argCount != nargs) {
     FOO_PANIC("Wrong number of arguments to %s. Wanted: %zu, got: %zu.",
               method->selector->name->data, method->argCount, nargs);
@@ -241,15 +241,11 @@ void foo_cleanup(struct FooContext* ctx) {
   block->function(block_ctx);
 }
 
-struct FooMethodArray {
-  size_t size;
-  struct FooMethod data[];
-};
-
 struct FooVtable {
   struct FooCString* name;
-  struct FooMethodArray* methods;
   struct Foo* classptr;
+  size_t size;
+  struct FooMethod methods[];
 };
 
 struct FooClass {
@@ -266,13 +262,11 @@ struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj) {
             vtable->name->data, obj.vtable->name->data);
 }
 
-struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, const struct FooSelector* selector) {
+const struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, const struct FooSelector* selector) {
   assert(vtable);
-  struct FooMethodArray* methods = vtable->methods;
   // FOO_DEBUG("/foo_vtable_find_method(%s#%s)", vtable->name->data, selector->name->data);
-  assert(methods);
-  for (size_t i = 0; i < methods->size; ++i) {
-    struct FooMethod* method = &methods->data[i];
+  for (size_t i = 0; i < vtable->size; ++i) {
+    const struct FooMethod* method = &vtable->methods[i];
     if (method->selector == selector) {
       return method;
     }
@@ -302,7 +296,7 @@ struct Foo foo_send(struct FooContext* sender,
   va_list arguments;
   va_start(arguments, nargs);
   assert(receiver.vtable);
-  struct FooMethod* method = foo_vtable_find_method(receiver.vtable, selector);
+  const struct FooMethod* method = foo_vtable_find_method(receiver.vtable, selector);
   if (method) {
     struct FooContext* context = foo_context_new_method(method, sender, receiver, nargs);
     jmp_buf ret;
