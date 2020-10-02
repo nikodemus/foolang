@@ -123,31 +123,32 @@ struct FooLayout {
   struct FooSlot slots[];
 };
 
-union FooReturnOrContext {
-  struct FooContext* context;
-  jmp_buf* ret;
-};
-
 // FIXME: Terribly messy
 struct FooContext {
   const char* info;
   struct Foo receiver;
   struct FooContext* sender;
   struct FooContext* outer_context;
-  size_t size;
-  // FIXME: Allocate inline?
-  struct Foo* frame;
-  // FIXME: Could pun this into outer_context.
+  // FIXME: Could pun this into outer_context or cleanup.
   jmp_buf* ret;
   struct FooContext* cleanup;
+  size_t size;
+  struct Foo frame[];
 };
+
+struct FooContext* foo_alloc_context(size_t size) {
+  struct FooContext* ctx
+    = foo_alloc(1, sizeof(struct FooContext) + size * sizeof(struct Foo));
+  ctx->size = size;
+  return ctx;
+}
 
 char* foo_debug_context(struct FooContext* ctx) {
   const int size = 1024;
   char* s = (char*)malloc(size+1);
   assert(s);
-  snprintf(s, size, "{ .info = %s, .size = %zu, .frame = %p, .outer_context = %p }",
-           ctx->info, ctx->size, ctx->frame, ctx->outer_context);
+  snprintf(s, size, "{ .info = %s, .size = %zu, .outer_context = %p }",
+           ctx->info, ctx->size, ctx->outer_context);
   return s;
 }
 
@@ -165,9 +166,6 @@ struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t fram
   struct Foo res = context->frame[index];
   assert(res.vtable);
   return res;
-}
-struct Foo* foo_frame_new(size_t size) {
-  return FOO_ALLOC_ARRAY(size, struct Foo);
 }
 
 struct FooMethod {
@@ -193,12 +191,12 @@ struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj);
 struct FooContext* foo_context_new_block(struct FooContext* ctx);
 
 struct FooContext* foo_context_new_main(size_t frameSize) {
-  struct FooContext* context = FOO_ALLOC(struct FooContext);
+  struct FooContext* context = foo_alloc_context(frameSize);
   context->info = "main";
   context->sender = NULL;
   context->receiver = foo_Integer_new(0); // should be: Main
   context->size = frameSize;
-  context->frame = foo_frame_new(frameSize);
+  context->outer_context = NULL;
   return context;
 }
 
@@ -207,24 +205,20 @@ struct FooContext* foo_context_new_method(struct FooMethod* method, struct FooCo
     FOO_PANIC("Wrong number of arguments to %s. Wanted: %zu, got: %zu.",
               method->selector->name->data, method->argCount, nargs);
   }
-  struct FooContext* context = FOO_ALLOC(struct FooContext);
+  struct FooContext* context = foo_alloc_context(method->frameSize);
   context->info = "method";
   context->sender = sender;
   context->receiver = receiver;
-  context->size = method->frameSize;
-  context->frame = foo_frame_new(method->frameSize);
   context->outer_context = NULL;
   return context;
 }
 
 struct FooContext* foo_context_new_block(struct FooContext* ctx) {
-  struct FooContext* context = FOO_ALLOC(struct FooContext);
   struct FooBlock* block = ctx->receiver.datum.block;
+  struct FooContext* context = foo_alloc_context(block->frameSize);
   context->info = "block";
   context->sender = ctx;
   context->receiver = block->context->receiver;
-  context->size = block->frameSize;
-  context->frame = foo_frame_new(block->frameSize);
   context->outer_context = block->context;
   for (size_t i = 0; i < block->argCount; ++i)
     context->frame[i] = ctx->frame[i];
@@ -232,12 +226,10 @@ struct FooContext* foo_context_new_block(struct FooContext* ctx) {
 }
 
 struct FooContext* foo_context_new_unwind(struct FooContext* ctx, struct FooBlock* block) {
-  struct FooContext* context = FOO_ALLOC(struct FooContext);
+  struct FooContext* context = foo_alloc_context(block->frameSize);
   context->info = "#finally:";
   context->sender = ctx;
   context->receiver = block->context->receiver;
-  context->size = block->frameSize;
-  context->frame = foo_frame_new(context->size);
   context->outer_context = block->context;
   assert(block->argCount == 0);
   return context;
