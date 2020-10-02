@@ -200,17 +200,6 @@ class TestTranspile3 { assert system }
                          end"
             expect: "#<Integer 2042>"!
 
-    method testNonLocalReturn
-        self transpile: "class Main \{}
-                             direct method run
-                                 self foo debug!
-                             direct method foo
-                                 100 + (self bar: \{ |x| return x })!
-                             direct method bar: block
-                                 block value: 420!
-                         end"
-            expect: "#<Integer 420>"!
-
     method testPrefixMethod
         self transpile: "class Main \{}
                              direct method run
@@ -254,6 +243,21 @@ class TestTranspile4 { assert system }
             expect: "#<Integer 2>#<Integer 100>"!
 end
 
+class TestTranspile5 { assert system }
+    is TranspilerTest
+
+    method testNonLocalReturn
+        self transpile: "class Main \{}
+                             direct method run
+                                 self foo debug!
+                             direct method foo
+                                 100 + (self bar: \{ |x| return x })!
+                             direct method bar: block
+                                 block value: 420!
+                         end"
+            expect: "#<Integer 420>"!
+end
+
 class Main {}
     direct method run: cmd in: system
         let tests = {
@@ -261,7 +265,8 @@ class Main {}
             "transpile1" -> TestTranspile1 system: system,
             "transpile2" -> TestTranspile2 system: system,
             "transpile3" -> TestTranspile3 system: system,
-            "transpile4" -> TestTranspile4 system: system
+            "transpile4" -> TestTranspile4 system: system,
+            "transpile5" -> TestTranspile4 system: system
         }.
         cmd do: { |name|
                   Assert
