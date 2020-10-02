@@ -10,6 +10,7 @@ return ctx->receiver.datum.block->function(block_ctx);"},
       #finally:
           -> {signature: [Block],
               body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
-\{ volatile struct FooContext* cleanup __attribute__((cleanup(foo_context_block_unwind)));
-  cleanup = ctx;
-  return ctx->receiver.datum.block->function(block_ctx); }"}}!
+block_ctx->cleanup = block_ctx;
+struct Foo block_value = ctx->receiver.datum.block->function(block_ctx);
+foo_cleanup(block_ctx);
+return block_value;"}}!

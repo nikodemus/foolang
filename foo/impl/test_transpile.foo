@@ -48,7 +48,7 @@ interface TranspilerTest
             = (((system getenv: "GITHUB_ACTION") is False) or: system isUnix)
                 ifTrue: { "-fsanitize=address -fsanitize=undefined" }
                 ifFalse: { "" }.
-        system command: "clang -o {path} {sanitizerOptions} -fexceptions -fno-omit-frame-pointer -g -Wall --std=c17 host/main.c".
+        system command: "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall --std=c17 host/main.c".
         path exists assert.
         system command: path toString!
 

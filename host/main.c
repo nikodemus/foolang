@@ -139,6 +139,7 @@ struct FooContext {
   struct Foo* frame;
   // FIXME: Could pun this into outer_context.
   jmp_buf* ret;
+  struct FooContext* cleanup;
 };
 
 char* foo_debug_context(struct FooContext* ctx) {
@@ -190,7 +191,6 @@ struct FooVtable FooInstanceVtable_Block;
 struct Foo foo_Integer_new(int64_t n);
 struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj);
 struct FooContext* foo_context_new_block(struct FooContext* ctx);
-struct FooContext* foo_context_new_unwind(struct FooContext* ctx, struct FooBlock* block);
 
 struct FooContext* foo_context_new_main(size_t frameSize) {
   struct FooContext* context = FOO_ALLOC(struct FooContext);
@@ -217,20 +217,6 @@ struct FooContext* foo_context_new_method(struct FooMethod* method, struct FooCo
   return context;
 }
 
-void foo_context_method_unwind(volatile struct FooContext** ctx) {
-  FOO_DEBUG("method unwind");
-  (*ctx)->ret = NULL;
-}
-
-void foo_context_block_unwind(volatile struct FooContext** ctx) {
-  FOO_DEBUG("block unwind");
-  struct FooBlock* block
-    = foo_vtable_typecheck(&FooInstanceVtable_Block, (*ctx)->frame[0]).datum.block;
-  struct FooContext* block_ctx
-    = foo_context_new_unwind((struct FooContext*)*ctx, block);
-  block->function(block_ctx);
-}
-
 struct FooContext* foo_context_new_block(struct FooContext* ctx) {
   struct FooContext* context = FOO_ALLOC(struct FooContext);
   struct FooBlock* block = ctx->receiver.datum.block;
@@ -255,6 +241,14 @@ struct FooContext* foo_context_new_unwind(struct FooContext* ctx, struct FooBloc
   context->outer_context = block->context;
   assert(block->argCount == 0);
   return context;
+}
+
+void foo_cleanup(struct FooContext* ctx) {
+  struct FooContext* sender = ctx->sender;
+  struct FooBlock* block
+    = foo_vtable_typecheck(&FooInstanceVtable_Block, sender->frame[0]).datum.block;
+  struct FooContext* block_ctx = foo_context_new_unwind(sender, block);
+  block->function(block_ctx);
 }
 
 struct FooMethodArray {
@@ -301,6 +295,9 @@ struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
   FOO_DEBUG("/foo_return(%s...)", foo_debug_context(ctx));
   struct FooContext* return_context = ctx;
   while (return_context->outer_context) {
+    if (return_context->cleanup) {
+      foo_cleanup(return_context->cleanup);
+    }
     return_context = return_context->outer_context;
   }
   return_context->receiver = value;
@@ -317,8 +314,7 @@ struct Foo foo_send(struct FooContext* sender,
   assert(receiver.vtable);
   struct FooMethod* method = foo_vtable_find_method(receiver.vtable, selector);
   if (method) {
-    volatile struct FooContext* context __attribute__((cleanup(foo_context_method_unwind)));
-    context = foo_context_new_method(method, sender, receiver, nargs);
+    struct FooContext* context = foo_context_new_method(method, sender, receiver, nargs);
     jmp_buf ret;
     context->ret = &ret;
     int jmp = setjmp(ret);
