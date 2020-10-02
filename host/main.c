@@ -123,24 +123,30 @@ struct FooLayout {
   struct FooSlot slots[];
 };
 
+union FooReturnOrContext {
+  struct FooContext* context;
+  jmp_buf* ret;
+};
+
 // FIXME: Terribly messy
 struct FooContext {
   const char* info;
-  struct FooContext* sender;
   struct Foo receiver;
+  struct FooContext* sender;
+  struct FooContext* outer_context;
   size_t size;
+  // FIXME: Allocate inline?
   struct Foo* frame;
-  struct FooContext* return_context;
+  // FIXME: Could pun this into outer_context.
   jmp_buf* ret;
-  struct Foo ret_value;
 };
 
 char* foo_debug_context(struct FooContext* ctx) {
   const int size = 1024;
   char* s = (char*)malloc(size+1);
   assert(s);
-  snprintf(s, size, "{ .info = %s, .size = %zu, .frame = %p, .return_context = %p }",
-           ctx->info, ctx->size, ctx->frame, ctx->return_context);
+  snprintf(s, size, "{ .info = %s, .size = %zu, .frame = %p, .outer_context = %p }",
+           ctx->info, ctx->size, ctx->frame, ctx->outer_context);
   return s;
 }
 
@@ -150,10 +156,11 @@ typedef struct Foo (*FooBlockFunction)(struct FooContext*);
 struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t frame) {
   FOO_DEBUG("/lexical_ref(index=%zu, frame=%zu)", index, frame);
   while (frame > 0) {
-    assert(context->sender);
-    context = context->sender;
+    assert(context->outer_context);
+    context = context->outer_context;
     --frame;
   }
+  assert(index < context->size);
   struct Foo res = context->frame[index];
   assert(res.vtable);
   return res;
@@ -183,7 +190,7 @@ struct FooVtable FooInstanceVtable_Block;
 struct Foo foo_Integer_new(int64_t n);
 struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj);
 struct FooContext* foo_context_new_block(struct FooContext* ctx);
-struct FooContext* foo_context_new_unwind(struct FooContext* ctx);
+struct FooContext* foo_context_new_unwind(struct FooContext* ctx, struct FooBlock* block);
 
 struct FooContext* foo_context_new_main(size_t frameSize) {
   struct FooContext* context = FOO_ALLOC(struct FooContext);
@@ -206,7 +213,7 @@ struct FooContext* foo_context_new_method(struct FooMethod* method, struct FooCo
   context->receiver = receiver;
   context->size = method->frameSize;
   context->frame = foo_frame_new(method->frameSize);
-  context->return_context = context;
+  context->outer_context = NULL;
   return context;
 }
 
@@ -217,36 +224,36 @@ void foo_context_method_unwind(volatile struct FooContext** ctx) {
 
 void foo_context_block_unwind(volatile struct FooContext** ctx) {
   FOO_DEBUG("block unwind");
-  struct FooContext* block_ctx = foo_context_new_unwind((struct FooContext*)*ctx);
-  block_ctx->receiver.datum.block->function(block_ctx);
+  struct FooBlock* block
+    = foo_vtable_typecheck(&FooInstanceVtable_Block, (*ctx)->frame[0]).datum.block;
+  struct FooContext* block_ctx
+    = foo_context_new_unwind((struct FooContext*)*ctx, block);
+  block->function(block_ctx);
 }
 
 struct FooContext* foo_context_new_block(struct FooContext* ctx) {
   struct FooContext* context = FOO_ALLOC(struct FooContext);
   struct FooBlock* block = ctx->receiver.datum.block;
   context->info = "block";
-  context->sender = block->context;
+  context->sender = ctx;
   context->receiver = block->context->receiver;
   context->size = block->frameSize;
   context->frame = foo_frame_new(block->frameSize);
-  context->return_context = context->sender->return_context;
+  context->outer_context = block->context;
   for (size_t i = 0; i < block->argCount; ++i)
     context->frame[i] = ctx->frame[i];
   return context;
 }
 
-struct FooContext* foo_context_new_unwind(struct FooContext* ctx) {
+struct FooContext* foo_context_new_unwind(struct FooContext* ctx, struct FooBlock* block) {
   struct FooContext* context = FOO_ALLOC(struct FooContext);
-  struct Foo blockObj = foo_vtable_typecheck(&FooInstanceVtable_Block, ctx->frame[0]);
-  struct FooBlock* block = blockObj.datum.block;
   context->info = "#finally:";
-  context->receiver = blockObj;
-  context->sender = block->context;
+  context->sender = ctx;
+  context->receiver = block->context->receiver;
   context->size = block->frameSize;
   context->frame = foo_frame_new(context->size);
-  context->return_context = context->sender->return_context;
-  for (size_t i = 0; i < context->receiver.datum.block->argCount; ++i)
-    context->frame[i] = ctx->frame[i];
+  context->outer_context = block->context;
+  assert(block->argCount == 0);
   return context;
 }
 
@@ -292,13 +299,13 @@ struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, const s
 struct Foo foo_return(struct FooContext* ctx, struct Foo value) __attribute__ ((noreturn));
 struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
   FOO_DEBUG("/foo_return(%s...)", foo_debug_context(ctx));
-  if (ctx->return_context->ret) {
-    ctx->return_context->ret_value = value;
-    longjmp(*ctx->return_context->ret, 1);
-    FOO_PANIC("longjmp() fell through!")
-  } else {
-    FOO_PANIC("Cannot return from here: %s", foo_debug_context(ctx));
+  struct FooContext* return_context = ctx;
+  while (return_context->outer_context) {
+    return_context = return_context->outer_context;
   }
+  return_context->receiver = value;
+  longjmp(*return_context->ret, 1);
+  FOO_PANIC("longjmp() fell through!")
 }
 
 struct Foo foo_send(struct FooContext* sender,
@@ -317,7 +324,9 @@ struct Foo foo_send(struct FooContext* sender,
     int jmp = setjmp(ret);
     if (jmp) {
       FOO_DEBUG("/foo_send -> non-local return from %s", selector->name->data);
-      return context->ret_value;
+      struct Foo return_value = context->receiver;
+      context->receiver = receiver;
+      return return_value;
     } else {
       struct Foo res = method->function((struct FooContext*)context, nargs, arguments);
       FOO_DEBUG("/foo_send -> local return from %s", selector->name->data);
