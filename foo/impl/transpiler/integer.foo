@@ -1,5 +1,7 @@
 import .name.Name
 
+-- FIXME: Overly restrictive types, mixed integer and float arithmetic not supported
+-- yet.
 define IntegerMethods
     { -- FIXME: The binary methods here should be generated from lang.number.foo
       (Selector name: "prefix-")
@@ -32,7 +34,7 @@ define IntegerMethods
       #-
           -> { signature: [Integer],
                body: "return foo_send(ctx, &{Name mangleSelector: #subNumber:}, ctx->frame[0], 1, ctx->receiver);" },
-      -- FIXME: There *Number methods should come from lang.integer.foo
+      -- FIXME: These *Number methods should come from lang.integer.foo
       #addNumber:
           -> { signature: [Integer],
                body: "return foo_send(ctx, &{Name mangleSelector: #integerAdd:}, ctx->frame[0], 1, ctx->receiver);" },
@@ -79,19 +81,19 @@ else
     foo_unimplemented(\"DivideByZero handling\");" },
       #integerEq:
           -> { signature: [Integer],
-               body: "return foo_Integer_new(ctx->receiver.datum.int64 == ctx->frame[0].datum.int64);" },
+               body: "return foo_Boolean_new(ctx->receiver.datum.int64 == ctx->frame[0].datum.int64);" },
       #integerGt:
           -> { signature: [Integer],
-               body: "return foo_Integer_new(ctx->receiver.datum.int64 > ctx->frame[0].datum.int64);" },
+               body: "return foo_Boolean_new(ctx->receiver.datum.int64 > ctx->frame[0].datum.int64);" },
       #integerGte:
           -> { signature: [Integer],
-               body: "return foo_Integer_new(ctx->receiver.datum.int64 >= ctx->frame[0].datum.int64);" },
+               body: "return foo_Boolean_new(ctx->receiver.datum.int64 >= ctx->frame[0].datum.int64);" },
       #integerLt:
           -> { signature: [Integer],
-               body: "return foo_Integer_new(ctx->receiver.datum.int64 < ctx->frame[0].datum.int64);" },
+               body: "return foo_Boolean_new(ctx->receiver.datum.int64 < ctx->frame[0].datum.int64);" },
       #integerLte:
           -> { signature: [Integer],
-               body: "return foo_Integer_new(ctx->receiver.datum.int64 <= ctx->frame[0].datum.int64);" },
+               body: "return foo_Boolean_new(ctx->receiver.datum.int64 <= ctx->frame[0].datum.int64);" },
       #integerMul:
           -> { signature: [Integer],
                body: "return foo_Integer_new(ctx->receiver.datum.int64 * ctx->frame[0].datum.int64);" },
