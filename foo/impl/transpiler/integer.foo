@@ -32,7 +32,7 @@ define IntegerMethods
       #-
           -> { signature: [Integer],
                body: "return foo_send(ctx, &{Name mangleSelector: #subNumber:}, ctx->frame[0], 1, ctx->receiver);" },
-      -- FIXME: There *Number methods should come from lang.integer.foo
+      -- FIXME: These *Number methods should come from lang.integer.foo
       #addNumber:
           -> { signature: [Integer],
                body: "return foo_send(ctx, &{Name mangleSelector: #integerAdd:}, ctx->frame[0], 1, ctx->receiver);" },
