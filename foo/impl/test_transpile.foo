@@ -263,6 +263,13 @@ class TestTranspile5 { assert system }
                                  1.01 debug!
                          end"
             expect: "#<Float 1.010000>"!
+
+    method testFloatArithmetic
+        self transpile: "class Main \{}
+                             direct method run
+                                 -(1.01) debug!
+                         end"
+            expect: "#<Float -1.010000>"!
 end
 
 class Main {}
