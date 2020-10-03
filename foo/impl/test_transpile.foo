@@ -266,7 +266,7 @@ class Main {}
             "transpile2" -> TestTranspile2 system: system,
             "transpile3" -> TestTranspile3 system: system,
             "transpile4" -> TestTranspile4 system: system,
-            "transpile5" -> TestTranspile4 system: system
+            "transpile5" -> TestTranspile5 system: system
         }.
         cmd do: { |name|
                   Assert
