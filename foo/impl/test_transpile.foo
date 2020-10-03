@@ -61,20 +61,6 @@ end
 class TestTranspile1 { assert system }
     is TranspilerTest
 
-    method testLiteralInteger
-        self transpile: "class Main \{}
-                             direct method run -- FIXME: : cmd in: sys
-                                 123 debug!
-                         end"
-             expect: "#<Integer 123>"!
-
-    method testBinary
-        self transpile: "class Main \{}
-                             direct method run
-                                 (10 + 100 + 1) debug!
-                         end"
-             expect: "#<Integer 111>"!
-
     method testLet
         self transpile: "class Main \{}
                              direct method run
@@ -344,6 +330,41 @@ end
 
 class TestTranspile7 { assert system }
     is TranspilerTest
+
+    method testLiteralInteger
+        self transpile: "class Main \{}
+                             direct method run -- FIXME: : cmd in: sys
+                                 123 debug!
+                         end"
+             expect: "#<Integer 123>"!
+
+    method testIntegerAdd
+        self transpile: "class Main \{}
+                             direct method run
+                                 (10 + 100 + 1) debug!
+                         end"
+             expect: "#<Integer 111>"!
+
+    method testIntegerMul
+        self transpile: "class Main \{}
+                             direct method run
+                                 (10 * 100) debug!
+                         end"
+             expect: "#<Integer 1000>"!
+
+    method testIntegerDiv
+        self transpile: "class Main \{}
+                             direct method run
+                                 (20 * 2) debug!
+                         end"
+             expect: "#<Integer 10>"!
+
+    method testIntegerSub
+        self transpile: "class Main \{}
+                             direct method run
+                                 (20 - 2) debug!
+                         end"
+             expect: "#<Integer 18>"!
 
     method testIntegerEquals
         self transpile: "class Main \{}
