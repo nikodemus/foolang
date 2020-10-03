@@ -256,6 +256,13 @@ class TestTranspile5 { assert system }
                                  block value: 420!
                          end"
             expect: "#<Integer 420>"!
+
+    method testFloatLiteral
+        self transpile: "class Main \{}
+                             direct method run
+                                 1.0 debug!
+                         end"
+            expect: "#<Float 1.0>"!
 end
 
 class Main {}
