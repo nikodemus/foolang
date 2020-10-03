@@ -68,6 +68,12 @@ fn test_self_hosted_transpiler5() -> Test {
 }
 
 #[test]
+#[serial]
+fn test_self_hosted_transpiler6() -> Test {
+    run_test_transpile("transpile6")
+}
+
+#[test]
 fn example_hello() -> Test {
     let mut cmd = Command::cargo_bin("foo")?;
     cmd.arg("foo/examples/hello.foo");

@@ -301,6 +301,54 @@ class TestTranspile5 { assert system }
             expect: "#<Boolean True>#<Boolean True>#<Boolean False>"!
 end
 
+class TestTranspile6 { assert system }
+    is TranspilerTest
+
+    method testIntegerEquals
+        self transpile: "class Main \{}
+                             direct method run
+                                 (1 == 2) debug.
+                                 (1 == 1) debug!
+                         end"
+            expect: "#<Boolean False>#<Boolean True>"!
+
+    method testIntegerGreaterThan
+        self transpile: "class Main \{}
+                             direct method run
+                                 (1 > 2) debug.
+                                 (2 > 1) debug.
+                                 (1 > 1) debug!
+                         end"
+            expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
+
+    method testIntegerGreaterThanOrEqual
+        self transpile: "class Main \{}
+                             direct method run
+                                 (1 >= 2) debug.
+                                 (2 >= 1) debug.
+                                 (1 >= 1) debug!
+                         end"
+            expect: "#<Boolean False>#<Boolean True>#<Boolean True>"!
+
+    method testIntegerLessThan
+        self transpile: "class Main \{}
+                             direct method run
+                                 (1 < 2) debug.
+                                 (2 < 1) debug.
+                                 (1 < 1) debug!
+                         end"
+            expect: "#<Boolean True>#<Boolean False>#<Boolean False>"!
+
+    method testIntegerLessThanOrEqual
+        self transpile: "class Main \{}
+                             direct method run
+                                 (1 <= 2) debug.
+                                 (2 <= 1) debug.
+                                 (1 <= 1) debug!
+                         end"
+            expect: "#<Boolean True>#<Boolean False>#<Boolean True>"!
+end
+
 class Main {}
     direct method run: cmd in: system
         let tests = {
@@ -309,7 +357,8 @@ class Main {}
             "transpile2" -> TestTranspile2 system: system,
             "transpile3" -> TestTranspile3 system: system,
             "transpile4" -> TestTranspile4 system: system,
-            "transpile5" -> TestTranspile5 system: system
+            "transpile5" -> TestTranspile5 system: system,
+            "transpile6" -> TestTranspile6 system: system
         }.
         cmd do: { |name|
                   Assert
