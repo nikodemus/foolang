@@ -39,5 +39,8 @@ return ctx->receiver;"},
                body: "return foo_Boolean_new(ctx->receiver.datum.float64 <= ctx->frame[0].datum.float64);" },
       #floatMul:
           -> { signature: [Float],
-               body: "return foo_Float_new(ctx->receiver.datum.float64 * ctx->frame[0].datum.float64);" }
+               body: "return foo_Float_new(ctx->receiver.datum.float64 * ctx->frame[0].datum.float64);" },
+      #floatSub:
+          -> { signature: [Float],
+               body: "return foo_Float_new(ctx->receiver.datum.float64 - ctx->frame[0].datum.float64);" },
     }!

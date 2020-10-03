@@ -273,9 +273,10 @@ class TestTranspile6 { assert system }
                              direct method run
                                  -(1.01) debug.
                                  (2.0 floatMul: 3.0) debug.
-                                 ((1.0 floatAdd: 10.0) floatAdd: 0.1) debug!
+                                 ((1.0 floatAdd: 10.0) floatAdd: 0.1) debug.
+                                 (10.0 floatSub: 0.1) debug!
                          end"
-            expect: "#<Float -1.010000>#<Float 6.000000>#<Float 11.100000>"!
+            expect: "#<Float -1.010000>#<Float 6.000000>#<Float 11.100000>#<Float 9.900000>"!
 
     method testFloatArithmetic2
         self transpile: "class Main \{}
