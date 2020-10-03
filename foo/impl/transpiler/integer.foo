@@ -1,5 +1,7 @@
 import .name.Name
 
+-- FIXME: Overly restrictive types, mixed integer and float arithmetic not supported
+-- yet.
 define IntegerMethods
     { -- FIXME: The binary methods here should be generated from lang.number.foo
       (Selector name: "prefix-")

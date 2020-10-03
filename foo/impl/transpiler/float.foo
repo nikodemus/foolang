@@ -1,14 +1,22 @@
 import .name.Name
 
+-- FIXME: Overly restrictive types, mixed integer and float arithmetic not supported
+-- yet.
 define FloatMethods
     { -- FIXME: The binary methods here should be generated from lang.number.foo
       (Selector name: "prefix-")
           -> { signature: [],
                body: "return foo_Float_new(- ctx->receiver.datum.float64);" },
+      #+
+          -> { signature: [Float],
+               body: "return foo_send(ctx, &{Name mangleSelector: #addNumber:}, ctx->frame[0], 1, ctx->receiver);" },
       #*
           -> { signature: [Float],
                body: "return foo_send(ctx, &{Name mangleSelector: #mulNumber:}, ctx->frame[0], 1, ctx->receiver);" },
       -- FIXME: These *Number methods should come from lang.integer.foo
+      #addNumber:
+          -> { signature: [Float],
+               body: "return foo_send(ctx, &{Name mangleSelector: #floatAdd:}, ctx->frame[0], 1, ctx->receiver);" },
       #mulNumber:
           -> { signature: [Float],
                body: "return foo_send(ctx, &{Name mangleSelector: #floatMul:}, ctx->frame[0], 1, ctx->receiver);" },
@@ -20,6 +28,9 @@ define FloatMethods
       #debug -> {signature: [],
                  body: "printf(\"#<Float %f>\", ctx->receiver.datum.float64);
 return ctx->receiver;"},
+      #floatAdd:
+          -> { signature: [Float],
+               body: "return foo_Float_new(ctx->receiver.datum.float64 + ctx->frame[0].datum.float64);" },
       #floatMul:
           -> { signature: [Float],
                body: "return foo_Float_new(ctx->receiver.datum.float64 * ctx->frame[0].datum.float64);" }
