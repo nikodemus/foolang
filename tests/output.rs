@@ -1,7 +1,6 @@
 use assert_cmd::Command;
 use predicates;
 use predicates::prelude::*;
-use serial_test::serial;
 
 type Test = Result<(), Box<dyn std::error::Error>>;
 
@@ -32,45 +31,16 @@ fn run_test_transpile(name: &str) -> Test {
 }
 
 #[test]
-#[serial]
-fn test_self_hosted_transpiler0() -> Test {
-    run_test_transpile("name")
-}
-
-#[test]
-#[serial]
-fn test_self_hosted_transpiler1() -> Test {
-    run_test_transpile("transpile1")
-}
-
-#[test]
-#[serial]
-fn test_self_hosted_transpiler2() -> Test {
-    run_test_transpile("transpile2")
-}
-
-#[test]
-#[serial]
-fn test_self_hosted_transpiler3() -> Test {
-    run_test_transpile("transpile3")
-}
-
-#[test]
-#[serial]
-fn test_self_hosted_transpiler4() -> Test {
-    run_test_transpile("transpile4")
-}
-
-#[test]
-#[serial]
-fn test_self_hosted_transpiler5() -> Test {
-    run_test_transpile("transpile5")
-}
-
-#[test]
-#[serial]
-fn test_self_hosted_transpiler6() -> Test {
-    run_test_transpile("transpile6")
+fn test_self_hosted_transpiler() -> Test {
+    run_test_transpile("name")?;
+    run_test_transpile("transpile1")?;
+    run_test_transpile("transpile2")?;
+    run_test_transpile("transpile3")?;
+    run_test_transpile("transpile4")?;
+    run_test_transpile("transpile5")?;
+    run_test_transpile("transpile6")?;
+    run_test_transpile("transpile7")?;
+    Ok(())
 }
 
 #[test]

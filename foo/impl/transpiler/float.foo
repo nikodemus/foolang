@@ -25,6 +25,18 @@ return ctx->receiver;"},
       #floatEq:
           -> { signature: [Float],
                body: "return foo_Boolean_new(ctx->receiver.datum.float64 == ctx->frame[0].datum.float64);" },
+      #floatGt:
+          -> { signature: [Float],
+               body: "return foo_Boolean_new(ctx->receiver.datum.float64 > ctx->frame[0].datum.float64);" },
+      #floatGte:
+          -> { signature: [Float],
+               body: "return foo_Boolean_new(ctx->receiver.datum.float64 >= ctx->frame[0].datum.float64);" },
+      #floatLt:
+          -> { signature: [Float],
+               body: "return foo_Boolean_new(ctx->receiver.datum.float64 < ctx->frame[0].datum.float64);" },
+      #floatLte:
+          -> { signature: [Float],
+               body: "return foo_Boolean_new(ctx->receiver.datum.float64 <= ctx->frame[0].datum.float64);" },
       #floatMul:
           -> { signature: [Float],
                body: "return foo_Float_new(ctx->receiver.datum.float64 * ctx->frame[0].datum.float64);" }

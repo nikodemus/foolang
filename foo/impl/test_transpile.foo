@@ -256,6 +256,10 @@ class TestTranspile5 { assert system }
                                  block value: 420!
                          end"
             expect: "#<Integer 420>"!
+end
+
+class TestTranspile6 { assert system }
+    is TranspilerTest
 
     method testFloatLiteral
         self transpile: "class Main \{}
@@ -299,9 +303,45 @@ class TestTranspile5 { assert system }
                                  (1.0 is 2.0) debug!
                          end"
             expect: "#<Boolean True>#<Boolean True>#<Boolean False>"!
+
+    method testFloatGt
+        self transpile: "class Main \{}
+                             direct method run
+                                 (1.0 floatGt: 2.0) debug.
+                                 (2.0 floatGt: 1.0) debug.
+                                 (1.0 floatGt: 1.0) debug!
+                         end"
+            expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
+
+    method testFloatGte
+        self transpile: "class Main \{}
+                             direct method run
+                                 (1.0 floatGte: 2.0) debug.
+                                 (2.0 floatGte: 1.0) debug.
+                                 (1.0 floatGte: 1.0) debug!
+                         end"
+            expect: "#<Boolean False>#<Boolean True>#<Boolean True>"!
+
+    method testFloatLt
+        self transpile: "class Main \{}
+                             direct method run
+                                 (1.0 floatLt: 2.0) debug.
+                                 (2.0 floatLt: 1.0) debug.
+                                 (1.0 floatLt: 1.0) debug!
+                         end"
+            expect: "#<Boolean True>#<Boolean False>#<Boolean False>"!
+
+    method testFloatLte
+        self transpile: "class Main \{}
+                             direct method run
+                                 (1.0 floatLte: 2.0) debug.
+                                 (2.0 floatLte: 1.0) debug.
+                                 (1.0 floatLte: 1.0) debug!
+                         end"
+            expect: "#<Boolean True>#<Boolean False>#<Boolean True>"!
 end
 
-class TestTranspile6 { assert system }
+class TestTranspile7 { assert system }
     is TranspilerTest
 
     method testIntegerEquals
@@ -358,7 +398,8 @@ class Main {}
             "transpile3" -> TestTranspile3 system: system,
             "transpile4" -> TestTranspile4 system: system,
             "transpile5" -> TestTranspile5 system: system,
-            "transpile6" -> TestTranspile6 system: system
+            "transpile6" -> TestTranspile6 system: system,
+            "transpile7" -> TestTranspile7 system: system
         }.
         cmd do: { |name|
                   Assert
