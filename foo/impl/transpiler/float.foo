@@ -19,6 +19,12 @@ return ctx->receiver;"},
       #floatAdd:
           -> { signature: [Float],
                body: "return foo_Float_new(ctx->receiver.datum.float64 + ctx->frame[0].datum.float64);" },
+      #floatDiv:
+          -> { signature: [Float],
+               body: "return foo_Float_new(ctx->receiver.datum.float64 / ctx->frame[0].datum.float64);" },
+      #floatEq:
+          -> { signature: [Float],
+               body: "return foo_Boolean_new(ctx->receiver.datum.float64 == ctx->frame[0].datum.float64);" },
       #floatMul:
           -> { signature: [Float],
                body: "return foo_Float_new(ctx->receiver.datum.float64 * ctx->frame[0].datum.float64);" }

@@ -79,6 +79,7 @@ if (div)
     return foo_Integer_new(ctx->receiver.datum.int64 / div);
 else
     foo_unimplemented(\"DivideByZero handling\");" },
+      -- FIXME: These should return booleans
       #integerEq:
           -> { signature: [Integer],
                body: "return foo_Integer_new(ctx->receiver.datum.int64 == ctx->frame[0].datum.int64);" },

@@ -184,6 +184,7 @@ struct FooBlock {
 
 // Forward declarations for vtables are in generated_classes, but we're going
 // to define a few builtin ctors first that need some of them.
+struct FooVtable FooInstanceVtable_Boolean;
 struct FooVtable FooInstanceVtable_Integer;
 struct FooVtable FooInstanceVtable_Float;
 struct FooVtable FooInstanceVtable_Block;
@@ -332,6 +333,10 @@ struct Foo foo_block_new(struct FooContext* context,
   block->argCount = argCount;
   block->frameSize = frameSize;
   return (struct Foo){ .vtable = &FooInstanceVtable_Block, .datum = { .block = block } };
+}
+
+struct Foo foo_Boolean_new(bool t) {
+  return (struct Foo){ .vtable = &FooInstanceVtable_Boolean, .datum = { .boolean = t } };
 }
 
 struct Foo foo_Integer_new(int64_t n) {

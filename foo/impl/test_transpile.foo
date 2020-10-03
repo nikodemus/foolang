@@ -264,7 +264,7 @@ class TestTranspile5 { assert system }
                          end"
             expect: "#<Float 1.010000>"!
 
-    method testFloatArithmetic
+    method testFloatArithmetic1
         self transpile: "class Main \{}
                              direct method run
                                  -(1.01) debug.
@@ -272,6 +272,33 @@ class TestTranspile5 { assert system }
                                  ((1.0 floatAdd: 10.0) floatAdd: 0.1) debug!
                          end"
             expect: "#<Float -1.010000>#<Float 6.000000>#<Float 11.100000>"!
+
+    method testFloatArithmetic2
+        self transpile: "class Main \{}
+                             direct method run
+                                 (8.0 floatDiv: 2.0) debug.
+                                 (8.0 floatDiv: 0.0) debug.
+                                 (0.0 floatMul: 10.0) debug!
+                         end"
+            expect: "#<Float 4.000000>#<Float inf>#<Float 0.000000>"!
+
+    method testFloatEq
+        self transpile: "class Main \{}
+                             direct method run
+                                 ((0.0 floatDiv: 0.0) floatEq: (0.0 floatDiv: 0.0)) debug.
+                                 (1.0 floatEq: 1.0) debug.
+                                 (1.0 floatEq: 2.0) debug!
+                         end"
+            expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
+
+    method testFloatIs
+        self transpile: "class Main \{}
+                             direct method run
+                                 ((0.0 floatDiv: 0.0) is (0.0 floatDiv: 0.0)) debug.
+                                 (1.0 is 1.0) debug.
+                                 (1.0 is 2.0) debug!
+                         end"
+            expect: "#<Boolean True>#<Boolean True>#<Boolean False>"!
 end
 
 class Main {}
