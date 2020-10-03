@@ -31,6 +31,9 @@ fn run_test_transpile(name: &str) -> Test {
 }
 
 #[test]
+#[ignore]
+// KLUDGE: marked ignore so we can "easily" ignore failures on Windows CI
+// host where the memory runs out for this.
 fn test_self_hosted_transpiler() -> Test {
     run_test_transpile("--block")?;
     run_test_transpile("--boolean")?;
