@@ -1,3 +1,4 @@
+#include <float.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <string.h>
@@ -58,6 +59,7 @@ union FooDatum {
   struct FooBlock* block;
   struct FooClass* class;
   int64_t int64;
+  double float64;
   bool boolean;
 };
 
@@ -183,8 +185,10 @@ struct FooBlock {
 // Forward declarations for vtables are in generated_classes, but we're going
 // to define a few builtin ctors first that need some of them.
 struct FooVtable FooInstanceVtable_Integer;
+struct FooVtable FooInstanceVtable_Float;
 struct FooVtable FooInstanceVtable_Block;
 struct Foo foo_Integer_new(int64_t n);
+struct Foo foo_Float_new(double f);
 struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj);
 struct FooContext* foo_context_new_block(struct FooContext* ctx);
 
@@ -334,9 +338,10 @@ struct Foo foo_Integer_new(int64_t n) {
   return (struct Foo){ .vtable = &FooInstanceVtable_Integer, .datum = { .int64 = n } };
 }
 
+struct Foo foo_Float_new(double f) {
+  return (struct Foo){ .vtable = &FooInstanceVtable_Float, .datum = { .float64 = f } };
+}
 
 #include "generated_blocks.c"
-
 #include "generated_classes.c"
-
 #include "generated_main.c"

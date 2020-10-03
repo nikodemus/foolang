@@ -1,0 +1,10 @@
+import .name.Name
+
+define FloatMethods
+    { -- FIXME: I absolutely despise the C floating point printing:
+      -- print the required number of digits without trailing zeros.
+      -- Either integrate dtoa.c, link to a small Rust library,
+      -- or implement the algorithm myself.
+      #debug -> {signature: [],
+                 body: "printf(\"#<Float %f>\", ctx->receiver.datum.float64);
+return ctx->receiver;"} }!

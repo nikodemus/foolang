@@ -2,6 +2,7 @@ import .transpiler.name.Name
 import .transpiler.integer
 import .transpiler.block
 import .transpiler.boolean
+import .transpiler.float
 import .ast.AstClass
 
 class BuiltinMethod { selector definition }
@@ -41,6 +42,10 @@ define BuiltinClasses
          new: "Integer"
          directMethods: []
          instanceMethods: integer.IntegerMethods,
+     BuiltinClass
+         new: "Float"
+         directMethods: []
+         instanceMethods: float.FloatMethods,
      BuiltinClass
          new: "Block"
          directMethods: []
@@ -334,6 +339,8 @@ class CTranspiler { output selectorMap blockFunctions }
         let value = aConstant value.
         (Integer includes: value)
             ifTrue: { return output print: "foo_Integer_new({value})" }.
+        (Float includes: value)
+            ifTrue: { return output print: "foo_Float_new({value})" }.
         Error raise: "Don't know how to transpile constant `{value}` into C."!
 
     method visitSend: aSend
