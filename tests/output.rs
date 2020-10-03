@@ -32,14 +32,17 @@ fn run_test_transpile(name: &str) -> Test {
 
 #[test]
 fn test_self_hosted_transpiler() -> Test {
-    run_test_transpile("name")?;
-    run_test_transpile("transpile1")?;
-    run_test_transpile("transpile2")?;
-    run_test_transpile("transpile3")?;
-    run_test_transpile("transpile4")?;
-    run_test_transpile("transpile5")?;
-    run_test_transpile("transpile6")?;
-    run_test_transpile("transpile7")?;
+    run_test_transpile("--block")?;
+    run_test_transpile("--boolean")?;
+    run_test_transpile("--class")?;
+    run_test_transpile("--finally")?;
+    run_test_transpile("--float")?;
+    run_test_transpile("--integer")?;
+    run_test_transpile("--keyword")?;
+    run_test_transpile("--let")?;
+    run_test_transpile("--name")?;
+    run_test_transpile("--return")?;
+    run_test_transpile("--self")?;
     Ok(())
 }
 

@@ -58,7 +58,17 @@ interface TranspilerTest
                testing: "transpile -> {output}"!
 end
 
-class TestTranspile1 { assert system }
+---
+KLUDGE: The reason these tests are split into so many classes and run
+individually is that the Github Actions CI host for Windows keeps running
+out of memory when running Clang multiple times in the same process.
+
+This is probably an indication of a memory leak in the bootstrap host,
+but right now this is what we're doing since other hosts don't have the
+same problem.
+---
+
+class TestTranspileLet { assert system }
     is TranspilerTest
 
     method testLet
@@ -69,6 +79,10 @@ class TestTranspile1 { assert system }
                                  (x * y) debug!
                         end"
              expect: "#<Integer 44>"!
+end
+
+class TestTranspileKeyword { assert system }
+    is TranspilerTest
 
     method testKeyword
         self transpile: "class Main \{}
@@ -77,7 +91,11 @@ class TestTranspile1 { assert system }
                              direct method add: x and: y
                                  x + y!
                         end"
-             expect: "#<Integer 45>"!
+            expect: "#<Integer 45>"!
+end
+
+class TestTranspileBlock { assert system }
+    is TranspilerTest
 
     method testBlock
         self transpile: "class Main \{}
@@ -91,7 +109,7 @@ class TestTranspile1 { assert system }
             expect: "#<Integer 222>"!
 end
 
-class TestTranspile2 { assert system }
+class TestTranspileSelf { assert system }
     is TranspilerTest
 
     method testSelf
@@ -113,6 +131,10 @@ class TestTranspile2 { assert system }
                                  242!
                          end"
             expect: "#<Integer 242>"!
+end
+
+class TestTranspileBoolean { assert system }
+    is TranspilerTest
 
     method testBooleanDebug
         self transpile: "class Main \{}
@@ -150,7 +172,7 @@ class TestTranspile2 { assert system }
             expect: "#<Boolean False>#<Boolean False>#<Boolean False>#<Boolean False>#<Boolean True>#<Boolean True>#<Boolean True>"!
 end
 
-class TestTranspile3 { assert system }
+class TestTranspileClass { assert system }
    is TranspilerTest
 
     method testMyClass
@@ -197,7 +219,7 @@ class TestTranspile3 { assert system }
 
 end
 
-class TestTranspile4 { assert system }
+class TestTranspileFinally { assert system }
     is TranspilerTest
 
     method testBlockFinally1
@@ -229,7 +251,7 @@ class TestTranspile4 { assert system }
             expect: "#<Integer 2>#<Integer 100>"!
 end
 
-class TestTranspile5 { assert system }
+class TestTranspileReturn { assert system }
     is TranspilerTest
 
     method testNonLocalReturn
@@ -244,7 +266,7 @@ class TestTranspile5 { assert system }
             expect: "#<Integer 420>"!
 end
 
-class TestTranspile6 { assert system }
+class TestTranspileFloat { assert system }
     is TranspilerTest
 
     method testFloatLiteral
@@ -328,7 +350,7 @@ class TestTranspile6 { assert system }
             expect: "#<Boolean True>#<Boolean False>#<Boolean True>"!
 end
 
-class TestTranspile7 { assert system }
+class TestTranspileInteger { assert system }
     is TranspilerTest
 
     method testLiteralInteger
@@ -355,7 +377,7 @@ class TestTranspile7 { assert system }
     method testIntegerDiv
         self transpile: "class Main \{}
                              direct method run
-                                 (20 * 2) debug!
+                                 (20 / 2) debug!
                          end"
              expect: "#<Integer 10>"!
 
@@ -414,15 +436,20 @@ end
 class Main {}
     direct method run: cmd in: system
         let tests = {
-            "name" -> TestName,
-            "transpile1" -> TestTranspile1 system: system,
-            "transpile2" -> TestTranspile2 system: system,
-            "transpile3" -> TestTranspile3 system: system,
-            "transpile4" -> TestTranspile4 system: system,
-            "transpile5" -> TestTranspile5 system: system,
-            "transpile6" -> TestTranspile6 system: system,
-            "transpile7" -> TestTranspile7 system: system
+            "--block" -> TestTranspileBlock system: system,
+            "--boolean" -> TestTranspileBoolean system: system,
+            "--class" -> TestTranspileClass system: system,
+            "--finally" -> TestTranspileFinally system: system,
+            "--float" -> TestTranspileFloat system: system,
+            "--integer" -> TestTranspileInteger system: system,
+            "--keyword" -> TestTranspileKeyword system: system,
+            "--let" -> TestTranspileLet system: system,
+            "--name" -> TestName,
+            "--return" -> TestTranspileReturn system: system,
+            "--self" -> TestTranspileSelf system: system,
         }.
+        cmd == ["--all"]
+            ifTrue: { cmd = tests keys }.
         cmd do: { |name|
                   Assert
                       runSuite: (tests at: name)
