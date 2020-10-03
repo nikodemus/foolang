@@ -1,26 +1,14 @@
 import .name.Name
 
--- FIXME: Overly restrictive types, mixed integer and float arithmetic not supported
--- yet.
+-- Not implementing the non-primitive methods here for floats, they should come
+-- from lang.number and lang.float!
+--
+-- Doing them for integers was OK, since it gave an opportunity to think about
+-- things - doing them for floats here would be a waste of time.
 define FloatMethods
-    { -- FIXME: The binary methods here should be generated from lang.number.foo
-      (Selector name: "prefix-")
+    { (Selector name: "prefix-")
           -> { signature: [],
                body: "return foo_Float_new(- ctx->receiver.datum.float64);" },
-      #+
-          -> { signature: [Float],
-               body: "return foo_send(ctx, &{Name mangleSelector: #addNumber:}, ctx->frame[0], 1, ctx->receiver);" },
-      #*
-          -> { signature: [Float],
-               body: "return foo_send(ctx, &{Name mangleSelector: #mulNumber:}, ctx->frame[0], 1, ctx->receiver);" },
-      -- FIXME: These *Number methods should come from lang.integer.foo
-      #addNumber:
-          -> { signature: [Float],
-               body: "return foo_send(ctx, &{Name mangleSelector: #floatAdd:}, ctx->frame[0], 1, ctx->receiver);" },
-      #mulNumber:
-          -> { signature: [Float],
-               body: "return foo_send(ctx, &{Name mangleSelector: #floatMul:}, ctx->frame[0], 1, ctx->receiver);" },
-      -- The real stuff
       -- FIXME: I absolutely despise the C floating point printing:
       -- print the required number of digits without trailing zeros.
       -- Either integrate dtoa.c, link to a small Rust library,
