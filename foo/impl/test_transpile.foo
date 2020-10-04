@@ -433,6 +433,44 @@ class TestTranspileInteger { assert system }
             expect: "#<Boolean True>#<Boolean False>#<Boolean True>"!
 end
 
+class TestTranspileString { assert system }
+    is TranspilerTest
+
+    method testStringLiteral
+        self transpile: "class Main \{}
+                             direct method run
+                                 \"foo\" debug!
+                         end"
+            expect: "#<String foo>"!
+
+    method testStringSize
+        self transpile: "class Main \{}
+                             direct method run
+                                 self string size debug!
+                             direct method string
+                                 \"1234567890\"!
+                         end"
+            expect: "#<Integer 10>"!
+
+    method testStringFromTo
+        self transpile: "class Main \{}
+                             direct method run
+                                 ((self string) from: 3 to: 5) debug!
+                             direct method string
+                                 \"XXbarXX\"!
+                         end"
+            expect: "#<String bar>"!
+
+    method testStringFromToEmpty
+        self transpile: "class Main \{}
+                             direct method run
+                                 ((self string) from: 3 to: 2) debug!
+                             direct method string
+                                 \"XXbarXX\"!
+                         end"
+            expect: "#<String >"!
+end
+
 class Main {}
     direct method run: cmd in: system
         let tests = {
@@ -447,6 +485,7 @@ class Main {}
             "--name" -> TestName,
             "--return" -> TestTranspileReturn system: system,
             "--self" -> TestTranspileSelf system: system,
+            "--string" -> TestTranspileString system: system,
         }.
         cmd == ["--all"]
             ifTrue: { cmd = tests keys }.
