@@ -74,19 +74,21 @@ class SelectorMap { names }
         names do: block!
 end
 
-class CTranspiler { output selectorMap blockFunctions }
+class CTranspiler { output selectorMap blockFunctions constants }
 
     direct method transpile: globals in: env
         let visitor = self
                           output: StringOutput new
                           selectorMap: SelectorMap new
-                          blockFunctions: List new.
+                          blockFunctions: List new
+                          constants: List new.
         -- FIXME: visit Main, and it's dependencies only
         globals do: { |each| visitor forwardDeclarationFor: each }.
         globals do: { |each| each definition visitBy: visitor }.
         visitor generateMain.
         { main: visitor output content,
           blocks: visitor generateBlocks,
+          constants: visitor generateConstants,
           classes: visitor generateClasses,
           selectors: visitor generateSelectors }!
 
@@ -124,14 +126,14 @@ class CTranspiler { output selectorMap blockFunctions }
                     let builtinVisitor = CTranspiler
                                              output: out
                                              selectorMap: selectorMap
-                                             blockFunctions: blockFunctions.
+                                             blockFunctions: blockFunctions
+                                             constants: constants.
                     BuiltinClasses
                         do: { |each|
                               builtinVisitor visitClassDefinition: each } }!
 
     method generateBlocks
-        StringOutput with: { |out|
-                             self generateBlocksOn: out }!
+        StringOutput with: { |out| self generateBlocksOn: out }!
 
     method generateBlocksOn: out
         blockFunctions do: { |block|
@@ -140,8 +142,38 @@ class CTranspiler { output selectorMap blockFunctions }
         blockFunctions do: { |block|
                              out println: block definition }!
 
+    method generateConstants
+        StringOutput with: { |out| self generateConstantsOn: out }!
+
+    method generateConstantsOn: out
+        constants do: { |each| out println: each }!
+
     method selectorCName: selector
         self selectorMap map: selector!
+
+    method stringCName: string
+        let index = constants size + 1.
+        let cname = "foostring_id{index}".
+        constants
+            add: (StringOutput
+                      with: { |out|
+                              out println: "struct FooBytes {cname}_bytes =".
+                              out println: "\{".
+                              out println: "    .size = {string size},".
+                              out print: "    .data = \{ ".
+                              string do: { |each|
+                                           out print: "'{each}'," }.
+                              out print: " 0".
+                              out println: " }".
+                              out println: "};".
+                              out newline.
+                              out println: "struct Foo {cname} =".
+                              out println: "\{".
+                              out println: "    .vtable = &{Name mangleInstanceVtable: String},".
+                              out println: "    .datum = \{ .bytes = &{cname}_bytes }".
+                              out println: "};".
+                              out newline }).
+        cname!
 
     method blockCName: block
         let output = StringOutput new.
@@ -160,7 +192,8 @@ class CTranspiler { output selectorMap blockFunctions }
         let blockVisitor = CTranspiler
                                output: output
                                selectorMap: selectorMap
-                               blockFunctions: blockFunctions.
+                               blockFunctions: blockFunctions
+                               constants: constants.
         block body visitBy: blockVisitor.
         output println: ";\n}".
         blockFunctions
@@ -348,7 +381,7 @@ class CTranspiler { output selectorMap blockFunctions }
         (Float includes: value)
             ifTrue: { return output print: "foo_Float_new({value})" }.
         (String includes: value)
-            ifTrue: { return output print: "foo_String_new({value size}, {value displayString})" }.
+            ifTrue: { return output print: (self stringCName: value) }.
         Error raise: "Don't know how to transpile constant `{value}` into C."!
 
     method visitSend: aSend
