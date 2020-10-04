@@ -388,6 +388,9 @@ class CTranspiler { output selectorMap blockFunctions constants }
             ifTrue: { return output print: ".float64 = {value}" }.
         (String includes: value)
             ifTrue: { return output print: ".bytes = &{self stringCName: value}_bytes" }.
+        (Boolean includes: value)
+            ifTrue: { let bit = value ifTrue: { 1 } ifFalse: { 0 }.
+                      return output print: ".boolean = {bit}" }.
         Error raise: "Don't know how to transpile constant `{value}` into C."!
 
     method visitConstant: aConstant
