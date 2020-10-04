@@ -71,7 +71,9 @@ struct Foo {
   union FooDatum datum;
 };
 
-/** Out of line allocation of data for compatibility with string literals.
+/** Out of line allocation of data for compatibility with C string literals.
+ *
+ *  FIXME: I'd really like to replace these with String.
  */
 struct FooCString {
   size_t size;
@@ -364,6 +366,7 @@ struct Foo foo_String_new(size_t len, const char* s) {
   return (struct Foo) { .vtable = &FooInstanceVtable_String, .datum = { .bytes = bytes } };
 }
 
+#include "generated_constants.c"
 #include "generated_blocks.c"
 #include "generated_classes.c"
 #include "generated_main.c"

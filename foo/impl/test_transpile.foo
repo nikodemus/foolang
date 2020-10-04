@@ -29,6 +29,9 @@ interface TranspilerTest
         (system files path: "host/generated_selectors.h")
             forWrite truncateExisting
                 createOrOpen: { |f| f writeString: c selectors }.
+        (system files path: "host/generated_constants.c")
+            forWrite truncateExisting
+                createOrOpen: { |f| f writeString: c constants }.
         (system files path: "host/generated_blocks.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f writeString: c blocks }.
