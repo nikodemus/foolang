@@ -199,7 +199,7 @@ struct FooVtable FooInstanceVtable_Integer;
 struct FooVtable FooInstanceVtable_String;
 struct Foo foo_Float_new(double f);
 struct Foo foo_Integer_new(int64_t n);
-struct Foo foo_String_new(const char* s);
+struct Foo foo_String_new(size_t len, const char* s);
 struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj);
 struct FooContext* foo_context_new_block(struct FooContext* ctx);
 
@@ -357,8 +357,7 @@ struct Foo foo_Float_new(double f) {
   return (struct Foo){ .vtable = &FooInstanceVtable_Float, .datum = { .float64 = f } };
 }
 
-struct Foo foo_String_new(const char* s) {
-  size_t len = strlen(s);
+struct Foo foo_String_new(size_t len, const char* s) {
   struct FooBytes* bytes = (struct FooBytes*)foo_alloc(1, sizeof(struct FooBytes) + len + 1);
   bytes->size = len;
   memcpy(bytes->data, s, len);

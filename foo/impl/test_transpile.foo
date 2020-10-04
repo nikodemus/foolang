@@ -455,11 +455,20 @@ class TestTranspileString { assert system }
     method testStringFromTo
         self transpile: "class Main \{}
                              direct method run
-                                 ((self string) from: 3 to: 6) debug!
+                                 ((self string) from: 3 to: 5) debug!
                              direct method string
-                                 \"foobarquux\"!
+                                 \"XXbarXX\"!
                          end"
             expect: "#<String bar>"!
+
+    method testStringFromToEmpty
+        self transpile: "class Main \{}
+                             direct method run
+                                 ((self string) from: 3 to: 2) debug!
+                             direct method string
+                                 \"XXbarXX\"!
+                         end"
+            expect: "#<String >"!
 end
 
 class Main {}
