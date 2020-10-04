@@ -451,6 +451,15 @@ class TestTranspileString { assert system }
                                  \"1234567890\"!
                          end"
             expect: "#<Integer 10>"!
+
+    method testStringFromTo
+        self transpile: "class Main \{}
+                             direct method run
+                                 ((self string) from: 3 to: 6) debug!
+                             direct method string
+                                 \"foobarquux\"!
+                         end"
+            expect: "#<String bar>"!
 end
 
 class Main {}
