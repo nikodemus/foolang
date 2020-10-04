@@ -448,7 +448,7 @@ class TestTranspileString { assert system }
                              direct method run
                                  self string size debug!
                              direct method string
-                                 \"123456890\"!
+                                 \"1234567890\"!
                          end"
             expect: "#<Integer 10>"!
 end
