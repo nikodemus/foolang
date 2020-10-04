@@ -442,6 +442,15 @@ class TestTranspileString { assert system }
                                  \"foo\" debug!
                          end"
             expect: "#<String foo>"!
+
+    method testStringSize
+        self transpile: "class Main \{}
+                             direct method run
+                                 self string size debug!
+                             direct method string
+                                 \"123456890\"!
+                         end"
+            expect: "#<Integer 10>"!
 end
 
 class Main {}
