@@ -61,16 +61,6 @@ interface TranspilerTest
                testing: "transpile -> {output}"!
 end
 
----
-KLUDGE: The reason these tests are split into so many classes and run
-individually is that the Github Actions CI host for Windows keeps running
-out of memory when running Clang multiple times in the same process.
-
-This is probably an indication of a memory leak in the bootstrap host,
-but right now this is what we're doing since other hosts don't have the
-same problem.
----
-
 class TestTranspileLet { assert system }
     is TranspilerTest
 
@@ -95,6 +85,34 @@ class TestTranspileKeyword { assert system }
                                  x + y!
                         end"
             expect: "#<Integer 45>"!
+end
+
+class TestTranspileDefine { assert system }
+    is TranspilerTest
+
+    method testDefineInteger
+        self transpile: "define MyInteger 1234!
+                         class Main \{}
+                             direct method run
+                                 MyInteger debug!
+                         end"
+            expect: "#<Integer 1234>"!
+
+    method testDefineFloat
+        self transpile: "define MyFloat 12.34!
+                         class Main \{}
+                             direct method run
+                                 MyFloat debug!
+                         end"
+            expect: "#<Float 12.340000>"!
+
+    method testDefineString
+        self transpile: "define MyString \"foobar\"!
+                         class Main \{}
+                             direct method run
+                                 MyString debug!
+                         end"
+            expect: "#<String foobar>"!
 end
 
 class TestTranspileBlock { assert system }
@@ -480,6 +498,7 @@ class Main {}
             "--block" -> TestTranspileBlock system: system,
             "--boolean" -> TestTranspileBoolean system: system,
             "--class" -> TestTranspileClass system: system,
+            "--define" -> TestTranspileDefine system: system,
             "--finally" -> TestTranspileFinally system: system,
             "--float" -> TestTranspileFloat system: system,
             "--integer" -> TestTranspileInteger system: system,
