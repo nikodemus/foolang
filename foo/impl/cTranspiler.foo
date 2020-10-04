@@ -3,6 +3,7 @@ import .transpiler.integer
 import .transpiler.block
 import .transpiler.boolean
 import .transpiler.float
+import .transpiler.string
 import .ast.AstClass
 
 class BuiltinMethod { selector definition }
@@ -37,15 +38,7 @@ class BuiltinClass { name directMethods instanceMethods }
         True!
 end
 
-define BuiltinClasses
-    [BuiltinClass
-         new: "Integer"
-         directMethods: []
-         instanceMethods: integer.IntegerMethods,
-     BuiltinClass
-         new: "Float"
-         directMethods: []
-         instanceMethods: float.FloatMethods,
+define BuiltinClasses [
      BuiltinClass
          new: "Block"
          directMethods: []
@@ -53,7 +46,20 @@ define BuiltinClasses
      BuiltinClass
          new: "Boolean"
          directMethods: boolean.DirectMethods
-         instanceMethods: boolean.InstanceMethods]!
+         instanceMethods: boolean.InstanceMethods,
+     BuiltinClass
+         new: "Float"
+         directMethods: []
+         instanceMethods: float.FloatMethods,
+     BuiltinClass
+         new: "Integer"
+         directMethods: []
+         instanceMethods: integer.IntegerMethods,
+     BuiltinClass
+         new: "String"
+         directMethods: []
+         instanceMethods: string.InstanceMethods
+]!
 
 class SelectorMap { names }
     direct method new
@@ -341,6 +347,8 @@ class CTranspiler { output selectorMap blockFunctions }
             ifTrue: { return output print: "foo_Integer_new({value})" }.
         (Float includes: value)
             ifTrue: { return output print: "foo_Float_new({value})" }.
+        (String includes: value)
+            ifTrue: { return output print: "foo_String_new({value displayString})" }.
         Error raise: "Don't know how to transpile constant `{value}` into C."!
 
     method visitSend: aSend

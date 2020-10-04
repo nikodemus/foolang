@@ -53,11 +53,14 @@ void* foo_alloc(size_t n, size_t size) {
 struct FooVtable;
 struct FooBlock;
 struct FooClass;
+struct FooBytes;
 
+// FIXME: fold all pointers into a single void*
 union FooDatum {
   struct Foo* object;
   struct FooBlock* block;
   struct FooClass* class;
+  struct FooBytes* bytes;
   int64_t int64;
   double float64;
   bool boolean;
@@ -114,6 +117,11 @@ struct FooSelector* foo_intern(const struct FooCString* name) {
 struct FooArray {
   size_t size;
   struct Foo data[];
+};
+
+struct FooBytes {
+  size_t size;
+  uint8_t data[];
 };
 
 struct FooSlot {
@@ -184,12 +192,14 @@ struct FooBlock {
 
 // Forward declarations for vtables are in generated_classes, but we're going
 // to define a few builtin ctors first that need some of them.
-struct FooVtable FooInstanceVtable_Boolean;
-struct FooVtable FooInstanceVtable_Integer;
-struct FooVtable FooInstanceVtable_Float;
 struct FooVtable FooInstanceVtable_Block;
-struct Foo foo_Integer_new(int64_t n);
+struct FooVtable FooInstanceVtable_Boolean;
+struct FooVtable FooInstanceVtable_Float;
+struct FooVtable FooInstanceVtable_Integer;
+struct FooVtable FooInstanceVtable_String;
 struct Foo foo_Float_new(double f);
+struct Foo foo_Integer_new(int64_t n);
+struct Foo foo_String_new(const char* s);
 struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj);
 struct FooContext* foo_context_new_block(struct FooContext* ctx);
 
@@ -345,6 +355,14 @@ struct Foo foo_Integer_new(int64_t n) {
 
 struct Foo foo_Float_new(double f) {
   return (struct Foo){ .vtable = &FooInstanceVtable_Float, .datum = { .float64 = f } };
+}
+
+struct Foo foo_String_new(const char* s) {
+  size_t len = strlen(s);
+  struct FooBytes* bytes = (struct FooBytes*)foo_alloc(1, sizeof(struct FooBytes) + len + 1);
+  bytes->size = len;
+  memcpy(bytes->data, s, len);
+  return (struct Foo) { .vtable = &FooInstanceVtable_String, .datum = { .bytes = bytes } };
 }
 
 #include "generated_blocks.c"
