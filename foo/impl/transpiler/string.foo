@@ -1,0 +1,19 @@
+import .name.Name
+
+define InstanceMethods {
+    #debug
+        -> {signature: [],
+            body: "printf(\"#<String %s>\", (char*)ctx->receiver.datum.bytes->data);
+return ctx->receiver;"},
+    #from:to:
+        -> {signature: [Integer, Integer],
+            body: "int64_t start = ctx->frame[0].datum.int64 - 1;
+int64_t end = ctx->frame[1].datum.int64;
+// FIXME: errors instead!
+assert(start <= end);
+assert(end <= ctx->receiver.datum.bytes->size);
+return foo_String_new((size_t)(end-start), (char*)ctx->receiver.datum.bytes->data+start);"},
+    #size
+        -> {signature: [],
+            body: "return foo_Integer_new(ctx->receiver.datum.bytes->size);"}
+}!
