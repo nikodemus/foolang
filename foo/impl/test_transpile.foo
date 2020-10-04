@@ -157,21 +157,21 @@ end
 class TestTranspileBoolean { assert system }
     is TranspilerTest
 
-    method testBooleanDebug
+    method testBooleanLiteral
         self transpile: "class Main \{}
                              direct method run
-                                 Boolean true debug.
-                                 Boolean false debug!
+                                 True debug.
+                                 False debug!
                          end"
             expect: "#<Boolean True>#<Boolean False>"!
 
     method testBooleanIfTrueIfFalse
         self transpile: "class Main \{}
                              direct method run
-                                 Boolean true
+                                 True
                                      ifTrue: \{ 42 debug }
                                      ifFalse: \{ 13 debug }.
-                                 Boolean false
+                                 False
                                      ifTrue: \{ 13 debug }
                                      ifFalse: \{ 42 debug }!
                          end"

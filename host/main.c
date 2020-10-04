@@ -347,6 +347,18 @@ struct Foo foo_block_new(struct FooContext* context,
   return (struct Foo){ .vtable = &FooInstanceVtable_Block, .datum = { .block = block } };
 }
 
+struct Foo FooGlobal_True =
+  {
+   .vtable = &FooInstanceVtable_Boolean,
+   .datum = { .boolean = 1 }
+  };
+
+struct Foo FooGlobal_False =
+  {
+   .vtable = &FooInstanceVtable_Boolean,
+   .datum = { .boolean = 0 }
+  };
+
 struct Foo foo_Boolean_new(bool t) {
   return (struct Foo){ .vtable = &FooInstanceVtable_Boolean, .datum = { .boolean = t } };
 }
