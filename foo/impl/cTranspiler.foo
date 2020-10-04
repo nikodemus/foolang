@@ -201,6 +201,13 @@ class CTranspiler { output selectorMap blockFunctions constants }
             at: index.
         cname!
 
+    method visitDefine: aDefine
+        let value = aDefine eval.
+        output println: "struct Foo {Name mangleGlobal: aDefine} = ".
+        self visitConstant: {value: value}.
+        output println: ";".
+        output newline!
+
     method visitClassDefinition: aClass
         let classNote = aClass isBuiltin
                        ifTrue: { "{aClass name} (builtin)" }
@@ -374,15 +381,21 @@ class CTranspiler { output selectorMap blockFunctions constants }
         -- FIXME: Include comments in generated source.
         aComment value visitBy: self!
 
+    method generateConstantDatum: value
+        (Integer includes: value)
+            ifTrue: { return output print: ".int64 = {value}" }.
+        (Float includes: value)
+            ifTrue: { return output print: ".float64 = {value}" }.
+        (String includes: value)
+            ifTrue: { return output print: ".bytes = &{self stringCName: value}_bytes" }.
+        Error raise: "Don't know how to transpile constant `{value}` into C."!
+
     method visitConstant: aConstant
         let value = aConstant value.
-        (Integer includes: value)
-            ifTrue: { return output print: "foo_Integer_new({value})" }.
-        (Float includes: value)
-            ifTrue: { return output print: "foo_Float_new({value})" }.
-        (String includes: value)
-            ifTrue: { return output print: (self stringCName: value) }.
-        Error raise: "Don't know how to transpile constant `{value}` into C."!
+        output print: "(struct Foo)\{ .vtable = &{Name mangleInstanceVtable: value classOf}, .datum = \{ ".
+        self generateConstantDatum: value.
+        output println: " } }".
+        output newline!
 
     method visitSend: aSend
         output print: "foo_send(ctx, &".

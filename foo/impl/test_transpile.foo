@@ -97,6 +97,22 @@ class TestTranspileDefine { assert system }
                                  MyInteger debug!
                          end"
             expect: "#<Integer 1234>"!
+
+    method testDefineFloat
+        self transpile: "define MyFloat 12.34!
+                         class Main \{}
+                             direct method run
+                                 MyFloat debug!
+                         end"
+            expect: "#<Float 12.340000>"!
+
+    method testDefineString
+        self transpile: "define MyString \"foobar\"!
+                         class Main \{}
+                             direct method run
+                                 MyString debug!
+                         end"
+            expect: "#<String foobar>"!
 end
 
 class TestTranspileBlock { assert system }

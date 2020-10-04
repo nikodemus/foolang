@@ -50,6 +50,9 @@ class AstDefine { name body frameSize isDynamic }
 
     method toString
         "#<AstDefine {self name}>"!
+
+    method visitBy: visitor
+        visitor visitDefine: self!
 end
 
 class AstImport { spec }
