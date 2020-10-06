@@ -500,6 +500,22 @@ class TestTranspileString { assert system }
             expect: "#<String >"!
 end
 
+class TestTranspileDynamic { assert system }
+    is TranspilerTest
+
+    method testDynamicVarBind
+        self transpile: "define $MyVar 999!
+                         class Main \{}
+                             direct method run
+                                 { let $MyVar = 1234.
+                                   self foo debug } value.
+                                 self foo debug!
+                             direct method foo
+                                 $MyVar!
+                         end"
+            expect: "#<Integer 1234>#<Integer 999>"!
+end
+
 class Main {}
     direct method run: cmd in: system
         let tests = {
@@ -507,6 +523,7 @@ class Main {}
             "--boolean" -> TestTranspileBoolean system: system,
             "--class" -> TestTranspileClass system: system,
             "--define" -> TestTranspileDefine system: system,
+            "--dynamic" -> TestTranspileDynamic system: system,
             "--finally" -> TestTranspileFinally system: system,
             "--float" -> TestTranspileFloat system: system,
             "--integer" -> TestTranspileInteger system: system,
