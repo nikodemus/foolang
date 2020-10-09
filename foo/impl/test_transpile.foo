@@ -503,7 +503,17 @@ end
 class TestTranspileDynamic { assert system }
     is TranspilerTest
 
-    method testDynamicVarBind
+    method testDynamicDefine
+        self transpile: "define $MyVar 999!
+                         class Main \{}
+                             direct method run
+                                 self foo debug!
+                             direct method foo
+                                 $MyVar!
+                         end"
+            expect: "#<Integer 999>"!
+
+    method no_testDynamicBind
         self transpile: "define $MyVar 999!
                          class Main \{}
                              direct method run
