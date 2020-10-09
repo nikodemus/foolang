@@ -95,14 +95,20 @@ class CTranspiler { output selectorMap blockFunctions constants variables }
 
     method forwardDeclarationFor: aGlobal
         aGlobal isDynamic
-            ifTrue: {  output println: "struct Foo {Name mangleDynamic: aGlobal};" }
+            ifTrue: {  variables put: (variables size) at: aGlobal name.
+                       output println: "struct Foo {Name mangleDynamic: aGlobal};" }
             ifFalse: {  output println: "struct Foo {Name mangleGlobal: aGlobal};" }!
 
     method generateMain
         output println: "int main".
         output println: "    (int argc, char** argv)".
         output println: "\{".
-        output println: "    struct FooContext* ctx = foo_context_new_main(0ul);".
+        output println: "    struct FooProcess* process = foo_process_new({variables size});".
+        variables
+            do: { |name offset|
+                  let var = {name: name}.
+                  output println: "process->vars[{offset}] = {Name mangleDynamic: var};" }.
+        output println: "    struct FooContext* ctx = foo_context_new_main(process);".
         let main = Name mangleGlobal: {name: "Main"}.
         output println: "    foo_send(ctx, &{Name mangleSelector: #run}, {main}, 0);".
         output println: "    return 0;".
@@ -218,23 +224,11 @@ class CTranspiler { output selectorMap blockFunctions constants variables }
     1. Have dynamic define and reference use process.
     2. Implement the above transformation in syntax translator.
     ---
-    method _defineDynamic: name
-        let info = variables
-                      at: name
-                      ifNone: { {index:  variables size + 1,
-                                 isDefined: False} }.
-        info isDefined
-            ifTrue: { Error raise: "Multiple definitions for a dynamic: {name}" }.
-        variables
-            at: name
-            put: {index: info index,
-                  isDefined: True}!
 
     method visitDefine: aDefine
         let value = aDefine eval.
         aDefine isDynamic
-            ifTrue: { self _defineDynamic: aDefine name.
-                      output println: "struct Foo {Name mangleDynamic: aDefine} = " }
+            ifTrue: { output println: "struct Foo {Name mangleDynamic: aDefine} = " }
             ifFalse: { output println: "struct Foo {Name mangleGlobal: aDefine} = " }.
         self visitConstant: {value: value}.
         output println: ";".
@@ -376,7 +370,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables }
         output print: (Name mangleGlobal: aVar)!
 
     method visitDynamic: aVar
-        output print: (Name mangleDynamic: aVar)!
+        output print: "ctx->process->vars[{variables at: aVar name}]"!
 
     method visitIs: anIs
         output print: "(\{ struct Foo left = ".

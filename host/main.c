@@ -135,11 +135,25 @@ struct FooLayout {
   struct FooSlot slots[];
 };
 
+struct FooProcess {
+  size_t size;
+  struct Foo vars[];
+};
+
+struct FooProcess* foo_process_new(size_t size) {
+  struct FooProcess* process
+    = foo_alloc(1, sizeof(struct FooProcess) + size * sizeof(struct Foo));
+  process->size = size;
+  return process;
+}
+
 struct FooContext {
   const char* info;
   struct Foo receiver;
   struct FooContext* sender;
   struct FooContext* outer_context;
+  // FIXME: Doesn't really belong in context, but easier right now.
+  struct FooProcess* process;
   // For methods this is jmp_buf*, for others this is cleanup or NULL.
   void* cleanup_or_ret;
   size_t size;
@@ -205,13 +219,14 @@ struct Foo foo_String_new(size_t len, const char* s);
 struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj);
 struct FooContext* foo_context_new_block(struct FooContext* ctx);
 
-struct FooContext* foo_context_new_main(size_t frameSize) {
-  struct FooContext* context = foo_alloc_context(frameSize);
+struct FooContext* foo_context_new_main(struct FooProcess* process) {
+  struct FooContext* context = foo_alloc_context(0);
   context->info = "main";
   context->sender = NULL;
-  context->receiver = foo_Integer_new(0); // should be: Main
-  context->size = frameSize;
+  context->receiver = foo_Integer_new(0); // should be Main?
+  context->size = 0;
   context->outer_context = NULL;
+  context->process = process;
   return context;
 }
 
@@ -225,18 +240,20 @@ struct FooContext* foo_context_new_method(const struct FooMethod* method, struct
   context->sender = sender;
   context->receiver = receiver;
   context->outer_context = NULL;
+  context->process = sender->process;
   return context;
 }
 
-struct FooContext* foo_context_new_block(struct FooContext* ctx) {
-  struct FooBlock* block = ctx->receiver.datum.block;
+struct FooContext* foo_context_new_block(struct FooContext* sender) {
+  struct FooBlock* block = sender->receiver.datum.block;
   struct FooContext* context = foo_alloc_context(block->frameSize);
   context->info = "block";
-  context->sender = ctx;
+  context->sender = sender;
   context->receiver = block->context->receiver;
   context->outer_context = block->context;
+  context->process = sender->process;
   for (size_t i = 0; i < block->argCount; ++i)
-    context->frame[i] = ctx->frame[i];
+    context->frame[i] = sender->frame[i];
   return context;
 }
 
