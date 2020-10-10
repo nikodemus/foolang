@@ -20,7 +20,6 @@ opt-level = 2
 
 [dependencies]
 regex = "1.*.*"
-lazy_static = "1.*.*"
 clap = "2.*.*"
 nalgebra = "0.19.*"
 getrandom = "0.1.*"
