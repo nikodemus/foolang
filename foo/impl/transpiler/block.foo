@@ -9,8 +9,16 @@ return ctx->receiver.datum.block->function(block_ctx);"},
 return ctx->receiver.datum.block->function(block_ctx);"},
       #finally:
           -> {signature: [Block],
-              body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
-block_ctx->cleanup = block_ctx;
+              body: "struct FooFinally finally = \{
+    .cleanup = \{
+        .function = foo_finally,
+        .next = ctx->cleanup
+    },
+    .block = foo_vtable_typecheck(&FooInstanceVtable_Block, ctx->frame[0]).datum.block
+};
+ctx->cleanup = &finally.cleanup;
+struct FooContext* block_ctx = foo_context_new_block(ctx);
 struct Foo block_value = ctx->receiver.datum.block->function(block_ctx);
-foo_cleanup(block_ctx);
+ctx->cleanup = ctx->cleanup->next;
+foo_finally(ctx, &finally.cleanup);
 return block_value;"}}!

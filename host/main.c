@@ -147,6 +147,20 @@ struct FooProcess* foo_process_new(size_t size) {
   return process;
 }
 
+struct FooContext;
+struct FooCleanup;
+typedef void (*FooCleanupFunction)(struct FooContext*, struct FooCleanup*);
+
+struct FooCleanup {
+  FooCleanupFunction function;
+  struct FooCleanup* next;
+};
+
+struct FooFinally {
+  struct FooCleanup cleanup;
+  struct FooBlock* block;
+};
+
 struct FooContext {
   const char* info;
   struct Foo receiver;
@@ -154,7 +168,7 @@ struct FooContext {
   struct FooContext* outer_context;
   // FIXME: Doesn't really belong in context, but easier right now.
   struct FooProcess* process;
-  struct FooContext* cleanup;
+  struct FooCleanup* cleanup;
   // Only for methods, for others this is NULL.
   jmp_buf* ret;
   size_t size;
@@ -268,10 +282,17 @@ struct FooContext* foo_context_new_unwind(struct FooContext* ctx, struct FooBloc
   return context;
 }
 
-void foo_cleanup(struct FooContext* ctx) {
-  struct FooContext* sender = ctx->sender;
-  struct FooBlock* block
-    = foo_vtable_typecheck(&FooInstanceVtable_Block, sender->frame[0]).datum.block;
+void foo_cleanup(struct FooContext* sender) {
+  while (sender->cleanup) {
+    struct FooCleanup* cleanup = sender->cleanup;
+    sender->cleanup = cleanup->next;
+    cleanup->function(sender, cleanup);
+  }
+}
+
+void foo_finally(struct FooContext* sender, struct FooCleanup* cleanup) {
+  struct FooBlock* block = ((struct FooFinally*)cleanup)->block;
+  // FIXME: Could stack-allocate this context.
   struct FooContext* block_ctx = foo_context_new_unwind(sender, block);
   block->function(block_ctx);
 }
@@ -314,14 +335,13 @@ struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
   FOO_DEBUG("/foo_return(%s...)", foo_debug_context(ctx));
   struct FooContext* return_context = ctx;
   while (return_context->outer_context) {
-    if (return_context->cleanup) {
-      foo_cleanup(return_context->cleanup);
-    }
     return_context = return_context->outer_context;
   }
-  if (return_context->cleanup) {
-    foo_cleanup(return_context->cleanup);
+  while (ctx != return_context) {
+    foo_cleanup(ctx);
+    ctx = ctx->sender;
   }
+  foo_cleanup(ctx);
   return_context->receiver = value;
   longjmp(*(jmp_buf*)return_context->ret, 1);
   FOO_PANIC("longjmp() fell through!")
