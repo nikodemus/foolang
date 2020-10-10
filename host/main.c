@@ -154,8 +154,9 @@ struct FooContext {
   struct FooContext* outer_context;
   // FIXME: Doesn't really belong in context, but easier right now.
   struct FooProcess* process;
-  // For methods this is jmp_buf*, for others this is cleanup or NULL.
-  void* cleanup_or_ret;
+  struct FooContext* cleanup;
+  // Only for methods, for others this is NULL.
+  jmp_buf* ret;
   size_t size;
   struct Foo frame[];
 };
@@ -313,13 +314,16 @@ struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
   FOO_DEBUG("/foo_return(%s...)", foo_debug_context(ctx));
   struct FooContext* return_context = ctx;
   while (return_context->outer_context) {
-    if (return_context->cleanup_or_ret) {
-      foo_cleanup(return_context->cleanup_or_ret);
+    if (return_context->cleanup) {
+      foo_cleanup(return_context->cleanup);
     }
     return_context = return_context->outer_context;
   }
+  if (return_context->cleanup) {
+    foo_cleanup(return_context->cleanup);
+  }
   return_context->receiver = value;
-  longjmp(*(jmp_buf*)return_context->cleanup_or_ret, 1);
+  longjmp(*(jmp_buf*)return_context->ret, 1);
   FOO_PANIC("longjmp() fell through!")
 }
 
@@ -334,7 +338,7 @@ struct Foo foo_send(struct FooContext* sender,
   if (method) {
     struct FooContext* context = foo_context_new_method(method, sender, receiver, nargs);
     jmp_buf ret;
-    context->cleanup_or_ret = &ret;
+    context->ret = &ret;
     int jmp = setjmp(ret);
     if (jmp) {
       FOO_DEBUG("/foo_send -> non-local return from %s", selector->name->data);
