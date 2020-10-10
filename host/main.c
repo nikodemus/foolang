@@ -161,6 +161,12 @@ struct FooFinally {
   struct FooBlock* block;
 };
 
+struct FooUnbind {
+  struct FooCleanup cleanup;
+  size_t index;
+  struct Foo value;
+};
+
 struct FooContext {
   const char* info;
   struct Foo receiver;
@@ -295,6 +301,11 @@ void foo_finally(struct FooContext* sender, struct FooCleanup* cleanup) {
   // FIXME: Could stack-allocate this context.
   struct FooContext* block_ctx = foo_context_new_unwind(sender, block);
   block->function(block_ctx);
+}
+
+void foo_unbind(struct FooContext* sender, struct FooCleanup* cleanup) {
+  struct FooUnbind* unbind = (struct FooUnbind*)cleanup;
+  sender->process->vars[unbind->index] = unbind->value;
 }
 
 struct FooVtable {

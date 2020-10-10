@@ -446,8 +446,9 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
     method visitBindDynamic: aBind
         let name = aBind variable name.
         let index = variables at: name.
-        let old = self genTemp: name.
-        output print: "(\{ struct Foo {old} = ctx->process->vars[{index}];".
+        let unbind = self genTemp: "unbind".
+        output print: "(\{ struct FooUnbind {unbind} = \{ .cleanup = \{ .function = foo_unbind, .next = ctx->cleanup }, .index = {index}, .value = ctx->process->vars[{index}] };".
+        output print: " ctx->cleanup = &{unbind}.cleanup;".
         output print: " ctx->process->vars[{index}] = ".
         aBind value visitBy: self.
         output print: ";".
@@ -455,7 +456,9 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output print: " struct Foo {res} = ".
         aBind body visitBy: self.
         output print: ";".
-        output print: " ctx->process->vars[{index}] = {old};".
+        output print: " assert(&{unbind}.cleanup == ctx->cleanup);".
+        output print: " ctx->cleanup = ctx->cleanup->next;".
+        output print: " foo_unbind(ctx, &{unbind}.cleanup);".
         output print: " {res}; })"!
 
     method visitBindLexical: aBind
