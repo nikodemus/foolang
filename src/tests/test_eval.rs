@@ -36,7 +36,6 @@ fn test_cascade2() {
     );
 }
 
-#[ignore]
 #[test]
 fn test_cascade3() {
     assert_eq!(
