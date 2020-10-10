@@ -132,4 +132,8 @@ class TestClosure { assert }
                equals: 3
                testing: "Closure#apply:"!
 
+    method testComposition
+        assert that: { ({ |a| a + 1 } then: { |b| b + 10 }) value: 0 }
+               equals: 11
+               testing: "Closure#then:"!
 end

@@ -96,7 +96,7 @@ interface Block
             condition: condition!
 
     method then: then
-        BlockComposition
+        Composition
             block: self
             continuation: then!
 end
