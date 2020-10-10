@@ -523,6 +523,18 @@ class TestTranspileDynamic { assert system }
                                  $MyVar!
                          end"
             expect: "#<Integer 1234>"!
+
+    method testDynamicBindRestores
+        self transpile: "define $MyVar 999!
+                         class Main \{}
+                             direct method run
+                                 \{ let $MyVar = 1234.
+                                    self foo debug } value.
+                                 self foo debug!
+                             direct method foo
+                                 $MyVar!
+                         end"
+            expect: "#<Integer 1234>#<Integer 999>"!
 end
 
 class Main {}

@@ -443,20 +443,6 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
     method visitSelfClass: aSelf
         output print: "*ctx->receiver.vtable->classptr"!
 
-    ---
-    let $foo = 42. <body>
-
-    ==>
-
-    let %old = thisProcess at: <fooindex>.
-    { thisProcess at: <fooindex> put: 42. <body> }
-        finally: { thisProcess at: <fooindex> put: %old }.
-
-    1. Have dynamic define and reference use process. DONE
-    2. Implement the above transformation in syntax translator.
-    3. ...except introducing a block is not straightforward
-       in syntax translator: variables have already been resolved.
-    ---
     method visitBindDynamic: aBind
         let name = aBind variable name.
         let old = self genTemp: name.
