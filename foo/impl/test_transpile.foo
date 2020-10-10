@@ -529,7 +529,7 @@ class TestTranspileDynamic { assert system }
                          class Main \{}
                              direct method run
                                  \{ let $MyVar = 1234.
-                                    self foo debug } value.
+                                    self foo } value debug.
                                  self foo debug!
                              direct method foo
                                  $MyVar!

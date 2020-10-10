@@ -445,13 +445,18 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
 
     method visitBindDynamic: aBind
         let name = aBind variable name.
+        let index = variables at: name.
         let old = self genTemp: name.
-        output print: "(\{ ".
-        output print: "ctx->process->vars[{variables at: name}] = ".
+        output print: "(\{ struct Foo {old} = ctx->process->vars[{index}];".
+        output print: " ctx->process->vars[{index}] = ".
         aBind value visitBy: self.
         output print: ";".
+        let res = self genTemp: "res".
+        output print: " struct Foo {res} = ".
         aBind body visitBy: self.
-        output print: "; })"!
+        output print: ";".
+        output print: " ctx->process->vars[{index}] = {old};".
+        output print: " {res}; })"!
 
     method visitBindLexical: aBind
         output print: "(\{ ctx->frame[{aBind variable index - 1}ul] = ".
