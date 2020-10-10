@@ -295,9 +295,6 @@ interface AstGlobalVariable
     method isConstant
         True!
 
-    method visitBy: visitor
-        visitor visitGlobal: self!
-
     method referenceUpwards: _offset
         self!
 
@@ -323,6 +320,12 @@ end
 
 class AstGlobal { name::String _value _definition sources }
     is AstGlobalVariable
+
+    method visitBy: visitor
+        visitor visitGlobal: self!
+
+    method isDynamic
+        False!
 end
 
 class AstDynamic { name::String _value _definition sources }
@@ -334,6 +337,11 @@ class AstDynamic { name::String _value _definition sources }
         { block value }
             finally: { _value = oldValue }!
 
+    method visitBy: visitor
+        visitor visitDynamic: self!
+
+    method isDynamic
+        True!
 end
 
 class AstConstantRef { value }

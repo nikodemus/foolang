@@ -74,14 +74,16 @@ class SelectorMap { names }
         names do: block!
 end
 
-class CTranspiler { output selectorMap blockFunctions constants }
+class CTranspiler { output selectorMap blockFunctions constants variables tmpCounter }
 
     direct method transpile: globals in: env
         let visitor = self
                           output: StringOutput new
                           selectorMap: SelectorMap new
                           blockFunctions: List new
-                          constants: List new.
+                          constants: List new
+                          variables: Dictionary new
+                          tmpCounter: 0.
         -- FIXME: visit Main, and it's dependencies only
         globals do: { |each| visitor forwardDeclarationFor: each }.
         globals do: { |each| each definition visitBy: visitor }.
@@ -92,14 +94,26 @@ class CTranspiler { output selectorMap blockFunctions constants }
           classes: visitor generateClasses,
           selectors: visitor generateSelectors }!
 
+    method genTemp: name
+        tmpCounter = tmpCounter + 1.
+        "tmp{tmpCounter}_{name}"!
+
     method forwardDeclarationFor: aGlobal
-        output println: "struct Foo {Name mangleGlobal: aGlobal};"!
+        aGlobal isDynamic
+            ifTrue: {  variables put: (variables size) at: aGlobal name.
+                       output println: "struct Foo {Name mangleDynamic: aGlobal};" }
+            ifFalse: {  output println: "struct Foo {Name mangleGlobal: aGlobal};" }!
 
     method generateMain
         output println: "int main".
         output println: "    (int argc, char** argv)".
         output println: "\{".
-        output println: "    struct FooContext* ctx = foo_context_new_main(0ul);".
+        output println: "    struct FooProcess* process = foo_process_new({variables size});".
+        variables
+            do: { |name offset|
+                  let var = {name: name}.
+                  output println: "process->vars[{offset}] = {Name mangleDynamic: var};" }.
+        output println: "    struct FooContext* ctx = foo_context_new_main(process);".
         let main = Name mangleGlobal: {name: "Main"}.
         output println: "    foo_send(ctx, &{Name mangleSelector: #run}, {main}, 0);".
         output println: "    return 0;".
@@ -127,7 +141,9 @@ class CTranspiler { output selectorMap blockFunctions constants }
                                              output: out
                                              selectorMap: selectorMap
                                              blockFunctions: blockFunctions
-                                             constants: constants.
+                                             constants: constants
+                                             variables: variables
+                                             tmpCounter: tmpCounter.
                     BuiltinClasses
                         do: { |each|
                               builtinVisitor visitClassDefinition: each } }!
@@ -193,7 +209,9 @@ class CTranspiler { output selectorMap blockFunctions constants }
                                output: output
                                selectorMap: selectorMap
                                blockFunctions: blockFunctions
-                               constants: constants.
+                               constants: constants
+                               variables: variables
+                               tmpCounter: tmpCounter.
         block body visitBy: blockVisitor.
         output println: ";\n}".
         blockFunctions
@@ -203,7 +221,9 @@ class CTranspiler { output selectorMap blockFunctions constants }
 
     method visitDefine: aDefine
         let value = aDefine eval.
-        output println: "struct Foo {Name mangleGlobal: aDefine} = ".
+        aDefine isDynamic
+            ifTrue: { output println: "struct Foo {Name mangleDynamic: aDefine} = " }
+            ifFalse: { output println: "struct Foo {Name mangleGlobal: aDefine} = " }.
         self visitConstant: {value: value}.
         output println: ";".
         output newline!
@@ -340,8 +360,11 @@ class CTranspiler { output selectorMap blockFunctions constants }
                        output println: "}" }.
         output newline!
 
-    method visitGlobal: aGlobal
-        output print: (Name mangleGlobal: aGlobal)!
+    method visitGlobal: aVar
+        output print: (Name mangleGlobal: aVar)!
+
+    method visitDynamic: aVar
+        output print: "ctx->process->vars[{variables at: aVar name}]"!
 
     method visitIs: anIs
         output print: "(\{ struct Foo left = ".
@@ -419,6 +442,24 @@ class CTranspiler { output selectorMap blockFunctions constants }
 
     method visitSelfClass: aSelf
         output print: "*ctx->receiver.vtable->classptr"!
+
+    method visitBindDynamic: aBind
+        let name = aBind variable name.
+        let index = variables at: name.
+        let unbind = self genTemp: "unbind".
+        output print: "(\{ struct FooUnbind {unbind} = \{ .cleanup = \{ .function = foo_unbind, .next = ctx->cleanup }, .index = {index}, .value = ctx->process->vars[{index}] };".
+        output print: " ctx->cleanup = &{unbind}.cleanup;".
+        output print: " ctx->process->vars[{index}] = ".
+        aBind value visitBy: self.
+        output print: ";".
+        let res = self genTemp: "res".
+        output print: " struct Foo {res} = ".
+        aBind body visitBy: self.
+        output print: ";".
+        output print: " assert(&{unbind}.cleanup == ctx->cleanup);".
+        output print: " ctx->cleanup = ctx->cleanup->next;".
+        output print: " foo_unbind(ctx, &{unbind}.cleanup);".
+        output print: " {res}; })"!
 
     method visitBindLexical: aBind
         output print: "(\{ ctx->frame[{aBind variable index - 1}ul] = ".

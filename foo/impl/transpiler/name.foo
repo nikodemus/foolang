@@ -56,8 +56,11 @@ class Name {}
     direct method mangleInstanceVtable: aClass
         "FooInstanceVtable_{aClass name}"!
 
-    direct method mangleGlobal: aGlobal
-        "FooGlobal_{aGlobal name}"!
+    direct method mangleGlobal: aVar
+        "FooGlobal_{aVar name}"!
+
+    direct method mangleDynamic: aVar
+        "FooDynamic_{aVar name}"!
 
     direct method _mangleSymbol: selector to: out
         selector name

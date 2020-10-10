@@ -11,6 +11,9 @@ extend Dictionary
     method at: key
         self at: key ifNone: { False }!
 
+    method at: key put: value
+        self put: value at: key!
+
     method has: key
         self at: key ifNone: { return False }.
         True!

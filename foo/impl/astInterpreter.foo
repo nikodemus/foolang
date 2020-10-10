@@ -195,8 +195,11 @@ class AstInterpreter { context process }
                       at: key }.
         theDictionary!
 
-    method visitGlobal: aGlobal
-        aGlobal value!
+    method visitGlobal: aVar
+        aVar value!
+
+    method visitDynamic: aVar
+        aVar value!
 
     method visitIs: anIs
         (anIs left visitBy: self) is (anIs right visitBy: self)!

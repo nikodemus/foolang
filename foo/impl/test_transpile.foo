@@ -500,6 +500,57 @@ class TestTranspileString { assert system }
             expect: "#<String >"!
 end
 
+class TestTranspileDynamic { assert system }
+    is TranspilerTest
+
+    method testDynamicDefine
+        self transpile: "define $MyVar 999!
+                         class Main \{}
+                             direct method run
+                                 self foo debug!
+                             direct method foo
+                                 $MyVar!
+                         end"
+            expect: "#<Integer 999>"!
+
+    method testDynamicBindBinds
+        self transpile: "define $MyVar 999!
+                         class Main \{}
+                             direct method run
+                                 \{ let $MyVar = 1234.
+                                    self foo debug } value!
+                             direct method foo
+                                 $MyVar!
+                         end"
+            expect: "#<Integer 1234>"!
+
+    method testDynamicBindRestores
+        self transpile: "define $MyVar 999!
+                         class Main \{}
+                             direct method run
+                                 \{ let $MyVar = 1234.
+                                    self foo } value debug.
+                                 self foo debug!
+                             direct method foo
+                                 $MyVar!
+                         end"
+            expect: "#<Integer 1234>#<Integer 999>"!
+
+    method testDynamicBindRestoresOnUnwind
+        self transpile: "define $MyVar 999!
+                         class Main \{}
+                             direct method run
+                                 self bar debug.
+                                 self foo debug!
+                             direct method bar
+                                 \{ let $MyVar = 1234.
+                                    return self foo } value!
+                             direct method foo
+                                 $MyVar!
+                         end"
+            expect: "#<Integer 1234>#<Integer 999>"!
+end
+
 class Main {}
     direct method run: cmd in: system
         let tests = {
@@ -507,6 +558,7 @@ class Main {}
             "--boolean" -> TestTranspileBoolean system: system,
             "--class" -> TestTranspileClass system: system,
             "--define" -> TestTranspileDefine system: system,
+            "--dynamic" -> TestTranspileDynamic system: system,
             "--finally" -> TestTranspileFinally system: system,
             "--float" -> TestTranspileFloat system: system,
             "--integer" -> TestTranspileInteger system: system,

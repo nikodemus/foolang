@@ -135,13 +135,48 @@ struct FooLayout {
   struct FooSlot slots[];
 };
 
+struct FooProcess {
+  size_t size;
+  struct Foo vars[];
+};
+
+struct FooProcess* foo_process_new(size_t size) {
+  struct FooProcess* process
+    = foo_alloc(1, sizeof(struct FooProcess) + size * sizeof(struct Foo));
+  process->size = size;
+  return process;
+}
+
+struct FooContext;
+struct FooCleanup;
+typedef void (*FooCleanupFunction)(struct FooContext*, struct FooCleanup*);
+
+struct FooCleanup {
+  FooCleanupFunction function;
+  struct FooCleanup* next;
+};
+
+struct FooFinally {
+  struct FooCleanup cleanup;
+  struct FooBlock* block;
+};
+
+struct FooUnbind {
+  struct FooCleanup cleanup;
+  size_t index;
+  struct Foo value;
+};
+
 struct FooContext {
   const char* info;
   struct Foo receiver;
   struct FooContext* sender;
   struct FooContext* outer_context;
-  // For methods this is jmp_buf*, for others this is cleanup or NULL.
-  void* cleanup_or_ret;
+  // FIXME: Doesn't really belong in context, but easier right now.
+  struct FooProcess* process;
+  struct FooCleanup* cleanup;
+  // Only for methods, for others this is NULL.
+  jmp_buf* ret;
   size_t size;
   struct Foo frame[];
 };
@@ -205,13 +240,14 @@ struct Foo foo_String_new(size_t len, const char* s);
 struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj);
 struct FooContext* foo_context_new_block(struct FooContext* ctx);
 
-struct FooContext* foo_context_new_main(size_t frameSize) {
-  struct FooContext* context = foo_alloc_context(frameSize);
+struct FooContext* foo_context_new_main(struct FooProcess* process) {
+  struct FooContext* context = foo_alloc_context(0);
   context->info = "main";
   context->sender = NULL;
-  context->receiver = foo_Integer_new(0); // should be: Main
-  context->size = frameSize;
+  context->receiver = foo_Integer_new(0); // should be Main?
+  context->size = 0;
   context->outer_context = NULL;
+  context->process = process;
   return context;
 }
 
@@ -225,18 +261,20 @@ struct FooContext* foo_context_new_method(const struct FooMethod* method, struct
   context->sender = sender;
   context->receiver = receiver;
   context->outer_context = NULL;
+  context->process = sender->process;
   return context;
 }
 
-struct FooContext* foo_context_new_block(struct FooContext* ctx) {
-  struct FooBlock* block = ctx->receiver.datum.block;
+struct FooContext* foo_context_new_block(struct FooContext* sender) {
+  struct FooBlock* block = sender->receiver.datum.block;
   struct FooContext* context = foo_alloc_context(block->frameSize);
   context->info = "block";
-  context->sender = ctx;
+  context->sender = sender;
   context->receiver = block->context->receiver;
   context->outer_context = block->context;
+  context->process = sender->process;
   for (size_t i = 0; i < block->argCount; ++i)
-    context->frame[i] = ctx->frame[i];
+    context->frame[i] = sender->frame[i];
   return context;
 }
 
@@ -250,12 +288,24 @@ struct FooContext* foo_context_new_unwind(struct FooContext* ctx, struct FooBloc
   return context;
 }
 
-void foo_cleanup(struct FooContext* ctx) {
-  struct FooContext* sender = ctx->sender;
-  struct FooBlock* block
-    = foo_vtable_typecheck(&FooInstanceVtable_Block, sender->frame[0]).datum.block;
+void foo_cleanup(struct FooContext* sender) {
+  while (sender->cleanup) {
+    struct FooCleanup* cleanup = sender->cleanup;
+    sender->cleanup = cleanup->next;
+    cleanup->function(sender, cleanup);
+  }
+}
+
+void foo_finally(struct FooContext* sender, struct FooCleanup* cleanup) {
+  struct FooBlock* block = ((struct FooFinally*)cleanup)->block;
+  // FIXME: Could stack-allocate this context.
   struct FooContext* block_ctx = foo_context_new_unwind(sender, block);
   block->function(block_ctx);
+}
+
+void foo_unbind(struct FooContext* sender, struct FooCleanup* cleanup) {
+  struct FooUnbind* unbind = (struct FooUnbind*)cleanup;
+  sender->process->vars[unbind->index] = unbind->value;
 }
 
 struct FooVtable {
@@ -296,13 +346,15 @@ struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
   FOO_DEBUG("/foo_return(%s...)", foo_debug_context(ctx));
   struct FooContext* return_context = ctx;
   while (return_context->outer_context) {
-    if (return_context->cleanup_or_ret) {
-      foo_cleanup(return_context->cleanup_or_ret);
-    }
     return_context = return_context->outer_context;
   }
+  while (ctx != return_context) {
+    foo_cleanup(ctx);
+    ctx = ctx->sender;
+  }
+  foo_cleanup(ctx);
   return_context->receiver = value;
-  longjmp(*(jmp_buf*)return_context->cleanup_or_ret, 1);
+  longjmp(*(jmp_buf*)return_context->ret, 1);
   FOO_PANIC("longjmp() fell through!")
 }
 
@@ -317,7 +369,7 @@ struct Foo foo_send(struct FooContext* sender,
   if (method) {
     struct FooContext* context = foo_context_new_method(method, sender, receiver, nargs);
     jmp_buf ret;
-    context->cleanup_or_ret = &ret;
+    context->ret = &ret;
     int jmp = setjmp(ret);
     if (jmp) {
       FOO_DEBUG("/foo_send -> non-local return from %s", selector->name->data);
