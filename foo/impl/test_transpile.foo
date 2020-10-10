@@ -513,17 +513,16 @@ class TestTranspileDynamic { assert system }
                          end"
             expect: "#<Integer 999>"!
 
-    method no_testDynamicBind
+    method testDynamicBindBinds
         self transpile: "define $MyVar 999!
                          class Main \{}
                              direct method run
-                                 { let $MyVar = 1234.
-                                   self foo debug } value.
-                                 self foo debug!
+                                 \{ let $MyVar = 1234.
+                                    self foo debug } value!
                              direct method foo
                                  $MyVar!
                          end"
-            expect: "#<Integer 1234>#<Integer 999>"!
+            expect: "#<Integer 1234>"!
 end
 
 class Main {}

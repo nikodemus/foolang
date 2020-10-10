@@ -74,7 +74,7 @@ class SelectorMap { names }
         names do: block!
 end
 
-class CTranspiler { output selectorMap blockFunctions constants variables }
+class CTranspiler { output selectorMap blockFunctions constants variables tmpCounter }
 
     direct method transpile: globals in: env
         let visitor = self
@@ -82,7 +82,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables }
                           selectorMap: SelectorMap new
                           blockFunctions: List new
                           constants: List new
-                          variables: Dictionary new.
+                          variables: Dictionary new
+                          tmpCounter: 0.
         -- FIXME: visit Main, and it's dependencies only
         globals do: { |each| visitor forwardDeclarationFor: each }.
         globals do: { |each| each definition visitBy: visitor }.
@@ -92,6 +93,10 @@ class CTranspiler { output selectorMap blockFunctions constants variables }
           constants: visitor generateConstants,
           classes: visitor generateClasses,
           selectors: visitor generateSelectors }!
+
+    method genTemp: name
+        tmpCounter = tmpCounter + 1.
+        "tmp{tmpCounter}_{name}"!
 
     method forwardDeclarationFor: aGlobal
         aGlobal isDynamic
@@ -137,7 +142,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables }
                                              selectorMap: selectorMap
                                              blockFunctions: blockFunctions
                                              constants: constants
-                                             variables: variables.
+                                             variables: variables
+                                             tmpCounter: tmpCounter.
                     BuiltinClasses
                         do: { |each|
                               builtinVisitor visitClassDefinition: each } }!
@@ -204,26 +210,14 @@ class CTranspiler { output selectorMap blockFunctions constants variables }
                                selectorMap: selectorMap
                                blockFunctions: blockFunctions
                                constants: constants
-                               variables: variables.
+                               variables: variables
+                               tmpCounter: tmpCounter.
         block body visitBy: blockVisitor.
         output println: ";\n}".
         blockFunctions
             put: {declaration: "{signature};", definition: output content}
             at: index.
         cname!
-
-    ---
-    let $foo = 42. <body>
-
-    ==>
-
-    let %old = thisProcess at: <fooindex>.
-    { thisProcess at: <fooindex> put: 42. <body> }
-        finally: { thisProcess at: <fooindex> put: %old }.
-
-    1. Have dynamic define and reference use process.
-    2. Implement the above transformation in syntax translator.
-    ---
 
     method visitDefine: aDefine
         let value = aDefine eval.
@@ -448,6 +442,30 @@ class CTranspiler { output selectorMap blockFunctions constants variables }
 
     method visitSelfClass: aSelf
         output print: "*ctx->receiver.vtable->classptr"!
+
+    ---
+    let $foo = 42. <body>
+
+    ==>
+
+    let %old = thisProcess at: <fooindex>.
+    { thisProcess at: <fooindex> put: 42. <body> }
+        finally: { thisProcess at: <fooindex> put: %old }.
+
+    1. Have dynamic define and reference use process. DONE
+    2. Implement the above transformation in syntax translator.
+    3. ...except introducing a block is not straightforward
+       in syntax translator: variables have already been resolved.
+    ---
+    method visitBindDynamic: aBind
+        let name = aBind variable name.
+        let old = self genTemp: name.
+        output print: "(\{ ".
+        output print: "ctx->process->vars[{variables at: name}] = ".
+        aBind value visitBy: self.
+        output print: ";".
+        aBind body visitBy: self.
+        output print: "; })"!
 
     method visitBindLexical: aBind
         output print: "(\{ ctx->frame[{aBind variable index - 1}ul] = ".
