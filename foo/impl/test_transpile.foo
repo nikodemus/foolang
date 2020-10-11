@@ -55,9 +55,16 @@ interface TranspilerTest
         path exists assert.
         system command: path toString!
 
+    method transpile: string expectError: output
+        assert that: { let cmd = self transpile: string.
+                       [cmd ok, cmd stdout] }
+               equals: [False, output]
+               testing: "transpile error -> {output}"!
+
     method transpile: string expect: output
-        assert that: { self transpile: string }
-               equals: output
+        assert that: { let res = self transpile: string.
+                       [res ok, res stdout] }
+               equals: [True, output]
                testing: "transpile -> {output}"!
 end
 
@@ -610,6 +617,25 @@ class TestTranspileDynamic { assert system }
             expect: "#<Integer 1234>#<Integer 999>"!
 end
 
+class TestTranspileTypecheck { assert system }
+    is TranspilerTest
+
+    method testIntegerOk
+        self transpile: "class Main \{}
+                             direct method run
+                                 (12::Integer) debug!
+                         end"
+            expect: "#<Integer 12>"!
+
+    method testIntegerOops
+        self transpile: "class Main \{}
+                             direct method run
+                                 (1.2::Integer) debug!
+                         end"
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+
+end
+
 class Main {}
     direct method run: cmd in: system
         let tests = {
@@ -628,6 +654,7 @@ class Main {}
             "--return" -> TestTranspileReturn system: system,
             "--self" -> TestTranspileSelf system: system,
             "--string" -> TestTranspileString system: system,
+            "--typecheck" -> TestTranspileTypecheck system: system,
         }.
         cmd == ["--all"]
             ifTrue: { cmd = tests keys }.
