@@ -302,9 +302,20 @@ void foo_unbind(struct FooContext* sender, struct FooCleanup* cleanup) {
   sender->process->vars[unbind->index] = unbind->value;
 }
 
+struct FooInterface {
+  // struct FooVtable* instanceVtable;
+  // struct FooVtable* classVtable;
+};
+
+struct FooVtableList {
+  size_t size;
+  struct FooVtable** data;
+};
+
 struct FooVtable {
   struct FooCString* name;
   struct Foo* classptr;
+  struct FooVtableList inherited;
   size_t size;
   struct FooMethod methods[];
 };
@@ -314,14 +325,14 @@ struct FooClass {
   struct FooVtable* instanceVtable;
 };
 
-struct FooInterface {
-  // struct FooVtable* instanceVtable;
-  // struct FooVtable* classVtable;
-};
-
 struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj) {
   if (vtable == obj.vtable)
     return obj;
+  struct FooVtableList* list = &obj.vtable->inherited;
+  for (size_t i = 0; i < list->size; i++)
+    if (vtable == list->data[i]) {
+      return obj;
+  }
   assert(vtable);
   assert(obj.vtable);
   FOO_PANIC("Type error! Wanted: %s, got: %s",
@@ -429,7 +440,7 @@ struct Foo foo_String_new(size_t len, const char* s) {
   return (struct Foo) { .vtable = &FooInstanceVtable_String, .datum = { .ptr = bytes } };
 }
 
+#include "generated_classes.c"
 #include "generated_constants.c"
 #include "generated_blocks.c"
-#include "generated_classes.c"
 #include "generated_main.c"
