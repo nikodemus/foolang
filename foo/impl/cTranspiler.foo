@@ -475,12 +475,17 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                         ifNone: { Error raise: "No index for: {aVar}" }.
         output print: "ctx->process->vars[{index}]"!
 
-    method visitTypecheck: aCheck
+    method _generateTypecheck: type for: value
+        type is Any
+            ifTrue: { return value visitBy: self }.
         output print: "foo_vtable_typecheck(&".
-        output print: (Name mangleInstanceVtable: aCheck type).
+        output print: (Name mangleInstanceVtable: type).
         output print: ", ".
-        aCheck value visitBy: self.
+        value visitBy: self.
         output print: ")"!
+
+    method visitTypecheck: aCheck
+        self _generateTypecheck: aCheck type for: aCheck value!
 
     method visitIs: anIs
         output print: "(\{ struct Foo left = ".
@@ -579,13 +584,18 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
 
     method visitBindLexical: aBind
         output print: "(\{ ctx->frame[{aBind variable index - 1}ul] = ".
-        aBind value visitBy: self.
+        self _generateTypecheck: aBind variable type value for: aBind value.
         output print: ";".
         aBind body visitBy: self.
         output print: "; })"!
 
     method visitLexicalRef: aRef
         output print: "foo_lexical_ref(ctx, {aRef variable index - 1}ul, {aRef frameOffset}ul)"!
+
+    method visitLexicalSet: aSet
+        output print: "foo_lexical_set(ctx, {aSet variable index - 1}ul, {aSet frameOffset}u, ".
+        self _generateTypecheck: aSet variable type value for: aSet value.
+        output print: ")"!
 
     method visitBlock: aBlock
         output print: "foo_block_new(ctx, ".

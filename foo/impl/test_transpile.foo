@@ -91,6 +91,25 @@ class TestTranspileLet { assert system }
                                  (x * y) debug!
                         end"
              expect: "#<Integer 44>"!
+
+    method testLetAssign
+        self transpile: "class Main \{}
+                             direct method run
+                                 let x = 22.
+                                 let y = 0.
+                                 y = 2.
+                                 (x * y) debug!
+                        end"
+             expect: "#<Integer 44>"!
+
+    method testLetAssignOuter
+        self transpile: "class Main \{}
+                             direct method run
+                                 let n = 0.
+                                 \{ n = 1142 } value.
+                                 n debug!
+                        end"
+             expect: "#<Integer 1142>"!
 end
 
 class TestTranspileInterface { assert system }
@@ -700,6 +719,31 @@ class TestTranspileTypecheck { assert system }
                                  42 :: MyInterface value debug!
                          end"
             expectError: "PANIC: Type error! Wanted: MyInterface, got: Integer"!
+
+    method testLetOk
+        self transpile: "class Main \{}
+                             direct method run
+                                 let x :: Integer = 42.
+                                 x debug!
+                         end"
+            expect: "#<Integer 42>"!
+
+    method testLetOops
+        self transpile: "class Main \{}
+                             direct method run
+                                 let x :: Integer = 42.12.
+                                 x debug!
+                         end"
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+
+    method testAssignOops
+        self transpile: "class Main \{}
+                             direct method run
+                                 let x :: Integer = 42.
+                                 x = 12.23.
+                                 x debug!
+                         end"
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
 end
 
 class Main {}
