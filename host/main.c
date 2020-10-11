@@ -53,12 +53,6 @@ void* foo_alloc(size_t n, size_t size) {
   }
 }
 
-struct FooVtable;
-struct FooBlock;
-struct FooClass;
-struct FooBytes;
-struct FooInterface;
-
 union FooDatum {
   void* ptr;
   int64_t int64;
