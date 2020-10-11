@@ -659,6 +659,20 @@ class TestTranspileTypecheck { assert system }
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
 
+    method testIntegerBlockArgOk
+        self transpile: "class Main \{}
+                             direct method run
+                                 \{ |x::Integer| x debug } value: 12!
+                         end"
+            expect: "#<Integer 12>"!
+
+    method testIntegerBlockArgOops
+        self transpile: "class Main \{}
+                             direct method run
+                                 \{ |x::Integer| x debug } value: 1.2!
+                         end"
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+
     method no_testInterfaceOk
         self transpile: "interface MyInterface
                          end
