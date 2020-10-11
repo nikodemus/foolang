@@ -57,6 +57,7 @@ struct FooVtable;
 struct FooBlock;
 struct FooClass;
 struct FooBytes;
+struct FooInterface;
 
 union FooDatum {
   void* ptr;
@@ -317,6 +318,11 @@ struct FooVtable {
 struct FooClass {
   // struct FooLayout* instanceSlots;
   struct FooVtable* instanceVtable;
+};
+
+struct FooInterface {
+  // struct FooVtable* instanceVtable;
+  // struct FooVtable* classVtable;
 };
 
 struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj) {

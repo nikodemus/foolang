@@ -90,23 +90,47 @@ class TestTranspileInterface { assert system }
                          end"
             expect: "#<Integer 42>"!
 
-    method no_testInterfaceInherited
+    method testInterfaceInherited
         self transpile: "interface MyInterface
                              direct method new
-                                 self value: 42!
+                                 self _value: 42!
                              method ding
                                  self value!
                          end
-                         class MyClass \{ value }
+                         class MyClass \{ _value }
                              is MyInterface
                              direct method boop
                                  self new!
+                             method value
+                                 _value!
                          end
                          class Main \{}
                              direct method run
                                  MyClass boop ding debug!
                          end"
             expect: "#<Integer 42>"!
+
+    method testInterfaceOverride
+        self transpile: "interface MyInterface
+                             direct method new
+                                 self _value: 42!
+                             method ding
+                                 self value!
+                         end
+                         class MyClass \{ _value }
+                             is MyInterface
+                             direct method new
+                                self _value: 100!
+                             direct method boop
+                                 self new!
+                             method ding
+                                 _value + 1!
+                         end
+                         class Main \{}
+                             direct method run
+                                 MyClass boop ding debug!
+                         end"
+            expect: "#<Integer 101>"!
 end
 
 class TestTranspileKeyword { assert system }

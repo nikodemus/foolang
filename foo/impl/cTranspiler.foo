@@ -85,7 +85,9 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                           variables: Dictionary new
                           tmpCounter: 0.
         -- FIXME: visit Main, and it's dependencies only
+        -- Debug println: "/forwardDeclarations".
         globals do: { |each| visitor forwardDeclarationFor: each }.
+        -- Debug println: "/definitions".
         globals do: { |each| each definition visitBy: visitor }.
         visitor generateMain.
         { main: visitor output content,
@@ -228,7 +230,53 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: ";".
         output newline!
 
+    method visitInterfaceDefinition: anInterface
+        output println: "/**
+* {anInterface name}
+*
+*/".
+        -- Forward declarations for methods to use.
+        let interfaceVtableName = Name mangleInterfaceVtable: anInterface.
+        output println: "struct FooVtable {interfaceVtableName};".
+        let globalName = Name mangleGlobal: anInterface.
+        output println: "struct Foo {globalName};".
+        output newline.
+        anInterface directMethods
+            do: { |each|
+                  self
+                      _generateMethod: each
+                      _in: anInterface
+                      _as: (Name mangleDirectMethod: each selector in: anInterface) }.
+
+        -- Interface Vtable
+        output println: "struct FooVtable {interfaceVtableName} = ".
+        output println: "\{".
+        output println: "    .name = &FOO_CSTRING({anInterface name displayString}\" interface\"),".
+        output println: "    .size = {anInterface directMethods size},".
+        output println: "    .methods = \{".
+        anInterface directMethods
+            do: { |each|
+                  output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
+                  output println: "                            .argCount = {each arity},".
+                  output println: "                            .frameSize = {each frameSize},".
+                  output println: "                            .function = &{Name mangleDirectMethod: each selector in: anInterface} }," }.
+        output println: "    }".
+        output println: "};".
+        output newline.
+        -- Interface struct
+        let interfaceName = "FooInterface_{anInterface name}".
+        output println: "struct FooInterface {interfaceName} = \{};".
+        output newline.
+        -- Interface object
+        output println: "struct Foo {globalName} =".
+        output println: "\{".
+        output println: "    .vtable = &{interfaceVtableName},".
+        output println: "    .datum = \{ .ptr = &{interfaceName} }".
+        output println: "};".
+        output newline!
+
     method visitClassDefinition: aClass
+        -- Debug println: "#visitClassDefinition: {aClass name}".
         let classNote = aClass isBuiltin
                        ifTrue: { "{aClass name} (builtin)" }
                        ifFalse: { aClass name }.
