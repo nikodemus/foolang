@@ -781,7 +781,7 @@ class TestTranspileTypecheck { assert system }
                                  x = 42.123.
                                  x!
                          end"
-            expect: "PANIC: Type error! Wanted: Integer, got: Float"!
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
 end
 
 class Main {}

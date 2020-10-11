@@ -479,7 +479,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                         ifNone: { Error raise: "No index for: {aVar}" }.
         output print: "ctx->process->vars[{index}]"!
 
-    method _generateTypecheck: type for: value
+    method _generateTypecheck: type _for: value
         type is Any
             ifTrue: { return value visitBy: self }.
         output print: "foo_vtable_typecheck(&".
@@ -489,7 +489,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output print: ")"!
 
     method visitTypecheck: aCheck
-        self _generateTypecheck: aCheck type for: aCheck value!
+        self _generateTypecheck: aCheck type
+             _for: aCheck value!
 
     method visitIs: anIs
         output print: "(\{ struct Foo left = ".
@@ -512,7 +513,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output print: "(PTR(Foo, ctx->receiver.datum)[".
         output print: (set slot index - 1).
         output print: "] = ".
-        set value visitBy: self.
+        self _generateTypecheck: set slot type value
+             _for: set value.
         output print: ")"!
 
     method visitSlotRef: ref
@@ -588,7 +590,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
 
     method visitBindLexical: aBind
         output print: "(\{ ctx->frame[{aBind variable index - 1}ul] = ".
-        self _generateTypecheck: aBind variable type value for: aBind value.
+        self _generateTypecheck: aBind variable type value
+             _for: aBind value.
         output print: ";".
         aBind body visitBy: self.
         output print: "; })"!
@@ -598,7 +601,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
 
     method visitLexicalSet: aSet
         output print: "foo_lexical_set(ctx, {aSet variable index - 1}ul, {aSet frameOffset}u, ".
-        self _generateTypecheck: aSet variable type value for: aSet value.
+        self _generateTypecheck: aSet variable type value
+             _for: aSet value.
         output print: ")"!
 
     method visitBlock: aBlock
