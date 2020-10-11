@@ -247,7 +247,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                                constants: constants
                                variables: variables
                                tmpCounter: tmpCounter.
-        block body visitBy: blockVisitor.
+        blockVisitor _generateTypecheck: block returnType value
+                     _for: block body.
         output println: ";\n}".
         blockFunctions
             put: {declaration: "{signature};", definition: output content}
