@@ -325,7 +325,9 @@ class Environment { parent    -- Enclosing environment or False
             ifTrue: { Error raise: "Cannot redefine a builtin: {name}" }.
         let global = globals
                          at: name
-                         ifNonePut: { definition global }.
-        global define: definition!
+                         ifNonePut: { definition allocGlobal }.
+        let res = global define: definition.
+        -- Debug println: "--".
+        res!
 
 end

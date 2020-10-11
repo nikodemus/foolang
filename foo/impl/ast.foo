@@ -20,15 +20,27 @@ interface AstDefinition
     method defineIn: env
         Error raise: "{self classOf name}#defineIn: -- should not happen!"!
 
-    method global
-        AstGlobal name: self name!
+    method isBuiltin
+        False!
+
+    method isDynamic
+        False!
+
+    method allocGlobal
+        self isDynamic
+            ifTrue: { AstDynamic name: name }
+            ifFalse: { AstGlobal name: name }!
 end
 
 class AstDefinitionList { list }
     is AstDefinition
 
     direct method new: list
-        self list: list!
+        self
+            list: list!
+
+    method allocGlobal
+        panic "No global for AstDefinitionList"!
 
     method defineIn: env
         list do: { |each| each defineIn: env }!
@@ -39,11 +51,6 @@ class AstDefine { name body frameSize isDynamic }
 
     method defineIn: env
         env define: name as: self!
-
-    method global
-        isDynamic
-            ifTrue: { AstDynamic name: name }
-            ifFalse: { AstGlobal name: name }!
 
     method eval
         AstInterpreter evalDefine: body frameSize: frameSize!
@@ -100,17 +107,52 @@ class AstInterface { name interfaces directMethods instanceMethods }
             directMethods: (Array from: directMethods)
             instanceMethods: (Array from: instanceMethods)!
 
+    method visitBy: visitor
+        visitor visitInterfaceDefinition: self!
+
     method toString
         "#<AstInterface {name}>"!
 end
 
-class AstClass { name slots interfaces directMethods instanceMethods }
+class AstClass { name slots interfaces _directMethods _instanceMethods }
     is AstDefinition
 
-    method isBuiltin
-        False!
+    direct method name: name
+                  slots: slots
+                  interfaces: interfaces
+                  directMethods: directMethods
+                  instanceMethods: instanceMethods
+        self
+            name: name
+            slots: slots
+            interfaces: interfaces
+            _directMethods: directMethods
+            _instanceMethods: instanceMethods!
+
+    method directMethods
+        self
+            _collectFromInterfaces: #directMethods
+            _with: _directMethods!
+
+    method instanceMethods
+        self
+            _collectFromInterfaces: #instanceMethods
+            _with: _instanceMethods!
+
+    method _collectFromInterfaces: block _with: local
+        let all = Dictionary new.
+        interfaces do: { |anInterface|
+                         self _collectMethods: (block value: anInterface definition)
+                              _into: all }.
+        self _collectMethods: local
+             _into: all.
+        all values!
+
+    method _collectMethods: methods _into: dict
+        methods do: { |each| dict put: each at: each selector name }!
 
     method defineIn: env
+        -- Debug println: "AstClass#defineIn: {name}".
         env define: name as: self!
 
     method eval
@@ -123,8 +165,8 @@ class AstClass { name slots interfaces directMethods instanceMethods }
                                        type: each type value } }
                         as: Array)
             interfaces: (Array from: (interfaces collect: #value))
-            directMethods: (Array from: directMethods)
-            instanceMethods: (Array from: instanceMethods)!
+            directMethods: (Array from: _directMethods)
+            instanceMethods: (Array from: _instanceMethods)!
 
     method constructor
         slots
@@ -249,6 +291,7 @@ interface AstGlobalVariable
     is AstNode
 
     direct method name: name
+        -- Debug println: "{self name}#name: {name}".
         self
             name: name
             _value: AstUndefined
@@ -256,6 +299,7 @@ interface AstGlobalVariable
             sources: List new!
 
     direct method name: name definition: definition
+        -- Debug println: "{self name}#name: {name} (defined)".
         self
             name: name
             _value: AstPending
@@ -273,14 +317,16 @@ interface AstGlobalVariable
         _definition!
 
     method define: definition
+        -- Debug println: "AstGlobalVariable#define: {name}".
         self assertDefined: False.
         _value = AstPending.
-        _definition = definition!
+        _definition = definition.
+        self isDefined assert!
 
     method assertDefined: wanted
         self isDefined is wanted
             ifFalse: { wanted
-                           ifTrue: { Error raise: "Undefined global: {name}" }
+                           ifTrue: { Error raise: "Undefined global in AST: {name}" }
                            ifFalse: { Error raise: "Global is already defined: {name}" } }!
 
     method value

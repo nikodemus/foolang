@@ -53,6 +53,9 @@ class Name {}
     direct method mangleClassVtable: aClass
         "FooClassVtable_{aClass name}"!
 
+    direct method mangleInterfaceVtable: anInterface
+        "FooInterfaceVtable_{anInterface name}"!
+
     direct method mangleInstanceVtable: aClass
         "FooInstanceVtable_{aClass name}"!
 

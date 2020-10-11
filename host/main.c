@@ -53,11 +53,6 @@ void* foo_alloc(size_t n, size_t size) {
   }
 }
 
-struct FooVtable;
-struct FooBlock;
-struct FooClass;
-struct FooBytes;
-
 union FooDatum {
   void* ptr;
   int64_t int64;
@@ -317,6 +312,11 @@ struct FooVtable {
 struct FooClass {
   // struct FooLayout* instanceSlots;
   struct FooVtable* instanceVtable;
+};
+
+struct FooInterface {
+  // struct FooVtable* instanceVtable;
+  // struct FooVtable* classVtable;
 };
 
 struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj) {

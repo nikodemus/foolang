@@ -74,6 +74,65 @@ class TestTranspileLet { assert system }
              expect: "#<Integer 44>"!
 end
 
+class TestTranspileInterface { assert system }
+    is TranspilerTest
+
+    method testInterfaceDirect
+        self transpile: "interface MyInterface
+                             direct method boop
+                                 self ding!
+                             direct method ding
+                                 42!
+                         end
+                         class Main \{}
+                             direct method run
+                                 MyInterface boop debug!
+                         end"
+            expect: "#<Integer 42>"!
+
+    method testInterfaceInherited
+        self transpile: "interface MyInterface
+                             direct method new
+                                 self _value: 42!
+                             method ding
+                                 self value!
+                         end
+                         class MyClass \{ _value }
+                             is MyInterface
+                             direct method boop
+                                 self new!
+                             method value
+                                 _value!
+                         end
+                         class Main \{}
+                             direct method run
+                                 MyClass boop ding debug!
+                         end"
+            expect: "#<Integer 42>"!
+
+    method testInterfaceOverride
+        self transpile: "interface MyInterface
+                             direct method new
+                                 self _value: 42!
+                             method ding
+                                 self value!
+                         end
+                         class MyClass \{ _value }
+                             is MyInterface
+                             direct method new
+                                self _value: 100!
+                             direct method boop
+                                 self new!
+                             method ding
+                                 _value + 1!
+                         end
+                         class Main \{}
+                             direct method run
+                                 MyClass boop ding debug!
+                         end"
+            expect: "#<Integer 101>"!
+end
+
 class TestTranspileKeyword { assert system }
     is TranspilerTest
 
@@ -562,6 +621,7 @@ class Main {}
             "--finally" -> TestTranspileFinally system: system,
             "--float" -> TestTranspileFloat system: system,
             "--integer" -> TestTranspileInteger system: system,
+            "--interface" -> TestTranspileInterface system: system,
             "--keyword" -> TestTranspileKeyword system: system,
             "--let" -> TestTranspileLet system: system,
             "--name" -> TestName,
