@@ -465,7 +465,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                        output println: (aMethod body replace: "\n" with: "\n    ").
                        output println: "}" }
             ifFalse: { output print: "    return ".
-                       aMethod body visitBy: self.
+                       self _generateTypecheck: aMethod returnType value
+                            _for: aMethod body.
                        output println: ";".
                        output println: "}" }.
         output newline!
@@ -524,7 +525,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
 
     method visitReturn: ret
         output print: "foo_return(ctx, ".
-        ret value visitBy: self.
+        self _generateTypecheck: ret from returnType value
+            _for: ret value.
         output print: ")"!
 
     method visitComment: aComment

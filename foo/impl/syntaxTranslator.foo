@@ -2,34 +2,44 @@ import .ast.*
 import .syntaxVisitor.SyntaxVisitor
 import .syntax.Syntax
 
-class SyntaxTranslator { env }
+class SyntaxTranslator { env currentMethod }
     is SyntaxVisitor
+
+    direct method env: env
+        self
+            env: env
+            currentMethod: False!
 
     direct method translate: syntax in: env
         syntax
             visitBy: (SyntaxTranslator env: env)!
 
+    method child: env
+        SyntaxTranslator
+            env: env
+            currentMethod: currentMethod!
+
     method addVariable: name
-        SyntaxTranslator env: (env addVariable: name)!
+        self child: (env addVariable: name)!
 
     method addVariable: name type: type
-        SyntaxTranslator env: (env addVariable: name type: type)!
+        self child: (env addVariable: name type: type)!
 
     method import: module relative: relative
-        SyntaxTranslator env: (env
-                                   import: module
-                                   relative: relative)!
+        self child: (env
+                         import: module
+                         relative: relative)!
 
     method import: name from: module relative: relative
-        SyntaxTranslator env: (env
-                                   import: name
-                                   from: module
-                                   relative: relative)!
+        self child: (env
+                         import: name
+                         from: module
+                         relative: relative)!
 
     method importAll: module relative: relative
-        SyntaxTranslator env: (env
-                                   importAll: module
-                                   relative: relative)!
+        self child: (env
+                         importAll: module
+                         relative: relative)!
 
     method visitLiteral: aLiteral
         AstConstantRef value: aLiteral value!
@@ -66,7 +76,9 @@ class SyntaxTranslator { env }
             then: (aSeq then visitBy: self)!
 
     method visitReturn: aReturn
-        AstReturn value: (aReturn value visitBy: self)!
+        AstReturn
+            from: currentMethod::AstMethod
+            value: (aReturn value visitBy: self)!
 
     method visitPanic: aPanic
         AstPanic value: (aPanic value visitBy: self)!
@@ -166,13 +178,13 @@ class SyntaxTranslator { env }
         let argumentVariables = bodyEnv bindings.
         (argumentVariables size is aBlock parameters size) assert.
         AstBlock
-            body: (aBlock body visitBy: (SyntaxTranslator env: bodyEnv))
+            body: (aBlock body visitBy: (self child: bodyEnv))
             argumentVariables: argumentVariables
             returnType: (self _visitType: aBlock returnType)
             frameSize: bodyEnv frame size!
 
     method visitDefine: aDefine
-        let bodyVisitor = SyntaxTranslator env: env newFrame.
+        let bodyVisitor = self child: env newFrame.
         AstDefine
             name: aDefine variable name
             body: (aDefine body visitBy: bodyVisitor)
@@ -206,7 +218,7 @@ class SyntaxTranslator { env }
 
     method _visitType: aType
         aType is False
-            ifTrue: { return { value: False } }.
+            ifTrue: { return { value: Any } }.
         let ast = aType visitBy: self.
         ast isConstant
             ifFalse: { Error raise: "non-constant type declaration" }.
@@ -221,23 +233,27 @@ class SyntaxTranslator { env }
                                                  self _visitType: each type }).
         let argumentVariables = bodyEnv bindings.
         (argumentVariables size is signature parameters size) assert.
-        AstMethod
-            -- FIXME: Methods should not know their selectors!
-            selector: signature selector
-            argumentVariables: argumentVariables
-            returnType: (self _visitType: signature returnType)
+        let astMethod = AstMethod
+                            -- FIXME: Methods should not know their selectors!
+                            selector: signature selector
+                            argumentVariables: argumentVariables
+                            returnType: (self _visitType: signature returnType)
+                            isDirect: aMethod isDirect.
+        astMethod
             body: (aMethod body is False
                        ifTrue: { False }
-                       ifFalse: { (aMethod body visitBy: (SyntaxTranslator env: bodyEnv)) })
-            frameSize: bodyEnv frame size
-            isDirect: aMethod isDirect!
+                       ifFalse: { aMethod body visitBy: (SyntaxTranslator
+                                               env: bodyEnv
+                                               currentMethod: astMethod) }).
+        astMethod
+            frameSize: bodyEnv frame size.
+        astMethod!
 
     method visitClass: aClass
         let slots = aClass slots collect: { |slot::Syntax|
                                             { name: slot name,
                                               type: (self _visitType: slot type) } }.
-        let instanceMethodVisitor = SyntaxTranslator
-                                        env: (env addSlots: slots).
+        let instanceMethodVisitor = self child: (env addSlots: slots).
         -- FIXME: should fetch interface object instead of using the name
         AstClass
             name: aClass name

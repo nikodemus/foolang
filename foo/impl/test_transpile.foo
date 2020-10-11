@@ -782,6 +782,48 @@ class TestTranspileTypecheck { assert system }
                                  x!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+
+    method testMethodReturnTypeOk
+        self transpile: "class Main \{}
+                             direct method run
+                                 self foo debug!
+                             direct method foo -> Integer
+                                 42!
+                         end"
+            expect: "#<Integer 42>"!
+
+    method testMethodReturnTypeOops
+        self transpile: "class Main \{}
+                             direct method run
+                                 self foo debug!
+                             direct method foo -> Integer
+                                 42.42!
+                         end"
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+
+    method testMethodNonLocalReturnTypeOk
+        self transpile: "class Main \{}
+                             direct method run
+                                 self foo debug!
+                             direct method foo -> Integer
+                                 self bar: \{ return 427 }!
+                             direct method bar: block
+                                 block value.
+                                 return 0!
+                         end"
+            expect: "#<Integer 427>"!
+
+    method testMethodNonLocalReturnTypeOops
+        self transpile: "class Main \{}
+                             direct method run
+                                 self foo debug!
+                             direct method foo -> Integer
+                                 self bar: \{ return 42.32 }!
+                             direct method bar: block
+                                 block value.
+                                 return 0!
+                         end"
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
 end
 
 class Main {}
