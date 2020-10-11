@@ -373,8 +373,12 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                 output println: "    (void)nargs;".
                 output println: "    (void)args;".
                 output println: "    struct Foo* new = FOO_ALLOC_ARRAY({aClass slots size}, struct Foo);".
-                output println: "    for (int i = 0; i < {aClass slots size}; ++i)".
-                output println: "        new[i] = va_arg(args, struct Foo);".
+                aClass slots
+                    doWithIndex: { |each index|
+                                   let type = each type value.
+                                   type is Any
+                                       ifTrue: { output println: "new[{index-1}] = va_arg(args, struct Foo);" }
+                                       ifFalse: { output println: "new[{index -1}] = foo_vtable_typecheck(&{Name mangleInstanceVtable: type}, va_arg(args, struct Foo));" } }.
                 output println: "    return (struct Foo)\{ .vtable = &{instanceVtableName}, .datum = \{ .ptr = new } };".
                 output println: "}".
                 output newline
