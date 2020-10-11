@@ -637,6 +637,10 @@ end
              where: { |e|
                       e value is 42 and: e expected is String }!
 
+    method testTypeDecl24
+        self eval: "123::Integer - 1"
+             expect: 122!
+
     method testFloat1
         self eval: "123.123"
              expect: 123.123!
