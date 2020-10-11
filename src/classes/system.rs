@@ -47,21 +47,20 @@ fn system_command(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
         Command::new("sh").args(&["-c", args[0].as_str()?]).output()
     };
     match output {
-        Ok(output) if output.status.success() => {
+        Ok(output) => {
+            let ok = output.status.success();
+            let stdout = std::str::from_utf8(&output.stdout).expect("Command stdout was not UTF-8");
             let stderr = std::str::from_utf8(&output.stderr).expect("Command stderr was not UTF-8");
-            if stderr.len() > 0 {
-                println!("Command stderr:\n---\n{}---\n", stderr);
-            }
-            Ok(env.foo.make_string(
-                std::str::from_utf8(&output.stdout).expect("Command output was not UTF-8"),
-            ))
+            env.find_global_or_unwind("Record")?.send(
+                "ok:stdout:stderr:",
+                &[
+                    env.foo.make_boolean(ok),
+                    env.foo.make_string(stdout),
+                    env.foo.make_string(stderr),
+                ],
+                env,
+            )
         }
-        Ok(output) => Unwind::error(&format!(
-            "Command exited with error: {:?}\n---\nstdout:\n{}\n---\nstderr:\n{}",
-            args[0],
-            std::str::from_utf8(&output.stdout).expect("Command stdout was not UTF-8"),
-            std::str::from_utf8(&output.stderr).expect("Command stderr was not UTF-8")
-        )),
         Err(err) => Unwind::error(&format!("Could not execute: {:?} ({})", args[0], err)),
     }
 }

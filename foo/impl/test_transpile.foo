@@ -44,20 +44,39 @@ interface TranspilerTest
         let tmpExe = "tmp_transpile_test.exe".
         let path = system currentDirectory path: tmpExe.
         path ifExists: #deleteFile.
-        path exists not assert.
+        path exists not assert: "executable cleared".
         -- KLUDGE: Windows CI host linker cannot find the sanitizer libraries,
         -- so we conditionalize on the environment and host.
         let sanitizerOptions
             = (((system getenv: "GITHUB_ACTION") is False) or: system isUnix)
                 ifTrue: { "-fsanitize=address -fsanitize=undefined" }
                 ifFalse: { "" }.
-        system command: "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall --std=c17 host/main.c".
-        path exists assert.
-        system command: path toString!
+        let buildCmd = "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall --std=c17 host/main.c".
+                           let build = system command: buildCmd.
+        self _reportStderr: build.
+        build ok
+            ifFalse: { Error raise: "Build failed: {buildCmd}" }.
+        path exists assert: "executable created".
+        let exec = system command: path toString.
+        self _reportStderr: exec!
+
+    method _reportStderr: cmd
+        cmd stderr isEmpty
+            ifFalse: { Debug println: "---stderr---".
+                       Debug println: cmd stderr.
+                       Debug println: "---" }.
+        cmd!
+
+    method transpile: string expectError: output
+        assert that: { let cmd = self transpile: string.
+                       [cmd ok, cmd stdout] }
+               equals: [False, output]
+               testing: "transpile error -> {output}"!
 
     method transpile: string expect: output
-        assert that: { self transpile: string }
-               equals: output
+        assert that: { let res = self transpile: string.
+                       [res ok, res stdout] }
+               equals: [True, output]
                testing: "transpile -> {output}"!
 end
 
@@ -610,6 +629,70 @@ class TestTranspileDynamic { assert system }
             expect: "#<Integer 1234>#<Integer 999>"!
 end
 
+class TestTranspileTypecheck { assert system }
+    is TranspilerTest
+
+    method testIntegerValueOk
+        self transpile: "class Main \{}
+                             direct method run
+                                 (12::Integer) debug!
+                         end"
+            expect: "#<Integer 12>"!
+
+    method testIntegerValueOops
+        self transpile: "class Main \{}
+                             direct method run
+                                 (1.2::Integer) debug!
+                         end"
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+
+    method testIntegerMethodArgOk
+        self transpile: "class Main \{}
+                             direct method run
+                                 self foo: 12!
+                             direct method foo: x::Integer
+                                 x debug!
+                         end"
+            expect: "#<Integer 12>"!
+
+    method testIntegerMethodArgOops
+        self transpile: "class Main \{}
+                             direct method run
+                                 self foo: 1.2!
+                             direct method foo: x::Integer
+                                 x debug!
+                         end"
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+
+    method testIntegerBlockArgOk
+        self transpile: "class Main \{}
+                             direct method run
+                                 \{ |x::Integer| x debug } value: 12!
+                         end"
+            expect: "#<Integer 12>"!
+
+    method testIntegerBlockArgOops
+        self transpile: "class Main \{}
+                             direct method run
+                                 \{ |x::Integer| x debug } value: 1.2!
+                         end"
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+
+    method no_testInterfaceOk
+        self transpile: "interface MyInterface
+                         end
+                         class MyClass \{}
+                             is MyInterface
+                             method value
+                                 9!
+                         end
+                         class Main \{}
+                             direct method run
+                                 MyClass new :: MyInterface value debug!
+                         end"
+            expect: "#<Integer 9>"!
+end
+
 class Main {}
     direct method run: cmd in: system
         let tests = {
@@ -628,6 +711,7 @@ class Main {}
             "--return" -> TestTranspileReturn system: system,
             "--self" -> TestTranspileSelf system: system,
             "--string" -> TestTranspileString system: system,
+            "--typecheck" -> TestTranspileTypecheck system: system,
         }.
         cmd == ["--all"]
             ifTrue: { cmd = tests keys }.

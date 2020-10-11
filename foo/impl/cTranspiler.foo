@@ -206,6 +206,13 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                                              out print: "(struct FooContext* ctx)" }.
         output print: signature.
         output println: " \{".
+        -- FIXME: Given that we need to check types here, should also put the args
+        -- in frame here, same as in methods.
+        block argumentVariables
+            do: { |var|
+                  let type = var type value.
+                  type is Any
+                      ifFalse: { output println: "    foo_vtable_typecheck(&{Name mangleInstanceVtable: type}, ctx->frame[{var index-1}]);" } }.
         output print: "    return ".
         let blockVisitor = CTranspiler
                                output: output
@@ -413,6 +420,13 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
 
     method visitDynamic: aVar
         output print: "ctx->process->vars[{variables at: aVar name}]"!
+
+    method visitTypecheck: aCheck
+        output print: "foo_vtable_typecheck(&".
+        output print: (Name mangleInstanceVtable: aCheck type).
+        output print: ", ".
+        aCheck value visitBy: self.
+        output print: ")"!
 
     method visitIs: anIs
         output print: "(\{ struct Foo left = ".
