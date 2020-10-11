@@ -51,16 +51,21 @@ interface TranspilerTest
             = (((system getenv: "GITHUB_ACTION") is False) or: system isUnix)
                 ifTrue: { "-fsanitize=address -fsanitize=undefined" }
                 ifFalse: { "" }.
-        let cmd = "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall --std=c17 host/main.c".
-        let res = system command: cmd.
-        res ok
-            ifFalse: { Debug println: "BUILD FAILED: {cmd}".
-                       Debug println: "---stderr---".
-                       Debug println: res stderr.
-                       Debug println: "---".
-                       Error raise: "test failed" }.
+        let buildCmd = "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall --std=c17 host/main.c".
+                           let build = system command: buildCmd.
+        self _reportStderr: build.
+        build ok
+            ifFalse: { Error raise: "Build failed: {buildCmd}" }.
         path exists assert: "executable created".
-        system command: path toString!
+        let exec = system command: path toString.
+        self _reportStderr: exec!
+
+    method _reportStderr: cmd
+        cmd stderr isEmpty
+            ifFalse: { Debug println: "---stderr---".
+                       Debug println: cmd stderr.
+                       Debug println: "---" }.
+        cmd!
 
     method transpile: string expectError: output
         assert that: { let cmd = self transpile: string.
