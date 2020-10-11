@@ -17,6 +17,9 @@
 #define FOO_ALLOC_ARRAY(n, type) \
   ((type*)foo_alloc((n), sizeof(type)))
 
+#define PTR(type, datum) \
+  ((struct type*)datum.ptr)
+
 #if 0
 # define FOO_DEBUG(...) { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); fflush(stderr); }
 #else
@@ -55,12 +58,8 @@ struct FooBlock;
 struct FooClass;
 struct FooBytes;
 
-// FIXME: fold all pointers into a single void*
 union FooDatum {
-  struct Foo* object;
-  struct FooBlock* block;
-  struct FooClass* class;
-  struct FooBytes* bytes;
+  void* ptr;
   int64_t int64;
   double float64;
   bool boolean;
@@ -266,7 +265,7 @@ struct FooContext* foo_context_new_method(const struct FooMethod* method, struct
 }
 
 struct FooContext* foo_context_new_block(struct FooContext* sender) {
-  struct FooBlock* block = sender->receiver.datum.block;
+  struct FooBlock* block = sender->receiver.datum.ptr;
   struct FooContext* context = foo_alloc_context(block->frameSize);
   context->info = "block";
   context->sender = sender;
@@ -396,7 +395,7 @@ struct Foo foo_block_new(struct FooContext* context,
   block->function = function;
   block->argCount = argCount;
   block->frameSize = frameSize;
-  return (struct Foo){ .vtable = &FooInstanceVtable_Block, .datum = { .block = block } };
+  return (struct Foo){ .vtable = &FooInstanceVtable_Block, .datum = { .ptr = block } };
 }
 
 struct Foo FooGlobal_True =
@@ -427,7 +426,7 @@ struct Foo foo_String_new(size_t len, const char* s) {
   struct FooBytes* bytes = (struct FooBytes*)foo_alloc(1, sizeof(struct FooBytes) + len + 1);
   bytes->size = len;
   memcpy(bytes->data, s, len);
-  return (struct Foo) { .vtable = &FooInstanceVtable_String, .datum = { .bytes = bytes } };
+  return (struct Foo) { .vtable = &FooInstanceVtable_String, .datum = { .ptr = bytes } };
 }
 
 #include "generated_constants.c"
