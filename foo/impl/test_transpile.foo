@@ -700,6 +700,22 @@ class TestTranspileTypecheck { assert system }
                                  42 :: MyInterface value debug!
                          end"
             expectError: "PANIC: Type error! Wanted: MyInterface, got: Integer"!
+
+    method testLetOk
+        self transpile: "class Main \{}
+                             direct method run
+                                 let x :: Integer = 42.
+                                 x debug!
+                         end"
+            expect: "#<Integer 42>"!
+
+    method testLetOops
+        self transpile: "class Main \{}
+                             direct method run
+                                 let x :: Integer = 42.12.
+                                 x debug!
+                         end"
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
 end
 
 class Main {}
