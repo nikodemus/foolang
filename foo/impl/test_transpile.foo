@@ -744,6 +744,44 @@ class TestTranspileTypecheck { assert system }
                                  x debug!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+
+    method testSlotTypeInitOk
+        self transpile: "class Main \{ x::Integer }
+                             direct method run
+                                 (self x: 42) x debug!
+                             method x
+                                 x!
+                         end"
+            expect: "#<Integer 42>"!
+
+    method testSlotTypeInitOops
+        self transpile: "class Main \{ x::Integer }
+                             direct method run
+                                 (self x: 42.42) x debug!
+                             method x
+                                 x!
+                         end"
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+
+    method testSlotTypeAssignOk
+        self transpile: "class Main \{ x::Integer }
+                             direct method run
+                                 (self x: 0) frob debug!
+                             method frob
+                                 x = 42.
+                                 x!
+                         end"
+            expect: "#<Integer 42>"!
+
+    method testSlotTypeAssignOops
+        self transpile: "class Main \{ x::Integer }
+                             direct method run
+                                 (self x: 0) frob debug!
+                             method frob
+                                 x = 42.123.
+                                 x!
+                         end"
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
 end
 
 class Main {}
