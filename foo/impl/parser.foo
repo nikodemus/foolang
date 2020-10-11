@@ -407,7 +407,7 @@ class TypeDeclarationToken { precedence string first last }
     method parseAsSuffixOf: prefix with: parser
         SyntaxValueTypeDeclaration
             value: prefix
-            type: (parser parseSingle)!
+            type: (parser parsePrefix)!
 end
 
 class DynamicVariableToken { precedence string first last }
