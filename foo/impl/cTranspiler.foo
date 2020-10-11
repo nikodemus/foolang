@@ -594,7 +594,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
 
     method visitLexicalSet: aSet
         output print: "foo_lexical_set(ctx, {aSet variable index - 1}ul, {aSet frameOffset}u, ".
-        aSet value visitBy: self.
+        self _generateTypecheck: aSet variable type value for: aSet value.
         output print: ")"!
 
     method visitBlock: aBlock

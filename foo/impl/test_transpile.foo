@@ -736,16 +736,14 @@ class TestTranspileTypecheck { assert system }
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
 
-    ---
     method testAssignOops
         self transpile: "class Main \{}
                              direct method run
                                  let x :: Integer = 42.
-                                 x = 12.23
+                                 x = 12.23.
                                  x debug!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
-    ---
 end
 
 class Main {}
