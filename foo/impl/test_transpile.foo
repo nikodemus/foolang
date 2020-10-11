@@ -641,6 +641,19 @@ class TestTranspileTypecheck { assert system }
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
 
+    method no_testInterfaceOk
+        self transpile: "interface MyInterface
+                         end
+                         class MyClass \{}
+                             is MyInterface
+                             method value
+                                 9!
+                         end
+                         class Main \{}
+                             direct method run
+                                 MyClass new :: MyInterface value debug!
+                         end"
+            expect: "#<Integer 9>"!
 end
 
 class Main {}
