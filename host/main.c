@@ -207,6 +207,18 @@ struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t fram
   return res;
 }
 
+struct Foo foo_lexical_set(struct FooContext* context, size_t index, size_t frame, struct Foo value) {
+  FOO_DEBUG("/lexical_set(index=%zu, frame=%zu, ...)", index, frame);
+  while (frame > 0) {
+    assert(context->outer_context);
+    context = context->outer_context;
+    --frame;
+  }
+  assert(index < context->size);
+  context->frame[index] = value;
+  return value;
+}
+
 struct FooMethod {
   struct FooSelector* selector;
   size_t argCount;
