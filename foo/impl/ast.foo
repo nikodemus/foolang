@@ -188,6 +188,26 @@ end
 class AstMethod { selector argumentVariables returnType body frameSize isDirect }
     is Object
 
+    direct method selector: selector
+                  argumentVariables: argumentVariables
+                  returnType: returnType
+                  isDirect: isDirect
+        self
+            selector: selector
+            argumentVariables: argumentVariables
+            returnType: returnType
+            body: False
+            frameSize: False
+            isDirect: isDirect!
+
+    method body: bodyVal
+        body is False assert: "body not set".
+        body = bodyVal!
+
+    method frameSize: frameSizeVal
+        frameSize is False assert: "frame size not set".
+        frameSize = frameSizeVal!
+
     method name
         selector name!
 
@@ -414,7 +434,7 @@ class AstSeq { first then }
         visitor visitSeq: self!
 end
 
-class AstReturn { value }
+class AstReturn { from value }
     is AstNode
 
     method visitBy: visitor
