@@ -3,7 +3,7 @@ import .name.Name
 define InstanceMethods {
     #debug
         -> {signature: [],
-            body: "printf(\"#<String %s>\", (char*)ctx->receiver.datum.bytes->data);
+            body: "printf(\"#<String %s>\", (char*)PTR(FooBytes, ctx->receiver.datum)->data);
 return ctx->receiver;"},
     #from:to:
         -> {signature: [Integer, Integer],
@@ -11,9 +11,9 @@ return ctx->receiver;"},
 int64_t end = ctx->frame[1].datum.int64;
 // FIXME: errors instead!
 assert(start <= end);
-assert(end <= ctx->receiver.datum.bytes->size);
-return foo_String_new((size_t)(end-start), (char*)ctx->receiver.datum.bytes->data+start);"},
+assert(end <= PTR(FooBytes, ctx->receiver.datum)->size);
+return foo_String_new((size_t)(end-start), (char*)PTR(FooBytes, ctx->receiver.datum)->data+start);"},
     #size
         -> {signature: [],
-            body: "return foo_Integer_new(ctx->receiver.datum.bytes->size);"}
+            body: "return foo_Integer_new(PTR(FooBytes, ctx->receiver.datum)->size);"}
 }!

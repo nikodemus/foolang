@@ -2,11 +2,11 @@ define BlockMethods
     { #value
           -> {signature: [],
               body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
-return ctx->receiver.datum.block->function(block_ctx);"},
+return PTR(FooBlock, ctx->receiver.datum)->function(block_ctx);"},
       #value:
           -> {signature: [Any],
               body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
-return ctx->receiver.datum.block->function(block_ctx);"},
+return PTR(FooBlock, ctx->receiver.datum)->function(block_ctx);"},
       #finally:
           -> {signature: [Block],
               body: "struct FooFinally finally = \{
@@ -14,11 +14,11 @@ return ctx->receiver.datum.block->function(block_ctx);"},
         .function = foo_finally,
         .next = ctx->cleanup
     },
-    .block = foo_vtable_typecheck(&FooInstanceVtable_Block, ctx->frame[0]).datum.block
+    .block = foo_vtable_typecheck(&FooInstanceVtable_Block, ctx->frame[0]).datum.ptr
 };
 ctx->cleanup = &finally.cleanup;
 struct FooContext* block_ctx = foo_context_new_block(ctx);
-struct Foo block_value = ctx->receiver.datum.block->function(block_ctx);
+struct Foo block_value = PTR(FooBlock, ctx->receiver.datum)->function(block_ctx);
 ctx->cleanup = ctx->cleanup->next;
 foo_finally(ctx, &finally.cleanup);
 return block_value;"}}!
