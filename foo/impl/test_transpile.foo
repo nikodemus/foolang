@@ -713,7 +713,7 @@ class TestTranspileExtend { assert system }
                          end
                          class Main \{}
                               direct method run
-                                  MyClass new foo!
+                                  MyClass new foo debug!
                          end"
             expect: "#<Integer 84>"!
 end

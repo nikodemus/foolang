@@ -7,11 +7,7 @@ import .ast.AstLexicalRef
 import .ast.AstSlotRef
 import .ast.AstDefinition
 import .parser.Parser
-
-class Builtin { value }
-    method eval
-        value!
-end
+import .ast.AstBuiltin
 
 class Globals { dictionary }
     direct method new
@@ -19,7 +15,7 @@ class Globals { dictionary }
     method define: builtin
         let name = builtin name.
         dictionary
-            put: (AstGlobal name: name definition: (Builtin value: builtin))
+            put: (AstGlobal name: name definition: (AstBuiltin value: builtin))
             at: name!
 end
 

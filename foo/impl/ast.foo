@@ -11,6 +11,25 @@ interface Ast
         Debug println: "#<AST {self}>"!
 end
 
+class AstBuiltin { value }
+    is Object
+
+    method eval
+        value!
+
+    method isBuiltin
+        True!
+
+    method __addInterface: anInterface
+        value __addInterface: anInterface!
+
+    method __addDirectMethod: aDirectMethod
+        value __addDirectMethod: aDirectMethod!
+
+    method __addInstanceMethod: anInstanceMethod
+        value __addInstanceMethod: anInstanceMethod!
+end
+
 interface AstDefinition
     is Object
 
@@ -84,7 +103,8 @@ class AstExtend { type interfaces directMethods instanceMethods }
         --
         -- FIXME: Does this mean we should resolve name in env instead
         -- of the way it is now done?
-        let target = type value.
+        let target = type definition.
+
         interfaces do: { |each| target __addInterface: each value }.
         directMethods do: { |each| target __addDirectMethod: each }.
         instanceMethods do: { |each| target __addInstanceMethod: each }.
@@ -128,6 +148,15 @@ class AstClass { name slots interfaces _directMethods _instanceMethods }
             interfaces: interfaces
             _directMethods: directMethods
             _instanceMethods: instanceMethods!
+
+    method __addInterface: anInterface
+        interfaces push: anInterface!
+
+    method __addDirectMethod: aDirectMethod
+        _directMethods add: aDirectMethod!
+
+    method __addInstanceMethod: anInstanceMethod
+        _instanceMethods add: anInstanceMethod!
 
     method directMethods
         self
