@@ -250,9 +250,13 @@ class SyntaxTranslator { env currentMethod }
         astMethod!
 
     method visitClass: aClass
-        let slots = aClass slots collect: { |slot::Syntax|
-                                            { name: slot name,
-                                              type: (self _visitType: slot type) } }.
+        let n = 0.
+        let slots = aClass slots collect: { |each::Syntax|
+                                            n = n + 1.
+                                            AstSlot
+                                                name: each name
+                                                index: n
+                                                type: (self _visitType: each type) }.
         let instanceMethodVisitor = self child: (env addSlots: slots).
         -- FIXME: should fetch interface object instead of using the name
         AstClass

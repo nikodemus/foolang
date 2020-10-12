@@ -321,6 +321,13 @@ class TestTranspileClass { assert system }
                          end"
             expect: "#<Integer 542>"!
 
+    method testSlotReader
+        self transpile: "class Main \{ x }
+                             direct method run
+                                (self x: 129408) x debug!
+                         end"
+            expect: "#<Integer 129408>"!
+
     method testSlots
         self transpile: "class Main \{ x }
                              direct method run
