@@ -12,6 +12,11 @@
 #undef NDEBUG
 #include <assert.h>
 
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#endif
+
 #define FOO_ALLOC(type) \
   ((type*)foo_alloc(1, sizeof(type)))
 #define FOO_ALLOC_ARRAY(n, type) \
@@ -460,6 +465,24 @@ struct Foo foo_String_new(size_t len, const char* s) {
   bytes->size = len;
   memcpy(bytes->data, s, len);
   return (struct Foo) { .vtable = &FooInstanceVtable_String, .datum = { .ptr = bytes } };
+}
+
+struct Foo foo_panic(struct Foo message) __attribute__((noreturn));
+struct Foo foo_panic(struct Foo message) {
+  struct FooBytes* bytes
+    = PTR(FooBytes, foo_vtable_typecheck(&FooInstanceVtable_String, message).datum);
+  printf("PANIC: %s", (char*)bytes->data);
+  putchar('\n');
+  fflush(stdout);
+  fflush(stderr);
+  _Exit(1);
+}
+
+void fooinit(void) {
+#ifdef _WIN32
+  _setmode(_fileno(stdout), O_BINARY);
+  _setmode(_fileno(stderr), O_BINARY);
+#endif
 }
 
 #include "generated_classes.c"
