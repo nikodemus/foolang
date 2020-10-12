@@ -298,6 +298,42 @@ class TestTranspileBoolean { assert system }
             expect: "#<Boolean False>#<Boolean False>#<Boolean False>#<Boolean False>#<Boolean True>#<Boolean True>#<Boolean True>"!
 end
 
+class TestTranspileArray { assert system }
+    is TranspilerTest
+
+    method testArrayCtor
+        self transpile: "class Main \{}
+                             direct method run
+                                 [1, 2, 3] debug!
+                         end"
+            expect: "[#<Integer 1>, #<Integer 2>, #<Integer 3>]"!
+
+    method testArraySize
+        self transpile: "class Main \{}
+                             direct method run
+                                 [1, 2, 3] size debug.
+                                 [] size debug!
+                         end"
+            expect: "#<Integer 3>#<Integer 0>"!
+
+    method testArrayAt
+        self transpile: "class Main \{}
+                             direct method run
+                                ([1,2,3,999,5] at: 4) debug!
+                         end"
+            expect: "#<Integer 999>"!
+
+    method testArrayAtPut
+        self transpile: "class Main \{}
+                             direct method run
+                                let a = [1,2,3,999,5].
+                                (a at: 4) debug.
+                                a at: 4 put: 42.
+                                (a at: 4) debug!
+                         end"
+            expect: "#<Integer 999>#<Integer 42>"!
+end
+
 class TestTranspileClass { assert system }
    is TranspilerTest
 
@@ -858,6 +894,7 @@ end
 class Main {}
     direct method run: cmd in: system
         let tests = {
+            "--array" -> TestTranspileArray system: system,
             "--block" -> TestTranspileBlock system: system,
             "--boolean" -> TestTranspileBoolean system: system,
             "--class" -> TestTranspileClass system: system,

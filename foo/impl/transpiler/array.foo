@@ -1,0 +1,39 @@
+define DirectMethods
+    { #new:
+          -> {signature: [Integer],
+              body: "size_t size = ctx->frame[0].datum.int64;
+// FIXME: error instead!
+assert(size >= 0);
+return foo_Array_new(size);"}
+}!
+
+define InstanceMethods
+    { #debug
+          -> {signature: [],
+              body: "struct FooArray* array = PTR(FooArray, ctx->receiver.datum);
+printf(\"[\");
+for (size_t i = 0; i < array->size; i++) \{
+    if (i)
+        printf(\", \");
+    foo_send(ctx, &FOO_debug, array->data[i], 0);
+}
+printf(\"]\");
+return ctx->receiver;"},
+      #at:
+          -> {signature: [Integer],
+              body: "struct FooArray* array = PTR(FooArray, ctx->receiver.datum);
+int64_t i = ctx->frame[0].datum.int64 - 1;
+assert(i >= 0);
+assert(i < array->size);
+return array->data[i];"},
+      #at:put:
+          -> {signature: [Integer, Any],
+              body: "struct FooArray* array = PTR(FooArray, ctx->receiver.datum);
+int64_t i = ctx->frame[0].datum.int64 - 1;
+assert(i >= 0);
+assert(i < array->size);
+return array->data[i] = ctx->frame[1];"},
+      #size
+              -> {signature: [],
+                  body: "return foo_Integer_new(PTR(FooArray, ctx->receiver.datum)->size);"}
+}!

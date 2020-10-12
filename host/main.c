@@ -235,6 +235,7 @@ struct FooBlock {
 
 // Forward declarations for vtables are in generated_classes, but we're going
 // to define a few builtin ctors first that need some of them.
+struct FooVtable FooInstanceVtable_Array;
 struct FooVtable FooInstanceVtable_Block;
 struct FooVtable FooInstanceVtable_Boolean;
 struct FooVtable FooInstanceVtable_Float;
@@ -432,6 +433,15 @@ struct Foo FooGlobal_False =
    .vtable = &FooInstanceVtable_Boolean,
    .datum = { .boolean = 0 }
   };
+
+struct Foo foo_Array_new(size_t size) {
+  struct FooArray* array = foo_alloc(1, sizeof(struct FooArray) + size*sizeof(struct Foo));
+  array->size = size;
+  for (size_t i = 0; i < size; ++i) {
+    array->data[i] = FooGlobal_False;
+  }
+  return (struct Foo){ .vtable = &FooInstanceVtable_Array, .datum = { .ptr = array } };
+}
 
 struct Foo foo_Boolean_new(bool t) {
   return (struct Foo){ .vtable = &FooInstanceVtable_Boolean, .datum = { .boolean = t } };
