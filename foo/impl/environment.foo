@@ -7,11 +7,7 @@ import .ast.AstLexicalRef
 import .ast.AstSlotRef
 import .ast.AstDefinition
 import .parser.Parser
-
-class Builtin { value }
-    method eval
-        value!
-end
+import .ast.AstBuiltin
 
 class Globals { dictionary }
     direct method new
@@ -19,7 +15,7 @@ class Globals { dictionary }
     method define: builtin
         let name = builtin name.
         dictionary
-            put: (AstGlobal name: name definition: (Builtin value: builtin))
+            put: (AstGlobal name: name definition: (AstBuiltin value: builtin))
             at: name!
 end
 
@@ -174,6 +170,13 @@ class Environment { parent    -- Enclosing environment or False
 
     method removeBuiltins: names
         builtins removeAll: names!
+
+    method replaceBuiltins: newBuiltins
+        newBuiltins do: { |each|
+                          let global = builtins
+                                           at: each name
+                                           ifNonePut: { AstGlobal name: each name }.
+                          global redefine: each }!
 
     method import: moduleName relative: relative
         (self depth is 1) assert.

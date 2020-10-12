@@ -29,13 +29,21 @@ class BuiltinMethod { selector definition }
         definition body!
 end
 
-class BuiltinClass { name directMethods instanceMethods }
-    direct method new: name
+class BuiltinClass { host directMethods instanceMethods }
+    direct method new: host
                   directMethods: directMethods
                   instanceMethods: instanceMethods
-        self name: name
+        self host: host
              directMethods: (BuiltinMethod forEach: directMethods)
              instanceMethods: (BuiltinMethod forEach: instanceMethods)!
+    method name
+        host name!
+    method eval
+        host!
+    method __addDirectMethod: aMethod
+        directMethods add: aMethod!
+    method __addInstanceMethod: aMethod
+        instanceMethods add: aMethod!
     method isBuiltin
         True!
     method interfaces
@@ -46,27 +54,27 @@ end
 
 define BuiltinClasses [
      BuiltinClass
-         new: "Array"
+         new: Array
          directMethods: array.DirectMethods
          instanceMethods: array.InstanceMethods,
      BuiltinClass
-         new: "Block"
+         new: Block
          directMethods: []
          instanceMethods: block.InstanceMethods,
      BuiltinClass
-         new: "Boolean"
+         new: Boolean
          directMethods: boolean.DirectMethods
          instanceMethods: boolean.InstanceMethods,
      BuiltinClass
-         new: "Float"
+         new: Float
          directMethods: []
          instanceMethods: float.FloatMethods,
      BuiltinClass
-         new: "Integer"
+         new: Integer
          directMethods: []
          instanceMethods: integer.IntegerMethods,
      BuiltinClass
-         new: "String"
+         new: String
          directMethods: []
          instanceMethods: string.InstanceMethods
 ]!
@@ -95,6 +103,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                           variables: Dictionary new
                           tmpCounter: 0.
         -- Debug println: "/definitions".
+        env replaceBuiltins: BuiltinClasses.
         let classes = visitor generateBuiltins: globals.
         globals do: { |each| each definition visitBy: visitor }.
         visitor generateMain.

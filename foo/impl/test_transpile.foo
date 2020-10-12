@@ -24,7 +24,8 @@ interface TranspilerTest
         TestTranspileWrapper test: self system: system!
 
     method transpile: string
-        let env = Environment new load: string.
+        let env = Environment new.
+        env load: string.
         let c = CTranspiler transpile: env globals values in: env.
         (system files path: "host/generated_selectors.h")
             forWrite truncateExisting
@@ -699,6 +700,54 @@ class TestTranspileDynamic { assert system }
             expect: "#<Integer 1234>#<Integer 999>"!
 end
 
+class TestTranspileExtend { assert system }
+    is TranspilerTest
+
+    method testExtend
+        self transpile: "class MyClass \{}
+                              method bar
+                                42!
+                         end
+                         extend MyClass
+                              method foo
+                                  self bar * 2!
+                         end
+                         class Main \{}
+                              direct method run
+                                  MyClass new foo debug!
+                         end"
+            expect: "#<Integer 84>"!
+
+    method testExtendBuiltin
+        self transpile: "extend Integer
+                             method doopdoop
+                                 1239812798!
+                         end
+                         class Main \{}
+                             direct method run
+                                 0 doopdoop debug!
+                         end"
+            expect: "#<Integer 1239812798>"!
+
+    method testExtendInterface
+        self transpile: "interface MyInterface
+                         end
+                         class MyClass \{}
+                              is MyInterface
+                              method bar
+                                42!
+                         end
+                         extend MyInterface
+                              method foo
+                                  self bar * 2!
+                         end
+                         class Main \{}
+                              direct method run
+                                  MyClass new foo debug!
+                         end"
+            expect: "#<Integer 84>"!
+end
+
 class TestTranspileTypecheck { assert system }
     is TranspilerTest
 
@@ -900,6 +949,7 @@ class Main {}
             "--class" -> TestTranspileClass system: system,
             "--define" -> TestTranspileDefine system: system,
             "--dynamic" -> TestTranspileDynamic system: system,
+            "--extend" -> TestTranspileExtend system: system,
             "--finally" -> TestTranspileFinally system: system,
             "--float" -> TestTranspileFloat system: system,
             "--integer" -> TestTranspileInteger system: system,
