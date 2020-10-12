@@ -367,6 +367,7 @@ class AstDictionary { entries }
 end
 
 class AstValueMarker { string }
+    is Object
     method toString
         string!
 end
@@ -460,6 +461,11 @@ class AstGlobal { name::String _value _definition sources }
 
     method isDynamic
         False!
+
+    method redefine: newDefinition
+        (AstValueMarker includes: _value)
+            ifFalse: { Error raise: "Cannot redefine a finalized global: {_value}" }.
+        _definition = newDefinition!
 end
 
 class AstDynamic { name::String _value _definition sources }

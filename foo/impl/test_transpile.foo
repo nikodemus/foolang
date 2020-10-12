@@ -24,7 +24,8 @@ interface TranspilerTest
         TestTranspileWrapper test: self system: system!
 
     method transpile: string
-        let env = Environment new load: string.
+        let env = Environment new.
+        env load: string.
         let c = CTranspiler transpile: env globals values in: env.
         (system files path: "host/generated_selectors.h")
             forWrite truncateExisting

@@ -36,6 +36,10 @@ class BuiltinClass { name directMethods instanceMethods }
         self name: name
              directMethods: (BuiltinMethod forEach: directMethods)
              instanceMethods: (BuiltinMethod forEach: instanceMethods)!
+    method __addDirectMethod: aMethod
+        directMethods add: aMethod!
+    method __addInstanceMethod: aMethod
+        instanceMethods add: aMethod!
     method isBuiltin
         True!
     method interfaces
@@ -95,6 +99,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                           variables: Dictionary new
                           tmpCounter: 0.
         -- Debug println: "/definitions".
+        env replaceBuiltins: BuiltinClasses.
         let classes = visitor generateBuiltins: globals.
         globals do: { |each| each definition visitBy: visitor }.
         visitor generateMain.
