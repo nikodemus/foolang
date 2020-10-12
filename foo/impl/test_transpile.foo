@@ -716,6 +716,17 @@ class TestTranspileExtend { assert system }
                                   MyClass new foo debug!
                          end"
             expect: "#<Integer 84>"!
+
+    method testExtendBuiltin
+        self transpile: "extend Integer
+                             method doopdoop
+                                 1239812798!
+                         end
+                         class Main \{}
+                             direct method run
+                                 0 doopdoop debug!
+                         end"
+            expect: "#<Integer 1239812798>"!
 end
 
 class TestTranspileTypecheck { assert system }
