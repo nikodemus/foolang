@@ -137,14 +137,25 @@ class AstClass { name slots interfaces _directMethods _instanceMethods }
     method instanceMethods
         self
             _collectFromInterfaces: #instanceMethods
+            _with: self _readerMethods
             _with: _instanceMethods!
 
+    method _readerMethods
+        (slots reject: { |each| each name startsWith: "_" })
+            collect: { |each|
+                       AstReaderMethod slot: each }!
+
     method _collectFromInterfaces: block _with: local
+        self _collectFromInterfaces: block _with: local _with: []!
+
+    method _collectFromInterfaces: block _with: local1 _with: local2
         let all = Dictionary new.
         interfaces do: { |anInterface|
                          self _collectMethods: (block value: anInterface definition)
                               _into: all }.
-        self _collectMethods: local
+        self _collectMethods: local1
+             _into: all.
+        self _collectMethods: local2
              _into: all.
         all values!
 
@@ -183,6 +194,34 @@ class AstClass { name slots interfaces _directMethods _instanceMethods }
 
     method toString
         "#<AstClass {name}>"!
+end
+
+class AstSlot { name index type }
+    is Object
+
+    method referenceUpwards: offset
+        AstSlotRef slot: self!
+end
+
+class AstReaderMethod { slot }
+    method selector
+        Selector new: slot name!
+    method signature
+        []!
+    method arity
+        0!
+    method frameSize
+        0!
+    method isBuiltin
+        False!
+    method returnType
+        -- FIXME: Since setters check the type, the readers don't
+        -- need to -- but it would be nice for senders to know the type.
+        -- So returnType needs to be split into returnTypeCheck and
+        -- declaredReturnType?
+        { value: Any }!
+    method body
+        slot referenceUpwards: False!
 end
 
 class AstMethod { selector argumentVariables returnType body frameSize isDirect }
