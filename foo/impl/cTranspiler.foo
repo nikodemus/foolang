@@ -4,6 +4,7 @@ import .transpiler.block
 import .transpiler.boolean
 import .transpiler.float
 import .transpiler.string
+import .transpiler.array
 import .ast.AstClass
 import .ast.AstInterface
 
@@ -45,9 +46,13 @@ end
 
 define BuiltinClasses [
      BuiltinClass
+         new: "Array"
+         directMethods: array.DirectMethods
+         instanceMethods: array.InstanceMethods,
+     BuiltinClass
          new: "Block"
          directMethods: []
-         instanceMethods: block.BlockMethods,
+         instanceMethods: block.InstanceMethods,
      BuiltinClass
          new: "Boolean"
          directMethods: boolean.DirectMethods
@@ -616,4 +621,18 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output print: ", ".
         output print: aBlock frameSize.
         output print: ")"!
+
+    method visitArray: anArray
+        let a = self genTemp: "array".
+        let entries = anArray entries.
+        output print: "(\{ struct Foo {a} = foo_Array_new({entries size}); ".
+        entries isEmpty
+            ifFalse: { let p = self genTemp: "arrayPtr".
+                       output print: "struct FooArray* {p} = PTR(FooArray, {a}.datum);".
+                       entries
+                           doWithIndex: { |each index|
+                                          output print: "{p}->data[{index-1}] = ".
+                                          each visitBy: self.
+                                          output print: "; " } }.
+        output print: "{a}; })"!
 end

@@ -1,4 +1,7 @@
-define BlockMethods
+define DirectMethods
+    []!
+
+define InstanceMethods
     { #value
           -> {signature: [],
               body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
