@@ -472,9 +472,11 @@ class AstGlobal { name::String _value _definition sources }
         False!
 
     method redefine: newDefinition
-        (AstValueMarker includes: _value)
-            ifFalse: { Error raise: "Cannot redefine a finalized global: {_value}" }.
+        -- FIXME: This is a bit dodgy: the usage is currently for replacing
+        -- host definitions of builtins in transpiler, but it seems to me that
+        -- value should be updated too if it has been materialized...
         _definition = newDefinition!
+
 end
 
 class AstDynamic { name::String _value _definition sources }
