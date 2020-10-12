@@ -699,6 +699,25 @@ class TestTranspileDynamic { assert system }
             expect: "#<Integer 1234>#<Integer 999>"!
 end
 
+class TestTranspileExtend { assert system }
+    is TranspilerTest
+
+    method testExtend
+        self transpile: "class MyClass \{}
+                              method bar
+                                42!
+                         end
+                         extend MyClass
+                              method foo
+                                  self bar * 2!
+                         end
+                         class Main \{}
+                              direct method run
+                                  MyClass new foo!
+                         end"
+            expect: "#<Integer 84>"!
+end
+
 class TestTranspileTypecheck { assert system }
     is TranspilerTest
 
@@ -900,6 +919,7 @@ class Main {}
             "--class" -> TestTranspileClass system: system,
             "--define" -> TestTranspileDefine system: system,
             "--dynamic" -> TestTranspileDynamic system: system,
+            "--extend" -> TestTranspileExtend system: system,
             "--finally" -> TestTranspileFinally system: system,
             "--float" -> TestTranspileFloat system: system,
             "--integer" -> TestTranspileInteger system: system,
