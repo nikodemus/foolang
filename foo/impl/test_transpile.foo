@@ -728,6 +728,24 @@ class TestTranspileExtend { assert system }
                                  0 doopdoop debug!
                          end"
             expect: "#<Integer 1239812798>"!
+
+    method testExtendInterface
+        self transpile: "interface MyInterface
+                         end
+                         class MyClass \{}
+                              is MyInterface
+                              method bar
+                                42!
+                         end
+                         extend MyInterface
+                              method foo
+                                  self bar * 2!
+                         end
+                         class Main \{}
+                              direct method run
+                                  MyClass new foo debug!
+                         end"
+            expect: "#<Integer 84>"!
 end
 
 class TestTranspileTypecheck { assert system }
