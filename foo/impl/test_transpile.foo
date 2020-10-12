@@ -350,6 +350,14 @@ class TestTranspileClass { assert system }
                          end"
             expect: "#<Integer -42>"!
 
+    method testPrefixMethodDefinition
+        self transpile: "class Main \{}
+                             direct method prefix-
+                                -123!
+                             direct method run
+                               (-self) debug!
+                         end"
+            expect: "#<Integer -123>"!
 end
 
 class TestTranspileFinally { assert system }
