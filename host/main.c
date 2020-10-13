@@ -436,18 +436,22 @@ struct Foo FooGlobal_False =
    .datum = { .boolean = 0 }
   };
 
-struct FooArray* foo_Array_alloc(size_t size) {
+struct FooArray* FooArray_alloc(size_t size) {
   struct FooArray* array = foo_alloc(sizeof(struct FooArray) + size*sizeof(struct Foo));
   array->size = size;
   return array;
 }
 
 struct Foo foo_Array_new(size_t size) {
-  struct FooArray* array = foo_alloc(sizeof(struct FooArray) + size*sizeof(struct Foo));
-  array->size = size;
+  struct FooArray* array = FooArray_alloc(size);
   for (size_t i = 0; i < size; ++i) {
     array->data[i] = FooGlobal_False;
   }
+  return (struct Foo){ .vtable = &FooInstanceVtable_Array, .datum = { .ptr = array } };
+}
+
+struct Foo foo_Array_alloc(size_t size) {
+  struct FooArray* array = FooArray_alloc(size);
   return (struct Foo){ .vtable = &FooInstanceVtable_Array, .datum = { .ptr = array } };
 }
 
@@ -463,9 +467,15 @@ struct Foo foo_Float_new(double f) {
   return (struct Foo){ .vtable = &FooInstanceVtable_Float, .datum = { .float64 = f } };
 }
 
-struct Foo foo_String_new(size_t len, const char* s) {
+
+struct FooBytes* FooBytes_alloc(size_t len) {
   struct FooBytes* bytes = (struct FooBytes*)foo_alloc(sizeof(struct FooBytes) + len + 1);
   bytes->size = len;
+  return bytes;
+}
+
+struct Foo foo_String_new(size_t len, const char* s) {
+  struct FooBytes* bytes = FooBytes_alloc(len);
   memcpy(bytes->data, s, len);
   return (struct Foo) { .vtable = &FooInstanceVtable_String, .datum = { .ptr = bytes } };
 }

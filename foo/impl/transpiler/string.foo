@@ -1,10 +1,39 @@
 import .name.Name
 
+define DirectMethods {
+    #concat:
+        -> {signature: [Array], vars: 0,
+            body: "size_t size = 0;
+struct FooArray* content = PTR(FooArray, ctx->frame[0].datum);
+for (size_t i = 0; i < content->size; i++) \{
+    struct FooBytes* s = PTR(FooBytes, foo_vtable_typecheck(&FooInstanceVtable_String, content->data[i]).datum);
+    size += s->size;
+}
+size_t offset = 0;
+struct FooBytes* string = FooBytes_alloc(size);
+for (size_t i = 0; i < content->size; i++) \{
+    struct FooBytes* s = PTR(FooBytes, content->data[i].datum);
+    memcpy(string->data+offset, s->data, s->size);
+    offset += s->size;
+}
+return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = \{ .ptr = string } };"}
+}!
+
 define InstanceMethods {
+    #append:
+        -> {signature: [String], vars: 0,
+            body: "struct FooBytes* b1 = PTR(FooBytes, ctx->receiver.datum);
+struct FooBytes* b2 = PTR(FooBytes, ctx->frame[0].datum);
+struct FooBytes* b3 = FooBytes_alloc(b1->size + b2->size);
+memcpy(b3->data, b1->data, b1->size);
+memcpy(b3->data+b1->size, b2->data, b2->size);
+return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = \{ .ptr = b3 } };"},
+
     #debug
         -> {signature: [], vars: 0,
             body: "printf(\"#<String %s>\", (char*)PTR(FooBytes, ctx->receiver.datum)->data);
 return ctx->receiver;"},
+
     #from:to:
         -> {signature: [Integer, Integer], vars: 0,
             body: "int64_t start = ctx->frame[0].datum.int64 - 1;
@@ -13,6 +42,11 @@ int64_t end = ctx->frame[1].datum.int64;
 assert(start <= end);
 assert(end <= PTR(FooBytes, ctx->receiver.datum)->size);
 return foo_String_new((size_t)(end-start), (char*)PTR(FooBytes, ctx->receiver.datum)->data+start);"},
+
+    #printOn:
+        -> {signature: [Any], vars: 0,
+            body: "return foo_send(ctx, &FOO_writeString_, ctx->frame[0], 1, ctx->receiver);"},
+
     #size
         -> {signature: [], vars: 0,
             body: "return foo_Integer_new(PTR(FooBytes, ctx->receiver.datum)->size);"}

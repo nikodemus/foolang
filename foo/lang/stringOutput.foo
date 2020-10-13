@@ -1,23 +1,51 @@
-extend StringOutput
+class StringOutput { _size _contents }
+
     direct method new: string
-        let out = self new.
-        out writeString: string.
-        out!
+        self new writeString: string!
+
+    direct method new
+        self _size: 0
+             _contents: (Array new: 8)!
+
     direct method with: block
         let out = self new.
         block value: out.
         out content!
+
+    method writeString: string
+        (_size == _contents size)
+            ifTrue: { let newContents = Array new: (_size + 1) * 2.
+                      1 to: _size
+                        do: { |i| newContents put: (_contents at: i) at: i }.
+                      _contents = newContents }.
+        _size = _size + 1.
+        _contents put: string at: _size.
+        self!
+
+    method content
+        let res = String concat: (_contents from: 1 to: _size).
+        _size = 0.
+        res!
+
+    method displayOn: stream
+        stream println: self toString!
+
     method toString
-        "#<StringOutput>"!
+        "#<StringOutput ...>"!
+
     method print: thing
         thing printOn: self!
+
     method display: thing
         thing displayOn: self!
+
     method flush
         self!
+
     method println: string
         self writeString: string.
         self newline!
+
     method newline
         self writeString: "\n".
         self!
