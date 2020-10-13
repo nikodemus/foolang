@@ -142,6 +142,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "int main".
         output println: "    (int argc, char** argv)".
         output println: "\{".
+        output println: "    fooinit();".
         output println: "    struct FooProcess* process = foo_process_new({variables size});".
         variables
             do: { |name offset|
@@ -220,7 +221,9 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                               out println: "    .size = {string size},".
                               out print: "    .data = \{ ".
                               string do: { |each|
-                                           out print: "'{each}'," }.
+                                           each == "'"
+                                               ifTrue: { out print: "'\\''," }
+                                               ifFalse: { out print: "'{each}'," } }.
                               out print: " 0".
                               out println: " }".
                               out println: "};".
@@ -644,4 +647,9 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                                           each visitBy: self.
                                           output print: "; " } }.
         output print: "{a}; })"!
+
+    method visitPanic: aPanic
+        output println: "foo_panic(".
+        aPanic value visitBy: self.
+        output println: ")"!
 end

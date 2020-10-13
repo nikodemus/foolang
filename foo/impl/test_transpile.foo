@@ -113,6 +113,17 @@ class TestTranspileLet { assert system }
              expect: "#<Integer 1142>"!
 end
 
+class TestTranspilePanic { assert system }
+    is TranspilerTest
+
+    method testPanic
+        self transpile: "class Main \{}
+                             direct method run
+                                 panic \"Let's Panic You And Me!\"!
+                         end"
+            expectError: "PANIC: Let's Panic You And Me!\n"!
+end
+
 class TestTranspileInterface { assert system }
     is TranspilerTest
 
@@ -956,6 +967,7 @@ class Main {}
             "--interface" -> TestTranspileInterface system: system,
             "--keyword" -> TestTranspileKeyword system: system,
             "--let" -> TestTranspileLet system: system,
+            "--panic" -> TestTranspilePanic system: system,
             "--name" -> TestName,
             "--return" -> TestTranspileReturn system: system,
             "--self" -> TestTranspileSelf system: system,
