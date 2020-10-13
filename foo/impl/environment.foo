@@ -100,6 +100,8 @@ class ModuleBinding { name module }
         self!
     method global: name
         module global: name!
+    method warnIfUndefined
+        self!
 end
 
 class Environment { parent    -- Enclosing environment or False
@@ -136,14 +138,20 @@ class Environment { parent    -- Enclosing environment or False
             modules: modules!
 
     method toplevel: bindings
+        bindings do: { |each| globals put: each at: each name }.
+        (depth is 1)
+            ifFalse: { Error raise: "Not at toplevel!" }.
+        self!
+        ---
         Environment
             parent: self
-            bindings: bindings
+            bindings: []
             frame: List new
             depth: 1
             globals: globals
             builtins: builtins
             modules: modules!
+       ---
 
     method toplevel
         self toplevel: []!

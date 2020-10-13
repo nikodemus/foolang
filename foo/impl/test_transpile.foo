@@ -24,7 +24,10 @@ interface TranspilerTest
         TestTranspileWrapper test: self system: system!
 
     method transpile: string
-        let env = Environment new.
+        let lang = system files path: "foo/lang".
+        let env = Environment
+                      modules: { "any" -> lang path: "any.foo" } asFileModules.
+        env removeBuiltins: ["Any"].
         env load: string.
         let c = CTranspiler transpile: env globals values in: env.
         (system files path: "host/generated_selectors.h")
@@ -122,6 +125,19 @@ class TestTranspilePanic { assert system }
                                  panic \"Let's Panic You And Me!\"!
                          end"
             expectError: "PANIC: Let's Panic You And Me!\n"!
+end
+
+class TestTranspilePrelude { assert system }
+    is TranspilerTest
+
+    method testAny
+        self transpile: "import any.Any
+
+                         class Main \{}
+                             direct method run
+                                 (Any is Any) debug!
+                         end"
+            expect: "#<Boolean True>"!
 end
 
 class TestTranspileInterface { assert system }
@@ -968,6 +984,7 @@ class Main {}
             "--keyword" -> TestTranspileKeyword system: system,
             "--let" -> TestTranspileLet system: system,
             "--panic" -> TestTranspilePanic system: system,
+            "--prelude" -> TestTranspilePrelude system: system,
             "--name" -> TestName,
             "--return" -> TestTranspileReturn system: system,
             "--self" -> TestTranspileSelf system: system,
