@@ -26,8 +26,15 @@ interface TranspilerTest
     method transpile: string
         let lang = system files path: "foo/lang".
         let env = Environment
-                      modules: { "any" -> lang path: "any.foo" } asFileModules.
-        env removeBuiltins: ["Any"].
+                      modules: { "any" -> lang path: "any.foo",
+                                  "stringOutput" -> lang path: "stringOutput.foo",
+                                 "object" -> lang path: "object.foo" }
+                      asFileModules.
+        env removeBuiltins: [
+            "Any",
+            "Object",
+            "StringOutput"
+        ].
         env load: string.
         let c = CTranspiler transpile: env globals values in: env.
         (system files path: "host/generated_selectors.h")
@@ -136,6 +143,29 @@ class TestTranspilePrelude { assert system }
                          class Main \{}
                              direct method run
                                  (Any is Any) debug!
+                         end"
+            expect: "#<Boolean True>"!
+
+    method testStringOutput
+        self transpile: "import stringOutput.*
+
+                         class Main \{}
+                             direct method run
+                                 (StringOutput with: \{ |out|
+                                                        out print: \"O\".
+                                                        out print: \"k\".
+                                                        out print: \"!\" })
+                                     debug!
+                         end"
+            expect: "#<String Ok!>"!
+
+    method no_testObject
+        self transpile: "import object.Object
+
+                         class Main \{}
+                             is Object
+                             direct method run
+                                 (self == self) debug!
                          end"
             expect: "#<Boolean True>"!
 end

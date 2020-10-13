@@ -478,33 +478,6 @@ impl Output {
     }
 }
 
-pub struct StringOutput {
-    pub contents: RefCell<String>,
-}
-
-impl PartialEq for StringOutput {
-    fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self, other)
-    }
-}
-
-impl Eq for StringOutput {}
-
-impl Hash for StringOutput {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        std::ptr::hash(self, state);
-    }
-}
-
-impl StringOutput {
-    pub fn write(&self, text: &str) {
-        self.contents.borrow_mut().push_str(text);
-    }
-    pub fn content(&self) -> String {
-        self.contents.replace(String::new())
-    }
-}
-
 #[derive(PartialEq, Clone)]
 pub enum Datum {
     Array(Rc<classes::array::Array>),
@@ -526,7 +499,6 @@ pub enum Datum {
     Random(Rc<classes::random::Random>),
     Record(Rc<classes::record::Record>),
     String(Rc<String>),
-    StringOutput(Rc<StringOutput>),
     // XXX: Null?
     System(Rc<System>),
     Time(Rc<TimeInfo>),
@@ -557,7 +529,6 @@ impl Hash for Datum {
             Random(x) => x.hash(state),
             Record(x) => x.hash(state),
             String(x) => x.hash(state),
-            StringOutput(x) => x.hash(state),
             // XXX: Null?
             System(x) => x.hash(state),
             Time(x) => x.hash(state),
@@ -602,8 +573,6 @@ pub struct Foolang {
     pub record_class_vtable: Rc<Vtable>,
     pub record_vtable: Rc<Vtable>,
     pub string_class_vtable: Rc<Vtable>,
-    pub string_output_class_vtable: Rc<Vtable>,
-    pub string_output_vtable: Rc<Vtable>,
     pub string_vtable: Rc<Vtable>,
     pub time_class_vtable: Rc<Vtable>,
     pub time_vtable: Rc<Vtable>,
@@ -648,10 +617,6 @@ impl Foolang {
         env.define("Random", Class::object(&self.random_class_vtable, &self.random_vtable));
         env.define("Record", Class::object(&self.record_class_vtable, &self.record_vtable));
         env.define("String", Class::object(&self.string_class_vtable, &self.string_vtable));
-        env.define(
-            "StringOutput",
-            Class::object(&self.string_output_class_vtable, &self.string_output_vtable),
-        );
         env.define("Time", Class::object(&self.time_class_vtable, &self.time_vtable));
         // println!("INIT OK");
         self
@@ -694,8 +659,6 @@ impl Foolang {
             record_class_vtable: Rc::new(classes::record::class_vtable()),
             record_vtable: Rc::new(classes::record::instance_vtable()),
             string_class_vtable: Rc::new(classes::string::class_vtable()),
-            string_output_class_vtable: Rc::new(classes::string_output::class_vtable()),
-            string_output_vtable: Rc::new(classes::string_output::instance_vtable()),
             string_vtable: Rc::new(classes::string::instance_vtable()),
             time_class_vtable: Rc::new(classes::time::class_vtable()),
             time_vtable: Rc::new(classes::time::instance_vtable()),
@@ -890,15 +853,6 @@ impl Foolang {
             datum: Datum::Output(Rc::new(Output {
                 name: name.to_string(),
                 stream: RefCell::new(output),
-            })),
-        }
-    }
-
-    pub fn make_string_output(&self) -> Object {
-        Object {
-            vtable: Rc::clone(&self.string_output_vtable),
-            datum: Datum::StringOutput(Rc::new(StringOutput {
-                contents: RefCell::new(String::new()),
             })),
         }
     }
@@ -1312,13 +1266,6 @@ impl Object {
         }
     }
 
-    pub fn string_output(&self) -> Rc<StringOutput> {
-        match &self.datum {
-            Datum::StringOutput(output) => Rc::clone(output),
-            _ => panic!("BUG: {:?} is not a StringOutput", self),
-        }
-    }
-
     pub fn string(&self) -> Rc<String> {
         match &self.datum {
             Datum::String(s) => Rc::clone(s),
@@ -1459,7 +1406,6 @@ impl fmt::Display for Object {
             Datum::Output(output) => write!(f, "#<Output {}>", &output.name),
             Datum::Random(_) => write!(f, "#<Random>"),
             Datum::Record(r) => write!(f, "{:?}", r),
-            Datum::StringOutput(_output) => write!(f, "#<StringOutput>"),
             Datum::String(s) => write!(f, "{}", s),
             Datum::System(_) => write!(f, "#<System>"),
             Datum::Time(time) => write!(

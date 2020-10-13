@@ -33,6 +33,27 @@ int64_t i = ctx->frame[0].datum.int64 - 1;
 assert(i >= 0);
 assert(i < array->size);
 return array->data[i] = ctx->frame[1];"},
+      #put:at:
+          -> {signature: [Any, Integer], vars: 0,
+              body: "struct FooArray* array = PTR(FooArray, ctx->receiver.datum);
+int64_t i = ctx->frame[1].datum.int64 - 1;
+assert(i >= 0);
+assert(i < array->size);
+return array->data[i] = ctx->frame[0];"},
+      #from:to:
+          -> {signature: [Integer, Integer], vars: 0,
+              body: "int64_t start = ctx->frame[0].datum.int64 - 1;
+int64_t end = ctx->frame[1].datum.int64;
+struct FooArray* self = PTR(FooArray, ctx->receiver.datum);
+// FIXME: errors instead!
+assert(start <= end);
+assert(end <= self->size);
+struct FooArray* new = FooArray_alloc((size_t)(end-start));
+size_t offset = 0;
+for (size_t i = start; i < end;) \{
+    new->data[offset++] = self->data[i++];
+}
+return (struct Foo)\{ .vtable = &FooInstanceVtable_Array, .datum = \{ .ptr = new } };"},
       #size
               -> {signature: [], vars: 0,
                   body: "return foo_Integer_new(PTR(FooArray, ctx->receiver.datum)->size);"}
