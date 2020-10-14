@@ -83,6 +83,7 @@ jobs:
         # don't like this, but dealing with it is a terrible timesink and I
         # build on windows daily otherwise.
         continue-on-error: ${{ runner.os == 'Windows' }}
+        timeout-minutes: 10
         with:
           command: run
           args: -- foo/impl/test_prelude.foo --use=foo/lib
