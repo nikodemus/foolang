@@ -989,7 +989,7 @@ class Main {}
             "--typecheck" -> TestTranspileTypecheck system: system,
         }.
         cmd == []
-            ifTrue: { cmd = tests keys }.
+            ifTrue: { cmd = tests keys sort }.
         cmd do: { |name|
                   Assert
                       runSuite: (tests at: name)
