@@ -85,16 +85,17 @@ jobs:
 
       - name: Test Transpile
         uses: actions-rs/cargo@v1
+        timeout-minutes: 10
+        # Windows CI host keeps running out of memory in transpiler tests. I
+        # don't like this, but dealing with it is a terrible timesink and I
+        # build on windows daily otherwise.
+        continue-on-error: ${{ runner.os == 'Windows' }}
         with:
           command: run
           args: -- foo/impl/test_transpile.foo --use=foo/lib
 
       - name: Test large
         uses: actions-rs/cargo@v1
-        # Windows CI host keeps running out of memory in transpiler tests. I
-        # don't like this, but dealing with it is a terrible timesink and I
-        # build on windows daily otherwise.
-        continue-on-error: ${{ runner.os == 'Windows' }}
         with:
           command: test
           args: -- --ignored
