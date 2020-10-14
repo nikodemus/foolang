@@ -65,11 +65,29 @@ jobs:
           command: fmt
           args: -- --check
 
-      - name: Test
+      - name: Test Rust
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: --all
+
+      - name: Test Foolang
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: -- foo/impl/test_foolang.foo --use=foo/lib
+
+      - name: Test Prelude
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: -- foo/impl/test_prelude.foo --use=foo/lib
+
+      - name: Test Transpile
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: -- foo/impl/test_transpile.foo --use=foo/lib
 
       - name: Test large
         uses: actions-rs/cargo@v1
