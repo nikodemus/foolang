@@ -55,8 +55,8 @@ interface TranspilerTest
             = (((system getenv: "GITHUB_ACTION") is False) or: system isUnix)
                 ifTrue: { "-fsanitize=address -fsanitize=undefined" }
                 ifFalse: { "" }.
-        let buildCmd = "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall --std=c17 host/main.c".
-                           let build = system command: buildCmd.
+        let buildCmd = "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall --std=c11 host/main.c".
+        let build = system command: buildCmd.
         self _reportStderr: build.
         build ok
             ifFalse: { Error raise: "Build failed: {buildCmd}" }.
