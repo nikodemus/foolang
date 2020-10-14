@@ -7,40 +7,40 @@ import .name.Name
 -- things - doing them for floats here would be a waste of time.
 define FloatMethods
     { (Selector name: "prefix-")
-          -> { signature: [],
+          -> { signature: [], vars: 0,
                body: "return foo_Float_new(- ctx->receiver.datum.float64);" },
       -- FIXME: I absolutely despise the C floating point printing:
       -- print the required number of digits without trailing zeros.
       -- Either integrate dtoa.c, link to a small Rust library,
       -- or implement the algorithm myself.
-      #debug -> {signature: [],
+      #debug -> {signature: [], vars: 0,
                  body: "printf(\"#<Float %f>\", ctx->receiver.datum.float64);
 return ctx->receiver;"},
       #floatAdd:
-          -> { signature: [Float],
+          -> { signature: [Float], vars: 0,
                body: "return foo_Float_new(ctx->receiver.datum.float64 + ctx->frame[0].datum.float64);" },
       #floatDiv:
-          -> { signature: [Float],
+          -> { signature: [Float], vars: 0,
                body: "return foo_Float_new(ctx->receiver.datum.float64 / ctx->frame[0].datum.float64);" },
       #floatEq:
-          -> { signature: [Float],
+          -> { signature: [Float], vars: 0,
                body: "return foo_Boolean_new(ctx->receiver.datum.float64 == ctx->frame[0].datum.float64);" },
       #floatGt:
-          -> { signature: [Float],
+          -> { signature: [Float], vars: 0,
                body: "return foo_Boolean_new(ctx->receiver.datum.float64 > ctx->frame[0].datum.float64);" },
       #floatGte:
-          -> { signature: [Float],
+          -> { signature: [Float], vars: 0,
                body: "return foo_Boolean_new(ctx->receiver.datum.float64 >= ctx->frame[0].datum.float64);" },
       #floatLt:
-          -> { signature: [Float],
+          -> { signature: [Float], vars: 0,
                body: "return foo_Boolean_new(ctx->receiver.datum.float64 < ctx->frame[0].datum.float64);" },
       #floatLte:
-          -> { signature: [Float],
+          -> { signature: [Float], vars: 0,
                body: "return foo_Boolean_new(ctx->receiver.datum.float64 <= ctx->frame[0].datum.float64);" },
       #floatMul:
-          -> { signature: [Float],
+          -> { signature: [Float], vars: 0,
                body: "return foo_Float_new(ctx->receiver.datum.float64 * ctx->frame[0].datum.float64);" },
       #floatSub:
-          -> { signature: [Float],
+          -> { signature: [Float], vars: 0,
                body: "return foo_Float_new(ctx->receiver.datum.float64 - ctx->frame[0].datum.float64);" },
     }!

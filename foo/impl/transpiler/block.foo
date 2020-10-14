@@ -3,15 +3,15 @@ define DirectMethods
 
 define InstanceMethods
     { #value
-          -> {signature: [],
+          -> {signature: [], vars: 0,
               body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
 return PTR(FooBlock, ctx->receiver.datum)->function(block_ctx);"},
       #value:
-          -> {signature: [Any],
+          -> {signature: [Any], vars: 0,
               body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
 return PTR(FooBlock, ctx->receiver.datum)->function(block_ctx);"},
       #finally:
-          -> {signature: [Block],
+          -> {signature: [Block], vars: 1,
               body: "struct FooFinally finally = \{
     .cleanup = \{
         .function = foo_finally,
@@ -21,7 +21,7 @@ return PTR(FooBlock, ctx->receiver.datum)->function(block_ctx);"},
 };
 ctx->cleanup = &finally.cleanup;
 struct FooContext* block_ctx = foo_context_new_block(ctx);
-struct Foo block_value = PTR(FooBlock, ctx->receiver.datum)->function(block_ctx);
+ctx->frame[1] = PTR(FooBlock, ctx->receiver.datum)->function(block_ctx);
 ctx->cleanup = ctx->cleanup->next;
 foo_finally(ctx, &finally.cleanup);
-return block_value;"}}!
+return ctx->frame[1];"}}!

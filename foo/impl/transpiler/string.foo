@@ -2,11 +2,11 @@ import .name.Name
 
 define InstanceMethods {
     #debug
-        -> {signature: [],
+        -> {signature: [], vars: 0,
             body: "printf(\"#<String %s>\", (char*)PTR(FooBytes, ctx->receiver.datum)->data);
 return ctx->receiver;"},
     #from:to:
-        -> {signature: [Integer, Integer],
+        -> {signature: [Integer, Integer], vars: 0,
             body: "int64_t start = ctx->frame[0].datum.int64 - 1;
 int64_t end = ctx->frame[1].datum.int64;
 // FIXME: errors instead!
@@ -14,6 +14,6 @@ assert(start <= end);
 assert(end <= PTR(FooBytes, ctx->receiver.datum)->size);
 return foo_String_new((size_t)(end-start), (char*)PTR(FooBytes, ctx->receiver.datum)->data+start);"},
     #size
-        -> {signature: [],
+        -> {signature: [], vars: 0,
             body: "return foo_Integer_new(PTR(FooBytes, ctx->receiver.datum)->size);"}
 }!

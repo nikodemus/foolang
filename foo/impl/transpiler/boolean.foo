@@ -2,19 +2,19 @@ import .name.Name
 
 define DirectMethods
     { #debug
-          -> { signature: [],
+          -> { signature: [], vars: 0,
                body: "printf(\"#<Class Boolean>\");
 return ctx->receiver;" } }!
 
 define InstanceMethods
     { #ifTrue:ifFalse:
-          -> { signature: [Block, Block],
+          -> { signature: [Block, Block], vars: 0,
                body: "if (ctx->receiver.datum.boolean) \{
     return foo_send(ctx, &{Name mangleSelector: #value}, ctx->frame[0], 0);
 } else \{
     return foo_send(ctx, &{Name mangleSelector: #value}, ctx->frame[1], 0);
 }" },
       #debug
-          -> { signature: [],
+          -> { signature: [], vars: 0,
                body: "printf(\"#<Boolean %s>\", ctx->receiver.datum.boolean ? \"True\" : \"False\");
 return ctx->receiver;" } }!
