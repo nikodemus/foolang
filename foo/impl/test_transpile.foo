@@ -39,19 +39,39 @@ interface TranspilerTest
         let c = CTranspiler transpile: env globals values in: env.
         (system files path: "host/generated_selectors.h")
             forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c selectors }.
+                createOrOpen: { |f|
+                                system output println: "---generated_selectors.h---".
+                                system output println: c selectors.
+                                system output println: "------".
+                                f writeString: c selectors }.
         (system files path: "host/generated_constants.c")
             forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c constants }.
+                createOrOpen: { |f|
+                                system output println: "---generated_constants.c---".
+                                system output println: c constants.
+                                system output println: "------".
+                                f writeString: c constants }.
         (system files path: "host/generated_blocks.c")
             forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c blocks }.
+                createOrOpen: { |f|
+                                system output println: "---generated_blocks.c---".
+                                system output println: c blocks.
+                                system output println: "------".
+                                f writeString: c blocks }.
         (system files path: "host/generated_main.c")
             forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c main }.
+                createOrOpen: { |f|
+                                system output println: "---generated_main.c---".
+                                system output println: c main.
+                                system output println: "------".
+                                f writeString: c main }.
         (system files path: "host/generated_classes.c")
             forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c classes }.
+                createOrOpen: { |f|
+                                system output println: "---generated_classes.c---".
+                                system output println: c classes.
+                                system output println: "------".
+                                f writeString: c classes }.
         let tmpExe = "tmp_transpile_test.exe".
         let path = system currentDirectory path: tmpExe.
         path ifExists: #deleteFile.
