@@ -98,6 +98,7 @@ impl<'a> Parser<'a> {
                 return Unwind::error(&format!("Could not read file: {}", file.to_string_lossy()))
             }
         };
+        // println!("PARSE:\n{}", &source);
         let mut parser = Parser::new_with_path(file, &source, root);
         fun(&mut parser)
     }
@@ -942,6 +943,7 @@ fn parse_block_or_dictionary(parser: &Parser) -> Result<Expr, Unwind> {
     } else if end == Token::EOF {
         parser.eof_error("Unexpected EOF while pasing a block: expected } as block terminator")
     } else {
+        // println!("{}", &parser.source[source_location.get_span()]);
         parser.error("Expected } as block terminator")
     }
 }

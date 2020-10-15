@@ -22,18 +22,20 @@ class BuiltinMethod { selector definition }
     method arity
         definition signature size!
     method frameSize
-        self arity!
+        self arity + self definition vars!
     method signature
         definition signature!
     method body
         definition body!
 end
 
-class BuiltinClass { host directMethods instanceMethods }
+class BuiltinClass { host markFunction directMethods instanceMethods }
     direct method new: host
+                  mark: mark
                   directMethods: directMethods
                   instanceMethods: instanceMethods
         self host: host
+             markFunction: mark
              directMethods: (BuiltinMethod forEach: directMethods)
              instanceMethods: (BuiltinMethod forEach: instanceMethods)!
     method name
@@ -55,26 +57,32 @@ end
 define BuiltinClasses [
      BuiltinClass
          new: Array
+         mark: "foo_mark_array"
          directMethods: array.DirectMethods
          instanceMethods: array.InstanceMethods,
      BuiltinClass
          new: Block
+         mark: "foo_mark_block"
          directMethods: []
          instanceMethods: block.InstanceMethods,
      BuiltinClass
          new: Boolean
+         mark: "foo_mark_noop"
          directMethods: boolean.DirectMethods
          instanceMethods: boolean.InstanceMethods,
      BuiltinClass
          new: Float
+         mark: "foo_mark_noop"
          directMethods: []
          instanceMethods: float.FloatMethods,
      BuiltinClass
          new: Integer
+         mark: "foo_mark_noop"
          directMethods: []
          instanceMethods: integer.IntegerMethods,
      BuiltinClass
          new: String
+         mark: "foo_mark_noop"
          directMethods: []
          instanceMethods: string.InstanceMethods
 ]!
@@ -91,6 +99,9 @@ class SelectorMap { names }
     method do: block
         names do: block!
 end
+
+define $home
+    False!
 
 class CTranspiler { output selectorMap blockFunctions constants variables tmpCounter }
 
@@ -112,6 +123,9 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
           constants: visitor generateConstants,
           classes: classes,
           selectors: visitor generateSelectors }!
+
+    method addTemp
+        $home addTemp!
 
     method genTemp: name
         tmpCounter = tmpCounter + 1.
@@ -143,12 +157,12 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "    (int argc, char** argv)".
         output println: "\{".
         output println: "    fooinit();".
-        output println: "    struct FooProcess* process = foo_process_new({variables size});".
+        output println: "    struct FooArray* vars = foo_Array_alloc({variables size});".
         variables
             do: { |name offset|
                   let var = {name: name}.
-                  output println: "process->vars[{offset}] = {Name mangleDynamic: var};" }.
-        output println: "    struct FooContext* ctx = foo_context_new_main(process);".
+                  output println: "vars->data[{offset}] = {Name mangleDynamic: var};" }.
+        output println: "    struct FooContext* ctx = foo_context_new_main(vars);".
         let main = Name mangleGlobal: {name: "Main"}.
         output println: "    foo_send(ctx, &{Name mangleSelector: #run}, {main}, 0);".
         output println: "    return 0;".
@@ -237,6 +251,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         cname!
 
     method blockCName: block
+        let $home = block.
         let output = StringOutput new.
         -- Placeholder so that recursive entry by visitor doesn't grab the
         -- same id.
@@ -307,6 +322,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "    .name = &FOO_CSTRING({anInterface name displayString}\" interface\"),".
         output println: "    .inherited = \{ .size = 0, .data = NULL },".
         output println: "    .size = {anInterface directMethods size},".
+        output println: "    .mark = foo_mark_noop,".
         output println: "    .methods = \{".
         anInterface directMethods
             do: { |each|
@@ -323,6 +339,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "    .name = &FOO_CSTRING({anInterface name displayString}),".
         output println: "    .classptr = NULL,". -- FIXME
         output println: "    .inherited = \{ .size = 0, .data = NULL },".
+        output println: "    .mark = foo_mark_noop,".
         output println: "    .size = 0,".
         output println: "    .methods = \{}".
         output println: "};".
@@ -380,23 +397,21 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                 output newline.
                 -- Constructor
                 let ctor = aClass constructor.
-                directMethods push: { selector: ctor, arity: aClass slots size, frameSize: 0 }.
+                directMethods push: { selector: ctor, arity: aClass slots size, frameSize: aClass slots size }.
                 let ctorName = Name mangleDirectMethod: ctor in: aClass.
                 output newline.
                 output print: "struct Foo ".
                 output println: ctorName.
-                output println: "    (struct FooContext* ctx, size_t nargs, va_list args)".
+                output println: "    (struct FooContext* ctx)".
                 output println: "\{".
                 output println: "    (void)ctx;".
-                output println: "    (void)nargs;".
-                output println: "    (void)args;".
-                output println: "    struct Foo* new = FOO_ALLOC_ARRAY({aClass slots size}, struct Foo);".
+                output println: "    struct FooArray* new = foo_Array_alloc({aClass slots size} * sizeof(struct Foo));".
                 aClass slots
                     doWithIndex: { |each index|
                                    let type = each type value.
                                    type is Any
-                                       ifTrue: { output println: "new[{index-1}] = va_arg(args, struct Foo);" }
-                                       ifFalse: { output println: "new[{index -1}] = foo_vtable_typecheck(&{Name mangleInstanceVtable: type}, va_arg(args, struct Foo));" } }.
+                                       ifTrue: { output println: "new->data[{index-1}] = ctx->frame[{index-1}];" }
+                                       ifFalse: { output println: "new->data[{index -1}] = foo_vtable_typecheck(&{Name mangleInstanceVtable: type}, ctx->frame[{index-1}]);" } }.
                 output println: "    return (struct Foo)\{ .vtable = &{instanceVtableName}, .datum = \{ .ptr = new } };".
                 output println: "}".
                 output newline
@@ -422,6 +437,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "    .name = &FOO_CSTRING({aClass name displayString}\" class\"),".
         output println: "    .classptr = NULL,". -- FIXME
         output println: "    .inherited = \{ .size = {aClass interfaces size}, .data = {classInterfacesName} },".
+        output println: "    .mark = foo_mark_noop,".
         output println: "    .size = {directMethods size},".
         output println: "    .methods = \{".
         directMethods
@@ -439,6 +455,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "    .name = &FOO_CSTRING({aClass name displayString}),".
         output println: "    .classptr = &{globalName},".
         output println: "    .inherited = \{ .size = {aClass interfaces size}, .data = {instanceInterfacesName} },".
+        output println: "    .mark = {aClass markFunction},".
         output println: "    .size = {aClass instanceMethods size},".
         output println: "    .methods = \{".
         aClass instanceMethods
@@ -466,18 +483,16 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output newline!
 
     method _generateMethod: aMethod _in: aClass _as: mangledName
+        let $home = aMethod.
         output print: "struct Foo ".
         output println: mangledName.
-        output println: "    (struct FooContext* ctx, size_t nargs, va_list args)".
+        output println: "    (struct FooContext* ctx)".
         output println: "\{".
         output println: "    (void)ctx;".
-        output println: "    (void)nargs;".
-        output println: "    (void)args;".
         aMethod signature
             doWithIndex: { |type index|
                            type is Any
-                               ifTrue: { output println: "    ctx->frame[{index-1}ul] = va_arg(args, struct Foo);" }
-                               ifFalse: { output println: "    ctx->frame[{index-1}ul] = foo_vtable_typecheck(&{Name mangleInstanceVtable: type}, va_arg(args, struct Foo));" } }.
+                               ifFalse: { output println: "    foo_vtable_typecheck(&{Name mangleInstanceVtable: type}, ctx->frame[{index-1}ul]);" } }.
         aMethod isBuiltin
             ifTrue: {  output print: "    ".
                        output println: (aMethod body replace: "\n" with: "\n    ").
@@ -496,7 +511,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         let index = variables
                         at: aVar name
                         ifNone: { Error raise: "No index for: {aVar}" }.
-        output print: "ctx->process->vars[{index}]"!
+        output print: "ctx->vars->data[{index}]"!
 
     method _generateTypecheck: type _for: value
         type is Any
@@ -512,13 +527,15 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
              _for: aCheck value!
 
     method visitIs: anIs
-        output print: "(\{ struct Foo left = ".
+        let left = self addTemp.
+        output print: "(\{ ctx->frame[{left}] = ".
         anIs left visitBy: self.
         output print: "; ".
-        output print: "struct Foo right = ".
+        let right = self addTemp.
+        output print: "ctx->frame[{right}] = ".
         anIs right visitBy: self.
         output print: "; ".
-        output print: "foo_Boolean_new(left.vtable == right.vtable && left.datum.int64 == right.datum.int64); ".
+        output print: "foo_Boolean_new(ctx->frame[{left}].vtable == ctx->frame[{right}].vtable && ctx->frame[{left}].datum.int64 == ctx->frame[{right}].datum.int64); ".
         output print: "})"!
 
     method visitSeq: seq
@@ -529,7 +546,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output print: "; })"!
 
     method visitSlotSet: set
-        output print: "(PTR(Foo, ctx->receiver.datum)[".
+        output print: "(PTR(FooArray, ctx->receiver.datum)->data[".
         output print: (set slot index - 1).
         output print: "] = ".
         self _generateTypecheck: set slot type value
@@ -537,7 +554,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output print: ")"!
 
     method visitSlotRef: ref
-        output print: "PTR(Foo, ctx->receiver.datum)[".
+        output print: "PTR(FooArray, ctx->receiver.datum)->data[".
         output print: (ref slot index - 1).
         output print: "]"!
 
@@ -571,6 +588,14 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output newline!
 
     method visitSend: aSend
+        output print: "(\{ ".
+        let argVars = aSend arguments
+                          collect: { |each|
+                                     let index = self addTemp.
+                                     output print: "ctx->frame[{index}] = ".
+                                     each visitBy: self.
+                                     output print: "; ".
+                                     index }.
         output print: "foo_send(ctx, &".
         output print: (self selectorCName: aSend selector).
         output print: ", ".
@@ -578,11 +603,10 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output print: ", ".
         output print: aSend arguments size.
         output print: "ul".
-        aSend arguments
-            do: { |arg|
-                  output print: ", ".
-                  arg visitBy: self }.
-        output print: ")"!
+        argVars
+            do: { |index|
+                  output print: ", ctx->frame[{index}]" }.
+        output print: "); })"!
 
     method visitSelfInstance: aSelf
         output print: "ctx->receiver"!
@@ -594,19 +618,19 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         let name = aBind variable name.
         let index = variables at: name.
         let unbind = self genTemp: "unbind".
-        output print: "(\{ struct FooUnbind {unbind} = \{ .cleanup = \{ .function = foo_unbind, .next = ctx->cleanup }, .index = {index}, .value = ctx->process->vars[{index}] };".
+        output print: "(\{ struct FooUnbind {unbind} = \{ .cleanup = \{ .function = foo_unbind, .next = ctx->cleanup }, .index = {index}, .value = ctx->vars->data[{index}] };".
         output print: " ctx->cleanup = &{unbind}.cleanup;".
-        output print: " ctx->process->vars[{index}] = ".
+        output print: " ctx->vars->data[{index}] = ".
         aBind value visitBy: self.
         output print: ";".
-        let res = self genTemp: "res".
-        output print: " struct Foo {res} = ".
+        let res = self addTemp.
+        output print: " ctx->frame[{res}] = ".
         aBind body visitBy: self.
         output print: ";".
         output print: " assert(&{unbind}.cleanup == ctx->cleanup);".
         output print: " ctx->cleanup = ctx->cleanup->next;".
         output print: " foo_unbind(ctx, &{unbind}.cleanup);".
-        output print: " {res}; })"!
+        output print: " ctx->frame[{res}]; })"!
 
     method visitBindLexical: aBind
         output print: "(\{ ctx->frame[{aBind variable index - 1}ul] = ".
@@ -635,18 +659,18 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output print: ")"!
 
     method visitArray: anArray
-        let a = self genTemp: "array".
         let entries = anArray entries.
-        output print: "(\{ struct Foo {a} = foo_Array_new({entries size}); ".
+        let array = self addTemp.
+        output print: "(\{ ctx->frame[{array}] = foo_Array_new({entries size}); ".
         entries isEmpty
             ifFalse: { let p = self genTemp: "arrayPtr".
-                       output print: "struct FooArray* {p} = PTR(FooArray, {a}.datum);".
+                       output print: "struct FooArray* {p} = PTR(FooArray, ctx->frame[{array}].datum);".
                        entries
                            doWithIndex: { |each index|
                                           output print: "{p}->data[{index-1}] = ".
                                           each visitBy: self.
                                           output print: "; " } }.
-        output print: "{a}; })"!
+        output print: "ctx->frame[{array}]; })"!
 
     method visitPanic: aPanic
         output println: "foo_panic(".

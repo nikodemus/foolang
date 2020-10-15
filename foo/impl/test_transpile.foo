@@ -360,6 +360,28 @@ class TestTranspileArray { assert system }
                                 (a at: 4) debug!
                          end"
             expect: "#<Integer 999>#<Integer 42>"!
+
+    method testArraySums
+        self transpile: "class Main \{}
+                             direct method run
+                                (self sums: 10) debug!
+                             direct method sum: n
+                                 let array = Array new: n.
+                                 1 to: n
+                                   do: \{ |each|
+                                         array at: each put: each * 2 }.
+                                 let sum = 0.
+                                 1 to: n
+                                   do: \{ |each|
+                                         sum = sum + (array at: each) }.
+                                 sum!
+                             direct method sums: n
+                                n > 0
+                                   ifTrue: \{ (self sum: n) + (self sums: n - 1) }
+                                   ifFalse: \{ 0 }!
+                         end"
+            expect: "#<Integer 440>"!
+
 end
 
 class TestTranspileClass { assert system }

@@ -172,6 +172,9 @@ class AstClass { name slots interfaces _directMethods _instanceMethods }
             _collectFromInterfaces: #directMethods
             _with: _directMethods!
 
+    method markFunction
+        "foo_mark_array"!
+
     method instanceMethods
         self
             _collectFromInterfaces: #instanceMethods
@@ -284,6 +287,11 @@ class AstMethod { selector argumentVariables returnType body frameSize isDirect 
     method frameSize: frameSizeVal
         frameSize is False assert: "frame size not set".
         frameSize = frameSizeVal!
+
+    method addTemp
+        let offset = frameSize.
+        frameSize = frameSize + 1.
+        offset!
 
     method name
         selector name!
@@ -561,6 +569,11 @@ class AstBlock { body argumentVariables returnType frameSize }
 
     method visitBy: visitor
         visitor visitBlock: self!
+
+    method addTemp
+        let offset = frameSize.
+        frameSize = frameSize + 1.
+        offset!
 
     method argumentCount
         argumentVariables size!

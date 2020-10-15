@@ -3,6 +3,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <setjmp.h>
@@ -17,11 +18,6 @@
 #include <fcntl.h>
 #endif
 
-#define FOO_ALLOC(type) \
-  ((type*)foo_alloc(1, sizeof(type)))
-#define FOO_ALLOC_ARRAY(n, type) \
-  ((type*)foo_alloc((n), sizeof(type)))
-
 #define PTR(type, datum) \
   ((struct type*)datum.ptr)
 
@@ -32,6 +28,10 @@
 #endif
 
 #define FOO_PANIC(...) { printf("PANIC: " __VA_ARGS__); fflush(stdout); _Exit(1); }
+
+struct FooContext;
+void* foo_alloc(size_t bytes);
+void foo_maybe_gc(struct FooContext* ctx);
 
 void foo_unimplemented(const char* message) __attribute__ ((noreturn));
 void foo_unimplemented(const char* message) {
@@ -47,15 +47,6 @@ void foo_abort(const char* message) {
   fflush(stdout);
   fflush(stderr);
   _Exit(1);
-}
-
-void* foo_alloc(size_t n, size_t size) {
-  void* new = calloc(n, size);
-  if (new) {
-    return new;
-  } else {
-    foo_abort("foo_alloc failed!");
-  }
 }
 
 union FooDatum {
@@ -96,7 +87,7 @@ struct FooSelector {
 #include "generated_selectors.h"
 
 struct FooSelector* foo_intern_new_selector(const struct FooCString* name) {
-  struct FooSelector* new = FOO_ALLOC(struct FooSelector);
+  struct FooSelector* new = calloc(1, sizeof(struct FooSelector));
   new->name = name;
   new->next = FOO_InternedSelectors;
   FOO_InternedSelectors = new;
@@ -134,19 +125,6 @@ struct FooLayout {
   struct FooSlot slots[];
 };
 
-struct FooProcess {
-  size_t size;
-  struct Foo vars[];
-};
-
-struct FooProcess* foo_process_new(size_t size) {
-  struct FooProcess* process
-    = foo_alloc(1, sizeof(struct FooProcess) + size * sizeof(struct Foo));
-  process->size = size;
-  return process;
-}
-
-struct FooContext;
 struct FooCleanup;
 typedef void (*FooCleanupFunction)(struct FooContext*, struct FooCleanup*);
 
@@ -172,8 +150,9 @@ struct FooContext {
   struct FooContext* sender;
   struct FooContext* outer_context;
   // FIXME: Doesn't really belong in context, but easier right now.
-  struct FooProcess* process;
+  struct FooArray* vars;
   struct FooCleanup* cleanup;
+  struct Foo return_value;
   // Only for methods, for others this is NULL.
   jmp_buf* ret;
   size_t size;
@@ -182,7 +161,7 @@ struct FooContext {
 
 struct FooContext* foo_alloc_context(size_t size) {
   struct FooContext* ctx
-    = foo_alloc(1, sizeof(struct FooContext) + size * sizeof(struct Foo));
+    = foo_alloc(sizeof(struct FooContext) + size * sizeof(struct Foo));
   ctx->size = size;
   return ctx;
 }
@@ -196,7 +175,7 @@ char* foo_debug_context(struct FooContext* ctx) {
   return s;
 }
 
-typedef struct Foo (*FooMethodFunction)(struct FooContext*, size_t, va_list);
+typedef struct Foo (*FooMethodFunction)(struct FooContext*);
 typedef struct Foo (*FooBlockFunction)(struct FooContext*);
 
 struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t frame) {
@@ -250,30 +229,17 @@ struct Foo foo_Float_new(double f);
 struct Foo foo_Integer_new(int64_t n);
 struct Foo foo_String_new(size_t len, const char* s);
 struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj);
+struct Foo FooGlobal_True;
+struct Foo FooGlobal_False;
 struct FooContext* foo_context_new_block(struct FooContext* ctx);
 
-struct FooContext* foo_context_new_main(struct FooProcess* process) {
+struct FooContext* foo_context_new_main(struct FooArray* vars) {
   struct FooContext* context = foo_alloc_context(0);
   context->info = "main";
+  context->receiver = FooGlobal_False;
   context->sender = NULL;
-  context->receiver = foo_Integer_new(0); // should be Main?
-  context->size = 0;
   context->outer_context = NULL;
-  context->process = process;
-  return context;
-}
-
-struct FooContext* foo_context_new_method(const struct FooMethod* method, struct FooContext* sender, struct Foo receiver, size_t nargs) {
-  if (method->argCount != nargs) {
-    FOO_PANIC("Wrong number of arguments to %s. Wanted: %zu, got: %zu.",
-              method->selector->name->data, method->argCount, nargs);
-  }
-  struct FooContext* context = foo_alloc_context(method->frameSize);
-  context->info = "method";
-  context->sender = sender;
-  context->receiver = receiver;
-  context->outer_context = NULL;
-  context->process = sender->process;
+  context->vars = vars;
   return context;
 }
 
@@ -281,10 +247,10 @@ struct FooContext* foo_context_new_block(struct FooContext* sender) {
   struct FooBlock* block = sender->receiver.datum.ptr;
   struct FooContext* context = foo_alloc_context(block->frameSize);
   context->info = "block";
-  context->sender = sender;
   context->receiver = block->context->receiver;
+  context->sender = sender;
   context->outer_context = block->context;
-  context->process = sender->process;
+  context->vars = sender->vars;
   for (size_t i = 0; i < block->argCount; ++i)
     context->frame[i] = sender->frame[i];
   return context;
@@ -293,9 +259,10 @@ struct FooContext* foo_context_new_block(struct FooContext* sender) {
 struct FooContext* foo_context_new_unwind(struct FooContext* ctx, struct FooBlock* block) {
   struct FooContext* context = foo_alloc_context(block->frameSize);
   context->info = "#finally:";
-  context->sender = ctx;
   context->receiver = block->context->receiver;
+  context->sender = ctx;
   context->outer_context = block->context;
+  context->vars = ctx->vars;
   assert(block->argCount == 0);
   return context;
 }
@@ -317,7 +284,7 @@ void foo_finally(struct FooContext* sender, struct FooCleanup* cleanup) {
 
 void foo_unbind(struct FooContext* sender, struct FooCleanup* cleanup) {
   struct FooUnbind* unbind = (struct FooUnbind*)cleanup;
-  sender->process->vars[unbind->index] = unbind->value;
+  sender->vars->data[unbind->index] = unbind->value;
 }
 
 struct FooInterface {
@@ -330,10 +297,13 @@ struct FooVtableList {
   struct FooVtable** data;
 };
 
+typedef void (*FooMarkFunction)(union FooDatum Foo);
+
 struct FooVtable {
   struct FooCString* name;
   struct Foo* classptr;
   struct FooVtableList inherited;
+  FooMarkFunction mark;
   size_t size;
   struct FooMethod methods[];
 };
@@ -381,31 +351,58 @@ struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
     ctx = ctx->sender;
   }
   foo_cleanup(ctx);
-  return_context->receiver = value;
+  return_context->return_value = value;
   longjmp(*(jmp_buf*)return_context->ret, 1);
   FOO_PANIC("longjmp() fell through!")
 }
 
+struct FooContext* foo_context_new_method(const struct FooMethod* method,
+                                          struct FooContext* sender,
+                                          struct Foo receiver,
+                                          size_t nargs, va_list arguments) {
+  if (method->argCount != nargs) {
+    FOO_PANIC("Wrong number of arguments to %s. Wanted: %zu, got: %zu.",
+              method->selector->name->data, method->argCount, nargs);
+  }
+  if (method->frameSize < nargs) {
+    FOO_PANIC("Method %s frame too small: %zu, got %zu arguments!",
+              method->selector->name->data,
+              method->frameSize,
+              nargs);
+  }
+  assert(method->frameSize >= nargs);
+  struct FooContext* context = foo_alloc_context(method->frameSize);
+  context->info = method->selector->name->data;
+  context->sender = sender;
+  context->receiver = receiver;
+  context->outer_context = NULL;
+  context->vars = sender->vars;
+  for (size_t i = 0; i < nargs; i++) {
+    context->frame[i] = va_arg(arguments, struct Foo);
+  }
+  return context;
+}
+
 struct Foo foo_send(struct FooContext* sender,
                     const struct FooSelector* selector,
-                    struct Foo receiver, size_t nargs, ...) {
+                    struct Foo receiver,
+                    size_t nargs, ...) {
   FOO_DEBUG("/foo_send(?, %s, ...)", selector->name->data);
   va_list arguments;
   va_start(arguments, nargs);
   assert(receiver.vtable);
   const struct FooMethod* method = foo_vtable_find_method(receiver.vtable, selector);
   if (method) {
-    struct FooContext* context = foo_context_new_method(method, sender, receiver, nargs);
+    struct FooContext* context = foo_context_new_method(method, sender, receiver, nargs, arguments);
+    foo_maybe_gc(context);
     jmp_buf ret;
     context->ret = &ret;
     int jmp = setjmp(ret);
     if (jmp) {
       FOO_DEBUG("/foo_send -> non-local return from %s", selector->name->data);
-      struct Foo return_value = context->receiver;
-      context->receiver = receiver;
-      return return_value;
+      return context->return_value;
     } else {
-      struct Foo res = method->function((struct FooContext*)context, nargs, arguments);
+      struct Foo res = method->function((struct FooContext*)context);
       FOO_DEBUG("/foo_send -> local return from %s", selector->name->data);
       return res;
     }
@@ -419,7 +416,7 @@ struct Foo foo_block_new(struct FooContext* context,
                          FooBlockFunction function,
                          size_t argCount,
                          size_t frameSize) {
-  struct FooBlock* block = FOO_ALLOC(struct FooBlock);
+  struct FooBlock* block = foo_alloc(sizeof(struct FooBlock));
   block->context = context;
   block->function = function;
   block->argCount = argCount;
@@ -439,8 +436,14 @@ struct Foo FooGlobal_False =
    .datum = { .boolean = 0 }
   };
 
+struct FooArray* foo_Array_alloc(size_t size) {
+  struct FooArray* array = foo_alloc(sizeof(struct FooArray) + size*sizeof(struct Foo));
+  array->size = size;
+  return array;
+}
+
 struct Foo foo_Array_new(size_t size) {
-  struct FooArray* array = foo_alloc(1, sizeof(struct FooArray) + size*sizeof(struct Foo));
+  struct FooArray* array = foo_alloc(sizeof(struct FooArray) + size*sizeof(struct Foo));
   array->size = size;
   for (size_t i = 0; i < size; ++i) {
     array->data[i] = FooGlobal_False;
@@ -461,7 +464,7 @@ struct Foo foo_Float_new(double f) {
 }
 
 struct Foo foo_String_new(size_t len, const char* s) {
-  struct FooBytes* bytes = (struct FooBytes*)foo_alloc(1, sizeof(struct FooBytes) + len + 1);
+  struct FooBytes* bytes = (struct FooBytes*)foo_alloc(sizeof(struct FooBytes) + len + 1);
   bytes->size = len;
   memcpy(bytes->data, s, len);
   return (struct Foo) { .vtable = &FooInstanceVtable_String, .datum = { .ptr = bytes } };
@@ -483,6 +486,166 @@ void fooinit(void) {
   _setmode(_fileno(stdout), O_BINARY);
   _setmode(_fileno(stderr), O_BINARY);
 #endif
+}
+
+/**
+   GC
+
+ */
+
+enum FooMark {
+  RED = 0,
+  BLUE = 1
+};
+
+static enum FooMark current_live_mark = RED;
+
+void foo_flip_mark() {
+  current_live_mark = !current_live_mark;
+}
+
+struct FooAlloc {
+  struct FooAlloc* next;
+  enum FooMark mark;
+  size_t size;
+  char data[];
+};
+
+bool foo_mark_ptr(void* ptr) {
+  const size_t offset = offsetof(struct FooAlloc, data);
+  struct FooAlloc* alloc = (void*)((char*)ptr-offset);
+  bool new_mark = alloc->mark == current_live_mark;
+  alloc->mark = current_live_mark;
+  return new_mark;
+}
+
+void foo_mark_context(struct FooContext* ctx);
+
+void foo_mark_object(struct Foo obj) {
+  if (obj.vtable) {
+    obj.vtable->mark(obj.datum);
+  }
+}
+
+void foo_mark_noop(union FooDatum datum) {
+  (void)datum;
+}
+
+void foo_mark_array(union FooDatum datum) {
+  struct FooArray* array = PTR(FooArray, datum);
+  if (foo_mark_ptr(array)) {
+    for (size_t i = 0; i < array->size; i++) {
+      foo_mark_object(array->data[i]);
+    }
+  }
+}
+
+void foo_mark_block(union FooDatum datum) {
+  struct FooBlock* block = PTR(FooBlock, datum);
+  if (foo_mark_ptr(block)) {
+    foo_mark_context(block->context);
+  }
+}
+
+void foo_mark_cleanup(struct FooCleanup* cleanup) {
+  if (!cleanup) {
+      return;
+  }
+  if (cleanup->function == foo_finally) {
+    return foo_mark_block((union FooDatum){ .ptr = cleanup });
+  }
+  if (cleanup->function == foo_unbind) {
+    return foo_mark_object(((struct FooUnbind*)cleanup)->value);
+  }
+  FOO_PANIC("invalid cleanup");
+}
+
+void foo_mark_context(struct FooContext* ctx) {
+  if (!ctx) {
+    return;
+  }
+  if (foo_mark_ptr(ctx)) {
+    foo_mark_object(ctx->receiver);
+    foo_mark_object(ctx->return_value);
+    foo_mark_context(ctx->sender);
+    foo_mark_context(ctx->outer_context);
+    // vars are shared between all contexts, foo_mark() processes
+    // them directly.
+    foo_mark_cleanup(ctx->cleanup);
+    for (size_t i = 0; i < ctx->size; i++) {
+      foo_mark_object(ctx->frame[i]);
+    }
+  }
+}
+
+static struct FooAlloc* allocations = NULL;
+static size_t allocation_count_since_gc = 0;
+static size_t allocation_bytes_since_gc = 0;
+static size_t allocation_bytes = 0;
+static size_t allocation_count = 0;
+
+// Intentionally low threshold so that GC gets exercised even for trivial tests.
+const size_t gc_threshold = 512;
+const bool gc_verbose = false;
+
+void foo_sweep() {
+  struct FooAlloc** tail = &allocations;
+  struct FooAlloc* head = *tail;
+  size_t freed_count = 0;
+  size_t freed_bytes = 0;
+  while (head) {
+    struct FooAlloc* next = head->next;
+    if (current_live_mark != head->mark) {
+      *tail = next;
+      freed_bytes += head->size;
+      freed_count += 1;
+      // free(head);
+    }
+    head = next;
+  }
+  if (freed_count > 0) {
+    allocation_bytes -= freed_bytes;
+    allocation_count -= freed_count;
+    if (gc_verbose) {
+      fprintf(stderr, "** GC'd %zu bytes in %zu objects, %zu bytes in %zu objects remain.\n",
+              freed_bytes, freed_count,
+              allocation_bytes, allocation_count);
+      fprintf(stderr, "** %zu bytes in %zu objects allocated since last gc.\n",
+              allocation_bytes_since_gc, allocation_count_since_gc);
+    }
+    allocation_count_since_gc = 0;
+    allocation_bytes_since_gc = 0;
+  }
+}
+
+void foo_maybe_gc(struct FooContext* ctx) {
+  if (allocation_bytes_since_gc > gc_threshold) {
+    foo_flip_mark();
+    if (ctx->vars) {
+      foo_mark_array((union FooDatum){ .ptr = ctx->vars });
+    }
+    foo_mark_context(ctx);
+    foo_sweep();
+  }
+}
+
+void* foo_alloc(size_t size) {
+  size_t bytes = sizeof(struct FooAlloc) + size;
+  struct FooAlloc* p = calloc(1, bytes);
+  if (!p) {
+    foo_abort("calloc");
+  }
+  p->next = allocations;
+  p->size = bytes;
+  p->mark = current_live_mark;
+  allocations = p;
+
+  allocation_bytes_since_gc += bytes;
+  allocation_bytes += bytes;
+  allocation_count_since_gc += 1;
+  allocation_count += 1;
+
+  return p->data;
 }
 
 #include "generated_classes.c"

@@ -5,101 +5,108 @@ import .name.Name
 define IntegerMethods
     { -- FIXME: The binary methods here should be generated from lang.number.foo
       (Selector name: "prefix-")
-          -> { signature: [],
+          -> { signature: [], vars: 0,
                body: "return foo_Integer_new(- ctx->receiver.datum.int64);" },
       #+
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #addNumber:}, ctx->frame[0], 1, ctx->receiver);" },
       #/
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #divNumber:}, ctx->frame[0], 1, ctx->receiver);" },
       #==
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #eqNumber:}, ctx->frame[0], 1, ctx->receiver);" },
       #>
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #gtNumber:}, ctx->frame[0], 1, ctx->receiver);" },
       #>=
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #gteNumber:}, ctx->frame[0], 1, ctx->receiver);" },
       #<
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #ltNumber:}, ctx->frame[0], 1, ctx->receiver);" },
       #<=
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #lteNumber:}, ctx->frame[0], 1, ctx->receiver);" },
       #*
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #mulNumber:}, ctx->frame[0], 1, ctx->receiver);" },
       #-
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #subNumber:}, ctx->frame[0], 1, ctx->receiver);" },
       -- FIXME: These *Number methods should come from lang.integer.foo
+      #to:do:
+          -> { signature: [Integer, Block], vars: 0,
+               body: "int64_t to = ctx->frame[0].datum.int64;
+for (int64_t i = ctx->receiver.datum.int64; i <= to; i++) \{
+    foo_send(ctx, &{Name mangleSelector: #value:}, ctx->frame[1], 1, foo_Integer_new(i));
+}
+return ctx->receiver;" },
       #addNumber:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #integerAdd:}, ctx->frame[0], 1, ctx->receiver);" },
       #divNumber:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #integerDiv:}, ctx->frame[0], 1, ctx->receiver);" },
       #eqNumber:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #integerEq:}, ctx->frame[0], 1, ctx->receiver);" },
       #gtNumber:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #integerGt:}, ctx->frame[0], 1, ctx->receiver);" },
       #gteNumber:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #integerGte:}, ctx->frame[0], 1, ctx->receiver);" },
       #ltNumber:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #integerLt:}, ctx->frame[0], 1, ctx->receiver);" },
       #lteNumber:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #integerLte:}, ctx->frame[0], 1, ctx->receiver);" },
       #mulNumber:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #integerMul:}, ctx->frame[0], 1, ctx->receiver);" },
       #subNumber:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_send(ctx, &{Name mangleSelector: #integerSub:}, ctx->frame[0], 1, ctx->receiver);" },
       -- The real stuff
       #asFloat
-          -> { signature: [],
+          -> { signature: [], vars: 0,
                body: "foo_unimplemented(\"Integer#asFloat\");" },
-      #debug -> {signature: [],
+      #debug -> {signature: [], vars: 0,
                  body: "printf(\"#<Integer %\" PRId64 \">\", ctx->receiver.datum.int64);
 return ctx->receiver;"},
       #integerAdd:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_Integer_new(ctx->receiver.datum.int64 + ctx->frame[0].datum.int64);" },
       #integerDiv:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "int64_t div = ctx->frame[0].datum.int64;
 if (div)
     return foo_Integer_new(ctx->receiver.datum.int64 / div);
 else
     foo_unimplemented(\"DivideByZero handling\");" },
       #integerEq:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_Boolean_new(ctx->receiver.datum.int64 == ctx->frame[0].datum.int64);" },
       #integerGt:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_Boolean_new(ctx->receiver.datum.int64 > ctx->frame[0].datum.int64);" },
       #integerGte:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_Boolean_new(ctx->receiver.datum.int64 >= ctx->frame[0].datum.int64);" },
       #integerLt:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_Boolean_new(ctx->receiver.datum.int64 < ctx->frame[0].datum.int64);" },
       #integerLte:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_Boolean_new(ctx->receiver.datum.int64 <= ctx->frame[0].datum.int64);" },
       #integerMul:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_Integer_new(ctx->receiver.datum.int64 * ctx->frame[0].datum.int64);" },
       #integerSub:
-          -> { signature: [Integer],
+          -> { signature: [Integer], vars: 0,
                body: "return foo_Integer_new(ctx->receiver.datum.int64 - ctx->frame[0].datum.int64);" },
       #toString
-          -> {signature: [],
+          -> {signature: [], vars: 0,
               body: "foo_unimplemented(\"Integer#toString\");"} }!
