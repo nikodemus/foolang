@@ -5,7 +5,7 @@ class StringOutput { _size _contents }
 
     direct method new
         self _size: 0
-             _contents: (Array new: 16)!
+             _contents: (Array new: 1024)!
 
     direct method with: block
         let out = self new.
