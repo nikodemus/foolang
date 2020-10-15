@@ -5,7 +5,7 @@ class StringOutput { _size _contents }
 
     direct method new
         self _size: 0
-             _contents: (Array new: 8)!
+             _contents: (Array new: 16)!
 
     direct method with: block
         let out = self new.
@@ -14,7 +14,8 @@ class StringOutput { _size _contents }
 
     method writeString: string
         (_size == _contents size)
-            ifTrue: { let newContents = Array new: (_size + 1) * 2.
+            ifTrue: { Output debug println: "    StringOutput#writeString grow: {_size}".
+                      let newContents = Array new: (_size + 1) * 2.
                       1 to: _size
                         do: { |i| newContents put: (_contents at: i) at: i }.
                       _contents = newContents }.
@@ -23,6 +24,7 @@ class StringOutput { _size _contents }
         self!
 
     method content
+        Output debug println: "    StringOutput#content".
         let res = String concat: (_contents from: 1 to: _size).
         _size = 0.
         res!

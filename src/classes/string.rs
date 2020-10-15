@@ -28,7 +28,11 @@ fn class_string_new(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
 
 fn class_string_concat(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let contents = args[0].as_array("String#from:")?;
-    let mut string = String::new();
+    let mut size = 0;
+    for s in contents.borrow().iter() {
+        size += s.as_str()?.len();
+    }
+    let mut string = String::with_capacity(size);
     for s in contents.borrow().iter() {
         string.push_str(s.as_str()?);
     }
