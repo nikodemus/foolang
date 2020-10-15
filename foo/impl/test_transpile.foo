@@ -24,66 +24,61 @@ interface TranspilerTest
         TestTranspileWrapper test: self system: system!
 
     method transpile: string
+        system output println: "  /TRANSPILE".
         let lang = system files path: "foo/lang".
         let env = Environment
                       modules: { "any" -> lang path: "any.foo",
                                   "stringOutput" -> lang path: "stringOutput.foo",
                                  "object" -> lang path: "object.foo" }
                       asFileModules.
+        system output println: "  /removeBuiltins".
         env removeBuiltins: [
             "Any",
             "Object",
             "StringOutput"
         ].
+        system output println: "  /load".
         env load: string.
+        system output println: "  /transpile".
         let c = CTranspiler transpile: env globals values in: env.
+        system output println: "  /write".
         (system files path: "host/generated_selectors.h")
             forWrite truncateExisting
                 createOrOpen: { |f|
-                                system output println: "---generated_selectors.h---".
-                                system output println: c selectors.
-                                system output println: "------".
                                 f writeString: c selectors }.
         (system files path: "host/generated_constants.c")
             forWrite truncateExisting
                 createOrOpen: { |f|
-                                system output println: "---generated_constants.c---".
-                                system output println: c constants.
-                                system output println: "------".
                                 f writeString: c constants }.
         (system files path: "host/generated_blocks.c")
             forWrite truncateExisting
                 createOrOpen: { |f|
-                                system output println: "---generated_blocks.c---".
-                                system output println: c blocks.
-                                system output println: "------".
                                 f writeString: c blocks }.
         (system files path: "host/generated_main.c")
             forWrite truncateExisting
                 createOrOpen: { |f|
-                                system output println: "---generated_main.c---".
-                                system output println: c main.
-                                system output println: "------".
                                 f writeString: c main }.
         (system files path: "host/generated_classes.c")
             forWrite truncateExisting
                 createOrOpen: { |f|
-                                system output println: "---generated_classes.c---".
-                                system output println: c classes.
-                                system output println: "------".
                                 f writeString: c classes }.
+        system output println: "  /clear exe".
         let tmpExe = "tmp_transpile_test.exe".
         let path = system currentDirectory path: tmpExe.
         path ifExists: #deleteFile.
         path exists not assert: "executable cleared".
         -- KLUDGE: Windows CI host linker cannot find the sanitizer libraries,
         -- so we conditionalize on the environment and host.
+        system output println: "  /options".
         let sanitizerOptions
             = (((system getenv: "GITHUB_ACTION") is False) or: system isUnix)
                 ifTrue: { "-fsanitize=address -fsanitize=undefined" }
                 ifFalse: { "" }.
+        system output println: "  /command".
         let buildCmd = "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall --std=c11 host/main.c".
+        system output println: "  /build".
         let build = system command: buildCmd.
+        system output println: "  /report".
         self _reportStderr: build.
         build ok
             ifFalse: { Error raise: "Build failed: {buildCmd}" }.

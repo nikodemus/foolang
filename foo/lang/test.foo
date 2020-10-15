@@ -5,6 +5,7 @@ interface TestSuite
 
     method runTest: test
         Output debug println: "- {test name}".
+        Output debug flush.
         test sendTo: self!
 
     method doTests: block
