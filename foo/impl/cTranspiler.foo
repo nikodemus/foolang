@@ -125,23 +125,23 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                           constants: List new
                           variables: Dictionary new
                           tmpCounter: 0.
-        Debug println: "    #transpile: (1)".
+        Debug println: "    #transpile: additional selectors".
         -- KLUDGE: add #writeString: to the selectors.
         visitor selectorMap map: #writeString:.
-        -- Debug println: "/definitions".
-        Debug println: "    #transpile: (2)".
+        Debug println: "    #transpile: replace builtins".
         env replaceBuiltins: BuiltinClasses.
-        Debug println: "    #transpile: (3)".
-        let classes = visitor generateBuiltins: globals.
-        Debug println: "    #transpile: (4)".
+        Debug println: "    #transpile: generate declarations".
+        let declarations = visitor generateDeclarations: globals.
+        Debug println: "    #transpile: globals".
         globals do: { |each| each definition visitBy: visitor }.
-        Debug println: "    #transpile: (5)".
+        Debug println: "    #transpile: main".
         visitor generateMain.
-        Debug println: "    #transpile: (6)".
-        { main: visitor output content,
+        Debug println: "    #transpile: finish".
+        { declarations: declarations,
+          main: visitor output content,
           blocks: visitor generateBlocks,
           constants: visitor generateConstants,
-          classes: classes,
+          builtins: visitor generateBuiltins,
           selectors: visitor generateSelectors }!
 
     method addTemp
@@ -201,10 +201,10 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                          output print: " };\n".
                          prev = "&{cname}" }.
         output println: "struct FooSelector* FOO_InternedSelectors = {prev};".
-        output content!
+        output!
 
-    method generateBuiltins: globals
-        Debug println: "#generateBuiltins".
+    method generateDeclarations: globals
+        Debug println: "      #generateDeclarations:".
         StringOutput
             with: { |out|
                     let builtinVisitor = CTranspiler
@@ -215,13 +215,25 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                                              variables: variables
                                              tmpCounter: tmpCounter.
                     -- FIXME: visit Main, and it's dependencies only
-                    -- Debug println: "/forwardDeclarations".
                     BuiltinClasses
                         do: { |each|
                               builtinVisitor forwardDeclarationFor: each }.
                     globals
                         do: { |each|
-                              builtinVisitor forwardDeclarationFor: each definition }.
+                              builtinVisitor forwardDeclarationFor: each definition } }!
+
+    method generateBuiltins
+        Debug println: "      #generateBuiltins:".
+        StringOutput
+            with: { |out|
+                    let builtinVisitor = CTranspiler
+                                             output: out
+                                             selectorMap: selectorMap
+                                             blockFunctions: blockFunctions
+                                             constants: constants
+                                             variables: variables
+                                             tmpCounter: tmpCounter.
+                    -- FIXME: used builtins only
                     BuiltinClasses
                         do: { |each|
                               builtinVisitor visitClassDefinition: each } }!
