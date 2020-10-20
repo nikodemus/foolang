@@ -100,7 +100,7 @@ jobs:
         continue-on-error: ${{ runner.os == 'Windows' }}
         with:
           command: run
-          args: -- foo/impl/test_transpile.foo --use=foo/lib
+          args: -- foo/impl/test_transpile.foo --use=foo/lib -- --fork-all
 
       - name: Test large
         uses: actions-rs/cargo@v1
