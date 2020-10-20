@@ -32,6 +32,7 @@ define Builtins
     ; define: Integer
     ; define: List
     ; define: Object
+    ; define: Output
     ; define: Selector
     ; define: String
     ; define: StringOutput

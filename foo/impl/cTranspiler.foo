@@ -3,6 +3,7 @@ import .transpiler.integer
 import .transpiler.block
 import .transpiler.boolean
 import .transpiler.float
+import .transpiler.output
 import .transpiler.string
 import .transpiler.array
 import .ast.AstClass
@@ -85,6 +86,11 @@ define BuiltinClasses [
          mark: "foo_mark_noop"
          directMethods: []
          instanceMethods: integer.IntegerMethods,
+     BuiltinClass
+         new: Output
+         mark: "foo_mark_noop"
+         directMethods: output.DirectMethods
+         instanceMethods: [],
      BuiltinClass
          new: String
          mark: "foo_mark_noop"
