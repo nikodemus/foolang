@@ -20,6 +20,7 @@ jobs:
   bootstrap-and-test:
     name: "Bootstrap and test"
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -87,7 +88,6 @@ jobs:
         # don't like this, but dealing with it is a terrible timesink and I
         # build on windows daily otherwise.
         continue-on-error: ${{ runner.os == 'Windows' }}
-        timeout-minutes: 10
         with:
           command: run
           args: -- foo/impl/test_prelude.foo --use=foo/lib
@@ -98,7 +98,6 @@ jobs:
         # don't like this, but dealing with it is a terrible timesink and I
         # build on windows daily otherwise.
         continue-on-error: ${{ runner.os == 'Windows' }}
-        timeout-minutes: 10
         with:
           command: run
           args: -- foo/impl/test_transpile.foo --use=foo/lib
