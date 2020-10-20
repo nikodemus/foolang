@@ -33,7 +33,7 @@ jobs:
         if: ${{ runner.os == 'Windows' }}
 
       - name: Linux information
-        run: lsb_release -a; lshw --short
+        run: lshw --short
         if: ${{ runner.os == 'Linux' }}
 
       - name: Clang version
