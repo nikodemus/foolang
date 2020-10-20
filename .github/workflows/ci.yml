@@ -28,9 +28,12 @@ jobs:
         run: echo '::add-path::C:\msys64\mingw64\bin'
         if: ${{ runner.os == 'Windows' }}
 
-      - name: Systeminfo for Windows
+      - name: Windows information
         run: systeminfo
         if: ${{ runner.os == 'Windows' }}
+
+      - name: Linux information
+        run: uname -a; lsb_release -a; lshw --short
 
       - name: Clang version
         run: clang --version
