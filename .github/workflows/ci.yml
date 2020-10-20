@@ -33,7 +33,8 @@ jobs:
         if: ${{ runner.os == 'Windows' }}
 
       - name: Linux information
-        run: uname -a; lsb_release -a; lshw --short
+        run: lsb_release -a; lshw --short
+        if: ${{ runner.os == 'Linux' }}
 
       - name: Clang version
         run: clang --version
@@ -48,8 +49,8 @@ jobs:
       - name: Rustc version
         run: rustc --version
 
-      - name: Environment
-        run: env
+      - name: Environment & uname
+        run: env; uname -a
 
       - name: Checkout
         uses: actions/checkout@v2
