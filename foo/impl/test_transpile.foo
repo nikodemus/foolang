@@ -1050,8 +1050,25 @@ class Main {}
             "--string" -> TestTranspileString system: system,
             "--typecheck" -> TestTranspileTypecheck system: system,
         }.
+        let all = tests keys sort.
         cmd == []
-            ifTrue: { cmd = tests keys sort }.
+            ifTrue: { cmd = all }.
+        -- Trying to work around Linux CI hosts mysteriously crashing, presumably due to OOM
+        -- killer, presumably due to bootstrap implementation leaking memory, presumably due
+        -- to circular Rc chains somewhere.
+        cmd == ["--fork-all"]
+            ifTrue: { all
+                          do: { |test|
+                                let next = "cargo run -- foo/impl/test_transpile.foo --use=foo/lib -- {test}".
+                                system output println: "TEST: {next}".
+                                let command = system command: next.
+                                system output println: "--test stdout--".
+                                system output println: command stdout.
+                                system output println: "--test stderr--".
+                                system output println: command stderr.
+                                command ok
+                                    ifFalse: { system exit: 1 } }.
+                      system exit }.
         cmd do: { |name|
                   Assert
                       runSuite: (tests at: name)
