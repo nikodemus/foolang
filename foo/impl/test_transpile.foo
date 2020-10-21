@@ -39,19 +39,22 @@ interface TranspilerTest
         let c = CTranspiler transpile: env globals values in: env.
         (system files path: "host/generated_selectors.h")
             forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c selectors }.
+                createOrOpen: { |f| f print: c selectors }.
+        (system files path: "host/generated_declarations.h")
+            forWrite truncateExisting
+                createOrOpen: { |f| f print: c declarations }.
         (system files path: "host/generated_constants.c")
             forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c constants }.
+                createOrOpen: { |f| f print: c constants }.
         (system files path: "host/generated_blocks.c")
             forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c blocks }.
+                createOrOpen: { |f| f print: c blocks }.
         (system files path: "host/generated_main.c")
             forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c main }.
-        (system files path: "host/generated_classes.c")
+                createOrOpen: { |f| f print: c main }.
+        (system files path: "host/generated_builtins.c")
             forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c classes }.
+                createOrOpen: { |f| f print: c builtins }.
         let tmpExe = "tmp_transpile_test.exe".
         let path = system currentDirectory path: tmpExe.
         path ifExists: #deleteFile.
