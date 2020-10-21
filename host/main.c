@@ -53,7 +53,7 @@ union FooDatum {
   void* ptr;
   int64_t int64;
   double float64;
-  bool boolean;
+  int64_t boolean; // Make sure there's no junk in high bits
 };
 
 struct Foo {
@@ -383,6 +383,10 @@ struct FooContext* foo_context_new_method(const struct FooMethod* method,
   return context;
 }
 
+bool foo_eq(struct Foo a, struct Foo b) {
+  return a.vtable == b.vtable && a.datum.int64 == b.datum.int64;
+}
+
 struct Foo foo_send(struct FooContext* sender,
                     const struct FooSelector* selector,
                     struct Foo receiver,
@@ -436,18 +440,22 @@ struct Foo FooGlobal_False =
    .datum = { .boolean = 0 }
   };
 
-struct FooArray* foo_Array_alloc(size_t size) {
+struct FooArray* FooArray_alloc(size_t size) {
   struct FooArray* array = foo_alloc(sizeof(struct FooArray) + size*sizeof(struct Foo));
   array->size = size;
   return array;
 }
 
 struct Foo foo_Array_new(size_t size) {
-  struct FooArray* array = foo_alloc(sizeof(struct FooArray) + size*sizeof(struct Foo));
-  array->size = size;
+  struct FooArray* array = FooArray_alloc(size);
   for (size_t i = 0; i < size; ++i) {
     array->data[i] = FooGlobal_False;
   }
+  return (struct Foo){ .vtable = &FooInstanceVtable_Array, .datum = { .ptr = array } };
+}
+
+struct Foo foo_Array_alloc(size_t size) {
+  struct FooArray* array = FooArray_alloc(size);
   return (struct Foo){ .vtable = &FooInstanceVtable_Array, .datum = { .ptr = array } };
 }
 
@@ -463,11 +471,21 @@ struct Foo foo_Float_new(double f) {
   return (struct Foo){ .vtable = &FooInstanceVtable_Float, .datum = { .float64 = f } };
 }
 
-struct Foo foo_String_new(size_t len, const char* s) {
+
+struct FooBytes* FooBytes_alloc(size_t len) {
   struct FooBytes* bytes = (struct FooBytes*)foo_alloc(sizeof(struct FooBytes) + len + 1);
   bytes->size = len;
+  return bytes;
+}
+
+struct Foo foo_String_new(size_t len, const char* s) {
+  struct FooBytes* bytes = FooBytes_alloc(len);
   memcpy(bytes->data, s, len);
   return (struct Foo) { .vtable = &FooInstanceVtable_String, .datum = { .ptr = bytes } };
+}
+
+struct Foo foo_String_new_from(const char* s) {
+  return foo_String_new(strlen(s), s);
 }
 
 struct Foo foo_panic(struct Foo message) __attribute__((noreturn));
@@ -648,7 +666,8 @@ void* foo_alloc(size_t size) {
   return p->data;
 }
 
-#include "generated_classes.c"
+#include "generated_declarations.h"
+#include "generated_builtins.c"
 #include "generated_constants.c"
 #include "generated_blocks.c"
 #include "generated_main.c"

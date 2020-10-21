@@ -26,25 +26,35 @@ interface TranspilerTest
     method transpile: string
         let lang = system files path: "foo/lang".
         let env = Environment
-                      modules: { "any" -> lang path: "any.foo" } asFileModules.
-        env removeBuiltins: ["Any"].
+                      modules: { "any" -> lang path: "any.foo",
+                                  "stringOutput" -> lang path: "stringOutput.foo",
+                                 "object" -> lang path: "object.foo" }
+                      asFileModules.
+        env removeBuiltins: [
+            "Any",
+            "Object",
+            "StringOutput"
+        ].
         env load: string.
         let c = CTranspiler transpile: env globals values in: env.
         (system files path: "host/generated_selectors.h")
             forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c selectors }.
+                createOrOpen: { |f| f print: c selectors }.
+        (system files path: "host/generated_declarations.h")
+            forWrite truncateExisting
+                createOrOpen: { |f| f print: c declarations }.
         (system files path: "host/generated_constants.c")
             forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c constants }.
+                createOrOpen: { |f| f print: c constants }.
         (system files path: "host/generated_blocks.c")
             forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c blocks }.
+                createOrOpen: { |f| f print: c blocks }.
         (system files path: "host/generated_main.c")
             forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c main }.
-        (system files path: "host/generated_classes.c")
+                createOrOpen: { |f| f print: c main }.
+        (system files path: "host/generated_builtins.c")
             forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c classes }.
+                createOrOpen: { |f| f print: c builtins }.
         let tmpExe = "tmp_transpile_test.exe".
         let path = system currentDirectory path: tmpExe.
         path ifExists: #deleteFile.
@@ -136,6 +146,29 @@ class TestTranspilePrelude { assert system }
                          class Main \{}
                              direct method run
                                  (Any is Any) debug!
+                         end"
+            expect: "#<Boolean True>"!
+
+    method testStringOutput
+        self transpile: "import stringOutput.*
+
+                         class Main \{}
+                             direct method run
+                                 (StringOutput with: \{ |out|
+                                                        out print: \"O\".
+                                                        out print: \"k\".
+                                                        out print: \"!\" })
+                                     debug!
+                         end"
+            expect: "#<String Ok!>"!
+
+    method no_testObject
+        self transpile: "import object.Object
+
+                         class Main \{}
+                             is Object
+                             direct method run
+                                 (self == self) debug!
                          end"
             expect: "#<Boolean True>"!
 end
@@ -324,6 +357,16 @@ class TestTranspileBoolean { assert system }
                                  (b2 is b2) debug!
                          end"
             expect: "#<Boolean False>#<Boolean False>#<Boolean False>#<Boolean False>#<Boolean True>#<Boolean True>#<Boolean True>"!
+
+    method testWhileFalse
+        self transpile: "class Main \{}
+                             direct method run
+                                 let n = 0.
+                                 \{ n is 10 } whileFalse: \{ n = n + 1 }.
+                                 n debug!
+                         end"
+            expect: "#<Integer 10>"!
+
 end
 
 class TestTranspileArray { assert system }
@@ -1010,8 +1053,25 @@ class Main {}
             "--string" -> TestTranspileString system: system,
             "--typecheck" -> TestTranspileTypecheck system: system,
         }.
+        let all = tests keys sort.
         cmd == []
-            ifTrue: { cmd = tests keys sort }.
+            ifTrue: { cmd = all }.
+        -- Trying to work around Linux CI hosts mysteriously crashing, presumably due to OOM
+        -- killer, presumably due to bootstrap implementation leaking memory, presumably due
+        -- to circular Rc chains somewhere.
+        cmd == ["--fork-all"]
+            ifTrue: { all
+                          do: { |test|
+                                let next = "cargo run -- foo/impl/test_transpile.foo --use=foo/lib -- {test}".
+                                system output println: "TEST: {next}".
+                                let command = system command: next.
+                                system output println: "--test stdout--".
+                                system output println: command stdout.
+                                system output println: "--test stderr--".
+                                system output println: command stderr.
+                                command ok
+                                    ifFalse: { system exit: 1 } }.
+                      system exit }.
         cmd do: { |name|
                   Assert
                       runSuite: (tests at: name)

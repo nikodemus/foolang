@@ -3,10 +3,16 @@ import .transpiler.integer
 import .transpiler.block
 import .transpiler.boolean
 import .transpiler.float
+import .transpiler.output
 import .transpiler.string
 import .transpiler.array
 import .ast.AstClass
 import .ast.AstInterface
+
+define CEscapes
+    { "'" -> "\\'",
+      "\n" -> "\\n",
+      "\r" -> "\\r" }!
 
 class BuiltinMethod { selector definition }
     direct method forEach: builtins
@@ -81,9 +87,14 @@ define BuiltinClasses [
          directMethods: []
          instanceMethods: integer.IntegerMethods,
      BuiltinClass
+         new: Output
+         mark: "foo_mark_noop"
+         directMethods: output.DirectMethods
+         instanceMethods: [],
+     BuiltinClass
          new: String
          mark: "foo_mark_noop"
-         directMethods: []
+         directMethods: string.DirectMethods
          instanceMethods: string.InstanceMethods
 ]!
 
@@ -113,15 +124,17 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                           constants: List new
                           variables: Dictionary new
                           tmpCounter: 0.
-        -- Debug println: "/definitions".
+        -- KLUDGE: add #writeString: to the selectors.
+        visitor selectorMap map: #writeString:.
         env replaceBuiltins: BuiltinClasses.
-        let classes = visitor generateBuiltins: globals.
+        let declarations = visitor generateDeclarations: globals.
         globals do: { |each| each definition visitBy: visitor }.
         visitor generateMain.
-        { main: visitor output content,
+        { declarations: declarations,
+          main: visitor output,
           blocks: visitor generateBlocks,
           constants: visitor generateConstants,
-          classes: classes,
+          builtins: visitor generateBuiltins,
           selectors: visitor generateSelectors }!
 
     method addTemp
@@ -157,7 +170,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "    (int argc, char** argv)".
         output println: "\{".
         output println: "    fooinit();".
-        output println: "    struct FooArray* vars = foo_Array_alloc({variables size});".
+        output println: "    struct FooArray* vars = FooArray_alloc({variables size});".
         variables
             do: { |name offset|
                   let var = {name: name}.
@@ -181,9 +194,10 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                          output print: " };\n".
                          prev = "&{cname}" }.
         output println: "struct FooSelector* FOO_InternedSelectors = {prev};".
-        output content!
+        output!
 
-    method generateBuiltins: globals
+    method generateDeclarations: globals
+        -- Debug println: "      #generateDeclarations:".
         StringOutput
             with: { |out|
                     let builtinVisitor = CTranspiler
@@ -194,13 +208,25 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                                              variables: variables
                                              tmpCounter: tmpCounter.
                     -- FIXME: visit Main, and it's dependencies only
-                    -- Debug println: "/forwardDeclarations".
                     BuiltinClasses
                         do: { |each|
                               builtinVisitor forwardDeclarationFor: each }.
                     globals
                         do: { |each|
-                              builtinVisitor forwardDeclarationFor: each definition }.
+                              builtinVisitor forwardDeclarationFor: each definition } }!
+
+    method generateBuiltins
+        -- Debug println: "      #generateBuiltins:".
+        StringOutput
+            with: { |out|
+                    let builtinVisitor = CTranspiler
+                                             output: out
+                                             selectorMap: selectorMap
+                                             blockFunctions: blockFunctions
+                                             constants: constants
+                                             variables: variables
+                                             tmpCounter: tmpCounter.
+                    -- FIXME: used builtins only
                     BuiltinClasses
                         do: { |each|
                               builtinVisitor visitClassDefinition: each } }!
@@ -235,10 +261,10 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                               out println: "    .size = {string size},".
                               out print: "    .data = \{ ".
                               string do: { |each|
-                                           each == "'"
-                                               ifTrue: { out print: "'\\''," }
-                                               ifFalse: { out print: "'{each}'," } }.
-                              out print: " 0".
+                                           out print: "'".
+                                           out print: (CEscapes at: each ifNone: { each }).
+                                           out print: "'," }.
+                              out print: "0".
                               out println: " }".
                               out println: "};".
                               out newline.
@@ -283,7 +309,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                      _for: block body.
         output println: ";\n}".
         blockFunctions
-            put: {declaration: "{signature};", definition: output content}
+            put: { declaration: "{signature};", definition: output }
             at: index.
         cname!
 
@@ -405,7 +431,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                 output println: "    (struct FooContext* ctx)".
                 output println: "\{".
                 output println: "    (void)ctx;".
-                output println: "    struct FooArray* new = foo_Array_alloc({aClass slots size} * sizeof(struct Foo));".
+                output println: "    struct FooArray* new = FooArray_alloc({aClass slots size} * sizeof(struct Foo));".
                 aClass slots
                     doWithIndex: { |each index|
                                    let type = each type value.
@@ -535,7 +561,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output print: "ctx->frame[{right}] = ".
         anIs right visitBy: self.
         output print: "; ".
-        output print: "foo_Boolean_new(ctx->frame[{left}].vtable == ctx->frame[{right}].vtable && ctx->frame[{left}].datum.int64 == ctx->frame[{right}].datum.int64); ".
+        output print: "foo_Boolean_new(foo_eq(ctx->frame[{left}], ctx->frame[{right}])); ".
         output print: "})"!
 
     method visitSeq: seq
@@ -661,7 +687,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
     method visitArray: anArray
         let entries = anArray entries.
         let array = self addTemp.
-        output print: "(\{ ctx->frame[{array}] = foo_Array_new({entries size}); ".
+        output print: "(\{ ctx->frame[{array}] = foo_Array_alloc({entries size}); ".
         entries isEmpty
             ifFalse: { let p = self genTemp: "arrayPtr".
                        output print: "struct FooArray* {p} = PTR(FooArray, ctx->frame[{array}].datum);".

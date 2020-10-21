@@ -1,24 +1,89 @@
-extend StringOutput
+class Chain { _first _last size }
+    direct method new
+        let array = Array new: 128.
+        -- First element contains number of elements
+        -- Last elements contains link to next array.
+        array put: 0 at: 1.
+        self _first: array
+             _last: array
+             size: 0!
+    method add: elt
+        let n = _last at: 1.
+        ((n + 2) is (_last size))
+            ifTrue: { let new = Array new: (n * 2).
+                      _last put: new at: _last size.
+                      new put: 0 at: 1.
+                      new put: False at: new size.
+                      _last = new }.
+        let newsize = (_last at: 1) + 1.
+        _last put: newsize at: 1.
+        _last put: elt at: newsize + 1.
+        size = size + 1.
+        self!
+    method do: block
+        let next = _first.
+        { next is False }
+            whileFalse: { 1 to: (next at: 1)
+                            do: { |each|
+                                  block value: (next at: (each + 1))}.
+                          next = next at: next size }!
+    method content
+        let array = Array new: size.
+        let i = 1.
+        self do: { |each|
+                   array put: each at: i.
+                   i = i + 1 }.
+        _last = _first.
+        _first put: 0 at: 1.
+        _first put: False at: (_first size).
+        array!
+    method displayOn: stream
+        stream print: "#<Chain>"!
+end
+
+class StringOutput { _chain }
+
     direct method new: string
-        let out = self new.
-        out writeString: string.
-        out!
+        self new print: string!
+
+    direct method new
+        self _chain: Chain new!
+
     direct method with: block
         let out = self new.
         block value: out.
         out content!
+
+    method content
+        String concat: _chain content!
+
+    method printOn: stream
+        _chain do: { |each| stream print: each }!
+
+    method displayOn: stream
+        stream println: self toString!
+
     method toString
-        "#<StringOutput>"!
+        "#<StringOutput ...>"!
+
+    method writeString: string
+        _chain add: string.
+        self!
+
     method print: thing
         thing printOn: self!
+
     method display: thing
         thing displayOn: self!
+
     method flush
         self!
+
     method println: string
-        self writeString: string.
+        self print: string.
         self newline!
+
     method newline
-        self writeString: "\n".
+        self print: "\n".
         self!
 end

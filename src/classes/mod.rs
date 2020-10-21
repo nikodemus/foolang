@@ -16,6 +16,5 @@ pub mod output;
 pub mod random;
 pub mod record;
 pub mod string;
-pub mod string_output;
 pub mod system;
 pub mod time;

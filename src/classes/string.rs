@@ -18,11 +18,25 @@ pub fn instance_vtable() -> Vtable {
 pub fn class_vtable() -> Vtable {
     let vt = Vtable::for_class("String");
     vt.add_primitive_method_or_panic("new", class_string_new);
+    vt.add_primitive_method_or_panic("concat:", class_string_concat);
     vt
 }
 
 fn class_string_new(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_string(""))
+}
+
+fn class_string_concat(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let contents = args[0].as_array("String#from:")?;
+    let mut size = 0;
+    for s in contents.borrow().iter() {
+        size += s.as_str()?.len();
+    }
+    let mut string = String::with_capacity(size);
+    for s in contents.borrow().iter() {
+        string.push_str(s.as_str()?);
+    }
+    Ok(env.foo.into_string(string))
 }
 
 fn string_do(receiver: &Object, args: &[Object], env: &Env) -> Eval {

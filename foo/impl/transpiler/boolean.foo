@@ -14,6 +14,23 @@ define InstanceMethods
 } else \{
     return foo_send(ctx, &{Name mangleSelector: #value}, ctx->frame[1], 0);
 }" },
+ #ifTrue:
+          -> { signature: [Block], vars: 0,
+               body: "if (ctx->receiver.datum.boolean) \{
+    return foo_send(ctx, &{Name mangleSelector: #value}, ctx->frame[0], 0);
+} else \{
+    return FooGlobal_False;
+}" },
+ #ifFalse:
+          -> { signature: [Block], vars: 0,
+               body: "if (ctx->receiver.datum.boolean) \{
+    return FooGlobal_True;
+} else \{
+    return foo_send(ctx, &{Name mangleSelector: #value}, ctx->frame[0], 0);
+}" },
+      #toString
+          -> { signature: [], vars: 0,
+               body: "return foo_String_new_from(ctx->receiver.datum.boolean ? \"True\" : \"False\");" },
       #debug
           -> { signature: [], vars: 0,
                body: "printf(\"#<Boolean %s>\", ctx->receiver.datum.boolean ? \"True\" : \"False\");
