@@ -484,6 +484,10 @@ struct Foo foo_String_new(size_t len, const char* s) {
   return (struct Foo) { .vtable = &FooInstanceVtable_String, .datum = { .ptr = bytes } };
 }
 
+struct Foo foo_String_new_from(const char* s) {
+  return foo_String_new(strlen(s), s);
+}
+
 struct Foo foo_panic(struct Foo message) __attribute__((noreturn));
 struct Foo foo_panic(struct Foo message) {
   struct FooBytes* bytes
