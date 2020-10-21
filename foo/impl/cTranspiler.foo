@@ -535,7 +535,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output print: "ctx->frame[{right}] = ".
         anIs right visitBy: self.
         output print: "; ".
-        output print: "foo_Boolean_new(ctx->frame[{left}].vtable == ctx->frame[{right}].vtable && ctx->frame[{left}].datum.int64 == ctx->frame[{right}].datum.int64); ".
+        output print: "foo_Boolean_new(foo_eq(ctx->frame[{left}], ctx->frame[{right}])); ".
         output print: "})"!
 
     method visitSeq: seq

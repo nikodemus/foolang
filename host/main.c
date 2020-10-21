@@ -53,7 +53,7 @@ union FooDatum {
   void* ptr;
   int64_t int64;
   double float64;
-  bool boolean;
+  int64_t boolean; // Make sure there's no junk in high bits
 };
 
 struct Foo {
@@ -381,6 +381,10 @@ struct FooContext* foo_context_new_method(const struct FooMethod* method,
     context->frame[i] = va_arg(arguments, struct Foo);
   }
   return context;
+}
+
+bool foo_eq(struct Foo a, struct Foo b) {
+  return a.vtable == b.vtable && a.datum.int64 == b.datum.int64;
 }
 
 struct Foo foo_send(struct FooContext* sender,

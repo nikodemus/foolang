@@ -324,6 +324,16 @@ class TestTranspileBoolean { assert system }
                                  (b2 is b2) debug!
                          end"
             expect: "#<Boolean False>#<Boolean False>#<Boolean False>#<Boolean False>#<Boolean True>#<Boolean True>#<Boolean True>"!
+
+    method testWhileFalse
+        self transpile: "class Main \{}
+                             direct method run
+                                 let n = 0.
+                                 \{ n is 10 } whileFalse: \{ n = n + 1 }.
+                                 n debug!
+                         end"
+            expect: "#<Integer 10>"!
+
 end
 
 class TestTranspileArray { assert system }
