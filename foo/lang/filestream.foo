@@ -33,6 +33,19 @@ extend FileStream
                          index = index + did }.
         total!
 
+    method print: object
+        object printOn: self!
+
+    method println: object
+        object printOn: self.
+        self newline!
+
+    method newline
+        self writeString: "\n"!
+
+    method display: object
+        object displayOn: self!
+
     method write: n bytesFrom: buffer at: index
         let did = self tryWrite: n bytesFrom: buffer at: index.
         did == n
