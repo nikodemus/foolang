@@ -648,24 +648,6 @@ end
         self eval: "#foo:bar:"
              expect: #foo:bar: !
 
-    method transpile: string
-        let env = Environment new.
-        let cst = Parser parseExpressions: string.
-        let ast = cst collect: { |syntax|
-                                 SyntaxTranslator
-                                     translate: syntax
-                                     in: env }.
-        let c = CTranspiler transpile: ast in: env.
-        (system files path: "host/generated_selectors.h")
-            forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c selectors }.
-        (system files path: "host/generated_blocks.c")
-            forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c blocks }.
-        (system files path: "host/generated_main.c")
-            forWrite truncateExisting
-                createOrOpen: { |f| f writeString: c main }!
-
     method testTypeDecl01
         self eval: "42::Integer"
              expect: 42!
