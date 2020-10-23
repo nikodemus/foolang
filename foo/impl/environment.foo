@@ -4,6 +4,7 @@ import .utils.Debug
 import .ast.AstGlobal
 import .ast.AstDynamic
 import .ast.AstLexicalRef
+import .ast.AstConstantRef
 import .ast.AstSlotRef
 import .ast.AstDefinition
 import .parser.Parser
@@ -174,7 +175,8 @@ class Environment { parent    -- Enclosing environment or False
         newBuiltins do: { |each|
                           let global = builtins
                                            at: each name
-                                           ifNonePut: { AstGlobal name: each name }.
+                                           ifNonePut: { AstGlobal name: each name
+                                                                  definition: each }.
                           global redefine: each }!
 
     method import: moduleName relative: relative
@@ -205,23 +207,26 @@ class Environment { parent    -- Enclosing environment or False
         self addGlobals: bindings!
 
     method addVariable: name type: type
+        -- Debug println: "addVariable: {name} type: {type}".
         self augment: [Variable
                            name: name
                            type: type
                            frame: frame]!
 
     method addVariable: name
-        self addVariable: name type: { value: Any }!
+        -- Debug println: "addVariable: {name}".
+        self addVariable: name type: Any!
 
     method addVariables: names
-        let type = { value: Any }.
+        -- Debug println: "addVariables: {names}".
         self augment: (names collect: { |each|
                                         Variable
                                             name: each
-                                            type: type
+                                            type: Any
                                             frame: frame })!
 
     method addVariables: names types: types
+        -- Debug println: "addVariables: {names} types: {types}".
         (names size is types size) assert.
         self augment: (names with: types
                              collect: { |name type|
@@ -249,8 +254,7 @@ class Environment { parent    -- Enclosing environment or False
         let binding = bindings
                           find: { |binding| binding name == name }
                           ifNone: { parent is False
-                                        ifTrue: { return self
-                                                      global: name }
+                                        ifTrue: { return self global: name }
                                         ifFalse: { return parent
                                                        reference: name
                                                        from: useDepth } }.

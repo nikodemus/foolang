@@ -274,7 +274,7 @@ class OpenBraceToken { precedence string first last }
         self
             _finishBlockWith: parser
             _parameters: []
-            _returnType: False
+            _returnType: Any
             _body: expr!
 
     method _parseAsRecordWith: parser
@@ -328,7 +328,7 @@ class OpenBraceToken { precedence string first last }
                   parser until: "|"
                          do: { parameters add: (parser parseVariable) }.
                   parser nextToken }.
-        let returnType = False.
+        let returnType = Any.
         parser
             when: "->"
             do: { parser nextToken.
@@ -816,7 +816,7 @@ class TokenSigil { precedence string first last }
         parser when: "->"
                do: { parser expect: "->".
                      return parser parsePrefix }.
-        False!
+        Any!
 
     method parseAsLiteralWith: parser
         SyntaxLiteral
@@ -876,7 +876,7 @@ class TokenWord { precedence string first last }
         parser when: "->"
                do:{ parser expect: "->".
                     return parser parsePrefix }.
-        False!
+        Any!
 
     method parseAsLiteralWith: parser
         SyntaxLiteral
@@ -922,7 +922,7 @@ class TokenKeyword { string first last }
         parser when: "->"
                do: { parser expect: "->".
                      return parser parsePrefix }.
-        False!
+        Any!
 
     method parseAsLiteralWith: parser
         let selector = StringOutput new: string.

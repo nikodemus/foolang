@@ -1,6 +1,9 @@
 import .ast.*
 import .syntaxVisitor.SyntaxVisitor
 import .syntax.Syntax
+import .utils.*
+
+define Tracer NullTracer!
 
 class SyntaxTranslator { env currentMethod }
     is SyntaxVisitor
@@ -42,18 +45,22 @@ class SyntaxTranslator { env currentMethod }
                          relative: relative)!
 
     method visitLiteral: aLiteral
+        Tracer trace: #visitLiteral:.
         AstConstantRef value: aLiteral value!
 
     method visitValueTypeDeclaration: aNode
+        Tracer trace: #visitValueTypeDeclaration.
         AstTypecheck
             value: (aNode value visitBy: self)
             type: (aNode type visitBy: self)!
 
     method visitArray: anArray
+        Tracer trace: #visitArray:.
         AstArray entries: (anArray entries
                                collect: { |each| each visitBy: self })!
 
     method visitRecord: aRecord
+        Tracer trace: #visitRecord:.
         let recordName = StringOutput
                              with: { |out|
                                      aRecord entries
@@ -64,38 +71,45 @@ class SyntaxTranslator { env currentMethod }
                           collect: { |each| each value visitBy: self })!
 
     method visitDictionary: aDictionary
+        Tracer trace: #visitDictionary:.
         AstDictionary
             entries: (aDictionary entries
                           collect: { |each| { key: (each key visitBy: self),
                                               value: (each value visitBy: self) }})!
 
     method visitSeq: aSeq
+        Tracer trace: #visitSeq:.
         -- FIXME: Would be nicer to flatten this out.
         AstSeq
             first: (aSeq first visitBy: self)
             then: (aSeq then visitBy: self)!
 
     method visitReturn: aReturn
+        Tracer trace: #visitReturn:.
         AstReturn
             from: currentMethod::AstMethod
             value: (aReturn value visitBy: self)!
 
     method visitPanic: aPanic
+        Tracer trace: #visitPanic:.
         AstPanic value: (aPanic value visitBy: self)!
 
     method visitPrefixComment: aComment
+        Tracer trace: #visitPrefixComment:.
         AstComment
             comment: aComment comment
             value: (aComment value visitBy: self)
             source: aComment source!
 
     method visitSuffixComment: aComment
+        Tracer trace: #visitSuffixComment:.
         AstComment
             comment: aComment comment
             value: (aComment value visitBy: self)
             source: aComment source!
 
     method visitLet: aLet
+        Tracer trace: #visitLet:.
         let bodyVisitor = self addVariable: aLet variable name
                                type: (self _visitType: aLet variable type).
         let var = bodyVisitor env bindings first.
@@ -106,6 +120,7 @@ class SyntaxTranslator { env currentMethod }
             body: (aLet body visitBy: bodyVisitor)!
 
     method visitDynamicLet: aLet
+        Tracer trace: #visitDynamicLet:.
         let var = aLet variable visitBy: self.
         AstBindDynamic
             variable: var
@@ -113,6 +128,7 @@ class SyntaxTranslator { env currentMethod }
             body: (aLet body visitBy: self)!
 
     method visitPrefixMessage: aMessage
+        Tracer trace: #visitPrefixMessage:.
         AstSend
             receiver: (aMessage receiver visitBy: self)
             selector: (Selector name: "prefix{aMessage selector name}")
@@ -120,6 +136,7 @@ class SyntaxTranslator { env currentMethod }
             source: aMessage source!
 
     method visitUnaryMessage: aMessage
+        Tracer trace: #visitUnaryMessage:.
         AstSend
             receiver: (aMessage receiver visitBy: self)
             selector: aMessage selector
@@ -127,6 +144,7 @@ class SyntaxTranslator { env currentMethod }
             source: aMessage source!
 
     method visitBinaryMessage: aMessage
+        Tracer trace: #visitBinaryMessage:.
         AstSend
             receiver: (aMessage receiver visitBy: self)
             selector: aMessage selector
@@ -134,6 +152,7 @@ class SyntaxTranslator { env currentMethod }
             source: aMessage source!
 
     method visitKeywordMessage: aMessage
+        Tracer trace: #visitKeywordMessage:.
         AstSend
             receiver: (aMessage receiver visitBy: self)
             selector: aMessage selector
@@ -141,40 +160,48 @@ class SyntaxTranslator { env currentMethod }
             source: aMessage source!
 
     method visitIs: anIs
+        Tracer trace: #visitIs:.
         AstIs
             left: (anIs left visitBy: self)
             right: (anIs right visitBy: self)!
 
     method visitSelfInstance: aSelf
+        Tracer trace: #visitSelfInstance:.
         AstSelfInstanceRef new!
 
     method visitSelfClass: aSelf
+        Tracer trace: #visitSelfClass:.
         AstSelfClassRef new!
 
     method visitVariable: aVariable
+        Tracer trace: #visitVariable:.
         (env reference: aVariable name)
             withSource: aVariable source!
 
     method visitDynamicVariable: aVariable
+        Tracer trace: #visitDynamicVariable:.
         (env dynamic: aVariable name)
             withSource: aVariable source!
                 
     method visitInterfaceRef: aRef
+        Tracer trace: #visitInterfaceRef:.
         aRef name visitBy: self!
 
     method visitAssign: anAssign
+        Tracer trace: #visitAssign:.
         (anAssign variable visitBy: self)
             assign: (anAssign value visitBy: self)!
 
     method visitParens: aParens
+        Tracer trace: #visitParens:.
         aParens body visitBy: self!
 
     method visitBlock: aBlock
+        Tracer visitBlock: aBlock.
         let bodyEnv = env newFrame
                           addVariables: (aBlock parameters collect: #name)
                           types: (aBlock parameters
-                                      collect: { |each|
-                                                 self _visitType: each type }).
+                                      collect: { |each| self _visitType: each type }).
         let argumentVariables = bodyEnv bindings.
         (argumentVariables size is aBlock parameters size) assert.
         AstBlock
@@ -184,6 +211,7 @@ class SyntaxTranslator { env currentMethod }
             frameSize: bodyEnv frame size!
 
     method visitDefine: aDefine
+        Tracer trace: #visitDefine:.
         let bodyVisitor = self child: env newFrame.
         AstDefine
             name: aDefine variable name
@@ -192,6 +220,7 @@ class SyntaxTranslator { env currentMethod }
             isDynamic: aDefine variable isDynamic!
 
     method visitModuleImport: anImport
+        Tracer trace: #visitModuleImport:.
         let bodyVisitor = self
                               import: anImport module
                               relative: anImport relative.
@@ -199,6 +228,7 @@ class SyntaxTranslator { env currentMethod }
             new: (bodyVisitor _visitEach: anImport body)!
 
     method visitNameImport: anImport
+        Tracer trace: #visitNameImport:.
         let bodyVisitor = self
                               import: anImport name
                               from: anImport module
@@ -207,6 +237,7 @@ class SyntaxTranslator { env currentMethod }
             new: (bodyVisitor _visitEach: anImport body)!
 
     method visitWildcardImport: anImport
+        Tracer trace: #visitWildCardImport:.
         let bodyVisitor = self
                               importAll: anImport module
                               relative: anImport relative.
@@ -214,17 +245,17 @@ class SyntaxTranslator { env currentMethod }
             new: (bodyVisitor _visitEach: anImport body)!
 
     method visitExternalRef: aRef
+        Tracer trace: #visitExternalRef:.
         env reference: aRef name inModule: aRef module!
 
     method _visitType: aType
-        aType is False
-            ifTrue: { return { value: Any } }.
-        let ast = aType visitBy: self.
-        ast isConstant
-            ifFalse: { Error raise: "non-constant type declaration" }.
-        ast!
+        Tracer _visitType: aType name.
+        aType is Any
+            ifTrue: { return Any }.
+        (aType visitBy: self) :: AstGlobal!
 
     method visitMethod: aMethod
+        Tracer trace: #visitMethod:.
         let signature = aMethod signature.
         let bodyEnv = env newFrame
                           addVariables: (signature parameters collect: #name)
@@ -250,6 +281,7 @@ class SyntaxTranslator { env currentMethod }
         astMethod!
 
     method visitClass: aClass
+        Tracer trace: #visitClass:.
         let n = 0.
         let slots = aClass slots collect: { |each::Syntax|
                                             n = n + 1.
@@ -267,6 +299,7 @@ class SyntaxTranslator { env currentMethod }
             instanceMethods: (instanceMethodVisitor _visitEach: aClass instanceMethods)!
 
     method visitInterface: anInterface
+        Tracer trace: #visitInterface:.
          -- FIXME: should fetch interface object instead of using the name
         AstInterface
             name: anInterface name
@@ -275,6 +308,7 @@ class SyntaxTranslator { env currentMethod }
             instanceMethods: (self _visitEach: anInterface instanceMethods)!
 
     method visitExtend: anExtend
+        Tracer trace: #visitExtend:.
         -- FIXME: should fetch interface object instead of using the name
         AstExtend
             type: (env reference: anExtend name)

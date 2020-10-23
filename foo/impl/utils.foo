@@ -1,6 +1,24 @@
 class Debug {}
-    direct method println: what
-        Output debug println: what!
-    direct method print: what
-        Output debug print: what!
+    direct method perform: name with: arguments
+        name sendTo: Output debug with: arguments!
+end
+
+class DebugTracer {}
+    direct method trace: thing
+        Debug println: thing!
+    direct method perform: name with: arguments
+        (Selector new: (name)) parts
+            doWithIndex: { |each index|
+                           index > 1
+                               ifTrue: { Debug print: " #" }
+                               ifFalse: { Debug print: "#" }.
+                           Debug print: each.
+                           Debug print: " ".
+                           Debug print: (arguments at: index) }.
+        Debug newline!
+end
+
+class NullTracer {}
+    direct method perform: selector with: arguments
+        False!
 end

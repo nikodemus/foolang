@@ -32,7 +32,8 @@ interface Syntax
     method checkEqualInternal: other
         self parts with: other parts
                    do: { |a b|
-                         a checkEqual: b }!
+                         a is b
+                             ifFalse: { a checkEqual: b } }!
 
     method isEquivalent: other
         self parts with: other parts
@@ -359,7 +360,7 @@ class SyntaxUntypedVariable { name }
         visitor visitUntypedVariable: self!
 
     method type
-        SyntaxLiteral value: Any!
+        Any!
 
     method isDynamic
         False!
@@ -651,7 +652,7 @@ class MethodSignature { selector parameters returnType }
                                                       out print: s.
                                                       out print: " ".
                                                       out print: t } }.
-                             returnType is False
+                             returnType is Any
                                  ifFalse: { out print: " -> ".
                                             out print: returnType }.
                              out print: ">" }!

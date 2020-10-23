@@ -6,13 +6,18 @@ import .transpiler.float
 import .transpiler.output
 import .transpiler.string
 import .transpiler.array
+import .ast.AstBuiltin
 import .ast.AstClass
+import .ast.AstGlobal
 import .ast.AstInterface
+import .utils.*
 
 define CEscapes
     { "'" -> "\\'",
       "\n" -> "\\n",
       "\r" -> "\\r" }!
+
+define Tracer NullTracer!
 
 class BuiltinMethod { selector definition }
     direct method forEach: builtins
@@ -36,6 +41,7 @@ class BuiltinMethod { selector definition }
 end
 
 class BuiltinClass { host markFunction directMethods instanceMethods }
+    is Object
     direct method new: host
                   mark: mark
                   directMethods: directMethods
@@ -44,6 +50,8 @@ class BuiltinClass { host markFunction directMethods instanceMethods }
              markFunction: mark
              directMethods: (BuiltinMethod forEach: directMethods)
              instanceMethods: (BuiltinMethod forEach: instanceMethods)!
+    method visitBy: visitor
+        visitor visitBuiltin: self!
     method name
         host name!
     method eval
@@ -114,23 +122,25 @@ end
 define $home
     False!
 
-class CTranspiler { output selectorMap blockFunctions constants variables tmpCounter }
+class CTranspiler { output selectorMap blockFunctions constants variables tmpCounter
+                    globals }
 
-    direct method transpile: globals in: env
-        let visitor = self
+    direct method transpile: main in: env
+        let visitor = CTranspiler
                           output: StringOutput new
                           selectorMap: SelectorMap new
                           blockFunctions: List new
                           constants: List new
                           variables: Dictionary new
-                          tmpCounter: 0.
+                          tmpCounter: 0
+                          globals: Dictionary new.
         -- KLUDGE: add #writeString: to the selectors.
         visitor selectorMap map: #writeString:.
         env replaceBuiltins: BuiltinClasses.
-        let declarations = visitor generateDeclarations: globals.
-        globals do: { |each| each definition visitBy: visitor }.
-        visitor generateMain.
-        { declarations: declarations,
+        visitor declare: main.
+        visitor writeDefinitions.
+        visitor writeMain.
+        { declarations: visitor generateDeclarations,
           main: visitor output,
           blocks: visitor generateBlocks,
           constants: visitor generateConstants,
@@ -139,6 +149,15 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
 
     method addTemp
         $home addTemp!
+
+    method declare: global
+        -- Debug println: "#declare: {global}".
+        globals at: (global name)
+                ifNonePut: { global definition }!
+
+    method declareDynamic: var
+        self declare: var.
+        variables at: var name ifNonePut: { variables size }!
 
     method genTemp: name
         tmpCounter = tmpCounter + 1.
@@ -152,9 +171,11 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
             ifTrue: { self _classDeclarations: aGlobal }.
         (AstInterface includes: aGlobal)
             ifTrue: { self _interfaceDeclarations: aGlobal }.
+        (AstBuiltin includes: aGlobal)
+            ifTrue: { return False }.
         aGlobal isDynamic
-            ifTrue: {  variables put: (variables size) at: aGlobal name.
-                       output println: "struct Foo {Name mangleDynamic: aGlobal};" }
+            ifTrue: { self declareDynamic: aGlobal.
+                      output println: "struct Foo {Name mangleDynamic: aGlobal};" }
             ifFalse: {  output println: "struct Foo {Name mangleGlobal: aGlobal};" }!
 
     method _classDeclarations: aClass
@@ -165,7 +186,20 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "struct FooVtable {Name mangleInterfaceVtable: anInterface};".
         output println: "struct FooVtable {Name mangleInstanceVtable: anInterface};"!
 
-    method generateMain
+    method writeDefinitions
+        -- Processing a definition can produce new global references. Visit
+        -- each definition only once, finish with the full collection.
+        let allGlobals = Dictionary new.
+        { globals isEmpty }
+            whileFalse: { let old = globals.
+                          globals = Dictionary new.
+                          old do: { |name def|
+                                    allGlobals at: name
+                                               ifNone: { allGlobals put: def at: name.
+                                                         def visitBy: self } } }.
+        globals = allGlobals!
+
+    method writeMain
         output println: "int main".
         output println: "    (int argc, char** argv)".
         output println: "\{".
@@ -174,7 +208,9 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         variables
             do: { |name offset|
                   let var = {name: name}.
-                  output println: "vars->data[{offset}] = {Name mangleDynamic: var};" }.
+                  output print: "vars->data[{offset}] = ".
+                  output print: (Name mangleDynamic: var).
+                  output println: ";" }.
         output println: "    struct FooContext* ctx = foo_context_new_main(vars);".
         let main = Name mangleGlobal: {name: "Main"}.
         output println: "    foo_send(ctx, &{Name mangleSelector: #run}, {main}, 0);".
@@ -196,8 +232,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "struct FooSelector* FOO_InternedSelectors = {prev};".
         output!
 
-    method generateDeclarations: globals
-        -- Debug println: "      #generateDeclarations:".
+    method generateDeclarations
+        -- Debug println: "      #generateDeclarations".
         StringOutput
             with: { |out|
                     let builtinVisitor = CTranspiler
@@ -206,14 +242,15 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                                              blockFunctions: blockFunctions
                                              constants: constants
                                              variables: variables
-                                             tmpCounter: tmpCounter.
-                    -- FIXME: visit Main, and it's dependencies only
+                                             tmpCounter: tmpCounter
+                                             globals: globals.
+                    -- FIXME: visit only referenced builtins
                     BuiltinClasses
                         do: { |each|
                               builtinVisitor forwardDeclarationFor: each }.
                     globals
-                        do: { |each|
-                              builtinVisitor forwardDeclarationFor: each definition } }!
+                        doValues: { |each|
+                                    builtinVisitor forwardDeclarationFor: each } }!
 
     method generateBuiltins
         -- Debug println: "      #generateBuiltins:".
@@ -225,7 +262,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                                              blockFunctions: blockFunctions
                                              constants: constants
                                              variables: variables
-                                             tmpCounter: tmpCounter.
+                                             tmpCounter: tmpCounter
+                                             globals: globals.
                     -- FIXME: used builtins only
                     BuiltinClasses
                         do: { |each|
@@ -294,7 +332,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         -- in frame here, same as in methods.
         block argumentVariables
             do: { |var|
-                  let type = var type value.
+                  let type = var type.
                   type is Any
                       ifFalse: { output println: "    foo_vtable_typecheck(&{Name mangleInstanceVtable: type}, ctx->frame[{var index-1}]);" } }.
         output print: "    return ".
@@ -304,8 +342,9 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                                blockFunctions: blockFunctions
                                constants: constants
                                variables: variables
-                               tmpCounter: tmpCounter.
-        blockVisitor _generateTypecheck: block returnType value
+                               tmpCounter: tmpCounter
+                               globals: globals.
+        blockVisitor _generateTypecheck: block returnType
                      _for: block body.
         output println: ";\n}".
         blockFunctions
@@ -313,16 +352,21 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
             at: index.
         cname!
 
+    method visitBuiltin: aClass
+        Tracer trace: #visitBuiltin:.
+        self!
+
     method visitDefine: aDefine
-        let value = aDefine eval.
+        Tracer trace: #visitDefine:.
         aDefine isDynamic
             ifTrue: { output println: "struct Foo {Name mangleDynamic: aDefine} = " }
             ifFalse: { output println: "struct Foo {Name mangleGlobal: aDefine} = " }.
-        self visitConstant: {value: value}.
+        self visitConstant: { value: aDefine eval }. -- FIXME, harmonize
         output println: ";".
         output newline!
 
     method visitInterfaceDefinition: anInterface
+        Tracer trace: #visitInterfaceDefinition:.
         output println: "/**
 * {anInterface name}
 *
@@ -383,7 +427,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output newline!
 
     method visitClassDefinition: aClass
-        -- Debug println: "#visitClassDefinition: {aClass name}".
+        Tracer visitClassDefinition: aClass name.
         let classNote = aClass isBuiltin
                        ifTrue: { "{aClass name} (builtin)" }
                        ifFalse: { aClass name }.
@@ -434,7 +478,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                 output println: "    struct FooArray* new = FooArray_alloc({aClass slots size} * sizeof(struct Foo));".
                 aClass slots
                     doWithIndex: { |each index|
-                                   let type = each type value.
+                                   let type = each type.
+                                   -- FIXME: visit the type
                                    type is Any
                                        ifTrue: { output println: "new->data[{index-1}] = ctx->frame[{index-1}];" }
                                        ifFalse: { output println: "new->data[{index -1}] = foo_vtable_typecheck(&{Name mangleInstanceVtable: type}, ctx->frame[{index-1}]);" } }.
@@ -448,13 +493,15 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                 output println: "    (struct FooContext* ctx)".
                 output println: "\{".
                 output println: "    return foo_Boolean_new(&{Name mangleInstanceVtable: aClass} == ctx->frame[0].vtable);".
-                output println: "}"
+                output println: "}".
+                output newline
             }.
         -- Interfaces
         let classInterfacesName = "FooClassInterfaces_{aClass name}".
         output println: "struct FooVtable* {classInterfacesName}[] = \{".
         aClass interfaces
             do: { |each|
+                  self declare: each.
                   output println: "    &{Name mangleInterfaceVtable: each}," }.
         output println: "};".
         output newline.
@@ -517,6 +564,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output newline!
 
     method _generateMethod: aMethod _in: aClass _as: mangledName
+        -- Debug println: "_generateMethod:_in: {aClass} _as: {mangledName}".
         let $home = aMethod.
         output print: "struct Foo ".
         output println: mangledName.
@@ -525,43 +573,52 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "    (void)ctx;".
         aMethod signature
             doWithIndex: { |type index|
+                           -- FIXME: visit the type
                            type is Any
                                ifFalse: { output println: "    foo_vtable_typecheck(&{Name mangleInstanceVtable: type}, ctx->frame[{index-1}ul]);" } }.
         aMethod isBuiltin
-            ifTrue: {  output print: "    ".
-                       output println: (aMethod body replace: "\n" with: "\n    ").
-                       output println: "}" }
-            ifFalse: { output print: "    return ".
-                       self _generateTypecheck: aMethod returnType value
+            ifTrue: { -- Debug println: "  - builtin method".
+                      output print: "    ".
+                      output println: (aMethod body replace: "\n" with: "\n    ").
+                      output println: "}" }
+            ifFalse: { -- Debug println: "  - normal method".
+                       output print: "    return ".
+                       self _generateTypecheck: aMethod returnType
                             _for: aMethod body.
                        output println: ";".
                        output println: "}" }.
+        -- Debug println: "  => method done".
         output newline!
-
-    method visitGlobal: aVar
-        aVar assertDefined: True.
-        output print: (Name mangleGlobal: aVar)!
-
-    method visitDynamic: aVar
-        let index = variables
-                        at: aVar name
-                        ifNone: { Error raise: "No index for: {aVar}" }.
-        output print: "ctx->vars->data[{index}]"!
 
     method _generateTypecheck: type _for: value
         type is Any
             ifTrue: { return value visitBy: self }.
+        let type = type::AstGlobal.
+        -- Debug println: "_generateTypecheck: {type} _for: {value}".
+        self declare: type.
         output print: "foo_vtable_typecheck(&".
         output print: (Name mangleInstanceVtable: type).
         output print: ", ".
         value visitBy: self.
         output print: ")"!
 
+    method visitGlobal: aVar
+        Tracer trace: #visitGlobal:.
+        self declare: aVar.
+        output print: (Name mangleGlobal: aVar)!
+
+    method visitDynamic: aVar
+        Tracer trace: #visitDynamic:.
+        let index = self declareDynamic: aVar.
+        output print: "ctx->vars->data[{index}]"!
+
     method visitTypecheck: aCheck
+        Tracer visitTypecheck: aCheck.
         self _generateTypecheck: aCheck type
              _for: aCheck value!
 
     method visitIs: anIs
+        Tracer trace: #visitIs:.
         let left = self addTemp.
         output print: "(\{ ctx->frame[{left}] = ".
         anIs left visitBy: self.
@@ -574,6 +631,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output print: "})"!
 
     method visitSeq: seq
+        Tracer trace: #visitSeq:.
         output print: "(\{ ".
         seq first visitBy: self.
         output print: "; ".
@@ -581,29 +639,34 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output print: "; })"!
 
     method visitSlotSet: set
+        Tracer trace: #visitSlotSet:.
         output print: "(PTR(FooArray, ctx->receiver.datum)->data[".
         output print: (set slot index - 1).
         output print: "] = ".
-        self _generateTypecheck: set slot type value
+        self _generateTypecheck: set slot type
              _for: set value.
         output print: ")"!
 
     method visitSlotRef: ref
+        Tracer trace: #visitSlotRef:.
         output print: "PTR(FooArray, ctx->receiver.datum)->data[".
         output print: (ref slot index - 1).
         output print: "]"!
 
     method visitReturn: ret
+        Tracer trace: #visitReturn:.
         output print: "foo_return(ctx, ".
-        self _generateTypecheck: ret from returnType value
-            _for: ret value.
+        self _generateTypecheck: ret from returnType
+             _for: ret value.
         output print: ")"!
 
     method visitComment: aComment
+        Tracer trace: #visitComment:.
         -- FIXME: Include comments in generated source.
         aComment value visitBy: self!
 
-    method generateConstantDatum: value
+    method visitDatum: value
+        Tracer trace: #visitDatum:.
         (Integer includes: value)
             ifTrue: { return output print: ".int64 = {value}" }.
         (Float includes: value)
@@ -616,13 +679,15 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         Error raise: "Don't know how to transpile constant `{value}` into C."!
 
     method visitConstant: aConstant
+        Tracer trace: #visitConstant:.
         let value = aConstant value.
         output print: "(struct Foo)\{ .vtable = &{Name mangleInstanceVtable: value classOf}, .datum = \{ ".
-        self generateConstantDatum: value.
+        self visitDatum: value.
         output println: " } }".
         output newline!
 
     method visitSend: aSend
+        Tracer trace: #visitSend:.
         output print: "(\{ ".
         let argVars = aSend arguments
                           collect: { |each|
@@ -644,14 +709,17 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output print: "); })"!
 
     method visitSelfInstance: aSelf
+        Tracer trace: #visitSelfInstance:.
         output print: "ctx->receiver"!
 
     method visitSelfClass: aSelf
+        Tracer trace: #visitSelfClass:.
         output print: "*ctx->receiver.vtable->classptr"!
 
     method visitBindDynamic: aBind
+        Tracer trace: #visitBindDynamic:.
         let name = aBind variable name.
-        let index = variables at: name.
+        let index = self declareDynamic: aBind variable.
         let unbind = self genTemp: "unbind".
         output print: "(\{ struct FooUnbind {unbind} = \{ .cleanup = \{ .function = foo_unbind, .next = ctx->cleanup }, .index = {index}, .value = ctx->vars->data[{index}] };".
         output print: " ctx->cleanup = &{unbind}.cleanup;".
@@ -668,23 +736,27 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output print: " ctx->frame[{res}]; })"!
 
     method visitBindLexical: aBind
+        Tracer trace: #visitBindLexical:.
         output print: "(\{ ctx->frame[{aBind variable index - 1}ul] = ".
-        self _generateTypecheck: aBind variable type value
+        self _generateTypecheck: aBind variable type
              _for: aBind value.
         output print: ";".
         aBind body visitBy: self.
         output print: "; })"!
 
     method visitLexicalRef: aRef
+        Tracer trace: #visitLexicalRef:.
         output print: "foo_lexical_ref(ctx, {aRef variable index - 1}ul, {aRef frameOffset}ul)"!
 
     method visitLexicalSet: aSet
+        Tracer trace: #visitLexicalSet:.
         output print: "foo_lexical_set(ctx, {aSet variable index - 1}ul, {aSet frameOffset}u, ".
-        self _generateTypecheck: aSet variable type value
+        self _generateTypecheck: aSet variable type
              _for: aSet value.
         output print: ")"!
 
     method visitBlock: aBlock
+        Tracer trace: #visitBlock:.
         output print: "foo_block_new(ctx, ".
         output print: (self blockCName: aBlock).
         output print: ", ".
@@ -694,6 +766,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output print: ")"!
 
     method visitArray: anArray
+        Tracer trace: #visitArray:.
         let entries = anArray entries.
         let array = self addTemp.
         output print: "(\{ ctx->frame[{array}] = foo_Array_alloc({entries size}); ".
@@ -708,6 +781,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output print: "ctx->frame[{array}]; })"!
 
     method visitPanic: aPanic
+        Tracer trace: #visitPanic:.
         output println: "foo_panic(".
         aPanic value visitBy: self.
         output println: ")"!

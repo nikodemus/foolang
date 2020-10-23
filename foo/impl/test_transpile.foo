@@ -36,7 +36,7 @@ interface TranspilerTest
             "StringOutput"
         ].
         env load: string.
-        let c = CTranspiler transpile: env globals values in: env.
+        let c = CTranspiler transpile: (env global: "Main") in: env.
         (system files path: "host/generated_selectors.h")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c selectors }.
@@ -164,7 +164,6 @@ class TestTranspilePrelude { assert system }
 
     method testObject
         self transpile: "import .object.*
-                         import .stringOutput.* -- FIXME, KLUDGE, FFS
 
                          class Main \{ x }
                              is Object

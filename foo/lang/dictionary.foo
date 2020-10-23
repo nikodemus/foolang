@@ -8,6 +8,9 @@ extend Dictionary
         -- Ignore hint, implement in self-hosted implementation.
         self new!
 
+    method isEmpty
+        self size is 0!
+
     method at: key
         self at: key ifNone: { False }!
 
