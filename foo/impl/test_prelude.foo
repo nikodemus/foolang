@@ -20,9 +20,10 @@ class TestPrelude { system ok onFailure }
 
     method testPrelude_1_Object
         let lang = system files path: "foo/lang".
-        self without: ["Object"]
-             modules: { "object" -> lang path: "object.foo" } asFileModules
-             load: "import object
+        self without: ["Object", "StringOutput"]
+             modules: { "./object" -> lang path: "object.foo",
+                        "./stringOutput" -> lang path: "stringOutput.foo" } asFileModules
+             load: "import .object
                     class X \{ y }
                         is object.Object
                         method displayOn: out
@@ -38,8 +39,9 @@ class TestPrelude { system ok onFailure }
 
     method testPrelude_2_Character
         let lang = system files path: "foo/lang".
-        self without: ["Character", "Object"]
+        self without: ["Character", "Object", "StringOutput"]
              modules: { "./object" -> lang path: "object.foo",
+                        "./stringOutput" -> lang path: "stringOutput.foo",
                         "character" -> lang path: "character.foo" } asFileModules
              load: "import character
                     class X \{ c::character.Character }
@@ -60,8 +62,9 @@ class TestPrelude { system ok onFailure }
 
     method testPrelude_3_Iterable
         let lang = system files path: "foo/lang".
-        self without: ["Iterable", "Object"]
+        self without: ["Iterable", "Object", "StringOutput"]
              modules: { "./object" -> lang path: "object.foo",
+                        "./stringOutput" -> lang path: "stringOutput.foo",
                         "iterable" -> lang path: "iterable.foo" } asFileModules
              load: "import iterable
                     class MyIterable \{}
@@ -74,8 +77,9 @@ class TestPrelude { system ok onFailure }
 
     method testPrelude_4_Interval
         let lang = system files path: "foo/lang".
-        self without: ["Interval", "Object"]
+        self without: ["Interval", "Object", "StringOutput"]
              modules: { "./object" -> lang path: "object.foo",
+                        "./stringOutput" -> lang path: "stringOutput.foo",
                         "./iterable" -> lang path: "iterable.foo",
                         "interval" -> lang path: "interval.foo" } asFileModules
              load: "import interval
@@ -86,8 +90,9 @@ class TestPrelude { system ok onFailure }
 
     method testPrelude_5_Collection
         let lang = system files path: "foo/lang".
-        self without: ["Collection", "Iterable", "Object"]
+        self without: ["Collection", "Iterable", "Object", "StringOutput"]
              modules: { "./object" -> lang path: "object.foo",
+                        "./stringOutput" -> lang path: "stringOutput.foo",
                         "./iterable" -> lang path: "iterable.foo",
                         "collection" -> lang path: "collection.foo" } asFileModules
              load: "import collection
@@ -115,8 +120,9 @@ class TestPrelude { system ok onFailure }
 
     method testPrelude_6_Block
         let lang = system files path: "foo/lang".
-        self without: ["Block", "Object"]
+        self without: ["Block", "Object", "StringOutput"]
              modules: { "./object" -> lang path: "object.foo",
+                        "./stringOutput" -> lang path: "stringOutput.foo",
                         "block" -> lang path: "block.foo" } asFileModules
              load: "import block
                     class MyBlock \{ data }
@@ -137,8 +143,9 @@ class TestPrelude { system ok onFailure }
 
     method testPrelude_7_Exception
         let lang = system files path: "foo/lang".
-        self without: ["Error", "TypeError", "DoesNotUnderstand", "Object"]
+        self without: ["Error", "TypeError", "DoesNotUnderstand", "Object", "StringOutput"]
              modules: { "./object" -> lang path: "object.foo",
+                        "./stringOutput" -> lang path: "stringOutput.foo",
                         "exception" -> lang path: "exception.foo" } asFileModules
              load: "import exception
                     class MyError \{}
@@ -151,8 +158,11 @@ class TestPrelude { system ok onFailure }
 
     method testPrelude_8_Boolean
         let lang = system files path: "foo/lang".
-        self without: ["Boolean", "True", "False", "Object"]
+        -- FIXME: This warns about False being undefined because StringOutput
+        -- uses it, and evaluator has no knowledge about due to the without.
+        self without: ["Boolean", "True", "False", "Object", "StringOutput"]
              modules: { "./object" -> lang path: "object.foo",
+                        "./stringOutput" -> lang path: "stringOutput.foo",
                         "boolean0" -> lang path: "boolean0.foo" } asFileModules
              load: "import boolean0
                     class Test \{}
@@ -165,8 +175,9 @@ class TestPrelude { system ok onFailure }
 
     method testPrelude_9_Ordered
         let lang = system files path: "foo/lang".
-        self without: ["Ordered", "Iterable", "Iterator", "Object"]
+        self without: ["Ordered", "Iterable", "Iterator", "Object", "StringOutput"]
              modules: { "./object" -> lang path: "object.foo",
+                        "./stringOutput" -> lang path: "stringOutput.foo",
                         "./iterable" -> lang path: "iterable.foo",
                         "ordered" -> lang path: "ordered.foo" } asFileModules
              load: "import ordered
