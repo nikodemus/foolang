@@ -394,7 +394,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         let instanceVtableName = Name mangleInstanceVtable: aClass.
         let classVtableName = Name mangleClassVtable: aClass.
         let globalName = Name mangleGlobal: aClass.
-        let directMethods = aClass directMethods copy. -- Augmented later with ctor
+        -- Augmented later with ctor and typetest
+        let directMethods = aClass directMethods copy.
         directMethods
             do: { |each|
                   self
@@ -425,7 +426,6 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                 let ctor = aClass constructor.
                 directMethods push: { selector: ctor, arity: aClass slots size, frameSize: aClass slots size }.
                 let ctorName = Name mangleDirectMethod: ctor in: aClass.
-                output newline.
                 output print: "struct Foo ".
                 output println: ctorName.
                 output println: "    (struct FooContext* ctx)".
@@ -440,7 +440,15 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                                        ifFalse: { output println: "new->data[{index -1}] = foo_vtable_typecheck(&{Name mangleInstanceVtable: type}, ctx->frame[{index-1}]);" } }.
                 output println: "    return (struct Foo)\{ .vtable = &{instanceVtableName}, .datum = \{ .ptr = new } };".
                 output println: "}".
-                output newline
+                output newline.
+                -- #includes: (typetest)
+                directMethods push: { selector: #includes:, arity: 1, frameSize: 1 }.
+                output print: "struct Foo ".
+                output println: (Name mangleDirectMethod: (#includes:) in: aClass).
+                output println: "    (struct FooContext* ctx)".
+                output println: "\{".
+                output println: "    return foo_Boolean_new(&{Name mangleInstanceVtable: aClass} == ctx->frame[0].vtable);".
+                output println: "}"
             }.
         -- Interfaces
         let classInterfacesName = "FooClassInterfaces_{aClass name}".

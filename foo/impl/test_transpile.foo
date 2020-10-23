@@ -1014,19 +1014,30 @@ class TestTranspileTypecheck { assert system }
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
 
-    method test1BlockReturnTypeOk
+    method testBlockReturnTypeOk
         self transpile: "class Main \{}
                              direct method run
                                 (\{ |a| -> Integer a } value: 42) debug!
                          end"
             expect: "#<Integer 42>"!
 
-    method test1BlockReturnTypeOops
+    method testBlockReturnTypeOops
         self transpile: "class Main \{}
                              direct method run
                                 (\{ |a| -> Integer a } value: 42.32) debug!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+
+    method testClassTypeIncludes
+        self transpile: "class A \{} end
+                         class B \{} end
+
+                         class Main \{}
+                             direct method run
+                                 (A includes: (A new)) debug.
+                                 (A includes: (B new)) debug!
+                         end"
+            expect: "#<Boolean True>#<Boolean False>"!
 end
 
 class Main {}
