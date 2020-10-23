@@ -539,6 +539,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output newline!
 
     method visitGlobal: aVar
+        aVar assertDefined: True.
         output print: (Name mangleGlobal: aVar)!
 
     method visitDynamic: aVar
