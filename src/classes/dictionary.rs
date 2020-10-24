@@ -102,8 +102,12 @@ fn dictionary_at_if_none(receiver: &Object, args: &[Object], env: &Env) -> Eval 
 }
 
 fn dictionary_do_keys(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let mut keys = Vec::new();
     for (k, _) in receiver.as_dictionary("Dictionary#doKeys:")?.borrow().iter() {
-        args[0].send("value:", std::slice::from_ref(k), env)?;
+        keys.push(k.clone());
+    }
+    for k in keys {
+        args[0].send("value:", &[k], env)?;
     }
     Ok(receiver.clone())
 }
