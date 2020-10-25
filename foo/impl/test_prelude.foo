@@ -1,12 +1,12 @@
 import .test_self_hosting.TestSelfHosting
 
-class TestPrelude { system ok onFailure }
+-- prelude tests numbered so that they sort in order
+-- of complexity, roughly.
+
+class TestPrelude01 { system ok onFailure }
     is TestSelfHosting
 
-    -- prelude tests numbered so that they sort in order
-    -- of complexity
-
-    method testPrelude_0_Any
+    method testPrelude_1_Any
         let lang = system files path: "foo/lang".
         self without: ["Any"]
              modules: { "any" -> lang path: "any.foo" } asFileModules
@@ -17,8 +17,12 @@ class TestPrelude { system ok onFailure }
                     end"
              eval: "Test test"
              expect: True!
+end
 
-    method testPrelude_1_Object
+class TestPrelude02 { system ok onFailure }
+    is TestSelfHosting
+
+    method testPrelude_2_Object
         let lang = system files path: "foo/lang".
         self without: ["Object", "StringOutput"]
              modules: { "./object" -> lang path: "object.foo",
@@ -36,8 +40,12 @@ class TestPrelude { system ok onFailure }
                     end"
              eval: "Test test"
              expect: "X=42"!
+end
 
-    method testPrelude_2_Character
+class TestPrelude03 { system ok onFailure }
+    is TestSelfHosting
+
+    method testPrelude_3_Character
         let lang = system files path: "foo/lang".
         self without: ["Character", "Object", "StringOutput"]
              modules: { "./object" -> lang path: "object.foo",
@@ -59,8 +67,12 @@ class TestPrelude { system ok onFailure }
                     end"
              eval: "[Test testError, Test testOk]"
              expect: [#gotcha, True]!
+end
 
-    method testPrelude_3_Iterable
+class TestPrelude04 { system ok onFailure }
+    is TestSelfHosting
+
+    method testPrelude_4_Iterable
         let lang = system files path: "foo/lang".
         self without: ["Iterable", "Object", "StringOutput"]
              modules: { "./object" -> lang path: "object.foo",
@@ -74,8 +86,12 @@ class TestPrelude { system ok onFailure }
                     end"
              eval: "MyIterable new collect: #abs as: List"
              expect: [1,2,3] asList!
+end
 
-    method testPrelude_4_Interval
+class TestPrelude05 { system ok onFailure }
+    is TestSelfHosting
+
+    method testPrelude_5_Interval
         let lang = system files path: "foo/lang".
         self without: ["Interval", "Object", "StringOutput"]
              modules: { "./object" -> lang path: "object.foo",
@@ -87,8 +103,12 @@ class TestPrelude { system ok onFailure }
                         interval.Interval from: 1 to: 1000 by: 10!"
              eval: "ThousandBy10 size"
              expect: 100!
+end
 
-    method testPrelude_5_Collection
+class TestPrelude06 { system ok onFailure }
+    is TestSelfHosting
+
+    method testPrelude_6_Collection
         let lang = system files path: "foo/lang".
         self without: ["Collection", "Iterable", "Object", "StringOutput"]
              modules: { "./object" -> lang path: "object.foo",
@@ -117,8 +137,12 @@ class TestPrelude { system ok onFailure }
                     coll clear.
                     [res, coll isEmpty]"
              expect: [[1,2,3] asList, True]!
+end
 
-    method testPrelude_6_Block
+class TestPrelude07 { system ok onFailure }
+    is TestSelfHosting
+
+    method testPrelude_7_Block
         let lang = system files path: "foo/lang".
         self without: ["Block", "Object", "StringOutput"]
              modules: { "./object" -> lang path: "object.foo",
@@ -140,8 +164,12 @@ class TestPrelude { system ok onFailure }
              eval: "let b = MyBlock data: [1,10,100].
                     b value: 1 value: 2 value: 3"
              expect: [2,12,103] asList!
+end
 
-    method testPrelude_7_Exception
+class TestPrelude08 { system ok onFailure }
+    is TestSelfHosting
+
+    method testPrelude_8_Exception
         let lang = system files path: "foo/lang".
         self without: ["Error", "TypeError", "DoesNotUnderstand", "Object", "StringOutput"]
              modules: { "./object" -> lang path: "object.foo",
@@ -155,8 +183,12 @@ class TestPrelude { system ok onFailure }
                     end"
              eval: "(\{ MyError new raise } catch: MyError) value description"
              expect: "Oops"!
+end
 
-    method testPrelude_8_Boolean
+class TestPrelude09 { system ok onFailure }
+    is TestSelfHosting
+
+    method testPrelude_9_Boolean
         let lang = system files path: "foo/lang".
         -- FIXME: This warns about False being undefined because StringOutput
         -- uses it, and evaluator has no knowledge about due to the without.
@@ -172,8 +204,12 @@ class TestPrelude { system ok onFailure }
                     end"
              eval: "Test test"
              expect: 42!
+end
 
-    method testPrelude_9_Ordered
+class TestPrelude10 { system ok onFailure }
+    is TestSelfHosting
+
+    method testPrelude_10_Ordered
         let lang = system files path: "foo/lang".
         self without: ["Ordered", "Iterable", "Iterator", "Object", "StringOutput"]
              modules: { "./object" -> lang path: "object.foo",
@@ -201,9 +237,37 @@ end
 
 class Main {}
     direct method run: cmd in: system
-        (TestPrelude runIn: system) ok
-            ifTrue: { system output println: "All tests ok!".
-                      system exit }
-            ifFalse: { system output println: "Tests failed!".
-                       system exit: 1 }!
+        let tests = {
+            "--prelude-01" -> TestPrelude01,
+            "--prelude-02" -> TestPrelude02,
+            "--prelude-03" -> TestPrelude03,
+            "--prelude-04" -> TestPrelude04,
+            "--prelude-05" -> TestPrelude05,
+            "--prelude-06" -> TestPrelude06,
+            "--prelude-07" -> TestPrelude07,
+            "--prelude-08" -> TestPrelude08,
+            "--prelude-09" -> TestPrelude09,
+            "--prelude-10" -> TestPrelude10,
+        }.
+        let all = tests keys sort.
+        cmd == []
+            ifTrue: { cmd = all }.
+        cmd == ["--fork-all"]
+            ifTrue: { all
+                          do: { |test|
+                                let next = "cargo run -- foo/impl/test_prelude.foo --use=foo/lib -- {test}".
+                                system output println: "TEST: {next}".
+                                let command = system command: next.
+                                system output println: "--test stdout--".
+                                system output println: command stdout.
+                                system output println: "--test stderr--".
+                                system output println: command stderr.
+                                command ok
+                                    ifFalse: { system exit: 1 } }.
+                      system exit }.
+        cmd do: { |name|
+                  let result = (tests at: name) runIn: system.
+                  result ok
+                      ifFalse: { system output println: "Test {name} failed!".
+                                 system exit: 1 } }!
 end
