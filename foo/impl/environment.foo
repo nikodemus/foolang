@@ -4,6 +4,7 @@ import .utils.Debug
 import .ast.AstGlobal
 import .ast.AstDynamic
 import .ast.AstLexicalRef
+import .ast.AstConstantRef
 import .ast.AstSlotRef
 import .ast.AstDefinition
 import .parser.Parser
@@ -138,24 +139,14 @@ class Environment { parent    -- Enclosing environment or False
             builtins: builtins
             modules: modules!
 
-    method toplevel: bindings
+    method addGlobals: bindings
+        self checkToplevel.
         bindings do: { |each| globals put: each at: each name }.
-        (depth is 1)
-            ifFalse: { Error raise: "Not at toplevel!" }.
         self!
-        ---
-        Environment
-            parent: self
-            bindings: []
-            frame: List new
-            depth: 1
-            globals: globals
-            builtins: builtins
-            modules: modules!
-       ---
 
-    method toplevel
-        self toplevel: []!
+    method checkToplevel
+        (depth is 1)
+            ifFalse: { Error raise: "Not at toplevel!" }!
 
     method newFrame
         Environment
@@ -184,7 +175,8 @@ class Environment { parent    -- Enclosing environment or False
         newBuiltins do: { |each|
                           let global = builtins
                                            at: each name
-                                           ifNonePut: { AstGlobal name: each name }.
+                                           ifNonePut: { AstGlobal name: each name
+                                                                  definition: each }.
                           global redefine: each }!
 
     method import: moduleName relative: relative
@@ -194,7 +186,7 @@ class Environment { parent    -- Enclosing environment or False
                          relative: relative
                          in: self.
         -- Debug println: "import: {moduleName}".
-        self toplevel: [ModuleBinding
+        self addGlobals: [ModuleBinding
                             name: moduleName last
                             module: module]!
 
@@ -202,7 +194,7 @@ class Environment { parent    -- Enclosing environment or False
         (self depth is 1) assert.
         let global = (modules at: moduleName relative: relative in: self)
                          global: name.
-        self toplevel: [global]!
+        self addGlobals: [global]!
 
     method importAll: moduleName relative: relative
         (self depth is 1) assert.
@@ -212,26 +204,29 @@ class Environment { parent    -- Enclosing environment or False
             doKeys: { |name|
                       (name startsWith: "_")
                           ifFalse: { bindings add: (module global: name) } }.
-        self toplevel: bindings!
+        self addGlobals: bindings!
 
     method addVariable: name type: type
+        -- Debug println: "addVariable: {name} type: {type}".
         self augment: [Variable
                            name: name
                            type: type
                            frame: frame]!
 
     method addVariable: name
-        self addVariable: name type: { value: Any }!
+        -- Debug println: "addVariable: {name}".
+        self addVariable: name type: Any!
 
     method addVariables: names
-        let type = { value: Any }.
+        -- Debug println: "addVariables: {names}".
         self augment: (names collect: { |each|
                                         Variable
                                             name: each
-                                            type: type
+                                            type: Any
                                             frame: frame })!
 
     method addVariables: names types: types
+        -- Debug println: "addVariables: {names} types: {types}".
         (names size is types size) assert.
         self augment: (names with: types
                              collect: { |name type|
@@ -259,8 +254,7 @@ class Environment { parent    -- Enclosing environment or False
         let binding = bindings
                           find: { |binding| binding name == name }
                           ifNone: { parent is False
-                                        ifTrue: { return self
-                                                      global: name }
+                                        ifTrue: { return self global: name }
                                         ifFalse: { return parent
                                                        reference: name
                                                        from: useDepth } }.
@@ -270,13 +264,14 @@ class Environment { parent    -- Enclosing environment or False
         -- Debug println: "Environment#load:".
         let envDefs = Dictionary new.
         let pendingDefs = List new.
+        self checkToplevel.
         (Parser parseDefinitions: string)
             do: { |syntax|
                   -- Debug println: "translate: {syntax}".
                   (SyntaxTranslator
                        translate: syntax
-                       in: (self toplevel))
-                  defineIn: self }.
+                       in: self)
+                    defineIn: self }.
         self checkGlobals.
         -- Debug println: "Environment#load: OK".
         return self!
@@ -289,14 +284,13 @@ class Environment { parent    -- Enclosing environment or False
 
     method eval: string
         -- Debug println: "Environment#eval: {string displayString}".
-        let toplevelEnv = self toplevel.
+        self checkToplevel.
         let res = False.
         (Parser parseExpressions: string)
             do: { |syntax|
-                  res =
-                      AstInterpreter
-                          eval: (SyntaxTranslator translate: syntax in: toplevelEnv)
-                          inEnv: toplevelEnv }.
+                  res = AstInterpreter
+                            eval: (SyntaxTranslator translate: syntax in: self)
+                            inEnv: self }.
         res!
 
     method checkGlobals

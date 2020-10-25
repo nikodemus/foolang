@@ -20,6 +20,9 @@ class AstBuiltin { value }
     method isBuiltin
         True!
 
+    method visitBy: visitor
+        visitor visitBuiltin: self!
+
     method __addInterface: anInterface
         value __addInterface: anInterface!
 
@@ -214,7 +217,7 @@ class AstClass { name slots interfaces _directMethods _instanceMethods }
             slots: (slots
                         collect: { |each|
                                      { name: each name,
-                                       type: each type value } }
+                                       type: each type } }
                         as: Array)
             interfaces: (Array from: (interfaces collect: #value))
             directMethods: (Array from: _directMethods)
@@ -260,7 +263,7 @@ class AstReaderMethod { slot }
         -- need to -- but it would be nice for senders to know the type.
         -- So returnType needs to be split into returnTypeCheck and
         -- declaredReturnType?
-        { value: Any }!
+        Any!
     method body
         slot referenceUpwards: False!
 end
@@ -306,7 +309,7 @@ class AstMethod { selector argumentVariables returnType body frameSize isDirect 
         (body is False) not!
 
     method signature
-        argumentVariables collect: { |var| var type value }!
+        argumentVariables collect: { |var| var type }!
 
     -- FIXME: duplicate methods below
 
@@ -478,6 +481,11 @@ class AstGlobal { name::String _value _definition sources }
 
     method isDynamic
         False!
+
+    -- KLUDGE: Currently types are either Any or AstGlobals. This is marginally
+    -- than the previous mess, but still not nice.
+    method typecheck: object
+        self value typecheck: object!
 
     method redefine: newDefinition
         -- FIXME: This is a bit dodgy: the usage is currently for replacing

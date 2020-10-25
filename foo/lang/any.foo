@@ -7,6 +7,8 @@ interface Any
         self is other!
     direct method default
         False!
+    direct method printOn: stream
+        stream print: "Any"!
     direct method displayOn: stream
         stream print: "#<Any>"!
 end

@@ -211,7 +211,7 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
                               do: { |param| param visitBy: self }
                               interleaving: { self print: " " }.
                           self print: "| " }.
-        aBlock returnType is False
+        aBlock returnType is Any
             ifFalse: { self print: " -> ".
                        aBlock returnType visitBy: self.
                        self print: " " }.
@@ -307,7 +307,7 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
                                           self print: " ".
                                           let param =  signature parameters at: index.
                                           param visitBy: self } }.
-        signature returnType is False
+        signature returnType is Any
             ifFalse: { self print: " -> ".
                        signature returnType visitBy: self }.
         aMethod isRequired
