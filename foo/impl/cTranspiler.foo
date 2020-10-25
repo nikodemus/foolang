@@ -150,11 +150,11 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         visitor declare: main.
         visitor writeDefinitions.
         visitor writeMain.
-        { declarations: visitor generateDeclarations,
-          main: visitor output,
+        { main: visitor output,
+          builtins: visitor generateBuiltins,
           blocks: visitor generateBlocks,
           constants: visitor generateConstants,
-          builtins: visitor generateBuiltins,
+          declarations: visitor generateDeclarations,
           selectors: visitor generateSelectors }!
 
     method addTemp
@@ -260,7 +260,10 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                               builtinVisitor forwardDeclarationFor: each }.
                     globals
                         doValues: { |each|
-                                    builtinVisitor forwardDeclarationFor: each } }!
+                                    builtinVisitor forwardDeclarationFor: each }.
+                    blockFunctions
+                        do: { |block|
+                              out println: block declaration } }!
 
     method generateBuiltins
         -- Debug println: "      #generateBuiltins:".
@@ -283,9 +286,6 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         StringOutput with: { |out| self generateBlocksOn: out }!
 
     method generateBlocksOn: out
-        blockFunctions do: { |block|
-                             out println: block declaration }.
-        out newline.
         blockFunctions do: { |block|
                              out println: block definition }!
 
@@ -378,7 +378,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
     method visitInterfaceDefinition: anInterface
         Tracer trace: #visitInterfaceDefinition:.
         output println: "/**
-* {anInterface name}
+* {anInterface name} (an interface)
 *
 */".
         let interfaceVtableName = Name mangleInterfaceVtable: anInterface.

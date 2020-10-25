@@ -27,8 +27,9 @@ interface TranspilerTest
         let lang = system files path: "foo/lang".
         let env = Environment
                       modules: { "./any" -> lang path: "any.foo",
-                                 "./stringOutput" -> lang path: "stringOutput.foo",
-                                 "./object" -> lang path: "object.foo" }
+                                 "./boolean" -> lang path: "boolean.foo",
+                                 "./object" -> lang path: "object.foo",
+                                 "./stringOutput" -> lang path: "stringOutput.foo" }
                       asFileModules.
         env removeBuiltins: [
             "Any",
@@ -172,6 +173,17 @@ class TestTranspilePrelude { assert system }
                                  ((self x: 1) == (self x: 1)) debug!
                              method isEquivalent: other
                                  (self x == other x)!
+                         end"
+            expect: "#<Boolean False>#<Boolean True>"!
+
+    method testBoolean
+        self transpile: "import .boolean.*
+
+                         class Main \{ x }
+                             is Object
+                             direct method run
+                                 True not debug.
+                                 False not debug!
                          end"
             expect: "#<Boolean False>#<Boolean True>"!
 end
