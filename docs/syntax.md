@@ -257,9 +257,7 @@ Records are objects that respond to messages corresponding to their
 fieldnames.
 
 ``` foolang
-let value = 2.
-let coords = { x: value, y: value }.
-coords x: 40.
+let coords = { x: 2, y: 40 }.
 coords x + coords y --> 42
 ```
 
