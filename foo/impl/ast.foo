@@ -107,7 +107,6 @@ class AstExtend { type interfaces directMethods instanceMethods }
         -- FIXME: Does this mean we should resolve name in env instead
         -- of the way it is now done?
         let target = type definition.
-
         interfaces do: { |each| target __addInterface: each value }.
         directMethods do: { |each| target __addDirectMethod: each }.
         instanceMethods do: { |each| target __addInstanceMethod: each }.
@@ -117,27 +116,52 @@ class AstExtend { type interfaces directMethods instanceMethods }
         "#<AstExtend {type name}>"!
 end
 
-class AstInterface { name interfaces directMethods instanceMethods }
+class AstInterface { name _interfaces _directMethods _instanceMethods }
     is AstDefinition
 
-    method defineIn: env
-        env define: name as: self!
+    direct method name: name
+                  interfaces: interfaces
+                  directMethods: directMethods
+                  instanceMethods: instanceMethods
+        self
+            name: name
+            _interfaces: (Dictionary
+                              keys: (interfaces collect: { |each| each name })
+                              values: interfaces)
+            _directMethods: (Dictionary
+                                 keys: (directMethods collect: { |each| each selector name })
+                                 values: directMethods)
+            _instanceMethods: (Dictionary
+                                   keys: (instanceMethods collect: { |each| each selector name })
+                                   values: instanceMethods)!
 
     method eval
         Interface
             new: name
-            interfaces: (Array from: (interfaces collect: #value))
-            directMethods: (Array from: directMethods)
-            instanceMethods: (Array from: instanceMethods)!
+            interfaces: (self interfaces collect: #value as: Array)
+            directMethods: self directMethods
+            instanceMethods: self instanceMethods!
+
+    method interfaces
+        _interfaces values!
+
+    method instanceMethods
+        _instanceMethods values!
+
+    method directMethods
+        _directMethods values!
 
     method __addInterface: anInterface
-        interfaces push: anInterface!
+        _interfaces at: anInterface name put: anInterface!
 
     method __addDirectMethod: aDirectMethod
-        directMethods add: aDirectMethod!
+        _directMethods at: aDirectMethod selector name put: aDirectMethod!
 
     method __addInstanceMethod: anInstanceMethod
-        instanceMethods add: anInstanceMethod!
+        _instanceMethods at: anInstanceMethod selector name put: anInstanceMethod!
+
+    method defineIn: env
+        env define: name as: self!
 
     method visitBy: visitor
         visitor visitInterfaceDefinition: self!
@@ -321,6 +345,9 @@ class AstMethod { selector argumentVariables returnType body frameSize isDirect 
 
     method isBuiltin
         False!
+
+    method printOn: stream
+        stream print: "#<AstMethod {selector}>"!
 end
 
 interface AstNode

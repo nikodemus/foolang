@@ -667,7 +667,7 @@ void* foo_alloc(size_t size) {
 }
 
 #include "generated_declarations.h"
-#include "generated_builtins.c"
 #include "generated_constants.c"
+#include "generated_builtins.c"
 #include "generated_blocks.c"
 #include "generated_main.c"

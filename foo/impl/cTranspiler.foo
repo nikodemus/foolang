@@ -21,13 +21,14 @@ define Tracer NullTracer!
 
 class BuiltinMethod { selector definition }
     direct method forEach: builtins
-        let list = List new.
+        let dict = Dictionary new.
         builtins
             do: { |selector definition|
-                  list push: (self
-                                  selector: selector
-                                  definition: definition) }.
-        list!
+                  dict at: selector name
+                       put: (self
+                                 selector: selector
+                                 definition: definition) }.
+        dict!
     method isBuiltin
         True!
     method arity
@@ -38,9 +39,11 @@ class BuiltinMethod { selector definition }
         definition signature!
     method body
         definition body!
+    method printOn: stream
+        stream print: "#<BuiltinMethod {selector}>"!
 end
 
-class BuiltinClass { host markFunction directMethods instanceMethods }
+class BuiltinClass { host markFunction _directMethods _instanceMethods }
     is Object
     direct method new: host
                   mark: mark
@@ -48,18 +51,25 @@ class BuiltinClass { host markFunction directMethods instanceMethods }
                   instanceMethods: instanceMethods
         self host: host
              markFunction: mark
-             directMethods: (BuiltinMethod forEach: directMethods)
-             instanceMethods: (BuiltinMethod forEach: instanceMethods)!
+             _directMethods: (BuiltinMethod forEach: directMethods)
+             _instanceMethods: (BuiltinMethod forEach: instanceMethods)!
     method visitBy: visitor
         visitor visitBuiltin: self!
     method name
         host name!
     method eval
         host!
+    method __addInterface: anInterface
+        -- FIXME
+        self!
     method __addDirectMethod: aMethod
-        directMethods add: aMethod!
+        _directMethods at: aMethod selector name put: aMethod!
     method __addInstanceMethod: aMethod
-        instanceMethods add: aMethod!
+        _instanceMethods at: aMethod selector name put: aMethod!
+    method instanceMethods
+        _instanceMethods values!
+    method directMethods
+        _directMethods values!
     method isBuiltin
         True!
     method interfaces
@@ -140,11 +150,11 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         visitor declare: main.
         visitor writeDefinitions.
         visitor writeMain.
-        { declarations: visitor generateDeclarations,
-          main: visitor output,
+        { main: visitor output,
+          builtins: visitor generateBuiltins,
           blocks: visitor generateBlocks,
           constants: visitor generateConstants,
-          builtins: visitor generateBuiltins,
+          declarations: visitor generateDeclarations,
           selectors: visitor generateSelectors }!
 
     method addTemp
@@ -250,7 +260,10 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                               builtinVisitor forwardDeclarationFor: each }.
                     globals
                         doValues: { |each|
-                                    builtinVisitor forwardDeclarationFor: each } }!
+                                    builtinVisitor forwardDeclarationFor: each }.
+                    blockFunctions
+                        do: { |block|
+                              out println: block declaration } }!
 
     method generateBuiltins
         -- Debug println: "      #generateBuiltins:".
@@ -273,9 +286,6 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         StringOutput with: { |out| self generateBlocksOn: out }!
 
     method generateBlocksOn: out
-        blockFunctions do: { |block|
-                             out println: block declaration }.
-        out newline.
         blockFunctions do: { |block|
                              out println: block definition }!
 
@@ -368,7 +378,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
     method visitInterfaceDefinition: anInterface
         Tracer trace: #visitInterfaceDefinition:.
         output println: "/**
-* {anInterface name}
+* {anInterface name} (an interface)
 *
 */".
         let interfaceVtableName = Name mangleInterfaceVtable: anInterface.
@@ -439,7 +449,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         let classVtableName = Name mangleClassVtable: aClass.
         let globalName = Name mangleGlobal: aClass.
         -- Augmented later with ctor and typetest
-        let directMethods = aClass directMethods copy.
+        let directMethods = aClass directMethods asList.
         directMethods
             do: { |each|
                   self
