@@ -151,7 +151,7 @@ x + y
 
 Keyword message with selector `foo:bar:` and arguments 1 and 2 to object
 ``` foolang
-    object foo: 1 bar: 2
+object foo: 1 bar: 2
 ```
 
 Message chaining is also simple concatenation:
