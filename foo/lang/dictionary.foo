@@ -8,6 +8,12 @@ extend Dictionary
         -- Ignore hint, implement in self-hosted implementation.
         self new!
 
+    direct method keys: keys values: values
+        let new = self new.
+        keys with: values
+             do: { |k v| new at: k put: v}.
+        new!
+
     method isEmpty
         self size is 0!
 
@@ -56,13 +62,19 @@ extend Dictionary
         self!
 
     method keys
-        let keys = List new.
-        self doKeys: { |key| keys add: key }.
+        let keys = Array new: self size.
+        let index = 1.
+        self doKeys: { |key|
+                       keys put: key at: index.
+                       index = index + 1 }.
         keys!
 
     method values
-        let values = List new.
-        self doValues: { |val| values add: val }.
+        let values = Array new: self size.
+        let index = 1.
+        self doValues: { |value|
+                         values put: value at: index.
+                         index = index + 1 }.
         values!
 
     method do: block
