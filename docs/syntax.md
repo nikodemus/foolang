@@ -151,7 +151,7 @@ x + y
 
 Keyword message with selector `foo:bar:` and arguments 1 and 2 to object
 ``` foolang
-    object foo: 1 bar: 2
+object foo: 1 bar: 2
 ```
 
 Message chaining is also simple concatenation:
@@ -257,9 +257,7 @@ Records are objects that respond to messages corresponding to their
 fieldnames.
 
 ``` foolang
-let value = 2.
-let coords = { x: value, y: value }.
-coords x: 40.
+let coords = { x: 2, y: 40 }.
 coords x + coords y --> 42
 ```
 
@@ -342,7 +340,7 @@ x::T::K
 Are constructed using square brackets
 
 ``` foolang
-    let array = [1, 2, 3]
+let array = [1, 2, 3]
 ```
 
 ## Module Import
