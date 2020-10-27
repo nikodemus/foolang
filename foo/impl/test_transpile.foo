@@ -24,12 +24,12 @@ interface TranspilerTest
         TestTranspileWrapper test: self system: system!
 
     method transpile: string
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         let env = Environment
-                      modules: { "./any" -> lang path: "any.foo",
-                                 "./boolean" -> lang path: "boolean.foo",
-                                 "./object" -> lang path: "object.foo",
-                                 "./stringOutput" -> lang path: "stringOutput.foo" }
+                      modules: { "./any" -> lang / "any.foo",
+                                 "./boolean" -> lang / "boolean.foo",
+                                 "./object" -> lang / "object.foo",
+                                 "./stringOutput" -> lang / "stringOutput.foo" }
                       asFileModules.
         env removeBuiltins: [
             "Any",
@@ -38,26 +38,25 @@ interface TranspilerTest
         ].
         env load: string.
         let c = CTranspiler transpile: (env global: "Main") in: env.
-        (system files path: "host/generated_selectors.h")
+        (system files / "host/generated_selectors.h")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c selectors }.
-        (system files path: "host/generated_declarations.h")
+        (system files / "host/generated_declarations.h")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c declarations }.
-        (system files path: "host/generated_constants.c")
+        (system files / "host/generated_constants.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c constants }.
-        (system files path: "host/generated_blocks.c")
+        (system files / "host/generated_blocks.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c blocks }.
-        (system files path: "host/generated_main.c")
+        (system files / "host/generated_main.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c main }.
-        (system files path: "host/generated_builtins.c")
+        (system files / "host/generated_builtins.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c builtins }.
-        let tmpExe = "tmp_transpile_test.exe".
-        let path = system currentDirectory path: tmpExe.
+        let path = system currentDirectory / "tmp_transpile_test.exe".
         path ifExists: #deleteFile.
         path exists not assert: "executable cleared".
         -- KLUDGE: Windows CI host linker cannot find the sanitizer libraries,
