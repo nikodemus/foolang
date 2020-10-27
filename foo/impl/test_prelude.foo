@@ -7,9 +7,9 @@ class TestPrelude01 { system ok onFailure }
     is TestSelfHosting
 
     method testPrelude_1_Any
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         self without: ["Any"]
-             modules: { "any" -> lang path: "any.foo" } asFileModules
+             modules: { "any" -> lang / "any.foo" } asFileModules
              load: "import any.Any
                     class Test \{}
                        direct method test
@@ -23,10 +23,10 @@ class TestPrelude02 { system ok onFailure }
     is TestSelfHosting
 
     method testPrelude_2_Object
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         self without: ["Object", "StringOutput"]
-             modules: { "./object" -> lang path: "object.foo",
-                        "./stringOutput" -> lang path: "stringOutput.foo" } asFileModules
+             modules: { "./object" -> lang / "object.foo",
+                        "./stringOutput" -> lang / "stringOutput.foo" } asFileModules
              load: "import .object
                     class X \{ y }
                         is object.Object
@@ -46,11 +46,11 @@ class TestPrelude03 { system ok onFailure }
     is TestSelfHosting
 
     method testPrelude_3_Character
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         self without: ["Character", "Object", "StringOutput"]
-             modules: { "./object" -> lang path: "object.foo",
-                        "./stringOutput" -> lang path: "stringOutput.foo",
-                        "character" -> lang path: "character.foo" } asFileModules
+             modules: { "./object" -> lang / "object.foo",
+                        "./stringOutput" -> lang / "stringOutput.foo",
+                        "character" -> lang / "character.foo" } asFileModules
              load: "import character
                     class X \{ c::character.Character }
                     end
@@ -73,11 +73,11 @@ class TestPrelude04 { system ok onFailure }
     is TestSelfHosting
 
     method testPrelude_4_Iterable
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         self without: ["Iterable", "Object", "StringOutput"]
-             modules: { "./object" -> lang path: "object.foo",
-                        "./stringOutput" -> lang path: "stringOutput.foo",
-                        "iterable" -> lang path: "iterable.foo" } asFileModules
+             modules: { "./object" -> lang / "object.foo",
+                        "./stringOutput" -> lang / "stringOutput.foo",
+                        "iterable" -> lang / "iterable.foo" } asFileModules
              load: "import iterable
                     class MyIterable \{}
                         is iterable.Iterable
@@ -92,12 +92,12 @@ class TestPrelude05 { system ok onFailure }
     is TestSelfHosting
 
     method testPrelude_5_Interval
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         self without: ["Interval", "Object", "StringOutput"]
-             modules: { "./object" -> lang path: "object.foo",
-                        "./stringOutput" -> lang path: "stringOutput.foo",
-                        "./iterable" -> lang path: "iterable.foo",
-                        "interval" -> lang path: "interval.foo" } asFileModules
+             modules: { "./object" -> lang / "object.foo",
+                        "./stringOutput" -> lang / "stringOutput.foo",
+                        "./iterable" -> lang / "iterable.foo",
+                        "interval" -> lang / "interval.foo" } asFileModules
              load: "import interval
                     define ThousandBy10
                         interval.Interval from: 1 to: 1000 by: 10!"
@@ -109,12 +109,12 @@ class TestPrelude06 { system ok onFailure }
     is TestSelfHosting
 
     method testPrelude_6_Collection
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         self without: ["Collection", "Iterable", "Object", "StringOutput"]
-             modules: { "./object" -> lang path: "object.foo",
-                        "./stringOutput" -> lang path: "stringOutput.foo",
-                        "./iterable" -> lang path: "iterable.foo",
-                        "collection" -> lang path: "collection.foo" } asFileModules
+             modules: { "./object" -> lang / "object.foo",
+                        "./stringOutput" -> lang / "stringOutput.foo",
+                        "./iterable" -> lang / "iterable.foo",
+                        "collection" -> lang / "collection.foo" } asFileModules
              load: "import collection
                     class MyCollection \{ data }
                         is collection.Collection
@@ -143,11 +143,11 @@ class TestPrelude07 { system ok onFailure }
     is TestSelfHosting
 
     method testPrelude_7_Block
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         self without: ["Block", "Object", "StringOutput"]
-             modules: { "./object" -> lang path: "object.foo",
-                        "./stringOutput" -> lang path: "stringOutput.foo",
-                        "block" -> lang path: "block.foo" } asFileModules
+             modules: { "./object" -> lang / "object.foo",
+                        "./stringOutput" -> lang / "stringOutput.foo",
+                        "block" -> lang / "block.foo" } asFileModules
              load: "import block
                     class MyBlock \{ data }
                         is block.Block
@@ -170,11 +170,11 @@ class TestPrelude08 { system ok onFailure }
     is TestSelfHosting
 
     method testPrelude_8_Exception
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         self without: ["Error", "TypeError", "DoesNotUnderstand", "Object", "StringOutput"]
-             modules: { "./object" -> lang path: "object.foo",
-                        "./stringOutput" -> lang path: "stringOutput.foo",
-                        "exception" -> lang path: "exception.foo" } asFileModules
+             modules: { "./object" -> lang / "object.foo",
+                        "./stringOutput" -> lang / "stringOutput.foo",
+                        "exception" -> lang / "exception.foo" } asFileModules
              load: "import exception
                     class MyError \{}
                         is exception.Error
@@ -189,13 +189,13 @@ class TestPrelude09 { system ok onFailure }
     is TestSelfHosting
 
     method testPrelude_9_Boolean
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         -- FIXME: This warns about False being undefined because StringOutput
         -- uses it, and evaluator has no knowledge about due to the without.
         self without: ["Boolean", "True", "False", "Object", "StringOutput"]
-             modules: { "./object" -> lang path: "object.foo",
-                        "./stringOutput" -> lang path: "stringOutput.foo",
-                        "boolean0" -> lang path: "boolean0.foo" } asFileModules
+             modules: { "./object" -> lang / "object.foo",
+                        "./stringOutput" -> lang / "stringOutput.foo",
+                        "boolean0" -> lang / "boolean0.foo" } asFileModules
              load: "import boolean0
                     class Test \{}
                         direct method test
@@ -210,12 +210,12 @@ class TestPrelude10 { system ok onFailure }
     is TestSelfHosting
 
     method testPrelude_10_Ordered
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         self without: ["Ordered", "Iterable", "Iterator", "Object", "StringOutput"]
-             modules: { "./object" -> lang path: "object.foo",
-                        "./stringOutput" -> lang path: "stringOutput.foo",
-                        "./iterable" -> lang path: "iterable.foo",
-                        "ordered" -> lang path: "ordered.foo" } asFileModules
+             modules: { "./object" -> lang / "object.foo",
+                        "./stringOutput" -> lang / "stringOutput.foo",
+                        "./iterable" -> lang / "iterable.foo",
+                        "ordered" -> lang / "ordered.foo" } asFileModules
              load: "import ordered
 
                     class Triple \{ a b c }

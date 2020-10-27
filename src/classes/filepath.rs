@@ -54,7 +54,7 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("file", filepath_file);
     vt.add_primitive_method_or_panic("isDirectory", filepath_is_directory);
     vt.add_primitive_method_or_panic("isFile", filepath_is_file);
-    vt.add_primitive_method_or_panic("path:", filepath_path);
+    vt.add_primitive_method_or_panic("/", filepath_slash);
     vt.add_primitive_method_or_panic("toString", filepath_to_string);
     vt
 }
@@ -97,7 +97,7 @@ fn filepath_is_file(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_boolean(receiver.as_filepath("in FilePath#isFile")?.path.is_file()))
 }
 
-fn filepath_path(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+fn filepath_slash(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let filepath = receiver.as_filepath("in FilePath#Path")?;
     let path = filepath.path.as_path();
     let arg = args[0].string_as_str();

@@ -971,9 +971,9 @@ end
     -- of complexity
 
     method testPrelude_0_Any
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         self without: ["Any"]
-             modules: { "any" -> lang path: "any.foo" } asFileModules
+             modules: { "any" -> lang / "any.foo" } asFileModules
              load: "import any.Any
                     class Test \{}
                        direct method test
@@ -983,9 +983,9 @@ end
              expect: True!
 
     method testPrelude_1_Object
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         self without: ["Object"]
-             modules: { "object" -> lang path: "object.foo" } asFileModules
+             modules: { "object" -> lang / "object.foo" } asFileModules
              load: "import object
                     class X \{ y }
                         is object.Object
@@ -1000,10 +1000,10 @@ end
              expect: True!
 
     method testPrelude_2_Character
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         self without: ["Character", "Object"]
-             modules: { "./object" -> lang path: "object.foo",
-                        "character" -> lang path: "character.foo" } asFileModules
+             modules: { "./object" -> lang / "object.foo",
+                        "character" -> lang / "character.foo" } asFileModules
              load: "import character
                     class X \{ c::character.Character }
                     end
@@ -1022,10 +1022,10 @@ end
              expect: [#gotcha, True]!
 
     method testPrelude_3_Interval
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         self without: ["Interval", "Object"]
-             modules: { "./object" -> lang path: "object.foo",
-                        "interval" -> lang path: "interval.foo" } asFileModules
+             modules: { "./object" -> lang / "object.foo",
+                        "interval" -> lang / "interval.foo" } asFileModules
              load: "import interval
                     define ThousandBy10
                         interval.Interval from: 1 to: 1000 by: 10!"
@@ -1033,10 +1033,10 @@ end
              expect: 100!
 
     method testPrelude_4_Iterable
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         self without: ["Iterable", "Object"]
-             modules: { "./object" -> lang path: "object.foo",
-                        "iterable" -> lang path: "iterable.foo" } asFileModules
+             modules: { "./object" -> lang / "object.foo",
+                        "iterable" -> lang / "iterable.foo" } asFileModules
              load: "import iterable
                     class MyIterable \{}
                         is iterable.Iterable
@@ -1047,11 +1047,11 @@ end
              expect: [1,2,3] asList!
 
     method testPrelude_5_Collection
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         self without: ["Collection", "Iterable", "Object"]
-             modules: { "./object" -> lang path: "object.foo",
-                        "./iterable" -> lang path: "iterable.foo",
-                        "collection" -> lang path: "collection.foo" } asFileModules
+             modules: { "./object" -> lang / "object.foo",
+                        "./iterable" -> lang / "iterable.foo",
+                        "collection" -> lang / "collection.foo" } asFileModules
              load: "import collection
                     class MyCollection \{ data }
                         is collection.Collection
@@ -1076,10 +1076,10 @@ end
              expect: [[1,2,3] asList, True]!
 
     method testPrelude_6_Block
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         self without: ["Block", "Object"]
-             modules: { "./object" -> lang path: "object.foo",
-                        "block" -> lang path: "block.foo" } asFileModules
+             modules: { "./object" -> lang / "object.foo",
+                        "block" -> lang / "block.foo" } asFileModules
              load: "import block
                     class MyBlock \{ data }
                         is block.Block
@@ -1098,10 +1098,10 @@ end
              expect: [2,12,103] asList!
 
     method test1Prelude_7_Exception
-        let lang = system files path: "foo/lang".
+        let lang = system files / "foo/lang".
         self without: ["Error", "TypeError", "DoesNotUnderstand", "Object"]
-             modules: { "./object" -> lang path: "object.foo",
-                        "exception" -> lang path: "exception.foo" } asFileModules
+             modules: { "./object" -> lang / "object.foo",
+                        "exception" -> lang / "exception.foo" } asFileModules
              load: "import exception
                     class MyError \{}
                         is exception.Error

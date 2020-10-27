@@ -10,7 +10,7 @@ extend FilePath
     method readString
         self forRead open: { |f| f readString }!
     method readString: path
-        (self path: path) readString!
+        (self / path) readString!
     method ifExists: block
         self exists ifTrue: { block cull: self }!
 end
@@ -41,7 +41,7 @@ class TestFilePath { assert dir none file }
                testing: "FilePath#isFile (file)"!
 
     method testDeleteFile
-        let tmpfile = dir path: "FilePath-testDeleteFile.tmp".
+        let tmpfile = dir / "FilePath-testDeleteFile.tmp".
         -- Try to clean up first.
         tmpfile ifExists: { tmpfile deleteFile }.
         assert false: { tmpfile exists }
@@ -57,8 +57,8 @@ class TestFilePath { assert dir none file }
         -- Assumes the repository root as the current directory
         let tests = self assert: assert
                          dir: system currentDirectory
-                         none: (system currentDirectory path: "does-not-exists")
-                         file: (system currentDirectory path: "README.md").
+                         none: (system currentDirectory / "does-not-exists")
+                         file: (system currentDirectory / "README.md").
         tests testDeleteFile.
         tests testExists.
         tests testIsDirectory.
