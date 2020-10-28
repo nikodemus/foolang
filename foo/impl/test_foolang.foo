@@ -743,21 +743,9 @@ end
             expect: 3!
 
     method testImport5
-        -- relative import
-        self modules: { "foo" -> "define Foo 21!",
-                        "bar" -> "define Bar 0!",
-                        "./foo" -> "define Foo 0!",
-                        "./bar" -> "define Bar 2!"} asStringModules
-             load: "import foo
-                    import .bar
-                    define Test foo.Foo * bar.Bar!"
-             eval: "Test"
-             expect: 42!
-
-    method testImport6
         -- submodule import
-        self modules: { "foo/bar" -> "define Quux 42!",
-                        "foo/zot" -> "define Beep 123!" } asStringModules
+        self modules: { "foo.bar" -> "define Quux 42!",
+                        "foo.zot" -> "define Beep 123!" } asStringModules
              load: "import foo.bar.Quux
                     import foo.zot
                     define A Quux!
@@ -765,11 +753,21 @@ end
              eval: "A + B"
              expect: 165!
 
+    method testImport6
+        -- relative import
+        self modules: { "foo.foo" -> "define Foo 21!",
+                        "foo.bar" -> "import .foo.Foo
+                                      define Bar 2!" } asStringModules
+             load: "import foo.bar
+                    define Test bar.Foo * bar.Bar!"
+             eval: "Test"
+             expect: 42!
+
     method testImport7
         -- leading comments at toplevel
-        self modules: { "foo/bar" -> "-- comment 1
+        self modules: { "foo.bar" -> "-- comment 1
                                       define Quux 42!",
-                        "foo/zot" -> "-- comment 2
+                        "foo.zot" -> "-- comment 2
                                       define Beep 123!" } asStringModules
              load: "-- comment 3
                     import foo.bar.Quux
@@ -787,7 +785,7 @@ end
         self modules: { "foo" -> "interface Foo
                                      method foo
                                         42!
-                                  end" }
+                                  end" } asStringModules
             load: "import foo
                    class Test \{}
                       is foo.Foo

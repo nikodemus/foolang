@@ -60,6 +60,8 @@ class Constant { name value }
         AstConstantRef value: value!
 end
 
+define $CurrentModulePath []!
+
 class ModuleDictionary { available translated }
     is Object
 
@@ -72,29 +74,40 @@ class ModuleDictionary { available translated }
              translated: Dictionary new!
 
     method at: name relative: relative in: env
-        let path = "/" join: name.
         self translated
-            at: path
-            ifNonePut: { self _translate: name _relative: relative _in: env }!
+            at: name
+            ifNonePut: { self _translate: name
+                              _in: env
+                              _relative: relative }!
 
-    method _translate: name _relative: relative _in: env
-        let path = "/" join: name.
-        let path = relative
-                       ifTrue: { "./{path}" }
-                       ifFalse: { path }.
-        let name = "." join: name.
+    method _translate: path _in: env _relative: relative
+        -- Debug println: "_translate: {path} _in: ... _:relative: {relative}".
+        relative
+            ifTrue: { self _translatePath: ($CurrentModulePath butlast concat: path)
+                           _in: env }
+            ifFalse: { self _translatePath: path
+                            _in: env }!
+
+    method _translatePath: path _in: env
+        -- Debug println: "_translatePath: {path} _in: ...".
+        let dotPath = "." join: path.
         let source
             = self available
                 at: path
-                ifNone: { Error raise: "Unknown module: {name}" }.
+                ifNone: { Error raise: "Unknown module: {dotPath}, available: {available}" }.
+        self _translateSource: source _for: path _in: env!
+
+    method _translateSource: source _for: path _in: env
+        -- Debug println: "_translateSource: {source} _for: {path} _in: ...".
+        let $CurrentModulePath = path.
         { (Environment
                builtins: env builtins
                modules: self)
           load: source }
             on: Error
             do: { |e|
-                  let maybeDot = relative ifTrue: { "." } ifFalse: { "" }.
-                  Error raise: "Error loading module {maybeDot}{name}:\n{e description}" }!
+                  let path = "." join: $CurrentModulePath.
+                  Error raise: "Error loading module {path}:\n{e description}" }!
 end
 
 class ModuleBinding { name module }
