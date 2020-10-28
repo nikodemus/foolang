@@ -8,16 +8,25 @@ import .cTranspiler.CTranspiler
 class StringModuleDictionary { _dict }
     direct method new: dict
         self _dict: dict!
-    method at: path ifNone: block
+    method at: fullPath ifNone: block
+        -- Debug println: "STRING: {fullPath}".
+        let path = "." join: fullPath.
         _dict at: path ifNone: block!
 end
 
 class FileModuleDictionary { _dict }
     direct method new: dict
         self _dict: dict!
-    method at: path ifNone: block
-        (_dict at: path ifNone: block)
-            file forRead open: { |f| f readString }!
+    method at: fullPath ifNone: block
+        -- Debug println: "FILE: {fullPath}".
+        let path = fullPath butlast copy.
+        let filepath = (_dict at: path pop ifNone: block).
+        { path isEmpty }
+            whileFalse: { filepath = filepath / path pop }.
+        filepath / "{fullPath last}.foo"
+            ifExists: { |foopath|
+                        foopath file forRead open: { |f| f readString } }
+            ifDoesNotExist: block!
 end
 
 extend Dictionary

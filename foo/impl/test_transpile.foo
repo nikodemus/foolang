@@ -26,10 +26,7 @@ interface TranspilerTest
     method transpile: string
         let lang = system files / "foo/lang".
         let env = Environment
-                      modules: { "./any" -> lang / "any.foo",
-                                 "./boolean" -> lang / "boolean.foo",
-                                 "./object" -> lang / "object.foo",
-                                 "./stringOutput" -> lang / "stringOutput.foo" }
+                      modules: { "lang" -> lang }
                       asFileModules.
         env removeBuiltins: [
             "Any",
@@ -141,7 +138,7 @@ class TestTranspilePrelude { assert system }
     is TranspilerTest
 
     method testAny
-        self transpile: "import .any.Any
+        self transpile: "import lang.any.Any
 
                          class Main \{}
                              direct method run
@@ -150,7 +147,7 @@ class TestTranspilePrelude { assert system }
             expect: "#<Boolean True>"!
 
     method testStringOutput
-        self transpile: "import .stringOutput.*
+        self transpile: "import lang.stringOutput.StringOutput
 
                          class Main \{}
                              direct method run
@@ -163,7 +160,7 @@ class TestTranspilePrelude { assert system }
             expect: "#<String Ok!>"!
 
     method testObject
-        self transpile: "import .object.*
+        self transpile: "import lang.object.Object
 
                          class Main \{ x }
                              is Object
@@ -176,7 +173,7 @@ class TestTranspilePrelude { assert system }
             expect: "#<Boolean False>#<Boolean True>"!
 
     method testBoolean
-        self transpile: "import .boolean.*
+        self transpile: "import lang.boolean.*
 
                          class Main \{ x }
                              is Object

@@ -9,11 +9,11 @@ class TestPrelude01 { system ok onFailure }
     method testPrelude_1_Any
         let lang = system files / "foo/lang".
         self without: ["Any"]
-             modules: { "any" -> lang / "any.foo" } asFileModules
-             load: "import any.Any
+             modules: { "lang" -> lang } asFileModules
+             load: "import lang.any
                     class Test \{}
                        direct method test
-                          Any includes: 42!
+                          any.Any includes: 42!
                     end"
              eval: "Test test"
              expect: True!
@@ -25,9 +25,8 @@ class TestPrelude02 { system ok onFailure }
     method testPrelude_2_Object
         let lang = system files / "foo/lang".
         self without: ["Object", "StringOutput"]
-             modules: { "./object" -> lang / "object.foo",
-                        "./stringOutput" -> lang / "stringOutput.foo" } asFileModules
-             load: "import .object
+             modules: { "lang" -> lang } asFileModules
+             load: "import lang.object
                     class X \{ y }
                         is object.Object
                         method displayOn: out
@@ -48,10 +47,8 @@ class TestPrelude03 { system ok onFailure }
     method testPrelude_3_Character
         let lang = system files / "foo/lang".
         self without: ["Character", "Object", "StringOutput"]
-             modules: { "./object" -> lang / "object.foo",
-                        "./stringOutput" -> lang / "stringOutput.foo",
-                        "character" -> lang / "character.foo" } asFileModules
-             load: "import character
+             modules: { "lang" -> lang } asFileModules
+             load: "import lang.character
                     class X \{ c::character.Character }
                     end
                     class Test \{}
@@ -75,10 +72,8 @@ class TestPrelude04 { system ok onFailure }
     method testPrelude_4_Iterable
         let lang = system files / "foo/lang".
         self without: ["Iterable", "Object", "StringOutput"]
-             modules: { "./object" -> lang / "object.foo",
-                        "./stringOutput" -> lang / "stringOutput.foo",
-                        "iterable" -> lang / "iterable.foo" } asFileModules
-             load: "import iterable
+             modules: { "lang" -> lang } asFileModules
+             load: "import lang.iterable
                     class MyIterable \{}
                         is iterable.Iterable
                         method iterator
@@ -94,11 +89,8 @@ class TestPrelude05 { system ok onFailure }
     method testPrelude_5_Interval
         let lang = system files / "foo/lang".
         self without: ["Interval", "Object", "StringOutput"]
-             modules: { "./object" -> lang / "object.foo",
-                        "./stringOutput" -> lang / "stringOutput.foo",
-                        "./iterable" -> lang / "iterable.foo",
-                        "interval" -> lang / "interval.foo" } asFileModules
-             load: "import interval
+             modules: { "lang" -> lang } asFileModules
+             load: "import lang.interval
                     define ThousandBy10
                         interval.Interval from: 1 to: 1000 by: 10!"
              eval: "ThousandBy10 size"
@@ -111,11 +103,8 @@ class TestPrelude06 { system ok onFailure }
     method testPrelude_6_Collection
         let lang = system files / "foo/lang".
         self without: ["Collection", "Iterable", "Object", "StringOutput"]
-             modules: { "./object" -> lang / "object.foo",
-                        "./stringOutput" -> lang / "stringOutput.foo",
-                        "./iterable" -> lang / "iterable.foo",
-                        "collection" -> lang / "collection.foo" } asFileModules
-             load: "import collection
+             modules: { "lang" -> lang } asFileModules
+             load: "import lang.collection
                     class MyCollection \{ data }
                         is collection.Collection
                         direct method new
@@ -145,10 +134,8 @@ class TestPrelude07 { system ok onFailure }
     method testPrelude_7_Block
         let lang = system files / "foo/lang".
         self without: ["Block", "Object", "StringOutput"]
-             modules: { "./object" -> lang / "object.foo",
-                        "./stringOutput" -> lang / "stringOutput.foo",
-                        "block" -> lang / "block.foo" } asFileModules
-             load: "import block
+             modules: { "lang" -> lang } asFileModules
+             load: "import lang.block
                     class MyBlock \{ data }
                         is block.Block
                         method apply: arguments
@@ -172,10 +159,8 @@ class TestPrelude08 { system ok onFailure }
     method testPrelude_8_Exception
         let lang = system files / "foo/lang".
         self without: ["Error", "TypeError", "DoesNotUnderstand", "Object", "StringOutput"]
-             modules: { "./object" -> lang / "object.foo",
-                        "./stringOutput" -> lang / "stringOutput.foo",
-                        "exception" -> lang / "exception.foo" } asFileModules
-             load: "import exception
+             modules: { "lang" -> lang } asFileModules
+             load: "import lang.exception
                     class MyError \{}
                         is exception.Error
                         method _description
@@ -193,10 +178,8 @@ class TestPrelude09 { system ok onFailure }
         -- FIXME: This warns about False being undefined because StringOutput
         -- uses it, and evaluator has no knowledge about due to the without.
         self without: ["Boolean", "True", "False", "Object", "StringOutput"]
-             modules: { "./object" -> lang / "object.foo",
-                        "./stringOutput" -> lang / "stringOutput.foo",
-                        "boolean0" -> lang / "boolean0.foo" } asFileModules
-             load: "import boolean0
+             modules: { "lang" -> lang } asFileModules
+             load: "import lang.boolean0
                     class Test \{}
                         direct method test
                            boolean0.True
@@ -212,11 +195,8 @@ class TestPrelude10 { system ok onFailure }
     method testPrelude_10_Ordered
         let lang = system files / "foo/lang".
         self without: ["Ordered", "Iterable", "Iterator", "Object", "StringOutput"]
-             modules: { "./object" -> lang / "object.foo",
-                        "./stringOutput" -> lang / "stringOutput.foo",
-                        "./iterable" -> lang / "iterable.foo",
-                        "ordered" -> lang / "ordered.foo" } asFileModules
-             load: "import ordered
+             modules: { "lang" -> lang } asFileModules
+             load: "import lang.ordered
 
                     class Triple \{ a b c }
                         is ordered.Ordered

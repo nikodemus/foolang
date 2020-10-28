@@ -12,7 +12,13 @@ extend FilePath
     method readString: path
         (self / path) readString!
     method ifExists: block
-        self exists ifTrue: { block cull: self }!
+        self
+            ifExists: block
+            ifDoesNotExist: { False }!
+    method ifExists: existsBlock ifDoesNotExist: doesNotExistBlock
+        self exists
+            ifTrue: { existsBlock cull: self }
+            ifFalse: { doesNotExistBlock cull: self }!
 end
 
 class TestFilePath { assert dir none file }

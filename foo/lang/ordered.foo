@@ -55,6 +55,8 @@ interface Ordered
         self at: self size!
 
     method butlast
+        self isEmpty
+            ifTrue: { return self }.
         self from: 1 to: (self size - 1)!
 
     method rest
@@ -83,10 +85,28 @@ interface Ordered
           do: { |index| block value: (self at: index) value: index }!
 
     method copy
-        let copy = Self of: (self elementType) new: self size.
-        1 to: self size
-          do: { |i| copy put: (self at: i) at: i }.
-          copy!
+        let copy = Self of: self elementType new: self size.
+        self copyTo: copy!
+
+    method copyTo: other
+         self copyTo: other startingAt: 1!
+
+    method copyTo: other startingAt: index
+        self from: 1 to: self size copyTo: other startingAt: index!
+
+    method from: first to: last copyTo: other startingAt: index
+        let offset = 0.
+        first to: last
+              do: { |i|
+                    other put: (self at: i) at: (index + offset).
+                    offset = offset + 1 }.
+        other!
+
+    method concat: other
+        Output debug println: "XXX: {self} concat: {other}".
+        let copy = Self of: self elementType new: self size + other size.
+        self copyTo: copy.
+        other copyTo: copy startingAt: self size + 1!
 
     method species
         Self of: self elementType!
