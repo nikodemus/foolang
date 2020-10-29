@@ -19,4 +19,26 @@ class TestOrdered { assert }
                        let split = (case first splitBy: ":" character) asArray.
                        split == case second }
                testing: "Ordered#splitBy:"!
+
+    method selectCases
+        [ [[1,2,3,4], { |x| x > 2 }, [3,4]],
+          [[10,1,10,1,1,10], { |x| x is 10 }, [10,10,10]] ]!
+
+    method testSelect
+        assert forAll: self selectCases
+               that: { |case|
+                       let selected = case first select: case second.
+                       selected == case third }
+               testing: "Ordered#select:"!
+
+    method rejectCases
+        [ [[1,2,3,4], { |x| x > 2 }, [1,2]],
+          [[10,1,10,1,1,10], { |x| x is 10 }, [1,1,1]] ]!
+
+    method testReject
+        assert forAll: self rejectCases
+               that: { |case|
+                       let notRejected = case first reject: case second.
+                       notRejected == case third }
+               testing: "Ordered#selectBy:"!
 end

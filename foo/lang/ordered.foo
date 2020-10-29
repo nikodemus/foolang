@@ -125,6 +125,36 @@ interface Ordered
                 coll put: (block value: (self at: i)) at: i }.
         coll!
 
+    method reject: block
+        self reject: block as: self species!
+
+    method reject: block as: type
+        let capacity = self size.
+        let tmp = type new: capacity.
+        let n = 0.
+        1 to: capacity
+          do: { |index|
+                let maybe = self at: index.
+                (block value: maybe)
+                    ifFalse: { n = n + 1.
+                               tmp put: maybe at: n } }.
+        tmp from: 1 to: n!
+
+    method select: block
+        self select: block as: self species!
+
+    method select: block as: type
+        let capacity = self size.
+        let tmp = type new: capacity.
+        let n = 0.
+        1 to: capacity
+          do: { |index|
+                let maybe = self at: index.
+                (block value: maybe)
+                    ifTrue: { n = n + 1.
+                              tmp put: maybe at: n } }.
+        tmp from: 1 to: n!
+
     -- FIXME: Inconsistency between split:do: and splitBy:
     -- ...the use-cases are different, but at least the idea should be
     -- made clear in the names.
