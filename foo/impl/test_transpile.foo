@@ -146,18 +146,16 @@ class TestTranspilePrelude { assert system }
                          end"
             expect: "#<Boolean True>"!
 
-    method testStringOutput
-        self transpile: "import lang.stringOutput.StringOutput
+    method testBoolean
+        self transpile: "import lang.boolean.*
 
-                         class Main \{}
+                         class Main \{ x }
+                             is Object
                              direct method run
-                                 (StringOutput with: \{ |out|
-                                                        out print: \"O\".
-                                                        out print: \"k\".
-                                                        out print: \"!\" })
-                                     debug!
+                                 True not debug.
+                                 False not debug!
                          end"
-            expect: "#<String Ok!>"!
+            expect: "#<Boolean False>#<Boolean True>"!
 
     method testObject
         self transpile: "import lang.object.Object
@@ -172,16 +170,18 @@ class TestTranspilePrelude { assert system }
                          end"
             expect: "#<Boolean False>#<Boolean True>"!
 
-    method testBoolean
-        self transpile: "import lang.boolean.*
+    method testStringOutput
+        self transpile: "import lang.stringOutput.StringOutput
 
-                         class Main \{ x }
-                             is Object
+                         class Main \{}
                              direct method run
-                                 True not debug.
-                                 False not debug!
+                                 (StringOutput with: \{ |out|
+                                                        out print: \"O\".
+                                                        out print: \"k\".
+                                                        out print: \"!\" })
+                                     debug!
                          end"
-            expect: "#<Boolean False>#<Boolean True>"!
+            expect: "#<String Ok!>"!
 end
 
 class TestTranspileInterface { assert system }
