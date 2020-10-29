@@ -376,7 +376,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output newline!
 
     method visitInterfaceDefinition: anInterface
-        Tracer trace: #visitInterfaceDefinition:.
+        Tracer visitInterfaceDefinition: anInterface name.
         output println: "/**
 * {anInterface name} (an interface)
 *
@@ -574,7 +574,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output newline!
 
     method _generateMethod: aMethod _in: aClass _as: mangledName
-        -- Debug println: "_generateMethod:_in: {aClass} _as: {mangledName}".
+        -- Debug println: "_generateMethod: {aMethod selector} _in: {aClass name} _as: {mangledName}".
         let $home = aMethod.
         output print: "struct Foo ".
         output println: mangledName.
@@ -601,10 +601,10 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output newline!
 
     method _generateTypecheck: type _for: value
+        -- Debug println: "_generateTypecheck: {type} _for: {value}".
         type is Any
             ifTrue: { return value visitBy: self }.
         let type = type::AstGlobal.
-        -- Debug println: "_generateTypecheck: {type} _for: {value}".
         self declare: type.
         output print: "foo_vtable_typecheck(&".
         output print: (Name mangleInstanceVtable: type).
@@ -697,7 +697,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output newline!
 
     method visitSend: aSend
-        Tracer trace: #visitSend:.
+        Tracer visitSend: aSend.
         output print: "(\{ ".
         let argVars = aSend arguments
                           collect: { |each|
@@ -719,7 +719,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output print: "); })"!
 
     method visitSelfInstance: aSelf
-        Tracer trace: #visitSelfInstance:.
+        Tracer visitSelfInstance: aSelf.
         output print: "ctx->receiver"!
 
     method visitSelfClass: aSelf
