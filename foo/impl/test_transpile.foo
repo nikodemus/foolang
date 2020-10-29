@@ -157,6 +157,39 @@ class TestTranspilePrelude { assert system }
                          end"
             expect: "#<Boolean False>#<Boolean True>"!
 
+    method testIterable
+        self transpile: "import lang.iterable.*
+
+                         class MyIterator \{ pos thing }
+                             is Iterator
+                             method nextIfNone: block
+                                self hasNext
+                                    ifTrue: \{ pos = pos + 1.
+                                               thing at: pos }
+                                    ifFalse: block!
+                             method hasNext
+                                pos < thing size!
+                         end
+
+                         class MyIterable \{ a b c }
+                             is Iterable
+                             method iterator
+                                 MyIterator pos: 0 thing: self!
+                             method at: index
+                                 index is 1 ifTrue: \{ return a }.
+                                 index is 2 ifTrue: \{ return b }.
+                                 index is 3 ifTrue: \{ return c }!
+                             method size
+                                 3!
+                         end
+
+                         class Main \{}
+                             direct method run
+                                 (MyIterable a: 10 b: 20 c: 30)
+                                     do: \{ |each| each debug }!
+                         end"
+            expect: "#<Integer 10>#<Integer 20>#<Integer 30>"!
+
     method testObject
         self transpile: "import lang.object.Object
 

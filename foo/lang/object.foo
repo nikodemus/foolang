@@ -5,8 +5,6 @@
 -- Should be able to specify non-inherited methods for
 -- cases like #default. (direct method?)
 
-import .stringOutput.StringOutput
-
 interface Object
     direct method isEquivalent: other
         self is other!
@@ -24,17 +22,11 @@ interface Object
     direct method displayOn: stream
         self printOn: stream!
 
-    direct method displayString
-        StringOutput with: { |out| self displayOn: out }!
-
     method printOn: stream
         stream print: self toString!
 
     method displayOn: stream
         self printOn: stream!
-
-    method displayString
-        StringOutput with: { |out| self displayOn: out }!
 
     method yourself
         self!
@@ -47,11 +39,4 @@ interface Object
     method checkEqualInternal: other
         self == other
             ifFalse: { self mismatch: other }!
-
-    method mismatch: other
-        let err = StringOutput new.
-        err print: self displayString.
-        err print: " <==> ".
-        err print: other displayString.
-        panic "Mismatch: {err content}"!
 end
