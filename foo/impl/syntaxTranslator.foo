@@ -269,13 +269,13 @@ class SyntaxTranslator { env currentMethod }
                             selector: signature selector
                             argumentVariables: argumentVariables
                             returnType: (self _visitType: signature returnType)
-                            isDirect: aMethod isDirect.
+                            isDirect: aMethod isDirect
+                            isRequired: aMethod body is False.
         astMethod
-            body: (aMethod body is False
-                       ifTrue: { False }
-                       ifFalse: { aMethod body visitBy: (SyntaxTranslator
-                                               env: bodyEnv
-                                               currentMethod: astMethod) }).
+            body: (astMethod isRequired not
+                       ifTrue: { aMethod body visitBy: (SyntaxTranslator
+                                              env: bodyEnv
+                                              currentMethod: astMethod) }).
         astMethod
             frameSize: bodyEnv frame size.
         astMethod!
