@@ -390,7 +390,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                       _generateMethod: each
                       _in: anInterface
                       _as: (Name mangleDirectMethod: each selector in: anInterface) }.
-        anInterface instanceMethods
+        (anInterface instanceMethods reject: #isRequired)
             do: { |each|
                   self
                       _generateMethod: each

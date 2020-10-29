@@ -241,6 +241,23 @@ class TestTranspileInterface { assert system }
                                  MyClass boop ding debug!
                          end"
             expect: "#<Integer 101>"!
+
+    method testInterfaceRequired
+        self transpile: "interface MyInterface
+                             required method foo
+                             method bar
+                                 self foo!
+                         end
+                         class MyClass \{}
+                             is MyInterface
+                             method foo
+                                 4102!
+                         end
+                         class Main \{}
+                             direct method run
+                                 MyClass new bar debug!
+                         end"
+            expect: "#<Integer 4102>"!
 end
 
 class TestTranspileKeyword { assert system }

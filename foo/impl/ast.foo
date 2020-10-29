@@ -292,20 +292,22 @@ class AstReaderMethod { slot }
         slot referenceUpwards: False!
 end
 
-class AstMethod { selector argumentVariables returnType body frameSize isDirect }
+class AstMethod { selector argumentVariables returnType body frameSize isDirect isRequired }
     is Object
 
     direct method selector: selector
                   argumentVariables: argumentVariables
                   returnType: returnType
                   isDirect: isDirect
+                  isRequired: isRequired
         self
             selector: selector
             argumentVariables: argumentVariables
             returnType: returnType
             body: False
             frameSize: False
-            isDirect: isDirect!
+            isDirect: isDirect
+            isRequired: isRequired!
 
     method body: bodyVal
         body is False assert: "body not set".
