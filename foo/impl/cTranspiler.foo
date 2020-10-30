@@ -244,56 +244,59 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
 
     method generateDeclarations
         -- Debug println: "      #generateDeclarations".
-        StringOutput
-            with: { |out|
-                    let builtinVisitor = CTranspiler
-                                             output: out
-                                             selectorMap: selectorMap
-                                             blockFunctions: blockFunctions
-                                             constants: constants
-                                             variables: variables
-                                             tmpCounter: tmpCounter
-                                             globals: globals.
-                    -- FIXME: visit only referenced builtins
-                    BuiltinClasses
-                        do: { |each|
-                              builtinVisitor forwardDeclarationFor: each }.
-                    globals
-                        doValues: { |each|
-                                    builtinVisitor forwardDeclarationFor: each }.
-                    blockFunctions
-                        do: { |block|
-                              out println: block declaration } }!
+        let output = StringOutput new.
+        let builtinVisitor = CTranspiler
+                                 output: output
+                                 selectorMap: selectorMap
+                                 blockFunctions: blockFunctions
+                                 constants: constants
+                                 variables: variables
+                                 tmpCounter: tmpCounter
+                                 globals: globals.
+        -- FIXME: visit only referenced builtins
+        BuiltinClasses
+            do: { |each|
+                  builtinVisitor forwardDeclarationFor: each }.
+        globals
+            doValues: { |each|
+                        builtinVisitor forwardDeclarationFor: each }.
+        blockFunctions
+            do: { |block|
+                  output print: block declaration.
+                  output println: ";" }.
+        output!
 
     method generateBuiltins
         -- Debug println: "      #generateBuiltins:".
-        StringOutput
-            with: { |out|
-                    let builtinVisitor = CTranspiler
-                                             output: out
-                                             selectorMap: selectorMap
-                                             blockFunctions: blockFunctions
-                                             constants: constants
-                                             variables: variables
-                                             tmpCounter: tmpCounter
-                                             globals: globals.
-                    -- FIXME: used builtins only
-                    BuiltinClasses
-                        do: { |each|
-                              builtinVisitor visitClassDefinition: each } }!
+        let output = StringOutput new.
+        let builtinVisitor = CTranspiler
+                                 output: output
+                                 selectorMap: selectorMap
+                                 blockFunctions: blockFunctions
+                                 constants: constants
+                                 variables: variables
+                                 tmpCounter: tmpCounter
+                                 globals: globals.
+        -- FIXME: used builtins only
+        BuiltinClasses
+            do: { |each|
+                  builtinVisitor visitClassDefinition: each }.
+        output!
 
     method generateBlocks
-        StringOutput with: { |out| self generateBlocksOn: out }!
+        self generateBlocksOn: StringOutput new!
 
     method generateBlocksOn: out
         blockFunctions do: { |block|
-                             out println: block definition }!
+                             out println: block definition }.
+        out!
 
     method generateConstants
-        StringOutput with: { |out| self generateConstantsOn: out }!
+        self generateConstantsOn: StringOutput new!
 
     method generateConstantsOn: out
-        constants do: { |each| out println: each }!
+        constants do: { |each| out println: each }.
+        out!
 
     method selectorCName: selector
         self selectorMap map: selector!
@@ -332,10 +335,10 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         blockFunctions add: False.
         let index = blockFunctions size.
         let cname = "fooblock_id{index}".
-        let signature = StringOutput with: { |out|
-                                             out print: "struct Foo ".
-                                             out print: cname.
-                                             out print: "(struct FooContext* ctx)" }.
+        let signature = StringOutput new.
+        signature print: "struct Foo ".
+        signature print: cname.
+        signature print: "(struct FooContext* ctx)".
         output print: signature.
         output println: " \{".
         -- FIXME: Given that we need to check types here, should also put the args
@@ -358,7 +361,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                      _for: block body.
         output println: ";\n}".
         blockFunctions
-            put: { declaration: "{signature};", definition: output }
+            put: { declaration: signature, definition: output }
             at: index.
         cname!
 
