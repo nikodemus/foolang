@@ -2,7 +2,13 @@ define DirectMethods
     []!
 
 define InstanceMethods
-    { #value
+    { #loop
+          -> {signature: [], vars: 0,
+              body: "for (;;) \{
+    foo_send(ctx, &FOO_value, ctx->receiver, 0);
+};
+return FooGlobal_False;"},
+      #value
           -> {signature: [], vars: 0,
               body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
 return PTR(FooBlock, ctx->receiver.datum)->function(block_ctx);"},

@@ -588,6 +588,9 @@ class AstSend {
 
     method visitBy: visitor
         visitor visitSend: self!
+
+    method printOn: stream
+        stream print: "#<AstSend {selector} to {receiver} with {arguments}>"!
 end
 
 class AstBlock { body argumentVariables returnType frameSize }

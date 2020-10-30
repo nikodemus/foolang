@@ -1,4 +1,8 @@
+import .object.Object
+
 class Chain { _first _last size }
+    is Object
+
     direct method new
         let array = Array new: 128.
         -- First element contains number of elements
@@ -42,6 +46,7 @@ class Chain { _first _last size }
 end
 
 class StringOutput { _chain }
+    is Object
 
     direct method new: string
         self new print: string!
@@ -86,4 +91,19 @@ class StringOutput { _chain }
     method newline
         self print: "\n".
         self!
+end
+
+extend Object
+    method mismatch: other
+        let err = StringOutput new.
+        err print: self displayString.
+        err print: " <==> ".
+        err print: other displayString.
+        panic "Mismatch: {err content}"!
+
+    method displayString
+        StringOutput with: { |out| self displayOn: out }!
+
+    direct method displayString
+        StringOutput with: { |out| self displayOn: out }!
 end

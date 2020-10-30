@@ -1,4 +1,8 @@
+import .any.Any
+import .object.Object
+
 interface Iterator
+    is Object
 
     required method nextIfNone: block
     required method hasNext
@@ -46,7 +50,6 @@ iterator every time and won't perform as well.
 
 All other methods are implemented on top of these ones.
 ---
-import .object.Object
 
 interface Iterable
     is Object

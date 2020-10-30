@@ -51,6 +51,9 @@ class Variable { name type index }
 
     method referenceUpwards: offset
         AstLexicalRef variable: self frameOffset: offset!
+
+    method printOn: stream
+        stream print: "#<Variable {name}>"!
 end
 
 class Constant { name value }
