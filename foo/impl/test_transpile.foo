@@ -157,6 +157,15 @@ class TestTranspilePrelude { assert system }
                          end"
             expect: "#<Boolean False>#<Boolean True>"!
 
+    method testInteger
+        self transpile: "import lang.integer
+
+                         class Main \{}
+                             direct method run
+                                 1 to: 3 do: \{ |i| i debug }!
+                         end"
+            expect: "#<Integer 1>#<Integer 2>#<Integer 3>"!
+
     method testInterval
         self transpile: "import lang.interval.Interval
                          class Main \{}
