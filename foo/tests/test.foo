@@ -4,7 +4,6 @@ import lib.si.SI_Tests
 import lang.dictionary.TestDictionary
 import lang.filepath.TestFilePath
 import lang.filestream.TestFileStream
-import lang.integer.TestInteger
 import lang.record.TestRecord
 import lang.selector.TestSelector
 import lang.string.TestString
