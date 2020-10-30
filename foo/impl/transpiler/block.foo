@@ -22,6 +22,12 @@ return PTR(FooBlock, ctx->receiver.datum)->function(block_ctx);"},
     foo_send(ctx, &FOO_value, ctx->frame[0], 0);
 };
 return FooGlobal_False;"},
+      #whileTrue:
+          -> {signature: [Block], vars: 0,
+              body: "while (foo_eq(FooGlobal_True, foo_send(ctx, &FOO_value, ctx->receiver, 0))) \{
+    foo_send(ctx, &FOO_value, ctx->frame[0], 0);
+};
+return FooGlobal_False;"},
       #finally:
           -> {signature: [Block], vars: 1,
               body: "struct FooFinally finally = \{
