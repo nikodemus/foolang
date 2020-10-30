@@ -14,22 +14,11 @@ import lang.test_byteArray.TestByteArray
 import lang.test_byteArray.TestByteArrayAsIterable
 import lang.test_character.TestCharacter
 import lang.test_closure.TestClosure
+import lang.test_integer.TestInteger
 import lang.test_list.TestList
 import lang.test_list.TestListAsIterable
 import lang.test_object.TestObject
 import lang.test_ordered.TestOrdered
-
--- Generates signed integers small enough to add without overflowing.
-class SmallIntegers {}
-    direct method do: block
-        -- First around zero
-        block value: -1.
-        block value: 0.
-        block value: 1.
-        -- Then random numbers
-        let rng = Random new.
-        100 times: { block value: (rng integer / 2) }!
-end
 
 class ShortStringSeqs {}
    direct method do: block
