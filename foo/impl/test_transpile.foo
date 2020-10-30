@@ -161,10 +161,10 @@ class TestTranspilePrelude { assert system }
         self transpile: "import lang.interval.Interval
                          class Main \{}
                              direct method run
-                                 ((Interval from: 1 to: 9 by: 2)
-                                       collect: \{ |each| each }) debug!
+                                 (Interval from: 1 to: 5 by: 2)
+                                     do: \{ |each| each debug }!
                          end"
-            expect: "#<Listish>"!
+            expect: "#<Integer 1>#<Integer 3>#<Integer 5>"!
 
     method testIterable
         self transpile: "import lang.iterable.*
