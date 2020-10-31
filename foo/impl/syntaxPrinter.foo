@@ -301,7 +301,7 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
             ifTrue: { self print: " ".
                       self print: signature selector name }
             ifFalse: { signature selector parts
-                           withIndexDo: { |part index|
+                           doWithIndex: { |part index|
                                           self print: " ".
                                           self print: part.
                                           self print: " ".
