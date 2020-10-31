@@ -306,7 +306,7 @@ class AstClass { name slots _interfaces _directMethods _instanceMethods }
         self _methodDictionary:
             ((slots reject: { |each| each name startsWith: "_" })
                  collect: { |each|
-                            AstReaderMethod slot: each })!
+                            AstReaderMethod home: self slot: each })!
 
     method defineIn: env
         -- Debug println: "AstClass#defineIn: {name}".
@@ -349,7 +349,7 @@ class AstSlot { name index type }
         AstSlotRef slot: self!
 end
 
-class AstReaderMethod { slot }
+class AstReaderMethod { home slot }
     method selector
         Selector new: slot name!
     method signature
@@ -360,6 +360,8 @@ class AstReaderMethod { slot }
         0!
     method isBuiltin
         False!
+    method isDirect
+        False!
     method returnType
         -- FIXME: Since setters check the type, the readers don't
         -- need to -- but it would be nice for senders to know the type.
@@ -368,21 +370,21 @@ class AstReaderMethod { slot }
         Any!
     method body
         slot referenceUpwards: False!
+    method printOn: stream
+        stream print: "#<AstReaderMethod {home name}#{slot name}>"!
 end
-
-define $AstMethodHome
-    False!
 
 class AstMethod { home selector argumentVariables returnType body frameSize isDirect isRequired }
     is Object
 
-    direct method selector: selector
+    direct method home: home
+                  selector: selector
                   argumentVariables: argumentVariables
                   returnType: returnType
                   isDirect: isDirect
                   isRequired: isRequired
         self
-            home: $AstMethodHome
+            home: home
             selector: selector
             argumentVariables: argumentVariables
             returnType: returnType
@@ -434,7 +436,9 @@ class AstMethod { home selector argumentVariables returnType body frameSize isDi
         False!
 
     method printOn: stream
-        stream print: "#<AstMethod {selector}>"!
+        self isDirect
+            ifTrue: { stream print: "#<AstMethod {home name} {selector name}>" }
+            ifFalse: { stream print: "#<AstMethod {home name}{selector}>" }!
 end
 
 interface AstNode

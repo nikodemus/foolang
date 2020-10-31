@@ -20,15 +20,17 @@ define CEscapes
 -- define Tracer DebugTracer name: "CTranspiler"!
 define Tracer NullTracer!
 
-class BuiltinMethod { selector definition }
-    direct method forEach: builtins
+class BuiltinMethod { home selector definition isDirect }
+    direct method forEach: builtins in: home direct: areDirect
         let dict = Dictionary new.
         builtins
             do: { |selector definition|
                   dict at: selector name
                        put: (self
+                                 home: home
                                  selector: selector
-                                 definition: definition) }.
+                                 definition: definition
+                                 isDirect: areDirect) }.
         dict!
     method isBuiltin
         True!
@@ -50,10 +52,20 @@ class BuiltinClass { host markFunction _directMethods _instanceMethods }
                   mark: mark
                   directMethods: directMethods
                   instanceMethods: instanceMethods
-        self host: host
-             markFunction: mark
-             _directMethods: (BuiltinMethod forEach: directMethods)
-             _instanceMethods: (BuiltinMethod forEach: instanceMethods)!
+        let theClass = self host: host
+                            markFunction: mark
+                            _directMethods: False
+                            _instanceMethods: False.
+        theClass directMethods: directMethods.
+        theClass instanceMethods: instanceMethods.
+        theClass!
+
+    method directMethods: methods
+        _directMethods = BuiltinMethod forEach: methods in: self direct: True!
+
+    method instanceMethods: methods
+        _instanceMethods = BuiltinMethod forEach: methods in: self direct: False!
+
     method visitBy: visitor
         visitor visitBuiltin: self!
     method name
@@ -135,7 +147,7 @@ define $home
     False!
 
 class CTranspiler { output selectorMap blockFunctions constants variables tmpCounter
-                    globals }
+                    globals generatedMethods }
 
 
     direct method transpile: string in: env
@@ -156,7 +168,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                           constants: List new
                           variables: Dictionary new
                           tmpCounter: 0
-                          globals: Dictionary new.
+                          globals: Dictionary new
+                          generatedMethods: Dictionary new.
         -- KLUDGE: add #writeString: to the selectors.
         visitor selectorMap map: #writeString:.
         env replaceBuiltins: BuiltinClasses.
@@ -203,11 +216,28 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
 
     method _classDeclarations: aClass
         output println: "struct FooVtable {Name mangleClassVtable: aClass};".
-        output println: "struct FooVtable {Name mangleInstanceVtable: aClass};"!
+        output println: "struct FooVtable {Name mangleInstanceVtable: aClass};".
+        let isOwnDefinition
+                = { |def| def home is aClass }.
+        (aClass directMethods select: isOwnDefinition)
+            do: { |each| self _methodDeclaration: each }.
+        (aClass instanceMethods select: isOwnDefinition)
+            do: { |each| self _methodDeclaration: each }!
 
     method _interfaceDeclarations: anInterface
         output println: "struct FooVtable {Name mangleInterfaceVtable: anInterface};".
-        output println: "struct FooVtable {Name mangleInstanceVtable: anInterface};"!
+        output println: "struct FooVtable {Name mangleInstanceVtable: anInterface};".
+        let isOwnDefinition
+                = { |def| def home is anInterface and: def isRequired not }.
+        (anInterface directMethods select: isOwnDefinition)
+            do: { |each| self _methodDeclaration: each }.
+        (anInterface instanceMethods select: isOwnDefinition)
+            do: { |each| self _methodDeclaration: each }!
+
+    method _methodDeclaration: aMethod
+        output print: "struct Foo ".
+        output print: (Name mangleMethod: aMethod).
+        output println: "(struct FooContext*);"!
 
     method writeDefinitions
         -- Processing a definition can produce new global references. Visit
@@ -265,7 +295,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                                  constants: constants
                                  variables: variables
                                  tmpCounter: tmpCounter
-                                 globals: globals.
+                                 globals: globals
+                                 generatedMethods: generatedMethods.
         -- FIXME: visit only referenced builtins
         BuiltinClasses
             do: { |each|
@@ -289,7 +320,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                                  constants: constants
                                  variables: variables
                                  tmpCounter: tmpCounter
-                                 globals: globals.
+                                 globals: globals
+                                 generatedMethods: generatedMethods.
         -- FIXME: used builtins only
         BuiltinClasses
             do: { |each|
@@ -369,7 +401,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                                constants: constants
                                variables: variables
                                tmpCounter: tmpCounter
-                               globals: globals.
+                               globals: globals
+                               generatedMethods: generatedMethods.
         blockVisitor _generateTypecheck: block returnType
                      _for: block body.
         output println: ";\n}".
@@ -400,18 +433,11 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         let interfaceVtableName = Name mangleInterfaceVtable: anInterface.
         let instanceVtableName = Name mangleInstanceVtable: anInterface.
         let globalName = Name mangleGlobal: anInterface.
-        anInterface directMethods
-            do: { |each|
-                  self
-                      _generateMethod: each
-                      _in: anInterface
-                      _as: (Name mangleDirectMethod: each selector in: anInterface) }.
+        let directMethods = anInterface directMethods reject: #isRequired.
+        directMethods
+            do: { |each| self _generateMethod: each }.
         (anInterface instanceMethods reject: #isRequired)
-            do: { |each|
-                  self
-                      _generateMethod: each
-                      _in: anInterface
-                      _as: (Name mangleInstanceMethod: each selector in: anInterface) }.
+            do: { |each| self _generateMethod: each }.
         -- Interface Vtable
         output println: "struct FooVtable {interfaceVtableName} = ".
         output println: "\{".
@@ -420,12 +446,12 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "    .size = {anInterface directMethods size},".
         output println: "    .mark = foo_mark_noop,".
         output println: "    .methods = \{".
-        anInterface directMethods
+        directMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                   output println: "                            .argCount = {each arity},".
                   output println: "                            .frameSize = {each frameSize},".
-                  output println: "                            .function = &{Name mangleDirectMethod: each selector in: anInterface} }," }.
+                  output println: "                            .function = &{Name mangleMethod: each} }," }.
         output println: "    }".
         output println: "};".
         output newline.
@@ -467,17 +493,9 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         -- Augmented later with ctor and typetest
         let directMethods = aClass directMethods asList.
         directMethods
-            do: { |each|
-                  self
-                      _generateMethod: each
-                      _in: aClass
-                      _as: (Name mangleDirectMethod: each selector in: aClass) }.
+            do: { |each| self _generateMethod: each }.
         aClass instanceMethods
-            do: { |each|
-                  self
-                      _generateMethod: each
-                      _in: aClass
-                      _as: (Name mangleInstanceMethod: each selector in: aClass) }.
+            do: { |each| self _generateMethod: each }.
         aClass isBuiltin
             ifFalse: {
                 -- Layout
@@ -493,11 +511,14 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                 output println: "};".
                 output newline.
                 -- Constructor
-                let ctor = aClass constructor.
-                directMethods push: { selector: ctor, arity: aClass slots size, frameSize: aClass slots size }.
-                let ctorName = Name mangleDirectMethod: ctor in: aClass.
+                let ctor = { home: aClass,
+                             selector: aClass constructor,
+                             arity: aClass slots size,
+                             frameSize: aClass slots size,
+                             isDirect: True }.
+                directMethods push: ctor.
                 output print: "struct Foo ".
-                output println: ctorName.
+                output println: (Name mangleMethod: ctor).
                 output println: "    (struct FooContext* ctx)".
                 output println: "\{".
                 output println: "    (void)ctx;".
@@ -513,9 +534,14 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                 output println: "}".
                 output newline.
                 -- #includes: (typetest)
-                directMethods push: { selector: #includes:, arity: 1, frameSize: 1 }.
+                let includes = { home: aClass,
+                                 selector: #includes:,
+                                 arity: 1,
+                                 frameSize: 1,
+                                 isDirect: True }.
+                directMethods push: includes.
                 output print: "struct Foo ".
-                output println: (Name mangleDirectMethod: (#includes:) in: aClass).
+                output println: (Name mangleMethod: includes).
                 output println: "    (struct FooContext* ctx)".
                 output println: "\{".
                 output println: "    return foo_Boolean_new(&{Name mangleInstanceVtable: aClass} == ctx->frame[0].vtable);".
@@ -553,7 +579,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                   output println: "                            .argCount = {each arity},".
                   output println: "                            .frameSize = {each frameSize},".
-                  output println: "                            .function = &{Name mangleDirectMethod: each selector in: aClass} }," }.
+                  output println: "                            .function = &{Name mangleMethod: each} }," }.
         output println: "    }".
         output println: "};".
         output newline.
@@ -571,7 +597,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                   output println: "                            .argCount = {each arity},".
                   output println: "                            .frameSize = {each frameSize},".
-                  output println: "                            .function = &{Name mangleInstanceMethod: each selector in: aClass} }," }.
+                  output println: "                            .function = &{Name mangleMethod: each} }," }.
         output println: "    }".
         output println: "};".
         output newline.
@@ -590,11 +616,17 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "};".
         output newline!
 
-    method _generateMethod: aMethod _in: aClass _as: mangledName
+    method _generateMethod: aMethod
+        Tracer _generateMethod: aMethod.
+        generatedMethods
+            at: aMethod
+            ifNonePut: { self _actuallyGenerateMethod: aMethod }!
+
+    method _actuallyGenerateMethod: aMethod
         -- Debug println: "_generateMethod: {aMethod selector} _in: {aClass name} _as: {mangledName}".
         let $home = aMethod.
         output print: "struct Foo ".
-        output println: mangledName.
+        output println: (Name mangleMethod: aMethod).
         output println: "    (struct FooContext* ctx)".
         output println: "\{".
         output println: "    (void)ctx;".
@@ -615,7 +647,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                        output println: ";".
                        output println: "}" }.
         -- Debug println: "  => method done".
-        output newline!
+        output newline.
+        True!
 
     method _generateTypecheck: type _for: value
         -- Debug println: "_generateTypecheck: {type} _for: {value}".
