@@ -912,7 +912,7 @@ class TestTranspileExtend { assert system }
             expect: "#<Integer 84>"!
 end
 
-class TestTranspileTypecheck { assert system }
+class TestTranspileTypecheck01 { assert system }
     is TranspilerTest
 
     method testIntegerValueOk
@@ -999,6 +999,10 @@ class TestTranspileTypecheck { assert system }
                                  x debug!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+end
+
+class TestTranspileTypecheck02 { assert system }
+    is TranspilerTest
 
     method testAssignOops
         self transpile: "class Main \{}
@@ -1138,7 +1142,8 @@ class Main {}
             "--return" -> TestTranspileReturn system: system,
             "--self" -> TestTranspileSelf system: system,
             "--string" -> TestTranspileString system: system,
-            "--typecheck" -> TestTranspileTypecheck system: system,
+            "--typecheck-01" -> TestTranspileTypecheck01 system: system,
+            "--typecheck-02" -> TestTranspileTypecheck02 system: system,
         }.
         let all = tests keys sort.
         cmd == []
