@@ -223,6 +223,7 @@ impl Vtable {
         vt.add_primitive_method_or_panic("includes:", classes::class::generic_class_includes_);
         vt.add_primitive_method_or_panic("typecheck:", classes::class::generic_class_typecheck_);
         vt.add_primitive_method_or_panic("name", classes::class::generic_class_name);
+        vt.add_primitive_method_or_panic("interfaces", classes::class::generic_class_interfaces);
         vt.add_primitive_method_or_panic(
             "__addDirectMethod:",
             classes::class::generic_class_add_direct_method_,

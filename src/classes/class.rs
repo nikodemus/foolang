@@ -92,6 +92,7 @@ pub fn class_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("includes:", class_includes_);
     vt.add_primitive_method_or_panic("typecheck:", class_typecheck_);
     vt.add_primitive_method_or_panic("name", generic_class_name);
+    vt.add_primitive_method_or_panic("interfaces", generic_class_interfaces);
     vt
 }
 
@@ -105,6 +106,7 @@ pub fn interface_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("includes:", interface_includes_);
     vt.add_primitive_method_or_panic("typecheck:", interface_typecheck_);
     vt.add_primitive_method_or_panic("name", generic_class_name);
+    vt.add_primitive_method_or_panic("interfaces", generic_class_interfaces);
     vt
 }
 
@@ -173,6 +175,14 @@ pub fn generic_class_class(receiver: &Object, _args: &[Object], env: &Env) -> Ev
 
 pub fn generic_class_name(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_string(&receiver.as_class_ref()?.instance_vtable.name))
+}
+
+pub fn generic_class_interfaces(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    let mut all = Vec::new();
+    for vtable in receiver.as_class_ref()?.instance_vtable.interfaces().iter() {
+        all.push(vtable.class.borrow().clone().unwrap());
+    }
+    Ok(env.foo.into_array(all, None))
 }
 
 pub fn generic_instance_class(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
