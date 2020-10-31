@@ -80,7 +80,7 @@ extend Dictionary
     method do: block
         self doKeys: { |key|
                        block
-                           value: key
+                           cull: key
                            value: (self at: key) }!
 
     method doValues: block
