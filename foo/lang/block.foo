@@ -15,6 +15,16 @@ interface Function
             ifTrue: { self apply: [arg1] }
             ifFalse: { self apply: [] }!
 
+    method value: arg1 cull: arg2
+        self arity is 1
+            ifTrue: { self apply: [arg1] }
+            ifFalse: { self apply: [arg1, arg2] }!
+
+    method cull: arg1 value: arg2
+        self arity is 1
+            ifTrue: { self apply: [arg2] }
+            ifFalse: { self apply: [arg1, arg2] }!
+
     method value
         self apply: []!
 
