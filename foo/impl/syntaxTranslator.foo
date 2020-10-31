@@ -175,7 +175,7 @@ class SyntaxTranslator { env currentMethod }
         AstSelfClassRef new!
 
     method visitVariable: aVariable
-        Tracer trace: #visitVariable:.
+        Tracer visitVariable: aVariable.
         (env reference: aVariable name)
             withSource: aVariable source!
 
@@ -256,7 +256,7 @@ class SyntaxTranslator { env currentMethod }
         (aType visitBy: self) :: AstGlobal!
 
     method visitMethod: aMethod
-        Tracer trace: #visitMethod:.
+        Tracer visitMethod: aMethod selector.
         let signature = aMethod signature.
         let bodyEnv = env newFrame
                           addVariables: (signature parameters collect: #name)
@@ -266,6 +266,7 @@ class SyntaxTranslator { env currentMethod }
         let argumentVariables = bodyEnv bindings.
         (argumentVariables size is signature parameters size) assert.
         let astMethod = AstMethod
+                            home: $MethodHome
                             selector: signature selector
                             argumentVariables: argumentVariables
                             returnType: (self _visitType: signature returnType)
