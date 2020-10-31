@@ -1,15 +1,12 @@
-import .transpiler.name.Name
-import .transpiler.integer
+import .transpiler.array
 import .transpiler.block
 import .transpiler.boolean
 import .transpiler.float
+import .transpiler.integer
+import .transpiler.name.Name
 import .transpiler.output
 import .transpiler.string
-import .transpiler.array
-import .ast.AstBuiltin
-import .ast.AstClass
-import .ast.AstGlobal
-import .ast.AstInterface
+import .ast.*
 import .utils.*
 
 define CEscapes
@@ -44,50 +41,56 @@ class BuiltinMethod { home selector definition isDirect }
         definition body!
     method printOn: stream
         stream print: "#<BuiltinMethod {selector}>"!
+    method toString
+        StringOutput with: { |out| self printOn: out }!
 end
 
-class BuiltinClass { host markFunction _directMethods _instanceMethods }
-    is Object
+class BuiltinClass { host markFunction _interfaces _directMethods _instanceMethods }
+    is AstMethodHome
+
     direct method new: host
                   mark: mark
                   directMethods: directMethods
                   instanceMethods: instanceMethods
         let theClass = self host: host
                             markFunction: mark
+                            _interfaces: List new
                             _directMethods: False
                             _instanceMethods: False.
-        theClass directMethods: directMethods.
-        theClass instanceMethods: instanceMethods.
+        theClass _directMethods: directMethods.
+        theClass _instanceMethods: instanceMethods.
         theClass!
 
-    method directMethods: methods
+    method _interfaces
+        _interfaces!
+
+    method _directMethods
+        _directMethods!
+
+    method _instanceMethods
+        _instanceMethods!
+
+    method _readerMethods
+        []!
+
+    method _directMethods: methods
         _directMethods = BuiltinMethod forEach: methods in: self direct: True!
 
-    method instanceMethods: methods
+    method _instanceMethods: methods
         _instanceMethods = BuiltinMethod forEach: methods in: self direct: False!
 
     method visitBy: visitor
         visitor visitBuiltin: self!
+
     method name
         host name!
+
     method eval
         host!
-    method __addInterface: anInterface
-        -- FIXME
-        self!
-    method __addDirectMethod: aMethod
-        _directMethods at: aMethod selector name put: aMethod!
-    method __addInstanceMethod: aMethod
-        _instanceMethods at: aMethod selector name put: aMethod!
-    method instanceMethods
-        _instanceMethods values!
-    method directMethods
-        _directMethods values!
+
     method isBuiltin
         True!
-    method interfaceGlobals
-        -- FIXME
-        []!
+
     method isDynamic
         False!
 end
@@ -491,9 +494,11 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         let classVtableName = Name mangleClassVtable: aClass.
         let globalName = Name mangleGlobal: aClass.
         -- Augmented later with ctor and typetest
+        -- Debug println: "/class direct methods".
         let directMethods = aClass directMethods asList.
         directMethods
             do: { |each| self _generateMethod: each }.
+        -- Debug println: "/class instance methods".
         aClass instanceMethods
             do: { |each| self _generateMethod: each }.
         aClass isBuiltin
@@ -618,15 +623,17 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
 
     method _generateMethod: aMethod
         Tracer _generateMethod: aMethod.
+        let name = Name mangleMethod: aMethod.
+        -- Debug println: "_generateMethod: {name}".
         generatedMethods
-            at: aMethod
-            ifNonePut: { self _actuallyGenerateMethod: aMethod }!
+            at: name
+            ifNonePut: { self _actuallyGenerateMethod: aMethod as: name }!
 
-    method _actuallyGenerateMethod: aMethod
-        -- Debug println: "_generateMethod: {aMethod selector} _in: {aClass name} _as: {mangledName}".
+    method _actuallyGenerateMethod: aMethod as: name
+        -- Debug println: "_actuallyGenerateMethod: {aMethod}".
         let $home = aMethod.
         output print: "struct Foo ".
-        output println: (Name mangleMethod: aMethod).
+        output println: name.
         output println: "    (struct FooContext* ctx)".
         output println: "\{".
         output println: "    (void)ctx;".
@@ -648,7 +655,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                        output println: "}" }.
         -- Debug println: "  => method done".
         output newline.
-        True!
+        aMethod!
 
     method _generateTypecheck: type _for: value
         -- Debug println: "_generateTypecheck: {type} _for: {value}".

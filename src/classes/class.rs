@@ -230,8 +230,9 @@ pub fn generic_class_add_instance_method_(receiver: &Object, args: &[Object], en
     Ok(receiver.clone())
 }
 
-pub fn generic_class_add_interface_(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
-    receiver.add_interface_object(&args[0])?;
+pub fn generic_class_add_interface_(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    // We get the interface definition here, #value gives us the object.a
+    receiver.add_interface_object(&args[0].send("value", &[], env)?)?;
     Ok(receiver.clone())
 }
 

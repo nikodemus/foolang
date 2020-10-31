@@ -61,6 +61,26 @@ interface Number
     method to: other by: step
        Interval from: self to: other by: step!
 
+    method to: other
+        self to: other by: Self one!
+
+    method downTo: other
+        self to: other by: -(Self one)!
+
+    method to: other do: block
+        let i = self.
+        let one = Self one.
+        { i <= other }
+            whileTrue: { block value: i. i = i + one }.
+        self!
+
+    method downTo: other do: block
+        let i = self.
+        let one = Self one.
+        { i >= other }
+            whileTrue: { block value: i. i = i - one }.
+        self!
+
     method leftPad: width by: padding
         padding size is 1 assert: "padding size is 1 in Number#leftPad:by:".
         let padded = self toString.

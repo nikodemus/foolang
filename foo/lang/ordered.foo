@@ -81,10 +81,6 @@ interface Ordered
     method isEmpty
         self size is 0!
 
-    method withIndexDo: block
-        1 to: self size
-          do: { |index| block value: (self at: index) value: index }!
-
     method copy
         let copy = Self of: self elementType new: self size.
         self copyTo: copy!
@@ -193,6 +189,15 @@ interface Ordered
           do: { |i|
                 block value: (self at: i) value: i }.
         self!
+
+    method position: block ifNone: noneBlock
+        self doWithIndex: { |each index|
+                            (block value: each)
+                                ifTrue: { return index } }.
+        noneBlock value!
+
+    method position: block
+        self position: block ifNone: { return False }!
 
     method with: other collect: block
         self with: other collect: block of: Any!

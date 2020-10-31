@@ -1120,19 +1120,23 @@ impl Object {
     pub fn add_interface_object(&self, interface_obj: &Object) -> Result<(), Unwind> {
         match &interface_obj.datum {
             Datum::Class(class) if class.interface => (),
-            _ => return Unwind::error(&format!("{:?} is no an interface!", &interface_obj)),
+            _ => return Unwind::error(&format!("{:?} is not an interface!", &interface_obj)),
         }
         let class = self.as_class_ref()?;
-        let class_name = &class.instance_vtable.name;
+        let instance_vt = &class.instance_vtable;
+        let class_name = &instance_vt.name;
         let interface_name = &interface_obj.as_class_ref()?.instance_vtable.name;
-        // Add interface direct methods
         let interface = interface_obj.as_class_ref()?;
+        if instance_vt.interfaces().borrow().contains(&interface.instance_vtable) {
+            //println!("RUST: {} already {}", class_name, interface_name);
+            return Ok(());
+        }
+        // Add interface direct methods
         for (selector, method) in interface_obj.vtable.methods().iter() {
             if !self.vtable.has(selector) {
                 self.vtable.add_method(selector, method.extend_env("Self", self))?;
             }
         }
-        let instance_vt = &class.instance_vtable;
         // Add interface to instance vtable
         vt_add_interface(instance_vt, &interface.instance_vtable);
         // Add interface instance methods
@@ -1140,12 +1144,13 @@ impl Object {
             let required = method.is_required();
             match instance_vt.get(selector) {
                 Some(Method::Interpreter(ref closure)) => {
-                    let signature = method.signature()?;
-                    if &closure.signature != signature {
-                        return Unwind::error(&format!(
-                            "{}#{} is {}, interface {} specifies {}",
-                            class_name, selector, &closure.signature, interface_name, signature
-                        ));
+                    if let Ok(signature) = method.signature() {
+                        if &closure.signature != signature {
+                            return Unwind::error(&format!(
+                                "{}#{} is {}, interface {} specifies {}",
+                                class_name, selector, &closure.signature, interface_name, signature
+                            ));
+                        }
                     }
                 }
                 Some(Method::Primitive(_)) => {

@@ -8,6 +8,12 @@ extend Integer
     direct method default
         0!
 
+    direct method zero
+        0!
+
+    direct method one
+        1!
+
     direct method printBase: base do: block
         let $IntegerPrintBase = base.
         block value!
@@ -41,24 +47,6 @@ extend Integer
         self is 10 ifTrue: { return "" }.
         self is 16 ifTrue: { return "0x" }.
         panic "No radixString for {self}"!
-
-    method to: other
-        self to: other by: 1!
-
-    method downTo: other
-        self to: other by: -1!
-
-    method to: other do: block
-        let i = self.
-        { i <= other }
-            whileTrue: { block value: i. i = i + 1 }.
-        self!
-
-    method downTo: other do: block
-        let i = self.
-        { i >= other }
-            whileTrue: { block value: i. i = i - 1 }.
-        self!
 
     method times: block
         let i = 0.

@@ -149,6 +149,29 @@ class TestTranspilePrelude01 { assert system }
                          end"
             expect: "#<Boolean False>#<Boolean True>"!
 
+    method testFloat1
+        self transpile: "import lang.float
+
+                         class Main \{}
+                             direct method run
+                                 (1.0 atLeast: 2.0 atMost: 10.0) debug!
+                         end"
+            expect: "#<Float 2.000000>"!
+end
+
+class TestTranspilePrelude02 { assert system }
+    is TranspilerTest
+
+    method testFloat2
+        self transpile: "import lang.float
+
+                         class Main \{}
+                             direct method run
+                                 1.0 to: 2.0
+                                     do: \{ |each| each debug }!
+                         end"
+            expect: "#<Float 1.000000>#<Float 2.000000>"!
+
     method testInteger
         self transpile: "import lang.integer
 
@@ -168,7 +191,7 @@ class TestTranspilePrelude01 { assert system }
             expect: "#<Integer 1>#<Integer 3>#<Integer 5>"!
 end
 
-class TestTranspilePrelude02 { assert system }
+class TestTranspilePrelude03 { assert system }
     is TranspilerTest
 
     method testIterable
@@ -928,6 +951,10 @@ class TestTranspileTypecheck01 { assert system }
                                  (1.2::Integer) debug!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+end
+
+class TestTranspileTypecheck02 { assert system }
+    is TranspilerTest
 
     method testIntegerMethodArgOk
         self transpile: "class Main \{}
@@ -946,6 +973,10 @@ class TestTranspileTypecheck01 { assert system }
                                  x debug!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+end
+
+class TestTranspileTypecheck03 { assert system }
+    is TranspilerTest
 
     method testIntegerBlockArgOk
         self transpile: "class Main \{}
@@ -960,6 +991,10 @@ class TestTranspileTypecheck01 { assert system }
                                  \{ |x::Integer| x debug } value: 1.2!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+end
+
+class TestTranspileTypecheck04 { assert system }
+    is TranspilerTest
 
     method testInterfaceOk
         self transpile: "interface MyInterface
@@ -984,6 +1019,11 @@ class TestTranspileTypecheck01 { assert system }
                          end"
             expectError: "PANIC: Type error! Wanted: MyInterface, got: Integer"!
 
+end
+
+class TestTranspileTypecheck05 { assert system }
+    is TranspilerTest
+
     method testLetOk
         self transpile: "class Main \{}
                              direct method run
@@ -1001,7 +1041,7 @@ class TestTranspileTypecheck01 { assert system }
             expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
 end
 
-class TestTranspileTypecheck02 { assert system }
+class TestTranspileTypecheck06 { assert system }
     is TranspilerTest
 
     method testAssignOops
@@ -1022,6 +1062,11 @@ class TestTranspileTypecheck02 { assert system }
                          end"
             expect: "#<Integer 42>"!
 
+end
+
+class TestTranspileTypecheck07 { assert system }
+    is TranspilerTest
+
     method testSlotTypeInitOops
         self transpile: "class Main \{ x::Integer }
                              direct method run
@@ -1041,6 +1086,11 @@ class TestTranspileTypecheck02 { assert system }
                          end"
             expect: "#<Integer 42>"!
 
+end
+
+class TestTranspileTypecheck08 { assert system }
+    is TranspilerTest
+
     method testSlotTypeAssignOops
         self transpile: "class Main \{ x::Integer }
                              direct method run
@@ -1059,6 +1109,10 @@ class TestTranspileTypecheck02 { assert system }
                                  42!
                          end"
             expect: "#<Integer 42>"!
+end
+
+class TestTranspileTypecheck09 { assert system }
+    is TranspilerTest
 
     method testMethodReturnTypeOops
         self transpile: "class Main \{}
@@ -1080,6 +1134,10 @@ class TestTranspileTypecheck02 { assert system }
                                  return 0!
                          end"
             expect: "#<Integer 427>"!
+end
+
+class TestTranspileTypecheck10 { assert system }
+    is TranspilerTest
 
     method testMethodNonLocalReturnTypeOops
         self transpile: "class Main \{}
@@ -1099,6 +1157,10 @@ class TestTranspileTypecheck02 { assert system }
                                 (\{ |a| -> Integer a } value: 42) debug!
                          end"
             expect: "#<Integer 42>"!
+end
+
+class TestTranspileTypecheck11 { assert system }
+    is TranspilerTest
 
     method testBlockReturnTypeOops
         self transpile: "class Main \{}
@@ -1122,28 +1184,37 @@ end
 class Main {}
     direct method run: cmd in: system
         let tests = {
-            "--array" -> TestTranspileArray system: system,
-            "--block" -> TestTranspileBlock system: system,
-            "--boolean" -> TestTranspileBoolean system: system,
-            "--class" -> TestTranspileClass system: system,
-            "--define" -> TestTranspileDefine system: system,
-            "--dynamic" -> TestTranspileDynamic system: system,
-            "--extend" -> TestTranspileExtend system: system,
-            "--finally" -> TestTranspileFinally system: system,
-            "--float" -> TestTranspileFloat system: system,
-            "--integer" -> TestTranspileInteger system: system,
-            "--interface" -> TestTranspileInterface system: system,
-            "--keyword" -> TestTranspileKeyword system: system,
-            "--let" -> TestTranspileLet system: system,
-            "--panic" -> TestTranspilePanic system: system,
-            "--prelude-01" -> TestTranspilePrelude01 system: system,
-            "--prelude-02" -> TestTranspilePrelude02 system: system,
-            "--name" -> TestName,
-            "--return" -> TestTranspileReturn system: system,
-            "--self" -> TestTranspileSelf system: system,
-            "--string" -> TestTranspileString system: system,
-            "--typecheck-01" -> TestTranspileTypecheck01 system: system,
-            "--typecheck-02" -> TestTranspileTypecheck02 system: system,
+            "--array" -> TestTranspileArray,
+            "--block" -> TestTranspileBlock,
+            "--boolean" -> TestTranspileBoolean,
+            "--class" -> TestTranspileClass,
+            "--define" -> TestTranspileDefine,
+            "--dynamic" -> TestTranspileDynamic,
+            "--extend" -> TestTranspileExtend,
+            "--finally" -> TestTranspileFinally,
+            "--float" -> TestTranspileFloat,
+            "--integer" -> TestTranspileInteger,
+            "--interface" -> TestTranspileInterface,
+            "--keyword" -> TestTranspileKeyword,
+            "--let" -> TestTranspileLet,
+            "--panic" -> TestTranspilePanic,
+            "--prelude-01" -> TestTranspilePrelude01,
+            "--prelude-02" -> TestTranspilePrelude02,
+            "--prelude-03" -> TestTranspilePrelude03,
+            "--return" -> TestTranspileReturn,
+            "--self" -> TestTranspileSelf,
+            "--string" -> TestTranspileString,
+            "--typecheck-01" -> TestTranspileTypecheck01,
+            "--typecheck-02" -> TestTranspileTypecheck02,
+            "--typecheck-03" -> TestTranspileTypecheck03,
+            "--typecheck-04" -> TestTranspileTypecheck04,
+            "--typecheck-05" -> TestTranspileTypecheck05,
+            "--typecheck-06" -> TestTranspileTypecheck06,
+            "--typecheck-07" -> TestTranspileTypecheck07,
+            "--typecheck-08" -> TestTranspileTypecheck08,
+            "--typecheck-09" -> TestTranspileTypecheck09,
+            "--typecheck-10" -> TestTranspileTypecheck10,
+            "--typecheck-11" -> TestTranspileTypecheck11
         }.
         let all = tests keys sort.
         cmd == []
@@ -1166,7 +1237,7 @@ class Main {}
                       system exit }.
         cmd do: { |name|
                   Assert
-                      runSuite: (tests at: name)
+                      runSuite: ((tests at: name) system: system)
                       in: system
                       onFailure: { system exit: 1 } }.
         system exit!

@@ -112,7 +112,7 @@ class AstExtend { type interfaces directMethods instanceMethods }
         -- FIXME: Does this mean we should resolve name in env instead
         -- of the way it is now done?
         let target = type definition.
-        interfaces do: { |each| target __addInterface: each value }.
+        interfaces do: { |each| target __addInterface: each }.
         directMethods do: { |each| target __addDirectMethod: each }.
         instanceMethods do: { |each| target __addInstanceMethod: each }.
         target!
@@ -131,6 +131,10 @@ interface AstMethodHome
 
     method __addInterface: anInterface
         -- Order is important, so these must be kept in a list!
+        let interfaces = self _interfaces.
+        (interfaces contains: anInterface)
+            ifTrue: { -- Debug println: "FOO: {self name} already {anInterface}".
+                      return False }.
         self _interfaces push: anInterface!
 
     method __addDirectMethod: aDirectMethod
