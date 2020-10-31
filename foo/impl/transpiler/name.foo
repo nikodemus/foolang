@@ -15,6 +15,7 @@ define SymbolNames
       "=" -> "_eq",
       ">" -> "_gt",
       "<" -> "_lt",
+      "^" -> "_up",
       }!
 
 class Name {}
