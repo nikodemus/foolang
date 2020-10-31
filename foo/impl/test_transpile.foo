@@ -127,7 +127,7 @@ class TestTranspilePanic { assert system }
             expectError: "PANIC: Let's Panic You And Me!\n"!
 end
 
-class TestTranspilePrelude { assert system }
+class TestTranspilePrelude01 { assert system }
     is TranspilerTest
 
     method testAny
@@ -166,6 +166,10 @@ class TestTranspilePrelude { assert system }
                                      do: \{ |each| each debug }!
                          end"
             expect: "#<Integer 1>#<Integer 3>#<Integer 5>"!
+end
+
+class TestTranspilePrelude02 { assert system }
+    is TranspilerTest
 
     method testIterable
         self transpile: "import lang.iterable.*
@@ -1128,7 +1132,8 @@ class Main {}
             "--keyword" -> TestTranspileKeyword system: system,
             "--let" -> TestTranspileLet system: system,
             "--panic" -> TestTranspilePanic system: system,
-            "--prelude" -> TestTranspilePrelude system: system,
+            "--prelude-01" -> TestTranspilePrelude01 system: system,
+            "--prelude-02" -> TestTranspilePrelude02 system: system,
             "--name" -> TestName,
             "--return" -> TestTranspileReturn system: system,
             "--self" -> TestTranspileSelf system: system,
