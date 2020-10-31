@@ -1,6 +1,9 @@
 class Debug {}
     direct method perform: name with: arguments
         name sendTo: Output debug with: arguments!
+    direct method pad: n println: message
+        n times: { self print: " " }.
+        self println: message!
 end
 
 class DebugTracer {}
