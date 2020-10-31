@@ -190,6 +190,15 @@ interface Ordered
                 block value: (self at: i) value: i }.
         self!
 
+    method position: block ifNone: noneBlock
+        self doWithIndex: { |each index|
+                            (block value: each)
+                                ifTrue: { return index } }.
+        noneBlock value!
+
+    method position: block
+        self position: block ifNone: { return False }!
+
     method with: other collect: block
         self with: other collect: block of: Any!
 
