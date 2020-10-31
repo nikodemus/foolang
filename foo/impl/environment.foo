@@ -65,6 +65,8 @@ end
 
 define $CurrentModulePath []!
 
+define $LoadDepth 0!
+
 class ModuleDictionary { available translated }
     is Object
 
@@ -90,6 +92,8 @@ class ModuleDictionary { available translated }
             ifNonePut: { self _loadPath: path _in: env _as: dotPath }!
 
     method _loadPath: path _in: env _as: dotPath
+        -- Debug pad: $LoadDepth println: "load: {dotPath} ...".
+        let $LoadDepth = $LoadDepth + 1.
         let source
             = self available
                 at: path
