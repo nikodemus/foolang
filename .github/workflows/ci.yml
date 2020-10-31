@@ -87,7 +87,10 @@ jobs:
         # Windows CI host keeps running out of memory in here. I
         # don't like this, but dealing with it is a terrible timesink and I
         # build on windows daily otherwise.
-        continue-on-error: ${{ runner.os == 'Windows' }}
+        #
+        # Disabled for now, but keeping this around if things get worse again.
+        #
+        # continue-on-error: ${{ runner.os == 'Windows' }}
         with:
           command: run
           args: -- foo/impl/test_prelude.foo --use=foo/lib -- --fork-all
@@ -97,7 +100,10 @@ jobs:
         # Windows CI host keeps running out of memory in here. I
         # don't like this, but dealing with it is a terrible timesink and I
         # build on windows daily otherwise.
-        continue-on-error: ${{ runner.os == 'Windows' }}
+        #
+        # Disabled for now, but keeping this around if things get worse again.
+        #
+        # continue-on-error: ${{ runner.os == 'Windows' }}
         with:
           command: run
           args: -- foo/impl/test_transpile.foo --use=foo/lib -- --fork-all
