@@ -16,6 +16,7 @@ class List { size data }
         1 to: self size - 1
           do: { |index|
                 self data put: (self data at: index + 1) at: index }.
+        self data put: self elementType default at: size.
         size = size - 1.
         first!
 
@@ -88,6 +89,7 @@ class List { size data }
     method pop
         size > 0
             ifTrue: { let elt = data at: size.
+                      data at: size put: self elementType default.
                       size = size - 1.
                       elt }
             ifFalse: { Error raise: "Cannot pop from empty " }!
