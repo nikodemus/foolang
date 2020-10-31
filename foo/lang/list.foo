@@ -71,7 +71,8 @@ class List { size data }
 
     method add: element
         self atCapacity
-            ifTrue: { let newdata = Array new: (size + 1) * 2.
+            ifTrue: { let increase = size atLeast: 8 atMost: 128.
+                      let newdata = Array new: size + increase.
                       1 to: size
                         do: { |i|
                               newdata put: (data at: i) at: i }.
