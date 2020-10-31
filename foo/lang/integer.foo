@@ -105,4 +105,11 @@ extend Integer
         self asFloat floatGte: right!
     method floatLte: right
         self asFloat floatLte: right!
+
+    method atLeast: min atMost: max
+        (self integerLt: min)
+            ifTrue: { return min }.
+        (self integerGt: max)
+            ifTrue: { return max }.
+        self!
 end
