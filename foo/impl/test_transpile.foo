@@ -150,7 +150,6 @@ class TestTranspilePrelude { assert system }
         self transpile: "import lang.boolean.*
 
                          class Main \{ x }
-                             is Object
                              direct method run
                                  True not debug.
                                  False not debug!
