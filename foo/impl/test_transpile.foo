@@ -149,6 +149,25 @@ class TestTranspilePrelude01 { assert system }
                          end"
             expect: "#<Boolean False>#<Boolean True>"!
 
+    method testFloat1
+        self transpile: "import lang.float
+
+                         class Main \{}
+                             direct method run
+                                 (1.0 atLeast: 2.0 atMost: 10.0) debug!
+                         end"
+            expect: "#<Float 2.000000>"!
+
+    method testFloat2
+        self transpile: "import lang.float
+
+                         class Main \{}
+                             direct method run
+                                 1.0 to: 2.0
+                                     do: \{ |each| each debug }!
+                         end"
+            expect: "#<Float 1.000000>#<Float 2.000000>"!
+
     method testInteger
         self transpile: "import lang.integer
 
