@@ -44,11 +44,10 @@ class Name {}
     direct method mangleSelector: selector
         self mangle: selector prefix: "FOO_"!
 
-    direct method mangleInstanceMethod: selector in: aClass
-        "fooInstanceMethod_{aClass name}_{self mangle: selector}"!
-
-    direct method mangleDirectMethod: selector in: aClass
-        "fooDirectMethod_{aClass name}_{self mangle: selector}"!
+    direct method mangleMethod: aMethod
+        aMethod isDirect
+            ifTrue: {  "fooDirectMethod_{aMethod home name}_{self mangle: aMethod selector}" }
+            ifFalse: { "fooInstanceMethod_{aMethod home name}_{self mangle: aMethod selector}" }!
 
     direct method mangleClassVtable: aClass
         "FooClassVtable_{aClass name}"!

@@ -65,6 +65,8 @@ end
 
 define $CurrentModulePath []!
 
+define $LoadDepth 0!
+
 class ModuleDictionary { available translated }
     is Object
 
@@ -76,15 +78,7 @@ class ModuleDictionary { available translated }
         self available: available
              translated: Dictionary new!
 
-    method at: name relative: relative in: env
-        self translated
-            at: name
-            ifNonePut: { self _translate: name
-                              _in: env
-                              _relative: relative }!
-
-    method _translate: path _in: env _relative: relative
-        -- Debug println: "_translate: {path} _in: ... _:relative: {relative}".
+    method at: path relative: relative in: env
         relative
             ifTrue: { self _translatePath: ($CurrentModulePath butlast concat: path)
                            _in: env }
@@ -92,8 +86,14 @@ class ModuleDictionary { available translated }
                             _in: env }!
 
     method _translatePath: path _in: env
-        -- Debug println: "_translatePath: {path} _in: ...".
         let dotPath = "." join: path.
+        self translated
+            at: dotPath
+            ifNonePut: { self _loadPath: path _in: env _as: dotPath }!
+
+    method _loadPath: path _in: env _as: dotPath
+        -- Debug pad: $LoadDepth println: "load: {dotPath} ...".
+        let $LoadDepth = $LoadDepth + 1.
         let source
             = self available
                 at: path

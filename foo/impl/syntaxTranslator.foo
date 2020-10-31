@@ -3,7 +3,11 @@ import .syntaxVisitor.SyntaxVisitor
 import .syntax.Syntax
 import .utils.*
 
+-- define Tracer DebugTracer name: "SyntaxTranslator"!
 define Tracer NullTracer!
+
+define $MethodHome
+    False!
 
 class SyntaxTranslator { env currentMethod }
     is SyntaxVisitor
@@ -174,7 +178,7 @@ class SyntaxTranslator { env currentMethod }
         AstSelfClassRef new!
 
     method visitVariable: aVariable
-        Tracer trace: #visitVariable:.
+        Tracer visitVariable: aVariable.
         (env reference: aVariable name)
             withSource: aVariable source!
 
@@ -255,7 +259,7 @@ class SyntaxTranslator { env currentMethod }
         (aType visitBy: self) :: AstGlobal!
 
     method visitMethod: aMethod
-        Tracer trace: #visitMethod:.
+        Tracer visitMethod: aMethod selector.
         let signature = aMethod signature.
         let bodyEnv = env newFrame
                           addVariables: (signature parameters collect: #name)
@@ -265,17 +269,18 @@ class SyntaxTranslator { env currentMethod }
         let argumentVariables = bodyEnv bindings.
         (argumentVariables size is signature parameters size) assert.
         let astMethod = AstMethod
-                            -- FIXME: Methods should not know their selectors!
+                            home: $MethodHome
                             selector: signature selector
                             argumentVariables: argumentVariables
                             returnType: (self _visitType: signature returnType)
                             isDirect: aMethod isDirect
                             isRequired: aMethod body is False.
-        astMethod
-            body: (astMethod isRequired not
-                       ifTrue: { aMethod body visitBy: (SyntaxTranslator
-                                              env: bodyEnv
-                                              currentMethod: astMethod) }).
+        astMethod isRequired
+            ifFalse: { astMethod
+                           body: (aMethod body
+                                      visitBy: (SyntaxTranslator
+                                                    env: bodyEnv
+                                                    currentMethod: astMethod)) }.
         astMethod
             frameSize: bodyEnv frame size.
         astMethod!
@@ -289,29 +294,32 @@ class SyntaxTranslator { env currentMethod }
                                                 name: each name
                                                 index: n
                                                 type: (self _visitType: each type) }.
+        let theClass = AstClass
+                           name: aClass name
+                           slots: slots
+                           interfaces: (self _visitEach: aClass interfaces).
+        let $MethodHome = theClass.
+        theClass directMethods: (self _visitEach: aClass directMethods).
         let instanceMethodVisitor = self child: (env addSlots: slots).
-        -- FIXME: should fetch interface object instead of using the name
-        AstClass
-            name: aClass name
-            slots: slots
-            interfaces: (self _visitEach: aClass interfaces)
-            directMethods: (self _visitEach: aClass directMethods)
-            instanceMethods: (instanceMethodVisitor _visitEach: aClass instanceMethods)!
+        theClass instanceMethods: (instanceMethodVisitor _visitEach: aClass instanceMethods).
+        theClass!
 
     method visitInterface: anInterface
-        Tracer trace: #visitInterface:.
-         -- FIXME: should fetch interface object instead of using the name
-        AstInterface
-            name: anInterface name
-            interfaces: (self _visitEach: anInterface interfaces)
-            directMethods: (self _visitEach: anInterface directMethods)
-            instanceMethods: (self _visitEach: anInterface instanceMethods)!
+        Tracer visitInterface: anInterface name.
+        let theInterface = AstInterface
+                               name: anInterface name
+                               interfaces: (self _visitEach: anInterface interfaces).
+        let $MethodHome = theInterface.
+        theInterface directMethods: (self _visitEach: anInterface directMethods).
+        theInterface instanceMethods: (self _visitEach: anInterface instanceMethods).
+        theInterface!
 
     method visitExtend: anExtend
         Tracer trace: #visitExtend:.
-        -- FIXME: should fetch interface object instead of using the name
+        let type = env reference: anExtend name.
+        let $MethodHome = type definition.
         AstExtend
-            type: (env reference: anExtend name)
+            type: type
             interfaces: (self _visitEach: anExtend interfaces)
             directMethods: (self _visitEach: anExtend directMethods)
             instanceMethods: (self _visitEach: anExtend instanceMethods)!

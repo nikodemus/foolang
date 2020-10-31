@@ -24,17 +24,10 @@ interface TranspilerTest
         TestTranspileWrapper test: self system: system!
 
     method transpile: string
-        let lang = system files / "foo/lang".
         let env = Environment
-                      modules: { "lang" -> lang }
+                      modules: { "lang" -> system files / "foo/lang" }
                       asFileModules.
-        env removeBuiltins: [
-            "Any",
-            "Object",
-            "StringOutput"
-        ].
-        env load: string.
-        let c = CTranspiler transpile: (env global: "Main") in: env.
+        let c = CTranspiler transpile: string in: env.
         (system files / "host/generated_selectors.h")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c selectors }.
@@ -134,7 +127,7 @@ class TestTranspilePanic { assert system }
             expectError: "PANIC: Let's Panic You And Me!\n"!
 end
 
-class TestTranspilePrelude { assert system }
+class TestTranspilePrelude01 { assert system }
     is TranspilerTest
 
     method testAny
@@ -150,12 +143,20 @@ class TestTranspilePrelude { assert system }
         self transpile: "import lang.boolean.*
 
                          class Main \{ x }
-                             is Object
                              direct method run
                                  True not debug.
                                  False not debug!
                          end"
             expect: "#<Boolean False>#<Boolean True>"!
+
+    method testInteger
+        self transpile: "import lang.integer
+
+                         class Main \{}
+                             direct method run
+                                 1 to: 3 do: \{ |i| i debug }!
+                         end"
+            expect: "#<Integer 1>#<Integer 2>#<Integer 3>"!
 
     method testInterval
         self transpile: "import lang.interval.Interval
@@ -165,6 +166,10 @@ class TestTranspilePrelude { assert system }
                                      do: \{ |each| each debug }!
                          end"
             expect: "#<Integer 1>#<Integer 3>#<Integer 5>"!
+end
+
+class TestTranspilePrelude02 { assert system }
+    is TranspilerTest
 
     method testIterable
         self transpile: "import lang.iterable.*
@@ -907,7 +912,7 @@ class TestTranspileExtend { assert system }
             expect: "#<Integer 84>"!
 end
 
-class TestTranspileTypecheck { assert system }
+class TestTranspileTypecheck01 { assert system }
     is TranspilerTest
 
     method testIntegerValueOk
@@ -994,6 +999,10 @@ class TestTranspileTypecheck { assert system }
                                  x debug!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+end
+
+class TestTranspileTypecheck02 { assert system }
+    is TranspilerTest
 
     method testAssignOops
         self transpile: "class Main \{}
@@ -1127,12 +1136,14 @@ class Main {}
             "--keyword" -> TestTranspileKeyword system: system,
             "--let" -> TestTranspileLet system: system,
             "--panic" -> TestTranspilePanic system: system,
-            "--prelude" -> TestTranspilePrelude system: system,
+            "--prelude-01" -> TestTranspilePrelude01 system: system,
+            "--prelude-02" -> TestTranspilePrelude02 system: system,
             "--name" -> TestName,
             "--return" -> TestTranspileReturn system: system,
             "--self" -> TestTranspileSelf system: system,
             "--string" -> TestTranspileString system: system,
-            "--typecheck" -> TestTranspileTypecheck system: system,
+            "--typecheck-01" -> TestTranspileTypecheck01 system: system,
+            "--typecheck-02" -> TestTranspileTypecheck02 system: system,
         }.
         let all = tests keys sort.
         cmd == []

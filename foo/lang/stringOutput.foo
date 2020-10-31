@@ -1,4 +1,5 @@
 import .object.Object
+import .integer.Integer
 
 class Chain { _first _last size }
     is Object
@@ -106,4 +107,9 @@ extend Object
 
     direct method displayString
         StringOutput with: { |out| self displayOn: out }!
+end
+
+extend Integer
+    method toString
+        StringOutput with: { |s| self printOn: s }!
 end

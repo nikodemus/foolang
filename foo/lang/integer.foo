@@ -40,10 +40,7 @@ extend Integer
         self is 2 ifTrue: { return "0b" }.
         self is 10 ifTrue: { return "" }.
         self is 16 ifTrue: { return "0x" }.
-        Error raise: "No radixString for {self}"!
-
-    method toString
-        StringOutput with: { |s| self printOn: s }!
+        panic "No radixString for {self}"!
 
     method to: other
         self to: other by: 1!
@@ -108,86 +105,11 @@ extend Integer
         self asFloat floatGte: right!
     method floatLte: right
         self asFloat floatLte: right!
-end
 
-class TestInteger { assert }
-    direct method runTests: assert
-        (self assert: assert)
-            ; testAdd
-            ; testAdditionCommutative
-            ; testSub
-            ; testPrintBase
-                !
-
-    method testAdd
-        assert forAll: SmallIntegers
-               that: { |x| x + x == x * 2 }
-               testing: "integer self addition"!
-
-    method testSub
-        assert forAll: SmallIntegers
-               that: { |x| x - x == 0 }
-               testing: "integer self substraction"!
-
-    method testAdditionCommutative
-        assert forAll: SmallIntegers
-               that: { |x| x + 1 == 1 + x }
-               testing: "integer addition commutates"!
-
-    method auxIntegerDivZeroError: x by: y
-        { x / y }
-            on: Error
-            do: { |error| return "oops" }!
-
-    method testDivByZero
-        assert forAll: SmallIntegers
-               that: { |x| { x / 0 }
-                           onPanic: { |p|
-                                      p description startsWith: "UNHANDLED ERROR: Divide by zero:" } }
-               testing: "division by zero (unhandled)".
-
-        assert forAll: SmallIntegers
-               that: { |x| ({ x / 0 } on: DivideByZero do: { |ex| ex return: 42 })
-                           == 42 }
-               testing: "division by zero (handled)".
-
-        assert forAll: SmallIntegers
-               that: { |x|
-                       x is 0
-                           ifTrue: { x = 1 }.
-                       [ self auxIntegerDivZeroError: x by: x,
-                         self auxIntegerDivZeroError: x by: 0 ]
-                       == [1, "oops"] }
-               testing: "division by zero (good catch)"!
-
-    method testPrintBase
-        assert that: { Integer printBase: 10 do: { 123 toString } }
-               equals: "123"
-               testing: "integer printbase 10 on 123".
-        assert that: { Integer printBase: 10 do: { -123 toString } }
-               equals: "-123"
-               testing: "integer printbase 10 on -123".
-        assert that: { Integer printBase: 10 do: { 0 toString } }
-               equals: "0"
-               testing: "integer printbase 10 on 0".
-
-        assert that: { Integer printBase: 2 do: { 123 toString } }
-               equals: "0b1111011"
-               testing: "integer printbase 2 on 123".
-        assert that: { Integer printBase: 2 do: { -123 toString } }
-               equals: "-0b1111011"
-               testing: "integer printbase 2 on -123".
-        assert that: { Integer printBase: 2 do: { 0 toString } }
-               equals: "0b0"
-               testing: "integer printbase 2 on 0".
-
-        assert that: { Integer printBase: 16 do: { 123 toString } }
-               equals: "0x7B"
-               testing: "integer printbase 16 on 123".
-        assert that: { Integer printBase: 16 do: { -123 toString } }
-               equals: "-0x7B"
-               testing: "integer printbase 16 on -123".
-        assert that: { Integer printBase: 16 do: { 0 toString } }
-               equals: "0x0"
-               testing: "integer printbase 16 on 0"!
+    method atLeast: min atMost: max
+        (self integerLt: min)
+            ifTrue: { return min }.
+        (self integerGt: max)
+            ifTrue: { return max }.
+        self!
 end
