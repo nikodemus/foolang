@@ -3,6 +3,7 @@ import .syntaxVisitor.SyntaxVisitor
 import .syntax.Syntax
 import .utils.*
 
+-- define Tracer DebugTracer name: "SyntaxTranslator"!
 define Tracer NullTracer!
 
 class SyntaxTranslator { env currentMethod }

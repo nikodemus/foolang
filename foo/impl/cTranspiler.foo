@@ -17,6 +17,7 @@ define CEscapes
       "\n" -> "\\n",
       "\r" -> "\\r" }!
 
+-- define Tracer DebugTracer name: "CTranspiler"!
 define Tracer NullTracer!
 
 class BuiltinMethod { selector definition }
