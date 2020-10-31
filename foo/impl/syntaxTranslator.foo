@@ -265,17 +265,17 @@ class SyntaxTranslator { env currentMethod }
         let argumentVariables = bodyEnv bindings.
         (argumentVariables size is signature parameters size) assert.
         let astMethod = AstMethod
-                            -- FIXME: Methods should not know their selectors!
                             selector: signature selector
                             argumentVariables: argumentVariables
                             returnType: (self _visitType: signature returnType)
                             isDirect: aMethod isDirect
                             isRequired: aMethod body is False.
-        astMethod
-            body: (astMethod isRequired not
-                       ifTrue: { aMethod body visitBy: (SyntaxTranslator
-                                              env: bodyEnv
-                                              currentMethod: astMethod) }).
+        astMethod isRequired
+            ifFalse: { astMethod
+                           body: (aMethod body
+                                      visitBy: (SyntaxTranslator
+                                                    env: bodyEnv
+                                                    currentMethod: astMethod)) }.
         astMethod
             frameSize: bodyEnv frame size.
         astMethod!
@@ -289,23 +289,25 @@ class SyntaxTranslator { env currentMethod }
                                                 name: each name
                                                 index: n
                                                 type: (self _visitType: each type) }.
+        let theClass = AstClass
+                           name: aClass name
+                           slots: slots
+                           interfaces: (self _visitEach: aClass interfaces).
+        let $AstMethodHome = theClass.
+        theClass directMethods: (self _visitEach: aClass directMethods).
         let instanceMethodVisitor = self child: (env addSlots: slots).
-        -- FIXME: should fetch interface object instead of using the name
-        AstClass
-            name: aClass name
-            slots: slots
-            interfaces: (self _visitEach: aClass interfaces)
-            directMethods: (self _visitEach: aClass directMethods)
-            instanceMethods: (instanceMethodVisitor _visitEach: aClass instanceMethods)!
+        theClass instanceMethods: (instanceMethodVisitor _visitEach: aClass instanceMethods).
+        theClass!
 
     method visitInterface: anInterface
         Tracer trace: #visitInterface:.
-         -- FIXME: should fetch interface object instead of using the name
-        AstInterface
-            name: anInterface name
-            interfaces: (self _visitEach: anInterface interfaces)
-            directMethods: (self _visitEach: anInterface directMethods)
-            instanceMethods: (self _visitEach: anInterface instanceMethods)!
+        let theInterface = AstInterface
+                               name: anInterface name
+                               interfaces: (self _visitEach: anInterface interfaces).
+        let $AstMethodHome = theInterface.
+        theInterface directMethods: (self _visitEach: anInterface directMethods).
+        theInterface instanceMethods: (self _visitEach: anInterface instanceMethods).
+        theInterface!
 
     method visitExtend: anExtend
         Tracer trace: #visitExtend:.

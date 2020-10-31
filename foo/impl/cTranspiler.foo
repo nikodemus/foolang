@@ -72,7 +72,8 @@ class BuiltinClass { host markFunction _directMethods _instanceMethods }
         _directMethods values!
     method isBuiltin
         True!
-    method interfaces
+    method interfaceGlobals
+        -- FIXME
         []!
     method isDynamic
         False!
@@ -87,7 +88,7 @@ define BuiltinClasses [
      BuiltinClass
          new: Block
          mark: "foo_mark_block"
-         directMethods: []
+         directMethods: Dictionary new
          instanceMethods: block.InstanceMethods,
      BuiltinClass
          new: Boolean
@@ -97,18 +98,18 @@ define BuiltinClasses [
      BuiltinClass
          new: Float
          mark: "foo_mark_noop"
-         directMethods: []
+         directMethods: Dictionary new
          instanceMethods: float.FloatMethods,
      BuiltinClass
          new: Integer
          mark: "foo_mark_noop"
-         directMethods: []
+         directMethods: Dictionary new
          instanceMethods: integer.IntegerMethods,
      BuiltinClass
          new: Output
          mark: "foo_mark_noop"
          directMethods: output.DirectMethods
-         instanceMethods: [],
+         instanceMethods: Dictionary new,
      BuiltinClass
          new: String
          mark: "foo_mark_noop"
@@ -521,9 +522,10 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                 output newline
             }.
         -- Interfaces
+        let interfaces = aClass interfaceGlobals.
         let classInterfacesName = "FooClassInterfaces_{aClass name}".
         output println: "struct FooVtable* {classInterfacesName}[] = \{".
-        aClass interfaces
+        interfaces
             do: { |each|
                   self declare: each.
                   output println: "    &{Name mangleInterfaceVtable: each}," }.
@@ -531,7 +533,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output newline.
         let instanceInterfacesName = "FooInstanceInterfaces_{aClass name}".
         output println: "struct FooVtable* {instanceInterfacesName}[] = \{".
-        aClass interfaces
+        interfaces
             do: { |each|
                   output println: "    &{Name mangleInstanceVtable: each}," }.
         output println: "};".
@@ -541,7 +543,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "\{".
         output println: "    .name = &FOO_CSTRING({aClass name displayString}\" class\"),".
         output println: "    .classptr = NULL,". -- FIXME
-        output println: "    .inherited = \{ .size = {aClass interfaces size}, .data = {classInterfacesName} },".
+        output println: "    .inherited = \{ .size = {interfaces size}, .data = {classInterfacesName} },".
         output println: "    .mark = foo_mark_noop,".
         output println: "    .size = {directMethods size},".
         output println: "    .methods = \{".
@@ -559,7 +561,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "\{".
         output println: "    .name = &FOO_CSTRING({aClass name displayString}),".
         output println: "    .classptr = &{globalName},".
-        output println: "    .inherited = \{ .size = {aClass interfaces size}, .data = {instanceInterfacesName} },".
+        output println: "    .inherited = \{ .size = {interfaces size}, .data = {instanceInterfacesName} },".
         output println: "    .mark = {aClass markFunction},".
         output println: "    .size = {aClass instanceMethods size},".
         output println: "    .methods = \{".
