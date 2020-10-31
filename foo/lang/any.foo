@@ -11,4 +11,6 @@ interface Any
         stream print: "Any"!
     direct method displayOn: stream
         stream print: "#<Any>"!
+    method yourself
+        self!
 end
