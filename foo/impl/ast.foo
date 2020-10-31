@@ -131,6 +131,10 @@ interface AstMethodHome
 
     method __addInterface: anInterface
         -- Order is important, so these must be kept in a list!
+        let interfaces = self _interfaces.
+        (interfaces contains: anInterface)
+            ifTrue: { -- Debug println: "FOO: {self name} already {anInterface}".
+                      return False }.
         self _interfaces push: anInterface!
 
     method __addDirectMethod: aDirectMethod
