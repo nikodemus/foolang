@@ -24,17 +24,10 @@ interface TranspilerTest
         TestTranspileWrapper test: self system: system!
 
     method transpile: string
-        let lang = system files / "foo/lang".
         let env = Environment
-                      modules: { "lang" -> lang }
+                      modules: { "lang" -> system files / "foo/lang" }
                       asFileModules.
-        env removeBuiltins: [
-            "Any",
-            "Object",
-            "StringOutput"
-        ].
-        env load: string.
-        let c = CTranspiler transpile: (env global: "Main") in: env.
+        let c = CTranspiler transpile: string in: env.
         (system files / "host/generated_selectors.h")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c selectors }.

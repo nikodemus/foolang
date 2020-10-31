@@ -135,7 +135,18 @@ define $home
 class CTranspiler { output selectorMap blockFunctions constants variables tmpCounter
                     globals }
 
-    direct method transpile: main in: env
+
+    direct method transpile: string in: env
+        env removeBuiltins: [
+            "Any",
+            "Object",
+            "StringOutput"
+        ].
+        env replaceBuiltins: BuiltinClasses.
+        env load: string.
+        self transpileMain: (env global: "Main") in: env!
+
+    direct method transpileMain: main in: env
         let visitor = CTranspiler
                           output: StringOutput new
                           selectorMap: SelectorMap new
