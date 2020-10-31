@@ -1120,7 +1120,7 @@ impl Object {
     pub fn add_interface_object(&self, interface_obj: &Object) -> Result<(), Unwind> {
         match &interface_obj.datum {
             Datum::Class(class) if class.interface => (),
-            _ => return Unwind::error(&format!("{:?} is no an interface!", &interface_obj)),
+            _ => return Unwind::error(&format!("{:?} is not an interface!", &interface_obj)),
         }
         let class = self.as_class_ref()?;
         let class_name = &class.instance_vtable.name;
