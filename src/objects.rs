@@ -1140,12 +1140,13 @@ impl Object {
             let required = method.is_required();
             match instance_vt.get(selector) {
                 Some(Method::Interpreter(ref closure)) => {
-                    let signature = method.signature()?;
-                    if &closure.signature != signature {
-                        return Unwind::error(&format!(
-                            "{}#{} is {}, interface {} specifies {}",
-                            class_name, selector, &closure.signature, interface_name, signature
-                        ));
+                    if let Ok(signature) = method.signature() {
+                        if &closure.signature != signature {
+                            return Unwind::error(&format!(
+                                "{}#{} is {}, interface {} specifies {}",
+                                class_name, selector, &closure.signature, interface_name, signature
+                            ));
+                        }
                     }
                 }
                 Some(Method::Primitive(_)) => {
