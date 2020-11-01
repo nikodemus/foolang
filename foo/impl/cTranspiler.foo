@@ -645,6 +645,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
             ifNonePut: { self _actuallyGenerateMethod: aMethod as: name }!
 
     method _actuallyGenerateMethod: aMethod as: name
+        Tracer _actuallyGenerateMethod: aMethod as: name.
         -- Debug println: "_actuallyGenerateMethod: {aMethod}".
         let $home = aMethod.
         output print: "struct Foo ".
@@ -673,6 +674,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         aMethod!
 
     method _generateTypecheck: type _for: value
+        Tracer _generateTypecheck: type _for: value.
         -- Debug println: "_generateTypecheck: {type} _for: {value}".
         type is Any
             ifTrue: { return value visitBy: self }.
