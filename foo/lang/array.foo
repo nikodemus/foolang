@@ -18,7 +18,9 @@ class Specialized { containerClass elementType }
             ifTrue: { thing elementType is elementType }!
     method typecheck: thing
         self includes: thing
-             ifFalse: { TypeError raise: thing expected: self }
+             ifFalse: { panic "TYPE OOPSIE: {thing} is not {self}!"
+                        -- TypeError raise: thing expected: self
+                        }.
         thing!
     method displayOn: stream
         stream print: "{containerClass} of: {elementType}"!
