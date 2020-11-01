@@ -6,9 +6,6 @@ interface Ast
 
     method isConstant
         False!
-
-    method debug
-        Debug println: "#<AST {self}>"!
 end
 
 class AstBuiltin { value }
