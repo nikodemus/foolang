@@ -377,7 +377,7 @@ class AstReaderMethod { home slot }
         stream print: "#<AstReaderMethod {home name}#{slot name}>"!
 end
 
-class AstMethod { home selector argumentVariables returnType body frameSize isDirect isRequired }
+class AstMethod { home selector argumentVariables returnType _body frameSize isDirect isRequired }
     is Object
 
     direct method home: home
@@ -391,7 +391,7 @@ class AstMethod { home selector argumentVariables returnType body frameSize isDi
             selector: selector
             argumentVariables: argumentVariables
             returnType: returnType
-            body: False
+            _body: False
             frameSize: False
             isDirect: isDirect
             isRequired: isRequired!
@@ -399,9 +399,16 @@ class AstMethod { home selector argumentVariables returnType body frameSize isDi
     method body: bodyVal
         isRequired
             ifTrue: { Error raise: "Required methods have no body: {selector}" }.
-        body is False
+        _body is False
             ifFalse: { Error raise: "Method body already set: {selector}" }.
-        body = bodyVal!
+        _body = bodyVal!
+
+    method body
+        isRequired
+            ifTrue: { Error raise: "{self} is a required method: it has no body." }.
+        _body is False
+            ifTrue: { Error raise: "Body of {self} is not set yet." }.
+        _body!
 
     method frameSize: frameSizeVal
         frameSize is False assert: "frame size not set".
@@ -422,7 +429,7 @@ class AstMethod { home selector argumentVariables returnType body frameSize isDi
             with: arguments!
 
     method isDefined
-        (body is False) not!
+        (_body is False) not!
 
     method signature
         argumentVariables collect: { |var| var type }!
