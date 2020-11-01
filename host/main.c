@@ -338,7 +338,7 @@ const struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, c
       return method;
     }
   }
-  return NULL;
+  FOO_PANIC("%s does not understand: #%s", vtable->name->data, selector->name->data);
 }
 
 struct Foo foo_return(struct FooContext* ctx, struct Foo value) __attribute__ ((noreturn));
@@ -358,10 +358,10 @@ struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
   FOO_PANIC("longjmp() fell through!")
 }
 
-struct FooContext* foo_context_new_method(const struct FooMethod* method,
-                                          struct FooContext* sender,
-                                          struct Foo receiver,
-                                          size_t nargs, va_list arguments) {
+struct FooContext* foo_context_new_method_no_args(const struct FooMethod* method,
+                                                  struct FooContext* sender,
+                                                  struct Foo receiver,
+                                                  size_t nargs) {
   if (method->argCount != nargs) {
     FOO_PANIC("Wrong number of arguments to %s. Wanted: %zu, got: %zu.",
               method->selector->name->data, method->argCount, nargs);
@@ -379,6 +379,27 @@ struct FooContext* foo_context_new_method(const struct FooMethod* method,
   context->receiver = receiver;
   context->outer_context = NULL;
   context->vars = sender->vars;
+  return context;
+}
+
+struct FooContext* foo_context_new_method_ptr(const struct FooMethod* method,
+                                              struct FooContext* sender,
+                                              struct Foo receiver,
+                                              size_t nargs, struct Foo* arguments) {
+  struct FooContext* context
+    = foo_context_new_method_no_args(method, sender, receiver, nargs);
+  for (size_t i = 0; i < nargs; i++) {
+    context->frame[i] = arguments[i];
+  }
+  return context;
+}
+
+struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
+                                          struct FooContext* sender,
+                                          struct Foo receiver,
+                                          size_t nargs, va_list arguments) {
+  struct FooContext* context
+    = foo_context_new_method_no_args(method, sender, receiver, nargs);
   for (size_t i = 0; i < nargs; i++) {
     context->frame[i] = va_arg(arguments, struct Foo);
   }
@@ -387,6 +408,34 @@ struct FooContext* foo_context_new_method(const struct FooMethod* method,
 
 bool foo_eq(struct Foo a, struct Foo b) {
   return a.vtable == b.vtable && a.datum.int64 == b.datum.int64;
+}
+
+struct Foo foo_activate(const struct FooMethod* method, struct FooContext* context) {
+  foo_maybe_gc(context);
+  jmp_buf ret;
+  context->ret = &ret;
+  int jmp = setjmp(ret);
+  if (jmp) {
+    FOO_DEBUG("/foo_send -> non-local return from %s", selector->name->data);
+    return context->return_value;
+  } else {
+    struct Foo res = method->function((struct FooContext*)context);
+    FOO_DEBUG("/foo_send -> local return from %s", selector->name->data);
+    return res;
+  }
+
+}
+
+struct Foo foo_send_ptr(struct FooContext* sender,
+                        const struct FooSelector* selector,
+                        struct Foo receiver,
+                        size_t nargs,
+                        struct Foo* arguments) {
+  FOO_DEBUG("/foo_send_ptr(?, %s, ...)", selector->name->data);
+  assert(receiver.vtable);
+  const struct FooMethod* method = foo_vtable_find_method(receiver.vtable, selector);
+  struct FooContext* context = foo_context_new_method_ptr(method, sender, receiver, nargs, arguments);
+  return foo_activate(method, context);
 }
 
 struct Foo foo_send(struct FooContext* sender,
@@ -398,24 +447,8 @@ struct Foo foo_send(struct FooContext* sender,
   va_start(arguments, nargs);
   assert(receiver.vtable);
   const struct FooMethod* method = foo_vtable_find_method(receiver.vtable, selector);
-  if (method) {
-    struct FooContext* context = foo_context_new_method(method, sender, receiver, nargs, arguments);
-    foo_maybe_gc(context);
-    jmp_buf ret;
-    context->ret = &ret;
-    int jmp = setjmp(ret);
-    if (jmp) {
-      FOO_DEBUG("/foo_send -> non-local return from %s", selector->name->data);
-      return context->return_value;
-    } else {
-      struct Foo res = method->function((struct FooContext*)context);
-      FOO_DEBUG("/foo_send -> local return from %s", selector->name->data);
-      return res;
-    }
-  } else {
-    FOO_PANIC("%s does not understand: #%s",
-              receiver.vtable->name->data, selector->name->data);
-  }
+  struct FooContext* context = foo_context_new_method_va(method, sender, receiver, nargs, arguments);
+  return foo_activate(method, context);
 }
 
 struct Foo foo_block_new(struct FooContext* context,

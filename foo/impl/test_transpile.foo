@@ -653,9 +653,9 @@ class TestTranspileSelector { assert system }
         self transpile: "class Main \{}
                              direct method run
                                  #foo debug.
-                                 #foo name debug!
+                                 (#name sendTo: #bar with: []) debug!
                         end"
-            expect: "#<Selector foo>#<String foo>"!
+            expect: "#<Selector foo>#<String bar>"!
 end
 
 class TestTranspileFloat { assert system }
