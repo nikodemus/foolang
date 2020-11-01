@@ -97,6 +97,12 @@ class BuiltinClass { host markFunction _interfaces _directMethods _instanceMetho
 
     method isDynamic
         False!
+
+    method printOn: stream
+        "#<BuiltinClass {host}>"!
+
+    method toString
+        StringOutput with: { |out| self printOn: out }!
 end
 
 define BuiltinClasses [
