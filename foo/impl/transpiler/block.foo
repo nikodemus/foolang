@@ -16,6 +16,10 @@ return PTR(FooBlock, ctx->receiver.datum)->function(block_ctx);"},
           -> {signature: [Any], vars: 0,
               body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
 return PTR(FooBlock, ctx->receiver.datum)->function(block_ctx);"},
+      #value:value:
+          -> {signature: [Any, Any], vars: 0,
+              body: "struct FooContext* block_ctx = foo_context_new_block(ctx);
+return PTR(FooBlock, ctx->receiver.datum)->function(block_ctx);"},
       #whileFalse:
           -> {signature: [Block], vars: 0,
               body: "while (foo_eq(FooGlobal_False, foo_send(ctx, &FOO_value, ctx->receiver, 0))) \{
