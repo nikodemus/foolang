@@ -515,7 +515,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         directMethods
             do: { |each| self _generateMethod: each _for: aClass name }.
         -- Debug println: "/class instance methods".
-        aClass instanceMethods
+        let instanceMethods = aClass instanceMethods.
+        instanceMethods
             do: { |each| self _generateMethod: each _for: aClass name }.
         aClass isBuiltin
             ifFalse: {
@@ -612,9 +613,9 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "    .classptr = &{globalName},".
         output println: "    .inherited = \{ .size = {interfaces size}, .data = {instanceInterfacesName} },".
         output println: "    .mark = {aClass markFunction},".
-        output println: "    .size = {aClass instanceMethods size},".
+        output println: "    .size = {instanceMethods size},".
         output println: "    .methods = \{".
-        aClass instanceMethods
+        instanceMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                   output println: "                            .vtable = &{Name mangleMethodVtable: each},".
