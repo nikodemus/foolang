@@ -1,0 +1,21 @@
+define DirectMethods
+    Dictionary new!
+
+define InstanceMethods {
+    #debug
+        -> {signature: [], vars: 0,
+            body: "const char* name = PTR(FooSelector, ctx->receiver.datum)->name->data;
+printf(\"#<Selector %s>\", name);
+return ctx->receiver;"},
+    #name
+        -> {signature: [], vars: 0,
+            body: "const struct FooCString* cname = PTR(FooSelector, ctx->receiver.datum)->name;
+struct FooBytes* name = FooBytes_alloc(cname->size);
+memcpy(name->data, cname->data, cname->size);
+return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = \{ .ptr = name } };"},
+    #sendTo:with:
+        -> {signature: [Any, Array], vars: 0,
+            body: "struct FooArray* array = PTR(FooArray, ctx->frame[1].datum);
+struct FooSelector* selector = PTR(FooSelector, ctx->receiver.datum);
+return foo_send_ptr(ctx->sender, selector, ctx->frame[0], array->size, array->data);"}
+}!
