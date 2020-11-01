@@ -247,7 +247,7 @@ interface Iterable
 
     method contains: object
         self do: { |each|
-                   each is object
+                   each == object
                        ifTrue: { return True } }.
         False!
 

@@ -106,6 +106,12 @@ interface TestIterable
                equals: [1, 10, 100, 123] asList
                testing: "with:collect:into: (size 3)"!
 
+    method testContains
+        assert true: { ["foo"] contains: "foo" }
+               testing: "contains: (true)".
+        assert false: { ["foo"] contains: "bar" }
+               testing: "contains: (false)"!
+
     method testCount
         assert that: { (self make: []) count: { |each| True }}
                equals: 0
