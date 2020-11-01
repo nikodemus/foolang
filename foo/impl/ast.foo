@@ -445,6 +445,9 @@ class AstMethod { home selector argumentVariables returnType body frameSize isDi
         self isDirect
             ifTrue: { stream print: "#<AstMethod {home name} {selector name}>" }
             ifFalse: { stream print: "#<AstMethod {home name}{selector}>" }!
+
+    method toString
+        StringOutput with: { |out| self printOn: out }!
 end
 
 interface AstNode
@@ -643,6 +646,9 @@ class AstConstantRef { value }
 
     method isConstant
         True!
+
+    method toString
+        "<AstConstantRef {value}>"!
 end
 
 class AstIs { left right }
