@@ -5,6 +5,7 @@ import .transpiler.float
 import .transpiler.integer
 import .transpiler.name.Name
 import .transpiler.output
+import .transpiler.selector
 import .transpiler.string
 import .ast.*
 import .utils.*
@@ -126,6 +127,11 @@ define BuiltinClasses [
          mark: "foo_mark_noop"
          directMethods: output.DirectMethods
          instanceMethods: Dictionary new,
+     BuiltinClass
+         new: Selector
+         mark: "foo_mark_noop"
+         directMethods: selector.DirectMethods
+         instanceMethods: selector.InstanceMethods,
      BuiltinClass
          new: String
          mark: "foo_mark_noop"
@@ -743,6 +749,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         (Boolean includes: value)
             ifTrue: { let bit = value ifTrue: { 1 } ifFalse: { 0 }.
                       return output print: ".boolean = {bit}" }.
+        (Selector includes: value)
+            ifTrue: { return output print: ".ptr = &{self selectorCName: value}" }.
         Error raise: "Don't know how to transpile constant `{value}` into C."!
 
     method visitConstant: aConstant

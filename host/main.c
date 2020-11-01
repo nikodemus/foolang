@@ -64,6 +64,8 @@ struct Foo {
 /** Out of line allocation of data for compatibility with C string literals.
  *
  *  FIXME: I'd really like to replace these with String.
+ *  The big issue is that these cannot be passed out from selectors without
+ *  copying. At least a vtable is needed...
  */
 struct FooCString {
   size_t size;
