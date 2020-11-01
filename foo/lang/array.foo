@@ -52,9 +52,6 @@ extend Array
           do: { |i| new put: (self at: i + offset) at: i }.
         new!
 
-    method asList
-        List from: self!
-
     method append: other
         let n = self size + other size.
         Array of: (self elementType) new: n

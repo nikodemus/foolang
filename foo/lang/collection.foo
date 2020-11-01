@@ -24,9 +24,6 @@ interface Collection
     required method add: object
     required method clear
 
-    direct method default
-        List new!
-
     direct method defaultCapacity
         8!
 

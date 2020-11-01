@@ -225,3 +225,25 @@ class List { size data }
     method mulNumber: left
        self collect: { |elt| left * elt }!
 end
+
+extend Ordered
+    method splitBy: element
+        self isEmpty
+            ifTrue: { return [self] }.
+        let list = List new.
+        let cursor = 1.
+        1 to: self size
+          do: { |index|
+                ((self at: index) == element)
+                    ifTrue: { list add: (self from: cursor to: index - 1).
+                              cursor = index + 1 } }.
+        list add: (self from: cursor to: self size).
+        list!
+    method asList
+        List from: self!
+end
+
+extend Collection
+    direct method default
+        List new!
+end
