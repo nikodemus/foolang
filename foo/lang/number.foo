@@ -1,5 +1,5 @@
-import .interval.Interval
 import .object.Object
+import .interval.Interval
 
 interface Number
     is Object
@@ -7,7 +7,7 @@ interface Number
     direct method default
         0!
 
-    method == right -> Boolean
+    method == right
         self is right!
 
     method isEquivalent: right
