@@ -252,6 +252,19 @@ class TestTranspilePreludeObject { assert system }
             expect: "#<Boolean False>#<Boolean True>"!
 end
 
+class TestTranspilePreludeString { assert system }
+    is TranspilerTest
+
+    method test
+        self transpile: "import lang.string.*
+
+                         class Main \{}
+                             direct method run
+                                 (\" to \" join: [\"a\", \"b\", \"c\"]) debug!
+                         end"
+            expect: "#<String a to b to c>"!
+end
+
 class TestTranspilePreludeStringOutput { assert system }
     is TranspilerTest
 
@@ -1363,6 +1376,7 @@ class Main {}
             "--prelude-interval" -> TestTranspilePreludeInterval,
             "--prelude-iterable" -> TestTranspilePreludeIterable,
             "--prelude-object" -> TestTranspilePreludeObject,
+            "--prelude-string" -> TestTranspilePreludeString,
             "--prelude-string-output" -> TestTranspilePreludeStringOutput,
             "--return" -> TestTranspileReturn,
             "--self" -> TestTranspileSelf,
