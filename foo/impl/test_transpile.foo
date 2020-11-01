@@ -646,6 +646,18 @@ class TestTranspileReturn { assert system }
             expect: "#<Integer 420>"!
 end
 
+class TestTranspileSelector { assert system }
+    is TranspilerTest
+
+    method test
+        self transpile: "class Main \{}
+                             direct method run
+                                 #foo debug.
+                                 #foo name debug!
+                        end"
+            expect: "#<Selector foo>#<String foo>"!
+end
+
 class TestTranspileFloat { assert system }
     is TranspilerTest
 
@@ -1220,6 +1232,7 @@ class Main {}
             "--prelude-string-output" -> TestTranspilePreludeStringOutput,
             "--return" -> TestTranspileReturn,
             "--self" -> TestTranspileSelf,
+            "--selector" -> TestTranspileSelector,
             "--string" -> TestTranspileString,
             "--typecheck-01" -> TestTranspileTypecheck01,
             "--typecheck-02" -> TestTranspileTypecheck02,
