@@ -200,11 +200,12 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         -- KLUDGE: add #writeString: to the selectors.
         visitor selectorMap map: #writeString:.
         env replaceBuiltins: BuiltinClasses.
+        let builtins = visitor generateBuiltins.
         visitor declare: main.
         visitor writeDefinitions.
         visitor writeMain.
         { main: visitor output,
-          builtins: visitor generateBuiltins,
+          builtins: builtins,
           blocks: visitor generateBlocks,
           constants: visitor generateConstants,
           declarations: visitor generateDeclarations,
