@@ -20,6 +20,23 @@ return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = \{ .ptr = st
 }!
 
 define InstanceMethods {
+    #isEquivalent:
+        -> {signature: [String], vars: 0,
+            body: "struct Foo arg = ctx->frame[0];
+struct Foo self = ctx->receiver;
+if (arg.datum.ptr == self.datum.ptr) \{
+    return FooGlobal_True;
+}
+struct FooBytes* argBytes = PTR(FooBytes, arg.datum);
+struct FooBytes* selfBytes = PTR(FooBytes, self.datum);
+if (argBytes->size != selfBytes->size) \{
+    return FooGlobal_False;
+}
+if (!memcmp(argBytes->data, selfBytes->data, argBytes->size)) \{
+    return FooGlobal_True;
+} else \{
+    return FooGlobal_False;
+}"},
     #append:
         -> {signature: [String], vars: 0,
             body: "struct FooBytes* b1 = PTR(FooBytes, ctx->receiver.datum);
