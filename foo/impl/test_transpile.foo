@@ -127,10 +127,10 @@ class TestTranspilePanic { assert system }
             expectError: "PANIC: Let's Panic You And Me!\n"!
 end
 
-class TestTranspilePrelude01 { assert system }
+class TestTranspilePreludeAny { assert system }
     is TranspilerTest
 
-    method testAny
+    method test
         self transpile: "import lang.any.Any
 
                          class Main \{}
@@ -138,8 +138,13 @@ class TestTranspilePrelude01 { assert system }
                                  (Any is Any) debug!
                          end"
             expect: "#<Boolean True>"!
+end
 
-    method testBoolean
+
+class TestTranspilePreludeBoolean { assert system }
+    is TranspilerTest
+
+    method test
         self transpile: "import lang.boolean.*
 
                          class Main \{ x }
@@ -148,21 +153,12 @@ class TestTranspilePrelude01 { assert system }
                                  False not debug!
                          end"
             expect: "#<Boolean False>#<Boolean True>"!
-
-    method testFloat1
-        self transpile: "import lang.float
-
-                         class Main \{}
-                             direct method run
-                                 (1.0 atLeast: 2.0 atMost: 10.0) debug!
-                         end"
-            expect: "#<Float 2.000000>"!
 end
 
-class TestTranspilePrelude02 { assert system }
+class TestTranspilePreludeFloat { assert system }
     is TranspilerTest
 
-    method testFloat2
+    method test
         self transpile: "import lang.float
 
                          class Main \{}
@@ -171,8 +167,12 @@ class TestTranspilePrelude02 { assert system }
                                      do: \{ |each| each debug }!
                          end"
             expect: "#<Float 1.000000>#<Float 2.000000>"!
+end
 
-    method testInteger
+class TestTranspilePreludeInteger { assert system }
+    is TranspilerTest
+
+    method test
         self transpile: "import lang.integer
 
                          class Main \{}
@@ -180,8 +180,12 @@ class TestTranspilePrelude02 { assert system }
                                  1 to: 3 do: \{ |i| i debug }!
                          end"
             expect: "#<Integer 1>#<Integer 2>#<Integer 3>"!
+end
 
-    method testInterval
+class TestTranspilePreludeInterval { assert system }
+    is TranspilerTest
+
+    method test
         self transpile: "import lang.interval.Interval
                          class Main \{}
                              direct method run
@@ -191,10 +195,10 @@ class TestTranspilePrelude02 { assert system }
             expect: "#<Integer 1>#<Integer 3>#<Integer 5>"!
 end
 
-class TestTranspilePrelude03 { assert system }
+class TestTranspilePreludeIterable { assert system }
     is TranspilerTest
 
-    method testIterable
+    method test
         self transpile: "import lang.iterable.*
 
                          class MyIterator \{ pos thing }
@@ -226,8 +230,12 @@ class TestTranspilePrelude03 { assert system }
                                      do: \{ |each| each debug }!
                          end"
             expect: "#<Integer 10>#<Integer 20>#<Integer 30>"!
+end
 
-    method testObject
+class TestTranspilePreludeObject { assert system }
+    is TranspilerTest
+
+    method test
         self transpile: "import lang.object.Object
 
                          class Main \{ x }
@@ -239,8 +247,12 @@ class TestTranspilePrelude03 { assert system }
                                  (self x == other x)!
                          end"
             expect: "#<Boolean False>#<Boolean True>"!
+end
 
-    method testStringOutput
+class TestTranspilePreludeStringOutput { assert system }
+    is TranspilerTest
+
+    method test
         self transpile: "import lang.stringOutput.StringOutput
 
                          class Main \{}
@@ -1198,9 +1210,14 @@ class Main {}
             "--keyword" -> TestTranspileKeyword,
             "--let" -> TestTranspileLet,
             "--panic" -> TestTranspilePanic,
-            "--prelude-01" -> TestTranspilePrelude01,
-            "--prelude-02" -> TestTranspilePrelude02,
-            "--prelude-03" -> TestTranspilePrelude03,
+            "--prelude-any" -> TestTranspilePreludeAny,
+            "--prelude-boolean" -> TestTranspilePreludeBoolean,
+            "--prelude-float" -> TestTranspilePreludeFloat,
+            "--prelude-integer" -> TestTranspilePreludeInteger,
+            "--prelude-interval" -> TestTranspilePreludeInterval,
+            "--prelude-iterable" -> TestTranspilePreludeIterable,
+            "--prelude-object" -> TestTranspilePreludeObject,
+            "--prelude-string-output" -> TestTranspilePreludeStringOutput,
             "--return" -> TestTranspileReturn,
             "--self" -> TestTranspileSelf,
             "--string" -> TestTranspileString,
