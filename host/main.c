@@ -147,6 +147,7 @@ struct FooUnbind {
 };
 
 struct FooContext {
+  size_t depth;
   const char* info;
   struct Foo receiver;
   struct FooContext* sender;
@@ -237,7 +238,8 @@ struct FooContext* foo_context_new_block(struct FooContext* ctx);
 
 struct FooContext* foo_context_new_main(struct FooArray* vars) {
   struct FooContext* context = foo_alloc_context(0);
-  context->info = "main";
+  context->depth = 1;
+  context->info = "<<main>>";
   context->receiver = FooGlobal_False;
   context->sender = NULL;
   context->outer_context = NULL;
@@ -248,7 +250,8 @@ struct FooContext* foo_context_new_main(struct FooArray* vars) {
 struct FooContext* foo_context_new_block(struct FooContext* sender) {
   struct FooBlock* block = sender->receiver.datum.ptr;
   struct FooContext* context = foo_alloc_context(block->frameSize);
-  context->info = "block";
+  context->depth = sender->depth + 1;
+  context->info = "<<block>>";
   context->receiver = block->context->receiver;
   context->sender = sender;
   context->outer_context = block->context;
@@ -260,7 +263,8 @@ struct FooContext* foo_context_new_block(struct FooContext* sender) {
 
 struct FooContext* foo_context_new_unwind(struct FooContext* ctx, struct FooBlock* block) {
   struct FooContext* context = foo_alloc_context(block->frameSize);
-  context->info = "#finally:";
+  context->depth = ctx->depth + 1;
+  context->info = "<<unwind>>";
   context->receiver = block->context->receiver;
   context->sender = ctx;
   context->outer_context = block->context;
@@ -374,6 +378,7 @@ struct FooContext* foo_context_new_method_no_args(const struct FooMethod* method
   }
   assert(method->frameSize >= nargs);
   struct FooContext* context = foo_alloc_context(method->frameSize);
+  context->depth = sender->depth + 1;
   context->info = method->selector->name->data;
   context->sender = sender;
   context->receiver = receiver;
@@ -410,7 +415,21 @@ bool foo_eq(struct Foo a, struct Foo b) {
   return a.vtable == b.vtable && a.datum.int64 == b.datum.int64;
 }
 
+void foo_print_backtrace(struct FooContext* context) {
+  while (context) {
+    printf("%zu: %s %s\n",
+           context->depth,
+           context->receiver.vtable->name->data,
+           context->info);
+    context = context->sender;
+  }
+}
+
 struct Foo foo_activate(const struct FooMethod* method, struct FooContext* context) {
+  if (context->depth > 200) {
+    foo_print_backtrace(context);
+    FOO_PANIC("Stack blew up!");
+  }
   foo_maybe_gc(context);
   jmp_buf ret;
   context->ret = &ret;
