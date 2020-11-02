@@ -1,0 +1,44 @@
+define DirectMethods {
+    #new:
+        -> {signature: [Integer], vars: 0,
+            body: "int64_t isize = ctx->frame[0].datum.int64;
+assert(isize >= 0);
+struct FooBytes* b = FooBytes_alloc((size_t)isize);
+return (struct Foo)\{ .vtable = &FooInstanceVtable_ByteArray, .datum = \{ .ptr = b } };"}
+}!
+
+define InstanceMethods {
+    #at:
+        -> {signature: [Integer], vars: 0,
+            body: "int64_t index = ctx->frame[0].datum.int64;
+struct FooBytes* b = PTR(FooBytes, ctx->receiver.datum);
+assert(index > 0);
+assert(index <= b->size);
+return foo_Integer_new(b->data[index-1]);"},
+    #debug
+        -> {signature: [], vars: 0,
+            body: "struct FooBytes* b = PTR(FooBytes, ctx->receiver.datum);
+printf(\"#<ByteArray \");
+for (size_t i = 0; i < b->size; i++) \{
+    if (i) \{
+        printf(\", \");
+    }
+    printf(\"%u\", (int)b->data[i]);
+}
+printf(\">\");
+return ctx->receiver;"},
+    #put:at:
+        -> {signature: [Integer, Integer], vars: 0,
+            body: "int64_t value = ctx->frame[0].datum.int64;
+assert((value & 0xff) >= 0 && value <= 255);
+struct FooBytes* b = PTR(FooBytes, ctx->receiver.datum);
+int64_t index = ctx->frame[1].datum.int64;
+assert(index > 0);
+assert(index <= b->size);
+b->data[index-1] = value;
+return ctx->receiver;"},
+    #size:
+        -> {signature: [], vars: 0,
+            body: "struct FooBytes* b = PTR(FooBytes, ctx->receiver.datum);
+return foo_Integer_new(b->size);"}
+}!

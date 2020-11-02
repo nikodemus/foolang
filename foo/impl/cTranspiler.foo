@@ -1,6 +1,7 @@
 import .transpiler.array
 import .transpiler.block
 import .transpiler.boolean
+import .transpiler.byte_array
 import .transpiler.float
 import .transpiler.integer
 import .transpiler.name.Name
@@ -112,6 +113,11 @@ define BuiltinClasses [
          mark: "foo_mark_noop"
          directMethods: boolean.DirectMethods
          instanceMethods: boolean.InstanceMethods,
+     BuiltinClass
+         new: ByteArray
+         mark: "foo_mark_noop"
+         directMethods: byte_array.DirectMethods
+         instanceMethods: byte_array.InstanceMethods,
      BuiltinClass
          new: Float
          mark: "foo_mark_noop"
