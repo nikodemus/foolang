@@ -549,22 +549,22 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                                        ifFalse: { output println: "new->data[{index -1}] = foo_vtable_typecheck(&{Name mangleInstanceVtable: type}, ctx->frame[{index-1}]);" } }.
                 output println: "    return (struct Foo)\{ .vtable = &{instanceVtableName}, .datum = \{ .ptr = new } };".
                 output println: "}".
-                output newline.
-                -- #includes: (typetest)
-                let includes = { home: aClass,
-                                 selector: #includes:,
-                                 arity: 1,
-                                 frameSize: 1,
-                                 isDirect: True }.
-                directMethods push: includes.
-                output print: "struct Foo ".
-                output println: (Name mangleMethod: includes).
-                output println: "    (struct FooContext* ctx)".
-                output println: "\{".
-                output println: "    return foo_Boolean_new(&{Name mangleInstanceVtable: aClass} == ctx->frame[0].vtable);".
-                output println: "}".
                 output newline
             }.
+        -- #includes: (typetest)
+        let includes = { home: aClass,
+                         selector: #includes:,
+                         arity: 1,
+                         frameSize: 1,
+                         isDirect: True }.
+        directMethods push: includes.
+        output print: "struct Foo ".
+        output println: (Name mangleMethod: includes).
+        output println: "    (struct FooContext* ctx)".
+        output println: "\{".
+        output println: "    return foo_Boolean_new(&{Name mangleInstanceVtable: aClass} == ctx->frame[0].vtable);".
+        output println: "}".
+        output newline.
         -- Interfaces
         let interfaces = aClass interfaceGlobals.
         let classInterfacesName = "FooClassInterfaces_{aClass name}".
