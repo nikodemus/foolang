@@ -644,7 +644,7 @@ struct FooAlloc {
 bool foo_mark_ptr(void* ptr) {
   const size_t offset = offsetof(struct FooAlloc, data);
   struct FooAlloc* alloc = (void*)((char*)ptr-offset);
-  bool new_mark = alloc->mark == current_live_mark;
+  bool new_mark = alloc->mark != current_live_mark;
   alloc->mark = current_live_mark;
   return new_mark;
 }
