@@ -110,37 +110,37 @@ define BuiltinClasses [
          instanceMethods: block.InstanceMethods,
      BuiltinClass
          new: Boolean
-         mark: "foo_mark_noop"
+         mark: "foo_mark_raw"
          directMethods: boolean.DirectMethods
          instanceMethods: boolean.InstanceMethods,
      BuiltinClass
          new: ByteArray
-         mark: "foo_mark_noop"
+         mark: "foo_mark_bytes"
          directMethods: byte_array.DirectMethods
          instanceMethods: byte_array.InstanceMethods,
      BuiltinClass
          new: Float
-         mark: "foo_mark_noop"
+         mark: "foo_mark_raw"
          directMethods: Dictionary new
          instanceMethods: float.FloatMethods,
      BuiltinClass
          new: Integer
-         mark: "foo_mark_noop"
+         mark: "foo_mark_raw"
          directMethods: Dictionary new
          instanceMethods: integer.IntegerMethods,
      BuiltinClass
          new: Output
-         mark: "foo_mark_noop"
+         mark: "foo_mark_raw"
          directMethods: output.DirectMethods
          instanceMethods: Dictionary new,
      BuiltinClass
          new: Selector
-         mark: "foo_mark_noop"
+         mark: "foo_mark_raw"
          directMethods: selector.DirectMethods
          instanceMethods: selector.InstanceMethods,
      BuiltinClass
          new: String
-         mark: "foo_mark_noop"
+         mark: "foo_mark_bytes"
          directMethods: string.DirectMethods
          instanceMethods: string.InstanceMethods
 ]!
@@ -369,6 +369,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
                       with: { |out|
                               out println: "struct FooBytes {cname}_bytes =".
                               out println: "\{".
+                              out println: "    .gc = false,".
                               out println: "    .size = {string size},".
                               out print: "    .data = \{ ".
                               string do: { |each|
@@ -459,7 +460,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "    .name = &FOO_CSTRING({anInterface name displayString}\" interface\"),".
         output println: "    .inherited = \{ .size = 0, .data = NULL },".
         output println: "    .size = {anInterface directMethods size},".
-        output println: "    .mark = foo_mark_noop,".
+        output println: "    .mark = foo_mark_raw,".
         output println: "    .methods = \{".
         directMethods
             do: { |each|
@@ -477,7 +478,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "    .name = &FOO_CSTRING({anInterface name displayString}),".
         output println: "    .classptr = NULL,". -- FIXME
         output println: "    .inherited = \{ .size = 0, .data = NULL },".
-        output println: "    .mark = foo_mark_noop,".
+        output println: "    .mark = NULL,".
         output println: "    .size = 0,".
         output println: "    .methods = \{}".
         output println: "};".
@@ -589,7 +590,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "    .name = &FOO_CSTRING({aClass name displayString}\" class\"),".
         output println: "    .classptr = NULL,". -- FIXME
         output println: "    .inherited = \{ .size = {interfaces size}, .data = {classInterfacesName} },".
-        output println: "    .mark = foo_mark_noop,".
+        output println: "    .mark = foo_mark_raw,".
         output println: "    .size = {directMethods size},".
         output println: "    .methods = \{".
         directMethods
