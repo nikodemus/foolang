@@ -75,13 +75,13 @@ interface TranspilerTest
         assert that: { let cmd = self transpile: string.
                        [cmd ok, cmd stdout] }
                equals: [False, output]
-               testing: "transpile error -> {output}"!
+               testing: "transpiler"!
 
     method transpile: string expect: output
         assert that: { let res = self transpile: string.
                        [res ok, res stdout] }
                equals: [True, output]
-               testing: "transpile -> {output}"!
+               testing: "transpiler"!
 end
 
 class TestTranspileLet { assert system }
@@ -124,7 +124,10 @@ class TestTranspilePanic { assert system }
                              direct method run
                                  panic \"Let's Panic You And Me!\"!
                          end"
-            expectError: "PANIC: Let's Panic You And Me!\n"!
+            expectError: "PANIC: Let's Panic You And Me!
+Backtrace:
+  1: Main class#run
+"!
 end
 
 class TestTranspilePreludeAny { assert system }
@@ -535,6 +538,29 @@ class TestTranspileArray { assert system }
                          end"
             expect: "#<Integer 440>"!
 
+end
+
+class TestTranspileBacktrace { assert system }
+    is TranspilerTest
+
+    method testBacktraceNoMethod
+        self transpile: "interface Aux
+                             direct method ok2
+                                 self oops!
+                         end
+                         class Main \{}
+                             is Aux
+                             direct method run
+                                 self ok!
+                             direct method ok
+                                 self ok2!
+                         end"
+            expectError: "PANIC: Main class does not understand: #oops
+Backtrace:
+  3: Aux interface#ok2 (Main class)
+  2: Main class#ok
+  1: Main class#run
+"!
 end
 
 class TestTranspileClass { assert system }
@@ -989,7 +1015,10 @@ class TestTranspileTypecheck01 { assert system }
                              direct method run
                                  (1.2::Integer) debug!
                          end"
-            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float
+Backtrace:
+  1: Main class#run
+"!
 end
 
 class TestTranspileTypecheck02 { assert system }
@@ -1011,7 +1040,11 @@ class TestTranspileTypecheck02 { assert system }
                              direct method foo: x::Integer
                                  x debug!
                          end"
-            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float
+Backtrace:
+  2: Main class#foo:
+  1: Main class#run
+"!
 end
 
 class TestTranspileTypecheck03 { assert system }
@@ -1029,7 +1062,11 @@ class TestTranspileTypecheck03 { assert system }
                              direct method run
                                  \{ |x::Integer| x debug } value: 1.2!
                          end"
-            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float
+Backtrace:
+  2: Block#value:
+  1: Main class#run
+"!
 end
 
 class TestTranspileTypecheck04 { assert system }
@@ -1056,7 +1093,10 @@ class TestTranspileTypecheck04 { assert system }
                              direct method run
                                  42 :: MyInterface value debug!
                          end"
-            expectError: "PANIC: Type error! Wanted: MyInterface, got: Integer"!
+            expectError: "PANIC: Type error! Wanted: MyInterface, got: Integer
+Backtrace:
+  1: Main class#run
+"!
 
 end
 
@@ -1077,7 +1117,10 @@ class TestTranspileTypecheck05 { assert system }
                                  let x :: Integer = 42.12.
                                  x debug!
                          end"
-            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float
+Backtrace:
+  1: Main class#run
+"!
 end
 
 class TestTranspileTypecheck06 { assert system }
@@ -1090,7 +1133,10 @@ class TestTranspileTypecheck06 { assert system }
                                  x = 12.23.
                                  x debug!
                          end"
-            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float
+Backtrace:
+  1: Main class#run
+"!
 
     method testSlotTypeInitOk
         self transpile: "class Main \{ x::Integer }
@@ -1113,7 +1159,11 @@ class TestTranspileTypecheck07 { assert system }
                              method x
                                  x!
                          end"
-            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float
+Backtrace:
+  2: Main class#x:
+  1: Main class#run
+"!
 
     method testSlotTypeAssignOk
         self transpile: "class Main \{ x::Integer }
@@ -1138,7 +1188,11 @@ class TestTranspileTypecheck08 { assert system }
                                  x = 42.123.
                                  x!
                          end"
-            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float
+Backtrace:
+  2: Main#frob
+  1: Main class#run
+"!
 
     method testMethodReturnTypeOk
         self transpile: "class Main \{}
@@ -1160,7 +1214,11 @@ class TestTranspileTypecheck09 { assert system }
                              direct method foo -> Integer
                                  42.42!
                          end"
-            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float
+Backtrace:
+  2: Main class#foo
+  1: Main class#run
+"!
 
     method testMethodNonLocalReturnTypeOk
         self transpile: "class Main \{}
@@ -1188,7 +1246,13 @@ class TestTranspileTypecheck10 { assert system }
                                  block value.
                                  return 0!
                          end"
-            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float
+Backtrace:
+  4: Block#value
+  3: Main class#bar:
+  2: Main class#foo
+  1: Main class#run
+"!
 
     method testBlockReturnTypeOk
         self transpile: "class Main \{}
@@ -1206,7 +1270,11 @@ class TestTranspileTypecheck11 { assert system }
                              direct method run
                                 (\{ |a| -> Integer a } value: 42.32) debug!
                          end"
-            expectError: "PANIC: Type error! Wanted: Integer, got: Float"!
+            expectError: "PANIC: Type error! Wanted: Integer, got: Float
+Backtrace:
+  2: Block#value:
+  1: Main class#run
+"!
 
     method testClassTypeIncludes
         self transpile: "class A \{} end
@@ -1224,10 +1292,11 @@ class Main {}
     direct method run: cmd in: system
         let tests = {
             "--array" -> TestTranspileArray,
+            "--backtrace" -> TestTranspileBacktrace,
             "--block" -> TestTranspileBlock,
             "--boolean" -> TestTranspileBoolean,
-             "--byte-array" -> TestTranspileByteArray,
-           "--class" -> TestTranspileClass,
+            "--byte-array" -> TestTranspileByteArray,
+            "--class" -> TestTranspileClass,
             "--define" -> TestTranspileDefine,
             "--dynamic" -> TestTranspileDynamic,
             "--extend" -> TestTranspileExtend,
