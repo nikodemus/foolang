@@ -317,7 +317,7 @@ struct FooVtableList {
   struct FooVtable** data;
 };
 
-typedef void (*FooMarkFunction)(union FooDatum Foo);
+typedef void (*FooMarkFunction)(void* ptr);
 
 struct FooVtable {
   struct FooCString* name;
@@ -623,6 +623,12 @@ void fooinit(void) {
 
  */
 
+#if 0
+#define DEBUG_GC(...) { printf(__VA_ARGS__); fflush(stdout); }
+#else
+#define DEBUG_GC(...)
+#endif
+
 enum FooMark {
   RED = 0,
   BLUE = 1
@@ -641,43 +647,57 @@ struct FooAlloc {
   char data[];
 };
 
-bool foo_mark_ptr(void* ptr) {
+bool foo_mark_live(void* ptr) {
   const size_t offset = offsetof(struct FooAlloc, data);
   struct FooAlloc* alloc = (void*)((char*)ptr-offset);
   bool new_mark = alloc->mark != current_live_mark;
+  DEBUG_GC("    /mark_live %p mark=%d, live=%d\n", ptr, alloc->mark, current_live_mark);
   alloc->mark = current_live_mark;
   return new_mark;
+}
+
+void foo_mark_ptr(void* ptr) {
+  foo_mark_live(ptr);
 }
 
 void foo_mark_context(struct FooContext* ctx);
 
 void foo_mark_object(struct Foo obj) {
   if (obj.vtable) {
-    obj.vtable->mark(obj.datum);
+    obj.vtable->mark(obj.datum.ptr);
   }
 }
 
-void foo_mark_noop(union FooDatum datum) {
-  (void)datum;
+void foo_mark_raw(void* ptr) {
+  (void)ptr;
+  DEBUG_GC("  /mark_raw\n");
 }
 
-void foo_mark_array(union FooDatum datum) {
-  struct FooArray* array = PTR(FooArray, datum);
-  if (foo_mark_ptr(array)) {
+void foo_mark_static(void* ptr) {
+  (void)ptr;
+  DEBUG_GC("  /mark_static\n");
+}
+
+void foo_mark_array(void* ptr) {
+  DEBUG_GC("  /mark_array\n");
+  struct FooArray* array = ptr;
+  if (foo_mark_live(array)) {
     for (size_t i = 0; i < array->size; i++) {
       foo_mark_object(array->data[i]);
     }
   }
 }
 
-void foo_mark_block(union FooDatum datum) {
-  struct FooBlock* block = PTR(FooBlock, datum);
-  if (foo_mark_ptr(block)) {
+void foo_mark_block(void* ptr) {
+  DEBUG_GC("  /mark_block\n");
+  struct FooBlock* block = ptr;
+  if (foo_mark_live(block)) {
     foo_mark_context(block->context);
   }
 }
 
 void foo_mark_cleanup(struct FooCleanup* cleanup) {
+  DEBUG_GC("  /mark_cleanup\n");
   if (!cleanup) {
       return;
   }
@@ -693,7 +713,8 @@ void foo_mark_context(struct FooContext* ctx) {
   if (!ctx) {
     return;
   }
-  if (foo_mark_ptr(ctx)) {
+  DEBUG_GC("/mark_context\n");
+  if (foo_mark_live(ctx)) {
     foo_mark_object(ctx->receiver);
     foo_mark_object(ctx->return_value);
     foo_mark_context(ctx->sender);
@@ -749,9 +770,10 @@ void foo_sweep() {
 
 void foo_maybe_gc(struct FooContext* ctx) {
   if (allocation_bytes_since_gc > gc_threshold) {
+    DEBUG_GC("--GC--\n");
     foo_flip_mark();
     if (ctx->vars) {
-      foo_mark_array((union FooDatum){ .ptr = ctx->vars });
+      foo_mark_array(ctx->vars);
     }
     foo_mark_context(ctx);
     foo_sweep();
