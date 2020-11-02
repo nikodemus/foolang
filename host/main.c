@@ -682,7 +682,7 @@ void foo_mark_cleanup(struct FooCleanup* cleanup) {
       return;
   }
   if (cleanup->function == foo_finally) {
-    return foo_mark_block((union FooDatum){ .ptr = cleanup });
+    return foo_mark_block(((struct FooFinally*)cleanup)->block);
   }
   if (cleanup->function == foo_unbind) {
     return foo_mark_object(((struct FooUnbind*)cleanup)->value);
