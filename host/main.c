@@ -728,7 +728,7 @@ void foo_sweep() {
       *tail = next;
       freed_bytes += head->size;
       freed_count += 1;
-      // free(head);
+      free(head);
     }
     head = next;
   }
