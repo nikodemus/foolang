@@ -1,4 +1,6 @@
 import .object.Object
+import .ordered.Ordered
+import .stringOutput.StringOutput
 
 extend String
     is Object
@@ -112,47 +114,5 @@ extend String
 
     method debug
         self displayString!
-
-end
-
-class TestString { assert }
-
-    direct method runTests: assert
-        (self assert: assert)
-            ; testLessThan
-            ; testTrimRight
-            ; testLines
-                !
-
-    method testLines
-        assert forAll: [["foo\nbar", ["foo", "bar"]],
-                        ["foo", ["foo"]],
-                        ["", [""]],
-                        ["\n", ["", ""]]]
-               that: { |test|
-                       test first lines == test second asList }
-               testing: "String#lines"!
-
-    method testTrimRight
-        assert forAll: [["foo", "foo"],
-                        [" foo", " foo"],
-                        [" foo ", " foo"],
-                        ["foo   ", "foo"],
-                        ["foo\n", "foo"]]
-               that: { |test|
-                       test first trimRight == test second }
-               testing: "String#trimRight"!
-
-    method testLessThan
-        assert forAll: [["aQWE", "bQWE"],
-                        ["aqwe", "b"],
-                        ["a", "bqwe"]]
-               that: { |test|
-                       test first < test second }
-               testing: "String#< (1)".
-        assert false: { "asd" < "asd" }
-               testing: "String#< (2)".
-        assert true: { "asd" < "asda" }
-               testing: "String#< (3)"!
 
 end
