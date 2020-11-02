@@ -27,11 +27,12 @@
 # define FOO_DEBUG(...)
 #endif
 
-#define FOO_PANIC(...) { printf("PANIC: " __VA_ARGS__); fflush(stdout); _Exit(1); }
-
 struct FooContext;
 void* foo_alloc(size_t bytes);
 void foo_maybe_gc(struct FooContext* ctx);
+
+struct Foo foo_panic(struct FooContext* ctx, struct Foo message) __attribute__((noreturn));
+struct Foo foo_panicf(struct FooContext* ctx, const char* fmt, ...) __attribute__((noreturn));
 
 void foo_unimplemented(const char* message) __attribute__ ((noreturn));
 void foo_unimplemented(const char* message) {
@@ -146,8 +147,17 @@ struct FooUnbind {
   struct Foo value;
 };
 
+enum FooContextType {
+    METHOD_CONTEXT,
+    BLOCK_CONTEXT,
+    UNWIND_CONTEXT,
+    ROOT_CONTEXT
+};
+
 struct FooContext {
-  const char* info;
+  enum FooContextType type;
+  uint32_t depth;
+  const struct FooMethod* method;
   struct Foo receiver;
   struct FooContext* sender;
   struct FooContext* outer_context;
@@ -172,8 +182,8 @@ char* foo_debug_context(struct FooContext* ctx) {
   const int size = 1024;
   char* s = (char*)malloc(size+1);
   assert(s);
-  snprintf(s, size, "{ .info = %s, .size = %zu, .outer_context = %p }",
-           ctx->info, ctx->size, ctx->outer_context);
+  snprintf(s, size, "{ .type = %u, .size = %zu, .outer_context = %p }",
+           ctx->type, ctx->size, ctx->outer_context);
   return s;
 }
 
@@ -206,6 +216,8 @@ struct Foo foo_lexical_set(struct FooContext* context, size_t index, size_t fram
 }
 
 struct FooMethod {
+  // The vtable in which this method originates.
+  struct FooVtable* vtable;
   struct FooSelector* selector;
   size_t argCount;
   size_t frameSize;
@@ -230,14 +242,16 @@ struct FooVtable FooInstanceVtable_String;
 struct Foo foo_Float_new(double f);
 struct Foo foo_Integer_new(int64_t n);
 struct Foo foo_String_new(size_t len, const char* s);
-struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj);
+struct Foo foo_vtable_typecheck(struct FooContext* ctx, struct FooVtable* vtable, struct Foo obj);
 struct Foo FooGlobal_True;
 struct Foo FooGlobal_False;
 struct FooContext* foo_context_new_block(struct FooContext* ctx);
 
 struct FooContext* foo_context_new_main(struct FooArray* vars) {
   struct FooContext* context = foo_alloc_context(0);
-  context->info = "main";
+  context->type = ROOT_CONTEXT;
+  context->depth = 0;
+  context->method = NULL;
   context->receiver = FooGlobal_False;
   context->sender = NULL;
   context->outer_context = NULL;
@@ -248,7 +262,9 @@ struct FooContext* foo_context_new_main(struct FooArray* vars) {
 struct FooContext* foo_context_new_block(struct FooContext* sender) {
   struct FooBlock* block = sender->receiver.datum.ptr;
   struct FooContext* context = foo_alloc_context(block->frameSize);
-  context->info = "block";
+  context->type = BLOCK_CONTEXT;
+  context->depth = sender->depth + 1;
+  context->method = NULL;
   context->receiver = block->context->receiver;
   context->sender = sender;
   context->outer_context = block->context;
@@ -260,7 +276,9 @@ struct FooContext* foo_context_new_block(struct FooContext* sender) {
 
 struct FooContext* foo_context_new_unwind(struct FooContext* ctx, struct FooBlock* block) {
   struct FooContext* context = foo_alloc_context(block->frameSize);
-  context->info = "#finally:";
+  context->type = UNWIND_CONTEXT;
+  context->depth = ctx->depth + 1;
+  context->method = NULL;
   context->receiver = block->context->receiver;
   context->sender = ctx;
   context->outer_context = block->context;
@@ -315,7 +333,9 @@ struct FooClass {
   struct FooVtable* instanceVtable;
 };
 
-struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj) {
+struct Foo foo_vtable_typecheck(struct FooContext* ctx,
+                                struct FooVtable* vtable,
+                                struct Foo obj) {
   if (vtable == obj.vtable)
     return obj;
   struct FooVtableList* list = &obj.vtable->inherited;
@@ -325,11 +345,13 @@ struct Foo foo_vtable_typecheck(struct FooVtable* vtable, struct Foo obj) {
   }
   assert(vtable);
   assert(obj.vtable);
-  FOO_PANIC("Type error! Wanted: %s, got: %s",
-            vtable->name->data, obj.vtable->name->data);
+  foo_panicf(ctx, "Type error! Wanted: %s, got: %s",
+             vtable->name->data, obj.vtable->name->data);
 }
 
-const struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, const struct FooSelector* selector) {
+const struct FooMethod* foo_vtable_find_method(struct FooContext* ctx,
+                                               const struct FooVtable* vtable,
+                                               const struct FooSelector* selector) {
   assert(vtable);
   // FOO_DEBUG("/foo_vtable_find_method(%s#%s)", vtable->name->data, selector->name->data);
   for (size_t i = 0; i < vtable->size; ++i) {
@@ -338,7 +360,7 @@ const struct FooMethod* foo_vtable_find_method(const struct FooVtable* vtable, c
       return method;
     }
   }
-  FOO_PANIC("%s does not understand: #%s", vtable->name->data, selector->name->data);
+  foo_panicf(ctx, "%s does not understand: #%s", vtable->name->data, selector->name->data);
 }
 
 struct Foo foo_return(struct FooContext* ctx, struct Foo value) __attribute__ ((noreturn));
@@ -355,7 +377,7 @@ struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
   foo_cleanup(ctx);
   return_context->return_value = value;
   longjmp(*(jmp_buf*)return_context->ret, 1);
-  FOO_PANIC("longjmp() fell through!")
+  foo_panicf(ctx, "INTERNAL ERROR: longjmp() fell through!");
 }
 
 struct FooContext* foo_context_new_method_no_args(const struct FooMethod* method,
@@ -363,18 +385,20 @@ struct FooContext* foo_context_new_method_no_args(const struct FooMethod* method
                                                   struct Foo receiver,
                                                   size_t nargs) {
   if (method->argCount != nargs) {
-    FOO_PANIC("Wrong number of arguments to %s. Wanted: %zu, got: %zu.",
-              method->selector->name->data, method->argCount, nargs);
+    foo_panicf(sender, "Wrong number of arguments to %s. Wanted: %zu, got: %zu.",
+               method->selector->name->data, method->argCount, nargs);
   }
   if (method->frameSize < nargs) {
-    FOO_PANIC("Method %s frame too small: %zu, got %zu arguments!",
-              method->selector->name->data,
-              method->frameSize,
-              nargs);
+    foo_panicf(sender, "INTERNAL ERROR: Method %s frame too small: %zu, got %zu arguments!",
+               method->selector->name->data,
+               method->frameSize,
+               nargs);
   }
   assert(method->frameSize >= nargs);
   struct FooContext* context = foo_alloc_context(method->frameSize);
-  context->info = method->selector->name->data;
+  context->type = METHOD_CONTEXT;
+  context->depth = sender->depth + 1;
+  context->method = method;
   context->sender = sender;
   context->receiver = receiver;
   context->outer_context = NULL;
@@ -410,7 +434,40 @@ bool foo_eq(struct Foo a, struct Foo b) {
   return a.vtable == b.vtable && a.datum.int64 == b.datum.int64;
 }
 
-struct Foo foo_activate(const struct FooMethod* method, struct FooContext* context) {
+void foo_print_backtrace(struct FooContext* context) {
+  printf("Backtrace:\n");
+  struct FooVtable* home;
+  struct FooVtable* here;
+  while (context && context->depth) {
+    switch (context->type) {
+    case METHOD_CONTEXT:
+      home = context->method->vtable;
+      here = context->receiver.vtable;
+      printf("  %u: ", context->depth);
+      printf("%s#%s", home->name->data, context->method->selector->name->data);
+      if (here != home) {
+        printf(" (%s)", here->name->data);
+      }
+      printf("\n");
+      break;
+    case BLOCK_CONTEXT:
+      // The method frame appears just before this one, not need to
+      // print this separately. Even the frame numbers are right.
+      break;
+    case UNWIND_CONTEXT:
+      printf("<<unwind>>");
+      break;
+    default:
+      printf("<<unknown context type: %u>", context->type);
+    }
+    context = context->sender;
+  }
+}
+
+struct Foo foo_activate(struct FooContext* context) {
+  if (context->depth > 200) {
+    foo_panicf(context, "Stack blew up!");
+  }
   foo_maybe_gc(context);
   jmp_buf ret;
   context->ret = &ret;
@@ -419,7 +476,7 @@ struct Foo foo_activate(const struct FooMethod* method, struct FooContext* conte
     FOO_DEBUG("/foo_send -> non-local return from %s", selector->name->data);
     return context->return_value;
   } else {
-    struct Foo res = method->function((struct FooContext*)context);
+    struct Foo res = context->method->function((struct FooContext*)context);
     FOO_DEBUG("/foo_send -> local return from %s", selector->name->data);
     return res;
   }
@@ -433,9 +490,11 @@ struct Foo foo_send_ptr(struct FooContext* sender,
                         struct Foo* arguments) {
   FOO_DEBUG("/foo_send_ptr(?, %s, ...)", selector->name->data);
   assert(receiver.vtable);
-  const struct FooMethod* method = foo_vtable_find_method(receiver.vtable, selector);
-  struct FooContext* context = foo_context_new_method_ptr(method, sender, receiver, nargs, arguments);
-  return foo_activate(method, context);
+  const struct FooMethod* method
+    = foo_vtable_find_method(sender, receiver.vtable, selector);
+  struct FooContext* context
+    = foo_context_new_method_ptr(method, sender, receiver, nargs, arguments);
+  return foo_activate(context);
 }
 
 struct Foo foo_send(struct FooContext* sender,
@@ -446,9 +505,11 @@ struct Foo foo_send(struct FooContext* sender,
   va_list arguments;
   va_start(arguments, nargs);
   assert(receiver.vtable);
-  const struct FooMethod* method = foo_vtable_find_method(receiver.vtable, selector);
-  struct FooContext* context = foo_context_new_method_va(method, sender, receiver, nargs, arguments);
-  return foo_activate(method, context);
+  const struct FooMethod* method
+    = foo_vtable_find_method(sender, receiver.vtable, selector);
+  struct FooContext* context
+    = foo_context_new_method_va(method, sender, receiver, nargs, arguments);
+  return foo_activate(context);
 }
 
 struct Foo foo_block_new(struct FooContext* context,
@@ -523,12 +584,28 @@ struct Foo foo_String_new_from(const char* s) {
   return foo_String_new(strlen(s), s);
 }
 
-struct Foo foo_panic(struct Foo message) __attribute__((noreturn));
-struct Foo foo_panic(struct Foo message) {
-  struct FooBytes* bytes
-    = PTR(FooBytes, foo_vtable_typecheck(&FooInstanceVtable_String, message).datum);
-  printf("PANIC: %s", (char*)bytes->data);
-  putchar('\n');
+struct Foo foo_panic(struct FooContext* ctx, struct Foo message) {
+  printf("PANIC: ");
+  if (&FooInstanceVtable_String == message.vtable) {
+    struct FooBytes* bytes = PTR(FooBytes, message.datum);
+    printf("%s", (char*)bytes->data);
+  } else {
+    printf("<<cannot print panic reason: not a String>>");
+  }
+  printf("\n");
+  foo_print_backtrace(ctx);
+  fflush(stdout);
+  fflush(stderr);
+  _Exit(1);
+}
+
+struct Foo foo_panicf(struct FooContext* ctx, const char* fmt, ...) {
+  va_list arguments;
+  va_start(arguments, fmt);
+  printf("PANIC: ");
+  vprintf(fmt, arguments);
+  printf("\n");
+  foo_print_backtrace(ctx);
   fflush(stdout);
   fflush(stderr);
   _Exit(1);
@@ -610,7 +687,6 @@ void foo_mark_cleanup(struct FooCleanup* cleanup) {
   if (cleanup->function == foo_unbind) {
     return foo_mark_object(((struct FooUnbind*)cleanup)->value);
   }
-  FOO_PANIC("invalid cleanup");
 }
 
 void foo_mark_context(struct FooContext* ctx) {

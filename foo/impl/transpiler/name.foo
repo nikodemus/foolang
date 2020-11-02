@@ -50,11 +50,13 @@ class Name {}
             ifTrue: {  "fooDirectMethod_{aMethod home name}_{self mangle: aMethod selector}" }
             ifFalse: { "fooInstanceMethod_{aMethod home name}_{self mangle: aMethod selector}" }!
 
-    direct method mangleClassVtable: aClass
-        "FooClassVtable_{aClass name}"!
+    direct method mangleMethodVtable: aMethod
+        aMethod isDirect
+            ifTrue: { self mangleDirectVtable: aMethod home }
+            ifFalse: { self mangleInstanceVtable: aMethod home }!
 
-    direct method mangleInterfaceVtable: anInterface
-        "FooInterfaceVtable_{anInterface name}"!
+    direct method mangleDirectVtable: aClass
+        "FooDirectVtable_{aClass name}"!
 
     direct method mangleInstanceVtable: aClass
         "FooInstanceVtable_{aClass name}"!

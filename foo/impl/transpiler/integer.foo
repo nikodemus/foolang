@@ -117,6 +117,6 @@ if (-1 < n && n < sizeof(buffer)) \{
     memcpy(bytes->data, buffer, n);
     return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = \{ .ptr = bytes }};
 } else \{
-    FOO_PANIC(\"Could not convert integer to string\");
+    foo_panicf(ctx, \"Could not convert integer to string: %zl\", ctx->receiver.datum.int64);
 }
 "} }!

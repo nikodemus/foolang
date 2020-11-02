@@ -35,7 +35,7 @@ return FooGlobal_False;"},
         .function = foo_finally,
         .next = ctx->cleanup
     },
-    .block = foo_vtable_typecheck(&FooInstanceVtable_Block, ctx->frame[0]).datum.ptr
+    .block = foo_vtable_typecheck(ctx, &FooInstanceVtable_Block, ctx->frame[0]).datum.ptr
 };
 ctx->cleanup = &finally.cleanup;
 struct FooContext* block_ctx = foo_context_new_block(ctx);
