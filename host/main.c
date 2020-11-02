@@ -115,6 +115,8 @@ struct FooArray {
 };
 
 struct FooBytes {
+  // KLUDGE: tells the GC is this should be traced or not
+  bool gc;
   size_t size;
   uint8_t data[];
 };
@@ -570,6 +572,7 @@ struct Foo foo_Float_new(double f) {
 
 struct FooBytes* FooBytes_alloc(size_t len) {
   struct FooBytes* bytes = (struct FooBytes*)foo_alloc(sizeof(struct FooBytes) + len + 1);
+  bytes->gc = true;
   bytes->size = len;
   return bytes;
 }
@@ -624,14 +627,19 @@ void fooinit(void) {
  */
 
 #if 0
+size_t gc_trace_depth = 0;
 #define DEBUG_GC(...) { printf(__VA_ARGS__); fflush(stdout); }
+#define ENTER_TRACE(...) { printf("\n"); for(size_t i = 0; i < gc_trace_depth; i++) printf("  "); printf("%zu: ", gc_trace_depth); printf(__VA_ARGS__); gc_trace_depth++; }
+#define EXIT_TRACE() { gc_trace_depth--; if (!gc_trace_depth) printf("\n"); }
 #else
 #define DEBUG_GC(...)
+#define ENTER_TRACE(...)
+#define EXIT_TRACE()
 #endif
 
 enum FooMark {
   RED = 0,
-  BLUE = 1
+  BLUE = 1,
 };
 
 static enum FooMark current_live_mark = RED;
@@ -641,91 +649,106 @@ void foo_flip_mark() {
 }
 
 struct FooAlloc {
-  struct FooAlloc* next;
   enum FooMark mark;
+  struct FooAlloc* next;
   size_t size;
   char data[];
 };
 
 bool foo_mark_live(void* ptr) {
+  ENTER_TRACE("mark_live %p", ptr);
   const size_t offset = offsetof(struct FooAlloc, data);
   struct FooAlloc* alloc = (void*)((char*)ptr-offset);
   bool new_mark = alloc->mark != current_live_mark;
-  DEBUG_GC("    /mark_live %p mark=%d, live=%d\n", ptr, alloc->mark, current_live_mark);
+  DEBUG_GC(" mark=%d, live=%d", alloc->mark, current_live_mark);
   alloc->mark = current_live_mark;
+  EXIT_TRACE();
   return new_mark;
 }
 
-void foo_mark_ptr(void* ptr) {
-  foo_mark_live(ptr);
+void foo_mark_bytes(void* ptr) {
+  ENTER_TRACE("mark_bytes");
+  struct FooBytes* bytes = ptr;
+  if (bytes->gc) {
+    foo_mark_live(ptr);
+  }
+  EXIT_TRACE();
 }
 
 void foo_mark_context(struct FooContext* ctx);
 
 void foo_mark_object(struct Foo obj) {
+  ENTER_TRACE("mark_object");
   if (obj.vtable) {
+    DEBUG_GC(" %p (%s)", obj.datum.ptr, obj.vtable->name->data);
     obj.vtable->mark(obj.datum.ptr);
   }
+  EXIT_TRACE();
 }
 
 void foo_mark_raw(void* ptr) {
   (void)ptr;
-  DEBUG_GC("  /mark_raw\n");
-}
-
-void foo_mark_static(void* ptr) {
-  (void)ptr;
-  DEBUG_GC("  /mark_static\n");
 }
 
 void foo_mark_array(void* ptr) {
-  DEBUG_GC("  /mark_array\n");
+  ENTER_TRACE("mark_array");
   struct FooArray* array = ptr;
   if (foo_mark_live(array)) {
     for (size_t i = 0; i < array->size; i++) {
       foo_mark_object(array->data[i]);
     }
   }
+  EXIT_TRACE();
 }
 
 void foo_mark_block(void* ptr) {
-  DEBUG_GC("  /mark_block\n");
+  ENTER_TRACE("mark_block");
   struct FooBlock* block = ptr;
   if (foo_mark_live(block)) {
     foo_mark_context(block->context);
   }
+  EXIT_TRACE();
 }
 
 void foo_mark_cleanup(struct FooCleanup* cleanup) {
-  DEBUG_GC("  /mark_cleanup\n");
+  ENTER_TRACE("mark_cleanup");
   if (!cleanup) {
-      return;
+    goto exit;
   }
   if (cleanup->function == foo_finally) {
-    return foo_mark_block(((struct FooFinally*)cleanup)->block);
+    foo_mark_block(((struct FooFinally*)cleanup)->block);
+    goto exit;
   }
   if (cleanup->function == foo_unbind) {
-    return foo_mark_object(((struct FooUnbind*)cleanup)->value);
+    foo_mark_object(((struct FooUnbind*)cleanup)->value);
+    goto exit;
   }
+ exit:
+  EXIT_TRACE();
 }
 
 void foo_mark_context(struct FooContext* ctx) {
-  if (!ctx) {
-    return;
+  ENTER_TRACE("mark_context");
+  if (ctx) {
+    DEBUG_GC(" depth: %u, size: %zu", ctx->depth, ctx->size);
+    if (ctx->type == METHOD_CONTEXT) {
+      DEBUG_GC(" selector: %s", ctx->method->selector->name->data);
+    }
+
   }
-  DEBUG_GC("/mark_context\n");
-  if (foo_mark_live(ctx)) {
+  if (ctx && foo_mark_live(ctx)) {
     foo_mark_object(ctx->receiver);
-    foo_mark_object(ctx->return_value);
     foo_mark_context(ctx->sender);
     foo_mark_context(ctx->outer_context);
-    // vars are shared between all contexts, foo_mark() processes
-    // them directly.
+    // vars are shared between all contexts, foo_mark() processes them directly.
     foo_mark_cleanup(ctx->cleanup);
+    foo_mark_object(ctx->return_value);
     for (size_t i = 0; i < ctx->size; i++) {
+      // printf("\n[%zu]", i);
       foo_mark_object(ctx->frame[i]);
     }
   }
+  EXIT_TRACE();
 }
 
 static struct FooAlloc* allocations = NULL;
@@ -770,13 +793,14 @@ void foo_sweep() {
 
 void foo_maybe_gc(struct FooContext* ctx) {
   if (allocation_bytes_since_gc > gc_threshold) {
-    DEBUG_GC("--GC--\n");
+    ENTER_TRACE("--GC--\n");
     foo_flip_mark();
     if (ctx->vars) {
       foo_mark_array(ctx->vars);
     }
     foo_mark_context(ctx);
     foo_sweep();
+    EXIT_TRACE();
   }
 }
 
