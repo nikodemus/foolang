@@ -33,6 +33,8 @@ class BuiltinMethod { home selector definition isDirect }
         dict!
     method isBuiltin
         True!
+    method isRequired
+        False!
     method arity
         definition signature size!
     method frameSize
