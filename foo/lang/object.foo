@@ -6,12 +6,16 @@
 -- cases like #default. (direct method?)
 
 interface Object
+    direct method == other
+        self is other!
+
     direct method isEquivalent: other
         self is other!
 
     method == other
         (Self includes: other)
-            ifTrue: { self isEquivalent: other }!
+            ifTrue: { self isEquivalent: other }
+            ifFalse: { False  }!
 
     method isEquivalent: other
         self is other!
