@@ -397,7 +397,14 @@ end
 class TestTranspileBlock { assert system }
     is TranspilerTest
 
-    method testBlock
+    method testValueValue
+        self transpile: "class Main \{}
+                             direct method run
+                                 (\{ |a b| a + b } value: 10 value: 30) debug!
+                         end"
+            expect: "#<Integer 40>"!
+
+    method testBlockScope
         self transpile: "class Main \{}
                              direct method run
                                  let x = 200.
@@ -484,6 +491,20 @@ end
 
 class TestTranspileArray { assert system }
     is TranspilerTest
+
+    method testOfNewValue
+        self transpile: "class Main \{}
+                             direct method run
+                                 (Array of: Float new: 3 value: 12.3) debug!
+                         end"
+            expect: "[#<Float 12.300000>, #<Float 12.300000>, #<Float 12.300000>]"!
+
+    method testNewValue
+        self transpile: "class Main \{}
+                             direct method run
+                                 (Array new: 3 value: True) debug!
+                         end"
+            expect: "[#<Boolean True>, #<Boolean True>, #<Boolean True>]"!
 
     method testArrayCtor
         self transpile: "class Main \{}
@@ -878,6 +899,13 @@ end
 class TestTranspileString { assert system }
     is TranspilerTest
 
+    method testStringAt
+        self transpile: "class Main \{}
+                             direct method run
+                                 (\"aaaxbbb\" at: 4) debug!
+                         end"
+            expect: "#<String x>"!
+
     method testStringLiteral
         self transpile: "class Main \{}
                              direct method run
@@ -885,14 +913,13 @@ class TestTranspileString { assert system }
                          end"
             expect: "#<String foo>"!
 
-    method testStringSize
+    method testStringEquivalent
         self transpile: "class Main \{}
                              direct method run
-                                 self string size debug!
-                             direct method string
-                                 \"1234567890\"!
+                                 (\"foo\" isEquivalent: \"foo\") debug.
+                                 (\"foo\" isEquivalent: \"Foo\") debug!
                          end"
-            expect: "#<Integer 10>"!
+            expect: "#<Boolean True>#<Boolean False>"!
 
     method testStringFromTo
         self transpile: "class Main \{}
@@ -911,6 +938,15 @@ class TestTranspileString { assert system }
                                  \"XXbarXX\"!
                          end"
             expect: "#<String >"!
+
+    method testStringSize
+        self transpile: "class Main \{}
+                             direct method run
+                                 self string size debug!
+                             direct method string
+                                 \"1234567890\"!
+                         end"
+            expect: "#<Integer 10>"!
 end
 
 class TestTranspileDynamic { assert system }

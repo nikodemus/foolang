@@ -1,10 +1,32 @@
 define DirectMethods
-    { #new:
+    { #of:new:value:
+          -> {signature: [Any, Integer, Any], vars: 0,
+              body: "int64_t size = ctx->frame[1].datum.int64;
+// FIXME: error instead!
+assert(size >= 0);
+struct FooArray* new = FooArray_alloc(size);
+struct Foo value = ctx->frame[2];
+for (int64_t i = 0; i < size; i++) \{
+    new->data[i] = value;
+}
+return (struct Foo)\{ .vtable = &FooInstanceVtable_Array, .datum = \{ .ptr = new } };"},
+      #new:
           -> {signature: [Integer], vars: 0,
               body: "size_t size = ctx->frame[0].datum.int64;
 // FIXME: error instead!
 assert(size >= 0);
-return foo_Array_new(size);"}
+return foo_Array_new(size);"},
+      #new:value:
+          -> {signature: [Integer, Any], vars: 0,
+              body: "int64_t size = ctx->frame[0].datum.int64;
+// FIXME: error instead!
+assert(size >= 0);
+struct FooArray* new = FooArray_alloc(size);
+struct Foo value = ctx->frame[1];
+for (int64_t i = 0; i < size; i++) \{
+    new->data[i] = value;
+}
+return (struct Foo)\{ .vtable = &FooInstanceVtable_Array, .datum = \{ .ptr = new } };"}
 }!
 
 define InstanceMethods
