@@ -33,6 +33,8 @@ class BuiltinMethod { home selector definition isDirect }
         dict!
     method isBuiltin
         True!
+    method isRequired
+        False!
     method arity
         definition signature size!
     method frameSize
@@ -451,9 +453,9 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         let globalName = Name mangleGlobal: anInterface.
         let directMethods = anInterface directMethods reject: #isRequired.
         directMethods
-            do: { |each| self _generateMethod: each }.
+            do: { |each| self _generateMethod: each _for: anInterface name }.
         (anInterface instanceMethods reject: #isRequired)
-            do: { |each| self _generateMethod: each }.
+            do: { |each| self _generateMethod: each _for: anInterface name }.
         -- Interface Vtable
         output println: "struct FooVtable {interfaceVtableName} = ".
         output println: "\{".
@@ -511,10 +513,11 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         -- Debug println: "/class direct methods".
         let directMethods = aClass directMethods asList.
         directMethods
-            do: { |each| self _generateMethod: each }.
+            do: { |each| self _generateMethod: each _for: aClass name }.
         -- Debug println: "/class instance methods".
-        aClass instanceMethods
-            do: { |each| self _generateMethod: each }.
+        let instanceMethods = aClass instanceMethods.
+        instanceMethods
+            do: { |each| self _generateMethod: each _for: aClass name }.
         aClass isBuiltin
             ifFalse: {
                 -- Layout
@@ -610,9 +613,9 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "    .classptr = &{globalName},".
         output println: "    .inherited = \{ .size = {interfaces size}, .data = {instanceInterfacesName} },".
         output println: "    .mark = {aClass markFunction},".
-        output println: "    .size = {aClass instanceMethods size},".
+        output println: "    .size = {instanceMethods size},".
         output println: "    .methods = \{".
-        aClass instanceMethods
+        instanceMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                   output println: "                            .vtable = &{Name mangleMethodVtable: each},".
@@ -637,17 +640,19 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         output println: "};".
         output newline!
 
-    method _generateMethod: aMethod
-        Tracer _generateMethod: aMethod.
+    method _generateMethod: aMethod _for: type
+        Tracer _generateMethod: aMethod _for: type.
         let name = Name mangleMethod: aMethod.
         -- Debug println: "_generateMethod: {name}".
         generatedMethods
             at: name
-            ifNonePut: { self _actuallyGenerateMethod: aMethod as: name }!
+            ifNonePut: { self _actuallyGenerateMethod: aMethod _as: name _for: type }!
 
-    method _actuallyGenerateMethod: aMethod as: name
-        Tracer _actuallyGenerateMethod: aMethod as: name.
+    method _actuallyGenerateMethod: aMethod _as: name _for: type
+        Tracer _actuallyGenerateMethod: aMethod _as: name _for: type.
         -- Debug println: "_actuallyGenerateMethod: {aMethod}".
+        aMethod isRequired
+            ifTrue: { Error raise: "Cannot generate required method: {aMethod} for: {type}." }.
         let $home = aMethod.
         output print: "struct Foo ".
         output println: name.
