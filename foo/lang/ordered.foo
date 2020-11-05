@@ -165,19 +165,6 @@ interface Ordered
         cursor <= self size
             ifTrue: { block value: (self from: cursor to: self size) }!
 
-    method splitBy: element
-        self isEmpty
-            ifTrue: { return [self] }.
-        let list = List new.
-        let cursor = 1.
-        1 to: self size
-          do: { |index|
-                ((self at: index) == element)
-                    ifTrue: { list add: (self from: cursor to: index - 1).
-                              cursor = index + 1 } }.
-        list add: (self from: cursor to: self size).
-        list!
-
     method do: block
         1 to: self size
           do: { |i|

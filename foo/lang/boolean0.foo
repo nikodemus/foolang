@@ -14,12 +14,6 @@ interface Boolean
     method assert
         self ifFalse: { panic "assertion failed!" }!
 
-    method == other -- -> Boolean
-        self is other!
-
-    method isEquivalent: other
-        self is other!
-
     method and: other
         self
            ifTrue: { other }
@@ -95,12 +89,4 @@ define False
 extend Object
     direct method default
         False!
-
-    direct method == other -> Boolean
-        self is other!
-
-    method == other -> Boolean
-        (self classOf includes: other)
-            ifTrue: { self isEquivalent: other }
-            ifFalse: { False }!
 end
