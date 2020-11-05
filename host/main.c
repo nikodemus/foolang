@@ -491,7 +491,9 @@ struct Foo foo_send_ptr(struct FooContext* sender,
                         size_t nargs,
                         struct Foo* arguments) {
   FOO_DEBUG("/foo_send_ptr(?, %s, ...)", selector->name->data);
-  assert(receiver.vtable);
+  if (!receiver.vtable) {
+    foo_panicf(sender, "Invalid receiver for #%s", selector->name->data);
+  }
   const struct FooMethod* method
     = foo_vtable_find_method(sender, receiver.vtable, selector);
   struct FooContext* context
@@ -506,7 +508,9 @@ struct Foo foo_send(struct FooContext* sender,
   FOO_DEBUG("/foo_send(?, %s, ...)", selector->name->data);
   va_list arguments;
   va_start(arguments, nargs);
-  assert(receiver.vtable);
+  if (!receiver.vtable) {
+    foo_panicf(sender, "Invalid receiver for #%s", selector->name->data);
+  }
   const struct FooMethod* method
     = foo_vtable_find_method(sender, receiver.vtable, selector);
   struct FooContext* context
