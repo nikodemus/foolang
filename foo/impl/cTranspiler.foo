@@ -53,7 +53,7 @@ class BuiltinMethod { home selector definition isDirect }
         StringOutput with: { |out| self printOn: out }!
 end
 
-class BuiltinClass { host markFunction _interfaces _directMethods _instanceMethods }
+class BuiltinClass { host markFunction _interfaces _directMethods _instanceMethods _allInterfaces }
     is AstMethodHome
 
     direct method new: host
@@ -64,7 +64,8 @@ class BuiltinClass { host markFunction _interfaces _directMethods _instanceMetho
                             markFunction: mark
                             _interfaces: List new
                             _directMethods: False
-                            _instanceMethods: False.
+                            _instanceMethods: False
+                            _allInterfaces: False.
         theClass _directMethods: directMethods.
         theClass _instanceMethods: instanceMethods.
         theClass!
@@ -80,6 +81,13 @@ class BuiltinClass { host markFunction _interfaces _directMethods _instanceMetho
 
     method _readerMethods
         []!
+
+    method _allInterfaces
+        _allInterfaces!
+
+    method _allInterfaces: list
+        (_allInterfaces is False) assert: "Oops, _allInterfaces already set!".
+        _allInterfaces = list asArray!
 
     method _directMethods: methods
         _directMethods = BuiltinMethod forEach: methods in: self direct: True!

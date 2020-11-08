@@ -124,6 +124,8 @@ interface AstMethodHome
     required method _directMethods: methods
     required method _instanceMethods: methods
     required method _readerMethods
+    required method _allInterfaces
+    required method _allInterfaces: interfaces
 
     method __addInterface: anInterface
         -- Order is important, so these must be kept in a list!
@@ -148,9 +150,11 @@ interface AstMethodHome
         self _instanceMethods: (self _methodDictionary: methods)!
 
     method allInterfaces
-        let list = (C3Linearization allInterfaces: self) asList.
-        (list first is self) assert.
-        list rest!
+        self _allInterfaces is False
+            ifTrue: { let list = (C3Linearization allInterfaces: self) asList.
+                      (list first is self) assert.
+                      self _allInterfaces: list rest }.
+        self _allInterfaces!
 
     method ownInterfaces
         self _interfaces!
@@ -219,7 +223,7 @@ interface AstMethodHome
             values: methods!
 end
 
-class AstInterface { name _interfaces _directMethods _instanceMethods }
+class AstInterface { name _interfaces _directMethods _instanceMethods _allInterfaces }
     is AstDefinition
     is AstMethodHome
 
@@ -229,7 +233,8 @@ class AstInterface { name _interfaces _directMethods _instanceMethods }
             name: name
             _interfaces: interfaces
             _directMethods: False
-            _instanceMethods: False!
+            _instanceMethods: False
+            _allInterfaces: False!
 
     method eval
         Interface
@@ -250,6 +255,13 @@ class AstInterface { name _interfaces _directMethods _instanceMethods }
     method _readerMethods
         []!
 
+    method _allInterfaces
+        _allInterfaces!
+
+    method _allInterfaces: list
+        (_allInterfaces is False) assert: "Oops, _allInterfaces already set!".
+        _allInterfaces = list asArray!
+
     method _directMethods: methods
         _directMethods = methods!
 
@@ -266,7 +278,7 @@ class AstInterface { name _interfaces _directMethods _instanceMethods }
         "#<AstInterface {name}>"!
 end
 
-class AstClass { name slots _interfaces _directMethods _instanceMethods }
+class AstClass { name slots _interfaces _directMethods _instanceMethods _allInterfaces }
     is AstDefinition
     is AstMethodHome
 
@@ -278,7 +290,8 @@ class AstClass { name slots _interfaces _directMethods _instanceMethods }
             slots: slots
             _interfaces: interfaces
             _directMethods: False
-            _instanceMethods: False!
+            _instanceMethods: False
+            _allInterfaces: False!
 
     method _interfaces
         _interfaces!
@@ -291,6 +304,13 @@ class AstClass { name slots _interfaces _directMethods _instanceMethods }
 
     method _readerMethods
         _readerMethods!
+
+    method _allInterfaces
+        _allInterfaces!
+
+    method _allInterfaces: list
+        (_allInterfaces is False) assert: "Oops, _allInterfaces already set!".
+        _allInterfaces = list asArray!
 
     method _directMethods: methods
         _directMethods = methods!
