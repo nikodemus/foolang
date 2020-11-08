@@ -1,5 +1,6 @@
 import .utils.Debug
 import .astInterpreter.AstInterpreter
+import .c3.C3Linearization
 
 interface Ast
     is Object
@@ -17,13 +18,11 @@ class AstBuiltin { value }
     method isBuiltin
         True!
 
+    method ownInterfaces
+        value interfaces collect: { |each| { eval: each } }!
+
     method visitBy: visitor
         visitor visitBuiltin: self!
-
-    method _forEachInterface: selector
-        selector == #value
-            ifTrue: { value interfaces }
-            ifFalse: { panic "{self} _forEachInterface: {selector} -- no can do" }!
 
     method __addInterface: anInterface
         value __addInterface: anInterface!
@@ -148,62 +147,60 @@ interface AstMethodHome
         (self _instanceMethods is False) assert: "Instance methods already set.".
         self _instanceMethods: (self _methodDictionary: methods)!
 
-    method _forEachInterface: selector
-        let all = List new.
-        let seen = Dictionary new.
-        let collectInterface
-            = { |iface|
-                seen at: iface name
-                     ifNone: { all add: iface.
-                               seen at: iface name put: True } }.
-        self _interfaces reversed :: Ordered
-            do: { |iface|
-                  (iface definition _forEachInterface: selector)
-                      reverse do: collectInterface.
-                  collectInterface value: (selector value: iface) }.
-        all reverse asArray!
+    method allInterfaces
+        let list = (C3Linearization allInterfaces: self) asList.
+        (list first is self) assert.
+        list rest!
+
+    method ownInterfaces
+        self _interfaces!
 
     method interfaceDefinitions
-        self _forEachInterface: #definition!
+        self allInterfaces collect: #definition!
 
     method interfaceGlobals
-        self _forEachInterface: #yourself!
+        self allInterfaces collect: #yourself!
 
     method interfaceObjects
-        self _forEachInterface: #value!
+        self allInterfaces collect: #eval!
+
+    method _ownDirectMethods
+        let dict = Dictionary new.
+        self _collectMethods: self _directMethods
+             _into: dict.
+        dict!
 
     method ownDirectMethods
-        let dict = Dictionary new.
-        self _collectMethods: self _directMethods
-             _into: dict.
-        dict values!
+        self _ownDirectMethods values!
 
     method directMethods
-        let dict = self _collectFromInterfaces: #directMethods.
-        self _collectMethods: self _directMethods
-             _into: dict.
+        let dict = self _ownDirectMethods.
+        self _collectFromInterfaces: #directMethods
+            _into: dict.
         dict values!
 
     ---
-    KLUDGE & FIXME: does not include reader methods, since bootstrap class creation
-    creates those automatically.
+    KLUDGE & FIXME: does not include reader methods, since bootstrap host
+    class creation creates those automatically.
     ---
-    method ownInstanceMethods
+    method _ownInstanceMethods
         let dict = Dictionary new.
         self _collectMethods: self _instanceMethods
              _into: dict.
-        dict values!
+        dict!
+
+    method ownInstanceMethods
+        self _ownInstanceMethods values!
 
     method instanceMethods
-        let dict = self _collectFromInterfaces: #instanceMethods.
+        let dict = self _ownInstanceMethods.
         self _collectMethods: self _readerMethods
              _into: dict.
-        self _collectMethods: self _instanceMethods
-             _into: dict.
+        self _collectFromInterfaces: #instanceMethods
+            _into: dict.
         dict values!
 
-    method _collectFromInterfaces: selector
-        let dict = Dictionary new.
+    method _collectFromInterfaces: selector _into: dict
         self interfaceDefinitions :: Ordered
             do: { |anInterface|
                   self _collectMethods: (selector value: anInterface)
@@ -213,7 +210,8 @@ interface AstMethodHome
     method _collectMethods: methods _into: dict
         methods
             do: { |aMethod|
-                  dict put: aMethod at: aMethod selector name }!
+                  dict at: aMethod selector name
+                       ifNonePut: { aMethod } }!
 
     method _methodDictionary: methods
         Dictionary
@@ -236,7 +234,7 @@ class AstInterface { name _interfaces _directMethods _instanceMethods }
     method eval
         Interface
             new: name
-            interfaces: self interfaceObjects
+            interfaces: self interfaceObjects asArray
             directMethods: self ownDirectMethods
             instanceMethods: self ownInstanceMethods!
 
@@ -314,7 +312,7 @@ class AstClass { name slots _interfaces _directMethods _instanceMethods }
         env define: name as: self!
 
     method eval
-        -- Debug println: "slots: {(slots collect: #type) asArray displayString}".
+        -- Debug println: "class {name} is {self interfaceObjects}".
         Class
             new: name
             slots: (slots
@@ -322,7 +320,7 @@ class AstClass { name slots _interfaces _directMethods _instanceMethods }
                                      { name: each name,
                                        type: each type } }
                         as: Array)
-            interfaces: self interfaceObjects
+            interfaces: self interfaceObjects asArray
             directMethods: self ownDirectMethods
             instanceMethods: self ownInstanceMethods!
 
@@ -612,6 +610,12 @@ class AstGlobal { name::String _value _definition sources }
 
     method isDynamic
         False!
+
+    method ownInterfaces
+        self definition ownInterfaces!
+
+    method eval
+        self value!
 
     -- KLUDGE: Currently types are either Any or AstGlobals. This is marginally
     -- than the previous mess, but still not nice.
