@@ -58,14 +58,20 @@ interface Iterable
 
     method allSatisfy: block
         self do: { |each|
-                   (block value: each)
+                   (block value: each) is True
+                       ifFalse: { return False } }.
+        True!
+
+    method noneSatisfy: block
+        self do: { |each|
+                   (block value: each) is False
                        ifFalse: { return False } }.
         True!
 
     method anySatisfy: block
         self do: { |each|
-                   (block value: each)
-                       ifTrue: { return True } }.
+                   (block value: each) is False
+                       ifFalse: { return True } }.
         False!
 
     method allTrue
