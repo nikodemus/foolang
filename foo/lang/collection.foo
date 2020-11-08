@@ -92,6 +92,20 @@ interface Collection
     method reject: block
         self select: { |each| (block value: each) not }!
 
+    method reject: rejectBy collect: collectBy
+        let new = Self withCapacity: self size.
+        self do: { |each|
+                   (rejectBy value: each)
+                       ifFalse: { new add: (collectBy value: each) } }.
+        new!
+
+    method select: selectBy collect: collectBy
+        let new = Self withCapacity: self size.
+        self do: { |each|
+                   (selectBy value: each)
+                       ifTrue: { new add: (collectBy value: each) } }.
+        new!
+
     method removeAll: iterable
         self removeIf: { |each| iterable includes: each }.
         self!
@@ -129,15 +143,6 @@ interface Collection
         self size is 0
             ifTrue: block
             ifFalse: notBlock!
-
-    method find: block
-        self find: block ifNone: { False }!
-
-    method find: block ifNone: noneBlock
-        self do: { |elt|
-                   (block value: elt) is True
-                       ifTrue: { return elt } }.
-        noneBlock value!
 
     method do: block
         1 to: self size

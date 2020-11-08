@@ -128,7 +128,7 @@ class DoesNotUnderstand { receiver selector arguments source context }
     method backtrace
         context is False
             ifTrue: { False }
-            ifFalse: { context bactrace }!
+            ifFalse: { context backtrace }!
     method _description
         let note = "Instances of {receiver classOf} do not understand: {selector}".
         source is False

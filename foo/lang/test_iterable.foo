@@ -236,7 +236,7 @@ interface TestIterable
 
     method testIfNotEmpty
         assert that: { (self make: []) ifNotEmpty: { "foo" } }
-               equals: True
+               equals: False
                testing: "ifNotEmpty: (empty)".
         assert that: { (self make: [1]) ifNotEmpty: { 123 } }
                equals: 123

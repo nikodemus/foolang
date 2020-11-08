@@ -46,6 +46,11 @@ interface Ordered
     method first
         self at: 1!
 
+    method firstOrFalse
+        self size is 0
+            ifTrue: { False }
+            ifFalse: { self at: 1 }!
+
     method second
         self at: 2!
 
@@ -100,7 +105,6 @@ interface Ordered
         other!
 
     method concat: other
-        Output debug println: "XXX: {self} concat: {other}".
         let copy = Self of: self elementType new: self size + other size.
         self copyTo: copy.
         other copyTo: copy startingAt: self size + 1!

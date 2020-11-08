@@ -310,7 +310,7 @@ class TestTranspileInterface { assert system }
                              direct method new
                                  self _value: 42!
                              method ding
-                                 self value!
+                                 self _value!
                          end
                          class MyClass \{ _value }
                              is MyInterface
