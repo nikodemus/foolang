@@ -100,10 +100,7 @@ jobs:
         # Windows CI host keeps running out of memory in here. I
         # don't like this, but dealing with it is a terrible timesink and I
         # build on windows daily otherwise.
-        #
-        # Disabled for now, but keeping this around if things get worse again.
-        #
-        # continue-on-error: ${{ runner.os == 'Windows' }}
+        continue-on-error: ${{ runner.os == 'Windows' }}
         with:
           command: run
           args: -- foo/impl/test_transpile.foo --use=foo/lib -- --fork-all
