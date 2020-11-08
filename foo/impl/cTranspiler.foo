@@ -180,6 +180,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
     direct method transpile: string in: env
         env removeBuiltins: [
             "Any",
+            "List",
             "Object",
             "StringOutput"
         ].
