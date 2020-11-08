@@ -103,10 +103,10 @@ class BuiltinClass { host markFunction _interfaces _directMethods _instanceMetho
         False!
 
     method printOn: stream
-        "#<BuiltinClass {host}>"!
+        stream print: self toString!
 
     method toString
-        StringOutput with: { |out| self printOn: out }!
+        "#<BuiltinClass {host}>"!
 end
 
 define BuiltinClasses [
