@@ -14,8 +14,7 @@ interface Object
 
     method == other
         (Self includes: other)
-            ifTrue: { self isEquivalent: other }
-            ifFalse: { False  }!
+            ifTrue: { self isEquivalent: other }!
 
     method isEquivalent: other
         self is other!
