@@ -105,7 +105,6 @@ interface Ordered
         other!
 
     method concat: other
-        Output debug println: "XXX: {self} concat: {other}".
         let copy = Self of: self elementType new: self size + other size.
         self copyTo: copy.
         other copyTo: copy startingAt: self size + 1!
