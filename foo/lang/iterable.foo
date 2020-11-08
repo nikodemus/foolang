@@ -164,7 +164,8 @@ interface Iterable
 
     method ifEmpty: block
         self isEmpty
-            ifTrue: block!
+            ifTrue: block
+            ifFalse: { False }!
 
     method ifEmpty: emptyBlock ifNotEmpty: notEmptyBlock
         self isEmpty
@@ -173,6 +174,7 @@ interface Iterable
 
     method ifNotEmpty: block
         self isEmpty
+            ifTrue: { False }
             ifFalse: block!
 
     method includes: object
