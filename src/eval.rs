@@ -42,7 +42,12 @@ impl Binding {
     }
 }
 
-type SymbolTable = HashMap<String, Binding>;
+#[derive(Debug)]
+pub enum SymbolTable {
+    Big(HashMap<String, Binding>),
+    Small((String, Binding)),
+    Empty,
+}
 
 /// Underlying lexical environment: most methods operate on `Env`
 /// or EnvRef instead.
@@ -59,6 +64,94 @@ pub struct EnvFrame {
     home: Option<EnvRef>,
     /// Current receiver.
     receiver: Option<Object>,
+}
+
+impl EnvFrame {
+    fn ensure_here(&mut self, name: &str, binding: Binding) {
+        match &mut self.symbols {
+            SymbolTable::Big(map) => {
+                map.insert(String::from(name), binding);
+                return;
+            }
+            SymbolTable::Small(pair) => {
+                if pair.0 == name {
+                    // KLUDGE: This is allowed due to eval_bind()'s toplevel
+                    // hack.
+                    pair.1 = binding;
+                } else {
+                    let mut map = HashMap::new();
+                    map.insert(name.to_string(), binding);
+                    map.insert(pair.0.to_string(), pair.1.clone());
+                    self.symbols = SymbolTable::Big(map);
+                }
+            }
+            SymbolTable::Empty => {
+                self.symbols = SymbolTable::Small((name.to_string(), binding));
+            }
+        }
+    }
+    fn get_here(&self, name: &str) -> Option<&Binding> {
+        match &self.symbols {
+            SymbolTable::Big(map) => map.get(name),
+            SymbolTable::Small((key, value)) => {
+                if key == name {
+                    Some(value)
+                } else {
+                    None
+                }
+            }
+            SymbolTable::Empty => None,
+        }
+    }
+    fn set_here(&mut self, name: &str, value: Object) {
+        match &mut self.symbols {
+            SymbolTable::Big(map) => {
+                if let Some(binding) = map.get_mut(name) {
+                    binding.value = value;
+                    return;
+                }
+            }
+            SymbolTable::Small(pair) => {
+                if pair.0 == name {
+                    pair.1.value = value;
+                    return;
+                }
+            }
+            _ => {
+                unreachable!();
+            }
+        }
+        unreachable!();
+    }
+    fn has_definition(&self, name: &str) -> bool {
+        match &self.symbols {
+            SymbolTable::Big(map) => {
+                if map.contains_key(name) {
+                    return true;
+                }
+            }
+            SymbolTable::Small((key, _)) if key == name => return true,
+            _ => {}
+        }
+        match &self.parent {
+            None => false,
+            Some(parent) => parent.has_definition(name),
+        }
+    }
+    fn iter(&self) -> Box<dyn std::iter::Iterator<Item = (&String, &Binding)> + '_> {
+        match &self.symbols {
+            SymbolTable::Big(map) => Box::new(map.iter()),
+            SymbolTable::Small(pair) => Box::new(std::iter::once((&pair.0, &pair.1))),
+            SymbolTable::Empty => Box::new(std::iter::empty()),
+        }
+    }
+    fn len(&self) -> usize {
+        match &self.symbols {
+            SymbolTable::Big(map) => map.len(),
+            SymbolTable::Small(_) => 1,
+            SymbolTable::Empty => 0,
+        }
+    }
 }
 
 // static mut DEBUG_DEPTH: usize = 0;
@@ -80,7 +173,7 @@ impl EnvRef {
         EnvRef {
             frame: Rc::new(RefCell::new(EnvFrame {
                 depth: 0,
-                symbols: HashMap::new(),
+                symbols: SymbolTable::Empty,
                 parent: None,
                 home: None,
                 receiver: None,
@@ -92,7 +185,7 @@ impl EnvRef {
         EnvRef {
             frame: Rc::new(RefCell::new(EnvFrame {
                 depth: self.depth() + 1,
-                symbols: HashMap::new(),
+                symbols: SymbolTable::Empty,
                 parent: Some(self.clone()),
                 home: None,
                 receiver: None,
@@ -127,14 +220,7 @@ impl EnvRef {
         self.depth() <= 1
     }
     fn has_definition(&self, name: &str) -> bool {
-        let frame = self.frame.borrow();
-        match frame.symbols.get(name) {
-            Some(_) => true,
-            None => match &frame.parent {
-                None => false,
-                Some(parent) => parent.has_definition(name),
-            },
-        }
+        self.frame.borrow().has_definition(name)
     }
     fn receiver(&self) -> Option<Object> {
         let frame = self.frame.borrow();
@@ -159,14 +245,14 @@ impl EnvRef {
             },
         }
     }
-    fn add_binding(&self, name: &str, binding: Binding) {
-        self.frame.borrow_mut().symbols.insert(String::from(name), binding);
+    fn ensure_binding(&self, name: &str, binding: Binding) {
+        self.frame.borrow_mut().ensure_here(name, binding);
     }
     pub fn define(&self, name: &str, value: Object) {
-        self.add_binding(name, Binding::untyped(value));
+        self.ensure_binding(name, Binding::untyped(value));
     }
     fn set(&self, name: &str, value: Object, env: &Env) -> Option<Eval> {
-        match self.frame.borrow().symbols.get(name) {
+        match self.frame.borrow().get_here(name) {
             Some(binding) => {
                 if let Err(e) = binding.check_assign(&value, env) {
                     return Some(Err(e));
@@ -177,23 +263,18 @@ impl EnvRef {
                 None => return None,
             },
         }
-        match self.frame.borrow_mut().symbols.get_mut(name) {
-            Some(binding) => {
-                binding.value = value.clone();
-                Some(Ok(value))
-            }
-            _ => std::unreachable!(),
-        }
+        self.frame.borrow_mut().set_here(name, value.clone());
+        Some(Ok(value))
     }
     fn get(&self, name: &str) -> Option<Object> {
         match self.get_binding(name) {
             None => None,
-            Some(binding) => return Some(binding.value),
+            Some(binding) => Some(binding.value.clone()),
         }
     }
     fn get_binding(&self, name: &str) -> Option<Binding> {
         let frame = self.frame.borrow();
-        match frame.symbols.get(name) {
+        match frame.get_here(name) {
             Some(binding) => return Some(binding.clone()),
             None => match &frame.parent {
                 Some(parent) => parent.get_binding(name),
@@ -221,14 +302,14 @@ impl EnvRef {
                         return Unwind::error(&format!("Name conflict: {} already defined", &name));
                     }
                 }
-                self.add_binding(&name, binding.clone());
+                self.ensure_binding(&name, binding.clone());
             }
         }
         Ok(())
     }
     pub fn import_everything(&self, module: &EnvRef) -> Result<(), Unwind> {
         let mut todo = vec![];
-        for (name, binding) in module.frame.borrow().symbols.iter() {
+        for (name, binding) in module.frame.borrow().iter() {
             if name.contains(".") || name.starts_with("_") {
                 continue;
             }
@@ -241,13 +322,13 @@ impl EnvRef {
             }
         }
         for (name, binding) in todo.into_iter() {
-            self.add_binding(&name, binding);
+            self.ensure_binding(&name, binding);
         }
         Ok(())
     }
     pub fn import_prefixed(&self, module: &EnvRef, prefix: &str) -> Result<(), Unwind> {
         let mut todo = vec![];
-        for (name, binding) in module.frame.borrow().symbols.iter() {
+        for (name, binding) in module.frame.borrow().iter() {
             if name.contains(".") {
                 continue;
             }
@@ -261,7 +342,7 @@ impl EnvRef {
             }
         }
         for (name, binding) in todo.into_iter() {
-            self.add_binding(&name, binding);
+            self.ensure_binding(&name, binding);
         }
         Ok(())
     }
@@ -364,7 +445,7 @@ impl Env {
     /// binding.
     pub fn bind(&self, name: &str, binding: Binding) -> Env {
         let child = self.enclose();
-        child.add_binding(name, binding);
+        child.ensure_binding(name, binding);
         child
     }
 
@@ -381,9 +462,9 @@ impl Env {
         self.env_ref.define(name, value);
     }
 
-    pub fn add_binding(&self, name: &str, binding: Binding) {
+    pub fn ensure_binding(&self, name: &str, binding: Binding) {
         // println!("add binding: {}", name);
-        self.env_ref.add_binding(name, binding);
+        self.env_ref.ensure_binding(name, binding);
     }
 
     pub fn set(&self, name: &str, value: Object) -> Option<Eval> {
@@ -471,7 +552,7 @@ impl Env {
         let env = if bind.dynamic {
             self.clone()
         } else if self.is_toplevel() {
-            self.add_binding(&bind.name, binding);
+            self.ensure_binding(&bind.name, binding);
             self.clone()
         } else {
             self.bind(&bind.name, binding)
@@ -588,9 +669,9 @@ impl Env {
 
     fn do_import(&self, import: &ImportDef) -> Eval {
         assert!(self.is_toplevel());
-        let n = self.env_ref.frame.borrow().symbols.len();
+        let n = self.env_ref.frame.borrow().len();
         let module = &self.load_module(&import.path)?.env_ref;
-        assert_eq!(n, self.env_ref.frame.borrow().symbols.len());
+        assert_eq!(n, self.env_ref.frame.borrow().len());
         let res = match &import.name {
             None => self.env_ref.import_prefixed(&module, &import.prefix),
             Some(name) if name == "*" => self.env_ref.import_everything(&module),

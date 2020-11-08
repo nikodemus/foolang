@@ -1,4 +1,4 @@
-use crate::eval::{Binding, Env};
+use crate::eval::{Binding, Env, SymbolTable};
 use crate::expr::*;
 use crate::objects::{Arg, Eval, Object, Signature, Source, Vtable};
 use crate::unwind::Unwind;
@@ -43,7 +43,6 @@ impl Closure {
     }
 
     pub fn apply(&self, receiver: Option<&Object>, args: &[Object]) -> Eval {
-        let mut symbols = HashMap::new();
         if self.params.len() != args.len() {
             return Unwind::error_at(
                 // FIXME: call-site would be 1000 x better...
@@ -57,6 +56,13 @@ impl Closure {
                 ),
             );
         }
+        if args.len() == 0 {
+            return self.apply0(receiver);
+        }
+        if args.len() == 1 {
+            return self.apply1(receiver, args);
+        }
+        let mut symbols = HashMap::with_capacity(args.len());
         for ((arg, vt), obj) in self
             .params
             .iter()
@@ -69,7 +75,53 @@ impl Closure {
             };
             symbols.insert(arg.name.clone(), binding);
         }
-        let env = self.env.extend(symbols, receiver);
+        let env = self.env.extend(SymbolTable::Big(symbols), receiver);
+        let ret = env.eval(&self.body);
+        // println!("apply return: {:?}", &ret);
+        let result = match ret {
+            Ok(value) => value,
+            Err(Unwind::ReturnFrom(ref ret_env, ref value)) if ret_env == &env.env_ref => {
+                value.clone()
+            }
+            Err(unwind) => {
+                return Err(unwind);
+            }
+        };
+        if let Some(typed) = &self.signature.return_type {
+            typed.send("typecheck:", &[result], &self.env).source(&self.body.source_location())
+        } else {
+            Ok(result)
+        }
+    }
+
+    pub fn apply0(&self, receiver: Option<&Object>) -> Eval {
+        let env = self.env.extend(SymbolTable::Empty, receiver);
+        let ret = env.eval(&self.body);
+        // println!("apply return: {:?}", &ret);
+        let result = match ret {
+            Ok(value) => value,
+            Err(Unwind::ReturnFrom(ref ret_env, ref value)) if ret_env == &env.env_ref => {
+                value.clone()
+            }
+            Err(unwind) => {
+                return Err(unwind);
+            }
+        };
+        if let Some(typed) = &self.signature.return_type {
+            typed.send("typecheck:", &[result], &self.env).source(&self.body.source_location())
+        } else {
+            Ok(result)
+        }
+    }
+
+    pub fn apply1(&self, receiver: Option<&Object>, args: &[Object]) -> Eval {
+        let name = self.params[0].name.to_string();
+        let obj = args[0].clone();
+        let binding = match &self.signature.parameter_types[0] {
+            None => Binding::untyped(obj),
+            Some(ref typed) => Binding::typed(typed.clone(), obj, &self.env)?,
+        };
+        let env = self.env.extend(SymbolTable::Small((name, binding)), receiver);
         let ret = env.eval(&self.body);
         // println!("apply return: {:?}", &ret);
         let result = match ret {
