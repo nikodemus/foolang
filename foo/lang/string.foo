@@ -4,7 +4,6 @@ import .list.List
 import .stringOutput.StringOutput
 
 extend String
-    is Object
     is Ordered
 
     direct method default
