@@ -1,0 +1,74 @@
+define $C3Root False!
+
+class C3Linearization {}
+    ---
+    Inheritance linearization algorithm from "A Monotonic Superclass
+    Linearization for Dylan".
+
+    C3 refers to "three consistencies":
+
+    1. Consistent with local precedence order: the produced linearization
+       is consistent with local precedence of all supertypes. Ie. if A
+       precedes B in local precedence order of C, then linearizarions
+       for all subtypes of C must maintain this property.
+
+    2. Monotonic: every property inherited by a type must be either
+       inherited or implemented by one of its direct supertypes. Ie.
+       properties cannot "skip over".
+
+    3. Consistent with with extended precedence graph. ...read the
+       paper. The end result of EPG consistency is that the results
+       are "more intuitive".
+    ---
+    direct method _merge: remaining _into: result
+        -- Both `results` are built in reverse order, and are
+        -- flipped at the end.`
+        (remaining allSatisfy: #isEmpty)
+            ifTrue: { return result reverse }.
+        -- `candidate`` returns True iff aType can go into results.
+        let candidate
+            = { |aType|
+                let isInTail = { |list|
+                                 (list position: { |each| each is aType } ifNone: { 0 })
+                                     > 1 }.
+                (remaining noneSatisfy: isInTail) }.
+        -- `candidateAtHead` returns True iff the first element of the list
+        -- is a valid candidate.
+        let candidateAtHead
+            = { |list|
+                list ifNotEmpty: { candidate value: (list first) } }.
+        -- Find the first local precedence list that starts with
+        -- a valid candidate, pick that.
+        let next
+            = (remaining find: candidateAtHead) firstOrFalse.
+        next is False
+            ifTrue: { Error raise: "Inconsistent precedence graph for {$C3Root}.
+         remaining: {remaining}
+    partial result: {result}
+Oops." }.
+        -- `removeNext` removes the `next` from the head of any
+        -- of its inputs.
+        --
+        -- FIXME: Using `#rest` here is inefficient. Should use
+        -- a tail-object instead.
+        let removeNext
+            = { |list|
+                (list firstOrFalse is next)
+                    ifTrue: { list rest }
+                    ifFalse: { list } }.
+        -- FIXME: Using `#concat` here is inefficient. Should use
+        -- a rope-line solution instead.
+        self _merge: (remaining collect: removeNext)
+             _into: ([next] concat: result)!
+
+    direct method allInterfaces: aType
+        let $C3Root = $C3Root is False
+                          ifTrue: { aType }
+                          ifFalse: { $C3Root }.
+        let ownInterfaces = aType ownInterfaces.
+        self _merge: ((ownInterfaces
+                           collect: { |each| self allInterfaces: each })
+                      concat: [ownInterfaces])
+             _into: [aType]!
+
+end

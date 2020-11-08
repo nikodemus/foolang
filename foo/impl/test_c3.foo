@@ -1,0 +1,49 @@
+import .c3.C3Linearization
+import lib.assert.Assert
+
+class Ex { name inherits }
+    is Object
+    method ownInterfaces
+        inherits!
+    method allInterfaces
+        (C3Linearization allInterfaces: self) asArray!
+    method printOn: stream
+        stream print: self toString!
+    method toString
+        "<{name}>"!
+end
+
+class TestC3 { assert }
+    is TestSuite
+
+    method testPopupMenu
+        let object = Ex name: "Object" inherits: [].
+        let choiceWidget = Ex name: "ChoiceWidget" inherits: [object].
+        let menu = Ex name: "Menu" inherits: [choiceWidget].
+        let popupMixin = Ex name: "PopupMixin" inherits: [object].
+        let popupMenu = Ex name: "PopupMenu" inherits: [menu, popupMixin].
+        assert that: { popupMenu allInterfaces }
+               equals: [popupMenu, menu, choiceWidget, popupMixin, object]
+               testing: "C3 linearization (1)"!
+
+    method testEditableScrollablePane
+        let object = Ex name: "Object" inherits: [].
+        let pane = Ex name: "Pane" inherits: [object].
+        let scrollingMixin = Ex name: "ScrollingeMixin" inherits: [object].
+        let scrollablePane = Ex name: "ScrollablePane" inherits: [pane, scrollingMixin].
+        let editingMixin = Ex name: "EditingMixin" inherits: [object].
+        let editablePane = Ex name: "EditablePane" inherits: [pane, editingMixin].
+        let editableScrollablePane = Ex name: "EditableScrollablePane"
+                                        inherits: [scrollablePane, editablePane].
+        assert that: { editableScrollablePane allInterfaces }
+               equals: [editableScrollablePane, scrollablePane, editablePane, pane,
+                        scrollingMixin, editingMixin, object]
+               testing: "C3 linearization (2)"!
+end
+
+class Main {}
+    direct method run: cmd in: system
+        Assert
+            runSuite: TestC3
+            in: system!
+end
