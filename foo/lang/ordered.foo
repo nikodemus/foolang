@@ -46,6 +46,11 @@ interface Ordered
     method first
         self at: 1!
 
+    method firstOrFalse
+        self size is 0
+            ifTrue: { False }
+            ifFalse: { self at: 1 }!
+
     method second
         self at: 2!
 
