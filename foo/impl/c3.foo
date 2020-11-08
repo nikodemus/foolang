@@ -39,13 +39,14 @@ class C3Linearization {}
                 list ifNotEmpty: { candidate value: (list first) } }.
         -- Find the first local precedence list that starts with
         -- a valid candidate, pick that.
-        let next
-            = (remaining find: candidateAtHead) firstOrFalse.
-        next is False
+        let nextList
+            = (remaining find: candidateAtHead).
+        nextList is False
             ifTrue: { Error raise: "Inconsistent precedence graph for {$C3Root}.
          remaining: {remaining}
     partial result: {result}
 Oops." }.
+        let next = nextList firstOrFalse.
         -- `removeNext` removes the `next` from the head of any
         -- of its inputs.
         --
