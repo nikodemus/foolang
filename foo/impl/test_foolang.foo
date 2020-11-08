@@ -384,6 +384,7 @@ end
                                    selectors isEquivalent: [#value, #bang:, #foo, #bar, #test] }}!
 
     method testAstSource
+         -- `is Object` required for the exception to happen as we want
         self load: "class SourceTest \{}
                          is Object
                          method foo
