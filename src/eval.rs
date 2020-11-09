@@ -44,7 +44,7 @@ impl Binding {
 
 #[derive(Debug)]
 pub enum SymbolTable {
-    Big(HashMap<String, Binding>),
+    Big(Vec<(String, Binding)>),
     Small((String, Binding)),
     Empty,
 }
@@ -69,9 +69,14 @@ pub struct EnvFrame {
 impl EnvFrame {
     fn ensure_here(&mut self, name: &str, binding: Binding) {
         match &mut self.symbols {
-            SymbolTable::Big(map) => {
-                map.insert(String::from(name), binding);
-                map.shrink_to_fit();
+            SymbolTable::Big(vec) => {
+                for entry in vec.iter_mut() {
+                    if entry.0 == name {
+                        entry.1 = binding;
+                        return;
+                    }
+                }
+                vec.push((String::from(name), binding));
                 return;
             }
             SymbolTable::Small(pair) => {
@@ -80,9 +85,9 @@ impl EnvFrame {
                     // hack.
                     pair.1 = binding;
                 } else {
-                    let mut map = HashMap::with_capacity(2);
-                    map.insert(pair.0.to_string(), pair.1.clone());
-                    self.symbols = SymbolTable::Big(map);
+                    let mut vec = Vec::with_capacity(2);
+                    vec.push((pair.0.to_string(), pair.1.clone()));
+                    self.symbols = SymbolTable::Big(vec);
                     return self.ensure_here(name, binding);
                 }
             }
@@ -93,7 +98,14 @@ impl EnvFrame {
     }
     fn get_here(&self, name: &str) -> Option<&Binding> {
         match &self.symbols {
-            SymbolTable::Big(map) => map.get(name),
+            SymbolTable::Big(vec) => {
+                for entry in vec.iter() {
+                    if entry.0 == name {
+                        return Some(&entry.1);
+                    }
+                }
+                return None;
+            }
             SymbolTable::Small((key, value)) => {
                 if key == name {
                     Some(value)
@@ -106,10 +118,12 @@ impl EnvFrame {
     }
     fn set_here(&mut self, name: &str, value: Object) {
         match &mut self.symbols {
-            SymbolTable::Big(map) => {
-                if let Some(binding) = map.get_mut(name) {
-                    binding.value = value;
-                    return;
+            SymbolTable::Big(vec) => {
+                for entry in vec.iter_mut() {
+                    if entry.0 == name {
+                        entry.1.value = value;
+                        return;
+                    }
                 }
             }
             SymbolTable::Small(pair) => {
@@ -126,10 +140,13 @@ impl EnvFrame {
     }
     fn has_definition(&self, name: &str) -> bool {
         match &self.symbols {
-            SymbolTable::Big(map) => {
-                if map.contains_key(name) {
-                    return true;
+            SymbolTable::Big(vec) => {
+                for entry in vec.iter() {
+                    if entry.0 == name {
+                        return true;
+                    }
                 }
+                return false;
             }
             SymbolTable::Small((key, _)) if key == name => return true,
             _ => {}
@@ -141,7 +158,7 @@ impl EnvFrame {
     }
     fn iter(&self) -> Box<dyn std::iter::Iterator<Item = (&String, &Binding)> + '_> {
         match &self.symbols {
-            SymbolTable::Big(map) => Box::new(map.iter()),
+            SymbolTable::Big(vec) => Box::new(vec.iter().map(|each| (&each.0, &each.1))),
             SymbolTable::Small(pair) => Box::new(std::iter::once((&pair.0, &pair.1))),
             SymbolTable::Empty => Box::new(std::iter::empty()),
         }

@@ -2,7 +2,6 @@ use crate::eval::{Binding, Env, EnvRef, SymbolTable};
 use crate::expr::*;
 use crate::objects::{Arg, Eval, Object, Signature, Source, Vtable};
 use crate::unwind::Unwind;
-use std::collections::HashMap;
 
 use std::cmp::Eq;
 use std::hash::{Hash, Hasher};
@@ -54,7 +53,7 @@ impl Closure {
         let closure_env = Env {
             env_ref: self
                 .env_ref
-                .extend(SymbolTable::Big(HashMap::with_capacity(args.len())), receiver),
+                .extend(SymbolTable::Big(Vec::with_capacity(args.len())), receiver),
             foo: send_env.foo.clone(),
         };
         for ((arg, vt), obj) in self
