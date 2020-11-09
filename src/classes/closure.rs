@@ -1,17 +1,15 @@
-use crate::eval::{Binding, Env};
+use crate::eval::{Binding, Env, EnvRef, SymbolTable};
 use crate::expr::*;
 use crate::objects::{Arg, Eval, Object, Signature, Source, Vtable};
 use crate::unwind::Unwind;
-use std::collections::HashMap;
 
 use std::cmp::Eq;
 use std::hash::{Hash, Hasher};
-use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct Closure {
     pub name: String,
-    pub env: Env,
+    pub env_ref: EnvRef,
     pub params: Vec<Arg>,
     pub body: Expr,
     pub signature: Signature,
@@ -32,18 +30,7 @@ impl Hash for Closure {
 }
 
 impl Closure {
-    pub fn extend_env(&self, name: &str, value: &Object) -> Rc<Closure> {
-        Rc::new(Closure {
-            name: self.name.clone(),
-            env: self.env.bind(name, Binding::untyped(value.clone())),
-            params: self.params.clone(),
-            body: self.body.clone(),
-            signature: self.signature.clone(),
-        })
-    }
-
-    pub fn apply(&self, receiver: Option<&Object>, args: &[Object]) -> Eval {
-        let mut symbols = HashMap::new();
+    pub fn apply(&self, receiver: Option<&Object>, args: &[Object], send_env: &Env) -> Eval {
         if self.params.len() != args.len() {
             return Unwind::error_at(
                 // FIXME: call-site would be 1000 x better...
@@ -57,6 +44,18 @@ impl Closure {
                 ),
             );
         }
+        if args.len() == 0 {
+            return self.apply0(receiver, send_env);
+        }
+        if args.len() == 1 {
+            return self.apply1(receiver, args, send_env);
+        }
+        let closure_env = Env {
+            env_ref: self
+                .env_ref
+                .extend(SymbolTable::Big(Vec::with_capacity(args.len())), receiver),
+            foo: send_env.foo.clone(),
+        };
         for ((arg, vt), obj) in self
             .params
             .iter()
@@ -65,16 +64,14 @@ impl Closure {
         {
             let binding = match vt {
                 None => Binding::untyped(obj),
-                Some(ref typed) => Binding::typed(typed.clone(), obj, &self.env)?,
+                Some(ref typed) => Binding::typed(typed.clone(), obj, &closure_env)?,
             };
-            symbols.insert(arg.name.clone(), binding);
+            closure_env.ensure_binding(&arg.name, binding);
         }
-        let env = self.env.extend(symbols, receiver);
-        let ret = env.eval(&self.body);
-        // println!("apply return: {:?}", &ret);
+        let ret = closure_env.eval(&self.body);
         let result = match ret {
             Ok(value) => value,
-            Err(Unwind::ReturnFrom(ref ret_env, ref value)) if ret_env == &env.env_ref => {
+            Err(Unwind::ReturnFrom(ref ret_env, ref value)) if ret_env == &closure_env.env_ref => {
                 value.clone()
             }
             Err(unwind) => {
@@ -82,7 +79,57 @@ impl Closure {
             }
         };
         if let Some(typed) = &self.signature.return_type {
-            typed.send("typecheck:", &[result], &self.env).source(&self.body.source_location())
+            typed.send("typecheck:", &[result], &closure_env).source(&self.body.source_location())
+        } else {
+            Ok(result)
+        }
+    }
+
+    pub fn apply0(&self, receiver: Option<&Object>, send_env: &Env) -> Eval {
+        let closure_env = Env {
+            env_ref: self.env_ref.extend(SymbolTable::Empty, receiver),
+            foo: send_env.foo.clone(),
+        };
+        let ret = closure_env.eval(&self.body);
+        let result = match ret {
+            Ok(value) => value,
+            Err(Unwind::ReturnFrom(ref ret_env, ref value)) if ret_env == &closure_env.env_ref => {
+                value.clone()
+            }
+            Err(unwind) => {
+                return Err(unwind);
+            }
+        };
+        if let Some(typed) = &self.signature.return_type {
+            typed.send("typecheck:", &[result], &closure_env).source(&self.body.source_location())
+        } else {
+            Ok(result)
+        }
+    }
+
+    pub fn apply1(&self, receiver: Option<&Object>, args: &[Object], send_env: &Env) -> Eval {
+        let closure_env = Env {
+            env_ref: self.env_ref.extend(SymbolTable::Empty, receiver),
+            foo: send_env.foo.clone(),
+        };
+        let obj = args[0].clone();
+        let binding = match &self.signature.parameter_types[0] {
+            None => Binding::untyped(obj),
+            Some(ref typed) => Binding::typed(typed.clone(), obj, &closure_env)?,
+        };
+        closure_env.ensure_binding(&self.params[0].name, binding);
+        let ret = closure_env.eval(&self.body);
+        let result = match ret {
+            Ok(value) => value,
+            Err(Unwind::ReturnFrom(ref ret_env, ref value)) if ret_env == &closure_env.env_ref => {
+                value.clone()
+            }
+            Err(unwind) => {
+                return Err(unwind);
+            }
+        };
+        if let Some(typed) = &self.signature.return_type {
+            typed.send("typecheck:", &[result], &closure_env).source(&self.body.source_location())
         } else {
             Ok(result)
         }
@@ -103,9 +150,9 @@ pub fn vtable() -> Vtable {
 
 // FUNDAMENTAL METHODS
 
-fn closure_apply_array(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
+fn closure_apply_array(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let array = args[0].as_array("Closure#apply:")?.borrow();
-    receiver.closure_ref().apply(None, &array)
+    receiver.closure_ref().apply(None, &array, env)
 }
 
 fn closure_signature(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
@@ -125,14 +172,14 @@ fn closure_arity(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_integer(receiver.closure_ref().params.len() as i64))
 }
 
-fn closure_finally(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
-    let res = receiver.closure_ref().apply(None, &[]);
-    args[0].closure_ref().apply(None, &[])?;
+fn closure_finally(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let res = receiver.closure_ref().apply(None, &[], env);
+    args[0].closure_ref().apply(None, &[], env)?;
     res
 }
 
 fn closure_on_panic(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let res = receiver.closure_ref().apply(None, &[]);
+    let res = receiver.closure_ref().apply(None, &[], env);
     if let Err(Unwind::Panic(error, loc)) = res {
         let panic_class = match env.get("Panic") {
             None => panic!("Panic class not defined!"),
@@ -149,8 +196,8 @@ fn closure_on_panic(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     }
 }
 
-fn closure_loop(receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
+fn closure_loop(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     loop {
-        receiver.closure_ref().apply(None, &[])?;
+        receiver.closure_ref().apply(None, &[], env)?;
     }
 }

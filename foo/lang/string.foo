@@ -4,7 +4,6 @@ import .list.List
 import .stringOutput.StringOutput
 
 extend String
-    is Object
     is Ordered
 
     direct method default
@@ -74,7 +73,7 @@ extend String
     method character
         self size == 1
             ifTrue: { self at: 1 }
-            ifFalse: { Error raise: "Not a character designator string: {self}" }!
+            ifFalse: { panic "Not a character designator string: {self}" }!
 
     method replace: s1 with: s2
         let out = StringOutput new.

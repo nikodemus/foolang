@@ -53,7 +53,7 @@ class BuiltinMethod { home selector definition isDirect }
         StringOutput with: { |out| self printOn: out }!
 end
 
-class BuiltinClass { host markFunction _interfaces _directMethods _instanceMethods }
+class BuiltinClass { host markFunction _interfaces _directMethods _instanceMethods _allInterfaces }
     is AstMethodHome
 
     direct method new: host
@@ -64,7 +64,8 @@ class BuiltinClass { host markFunction _interfaces _directMethods _instanceMetho
                             markFunction: mark
                             _interfaces: List new
                             _directMethods: False
-                            _instanceMethods: False.
+                            _instanceMethods: False
+                            _allInterfaces: False.
         theClass _directMethods: directMethods.
         theClass _instanceMethods: instanceMethods.
         theClass!
@@ -80,6 +81,13 @@ class BuiltinClass { host markFunction _interfaces _directMethods _instanceMetho
 
     method _readerMethods
         []!
+
+    method _allInterfaces
+        _allInterfaces!
+
+    method _allInterfaces: list
+        (_allInterfaces is False) assert: "Oops, _allInterfaces already set!".
+        _allInterfaces = list asArray!
 
     method _directMethods: methods
         _directMethods = BuiltinMethod forEach: methods in: self direct: True!
@@ -103,10 +111,10 @@ class BuiltinClass { host markFunction _interfaces _directMethods _instanceMetho
         False!
 
     method printOn: stream
-        "#<BuiltinClass {host}>"!
+        stream print: self toString!
 
     method toString
-        StringOutput with: { |out| self printOn: out }!
+        "#<BuiltinClass {host}>"!
 end
 
 define BuiltinClasses [
@@ -180,6 +188,7 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
     direct method transpile: string in: env
         env removeBuiltins: [
             "Any",
+            "List",
             "Object",
             "StringOutput"
         ].
@@ -200,11 +209,12 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
         -- KLUDGE: add #writeString: to the selectors.
         visitor selectorMap map: #writeString:.
         env replaceBuiltins: BuiltinClasses.
+        let builtins = visitor generateBuiltins.
         visitor declare: main.
         visitor writeDefinitions.
         visitor writeMain.
         { main: visitor output,
-          builtins: visitor generateBuiltins,
+          builtins: builtins,
           blocks: visitor generateBlocks,
           constants: visitor generateConstants,
           declarations: visitor generateDeclarations,
