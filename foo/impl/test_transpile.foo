@@ -1415,7 +1415,10 @@ class Main {}
                       system exit }.
         cmd do: { |name|
                   Assert
-                      runSuite: ((tests at: name) system: system)
+                      runSuite: ((tests
+                                      at: name
+                                      ifNone: { Error raise: "Unknown test: {name}" })
+                                     system: system)
                       in: system
                       onFailure: { system exit: 1 } }.
         system exit!
