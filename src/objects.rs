@@ -163,13 +163,6 @@ impl Method {
             Method::Object(_) => Unwind::error("Object method signature fetching not implemented."),
         }
     }
-
-    fn extend_env(&self, name: &str, value: &Object) -> Method {
-        match self {
-            Method::Interpreter(ref c) => Method::Interpreter(c.extend_env(name, value)),
-            _ => self.clone(),
-        }
-    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -1066,7 +1059,7 @@ impl Object {
         let interface = interface_obj.as_class_ref()?;
         for (selector, method) in interface_obj.vtable.methods().iter() {
             if !self.vtable.has(selector) {
-                self.vtable.add_method(selector, method.extend_env("Self", self))?;
+                self.vtable.add_method(selector, method.clone())?;
             }
         }
         let instance_vt = &class.instance_vtable;
@@ -1104,7 +1097,7 @@ impl Object {
                     ))
                 }
                 None => {
-                    instance_vt.add_method(selector, method.extend_env("Self", self))?;
+                    instance_vt.add_method(selector, method.clone())?;
                 }
             }
         }
@@ -1134,7 +1127,7 @@ impl Object {
         // Add interface direct methods
         for (selector, method) in interface_obj.vtable.methods().iter() {
             if !self.vtable.has(selector) {
-                self.vtable.add_method(selector, method.extend_env("Self", self))?;
+                self.vtable.add_method(selector, method.clone())?;
             }
         }
         // Add interface to instance vtable
@@ -1175,7 +1168,7 @@ impl Object {
                     ))
                 }
                 None => {
-                    instance_vt.add_method(selector, method.extend_env("Self", self))?;
+                    instance_vt.add_method(selector, method.clone())?;
                 }
             }
         }

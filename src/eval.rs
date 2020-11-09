@@ -169,6 +169,15 @@ impl PartialEq for EnvRef {
 }
 
 impl EnvRef {
+    pub fn debug(&self) {
+        println!("---");
+        for (k, _) in self.frame.borrow().iter() {
+            println!("- {}", k);
+        }
+        if let Some(parent) = &self.frame.borrow().parent {
+            parent.debug();
+        }
+    }
     pub fn new() -> EnvRef {
         EnvRef {
             frame: Rc::new(RefCell::new(EnvFrame {
@@ -266,7 +275,20 @@ impl EnvRef {
         self.frame.borrow_mut().set_here(name, value.clone());
         Some(Ok(value))
     }
+    fn receiver_class(&self) -> Option<Object> {
+        if let Some(receiver) = self.receiver() {
+            receiver.vtable.class.borrow().clone()
+        } else {
+            None
+        }
+    }
     fn get(&self, name: &str) -> Option<Object> {
+        if name == "self" {
+            return self.receiver();
+        }
+        if name == "Self" {
+            return self.receiver_class();
+        }
         match self.get_binding(name) {
             None => None,
             Some(binding) => Some(binding.value.clone()),
@@ -851,38 +873,26 @@ impl Env {
     }
 
     fn eval_var(&self, var: &Var) -> Eval {
-        if &var.name == "self" {
-            match self.receiver() {
-                None => {
-                    Unwind::error_at(var.source_location.clone(), "self outside method context")
-                }
-                Some(receiver) => Ok(receiver.clone()),
-            }
-        } else {
-            match self.get(&var.name) {
-                Some(value) => return Ok(value),
-                None => {
-                    if let Some(receiver) = self.receiver() {
-                        if let Some(slot) = receiver.slots().iter().find(|s| &s.name == &var.name) {
-                            return read_instance_variable(&receiver, slot.index);
-                        }
+        match self.get(&var.name) {
+            Some(value) => return Ok(value),
+            None => {
+                if let Some(receiver) = self.receiver() {
+                    if let Some(slot) = receiver.slots().iter().find(|s| &s.name == &var.name) {
+                        return read_instance_variable(&receiver, slot.index);
                     }
-                    /*
-                    println!(
-                        "UNBOUND: {:?}\n    ENV: {:?}\n    REC: {:?}",
-                        &var,
-                        self.env_impl.borrow(),
-                        self.receiver()
-                    );
-                     */
-                    // FIXME: There used to be workspace handling here
                 }
+                /*
+                    println!(
+                    "UNBOUND: {:?}\n    ENV: {:?}\n    REC: {:?}",
+                    &var,
+                    self.env_impl.borrow(),
+                    self.receiver()
+                );
+                     */
+                // FIXME: There used to be workspace handling here
             }
-            Unwind::error_at(
-                var.source_location.clone(),
-                &format!("Unbound variable: {}", &var.name),
-            )
         }
+        Unwind::error_at(var.source_location.clone(), &format!("Unbound variable: {}", &var.name))
     }
 }
 

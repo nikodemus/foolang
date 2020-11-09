@@ -6,7 +6,6 @@ use std::collections::HashMap;
 
 use std::cmp::Eq;
 use std::hash::{Hash, Hasher};
-use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct Closure {
@@ -32,6 +31,7 @@ impl Hash for Closure {
 }
 
 impl Closure {
+    /*
     pub fn extend_env(&self, name: &str, value: &Object) -> Rc<Closure> {
         Rc::new(Closure {
             name: self.name.clone(),
@@ -41,6 +41,7 @@ impl Closure {
             signature: self.signature.clone(),
         })
     }
+     */
 
     pub fn apply(&self, receiver: Option<&Object>, args: &[Object]) -> Eval {
         if self.params.len() != args.len() {
