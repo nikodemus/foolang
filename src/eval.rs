@@ -71,6 +71,7 @@ impl EnvFrame {
         match &mut self.symbols {
             SymbolTable::Big(map) => {
                 map.insert(String::from(name), binding);
+                map.shrink_to_fit();
                 return;
             }
             SymbolTable::Small(pair) => {
@@ -79,10 +80,10 @@ impl EnvFrame {
                     // hack.
                     pair.1 = binding;
                 } else {
-                    let mut map = HashMap::new();
-                    map.insert(name.to_string(), binding);
+                    let mut map = HashMap::with_capacity(2);
                     map.insert(pair.0.to_string(), pair.1.clone());
                     self.symbols = SymbolTable::Big(map);
+                    return self.ensure_here(name, binding);
                 }
             }
             SymbolTable::Empty => {
@@ -202,7 +203,7 @@ impl EnvRef {
         }
     }
 
-    fn extend(&self, symbols: SymbolTable, receiver: Option<&Object>) -> EnvRef {
+    pub fn extend(&self, symbols: SymbolTable, receiver: Option<&Object>) -> EnvRef {
         let env_ref = EnvRef {
             frame: Rc::new(RefCell::new(EnvFrame {
                 depth: self.depth() + 1,
@@ -609,13 +610,7 @@ impl Env {
             args.push(Arg::new(p.source_location.clone(), p.name.clone()));
             parameter_types.push(&p.typename);
         }
-        self.foo.make_closure(
-            self.clone(),
-            args,
-            (*block.body).clone(),
-            parameter_types,
-            &block.rtype,
-        )
+        self.foo.make_closure(&self, args, (*block.body).clone(), parameter_types, &block.rtype)
     }
 
     fn eval_cascade(&self, cascade: &Cascade) -> Eval {

@@ -782,7 +782,7 @@ impl Foolang {
 
     pub fn make_closure(
         &self,
-        env: Env,
+        env: &Env,
         params: Vec<Arg>,
         body: Expr,
         parameter_type_names: Vec<&Option<String>>,
@@ -797,7 +797,7 @@ impl Foolang {
             vtable: Rc::clone(&self.closure_vtable),
             datum: Datum::Closure(Rc::new(Closure {
                 name: "block".to_string(),
-                env,
+                env_ref: env.env_ref.clone(),
                 params,
                 body,
                 signature: Signature {
@@ -1307,7 +1307,7 @@ impl Object {
         match self.vtable.get(selector) {
             Some(m) => match &m {
                 Method::Primitive(method) => method(self, args, env),
-                Method::Interpreter(closure) => closure.apply(Some(self), args),
+                Method::Interpreter(closure) => closure.apply(Some(self), args, env),
                 Method::Reader(index) => read_instance_variable(self, *index),
                 Method::Required(_) => {
                     Unwind::error(&format!("Required method '{}' unimplemented", selector))
@@ -1332,7 +1332,9 @@ impl Object {
                 match self.vtable.get("perform:with:") {
                     Some(m) => match &m {
                         Method::Primitive(method) => method(self, &not_understood, env),
-                        Method::Interpreter(closure) => closure.apply(Some(self), &not_understood),
+                        Method::Interpreter(closure) => {
+                            closure.apply(Some(self), &not_understood, env)
+                        }
                         Method::Reader(index) => read_instance_variable(self, *index),
                         Method::Required(_) => {
                             Unwind::error(&format!("Required method '{}' unimplemented", selector))
@@ -1367,7 +1369,7 @@ pub fn make_method_closure(
     }
     Ok(Closure {
         name: name.to_string(),
-        env: env.clone(),
+        env_ref: env.env_ref.clone(),
         params: args,
         body: body.to_owned(),
         signature: Signature {
