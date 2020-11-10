@@ -49,6 +49,13 @@ pub enum SymbolTable {
     Empty,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+enum HomeRef {
+    None,
+    This,
+    Other(EnvRef),
+}
+
 /// Underlying lexical environment: most methods operate on `Env`
 /// or EnvRef instead.
 #[derive(Debug)]
@@ -61,7 +68,7 @@ pub struct EnvFrame {
     parent: Option<EnvRef>,
     /// Environment of the outermost lexically enclosing closure. Used to identify
     /// identify correct frame to return from.
-    home: Option<EnvRef>,
+    home: HomeRef,
     /// Current receiver.
     receiver: Option<Object>,
 }
@@ -202,7 +209,7 @@ impl EnvRef {
                 depth: 0,
                 symbols: SymbolTable::Empty,
                 parent: None,
-                home: None,
+                home: HomeRef::None,
                 receiver: None,
             })),
         }
@@ -214,28 +221,28 @@ impl EnvRef {
                 depth: self.depth() + 1,
                 symbols: SymbolTable::Empty,
                 parent: Some(self.clone()),
-                home: None,
+                home: HomeRef::None,
                 receiver: None,
             })),
         }
     }
 
     pub fn extend(&self, symbols: SymbolTable, receiver: Option<&Object>) -> EnvRef {
-        let env_ref = EnvRef {
+        // If there was no lexically enclosing call environment, then this is
+        // the one.
+        let mut home = self.homeref();
+        if home == HomeRef::None {
+            home = HomeRef::This;
+        }
+        EnvRef {
             frame: Rc::new(RefCell::new(EnvFrame {
                 depth: self.depth() + 1,
                 symbols,
                 parent: Some(self.clone()),
-                home: self.home(),
+                home,
                 receiver: receiver.map(|obj| obj.clone()),
             })),
-        };
-        // If there was no lexically enclosing call environment, then this is
-        // the one.
-        if env_ref.home().is_none() {
-            env_ref.frame.borrow_mut().home = Some(env_ref.clone());
         }
-        env_ref
     }
     fn depth(&self) -> u32 {
         self.frame.borrow().depth
@@ -252,7 +259,7 @@ impl EnvRef {
     fn receiver(&self) -> Option<Object> {
         let frame = self.frame.borrow();
         match &frame.home {
-            Some(home) if &home != &self => home.receiver(),
+            HomeRef::Other(home) => home.receiver(),
             _ => match &frame.receiver {
                 Some(receiver) => Some(receiver.clone()),
                 None => match &frame.parent {
@@ -262,14 +269,25 @@ impl EnvRef {
             },
         }
     }
-    fn home(&self) -> Option<EnvRef> {
+    fn homeref(&self) -> HomeRef {
         let frame = self.frame.borrow();
         match &frame.home {
-            Some(home) => Some(home.clone()),
-            None => match &frame.parent {
-                Some(parent) => parent.home(),
-                None => None,
-            },
+            HomeRef::None => {
+                if let Some(parent) = &frame.parent {
+                    parent.homeref()
+                } else {
+                    HomeRef::None
+                }
+            }
+            HomeRef::This => HomeRef::Other(self.clone()),
+            _ => frame.home.clone(),
+        }
+    }
+    fn home(&self) -> Option<EnvRef> {
+        match self.homeref() {
+            HomeRef::None => None,
+            HomeRef::This => Some(self.clone()),
+            HomeRef::Other(home) => Some(home.clone()),
         }
     }
     fn ensure_binding(&self, name: &str, binding: Binding) {
