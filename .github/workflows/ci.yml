@@ -86,13 +86,13 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: run
-          args: -- foo/impl/test_prelude.foo --use=foo/lib -- --fork-all
+          args: -- foo/impl/test_prelude.foo --use=foo/lib
 
       - name: Test Transpile
         uses: actions-rs/cargo@v1
         with:
           command: run
-          args: -- foo/impl/test_transpile.foo --use=foo/lib -- --fork-all
+          args: -- foo/impl/test_transpile.foo --use=foo/lib
 
       - name: Test large
         uses: actions-rs/cargo@v1

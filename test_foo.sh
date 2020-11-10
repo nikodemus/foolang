@@ -11,5 +11,5 @@ run() {
 }
 
 run test_foolang.foo
-run test_prelude.foo --fork-all
-run test_transpile.foo --fork-all
+run test_prelude.foo
+run test_transpile.foo
