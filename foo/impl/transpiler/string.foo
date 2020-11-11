@@ -60,14 +60,13 @@ assert(start <= end);
 assert(end <= PTR(FooBytes, ctx->receiver.datum)->size);
 return foo_String_new((size_t)(end-start), (char*)PTR(FooBytes, ctx->receiver.datum)->data+start);"},
 
-    #at:
+    #codeAt:
         -> {signature: [Integer], vars: 0,
-            body: "struct FooBytes* s1 = PTR(FooBytes, ctx->receiver.datum);
+            body: "struct FooBytes* s = PTR(FooBytes, ctx->receiver.datum);
 int64_t i = ctx->frame[0].datum.int64;
 assert(i > 0);
-struct FooBytes* s2 = FooBytes_alloc(1);
-s2->data[0] = s1->data[i-1];
-return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = \{ .ptr = s2 } };"},
+assert(i <= s->size);
+return foo_Integer_new(s->data[i-1]);"},
 
     #printOn:
         -> {signature: [Any], vars: 0,

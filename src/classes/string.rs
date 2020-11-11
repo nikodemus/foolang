@@ -8,7 +8,7 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("toString", string_to_string);
     vt.add_primitive_method_or_panic("size", string_size);
     vt.add_primitive_method_or_panic("do:", string_do);
-    vt.add_primitive_method_or_panic("at:", string_at);
+    vt.add_primitive_method_or_panic("codeAt:", string_code_at);
     vt.add_primitive_method_or_panic("from:to:", string_from_to);
     vt.add_primitive_method_or_panic("isEquivalent:", string_is_equivalent);
     vt.add_primitive_method_or_panic("sendTo:with:", string_send_to_with);
@@ -96,25 +96,21 @@ fn string_from_to(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_string(&data[i..j]))
 }
 
-fn string_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+fn string_code_at(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let data: &str = receiver.string_as_str();
-    let arg = args[0].as_i64("String#at: index")?;
+    let arg = args[0].as_i64("String#codeAt: index")?;
     let i = (arg - 1) as usize;
     if arg < 1 || data.len() < arg as usize {
         return Unwind::error(&format!("Index out of bounds for string: {}", arg));
     }
     if data.is_char_boundary(i) {
         if let Some(code) = data[i..].chars().next() {
-            env.find_global_or_unwind("Character")?.send(
-                "code:",
-                &[env.foo.make_integer(code as i64)],
-                env,
-            )
+            Ok(env.foo.make_integer(code as i64))
         } else {
             Unwind::error(&format!("Index out of bounds for string: {}", arg))
         }
     } else {
-        Unwind::error(&format!("String#at: {} not at character boundary.", arg))
+        Unwind::error(&format!("String#codeAt: {} not at character boundary.", arg))
     }
 }
 

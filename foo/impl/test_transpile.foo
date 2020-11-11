@@ -158,6 +158,22 @@ class TestTranspilePreludeBoolean { assert system }
             expect: "#<Boolean False>#<Boolean True>"!
 end
 
+class TestTranspilePreludeCharacter { assert system }
+    is TranspilerTest
+
+    method testIsWhitespace
+        self transpile: "import lang.character.*
+                         import lang.string -- for String#at:
+
+                         class Main \{}
+                             direct method run
+                                 let s = \" x \".
+                                 1 to: s size
+                                   do: \{ |index| (s at: index) isWhitespace debug }!
+                         end"
+            expect: "#<Boolean True>#<Boolean False>#<Boolean True>"!
+end
+
 class TestTranspilePreludeFloat { assert system }
     is TranspilerTest
 
@@ -1434,6 +1450,7 @@ class Main {}
             "--panic" -> TestTranspilePanic,
             "--prelude-any" -> TestTranspilePreludeAny,
             "--prelude-boolean" -> TestTranspilePreludeBoolean,
+            "--prelude-character" -> TestTranspilePreludeCharacter,
             "--prelude-float" -> TestTranspilePreludeFloat,
             "--prelude-integer" -> TestTranspilePreludeInteger,
             "--prelude-interval" -> TestTranspilePreludeInterval,
