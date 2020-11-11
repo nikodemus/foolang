@@ -115,6 +115,13 @@ interface Ordered
     method collect: block
         self collect: block as: self species!
 
+    method collectWithIndex: block
+        let index = 0.
+        self collect: { |each|
+                        index = index + 1.
+                        block value: each value: index }
+             as: self species!
+
     method collect: block of: type
         self collect: block as: (Self of: type)!
 
