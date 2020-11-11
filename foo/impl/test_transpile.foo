@@ -706,6 +706,18 @@ class TestTranspileFinally { assert system }
             expect: "#<Integer 2>#<Integer 100>"!
 end
 
+class TestTranspileRecord { assert system }
+    is TranspilerTest
+
+    method test
+        self transpile: "class Main \{}
+                             direct method run
+                                 let r = \{ foo: 42 }.
+                                 r foo debug!
+                        end"
+            expect: "#<Integer 42>"!
+end
+
 class TestTranspileReturn { assert system }
     is TranspilerTest
 
@@ -1378,6 +1390,7 @@ class Main {}
             "--prelude-object" -> TestTranspilePreludeObject,
             "--prelude-string" -> TestTranspilePreludeString,
             "--prelude-string-output" -> TestTranspilePreludeStringOutput,
+            "--record" -> TestTranspileRecord,
             "--return" -> TestTranspileReturn,
             "--self" -> TestTranspileSelf,
             "--selector" -> TestTranspileSelector,

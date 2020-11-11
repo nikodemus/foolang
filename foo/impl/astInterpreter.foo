@@ -181,7 +181,7 @@ class AstInterpreter { context process }
     method visitRecord: aRecord
         aRecord name
             sendTo: Record
-            with: (aRecord entries
+            with: (aRecord values
                        collect: { |each| each visitBy: self })!
 
     method visitDictionary: aDictionary

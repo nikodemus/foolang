@@ -16,39 +16,25 @@ define SymbolNames
       ">" -> "_gt",
       "<" -> "_lt",
       "^" -> "_up",
+      "#" -> "_xx",
       }!
 
-class Name {}
+class Name { out }
     is Object
 
-    direct method mangle: selector prefix: prefix
-        let res = StringOutput
-                      with: { |out|
-                              out print: prefix.
-                              self _mangle: selector to: out }.
-        -- Output debug println: "mangle: {selector} prefix: {prefix} -> {res}".
-        res!
+    direct method _new
+        self out: StringOutput new!
 
-    direct method _mangle: selector to: out
-        selector isPrefix
-            ifTrue: { out print: "_".
-                      return self _mangleSymbol: selector to: out }.
-        selector isSymbol
-            ifTrue: { return self _mangleSymbol: selector to: out }.
-        selector isKeyword
-            ifTrue: { return self _mangleKeyword: selector to: out }.
-        self _mangleUnary: selector to: out!
-
-    direct method mangle: selector
-        self mangle: selector prefix: ""!
-
-    direct method mangleSelector: selector
-        self mangle: selector prefix: "FOO_"!
+    direct method mangleSelector: selector::Selector
+        self _new
+            ; out print: "FOO_"
+            ; _mangleSelector: selector
+            ; content!
 
     direct method mangleMethod: aMethod
-        aMethod isDirect
-            ifTrue: {  "fooDirectMethod_{aMethod home name}_{self mangle: aMethod selector}" }
-            ifFalse: { "fooInstanceMethod_{aMethod home name}_{self mangle: aMethod selector}" }!
+        self _new
+            ; _mangleMethod: aMethod
+            ; content!
 
     direct method mangleMethodVtable: aMethod
         aMethod isDirect
@@ -56,38 +42,80 @@ class Name {}
             ifFalse: { self mangleInstanceVtable: aMethod home }!
 
     direct method mangleDirectVtable: aClass
-        "FooDirectVtable_{aClass name}"!
+        self _new
+            ; _mangleDirectVtable: aClass
+            ; content!
 
     direct method mangleInstanceVtable: aClass
-        "FooInstanceVtable_{aClass name}"!
+        self _new
+            ; _mangleInstanceVtable: aClass
+            ; content!
 
     direct method mangleGlobal: aVar
-        "FooGlobal_{aVar name}"!
+        self _new
+            ; _mangleGlobal: aVar
+            ; content!
 
     direct method mangleDynamic: aVar
-        "FooDynamic_{aVar name}"!
+        self _new
+            ; _mangleDynamic: aVar
+            ; content!
 
-    direct method _mangleSymbol: selector to: out
+    method content
+        out content!
+
+    method _mangleDynamic: aVar
+        out print: "FooDynamic_".
+        out print: aVar name!
+
+    method _mangleGlobal: aVar
+        out print: "FooGlobal_".
+        out print: aVar name!
+
+    method _mangleDirectVtable: aClass
+        out print: "FooDirectVtable_".
+        out print: aClass name!
+
+    method _mangleInstanceVtable: aClass
+        out print: "FooInstanceVtable_".
+        out print: aClass name!
+
+    method _mangleMethod: aMethod
+        out print: (aMethod isDirect
+                        ifTrue: { "fooDirectMethod_" }
+                        ifFalse: { "fooInstanceMethod_" }).
+        out print: aMethod home name.
+        out print: "_".
+        self _mangleSelector: aMethod selector!
+
+    method _mangleSelector: selector::Selector
+        selector isPrefix
+            ifTrue: { out print: "_".
+                      return self _mangleSymbol: selector }.
+        selector isSymbol
+            ifTrue: { return self _mangleSymbol: selector }.
+        selector isKeyword
+            ifTrue: { return self _mangleKeyword: selector }.
+        self _mangleUnary: selector!
+
+    method _mangleSymbol: selector
         selector name
             do: { |each|
                   out print: (SymbolNames
                                   at: each
                                   ifNone: { each }) }!
 
-    direct method _mangleUnary: selector to: out
-        self _mangleName: selector name to: out!
+    method _mangleUnary: selector
+        self _mangleName: selector name!
 
-    direct method _mangleKeyword: selector to: out
+    method _mangleKeyword: selector
         selector parts
             do: { |part|
-                  self _mangleName: (part butlast) to: out.
+                  self _mangleName: (part butlast).
                   out print: "_" }!
 
-    direct method _mangleName: name to: out
+    method _mangleName: name::String
         name do: { |s|
                    s == "_" ifTrue: { out print: s }.
                    out print: s }!
-
-    direct method displayOn: out
-        out print: "Name selector: {selector}"!
 end

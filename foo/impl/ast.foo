@@ -293,6 +293,16 @@ class AstClass { name slots _interfaces _directMethods _instanceMethods _allInte
             _instanceMethods: False
             _allInterfaces: False!
 
+    direct method name: name
+                  slots: slots
+        self
+            name: name
+            slots: slots
+            _interfaces: []
+            _directMethods: []
+            _instanceMethods: []
+            _allInterfaces: False!
+
     method _interfaces
         _interfaces!
 
@@ -515,14 +525,14 @@ class AstTypecheck { value type }
         [value, type]!
 end
 
-class AstRecord { name entries }
+class AstRecord { name slots values }
     is AstNode
 
     method visitBy: visitor
         visitor visitRecord: self!
 
     method parts
-        [name, entries]!
+        [name, slots, values]!
 end
 
 class AstDictionary { entries }
