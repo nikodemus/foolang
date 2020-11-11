@@ -293,6 +293,16 @@ class AstClass { name slots _interfaces _directMethods _instanceMethods _allInte
             _instanceMethods: False
             _allInterfaces: False!
 
+    direct method name: name
+                  slots: slots
+        self
+            name: name
+            slots: slots
+            _interfaces: []
+            _directMethods: []
+            _instanceMethods: []
+            _allInterfaces: False!
+
     method _interfaces
         _interfaces!
 
