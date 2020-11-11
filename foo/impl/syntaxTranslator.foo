@@ -71,8 +71,9 @@ class SyntaxTranslator { env currentMethod }
                                          do: { |each| out print: each key } }.
         AstRecord
             name: (Selector new: recordName)
-            entries: (aRecord entries
-                          collect: { |each| each value visitBy: self })!
+            slots: (aRecord entries collect: { |each| each key butlast })
+            values: (aRecord entries
+                         collect: { |each| each value visitBy: self })!
 
     method visitDictionary: aDictionary
         Tracer trace: #visitDictionary:.

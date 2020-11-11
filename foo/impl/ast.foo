@@ -515,14 +515,14 @@ class AstTypecheck { value type }
         [value, type]!
 end
 
-class AstRecord { name entries }
+class AstRecord { name slots values }
     is AstNode
 
     method visitBy: visitor
         visitor visitRecord: self!
 
     method parts
-        [name, entries]!
+        [name, slots, values]!
 end
 
 class AstDictionary { entries }
