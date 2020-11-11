@@ -53,7 +53,9 @@ class BuiltinMethod { home selector definition isDirect }
         StringOutput with: { |out| self printOn: out }!
 end
 
-class BuiltinClass { host markFunction _interfaces _directMethods _instanceMethods _allInterfaces }
+class BuiltinClass { host markFunction _interfaces
+                     _builtinDirectMethods _builtinInstanceMethods
+                     _directMethods _instanceMethods _allInterfaces }
     is AstMethodHome
 
     direct method new: host
@@ -63,12 +65,25 @@ class BuiltinClass { host markFunction _interfaces _directMethods _instanceMetho
         let theClass = self host: host
                             markFunction: mark
                             _interfaces: List new
+                            _builtinDirectMethods: directMethods
+                            _builtinInstanceMethods: instanceMethods
                             _directMethods: False
                             _instanceMethods: False
                             _allInterfaces: False.
         theClass _directMethods: directMethods.
         theClass _instanceMethods: instanceMethods.
         theClass!
+
+    -- FIXME/KLUDGE: This is a terrible hack borne out of bootstrap
+    -- host globals being mutable. If they weren't, then CTranspiler
+    -- would have to do the right thing instead of mutating static
+    -- objects...
+    method reset
+        _interfaces = List new.
+        _allInterfaces = False.
+        self _directMethods: _builtinDirectMethods.
+        self _instanceMethods: _builtinInstanceMethods.
+        self!
 
     method _interfaces
         _interfaces!
@@ -186,6 +201,8 @@ class CTranspiler { output selectorMap blockFunctions constants variables tmpCou
 
 
     direct method transpile: string in: env
+        -- Clean up from previous run.
+        BuiltinClasses do: #reset.
         env removeBuiltins: [
             "Any",
             "List",
