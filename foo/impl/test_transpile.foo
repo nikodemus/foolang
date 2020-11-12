@@ -390,13 +390,13 @@ class TestTranspileDefine { assert system }
                          end"
             expect: "[[#<Integer 1>], [[#<Integer 1>]], [[[#<Integer 1>]]]]"!
 
-    method testDefineInteger
-        self transpile: "define MyInteger 1234!
+    method testDefineBoolean
+        self transpile: "define MyBoolean True!
                          class Main \{}
                              direct method run
-                                 MyInteger debug!
+                                 MyBoolean debug!
                          end"
-            expect: "#<Integer 1234>"!
+            expect: "#<Boolean True>"!
 
     method testDefineFloat
         self transpile: "define MyFloat 12.34!
@@ -406,6 +406,23 @@ class TestTranspileDefine { assert system }
                          end"
             expect: "#<Float 12.340000>"!
 
+    method testDefineInteger
+        self transpile: "define MyInteger 1234!
+                         class Main \{}
+                             direct method run
+                                 MyInteger debug!
+                         end"
+            expect: "#<Integer 1234>"!
+
+    method test1DefineRecord
+        self transpile: "define MyRecord \{ foo: 42 }!
+
+                         class Main \{}
+                             direct method run
+                                 MyRecord foo debug!
+                         end"
+             expect: "#<Integer 42>"!
+
     method testDefineString
         self transpile: "define MyString \"foobar\"!
                          class Main \{}
@@ -413,14 +430,6 @@ class TestTranspileDefine { assert system }
                                  MyString debug!
                          end"
             expect: "#<String foobar>"!
-
-    method testDefineBoolean
-        self transpile: "define MyBoolean True!
-                         class Main \{}
-                             direct method run
-                                 MyBoolean debug!
-                         end"
-            expect: "#<Boolean True>"!
 end
 
 class TestTranspileBlock { assert system }
