@@ -398,6 +398,21 @@ class TestTranspileDefine { assert system }
                          end"
             expect: "#<Boolean True>"!
 
+    method testDefineClassInstance
+        self transpile: "class MyClass \{ x y }
+                             method value
+                                 x + y!
+                         end
+
+                         define MyValue MyClass x: 40 y: 1202!
+
+                         class Main \{}
+                             direct method run
+                                 MyValue value debug.
+                                 MyValue x debug!
+                         end"
+            expect: "#<Integer 1242>#<Integer 40>"!
+
     method testDefineFloat
         self transpile: "define MyFloat 12.34!
                          class Main \{}

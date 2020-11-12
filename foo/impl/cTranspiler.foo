@@ -53,6 +53,9 @@ class BuiltinMethod { home selector definition isDirect }
         StringOutput with: { |out| self printOn: out }!
 end
 
+define DatumClasses
+    [Boolean, Integer, Float]!
+
 class BuiltinClass { host markFunction _interfaces
                      _builtinDirectMethods _builtinInstanceMethods
                      _directMethods _instanceMethods _allInterfaces }
@@ -198,7 +201,7 @@ define $home
 
 class CTranspiler { output selectorMap blockFunctions
                     constants variables tmpCounter
-                    globals generatedMethods }
+                    globals generatedMethods env }
 
     direct method transpile: string in: env
         -- Clean up from previous run.
@@ -222,7 +225,8 @@ class CTranspiler { output selectorMap blockFunctions
                           variables: Dictionary new
                           tmpCounter: 0
                           globals: Dictionary new
-                          generatedMethods: Dictionary new.
+                          generatedMethods: Dictionary new
+                          env: env.
         -- KLUDGE: add #writeString: to the selectors.
         visitor selectorMap map: #writeString:.
         env replaceBuiltins: BuiltinClasses.
@@ -350,7 +354,8 @@ class CTranspiler { output selectorMap blockFunctions
                                  variables: variables
                                  tmpCounter: tmpCounter
                                  globals: globals
-                                 generatedMethods: generatedMethods.
+                                 generatedMethods: generatedMethods
+                                 env: env.
         -- FIXME: visit only referenced builtins
         BuiltinClasses
             do: { |each|
@@ -375,7 +380,8 @@ class CTranspiler { output selectorMap blockFunctions
                                  variables: variables
                                  tmpCounter: tmpCounter
                                  globals: globals
-                                 generatedMethods: generatedMethods.
+                                 generatedMethods: generatedMethods
+                                 env: env.
         -- FIXME: used builtins only
         BuiltinClasses
             do: { |each|
@@ -418,11 +424,10 @@ class CTranspiler { output selectorMap blockFunctions
         cname!
 
     method _isPtr: value
-        [Array, String, Record, Selector]
-            do: { |each|
-                  (each includes: value)
-                      ifTrue: { return True } }.
-        False!
+        let theClass = value classOf.
+        (DatumClasses contains: theClass)
+            ifTrue: { return False }.
+        True!
 
     method _writeDatum: value to: out
         Tracer trace: #visitDatum:.
@@ -451,7 +456,7 @@ class CTranspiler { output selectorMap blockFunctions
         self _ensureRecordClass: { name: name,
                                    slots: keys }!
 
-    method _writeValue: value to: out
+    method _writeValue: value _to: out
         out print: "(struct Foo)\{ .vtable = &{Name mangleInstanceVtable: (self _targetClassOf: value)}, .datum = \{ ".
         self _writeDatum: value to: out.
         out println: " } }"!
@@ -478,7 +483,11 @@ class CTranspiler { output selectorMap blockFunctions
                             declaration: "struct FooBytes {cname};",
                             definition: (self _stringDefinition: value
                                               _called: cname) } }.
-        Error raise: "Don't know how to generate static code for: {value}"!
+        { value: value,
+          cname: cname,
+          declaration: "struct FooArray {cname};",
+          definition: (self _instanceDefinition: value
+                            _called: cname) }!
 
     method _arrayDefinition: value _called: cname
         StringOutput
@@ -489,8 +498,29 @@ class CTranspiler { output selectorMap blockFunctions
                     out println: "    .size = {value size},".
                     out print: "    .data = \{ ".
                     value do: { |each|
-                                self _writeValue: each to: out.
+                                self _writeValue: each
+                                     _to: out.
                                 out print: "," }.
+                    out println: " }".
+                    out println: "};" }!
+
+    method _instanceDefinition: value _called: cname
+        let theClass = env global: value classOf name.
+        self declare: theClass.
+        let slots = theClass definition slots.
+        StringOutput
+            with: { |out|
+                    out println: "struct FooArray {cname} =".
+                    out println: "\{".
+                    out println: "    .gc = false,".
+                    out println: "    .size = {slots size},".
+                    out print: "    .data = \{ ".
+                    slots
+                        do: { |each|
+                              self _writeValue: ((Selector new: each name)
+                                                     sendTo: value)
+                                   _to: out.
+                              out print: "," }.
                     out println: " }".
                     out println: "};" }!
 
@@ -503,7 +533,7 @@ class CTranspiler { output selectorMap blockFunctions
                     out println: "    .size = {Record sizeOf: value},".
                     out print: "    .data = \{ ".
                     value do: { |each|
-                                self _writeValue: each to: out.
+                                self _writeValue: each _to: out.
                                 out print: "," }.
                     out println: " }".
                     out println: "};" }!
@@ -554,7 +584,8 @@ class CTranspiler { output selectorMap blockFunctions
                                variables: variables
                                tmpCounter: tmpCounter
                                globals: globals
-                               generatedMethods: generatedMethods.
+                               generatedMethods: generatedMethods
+                               env: env.
         blockVisitor _generateTypecheck: block returnType
                      _for: block body.
         output println: ";\n}".
@@ -917,7 +948,7 @@ class CTranspiler { output selectorMap blockFunctions
 
     method visitConstant: aConstant
         Tracer trace: #visitConstant:.
-        self _writeValue: aConstant value to: output!
+        self _writeValue: aConstant value _to: output!
 
     method visitSend: aSend
         Tracer visitSend: aSend.
