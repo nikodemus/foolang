@@ -409,7 +409,7 @@ class CTranspiler { output selectorMap blockFunctions
 
     method constantCName: value
         (Selector includes: value)
-            ifTrue: { self selectorCName: value }.
+            ifTrue: { return self selectorCName: value }.
         constants
             do: { |each|
                   each value == value

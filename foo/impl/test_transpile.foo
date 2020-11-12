@@ -438,7 +438,16 @@ class TestTranspileDefine { assert system }
                                  MyRecord1 foo debug.
                                  MyRecord2 foo debug!
                          end"
-             expect: "#<Integer 42>#<Integer 99>"!
+            expect: "#<Integer 42>#<Integer 99>"!
+
+    method testDefineSelector
+        self transpile: "define MySelector #foobar!
+
+                         class Main \{}
+                             direct method run
+                                 MySelector debug!
+                         end"
+            expect: "#<Selector foobar>"!
 
     method testDefineString
         self transpile: "define MyString \"foobar\"!
