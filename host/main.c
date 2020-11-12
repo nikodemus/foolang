@@ -110,6 +110,7 @@ struct FooSelector* foo_intern(const struct FooCString* name) {
 }
 
 struct FooArray {
+  bool gc;
   size_t size;
   struct Foo data[];
 };
@@ -544,6 +545,7 @@ struct Foo FooGlobal_False =
 
 struct FooArray* FooArray_alloc(size_t size) {
   struct FooArray* array = foo_alloc(sizeof(struct FooArray) + size*sizeof(struct Foo));
+  array->gc = true;
   array->size = size;
   return array;
 }
@@ -697,7 +699,7 @@ void foo_mark_raw(void* ptr) {
 void foo_mark_array(void* ptr) {
   ENTER_TRACE("mark_array");
   struct FooArray* array = ptr;
-  if (foo_mark_live(array)) {
+  if (array->gc && foo_mark_live(array)) {
     for (size_t i = 0; i < array->size; i++) {
       foo_mark_object(array->data[i]);
     }

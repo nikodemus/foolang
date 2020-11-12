@@ -374,6 +374,22 @@ end
 class TestTranspileDefine { assert system }
     is TranspilerTest
 
+    method testDefineArray1
+        self transpile: "define MyArray [1,2,3]!
+                         class Main \{}
+                             direct method run
+                                 MyArray debug!
+                         end"
+            expect: "[#<Integer 1>, #<Integer 2>, #<Integer 3>]"!
+
+    method testDefineArray2
+        self transpile: "define MyArray [[1],[[1]],[[[1]]]]!
+                         class Main \{}
+                             direct method run
+                                 MyArray debug!
+                         end"
+            expect: "[[#<Integer 1>], [[#<Integer 1>]], [[[#<Integer 1>]]]]"!
+
     method testDefineInteger
         self transpile: "define MyInteger 1234!
                          class Main \{}
