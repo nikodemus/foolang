@@ -991,12 +991,12 @@ end
 class TestTranspileString { assert system }
     is TranspilerTest
 
-    method testStringAt
+    method testStringCodeAt
         self transpile: "class Main \{}
                              direct method run
-                                 (\"aaaxbbb\" at: 4) debug!
+                                 (\"aaaxbbb\" codeAt: 4) debug!
                          end"
-            expect: "#<String x>"!
+            expect: "#<Integer 120>"!
 
     method testStringLiteral
         self transpile: "class Main \{}
