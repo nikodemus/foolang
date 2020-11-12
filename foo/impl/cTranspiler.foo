@@ -402,6 +402,8 @@ class CTranspiler { output selectorMap blockFunctions
         self selectorMap map: selector!
 
     method constantCName: value
+        (Selector includes: value)
+            ifTrue: { self selectorCName: value }.
         constants
             do: { |each|
                   each value == value
@@ -415,6 +417,45 @@ class CTranspiler { output selectorMap blockFunctions
                              _called: cname).
         cname!
 
+    method _isPtr: value
+        [Array, String, Record, Selector]
+            do: { |each|
+                  (each includes: value)
+                      ifTrue: { return True } }.
+        False!
+
+    method _writeDatum: value to: out
+        Tracer trace: #visitDatum:.
+        (self _isPtr: value)
+            ifTrue: { return out print: ".ptr = &{self constantCName: value}" }.
+        (Boolean includes: value)
+            ifTrue: { let bit = value ifTrue: { 1 } ifFalse: { 0 }.
+                      return out print: ".boolean = {bit}" }.
+        (Float includes: value)
+            ifTrue: { return out print: ".float64 = {value}" }.
+        (Integer includes: value)
+            ifTrue: { return out print: ".int64 = {value}" }.
+        Error raise: "Don't know how to transpile constant `{value}` into C."!
+
+    method _targetClassOf: value
+        (Record includes: value)
+            ifTrue: { return self _recordClassFromRecord: value }.
+        value classOf!
+
+    method _recordClassFromRecord: aRecord
+        let keys = (Record keysIn: aRecord) sorted.
+        let name = Selector
+                       new: (StringOutput
+                                 with: { |out|
+                                         keys do: { |each| out print: "{each}:" }}).
+        self _ensureRecordClass: { name: name,
+                                   slots: keys }!
+
+    method _writeValue: value to: out
+        out print: "(struct Foo)\{ .vtable = &{Name mangleInstanceVtable: (self _targetClassOf: value)}, .datum = \{ ".
+        self _writeDatum: value to: out.
+        out println: " } }"!
+
     method _constantDefinition: value _called: cname
         (Array includes: value)
             ifTrue: { return
@@ -422,6 +463,13 @@ class CTranspiler { output selectorMap blockFunctions
                             cname: cname,
                             declaration: "struct FooArray {cname};",
                             definition: (self _arrayDefinition: value
+                                              _called: cname) } }.
+        (Record includes: value)
+            ifTrue: { return
+                          { value: value,
+                            cname: cname,
+                            declaration: "struct FooArray {cname};",
+                            definition: (self _recordDefinition: value
                                               _called: cname) } }.
         (String includes: value)
             ifTrue: { return
@@ -439,6 +487,20 @@ class CTranspiler { output selectorMap blockFunctions
                     out println: "\{".
                     out println: "    .gc = false,".
                     out println: "    .size = {value size},".
+                    out print: "    .data = \{ ".
+                    value do: { |each|
+                                self _writeValue: each to: out.
+                                out print: "," }.
+                    out println: " }".
+                    out println: "};" }!
+
+    method _recordDefinition: value _called: cname
+        StringOutput
+            with: { |out|
+                    out println: "struct FooArray {cname} =".
+                    out println: "\{".
+                    out println: "    .gc = false,".
+                    out println: "    .size = {Record sizeOf: value},".
                     out print: "    .data = \{ ".
                     value do: { |each|
                                 self _writeValue: each to: out.
@@ -515,8 +577,8 @@ class CTranspiler { output selectorMap blockFunctions
         output newline!
 
     method _ensureRecordClass: aRecord
-        globals at: aRecord name
-                ifNonePut: { (self _createRecordClass: aRecord) }!
+        globals at: aRecord name name -- Selector don't play nice in tables yet!
+                ifNonePut: { self _createRecordClass: aRecord }!
 
     method _createRecordClass: aRecord
         AstClass
@@ -852,26 +914,6 @@ class CTranspiler { output selectorMap blockFunctions
         Tracer trace: #visitComment:.
         -- FIXME: Include comments in generated source.
         aComment value visitBy: self!
-
-    method _writeDatum: value to: out
-        Tracer trace: #visitDatum:.
-        ((Array includes: value) or: (String includes: value))
-            ifTrue: { return out print: ".ptr = &{self constantCName: value}" }.
-        (Boolean includes: value)
-            ifTrue: { let bit = value ifTrue: { 1 } ifFalse: { 0 }.
-                      return out print: ".boolean = {bit}" }.
-        (Float includes: value)
-            ifTrue: { return out print: ".float64 = {value}" }.
-        (Integer includes: value)
-            ifTrue: { return out print: ".int64 = {value}" }.
-        (Selector includes: value)
-            ifTrue: { return out print: ".ptr = &{self selectorCName: value}" }.
-        Error raise: "Don't know how to transpile constant `{value}` into C."!
-
-    method _writeValue: value to: out
-        out print: "(struct Foo)\{ .vtable = &{Name mangleInstanceVtable: value classOf}, .datum = \{ ".
-        self _writeDatum: value to: out.
-        out println: " } }"!
 
     method visitConstant: aConstant
         Tracer trace: #visitConstant:.

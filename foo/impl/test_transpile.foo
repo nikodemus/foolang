@@ -414,14 +414,16 @@ class TestTranspileDefine { assert system }
                          end"
             expect: "#<Integer 1234>"!
 
-    method test1DefineRecord
-        self transpile: "define MyRecord \{ foo: 42 }!
+    method testDefineRecord
+        self transpile: "define MyRecord1 \{ foo: 42, bar: 123 }!
+                         define MyRecord2 \{ bar: 128947, foo: 99 }!
 
                          class Main \{}
                              direct method run
-                                 MyRecord foo debug!
+                                 MyRecord1 foo debug.
+                                 MyRecord2 foo debug!
                          end"
-             expect: "#<Integer 42>"!
+             expect: "#<Integer 42>#<Integer 99>"!
 
     method testDefineString
         self transpile: "define MyString \"foobar\"!
