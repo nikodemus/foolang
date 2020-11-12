@@ -1,5 +1,10 @@
+import .stringOutput.StringOutput
+
 extend Record
     is Object
+
+    direct method sizeOf: record
+        (Record keysIn: record) size!
 
     method isEquivalent: other
         let keys = (Record keysIn: self) sorted.
@@ -10,6 +15,14 @@ extend Record
             allSatisfy: { |each|
                           (Record at: each in: self)
                               == (Record at: each in: other) }!
+
+    method do: block
+        (Record keysIn: self) sorted
+            do: { |each|
+                  block value: (Record at: each in: self) }!
+
+    method toString
+        StringOutput with: { |out| self printOn: out }!
 
     method printOn: stream
         stream print: "\{".

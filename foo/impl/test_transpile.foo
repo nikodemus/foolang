@@ -390,13 +390,28 @@ class TestTranspileDefine { assert system }
                          end"
             expect: "[[#<Integer 1>], [[#<Integer 1>]], [[[#<Integer 1>]]]]"!
 
-    method testDefineInteger
-        self transpile: "define MyInteger 1234!
+    method testDefineBoolean
+        self transpile: "define MyBoolean True!
                          class Main \{}
                              direct method run
-                                 MyInteger debug!
+                                 MyBoolean debug!
                          end"
-            expect: "#<Integer 1234>"!
+            expect: "#<Boolean True>"!
+
+    method testDefineClassInstance
+        self transpile: "class MyClass \{ x y }
+                             method value
+                                 x + y!
+                         end
+
+                         define MyValue MyClass x: 40 y: 1202!
+
+                         class Main \{}
+                             direct method run
+                                 MyValue value debug.
+                                 MyValue x debug!
+                         end"
+            expect: "#<Integer 1242>#<Integer 40>"!
 
     method testDefineFloat
         self transpile: "define MyFloat 12.34!
@@ -406,6 +421,34 @@ class TestTranspileDefine { assert system }
                          end"
             expect: "#<Float 12.340000>"!
 
+    method testDefineInteger
+        self transpile: "define MyInteger 1234!
+                         class Main \{}
+                             direct method run
+                                 MyInteger debug!
+                         end"
+            expect: "#<Integer 1234>"!
+
+    method testDefineRecord
+        self transpile: "define MyRecord1 \{ foo: 42, bar: 123 }!
+                         define MyRecord2 \{ bar: 128947, foo: 99 }!
+
+                         class Main \{}
+                             direct method run
+                                 MyRecord1 foo debug.
+                                 MyRecord2 foo debug!
+                         end"
+            expect: "#<Integer 42>#<Integer 99>"!
+
+    method testDefineSelector
+        self transpile: "define MySelector #foobar!
+
+                         class Main \{}
+                             direct method run
+                                 MySelector debug!
+                         end"
+            expect: "#<Selector foobar>"!
+
     method testDefineString
         self transpile: "define MyString \"foobar\"!
                          class Main \{}
@@ -413,14 +456,6 @@ class TestTranspileDefine { assert system }
                                  MyString debug!
                          end"
             expect: "#<String foobar>"!
-
-    method testDefineBoolean
-        self transpile: "define MyBoolean True!
-                         class Main \{}
-                             direct method run
-                                 MyBoolean debug!
-                         end"
-            expect: "#<Boolean True>"!
 end
 
 class TestTranspileBlock { assert system }
