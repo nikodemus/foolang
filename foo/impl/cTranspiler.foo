@@ -394,38 +394,73 @@ class CTranspiler { output selectorMap blockFunctions
         self generateConstantsOn: StringOutput new!
 
     method generateConstantsOn: out
-        constants do: { |each| out println: each }.
+        constants do: { |each| out println: each declaration }.
+        constants do: { |each| out println: each definition }.
         out!
 
     method selectorCName: selector
         self selectorMap map: selector!
 
-    method stringCName: string
-        let index = constants size + 1.
-        let cname = "foostring_id{index}".
+    method constantCName: value
         constants
-            add: (StringOutput
-                      with: { |out|
-                              out println: "struct FooBytes {cname}_bytes =".
-                              out println: "\{".
-                              out println: "    .gc = false,".
-                              out println: "    .size = {string size},".
-                              out print: "    .data = \{ ".
-                              string do: { |each|
-                                           out print: "'".
-                                           out print: (CEscapes at: each ifNone: { each }).
-                                           out print: "'," }.
-                              out print: "0".
-                              out println: " }".
-                              out println: "};".
-                              out newline.
-                              out println: "struct Foo {cname} =".
-                              out println: "\{".
-                              out println: "    .vtable = &{Name mangleInstanceVtable: String},".
-                              out println: "    .datum = \{ .ptr = &{cname}_bytes }".
-                              out println: "};".
-                              out newline }).
+            do: { |each|
+                  each value == value
+                      ifTrue: { return each cname } }.
+        let index = constants size + 1.
+        let cname = "fooconst_{value classOf name}_{index}".
+        -- Placeholder in case of recursive entry.
+        constants add: { value: value, cname: cname }.
+        constants at: index
+                  put: (self _constantDefinition: value
+                             _called: cname).
         cname!
+
+    method _constantDefinition: value _called: cname
+        (Array includes: value)
+            ifTrue: { return
+                          { value: value,
+                            cname: cname,
+                            declaration: "struct FooArray {cname};",
+                            definition: (self _arrayDefinition: value
+                                              _called: cname) } }.
+        (String includes: value)
+            ifTrue: { return
+                          { value: value,
+                            cname: cname,
+                            declaration: "struct FooBytes {cname};",
+                            definition: (self _stringDefinition: value
+                                              _called: cname) } }.
+        Error raise: "Don't know how to generate static code for: {value}"!
+
+    method _arrayDefinition: value _called: cname
+        StringOutput
+            with: { |out|
+                    out println: "struct FooArray {cname} =".
+                    out println: "\{".
+                    out println: "    .gc = false,".
+                    out println: "    .size = {value size},".
+                    out print: "    .data = \{ ".
+                    value do: { |each|
+                                self _writeValue: each to: out.
+                                out print: "," }.
+                    out println: " }".
+                    out println: "};" }!
+
+    method _stringDefinition: value _called: cname
+        StringOutput
+            with: { |out|
+                    out println: "struct FooBytes {cname} =".
+                    out println: "\{".
+                    out println: "    .gc = false,".
+                    out println: "    .size = {value size},".
+                    out print: "    .data = \{ ".
+                    value do: { |each|
+                                out print: "'".
+                                out print: (CEscapes at: each ifNone: { each }).
+                                out print: "'," }.
+                    out print: "0".
+                    out println: " }".
+                    out println: "};" }!
 
     method blockCName: block
         let $home = block.
@@ -818,28 +853,29 @@ class CTranspiler { output selectorMap blockFunctions
         -- FIXME: Include comments in generated source.
         aComment value visitBy: self!
 
-    method visitDatum: value
+    method _writeDatum: value to: out
         Tracer trace: #visitDatum:.
-        (Integer includes: value)
-            ifTrue: { return output print: ".int64 = {value}" }.
-        (Float includes: value)
-            ifTrue: { return output print: ".float64 = {value}" }.
-        (String includes: value)
-            ifTrue: { return output print: ".ptr = &{self stringCName: value}_bytes" }.
+        ((Array includes: value) or: (String includes: value))
+            ifTrue: { return out print: ".ptr = &{self constantCName: value}" }.
         (Boolean includes: value)
             ifTrue: { let bit = value ifTrue: { 1 } ifFalse: { 0 }.
-                      return output print: ".boolean = {bit}" }.
+                      return out print: ".boolean = {bit}" }.
+        (Float includes: value)
+            ifTrue: { return out print: ".float64 = {value}" }.
+        (Integer includes: value)
+            ifTrue: { return out print: ".int64 = {value}" }.
         (Selector includes: value)
-            ifTrue: { return output print: ".ptr = &{self selectorCName: value}" }.
+            ifTrue: { return out print: ".ptr = &{self selectorCName: value}" }.
         Error raise: "Don't know how to transpile constant `{value}` into C."!
+
+    method _writeValue: value to: out
+        out print: "(struct Foo)\{ .vtable = &{Name mangleInstanceVtable: value classOf}, .datum = \{ ".
+        self _writeDatum: value to: out.
+        out println: " } }"!
 
     method visitConstant: aConstant
         Tracer trace: #visitConstant:.
-        let value = aConstant value.
-        output print: "(struct Foo)\{ .vtable = &{Name mangleInstanceVtable: value classOf}, .datum = \{ ".
-        self visitDatum: value.
-        output println: " } }".
-        output newline!
+        self _writeValue: aConstant value to: output!
 
     method visitSend: aSend
         Tracer visitSend: aSend.
