@@ -2,6 +2,7 @@ import .object.Object
 import .ordered.Ordered
 import .list.List
 import .stringOutput.StringOutput
+import .character.Character
 
 extend String
     is Ordered
@@ -19,6 +20,9 @@ extend String
                 a > b
                     ifTrue: { return False } }.
         self size < other size!
+
+    method at: index
+        Character code: (self codeAt: index)!
 
     method append: other
        other appendToString: self!
