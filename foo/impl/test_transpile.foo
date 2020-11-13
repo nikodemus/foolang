@@ -37,9 +37,9 @@ interface TranspilerTest
         (system files / "host/generated_constants.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c constants }.
-        (system files / "host/generated_blocks.c")
+        (system files / "host/generated_closures.c")
             forWrite truncateExisting
-                createOrOpen: { |f| f print: c blocks }.
+                createOrOpen: { |f| f print: c closures }.
         (system files / "host/generated_main.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c main }.
@@ -156,6 +156,8 @@ class TestTranspilePreludeBoolean { assert system }
                                  False not debug!
                          end"
             expect: "#<Boolean False>#<Boolean True>"!
+
+
 end
 
 class TestTranspilePreludeCharacter { assert system }
@@ -172,6 +174,20 @@ class TestTranspilePreludeCharacter { assert system }
                                    do: \{ |index| (s at: index) isWhitespace debug }!
                          end"
             expect: "#<Boolean True>#<Boolean False>#<Boolean True>"!
+end
+
+class TestTranspilePreludeClosure { assert system }
+    is TranspilerTest
+
+    method test
+        self transpile: "import lang.closure.*
+
+                         class Main \{ x }
+                             direct method run
+                                 (\{ 53 } cull: 123) debug.
+                                 (\{ |x| x } cull: 312) debug!
+                         end"
+            expect: "#<Integer 53>#<Integer 312>"!
 end
 
 class TestTranspilePreludeFloat { assert system }
@@ -1204,7 +1220,7 @@ class TestTranspileTypecheck03 { assert system }
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  2: Block#value:
+  2: Closure#value:
   1: Main class#run
 "!
 end
@@ -1388,7 +1404,7 @@ class TestTranspileTypecheck10 { assert system }
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  4: Block#value
+  4: Closure#value
   3: Main class#bar:
   2: Main class#foo
   1: Main class#run
@@ -1412,7 +1428,7 @@ class TestTranspileTypecheck11 { assert system }
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  2: Block#value:
+  2: Closure#value:
   1: Main class#run
 "!
 
@@ -1451,6 +1467,7 @@ class Main {}
             "--prelude-any" -> TestTranspilePreludeAny,
             "--prelude-boolean" -> TestTranspilePreludeBoolean,
             "--prelude-character" -> TestTranspilePreludeCharacter,
+            "--prelude-closure" -> TestTranspilePreludeClosure,
             "--prelude-float" -> TestTranspilePreludeFloat,
             "--prelude-integer" -> TestTranspilePreludeInteger,
             "--prelude-interval" -> TestTranspilePreludeInterval,

@@ -1,7 +1,7 @@
 import .transpiler.array
-import .transpiler.block
 import .transpiler.boolean
 import .transpiler.byte_array
+import .transpiler.closure
 import .transpiler.float
 import .transpiler.integer
 import .transpiler.name.Name
@@ -142,11 +142,6 @@ define BuiltinClasses [
          directMethods: array.DirectMethods
          instanceMethods: array.InstanceMethods,
      BuiltinClass
-         new: Block
-         mark: "foo_mark_block"
-         directMethods: Dictionary new
-         instanceMethods: block.InstanceMethods,
-     BuiltinClass
          new: Boolean
          mark: "foo_mark_raw"
          directMethods: boolean.DirectMethods
@@ -156,6 +151,11 @@ define BuiltinClasses [
          mark: "foo_mark_bytes"
          directMethods: byte_array.DirectMethods
          instanceMethods: byte_array.InstanceMethods,
+     BuiltinClass
+         new: Closure
+         mark: "foo_mark_closure"
+         directMethods: Dictionary new
+         instanceMethods: closure.InstanceMethods,
      BuiltinClass
          new: Float
          mark: "foo_mark_raw"
@@ -199,7 +199,7 @@ end
 define $home
     False!
 
-class CTranspiler { output selectorMap blockFunctions
+class CTranspiler { output selectorMap closureFunctions
                     constants variables tmpCounter
                     globals generatedMethods env }
 
@@ -220,7 +220,7 @@ class CTranspiler { output selectorMap blockFunctions
         let visitor = CTranspiler
                           output: StringOutput new
                           selectorMap: SelectorMap new
-                          blockFunctions: List new
+                          closureFunctions: List new
                           constants: List new
                           variables: Dictionary new
                           tmpCounter: 0
@@ -236,7 +236,7 @@ class CTranspiler { output selectorMap blockFunctions
         visitor writeMain.
         { main: visitor output,
           builtins: builtins,
-          blocks: visitor generateBlocks,
+          closures: visitor generateClosures,
           constants: visitor generateConstants,
           declarations: visitor generateDeclarations,
           selectors: visitor generateSelectors }!
@@ -349,7 +349,7 @@ class CTranspiler { output selectorMap blockFunctions
         let builtinVisitor = CTranspiler
                                  output: output
                                  selectorMap: selectorMap
-                                 blockFunctions: blockFunctions
+                                 closureFunctions: closureFunctions
                                  constants: constants
                                  variables: variables
                                  tmpCounter: tmpCounter
@@ -363,9 +363,9 @@ class CTranspiler { output selectorMap blockFunctions
         globals
             doValues: { |each|
                         builtinVisitor forwardDeclarationFor: each }.
-        blockFunctions
-            do: { |block|
-                  output print: block declaration.
+        closureFunctions
+            do: { |closure|
+                  output print: closure declaration.
                   output println: ";" }.
         output!
 
@@ -375,7 +375,7 @@ class CTranspiler { output selectorMap blockFunctions
         let builtinVisitor = CTranspiler
                                  output: output
                                  selectorMap: selectorMap
-                                 blockFunctions: blockFunctions
+                                 closureFunctions: closureFunctions
                                  constants: constants
                                  variables: variables
                                  tmpCounter: tmpCounter
@@ -388,12 +388,12 @@ class CTranspiler { output selectorMap blockFunctions
                   builtinVisitor visitClassDefinition: each }.
         output!
 
-    method generateBlocks
-        self generateBlocksOn: StringOutput new!
+    method generateClosures
+        self generateClosuresOn: StringOutput new!
 
-    method generateBlocksOn: out
-        blockFunctions do: { |block|
-                             out println: block definition }.
+    method generateClosuresOn: out
+        closureFunctions do: { |closure|
+                             out println: closure definition }.
         out!
 
     method generateConstants
@@ -554,14 +554,14 @@ class CTranspiler { output selectorMap blockFunctions
                     out println: " }".
                     out println: "};" }!
 
-    method blockCName: block
-        let $home = block.
+    method closureCName: closure
+        let $home = closure.
         let output = StringOutput new.
         -- Placeholder so that recursive entry by visitor doesn't grab the
         -- same id.
-        blockFunctions add: False.
-        let index = blockFunctions size.
-        let cname = "fooblock_id{index}".
+        closureFunctions add: False.
+        let index = closureFunctions size.
+        let cname = "fooclosure_id{index}".
         let signature = StringOutput new.
         signature print: "struct Foo ".
         signature print: cname.
@@ -570,26 +570,26 @@ class CTranspiler { output selectorMap blockFunctions
         output println: " \{".
         -- FIXME: Given that we need to check types here, should also put the args
         -- in frame here, same as in methods.
-        block argumentVariables
+        closure argumentVariables
             do: { |var|
                   let type = var type.
                   type is Any
                       ifFalse: { output println: "    foo_vtable_typecheck(ctx, &{Name mangleInstanceVtable: type}, ctx->frame[{var index-1}]);" } }.
         output print: "    return ".
-        let blockVisitor = CTranspiler
+        let closureVisitor = CTranspiler
                                output: output
                                selectorMap: selectorMap
-                               blockFunctions: blockFunctions
+                               closureFunctions: closureFunctions
                                constants: constants
                                variables: variables
                                tmpCounter: tmpCounter
                                globals: globals
                                generatedMethods: generatedMethods
                                env: env.
-        blockVisitor _generateTypecheck: block returnType
-                     _for: block body.
+        closureVisitor _generateTypecheck: closure returnType
+                     _for: closure body.
         output println: ";\n}".
-        blockFunctions
+        closureFunctions
             put: { declaration: signature, definition: output }
             at: index.
         cname!
@@ -1021,8 +1021,8 @@ class CTranspiler { output selectorMap blockFunctions
 
     method visitBlock: aBlock
         Tracer trace: #visitBlock:.
-        output print: "foo_block_new(ctx, ".
-        output print: (self blockCName: aBlock).
+        output print: "foo_closure_new(ctx, ".
+        output print: (self closureCName: aBlock).
         output print: ", ".
         output print: aBlock argumentCount.
         output print: ", ".

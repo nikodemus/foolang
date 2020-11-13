@@ -36,7 +36,7 @@ define IntegerMethods
                body: "return foo_send(ctx, &{Name mangleSelector: #subNumber:}, ctx->frame[0], 1, ctx->receiver);" },
       -- FIXME: These *Number methods should come from lang.integer.foo
       #to:do:
-          -> { signature: [Integer, Block], vars: 0,
+          -> { signature: [Integer, Closure], vars: 0,
                body: "int64_t to = ctx->frame[0].datum.int64;
 for (int64_t i = ctx->receiver.datum.int64; i <= to; i++) \{
     foo_send(ctx, &{Name mangleSelector: #value:}, ctx->frame[1], 1, foo_Integer_new(i));
