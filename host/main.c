@@ -141,7 +141,7 @@ struct FooCleanup {
 
 struct FooFinally {
   struct FooCleanup cleanup;
-  struct FooBlock* block;
+  struct FooClosure* closure;
 };
 
 struct FooUnbind {
@@ -152,7 +152,7 @@ struct FooUnbind {
 
 enum FooContextType {
     METHOD_CONTEXT,
-    BLOCK_CONTEXT,
+    CLOSURE_CONTEXT,
     UNWIND_CONTEXT,
     ROOT_CONTEXT
 };
@@ -191,7 +191,7 @@ char* foo_debug_context(struct FooContext* ctx) {
 }
 
 typedef struct Foo (*FooMethodFunction)(struct FooContext*);
-typedef struct Foo (*FooBlockFunction)(struct FooContext*);
+typedef struct Foo (*FooClosureFunction)(struct FooContext*);
 
 struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t frame) {
   FOO_DEBUG("/lexical_ref(index=%zu, frame=%zu)", index, frame);
@@ -227,17 +227,17 @@ struct FooMethod {
   FooMethodFunction function;
 };
 
-struct FooBlock {
+struct FooClosure {
   struct FooContext* context;
   size_t argCount;
   size_t frameSize;
-  FooBlockFunction function;
+  FooClosureFunction function;
 };
 
 // Forward declarations for vtables are in generated_classes, but we're going
 // to define a few builtin ctors first that need some of them.
 struct FooVtable FooInstanceVtable_Array;
-struct FooVtable FooInstanceVtable_Block;
+struct FooVtable FooInstanceVtable_Closure;
 struct FooVtable FooInstanceVtable_Boolean;
 struct FooVtable FooInstanceVtable_Float;
 struct FooVtable FooInstanceVtable_Integer;
@@ -248,7 +248,7 @@ struct Foo foo_String_new(size_t len, const char* s);
 struct Foo foo_vtable_typecheck(struct FooContext* ctx, struct FooVtable* vtable, struct Foo obj);
 struct Foo FooGlobal_True;
 struct Foo FooGlobal_False;
-struct FooContext* foo_context_new_block(struct FooContext* ctx);
+struct FooContext* foo_context_new_closure(struct FooContext* ctx);
 
 struct FooContext* foo_context_new_main(struct FooArray* vars) {
   struct FooContext* context = foo_alloc_context(0);
@@ -262,31 +262,48 @@ struct FooContext* foo_context_new_main(struct FooArray* vars) {
   return context;
 }
 
-struct FooContext* foo_context_new_block(struct FooContext* sender) {
-  struct FooBlock* block = sender->receiver.datum.ptr;
-  struct FooContext* context = foo_alloc_context(block->frameSize);
-  context->type = BLOCK_CONTEXT;
+struct FooContext* foo_context_new_closure(struct FooContext* sender) {
+  struct FooClosure* closure = sender->receiver.datum.ptr;
+  struct FooContext* context = foo_alloc_context(closure->frameSize);
+  context->type = CLOSURE_CONTEXT;
   context->depth = sender->depth + 1;
   context->method = NULL;
-  context->receiver = block->context->receiver;
+  context->receiver = closure->context->receiver;
   context->sender = sender;
-  context->outer_context = block->context;
+  context->outer_context = closure->context;
   context->vars = sender->vars;
-  for (size_t i = 0; i < block->argCount; ++i)
+  for (size_t i = 0; i < closure->argCount; ++i)
     context->frame[i] = sender->frame[i];
   return context;
 }
 
-struct FooContext* foo_context_new_unwind(struct FooContext* ctx, struct FooBlock* block) {
-  struct FooContext* context = foo_alloc_context(block->frameSize);
+struct FooContext* foo_context_new_closure_array(struct FooContext* sender,
+                                                 struct FooArray* array) {
+  struct FooClosure* closure = sender->receiver.datum.ptr;
+  struct FooContext* context = foo_alloc_context(closure->frameSize);
+  context->type = CLOSURE_CONTEXT;
+  context->depth = sender->depth + 1;
+  context->method = NULL;
+  context->receiver = closure->context->receiver;
+  context->sender = sender;
+  context->outer_context = closure->context;
+  context->vars = sender->vars;
+  assert(array->size == closure->argCount);
+  for (size_t i = 0; i < closure->argCount; ++i)
+    context->frame[i] = array->data[i];
+  return context;
+}
+
+struct FooContext* foo_context_new_unwind(struct FooContext* ctx, struct FooClosure* closure) {
+  struct FooContext* context = foo_alloc_context(closure->frameSize);
   context->type = UNWIND_CONTEXT;
   context->depth = ctx->depth + 1;
   context->method = NULL;
-  context->receiver = block->context->receiver;
+  context->receiver = closure->context->receiver;
   context->sender = ctx;
-  context->outer_context = block->context;
+  context->outer_context = closure->context;
   context->vars = ctx->vars;
-  assert(block->argCount == 0);
+  assert(closure->argCount == 0);
   return context;
 }
 
@@ -299,10 +316,10 @@ void foo_cleanup(struct FooContext* sender) {
 }
 
 void foo_finally(struct FooContext* sender, struct FooCleanup* cleanup) {
-  struct FooBlock* block = ((struct FooFinally*)cleanup)->block;
+  struct FooClosure* closure = ((struct FooFinally*)cleanup)->closure;
   // FIXME: Could stack-allocate this context.
-  struct FooContext* block_ctx = foo_context_new_unwind(sender, block);
-  block->function(block_ctx);
+  struct FooContext* closure_ctx = foo_context_new_unwind(sender, closure);
+  closure->function(closure_ctx);
 }
 
 void foo_unbind(struct FooContext* sender, struct FooCleanup* cleanup) {
@@ -453,7 +470,7 @@ void foo_print_backtrace(struct FooContext* context) {
       }
       printf("\n");
       break;
-    case BLOCK_CONTEXT:
+    case CLOSURE_CONTEXT:
       // The method frame appears just before this one, not need to
       // print this separately. Even the frame numbers are right.
       break;
@@ -519,16 +536,16 @@ struct Foo foo_send(struct FooContext* sender,
   return foo_activate(context);
 }
 
-struct Foo foo_block_new(struct FooContext* context,
-                         FooBlockFunction function,
+struct Foo foo_closure_new(struct FooContext* context,
+                         FooClosureFunction function,
                          size_t argCount,
                          size_t frameSize) {
-  struct FooBlock* block = foo_alloc(sizeof(struct FooBlock));
-  block->context = context;
-  block->function = function;
-  block->argCount = argCount;
-  block->frameSize = frameSize;
-  return (struct Foo){ .vtable = &FooInstanceVtable_Block, .datum = { .ptr = block } };
+  struct FooClosure* closure = foo_alloc(sizeof(struct FooClosure));
+  closure->context = context;
+  closure->function = function;
+  closure->argCount = argCount;
+  closure->frameSize = frameSize;
+  return (struct Foo){ .vtable = &FooInstanceVtable_Closure, .datum = { .ptr = closure } };
 }
 
 struct Foo FooGlobal_True =
@@ -707,11 +724,11 @@ void foo_mark_array(void* ptr) {
   EXIT_TRACE();
 }
 
-void foo_mark_block(void* ptr) {
-  ENTER_TRACE("mark_block");
-  struct FooBlock* block = ptr;
-  if (foo_mark_live(block)) {
-    foo_mark_context(block->context);
+void foo_mark_closure(void* ptr) {
+  ENTER_TRACE("mark_closure");
+  struct FooClosure* closure = ptr;
+  if (foo_mark_live(closure)) {
+    foo_mark_context(closure->context);
   }
   EXIT_TRACE();
 }
@@ -722,7 +739,7 @@ void foo_mark_cleanup(struct FooCleanup* cleanup) {
     goto exit;
   }
   if (cleanup->function == foo_finally) {
-    foo_mark_block(((struct FooFinally*)cleanup)->block);
+    foo_mark_closure(((struct FooFinally*)cleanup)->closure);
     goto exit;
   }
   if (cleanup->function == foo_unbind) {
@@ -832,5 +849,5 @@ void* foo_alloc(size_t size) {
 #include "generated_declarations.h"
 #include "generated_constants.c"
 #include "generated_builtins.c"
-#include "generated_blocks.c"
+#include "generated_closures.c"
 #include "generated_main.c"

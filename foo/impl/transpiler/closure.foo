@@ -1,0 +1,58 @@
+define DirectMethods
+    []!
+
+define InstanceMethods
+    { #arity
+          -> {signature: [], vars: 0,
+              body: "struct FooClosure* closure = PTR(FooClosure, ctx->receiver.datum);
+return foo_Integer_new((int64_t)closure->argCount);"},
+      #apply:
+          -> {signature: [Array], vars: 0,
+              body: "struct FooArray* array = PTR(FooArray, ctx->frame[0].datum);
+struct FooContext* closure_ctx = foo_context_new_closure_array(ctx, array);
+return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
+      #loop
+          -> {signature: [], vars: 0,
+              body: "for (;;) \{
+    foo_send(ctx, &FOO_value, ctx->receiver, 0);
+};
+return FooGlobal_False;"},
+      #value
+          -> {signature: [], vars: 0,
+              body: "struct FooContext* closure_ctx = foo_context_new_closure(ctx);
+return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
+      #value:
+          -> {signature: [Any], vars: 0,
+              body: "struct FooContext* closure_ctx = foo_context_new_closure(ctx);
+return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
+      #value:value:
+          -> {signature: [Any, Any], vars: 0,
+              body: "struct FooContext* closure_ctx = foo_context_new_closure(ctx);
+return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
+      #whileFalse:
+          -> {signature: [Closure], vars: 0,
+              body: "while (foo_eq(FooGlobal_False, foo_send(ctx, &FOO_value, ctx->receiver, 0))) \{
+    foo_send(ctx, &FOO_value, ctx->frame[0], 0);
+};
+return FooGlobal_False;"},
+      #whileTrue:
+          -> {signature: [Closure], vars: 0,
+              body: "while (foo_eq(FooGlobal_True, foo_send(ctx, &FOO_value, ctx->receiver, 0))) \{
+    foo_send(ctx, &FOO_value, ctx->frame[0], 0);
+};
+return FooGlobal_False;"},
+      #finally:
+          -> {signature: [Closure], vars: 1,
+              body: "struct FooFinally finally = \{
+    .cleanup = \{
+        .function = foo_finally,
+        .next = ctx->cleanup
+    },
+    .closure = foo_vtable_typecheck(ctx, &FooInstanceVtable_Closure, ctx->frame[0]).datum.ptr
+};
+ctx->cleanup = &finally.cleanup;
+struct FooContext* closure_ctx = foo_context_new_closure(ctx);
+ctx->frame[1] = PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);
+ctx->cleanup = ctx->cleanup->next;
+foo_finally(ctx, &finally.cleanup);
+return ctx->frame[1];"}}!
