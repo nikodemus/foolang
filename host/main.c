@@ -356,6 +356,8 @@ struct FooClass {
 struct Foo foo_vtable_typecheck(struct FooContext* ctx,
                                 struct FooVtable* vtable,
                                 struct Foo obj) {
+  assert(vtable);
+  assert(obj.vtable);
   if (vtable == obj.vtable)
     return obj;
   struct FooVtableList* list = &obj.vtable->inherited;
@@ -363,10 +365,25 @@ struct Foo foo_vtable_typecheck(struct FooContext* ctx,
     if (vtable == list->data[i]) {
       return obj;
   }
-  assert(vtable);
-  assert(obj.vtable);
   foo_panicf(ctx, "Type error! Wanted: %s, got: %s",
              vtable->name->data, obj.vtable->name->data);
+}
+
+struct Foo foo_Boolean_new(bool t);
+
+struct Foo foo_vtable_includes(struct FooContext* ctx,
+                               struct FooVtable* vtable,
+                               struct Foo obj) {
+  assert(vtable);
+  assert(obj.vtable);
+  if (vtable == obj.vtable)
+    return foo_Boolean_new(true);
+  struct FooVtableList* list = &obj.vtable->inherited;
+  for (size_t i = 0; i < list->size; i++)
+    if (vtable == list->data[i]) {
+      return foo_Boolean_new(true);
+  }
+  return foo_Boolean_new(false);
 }
 
 const struct FooMethod* foo_vtable_find_method(struct FooContext* ctx,
@@ -380,6 +397,12 @@ const struct FooMethod* foo_vtable_find_method(struct FooContext* ctx,
       return method;
     }
   }
+  /*
+  for (size_t i = 0; i < vtable->size; ++i) {
+    const struct FooMethod* method = &vtable->methods[i];
+    printf("- %s\n", method->selector->name->data);
+  }
+  */
   foo_panicf(ctx, "%s does not understand: #%s", vtable->name->data, selector->name->data);
 }
 

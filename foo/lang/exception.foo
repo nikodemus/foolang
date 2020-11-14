@@ -3,11 +3,13 @@ import .object.Object
 class Panic { description context }
     is Object
     method displayOn: stream
-        stream println: "PANIC: {self description}".
+        stream print: "PANIC: ".
+        stream println: self description.
         stream println: self context!
 end
 
 class FallbackHandler {}
+    is Object
     direct method raise: ex
         panic "UNHANDLED ERROR: {ex description}"!
 end
@@ -183,6 +185,7 @@ extend Object
     -- FIXME: Would be infinitely preferable for the host to handle this,
     -- in order to provide the source context -- but that takes a bit of
     -- doing.
+
     direct method perform: selector with: arguments
         DoesNotUnderstand
             raise: (Selector new: selector)

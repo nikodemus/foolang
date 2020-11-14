@@ -190,6 +190,39 @@ class TestTranspilePreludeClosure { assert system }
             expect: "#<Integer 53>#<Integer 312>"!
 end
 
+class TestTranspilePreludeException { assert system }
+    is TranspilerTest
+
+    method test
+        self transpile: "import lang.exception.*
+                         import lang.closure.* -- for #on:do:
+
+                         class Main \{}
+                             direct method run
+                                 \{ self bang }
+                                     on: Error
+                                     do: \{ 1 debug }.
+                                 self bang!
+                             direct method bang
+                                 Error raise: \"Bang!\"!
+                         end"
+            -- FIXME: string interpolation!
+            expectError: "#<Integer 1>PANIC: UNHANDLED ERROR: \{ex description}
+Backtrace:
+  11: FallbackHandler class#raise:
+  10: Handler#raise:
+  9: Error#raise (SimpleError)
+  8: SimpleError class#raise:
+  7: Error interface#raise:
+  6: Main class#bang
+  4: Closure#value
+  3: Error interface#withHandler:do:
+  2: Block#on:do: (Closure)
+  1: Main class#run
+"!
+
+end
+
 class TestTranspilePreludeFloat { assert system }
     is TranspilerTest
 
@@ -1468,6 +1501,7 @@ class Main {}
             "--prelude-boolean" -> TestTranspilePreludeBoolean,
             "--prelude-character" -> TestTranspilePreludeCharacter,
             "--prelude-closure" -> TestTranspilePreludeClosure,
+            "--prelude-exception" -> TestTranspilePreludeException,
             "--prelude-float" -> TestTranspilePreludeFloat,
             "--prelude-integer" -> TestTranspilePreludeInteger,
             "--prelude-interval" -> TestTranspilePreludeInterval,

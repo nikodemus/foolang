@@ -1,7 +1,5 @@
 -- Should this be "Standard" or "StandardObject" instead?
 
--- import .selector.Selector
-
 -- Should be able to specify non-inherited methods for
 -- cases like #default. (direct method?)
 

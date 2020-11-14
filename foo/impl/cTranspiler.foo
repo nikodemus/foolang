@@ -208,9 +208,12 @@ class CTranspiler { output selectorMap closureFunctions
         BuiltinClasses do: #reset.
         env removeBuiltins: [
             "Any",
+            "DoesNotUnderstand",
+            "Error",
             "List",
             "Object",
-            "StringOutput"
+            "StringOutput",
+            "TypeError"
         ].
         env replaceBuiltins: BuiltinClasses.
         env load: string.
@@ -415,7 +418,7 @@ class CTranspiler { output selectorMap closureFunctions
                   each value == value
                       ifTrue: { return each cname } }.
         let index = constants size + 1.
-        let cname = "fooconst_{value classOf name}_{index}".
+        let cname = "fooconst_{Name mangleName: value classOf name}_{index}".
         -- Placeholder in case of recursive entry.
         constants add: { value: value, cname: cname }.
         constants at: index
@@ -445,6 +448,8 @@ class CTranspiler { output selectorMap closureFunctions
     method _targetClassOf: value
         (Record includes: value)
             ifTrue: { return self _recordClassFromRecord: value }.
+        (Class includes: value)
+            ifTrue: { return env global: value name }.
         value classOf!
 
     method _recordClassFromRecord: aRecord
@@ -457,7 +462,9 @@ class CTranspiler { output selectorMap closureFunctions
                                    slots: keys }!
 
     method _writeValue: value _to: out
-        out print: "(struct Foo)\{ .vtable = &{Name mangleInstanceVtable: (self _targetClassOf: value)}, .datum = \{ ".
+        (Class includes: value)
+            ifTrue: { out print: "(struct Foo)\{ .vtable = &{Name mangleDirectVtable: (self _targetClassOf: value)}, .datum = \{ " }
+            ifFalse: { out print: "(struct Foo)\{ .vtable = &{Name mangleInstanceVtable: (self _targetClassOf: value)}, .datum = \{ " }.
         self _writeDatum: value to: out.
         out println: " } }"!
 
@@ -505,7 +512,7 @@ class CTranspiler { output selectorMap closureFunctions
                     out println: "};" }!
 
     method _instanceDefinition: value _called: cname
-        let theClass = env global: value classOf name.
+        let theClass = env global: (self _targetClassOf: value) name.
         self declare: theClass.
         let slots = theClass definition slots.
         StringOutput
@@ -635,6 +642,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method visitInterfaceDefinition: anInterface
         Tracer visitInterfaceDefinition: anInterface name.
+        -- Debug println: "interface: {anInterface name}".
         output println: "/**
 * {anInterface name} (an interface)
 *
@@ -642,9 +650,25 @@ class CTranspiler { output selectorMap closureFunctions
         let interfaceVtableName = Name mangleDirectVtable: anInterface.
         let instanceVtableName = Name mangleInstanceVtable: anInterface.
         let globalName = Name mangleGlobal: anInterface.
-        let directMethods = anInterface directMethods reject: #isRequired.
+        -- Augmented with #includes:
+        let directMethods = (anInterface directMethods reject: #isRequired) asList.
         directMethods
             do: { |each| self _generateMethod: each _for: anInterface name }.
+        -- FIXME: Currently Any has it's own definition
+        (directMethods find: { |each| each selector == #includes: }) is False
+            ifTrue: { let includes = { home: anInterface,
+                                       selector: #includes:,
+                                       arity: 1,
+                                       frameSize: 1,
+                                       isDirect: True }.
+                      directMethods push: includes.
+                      output print: "struct Foo ".
+                      output println: (Name mangleMethod: includes).
+                      output println: "    (struct FooContext* ctx)".
+                      output println: "\{".
+                      output println: "    return foo_vtable_includes(ctx, &{Name mangleInstanceVtable: anInterface}, ctx->frame[0]);".
+                      output println: "}".
+                      output newline }.
         (anInterface instanceMethods reject: #isRequired)
             do: { |each| self _generateMethod: each _for: anInterface name }.
         -- Interface Vtable
@@ -652,7 +676,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "\{".
         output println: "    .name = &FOO_CSTRING({anInterface name displayString}\" interface\"),".
         output println: "    .inherited = \{ .size = 0, .data = NULL },".
-        output println: "    .size = {anInterface directMethods size},".
+        output println: "    .size = {directMethods size},".
         output println: "    .mark = foo_mark_raw,".
         output println: "    .methods = \{".
         directMethods
@@ -690,6 +714,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method visitClassDefinition: aClass
         Tracer visitClassDefinition: aClass name.
+        -- Debug println: "class: {aClass name}".
         let classNote = aClass isBuiltin
                        ifTrue: { "{aClass name} (builtin)" }
                        ifFalse: { aClass name }.
