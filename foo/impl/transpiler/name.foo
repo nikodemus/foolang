@@ -16,7 +16,7 @@ define SymbolNames
       ">" -> "_gt",
       "<" -> "_lt",
       "^" -> "_up",
-      "#" -> "_xx",
+      "#" -> "_xx"
       }!
 
 class Name { out }
@@ -51,6 +51,11 @@ class Name { out }
             ; _mangleInstanceVtable: aClass
             ; content!
 
+    direct method mangleName: name
+        self _new
+            ; _mangleName: name
+            ; content!
+
     direct method mangleGlobal: aVar
         self _new
             ; _mangleGlobal: aVar
@@ -74,11 +79,11 @@ class Name { out }
 
     method _mangleDirectVtable: aClass
         out print: "FooDirectVtable_".
-        out print: aClass name!
+        self _mangleName: aClass name!
 
     method _mangleInstanceVtable: aClass
         out print: "FooInstanceVtable_".
-        out print: aClass name!
+        self _mangleName: aClass name!
 
     method _mangleMethod: aMethod
         out print: (aMethod isDirect
@@ -116,6 +121,9 @@ class Name { out }
 
     method _mangleName: name::String
         name do: { |s|
-                   s == "_" ifTrue: { out print: s }.
-                   out print: s }!
+                   s == " "
+                       ifTrue: { out print: "__" }
+                       ifFalse: { s == "_"
+                                      ifTrue: { out print: s }.
+                                  out print: s } }!
 end
