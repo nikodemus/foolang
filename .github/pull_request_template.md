@@ -1,10 +1,12 @@
-**Check that**
+Rebase or squash so that the branch is _reasonably_ clean of noise commits like
+"oops", "typo", "more fixes", "debug prints".
 
-1. `cargo test` passes
-2. `cargo fmt` agrees with code formatting
-3. The branch is clean of noise commits like "oops", "typo", "more fixes", "debug prints"
+For Foolang changes:
 
-**Then, here**
+- Run `test_foo.sh`.
 
-- Summarize your changes.
-- Add "Resolves #issuenumber" for each resolved issue.
+For Rust changes:
+
+- Run `cargo fmt && cargo test`
+
+Delete this boilerplate text to indicate that you read it. :wink:
