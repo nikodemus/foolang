@@ -317,6 +317,20 @@ class TestTranspilePreludeObject { assert system }
             expect: "#<Boolean False>#<Boolean True>"!
 end
 
+class TestTranspilePreludeSelector { assert system }
+    is TranspilerTest
+
+    method test
+        self transpile: "import lang.selector_ext.*
+
+                         class Main \{}
+                             direct method run
+                                 #foo isKeyword debug.
+                                 (#foo:) isKeyword debug!
+                         end"
+            expect: "#<Boolean False>#<Boolean True>"!
+end
+
 class TestTranspilePreludeString { assert system }
     is TranspilerTest
 
@@ -1507,6 +1521,7 @@ class Main {}
             "--prelude-interval" -> TestTranspilePreludeInterval,
             "--prelude-iterable" -> TestTranspilePreludeIterable,
             "--prelude-object" -> TestTranspilePreludeObject,
+            "--prelude-selector" -> TestTranspilePreludeSelector,
             "--prelude-string" -> TestTranspilePreludeString,
             "--prelude-string-output" -> TestTranspilePreludeStringOutput,
             "--record" -> TestTranspileRecord,

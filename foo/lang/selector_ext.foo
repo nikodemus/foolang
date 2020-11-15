@@ -1,0 +1,78 @@
+import .character.Character
+import .closure.Block
+import .list.List
+import .stringOutput.StringOutput
+import .string -- for #find:ifNone
+
+define ColonCharacter
+    ":" character!
+
+define UnderscoreCharacter
+    "_" character!
+
+extend Selector
+    is Block
+
+    method apply: arguments
+        self sendTo: arguments first with: arguments rest!
+
+    method arity
+        self isKeyword
+            ifTrue: { return 1 + (self name count: { |c| c == ":" }) }.
+        self isSymbol
+            ifTrue: { return 2 }.
+        1!
+
+    method loop
+        panic "Cannot use #loop on a selector."!
+
+    method finally: cleanup
+        panic "Cannot use #finally on a selector."!
+
+    method < other
+        self name < other name!
+
+    method isKeyword
+        self name
+            find: { |c| c == ":" }
+            ifNone: { return False }.
+        True!
+
+    method isSymbol
+        (self name at: 1) isSymbol!
+
+    method isPrefix
+        let name = self name.
+        ((name size > 6) and: (name startsWith: "prefix"))
+            -- Good enough until https://github.com/nikodemus/foolang/issues/331
+            -- is implemented.
+            ifTrue: { (name at: 7) isSymbol }!
+
+    method isUnary
+        self isSymbol
+            ifTrue: { return False }.
+        self isKeyword
+            ifTrue: { return False }.
+        True!
+
+    method sendTo: receiver
+        self name sendTo: receiver with: []!
+
+    method startsWith: part
+        self name startsWith: part!
+
+    method parts
+        let parts = List new.
+        self name
+            split: { |c| c == ColonCharacter }
+            do:  { |part| parts add: part }.
+        parts ifEmpty: { parts add: self name }.
+        parts!
+
+    method printOn: stream
+        stream print: "#".
+        stream print: self name!
+
+    method toString
+        StringOutput with: { |out| self printOn: out }!
+end
