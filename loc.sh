@@ -4,34 +4,47 @@ set -euo pipefail
 
 cd $(dirname $0)
 
-git ls-files \
-    | grep -E '\.rs$' \
-    | grep -vE '^src/tests|^tests|^src/bin/bench.rs$' \
-    | xargs wc -l \
-    | awk 'END { print "Rust/code " $1 }'
+TOTAL=0
 
-git ls-files \
-    | grep -E '\.rs$' \
-    | grep -E '^src/tests|^tests|^src/bin/bench.rs$' \
-    | xargs wc -l \
-    | awk 'END { print "Rust/test " $1 }'
+count() {
+    local where=$1
+    local name=$2
+    local lines=$(eval git ls-files $where | $name | xargs wc -l | awk 'END { print $1 }')
+    echo "$name $lines" | sed -s 's|_|/|g'
+    TOTAL=$((TOTAL+lines))
+}
 
-git ls-files foo \
-    | grep -E '.foo$' \
-    | xargs wc -l \
-    | awk 'END { print "Foolang   " $1 }'
+Rust_code() {
+    grep -E '\.rs$' \
+        | grep -vE '^src/tests|^tests|^src/bin/bench.rs$'
+}
 
-git ls-files host \
-    | grep -E '.c$' \
-    | xargs wc -l \
-    | awk 'END { print "C         " $1 }'
+Rust_test() {
+    grep -E '\.rs$' \
+        | grep -E '^src/tests|^tests|^src/bin/bench.rs$'
+}
 
-git ls-files elisp \
-    | grep -E '.el$' \
-    | xargs wc -l \
-    | awk 'END { print "Elisp     " $1 }'
+Foolang() {
+    grep -E '.foo$'
+}
 
-git ls-files docs \
-    | grep -E '.(md)$' \
-    | xargs wc -l \
-    | awk 'END { print "Markdown  " $1 }'
+C() {
+    grep -E '.c$'
+}
+
+Elisp() {
+    grep -E '.el$'
+}
+
+Markdown() {
+    grep -E '.(md)$'
+}
+
+count foo   "Foolang  "
+count docs  "Markdown "
+count elisp "Elisp    "
+count host  "C        "
+count .     "Rust_code"
+count .     "Rust_test"
+echo        "---------------"
+echo        "    Total" $TOTAL
