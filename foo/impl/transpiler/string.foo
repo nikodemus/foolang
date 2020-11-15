@@ -37,6 +37,7 @@ if (!memcmp(argBytes->data, selfBytes->data, argBytes->size)) \{
 } else \{
     return FooGlobal_False;
 }"},
+
     #append:
         -> {signature: [String], vars: 0,
             body: "struct FooBytes* b1 = PTR(FooBytes, ctx->receiver.datum);
@@ -49,6 +50,16 @@ return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = \{ .ptr = b3
     #debug
         -> {signature: [], vars: 0,
             body: "printf(\"#<String %s>\", (char*)PTR(FooBytes, ctx->receiver.datum)->data);
+return ctx->receiver;"},
+
+    #do:
+        -> {signature: [Closure], vars: 1,
+            body: "struct Foo block = ctx->frame[0];
+struct FooBytes* s = PTR(FooBytes, ctx->receiver.datum);
+for (size_t i = 0; i < s->size; i++) \{
+    ctx->frame[1] = foo_String_new(1, (char*)s->data+i);
+    foo_send(ctx, &FOO_value_, block, 1, ctx->frame[1]);
+}
 return ctx->receiver;"},
 
     #from:to:
