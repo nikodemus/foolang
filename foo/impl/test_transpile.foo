@@ -130,6 +130,20 @@ Backtrace:
 "!
 end
 
+class TestTranspilePerformWith { assert system }
+    is TranspilerTest
+
+    method test
+        self transpile: "class Main \{}
+                             direct method run
+                                 self doop: 123 boop: 321!
+                             direct method perform: selector with: args
+                                 selector debug.
+                                 args debug!
+                         end"
+            expect: "#<Selector doop:boop:>[#<Integer 123>, #<Integer 321>]"!
+end
+
 class TestTranspilePreludeAny { assert system }
     is TranspilerTest
 
@@ -1497,6 +1511,7 @@ class Main {}
             "--keyword" -> TestTranspileKeyword,
             "--let" -> TestTranspileLet,
             "--panic" -> TestTranspilePanic,
+            "--perform-with" -> TestTranspilePerformWith,
             "--prelude-any" -> TestTranspilePreludeAny,
             "--prelude-boolean" -> TestTranspilePreludeBoolean,
             "--prelude-character" -> TestTranspilePreludeCharacter,

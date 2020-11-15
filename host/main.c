@@ -241,7 +241,9 @@ struct FooVtable FooInstanceVtable_Closure;
 struct FooVtable FooInstanceVtable_Boolean;
 struct FooVtable FooInstanceVtable_Float;
 struct FooVtable FooInstanceVtable_Integer;
+struct FooVtable FooInstanceVtable_Selector;
 struct FooVtable FooInstanceVtable_String;
+struct FooArray* FooArray_alloc(size_t size);
 struct Foo foo_Float_new(double f);
 struct Foo foo_Integer_new(int64_t n);
 struct Foo foo_String_new(size_t len, const char* s);
@@ -391,11 +393,17 @@ const struct FooMethod* foo_vtable_find_method(struct FooContext* ctx,
                                                const struct FooSelector* selector) {
   assert(vtable);
   // FOO_DEBUG("/foo_vtable_find_method(%s#%s)", vtable->name->data, selector->name->data);
+  const struct FooMethod* fallback = NULL;
   for (size_t i = 0; i < vtable->size; ++i) {
     const struct FooMethod* method = &vtable->methods[i];
     if (method->selector == selector) {
       return method;
+    } else if (method->selector == &FOO_perform_with_) {
+      fallback = method;
     }
+  }
+  if (fallback) {
+    return fallback;
   }
   /*
   for (size_t i = 0; i < vtable->size; ++i) {
@@ -449,26 +457,54 @@ struct FooContext* foo_context_new_method_no_args(const struct FooMethod* method
   return context;
 }
 
-struct FooContext* foo_context_new_method_ptr(const struct FooMethod* method,
-                                              struct FooContext* sender,
-                                              struct Foo receiver,
-                                              size_t nargs, struct Foo* arguments) {
+struct FooContext* foo_context_new_method_array(const struct FooMethod* method,
+                                                struct FooContext* sender,
+                                                const struct FooSelector* selector,
+                                                struct Foo receiver,
+                                                struct Foo arguments) {
   struct FooContext* context
-    = foo_context_new_method_no_args(method, sender, receiver, nargs);
-  for (size_t i = 0; i < nargs; i++) {
-    context->frame[i] = arguments[i];
+    = foo_context_new_method_no_args(method, sender, receiver, method->argCount);
+  if (selector != method->selector) {
+    // DoesNotUnderstand case
+    assert(&FOO_perform_with_ == method->selector);
+    assert(method->argCount == 2);
+    context->frame[0] = (struct Foo){ .vtable = &FooInstanceVtable_Selector,
+                                      .datum = { .ptr = (void*)selector } };
+    context->frame[1] = arguments;
+  } else {
+    // normal case
+    struct FooArray* array = PTR(FooArray, arguments.datum);
+    assert(array->size == method->argCount);
+    for (size_t i = 0; i < array->size; i++) {
+      context->frame[i] = array->data[i];
+    }
   }
   return context;
 }
 
 struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
-                                          struct FooContext* sender,
-                                          struct Foo receiver,
-                                          size_t nargs, va_list arguments) {
+                                             struct FooContext* sender,
+                                             const struct FooSelector* selector,
+                                             struct Foo receiver,
+                                             size_t nargs, va_list arguments) {
   struct FooContext* context
-    = foo_context_new_method_no_args(method, sender, receiver, nargs);
-  for (size_t i = 0; i < nargs; i++) {
-    context->frame[i] = va_arg(arguments, struct Foo);
+    = foo_context_new_method_no_args(method, sender, receiver, method->argCount);
+  if (selector != method->selector) {
+    assert(&FOO_perform_with_ == method->selector);
+    assert(method->argCount == 2);
+    context->frame[0] = (struct Foo){ .vtable = &FooInstanceVtable_Selector,
+                                      .datum = { .ptr = (void*)selector }};
+    struct FooArray* array = FooArray_alloc(nargs);
+    for (size_t i = 0; i < nargs; i++) {
+      array->data[i] = va_arg(arguments, struct Foo);
+    }
+    context->frame[1] = (struct Foo){ .vtable = &FooInstanceVtable_Array,
+                                      .datum = { .ptr = array } };
+  } else {
+    assert(nargs == method->argCount);
+    for (size_t i = 0; i < nargs; i++) {
+      context->frame[i] = va_arg(arguments, struct Foo);
+    }
   }
   return context;
 }
@@ -526,19 +562,18 @@ struct Foo foo_activate(struct FooContext* context) {
 
 }
 
-struct Foo foo_send_ptr(struct FooContext* sender,
-                        const struct FooSelector* selector,
-                        struct Foo receiver,
-                        size_t nargs,
-                        struct Foo* arguments) {
-  FOO_DEBUG("/foo_send_ptr(?, %s, ...)", selector->name->data);
+struct Foo foo_send_array(struct FooContext* sender,
+                          const struct FooSelector* selector,
+                          struct Foo receiver,
+                          struct Foo array) {
+  FOO_DEBUG("/foo_send_array(?, %s, ...)", selector->name->data);
   if (!receiver.vtable) {
     foo_panicf(sender, "Invalid receiver for #%s", selector->name->data);
   }
   const struct FooMethod* method
     = foo_vtable_find_method(sender, receiver.vtable, selector);
   struct FooContext* context
-    = foo_context_new_method_ptr(method, sender, receiver, nargs, arguments);
+    = foo_context_new_method_array(method, sender, selector, receiver, array);
   return foo_activate(context);
 }
 
@@ -555,7 +590,7 @@ struct Foo foo_send(struct FooContext* sender,
   const struct FooMethod* method
     = foo_vtable_find_method(sender, receiver.vtable, selector);
   struct FooContext* context
-    = foo_context_new_method_va(method, sender, receiver, nargs, arguments);
+    = foo_context_new_method_va(method, sender, selector, receiver, nargs, arguments);
   return foo_activate(context);
 }
 

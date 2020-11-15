@@ -15,7 +15,6 @@ memcpy(name->data, cname->data, cname->size);
 return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = \{ .ptr = name } };"},
     #sendTo:with:
         -> {signature: [Any, Array], vars: 0,
-            body: "struct FooArray* array = PTR(FooArray, ctx->frame[1].datum);
-struct FooSelector* selector = PTR(FooSelector, ctx->receiver.datum);
-return foo_send_ptr(ctx->sender, selector, ctx->frame[0], array->size, array->data);"}
+            body: "struct FooSelector* selector = PTR(FooSelector, ctx->receiver.datum);
+return foo_send_array(ctx->sender, selector, ctx->frame[0], ctx->frame[1]);"}
 }!
