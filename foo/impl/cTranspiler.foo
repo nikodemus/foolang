@@ -230,9 +230,9 @@ class CTranspiler { output selectorMap closureFunctions
                           globals: Dictionary new
                           generatedMethods: Dictionary new
                           env: env.
-        -- KLUDGE: add #writeString: to the selectors.
+        -- KLUDGE: ensure selectors with references from C code
+        visitor selectorMap map: #perform:with:.
         visitor selectorMap map: #writeString:.
-        env replaceBuiltins: BuiltinClasses.
         let builtins = visitor generateBuiltins.
         visitor declare: main.
         visitor writeDefinitions.
