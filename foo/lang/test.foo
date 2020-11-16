@@ -1,12 +1,16 @@
+import .list.List
+import .exception.*
+
 interface TestSuite
     method runTests
         self doTests: { |each| self runTest: each }.
         self!
 
     method runTest: test
-        Output debug println: "- {test name}".
+        Output debug print: "- ".
+        Output debug println: test name.
         Output debug flush.
-        test sendTo: self!
+        test sendTo: self with: []!
 
     method doTests: block
         let list = List new.
