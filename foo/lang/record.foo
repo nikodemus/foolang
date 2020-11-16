@@ -1,3 +1,4 @@
+import .object.Object
 import .stringOutput.StringOutput
 
 extend Record
@@ -33,27 +34,4 @@ extend Record
                   stream print: (Record at: key in: self) }
             interleaving: { stream print: ", " }.
         stream print: "}"!
-end
-
-class TestRecord { assert }
-
-    direct method runTests: assert
-        (self assert: assert)
-            ; testBasic
-            ; testCompare
-                !
-
-    method testBasic
-        assert that: { let r = {x: -10, y: 52}.
-                       r x + r y }
-               is: 42
-               testing: "Record syntax and accessors"!
-
-    method testCompare
-        assert forAll: [[True, {foo: 123, bar: 42}, {bar: 42, foo: 123}],
-                        [False, {foo: 123, bar: 123}, {bar: 42, foo: 123}]]
-               that: { |test|
-                       test first is (test second == test third) }
-               testing: "Record#=="!
-
 end
