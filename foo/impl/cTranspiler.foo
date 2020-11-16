@@ -1,6 +1,8 @@
+import .transpiler.record
 import .transpiler.array
 import .transpiler.boolean
 import .transpiler.byte_array
+import .transpiler.character
 import .transpiler.closure
 import .transpiler.float
 import .transpiler.integer
@@ -54,25 +56,28 @@ class BuiltinMethod { home selector definition isDirect }
 end
 
 define DatumClasses
-    [Boolean, Integer, Float]!
+    [Boolean, Character, Integer, Float]!
 
-class BuiltinClass { host markFunction _interfaces
-                     _builtinDirectMethods _builtinInstanceMethods
-                     _directMethods _instanceMethods _allInterfaces }
+class Builtin { type value markFunction _interfaces
+                _builtinDirectMethods _builtinInstanceMethods
+                _directMethods _instanceMethods _allInterfaces }
     is AstMethodHome
 
-    direct method new: host
+    direct method type: type
+                  value: value
                   mark: mark
                   directMethods: directMethods
                   instanceMethods: instanceMethods
-        let theClass = self host: host
-                            markFunction: mark
-                            _interfaces: List new
-                            _builtinDirectMethods: directMethods
-                            _builtinInstanceMethods: instanceMethods
-                            _directMethods: False
-                            _instanceMethods: False
-                            _allInterfaces: False.
+        let theClass = self
+                           type: type
+                           value: value
+                           markFunction: mark
+                           _interfaces: List new
+                           _builtinDirectMethods: directMethods
+                           _builtinInstanceMethods: instanceMethods
+                           _directMethods: False
+                           _instanceMethods: False
+                           _allInterfaces: False.
         theClass _directMethods: directMethods.
         theClass _instanceMethods: instanceMethods.
         theClass!
@@ -117,10 +122,10 @@ class BuiltinClass { host markFunction _interfaces
         visitor visitBuiltin: self!
 
     method name
-        host name!
+        value name!
 
     method eval
-        host!
+        value!
 
     method isBuiltin
         True!
@@ -132,52 +137,73 @@ class BuiltinClass { host markFunction _interfaces
         stream print: self toString!
 
     method toString
-        "#<BuiltinClass {host}>"!
+        "#<Builtin{type name} {self name}>"!
 end
 
-define BuiltinClasses [
-     BuiltinClass
-         new: Array
+define Builtins [
+     Builtin
+         type: Class
+         value: Array
          mark: "foo_mark_array"
          directMethods: array.DirectMethods
          instanceMethods: array.InstanceMethods,
-     BuiltinClass
-         new: Boolean
+     Builtin
+         type: Class
+         value: Boolean
          mark: "foo_mark_raw"
          directMethods: boolean.DirectMethods
          instanceMethods: boolean.InstanceMethods,
-     BuiltinClass
-         new: ByteArray
+     Builtin
+         type: Class
+         value: ByteArray
          mark: "foo_mark_bytes"
          directMethods: byte_array.DirectMethods
          instanceMethods: byte_array.InstanceMethods,
-     BuiltinClass
-         new: Closure
+     Builtin
+         type: Class
+         value: Character
+         mark: "foo_mark_raw"
+         directMethods: character.DirectMethods
+         instanceMethods: character.InstanceMethods,
+     Builtin
+         type: Class
+         value: Closure
          mark: "foo_mark_closure"
          directMethods: Dictionary new
          instanceMethods: closure.InstanceMethods,
-     BuiltinClass
-         new: Float
+     Builtin
+         type: Class
+         value: Float
          mark: "foo_mark_raw"
          directMethods: Dictionary new
          instanceMethods: float.FloatMethods,
-     BuiltinClass
-         new: Integer
+     Builtin
+         type: Class
+         value: Integer
          mark: "foo_mark_raw"
          directMethods: Dictionary new
          instanceMethods: integer.IntegerMethods,
-     BuiltinClass
-         new: Output
+     Builtin
+         type: Class
+         value: Output
          mark: "foo_mark_raw"
          directMethods: output.DirectMethods
          instanceMethods: Dictionary new,
-     BuiltinClass
-         new: Selector
+     Builtin
+         type: Interface
+         value: Record
+         mark: "foo_mark_raw"
+         directMethods: record.DirectMethods
+         instanceMethods: record.InstanceMethods,
+     Builtin
+         type: Class
+         value: Selector
          mark: "foo_mark_raw"
          directMethods: selector.DirectMethods
          instanceMethods: selector.InstanceMethods,
-     BuiltinClass
-         new: String
+     Builtin
+         type: Class
+         value: String
          mark: "foo_mark_bytes"
          directMethods: string.DirectMethods
          instanceMethods: string.InstanceMethods
@@ -205,7 +231,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     direct method transpile: string in: env
         -- Clean up from previous run.
-        BuiltinClasses do: #reset.
+        Builtins do: #reset.
         env removeBuiltins: [
             "Any",
             "DoesNotUnderstand",
@@ -215,7 +241,7 @@ class CTranspiler { output selectorMap closureFunctions
             "StringOutput",
             "TypeError"
         ].
-        env replaceBuiltins: BuiltinClasses.
+        env replaceBuiltins: Builtins.
         env load: string.
         self transpileMain: (env global: "Main") in: env!
 
@@ -262,7 +288,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method forwardDeclarationFor: aGlobal
         -- Debug println: "declare: {aGlobal}".
-        (BuiltinClass includes: aGlobal)
+        (Builtin includes: aGlobal)
             ifTrue: { self _classDeclarations: aGlobal }.
         (AstClass includes: aGlobal)
             ifTrue: { self _classDeclarations: aGlobal }.
@@ -360,7 +386,7 @@ class CTranspiler { output selectorMap closureFunctions
                                  generatedMethods: generatedMethods
                                  env: env.
         -- FIXME: visit only referenced builtins
-        BuiltinClasses
+        Builtins
             do: { |each|
                   builtinVisitor forwardDeclarationFor: each }.
         globals
@@ -386,7 +412,7 @@ class CTranspiler { output selectorMap closureFunctions
                                  generatedMethods: generatedMethods
                                  env: env.
         -- FIXME: used builtins only
-        BuiltinClasses
+        Builtins
             do: { |each|
                   builtinVisitor visitClassDefinition: each }.
         output!
@@ -439,6 +465,8 @@ class CTranspiler { output selectorMap closureFunctions
         (Boolean includes: value)
             ifTrue: { let bit = value ifTrue: { 1 } ifFalse: { 0 }.
                       return out print: ".boolean = {bit}" }.
+        (Character includes: value)
+            ifTrue: { return out print: ".int64 = {value code}" }.
         (Float includes: value)
             ifTrue: { return out print: ".float64 = {value}" }.
         (Integer includes: value)
@@ -606,7 +634,7 @@ class CTranspiler { output selectorMap closureFunctions
         self!
 
     method visitDefine: aDefine
-        Tracer trace: #visitDefine:.
+        Tracer visitDefine: aDefine.
         aDefine isDynamic
             ifTrue: { output println: "struct Foo {Name mangleDynamic: aDefine} = " }
             ifFalse: { output println: "struct Foo {Name mangleGlobal: aDefine} = " }.
@@ -619,13 +647,17 @@ class CTranspiler { output selectorMap closureFunctions
                 ifNonePut: { self _createRecordClass: aRecord }!
 
     method _createRecordClass: aRecord
-        AstClass
-            name: (String concat: ["Record_", aRecord name name replace: ":" with: "$"])
-            slots: (aRecord slots
-                        collectWithIndex: { |each index|
-                                            AstSlot name: each
-                                                    index: index
-                                                    type: Any })!
+        let theClass = AstClass
+                           name: (String concat: ["Record_", aRecord name name replace: ":" with: "$"])
+                           slots: (aRecord slots
+                                       collectWithIndex: { |each index|
+                                                           AstSlot name: each
+                                                                   index: index
+                                                                   type: Any })
+                           interfaces: [env global: "Record"].
+        theClass directMethods: [].
+        theClass instanceMethods: [].
+        theClass!
 
     method visitRecord: aRecord
         Tracer visitRecord: aRecord.
@@ -976,7 +1008,7 @@ class CTranspiler { output selectorMap closureFunctions
         self _writeValue: aConstant value _to: output!
 
     method visitSend: aSend
-        Tracer visitSend: aSend.
+        Tracer visitSend: aSend selector.
         output print: "(\{ ".
         let argVars = aSend arguments
                           collect: { |each|

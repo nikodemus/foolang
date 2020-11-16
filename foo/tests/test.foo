@@ -4,7 +4,6 @@ import lib.si.SI_Tests
 import lang.dictionary.TestDictionary
 import lang.filepath.TestFilePath
 import lang.filestream.TestFileStream
-import lang.record.TestRecord
 import lang.selector.TestSelector
 import lang.test_array.TestArray
 import lang.test_array.TestArrayAsIterable
@@ -17,6 +16,7 @@ import lang.test_list.TestList
 import lang.test_list.TestListAsIterable
 import lang.test_object.TestObject
 import lang.test_ordered.TestOrdered
+import lang.test_record.TestRecord
 import lang.test_string.TestString
 
 class ShortStringSeqs {}

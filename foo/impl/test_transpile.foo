@@ -178,7 +178,7 @@ class TestTranspilePreludeCharacter { assert system }
     is TranspilerTest
 
     method testIsWhitespace
-        self transpile: "import lang.character.*
+        self transpile: "import lang.character_ext
                          import lang.string -- for String#at:
 
                          class Main \{}
@@ -329,6 +329,25 @@ class TestTranspilePreludeObject { assert system }
                                  (self x == other x)!
                          end"
             expect: "#<Boolean False>#<Boolean True>"!
+end
+
+class TestTranspilePreludeRecord { assert system }
+    is TranspilerTest
+
+    method test
+        self transpile: "import lang.record_ext.*
+
+                         class Main \{}
+                             direct method run
+                                 let a1 = \{ foo: 42 }.
+                                 let a2 = \{ foo: 42 }.
+                                 let b = \{ bar: 42 }.
+                                 let c = \{ foo: 42, bar: 42 }.
+                                 (a1 == a2) debug.
+                                 (a1 == b) debug.
+                                 (a1 == b) debug!
+                         end"
+            expect: "#<Boolean True>#<Boolean False>#<Boolean False>"!
 end
 
 class TestTranspilePreludeSelector { assert system }
@@ -1536,6 +1555,7 @@ class Main {}
             "--prelude-interval" -> TestTranspilePreludeInterval,
             "--prelude-iterable" -> TestTranspilePreludeIterable,
             "--prelude-object" -> TestTranspilePreludeObject,
+            "--prelude-record" -> TestTranspilePreludeRecord,
             "--prelude-selector" -> TestTranspilePreludeSelector,
             "--prelude-string" -> TestTranspilePreludeString,
             "--prelude-string-output" -> TestTranspilePreludeStringOutput,

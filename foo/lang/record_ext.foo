@@ -1,6 +1,6 @@
 import .object.Object
-import .array -- for Array#sorted
-import .string   -- for String#==
+import .array        -- for Array#sorted
+import .selector_ext -- for Selector#==
 import .stringOutput.StringOutput
 
 extend Record
