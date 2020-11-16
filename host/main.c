@@ -193,16 +193,21 @@ char* foo_debug_context(struct FooContext* ctx) {
 typedef struct Foo (*FooMethodFunction)(struct FooContext*);
 typedef struct Foo (*FooClosureFunction)(struct FooContext*);
 
-struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t frame) {
-  FOO_DEBUG("/lexical_ref(index=%zu, frame=%zu)", index, frame);
-  while (frame > 0) {
+struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t frameOffset) {
+  struct FooContext* context0 = context;
+  size_t frameOffset0 = frameOffset;
+  FOO_DEBUG("/lexical_ref(index=%zu, frame=%zu)", index, frameOffset);
+  while (frameOffset > 0) {
     assert(context->outer_context);
     context = context->outer_context;
-    --frame;
+    --frameOffset;
   }
   assert(index < context->size);
   struct Foo res = context->frame[index];
-  assert(res.vtable);
+  if (!res.vtable) {
+    foo_panicf(context0, "Invalid lexical reference at index: %zu, frameOffset: %zu",
+               index, frameOffset0);
+  }
   return res;
 }
 
@@ -237,6 +242,7 @@ struct FooClosure {
 // Forward declarations for vtables are in generated_classes, but we're going
 // to define a few builtin ctors first that need some of them.
 struct FooVtable FooInstanceVtable_Array;
+struct FooVtable FooInstanceVtable_Character;
 struct FooVtable FooInstanceVtable_Closure;
 struct FooVtable FooInstanceVtable_Boolean;
 struct FooVtable FooInstanceVtable_Float;
@@ -640,6 +646,11 @@ struct Foo foo_Array_alloc(size_t size) {
 
 struct Foo foo_Boolean_new(bool t) {
   return (struct Foo){ .vtable = &FooInstanceVtable_Boolean, .datum = { .boolean = t } };
+}
+
+struct Foo foo_Character_new(int64_t n) {
+  assert(n >= 0);
+  return (struct Foo){ .vtable = &FooInstanceVtable_Character, .datum = { .int64 = n } };
 }
 
 struct Foo foo_Integer_new(int64_t n) {

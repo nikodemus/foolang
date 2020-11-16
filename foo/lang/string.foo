@@ -2,7 +2,6 @@ import .object.Object
 import .ordered.Ordered
 import .list.List
 import .stringOutput.StringOutput
-import .character.Character
 
 extend String
     is Ordered
@@ -68,6 +67,9 @@ extend String
                 (self at: i) == (other at: i)
                     ifFalse: { return False } }.
         True!
+
+    method sendTo: recv
+        self sendTo: recv with: []!
 
     method join: iterable
         StringOutput with: { |out|

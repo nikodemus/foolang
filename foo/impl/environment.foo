@@ -27,6 +27,7 @@ define Builtins
     ; define: Array
     ; define: ByteArray
     ; define: Boolean
+    ; define: Character
     ; define: DoesNotUnderstand
     ; define: Error
     ; define: False

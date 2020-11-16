@@ -1,4 +1,4 @@
-import .character.Character
+import .character_ext
 import .closure.Block
 import .list.List
 import .stringOutput.StringOutput
@@ -15,6 +15,9 @@ extend Selector
 
     method apply: arguments
         self sendTo: arguments first with: arguments rest!
+
+    method sendTo: receiver
+        self sendTo: receiver with: []!
 
     method arity
         self isKeyword
@@ -54,9 +57,6 @@ extend Selector
         self isKeyword
             ifTrue: { return False }.
         True!
-
-    method sendTo: receiver
-        self name sendTo: receiver with: []!
 
     method startsWith: part
         self name startsWith: part!

@@ -1,4 +1,6 @@
 import .object.Object
+import .array -- for Array#sorted
+import .string   -- for String#==
 import .stringOutput.StringOutput
 
 extend Record
@@ -14,13 +16,12 @@ extend Record
                        return False }.
         keys
             allSatisfy: { |each|
-                          (Record at: each in: self)
-                              == (Record at: each in: other) }!
+                          (each sendTo: self) == (each sendTo: other) }!
 
     method do: block
         (Record keysIn: self) sorted
             do: { |each|
-                  block value: (Record at: each in: self) }!
+                  block value: (each sendTo: self) }!
 
     method toString
         StringOutput with: { |out| self printOn: out }!
@@ -31,7 +32,7 @@ extend Record
             do: { |key|
                   stream print: key.
                   stream print: ": ".
-                  stream print: (Record at: key in: self) }
+                  stream print: (key sendTo: self) }
             interleaving: { stream print: ", " }.
         stream print: "}"!
 end

@@ -55,6 +55,14 @@ int64_t i = ctx->frame[0].datum.int64 - 1;
 assert(i >= 0);
 assert(i < array->size);
 return array->data[i] = ctx->frame[1];"},
+      #copy
+          -> {signature: [], vars: 0,
+              body: "struct FooArray* self = PTR(FooArray, ctx->receiver.datum);
+struct FooArray* new = FooArray_alloc(self->size);
+for (size_t i = 0; i < self->size; i++) \{
+    new->data[i] = self->data[i];
+}
+return (struct Foo)\{ .vtable = &FooInstanceVtable_Array, .datum = \{ .ptr = new } };"},
       #put:at:
           -> {signature: [Any, Integer], vars: 0,
               body: "struct FooArray* array = PTR(FooArray, ctx->receiver.datum);

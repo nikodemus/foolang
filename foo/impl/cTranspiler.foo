@@ -1,6 +1,8 @@
+import .transpiler.record
 import .transpiler.array
 import .transpiler.boolean
 import .transpiler.byte_array
+import .transpiler.character
 import .transpiler.closure
 import .transpiler.float
 import .transpiler.integer
@@ -54,7 +56,7 @@ class BuiltinMethod { home selector definition isDirect }
 end
 
 define DatumClasses
-    [Boolean, Integer, Float]!
+    [Boolean, Character, Integer, Float]!
 
 class Builtin { type value markFunction _interfaces
                 _builtinDirectMethods _builtinInstanceMethods
@@ -159,6 +161,12 @@ define Builtins [
          instanceMethods: byte_array.InstanceMethods,
      Builtin
          type: Class
+         value: Character
+         mark: "foo_mark_raw"
+         directMethods: character.DirectMethods
+         instanceMethods: character.InstanceMethods,
+     Builtin
+         type: Class
          value: Closure
          mark: "foo_mark_closure"
          directMethods: Dictionary new
@@ -181,6 +189,12 @@ define Builtins [
          mark: "foo_mark_raw"
          directMethods: output.DirectMethods
          instanceMethods: Dictionary new,
+     Builtin
+         type: Interface
+         value: Record
+         mark: "foo_mark_raw"
+         directMethods: record.DirectMethods
+         instanceMethods: record.InstanceMethods,
      Builtin
          type: Class
          value: Selector
@@ -451,6 +465,8 @@ class CTranspiler { output selectorMap closureFunctions
         (Boolean includes: value)
             ifTrue: { let bit = value ifTrue: { 1 } ifFalse: { 0 }.
                       return out print: ".boolean = {bit}" }.
+        (Character includes: value)
+            ifTrue: { return out print: ".int64 = {value code}" }.
         (Float includes: value)
             ifTrue: { return out print: ".float64 = {value}" }.
         (Integer includes: value)
@@ -618,7 +634,7 @@ class CTranspiler { output selectorMap closureFunctions
         self!
 
     method visitDefine: aDefine
-        Tracer trace: #visitDefine:.
+        Tracer visitDefine: aDefine.
         aDefine isDynamic
             ifTrue: { output println: "struct Foo {Name mangleDynamic: aDefine} = " }
             ifFalse: { output println: "struct Foo {Name mangleGlobal: aDefine} = " }.
@@ -631,13 +647,17 @@ class CTranspiler { output selectorMap closureFunctions
                 ifNonePut: { self _createRecordClass: aRecord }!
 
     method _createRecordClass: aRecord
-        AstClass
-            name: (String concat: ["Record_", aRecord name name replace: ":" with: "$"])
-            slots: (aRecord slots
-                        collectWithIndex: { |each index|
-                                            AstSlot name: each
-                                                    index: index
-                                                    type: Any })!
+        let theClass = AstClass
+                           name: (String concat: ["Record_", aRecord name name replace: ":" with: "$"])
+                           slots: (aRecord slots
+                                       collectWithIndex: { |each index|
+                                                           AstSlot name: each
+                                                                   index: index
+                                                                   type: Any })
+                           interfaces: [env global: "Record"].
+        theClass directMethods: [].
+        theClass instanceMethods: [].
+        theClass!
 
     method visitRecord: aRecord
         Tracer visitRecord: aRecord.
@@ -988,7 +1008,7 @@ class CTranspiler { output selectorMap closureFunctions
         self _writeValue: aConstant value _to: output!
 
     method visitSend: aSend
-        Tracer visitSend: aSend.
+        Tracer visitSend: aSend selector.
         output print: "(\{ ".
         let argVars = aSend arguments
                           collect: { |each|
