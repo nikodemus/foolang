@@ -1,0 +1,93 @@
+define ASCII
+    {space: 0x20,
+     tab: 0x09,
+     digit0: 0x30,
+     digit9: 0x39,
+     upperA: 0x41,
+     upperF: 0x46,
+     upperZ: 0x5A,
+     underscore: 0x5F,
+     lowerA: 0x61,
+     lowerF: 0x66,
+     lowerZ: 0x7A,
+     lineFeed: 0x0A,
+     formFeed: 0x0C,
+     carriageReturn: 0x0D}!
+
+define HorizontalWhitespaceASCII
+    [ASCII space,
+     ASCII tab]!
+
+define WhitespaceASCII
+    [ASCII space,
+     ASCII tab,
+     ASCII lineFeed,
+     ASCII formFeed,
+     ASCII carriageReturn]!
+
+import .object.Object
+
+-- FIXME: support unicode range
+extend Character
+    is Object
+
+    method isLowercase
+        let code = self code.
+        ASCII lowerA <= code and: code <= ASCII lowerZ!
+
+    method isAlphanumeric
+        self isAlpha or: self isDigit!
+
+    method isAlpha
+        let code = self code.
+        (ASCII upperA <= code and: code <= ASCII upperZ)
+            ifFalse: { ASCII lowerA <= code and: code <= ASCII lowerZ }!
+
+    method isSymbol
+        self code == ASCII underscore
+            ifTrue: { False }
+            ifFalse: { self isAlpha not }!
+
+    method isWhitespace
+        WhitespaceASCII
+            anySatisfy: { |whitespaceCode| whitespaceCode is self code }!
+
+    method isHorizontalWhitespace
+        HorizontalWhitespaceASCII
+            anySatisfy: { |whitespaceCode| whitespaceCode is self code }!
+
+    method isDigit: base
+        let code = self code.
+        base <= 10
+            ifTrue: { ASCII digit0 <= code and: code < ASCII digit0 + base }
+            ifFalse: { let hexBase = base - 10.
+                       (ASCII digit0 <= code and: code <= ASCII digit9)
+                           or: (ASCII upperA <= code
+                                    and: code < ASCII upperA + hexBase)
+                           or: (ASCII lowerA <= code
+                                    and: code < ASCII lowerA + hexBase) }!
+
+    method isDigit
+        self isDigit: 10!
+
+    method digit: base
+        let code = self code.
+        (self isDigit: base)
+            ifTrue: { code <= ASCII digit9
+                          ifTrue: { return code - ASCII digit0 }.
+                      code <= ASCII upperF
+                          ifTrue: { return (code - ASCII upperA) + 10 }.
+                      (code - ASCII lowerA) + 10 }!
+
+    method digit
+        self digit: 10!
+
+    method isEquivalent: other
+        self is other!
+
+    method toString
+        "#<Character code: {self code}>"!
+
+    method isNewline
+        self code is ASCII lineFeed!
+end

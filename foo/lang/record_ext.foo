@@ -1,0 +1,38 @@
+import .object.Object
+import .array        -- for Array#sorted
+import .selector_ext -- for Selector#==
+import .stringOutput.StringOutput
+
+extend Record
+    is Object
+
+    direct method sizeOf: record
+        (Record keysIn: record) size!
+
+    method isEquivalent: other
+        let keys = (Record keysIn: self) sorted.
+        keys == (Record keysIn: other) sorted
+            ifFalse: { -- Output debug println: "my: {keys} other: {(Record keysIn: other) sorted}".
+                       return False }.
+        keys
+            allSatisfy: { |each|
+                          (each sendTo: self) == (each sendTo: other) }!
+
+    method do: block
+        (Record keysIn: self) sorted
+            do: { |each|
+                  block value: (each sendTo: self) }!
+
+    method toString
+        StringOutput with: { |out| self printOn: out }!
+
+    method printOn: stream
+        stream print: "\{".
+        (Record keysIn: self) sorted
+            do: { |key|
+                  stream print: key.
+                  stream print: ": ".
+                  stream print: (key sendTo: self) }
+            interleaving: { stream print: ", " }.
+        stream print: "}"!
+end
