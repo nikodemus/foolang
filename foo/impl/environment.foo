@@ -115,6 +115,7 @@ class ModuleDictionary { available translated }
 end
 
 class ModuleBinding { name module }
+    is Object
     method referenceUpwards: _
         self!
     method global: name

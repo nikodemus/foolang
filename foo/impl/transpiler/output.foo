@@ -4,12 +4,16 @@ define DirectMethods
          #debug
          -> { signature: [], vars: 0,
               body: "return ctx->receiver;" },
+         #flush
+         -> { signature: [], vars: 0,
+              body: "fflush(stdout);
+return ctx->receiver;" },
          #print:
          -> { signature: [String], vars: 0,
-              body: "fprintf(stderr, \"%s\", PTR(FooBytes, ctx->frame[0].datum)->data);
+              body: "fprintf(stdout, \"%s\", PTR(FooBytes, ctx->frame[0].datum)->data);
 return ctx->receiver;" },
          #println:
          -> { signature: [String], vars: 0,
-              body: "fprintf(stderr, \"%s\\n\", PTR(FooBytes, ctx->frame[0].datum)->data);
+              body: "fprintf(stdout, \"%s\\n\", PTR(FooBytes, ctx->frame[0].datum)->data);
 return ctx->receiver;" }
     }!

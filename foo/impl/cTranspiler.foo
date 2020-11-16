@@ -222,6 +222,11 @@ class SelectorMap { names }
         names do: block!
 end
 
+define AlwaysEmittedSelectors
+    [#__doSelectors:,
+     #perform:with:,
+     #writeString:]!
+
 define $home
     False!
 
@@ -257,8 +262,8 @@ class CTranspiler { output selectorMap closureFunctions
                           generatedMethods: Dictionary new
                           env: env.
         -- KLUDGE: ensure selectors with references from C code
-        visitor selectorMap map: #perform:with:.
-        visitor selectorMap map: #writeString:.
+        AlwaysEmittedSelectors
+            do: { |each| visitor selectorMap map: each }.
         let builtins = visitor generateBuiltins.
         visitor declare: main.
         visitor writeDefinitions.
@@ -436,7 +441,8 @@ class CTranspiler { output selectorMap closureFunctions
     method selectorCName: selector
         self selectorMap map: selector!
 
-    method constantCName: value
+    method constantCName: value in: env
+        -- Tracer constantCName: value.
         (Selector includes: value)
             ifTrue: { return self selectorCName: value }.
         constants
@@ -449,6 +455,7 @@ class CTranspiler { output selectorMap closureFunctions
         constants add: { value: value, cname: cname }.
         constants at: index
                   put: (self _constantDefinition: value
+                             _in: env
                              _called: cname).
         cname!
 
@@ -458,10 +465,10 @@ class CTranspiler { output selectorMap closureFunctions
             ifTrue: { return False }.
         True!
 
-    method _writeDatum: value to: out
-        Tracer trace: #visitDatum:.
+    method _writeDatum: value _in: env _to: out
+        -- Tracer visitDatum: value.
         (self _isPtr: value)
-            ifTrue: { return out print: ".ptr = &{self constantCName: value}" }.
+            ifTrue: { return out print: ".ptr = &{self constantCName: value in: env}" }.
         (Boolean includes: value)
             ifTrue: { let bit = value ifTrue: { 1 } ifFalse: { 0 }.
                       return out print: ".boolean = {bit}" }.
@@ -473,12 +480,13 @@ class CTranspiler { output selectorMap closureFunctions
             ifTrue: { return out print: ".int64 = {value}" }.
         Error raise: "Don't know how to transpile constant `{value}` into C."!
 
-    method _targetClassOf: value
+    method _targetClassOf: value _in: env
+        -- Tracer _targetClassOf: value.
         (Record includes: value)
             ifTrue: { return self _recordClassFromRecord: value }.
         (Class includes: value)
             ifTrue: { return env global: value name }.
-        value classOf!
+        env global: value classOf name!
 
     method _recordClassFromRecord: aRecord
         let keys = (Record keysIn: aRecord) sorted.
@@ -489,20 +497,22 @@ class CTranspiler { output selectorMap closureFunctions
         self _ensureRecordClass: { name: name,
                                    slots: keys }!
 
-    method _writeValue: value _to: out
+    method _writeValue: value _in: env _to: out
         (Class includes: value)
-            ifTrue: { out print: "(struct Foo)\{ .vtable = &{Name mangleDirectVtable: (self _targetClassOf: value)}, .datum = \{ " }
-            ifFalse: { out print: "(struct Foo)\{ .vtable = &{Name mangleInstanceVtable: (self _targetClassOf: value)}, .datum = \{ " }.
-        self _writeDatum: value to: out.
+            ifTrue: { out print: "(struct Foo)\{ .vtable = &{Name mangleDirectVtable: (self _targetClassOf: value _in: env)}, .datum = \{ " }
+            ifFalse: { out print: "(struct Foo)\{ .vtable = &{Name mangleInstanceVtable: (self _targetClassOf: value _in: env)}, .datum = \{ " }.
+        self _writeDatum: value _in: env _to: out.
         out println: " } }"!
 
-    method _constantDefinition: value _called: cname
+    method _constantDefinition: value _in: env _called: cname
+        -- Tracer _constantDefinition: value.
         (Array includes: value)
             ifTrue: { return
                           { value: value,
                             cname: cname,
                             declaration: "struct FooArray {cname};",
                             definition: (self _arrayDefinition: value
+                                              _in: env
                                               _called: cname) } }.
         (Record includes: value)
             ifTrue: { return
@@ -510,6 +520,7 @@ class CTranspiler { output selectorMap closureFunctions
                             cname: cname,
                             declaration: "struct FooArray {cname};",
                             definition: (self _recordDefinition: value
+                                              _in: env
                                               _called: cname) } }.
         (String includes: value)
             ifTrue: { return
@@ -522,9 +533,10 @@ class CTranspiler { output selectorMap closureFunctions
           cname: cname,
           declaration: "struct FooArray {cname};",
           definition: (self _instanceDefinition: value
+                            _in: env
                             _called: cname) }!
 
-    method _arrayDefinition: value _called: cname
+    method _arrayDefinition: value _in: env _called: cname
         StringOutput
             with: { |out|
                     out println: "struct FooArray {cname} =".
@@ -534,13 +546,16 @@ class CTranspiler { output selectorMap closureFunctions
                     out print: "    .data = \{ ".
                     value do: { |each|
                                 self _writeValue: each
+                                     _in: env
                                      _to: out.
                                 out print: "," }.
                     out println: " }".
                     out println: "};" }!
 
-    method _instanceDefinition: value _called: cname
-        let theClass = env global: (self _targetClassOf: value) name.
+    method _instanceDefinition: value _in: env _called: cname
+        -- Tracer _instanceDefinition: value _in: env.
+        -- Debug println: "XXX: {value} IN:\n {env globals}".
+        let theClass = self _targetClassOf: value _in: env.
         self declare: theClass.
         let slots = theClass definition slots.
         StringOutput
@@ -554,12 +569,13 @@ class CTranspiler { output selectorMap closureFunctions
                         do: { |each|
                               self _writeValue: ((Selector new: each name)
                                                      sendTo: value)
+                                   _in: env
                                    _to: out.
                               out print: "," }.
                     out println: " }".
                     out println: "};" }!
 
-    method _recordDefinition: value _called: cname
+    method _recordDefinition: value _in: env _called: cname
         StringOutput
             with: { |out|
                     out println: "struct FooArray {cname} =".
@@ -568,7 +584,7 @@ class CTranspiler { output selectorMap closureFunctions
                     out println: "    .size = {Record sizeOf: value},".
                     out print: "    .data = \{ ".
                     value do: { |each|
-                                self _writeValue: each _to: out.
+                                self _writeValue: each _in: env _to: out.
                                 out print: "," }.
                     out println: " }".
                     out println: "};" }!
@@ -630,7 +646,7 @@ class CTranspiler { output selectorMap closureFunctions
         cname!
 
     method visitBuiltin: aClass
-        Tracer trace: #visitBuiltin:.
+        -- Tracer trace: #visitBuiltin:.
         self!
 
     method visitDefine: aDefine
@@ -638,7 +654,8 @@ class CTranspiler { output selectorMap closureFunctions
         aDefine isDynamic
             ifTrue: { output println: "struct Foo {Name mangleDynamic: aDefine} = " }
             ifFalse: { output println: "struct Foo {Name mangleGlobal: aDefine} = " }.
-        self visitConstant: { value: aDefine eval }. -- FIXME, harmonize
+        -- FIXME: harmonize #eval vs #value
+        self _writeValue: aDefine eval _in: aDefine env _to: output.
         output println: ";".
         output newline!
 
@@ -660,7 +677,7 @@ class CTranspiler { output selectorMap closureFunctions
         theClass!
 
     method visitRecord: aRecord
-        Tracer visitRecord: aRecord.
+        -- Tracer visitRecord: aRecord.
         let recordClass = self _ensureRecordClass: aRecord.
         output print: "foo_send(ctx".
         output print: ", &{Name mangleSelector: aRecord name}".
@@ -861,7 +878,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "    .classptr = &{globalName},".
         output println: "    .inherited = \{ .size = {interfaces size}, .data = {instanceInterfacesName} },".
         output println: "    .mark = {aClass markFunction},".
-        output println: "    .size = {instanceMethods size},".
+        output println: "    .size = {instanceMethods size + 1},".
         output println: "    .methods = \{".
         instanceMethods
             do: { |each|
@@ -870,6 +887,12 @@ class CTranspiler { output selectorMap closureFunctions
                   output println: "                            .argCount = {each arity},".
                   output println: "                            .frameSize = {each frameSize},".
                   output println: "                            .function = &{Name mangleMethod: each} }," }.
+        -- #__doSelectors
+        output println: "        (struct FooMethod)\{ .selector = &FOO_____doSelectors_,".
+        output println: "                            .vtable = NULL,".
+        output println: "                            .argCount = 1,".
+        output println: "                            .frameSize = 1,".
+        output println: "                            .function = &foo_do_selectors }".
         output println: "    }".
         output println: "};".
         output newline.
@@ -889,7 +912,7 @@ class CTranspiler { output selectorMap closureFunctions
         output newline!
 
     method _generateMethod: aMethod _for: type
-        Tracer _generateMethod: aMethod _for: type.
+        -- Tracer _generateMethod: aMethod _for: type.
         -- Debug println: "_generateMethod: {aMethod}".
         let name = Name mangleMethod: aMethod.
         generatedMethods
@@ -897,7 +920,7 @@ class CTranspiler { output selectorMap closureFunctions
             ifNonePut: { self _actuallyGenerateMethod: aMethod _as: name _for: type }!
 
     method _actuallyGenerateMethod: aMethod _as: name _for: type
-        Tracer _actuallyGenerateMethod: aMethod _as: name _for: type.
+        -- Tracer _actuallyGenerateMethod: aMethod _as: name _for: type.
         -- Debug println: "_actuallyGenerateMethod: {aMethod}".
         aMethod isRequired
             ifTrue: { Error raise: "Cannot generate required method: {aMethod} for: {type}." }.
@@ -928,7 +951,7 @@ class CTranspiler { output selectorMap closureFunctions
         aMethod!
 
     method _generateTypecheck: type _for: value
-        Tracer _generateTypecheck: type _for: value.
+        -- Tracer _generateTypecheck: type _for: value.
         -- Debug println: "_generateTypecheck: {type} _for: {value}".
         type is Any
             ifTrue: { return value visitBy: self }.
@@ -941,22 +964,22 @@ class CTranspiler { output selectorMap closureFunctions
         output print: ")"!
 
     method visitGlobal: aVar
-        Tracer trace: #visitGlobal:.
+        -- Tracer visitGlobal: aVar name.
         self declare: aVar.
         output print: (Name mangleGlobal: aVar)!
 
     method visitDynamic: aVar
-        Tracer trace: #visitDynamic:.
+        -- Tracer trace: #visitDynamic:.
         let index = self declareDynamic: aVar.
         output print: "ctx->vars->data[{index}]"!
 
     method visitTypecheck: aCheck
-        Tracer visitTypecheck: aCheck.
+        -- Tracer visitTypecheck: aCheck.
         self _generateTypecheck: aCheck type
              _for: aCheck value!
 
     method visitIs: anIs
-        Tracer trace: #visitIs:.
+        -- Tracer trace: #visitIs:.
         let left = self addTemp.
         output print: "(\{ ctx->frame[{left}] = ".
         anIs left visitBy: self.
@@ -969,7 +992,7 @@ class CTranspiler { output selectorMap closureFunctions
         output print: "})"!
 
     method visitSeq: seq
-        Tracer trace: #visitSeq:.
+        -- Tracer trace: #visitSeq:.
         output print: "(\{ ".
         seq first visitBy: self.
         output print: "; ".
@@ -977,7 +1000,7 @@ class CTranspiler { output selectorMap closureFunctions
         output print: "; })"!
 
     method visitSlotSet: set
-        Tracer trace: #visitSlotSet:.
+        -- Tracer trace: #visitSlotSet:.
         output print: "(PTR(FooArray, ctx->receiver.datum)->data[".
         output print: (set slot index - 1).
         output print: "] = ".
@@ -986,29 +1009,29 @@ class CTranspiler { output selectorMap closureFunctions
         output print: ")"!
 
     method visitSlotRef: ref
-        Tracer trace: #visitSlotRef:.
+        -- Tracer trace: #visitSlotRef:.
         output print: "PTR(FooArray, ctx->receiver.datum)->data[".
         output print: (ref slot index - 1).
         output print: "]"!
 
     method visitReturn: ret
-        Tracer trace: #visitReturn:.
+        -- Tracer trace: #visitReturn:.
         output print: "foo_return(ctx, ".
         self _generateTypecheck: ret from returnType
              _for: ret value.
         output print: ")"!
 
     method visitComment: aComment
-        Tracer trace: #visitComment:.
+        -- Tracer trace: #visitComment:.
         -- FIXME: Include comments in generated source.
         aComment value visitBy: self!
 
     method visitConstant: aConstant
-        Tracer trace: #visitConstant:.
-        self _writeValue: aConstant value _to: output!
+        -- Tracer visitConstant: aConstant.
+        self _writeValue: aConstant value _in: aConstant env _to: output!
 
     method visitSend: aSend
-        Tracer visitSend: aSend selector.
+        -- Tracer visitSend: aSend selector.
         output print: "(\{ ".
         let argVars = aSend arguments
                           collect: { |each|
@@ -1030,15 +1053,15 @@ class CTranspiler { output selectorMap closureFunctions
         output print: "); })"!
 
     method visitSelfInstance: aSelf
-        Tracer visitSelfInstance: aSelf.
+        -- Tracer visitSelfInstance: aSelf.
         output print: "ctx->receiver"!
 
     method visitSelfClass: aSelf
-        Tracer trace: #visitSelfClass:.
+        -- Tracer trace: #visitSelfClass:.
         output print: "*ctx->receiver.vtable->classptr"!
 
     method visitBindDynamic: aBind
-        Tracer trace: #visitBindDynamic:.
+        -- Tracer trace: #visitBindDynamic:.
         let name = aBind variable name.
         let index = self declareDynamic: aBind variable.
         let unbind = self genTemp: "unbind".
@@ -1057,7 +1080,7 @@ class CTranspiler { output selectorMap closureFunctions
         output print: " ctx->frame[{res}]; })"!
 
     method visitBindLexical: aBind
-        Tracer trace: #visitBindLexical:.
+        -- Tracer trace: #visitBindLexical:.
         output print: "(\{ ctx->frame[{aBind variable index - 1}ul] = ".
         self _generateTypecheck: aBind variable type
              _for: aBind value.
@@ -1066,18 +1089,18 @@ class CTranspiler { output selectorMap closureFunctions
         output print: "; })"!
 
     method visitLexicalRef: aRef
-        Tracer trace: #visitLexicalRef:.
+        -- Tracer trace: #visitLexicalRef:.
         output print: "foo_lexical_ref(ctx, {aRef variable index - 1}ul, {aRef frameOffset}ul)"!
 
     method visitLexicalSet: aSet
-        Tracer trace: #visitLexicalSet:.
+        -- Tracer trace: #visitLexicalSet:.
         output print: "foo_lexical_set(ctx, {aSet variable index - 1}ul, {aSet frameOffset}u, ".
         self _generateTypecheck: aSet variable type
              _for: aSet value.
         output print: ")"!
 
     method visitBlock: aBlock
-        Tracer trace: #visitBlock:.
+        -- Tracer trace: #visitBlock:.
         output print: "foo_closure_new(ctx, ".
         output print: (self closureCName: aBlock).
         output print: ", ".
@@ -1087,7 +1110,7 @@ class CTranspiler { output selectorMap closureFunctions
         output print: ")"!
 
     method visitArray: anArray
-        Tracer trace: #visitArray:.
+        -- Tracer trace: #visitArray:.
         let entries = anArray entries.
         let array = self addTemp.
         output print: "(\{ ctx->frame[{array}] = foo_Array_alloc({entries size}); ".
@@ -1102,7 +1125,7 @@ class CTranspiler { output selectorMap closureFunctions
         output print: "ctx->frame[{array}]; })"!
 
     method visitPanic: aPanic
-        Tracer trace: #visitPanic:.
+        -- Tracer trace: #visitPanic:.
         output println: "foo_panic(ctx, ".
         aPanic value visitBy: self.
         output println: ")"!

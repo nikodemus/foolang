@@ -18,6 +18,14 @@
 #include <fcntl.h>
 #endif
 
+size_t min_size(size_t a, size_t b) {
+  if (a <= b) {
+    return a;
+  } else {
+    return b;
+  }
+}
+
 #define PTR(type, datum) \
   ((struct type*)datum.ptr)
 
@@ -480,7 +488,10 @@ struct FooContext* foo_context_new_method_array(const struct FooMethod* method,
   } else {
     // normal case
     struct FooArray* array = PTR(FooArray, arguments.datum);
-    assert(array->size == method->argCount);
+    if (array->size != method->argCount) {
+      foo_panicf(context, "Invalid number of arguments to #%s, wanted %zu, got %zu",
+                 method->selector->name->data, method->argCount, array->size);
+    }
     for (size_t i = 0; i < array->size; i++) {
       context->frame[i] = array->data[i];
     }
@@ -598,6 +609,17 @@ struct Foo foo_send(struct FooContext* sender,
   struct FooContext* context
     = foo_context_new_method_va(method, sender, selector, receiver, nargs, arguments);
   return foo_activate(context);
+}
+
+struct Foo foo_do_selectors(struct FooContext* context) {
+  struct FooVtable* vt = context->receiver.vtable;
+  struct Foo block = context->frame[0];
+  for (size_t i = 0; i < vt->size; i++) {
+    foo_send(context, &FOO_value_, block, 1,
+             (struct Foo){ .vtable = &FooInstanceVtable_Selector,
+                           .datum = { .ptr = vt->methods[i].selector } });
+  }
+  return context->receiver;
 }
 
 struct Foo foo_closure_new(struct FooContext* context,

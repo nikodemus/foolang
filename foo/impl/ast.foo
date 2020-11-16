@@ -69,11 +69,22 @@ class AstDefinitionList { list }
         list do: { |each| each defineIn: env }!
 end
 
-class AstDefine { name body frameSize isDynamic }
+class AstDefine { name body frameSize isDynamic env }
     is AstDefinition
 
-    method defineIn: env
-        env define: name as: self!
+    direct method name: name
+                  body: body
+                  frameSize: frameSize
+                  isDynamic: isDynamic
+        self name: name
+             body: body
+             frameSize: frameSize
+             isDynamic: isDynamic
+             env: False!
+
+    method defineIn: defEnv
+        env = defEnv.
+        defEnv define: name as: self!
 
     method eval
         AstInterpreter evalDefine: body frameSize: frameSize!
@@ -328,7 +339,6 @@ class AstClass { name slots _interfaces _directMethods _instanceMethods _allInte
                             AstReaderMethod home: self slot: each })!
 
     method defineIn: env
-        -- Debug println: "AstClass#defineIn: {name}".
         env define: name as: self!
 
     method eval
@@ -666,7 +676,7 @@ class AstDynamic { name::String _value _definition sources }
         True!
 end
 
-class AstConstantRef { value }
+class AstConstantRef { value env }
     is AstNode
 
     method visitBy: visitor

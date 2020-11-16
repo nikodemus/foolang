@@ -14,10 +14,8 @@ extend String
           do: { |index|
                 let a = (self at: index) code.
                 let b = (other at: index) code.
-                a < b
-                    ifTrue: { return True }.
-                a > b
-                    ifTrue: { return False } }.
+                a == b
+                    ifFalse: { return a < b } }.
         self size < other size!
 
     method at: index

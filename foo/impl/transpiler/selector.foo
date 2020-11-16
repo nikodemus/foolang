@@ -2,6 +2,19 @@ define DirectMethods
     Dictionary new!
 
 define InstanceMethods {
+    #<
+        -> {signature: [Selector], vars: 0,
+            body: "const struct FooCString* name1 = PTR(FooSelector, ctx->receiver.datum)->name;
+const struct FooCString* name2 = PTR(FooSelector, ctx->frame[0].datum)->name;
+size_t n = min_size(name1->size, name2->size);
+for (size_t i = 0; i < n; i++) \{
+    uint8_t c1 = name1->data[i];
+    uint8_t c2 = name2->data[i];
+    if (c1 != c2) \{
+        return foo_Boolean_new(c1 < c2);
+    }
+}
+return foo_Boolean_new(name1->size < name2->size);"},
     #debug
         -> {signature: [], vars: 0,
             body: "const char* name = PTR(FooSelector, ctx->receiver.datum)->name->data;
@@ -16,5 +29,11 @@ return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = \{ .ptr = na
     #sendTo:with:
         -> {signature: [Any, Array], vars: 0,
             body: "struct FooSelector* selector = PTR(FooSelector, ctx->receiver.datum);
-return foo_send_array(ctx->sender, selector, ctx->frame[0], ctx->frame[1]);"}
+return foo_send_array(ctx->sender, selector, ctx->frame[0], ctx->frame[1]);"},
+    #startsWith:
+        -> {signature: [String], vars: 0,
+            body: "const struct FooCString* name = PTR(FooSelector, ctx->receiver.datum)->name;
+struct FooBytes* string = PTR(FooBytes, ctx->frame[0].datum);
+return foo_Boolean_new(name->size >= string->size &&
+                       !memcmp(name->data, string->data, string->size));"}
 }!
