@@ -18,6 +18,8 @@
 #include <fcntl.h>
 #endif
 
+#include "system.h"
+
 size_t min_size(size_t a, size_t b) {
   if (a <= b) {
     return a;

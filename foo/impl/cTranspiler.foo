@@ -10,6 +10,7 @@ import .transpiler.name.Name
 import .transpiler.output
 import .transpiler.selector
 import .transpiler.string
+import .transpiler.system
 import .ast.*
 import .utils.*
 
@@ -140,6 +141,9 @@ class Builtin { type value markFunction _interfaces
         "#<Builtin{type name} {self name}>"!
 end
 
+class System {}
+end
+
 define Builtins [
      Builtin
          type: Class
@@ -206,7 +210,13 @@ define Builtins [
          value: String
          mark: "foo_mark_bytes"
          directMethods: string.DirectMethods
-         instanceMethods: string.InstanceMethods
+         instanceMethods: string.InstanceMethods,
+    Builtin
+         type: Class
+         value: System
+         mark: "foo_mark_raw"
+         directMethods: system.DirectMethods
+         instanceMethods: system.InstanceMethods
 ]!
 
 class SelectorMap { names }
@@ -358,7 +368,8 @@ class CTranspiler { output selectorMap closureFunctions
                   output println: ";" }.
         output println: "    struct FooContext* ctx = foo_context_new_main(vars);".
         let main = Name mangleGlobal: {name: "Main"}.
-        output println: "    foo_send(ctx, &{Name mangleSelector: #run}, {main}, 0);".
+        output println: "    struct Foo system = \{ .vtable = &FooInstanceVtable_System, .datum = \{ .ptr = NULL } };".
+        output println: "    foo_send(ctx, &{Name mangleSelector: #runIn:}, {main}, 1, system);".
         output println: "    return 0;".
         output println: "}"!
 

@@ -193,7 +193,7 @@ class SyntaxTranslator { env currentMethod }
         aRef name visitBy: self!
 
     method visitAssign: anAssign
-        -- Tracer trace: #visitAssign:.
+        Tracer visitAssign: anAssign.
         (anAssign variable visitBy: self)
             assign: (anAssign value visitBy: self)!
 

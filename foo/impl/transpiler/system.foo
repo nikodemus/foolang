@@ -1,0 +1,8 @@
+define DirectMethods
+    Dictionary new!
+
+define InstanceMethods
+    { #timeSeconds ->
+          {signature: [], vars: 0,
+           body: "return foo_Float_new(system_time_seconds());"}
+          }!
