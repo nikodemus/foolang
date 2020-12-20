@@ -55,7 +55,11 @@ interface TranspilerTest
             = (((system getenv: "GITHUB_ACTION") is False) or: system isUnix)
                 ifTrue: { "-fsanitize=address -fsanitize=undefined" }
                 ifFalse: { "" }.
-        let buildCmd = "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall --std=c11 host/main.c".
+        let target
+            = system isUnix
+                ifTrue: { "unix" }
+                ifFalse: { "windows" }.
+        let buildCmd = "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall --std=c11 host/main.c host/system_{target}.c".
         let build = system command: buildCmd.
         self _reportStderr: build.
         build ok
@@ -89,7 +93,7 @@ class TestTranspileLet { assert system }
 
     method testLet
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  let x = 22.
                                  let y = 2.
                                  (x * y) debug!
@@ -98,7 +102,7 @@ class TestTranspileLet { assert system }
 
     method testLetAssign
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  let x = 22.
                                  let y = 0.
                                  y = 2.
@@ -108,7 +112,7 @@ class TestTranspileLet { assert system }
 
     method testLetAssignOuter
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  let n = 0.
                                  \{ n = 1142 } value.
                                  n debug!
@@ -121,12 +125,12 @@ class TestTranspilePanic { assert system }
 
     method testPanic
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  panic \"Let's Panic You And Me!\"!
                          end"
             expectError: "PANIC: Let's Panic You And Me!
 Backtrace:
-  1: Main class#run
+  1: Main class#runIn:
 "!
 end
 
@@ -135,7 +139,7 @@ class TestTranspilePerformWith { assert system }
 
     method test
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  self doop: 123 boop: 321!
                              direct method perform: selector with: args
                                  selector debug.
@@ -151,7 +155,7 @@ class TestTranspilePreludeAny { assert system }
         self transpile: "import lang.any.Any
 
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (Any is Any) debug!
                          end"
             expect: "#<Boolean True>"!
@@ -165,7 +169,7 @@ class TestTranspilePreludeBoolean { assert system }
         self transpile: "import lang.boolean.*
 
                          class Main \{ x }
-                             direct method run
+                             direct method runIn: system
                                  True not debug.
                                  False not debug!
                          end"
@@ -182,7 +186,7 @@ class TestTranspilePreludeCharacter { assert system }
                          import lang.string -- for String#at:
 
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  let s = \" x \".
                                  1 to: s size
                                    do: \{ |index| (s at: index) isWhitespace debug }!
@@ -197,7 +201,7 @@ class TestTranspilePreludeClosure { assert system }
         self transpile: "import lang.closure.*
 
                          class Main \{ x }
-                             direct method run
+                             direct method runIn: system
                                  (\{ 53 } cull: 123) debug.
                                  (\{ |x| x } cull: 312) debug!
                          end"
@@ -212,7 +216,7 @@ class TestTranspilePreludeException { assert system }
                          import lang.closure.* -- for #on:do:
 
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  \{ self bang }
                                      on: Error
                                      do: \{ 1 debug }.
@@ -232,7 +236,7 @@ Backtrace:
   4: Closure#value
   3: Error interface#withHandler:do:
   2: Block#on:do: (Closure)
-  1: Main class#run
+  1: Main class#runIn:
 "!
 
 end
@@ -244,7 +248,7 @@ class TestTranspilePreludeFloat { assert system }
         self transpile: "import lang.float
 
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  1.0 to: 2.0
                                      do: \{ |each| each debug }!
                          end"
@@ -258,7 +262,7 @@ class TestTranspilePreludeInteger { assert system }
         self transpile: "import lang.integer
 
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  1 to: 3 do: \{ |i| i debug }!
                          end"
             expect: "#<Integer 1>#<Integer 2>#<Integer 3>"!
@@ -270,7 +274,7 @@ class TestTranspilePreludeInterval { assert system }
     method test
         self transpile: "import lang.interval.Interval
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (Interval from: 1 to: 5 by: 2)
                                      do: \{ |each| each debug }!
                          end"
@@ -307,7 +311,7 @@ class TestTranspilePreludeIterable { assert system }
                          end
 
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (MyIterable a: 10 b: 20 c: 30)
                                      do: \{ |each| each debug }!
                          end"
@@ -322,7 +326,7 @@ class TestTranspilePreludeObject { assert system }
 
                          class Main \{ x }
                              is Object
-                             direct method run
+                             direct method runIn: system
                                  ((self x: 1) == (self x: 2)) debug.
                                  ((self x: 1) == (self x: 1)) debug!
                              method isEquivalent: other
@@ -338,7 +342,7 @@ class TestTranspilePreludeRecord { assert system }
         self transpile: "import lang.record_ext.*
 
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  let a1 = \{ foo: 42 }.
                                  let a2 = \{ foo: 42 }.
                                  let b = \{ bar: 42 }.
@@ -357,7 +361,7 @@ class TestTranspilePreludeSelector { assert system }
         self transpile: "import lang.selector_ext.*
 
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  #foo isKeyword debug.
                                  (#foo:) isKeyword debug!
                          end"
@@ -371,7 +375,7 @@ class TestTranspilePreludeString { assert system }
         self transpile: "import lang.string.*
 
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (\" to \" join: [\"a\", \"b\", \"c\"]) debug!
                          end"
             expect: "#<String a to b to c>"!
@@ -384,7 +388,7 @@ class TestTranspilePreludeStringOutput { assert system }
         self transpile: "import lang.stringOutput.StringOutput
 
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (StringOutput with: \{ |out|
                                                         out print: \"O\".
                                                         out print: \"k\".
@@ -401,7 +405,7 @@ class TestTranspilePreludeTest { assert system }
         self transpile: "import lang.test
                          class Main \{}
                              is test.TestSuite
-                             direct method run
+                             direct method runIn: system
                                  self new runTests!
                              method test_a
                                  True!
@@ -424,7 +428,7 @@ class TestTranspileInterface { assert system }
                                  42!
                          end
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  MyInterface boop debug!
                          end"
             expect: "#<Integer 42>"!
@@ -444,7 +448,7 @@ class TestTranspileInterface { assert system }
                                  _value!
                          end
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  MyClass boop ding debug!
                          end"
             expect: "#<Integer 42>"!
@@ -466,7 +470,7 @@ class TestTranspileInterface { assert system }
                                  _value + 1!
                          end
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  MyClass boop ding debug!
                          end"
             expect: "#<Integer 101>"!
@@ -483,7 +487,7 @@ class TestTranspileInterface { assert system }
                                  4102!
                          end
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  MyClass new bar debug!
                          end"
             expect: "#<Integer 4102>"!
@@ -494,7 +498,7 @@ class TestTranspileKeyword { assert system }
 
     method testKeyword
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (self add: 40 and: 5) debug!
                              direct method add: x and: y
                                  x + y!
@@ -508,7 +512,7 @@ class TestTranspileDefine { assert system }
     method testDefineArray1
         self transpile: "define MyArray [1,2,3]!
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  MyArray debug!
                          end"
             expect: "[#<Integer 1>, #<Integer 2>, #<Integer 3>]"!
@@ -516,7 +520,7 @@ class TestTranspileDefine { assert system }
     method testDefineArray2
         self transpile: "define MyArray [[1],[[1]],[[[1]]]]!
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  MyArray debug!
                          end"
             expect: "[[#<Integer 1>], [[#<Integer 1>]], [[[#<Integer 1>]]]]"!
@@ -524,7 +528,7 @@ class TestTranspileDefine { assert system }
     method testDefineBoolean
         self transpile: "define MyBoolean True!
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  MyBoolean debug!
                          end"
             expect: "#<Boolean True>"!
@@ -538,7 +542,7 @@ class TestTranspileDefine { assert system }
                          define MyValue MyClass x: 40 y: 1202!
 
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  MyValue value debug.
                                  MyValue x debug!
                          end"
@@ -547,7 +551,7 @@ class TestTranspileDefine { assert system }
     method testDefineFloat
         self transpile: "define MyFloat 12.34!
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  MyFloat debug!
                          end"
             expect: "#<Float 12.340000>"!
@@ -555,7 +559,7 @@ class TestTranspileDefine { assert system }
     method testDefineInteger
         self transpile: "define MyInteger 1234!
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  MyInteger debug!
                          end"
             expect: "#<Integer 1234>"!
@@ -565,7 +569,7 @@ class TestTranspileDefine { assert system }
                          define MyRecord2 \{ bar: 128947, foo: 99 }!
 
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  MyRecord1 foo debug.
                                  MyRecord2 foo debug!
                          end"
@@ -575,7 +579,7 @@ class TestTranspileDefine { assert system }
         self transpile: "define MySelector #foobar!
 
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  MySelector debug!
                          end"
             expect: "#<Selector foobar>"!
@@ -583,7 +587,7 @@ class TestTranspileDefine { assert system }
     method testDefineString
         self transpile: "define MyString \"foobar\"!
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  MyString debug!
                          end"
             expect: "#<String foobar>"!
@@ -594,14 +598,14 @@ class TestTranspileBlock { assert system }
 
     method testValueValue
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (\{ |a b| a + b } value: 10 value: 30) debug!
                          end"
             expect: "#<Integer 40>"!
 
     method testBlockScope
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  let x = 200.
                                  let b1 = \{ x + 11 * 2 }.
                                  let b2 = \{ let x = 0. b1 value }.
@@ -616,7 +620,7 @@ class TestTranspileSelf { assert system }
 
     method testSelf
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  self foo debug!
                              direct method foo
                                  142!
@@ -625,7 +629,7 @@ class TestTranspileSelf { assert system }
 
     method testSelfClass
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  self new foo debug!
                              method foo
                                  Self bar!
@@ -640,7 +644,7 @@ class TestTranspileBoolean { assert system }
 
     method testBooleanLiteral
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  True debug.
                                  False debug!
                          end"
@@ -648,7 +652,7 @@ class TestTranspileBoolean { assert system }
 
     method testBooleanIfTrueIfFalse
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  True
                                      ifTrue: \{ 42 debug }
                                      ifFalse: \{ 13 debug }.
@@ -660,7 +664,7 @@ class TestTranspileBoolean { assert system }
 
     method testIs
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  let b1 = { 123 }.
                                  let b2 = { 42 }.
                                  (b1 is b2) debug.
@@ -675,7 +679,7 @@ class TestTranspileBoolean { assert system }
 
     method testWhileFalse
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  let n = 0.
                                  \{ n is 10 } whileFalse: \{ n = n + 1 }.
                                  n debug!
@@ -689,28 +693,28 @@ class TestTranspileArray { assert system }
 
     method testOfNewValue
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (Array of: Float new: 3 value: 12.3) debug!
                          end"
             expect: "[#<Float 12.300000>, #<Float 12.300000>, #<Float 12.300000>]"!
 
     method testNewValue
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (Array new: 3 value: True) debug!
                          end"
             expect: "[#<Boolean True>, #<Boolean True>, #<Boolean True>]"!
 
     method testArrayCtor
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  [1, 2, 3] debug!
                          end"
             expect: "[#<Integer 1>, #<Integer 2>, #<Integer 3>]"!
 
     method testArraySize
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  [1, 2, 3] size debug.
                                  [] size debug!
                          end"
@@ -718,14 +722,14 @@ class TestTranspileArray { assert system }
 
     method testArrayAt
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                 ([1,2,3,999,5] at: 4) debug!
                          end"
             expect: "#<Integer 999>"!
 
     method testArrayAtPut
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                 let a = [1,2,3,999,5].
                                 (a at: 4) debug.
                                 a at: 4 put: 42.
@@ -735,7 +739,7 @@ class TestTranspileArray { assert system }
 
     method testArraySums
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                 (self sums: 10) debug!
                              direct method sum: n
                                  let array = Array new: n.
@@ -766,7 +770,7 @@ class TestTranspileBacktrace { assert system }
                          end
                          class Main \{}
                              is Aux
-                             direct method run
+                             direct method runIn: system
                                  self ok!
                              direct method ok
                                  self ok2!
@@ -775,7 +779,7 @@ class TestTranspileBacktrace { assert system }
 Backtrace:
   3: Aux interface#ok2 (Main class)
   2: Main class#ok
-  1: Main class#run
+  1: Main class#runIn:
 "!
 end
 
@@ -788,14 +792,14 @@ class TestTranspileClass { assert system }
                                  123!
                          end
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  MyClass test debug!
                          end"
             expect: "#<Integer 123>"!
 
     method testCtor
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  self new foo debug!
                              method foo
                                  542!
@@ -804,14 +808,14 @@ class TestTranspileClass { assert system }
 
     method testSlotReader
         self transpile: "class Main \{ x }
-                             direct method run
+                             direct method runIn: system
                                 (self x: 129408) x debug!
                          end"
             expect: "#<Integer 129408>"!
 
     method testSlots
         self transpile: "class Main \{ x }
-                             direct method run
+                             direct method runIn: system
                                  let instance = self x: 1021.
                                  instance double.
                                  instance read debug!
@@ -824,7 +828,7 @@ class TestTranspileClass { assert system }
 
     method testPrefixMethod
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  -(self foo) debug!
                              direct method foo
                                  42!
@@ -835,7 +839,7 @@ class TestTranspileClass { assert system }
         self transpile: "class Main \{}
                              direct method prefix-
                                 -123!
-                             direct method run
+                             direct method runIn: system
                                (-self) debug!
                          end"
             expect: "#<Integer -123>"!
@@ -846,7 +850,7 @@ class TestTranspileByteArray { assert system }
 
     method testByteArray1
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  let bytes = ByteArray new: 3.
                                  bytes put: 0 at: 1.
                                  bytes put: 100 at: 2.
@@ -861,7 +865,7 @@ class TestTranspileFinally { assert system }
 
     method testBlockFinally1
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  \{ 1 debug } finally: \{ 2 debug }!
                          end"
             expect: "#<Integer 1>#<Integer 2>"!
@@ -870,7 +874,7 @@ class TestTranspileFinally { assert system }
         self transpile: "class Main \{}
                              direct method test
                                  \{ return 1 } finally: \{ 2 debug }!
-                             direct method run
+                             direct method runIn: system
                                  self test debug!
                          end"
             expect: "#<Integer 2>#<Integer 1>"!
@@ -880,7 +884,7 @@ class TestTranspileFinally { assert system }
                              direct method test
                                 let x = 2.
                                 self inner: \{ |y| \{ return y } finally: \{ x debug } }!
-                             direct method run
+                             direct method runIn: system
                                  self test debug!
                              direct method inner: block
                                  block value: 100!
@@ -893,7 +897,7 @@ class TestTranspileRecord { assert system }
 
     method test
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  let r = \{ foo: 42 }.
                                  r foo debug!
                         end"
@@ -905,7 +909,7 @@ class TestTranspileReturn { assert system }
 
     method testNonLocalReturn
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  self foo debug!
                              direct method foo
                                  100 + (self bar: \{ |x| return x })!
@@ -920,7 +924,7 @@ class TestTranspileSelector { assert system }
 
     method test
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  #foo debug.
                                  (#name sendTo: #bar with: []) debug!
                         end"
@@ -932,14 +936,14 @@ class TestTranspileFloat { assert system }
 
     method testFloatLiteral
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  1.01 debug!
                          end"
             expect: "#<Float 1.010000>"!
 
     method testFloatArithmetic1
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  -(1.01) debug.
                                  (2.0 floatMul: 3.0) debug.
                                  ((1.0 floatAdd: 10.0) floatAdd: 0.1) debug.
@@ -949,7 +953,7 @@ class TestTranspileFloat { assert system }
 
     method testFloatArithmetic2
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (8.0 floatDiv: 2.0) debug.
                                  (0.0 floatMul: 10.0) debug!
                          end"
@@ -957,7 +961,7 @@ class TestTranspileFloat { assert system }
 
     method testFloatEq
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (1.0 floatEq: 1.0) debug.
                                  (1.0 floatEq: 2.0) debug!
                          end"
@@ -965,7 +969,7 @@ class TestTranspileFloat { assert system }
 
     method testFloatIs
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (1.0 is 1.0) debug.
                                  (1.0 is 2.0) debug!
                          end"
@@ -973,7 +977,7 @@ class TestTranspileFloat { assert system }
 
     method testFloatGt
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (1.0 floatGt: 2.0) debug.
                                  (2.0 floatGt: 1.0) debug.
                                  (1.0 floatGt: 1.0) debug!
@@ -982,7 +986,7 @@ class TestTranspileFloat { assert system }
 
     method testFloatGte
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (1.0 floatGte: 2.0) debug.
                                  (2.0 floatGte: 1.0) debug.
                                  (1.0 floatGte: 1.0) debug!
@@ -991,7 +995,7 @@ class TestTranspileFloat { assert system }
 
     method testFloatLt
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (1.0 floatLt: 2.0) debug.
                                  (2.0 floatLt: 1.0) debug.
                                  (1.0 floatLt: 1.0) debug!
@@ -1000,7 +1004,7 @@ class TestTranspileFloat { assert system }
 
     method testFloatLte
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (1.0 floatLte: 2.0) debug.
                                  (2.0 floatLte: 1.0) debug.
                                  (1.0 floatLte: 1.0) debug!
@@ -1013,7 +1017,7 @@ class TestTranspileIncludes { assert system }
 
     method testArrayIncludes
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                 (Array includes: [1, 2, 3]) debug.
                                 (Array includes: 123) debug!
                          end"
@@ -1025,42 +1029,42 @@ class TestTranspileInteger { assert system }
 
     method testLiteralInteger
         self transpile: "class Main \{}
-                             direct method run -- FIXME: : cmd in: sys
+                             direct method runIn: system -- FIXME: : cmd in: sys
                                  123 debug!
                          end"
              expect: "#<Integer 123>"!
 
     method testIntegerAdd
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (10 + 100 + 1) debug!
                          end"
              expect: "#<Integer 111>"!
 
     method testIntegerMul
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (10 * 100) debug!
                          end"
              expect: "#<Integer 1000>"!
 
     method testIntegerDiv
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (20 / 2) debug!
                          end"
              expect: "#<Integer 10>"!
 
     method testIntegerSub
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (20 - 2) debug!
                          end"
              expect: "#<Integer 18>"!
 
     method testIntegerEquals
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (1 == 2) debug.
                                  (1 == 1) debug!
                          end"
@@ -1068,7 +1072,7 @@ class TestTranspileInteger { assert system }
 
     method testIntegerGreaterThan
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (1 > 2) debug.
                                  (2 > 1) debug.
                                  (1 > 1) debug!
@@ -1077,7 +1081,7 @@ class TestTranspileInteger { assert system }
 
     method testIntegerGreaterThanOrEqual
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (1 >= 2) debug.
                                  (2 >= 1) debug.
                                  (1 >= 1) debug!
@@ -1086,7 +1090,7 @@ class TestTranspileInteger { assert system }
 
     method testIntegerLessThan
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (1 < 2) debug.
                                  (2 < 1) debug.
                                  (1 < 1) debug!
@@ -1095,7 +1099,7 @@ class TestTranspileInteger { assert system }
 
     method testIntegerLessThanOrEqual
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (1 <= 2) debug.
                                  (2 <= 1) debug.
                                  (1 <= 1) debug!
@@ -1108,21 +1112,21 @@ class TestTranspileString { assert system }
 
     method testStringCodeAt
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (\"aaaxbbb\" codeAt: 4) debug!
                          end"
             expect: "#<Integer 120>"!
 
     method testStringLiteral
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  \"foo\" debug!
                          end"
             expect: "#<String foo>"!
 
     method testStringEquivalent
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (\"foo\" isEquivalent: \"foo\") debug.
                                  (\"foo\" isEquivalent: \"Foo\") debug!
                          end"
@@ -1130,7 +1134,7 @@ class TestTranspileString { assert system }
 
     method testStringFromTo
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  ((self string) from: 3 to: 5) debug!
                              direct method string
                                  \"XXbarXX\"!
@@ -1139,7 +1143,7 @@ class TestTranspileString { assert system }
 
     method testStringFromToEmpty
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  ((self string) from: 3 to: 2) debug!
                              direct method string
                                  \"XXbarXX\"!
@@ -1148,12 +1152,28 @@ class TestTranspileString { assert system }
 
     method testStringSize
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  self string size debug!
                              direct method string
                                  \"1234567890\"!
                          end"
             expect: "#<Integer 10>"!
+end
+
+class TestTranspileSystem { assert system }
+    is TranspilerTest
+
+    method testTimeSeconds
+        self transpile: "class Main \{}
+                             direct method runIn: system
+                                 let t1 = system timeSeconds.
+                                 let i = 0.
+                                 \{ i is 1000 }
+                                     whileFalse: \{ i = i + 1 }.
+                                 let t2 = system timeSeconds.
+                                 (t1 floatLt: t2) debug!
+                         end"
+            expect: "#<Boolean True>"!
 end
 
 class TestTranspileDynamic { assert system }
@@ -1162,7 +1182,7 @@ class TestTranspileDynamic { assert system }
     method testDynamicDefine
         self transpile: "define $MyVar 999!
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  self foo debug!
                              direct method foo
                                  $MyVar!
@@ -1172,7 +1192,7 @@ class TestTranspileDynamic { assert system }
     method testDynamicBindBinds
         self transpile: "define $MyVar 999!
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  \{ let $MyVar = 1234.
                                     self foo debug } value!
                              direct method foo
@@ -1183,7 +1203,7 @@ class TestTranspileDynamic { assert system }
     method testDynamicBindRestores
         self transpile: "define $MyVar 999!
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  \{ let $MyVar = 1234.
                                     self foo } value debug.
                                  self foo debug!
@@ -1195,7 +1215,7 @@ class TestTranspileDynamic { assert system }
     method testDynamicBindRestoresOnUnwind
         self transpile: "define $MyVar 999!
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  self bar debug.
                                  self foo debug!
                              direct method bar
@@ -1220,7 +1240,7 @@ class TestTranspileExtend { assert system }
                                   self bar * 2!
                          end
                          class Main \{}
-                              direct method run
+                              direct method runIn: system
                                   MyClass new foo debug!
                          end"
             expect: "#<Integer 84>"!
@@ -1231,7 +1251,7 @@ class TestTranspileExtend { assert system }
                                  1239812798!
                          end
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  0 doopdoop debug!
                          end"
             expect: "#<Integer 1239812798>"!
@@ -1249,7 +1269,7 @@ class TestTranspileExtend { assert system }
                                   self bar * 2!
                          end
                          class Main \{}
-                              direct method run
+                              direct method runIn: system
                                   MyClass new foo debug!
                          end"
             expect: "#<Integer 84>"!
@@ -1260,19 +1280,19 @@ class TestTranspileTypecheck01 { assert system }
 
     method testIntegerValueOk
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (12::Integer) debug!
                          end"
             expect: "#<Integer 12>"!
 
     method testIntegerValueOops
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (1.2::Integer) debug!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  1: Main class#run
+  1: Main class#runIn:
 "!
 end
 
@@ -1281,7 +1301,7 @@ class TestTranspileTypecheck02 { assert system }
 
     method testIntegerMethodArgOk
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  self foo: 12!
                              direct method foo: x::Integer
                                  x debug!
@@ -1290,7 +1310,7 @@ class TestTranspileTypecheck02 { assert system }
 
     method testIntegerMethodArgOops
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  self foo: 1.2!
                              direct method foo: x::Integer
                                  x debug!
@@ -1298,7 +1318,7 @@ class TestTranspileTypecheck02 { assert system }
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
   2: Main class#foo:
-  1: Main class#run
+  1: Main class#runIn:
 "!
 end
 
@@ -1307,20 +1327,20 @@ class TestTranspileTypecheck03 { assert system }
 
     method testIntegerBlockArgOk
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  \{ |x::Integer| x debug } value: 12!
                          end"
             expect: "#<Integer 12>"!
 
     method testIntegerBlockArgOops
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  \{ |x::Integer| x debug } value: 1.2!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
   2: Closure#value:
-  1: Main class#run
+  1: Main class#runIn:
 "!
 end
 
@@ -1336,7 +1356,7 @@ class TestTranspileTypecheck04 { assert system }
                                  9!
                          end
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  MyClass new :: MyInterface value debug!
                          end"
             expect: "#<Integer 9>"!
@@ -1345,12 +1365,12 @@ class TestTranspileTypecheck04 { assert system }
         self transpile: "interface MyInterface
                          end
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  42 :: MyInterface value debug!
                          end"
             expectError: "PANIC: Type error! Wanted: MyInterface, got: Integer
 Backtrace:
-  1: Main class#run
+  1: Main class#runIn:
 "!
 
 end
@@ -1360,7 +1380,7 @@ class TestTranspileTypecheck05 { assert system }
 
     method testLetOk
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  let x :: Integer = 42.
                                  x debug!
                          end"
@@ -1368,13 +1388,13 @@ class TestTranspileTypecheck05 { assert system }
 
     method testLetOops
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  let x :: Integer = 42.12.
                                  x debug!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  1: Main class#run
+  1: Main class#runIn:
 "!
 end
 
@@ -1383,19 +1403,19 @@ class TestTranspileTypecheck06 { assert system }
 
     method testAssignOops
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  let x :: Integer = 42.
                                  x = 12.23.
                                  x debug!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  1: Main class#run
+  1: Main class#runIn:
 "!
 
     method testSlotTypeInitOk
         self transpile: "class Main \{ x::Integer }
-                             direct method run
+                             direct method runIn: system
                                  (self x: 42) x debug!
                              method x
                                  x!
@@ -1409,7 +1429,7 @@ class TestTranspileTypecheck07 { assert system }
 
     method testSlotTypeInitOops
         self transpile: "class Main \{ x::Integer }
-                             direct method run
+                             direct method runIn: system
                                  (self x: 42.42) x debug!
                              method x
                                  x!
@@ -1417,12 +1437,12 @@ class TestTranspileTypecheck07 { assert system }
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
   2: Main class#x:
-  1: Main class#run
+  1: Main class#runIn:
 "!
 
     method testSlotTypeAssignOk
         self transpile: "class Main \{ x::Integer }
-                             direct method run
+                             direct method runIn: system
                                  (self x: 0) frob debug!
                              method frob
                                  x = 42.
@@ -1437,7 +1457,7 @@ class TestTranspileTypecheck08 { assert system }
 
     method testSlotTypeAssignOops
         self transpile: "class Main \{ x::Integer }
-                             direct method run
+                             direct method runIn: system
                                  (self x: 0) frob debug!
                              method frob
                                  x = 42.123.
@@ -1446,12 +1466,12 @@ class TestTranspileTypecheck08 { assert system }
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
   2: Main#frob
-  1: Main class#run
+  1: Main class#runIn:
 "!
 
     method testMethodReturnTypeOk
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  self foo debug!
                              direct method foo -> Integer
                                  42!
@@ -1464,7 +1484,7 @@ class TestTranspileTypecheck09 { assert system }
 
     method testMethodReturnTypeOops
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  self foo debug!
                              direct method foo -> Integer
                                  42.42!
@@ -1472,12 +1492,12 @@ class TestTranspileTypecheck09 { assert system }
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
   2: Main class#foo
-  1: Main class#run
+  1: Main class#runIn:
 "!
 
     method testMethodNonLocalReturnTypeOk
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  self foo debug!
                              direct method foo -> Integer
                                  self bar: \{ return 427 }!
@@ -1493,7 +1513,7 @@ class TestTranspileTypecheck10 { assert system }
 
     method testMethodNonLocalReturnTypeOops
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  self foo debug!
                              direct method foo -> Integer
                                  self bar: \{ return 42.32 }!
@@ -1506,12 +1526,12 @@ Backtrace:
   4: Closure#value
   3: Main class#bar:
   2: Main class#foo
-  1: Main class#run
+  1: Main class#runIn:
 "!
 
     method testBlockReturnTypeOk
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                 (\{ |a| -> Integer a } value: 42) debug!
                          end"
             expect: "#<Integer 42>"!
@@ -1522,13 +1542,13 @@ class TestTranspileTypecheck11 { assert system }
 
     method testBlockReturnTypeOops
         self transpile: "class Main \{}
-                             direct method run
+                             direct method runIn: system
                                 (\{ |a| -> Integer a } value: 42.32) debug!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
   2: Closure#value:
-  1: Main class#run
+  1: Main class#runIn:
 "!
 
     method testClassTypeIncludes
@@ -1536,7 +1556,7 @@ Backtrace:
                          class B \{} end
 
                          class Main \{}
-                             direct method run
+                             direct method runIn: system
                                  (A includes: (A new)) debug.
                                  (A includes: (B new)) debug!
                          end"
@@ -1584,6 +1604,7 @@ class Main {}
             "--self" -> TestTranspileSelf,
             "--selector" -> TestTranspileSelector,
             "--string" -> TestTranspileString,
+            "--system" -> TestTranspileSystem,
             "--typecheck-01" -> TestTranspileTypecheck01,
             "--typecheck-02" -> TestTranspileTypecheck02,
             "--typecheck-03" -> TestTranspileTypecheck03,
