@@ -130,7 +130,7 @@ class TestTranspilePanic { assert system }
                          end"
             expectError: "PANIC: Let's Panic You And Me!
 Backtrace:
-  1: Main class#run: command in:
+  1: Main class#run:in:
 "!
 end
 
