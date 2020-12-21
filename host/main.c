@@ -10,12 +10,24 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <sys/stat.h>
+
 #undef NDEBUG
 #include <assert.h>
 
 #ifdef _WIN32
 #include <io.h>
 #include <fcntl.h>
+#define sys_stat _stat
+#define sys_access _access
+#define SYS_ISDIR(s) (_S_IFDIR & s)
+#define SYS_ISREG(s) (_S_IFREG & s)
+#else
+#include <unistd.h>
+#define sys_stat stat
+#define sys_access access
+#define SYS_ISDIR S_ISDIR
+#define SYS_ISREG S_ISREG
 #endif
 
 #include "system.h"
@@ -690,6 +702,13 @@ struct FooBytes* FooBytes_alloc(size_t len) {
   struct FooBytes* bytes = (struct FooBytes*)foo_alloc(sizeof(struct FooBytes) + len + 1);
   bytes->gc = true;
   bytes->size = len;
+  return bytes;
+}
+
+struct FooBytes* FooBytes_from(const char* s) {
+  size_t len = strlen(s);
+  struct FooBytes* bytes = FooBytes_alloc(len);
+  memcpy(bytes->data, s, len);
   return bytes;
 }
 
