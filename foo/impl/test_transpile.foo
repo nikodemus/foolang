@@ -1193,7 +1193,7 @@ class TestTranspileSystem { assert system }
     method testOutput
         self transpile: "class Main \{}
                              direct method run: command in: system
-                                 system output print: \"Hello!\"!
+                                 system output writeString: \"Hello!\"!
                          end"
              expect: "Hello!"!
 
