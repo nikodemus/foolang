@@ -192,7 +192,7 @@ define Builtins [
          value: Output
          mark: "foo_mark_raw"
          directMethods: output.DirectMethods
-         instanceMethods: Dictionary new,
+         instanceMethods: output.InstanceMethods,
      Builtin
          type: Interface
          value: Record

@@ -335,6 +335,21 @@ class TestTranspilePreludeObject { assert system }
             expect: "#<Boolean False>#<Boolean True>"!
 end
 
+class TestTranspilePreludeOutput { assert system }
+    is TranspilerTest
+
+    method test
+        self transpile: "import lang.output.Output
+                         import lang.integer
+
+                         class Main \{ x }
+                             direct method run: command in: system
+                                 system output println: \"Hello World!\".
+                                 system output print: 42!
+                         end"
+            expect: "Hello World!\n42"!
+end
+
 class TestTranspilePreludeRecord { assert system }
     is TranspilerTest
 
@@ -1175,6 +1190,13 @@ class TestTranspileSystem { assert system }
                          end"
             expect: "#<Boolean True>"!
 
+    method testOutput
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                 system output writeString: \"Hello!\"!
+                         end"
+             expect: "Hello!"!
+
     method testCommandArgs
         self transpile: "class Main \{}
                              direct method run: command in: system
@@ -1601,6 +1623,7 @@ class Main {}
             "--prelude-interval" -> TestTranspilePreludeInterval,
             "--prelude-iterable" -> TestTranspilePreludeIterable,
             "--prelude-object" -> TestTranspilePreludeObject,
+            "--prelude-output" -> TestTranspilePreludeOutput,
             "--prelude-record" -> TestTranspilePreludeRecord,
             "--prelude-selector" -> TestTranspilePreludeSelector,
             "--prelude-string" -> TestTranspilePreludeString,

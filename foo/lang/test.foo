@@ -1,5 +1,6 @@
 import .list.List
 import .exception.*
+import .output
 
 interface TestSuite
     method runTests
