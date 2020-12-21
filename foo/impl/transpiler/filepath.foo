@@ -1,0 +1,41 @@
+define DirectMethods
+    Dictionary new!
+
+-- FIXME: #exists swallows access errors
+define InstanceMethods {
+    #/
+    -> { signature: [String], vars: 0,
+         body: "struct FooBytes* b1 = PTR(FooBytes, ctx->receiver.datum);
+                struct FooBytes* b2 = PTR(FooBytes, ctx->frame[0].datum);
+                struct FooBytes* b3 = FooBytes_alloc(b1->size + b2->size + 1);
+                memcpy(b3->data, b1->data, b1->size);
+                b3->data[b1->size] = '/';
+                memcpy(b3->data + b1->size + 1, b2->data, b2->size);
+                return (struct Foo)\{ .vtable = &FooInstanceVtable_FilePath, .datum = \{ .ptr = b3 } };" },
+    #deleteFile
+    -> { signature: [], vars: 0,
+         body: "return foo_Boolean_new(
+                    0 == remove((char*)PTR(FooBytes, ctx->receiver.datum)->data));" },
+    #exists
+    -> { signature: [], vars: 0,
+         body: "return foo_Boolean_new(
+                    0 == sys_access((char*)PTR(FooBytes, ctx->receiver.datum)->data, 0));" },
+    #file
+    -> { signature: [], vars: 0,
+         body: "foo_panicf(ctx, \"FilePath#file not implemented yet.\");" },
+    #isDirectory
+    -> { signature: [], vars: 0,
+         body: "struct sys_stat s;
+                if (sys_stat((char*)PTR(FooBytes, ctx->receiver.datum)->data, &s))
+                    return foo_Boolean_new(false);
+                return foo_Boolean_new(SYS_ISDIR(s.st_mode));" },
+    #isFile
+    -> { signature: [], vars: 0,
+         body: "struct sys_stat s;
+                if (sys_stat((char*)PTR(FooBytes, ctx->receiver.datum)->data, &s))
+                    return foo_Boolean_new(false);
+                return foo_Boolean_new(SYS_ISREG(s.st_mode));" },
+    #toString
+    -> { signature: [], vars: 0,
+         body: "return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = ctx->receiver.datum };" },
+}!

@@ -4,6 +4,7 @@ import .transpiler.boolean
 import .transpiler.byte_array
 import .transpiler.character
 import .transpiler.closure
+import .transpiler.filepath
 import .transpiler.float
 import .transpiler.integer
 import .transpiler.name.Name
@@ -175,6 +176,12 @@ define Builtins [
          mark: "foo_mark_closure"
          directMethods: Dictionary new
          instanceMethods: closure.InstanceMethods,
+     Builtin
+         type: Class
+         value: FilePath
+         mark: "foo_mark_bytes"
+         directMethods: filepath.DirectMethods
+         instanceMethods: filepath.InstanceMethods,
      Builtin
          type: Class
          value: Float

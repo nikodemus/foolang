@@ -241,6 +241,45 @@ Backtrace:
 
 end
 
+class TestTranspilePreludeFilePath { assert system }
+    is TranspilerTest
+
+    method testExists
+        self transpile: "class Main \{}
+                              direct method run: command in: system
+                                  (system files / \"foo\") exists debug.
+                                  (system files / \"nosuchthing\") exists debug!
+                         end"
+             expect: "#<Boolean True>#<Boolean False>"!
+
+    method testToString
+        self transpile: "class Main \{}
+                              direct method run: command in: system
+                                  (system files / \"foo\") toString debug!
+                         end"
+             expect: "#<String ./foo>"!
+
+    method testIsDirectory
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                 let foo = system files / \"foo\".
+                                 let readme = system files / \"README.md\".
+                                 foo isDirectory debug.
+                                 readme isDirectory debug!
+                         end"
+             expect: "#<Boolean True>#<Boolean False>"!
+
+    method testIsFile
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                 let foo = system files / \"foo\".
+                                 let readme = system files / \"README.md\".
+                                 readme isFile debug.
+                                 foo isFile debug!
+                         end"
+             expect: "#<Boolean True>#<Boolean False>"!
+end
+
 class TestTranspilePreludeFloat { assert system }
     is TranspilerTest
 
@@ -1618,6 +1657,7 @@ class Main {}
             "--prelude-character" -> TestTranspilePreludeCharacter,
             "--prelude-closure" -> TestTranspilePreludeClosure,
             "--prelude-exception" -> TestTranspilePreludeException,
+            "--prelude-filepath" -> TestTranspilePreludeFilePath,
             "--prelude-float" -> TestTranspilePreludeFloat,
             "--prelude-integer" -> TestTranspilePreludeInteger,
             "--prelude-interval" -> TestTranspilePreludeInterval,
