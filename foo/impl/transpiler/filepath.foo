@@ -7,6 +7,10 @@ define InstanceMethods {
     -> { signature: [String], vars: 0,
          body: "struct FooBytes* b1 = PTR(FooBytes, ctx->receiver.datum);
                 struct FooBytes* b2 = PTR(FooBytes, ctx->frame[0].datum);
+                if (b2->size == 0)
+                    foo_panicf(ctx, \"Invalid pathname in FilePath#/\");
+                if (b1->size == 0)
+                    return (struct Foo)\{ .vtable = &FooInstanceVtable_FilePath, .datum = \{ .ptr = b2 } };
                 struct FooBytes* b3 = FooBytes_alloc(b1->size + b2->size + 1);
                 memcpy(b3->data, b1->data, b1->size);
                 b3->data[b1->size] = '/';

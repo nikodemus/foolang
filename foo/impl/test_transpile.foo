@@ -289,19 +289,25 @@ class TestTranspilePreludeFilePath { assert system }
     is TranspilerTest
 
     method testExists
-        self transpile: "class Main \{}
+        self transpile: "import lang.filepath
+                         class Main \{}
                               direct method run: command in: system
-                                  (system files / \"foo\") exists debug.
-                                  (system files / \"nosuchthing\") exists debug!
+                                  (system files / \"foo\")
+                                      ifExists: \{ system output writeString: \"foo ok, \" }
+                                      ifDoesNotExist: \{ system output writeString: \"no foo! \"}.
+                                  (system files / \"nosuchthing\")
+                                      ifExists: \{ system output writeString: \"nosuchthing exists!\" }
+                                      ifDoesNotExist: \{ system output writeString: \"nosuchthing ok\"}!
                          end"
-             expect: "#<Boolean True>#<Boolean False>"!
+             expect: "foo ok, nosuchthing ok"!
 
     method testFile
-        self transpile: "class Main \{}
+        self transpile: "import lang.filepath
+                         class Main \{}
                              direct method run: command in: system
-                                 (system files / \"README.md\") file pathname debug!
+                                 (system files / \"README.md\") pathname printOn: system output!
                          end"
-            expect: "#<String ./README.md>"!
+            expect: "README.md"!
 
     method testIsDirectory
         self transpile: "class Main \{}

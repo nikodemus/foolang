@@ -1,3 +1,5 @@
+import .closure
+
 extend FilePath
     method displayOn: stream
         stream print: self toString!
@@ -7,6 +9,8 @@ extend FilePath
         self file forRead!
     method forWrite
         self file forWrite!
+    method pathname
+        self toString!
     method readString
         self forRead open: { |f| f readString }!
     method readString: path
