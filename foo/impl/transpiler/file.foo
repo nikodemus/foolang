@@ -1,0 +1,44 @@
+-- KLUDGE: layout defined in main.c, which I'm not
+-- entirely happy about
+
+define DirectMethods
+    Dictionary new!
+
+define InstanceMethods {
+    #forAppend
+    -> { signature: [], vars: 0,
+         body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
+                return foo_File_new(file->path, (file->mode | FooFile_APPEND) & ~FooFile_WRITE);" },
+    #forRead
+    -> { signature: [], vars: 0,
+         body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
+                return foo_File_new(file->path, file->mode | FooFile_READ);" },
+    #forWrite
+    -> { signature: [], vars: 0,
+         body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
+                return foo_File_new(file->path, (file->mode | FooFile_WRITE) & ~FooFile_APPEND);" },
+    #isAppend
+    -> { signature: [], vars: 0,
+         body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
+                return foo_Boolean_new(file->mode & FooFile_APPEND);" },
+    #isRead
+    -> { signature: [], vars: 0,
+         body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
+                return foo_Boolean_new(file->mode & FooFile_READ);" },
+    #isTruncate
+    -> { signature: [], vars: 0,
+         body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
+                return foo_Boolean_new(file->mode & FooFile_TRUNCATE);" },
+    #isWrite
+    -> { signature: [], vars: 0,
+         body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
+                return foo_Boolean_new(file->mode & FooFile_WRITE);" },
+    #pathname
+    -> { signature: [], vars: 0,
+         body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
+                return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = \{ .ptr = file->path } };" },
+    #truncateExisting
+    -> { signature: [], vars: 0,
+         body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
+                return foo_File_new(file->path, file->mode | FooFile_TRUNCATE);" },
+}!

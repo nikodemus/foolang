@@ -138,10 +138,16 @@ struct FooArray {
 };
 
 struct FooBytes {
-  // KLUDGE: tells the GC is this should be traced or not
   bool gc;
   size_t size;
   uint8_t data[];
+};
+
+// FIXME: Don't like defining this in C.
+struct FooFile {
+  bool gc;
+  struct FooBytes* path;
+  size_t mode;
 };
 
 struct FooSlot {
@@ -810,6 +816,16 @@ void foo_mark_bytes(void* ptr) {
   EXIT_TRACE();
 }
 
+void foo_mark_file(void* ptr) {
+  ENTER_TRACE("mark_bytes");
+  struct FooFile* file = ptr;
+  if (file->gc) {
+    foo_mark_live(file);
+    foo_mark_bytes(file->path);
+  }
+  EXIT_TRACE();
+}
+
 void foo_mark_context(struct FooContext* ctx);
 
 void foo_mark_object(struct Foo obj) {
@@ -958,8 +974,24 @@ void* foo_alloc(size_t size) {
   return p->data;
 }
 
+const size_t FooFile_READ      = 0b0001;
+const size_t FooFile_WRITE     = 0b0010;
+const size_t FooFile_APPEND    = 0b0100;
+const size_t FooFile_WRITEMASK = 0b0110;
+const size_t FooFile_TRUNCATE  = 0b1000;
+
+struct Foo foo_File_new(struct FooBytes* path, size_t mode);
+
 #include "generated_declarations.h"
 #include "generated_constants.c"
 #include "generated_builtins.c"
 #include "generated_closures.c"
 #include "generated_main.c"
+
+struct Foo foo_File_new(struct FooBytes* path, size_t mode) {
+  struct FooFile* file = foo_alloc(sizeof(struct FooFile));
+  file->gc = true;
+  file->path = path;
+  file->mode = mode;
+  return (struct Foo){ .vtable = &FooInstanceVtable_File, .datum = { .ptr = file } };
+}

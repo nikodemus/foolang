@@ -241,6 +241,50 @@ Backtrace:
 
 end
 
+class TestTranspilePreludeFile { assert system }
+    is TranspilerTest
+
+    method testForAppend
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                 let f = (system files / \"new\") file.
+                                 f isAppend debug.
+                                 f forAppend isAppend debug.
+                                 f isAppend debug!
+                         end"
+            expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
+
+    method testForRead
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                 let f = (system files / \"new\") file.
+                                 f isRead debug.
+                                 f forRead isRead debug.
+                                 f isRead debug!
+                         end"
+            expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
+
+    method testForWrite
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                 let f = (system files / \"new\") file.
+                                 f isWrite debug.
+                                 f forWrite isWrite debug.
+                                 f isWrite debug!
+                         end"
+            expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
+
+    method testTruncateExisting
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                 let f = (system files / \"new\") file.
+                                 f isTruncate debug.
+                                 f truncateExisting isTruncate debug.
+                                 f isTruncate debug!
+                         end"
+            expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
+end
+
 class TestTranspilePreludeFilePath { assert system }
     is TranspilerTest
 
@@ -252,12 +296,12 @@ class TestTranspilePreludeFilePath { assert system }
                          end"
              expect: "#<Boolean True>#<Boolean False>"!
 
-    method testToString
+    method testFile
         self transpile: "class Main \{}
-                              direct method run: command in: system
-                                  (system files / \"foo\") toString debug!
+                             direct method run: command in: system
+                                 (system files / \"README.md\") file pathname debug!
                          end"
-             expect: "#<String ./foo>"!
+            expect: "#<String ./README.md>"!
 
     method testIsDirectory
         self transpile: "class Main \{}
@@ -267,7 +311,7 @@ class TestTranspilePreludeFilePath { assert system }
                                  foo isDirectory debug.
                                  readme isDirectory debug!
                          end"
-             expect: "#<Boolean True>#<Boolean False>"!
+            expect: "#<Boolean True>#<Boolean False>"!
 
     method testIsFile
         self transpile: "class Main \{}
@@ -278,6 +322,14 @@ class TestTranspilePreludeFilePath { assert system }
                                  foo isFile debug!
                          end"
              expect: "#<Boolean True>#<Boolean False>"!
+
+    method testToString
+        self transpile: "class Main \{}
+                              direct method run: command in: system
+                                  (system files / \"foo\") toString debug!
+                         end"
+             expect: "#<String ./foo>"!
+
 end
 
 class TestTranspilePreludeFloat { assert system }
@@ -1657,6 +1709,7 @@ class Main {}
             "--prelude-character" -> TestTranspilePreludeCharacter,
             "--prelude-closure" -> TestTranspilePreludeClosure,
             "--prelude-exception" -> TestTranspilePreludeException,
+            "--prelude-file" -> TestTranspilePreludeFile,
             "--prelude-filepath" -> TestTranspilePreludeFilePath,
             "--prelude-float" -> TestTranspilePreludeFloat,
             "--prelude-integer" -> TestTranspilePreludeInteger,
