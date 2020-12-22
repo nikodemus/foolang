@@ -274,6 +274,16 @@ class TestTranspilePreludeFile { assert system }
                          end"
             expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
 
+    method testOpenBlock
+        self transpile: "import lang.file
+                         class Main \{}
+                             direct method run: command in: system
+                                 let f = (system files / \"test.tmp\") file.
+                                 f forWrite truncateExisting createOrOpen: \{ |s| s writeString: \"test ok\" }.
+                                 f readString printOn: system output!
+                         end"
+            expect: "test ok"!
+
     method testTruncateExisting
         self transpile: "class Main \{}
                              direct method run: command in: system
@@ -289,19 +299,25 @@ class TestTranspilePreludeFilePath { assert system }
     is TranspilerTest
 
     method testExists
-        self transpile: "class Main \{}
+        self transpile: "import lang.filepath
+                         class Main \{}
                               direct method run: command in: system
-                                  (system files / \"foo\") exists debug.
-                                  (system files / \"nosuchthing\") exists debug!
+                                  (system files / \"foo\")
+                                      ifExists: \{ system output writeString: \"foo ok, \" }
+                                      ifDoesNotExist: \{ system output writeString: \"no foo! \"}.
+                                  (system files / \"nosuchthing\")
+                                      ifExists: \{ system output writeString: \"nosuchthing exists!\" }
+                                      ifDoesNotExist: \{ system output writeString: \"nosuchthing ok\"}!
                          end"
-             expect: "#<Boolean True>#<Boolean False>"!
+             expect: "foo ok, nosuchthing ok"!
 
     method testFile
-        self transpile: "class Main \{}
+        self transpile: "import lang.filepath
+                         class Main \{}
                              direct method run: command in: system
-                                 (system files / \"README.md\") file pathname debug!
+                                 (system files / \"README.md\") pathname printOn: system output!
                          end"
-            expect: "#<String ./README.md>"!
+            expect: "README.md"!
 
     method testIsDirectory
         self transpile: "class Main \{}
@@ -328,7 +344,7 @@ class TestTranspilePreludeFilePath { assert system }
                               direct method run: command in: system
                                   (system files / \"foo\") toString debug!
                          end"
-             expect: "#<String ./foo>"!
+             expect: "#<String foo>"!
 
 end
 
@@ -356,6 +372,20 @@ class TestTranspilePreludeFileStream { assert system }
                                 test deleteFile!
                          end"
             expect: "This is a test! a test! is a test!"!
+
+
+    method testSize
+        self transpile: "import lang.filestream
+                         import lang.filepath
+                         import lang.file
+                         class Main \{}
+                             direct method run: command in: system
+                                 let size = (system files / \"README.md\") forRead
+                                     open: \{ |s| s size }.
+                                 (size > 1000) debug.
+                                 (size < 2000) debug!
+                         end"
+            expect: "#<Boolean True>#<Boolean True>"!
 end
 
 class TestTranspilePreludeFloat { assert system }

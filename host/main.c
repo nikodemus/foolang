@@ -1048,7 +1048,7 @@ struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size
     // Eg. open for append, don't create. FIXME: Need to implement on top of
     // open() instead, but windows compat via _sopen_s is more than one line for
     // that, so skipping for now.
-    foo_panicf(ctx, "Unsupported file mode!");
+    foo_panicf(ctx, "Unsupported file mode & flags: mode=%zu, flags=%zu!", file->mode, flags);
   }
   stream->ptr = fopen((char*)file->pathname->data, mode);
   if (!stream->ptr) {

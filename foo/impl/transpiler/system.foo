@@ -4,7 +4,7 @@ define DirectMethods
 define InstanceMethods {
     #files
     -> { signature: [], vars: 0,
-         body: "struct FooBytes* root = FooBytes_from(\".\");
+         body: "struct FooBytes* root = FooBytes_from(\"\");
                 return (struct Foo)\{ .vtable = &FooInstanceVtable_FilePath, .datum = \{ .ptr = root } };" },
     #output
     -> { signature: [], vars: 0,
