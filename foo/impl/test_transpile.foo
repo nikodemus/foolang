@@ -372,6 +372,20 @@ class TestTranspilePreludeFileStream { assert system }
                                 test deleteFile!
                          end"
             expect: "This is a test! a test! is a test!"!
+
+
+    method testSize
+        self transpile: "import lang.filestream
+                         import lang.filepath
+                         import lang.file
+                         class Main \{}
+                             direct method run: command in: system
+                                 let size = (system files / \"README.md\") forRead
+                                     open: \{ |s| s size }.
+                                 (size > 1000) debug.
+                                 (size < 2000) debug!
+                         end"
+            expect: "#<Boolean True>#<Boolean True>"!
 end
 
 class TestTranspilePreludeFloat { assert system }

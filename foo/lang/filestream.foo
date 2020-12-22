@@ -68,7 +68,8 @@ extend FileStream
 
     method size
         let pos = self offset.
-        { self offsetFromEnd: 0 } finally: { self offset: pos }!
+        { self offsetFromEnd: 0. self offset }
+            finally: { self offset: pos }!
 
     method writeBytes: bytes
         self write: bytes size bytesFrom: bytes at: 1!
