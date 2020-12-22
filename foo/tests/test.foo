@@ -2,7 +2,6 @@ import lib.assert.Assert
 import lib.si.SI_Tests
 
 import lang.dictionary.TestDictionary
-import lang.filepath.TestFilePath
 import lang.filestream.TestFileStream
 import lang.selector.TestSelector
 import lang.test_array.TestArray
@@ -11,6 +10,7 @@ import lang.test_byteArray.TestByteArray
 import lang.test_byteArray.TestByteArrayAsIterable
 import lang.test_character.TestCharacter
 import lang.test_closure.TestClosure
+import lang.test_filepath.TestFilePath
 import lang.test_integer.TestInteger
 import lang.test_list.TestList
 import lang.test_list.TestListAsIterable
