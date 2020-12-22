@@ -6,6 +6,7 @@ import .transpiler.character
 import .transpiler.closure
 import .transpiler.file
 import .transpiler.filepath
+import .transpiler.filestream
 import .transpiler.float
 import .transpiler.integer
 import .transpiler.name.Name
@@ -189,6 +190,12 @@ define Builtins [
          mark: "foo_mark_bytes"
          directMethods: filepath.DirectMethods
          instanceMethods: filepath.InstanceMethods,
+     Builtin
+         type: Class
+         value: FileStream
+         mark: "foo_mark_filestream"
+         directMethods: filestream.DirectMethods
+         instanceMethods: filestream.InstanceMethods,
      Builtin
          type: Class
          value: Float
