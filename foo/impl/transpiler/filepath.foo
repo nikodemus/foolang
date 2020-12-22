@@ -22,7 +22,7 @@ define InstanceMethods {
                     0 == sys_access((char*)PTR(FooBytes, ctx->receiver.datum)->data, 0));" },
     #file
     -> { signature: [], vars: 0,
-         body: "foo_panicf(ctx, \"FilePath#file not implemented yet.\");" },
+         body: "return foo_File_new(PTR(FooBytes, ctx->receiver.datum), 0);" },
     #isDirectory
     -> { signature: [], vars: 0,
          body: "struct sys_stat s;
