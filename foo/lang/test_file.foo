@@ -1,0 +1,48 @@
+class TestFile {}
+    direct method runTests: assert in: system
+        let file = system currentDirectory file.
+        assert false: { file isAppend }
+               testing: "FilePath#file creates file without append".
+        assert false: { file isRead }
+               testing: "FilePath#file creates file without read".
+        assert false: { file isTruncate }
+               testing: "FilePath#file creates file without truncate".
+        assert false: { file isWrite }
+               testing: "FilePath#file creates file without write".
+        let readfile = file forRead.
+        assert true: { readfile isRead }
+               testing: "File#forRead sets read".
+        assert false: { readfile isAppend }
+               testing: "File#forRead does not set append".
+        assert false: { readfile isTruncate }
+               testing: "File#forRead does not set truncate".
+        assert false: { readfile isWrite }
+               testing: "File#forRead does not set write".
+        let writefile = file forWrite.
+        assert true: { writefile isWrite }
+               testing: "File#forWrite sets write".
+        assert false: { writefile isAppend }
+               testing: "File#forWrite does not set append".
+        assert false: { writefile isRead }
+               testing: "File#forWrite does not set read".
+        assert false: { writefile isTruncate }
+               testing: "File#forWrite does not set truncate".
+        let appendfile = file forAppend.
+        assert true: { appendfile isAppend }
+               testing: "File#forAppend sets append".
+        assert false: { appendfile isRead }
+               testing: "File#forAppend does not set read".
+        assert false: { appendfile isTruncate }
+               testing: "File#forAppend does not set truncate".
+        assert false: { appendfile isWrite }
+               testing: "File#forWrite does not set write".
+        let truncatefile = file truncateExisting.
+        assert true: { truncatefile isTruncate }
+               testing: "File#truncateExisting sets truncate".
+        assert false: { truncatefile isAppend }
+               testing: "File#truncateExisting does not set append".
+        assert false: { truncatefile isRead }
+               testing: "File#truncateExisting does not set read".
+        assert false: { truncatefile isWrite }
+               testing: "File#forWrite does not set write"!
+end

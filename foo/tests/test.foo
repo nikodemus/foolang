@@ -10,6 +10,7 @@ import lang.test_byteArray.TestByteArray
 import lang.test_byteArray.TestByteArrayAsIterable
 import lang.test_character.TestCharacter
 import lang.test_closure.TestClosure
+import lang.test_file.TestFile
 import lang.test_filepath.TestFilePath
 import lang.test_integer.TestInteger
 import lang.test_list.TestList
@@ -89,7 +90,7 @@ class Main { assert system }
             SI_Tests
         ] do: { |each| each runTests: assert }.
         [
-            File,
+            TestFile,
             TestFilePath,
             TestFileStream
         ] do: { |each| each runTests: assert in: system }.
