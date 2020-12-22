@@ -344,7 +344,7 @@ class TestTranspilePreludeFilePath { assert system }
                               direct method run: command in: system
                                   (system files / \"foo\") toString debug!
                          end"
-             expect: "#<String ./foo>"!
+             expect: "#<String foo>"!
 
 end
 
