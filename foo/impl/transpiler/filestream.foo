@@ -1,0 +1,94 @@
+define DirectMethods
+    Dictionary new!
+
+-- FIXME: duplicates Output pretty much
+define InstanceMethods {
+    #close
+    -> { signature: [], vars: 0,
+         body: "struct FooFileStream* stream = PTR(FooFileStream, ctx->receiver.datum);
+                if (stream->ptr) \{
+                    fclose(stream->ptr);
+                    stream->ptr = NULL;
+                    return foo_Boolean_new(true);
+                }
+                return foo_Boolean_new(false);" },
+    #flush
+    -> { signature: [], vars: 0,
+         body: "fflush(ctx->receiver.datum.ptr);
+                return ctx->receiver;" },
+    #isClosed
+    -> { signature: [], vars: 0,
+         body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
+                return foo_Boolean_new(f);" },
+    #offset
+    -> { signature: [], vars: 0,
+         body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
+                if (f)
+                    return foo_Integer_new(ftell(f));
+                else
+                    foo_panicf(ctx, \"FileStream#offset on closed stream.\");" },
+    #offset:
+    -> { signature: [Integer], vars: 0,
+         body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
+                int64_t arg = ctx->frame[0].datum.int64;
+                if (arg < 0)
+                    foo_panicf(ctx, \"FileStream#offset: cannot be negative.\");
+                size_t offset = (size_t)arg;
+                if (f)
+                    assert(!fseek(f, offset, SEEK_SET));
+                else
+                    foo_panicf(ctx, \"FileStream#offset: on closed stream.\");
+                return ctx->frame[0];" },
+    #offsetFromEnd:
+    -> { signature: [Integer], vars: 0,
+         body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
+                int64_t arg = ctx->frame[0].datum.int64;
+                if (arg > 0)
+                    foo_panicf(ctx, \"FileStream#offsetFromEnd: cannot be positive.\");
+                if (f)
+                    assert(!fseek(f, arg, SEEK_END));
+                else
+                    foo_panicf(ctx, \"FileStream#offsetFromEnd: on closed stream.\");
+                return ctx->frame[0];" },
+    #offsetFromHere:
+    -> { signature: [Integer], vars: 0,
+         body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
+                int64_t arg = ctx->frame[0].datum.int64;
+                if (f)
+                    assert(!fseek(f, arg, SEEK_CUR));
+                else
+                    foo_panicf(ctx, \"FileStream#offsetFromHere: on closed stream.\");
+                return ctx->frame[0];" },
+    #readString
+    -> { signature: [], vars: 0,
+         body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
+                if (!f) \{
+                    foo_panicf(ctx, \"Cannot read from closed FileStream.\");
+                }
+                long pos = ftell(f);
+                assert(pos >= 0);
+                assert(!fseek(f, 0, SEEK_END));
+                size_t size = ftell(f) - pos;
+                assert(!fseek(f, pos, SEEK_SET));
+                struct FooBytes* bytes = FooBytes_alloc(size);
+                assert(size == fread(bytes->data, 1, size, f));
+                return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = \{ .ptr = bytes } };" },
+    #resize:
+    -> { signature: [], vars: 0,
+         body: "foo_panicf(ctx, \"FileStream#resize: not implemented\");" },
+    #toString:
+    -> { signature: [], vars: 0,
+         body: "return foo_String_new_from(\"#<FileStream>\");" },
+    #tryReadOnce:bytesInto:at:
+    -> { signature: [], vars: 0,
+         body: "foo_panicf(ctx, \"FileStream#tryReadOnce:bytesInto:at: not implemented\");" },
+    #tryWriteOnce:bytesFrom:at:
+    -> { signature: [], vars: 0,
+         body: "foo_panicf(ctx, \"FileStream#tryWriteOnce:bytesFrom:at: not implemented\");" },
+    #writeString:
+    -> { signature: [String], vars: 0,
+         body: "struct FooBytes* bytes = PTR(FooBytes, ctx->frame[0].datum);
+                FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
+                fwrite(bytes->data, 1, bytes->size, f);
+                return ctx->frame[0];" },
+}!

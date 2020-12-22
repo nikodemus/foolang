@@ -1,3 +1,6 @@
+// FIXME: fopen() on Windows, should use fopen_s instead.
+#define _CRT_SECURE_NO_WARNINGS 1
+
 #include <float.h>
 #include <stdint.h>
 #include <inttypes.h>
@@ -16,18 +19,24 @@
 #include <assert.h>
 
 #ifdef _WIN32
+
 #include <io.h>
 #include <fcntl.h>
 #define sys_stat _stat
 #define sys_access _access
 #define SYS_ISDIR(s) (_S_IFDIR & s)
 #define SYS_ISREG(s) (_S_IFREG & s)
+
 #else
+
 #include <unistd.h>
+#include <sys/types.h>
+#include <fcntl.h>
 #define sys_stat stat
 #define sys_access access
 #define SYS_ISDIR S_ISDIR
 #define SYS_ISREG S_ISREG
+
 #endif
 
 #include "system.h"
@@ -146,8 +155,15 @@ struct FooBytes {
 // FIXME: Don't like defining this in C.
 struct FooFile {
   bool gc;
-  struct FooBytes* path;
+  struct FooBytes* pathname;
   size_t mode;
+};
+
+// FIXME: Don't like defining this in C.
+struct FooFileStream {
+  bool gc;
+  struct FooBytes* pathname;
+  FILE* ptr;
 };
 
 struct FooSlot {
@@ -821,7 +837,17 @@ void foo_mark_file(void* ptr) {
   struct FooFile* file = ptr;
   if (file->gc) {
     foo_mark_live(file);
-    foo_mark_bytes(file->path);
+    foo_mark_bytes(file->pathname);
+  }
+  EXIT_TRACE();
+}
+
+void foo_mark_filestream(void* ptr) {
+  ENTER_TRACE("mark_bytes");
+  struct FooFileStream* stream = ptr;
+  if (stream->gc) {
+    foo_mark_live(stream);
+    foo_mark_bytes(stream->pathname);
   }
   EXIT_TRACE();
 }
@@ -977,10 +1003,14 @@ void* foo_alloc(size_t size) {
 const size_t FooFile_READ      = 0b0001;
 const size_t FooFile_WRITE     = 0b0010;
 const size_t FooFile_APPEND    = 0b0100;
-const size_t FooFile_WRITEMASK = 0b0110;
 const size_t FooFile_TRUNCATE  = 0b1000;
 
+const size_t FooFile_OPEN           = 0b01;
+const size_t FooFile_CREATE         = 0b10;
+const size_t FooFile_CREATE_OR_OPEN = 0b11;
+
 struct Foo foo_File_new(struct FooBytes* path, size_t mode);
+struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size_t flags);
 
 #include "generated_declarations.h"
 #include "generated_constants.c"
@@ -988,10 +1018,41 @@ struct Foo foo_File_new(struct FooBytes* path, size_t mode);
 #include "generated_closures.c"
 #include "generated_main.c"
 
-struct Foo foo_File_new(struct FooBytes* path, size_t mode) {
+struct Foo foo_File_new(struct FooBytes* pathname, size_t mode) {
   struct FooFile* file = foo_alloc(sizeof(struct FooFile));
   file->gc = true;
-  file->path = path;
+  file->pathname = pathname;
   file->mode = mode;
   return (struct Foo){ .vtable = &FooInstanceVtable_File, .datum = { .ptr = file } };
+}
+
+struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size_t flags) {
+  // FIXME: GC should close stream!
+  struct FooFileStream* stream = foo_alloc(sizeof(struct FooFileStream));
+  stream->gc = true;
+  stream->pathname = file->pathname;
+  const char* mode = NULL;
+  if (flags == FooFile_OPEN && file->mode == FooFile_READ) {
+    mode = "rb";
+  } else if (flags == FooFile_OPEN && file->mode == (FooFile_READ | FooFile_WRITE)) {
+    mode = "r+b";
+  } else if (flags == FooFile_CREATE_OR_OPEN && file->mode == (FooFile_TRUNCATE | FooFile_WRITE)) {
+    mode = "wb";
+  } else if (flags == FooFile_CREATE_OR_OPEN && file->mode == (FooFile_TRUNCATE | FooFile_READ | FooFile_WRITE)) {
+    mode = "w+b";
+  } else if (flags == FooFile_CREATE_OR_OPEN && file->mode == FooFile_APPEND) {
+    mode = "ab";
+  } else if (flags == FooFile_CREATE_OR_OPEN && file->mode == (FooFile_APPEND | FooFile_READ)) {
+    mode = "a+b";
+  } else {
+    // Eg. open for append, don't create. FIXME: Need to implement on top of
+    // open() instead, but windows compat via _sopen_s is more than one line for
+    // that, so skipping for now.
+    foo_panicf(ctx, "Unsupported file mode!");
+  }
+  stream->ptr = fopen((char*)file->pathname->data, mode);
+  if (!stream->ptr) {
+    foo_panicf(ctx, "fdopen() failed!");
+  }
+  return (struct Foo){ .vtable = &FooInstanceVtable_FileStream, .datum = { .ptr = stream } };
 }

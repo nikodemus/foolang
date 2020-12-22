@@ -332,6 +332,32 @@ class TestTranspilePreludeFilePath { assert system }
 
 end
 
+class TestTranspilePreludeFileStream { assert system }
+    is TranspilerTest
+
+    method testRoundtrip
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                let test = (system files / \"test.tmp\").
+                                let out = test file forWrite truncateExisting createOrOpen.
+                                out writeString: \"This is\".
+                                out close.
+                                let out2 = test file forAppend createOrOpen.
+                                out2 writeString: \" a test!\".
+                                out2 close.
+                                let in = test file forRead open.
+                                system output writeString: in readString.
+                                in offsetFromEnd: -8.
+                                system output writeString: in readString.
+                                in offset: 2.
+                                in offsetFromHere: 2.
+                                system output writeString: in readString.
+                                in close.
+                                test deleteFile!
+                         end"
+            expect: "This is a test! a test! is a test!"!
+end
+
 class TestTranspilePreludeFloat { assert system }
     is TranspilerTest
 
@@ -1711,6 +1737,7 @@ class Main {}
             "--prelude-exception" -> TestTranspilePreludeException,
             "--prelude-file" -> TestTranspilePreludeFile,
             "--prelude-filepath" -> TestTranspilePreludeFilePath,
+            "--prelude-filestream" -> TestTranspilePreludeFileStream,
             "--prelude-float" -> TestTranspilePreludeFloat,
             "--prelude-integer" -> TestTranspilePreludeInteger,
             "--prelude-interval" -> TestTranspilePreludeInterval,
