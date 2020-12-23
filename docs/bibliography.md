@@ -12,7 +12,13 @@ it's here more for future reference than anything else.
   principles, but being explicit about that would be nice._ 
 
 - 1983 - [Smalltalk-80: The Language and Its Implementation](http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf)
-  Adale Goldberd and David Robson. 
+  Adale Goldberd and David Robson.
+  
+- 1988 - [Overview of Modular
+  Smalltalk](https://dl.acm.org/doi/10.1145/62084.62095?cid=81100400306)
+  by Allen Wirfs-Brock, and Brian Wilkerson. _This is a precursor of_
+  A Declarative Model for Defining Smalltalk Programs _and a very close match
+  to Foolang's design ideas._
 
 - 1990 - [A Type System for
   Smalltalk](https://www.researchgate.net/publication/2815088_A_Type_System_for_Smalltalk)
@@ -33,9 +39,6 @@ it's here more for future reference than anything else.
   paper](http://www.wirfs-brock.com/allen/talks/oopsla96dclslides.pdf), and a
   shorter paper with the same title from [Smalltalk Solutions
   97](https://web.archive.org/web/20200301140324/https://www.instantiations.com/vast/files/archive/Smalltalk-Solutions97/SSDCL1.HTM).
-  _These papers describe a model very closely aligned with Foolang's.
-  Only major difference is that in Foolang all globals are immutable
-  during program execution. Very much worth reading._
 
 - 1997 - [Smalltalk ANSI Standard
   (draft)](https://web.archive.org/web/20200301135851/http://www.math.sfedu.ru/smalltalk/standard/index.html.en)
@@ -53,10 +56,10 @@ it's here more for future reference than anything else.
   when it does it will be use a mirror-based design._
 
 - 2005 - [The Implementation of Lua 5.0](https://www.lua.org/doc/jucs05.pdf) by
-  Roberto Ierusalimschy, Luiz Henrique de Figueiredo, and Waldemar Celes. 
+  Roberto Ierusalimschy, Luiz Henrique de Figueiredo, and Waldemar Celes.
   _While goals of Lua are radically different from Foolang, the careful matching
   of Lua's goals and implementation strategies is noteworthy, as is the design
-  of the virtual machine.__
+  of the virtual machine._
 
 - 2008 - [The Fortress Language Specification](http://www.ccs.neu.edu/home/samth/fortress-spec.pdf) by
   various. _Foolang has quite different design criteria than Fortress, but
@@ -79,14 +82,15 @@ it's here more for future reference than anything else.
   non-toy language you might want to check out Pony._
 
 - 2017 - [Lunar Programming Language](http://users.rcn.com/david-moon/Lunar/) by
-  David Moon.
+  David Moon. _You might disagree with David Moon about language design, but
+  you need to be able to explain why._
 
 ## Method Dispatch
 
 - 2001 - [Efficient Implementation of Java
   Interfaces](https://yanniss.github.io/M135-18/oopsla01.pdf) by Bowen Alpern,
-  Anthony Cocchi, Stephen Fink, David Grove, and Derek Lieber. Describes the
-  method Jalapeno JVM uses. (Or at least used in 2001.)
+  Anthony Cocchi, Stephen Fink, David Grove, and Derek Lieber. _Describes the
+  method Jalapeno JVM uses. (Or at least used in 2001.)_
 
 - 2005 - [Efficient Multimethods in a Single Dispatch
   Language](http://www.laputan.org/reflection/Foote-Johnson-Noble-ECOOP-2005.pdf)
