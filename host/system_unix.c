@@ -12,11 +12,11 @@
 #include "system.h"
 
 double timeval_as_double(struct timeval t) {
-  return (double)t.tv_sec + (double)(t.tv_usec / 1e6);
+  return (double)t.tv_sec + (double)t.tv_usec / 1e6;
 }
 
 double timespec_as_double(struct timespec t) {
-  return (double)t.tv_sec + (double)(t.tv_nsec / 1e9);
+  return (double)t.tv_sec + (double)t.tv_nsec / 1e9;
 }
 
 struct timespec double_as_timespec(double t) {
