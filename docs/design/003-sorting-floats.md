@@ -4,9 +4,7 @@
 
 **Identifier**: 003-sorting-floats
 
-**References**: none
-
-**Prior Art**:
+**References**:
 
 - IEEE 754-2008 adds a total ordering predicate, the only definition which
   appears to be currently on the internet is in [the Rust issue
@@ -17,6 +15,7 @@
 
 **History**:
 - 2020-02-29: initial version by Nikodemus
+- 2021-01-05: updated to current format
 
 ## Problem Description
 

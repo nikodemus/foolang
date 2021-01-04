@@ -4,9 +4,7 @@
 
 **Identifier**: 006-integer-types
 
-**References**: none
-
-**Prior Art**:
+**References**:
 - Common Lisp's integer types:
   - [INTEGER](http://www.lispworks.com/documentation/HyperSpec/Body/t_intege.htm)
   - [SIGNED-BYTE](http://www.lispworks.com/documentation/HyperSpec/Body/t_sgn_by.htm)
@@ -16,6 +14,7 @@
 **History**:
 - 2020-03-02: initial version by Nikodemus
 - 2020-06-06: performance notes by Nikodemus
+- 2021-01-05: updated to current format
 
 ## Problem Description
 

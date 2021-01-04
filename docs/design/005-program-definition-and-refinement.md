@@ -4,9 +4,7 @@
 
 **Identifier**: 005-program-definition-and-refinement
 
-**References**: none
-
-**Prior Art**:
+**References**:
 - 1997 - [A Declarative Model for Defining Smalltalk
   Programs](https://web.archive.org/web/20200301140324/https://www.instantiations.com/vast/files/archive/Smalltalk-Solutions97/SSDCL1.HTM)
   by Allen Wirfs-Brock.
@@ -17,6 +15,7 @@
 - 2020-03-01: Initial version by Nikodemus.
 - 2020-08-08: Separate resolution and finalizations steps allow cyclic
   references. Marginally improved specification of separate compilation.
+- 2021-01-05: updated to current format
 
 ## Problem Description
 

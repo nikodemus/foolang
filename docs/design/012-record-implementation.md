@@ -2,11 +2,9 @@
 
 **Status**: WIP (not implemented)
 
-**Identifier**: 021-record-implementation
+**Identifier**: 012-record-implementation
 
-**References**:
-
-**Prior Art**:
+**References**: none
 
 **History**:
 - 2020-11-10: initial version by Nikodemus

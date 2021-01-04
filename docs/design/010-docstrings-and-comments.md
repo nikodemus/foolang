@@ -4,8 +4,11 @@
 
 **Identifier**: 010-docstrings-and-comments
 
+**References**: none
+
 **History**:
 - 2020-08-06: initial version by Nikodemus
+- 2021-01-05: updated to current format
 
 ## Problem Description
 

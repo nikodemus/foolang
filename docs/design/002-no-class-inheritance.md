@@ -4,9 +4,7 @@
 
 **Identifier**: 002-no-class-inheritance.md 
 
-**References**: none
-
-**Prior Art**:
+**References**:
 - Rust's structs vs traits
 - Julia's concrete types may not subtype each other
 
@@ -14,6 +12,7 @@
 - 2019-01-01: arbitrarily backdated by nikodemus, since this is an old
   design decision.
 - 2020-02-25: initial version of this writeup by nikodemus
+- 2021-01-05: updated to current format
 
 ## Problem Description
 
@@ -26,19 +25,19 @@ object::ConcreteType message: arg
 ```
 
 Users should be able to rely on this being "compiled well", applying
-interprocedural optimizations. (Eg. constant-folding the whole expression if
-`arg` happens to be a constant.)
+interprocedural optimizations. (Eg. possibly constant-folding the whole
+expression if `arg` happens to be a constant and the method allowing it.)
 
-For the compiler to be reliably able to do so, it must know the exact method that
-implements `#message:`&mdash;static interprocedural optimizations are inhibited
-if `ConcreteType` has subclasses that override the method.
+For the compiler to be reliably able to do so, it must know the exact method
+that implements `#message:`&mdash;static interprocedural optimizations are
+inhibited if `ConcreteType` has subclasses that override the method.
 
 In particular, adding a new subclass of `ConcreteType` can easily inhibit
-optimizations that previously worked, causing surprising performance
-degradation due to apparently unrelated changes.
+optimizations that previously worked, causing surprising performance degradation
+due to apparently unrelated changes.
 
-For performance to be reliable and transparent user's and compiler's views
-must coincide without significant extra effort on user's side.
+For performance to be reliable and transparent both user's and compiler's views
+must coincide without significant extra effort on the user's part.
 
 ### Part 2: Representation Selection
 
@@ -60,6 +59,7 @@ optimization part above apply here.
 - Predictable performance: ability to predict reliably when interprocedutal
   optimizations can be applied, ability to predict reliably when a compact
   non-heap representation can be used.
+
 - Reasonable implementation overhead: "sufficiently smart compilers" need not
   apply, and are antagonistic to predictable performance anyhow.
 
@@ -95,8 +95,8 @@ flexibility as useful concrete classes cannot be subclassed.
 
 #### Performance
 
-Positive impact: easier to optimize message sends when type of the
-receiver is known.
+Positive impact: easier to optimize message sends when type of the receiver is
+known.
 
 #### Uniformity
 
@@ -129,8 +129,9 @@ significant amounts of extra care.
   "this will not change due to another class" at method granularity. The end
   result seems undesirable, however: there is a temptation to "let's make this
   one not final so I can subclass"-type decisions, and making the annotation is
-  optional so it is easy to forget. Does not answer the issue of representations.
-  
+  optional so it is easy to forget. Does not answer the issue of
+  representations.
+
 - **Method qualifiers allowing overrides in subclass**: similar to `final`, but
   opposite. Seems like a better default, but does not answer the issue of
   representations either.

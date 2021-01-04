@@ -4,9 +4,7 @@
 
 **Identifier**: 008-indexed-classes
 
-**References**: none
-
-**Prior Art**:
+**References**:
 - Smalltalk indexed instance variables
 - C structs with tailing arrays
 
@@ -14,6 +12,7 @@
 - 2020-03-21: initial version by Nikodemus
 - 2020-04-15: primitive arrays initially approach
 - 2020-07-11: adoption
+- 2021-01-05: updated to current format
 
 ## Problem Description
 

@@ -4,13 +4,14 @@
 
 **Identifier**: 009-self-hosting
 
-**Prior Art**:
+**References**:
 - Back to the Future&mdash;The Story of Squeak, A Practical Smalltalk Written in
   Itself. http://files.squeak.org/docs/OOPSLA.Squeak.html
 
 **History**:
 - 2020-08-06: initial version by Nikodemus&mdash;this has been cooking
   a lot longer, but time to put it here.
+- 2021-01-05: updated to current format
 
 ## Problem Description
 
