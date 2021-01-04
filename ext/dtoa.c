@@ -17,15 +17,22 @@
  *
  ***************************************************************/
 
-#define IEEE_8087 // assume for now
-#define Omit_Private_Memory
+/**
+ * Foolang build configs.
+ *
+ * Other than these the only difference is naming strtod to strtod2
+ * to avoid conflicts.
+ */
+
+#define IEEE_8087            // assume for now
+#define Omit_Private_Memory  // ASAN detected problems with private memory!
 
 /* Please send bug reports to David M. Gay (dmg at acm dot org,
  * with " at " changed at "@" and " dot " changed to ".").	*/
 
 /* On a machine with IEEE extended-precision registers, it is
  * necessary to specify double-precision (53-bit) rounding precision
- * before invoking strtod or dtoa.  If the machine uses (the equivalent
+ * before invoking strtod2 or dtoa.  If the machine uses (the equivalent
  * of) Intel 80x87 arithmetic, the call
  *	_control87(PC_53, MCW_PC);
  * does this with many compilers.  Whether this or another call is
@@ -34,10 +41,10 @@
  * file.
  */
 
-/* strtod for IEEE-, VAX-, and IBM-arithmetic machines.
+/* strtod2 for IEEE-, VAX-, and IBM-arithmetic machines.
  * (Note that IEEE arithmetic is disabled by gcc's -ffast-math flag.)
  *
- * This strtod returns a nearest machine number to the input decimal
+ * This strtod2 returns a nearest machine number to the input decimal
  * string (or sets errno to ERANGE).  With IEEE arithmetic, ties are
  * broken by the IEEE round-even rule.  Otherwise ties are broken by
  * biased rounding (add half and chop).
@@ -77,7 +84,7 @@
  *	computation of dtoa.  This will cause dtoa modes 4 and 5 to be
  *	treated the same as modes 2 and 3 for some inputs.
  * #define Honor_FLT_ROUNDS if FLT_ROUNDS can assume the values 2 or 3
- *	and strtod and dtoa should round accordingly.  Unless Trust_FLT_ROUNDS
+ *	and strtod2 and dtoa should round accordingly.  Unless Trust_FLT_ROUNDS
  *	is also #defined, fegetround() will be queried for the rounding mode.
  *	Note that both FLT_ROUNDS and fegetround() are specified by the C99
  *	standard (and are specified to be consistent, with fesetround()
@@ -125,19 +132,19 @@
  *	suffices to get rid of MALLOC calls except for unusual cases,
  *	such as decimal-to-binary conversion of a very long string of
  *	digits.  The longest string dtoa can return is about 751 bytes
- *	long.  For conversions by strtod of strings of 800 digits and
+ *	long.  For conversions by strtod2 of strings of 800 digits and
  *	all dtoa conversions in single-threaded executions with 8-byte
  *	pointers, PRIVATE_MEM >= 7400 appears to suffice; with 4-byte
  *	pointers, PRIVATE_MEM >= 7112 appears adequate.
  * #define NO_INFNAN_CHECK if you do not wish to have INFNAN_CHECK
  *	#defined automatically on IEEE systems.  On such systems,
- *	when INFNAN_CHECK is #defined, strtod checks
+ *	when INFNAN_CHECK is #defined, strtod2 checks
  *	for Infinity and NaN (case insensitively).  On some systems
  *	(e.g., some HP systems), it may be necessary to #define NAN_WORD0
  *	appropriately -- to the most significant word of a quiet NaN.
  *	(On HP Series 700/800 machines, -DNAN_WORD0=0x7ff40000 works.)
  *	When INFNAN_CHECK is #defined and No_Hex_NaN is not #defined,
- *	strtod also accepts (case insensitively) strings of the form
+ *	strtod2 also accepts (case insensitively) strings of the form
  *	NaN(x), where x is a string of hexadecimal digits and spaces;
  *	if there is only one string of hexadecimal digits, it is taken
  *	for the 52 fraction bits of the resulting NaN; if there are two
@@ -174,7 +181,7 @@
  *	Such a call invokes REALLOC (assumed to be "realloc" if REALLOC
  *	is not #defined) to extend the size of the relevant array.
 
- * #define NO_IEEE_Scale to disable new (Feb. 1997) logic in strtod that
+ * #define NO_IEEE_Scale to disable new (Feb. 1997) logic in strtod2 that
  *	avoids underflows on inputs whose result does not underflow.
  *	If you #define NO_IEEE_Scale on a machine that uses IEEE-format
  *	floating-point numbers and flushes underflows to zero rather
@@ -191,11 +198,11 @@
  *		void clear_inexact(void);
  *	such that get_inexact() returns a nonzero value if the
  *	inexact bit is already set, and clear_inexact() sets the
- *	inexact bit to 0.  When SET_INEXACT is #defined, strtod
+ *	inexact bit to 0.  When SET_INEXACT is #defined, strtod2
  *	also does extra computations to set the underflow and overflow
  *	flags when appropriate (i.e., when the result is tiny and
  *	inexact or when it is a numeric value rounded to +-infinity).
- * #define NO_ERRNO if strtod should not assign errno = ERANGE when
+ * #define NO_ERRNO if strtod2 should not assign errno = ERANGE when
  *	the result overflows to +-Infinity or underflows to 0.
  *	When errno should be assigned, under seemingly rare conditions
  *	it may be necessary to define Set_errno(x) suitably, e.g., in
@@ -203,13 +210,13 @@
  *		#include <errno.h>
  *		#define Set_errno(x) _set_errno(x)
  * #define NO_HEX_FP to omit recognition of hexadecimal floating-point
- *	values by strtod.
- * #define NO_STRTOD_BIGCOMP (on IEEE-arithmetic systems only for now)
+ *	values by strtod2.
+ * #define NO_STRTOD2_BIGCOMP (on IEEE-arithmetic systems only for now)
  *	to disable logic for "fast" testing of very long input strings
- *	to strtod.  This testing proceeds by initially truncating the
+ *	to strtod2.  This testing proceeds by initially truncating the
  *	input string, then if necessary comparing the whole string with
  *	a decimal expansion to decide close cases. This logic is only
- *	used for input more than STRTOD_DIGLIM digits long (default 40).
+ *	used for input more than STRTOD2_DIGLIM digits long (default 40).
  */
 
 #ifndef Long
@@ -224,7 +231,7 @@ typedef unsigned Long ULong;
 #include "stdio.h"
 #define Bug(x) {fprintf(stderr, "%s\n", x); exit(1);}
 #define Debug(x) x
-int dtoa_stats[7]; /* strtod_{64,96,bigcomp},dtoa_{exact,64,96,bigcomp} */
+int dtoa_stats[7]; /* strtod2_{64,96,bigcomp},dtoa_{exact,64,96,bigcomp} */
 #else
 #define assert(x) /*nothing*/
 #define Debug(x) /*nothing*/
@@ -290,7 +297,7 @@ static double private_mem[PRIVATE_mem], *pmem_next = private_mem;
 #endif
 #else
 #undef INFNAN_CHECK
-#define NO_STRTOD_BIGCOMP
+#define NO_STRTOD2_BIGCOMP
 #endif
 
 #include "errno.h"
@@ -1316,14 +1323,14 @@ typedef union { double d; ULong L[2];
 #define dval(x) (x)->d
 #define LLval(x) (x)->LL
 
-#ifndef STRTOD_DIGLIM
-#define STRTOD_DIGLIM 40
+#ifndef STRTOD2_DIGLIM
+#define STRTOD2_DIGLIM 40
 #endif
 
 #ifdef DIGLIM_DEBUG
-extern int strtod_diglim;
+extern int strtod2_diglim;
 #else
-#define strtod_diglim STRTOD_DIGLIM
+#define strtod2_diglim STRTOD2_DIGLIM
 #endif
 
 /* The following definition of Storeinc is appropriate for MIPS processors.
@@ -1505,7 +1512,7 @@ static unsigned int maxthreads = 0;
 #define Kmax 7
 
 #ifdef __cplusplus
-extern "C" double strtod(const char *s00, char **se);
+extern "C" double strtod2(const char *s00, char **se);
 extern "C" char *dtoa(double d, int mode, int ndigits,
 			int *decpt, int *sign, char **rve);
 #endif
@@ -2453,7 +2460,7 @@ static const double tinytens[] = { 1e-16, 1e-32, 1e-64, 1e-128,
 #endif
 		};
 /* The factor of 2^53 in tinytens[4] helps us avoid setting the underflow */
-/* flag unnecessarily.  It leads to a song and dance at the end of strtod. */
+/* flag unnecessarily.  It leads to a song and dance at the end of strtod2. */
 #define Scale_Bit 0x10
 #define n_bigtens 5
 #else
@@ -3118,7 +3125,7 @@ quorem(Bigint *b, Bigint *S)
 	bxe = bx + n;
 	q = *bxe / (*sxe + 1);	/* ensure q <= true quotient */
 #ifdef DEBUG
-#ifdef NO_STRTOD_BIGCOMP
+#ifdef NO_STRTOD2_BIGCOMP
 	/*debug*/ if (q > 9)
 #else
 	/* An oversized q is possible when quorem is called from bigcomp and */
@@ -3210,7 +3217,7 @@ quorem(Bigint *b, Bigint *S)
 	return q;
 	}
 
-#if defined(Avoid_Underflow) || !defined(NO_STRTOD_BIGCOMP) /*{*/
+#if defined(Avoid_Underflow) || !defined(NO_STRTOD2_BIGCOMP) /*{*/
  static double
 sulp(U *x, BCinfo *bc)
 {
@@ -3227,7 +3234,7 @@ sulp(U *x, BCinfo *bc)
 	}
 #endif /*}*/
 
-#ifndef NO_STRTOD_BIGCOMP
+#ifndef NO_STRTOD2_BIGCOMP
  static void
 bigcomp(U *rv, const char *s0, BCinfo *bc MTd)
 {
@@ -3429,10 +3436,10 @@ retlow1:
 #endif
 	return;
 	}
-#endif /* NO_STRTOD_BIGCOMP */
+#endif /* NO_STRTOD2_BIGCOMP */
 
  double
-strtod(const char *s00, char **se)
+strtod2(const char *s00, char **se)
 {
 	int bb2, bb5, bbe, bd2, bd5, bbbits, bs2, c, e, e1;
 	int esign, i, j, k, nd, nd0, nf, nz, nz0, nz1, sign;
@@ -3454,7 +3461,7 @@ strtod(const char *s00, char **se)
 #ifdef SET_INEXACT
 	int oldinexact;
 #endif
-#ifndef NO_STRTOD_BIGCOMP
+#ifndef NO_STRTOD2_BIGCOMP
 	int req_bigcomp = 0;
 #endif
 #ifdef MULTIPLE_THREADS
@@ -4245,12 +4252,12 @@ strtod(const char *s00, char **se)
 	/* Put digits into bd: true value = bd * 10^e */
 
 	bc.nd = nd - nz1;
-#ifndef NO_STRTOD_BIGCOMP
-	bc.nd0 = nd0;	/* Only needed if nd > strtod_diglim, but done here */
+#ifndef NO_STRTOD2_BIGCOMP
+	bc.nd0 = nd0;	/* Only needed if nd > strtod2_diglim, but done here */
 			/* to silence an erroneous warning about bc.nd0 */
 			/* possibly not being initialized. */
-	if (nd > strtod_diglim) {
-		/* ASSERT(strtod_diglim >= 18); 18 == one more than the */
+	if (nd > strtod2_diglim) {
+		/* ASSERT(strtod2_diglim >= 18); 18 == one more than the */
 		/* minimum number of decimal digits to distinguish double values */
 		/* in IEEE arithmetic. */
 		i = j = 18;
@@ -4364,7 +4371,7 @@ strtod(const char *s00, char **se)
 		bc.dsign = delta->sign;
 		delta->sign = 0;
 		i = cmp(delta, bs);
-#ifndef NO_STRTOD_BIGCOMP /*{*/
+#ifndef NO_STRTOD2_BIGCOMP /*{*/
 		if (bc.nd > nd && i <= 0) {
 			if (bc.dsign) {
 				/* Must use bigcomp(). */
@@ -4581,7 +4588,7 @@ strtod(const char *s00, char **se)
 #ifdef IBM
 				goto cont;
 #else
-#ifndef NO_STRTOD_BIGCOMP
+#ifndef NO_STRTOD2_BIGCOMP
 				if (bc.nd > nd)
 					goto cont;
 #endif
@@ -4709,7 +4716,7 @@ strtod(const char *s00, char **se)
 				adj.d = aadj1 * ulp(&rv);
 				dval(&rv) += adj.d;
 				if (rv.d == 0.)
-#ifdef NO_STRTOD_BIGCOMP
+#ifdef NO_STRTOD2_BIGCOMP
 					goto undfl;
 #else
 					{
@@ -4803,7 +4810,7 @@ strtod(const char *s00, char **se)
 	Bfree(bs MTb);
 	Bfree(bd0 MTb);
 	Bfree(delta MTb);
-#ifndef NO_STRTOD_BIGCOMP
+#ifndef NO_STRTOD2_BIGCOMP
 	if (req_bigcomp) {
 		bd0 = 0;
 		bc.e0 += nz1;
