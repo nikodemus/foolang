@@ -1,12 +1,22 @@
+#define _POSIX_C_SOURCE 199309L // minimum for clock_gettime()
+
 #include <inttypes.h>
 #include <stddef.h>
+#include <time.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+
+#undef NDEBUG
+#include <assert.h>
 
 #include "system.h"
 
 double timeval_as_double(struct timeval t) {
   return (double)t.tv_sec + (double)(t.tv_usec / 1e6);
+}
+
+double timespec_as_double(struct timespec t) {
+  return (double)t.tv_sec + (double)(t.tv_nsec / 1e9);
 }
 
 struct timespec double_as_timespec(double t) {
@@ -31,7 +41,7 @@ void system_get_process_times(struct FooProcessTimes* times) {
   struct rusage usage;
   struct timespec now;
   assert(!getrusage(RUSAGE_SELF, &usage));
-  assert(!clock_getttime(CLOCK_MONOTONIC, &now));
+  assert(!clock_gettime(CLOCK_MONOTONIC, &now));
   times->user = timeval_as_double(usage.ru_utime);
   times->system = timeval_as_double(usage.ru_stime);
   times->real = timespec_as_double(now) - SYSTEM_START_MONOTONIC_SECONDS;
@@ -47,6 +57,6 @@ void system_sleep(double seconds) {
 void system_init() {
   // Init time
   struct timespec now;
-  assert(!clock_getttime(CLOCK_MONOTONIC, &now));
+  assert(!clock_gettime(CLOCK_MONOTONIC, &now));
   SYSTEM_START_MONOTONIC_SECONDS = timespec_as_double(now);
 }
