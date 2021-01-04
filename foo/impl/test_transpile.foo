@@ -213,9 +213,9 @@ class TestTranspilePreludeTime { assert system }
                                  -- at a fairly coarse granularity, at least on some
                                  -- machines. So add 1 second there.
                                  let t1 = clock times
-                                             + Time user: 1.0
-                                                    system: 0.0
-                                                    real: 0.0.
+                                             + (Time user: 1.0
+                                                     system: 0.0
+                                                     real: 0.0).
                                  let delta = t1 - t0.
                                  (t1 > delta) debug!
                          end"
