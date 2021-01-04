@@ -5,17 +5,66 @@ import .name.Name
 --
 -- Doing them for integers was OK, since it gave an opportunity to think about
 -- things - doing them for floats here would be a waste of time.
+--
+-- toString is a perfect example of a how inlining these in here doesn't
+-- make sense
 define FloatMethods
     { (Selector name: "prefix-")
           -> { signature: [], vars: 0,
                body: "return foo_Float_new(- ctx->receiver.datum.float64);" },
-      -- FIXME: I absolutely despise the C floating point printing:
-      -- print the required number of digits without trailing zeros.
-      -- Either integrate dtoa.c, link to a small Rust library,
-      -- or implement the algorithm myself.
-      #debug -> {signature: [], vars: 0,
-                 body: "printf(\"#<Float %f>\", ctx->receiver.datum.float64);
-return ctx->receiver;"},
+      #debug
+      -> { signature: [], vars: 1,
+           body: "ctx->frame[0] = foo_send(ctx, &FOO_toString, ctx->receiver, 0);
+                  printf(\"#<Float %s>\", PTR(FooBytes, ctx->frame[0].datum)->data);
+                  return ctx->receiver;"},
+      #toString
+      -> { signature: [], vars: 0,
+           body: "double arg = ctx->receiver.datum.float64;
+                  if (arg == 0.0) \{
+                      // FIXME: signed zero!
+                      return INSTANCE(String, FooBytes_from(\"0.0\"));
+                  }
+                  int mode = 0;    // we want the shortest representation
+                  int ndigits = 0; // mode zero ignores ndigits.
+                  int dec;         // decimal exponent (number of digits / leading zeros)
+                  int sign;        // 0 for no sign, 1 for negative
+                  char *s = dtoa(arg, mode, ndigits, &dec, &sign, NULL);
+                  size_t n = strlen(s);
+                  struct FooBytes *bytes;
+                  size_t dec_digits = dec, zeros = 0, start1 = 0, start2, dot;
+                  if (dec == n) \{
+                      // Integer value
+                      bytes = FooBytes_alloc(sign + n + 2);
+                      start1 = sign;
+                      dot = start1 + n;
+                      start2 = dot + 1;
+                  } else if (dec > 0) \{
+                      bytes = FooBytes_alloc(sign + n + 1);
+                      start1 = sign;
+                      dot = start1 + dec;
+                      start2 = dot + 1;
+                  } else \{
+                      dec_digits = 0;
+                      zeros = -dec + 2; // dot counted here!
+                      bytes = FooBytes_alloc(sign + zeros + n);
+                      dot = sign + 1;
+                      start2 = dot + 1 + -dec;
+                  }
+                  char *data = (char *)bytes->data;
+                  if (sign)
+                      data[0] = '-';
+                  if (dec_digits) \{
+                      memcpy(data + start1, s, dec_digits);
+                  } else \{
+                      memset(data + sign, '0', zeros);
+                  }
+                  data[dot] = '.';
+                  if (n > dec_digits) \{
+                      memcpy(data + start2, s + dec_digits, n - dec_digits);
+                  } else \{
+                      data[start2] = '0';
+                  }
+                  return INSTANCE(String, bytes);" },
       #floatAdd:
           -> { signature: [Float], vars: 0,
                body: "return foo_Float_new(ctx->receiver.datum.float64 + ctx->frame[0].datum.float64);" },

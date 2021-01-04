@@ -72,7 +72,7 @@ return ctx->receiver;" },
       -- The real stuff
       #asFloat
           -> { signature: [], vars: 0,
-               body: "foo_unimplemented(\"Integer#asFloat\");" },
+               body: "return FLOAT(ctx->receiver.datum.int64);" },
       #debug -> {signature: [], vars: 0,
                  body: "printf(\"#<Integer %\" PRId64 \">\", ctx->receiver.datum.int64);
 return ctx->receiver;"},

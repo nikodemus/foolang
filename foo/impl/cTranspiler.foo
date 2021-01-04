@@ -3,6 +3,7 @@ import .transpiler.array
 import .transpiler.boolean
 import .transpiler.byte_array
 import .transpiler.character
+import .transpiler.clock
 import .transpiler.closure
 import .transpiler.file
 import .transpiler.filepath
@@ -14,6 +15,7 @@ import .transpiler.output
 import .transpiler.selector
 import .transpiler.string
 import .transpiler.system
+import .transpiler.time
 import .ast.*
 import .utils.*
 
@@ -157,7 +159,7 @@ define Builtins [
      Builtin
          type: Class
          value: Boolean
-         mark: "foo_mark_raw"
+         mark: "foo_mark_none"
          directMethods: boolean.DirectMethods
          instanceMethods: boolean.InstanceMethods,
      Builtin
@@ -169,9 +171,15 @@ define Builtins [
      Builtin
          type: Class
          value: Character
-         mark: "foo_mark_raw"
+         mark: "foo_mark_none"
          directMethods: character.DirectMethods
          instanceMethods: character.InstanceMethods,
+     Builtin
+         type: Class
+         value: Clock
+         mark: "foo_mark_none"
+         directMethods: clock.DirectMethods
+         instanceMethods: clock.InstanceMethods,
      Builtin
          type: Class
          value: Closure
@@ -199,31 +207,31 @@ define Builtins [
      Builtin
          type: Class
          value: Float
-         mark: "foo_mark_raw"
+         mark: "foo_mark_none"
          directMethods: Dictionary new
          instanceMethods: float.FloatMethods,
      Builtin
          type: Class
          value: Integer
-         mark: "foo_mark_raw"
+         mark: "foo_mark_none"
          directMethods: Dictionary new
          instanceMethods: integer.IntegerMethods,
      Builtin
          type: Class
          value: Output
-         mark: "foo_mark_raw"
+         mark: "foo_mark_none"
          directMethods: output.DirectMethods
          instanceMethods: output.InstanceMethods,
      Builtin
          type: Interface
          value: Record
-         mark: "foo_mark_raw"
+         mark: "foo_mark_none"
          directMethods: record.DirectMethods
          instanceMethods: record.InstanceMethods,
      Builtin
          type: Class
          value: Selector
-         mark: "foo_mark_raw"
+         mark: "foo_mark_none"
          directMethods: selector.DirectMethods
          instanceMethods: selector.InstanceMethods,
      Builtin
@@ -235,9 +243,15 @@ define Builtins [
     Builtin
          type: Class
          value: System
-         mark: "foo_mark_raw"
+         mark: "foo_mark_none"
          directMethods: system.DirectMethods
-         instanceMethods: system.InstanceMethods
+         instanceMethods: system.InstanceMethods,
+    Builtin
+         type: Class
+         value: Time
+         mark: "foo_mark_ptr"
+         directMethods: time.DirectMethods
+         instanceMethods: time.InstanceMethods
 ]!
 
 class SelectorMap { names }
@@ -292,6 +306,7 @@ class CTranspiler { output selectorMap closureFunctions
                           globals: Dictionary new
                           generatedMethods: Dictionary new
                           env: env.
+        visitor output println: "#include \"foo.h\"".
         -- KLUDGE: ensure selectors with references from C code
         AlwaysEmittedSelectors
             do: { |each| visitor selectorMap map: each }.
@@ -426,6 +441,7 @@ class CTranspiler { output selectorMap closureFunctions
                                  globals: globals
                                  generatedMethods: generatedMethods
                                  env: env.
+        builtinVisitor output println: "#include \"foo.h\"".
         -- FIXME: visit only referenced builtins
         Builtins
             do: { |each|
@@ -452,6 +468,7 @@ class CTranspiler { output selectorMap closureFunctions
                                  globals: globals
                                  generatedMethods: generatedMethods
                                  env: env.
+        builtinVisitor output println: "#include \"foo.h\"".
         -- FIXME: used builtins only
         Builtins
             do: { |each|
@@ -762,7 +779,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "    .name = &FOO_CSTRING({anInterface name displayString}\" interface\"),".
         output println: "    .inherited = \{ .size = 0, .data = NULL },".
         output println: "    .size = {directMethods size},".
-        output println: "    .mark = foo_mark_raw,".
+        output println: "    .mark = foo_mark_none,".
         output println: "    .methods = \{".
         directMethods
             do: { |each|
@@ -894,7 +911,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "    .name = &FOO_CSTRING({aClass name displayString}\" class\"),".
         output println: "    .classptr = NULL,". -- FIXME
         output println: "    .inherited = \{ .size = {interfaces size}, .data = {classInterfacesName} },".
-        output println: "    .mark = foo_mark_raw,".
+        output println: "    .mark = foo_mark_none,".
         output println: "    .size = {directMethods size},".
         output println: "    .methods = \{".
         directMethods

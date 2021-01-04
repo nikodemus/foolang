@@ -1,0 +1,24 @@
+define DirectMethods {
+    #user:system:real:
+    -> { signature: [Float, Float, Float], vars: 0,
+         body: "struct FooProcessTimes* times
+                    = FooProcessTimes_new(ctx->frame[0].datum.float64,
+                                          ctx->frame[1].datum.float64,
+                                          ctx->frame[2].datum.float64);
+                return INSTANCE(Time, times);" }
+}!
+
+define InstanceMethods {
+    #user
+    -> { signature: [], vars: 0,
+         body: "struct FooProcessTimes* times = PTR(FooProcessTimes, ctx->receiver.datum);
+                return FLOAT(times->user);" },
+    #system
+    -> { signature: [], vars: 0,
+         body: "struct FooProcessTimes* times = PTR(FooProcessTimes, ctx->receiver.datum);
+                return FLOAT(times->system);" },
+    #real
+    -> { signature: [], vars: 0,
+         body: "struct FooProcessTimes* times = PTR(FooProcessTimes, ctx->receiver.datum);
+                return FLOAT(times->real);" }
+}!

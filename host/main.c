@@ -39,7 +39,9 @@
 
 #endif
 
+#include "foo.h"
 #include "system.h"
+#include "ext.h"
 
 size_t min_size(size_t a, size_t b) {
   if (a <= b) {
@@ -682,6 +684,24 @@ struct Foo FooGlobal_False =
    .datum = { .boolean = 0 }
   };
 
+struct FooProcessTimes* FooProcessTimes_alloc() {
+  return foo_alloc(sizeof(struct FooProcessTimes));
+}
+
+struct FooProcessTimes* FooProcessTimes_now() {
+  struct FooProcessTimes* times = FooProcessTimes_alloc();
+  system_get_process_times(times);
+  return times;
+}
+
+struct FooProcessTimes* FooProcessTimes_new(double user, double system, double real) {
+  struct FooProcessTimes* times = FooProcessTimes_alloc();
+  times->user = user;
+  times->system = system;
+  times->real = real;
+  return times;
+}
+
 struct FooArray* FooArray_alloc(size_t size) {
   struct FooArray* array = foo_alloc(sizeof(struct FooArray) + size*sizeof(struct Foo));
   array->gc = true;
@@ -823,6 +843,14 @@ bool foo_mark_live(void* ptr) {
   return new_mark;
 }
 
+void foo_mark_ptr(void* ptr) {
+  ENTER_TRACE("mark_ptr");
+  foo_mark_live(ptr);
+  EXIT_TRACE();
+}
+
+// FIXME: Move bytes->gc, etc into allocation header, allocating
+// global objects as (struct Allocation){ .gc = false, ... }.
 void foo_mark_bytes(void* ptr) {
   ENTER_TRACE("mark_bytes");
   struct FooBytes* bytes = ptr;
@@ -863,7 +891,7 @@ void foo_mark_object(struct Foo obj) {
   EXIT_TRACE();
 }
 
-void foo_mark_raw(void* ptr) {
+void foo_mark_none(void* ptr) {
   (void)ptr;
 }
 

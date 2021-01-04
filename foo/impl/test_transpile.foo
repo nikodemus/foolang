@@ -59,7 +59,7 @@ interface TranspilerTest
             = system isUnix
                 ifTrue: { "unix" }
                 ifFalse: { "windows" }.
-        let buildCmd = "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall --std=c11 host/main.c host/system_{target}.c".
+        let buildCmd = "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall --std=c11 host/main.c host/system_{target}.c ext/dtoa.c".
         let build = system command: buildCmd.
         self _reportStderr: build.
         build ok
@@ -193,6 +193,30 @@ class TestTranspilePreludeCharacter { assert system }
                          end"
             expect: "#<Boolean True>#<Boolean False>#<Boolean True>"!
 end
+
+class TestTranspilePreludeTime { assert system }
+    is TranspilerTest
+
+    method testSystemClockTimes
+        self transpile: "import lang.time
+                         import lang.output
+                         import lang.integer
+
+                         class Main \{}
+                             direct method run: command in: system
+                                 let clock = system clock.
+                                 let offset = Time user: 0.1
+                                                   system: 0.1
+                                                   real: 0.1.
+                                 -- Easiest way to make sure t1 > t0 > 0.
+                                 let t0 = clock times + offset.
+                                 let t1 = t0 + offset.
+                                 let delta = t1 - t0.
+                                 (t1 > delta) debug!
+                         end"
+            expect: "#<Boolean True>"!
+end
+
 
 class TestTranspilePreludeClosure { assert system }
     is TranspilerTest
@@ -399,7 +423,7 @@ class TestTranspilePreludeFloat { assert system }
                                  1.0 to: 2.0
                                      do: \{ |each| each debug }!
                          end"
-            expect: "#<Float 1.000000>#<Float 2.000000>"!
+            expect: "#<Float 1.0>#<Float 2.0>"!
 end
 
 class TestTranspilePreludeInteger { assert system }
@@ -716,7 +740,7 @@ class TestTranspileDefine { assert system }
                              direct method run: command in: system
                                  MyFloat debug!
                          end"
-            expect: "#<Float 12.340000>"!
+            expect: "#<Float 12.34>"!
 
     method testDefineInteger
         self transpile: "define MyInteger 1234!
@@ -858,7 +882,7 @@ class TestTranspileArray { assert system }
                              direct method run: command in: system
                                  (Array of: Float new: 3 value: 12.3) debug!
                          end"
-            expect: "[#<Float 12.300000>, #<Float 12.300000>, #<Float 12.300000>]"!
+            expect: "[#<Float 12.3>, #<Float 12.3>, #<Float 12.3>]"!
 
     method testNewValue
         self transpile: "class Main \{}
@@ -1096,12 +1120,16 @@ end
 class TestTranspileFloat { assert system }
     is TranspilerTest
 
-    method testFloatLiteral
+    method testToString
         self transpile: "class Main \{}
                              direct method run: command in: system
-                                 1.01 debug!
+                                 [0.0 toString,
+                                  2123.0 toString,
+                                  -2.0 toString,
+                                  0.01 toString,
+                                  -0.01 toString] debug!
                          end"
-            expect: "#<Float 1.010000>"!
+            expect: "[#<String 0.0>, #<String 2123.0>, #<String -2.0>, #<String 0.01>, #<String -0.01>]"!
 
     method testFloatArithmetic1
         self transpile: "class Main \{}
@@ -1111,7 +1139,7 @@ class TestTranspileFloat { assert system }
                                  ((1.0 floatAdd: 10.0) floatAdd: 0.1) debug.
                                  (10.0 floatSub: 0.1) debug!
                          end"
-            expect: "#<Float -1.010000>#<Float 6.000000>#<Float 11.100000>#<Float 9.900000>"!
+            expect: "#<Float -1.01>#<Float 6.0>#<Float 11.1>#<Float 9.9>"!
 
     method testFloatArithmetic2
         self transpile: "class Main \{}
@@ -1119,7 +1147,7 @@ class TestTranspileFloat { assert system }
                                  (8.0 floatDiv: 2.0) debug.
                                  (0.0 floatMul: 10.0) debug!
                          end"
-            expect: "#<Float 4.000000>#<Float 0.000000>"!
+            expect: "#<Float 4.0>#<Float 0.0>"!
 
     method testFloatEq
         self transpile: "class Main \{}
@@ -1325,17 +1353,25 @@ end
 class TestTranspileSystem { assert system }
     is TranspilerTest
 
-    method testTimeSeconds
+    method testClock
         self transpile: "class Main \{}
+                             -- Just a small smoketest
                              direct method run: command in: system
-                                 let t1 = system timeSeconds.
-                                 let i = 0.
-                                 \{ i is 1000 }
-                                     whileFalse: \{ i = i + 1 }.
-                                 let t2 = system timeSeconds.
-                                 (t1 floatLt: t2) debug!
-                         end"
-            expect: "#<Boolean True>"!
+                                 let clock = system clock.
+                                 let t0 = clock seconds.
+                                 let n = 0.
+                                 let t = clock seconds.
+                                 \{ (t0 floatAdd: 0.1) floatLt: t }
+                                     whileFalse: \{ clock sleep: 0.1.
+                                                    t = clock seconds.
+                                                    n = n integerAdd: 1 }.
+                                 -- Sleeps may be short, but let's bet on 3
+                                 -- consequtive sleeps not being short.
+                                 (0 integerLt: n) debug.
+                                 (n integerLte: 3) debug.
+                                 (t floatLt: (t0 floatAdd: 1.0)) debug!
+                          end"
+            expect: "#<Boolean True>#<Boolean True>#<Boolean True>"!
 
     method testOutput
         self transpile: "class Main \{}
@@ -1779,6 +1815,7 @@ class Main {}
             "--prelude-string" -> TestTranspilePreludeString,
             "--prelude-string-output" -> TestTranspilePreludeStringOutput,
             "--prelude-test" -> TestTranspilePreludeTest,
+            "--prelude-time" -> TestTranspilePreludeTime,
             "--record" -> TestTranspileRecord,
             "--return" -> TestTranspileReturn,
             "--self" -> TestTranspileSelf,
