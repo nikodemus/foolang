@@ -59,7 +59,7 @@ interface TranspilerTest
             = system isUnix
                 ifTrue: { "unix" }
                 ifFalse: { "windows" }.
-        let buildCmd = "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall --std=c11 host/main.c host/system_{target}.c".
+        let buildCmd = "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall --std=c11 host/main.c host/system_{target}.c ext/dtoa.c".
         let build = system command: buildCmd.
         self _reportStderr: build.
         build ok
@@ -399,7 +399,7 @@ class TestTranspilePreludeFloat { assert system }
                                  1.0 to: 2.0
                                      do: \{ |each| each debug }!
                          end"
-            expect: "#<Float 1.000000>#<Float 2.000000>"!
+            expect: "#<Float 1.0>#<Float 2.0>"!
 end
 
 class TestTranspilePreludeInteger { assert system }
@@ -716,7 +716,7 @@ class TestTranspileDefine { assert system }
                              direct method run: command in: system
                                  MyFloat debug!
                          end"
-            expect: "#<Float 12.340000>"!
+            expect: "#<Float 12.34>"!
 
     method testDefineInteger
         self transpile: "define MyInteger 1234!
@@ -858,7 +858,7 @@ class TestTranspileArray { assert system }
                              direct method run: command in: system
                                  (Array of: Float new: 3 value: 12.3) debug!
                          end"
-            expect: "[#<Float 12.300000>, #<Float 12.300000>, #<Float 12.300000>]"!
+            expect: "[#<Float 12.3>, #<Float 12.3>, #<Float 12.3>]"!
 
     method testNewValue
         self transpile: "class Main \{}
@@ -1096,12 +1096,16 @@ end
 class TestTranspileFloat { assert system }
     is TranspilerTest
 
-    method testFloatLiteral
+    method testToString
         self transpile: "class Main \{}
                              direct method run: command in: system
-                                 1.01 debug!
+                                 [0.0 toString,
+                                  2123.0 toString,
+                                  -2.0 toString,
+                                  0.01 toString,
+                                  -0.01 toString] debug!
                          end"
-            expect: "#<Float 1.010000>"!
+            expect: "[#<String 0.0>, #<String 2123.0>, #<String -2.0>, #<String 0.01>, #<String -0.01>]"!
 
     method testFloatArithmetic1
         self transpile: "class Main \{}
@@ -1111,7 +1115,7 @@ class TestTranspileFloat { assert system }
                                  ((1.0 floatAdd: 10.0) floatAdd: 0.1) debug.
                                  (10.0 floatSub: 0.1) debug!
                          end"
-            expect: "#<Float -1.010000>#<Float 6.000000>#<Float 11.100000>#<Float 9.900000>"!
+            expect: "#<Float -1.01>#<Float 6.0>#<Float 11.1>#<Float 9.9>"!
 
     method testFloatArithmetic2
         self transpile: "class Main \{}
@@ -1119,7 +1123,7 @@ class TestTranspileFloat { assert system }
                                  (8.0 floatDiv: 2.0) debug.
                                  (0.0 floatMul: 10.0) debug!
                          end"
-            expect: "#<Float 4.000000>#<Float 0.000000>"!
+            expect: "#<Float 4.0>#<Float 0.0>"!
 
     method testFloatEq
         self transpile: "class Main \{}

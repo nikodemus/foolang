@@ -40,6 +40,7 @@
 #endif
 
 #include "system.h"
+#include "ext.h"
 
 size_t min_size(size_t a, size_t b) {
   if (a <= b) {
