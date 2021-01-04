@@ -1,6 +1,4 @@
 use std::hash::{Hash, Hasher};
-use std::ops::Add;
-use std::ops::Sub;
 
 static mut START_TIME: Option<std::time::Instant> = None;
 
@@ -22,28 +20,6 @@ impl Eq for TimeInfo {}
 impl Hash for TimeInfo {
     fn hash<H: Hasher>(&self, state: &mut H) {
         std::ptr::hash(self, state);
-    }
-}
-
-impl Add for TimeInfo {
-    type Output = TimeInfo;
-    fn add(self, other: TimeInfo) -> TimeInfo {
-        TimeInfo {
-            user: self.user + other.user,
-            system: self.system + other.system,
-            real: self.real + other.real,
-        }
-    }
-}
-
-impl Sub for TimeInfo {
-    type Output = TimeInfo;
-    fn sub(self, other: TimeInfo) -> TimeInfo {
-        TimeInfo {
-            user: self.user - other.user,
-            system: self.system - other.system,
-            real: self.real - other.real,
-        }
     }
 }
 

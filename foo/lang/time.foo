@@ -1,6 +1,45 @@
+import .float
+import .object.Object
+
 extend Time
-    method + x
-        x addTime: self!
-    method - x
-        x subTime: self!
+    is Object
+    method + other
+        Time user: (self user + other user)
+             system: (self system + other system)
+             real: (self real + other real)!
+    method - other
+        Time user: (self user - other user)
+             system: (self system - other system)
+             real: (self real - other real)!
+    method * number
+        Time user: (self user * number)
+             system: (self system * number)
+             real: (self system * number)!
+    method / number
+        Time user: (self user / number)
+             system: (self system / number)
+             real: (self real / number)!
+    method < other
+        self compareTo: other using: { |a b| a < b }!
+    method <= other
+        self compareTo: other using: { |a b| a <= b }!
+    method > other
+        self compareTo: other using: { |a b| a > b }!
+    method >= other
+        self compareTo: other using: { |a b| a >= b }!
+    method == other
+        self compareTo: other using: { |a b| a == b }!
+    method compareTo: other using: block
+        (block value: self user value: other user)
+            ifTrue: { (block value: self system value: other system)
+                          ifTrue: { (block value: self real value: other real) } }!
+    method cpu
+        (self user + self system) / self real!
+    method printOn: stream
+        stream print: "Time user: ".
+        stream print: self user.
+        stream print: " system: ".
+        stream print: self system.
+        stream print: " real: ".
+        stream print: self real!
 end

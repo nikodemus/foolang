@@ -194,6 +194,29 @@ class TestTranspilePreludeCharacter { assert system }
             expect: "#<Boolean True>#<Boolean False>#<Boolean True>"!
 end
 
+class TestTranspilePreludeTime { assert system }
+    is TranspilerTest
+
+    method testSystemClockTimes
+        self transpile: "import lang.time
+                         import lang.output
+                         import lang.integer
+
+                         class Main \{}
+                             direct method run: command in: system
+                                 let clock = system clock.
+                                 let waste = 1.0.
+                                 1000 times: \{ waste = waste + 0 }.
+                                 let t0 = clock times.
+                                 1000 times: \{ waste = waste + 0 }.
+                                 let t1 = clock times.
+                                 let delta = t1 - t0.
+                                 (t1 > delta) debug!
+                         end"
+            expect: "#<Boolean True>"!
+end
+
+
 class TestTranspilePreludeClosure { assert system }
     is TranspilerTest
 
@@ -1329,17 +1352,25 @@ end
 class TestTranspileSystem { assert system }
     is TranspilerTest
 
-    method testTimeSeconds
+    method testClock
         self transpile: "class Main \{}
+                             -- Just a small smoketest
                              direct method run: command in: system
-                                 let t1 = system timeSeconds.
-                                 let i = 0.
-                                 \{ i is 1000 }
-                                     whileFalse: \{ i = i + 1 }.
-                                 let t2 = system timeSeconds.
-                                 (t1 floatLt: t2) debug!
-                         end"
-            expect: "#<Boolean True>"!
+                                 let clock = system clock.
+                                 let t0 = clock seconds.
+                                 let n = 0.
+                                 let t = clock seconds.
+                                 \{ (t0 floatAdd: 0.1) floatLt: t }
+                                     whileFalse: \{ clock sleep: 0.1.
+                                                    t = clock seconds.
+                                                    n = n integerAdd: 1 }.
+                                 -- Sleeps may be short, but let's bet on 3
+                                 -- consequtive sleeps not being short.
+                                 (0 integerLt: n) debug.
+                                 (n integerLte: 3) debug.
+                                 (t floatLt: (t0 floatAdd: 1.0)) debug!
+                          end"
+            expect: "#<Boolean True>#<Boolean True>#<Boolean True>"!
 
     method testOutput
         self transpile: "class Main \{}
@@ -1783,6 +1814,7 @@ class Main {}
             "--prelude-string" -> TestTranspilePreludeString,
             "--prelude-string-output" -> TestTranspilePreludeStringOutput,
             "--prelude-test" -> TestTranspilePreludeTest,
+            "--prelude-time" -> TestTranspilePreludeTime,
             "--record" -> TestTranspileRecord,
             "--return" -> TestTranspileReturn,
             "--self" -> TestTranspileSelf,
