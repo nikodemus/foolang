@@ -209,7 +209,13 @@ class TestTranspilePreludeTime { assert system }
                                  1000 times: \{ waste = waste + 0 }.
                                  let t0 = clock times.
                                  1000 times: \{ waste = waste + 0 }.
-                                 let t1 = clock times.
+                                 -- KLUDGE: on windows the increments to usertime appear
+                                 -- at a fairly coarse granularity, at least on some
+                                 -- machines. So add 1 second there.
+                                 let t1 = clock times
+                                             + Time user: 1.0
+                                                    system: 0.0
+                                                    real: 0.0.
                                  let delta = t1 - t0.
                                  (t1 > delta) debug!
                          end"
