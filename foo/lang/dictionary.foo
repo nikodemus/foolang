@@ -4,7 +4,7 @@ import .object.Object
 extend Dictionary
     is Object
 
-    direct method new: capacity
+    direct method withCapacity: capacity
         -- Ignore hint, implement in self-hosted implementation.
         self new!
 

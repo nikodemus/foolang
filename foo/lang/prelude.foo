@@ -8,7 +8,7 @@ import .character_ext.Character
 -- import .class.Class
 import .closure.Closure
 import .collection.Collection
--- import .dictionary.Dictionary
+import .dictionary2.Dictionary
 import .exception.DivideByZero
 import .exception.DoesNotUnderstand
 import .exception.Error

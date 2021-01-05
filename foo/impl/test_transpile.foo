@@ -244,6 +244,40 @@ class TestTranspilePreludeClosure { assert system }
             expect: "#<Integer 53>#<Integer 312>"!
 end
 
+class TestTranspilePreludeDictionary { assert system }
+    is TranspilerTest
+
+    method testRemove
+        self transpile: "import lang.dictionary2.Dictionary
+                         import lang.output
+                         import lang.string
+
+                         class Main \{}
+                             direct method run: command in: system
+                                 let dict = Dictionary new.
+                                 dict at: 1 put: \"one\".
+                                 dict at: 2 put: \"two\".
+                                 dict remove: 1.
+                                 system output print: dict!
+                         end"
+            expect: "\{ 2 -> \"two\" }"!
+
+    method testToString
+        self transpile: "import lang.dictionary2.Dictionary
+                         import lang.output
+                         import lang.string
+
+                         class Main \{}
+                             direct method run: command in: system
+                                 let dict = Dictionary new.
+                                 dict at: 1 put: \"one\".
+                                 dict at: 2 put: \"two\".
+                                 system output print: dict!
+                         end"
+            expect: "\{ 1 -> \"one\",
+  2 -> \"two\" }"!
+end
+
 class TestTranspilePreludeException { assert system }
     is TranspilerTest
 
@@ -1812,6 +1846,7 @@ class Main {}
             "--prelude-boolean" -> TestTranspilePreludeBoolean,
             "--prelude-character" -> TestTranspilePreludeCharacter,
             "--prelude-closure" -> TestTranspilePreludeClosure,
+            "--prelude-dictionary" -> TestTranspilePreludeDictionary,
             "--prelude-exception" -> TestTranspilePreludeException,
             "--prelude-file" -> TestTranspilePreludeFile,
             "--prelude-filepath" -> TestTranspilePreludeFilePath,

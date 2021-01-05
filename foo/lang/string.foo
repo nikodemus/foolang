@@ -46,7 +46,6 @@ extend String
     method _escapeOn: stream
         [["\"", "\\\""],
          ["\n", "\\n"],
-         ["\t", "\\t"],
          ["\r", "\\r"],
          ["\{", "\\\{"]]
            do: { |esc|

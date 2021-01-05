@@ -61,7 +61,6 @@ pub fn instance_vtable() -> Vtable {
     let vt = Vtable::for_instance("Dictionary");
     vt.add_primitive_method_or_panic("at:ifNone:", dictionary_at_if_none);
     vt.add_primitive_method_or_panic("doKeys:", dictionary_do_keys);
-    vt.add_primitive_method_or_panic("has:", dictionary_has);
     vt.add_primitive_method_or_panic("remove:", dictionary_remove);
     vt.add_primitive_method_or_panic("put:at:", dictionary_put_at);
     vt.add_primitive_method_or_panic("size", dictionary_size);
@@ -110,12 +109,6 @@ fn dictionary_do_keys(receiver: &Object, args: &[Object], env: &Env) -> Eval {
         args[0].send("value:", &[k], env)?;
     }
     Ok(receiver.clone())
-}
-
-fn dictionary_has(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    Ok(env
-        .foo
-        .make_boolean(receiver.as_dictionary("Dictionary#has:")?.borrow().get(&args[0]).is_some()))
 }
 
 fn dictionary_put_at(receiver: &Object, args: &[Object], _env: &Env) -> Eval {
