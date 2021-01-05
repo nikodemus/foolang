@@ -1,13 +1,11 @@
 # Reified Types Without Reflection
 
-**Status**: ADOPTED
+**Status**: ADOPTED (not implemented, principle currently violated)
 
 **Identifier**: 004-reified-types-without-reflection
 
 **References**:
-- WIP - [Tower of Babel](design/wip-tower-of-babel.md)
-
-**Prior Art**:
+- 013 - [Tower of Babel](design/013-tower-of-babel.md)
 - 2004 - [Mirrors: Design Principles for Meta-level Facilities of
   Object-Oriented Programming Languages](https://bracha.org/mirrors.pdf) by
   Gilad Bracha and David Ungar.
@@ -15,6 +13,7 @@
 **History**:
 - 2020-03-01: initial version by Nikodemus
 - 2020-06-06: additional performance note by Nikodemus
+- 2021-01-05: update to current format
 
 ## Problem Description
 
@@ -33,7 +32,7 @@ mirrors do not prevent addition of `classOf`.
 At the same time I've avoided adding a `classOf` builtin or method to push code
 towards protocols where type-tests aren't used.
 
-Analysis in [Tower of Babel](design/wip-tower-of-babel.md) also makes clear that
+Analysis in [Tower of Babel](design/013-tower-of-babel.md) also makes clear that
 type-tests make some changes which would otherwise not be breaking changes into
 breaking changes: implementing pre-existing interfaces in other pre-existing
 classes and interfaces can break dependents even if the behaviour of the code

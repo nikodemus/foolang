@@ -5,9 +5,6 @@
 **Identifier**: 011-metaobject-protocol
 
 **References**:
-- none
-
-**Prior Art**:
 - The Art of the Metaobject Protocol, by Gregor Kiczales, Jim des Rivieres, and
   Daniel G. Bobrow.
 - [Traits: Composable Units of
@@ -22,6 +19,7 @@
 **History**:
 - 2020-08-11: initial incomplete version by Nikodemus
 - 2020-08-14: first version that might be semi-coherent by Nikodemus
+- 2021-01-05: updated to current format
 
 ## Problem Description
 

@@ -1,15 +1,14 @@
 # 012 - Record Implementation
 
-**Status**: WIP (not implemented)
+**Status**: ADOPTED (partial implementation)
 
-**Identifier**: 021-record-implementation
+**Identifier**: 012-record-implementation
 
-**References**:
-
-**Prior Art**:
+**References**: none
 
 **History**:
 - 2020-11-10: initial version by Nikodemus
+- 2021-01-05: updated to reflect current status
 
 ## Problem Description
 
@@ -27,7 +26,7 @@ method frob: foobar::Foobar
    ...
 ```
 
-(Mockup, not the way it is going to be done.)
+(Mockup, not the way it is going to be done!)
 
 Having one type per constructor site in source location is too much: then the
 type is useless.
@@ -41,8 +40,8 @@ type is useless.
 ## Proposal
 
 Record interface now longer works as ad-hoc constructor for records: the
-syntactic form must be used. This ensures that all records types are
-statically known.
+syntactic form must be used. This ensures that all records types are statically
+known.
 
 For every constructor, sort the keywords into canonical order.
 
@@ -106,9 +105,11 @@ No users, no issues.
 
 ## Implementation Notes
 
-None
+- Partial implmentation in transpiler, bootstrap evaluator and interpreter
+  do not use this.
 
 ## Discussion
 
-None.
-
+- Having the idea of a "record type" is starting to seem suspect. The
+  constructors and the shared classes are fine, but being able to specify
+  "this thing must be a record of foo and bar" seems wrong.

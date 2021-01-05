@@ -7,12 +7,11 @@
 **References**:
 - 005 - [Program Definition and Refinement](005-program-definition-and-refinement.md)
 
-**Prior Art**: none
-
 **History**:
 - 2020-03-15: initial version by Nikodemus
 - 2020-03-19: implementation notes by Nikodemus
 - 2020-06-06: impact clarified by Nikodemus
+- 2021-01-05: updated to current format
 
 ## Problem Description
 

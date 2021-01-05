@@ -2,7 +2,7 @@
 
 **Status**: WIP
 
-**Identifier**: wip-twower-of-babel
+**Identifier**: 013-twower-of-babel
 
 **References**:
 - 002 - [No Class Inheritance](design/002-no-class-inheritance.md)
@@ -14,6 +14,7 @@
 **History**:
 - 2020-02-25: initial version by Nikodemus
 - 2020-03-01: updated with reference to _Reified Types Without Reflection_ by Nikodemus
+- 2021-01-05: updated to current format
 
 ## Problem Description
 

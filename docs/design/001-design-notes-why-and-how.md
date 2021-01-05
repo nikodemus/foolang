@@ -4,9 +4,7 @@
 
 **Identifier**: 001-design-notes-why-and-how.md
 
-**References**: none
-
-**Prior Art**:
+**References**:
 - X3J13 issues, aka Common Lisp standardization committee issues, see:
   - http://www.lispworks.com/documentation/lw50/CLHS/Issues/I_Alpha.htm
   - http://nhplace.com/kent/Papers/cl-untold-story.html
@@ -18,6 +16,10 @@
 **History**:
 - 2020-02-25: initial version by nikodemus
 - 2020-02-29: added optional implementation status parenthetical to status field
+- 2021-12-05:
+  - require unique identifier numbers for wip-proposals as well
+  - merge prior art into references
+  - both dropped and retired proposals go to `design/old/`
 
 ## Problem Description
 
@@ -49,7 +51,7 @@ art.)
 Format notes in Markdown, including extensions currently supported under
 `docs/`, such as Mermaid.
 
-[`wip-design-note-template.md`](design-notes/wip-design-note-template.md)
+[`new-design-note-template.md`](design-notes/new-design-note-template.md)
 is template to be used when adding new design notes, with the fields
 and sections described below already in place.
 
@@ -63,15 +65,11 @@ Each proposal should have the following fields:
 - **Status**: One of: _WIP_, _ADOPTED_, _DROPPED_, or _RETIRED_, and
   an optional parenthetical comment on current implementation status.
 
-- **Identifier**: for _WIP_ notes `wip-` followed by a unique lowercase
-  hyphenation of the title. For notes in later statutes the `wip-` is replaced
-  by a unique numeric prefix, using three digits.
+- **Identifier**: Unique numeric prefix followed by a lowercase
+  hyphenation of the title.
 
-- **References**: project internal references: other design notes, pull
-  requests, etc.
-
-- **Prior Art**: project external prior art: papers, language manuals, blog
-  posts, etc.
+- **References**: other design notes, pull requests, and prior art such
+  as papers, language manuals, blog posts, etc.
 
 - **History**: initial version date, status changes, substantive rewrites
   of _WIP_ notes, any amendments to notes in later statuses.
@@ -82,8 +80,8 @@ Each proposal should have the following sections:
 
 - **Problem Description**: what is the problem that should be addressed.
 
-  Should preferably be explicit about **Drivers**: the accepted
-  constraints and forces driving the proposal.
+  Should preferably be explicit about **Drivers**: the accepted constraints and
+  forces driving the proposal.
 
 - **Proposal**: proposed solution if any, including a summary containing
   rationale and impact notes on:
@@ -100,11 +98,11 @@ Each proposal should have the following sections:
   be included, but that's rare in the real world.) Example: this proposal
   _might_ improve ergnomics over a long time by fostering consistent design, but
   that is a speculative and indirect impact, in no way guaranteed&mdash;and as
-  such not discussed under _Ergnomics_.
+  such not discussed under _Ergonomics_.
 
-- **Alternatives**: different alternatives solutions. These may be equally
-  fully developed as the main proposal, or shorter. WIP proposals and
-  dropped proposals might not even have a main proposal.
+- **Alternatives**: different alternative solutions. These may be equally fully
+  developed as the main proposal, or shorter. WIP proposals and dropped
+  proposals might not even have a main proposal.
 
 - **Implementation Notes** (optional): may be added during the transition from
   _WIP_ to _ADOPTED_, particularly any shortcomings or differences, should be
@@ -119,8 +117,7 @@ _WIP_ and _ADOPTED_ notes are stored in `.md` files under `docs/design/`
 with name matching each note's identifier. This makes _WIP_ and _ADOPTED_ notes
 visible in the same space, but easy to distinguish.
 
-_DROPPED_ and _RETIRED_ notes are moved to `docs/design/dropped/` and
-`docs/design/retired/` respectively.
+_DROPPED_ and _RETIRED_ notes are moved to `docs/design/old/`.
 
 ### Statuses
 
@@ -138,11 +135,11 @@ Meanings of statuses:
 - **WIP**: These notes may be edited freely, but they should still contain
   the require fields and a problem description.
 
-- **ADOPTED**: These notes describe the current design, and hopefully
-  the implementation. The proposal section should not be substantively edited,
-  but **Implementation notes** may evolve. If proposal (design) changes
-  substantively open a new design note that supersedes the old one instead
-  of amending the old one.
+- **ADOPTED**: These notes describe the current design, and hopefully the
+  implementation. The proposal section should not be substantively edited, but
+  **Implementation notes** may evolve. If proposal (design) changes
+  substantively open a new design note that supersedes the old one instead of
+  amending the old one.
 
 - **DROPPED**: A note that was thrown out without being adopted. These should
   always contain an explanation as to why&mdash;even if it is just "this is not
@@ -176,8 +173,8 @@ No impact.
 
 #### Implementation
 
-Increased discipline in recording design issues increases overhead, but
-the overhead does not seem overly large.
+Increased discipline in recording design issues increases overhead, but the
+overhead does not seem overly large.
 
 #### Users
 
