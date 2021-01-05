@@ -1432,6 +1432,15 @@ class TestTranspileSystem { assert system }
                                  command size debug!
                          end"
             expect: "#<Integer 1>"!
+
+    method testRandom
+        self transpile: "class Main \{}
+                            direct method run: command in: system
+                                let a = system random integer.
+                                let b = system random integer.
+                                (a is b) debug!
+                        end"
+            expect: "#<Boolean False>"!
 end
 
 class TestTranspileDynamic { assert system }

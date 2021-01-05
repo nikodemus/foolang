@@ -13,4 +13,7 @@ struct FooProcessTimes {
 #define FLOAT(value) \
   ((struct Foo){ .vtable = &FooInstanceVtable_Float, .datum = { .float64 = value } })
 
+#define INTEGER(value) \
+  ((struct Foo){ .vtable = &FooInstanceVtable_Integer, .datum = { .int64 = value } })
+
 #endif // __FOO_H_

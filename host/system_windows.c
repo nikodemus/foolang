@@ -1,8 +1,11 @@
 #include "system.h"
 
 #define WIN32_LEAN_AND_MEAN
+#define _CRT_RAND_S
+
 #include <Windows.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <winsock2.h>
 
 #undef NDEBUG
@@ -67,5 +70,26 @@ void system_sleep(double seconds) {
   Sleep((DWORD)(seconds * 1000.0));
 }
 
+int64_t system_random(void) {
+  // rand_s gives us an unsigned int's worth of random,
+  // make sure that's 4 bytes as expected.
+  _Static_assert(sizeof(unsigned int) == sizeof(uint32_t),
+                 "unsigned int not uint32_t");
+  union {
+    int64_t value;
+    struct{
+      uint32_t low;
+      uint32_t high;
+    };
+  } random;
+  errno_t err;
+  err = rand_s(&random.low);
+  assert(!err);
+  err = rand_s(&random.high);
+  assert(!err);
+  return random.value;
+}
+
 void system_init(void) {
+    // nothing to do!
 }
