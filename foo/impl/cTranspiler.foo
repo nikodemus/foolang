@@ -15,6 +15,7 @@ import .transpiler.output
 import .transpiler.selector
 import .transpiler.string
 import .transpiler.system
+import .transpiler.system_random
 import .transpiler.time
 import .ast.*
 import .utils.*
@@ -149,6 +150,9 @@ end
 class System {}
 end
 
+class SystemRandom {}
+end
+
 define Builtins [
      Builtin
          type: Class
@@ -246,6 +250,12 @@ define Builtins [
          mark: "foo_mark_none"
          directMethods: system.DirectMethods
          instanceMethods: system.InstanceMethods,
+    Builtin
+         type: Class
+         value: SystemRandom
+         mark: "foo_mark_none"
+         directMethods: system_random.DirectMethods
+         instanceMethods: system_random.InstanceMethods,
     Builtin
          type: Class
          value: Time

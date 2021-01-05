@@ -2,6 +2,9 @@ define DirectMethods
     Dictionary new!
 
 define InstanceMethods {
+    #clock
+    -> { signature: [], vars: 0,
+         body: "return INSTANCE(Clock, NULL);" },
     #files
     -> { signature: [], vars: 0,
          body: "struct FooBytes* root = FooBytes_from(\"\");
@@ -9,7 +12,7 @@ define InstanceMethods {
     #output
     -> { signature: [], vars: 0,
          body: "return INSTANCE(Output, stdout);" },
-    #clock
+    #random
     -> { signature: [], vars: 0,
-         body: "return INSTANCE(Clock, NULL);" },
+         body: "return INSTANCE(SystemRandom, NULL);" },
 }!

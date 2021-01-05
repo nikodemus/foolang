@@ -1,5 +1,6 @@
 #define _POSIX_C_SOURCE 199309L // minimum for clock_gettime()
 
+#include <stdio.h>
 #include <inttypes.h>
 #include <stddef.h>
 #include <time.h>
@@ -54,7 +55,20 @@ void system_sleep(double seconds) {
   nanosleep(&req, &rem_unused);
 }
 
-void system_init() {
+int64_t system_random(void) {
+  int64_t r;
+  FILE* f;
+  // Yes, /dev/urandom, not /dev/random. See:
+  //     https://www.2uo.de/myths-about-urandom/
+  // ...just hoping this is good for other unix
+  // platforms as well.
+  assert((f = fopen("/dev/urandom", "r")));
+  assert(sizeof(r) == fread(&r, 1, sizeof(r), f));
+  fclose(f);
+  return r;
+}
+
+void system_init(void) {
   // Init time
   struct timespec now;
   assert(!clock_gettime(CLOCK_MONOTONIC, &now));
