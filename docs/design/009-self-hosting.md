@@ -1,6 +1,6 @@
 # Self Hosting
 
-**Status**: WIP (not implemented)
+**Status**: ADOPTED (work in progress implementation)
 
 **Identifier**: 009-self-hosting
 
@@ -29,9 +29,7 @@ How to get there?
 Bootstap interpreter needs to be good enough to interpret the self hosted code,
 but no more.
 
-The transpiler could operate on AST directly, but a few straigtforward passes
-are probably in order. (Inlining / partial evaluation, typechecking,
-devirtualization, lambda-lifting.)
+The transpiler initially can operate on AST directly.
 
 Transpile the self-hosted code into source for a `foo` executable capable of
 acting as both an interpreter and compiler, replacing the bootstrap interpreter.
@@ -40,9 +38,9 @@ acting as both an interpreter and compiler, replacing the bootstrap interpreter.
 type-punning.)
 
 Later given the existing C transpiler, adding transpilers targeting Emacs Lisp
-and Javascript should be a quick job: these will allow seamless editor
-integration, use of self-hosted pretty printer for indentation, and an
-in-browser web-repl.
+and Javascript should be a relatively simple, if tedious job: these will allow
+seamless editor integration, use of self-hosted pretty printer for indentation,
+and an in-browser web-repl.
 
 ### Summary
 
