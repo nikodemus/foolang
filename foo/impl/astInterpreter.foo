@@ -185,7 +185,7 @@ class AstInterpreter { context process }
                        collect: { |each| each visitBy: self })!
 
     method visitDictionary: aDictionary
-        let theDictionary = Dictionary new: (aDictionary entries size).
+        let theDictionary = Dictionary withCapacity: (aDictionary entries size).
         aDictionary entries
             do: { |each|
                   -- Note order of evaluation!

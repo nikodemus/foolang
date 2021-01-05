@@ -1,0 +1,154 @@
+-- VERY quick and dirty linear search version
+
+import .any.Any
+import .array.Array
+import .object.Object
+import .stringOutput.StringOutput
+
+-- FIXME: A MASSIVE KLUDGE as self hosted arrays do not yet support element
+-- type, used by Array#from:to: (whole things needs to be rethought).
+extend Array
+    method arrayElementType
+        Any!
+end
+
+class Dictionary { size _keys _values }
+    is Object
+
+    direct method new
+       self size: 0
+             _keys: (Array new: 8)
+             _values: (Array new: 8)!
+
+    direct method withCapacity: capacity
+        self size: 0
+             _values: (Array new: capacity)
+             _keys: (Array new: capacity)!
+
+    direct method keys: keys values: values
+        let size = keys size.
+        size == values size
+            ifFalse: { panic "size mismatch" }.
+        self size: size
+             _keys: (Array from: keys)
+             _values: (Array from: values)!
+
+    method _index: key _or: block
+        1 to: size
+          do: { |index|
+                (_keys at: index) == key
+                    ifTrue: {  return index } }.
+        block value!
+
+    method _add: value _as: key
+        self _growIfNeeded.
+        size = size + 1.
+        _keys put: key at: size.
+        _values put: value at: size.
+        self!
+
+    method _growIfNeeded
+        _keys size > size
+            ifFalse: { let inc = size atLeast: 8 atMost: 128.
+                       _values = _values append: (Array new: inc).
+                       _keys = _keys append: (Array new: inc) }!
+
+    method isEmpty
+        size is 0!
+
+    method put: value at: key
+        _values put: value
+                at: (self _index: key
+                          _or: { return self _add: value _as: key }).
+        self!
+
+    method at: key put: value
+        self put: value at: key!
+
+    method at: key
+        self at: key ifNone: { False }!
+
+    method at: key ifNone: block
+        _values at: (self _index: key
+                          _or: { return block value })!
+
+    method at: key ifNonePut: block
+        self at: key
+             ifNone: { let new = block value.
+                       self _add: new _as: key.
+                       new }!
+
+    method has: key
+        self at: key ifNone: { return False }.
+        True!
+
+    method do: block
+        1 to: size
+          do: { |index|
+                block cull: (_keys at: index)
+                      value: (_values at: index) }.
+        self!
+
+    method doKeys: block
+        1 to: size
+          do: { |index|
+                block value: (_keys at: index) }!
+
+    method doValues: block
+        1 to: size
+          do: { |index|
+                block value: (_values at: index) }.
+        self!
+
+    method remove: key
+        let index = self _index: key
+                        _or: { return False }.
+        _keys put: (_keys at: size) at: index.
+        _keys put: False at: size.
+        _values put: (_values at: size) at: index.
+        _values put: False at: size.
+        size = size - 1.
+        True!
+
+    method toString
+        size is 0
+            ifTrue: { "Dictionary new" }.
+        StringOutput with: { |out|
+                             out print: "\{ ".
+                             self keys sort
+                                 do: { |each|
+                                       out display: each.
+                                       out print: " -> ".
+                                       out display: (self at: each) }
+                                 interleaving: { out println: ",".
+                                                 out print: "  " }.
+                             out print: " }" }!
+
+    method isEquivalent: other
+        self size is other size
+            ifFalse: { return False }.
+        self doKeys: { |key|
+                       (other at: key ifNone: { return False }) == (self at: key)
+                           ifFalse: { return False } }.
+        True!
+
+    method merge: other
+        other doKeys: { |key|
+                        self put: (other at: key) at: key }.
+        self!
+
+    method removeAll: keys
+        keys do: { |each| self remove: each }.
+        self!
+
+    method keys
+        _keys from: 1 to: size!
+
+    method values
+        _values from: 1 to: size!
+
+    method copy
+        Dictionary size: size
+                   _keys: _keys copy
+                   _values: _values copy!
+end
