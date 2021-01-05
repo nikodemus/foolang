@@ -23,8 +23,8 @@ end
 interface Ordered
     is Iterable
 
-    required method size
-    required method at: index
+    -- required method size
+    -- required method at: index
 
     method at: index put: elt
         self put: elt at: index!
