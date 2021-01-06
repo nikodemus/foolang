@@ -8,7 +8,8 @@ interface Syntax
     required method parts
 
     method addTo: definition
-        Error raise: "{self} is not valid component of {definition}"!
+        let note = "invalid definition part".
+        Error raise: "Bad definition of {definition name}:\n{self source note: note}"!
 
     method withBlockComment: lines fence: fence commentSource: source
         SyntaxPrefixComment
@@ -58,33 +59,27 @@ interface Syntax
 end
 
 interface Literal
+    is Syntax
+
     required method value
     required method valueDisplayString
-end
-
-class SyntaxLiteral { value }
-    is Syntax
-    is Literal
 
     method visitBy: visitor
         visitor visitLiteral: self!
 
     method parts
         [value]!
+end
+
+class SyntaxLiteral { value }
+    is Literal
 
     method valueDisplayString
         value displayString!
 end
 
 class SyntaxFloatLiteral { string value }
-    is Syntax
     is Literal
-
-    method visitBy: visitor
-        visitor visitLiteral: self!
-
-    method parts
-        [value]!
 
     method valueDisplayString
         string!
@@ -92,14 +87,7 @@ end
 
 
 class SyntaxHexLiteral { value }
-    is Syntax
     is Literal
-
-    method visitBy: visitor
-        visitor visitLiteral: self!
-
-    method parts
-        [value]!
 
     method valueDisplayString
         Integer printBase: 16
@@ -107,13 +95,7 @@ class SyntaxHexLiteral { value }
 end
 
 class SyntaxBinaryLiteral { value }
-    is Syntax
-
-    method visitBy: visitor
-        visitor visitLiteral: self!
-
-    method parts
-        [value]!
+    is Literal
 
     method valueDisplayString
         Integer printBase: 2
@@ -579,7 +561,7 @@ interface SyntaxMethod
     method withBlockComment: lines fence: fence commentSource: aSource
         self comment: (SyntaxBlockComment
                            fence: fence
-                           comment: lines
+                           lines: lines
                            source: aSource).
         self!
 

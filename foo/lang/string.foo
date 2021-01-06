@@ -45,6 +45,7 @@ extend String
 
     method _escapeOn: stream
         [["\"", "\\\""],
+         ["\\", "\\\\"],
          ["\n", "\\n"],
          ["\r", "\\r"],
          ["\{", "\\\{"]]

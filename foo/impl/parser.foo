@@ -27,38 +27,99 @@ interface Token
         "#<{self classOf name} \"{self string}\" @ {self first}>"!
 
     method parseAsVariableWith: parser
-        Error raise: "Invalid variable in self-hosted parser: {string} ({self classOf name})"!
+        let source = SourceString string: parser source first: first last: last.
+        Error raise: "Invalid variable in self-hosted parser: {string} ({self classOf name})
+{source}"!
 
     required method string
     required method first
 end
 
 define StringEscapes
-    let escapes = Dictionary new.
-    escapes put: "\n" at: "n".
-    escapes!
+    {
+         "n" -> "\n",
+         "r" -> "\r",
+         "t" -> "\t",
+         "\\" -> "\\",
+         "\"" -> "\"",
+         "\{" -> "\{",
+         "\}" -> "\}"
+    }!
 
 class TokenString { string first last }
     is Token
 
-    method parseAsPrefixWith: parser atPrecedence: _precedence
-        let out = StringOutput new.
-        let escape = False.
-        first to: last
-              do: { |pos|
-                    (escape not and: (parser atEscape: pos))
-                        ifTrue: { escape = True }
-                        ifFalse: { let orig = parser source from: pos to: pos.
-                                   out print: (escape
-                                                   ifTrue: { escape = False.
-                                                             self escape: orig }
-                                                   ifFalse: { orig }) } }.
-        SyntaxLiteral value: out content!
-
-    method escape: s
+    method _escapeChar: char
         StringEscapes
-            at: s
-            ifNone: { s }!
+            at: char
+            ifNone: { panic "Unknown escape character: {char}" }!
+
+    method _scanCharFrom: next into: literal
+        let char = string from: next to: next.
+        next = next + 1.
+        char == "\\"
+            ifTrue: { literal print: (self _escapeChar: (string from: next to: next)).
+                      next = next + 1 }
+            ifFalse: { literal print: char }.
+        next!
+
+    method _isInterpolationStart: next
+        "\{" == (string from: next to: next)!
+
+    method _literalFrom: next into: parts
+        let literal = StringOutput new.
+        let from = next.
+
+        { next < string size
+              ifTrue: { (self _isInterpolationStart: next) not } }
+        whileTrue: { next = self _scanCharFrom: next into: literal }.
+
+        from is next
+            ifFalse: { parts add: (SyntaxLiteral value: literal content) }.
+        next!
+
+    method _interpolatedFrom: next into: parts
+        (next < string size)
+            ifFalse: { return next }.
+        (self _isInterpolationStart: next) not
+            ifTrue: { return next }.
+        let source = string from: next to: string size.
+        let exprParser = Parser expressionParser: source.
+        parts add: exprParser parsePrefix.
+        next + exprParser position - 1!
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        -- Debug println: "parse string: '{string}'".
+        string size is 2 -- just ""
+            ifTrue: { return SyntaxLiteral value: "" }.
+        let parts = List new.
+        let next = 2.
+        { next < string size }
+            whileTrue: { next = self _literalFrom: next into: parts.
+                         next = self _interpolatedFrom: next into: parts }.
+        -- Debug println: "parts: {parts}".
+        parts = parts
+            collect: { |each|
+                       (SyntaxLiteral includes: each)
+                           ifTrue: { each }
+                           ifFalse: { let value
+                                          = SyntaxUnary
+                                              receiver: each
+                                              selector: #value
+                                              source: "<interpolation #value>".
+                                      SyntaxUnary
+                                          receiver: value
+                                          selector: #toString
+                                          source: "<interpolation #toString" } }.
+        (parts size > 0) assert.
+        let res = parts pop.
+        { parts isEmpty }
+            whileFalse: { res = SyntaxKeyword
+                              receiver: (parts pop)
+                              selector: (#append:)
+                              arguments: [res]
+                              source: "<interpolation #append>" }.
+        res!
 end
 
 class TokenFloat { string first last }
@@ -141,6 +202,7 @@ interface TokenComment
     direct method from: first to: last in: parser
         last - first < 2
             ifTrue: { LineCommentToken
+                          string: (parser from: first to: last)
                           first: first
                           last: last }
             ifFalse: { BlockCommentToken
@@ -149,14 +211,11 @@ interface TokenComment
                            last: last }!
 end
 
-class LineCommentToken { first last }
+class LineCommentToken { string first last }
     is Token
 
     method precedence
         MaxPrecedence!
-
-    method string
-        "--"!
 
     ---
     See also: special handlings in SequenceToken and LetToken to parse
@@ -487,6 +546,7 @@ class DefineToken { precedence string first last }
     is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
+        -- Debug println: "DefineToken#parseAsPrefixWith: ...".
         parser withSyntaxTable: ExpressionSyntaxTable
                do: { let def = SyntaxDefine
                                    variable: parser parseVariable
@@ -548,6 +608,7 @@ interface MethodToken
                      parser handleSuffixCommentOf: theMethod }!
 
     method parseMethodWith: parser as: methodClass
+        -- Debug println: "MethodToken#parseMethodWith: ...".
         parser withSyntaxTable: ExpressionSyntaxTable
                do: { let signature = self _parseMethodSignatureWith: parser.
                      -- Debug println: "\n- method {signature selector}, {signature parameters}, {methodClass} -> {signature returnType}".
@@ -771,6 +832,8 @@ define ExtendSyntaxTable
 interface LookupToken
     is Token
 
+    -- FIXME: Current host doesn't support required direct methods
+    -- required direct method tokenClassIn: table
     direct method from: first to: last in: parser
         let tokenString = parser from: first to: last.
         -- Figure out the correct tokenclass using current syntax.
@@ -785,9 +848,6 @@ interface LookupToken
             string: tokenString
             first: first
             last: last!
-
-    -- FIXME: Current host doesn't support required direct methods
-    -- required direct method tokenClassIn: table
 end
 
 class TokenSigil { precedence string first last }
@@ -974,7 +1034,7 @@ class Parser { source::String
                _position::Integer
                first::Integer
                last::Integer
-               stack::List -- for lookahead
+               stack::List
                syntaxTable }
     is Object
 
@@ -1007,12 +1067,18 @@ class Parser { source::String
             finally: { syntaxTable = prevTable.
                        self _clearLookahead }!
 
+    direct method expressionParser: source
+        self _new: source syntaxTable: ExpressionSyntaxTable!
+
+    direct method definitionParser: source
+        self _new: source syntaxTable: ToplevelSyntaxTable!
+
     direct method parseExpressions: source
-        (self _new: source syntaxTable: ExpressionSyntaxTable)
+        (self expressionParser: source)
             _parseAll: #parse!
 
     direct method parseDefinitions: source
-        (self _new: source syntaxTable: ToplevelSyntaxTable)
+        (self definitionParser: source)
             parseDefinitions!
 
     direct method parseMixed: source
@@ -1072,11 +1138,11 @@ class Parser { source::String
         SourceString string: source first: first last: last!
 
     method expect: expected
-        let got = self nextToken string.
+        let token = self nextToken.
+        let got = token string.
         got == expected
             ifFalse: { Error raise: "Expected '{expected}', got '{got}' {syntaxTable where} (self-hosted parser)
-Position: {self position}
-Source: {source}" }!
+{SourceString string: source first: token first last: token last}" }!
 
     method sees: test
         -- Cannot use lookahead since that would skip newlines!
@@ -1106,7 +1172,6 @@ Source: {source}" }!
 
     method parseSuffixOf: prefix with: precedence
         let expr = prefix.
-
         { -- Debug println: "expr: {expr displayString}, precedence={precedence}, next={self lookahead}?, nextPrecedence={self nextPrecedence} in: {syntaxTable where}".
           precedence < self nextPrecedence }
         whileTrue: { -- Debug println: " -> go".
@@ -1259,14 +1324,11 @@ Source: {source}" }!
                     ifTrue: { return True } }.
         False!
 
-    method afterEscape
-        self atEscape: self position - 1!
-
-    method atEscape: position
-        (self atEof: position)
+    method atEscape
+        (self atEof: self position)
             ifTrue: { return False }.
-        (position >= first)
-            ifTrue: { (source at: position) == EscapeCharacter }!
+        (self position >= first)
+            ifTrue: { (source at: self position) == EscapeCharacter }!
 
     method isAt: block
         self atEof
@@ -1332,13 +1394,18 @@ Source: {source}" }!
 
     method _scanString
         -- Debug println: "/scanString".
+        let start = self position.
         self advance.
-        let string = TokenString
-                         from: self position
-                         to: (self skipWhile: { self atDoublequote not or: self afterEscape })
-                         in: self.
+        { self atDoublequote }
+            whileFalse: { self atEscape ifTrue: { self advance }.
+                          self advance }.
+        -- Debug println: "/scanString => |{source from: start to: self position - 1}|".
+        let res = TokenString
+                      from: start
+                      to: self position
+                      in: self.
         self advance.
-        string!
+        res!
 
     method _scanSigil
         TokenSigil
@@ -1347,7 +1414,7 @@ Source: {source}" }!
             in: self!
 
     method _scanWord
-        -- Debug println: "/scanWord".
+        -- Debug println: "/_scanWord".
         let first = self position.
         self skipWhile: { self atWord }.
         (self atChar: ColonCharacter notFollowedBy: ColonCharacter)

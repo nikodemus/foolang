@@ -25,7 +25,8 @@ interface TranspilerTest
 
     method transpile: string
         let env = Environment
-                      modules: { "lang" -> system files / "foo/lang" }
+                      modules: { "lang" -> system files / "foo/lang",
+                                 "impl" -> system files / "foo/impl", }
                       asFileModules.
         let c = CTranspiler transpile: string in: env.
         (system files / "host/generated_selectors.h")
@@ -132,6 +133,24 @@ class TestTranspilePanic { assert system }
 Backtrace:
   1: Main class#run:in:
 "!
+end
+
+class TestTranspileParser { assert system }
+    is TranspilerTest
+
+    -- Doesn't quite work yet
+    method no_testParseInteger
+        self transpile: "import impl.parser
+                         class Main \{\}
+                             direct method run: command in: system
+                                 let i = parser.Parser parseExpressions: \"123\".
+                                 system output print: i!
+                         end"
+            expect: "123"!
+
+    -- Tests bail out if there are not test methods at all!
+    method testNop
+        True!
 end
 
 class TestTranspilePerformWith { assert system }
@@ -295,7 +314,7 @@ class TestTranspilePreludeException { assert system }
                                  Error raise: \"Bang!\"!
                          end"
             -- FIXME: string interpolation!
-            expectError: "#<Integer 1>PANIC: UNHANDLED ERROR: \{ex description}
+            expectError: "#<Integer 1>PANIC: UNHANDLED ERROR: Bang!
 Backtrace:
   11: FallbackHandler class#raise:
   10: Handler#raise:
@@ -937,12 +956,19 @@ class TestTranspileArray { assert system }
                          end"
             expect: "[#<Boolean True>, #<Boolean True>, #<Boolean True>]"!
 
-    method testArrayCtor
+    method testArrayCtor1
         self transpile: "class Main \{}
                              direct method run: command in: system
                                  [1, 2, 3] debug!
                          end"
             expect: "[#<Integer 1>, #<Integer 2>, #<Integer 3>]"!
+
+    method testArrayCtor2
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                 [\"[\", \"]\", 123] debug!
+                         end"
+            expect: "[#<String [>, #<String ]>, #<Integer 123>]"!
 
     method testArraySize
         self transpile: "class Main \{}
@@ -1353,12 +1379,14 @@ class TestTranspileString { assert system }
                          end"
             expect: "#<Integer 120>"!
 
-    method testStringLiteral
+    method testStringLiterals
         self transpile: "class Main \{}
                              direct method run: command in: system
-                                 \"foo\" debug!
+                                 \"foo\" debug.
+                                 \"\" debug.
+                                 \"\\\\\" debug!
                          end"
-            expect: "#<String foo>"!
+            expect: "#<String foo>#<String >#<String \\>"!
 
     method testStringEquivalent
         self transpile: "class Main \{}
@@ -1376,6 +1404,26 @@ class TestTranspileString { assert system }
                                  \"XXbarXX\"!
                          end"
             expect: "#<String bar>"!
+
+    method testStringInterpolation1
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                 let fourtytwo = 42.
+                                 let q = 123.
+                                 \"Answer is \{fourtytwo\}, right? \{q is 123\}!\" debug!
+                         end"
+            expect: "#<String Answer is 42, right? True!>"!
+
+    method testStringInterpolation2
+        self transpile: "class Main \{}
+                             direct method string
+                                 \"<string>\"!
+                             direct method run: command in: system
+                                 let note = \"<note>\".
+                                 let parser = \{ syntaxTable: \{ where: \"<where>\" } }.
+                                 \"\{note}: '\{self string}' in suffix position \{parser syntaxTable where}:\" debug!
+                        end"
+            expect: "#<String <note>: '<string>' in suffix position <where>:>"!
 
     method testStringFromToEmpty
         self transpile: "class Main \{}
@@ -1850,6 +1898,7 @@ class Main {}
             "--keyword" -> TestTranspileKeyword,
             "--let" -> TestTranspileLet,
             "--panic" -> TestTranspilePanic,
+            "--parser" -> TestTranspileParser,
             "--perform-with" -> TestTranspilePerformWith,
             "--prelude-any" -> TestTranspilePreludeAny,
             "--prelude-boolean" -> TestTranspilePreludeBoolean,
