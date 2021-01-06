@@ -824,6 +824,8 @@ define ExtendSyntaxTable
 interface LookupToken
     is Token
 
+    -- FIXME: Current host doesn't support required direct methods
+    -- required direct method tokenClassIn: table
     direct method from: first to: last in: parser
         let tokenString = parser from: first to: last.
         -- Figure out the correct tokenclass using current syntax.
@@ -838,9 +840,6 @@ interface LookupToken
             string: tokenString
             first: first
             last: last!
-
-    -- FIXME: Current host doesn't support required direct methods
-    -- required direct method tokenClassIn: table
 end
 
 class TokenSigil { precedence string first last }
