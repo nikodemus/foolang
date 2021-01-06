@@ -314,7 +314,7 @@ class TestTranspilePreludeException { assert system }
                                  Error raise: \"Bang!\"!
                          end"
             -- FIXME: string interpolation!
-            expectError: "#<Integer 1>PANIC: UNHANDLED ERROR: \{ex description}
+            expectError: "#<Integer 1>PANIC: UNHANDLED ERROR: Bang!
 Backtrace:
   11: FallbackHandler class#raise:
   10: Handler#raise:
