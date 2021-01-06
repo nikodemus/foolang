@@ -76,9 +76,10 @@ class TokenString { string first last }
             ifFalse: { return next }.
         (self _isInterpolationStart: next) not
             ifTrue: { return next }.
-        let exprParser = Parser expressionParser: (string from: next to: string size).
-        parts add: exprParser parseSingle.
-        next + exprParser position - 2!
+        let source = string from: next to: string size.
+        let exprParser = Parser expressionParser: source.
+        parts add: exprParser parsePrefix.
+        next + exprParser position - 1!
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
         let parts = List new.
