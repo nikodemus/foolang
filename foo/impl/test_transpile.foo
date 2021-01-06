@@ -25,7 +25,8 @@ interface TranspilerTest
 
     method transpile: string
         let env = Environment
-                      modules: { "lang" -> system files / "foo/lang" }
+                      modules: { "lang" -> system files / "foo/lang",
+                                 "impl" -> system files / "foo/impl", }
                       asFileModules.
         let c = CTranspiler transpile: string in: env.
         (system files / "host/generated_selectors.h")
@@ -132,6 +133,20 @@ class TestTranspilePanic { assert system }
 Backtrace:
   1: Main class#run:in:
 "!
+end
+
+class TestTranspileParser { assert system }
+    is TranspilerTest
+
+    method no_testParseInteger
+        self transpile: "import impl.parser
+
+                         class Main \{\}
+                             direct method run: command in: system
+                                 let i = parser.Parser parseExpressions: \"123\".
+                                 system output print: i!
+                         end"
+            expect: "123"!
 end
 
 class TestTranspilePerformWith { assert system }
@@ -1879,6 +1894,7 @@ class Main {}
             "--keyword" -> TestTranspileKeyword,
             "--let" -> TestTranspileLet,
             "--panic" -> TestTranspilePanic,
+            "--parser" -> TestTranspileParser,
             "--perform-with" -> TestTranspilePerformWith,
             "--prelude-any" -> TestTranspilePreludeAny,
             "--prelude-boolean" -> TestTranspilePreludeBoolean,
