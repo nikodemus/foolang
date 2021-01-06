@@ -198,6 +198,7 @@ interface TokenComment
     direct method from: first to: last in: parser
         last - first < 2
             ifTrue: { LineCommentToken
+                          string: (parser from: first to: last)
                           first: first
                           last: last }
             ifFalse: { BlockCommentToken
@@ -206,14 +207,11 @@ interface TokenComment
                            last: last }!
 end
 
-class LineCommentToken { first last }
+class LineCommentToken { string first last }
     is Token
 
     method precedence
         MaxPrecedence!
-
-    method string
-        "--"!
 
     ---
     See also: special handlings in SequenceToken and LetToken to parse
