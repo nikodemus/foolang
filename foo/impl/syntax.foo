@@ -8,7 +8,8 @@ interface Syntax
     required method parts
 
     method addTo: definition
-        Error raise: "{self source} is not valid component of a toplevel definition"!
+        let note = "invalid definition part".
+        Error raise: "Bad definition of {definition name}:\n{self source note: note}"!
 
     method withBlockComment: lines fence: fence commentSource: source
         SyntaxPrefixComment
