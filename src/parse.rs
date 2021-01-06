@@ -1398,6 +1398,7 @@ fn scan_string_part(parser: &Parser, mut source_location: SourceLocation) -> Res
                 Some((_, 't')) => res.push_str("\t"),
                 Some((_, 'r')) => res.push_str("\r"),
                 Some((_, '{')) => res.push_str("{"),
+                Some((_, '}')) => res.push_str("}"),
                 Some((pos1, _)) => {
                     source_location.set_span(&(start + pos0..start + pos1));
                     return Unwind::error_at(

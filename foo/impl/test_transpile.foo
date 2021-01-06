@@ -1377,6 +1377,15 @@ class TestTranspileString { assert system }
                          end"
             expect: "#<String bar>"!
 
+    method testStringInterpolation
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                 let fourtytwo = 42.
+                                 let q = 123.
+                                 \"Answer is \{fourtytwo\}, right? \{q is 123\}!\" debug!
+                         end"
+            expect: "#<String Answer is 42, right? True!>"!
+
     method testStringFromToEmpty
         self transpile: "class Main \{}
                              direct method run: command in: system

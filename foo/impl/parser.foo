@@ -34,31 +34,79 @@ interface Token
 end
 
 define StringEscapes
-    let escapes = Dictionary new.
-    escapes put: "\n" at: "n".
-    escapes!
+    {
+         "n" -> "\n",
+         "\\" -> "\\",
+         "\{" -> "\{",
+         "\}" -> "\}"
+    }!
 
 class TokenString { string first last }
     is Token
 
-    method parseAsPrefixWith: parser atPrecedence: _precedence
-        let out = StringOutput new.
-        let escape = False.
-        first to: last
-              do: { |pos|
-                    (escape not and: (parser atEscape: pos))
-                        ifTrue: { escape = True }
-                        ifFalse: { let orig = parser source from: pos to: pos.
-                                   out print: (escape
-                                                   ifTrue: { escape = False.
-                                                             self escape: orig }
-                                                   ifFalse: { orig }) } }.
-        SyntaxLiteral value: out content!
-
-    method escape: s
+    method _escapeChar: char
         StringEscapes
-            at: s
-            ifNone: { s }!
+            at: char
+            ifNone: { panic "Unknown escape character: {char}" }!
+
+    method _scanCharFrom: next into: literal
+        let char = string from: next to: next.
+        next = next + 1.
+        char == "\\"
+            ifTrue: { literal print: (self _escapeChar: string from: next to: next).
+                      next = next + 1 }
+            ifFalse: { literal print: char }.
+        next!
+
+    method _isInterpolationStart: next
+        "\{" == (string from: next to: next)!
+
+    method _literalFrom: next into: parts
+        let literal = StringOutput new.
+        let from = next.
+        { next <= string size
+              ifTrue: { (self _isInterpolationStart: next) not } }
+            whileTrue: { next = self _scanCharFrom: next into: literal }.
+        from is next
+            ifFalse: { parts add: (SyntaxLiteral value: literal content) }.
+        next!
+
+    method _interpolatedFrom: next into: parts
+        (next <= string size)
+            ifFalse: { return next }.
+        (self _isInterpolationStart: next) not
+            ifTrue: { return next }.
+        let exprParser = Parser expressionParser: (string from: next to: string size).
+        parts add: exprParser parseSingle.
+        next + exprParser position - 2!
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        let parts = List new.
+        let next = 1.
+        { next <= string size }
+            whileTrue: { next = self _literalFrom: next into: parts.
+                         next = self _interpolatedFrom: next into: parts }.
+        parts = parts
+            collect: { |each|
+                       (SyntaxLiteral includes: each)
+                           ifTrue: { each }
+                           ifFalse: { let value
+                                          = SyntaxUnary
+                                              receiver: each
+                                              selector: #value
+                                              source: "<interpolation #value>".
+                                      SyntaxUnary
+                                          receiver: value
+                                          selector: #toString
+                                          source: "<interpolation #toString" } }.
+        let res = parts pop.
+        { parts isEmpty }
+            whileFalse: { res = SyntaxKeyword
+                              receiver: (parts pop)
+                              selector: (#append:)
+                              arguments: [res]
+                              source: "<interpolation #append>" }.
+        res!
 end
 
 class TokenFloat { string first last }
@@ -1007,12 +1055,18 @@ class Parser { source::String
             finally: { syntaxTable = prevTable.
                        self _clearLookahead }!
 
+    direct method expressionParser: source
+        self _new: source syntaxTable: ExpressionSyntaxTable!
+
+    direct method definitionParser: source
+        self _new: source syntaxTable: ToplevelSyntaxTable!
+
     direct method parseExpressions: source
-        (self _new: source syntaxTable: ExpressionSyntaxTable)
+        (self expressionParser: source)
             _parseAll: #parse!
 
     direct method parseDefinitions: source
-        (self _new: source syntaxTable: ToplevelSyntaxTable)
+        (self definitionParser: source)
             parseDefinitions!
 
     direct method parseMixed: source
