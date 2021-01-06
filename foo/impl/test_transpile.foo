@@ -1353,12 +1353,14 @@ class TestTranspileString { assert system }
                          end"
             expect: "#<Integer 120>"!
 
-    method testStringLiteral
+    method testStringLiterals
         self transpile: "class Main \{}
                              direct method run: command in: system
-                                 \"foo\" debug!
+                                 \"foo\" debug.
+                                 \"\" debug.
+                                 \"\\\\\" debug!
                          end"
-            expect: "#<String foo>"!
+            expect: "#<String foo>#<String >#<String \\>"!
 
     method testStringEquivalent
         self transpile: "class Main \{}
@@ -1396,13 +1398,6 @@ class TestTranspileString { assert system }
                                  \"\{note}: '\{self string}' in suffix position \{parser syntaxTable where}:\" debug!
                         end"
             expect: "#<String <note>: '<string>' in suffix position <where>:>"!
-
-    method testSlashEscape
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 \"\\\\\" debug!
-                         end"
-            expect: "#<String \\>"!
 
     method testStringFromToEmpty
         self transpile: "class Main \{}

@@ -83,6 +83,8 @@ class TokenString { string first last }
         next + exprParser position - 1!
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
+        string isEmpty
+            ifTrue: { return SyntaxLiteral value: "" }.
         let parts = List new.
         let next = 1.
         { next <= string size }
@@ -101,6 +103,7 @@ class TokenString { string first last }
                                           receiver: value
                                           selector: #toString
                                           source: "<interpolation #toString" } }.
+        (parts size > 0) assert.
         let res = parts pop.
         { parts isEmpty }
             whileFalse: { res = SyntaxKeyword
