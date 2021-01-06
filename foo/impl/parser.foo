@@ -1315,14 +1315,11 @@ Source: {source}" }!
                     ifTrue: { return True } }.
         False!
 
-    method afterEscape
-        self atEscape: self position - 1!
-
-    method atEscape: position
-        (self atEof: position)
+    method atEscape
+        (self atEof: self position)
             ifTrue: { return False }.
-        (position >= first)
-            ifTrue: { (source at: position) == EscapeCharacter }!
+        (self position >= first)
+            ifTrue: { (source at: self position) == EscapeCharacter }!
 
     method isAt: block
         self atEof
@@ -1389,12 +1386,17 @@ Source: {source}" }!
     method _scanString
         -- Debug println: "/scanString".
         self advance.
-        let string = TokenString
-                         from: self position
-                         to: (self skipWhile: { self atDoublequote not or: self afterEscape })
-                         in: self.
+        let start = self position.
+        { self atDoublequote }
+            whileFalse: { self atEscape ifTrue: { self advance }.
+                          self advance }.
+        -- Debug println: "/scanString => |{source from: start to: self position - 1}|".
+        let res = TokenString
+                      from: start
+                      to: self position - 1
+                      in: self.
         self advance.
-        string!
+        res!
 
     method _scanSigil
         TokenSigil
@@ -1403,7 +1405,7 @@ Source: {source}" }!
             in: self!
 
     method _scanWord
-        -- Debug println: "/scanWord".
+        -- Debug println: "/_scanWord".
         let first = self position.
         self skipWhile: { self atWord }.
         (self atChar: ColonCharacter notFollowedBy: ColonCharacter)
