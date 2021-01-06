@@ -1130,11 +1130,11 @@ class Parser { source::String
         SourceString string: source first: first last: last!
 
     method expect: expected
-        let got = self nextToken string.
+        let token = self nextToken.
+        let got = token string.
         got == expected
             ifFalse: { Error raise: "Expected '{expected}', got '{got}' {syntaxTable where} (self-hosted parser)
-Position: {self position}
-Source: {source}" }!
+{SourceString string: source first: token first last: token last}" }!
 
     method sees: test
         -- Cannot use lookahead since that would skip newlines!
