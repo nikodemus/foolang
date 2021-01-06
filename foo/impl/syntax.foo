@@ -560,7 +560,7 @@ interface SyntaxMethod
     method withBlockComment: lines fence: fence commentSource: aSource
         self comment: (SyntaxBlockComment
                            fence: fence
-                           comment: lines
+                           lines: lines
                            source: aSource).
         self!
 
