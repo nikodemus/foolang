@@ -65,15 +65,17 @@ class TokenString { string first last }
     method _literalFrom: next into: parts
         let literal = StringOutput new.
         let from = next.
-        { next <= string size
+
+        { next < string size
               ifTrue: { (self _isInterpolationStart: next) not } }
-            whileTrue: { next = self _scanCharFrom: next into: literal }.
+        whileTrue: { next = self _scanCharFrom: next into: literal }.
+
         from is next
             ifFalse: { parts add: (SyntaxLiteral value: literal content) }.
         next!
 
     method _interpolatedFrom: next into: parts
-        (next <= string size)
+        (next < string size)
             ifFalse: { return next }.
         (self _isInterpolationStart: next) not
             ifTrue: { return next }.
@@ -83,13 +85,15 @@ class TokenString { string first last }
         next + exprParser position - 1!
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        string isEmpty
+        -- Debug println: "parse string: '{string}'".
+        string size is 2 -- just ""
             ifTrue: { return SyntaxLiteral value: "" }.
         let parts = List new.
-        let next = 1.
-        { next <= string size }
+        let next = 2.
+        { next < string size }
             whileTrue: { next = self _literalFrom: next into: parts.
                          next = self _interpolatedFrom: next into: parts }.
+        -- Debug println: "parts: {parts}".
         parts = parts
             collect: { |each|
                        (SyntaxLiteral includes: each)
@@ -1387,15 +1391,15 @@ class Parser { source::String
 
     method _scanString
         -- Debug println: "/scanString".
-        self advance.
         let start = self position.
+        self advance.
         { self atDoublequote }
             whileFalse: { self atEscape ifTrue: { self advance }.
                           self advance }.
         -- Debug println: "/scanString => |{source from: start to: self position - 1}|".
         let res = TokenString
                       from: start
-                      to: self position - 1
+                      to: self position
                       in: self.
         self advance.
         res!

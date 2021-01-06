@@ -937,12 +937,19 @@ class TestTranspileArray { assert system }
                          end"
             expect: "[#<Boolean True>, #<Boolean True>, #<Boolean True>]"!
 
-    method testArrayCtor
+    method testArrayCtor1
         self transpile: "class Main \{}
                              direct method run: command in: system
                                  [1, 2, 3] debug!
                          end"
             expect: "[#<Integer 1>, #<Integer 2>, #<Integer 3>]"!
+
+    method testArrayCtor2
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                 [\"[\", \"]\", 123] debug!
+                         end"
+            expect: "[#<String [>, #<String ]>, #<Integer 123>]"!
 
     method testArraySize
         self transpile: "class Main \{}
