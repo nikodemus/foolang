@@ -544,6 +544,7 @@ class DefineToken { precedence string first last }
     is Token
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
+        -- Debug println: "DefineToken#parseAsPrefixWith: ...".
         parser withSyntaxTable: ExpressionSyntaxTable
                do: { let def = SyntaxDefine
                                    variable: parser parseVariable
@@ -605,6 +606,7 @@ interface MethodToken
                      parser handleSuffixCommentOf: theMethod }!
 
     method parseMethodWith: parser as: methodClass
+        -- Debug println: "MethodToken#parseMethodWith: ...".
         parser withSyntaxTable: ExpressionSyntaxTable
                do: { let signature = self _parseMethodSignatureWith: parser.
                      -- Debug println: "\n- method {signature selector}, {signature parameters}, {methodClass} -> {signature returnType}".
@@ -1030,7 +1032,7 @@ class Parser { source::String
                _position::Integer
                first::Integer
                last::Integer
-               stack::List -- for lookahead
+               stack::List
                syntaxTable }
     is Object
 
@@ -1168,7 +1170,6 @@ class Parser { source::String
 
     method parseSuffixOf: prefix with: precedence
         let expr = prefix.
-
         { -- Debug println: "expr: {expr displayString}, precedence={precedence}, next={self lookahead}?, nextPrecedence={self nextPrecedence} in: {syntaxTable where}".
           precedence < self nextPrecedence }
         whileTrue: { -- Debug println: " -> go".
