@@ -578,7 +578,7 @@ interface SyntaxMethod
         visitor visitMethod: self!
 
     method isRequired
-        body is False!
+        self body is False!
 
     method isDefined
         self isRequired not!
