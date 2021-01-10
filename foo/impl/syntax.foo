@@ -68,7 +68,7 @@ interface Literal
         visitor visitLiteral: self!
 
     method parts
-        [value]!
+        [self value]!
 end
 
 class SyntaxLiteral { value }
