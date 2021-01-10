@@ -27,8 +27,8 @@ interface Token
         "#<{self classOf name} \"{self string}\" @ {self first}>"!
 
     method parseAsVariableWith: parser
-        let source = SourceString string: parser source first: first last: last.
-        Error raise: "Invalid variable in self-hosted parser: {string} ({self classOf name})
+        let source = SourceString string: parser source first: self first last: self last.
+        Error raise: "Invalid variable in self-hosted parser: {self string} ({self classOf name})
 {source}"!
 
     required method string
