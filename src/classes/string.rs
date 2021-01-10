@@ -4,7 +4,7 @@ use crate::unwind::Unwind;
 
 pub fn instance_vtable() -> Vtable {
     let vt = Vtable::for_instance("String");
-    vt.add_primitive_method_or_panic("appendToString:", string_append_to_string);
+    vt.add_primitive_method_or_panic("append:", string_append_);
     vt.add_primitive_method_or_panic("toString", string_to_string);
     vt.add_primitive_method_or_panic("size", string_size);
     vt.add_primitive_method_or_panic("do:", string_do);
@@ -53,9 +53,9 @@ fn string_send_to_with(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     receiver2.send(selector2, args2, env)
 }
 
-fn string_append_to_string(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let mut s = args[0].string_as_str().to_string();
-    s.push_str(receiver.string_as_str());
+fn string_append_(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let mut s = receiver.string_as_str().to_string();
+    s.push_str(args[0].string_as_str());
     Ok(env.foo.into_string(s))
 }
 
