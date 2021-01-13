@@ -514,15 +514,24 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each|
                   each value == value
                       ifTrue: { return each cname } }.
-        let index = constants size + 1.
-        let cname = "fooconst_{Name mangleName: value classOf name}_{index}".
-        -- Placeholder in case of recursive entry.
-        constants add: { value: value, cname: cname }.
-        constants at: index
-                  put: (self _constantDefinition: value
-                             _in: env
-                             _called: cname).
-        cname!
+        (Class includes: value)
+            ifTrue: { self declare: (self _targetClassOf: value
+                                         _in: env).
+                      let cname = Name mangleGlobal: value.
+                      constants add: { value: value,
+                                       cname: cname,
+                                       declaration: "",
+                                       definition: "" }.
+                      return cname }
+            ifFalse: { let index = constants size + 1.
+                       let cname = "fooconst_{Name mangleName: value classOf name}_{index}".
+                       -- Placeholder in case of recursive entry.
+                       constants add: { value: value, cname: cname }.
+                       constants at: index
+                                 put: (self _constantDefinition: value
+                                            _in: env
+                                            _called: cname).
+                       return cname }!
 
     method _isPtr: value
         let theClass = value classOf.
