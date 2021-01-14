@@ -152,14 +152,15 @@ class TestTranspileParser { assert system }
     is TranspilerTest
 
     -- Doesn't quite work yet
-    method no_testParseInteger
-        self transpile: "import impl.parser
-                         class Main \{\}
-                             direct method run: command in: system
-                                 let i = parser.Parser parseExpressions: \"123\".
-                                 system output print: i!
-                         end"
-            expect: "123"!
+    method testParseInteger
+        self transpileWithPrelude:
+            "import impl.parser
+             class Main \{\}
+                 direct method run: command in: system
+                     let i = parser.Parser parseExpressions: \"123\".
+                     system output print: i!
+             end"
+            expect: "[#<SyntaxLiteral 123>]"!
 
     -- Tests bail out if there are not test methods at all!
     method testNop
