@@ -896,7 +896,7 @@ impl Env {
                 // FIXME: there used to be a workspace lookup here...
                 Unwind::error_at(
                     assign.source_location.clone(),
-                    "Cannot assign to an unbound variable",
+                    &format!("Cannot assign to an unbound variable: {}", &assign.name),
                 )
             }
         }
