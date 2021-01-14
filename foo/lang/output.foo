@@ -1,4 +1,8 @@
+import .object.Object
+
 extend Output
+    is Object
+
     method println: string
         string printOn: self.
         self newline!
