@@ -714,10 +714,6 @@ class SyntaxTable { where tokens }
             where: newWhere
             tokens: (tokens copy merge: newTokens)!
 
-    method where: newWhere tokens: newTokens
-        SyntaxTable
-            where: newWhere
-            tokens: (tokens copy merge: newTokens)!
 end
 
 -- FIXME: call it binding power, it's more accurate
@@ -1074,6 +1070,7 @@ class Parser { source::String
         self _new: source syntaxTable: ToplevelSyntaxTable!
 
     direct method parseExpressions: source
+        -- Debug println: "#parseExpressions: ...".
         (self expressionParser: source)
             _parseAll: #parse!
 
