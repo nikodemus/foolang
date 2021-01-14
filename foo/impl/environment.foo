@@ -193,8 +193,7 @@ class Environment { parent    -- Enclosing environment or False
         newBuiltins do: { |each|
                           let global = builtins
                                            at: each name
-                                           ifNonePut: { AstGlobal name: each name
-                                                                  definition: each }.
+                                           ifNonePut: { AstGlobal name: each name }.
                           global redefine: each }!
 
     method import: moduleName relative: relative
@@ -221,8 +220,21 @@ class Environment { parent    -- Enclosing environment or False
         module globals
             doKeys: { |name|
                       (name startsWith: "_")
-                          ifFalse: { bindings add: (module global: name) } }.
+                          ifFalse: { -- Debug println: "importing: {name}".
+                                     bindings add: (module global: name) } }.
         self addGlobals: bindings!
+
+    method importPrelude: moduleName
+        (self depth is 1) assert.
+        let module = (modules at: moduleName relative: False in: self).
+        module globals
+            do: { |name global|
+                      (name startsWith: "_")
+                      ifFalse: { -- Debug println: "prelude: {name}".
+                                 (builtins has: name)
+                                     ifTrue: { (builtins at: name)
+                                                   redefineUsing: global }
+                                     ifFalse: { builtins put: global at: name } } }!
 
     method addVariable: name type: type
         -- Debug println: "addVariable: {name} type: {type}".
