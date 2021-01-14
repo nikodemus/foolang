@@ -86,7 +86,7 @@ interface TranspilerTest
         self prelude: False
              transpile: string
              ok: False
-             output: output!
+             expect: output!
 
     method transpileWithPrelude: string expect: output
         self prelude: ["lang", "prelude"] asList
