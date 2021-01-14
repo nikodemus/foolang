@@ -289,7 +289,7 @@ class CTranspiler { output selectorMap closureFunctions
                     constants variables tmpCounter
                     globals generatedMethods env }
 
-    direct method transpile: string in: env
+    direct method transpile: string in: env with: prelude
         -- Clean up from previous run.
         Builtins do: #reset.
         env removeBuiltins: [
@@ -302,6 +302,8 @@ class CTranspiler { output selectorMap closureFunctions
             "TypeError"
         ].
         env replaceBuiltins: Builtins.
+        prelude is False
+            ifFalse: { env importPrelude: prelude }.
         env load: string.
         self transpileMain: (env global: "Main") in: env!
 
@@ -512,15 +514,24 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each|
                   each value == value
                       ifTrue: { return each cname } }.
-        let index = constants size + 1.
-        let cname = "fooconst_{Name mangleName: value classOf name}_{index}".
-        -- Placeholder in case of recursive entry.
-        constants add: { value: value, cname: cname }.
-        constants at: index
-                  put: (self _constantDefinition: value
-                             _in: env
-                             _called: cname).
-        cname!
+        (Class includes: value)
+            ifTrue: { self declare: (self _targetClassOf: value
+                                         _in: env).
+                      let cname = Name mangleGlobal: value.
+                      constants add: { value: value,
+                                       cname: cname,
+                                       declaration: "",
+                                       definition: "" }.
+                      return cname }
+            ifFalse: { let index = constants size + 1.
+                       let cname = "fooconst_{Name mangleName: value classOf name}_{index}".
+                       -- Placeholder in case of recursive entry.
+                       constants add: { value: value, cname: cname }.
+                       constants at: index
+                                 put: (self _constantDefinition: value
+                                            _in: env
+                                            _called: cname).
+                       return cname }!
 
     method _isPtr: value
         let theClass = value classOf.
@@ -837,13 +848,14 @@ class CTranspiler { output selectorMap closureFunctions
         let instanceVtableName = Name mangleInstanceVtable: aClass.
         let classVtableName = Name mangleDirectVtable: aClass.
         let globalName = Name mangleGlobal: aClass.
-        -- Augmented later with ctor and typetest
+        -- Augmented later with: constructor (aka ctor), #includes:, and #name
         -- Debug println: "/class direct methods".
         let directMethods = aClass directMethods asList.
         directMethods
             do: { |each| self _generateMethod: each _for: aClass name }.
+        -- Augmented later with #classOf.
         -- Debug println: "/class instance methods".
-        let instanceMethods = aClass instanceMethods.
+        let instanceMethods = aClass instanceMethods asList.
         instanceMethods
             do: { |each| self _generateMethod: each _for: aClass name }.
         aClass isBuiltin
@@ -898,6 +910,36 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "    return foo_Boolean_new(&{Name mangleInstanceVtable: aClass} == ctx->frame[0].vtable);".
         output println: "}".
         output newline.
+        -- #name
+        -- FIXME: This can be reused between all classes!
+        -- FIXME: replace FooCStrings with just strings, so we can return name directly.
+        let getname = { home: aClass,
+                     selector: #name,
+                     arity: 0,
+                     frameSize: 0,
+                     isDirect: True }.
+        directMethods push: getname.
+        output print: "struct Foo ".
+        output println: (Name mangleMethod: getname).
+        output println: "    (struct FooContext* ctx)".
+        output println: "\{".
+        output println: "    struct FooClass* class = PTR(FooClass, ctx->receiver.datum);".
+        output println: "    struct FooCString* name = class->instanceVtable->name;".
+        output println: "    return foo_String_new(name->size, name->data);".
+        output println: "\}".
+        -- #classOf
+        let classOf = { home: aClass,
+                        selector: #classOf,
+                        arity: 0,
+                        frameSize: 0,
+                        isDirect: False }.
+        instanceMethods push: classOf.
+        output print: "struct Foo ".
+        output println: (Name mangleMethod: classOf).
+        output println: "    (struct FooContext* ctx)".
+        output println: "\{".
+        output println: "    return {globalName};".
+        output println: "\}".
         -- Interfaces
         let interfaces = aClass interfaceGlobals.
         let classInterfacesName = "FooClassInterfaces_{aClass name}".

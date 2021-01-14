@@ -27,8 +27,8 @@ interface Token
         "#<{self classOf name} \"{self string}\" @ {self first}>"!
 
     method parseAsVariableWith: parser
-        let source = SourceString string: parser source first: first last: last.
-        Error raise: "Invalid variable in self-hosted parser: {string} ({self classOf name})
+        let source = SourceString string: parser source first: self first last: self last.
+        Error raise: "Invalid variable in self-hosted parser: {self string} ({self classOf name})
 {source}"!
 
     required method string
@@ -714,10 +714,6 @@ class SyntaxTable { where tokens }
             where: newWhere
             tokens: (tokens copy merge: newTokens)!
 
-    method where: newWhere tokens: newTokens
-        SyntaxTable
-            where: newWhere
-            tokens: (tokens copy merge: newTokens)!
 end
 
 -- FIXME: call it binding power, it's more accurate
@@ -1074,6 +1070,7 @@ class Parser { source::String
         self _new: source syntaxTable: ToplevelSyntaxTable!
 
     direct method parseExpressions: source
+        -- Debug println: "#parseExpressions: ...".
         (self expressionParser: source)
             _parseAll: #parse!
 

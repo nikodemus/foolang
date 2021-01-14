@@ -21,9 +21,6 @@ extend String
     method at: index
         Character code: (self codeAt: index)!
 
-    method append: other
-       other appendToString: self!
-
     method trimRight
         self trimRight: #isWhitespace!
 
@@ -38,7 +35,7 @@ extend String
         ""!
 
     method newline
-        "\n" appendToString: self!
+        self append: "\n"!
 
     method printOn: stream
         stream writeString: self!

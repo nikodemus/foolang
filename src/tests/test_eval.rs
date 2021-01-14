@@ -209,13 +209,13 @@ fn test_assign_unbound() {
         eval_str("let x = 1. z = x + 1. let y = x. y"),
         Err(Unwind::Panic(
             Error::SimpleError(SimpleError {
-                what: "Cannot assign to an unbound variable".to_string(),
+                what: "Cannot assign to an unbound variable: z".to_string(),
             }),
             Location::from(
                 11..12,
                 concat!(
                     "001 let x = 1. z = x + 1. let y = x. y\n",
-                    "               ^ Cannot assign to an unbound variable\n"
+                    "               ^ Cannot assign to an unbound variable: z\n"
                 )
             )
         ))

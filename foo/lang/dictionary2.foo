@@ -22,8 +22,8 @@ class Dictionary { size _keys _values }
 
     direct method withCapacity: capacity
         self size: 0
-             _values: (Array new: capacity)
-             _keys: (Array new: capacity)!
+             _keys: (Array new: capacity)
+             _values: (Array new: capacity)!
 
     direct method keys: keys values: values
         let size = keys size.

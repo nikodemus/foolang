@@ -4,6 +4,18 @@ import .object.Object
 extend Dictionary
     is Object
 
+    method _keys
+        -- To allow dumping in transpiler for target
+        self keys sort!
+
+    method _values
+        -- To allow dumping in transpiler for target
+        let values = Array new: self size.
+        self _keys
+            doWithIndex: { |key index|
+                           values put: (self at: key) at: index }.
+        values!
+
     direct method withCapacity: capacity
         -- Ignore hint, implement in self-hosted implementation.
         self new!

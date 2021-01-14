@@ -606,6 +606,15 @@ interface AstGlobalVariable
                       _value = _definition eval }.
         _value!
 
+    method hasValue
+        _value is AstUndefined
+            ifTrue: { return False }.
+        _value is AstInProgress
+            ifTrue: { return False }.
+        _value is AstPending
+            ifTrue: { return False }.
+        return True!
+
     method isConstant
         True!
 
@@ -656,7 +665,17 @@ class AstGlobal { name::String _value _definition sources }
         -- FIXME: This is a bit dodgy: the usage is currently for replacing
         -- host definitions of builtins in transpiler, but it seems to me that
         -- value should be updated too if it has been materialized...
+        --
+        -- (See #redefineUsing:)
         _definition = newDefinition!
+
+    method redefineUsing: global
+        _definition = global definition.
+        sources = global sources.
+        self hasValue
+                ifTrue: { global hasValue
+                              ifTrue: { _value = global value }
+                              ifFalse: { _value =  AstPending } }!
 
 end
 

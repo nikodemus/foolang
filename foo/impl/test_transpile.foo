@@ -23,12 +23,12 @@ interface TranspilerTest
     direct method system: system
         TestTranspileWrapper test: self system: system!
 
-    method transpile: string
+    method prelude: prelude transpile: string
         let env = Environment
                       modules: { "lang" -> system files / "foo/lang",
                                  "impl" -> system files / "foo/impl", }
                       asFileModules.
-        let c = CTranspiler transpile: string in: env.
+        let c = CTranspiler transpile: string in: env with: prelude.
         (system files / "host/generated_selectors.h")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c selectors }.
@@ -76,16 +76,29 @@ interface TranspilerTest
                        Debug println: "---" }.
         cmd!
 
-    method transpile: string expectError: output
-        assert that: { let cmd = self transpile: string.
-                       [cmd ok, cmd stdout] }
-               equals: [False, output]
-               testing: "transpiler"!
-
     method transpile: string expect: output
-        assert that: { let res = self transpile: string.
+        self prelude: False
+             transpile: string
+             ok: True
+             expect: output!
+
+    method transpile: string expectError: output
+        self prelude: False
+             transpile: string
+             ok: False
+             expect: output!
+
+    method transpileWithPrelude: string expect: output
+        self prelude: ["lang", "prelude"] asList
+             transpile: string
+             ok: True
+             expect: output!
+
+    method prelude: name transpile: string ok: maybe expect: output
+        assert that: { let res = self prelude: name
+                                      transpile: string.
                        [res ok, res stdout] }
-               equals: [True, output]
+               equals: [maybe, output]
                testing: "transpiler"!
 end
 
@@ -139,14 +152,15 @@ class TestTranspileParser { assert system }
     is TranspilerTest
 
     -- Doesn't quite work yet
-    method no_testParseInteger
-        self transpile: "import impl.parser
-                         class Main \{\}
-                             direct method run: command in: system
-                                 let i = parser.Parser parseExpressions: \"123\".
-                                 system output print: i!
-                         end"
-            expect: "123"!
+    method testParseInteger
+        self transpileWithPrelude:
+            "import impl.parser
+             class Main \{\}
+                 direct method run: command in: system
+                     let i = parser.Parser parseExpressions: \"123\".
+                     system output print: i!
+             end"
+            expect: "[#<SyntaxLiteral 123>]"!
 
     -- Tests bail out if there are not test methods at all!
     method testNop
