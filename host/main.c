@@ -578,9 +578,17 @@ void foo_print_backtrace(struct FooContext* context) {
       home = context->method->vtable;
       here = context->receiver.vtable;
       printf("  %u: ", context->depth);
-      printf("%s#%s", home->name->data, context->method->selector->name->data);
+      struct FooSelector* selector = context->method->selector;
+      printf("%s#%s", home->name->data, selector->name->data);
       if (here != home) {
         printf(" (%s)", here->name->data);
+      }
+      if (selector == &FOO_perform_with_ && context->size > 0) {
+        struct Foo arg = context->frame[0];
+        if (arg.vtable == &FooInstanceVtable_Selector) {
+          struct FooSelector* argSelector = PTR(FooSelector, arg.datum);
+          printf(" #%s", argSelector->name->data);
+        }
       }
       printf("\n");
       break;
