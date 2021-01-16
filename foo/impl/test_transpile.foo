@@ -908,7 +908,7 @@ end
 class TestTranspileSelfHosted { assert system }
     is TranspilerTest
 
-    method testParseInteger
+    method testParser
         self transpileWithPrelude:
             "import impl.parser
              class Main \{\}
@@ -916,7 +916,24 @@ class TestTranspileSelfHosted { assert system }
                      let i = parser.Parser parseExpressions: \"123\".
                      system output print: i!
              end"
-            expect: "[#<SyntaxLiteral 123>]"!
+                expect: "[#<SyntaxLiteral 123>]"!
+
+    method testSyntaxPrinter
+        self transpileWithPrelude:
+            "import impl.syntaxPrinter
+             import impl.syntax
+             class Main \{\}
+                 direct method run: command in: system
+                     let tree = syntax.SyntaxBinary
+                          receiver: (syntax.SyntaxLiteral value: 20)
+                          selector: #+
+                          argument: (syntax.SyntaxLiteral value: 22)
+                          source: \"20+22\".
+                      syntaxPrinter.SyntaxPrinter
+                          print: tree
+                          to: system output!
+             end"
+            expect: "20 + 22"!
 
 end
 
