@@ -50,6 +50,7 @@ interface AstDefinition
         False!
 
     method allocGlobal
+        let name = self name.
         self isDynamic
             ifTrue: { AstDynamic name: name }
             ifFalse: { AstGlobal name: name }!
@@ -312,9 +313,6 @@ class AstClass { name slots _interfaces _directMethods _instanceMethods _allInte
 
     method _instanceMethods
         _instanceMethods!
-
-    method _readerMethods
-        _readerMethods!
 
     method _allInterfaces
         _allInterfaces!
@@ -604,7 +602,7 @@ interface AstGlobalVariable
         self _value is AstPending
             ifTrue: { self _value: AstInProgress.
                       self _value: self _definition eval }.
-        _value!
+        self _value!
 
     method hasValue
         self _value is AstUndefined
@@ -632,12 +630,12 @@ interface AstGlobalVariable
     method warnIfUndefined
         self isUndefined
             ifTrue: { let note = "Undefined variable: {self name}".
-                      (sources isEmpty not) assert.
+                      (self sources isEmpty not) assert.
                       Output debug
-                          println: "\nWARNING: {note}\n{sources first note: note}" }!
+                          println: "\nWARNING: {note}\n{self sources first note: note}" }!
 
     method withSource: sourceLocation
-        sources add: sourceLocation.
+        self sources add: sourceLocation.
         self!
 end
 
