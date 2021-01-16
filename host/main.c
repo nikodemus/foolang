@@ -622,7 +622,6 @@ struct Foo foo_activate(struct FooContext* context) {
     FOO_DEBUG("/foo_send -> local return from %s", selector->name->data);
     return res;
   }
-
 }
 
 struct Foo foo_send_array(struct FooContext* sender,
