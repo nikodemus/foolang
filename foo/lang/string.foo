@@ -9,6 +9,9 @@ extend String
     direct method default
         ""!
 
+    method toSelector
+        Selector new: self!
+
     method < other
         1 to: (self size min: other size)
           do: { |index|

@@ -896,7 +896,7 @@ class CTranspiler { output selectorMap closureFunctions
                 output println: "}".
                 output newline
             }.
-        -- #includes: (typetest)
+        -- Class#includes: (typetest)
         let includes = { home: aClass,
                          selector: #includes:,
                          arity: 1,
@@ -910,6 +910,19 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "    return foo_Boolean_new(&{Name mangleInstanceVtable: aClass} == ctx->frame[0].vtable);".
         output println: "}".
         output newline.
+        -- Class#classOf: FIXME, this is blatant lie because .classPtr is null!
+        let classClassOf = { home: aClass,
+                             selector: #classOf,
+                             arity: 0,
+                             frameSize: 0,
+                             isDirect: True }.
+        directMethods push: classClassOf.
+        output print: "struct Foo ".
+        output println: (Name mangleMethod: classClassOf).
+        output println: "    (struct FooContext* ctx)".
+        output println: "\{".
+        output println: "    return {globalName};".
+        output println: "\}".
         -- #name
         -- FIXME: This can be reused between all classes!
         -- FIXME: replace FooCStrings with just strings, so we can return name directly.

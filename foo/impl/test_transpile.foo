@@ -295,7 +295,28 @@ end
 class TestTranspilePreludeException { assert system }
     is TranspilerTest
 
-    method test
+    method testDoesNotUnderstand
+        self transpile: "import lang.exception.*
+                         import lang.closure
+                         import lang.selector_ext
+                         import lang.object.Object
+
+                         class Main \{\}
+                             is Object
+                             direct method run: command in: system
+                                 self bang!
+                         end"
+            expectError: "PANIC: UNHANDLED ERROR: Instances of Main classOf do not understand: #bang
+Backtrace:
+  6: FallbackHandler class#raise:
+  5: Error#raise (DoesNotUnderstand)
+  4: DoesNotUnderstand class#raise:with:on:source:context:
+  3: DoesNotUnderstand class#raise:with:on:
+  2: Object interface#perform:with: (Main class) #bang
+  1: Main class#run:in:
+"!
+
+    method testErrorRaise
         self transpile: "import lang.exception.*
                          import lang.closure.* -- for #on:do:
 
@@ -308,7 +329,6 @@ class TestTranspilePreludeException { assert system }
                              direct method bang
                                  Error raise: \"Bang!\"!
                          end"
-            -- FIXME: string interpolation!
             expectError: "#<Integer 1>PANIC: UNHANDLED ERROR: Bang!
 Backtrace:
   11: FallbackHandler class#raise:

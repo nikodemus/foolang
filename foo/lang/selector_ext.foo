@@ -13,6 +13,9 @@ define UnderscoreCharacter
 extend Selector
     is Block
 
+    method toSelector
+        self!
+
     method apply: arguments
         self sendTo: arguments first with: arguments rest!
 

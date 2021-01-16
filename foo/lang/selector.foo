@@ -11,6 +11,12 @@ class Selector { name }
     is Object
     is Block
 
+    direct method new: name
+        self name: name!
+
+    method toSelector
+        self!
+
     method apply: arguments
         self sendTo: arguments first with: arguments rest!
 
@@ -26,9 +32,6 @@ class Selector { name }
 
     method finally: cleanup
         Error raise: "Cannot use #finally: on {self}."!
-
-    direct method new: name
-        self name: name!
 
     method < other
         self name < other name!
