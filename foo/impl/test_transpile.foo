@@ -148,25 +148,6 @@ Backtrace:
 "!
 end
 
-class TestTranspileParser { assert system }
-    is TranspilerTest
-
-    -- Doesn't quite work yet
-    method testParseInteger
-        self transpileWithPrelude:
-            "import impl.parser
-             class Main \{\}
-                 direct method run: command in: system
-                     let i = parser.Parser parseExpressions: \"123\".
-                     system output print: i!
-             end"
-            expect: "[#<SyntaxLiteral 123>]"!
-
-    -- Tests bail out if there are not test methods at all!
-    method testNop
-        True!
-end
-
 class TestTranspilePerformWith { assert system }
     is TranspilerTest
 
@@ -902,6 +883,21 @@ class TestTranspileSelf { assert system }
                                  242!
                          end"
             expect: "#<Integer 242>"!
+end
+
+class TestTranspileSelfHosted { assert system }
+    is TranspilerTest
+
+    method testParseInteger
+        self transpileWithPrelude:
+            "import impl.parser
+             class Main \{\}
+                 direct method run: command in: system
+                     let i = parser.Parser parseExpressions: \"123\".
+                     system output print: i!
+             end"
+            expect: "[#<SyntaxLiteral 123>]"!
+
 end
 
 class TestTranspileBoolean { assert system }
@@ -1912,7 +1908,6 @@ class Main {}
             "--keyword" -> TestTranspileKeyword,
             "--let" -> TestTranspileLet,
             "--panic" -> TestTranspilePanic,
-            "--parser" -> TestTranspileParser,
             "--perform-with" -> TestTranspilePerformWith,
             "--prelude-any" -> TestTranspilePreludeAny,
             "--prelude-boolean" -> TestTranspilePreludeBoolean,
@@ -1939,6 +1934,7 @@ class Main {}
             "--record" -> TestTranspileRecord,
             "--return" -> TestTranspileReturn,
             "--self" -> TestTranspileSelf,
+            "--self-hosted" -> TestTranspileSelfHosted,
             "--selector" -> TestTranspileSelector,
             "--string" -> TestTranspileString,
             "--system" -> TestTranspileSystem,
