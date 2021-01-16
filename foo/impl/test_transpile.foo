@@ -935,6 +935,15 @@ class TestTranspileSelfHosted { assert system }
              end"
             expect: "20 + 22"!
 
+    method wip_testEvalLiteral
+        self transpileWithPrelude:
+            "import impl.environment.Environment
+             class Main \{\}
+                 direct method run: command in: system
+                      (Environment eval: \"123.0\") debug!
+             end"
+            expect: "#<Float 123.0>"!
+
 end
 
 class TestTranspileBoolean { assert system }
