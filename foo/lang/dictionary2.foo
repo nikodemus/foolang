@@ -15,6 +15,12 @@ end
 class Dictionary { size _keys _values }
     is Object
 
+    method _keys
+        _keys!
+
+    method _values
+        _values!
+
     direct method new
        self size: 0
              _keys: (Array new: 8)
