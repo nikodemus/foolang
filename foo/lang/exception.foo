@@ -132,17 +132,22 @@ class DoesNotUnderstand { receiver selector arguments source context }
         context is False
             ifTrue: { False }
             ifFalse: { context backtrace }!
+    method _note
+        { "{receiver} does not understand: {selector}" }
+            on: Error
+            do: { |e|
+                  -- FIXME: Workaround for the lack of metaclasses in transpiler
+                  -- kludge. (someClass classOf returns someClass!)
+                  let classOf = receiver classOf.
+                  let className = classOf is receiver
+                                      ifTrue: { "{classOf name} classOf" }
+                                      ifFalse: { classOf name }.
+                  return "Instances of {className} do not understand: {selector}" }!
     method _description
-        let classOf = receiver classOf.
-        -- FIXME: Workaround for the lack of metaclasses in transpiler
-        -- kludge. (someClass classOf returns someClass!)
-        let className = classOf is receiver
-                            ifTrue: { "{classOf name} classOf" }
-                            ifFalse: { classOf name }.
-        let note = "Instances of {className} do not understand: {selector}".
+        let note = self _note.
         source is False
-            ifTrue: { note }
-            ifFalse: { "{note}\n{source note: note}" }!
+            ifTrue: { self _note }
+            ifFalse: { "{note}\n{source note: self _note}" }!
 end
 
 class TypeError { value expected source }
