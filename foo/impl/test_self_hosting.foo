@@ -3,7 +3,6 @@ import .parser.Parser
 import .utils.Debug
 import .syntaxTranslator.SyntaxTranslator
 import .syntaxPrinter.SyntaxPrinter
-import .cTranspiler.CTranspiler
 
 class StringModuleDictionary { _dict }
     direct method new: dict

@@ -21,26 +21,28 @@ class Globals { dictionary }
 end
 
 -- FIXME: cannot differentiate from local definitions!
+-- FIXME: use a cascade as soon as they're supported in self-hosted
+-- implementation...
 define Builtins
-    Globals new
-    ; define: Any
-    ; define: Array
-    ; define: ByteArray
-    ; define: Boolean
-    ; define: Character
-    ; define: DoesNotUnderstand
-    ; define: Error
-    ; define: False
-    ; define: Integer
-    ; define: List
-    ; define: Object
-    ; define: Output
-    ; define: Selector
-    ; define: String
-    ; define: StringOutput
-    ; define: True
-    ; define: TypeError
-    ; dictionary!
+    let g = Globals new.
+    g define: Any.
+    g define: Array.
+    g define: ByteArray.
+    g define: Boolean.
+    g define: Character.
+    g define: DoesNotUnderstand.
+    g define: Error.
+    g define: False.
+    g define: Integer.
+    g define: List.
+    g define: Object.
+    g define: Output.
+    g define: Selector.
+    g define: String.
+    g define: StringOutput.
+    g define: True.
+    g define: TypeError.
+    g dictionary!
 
 class Variable { name type index }
     is Object
@@ -124,13 +126,22 @@ class ModuleBinding { name module }
         self!
 end
 
-class Environment { parent    -- Enclosing environment or False
-                    bindings  -- Variables and slots in this environment
-                    frame     -- Variables in this frame
-                    depth     -- Number of enclosing frames, including this one
-                    globals   -- Dictionary of globals
-                    builtins  -- Dictionary of builtins
-                    modules } -- ModuleDictionary
+---
+parent    -- Enclosing environment or False
+bindings  -- Variables and slots in this environmetn
+frame     -- Variables in this frame
+depth     -- Number of enclosing frames, including this one
+globals   -- Dictionary of globals
+builtins  -- Dictionary of builtins
+modules   -- ModuleDictionary
+---
+class Environment { parent
+                    bindings
+                    frame
+                    depth
+                    globals
+                    builtins
+                    modules }
     is Object
 
     direct method new

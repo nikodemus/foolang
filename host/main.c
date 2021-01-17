@@ -444,7 +444,7 @@ const struct FooMethod* foo_vtable_find_method(struct FooContext* ctx,
                                                const struct FooVtable* vtable,
                                                const struct FooSelector* selector) {
   assert(vtable);
-  // FOO_DEBUG("/foo_vtable_find_method(%s#%s)", vtable->name->data, selector->name->data);
+  FOO_DEBUG("/foo_vtable_find_method(%s#%s)", vtable->name->data, selector->name->data);
   const struct FooMethod* fallback = NULL;
   for (size_t i = 0; i < vtable->size; ++i) {
     const struct FooMethod* method = &vtable->methods[i];
@@ -455,6 +455,7 @@ const struct FooMethod* foo_vtable_find_method(struct FooContext* ctx,
     }
   }
   if (fallback) {
+    FOO_DEBUG(" => fallback: %s", fallback->selector->name->data);
     return fallback;
   }
   /*
@@ -578,9 +579,17 @@ void foo_print_backtrace(struct FooContext* context) {
       home = context->method->vtable;
       here = context->receiver.vtable;
       printf("  %u: ", context->depth);
-      printf("%s#%s", home->name->data, context->method->selector->name->data);
+      struct FooSelector* selector = context->method->selector;
+      printf("%s#%s", home->name->data, selector->name->data);
       if (here != home) {
         printf(" (%s)", here->name->data);
+      }
+      if (selector == &FOO_perform_with_ && context->size > 0) {
+        struct Foo arg = context->frame[0];
+        if (arg.vtable == &FooInstanceVtable_Selector) {
+          struct FooSelector* argSelector = PTR(FooSelector, arg.datum);
+          printf(" #%s", argSelector->name->data);
+        }
       }
       printf("\n");
       break;
@@ -607,14 +616,13 @@ struct Foo foo_activate(struct FooContext* context) {
   context->ret = &ret;
   int jmp = setjmp(ret);
   if (jmp) {
-    FOO_DEBUG("/foo_send -> non-local return from %s", selector->name->data);
+    FOO_DEBUG("/foo_send -> non-local return from %s", context->method->selector->name->data);
     return context->return_value;
   } else {
     struct Foo res = context->method->function((struct FooContext*)context);
-    FOO_DEBUG("/foo_send -> local return from %s", selector->name->data);
+    FOO_DEBUG("/foo_send -> local return from %s", context->method->selector->name->data);
     return res;
   }
-
 }
 
 struct Foo foo_send_array(struct FooContext* sender,

@@ -50,6 +50,7 @@ interface AstDefinition
         False!
 
     method allocGlobal
+        let name = self name.
         self isDynamic
             ifTrue: { AstDynamic name: name }
             ifFalse: { AstGlobal name: name }!
@@ -313,9 +314,6 @@ class AstClass { name slots _interfaces _directMethods _instanceMethods _allInte
     method _instanceMethods
         _instanceMethods!
 
-    method _readerMethods
-        _readerMethods!
-
     method _allInterfaces
         _allInterfaces!
 
@@ -575,43 +573,43 @@ interface AstGlobalVariable
             sources: List new!
 
     method isUndefined
-        _definition is False!
+        self _definition is False!
 
     method isDefined
         self isUndefined not!
 
     method definition
         self assertDefined: True.
-        _definition!
+        self _definition!
 
     method define: definition
         -- Debug println: "AstGlobalVariable#define: {name}".
         self assertDefined: False.
-        _value = AstPending.
-        _definition = definition.
+        self _value: AstPending.
+        self _definition: definition.
         self isDefined assert!
 
     method assertDefined: wanted
         self isDefined is wanted
             ifFalse: { wanted
-                           ifTrue: { Error raise: "Undefined global in AST: {name}" }
-                           ifFalse: { Error raise: "Global is already defined: {name}" } }!
+                           ifTrue: { Error raise: "Undefined global in AST: {self name}" }
+                           ifFalse: { Error raise: "Global is already defined: {self name}" } }!
 
     method value
         self assertDefined: True.
-        _value is AstInProgress
+        self _value is AstInProgress
             ifTrue: { Error raise: "Cyclic definition: {self name}" }.
-        _value is AstPending
-            ifTrue: { _value = AstInProgress.
-                      _value = _definition eval }.
-        _value!
+        self _value is AstPending
+            ifTrue: { self _value: AstInProgress.
+                      self _value: self _definition eval }.
+        self _value!
 
     method hasValue
-        _value is AstUndefined
+        self _value is AstUndefined
             ifTrue: { return False }.
-        _value is AstInProgress
+        self _value is AstInProgress
             ifTrue: { return False }.
-        _value is AstPending
+        self _value is AstPending
             ifTrue: { return False }.
         return True!
 
@@ -627,22 +625,34 @@ interface AstGlobalVariable
     method _info
         self isUndefined
             ifTrue: { "<undefined>" }.
-        _value!
+        self _value!
 
     method warnIfUndefined
         self isUndefined
             ifTrue: { let note = "Undefined variable: {self name}".
-                      (sources isEmpty not) assert.
+                      (self sources isEmpty not) assert.
                       Output debug
-                          println: "\nWARNING: {note}\n{sources first note: note}" }!
+                          println: "\nWARNING: {note}\n{self sources first note: note}" }!
 
     method withSource: sourceLocation
-        sources add: sourceLocation.
+        self sources add: sourceLocation.
         self!
 end
 
 class AstGlobal { name::String _value _definition sources }
     is AstGlobalVariable
+
+    method _value: new
+        _value = new!
+
+    method _value
+        _value!
+
+    method _definition: new
+        _definition = new!
+
+    method _definition
+        _definition!
 
     method visitBy: visitor
         visitor visitGlobal: self!
@@ -655,6 +665,9 @@ class AstGlobal { name::String _value _definition sources }
 
     method eval
         self value!
+
+    method assign: value
+        panic "Cannot assign to global! {name} = {value}"!
 
     -- KLUDGE: Currently types are either Any or AstGlobals. This is marginally
     -- than the previous mess, but still not nice.
@@ -681,6 +694,18 @@ end
 
 class AstDynamic { name::String _value _definition sources }
     is AstGlobalVariable
+
+    method _definition
+        _definition!
+
+    method _definition: new
+        _definition = new!
+
+    method _value
+        _value!
+
+    method _value: new
+        _value = new!
 
     method bind: newValue in: block
         let oldValue = _value.

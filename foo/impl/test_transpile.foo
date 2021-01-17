@@ -148,25 +148,6 @@ Backtrace:
 "!
 end
 
-class TestTranspileParser { assert system }
-    is TranspilerTest
-
-    -- Doesn't quite work yet
-    method testParseInteger
-        self transpileWithPrelude:
-            "import impl.parser
-             class Main \{\}
-                 direct method run: command in: system
-                     let i = parser.Parser parseExpressions: \"123\".
-                     system output print: i!
-             end"
-            expect: "[#<SyntaxLiteral 123>]"!
-
-    -- Tests bail out if there are not test methods at all!
-    method testNop
-        True!
-end
-
 class TestTranspilePerformWith { assert system }
     is TranspilerTest
 
@@ -314,7 +295,28 @@ end
 class TestTranspilePreludeException { assert system }
     is TranspilerTest
 
-    method test
+    method testDoesNotUnderstand
+        self transpile: "import lang.exception.*
+                         import lang.closure
+                         import lang.selector_ext
+                         import lang.object.Object
+
+                         class Main \{\}
+                             is Object
+                             direct method run: command in: system
+                                 self bang!
+                         end"
+            expectError: "PANIC: UNHANDLED ERROR: Instances of Main classOf do not understand: #bang
+Backtrace:
+  6: FallbackHandler class#raise:
+  5: Error#raise (DoesNotUnderstand)
+  4: DoesNotUnderstand class#raise:with:on:source:context:
+  3: DoesNotUnderstand class#raise:with:on:
+  2: Object interface#perform:with: (Main class) #bang
+  1: Main class#run:in:
+"!
+
+    method testErrorRaise
         self transpile: "import lang.exception.*
                          import lang.closure.* -- for #on:do:
 
@@ -327,7 +329,6 @@ class TestTranspilePreludeException { assert system }
                              direct method bang
                                  Error raise: \"Bang!\"!
                          end"
-            -- FIXME: string interpolation!
             expectError: "#<Integer 1>PANIC: UNHANDLED ERROR: Bang!
 Backtrace:
   11: FallbackHandler class#raise:
@@ -902,6 +903,47 @@ class TestTranspileSelf { assert system }
                                  242!
                          end"
             expect: "#<Integer 242>"!
+end
+
+class TestTranspileSelfHosted { assert system }
+    is TranspilerTest
+
+    method testParser
+        self transpileWithPrelude:
+            "import impl.parser
+             class Main \{\}
+                 direct method run: command in: system
+                     let i = parser.Parser parseExpressions: \"123\".
+                     system output print: i!
+             end"
+                expect: "[#<SyntaxLiteral 123>]"!
+
+    method testSyntaxPrinter
+        self transpileWithPrelude:
+            "import impl.syntaxPrinter
+             import impl.syntax
+             class Main \{\}
+                 direct method run: command in: system
+                     let tree = syntax.SyntaxBinary
+                          receiver: (syntax.SyntaxLiteral value: 20)
+                          selector: #+
+                          argument: (syntax.SyntaxLiteral value: 22)
+                          source: \"20+22\".
+                      syntaxPrinter.SyntaxPrinter
+                          print: tree
+                          to: system output!
+             end"
+            expect: "20 + 22"!
+
+    method wip_testEvalLiteral
+        self transpileWithPrelude:
+            "import impl.environment.Environment
+             class Main \{\}
+                 direct method run: command in: system
+                      (Environment eval: \"123.0\") debug!
+             end"
+            expect: "#<Float 123.0>"!
+
 end
 
 class TestTranspileBoolean { assert system }
@@ -1912,7 +1954,6 @@ class Main {}
             "--keyword" -> TestTranspileKeyword,
             "--let" -> TestTranspileLet,
             "--panic" -> TestTranspilePanic,
-            "--parser" -> TestTranspileParser,
             "--perform-with" -> TestTranspilePerformWith,
             "--prelude-any" -> TestTranspilePreludeAny,
             "--prelude-boolean" -> TestTranspilePreludeBoolean,
@@ -1939,6 +1980,7 @@ class Main {}
             "--record" -> TestTranspileRecord,
             "--return" -> TestTranspileReturn,
             "--self" -> TestTranspileSelf,
+            "--self-hosted" -> TestTranspileSelfHosted,
             "--selector" -> TestTranspileSelector,
             "--string" -> TestTranspileString,
             "--system" -> TestTranspileSystem,
