@@ -267,6 +267,9 @@ class AstInterface { name _interfaces _directMethods _instanceMethods _allInterf
     method _readerMethods
         []!
 
+    method slots
+        []!
+
     method _allInterfaces
         _allInterfaces!
 
