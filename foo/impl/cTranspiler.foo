@@ -558,7 +558,8 @@ class CTranspiler { output selectorMap closureFunctions
         -- Tracer _targetClassOf: value.
         (Record includes: value)
             ifTrue: { return self _recordClassFromRecord: value }.
-        (Class includes: value)
+        -- This seems wrong, but is needed. Why?
+        ((Class includes: value) or: (Interface includes: value))
             ifTrue: { return env global: value name }.
         env global: value classOf name!
 
@@ -572,6 +573,7 @@ class CTranspiler { output selectorMap closureFunctions
                                    slots: keys }!
 
     method _writeValue: value _in: env _to: out
+        -- Tracer _writeValue: value.
         (Class includes: value)
             ifTrue: { out print: "(struct Foo)\{ .vtable = &{Name mangleDirectVtable: (self _targetClassOf: value _in: env)}, .datum = \{ " }
             ifFalse: { out print: "(struct Foo)\{ .vtable = &{Name mangleInstanceVtable: (self _targetClassOf: value _in: env)}, .datum = \{ " }.

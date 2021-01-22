@@ -15,8 +15,12 @@ class Globals { dictionary }
         self dictionary: Dictionary new!
     method define: builtin
         let name = builtin name.
+        let global = AstGlobal
+                         name: name
+                         definition: (AstBuiltin value: builtin).
+        global value. -- finalize
         dictionary
-            put: (AstGlobal name: name definition: (AstBuiltin value: builtin))
+            put: global
             at: name!
 end
 
