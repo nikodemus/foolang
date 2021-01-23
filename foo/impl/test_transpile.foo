@@ -1100,6 +1100,27 @@ end
 class TestTranspileClass { assert system }
    is TranspilerTest
 
+    method wip_testRuntimeClass
+        self transpile:
+            "class BlockMethod \{ name block \}
+                 method invoke: args on: receiver
+                     block apply: ([receiver] append: args)!
+             end
+
+             class Main \{\}
+                  direct method run: command in: system
+                      let test = Class
+                                    new: \"test\"
+                                    slots: []
+                                    interfaces: []
+                                    directMethods: [(BlockMethod
+                                                         name: #one
+                                                         block: \{ |r| 1 \})]
+                                    instanceMethods: [].
+                      system output print: test one!
+             end"
+            expect: "1"!
+
     method testMyClass
         self transpile: "class MyClass \{}
                              direct method test
