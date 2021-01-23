@@ -6,8 +6,6 @@
 
 **References**:
 - Link other design notes, pull request, and other project internal resources here.
-
-**Prior Art**:
 - Link related project external items here. Papers, blogposts, manuals of
   other languages, etc.
 
