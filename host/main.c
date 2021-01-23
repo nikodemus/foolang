@@ -91,7 +91,7 @@ union FooDatum {
 };
 
 struct Foo {
-  struct FooVtable* vtable;
+  struct FooClass* class;
   union FooDatum datum;
 };
 
@@ -99,7 +99,7 @@ struct Foo {
  *
  *  FIXME: I'd really like to replace these with String.
  *  The big issue is that these cannot be passed out from selectors without
- *  copying. At least a vtable is needed...
+ *  copying. At least a class is needed...
  */
 struct FooCString {
   size_t size;
@@ -250,7 +250,7 @@ struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t fram
   }
   assert(index < context->size);
   struct Foo res = context->frame[index];
-  if (!res.vtable) {
+  if (!res.class) {
     foo_panicf(context0, "Invalid lexical reference at index: %zu, frameOffset: %zu",
                index, frameOffset0);
   }
@@ -270,8 +270,8 @@ struct Foo foo_lexical_set(struct FooContext* context, size_t index, size_t fram
 }
 
 struct FooMethod {
-  // The vtable in which this method originates.
-  struct FooVtable* vtable;
+  // The class in which this method originates.
+  struct FooClass* class;
   struct FooSelector* selector;
   size_t argCount;
   size_t frameSize;
@@ -285,21 +285,21 @@ struct FooClosure {
   FooClosureFunction function;
 };
 
-// Forward declarations for vtables are in generated_classes, but we're going
+// Forward declarations for classs are in generated_classes, but we're going
 // to define a few builtin ctors first that need some of them.
-struct FooVtable FooInstanceVtable_Array;
-struct FooVtable FooInstanceVtable_Character;
-struct FooVtable FooInstanceVtable_Closure;
-struct FooVtable FooInstanceVtable_Boolean;
-struct FooVtable FooInstanceVtable_Float;
-struct FooVtable FooInstanceVtable_Integer;
-struct FooVtable FooInstanceVtable_Selector;
-struct FooVtable FooInstanceVtable_String;
+struct FooClass FooClass_Array;
+struct FooClass FooClass_Character;
+struct FooClass FooClass_Closure;
+struct FooClass FooClass_Boolean;
+struct FooClass FooClass_Float;
+struct FooClass FooClass_Integer;
+struct FooClass FooClass_Selector;
+struct FooClass FooClass_String;
 struct FooArray* FooArray_alloc(size_t size);
 struct Foo foo_Float_new(double f);
 struct Foo foo_Integer_new(int64_t n);
 struct Foo foo_String_new(size_t len, const char* s);
-struct Foo foo_vtable_typecheck(struct FooContext* ctx, struct FooVtable* vtable, struct Foo obj);
+struct Foo foo_class_typecheck(struct FooContext* ctx, struct FooClass* class, struct Foo obj);
 struct Foo FooGlobal_True;
 struct Foo FooGlobal_False;
 struct FooContext* foo_context_new_closure(struct FooContext* ctx);
@@ -382,72 +382,67 @@ void foo_unbind(struct FooContext* sender, struct FooCleanup* cleanup) {
 }
 
 struct FooInterface {
-  // struct FooVtable* instanceVtable;
-  // struct FooVtable* classVtable;
+  // struct FooClass* class;
+  // struct FooClass* classClass;
 };
 
-struct FooVtableList {
+struct FooClassList {
   size_t size;
-  struct FooVtable** data;
+  struct FooClass** data;
 };
 
 typedef void (*FooMarkFunction)(void* ptr);
 
-struct FooVtable {
+struct FooClass {
   struct FooCString* name;
   struct Foo* classptr;
-  struct FooVtableList inherited;
+  struct FooClassList inherited;
   FooMarkFunction mark;
   size_t size;
   struct FooMethod methods[];
 };
 
-struct FooClass {
-  // struct FooLayout* instanceSlots;
-  struct FooVtable* instanceVtable;
-};
-
-struct Foo foo_vtable_typecheck(struct FooContext* ctx,
-                                struct FooVtable* vtable,
+struct Foo foo_class_typecheck(struct FooContext* ctx,
+                                struct FooClass* class,
                                 struct Foo obj) {
-  assert(vtable);
-  assert(obj.vtable);
-  if (vtable == obj.vtable)
+  assert(class);
+  assert(obj.class);
+  if (class == obj.class)
     return obj;
-  struct FooVtableList* list = &obj.vtable->inherited;
+  struct FooClassList* list = &obj.class->inherited;
   for (size_t i = 0; i < list->size; i++)
-    if (vtable == list->data[i]) {
+    if (class == list->data[i]) {
       return obj;
   }
   foo_panicf(ctx, "Type error! Wanted: %s, got: %s",
-             vtable->name->data, obj.vtable->name->data);
+             class->name->data, obj.class->name->data);
 }
 
 struct Foo foo_Boolean_new(bool t);
 
-struct Foo foo_vtable_includes(struct FooContext* ctx,
-                               struct FooVtable* vtable,
+struct Foo foo_class_includes(struct FooContext* ctx,
+                               struct FooClass* class,
                                struct Foo obj) {
-  assert(vtable);
-  assert(obj.vtable);
-  if (vtable == obj.vtable)
+  assert(class);
+  assert(obj.class);
+  if (class == obj.class)
     return foo_Boolean_new(true);
-  struct FooVtableList* list = &obj.vtable->inherited;
+  struct FooClassList* list = &obj.class->inherited;
   for (size_t i = 0; i < list->size; i++)
-    if (vtable == list->data[i]) {
+    if (class == list->data[i]) {
       return foo_Boolean_new(true);
   }
   return foo_Boolean_new(false);
 }
 
-const struct FooMethod* foo_vtable_find_method(struct FooContext* ctx,
-                                               const struct FooVtable* vtable,
+const struct FooMethod* foo_class_find_method(struct FooContext* ctx,
+                                               const struct FooClass* class,
                                                const struct FooSelector* selector) {
-  assert(vtable);
-  FOO_DEBUG("/foo_vtable_find_method(%s#%s)", vtable->name->data, selector->name->data);
+  assert(class);
+  FOO_DEBUG("/foo_class_find_method(%s#%s)", class->name->data, selector->name->data);
   const struct FooMethod* fallback = NULL;
-  for (size_t i = 0; i < vtable->size; ++i) {
-    const struct FooMethod* method = &vtable->methods[i];
+  for (size_t i = 0; i < class->size; ++i) {
+    const struct FooMethod* method = &class->methods[i];
     if (method->selector == selector) {
       return method;
     } else if (method->selector == &FOO_perform_with_) {
@@ -459,12 +454,12 @@ const struct FooMethod* foo_vtable_find_method(struct FooContext* ctx,
     return fallback;
   }
   /*
-  for (size_t i = 0; i < vtable->size; ++i) {
-    const struct FooMethod* method = &vtable->methods[i];
+  for (size_t i = 0; i < class->size; ++i) {
+    const struct FooMethod* method = &class->methods[i];
     printf("- %s\n", method->selector->name->data);
   }
   */
-  foo_panicf(ctx, "%s does not understand: #%s", vtable->name->data, selector->name->data);
+  foo_panicf(ctx, "%s does not understand: #%s", class->name->data, selector->name->data);
 }
 
 struct Foo foo_return(struct FooContext* ctx, struct Foo value) __attribute__ ((noreturn));
@@ -521,7 +516,7 @@ struct FooContext* foo_context_new_method_array(const struct FooMethod* method,
     // DoesNotUnderstand case
     assert(&FOO_perform_with_ == method->selector);
     assert(method->argCount == 2);
-    context->frame[0] = (struct Foo){ .vtable = &FooInstanceVtable_Selector,
+    context->frame[0] = (struct Foo){ .class = &FooClass_Selector,
                                       .datum = { .ptr = (void*)selector } };
     context->frame[1] = arguments;
   } else {
@@ -548,13 +543,13 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
   if (selector != method->selector) {
     assert(&FOO_perform_with_ == method->selector);
     assert(method->argCount == 2);
-    context->frame[0] = (struct Foo){ .vtable = &FooInstanceVtable_Selector,
+    context->frame[0] = (struct Foo){ .class = &FooClass_Selector,
                                       .datum = { .ptr = (void*)selector }};
     struct FooArray* array = FooArray_alloc(nargs);
     for (size_t i = 0; i < nargs; i++) {
       array->data[i] = va_arg(arguments, struct Foo);
     }
-    context->frame[1] = (struct Foo){ .vtable = &FooInstanceVtable_Array,
+    context->frame[1] = (struct Foo){ .class = &FooClass_Array,
                                       .datum = { .ptr = array } };
   } else {
     assert(nargs == method->argCount);
@@ -566,18 +561,18 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
 }
 
 bool foo_eq(struct Foo a, struct Foo b) {
-  return a.vtable == b.vtable && a.datum.int64 == b.datum.int64;
+  return a.class == b.class && a.datum.int64 == b.datum.int64;
 }
 
 void foo_print_backtrace(struct FooContext* context) {
   printf("Backtrace:\n");
-  struct FooVtable* home;
-  struct FooVtable* here;
+  struct FooClass* home;
+  struct FooClass* here;
   while (context && context->depth) {
     switch (context->type) {
     case METHOD_CONTEXT:
-      home = context->method->vtable;
-      here = context->receiver.vtable;
+      home = context->method->class;
+      here = context->receiver.class;
       printf("  %u: ", context->depth);
       struct FooSelector* selector = context->method->selector;
       printf("%s#%s", home->name->data, selector->name->data);
@@ -586,7 +581,7 @@ void foo_print_backtrace(struct FooContext* context) {
       }
       if (selector == &FOO_perform_with_ && context->size > 0) {
         struct Foo arg = context->frame[0];
-        if (arg.vtable == &FooInstanceVtable_Selector) {
+        if (arg.class == &FooClass_Selector) {
           struct FooSelector* argSelector = PTR(FooSelector, arg.datum);
           printf(" #%s", argSelector->name->data);
         }
@@ -630,11 +625,11 @@ struct Foo foo_send_array(struct FooContext* sender,
                           struct Foo receiver,
                           struct Foo array) {
   FOO_DEBUG("/foo_send_array(?, %s, ...)", selector->name->data);
-  if (!receiver.vtable) {
+  if (!receiver.class) {
     foo_panicf(sender, "Invalid receiver for #%s", selector->name->data);
   }
   const struct FooMethod* method
-    = foo_vtable_find_method(sender, receiver.vtable, selector);
+    = foo_class_find_method(sender, receiver.class, selector);
   struct FooContext* context
     = foo_context_new_method_array(method, sender, selector, receiver, array);
   return foo_activate(context);
@@ -647,22 +642,22 @@ struct Foo foo_send(struct FooContext* sender,
   FOO_DEBUG("/foo_send(?, %s, ...)", selector->name->data);
   va_list arguments;
   va_start(arguments, nargs);
-  if (!receiver.vtable) {
+  if (!receiver.class) {
     foo_panicf(sender, "Invalid receiver for #%s", selector->name->data);
   }
   const struct FooMethod* method
-    = foo_vtable_find_method(sender, receiver.vtable, selector);
+    = foo_class_find_method(sender, receiver.class, selector);
   struct FooContext* context
     = foo_context_new_method_va(method, sender, selector, receiver, nargs, arguments);
   return foo_activate(context);
 }
 
 struct Foo foo_do_selectors(struct FooContext* context) {
-  struct FooVtable* vt = context->receiver.vtable;
+  struct FooClass* vt = context->receiver.class;
   struct Foo block = context->frame[0];
   for (size_t i = 0; i < vt->size; i++) {
     foo_send(context, &FOO_value_, block, 1,
-             (struct Foo){ .vtable = &FooInstanceVtable_Selector,
+             (struct Foo){ .class = &FooClass_Selector,
                            .datum = { .ptr = vt->methods[i].selector } });
   }
   return context->receiver;
@@ -677,18 +672,18 @@ struct Foo foo_closure_new(struct FooContext* context,
   closure->function = function;
   closure->argCount = argCount;
   closure->frameSize = frameSize;
-  return (struct Foo){ .vtable = &FooInstanceVtable_Closure, .datum = { .ptr = closure } };
+  return (struct Foo){ .class = &FooClass_Closure, .datum = { .ptr = closure } };
 }
 
 struct Foo FooGlobal_True =
   {
-   .vtable = &FooInstanceVtable_Boolean,
+   .class = &FooClass_Boolean,
    .datum = { .boolean = 1 }
   };
 
 struct Foo FooGlobal_False =
   {
-   .vtable = &FooInstanceVtable_Boolean,
+   .class = &FooClass_Boolean,
    .datum = { .boolean = 0 }
   };
 
@@ -722,29 +717,29 @@ struct Foo foo_Array_new(size_t size) {
   for (size_t i = 0; i < size; ++i) {
     array->data[i] = FooGlobal_False;
   }
-  return (struct Foo){ .vtable = &FooInstanceVtable_Array, .datum = { .ptr = array } };
+  return (struct Foo){ .class = &FooClass_Array, .datum = { .ptr = array } };
 }
 
 struct Foo foo_Array_alloc(size_t size) {
   struct FooArray* array = FooArray_alloc(size);
-  return (struct Foo){ .vtable = &FooInstanceVtable_Array, .datum = { .ptr = array } };
+  return (struct Foo){ .class = &FooClass_Array, .datum = { .ptr = array } };
 }
 
 struct Foo foo_Boolean_new(bool t) {
-  return (struct Foo){ .vtable = &FooInstanceVtable_Boolean, .datum = { .boolean = t } };
+  return (struct Foo){ .class = &FooClass_Boolean, .datum = { .boolean = t } };
 }
 
 struct Foo foo_Character_new(int64_t n) {
   assert(n >= 0);
-  return (struct Foo){ .vtable = &FooInstanceVtable_Character, .datum = { .int64 = n } };
+  return (struct Foo){ .class = &FooClass_Character, .datum = { .int64 = n } };
 }
 
 struct Foo foo_Integer_new(int64_t n) {
-  return (struct Foo){ .vtable = &FooInstanceVtable_Integer, .datum = { .int64 = n } };
+  return (struct Foo){ .class = &FooClass_Integer, .datum = { .int64 = n } };
 }
 
 struct Foo foo_Float_new(double f) {
-  return (struct Foo){ .vtable = &FooInstanceVtable_Float, .datum = { .float64 = f } };
+  return (struct Foo){ .class = &FooClass_Float, .datum = { .float64 = f } };
 }
 
 
@@ -765,7 +760,7 @@ struct FooBytes* FooBytes_from(const char* s) {
 struct Foo foo_String_new(size_t len, const char* s) {
   struct FooBytes* bytes = FooBytes_alloc(len);
   memcpy(bytes->data, s, len);
-  return (struct Foo) { .vtable = &FooInstanceVtable_String, .datum = { .ptr = bytes } };
+  return (struct Foo) { .class = &FooClass_String, .datum = { .ptr = bytes } };
 }
 
 struct Foo foo_String_new_from(const char* s) {
@@ -774,7 +769,7 @@ struct Foo foo_String_new_from(const char* s) {
 
 struct Foo foo_panic(struct FooContext* ctx, struct Foo message) {
   printf("PANIC: ");
-  if (&FooInstanceVtable_String == message.vtable) {
+  if (&FooClass_String == message.class) {
     struct FooBytes* bytes = PTR(FooBytes, message.datum);
     printf("%s", (char*)bytes->data);
   } else {
@@ -892,9 +887,9 @@ void foo_mark_context(struct FooContext* ctx);
 
 void foo_mark_object(struct Foo obj) {
   ENTER_TRACE("mark_object");
-  if (obj.vtable) {
-    DEBUG_GC(" %p (%s)", obj.datum.ptr, obj.vtable->name->data);
-    obj.vtable->mark(obj.datum.ptr);
+  if (obj.class) {
+    DEBUG_GC(" %p (%s)", obj.datum.ptr, obj.class->name->data);
+    obj.class->mark(obj.datum.ptr);
   }
   EXIT_TRACE();
 }
@@ -1059,7 +1054,7 @@ struct Foo foo_File_new(struct FooBytes* pathname, size_t mode) {
   file->gc = true;
   file->pathname = pathname;
   file->mode = mode;
-  return (struct Foo){ .vtable = &FooInstanceVtable_File, .datum = { .ptr = file } };
+  return (struct Foo){ .class = &FooClass_File, .datum = { .ptr = file } };
 }
 
 struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size_t flags) {
@@ -1090,5 +1085,5 @@ struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size
   if (!stream->ptr) {
     foo_panicf(ctx, "fdopen() failed!");
   }
-  return (struct Foo){ .vtable = &FooInstanceVtable_FileStream, .datum = { .ptr = stream } };
+  return (struct Foo){ .class = &FooClass_FileStream, .datum = { .ptr = stream } };
 }

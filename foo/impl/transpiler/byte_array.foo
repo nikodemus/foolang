@@ -4,7 +4,7 @@ define DirectMethods {
             body: "int64_t isize = ctx->frame[0].datum.int64;
 assert(isize >= 0);
 struct FooBytes* b = FooBytes_alloc((size_t)isize);
-return (struct Foo)\{ .vtable = &FooInstanceVtable_ByteArray, .datum = \{ .ptr = b } };"}
+return (struct Foo)\{ .class = &FooClass_ByteArray, .datum = \{ .ptr = b } };"}
 }!
 
 define InstanceMethods {

@@ -48,7 +48,7 @@ define InstanceMethods {
     #pathname
     -> { signature: [], vars: 0,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
-                return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = \{ .ptr = file->pathname } };" },
+                return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = file->pathname } };" },
     #truncateExisting
     -> { signature: [], vars: 0,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);

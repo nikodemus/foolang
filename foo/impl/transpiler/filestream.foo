@@ -72,7 +72,7 @@ define InstanceMethods {
                 assert(!fseek(f, pos, SEEK_SET));
                 struct FooBytes* bytes = FooBytes_alloc(size);
                 assert(size == fread(bytes->data, 1, size, f));
-                return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = \{ .ptr = bytes } };" },
+                return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = bytes } };" },
     #resize:
     -> { signature: [], vars: 0,
          body: "foo_panicf(ctx, \"FileStream#resize: not implemented\");" },
