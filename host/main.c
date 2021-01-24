@@ -648,7 +648,7 @@ struct Foo foo_send(struct FooContext* sender,
   return foo_activate(context);
 }
 
-struct Foo foo_do_selectors(struct FooContext* context) {
+struct Foo foo_method_doSelectors_(struct FooContext* context) {
   struct FooClass* vt = context->receiver.class;
   struct Foo block = context->frame[0];
   for (size_t i = 0; i < vt->size; i++) {
@@ -657,6 +657,22 @@ struct Foo foo_do_selectors(struct FooContext* context) {
                            .datum = { .ptr = vt->methods[i].selector } });
   }
   return context->receiver;
+}
+
+struct Foo foo_method_classOf(struct FooContext* ctx) {
+  return (struct Foo){ .class = ctx->receiver.class->metaclass,
+                        .datum = { .ptr = ctx->receiver.class } };
+}
+
+struct Foo foo_method_includes_(struct FooContext* ctx) {
+  return foo_class_includes(ctx, PTR(FooClass, ctx->receiver.datum), ctx->frame[0]);
+}
+
+struct Foo foo_method_name(struct FooContext* ctx) {
+  // FIXME: replace FooCStrings with just strings, so we can return name directly.
+  struct FooClass* class = PTR(FooClass, ctx->receiver.datum);
+  struct FooCString* name = class->name;
+  return foo_String_new(name->size, name->data);
 }
 
 struct Foo foo_closure_new(struct FooContext* context,
