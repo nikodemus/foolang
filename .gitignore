@@ -11,3 +11,4 @@ generated_*.*
 a.out
 *.lib
 *.exp
+foo/scratch/*
