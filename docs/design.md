@@ -44,7 +44,6 @@ in in progress, this is the current status:
 - 008 - [Indexed Classes](design/008-indexed-classes.md)
 - 009 - [Self Hosting](design/009-self-hosting.md)
 - 010 - [Docstrings and Comments](design/010-docstrings-and-comments.md)
-- 011 - [Metaobject Protocol](design/011-metaobject-protocol.md)
 - 012 - [Record Implementation](design/012-record-implementation.md)
 - 013 - [Tower of Babel](design/013-tower-of-babel.md)
 - 014 - [Object Model](design/014-object-model.md)
@@ -70,6 +69,10 @@ Most of the notes haven't been migrated yet:
 - [System](system.md)
 - [Testing](Testing.md)
 - [Tokenization](Tokenization.md)
+
+## Dropped or Withdrawn Design Notes
+
+- 011 - [Metaobject Protocol](design/old/011-metaobject-protocol.md)
 
 ## Design Compromises
 
