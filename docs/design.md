@@ -45,7 +45,9 @@ in in progress, this is the current status:
 - 009 - [Self Hosting](design/009-self-hosting.md)
 - 010 - [Docstrings and Comments](design/010-docstrings-and-comments.md)
 - 011 - [Metaobject Protocol](design/011-metaobject-protocol.md)
-- WIP - [Tower of Babel](design/wip-tower-of-babel.md)
+- 012 - [Record Implementation](design/012-record-implementation.md)
+- 013 - [Tower of Babel](design/013-tower-of-babel.md)
+- 014 - [Object Model](design/014-object-model.md)
 
 ### Old Design Notes
 

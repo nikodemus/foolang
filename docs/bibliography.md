@@ -12,7 +12,12 @@ it's here more for future reference than anything else.
   principles, but being explicit about that would be nice._ 
 
 - 1983 - [Smalltalk-80: The Language and Its Implementation](http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf)
-  Adale Goldberd and David Robson.
+  by Adale Goldberd and David Robson.
+  
+- 1987 - [Metaclasses are First Class: the ObjVLisp
+  Model](http://stephane.ducasse.free.fr/Web/ArchivedLectures/p156-cointe.pdf)
+  by Pierre Cointe. _Along with CLOS and MOP the main inspiration for Foolang
+  object model._
   
 - 1988 - [Overview of Modular
   Smalltalk](https://dl.acm.org/doi/10.1145/62084.62095?cid=81100400306)

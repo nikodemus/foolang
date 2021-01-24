@@ -1,6 +1,6 @@
 # Metaobject Protocol
 
-**Status**: WIP (design in progress, not implemented)
+**Status**: DROPPED (superseded by [014 - Object Model](design/014-object-model.md))
 
 **Identifier**: 011-metaobject-protocol
 
@@ -20,6 +20,7 @@
 - 2020-08-11: initial incomplete version by Nikodemus
 - 2020-08-14: first version that might be semi-coherent by Nikodemus
 - 2021-01-05: updated to current format
+- 2021-01-24: dropped, superseded by [014 - Object Model](design/014-object-model.md)
 
 ## Problem Description
 
@@ -1002,4 +1003,6 @@ None.
 
 ## Discussion
 
-None.
+DROPPED as the changes in basic object model led to leaving out distinct
+interface objects. Many of the ideas contained here may be revived later,
+though.
