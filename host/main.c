@@ -236,7 +236,7 @@ char* foo_debug_context(struct FooContext* ctx) {
   return s;
 }
 
-typedef struct Foo (*FooMethodFunction)(struct FooContext*);
+typedef struct Foo (*FooMethodFunction)(const struct FooMethod*, struct FooContext*);
 typedef struct Foo (*FooClosureFunction)(struct FooContext*);
 
 struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t frameOffset) {
@@ -270,12 +270,14 @@ struct Foo foo_lexical_set(struct FooContext* context, size_t index, size_t fram
 }
 
 struct FooMethod {
-  // The class in which this method originates.
-  struct FooClass* class;
+  struct FooClass* class; // FIXME: rename to home
   struct FooSelector* selector;
   size_t argCount;
   size_t frameSize;
+  // Native method functions directly implement the method
+  // Object method functions send #invoke:inContext: to the object
   FooMethodFunction function;
+  struct Foo object;
 };
 
 struct FooClosure {
@@ -296,6 +298,7 @@ struct FooClass FooClass_Float;
 struct FooClass FooClass_Integer;
 struct FooClass FooClass_Selector;
 struct FooClass FooClass_String;
+struct FooClassList FooClassInheritance_Class;
 struct FooArray* FooArray_alloc(size_t size);
 struct Foo foo_Float_new(double f);
 struct Foo foo_Integer_new(int64_t n);
@@ -390,10 +393,11 @@ struct FooClassList {
 typedef void (*FooMarkFunction)(void* ptr);
 
 struct FooClass {
-  struct FooCString* name;
+  struct FooBytes* name;
   struct FooClass* metaclass;
   struct FooClassList* inherited;
   FooMarkFunction mark;
+  bool gc;
   size_t size;
   struct FooMethod methods[];
 };
@@ -449,12 +453,12 @@ const struct FooMethod* foo_class_find_method(struct FooContext* ctx,
     FOO_DEBUG(" => fallback: %s", fallback->selector->name->data);
     return fallback;
   }
-  /*
-  for (size_t i = 0; i < class->size; ++i) {
-    const struct FooMethod* method = &class->methods[i];
-    printf("- %s\n", method->selector->name->data);
+  if (false) {
+    for (size_t i = 0; i < class->size; ++i) {
+      const struct FooMethod* method = &class->methods[i];
+      printf("- %s\n", method->selector->name->data);
+    }
   }
-  */
   foo_panicf(ctx, "%s does not understand: #%s", class->name->data, selector->name->data);
 }
 
@@ -610,7 +614,7 @@ struct Foo foo_activate(struct FooContext* context) {
     FOO_DEBUG("/foo_send -> non-local return from %s", context->method->selector->name->data);
     return context->return_value;
   } else {
-    struct Foo res = context->method->function((struct FooContext*)context);
+    struct Foo res = context->method->function(context->method, context);
     FOO_DEBUG("/foo_send -> local return from %s", context->method->selector->name->data);
     return res;
   }
@@ -648,37 +652,39 @@ struct Foo foo_send(struct FooContext* sender,
   return foo_activate(context);
 }
 
-struct Foo foo_method_doSelectors_(struct FooContext* context) {
-  struct FooClass* vt = context->receiver.class;
-  struct Foo block = context->frame[0];
+struct Foo foo_method_doSelectors_(const struct FooMethod* method, struct FooContext* ctx) {
+  (void)method;
+  struct FooClass* vt = ctx->receiver.class;
+  struct Foo block = ctx->frame[0];
   for (size_t i = 0; i < vt->size; i++) {
-    foo_send(context, &FOO_value_, block, 1,
+    foo_send(ctx, &FOO_value_, block, 1,
              (struct Foo){ .class = &FooClass_Selector,
-                           .datum = { .ptr = vt->methods[i].selector } });
+                            .datum = { .ptr = vt->methods[i].selector } });
   }
-  return context->receiver;
+  return ctx->receiver;
 }
 
-struct Foo foo_method_classOf(struct FooContext* ctx) {
+struct Foo foo_method_classOf(const struct FooMethod* method, struct FooContext* ctx) {
+  (void)method;
   return (struct Foo){ .class = ctx->receiver.class->metaclass,
                         .datum = { .ptr = ctx->receiver.class } };
 }
 
-struct Foo foo_method_includes_(struct FooContext* ctx) {
+struct Foo foo_method_includes_(const struct FooMethod* method, struct FooContext* ctx) {
+  (void)method;
   return foo_class_includes(ctx, PTR(FooClass, ctx->receiver.datum), ctx->frame[0]);
 }
 
-struct Foo foo_method_name(struct FooContext* ctx) {
-  // FIXME: replace FooCStrings with just strings, so we can return name directly.
+struct Foo foo_method_name(const struct FooMethod* method, struct FooContext* ctx) {
+  (void)method;
   struct FooClass* class = PTR(FooClass, ctx->receiver.datum);
-  struct FooCString* name = class->name;
-  return foo_String_new(name->size, name->data);
+  return (struct Foo){ .class = &FooClass_String, .datum = { .ptr = class->name } };
 }
 
 struct Foo foo_closure_new(struct FooContext* context,
-                         FooClosureFunction function,
-                         size_t argCount,
-                         size_t frameSize) {
+                           FooClosureFunction function,
+                           size_t argCount,
+                           size_t frameSize) {
   struct FooClosure* closure = foo_alloc(sizeof(struct FooClosure));
   closure->context = context;
   closure->function = function;
@@ -921,6 +927,22 @@ void foo_mark_array(void* ptr) {
   EXIT_TRACE();
 }
 
+void foo_mark_class(void* ptr) {
+  ENTER_TRACE("mark_class");
+  struct FooClass* class = ptr;
+  if (class->gc && foo_mark_live(class)) {
+    foo_mark_bytes(class->name);
+    foo_mark_class(class->metaclass);
+    // foo_mark_ptr(class.inherited); // FIXME
+    for (size_t i = 0; i < class->size; i++) {
+      struct FooMethod* method = &class->methods[i];
+      if (method->object.class)
+        foo_mark_object(method->object);
+    }
+  }
+  EXIT_TRACE();
+}
+
 void foo_mark_closure(void* ptr) {
   ENTER_TRACE("mark_closure");
   struct FooClosure* closure = ptr;
@@ -1099,3 +1121,6 @@ struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size
   }
   return (struct Foo){ .class = &FooClass_FileStream, .datum = { .ptr = stream } };
 }
+
+struct FooClassList FooClassInheritance_Class = { .size = 1,
+                                                  .data = { &FooClass_Class } };

@@ -1,7 +1,41 @@
-define Methods {
-     #name
-     -> { signature: [], vars: 0,
-          body: "struct FooClass* class = PTR(FooClass, ctx->receiver.datum);
-                 struct FooCString* name = class->name;
-                 return foo_String_new(name->size, name->data);" }
+define InstanceMethods {
+     #name:layout:methods:
+     -> { signature: [String, Any, Array], vars: 1,
+          body: "struct FooArray* methods = PTR(FooArray, ctx->frame[2].datum);
+                 size_t n = methods->size;
+                 struct FooClass* newclass
+                   = foo_alloc(sizeof(struct FooClass) + n*sizeof(struct FooMethod));
+
+                 newclass->name = PTR(FooBytes, ctx->frame[0].datum);
+                 newclass->metaclass = &FooClass_Class;
+                 newclass->inherited = &FooClassInheritance_Class;
+                 newclass->mark = foo_mark_none;
+                 newclass->gc = true;
+                 newclass->size = 0;
+
+                 /* Make the new class visible to GC. */
+                 ctx->frame[3] = (struct Foo)
+                   \{ .class = &FooClass_Class,
+                      .datum = \{ .ptr = newclass }};
+
+                 for (size_t i = 0; i < n; i++) \{
+                   struct Foo method_object = methods->data[i];
+                   struct Foo selector = foo_send(ctx, &FOO_selector, method_object, 0);
+                   foo_class_typecheck(ctx, &FooClass_Selector, selector);
+                   struct Foo nargs = foo_send(ctx, &FOO_arity, selector, 0);
+                   foo_class_typecheck(ctx, &FooClass_Integer, nargs);
+
+                   struct FooMethod* m = &newclass->methods[i];
+                   m->class = newclass;
+                   m->selector = PTR(FooSelector, selector.datum);
+                   m->argCount = nargs.datum.int64;
+                   m->frameSize = nargs.datum.int64;
+                   m->object = method_object;
+
+                   /* Update the size once the method is in place,
+                      so GC sees it. */
+                   newclass->size++;
+                 }
+                 return ctx->frame[3];"
+          }
 }!

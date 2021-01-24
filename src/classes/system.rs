@@ -49,14 +49,14 @@ fn system_command(_receiver: &Object, args: &[Object], env: &Env) -> Eval {
     match output {
         Ok(output) => {
             let ok = output.status.success();
-            let stdout = std::str::from_utf8(&output.stdout).expect("Command stdout was not UTF-8");
-            let stderr = std::str::from_utf8(&output.stderr).expect("Command stderr was not UTF-8");
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
             env.find_global_or_unwind("Record")?.send(
                 "ok:stdout:stderr:",
                 &[
                     env.foo.make_boolean(ok),
-                    env.foo.make_string(stdout),
-                    env.foo.make_string(stderr),
+                    env.foo.make_string(&stdout),
+                    env.foo.make_string(&stderr),
                 ],
                 env,
             )

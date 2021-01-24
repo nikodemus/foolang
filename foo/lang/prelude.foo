@@ -15,6 +15,7 @@ import .exception.Error
 import .exception.Panic
 import .exception.RequiredMethodMissing
 import .exception.TypeError
+import .layout.Layout
 import .file.File
 import .filepath.FilePath
 import .filestream.FileStream

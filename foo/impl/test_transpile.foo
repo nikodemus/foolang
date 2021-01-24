@@ -800,18 +800,20 @@ class TestTranspileDefine { assert system }
             expect: "#<Boolean True>"!
 
     method testDefineClassInstance
-        self transpile: "class MyClass \{ x y }
-                             method value
-                                 x + y!
-                         end
+        self transpileWithPrelude:
+            "class MyClass \{ x y }
+                 is Object
+                 method value
+                     x + y!
+             end
 
-                         define MyValue MyClass x: 40 y: 1202!
+             define MyValue MyClass x: 40 y: 1202!
 
-                         class Main \{}
-                             direct method run: command in: system
-                                 MyValue value debug.
-                                 MyValue x debug!
-                         end"
+             class Main \{}
+                 direct method run: command in: system
+                     MyValue value debug.
+                     MyValue x debug!
+             end"
             expect: "#<Integer 1242>#<Integer 40>"!
 
     method testDefineFloat
@@ -1100,26 +1102,25 @@ end
 class TestTranspileClass { assert system }
    is TranspilerTest
 
-    method wip_testRuntimeClass
-        self transpile:
-            "class BlockMethod \{ name block \}
+    method test0RuntimeClass
+        self transpileWithPrelude:
+            "class BlockMethod \{ selector block \}
                  method invoke: args on: receiver
                      block apply: ([receiver] append: args)!
              end
 
              class Main \{\}
                   direct method run: command in: system
-                      let test = Class
-                                    new: \"test\"
-                                    slots: []
-                                    interfaces: []
-                                    directMethods: [(BlockMethod
-                                                         name: #one
-                                                         block: \{ |r| 1 \})]
-                                    instanceMethods: [].
-                      system output print: test one!
+                      let test = Class name: \"test class\"
+                                       layout: Layout empty
+                                       methods: [(BlockMethod
+                                                     selector: #slots
+                                                     block: \{ |r| 1 \})].
+                      -- let instance = test layout makeInstanceOf: test.
+                      -- system output print: instance one!
+                      system output print: test name!
              end"
-            expect: "1"!
+            expect: "test class"!
 
     method testMyClass
         self transpile: "class MyClass \{}
