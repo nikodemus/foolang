@@ -61,6 +61,10 @@ class BuiltinMethod { home selector definition isDirect }
         self printOn: stream!
     method toString
         StringOutput with: { |out| self printOn: out }!
+    method methodFunctionName
+        Name mangleMethod: self!
+    method methodHomeName
+        Name mangleMethodClass: self!
 end
 
 define DatumClasses
@@ -813,24 +817,12 @@ class CTranspiler { output selectorMap closureFunctions
         -- Augmented with #includes:
         let directMethods = (anInterface directMethods reject: #isRequired) asList.
         directMethods
-            do: { |each| self _generateMethod: each _for: anInterface name }.
+            do: { |each| self _writeMethod: each _for: anInterface name }.
         -- FIXME: Currently Any has it's own definition
         (directMethods find: { |each| each selector == #includes: }) is False
-            ifTrue: { let includes = { home: anInterface,
-                                       selector: #includes:,
-                                       arity: 1,
-                                       frameSize: 1,
-                                       isDirect: True }.
-                      directMethods push: includes.
-                      output print: "struct Foo ".
-                      output println: (Name mangleMethod: includes).
-                      output println: "    (struct FooContext* ctx)".
-                      output println: "\{".
-                      output println: "    return foo_class_includes(ctx, &{Name mangleClass: anInterface}, ctx->frame[0]);".
-                      output println: "}".
-                      output newline }.
+            ifTrue: { directMethods add: (self _generateClassIncludes: anInterface) }.
         (anInterface instanceMethods reject: #isRequired)
-            do: { |each| self _generateMethod: each _for: anInterface name }.
+            do: { |each| self _writeMethod: each _for: anInterface name }.
         -- Interface metaclass
         -- FIXME: name says 'Foo interface', should be 'Foo class'!
         let metaclassInheritance
@@ -847,10 +839,10 @@ class CTranspiler { output selectorMap closureFunctions
         directMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                  output println: "                            .class = &{Name mangleMethodClass: each},".
+                  output println: "                            .class = &{each methodHomeName},".
                   output println: "                            .argCount = {each arity},".
                   output println: "                            .frameSize = {each frameSize},".
-                  output println: "                            .function = &{Name mangleMethod: each} }," }.
+                  output println: "                            .function = &{each methodFunctionName} }," }.
         output println: "    }".
         output println: "};".
         output newline.
@@ -874,6 +866,61 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "};".
         output newline!
 
+    method _generateClassConstructor: aClass
+        let ctorProto = { home: aClass,
+                          selector: aClass constructor,
+                          isDirect: True }.
+        -- Awkward: we need the proto to mangle the names...
+        let ctor =  { selector: aClass constructor,
+                      arity: aClass slots size,
+                      frameSize: aClass slots size,
+                      methodHomeName: (Name mangleMethodClass: ctorProto),
+                      methodFunctionName: (Name mangleMethod: ctorProto) }.
+        output print: "struct Foo ".
+        output println: ctor methodFunctionName.
+        output println: "    (struct FooContext* ctx)".
+        output println: "\{".
+        output println: "    (void)ctx;".
+        output println: "    struct FooArray* new = FooArray_alloc({aClass slots size} * sizeof(struct Foo));".
+        aClass slots
+            doWithIndex: { |each index|
+                           let type = each type. -- FIXME: visit the type
+                           type is Any
+                               ifTrue: { output println: "new->data[{index-1}] = ctx->frame[{index-1}];" }
+                               ifFalse: { output println: "new->data[{index -1}] = foo_class_typecheck(ctx, &{Name mangleClass: type}, ctx->frame[{index-1}]);" } }.
+        output println: "    return (struct Foo)\{ .class = PTR(FooClass, ctx->receiver.datum), .datum = \{ .ptr = new } };".
+        output println: "}".
+        output newline.
+        ctor!
+
+    method _generateClassIncludes: aClass
+        { selector: #includes:,
+          arity: 1,
+          frameSize: 1,
+          methodHomeName: (Name mangleMetaclass: aClass),
+          methodFunctionName: "foo_method_includes_" }!
+
+    method _generateClassName: aClass
+        { selector: #name,
+          arity: 0,
+          frameSize: 0,
+          methodHomeName: (Name mangleMetaclass: aClass),
+          methodFunctionName: "foo_method_name" }!
+
+    method _generateClassClassOf: aClass
+        { selector: #classOf,
+          arity: 0,
+          frameSize: 0,
+          methodHomeName: (Name mangleMetaclass: aClass),
+          methodFunctionName: "foo_method_classOf" }!
+
+    method _generateInstanceClassOf: aClass
+        { selector: #classOf,
+          arity: 0,
+          frameSize: 0,
+          methodHomeName: (Name mangleClass: aClass),
+          methodFunctionName: "foo_method_classOf" }!
+
     method visitClassDefinition: aClass
         Tracer visitClassDefinition: aClass name.
         -- Debug println: "class: {aClass name}".
@@ -888,110 +935,19 @@ class CTranspiler { output selectorMap closureFunctions
         let metaclassName = Name mangleMetaclass: aClass.
         let globalName = Name mangleGlobal: aClass.
         -- Augmented later with: constructor (aka ctor), #includes:, and #name
-        -- Debug println: "/class direct methods".
         let directMethods = aClass directMethods asList.
         directMethods
-            do: { |each| self _generateMethod: each _for: aClass name }.
+            do: { |each| self _writeMethod: each _for: aClass name }.
         -- Augmented later with #classOf.
-        -- Debug println: "/class instance methods".
         let instanceMethods = aClass instanceMethods asList.
         instanceMethods
-            do: { |each| self _generateMethod: each _for: aClass name }.
+            do: { |each| self _writeMethod: each _for: aClass name }.
         aClass isBuiltin
-            ifFalse: {
-                -- Layout
-                let layoutName = "FooLayout_{aClass name}".
-                output println: "struct FooLayout {layoutName} =".
-                output println: "\{".
-                output println: "    .size = {aClass slots size},".
-                output println: "    .slots = \{".
-                aClass slots
-                    do: { |each|
-                          output println: "        \{ .name = &FOO_CSTRING({each name displayString}) }," }.
-                output println: "    }".
-                output println: "};".
-                output newline.
-                -- Constructor
-                let ctor = { home: aClass,
-                             selector: aClass constructor,
-                             arity: aClass slots size,
-                             frameSize: aClass slots size,
-                             isDirect: True }.
-                directMethods push: ctor.
-                output print: "struct Foo ".
-                output println: (Name mangleMethod: ctor).
-                output println: "    (struct FooContext* ctx)".
-                output println: "\{".
-                output println: "    (void)ctx;".
-                output println: "    struct FooArray* new = FooArray_alloc({aClass slots size} * sizeof(struct Foo));".
-                aClass slots
-                    doWithIndex: { |each index|
-                                   let type = each type.
-                                   -- FIXME: visit the type
-                                   type is Any
-                                       ifTrue: { output println: "new->data[{index-1}] = ctx->frame[{index-1}];" }
-                                       ifFalse: { output println: "new->data[{index -1}] = foo_class_typecheck(ctx, &{Name mangleClass: type}, ctx->frame[{index-1}]);" } }.
-                output println: "    return (struct Foo)\{ .class = &{className}, .datum = \{ .ptr = new } };".
-                output println: "}".
-                output newline
-            }.
-        -- Class#includes: (typetest)
-        let includes = { home: aClass,
-                         selector: #includes:,
-                         arity: 1,
-                         frameSize: 1,
-                         isDirect: True }.
-        directMethods push: includes.
-        output print: "struct Foo ".
-        output println: (Name mangleMethod: includes).
-        output println: "    (struct FooContext* ctx)".
-        output println: "\{".
-        output println: "    return foo_Boolean_new(&{Name mangleClass: aClass} == ctx->frame[0].class);".
-        output println: "}".
-        output newline.
-        -- Class#classOf: FIXME, can share between all classes!
-        let metaclassClassOf = { home: aClass,
-                                 selector: #classOf,
-                                 arity: 0,
-                                 frameSize: 0,
-                                 isDirect: True }.
-        directMethods push: metaclassClassOf.
-        output print: "struct Foo ".
-        output println: (Name mangleMethod: metaclassClassOf).
-        output println: "    (struct FooContext* ctx)".
-        output println: "\{".
-        output println: "    return (struct Foo)\{ .class = ctx->receiver.class->metaclass, .datum = \{ .ptr = ctx->receiver.class } };".
-        output println: "\}".
-        -- #name
-        -- FIXME: This can be reused between all classes!
-        -- FIXME: replace FooCStrings with just strings, so we can return name directly.
-        let getname = { home: aClass,
-                        selector: #name,
-                        arity: 0,
-                        frameSize: 0,
-                        isDirect: True }.
-        directMethods push: getname.
-        output print: "struct Foo ".
-        output println: (Name mangleMethod: getname).
-        output println: "    (struct FooContext* ctx)".
-        output println: "\{".
-        output println: "    struct FooClass* class = PTR(FooClass, ctx->receiver.datum);".
-        output println: "    struct FooCString* name = class->name;".
-        output println: "    return foo_String_new(name->size, name->data);".
-        output println: "\}".
-        -- #classOf
-        let classOf = { home: aClass,
-                        selector: #classOf,
-                        arity: 0,
-                        frameSize: 0,
-                        isDirect: False }.
-        instanceMethods push: classOf.
-        output print: "struct Foo ".
-        output println: (Name mangleMethod: classOf).
-        output println: "    (struct FooContext* ctx)".
-        output println: "\{".
-        output println: "    return {globalName};".
-        output println: "\}".
+            ifFalse: { directMethods add: (self _generateClassConstructor: aClass) }.
+        directMethods add: (self _generateClassIncludes: aClass).
+        directMethods add: (self _generateClassClassOf: aClass).
+        directMethods add: (self _generateClassName: aClass).
+        instanceMethods add: (self _generateInstanceClassOf: aClass).
         -- Interfaces
         let metaclassInheritance
             = self _generateInheritance: aClass forMetaclass: True.
@@ -1009,10 +965,10 @@ class CTranspiler { output selectorMap closureFunctions
         directMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                  output println: "                            .class = &{Name mangleMethodClass: each},".
+                  output println: "                            .class = &{each methodHomeName},".
                   output println: "                            .argCount = {each arity},".
                   output println: "                            .frameSize = {each frameSize},".
-                  output println: "                            .function = &{Name mangleMethod: each} }," }.
+                  output println: "                            .function = &{each methodFunctionName} }," }.
         output println: "    }".
         output println: "};".
         output newline.
@@ -1028,16 +984,16 @@ class CTranspiler { output selectorMap closureFunctions
         instanceMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                  output println: "                            .class = &{Name mangleMethodClass: each},".
+                  output println: "                            .class = &{each methodHomeName},".
                   output println: "                            .argCount = {each arity},".
                   output println: "                            .frameSize = {each frameSize},".
-                  output println: "                            .function = &{Name mangleMethod: each} }," }.
+                  output println: "                            .function = &{each methodFunctionName} }," }.
         -- #__doSelectors
         output println: "        (struct FooMethod)\{ .selector = &FOO_____doSelectors_,".
         output println: "                            .class = NULL,".
         output println: "                            .argCount = 1,".
         output println: "                            .frameSize = 1,".
-        output println: "                            .function = &foo_do_selectors }".
+        output println: "                            .function = &foo_method_doSelectors_ }".
         output println: "    }".
         output println: "};".
         output newline.
@@ -1049,9 +1005,9 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "};".
         output newline!
 
-    method _generateMethod: aMethod _for: type
-        -- Tracer _generateMethod: aMethod _for: type.
-        -- Debug println: "_generateMethod: {aMethod}".
+    method _writeMethod: aMethod _for: type
+        -- Tracer _writeMethod: aMethod _for: type.
+        -- Debug println: "_writeMethod: {aMethod}".
         let name = Name mangleMethod: aMethod.
         generatedMethods
             at: name
