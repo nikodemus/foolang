@@ -3,6 +3,7 @@ import .transpiler.array
 import .transpiler.boolean
 import .transpiler.byte_array
 import .transpiler.character
+import .transpiler.class
 import .transpiler.clock
 import .transpiler.closure
 import .transpiler.file
@@ -178,6 +179,12 @@ define Builtins [
          mark: "foo_mark_none"
          directMethods: character.DirectMethods
          instanceMethods: character.InstanceMethods,
+     Builtin
+         type: Class
+         value: Class
+         mark: "foo_mark_none" -- FIXME: need gc flag in classes
+         directMethods: Dictionary new
+         instanceMethods: class.Methods,
      Builtin
          type: Class
          value: Clock
@@ -765,6 +772,34 @@ class CTranspiler { output selectorMap closureFunctions
             interleaving: { output print: ", " }.
         output print: ")"!
 
+    method _generateInheritance: anObject forMetaclass: forMetaclass
+        -- FIXME: The metaclass inheritance here parallels the class inheritance,
+        -- like in Smalltalk, and is consistent with inheritance of
+        -- direct methods, but consider:
+        --
+        -- Class X inherits from MyInterface. `MyInterface`
+        -- itself is abstract, but `MyInterface class` is not!
+        --
+        -- Argh...
+        let inheritance = forMetaclass
+                              ifTrue: { "FooMetaclassInheritance_{anObject name}" }
+                              ifFalse: { "FooClassInheritance_{anObject name}" }.
+        let mangle = forMetaclass
+                         ifTrue: { { |x| Name mangleMetaclass: x} }
+                         ifFalse: { { |x| Name mangleClass: x } }.
+        let interfaces = anObject interfaceGlobals.
+        output println: "struct FooClassList {inheritance} = \{".
+        output println: "    .size = {interfaces size},".
+        output println: "    .data = \{".
+        interfaces
+            do: { |each|
+                  self declare: each.
+                  output println: "        &{mangle value: each}," }.
+        output println: "    }".
+        output println: "};".
+        output newline.
+        inheritance!
+
     method visitInterfaceDefinition: anInterface
         Tracer visitInterfaceDefinition: anInterface name.
         -- Debug println: "interface: {anInterface name}".
@@ -798,10 +833,14 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each| self _generateMethod: each _for: anInterface name }.
         -- Interface metaclass
         -- FIXME: name says 'Foo interface', should be 'Foo class'!
+        let metaclassInheritance
+            = self _generateInheritance: anInterface forMetaclass: True.
+        let classInheritance
+            = self _generateInheritance: anInterface forMetaclass: False.
         output println: "struct FooClass {metaclassName} = ".
         output println: "\{".
         output println: "    .name = &FOO_CSTRING({anInterface name displayString}\" interface\"),".
-        output println: "    .inherited = \{ .size = 0, .data = NULL },".
+        output println: "    .inherited = &{metaclassInheritance},".
         output println: "    .size = {directMethods size},".
         output println: "    .mark = foo_mark_none,".
         output println: "    .methods = \{".
@@ -820,22 +859,18 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "struct FooClass {className} = ".
         output println: "\{".
         output println: "    .name = &FOO_CSTRING({anInterface name displayString}),".
-        output println: "    .classptr = NULL,". -- FIXME
-        output println: "    .inherited = \{ .size = 0, .data = NULL },".
-        output println: "    .mark = NULL,".
+        output println: "    .metaclass = &{metaclassName},".
+        output println: "    .inherited = &{classInheritance},".
+        output println: "    .mark = NULL,". -- FIXME!
         output println: "    .size = 0,".
         output println: "    .methods = \{}".
         output println: "};".
-        output newline.
-        -- Interface struct
-        let interfaceName = "FooInterface_{anInterface name}".
-        output println: "struct FooInterface {interfaceName} = \{};".
         output newline.
         -- Interface object
         output println: "struct Foo {globalName} =".
         output println: "\{".
         output println: "    .class = &{metaclassName},".
-        output println: "    .datum = \{ .ptr = &{interfaceName} }".
+        output println: "    .datum = \{ .ptr = &{className} }".
         output println: "};".
         output newline!
 
@@ -850,7 +885,7 @@ class CTranspiler { output selectorMap closureFunctions
  *
  */".
         let className = Name mangleClass: aClass.
-        let classClassName = Name mangleMetaclass: aClass.
+        let metaclassName = Name mangleMetaclass: aClass.
         let globalName = Name mangleGlobal: aClass.
         -- Augmented later with: constructor (aka ctor), #includes:, and #name
         -- Debug println: "/class direct methods".
@@ -914,27 +949,27 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "    return foo_Boolean_new(&{Name mangleClass: aClass} == ctx->frame[0].class);".
         output println: "}".
         output newline.
-        -- Class#classOf: FIXME, this is blatant lie because .classPtr is null!
-        let classClassOf = { home: aClass,
-                             selector: #classOf,
-                             arity: 0,
-                             frameSize: 0,
-                             isDirect: True }.
-        directMethods push: classClassOf.
+        -- Class#classOf: FIXME, can share between all classes!
+        let metaclassClassOf = { home: aClass,
+                                 selector: #classOf,
+                                 arity: 0,
+                                 frameSize: 0,
+                                 isDirect: True }.
+        directMethods push: metaclassClassOf.
         output print: "struct Foo ".
-        output println: (Name mangleMethod: classClassOf).
+        output println: (Name mangleMethod: metaclassClassOf).
         output println: "    (struct FooContext* ctx)".
         output println: "\{".
-        output println: "    return {globalName};".
+        output println: "    return (struct Foo)\{ .class = ctx->receiver.class->metaclass, .datum = \{ .ptr = ctx->receiver.class } };".
         output println: "\}".
         -- #name
         -- FIXME: This can be reused between all classes!
         -- FIXME: replace FooCStrings with just strings, so we can return name directly.
         let getname = { home: aClass,
-                     selector: #name,
-                     arity: 0,
-                     frameSize: 0,
-                     isDirect: True }.
+                        selector: #name,
+                        arity: 0,
+                        frameSize: 0,
+                        isDirect: True }.
         directMethods push: getname.
         output print: "struct Foo ".
         output println: (Name mangleMethod: getname).
@@ -958,28 +993,16 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "    return {globalName};".
         output println: "\}".
         -- Interfaces
-        let interfaces = aClass interfaceGlobals.
-        let classInterfacesName = "FooClassInterfaces_{aClass name}".
-        output println: "struct FooClass* {classInterfacesName}[] = \{".
-        interfaces
-            do: { |each|
-                  self declare: each.
-                  output println: "    &{Name mangleMetaclass: each}," }.
-        output println: "};".
-        output newline.
-        let instanceInterfacesName = "FooInstanceInterfaces_{aClass name}".
-        output println: "struct FooClass* {instanceInterfacesName}[] = \{".
-        interfaces
-            do: { |each|
-                  output println: "    &{Name mangleClass: each}," }.
-        output println: "};".
-        output newline.
-        -- Class Class
-        output println: "struct FooClass {classClassName} = ".
+        let metaclassInheritance
+            = self _generateInheritance: aClass forMetaclass: True.
+        let classInheritance
+            = self _generateInheritance: aClass forMetaclass: False.
+        -- Class metaclass
+        output println: "struct FooClass {metaclassName} = ".
         output println: "\{".
         output println: "    .name = &FOO_CSTRING({aClass name displayString}\" class\"),".
-        output println: "    .classptr = NULL,". -- FIXME
-        output println: "    .inherited = \{ .size = {interfaces size}, .data = {classInterfacesName} },".
+        output println: "    .metaclass = &FooClass_Class,".
+        output println: "    .inherited = &{metaclassInheritance},".
         output println: "    .mark = foo_mark_none,".
         output println: "    .size = {directMethods size},".
         output println: "    .methods = \{".
@@ -997,8 +1020,8 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "struct FooClass {className} = ".
         output println: "\{".
         output println: "    .name = &FOO_CSTRING({aClass name displayString}),".
-        output println: "    .classptr = &{globalName},".
-        output println: "    .inherited = \{ .size = {interfaces size}, .data = {instanceInterfacesName} },".
+        output println: "    .metaclass = &{metaclassName},".
+        output println: "    .inherited = &{classInheritance},".
         output println: "    .mark = {aClass markFunction},".
         output println: "    .size = {instanceMethods size + 1},".
         output println: "    .methods = \{".
@@ -1021,7 +1044,7 @@ class CTranspiler { output selectorMap closureFunctions
         -- Class object
         output println: "struct Foo {globalName} =".
         output println: "\{".
-        output println: "    .class = &{classClassName},".
+        output println: "    .class = &{metaclassName},".
         output println: "    .datum = \{ .ptr = &{className} }".
         output println: "};".
         output newline!
@@ -1173,7 +1196,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method visitSelfClass: aSelf
         -- Tracer trace: #visitSelfClass:.
-        output print: "*ctx->receiver.class->classptr"!
+        output print: "(struct Foo)\{ .class = ctx->receiver.class->metaclass, .datum = \{ .ptr = ctx->receiver.class }}"!
 
     method visitBindDynamic: aBind
         -- Tracer trace: #visitBindDynamic:.

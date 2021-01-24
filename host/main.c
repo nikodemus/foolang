@@ -289,6 +289,7 @@ struct FooClosure {
 // to define a few builtin ctors first that need some of them.
 struct FooClass FooClass_Array;
 struct FooClass FooClass_Character;
+struct FooClass FooClass_Class;
 struct FooClass FooClass_Closure;
 struct FooClass FooClass_Boolean;
 struct FooClass FooClass_Float;
@@ -381,22 +382,17 @@ void foo_unbind(struct FooContext* sender, struct FooCleanup* cleanup) {
   sender->vars->data[unbind->index] = unbind->value;
 }
 
-struct FooInterface {
-  // struct FooClass* class;
-  // struct FooClass* classClass;
-};
-
 struct FooClassList {
   size_t size;
-  struct FooClass** data;
+  struct FooClass* data[];
 };
 
 typedef void (*FooMarkFunction)(void* ptr);
 
 struct FooClass {
   struct FooCString* name;
-  struct Foo* classptr;
-  struct FooClassList inherited;
+  struct FooClass* metaclass;
+  struct FooClassList* inherited;
   FooMarkFunction mark;
   size_t size;
   struct FooMethod methods[];
@@ -409,7 +405,7 @@ struct Foo foo_class_typecheck(struct FooContext* ctx,
   assert(obj.class);
   if (class == obj.class)
     return obj;
-  struct FooClassList* list = &obj.class->inherited;
+  struct FooClassList* list = obj.class->inherited;
   for (size_t i = 0; i < list->size; i++)
     if (class == list->data[i]) {
       return obj;
@@ -427,7 +423,7 @@ struct Foo foo_class_includes(struct FooContext* ctx,
   assert(obj.class);
   if (class == obj.class)
     return foo_Boolean_new(true);
-  struct FooClassList* list = &obj.class->inherited;
+  struct FooClassList* list = obj.class->inherited;
   for (size_t i = 0; i < list->size; i++)
     if (class == list->data[i]) {
       return foo_Boolean_new(true);

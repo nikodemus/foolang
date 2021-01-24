@@ -1,0 +1,7 @@
+define Methods {
+     #name
+     -> { signature: [], vars: 0,
+          body: "struct FooClass* class = PTR(FooClass, ctx->receiver.datum);
+                 struct FooCString* name = class->name;
+                 return foo_String_new(name->size, name->data);" }
+}!

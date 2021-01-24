@@ -306,7 +306,7 @@ class TestTranspilePreludeException { assert system }
                              direct method run: command in: system
                                  self bang!
                          end"
-            expectError: "PANIC: UNHANDLED ERROR: Instances of Main classOf do not understand: #bang
+            expectError: "PANIC: UNHANDLED ERROR: Instances of Main class do not understand: #bang
 Backtrace:
   6: FallbackHandler class#raise:
   5: Error#raise (DoesNotUnderstand)
