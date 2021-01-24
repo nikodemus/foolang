@@ -8,12 +8,12 @@ Implementation Notes:
   operations in could be done closer to 0-1 range.
 - Conventional compound units with their own names, like Joule not handled.
   Should deal with printing & entering values.
-- Should store the base unit powers as a vector instead of a table.
+- Should store the base unit powers as a vector instead of a table. I8 is enough for anyone?
 - Would be nice of units were types: x::Meters^2
 - Would be nice to have specialized representations for commonplace units
   to avoid the fully general symbolic units -- ideally representing even the
-  exponents by the vtable for common cases, so unit values would just be floats
-  with special vtables and types -- which would allow the compiler to reason about them.
+  exponents by the classes for common cases, so unit datums would just be floats
+  with special classes -- which would allow the compiler to reason about them.
 
 Examples:
 

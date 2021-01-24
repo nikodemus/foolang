@@ -10,12 +10,12 @@ define InstanceMethods {
                 if (b2->size == 0)
                     foo_panicf(ctx, \"Invalid pathname in FilePath#/\");
                 if (b1->size == 0)
-                    return (struct Foo)\{ .vtable = &FooInstanceVtable_FilePath, .datum = \{ .ptr = b2 } };
+                    return (struct Foo)\{ .class = &FooClass_FilePath, .datum = \{ .ptr = b2 } };
                 struct FooBytes* b3 = FooBytes_alloc(b1->size + b2->size + 1);
                 memcpy(b3->data, b1->data, b1->size);
                 b3->data[b1->size] = '/';
                 memcpy(b3->data + b1->size + 1, b2->data, b2->size);
-                return (struct Foo)\{ .vtable = &FooInstanceVtable_FilePath, .datum = \{ .ptr = b3 } };" },
+                return (struct Foo)\{ .class = &FooClass_FilePath, .datum = \{ .ptr = b3 } };" },
     #deleteFile
     -> { signature: [], vars: 0,
          body: "return foo_Boolean_new(
@@ -41,5 +41,5 @@ define InstanceMethods {
                 return foo_Boolean_new(SYS_ISREG(s.st_mode));" },
     #toString
     -> { signature: [], vars: 0,
-         body: "return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = ctx->receiver.datum };" },
+         body: "return (struct Foo)\{ .class = &FooClass_String, .datum = ctx->receiver.datum };" },
 }!

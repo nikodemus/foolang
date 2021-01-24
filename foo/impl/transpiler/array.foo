@@ -9,7 +9,7 @@ struct Foo value = ctx->frame[2];
 for (int64_t i = 0; i < size; i++) \{
     new->data[i] = value;
 }
-return (struct Foo)\{ .vtable = &FooInstanceVtable_Array, .datum = \{ .ptr = new } };"},
+return (struct Foo)\{ .class = &FooClass_Array, .datum = \{ .ptr = new } };"},
       #new:
           -> {signature: [Integer], vars: 0,
               body: "size_t size = ctx->frame[0].datum.int64;
@@ -26,7 +26,7 @@ struct Foo value = ctx->frame[1];
 for (int64_t i = 0; i < size; i++) \{
     new->data[i] = value;
 }
-return (struct Foo)\{ .vtable = &FooInstanceVtable_Array, .datum = \{ .ptr = new } };"}
+return (struct Foo)\{ .class = &FooClass_Array, .datum = \{ .ptr = new } };"}
 }!
 
 define InstanceMethods
@@ -62,7 +62,7 @@ struct FooArray* new = FooArray_alloc(self->size);
 for (size_t i = 0; i < self->size; i++) \{
     new->data[i] = self->data[i];
 }
-return (struct Foo)\{ .vtable = &FooInstanceVtable_Array, .datum = \{ .ptr = new } };"},
+return (struct Foo)\{ .class = &FooClass_Array, .datum = \{ .ptr = new } };"},
       #put:at:
           -> {signature: [Any, Integer], vars: 0,
               body: "struct FooArray* array = PTR(FooArray, ctx->receiver.datum);
@@ -83,7 +83,7 @@ size_t offset = 0;
 for (size_t i = start; i < end;) \{
     new->data[offset++] = self->data[i++];
 }
-return (struct Foo)\{ .vtable = &FooInstanceVtable_Array, .datum = \{ .ptr = new } };"},
+return (struct Foo)\{ .class = &FooClass_Array, .datum = \{ .ptr = new } };"},
       #size
               -> {signature: [], vars: 0,
                   body: "return foo_Integer_new(PTR(FooArray, ctx->receiver.datum)->size);"}

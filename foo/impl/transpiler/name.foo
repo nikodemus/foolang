@@ -36,19 +36,19 @@ class Name { out }
             ; _mangleMethod: aMethod
             ; content!
 
-    direct method mangleMethodVtable: aMethod
+    direct method mangleMethodClass: aMethod
         aMethod isDirect
-            ifTrue: { self mangleDirectVtable: aMethod home }
-            ifFalse: { self mangleInstanceVtable: aMethod home }!
+            ifTrue: { self mangleMetaclass: aMethod home }
+            ifFalse: { self mangleClass: aMethod home }!
 
-    direct method mangleDirectVtable: aClass
+    direct method mangleMetaclass: aClass
         self _new
-            ; _mangleDirectVtable: aClass
+            ; _mangleMetaclass: aClass
             ; content!
 
-    direct method mangleInstanceVtable: aClass
+    direct method mangleClass: aClass
         self _new
-            ; _mangleInstanceVtable: aClass
+            ; _mangleClass: aClass
             ; content!
 
     direct method mangleName: name
@@ -77,12 +77,12 @@ class Name { out }
         out print: "FooGlobal_".
         out print: aVar name!
 
-    method _mangleDirectVtable: aClass
-        out print: "FooDirectVtable_".
+    method _mangleMetaclass: aClass
+        out print: "FooMetaclass_".
         self _mangleName: aClass name!
 
-    method _mangleInstanceVtable: aClass
-        out print: "FooInstanceVtable_".
+    method _mangleClass: aClass
+        out print: "FooClass_".
         self _mangleName: aClass name!
 
     method _mangleMethod: aMethod

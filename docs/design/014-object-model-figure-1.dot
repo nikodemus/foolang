@@ -1,0 +1,40 @@
+digraph Classes {
+    rankdir=BT;
+    nodesep="0.5";
+    pad="0.25";
+    node [shape=record];
+
+    { rank=same; ObjectClass, NumberClass, IntegerClass };
+    ObjectClass [label="Object class"];
+    NumberClass [label="Number class"];
+    IntegerClass [label="Integer class"];
+
+    Object [shape=ellipse];
+    Object -> ObjectClass -> Class;
+
+    Number [shape=ellipse];
+    Number -> NumberClass -> Class;
+
+    Class:n -> Class:n;
+
+    42 [shape=plaintext];
+    42 -> Integer;
+    Integer -> Number [style=dotted];
+    Integer -> IntegerClass -> Class;
+
+    edge [style=dotted];
+    IntegerClass -> Class;
+    Number -> Object;
+    NumberClass -> Class;
+    Class -> Object;
+    ObjectClass -> Class;
+
+    subgraph cluster_01 {
+        label="Legend";
+        node [shape=plaintext];
+        subtype -> type [style=dotted];
+        instance -> class [style=solid];
+        { rank=same; subtype, type }
+        { rank=same; instance, class }
+    }
+}

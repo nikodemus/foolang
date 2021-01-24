@@ -3,7 +3,7 @@
 define DirectMethods {
     #debug ->
     { signature: [], vars: 0,
-      body: "return (struct Foo)\{ .vtable = &FooInstanceVtable_Output, .datum = \{ .ptr = stdout } };" }
+      body: "return (struct Foo)\{ .class = &FooClass_Output, .datum = \{ .ptr = stdout } };" }
 }!
 
 define InstanceMethods {

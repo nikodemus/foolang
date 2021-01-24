@@ -6,7 +6,7 @@ define DirectMethods {
             body: "size_t size = 0;
 struct FooArray* content = PTR(FooArray, ctx->frame[0].datum);
 for (size_t i = 0; i < content->size; i++) \{
-    struct FooBytes* s = PTR(FooBytes, foo_vtable_typecheck(ctx, &FooInstanceVtable_String, content->data[i]).datum);
+    struct FooBytes* s = PTR(FooBytes, foo_class_typecheck(ctx, &FooClass_String, content->data[i]).datum);
     size += s->size;
 }
 size_t offset = 0;
@@ -16,7 +16,7 @@ for (size_t i = 0; i < content->size; i++) \{
     memcpy(string->data+offset, s->data, s->size);
     offset += s->size;
 }
-return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = \{ .ptr = string } };"}
+return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = string } };"}
 }!
 
 define InstanceMethods {
@@ -45,7 +45,7 @@ struct FooBytes* b2 = PTR(FooBytes, ctx->frame[0].datum);
 struct FooBytes* b3 = FooBytes_alloc(b1->size + b2->size);
 memcpy(b3->data, b1->data, b1->size);
 memcpy(b3->data+b1->size, b2->data, b2->size);
-return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = \{ .ptr = b3 } };"},
+return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = b3 } };"},
 
     #debug
         -> {signature: [], vars: 0,

@@ -115,7 +115,7 @@ int n = snprintf(buffer, sizeof(buffer), \"%\" PRId64, ctx->receiver.datum.int64
 if (-1 < n && n < sizeof(buffer)) \{
     struct FooBytes* bytes = FooBytes_alloc(n);
     memcpy(bytes->data, buffer, n);
-    return (struct Foo)\{ .vtable = &FooInstanceVtable_String, .datum = \{ .ptr = bytes }};
+    return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = bytes }};
 } else \{
     foo_panicf(ctx, \"Could not convert integer to string: %zl\", ctx->receiver.datum.int64);
 }

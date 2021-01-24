@@ -7,13 +7,13 @@ struct FooProcessTimes {
   double real;
 };
 
-#define INSTANCE(class, value) \
-  ((struct Foo){ .vtable = &FooInstanceVtable_ ## class, .datum = { .ptr = value } })
+#define INSTANCE(classname, value) \
+  ((struct Foo){ .class = &FooClass_ ## classname, .datum = { .ptr = value } })
 
 #define FLOAT(value) \
-  ((struct Foo){ .vtable = &FooInstanceVtable_Float, .datum = { .float64 = value } })
+  ((struct Foo){ .class = &FooClass_Float, .datum = { .float64 = value } })
 
 #define INTEGER(value) \
-  ((struct Foo){ .vtable = &FooInstanceVtable_Integer, .datum = { .int64 = value } })
+  ((struct Foo){ .class = &FooClass_Integer, .datum = { .int64 = value } })
 
 #endif // __FOO_H_

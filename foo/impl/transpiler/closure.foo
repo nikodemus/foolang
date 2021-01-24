@@ -48,7 +48,7 @@ return FooGlobal_False;"},
         .function = foo_finally,
         .next = ctx->cleanup
     },
-    .closure = foo_vtable_typecheck(ctx, &FooInstanceVtable_Closure, ctx->frame[0]).datum.ptr
+    .closure = foo_class_typecheck(ctx, &FooClass_Closure, ctx->frame[0]).datum.ptr
 };
 ctx->cleanup = &finally.cleanup;
 struct FooContext* closure_ctx = foo_context_new_closure(ctx);
