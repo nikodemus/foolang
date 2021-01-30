@@ -1,40 +1,67 @@
 digraph Classes {
-    rankdir=BT;
-    nodesep="0.5";
-    pad="0.25";
-    node [shape=record];
+    rankdir=BT
+    newrank=true
+    nodesep="0.5"
+    pad="0.25"
+    node [shape=record]
 
-    { rank=same; ObjectClass, NumberClass, IntegerClass };
-    ObjectClass [label="Object class"];
-    NumberClass [label="Number class"];
-    IntegerClass [label="Integer class"];
+    { rank=sink; Any }
+    { rank=same; AnyDirect, NumberDirect }
+    { rank=same; NumberClass, AnyClass, IntegerClass }
 
-    Object [shape=ellipse];
-    Object -> ObjectClass -> Class;
+    Any [shape=ellipse]
+    Any -> AnyClass
 
-    Number [shape=ellipse];
-    Number -> NumberClass -> Class;
+    Class:n -> Class:n
+    Class -> Any [style=dotted]
 
-    Class:n -> Class:n;
+    AnyDirect [label="Any direct class", shape=ellipse]
+    AnyDirect -> Class
 
-    42 [shape=plaintext];
-    42 -> Integer;
-    Integer -> Number [style=dotted];
-    Integer -> IntegerClass -> Class;
+    NumberDirect [label="Number direct class", shape=ellipse]
+    NumberDirect -> Class
 
-    edge [style=dotted];
-    IntegerClass -> Class;
-    Number -> Object;
-    NumberClass -> Class;
-    Class -> Object;
-    ObjectClass -> Class;
+    AnyClass [label="Any class"]
+    AnyClass -> Class
+    AnyClass -> Class [style=dotted]
+    AnyClass -> AnyDirect [style=dotted]
 
-    subgraph cluster_01 {
+    NumberClass [label="Number class"]
+    NumberClass -> Class
+    NumberClass -> Class [style=dotted]
+    NumberClass -> NumberDirect [style=dotted]
+    NumberClass -> AnyDirect [style=dotted]
+
+    IntegerClass [label="Integer class"]
+    IntegerClass -> Class
+    IntegerClass -> Class [style=dotted]
+
+    Number [shape=ellipse]
+    Number -> Any [style=dotted]
+    Number -> NumberClass
+
+    Integer -> IntegerClass
+    Integer -> Number [style=dotted]
+
+    42 [shape=plaintext]
+    42 -> Integer
+
+    compound=true
+
+    subgraph cluster_legend {
         label="Legend";
-        node [shape=plaintext];
-        subtype -> type [style=dotted];
-        instance -> class [style=solid];
         { rank=same; subtype, type }
+        subtype [shape=plaintext]
+        type [shape=plaintext]
         { rank=same; instance, class }
+        instance [shape=plaintext]
+        class [shape=plaintext]
+
+        instance -> class [style=solid]
+        subtype -> type [style=dotted]
+
+        concrete [label="concrete class", shape=record]
+        abstract [label="abstract class", shape=ellipse]
     }
+    instance-> 42 [style=invis]
 }
