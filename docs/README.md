@@ -118,28 +118,25 @@ can be redefined and new classes added while the program is running.
 ### Pending
 
 <span class="todo">&cross;</span>
-**Self-Hosted**: self-hosted parser and interpreter are almost complete,
-work on self-hosted transpiler to C for bootstrap is about to start.
+**Self-Hosted**: self-hosted parser and
+interpreter are done, work on self-hosted transpiler to C for bootstrapping
+is around 90% complete.
 
-<span class="todo">&cross;</span> **Compiled**: Foolang is intended to be
+<span class="todo">&cross;</span>
+**Compiled**: Foolang is intended to be
 capable of producing native, monolithic executables&mdash;without compromising
 the interactive development experience.
-
-<span class="todo">&cross;</span>
-**Extensible syntax & code generation**: Foolang is intended to offer a
-compile-time computation facility similar to Lisp's macros, allowing both
-syntactic convenience and ability to generate code.
-
-<span class="todo">&cross;</span>
-**Type inference**: while Foolang's typesystem should be considered
-weaksouce by today's standards doing basic type inference is critical for
-the intendend functionality.
 
 <span class="todo">&cross;</span>
 **Performant**: type-annotated and compiled Foolang code should perform about as well
 as equivalent `-O0` C++ code. To be fair: this will require more effort from
 the compiler than C++, but not drastically so&mdash;a partial evaluation pass
 should cover most of it.
+
+<span class="todo">&cross;</span>
+**Type inference**: while Foolang's typesystem should be considered
+weaksauce by today's standards, doing basic type inference is critical for
+the intendend functionality.
 
 <span class="todo">&cross;</span>
 **Supervised and isolated threads**: Foolang threads will not share memory,
@@ -150,3 +147,8 @@ does. (Unlike Erlang Foolang does allow thread-local side-effects.)
 **Smalltalkish development environment**: while Foolang keeps it's code in files
 and allows you to use your favorite editor, it still wants to provide an
 integrated experience similar to Smalltalks.
+
+<span class="todo">&cross;</span>
+**Extensible syntax & code generation**: Foolang is intended to offer a
+compile-time computation facility similar to Lisp's macros, allowing both
+syntactic convenience and ability to generate code.
