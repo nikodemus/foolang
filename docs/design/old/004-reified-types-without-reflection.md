@@ -1,6 +1,6 @@
 # Reified Types Without Reflection
 
-**Status**: ADOPTED (not implemented, principle currently violated)
+**Status**: DROPPED (not implemented, principle currently heavily violated)
 
 **Identifier**: 004-reified-types-without-reflection
 

@@ -35,9 +35,7 @@ Reorganization of design notes into more coherent and future proof form
 in in progress, this is the current status:
 
 - 001 - [Design Notes: Why and How](design/001-design-notes-why-and-how.md)
-- 002 - [No Class Inheritance](design/002-no-class-inheritance.md)
 - 003 - [Sorting Floats](design/003-sorting-floats.md)
-- 004 - [Reified Types Without Reflection](design/004-reified-types-without-reflection.md)
 - 005 - [Program Definition and Refinement](design/005-program-definition-and-refinement.md)
 - 006 - [Integer Types](design/006-integer-types.md)
 - 007 - [Definitions and Expressions](design/007-definitions-and-expressions.md)
@@ -72,6 +70,8 @@ Most of the notes haven't been migrated yet:
 
 ## Dropped or Withdrawn Design Notes
 
+- 002 - [No Class Inheritance](design/old/002-no-class-inheritance.md)
+- 004 - [Reified Types Without Reflection](design/old/004-reified-types-without-reflection.md)
 - 011 - [Metaobject Protocol](design/old/011-metaobject-protocol.md)
 
 ## Design Compromises
