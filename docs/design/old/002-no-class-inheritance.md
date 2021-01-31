@@ -1,10 +1,13 @@
 # No Class Inheritance
 
-**Status**: ADOPTED (implemented)
+**Status**: WITHDRAWN (implemented, superseded)
 
 **Identifier**: 002-no-class-inheritance.md 
 
 **References**:
+- [014 - Object Model](design/014-object-model.md) supersedes this design note,
+  motivation and reasoning in this note should still be valid, but the details
+  of design have changed sufficiently that this is not entirely correct anymore.
 - Rust's structs vs traits
 - Julia's concrete types may not subtype each other
 
@@ -13,6 +16,7 @@
   design decision.
 - 2020-02-25: initial version of this writeup by nikodemus
 - 2021-01-05: updated to current format
+- 2021-01-32: supersesed
 
 ## Problem Description
 

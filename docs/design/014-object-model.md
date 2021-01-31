@@ -5,7 +5,9 @@
 **Identifier**: 014-object-model
 
 **References**:
-- Dropped design note: [011- Metaobject Protocol](design/old/011-metaobject-protocol.md)
+- Supersedes the following design notes:
+  - [002 - No Class Inheritance](design/old/002-no-class-inheritance.md)
+  - [011 - Metaobject Protocol](design/old/011-metaobject-protocol.md)
 - [Metaclasses are First Class: the ObjVLisp
   Model](http://stephane.ducasse.free.fr/Web/ArchivedLectures/p156-cointe.pdf)
   by Pierre Cointe.

@@ -5,8 +5,8 @@
 **Identifier**: 013-twower-of-babel
 
 **References**:
-- 002 - [No Class Inheritance](design/002-no-class-inheritance.md)
-- 004 - [Reified Types Without Reflection](design/004-reified-types-without-reflection.md)
+- 002 - [No Class Inheritance](design/old/002-no-class-inheritance.md)
+- 004 - [Reified Types Without Reflection](design/old/004-reified-types-without-reflection.md)
 
 **Prior Art**:
 - [Spec-ulation](https://github.com/matthiasn/talk-transcripts/blob/master/Hickey_Rich/Spec_ulation.md), talk by Rich Hickey
