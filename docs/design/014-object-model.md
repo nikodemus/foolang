@@ -94,7 +94,7 @@ The following object model is heavily influenced by ObjVLisp.
    The inheritance tree is rooted in the abstract class `Any`, inherited by
    all classes, representing the most common behaviour shared by all objects.
 
-8. Interfaces do not exists as concepts at object model level, but are a
+7. Interfaces do not exist as concepts at object model level, but are a
    language level concept implemented on top of classes.
 
    For each interface there are three associated classes:
@@ -115,43 +115,65 @@ The following object model is heavily influenced by ObjVLisp.
    - Class _T_ inherits from the abstract instance interface class associated
      with _I_, instances of _T_ thereby gaining the instance methods of _I_.
 
-   - Metaclass of class _T_, ie. _T class_ inherits from the abstract direct interface class associated with
-     _I_, class _T_ thereby gaining the direct methods of _I_.
+   - Metaclass of class _T_, ie. _T class_ inherits from the abstract direct
+     interface class associated with _I_, class _T_ thereby gaining the direct
+     methods of _I_.
 
   See _Any_ and _Number_ in Figure 1.
 
-?> Class immutability is absolutely required for classes known at compile time,
-since they will be allocated in static space and shared between multiple threads
-without locking. Class immutability could be relaxed for classes created at
-runtime, but that would lead to an inconsistency between runtime created and
-compile-time created classes that would be undesirable.
+8. Creation of new instances is handled by layouts objects. Approximately:
 
-?> Class immutability in development mode / environment will be relaxed,
+   ```foolang
+   method x: x y: y
+       self layout makeInstanceOf: self slot: x slot: y!
+   ```
+
+### On Immutability
+
+Immutability of classes is absolutely required for classes known at compile
+time, since they will be allocated in static space and shared between multiple
+threads without locking.
+
+Class immutability _could_ be relaxed for classes created at runtime, but that
+would lead to an inconsistency between runtime created and compile-time created
+classes, which seems undesirable.
+
+However: class immutability in development mode / environment will be relaxed,
 allowing the development environment to add methods to classes, change layouts,
 etc. The details of this are to be defined later.
 
-Pseudocode example of runtime instantiation:
+### Example
+
+Pseudocode example of runtime class creation:
 
 ```foolang
+
+let mylayout
+ = Layout new: [SlotDescription name: "a" type: Integer,
+                SlotDescription name: "b" type: Integer].
+
 let mymetaclass
  = Class
-       name: "a metaclass"
-       extends: Class
-       methods: [#test -> { |this| "the class" }].
-
-let layout
- = Layout
-       a: Integer
-       b: Integer.
+       subclass: "a metaclass"
+       methods: [#test -> { |this| "the class" },
+                 #a:b: -> { |this a b|
+                            this layout
+                                makeInstance: this
+                                slot: a
+                                slot: b }].
 
 let myclass
  = mymetaclass
-       name: "a class"
-       layout: layout
-       methods: [#test -> { |this|
-                            "({layout get_a: this}, {layout get_b: this})" }].
+       instance: "a class"
+       layout: mylayout
+       methods: [#a -> { |this|
+                         mylayout readSlot: 1 from: this },
+                 #b -> { |this|
+                         mylayout readSlot: 2 from: this },
+                 #test -> { |this|
+                            "({this a}, {this b})" }].
 
-let instance = myclass a: 1 b: 2.
+let myinstance = myclass a: 1 b: 2.
 
 mymetaclass name --> "a metaclass"
 myclass name     --> "a class"
@@ -161,6 +183,22 @@ mymetaclass test --! Does not understand
 myclass test     --> "the class"
 myinstance test  --> "(1,2)"
 ```
+
+The above example assumes that `Layout#readSlot:from:` is approximately:
+
+```
+method readSlot: index from: instance
+    let slot = slots at: index.
+    self read: slot from: instance!
+
+method read: slot from: instance
+    (self is instance class layout)
+        assert: "{instance} cannot be read from using {self}: layout mismatch".
+    ...primitive read using information stored in the slot instance...
+```
+
+so that having access to layout and slot objects does not allow one to
+circumvent type safety.
 
 ### Summary
 
@@ -206,8 +244,8 @@ have to worry about this.
 
 Minor impact.
 
-Metaclasses delegating instantiation to layouts stored in the class objects
-is a small source of runtime overhead for when instantiating unknown classes.
+Metaclasses delegating instantiation to layouts stored in the class objects is a
+small source of runtime overhead for when instantiating unknown classes.
 
 #### Uniformity
 
