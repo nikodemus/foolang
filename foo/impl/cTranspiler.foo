@@ -186,9 +186,9 @@ define Builtins [
      Builtin
          type: Class
          value: Class
-         mark: "foo_mark_none" -- FIXME: need gc flag in classes
+         mark: "foo_mark_class"
          directMethods: Dictionary new
-         instanceMethods: class.Methods,
+         instanceMethods: class.InstanceMethods,
      Builtin
          type: Class
          value: Clock
@@ -291,6 +291,7 @@ end
 define AlwaysEmittedSelectors
     [#__doSelectors:,
      #perform:with:,
+     #selector,
      #writeString:]!
 
 define $home
@@ -398,7 +399,7 @@ class CTranspiler { output selectorMap closureFunctions
     method _methodDeclaration: aMethod
         output print: "struct Foo ".
         output print: (Name mangleMethod: aMethod).
-        output println: "(struct FooContext*);"!
+        output println: "(const struct FooMethod*, struct FooContext*);"!
 
     method writeDefinitions
         -- Processing a definition can produce new global references. Visit
@@ -829,12 +830,14 @@ class CTranspiler { output selectorMap closureFunctions
             = self _generateInheritance: anInterface forMetaclass: True.
         let classInheritance
             = self _generateInheritance: anInterface forMetaclass: False.
+        let metaclassNameString = "{anInterface name} interface".
         output println: "struct FooClass {metaclassName} = ".
         output println: "\{".
-        output println: "    .name = &FOO_CSTRING({anInterface name displayString}\" interface\"),".
+        output println: "    .name = &{self constantCName: metaclassNameString in: env},".
         output println: "    .inherited = &{metaclassInheritance},".
-        output println: "    .size = {directMethods size},".
         output println: "    .mark = foo_mark_none,".
+        output println: "    .gc = false,".
+        output println: "    .size = {directMethods size},".
         output println: "    .methods = \{".
         directMethods
             do: { |each|
@@ -842,7 +845,8 @@ class CTranspiler { output selectorMap closureFunctions
                   output println: "                            .class = &{each methodHomeName},".
                   output println: "                            .argCount = {each arity},".
                   output println: "                            .frameSize = {each frameSize},".
-                  output println: "                            .function = &{each methodFunctionName} }," }.
+                  output println: "                            .function = &{each methodFunctionName},".
+                  output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL } } }," }.
         output println: "    }".
         output println: "};".
         output newline.
@@ -850,10 +854,11 @@ class CTranspiler { output selectorMap closureFunctions
         -- FIXME: for runtime instantiation of classes we need to add the instance methods here!
         output println: "struct FooClass {className} = ".
         output println: "\{".
-        output println: "    .name = &FOO_CSTRING({anInterface name displayString}),".
+        output println: "    .name = &{self constantCName: anInterface name in: env},".
         output println: "    .metaclass = &{metaclassName},".
         output println: "    .inherited = &{classInheritance},".
-        output println: "    .mark = NULL,". -- FIXME!
+        output println: "    .mark = foo_mark_none,".
+        output println: "    .gc = false,".
         output println: "    .size = 0,".
         output println: "    .methods = \{}".
         output println: "};".
@@ -878,8 +883,9 @@ class CTranspiler { output selectorMap closureFunctions
                       methodFunctionName: (Name mangleMethod: ctorProto) }.
         output print: "struct Foo ".
         output println: ctor methodFunctionName.
-        output println: "    (struct FooContext* ctx)".
+        output println: "    (const struct FooMethod* method, struct FooContext* ctx)".
         output println: "\{".
+        output println: "    (void)method;".
         output println: "    (void)ctx;".
         output println: "    struct FooArray* new = FooArray_alloc({aClass slots size} * sizeof(struct Foo));".
         aClass slots
@@ -931,8 +937,11 @@ class CTranspiler { output selectorMap closureFunctions
  * {classNote}
  *
  */".
+        let isTheClass = aClass isBuiltin and: aClass name == "Class".
         let className = Name mangleClass: aClass.
-        let metaclassName = Name mangleMetaclass: aClass.
+        let metaclassName = isTheClass
+                                ifTrue: { className }
+                                ifFalse: { Name mangleMetaclass: aClass }.
         let globalName = Name mangleGlobal: aClass.
         -- Augmented later with: constructor (aka ctor), #includes:, and #name
         let directMethods = aClass directMethods asList.
@@ -944,38 +953,46 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each| self _writeMethod: each _for: aClass name }.
         aClass isBuiltin
             ifFalse: { directMethods add: (self _generateClassConstructor: aClass) }.
-        directMethods add: (self _generateClassIncludes: aClass).
-        directMethods add: (self _generateClassClassOf: aClass).
-        directMethods add: (self _generateClassName: aClass).
+        let classMethods = isTheClass
+                               ifTrue: { instanceMethods }
+                               ifFalse:{ directMethods }.
+        classMethods add: (self _generateClassIncludes: aClass).
+        classMethods add: (self _generateClassClassOf: aClass).
+        classMethods add: (self _generateClassName: aClass).
         instanceMethods add: (self _generateInstanceClassOf: aClass).
-        -- Interfaces
-        let metaclassInheritance
-            = self _generateInheritance: aClass forMetaclass: True.
-        let classInheritance
-            = self _generateInheritance: aClass forMetaclass: False.
-        -- Class metaclass
-        output println: "struct FooClass {metaclassName} = ".
-        output println: "\{".
-        output println: "    .name = &FOO_CSTRING({aClass name displayString}\" class\"),".
-        output println: "    .metaclass = &FooClass_Class,".
-        output println: "    .inherited = &{metaclassInheritance},".
-        output println: "    .mark = foo_mark_none,".
-        output println: "    .size = {directMethods size},".
-        output println: "    .methods = \{".
-        directMethods
-            do: { |each|
-                  output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                  output println: "                            .class = &{each methodHomeName},".
-                  output println: "                            .argCount = {each arity},".
-                  output println: "                            .frameSize = {each frameSize},".
-                  output println: "                            .function = &{each methodFunctionName} }," }.
-        output println: "    }".
-        output println: "};".
-        output newline.
+        isTheClass
+            ifFalse: { -- Class metaclass
+                       let metaclassInheritance
+                           = self _generateInheritance: aClass forMetaclass: True.
+                       let metaclassNameString = "{aClass name} class".
+                       output println: "struct FooClass {metaclassName} = ".
+                       output println: "\{".
+                       output println: "    .name = &{self constantCName: metaclassNameString in: env}, /* a */".
+                       output println: "    .metaclass = &FooClass_Class,".
+                       output println: "    .inherited = &{metaclassInheritance},".
+                       output println: "    .mark = foo_mark_none,".
+                       output println: "    .gc = false,".
+                       output println: "    .size = {directMethods size},".
+                       output println: "    .methods = \{".
+                       directMethods
+                           do: { |each|
+                                 output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
+                                 output println: "                            .class = &{each methodHomeName},".
+                                 output println: "                            .argCount = {each arity},".
+                                 output println: "                            .frameSize = {each frameSize},".
+                                 output println: "                            .function = &{each methodFunctionName},".
+                                 output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL } } }," }.
+                       output println: "    }".
+                       output println: "};".
+                       output newline }.
         -- Instance Class
+        let classInheritance = isTheClass
+                                   ifTrue: { "FooClassInheritance_Class" }
+                                   ifFalse: { self _generateInheritance: aClass forMetaclass: False }.
+
         output println: "struct FooClass {className} = ".
         output println: "\{".
-        output println: "    .name = &FOO_CSTRING({aClass name displayString}),".
+        output println: "    .name = &{self constantCName: aClass name in: env}, /* b */".
         output println: "    .metaclass = &{metaclassName},".
         output println: "    .inherited = &{classInheritance},".
         output println: "    .mark = {aClass markFunction},".
@@ -987,13 +1004,15 @@ class CTranspiler { output selectorMap closureFunctions
                   output println: "                            .class = &{each methodHomeName},".
                   output println: "                            .argCount = {each arity},".
                   output println: "                            .frameSize = {each frameSize},".
-                  output println: "                            .function = &{each methodFunctionName} }," }.
+                  output println: "                            .function = &{each methodFunctionName},".
+                  output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
         -- #__doSelectors
         output println: "        (struct FooMethod)\{ .selector = &FOO_____doSelectors_,".
         output println: "                            .class = NULL,".
         output println: "                            .argCount = 1,".
         output println: "                            .frameSize = 1,".
-        output println: "                            .function = &foo_method_doSelectors_ }".
+        output println: "                            .function = &foo_method_doSelectors_,".
+        output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\},".
         output println: "    }".
         output println: "};".
         output newline.
@@ -1021,8 +1040,9 @@ class CTranspiler { output selectorMap closureFunctions
         let $home = aMethod.
         output print: "struct Foo ".
         output println: name.
-        output println: "    (struct FooContext* ctx)".
+        output println: "    (const struct FooMethod* method, struct FooContext* ctx)".
         output println: "\{".
+        output println: "    (void)method;".
         output println: "    (void)ctx;".
         aMethod signature
             doWithIndex: { |type index|

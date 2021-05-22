@@ -1,0 +1,4 @@
+class Layout { slots }
+    direct method empty
+        self slots: []!
+end
