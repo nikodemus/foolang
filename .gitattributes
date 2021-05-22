@@ -4,3 +4,6 @@
 # Foolang isn't a Smalltalk, but Github Linguist doesn't support custom
 # languages and unknown languages aren't counted at all. :/
 *.foo linguist-language=Smalltalk
+
+# Mark PDF's as binary
+*.pdf binary
