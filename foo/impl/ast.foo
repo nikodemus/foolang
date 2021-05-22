@@ -674,6 +674,9 @@ class AstGlobal { name::String _value _definition sources }
     method isDynamic
         False!
 
+    method isBuiltin
+        _definition isBuiltin!
+
     method ownInterfaces
         self definition ownInterfaces!
 

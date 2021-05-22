@@ -78,8 +78,10 @@ class Name { out }
         out print: aVar name!
 
     method _mangleMetaclass: aClass
-        out print: "FooMetaclass_".
-        self _mangleName: aClass name!
+        (aClass isBuiltin and: aClass name == "Class")
+            ifTrue: { out print: "FooClass_Class" }
+            ifFalse: { out print: "FooMetaclass_".
+                       self _mangleName: aClass name }!
 
     method _mangleClass: aClass
         out print: "FooClass_".

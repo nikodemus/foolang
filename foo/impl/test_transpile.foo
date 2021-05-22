@@ -1102,7 +1102,37 @@ end
 class TestTranspileClass { assert system }
    is TranspilerTest
 
-    method test0RuntimeClass
+    method testRuntimeClass1
+        self transpileWithPrelude:
+            "class Main \{\}
+                  direct method run: command in: system
+                      let test = Class name: \"test class\"
+                                       metaclass: Class
+                                       layout: Layout empty
+                                       methods: [].
+                      system output print: test name!
+             end"
+            expect: "test class"!
+
+    method testRuntimeClass2
+        self transpileWithPrelude:
+            "class MyMetaclass \{}
+                 is Class
+                 method ping
+                     #pong!
+             end
+
+             class Main \{\}
+                  direct method run: command in: system
+                      let test = Class name: \"test class\"
+                                       metaclass: MyMetaclass
+                                       layout: Layout empty
+                                       methods: [].
+                      system output print: test ping!
+             end"
+            expect: "#pong"!
+
+    method testRuntimeClass3
         self transpileWithPrelude:
             "class BlockMethod \{ selector block \}
                  method invoke: args on: receiver
@@ -1111,16 +1141,19 @@ class TestTranspileClass { assert system }
 
              class Main \{\}
                   direct method run: command in: system
+                      let metaclass = Class name: \"test metaclass\"
+                                            metaclass: Class
+                                            layout: Layout empty
+                                            methods: [(BlockMethod
+                                                           selector: #ping
+                                                           block: \{ |r| #pong \})].
                       let test = Class name: \"test class\"
+                                       metaclass: metaclass
                                        layout: Layout empty
-                                       methods: [(BlockMethod
-                                                     selector: #slots
-                                                     block: \{ |r| 1 \})].
-                      -- let instance = test layout makeInstanceOf: test.
-                      -- system output print: instance one!
-                      system output print: test name!
+                                       methods: [].
+                      system output print: test ping!
              end"
-            expect: "test class"!
+            expect: "#pong"!
 
     method testMyClass
         self transpile: "class MyClass \{}
