@@ -887,7 +887,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "\{".
         output println: "    (void)method;".
         output println: "    (void)ctx;".
-        output println: "    struct FooArray* new = FooArray_alloc({aClass slots size} * sizeof(struct Foo));".
+        output println: "    struct FooArray* new = FooArray_alloc({aClass slots size});".
         aClass slots
             doWithIndex: { |each index|
                            let type = each type. -- FIXME: visit the type
