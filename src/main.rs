@@ -85,7 +85,7 @@ fn foo_main() {
         for spec in values {
             let (name, root) = find_module_or_abort(spec, &app);
             if module_roots.contains_key(&name) && module_roots[&name] != root {
-                panic!("ERROR: module {} specified multiple times with inconsistent paths");
+                panic!("ERROR: module {} specified multiple times with inconsistent paths", name);
             }
             module_roots.insert(name.to_string(), root.to_path_buf());
         }
