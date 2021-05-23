@@ -60,6 +60,8 @@ size_t min_size(size_t a, size_t b) {
 # define FOO_DEBUG(...)
 #endif
 
+#define FOO_XXX(...) { fprintf(stderr, "XXX: "); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); fflush(stderr); }
+
 struct FooContext;
 void* foo_alloc(size_t bytes);
 void foo_maybe_gc(struct FooContext* ctx);
@@ -414,6 +416,10 @@ struct Foo foo_class_typecheck(struct FooContext* ctx,
     if (class == list->data[i]) {
       return obj;
   }
+  FOO_XXX("Object class: %s", obj.class->name->data);
+  for (size_t i = 0; i < list->size; i++) {
+    FOO_XXX("  is %s", list->data[i]->name->data);
+  }
   foo_panicf(ctx, "Type error! Wanted: %s, got: %s",
              class->name->data, obj.class->name->data);
 }
@@ -479,12 +485,11 @@ struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
   foo_panicf(ctx, "INTERNAL ERROR: longjmp() fell through!");
 }
 
-struct FooContext* foo_context_new_method_no_args(const struct FooMethod* method,
-                                                  struct FooContext* sender,
-                                                  struct Foo receiver,
-                                                  size_t nargs) {
-  if (method->argCount != nargs) {
-    foo_panicf(sender, "Wrong number of arguments to %s. Wanted: %zu, got: %zu.",
+void foo_check_method_argcount(struct FooContext* sender,
+                               size_t nargs,
+                               const struct FooMethod* method) {
+  if (nargs != method->argCount) {
+    foo_panicf(sender, "Wrong number of arguments! %s requires %zu, got %zu",
                method->selector->name->data, method->argCount, nargs);
   }
   if (method->frameSize < nargs) {
@@ -493,7 +498,13 @@ struct FooContext* foo_context_new_method_no_args(const struct FooMethod* method
                method->frameSize,
                nargs);
   }
-  assert(method->frameSize >= nargs);
+}
+
+struct FooContext* foo_context_new_method_no_args(const struct FooMethod* method,
+                                                  struct FooContext* sender,
+                                                  struct Foo receiver,
+                                                  size_t nargs) {
+  foo_check_method_argcount(sender, nargs, method);
   struct FooContext* context = foo_alloc_context(method->frameSize);
   context->type = METHOD_CONTEXT;
   context->depth = sender->depth + 1;
@@ -538,6 +549,7 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
                                              const struct FooSelector* selector,
                                              struct Foo receiver,
                                              size_t nargs, va_list arguments) {
+  FOO_DEBUG("/foo_context_new_method_va");
   struct FooContext* context
     = foo_context_new_method_no_args(method, sender, receiver, method->argCount);
   if (selector != method->selector) {
@@ -552,7 +564,7 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
     context->frame[1] = (struct Foo){ .class = &FooClass_Array,
                                       .datum = { .ptr = array } };
   } else {
-    assert(nargs == method->argCount);
+    foo_check_method_argcount(sender, nargs, method);
     for (size_t i = 0; i < nargs; i++) {
       context->frame[i] = va_arg(arguments, struct Foo);
     }
@@ -603,6 +615,7 @@ void foo_print_backtrace(struct FooContext* context) {
 }
 
 struct Foo foo_activate(struct FooContext* context) {
+  FOO_DEBUG("/foo_activate")
   if (context->depth > 200) {
     foo_panicf(context, "Stack blew up!");
   }
@@ -611,11 +624,13 @@ struct Foo foo_activate(struct FooContext* context) {
   context->ret = &ret;
   int jmp = setjmp(ret);
   if (jmp) {
-    FOO_DEBUG("/foo_send -> non-local return from %s", context->method->selector->name->data);
+    FOO_DEBUG("/foo_activate -> non-local return from %s", context->method->selector->name->data);
     return context->return_value;
   } else {
-    struct Foo res = context->method->function(context->method, context);
-    FOO_DEBUG("/foo_send -> local return from %s", context->method->selector->name->data);
+    FooMethodFunction function = context->method->function;
+    assert(function);
+    struct Foo res = function(context->method, context);
+    FOO_DEBUG("/foo_activate -> local return from %s", context->method->selector->name->data);
     return res;
   }
 }
@@ -639,7 +654,8 @@ struct Foo foo_send(struct FooContext* sender,
                     const struct FooSelector* selector,
                     struct Foo receiver,
                     size_t nargs, ...) {
-  FOO_DEBUG("/foo_send(?, %s, ...)", selector->name->data);
+  FOO_DEBUG("/foo_send(?, %s, %s, ...)",
+            selector->name->data, receiver.class->name->data);
   va_list arguments;
   va_start(arguments, nargs);
   if (!receiver.class) {
@@ -650,6 +666,22 @@ struct Foo foo_send(struct FooContext* sender,
   struct FooContext* context
     = foo_context_new_method_va(method, sender, selector, receiver, nargs, arguments);
   return foo_activate(context);
+}
+
+
+/**
+ * Used as method function in methods implemented by objects. */
+struct Foo foo_invoke_on(const struct FooMethod* method, struct FooContext* context) {
+  struct FooArray* args = FooArray_alloc(method->argCount);
+  for (size_t i = 0; i < args->size; i++) {
+    args->data[i] = context->frame[i];
+  }
+  return foo_send(context, &FOO_invoke_on_, method->object,
+                  2,
+                  (struct Foo)
+                  { .class = &FooClass_Array,
+                    .datum = { .ptr = args } },
+                  context->receiver);
 }
 
 struct Foo foo_method_doSelectors_(const struct FooMethod* method, struct FooContext* ctx) {
@@ -826,9 +858,9 @@ void fooinit(void) {
 
 #if 0
 size_t gc_trace_depth = 0;
-#define DEBUG_GC(...) { printf(__VA_ARGS__); fflush(stdout); }
-#define ENTER_TRACE(...) { printf("\n"); for(size_t i = 0; i < gc_trace_depth; i++) printf("  "); printf("%zu: ", gc_trace_depth); printf(__VA_ARGS__); gc_trace_depth++; }
-#define EXIT_TRACE() { gc_trace_depth--; if (!gc_trace_depth) printf("\n"); }
+#define DEBUG_GC(...) { fprintf(stderr, __VA_ARGS__); fflush(stderr); }
+#define ENTER_TRACE(...) { fprintf(stderr, "\n"); for(size_t i = 0; i < gc_trace_depth; i++) fprintf(stderr, "  "); fprintf(stderr, "%zu: ", gc_trace_depth); fprintf(stderr, __VA_ARGS__); gc_trace_depth++; }
+#define EXIT_TRACE() { gc_trace_depth--; if (!gc_trace_depth) fprintf(stderr, "\n"); }
 #else
 #define DEBUG_GC(...)
 #define ENTER_TRACE(...)
@@ -919,6 +951,13 @@ void foo_mark_none(void* ptr) {
 void foo_mark_array(void* ptr) {
   ENTER_TRACE("mark_array");
   struct FooArray* array = ptr;
+  char xxx = *((char*)&array->gc);
+  if (xxx && xxx != 1) {
+    FOO_XXX("BAD ARRAY: %p", ptr);
+    FOO_XXX("  size: %zu", array->size);
+    if (array->size)
+      FOO_XXX("  first class: %s", array->data[0].class->name->data);
+  }
   if (array->gc && foo_mark_live(array)) {
     for (size_t i = 0; i < array->size; i++) {
       foo_mark_object(array->data[i]);
@@ -1033,16 +1072,22 @@ void foo_sweep() {
   }
 }
 
+void foo_gc(struct FooContext* ctx) {
+  FOO_DEBUG("/foo_gc begin");
+  ENTER_TRACE("--GC--\n");
+  foo_flip_mark();
+  if (ctx->vars) {
+      foo_mark_array(ctx->vars);
+  }
+  foo_mark_context(ctx);
+  foo_sweep();
+  EXIT_TRACE();
+  FOO_DEBUG("/foo_gc end");
+}
+
 void foo_maybe_gc(struct FooContext* ctx) {
   if (allocation_bytes_since_gc > gc_threshold) {
-    ENTER_TRACE("--GC--\n");
-    foo_flip_mark();
-    if (ctx->vars) {
-      foo_mark_array(ctx->vars);
-    }
-    foo_mark_context(ctx);
-    foo_sweep();
-    EXIT_TRACE();
+    foo_gc(ctx);
   }
 }
 

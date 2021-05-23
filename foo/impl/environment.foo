@@ -34,6 +34,7 @@ define Builtins
     g define: ByteArray.
     g define: Boolean.
     g define: Character.
+    g define: Class.
     g define: DoesNotUnderstand.
     g define: Error.
     g define: False.

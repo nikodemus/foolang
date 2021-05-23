@@ -290,6 +290,7 @@ end
 
 define AlwaysEmittedSelectors
     [#__doSelectors:,
+     #invoke:on:,
      #perform:with:,
      #selector,
      #writeString:]!
@@ -778,14 +779,6 @@ class CTranspiler { output selectorMap closureFunctions
         output print: ")"!
 
     method _generateInheritance: anObject forMetaclass: forMetaclass
-        -- FIXME: The metaclass inheritance here parallels the class inheritance,
-        -- like in Smalltalk, and is consistent with inheritance of
-        -- direct methods, but consider:
-        --
-        -- Class X inherits from MyInterface. `MyInterface`
-        -- itself is abstract, but `MyInterface class` is not!
-        --
-        -- Argh...
         let inheritance = forMetaclass
                               ifTrue: { "FooMetaclassInheritance_{anObject name}" }
                               ifFalse: { "FooClassInheritance_{anObject name}" }.
@@ -939,9 +932,7 @@ class CTranspiler { output selectorMap closureFunctions
  */".
         let isTheClass = aClass isBuiltin and: aClass name == "Class".
         let className = Name mangleClass: aClass.
-        let metaclassName = isTheClass
-                                ifTrue: { className }
-                                ifFalse: { Name mangleMetaclass: aClass }.
+        let metaclassName = Name mangleMetaclass: aClass.
         let globalName = Name mangleGlobal: aClass.
         -- Augmented later with: constructor (aka ctor), #includes:, and #name
         let directMethods = aClass directMethods asList.
@@ -961,7 +952,8 @@ class CTranspiler { output selectorMap closureFunctions
         classMethods add: (self _generateClassName: aClass).
         instanceMethods add: (self _generateInstanceClassOf: aClass).
         isTheClass
-            ifFalse: { -- Class metaclass
+            ifFalse: { -- Class metaclass, not needed for Class which
+                       -- is its own metaclass.
                        let metaclassInheritance
                            = self _generateInheritance: aClass forMetaclass: True.
                        let metaclassNameString = "{aClass name} class".
