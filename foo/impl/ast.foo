@@ -294,7 +294,7 @@ class AstInterface { name _interfaces _directMethods _instanceMethods _allInterf
         "#<AstInterface {name}>"!
 end
 
-class AstClass { name slots _interfaces _directMethods _instanceMethods _allInterfaces }
+class AstClass { name superclass _slots _interfaces _directMethods _instanceMethods _allInterfaces }
     is AstDefinition
     is AstMethodHome
 
@@ -303,11 +303,29 @@ class AstClass { name slots _interfaces _directMethods _instanceMethods _allInte
                   interfaces: interfaces
         self
             name: name
-            slots: slots
+            superclass: False
+            _slots: slots
             _interfaces: interfaces
             _directMethods: False
             _instanceMethods: False
             _allInterfaces: False!
+
+    direct method name: name
+                  superclass: superclass
+                  interfaces: interfaces
+        self
+            name: name
+            superclass: superclass
+            _slots: False
+            _interfaces: interfaces
+            _directMethods: False
+            _instanceMethods: False
+            _allInterfaces: False!
+
+    method slots
+        superclass is False
+            ifTrue: { _slots }
+            ifFalse: { superclass definition slots }!
 
     method _interfaces
         _interfaces!
@@ -323,7 +341,9 @@ class AstClass { name slots _interfaces _directMethods _instanceMethods _allInte
 
     method _allInterfaces: list
         (_allInterfaces is False) assert: "Oops, _allInterfaces already set!".
-        _allInterfaces = list asArray!
+        superclass is False
+            ifTrue: { _allInterfaces = list asArray }
+            ifFalse: { _allInterfaces = ([superclass] append: list) asArray }!
 
     method _directMethods: methods
         _directMethods = methods!
@@ -336,7 +356,7 @@ class AstClass { name slots _interfaces _directMethods _instanceMethods _allInte
 
     method _readerMethods
         self _methodDictionary:
-            ((slots reject: { |each| each name startsWith: "_" })
+            ((self slots reject: { |each| each name startsWith: "_" })
                  collect: { |each|
                             AstReaderMethod home: self slot: each })!
 
@@ -344,10 +364,12 @@ class AstClass { name slots _interfaces _directMethods _instanceMethods _allInte
         env define: name as: self!
 
     method eval
+        -- FIXME: This is so incorrect for self hosted object
+        -- model..
         -- Debug println: "class {name} is {self interfaceObjects}".
         Class
             new: name
-            slots: (slots
+            slots: (self slots
                         collect: { |each|
                                      { name: each name,
                                        type: each type } }
@@ -357,14 +379,15 @@ class AstClass { name slots _interfaces _directMethods _instanceMethods _allInte
             instanceMethods: self ownInstanceMethods!
 
     method constructor
-        slots
+        self slots
             ifEmpty: { #new }
             ifNotEmpty: { Selector
                               new: (StringOutput
                                         with: { |out|
-                                                slots do: { |each|
-                                                            out print: each name.
-                                                            out print: ":" } }) }!
+                                                self slots
+                                                    do: { |each|
+                                                          out print: each name.
+                                                          out print: ":" } }) }!
 
     method visitBy: visitor
         visitor visitClassDefinition: self!

@@ -524,14 +524,25 @@ end
 class ClassToken { precedence string first last }
     is Token
 
-    method parseAsPrefixWith: parser atPrecedence: _precedence
-        let name = parser parseName: "a class".
+    method parseNewclass: name with: parser
         let slots = List new.
         parser expect: "\{".
         parser until: "}"
                do: { slots add: parser parseVariable }.
         parser expect: "}".
-        let theClass = SyntaxClass name: name slots: slots.
+        SyntaxClass name: name slots: slots!
+
+    method parseSubclass: name with: parser
+        let super = parser parseVariable.
+        SyntaxClass name: name inherits: super!
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        let name = parser parseName: "a class".
+        let theClass = parser
+                           when: "<"
+                           do: { parser nextToken.
+                                 self parseSubclass: name with: parser }
+                           else: { self parseNewclass: name with: parser }.
         parser withSyntaxTable: ClassSyntaxTable
                do: { parser
                          until: "end"
@@ -912,8 +923,9 @@ class TokenWord { precedence string first last }
                      return SyntaxTypedVariable
                          name: string
                          type: parser parsePrefix }.
-        SyntaxUntypedVariable
-            name: string!
+        SyntaxVariable
+            name: string
+            source: (parser sourceFrom: first to: last)!
 
     method parseAsSuffixOf: prefix with: parser
         SyntaxUnary
@@ -1148,8 +1160,14 @@ class Parser { source::String
         test == (source from: self position to: last)!
 
     method when: test do: action
+        self when: test
+             do: action
+             else: { False }!
+
+    method when: test do: action else: otherAction
         self lookahead string == test
-            ifTrue: { action value }!
+            ifTrue: action
+            ifFalse: otherAction!
 
     method unless: test do: action
         self lookahead string == test

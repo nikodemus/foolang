@@ -84,7 +84,8 @@ The following object model is heavily influenced by ObjVLisp.
    If a class inherits from a concrete class, it inherits both the layout and
    all methods of the inherited class, and can only extend the inherited class
    by adding new methods; overriding existing methods or changing the layout is
-   not allowed.
+   not allowed. The inheriting class is also restricted to using methods: it
+   cannot access the slots of the inherited class directly.
 
    If a class inherits from an abstract class, it inherits all methods of the
    inherited class, and can specify a layout, extend the inherited class by
