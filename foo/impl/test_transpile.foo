@@ -1114,7 +1114,7 @@ class TestTranspileClass { assert system }
              end"
             expect: "test class"!
 
-    method testRuntimeClass2
+    method no_testRuntimeClass2
         self transpileWithPrelude:
             "class MyMetaclass \{}
                  is Class
