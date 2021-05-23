@@ -290,6 +290,7 @@ end
 
 define AlwaysEmittedSelectors
     [#__doSelectors:,
+     #invoke:on:,
      #perform:with:,
      #selector,
      #writeString:]!

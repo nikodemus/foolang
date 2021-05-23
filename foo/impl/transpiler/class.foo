@@ -1,6 +1,6 @@
 define InstanceMethods {
      #name:metaclass:layout:methods:
-     -> { signature: [String, Class, Layout, Array], vars: 1,
+     -> { signature: [String, Class, Any, Array], vars: 1,
           body: "struct FooArray* methods = PTR(FooArray, ctx->frame[3].datum);
                  size_t n = methods->size;
                  struct FooClass* newclass
@@ -30,8 +30,9 @@ define InstanceMethods {
                    struct FooMethod* m = &newclass->methods[i];
                    m->class = newclass;
                    m->selector = PTR(FooSelector, selector.datum);
-                   m->argCount = selector_arity.datum.int64;
+                   m->argCount = method_arity; // selector_arity.datum.int64;
                    m->frameSize = selector_arity.datum.int64;
+                   m->function = foo_invoke_on;
                    m->object = method_object;
 
                    /* Update the size once the method is in place,

@@ -54,7 +54,7 @@ size_t min_size(size_t a, size_t b) {
 #define PTR(type, datum) \
   ((struct type*)datum.ptr)
 
-#if 1
+#if 0
 # define FOO_DEBUG(...) { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); fflush(stderr); }
 #else
 # define FOO_DEBUG(...)
@@ -549,6 +549,7 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
                                              const struct FooSelector* selector,
                                              struct Foo receiver,
                                              size_t nargs, va_list arguments) {
+  FOO_DEBUG("/foo_context_new_method_va");
   struct FooContext* context
     = foo_context_new_method_no_args(method, sender, receiver, method->argCount);
   if (selector != method->selector) {
@@ -614,6 +615,7 @@ void foo_print_backtrace(struct FooContext* context) {
 }
 
 struct Foo foo_activate(struct FooContext* context) {
+  FOO_DEBUG("/foo_activate")
   if (context->depth > 200) {
     foo_panicf(context, "Stack blew up!");
   }
@@ -622,11 +624,13 @@ struct Foo foo_activate(struct FooContext* context) {
   context->ret = &ret;
   int jmp = setjmp(ret);
   if (jmp) {
-    FOO_DEBUG("/foo_send -> non-local return from %s", context->method->selector->name->data);
+    FOO_DEBUG("/foo_activate -> non-local return from %s", context->method->selector->name->data);
     return context->return_value;
   } else {
-    struct Foo res = context->method->function(context->method, context);
-    FOO_DEBUG("/foo_send -> local return from %s", context->method->selector->name->data);
+    FooMethodFunction function = context->method->function;
+    assert(function);
+    struct Foo res = function(context->method, context);
+    FOO_DEBUG("/foo_activate -> local return from %s", context->method->selector->name->data);
     return res;
   }
 }
@@ -662,6 +666,22 @@ struct Foo foo_send(struct FooContext* sender,
   struct FooContext* context
     = foo_context_new_method_va(method, sender, selector, receiver, nargs, arguments);
   return foo_activate(context);
+}
+
+
+/**
+ * Used as method function in methods implemented by objects. */
+struct Foo foo_invoke_on(const struct FooMethod* method, struct FooContext* context) {
+  struct FooArray* args = FooArray_alloc(method->argCount);
+  for (size_t i = 0; i < args->size; i++) {
+    args->data[i] = context->frame[i];
+  }
+  return foo_send(context, &FOO_invoke_on_, method->object,
+                  2,
+                  (struct Foo)
+                  { .class = &FooClass_Array,
+                    .datum = { .ptr = args } },
+                  context->receiver);
 }
 
 struct Foo foo_method_doSelectors_(const struct FooMethod* method, struct FooContext* ctx) {
@@ -1052,16 +1072,22 @@ void foo_sweep() {
   }
 }
 
+void foo_gc(struct FooContext* ctx) {
+  FOO_DEBUG("/foo_gc begin");
+  ENTER_TRACE("--GC--\n");
+  foo_flip_mark();
+  if (ctx->vars) {
+      foo_mark_array(ctx->vars);
+  }
+  foo_mark_context(ctx);
+  foo_sweep();
+  EXIT_TRACE();
+  FOO_DEBUG("/foo_gc end");
+}
+
 void foo_maybe_gc(struct FooContext* ctx) {
   if (allocation_bytes_since_gc > gc_threshold) {
-    ENTER_TRACE("--GC--\n");
-    foo_flip_mark();
-    if (ctx->vars) {
-      foo_mark_array(ctx->vars);
-    }
-    foo_mark_context(ctx);
-    foo_sweep();
-    EXIT_TRACE();
+    foo_gc(ctx);
   }
 }
 
