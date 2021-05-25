@@ -1100,7 +1100,74 @@ Backtrace:
 end
 
 class TestTranspileClass { assert system }
-   is TranspilerTest
+    is TranspilerTest
+
+    method testClassInheritanceCanUseSuperclassConstructor
+        self transpile:
+            "import lang.output
+             import lang.integer
+
+             class MainClass \{ a b }
+             end
+
+             class SubClass < MainClass
+                method sum
+                   self a + self b!
+             end
+
+             class Main \{\}
+                 direct method run: command in: system
+                     let x = SubClass a: 22 b: 20.
+                     system output print: x sum!
+             end
+             "
+              expect: "42"!
+
+    method testClassInheritanceCanUseSuperclassMethods
+        self transpile:
+            "import lang.output
+             import lang.integer
+
+             class MainClass \{ _a _b }
+                 direct method a: a b: b
+                    self _a: a _b: b!
+                 method a
+                    _a!
+                 method b
+                    _b!
+             end
+
+             class SubClass < MainClass
+                method sum
+                   self a + self b!
+             end
+
+             class Main \{\}
+                 direct method run: command in: system
+                     let x = SubClass a: 22 b: 20.
+                     system output print: x sum!
+             end
+             "
+              expect: "42"!
+
+    method testClassInheritanceCreatesSubtype
+        self transpile:
+            "import lang.output
+             import lang.boolean
+
+             class MainClass \{ a b }
+             end
+
+             class SubClass < MainClass
+             end
+
+             class Main \{\}
+                 direct method run: command in: system
+                     let x = SubClass a: 22 b: 20.
+                     system output print: (MainClass includes: x)!
+             end
+             "
+              expect: "True"!
 
     method testRuntimeClass1
         self transpileWithPrelude:

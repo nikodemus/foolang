@@ -335,22 +335,6 @@ class SyntaxIs { left right }
         [left, right]!
 end
 
-class SyntaxUntypedVariable { name }
-    is Syntax
-
-    method visitBy: visitor
-        visitor visitUntypedVariable: self!
-
-    method type
-        Any!
-
-    method isDynamic
-        False!
-
-    method parts
-        [name]!
-end
-
 class SyntaxLet { variable value body }
     is Syntax
 
@@ -391,6 +375,9 @@ class SyntaxVariable { name::String source }
 
     method isDynamic
         False!
+
+    method type
+        Any!
 
     method parts
         -- Source ignored, since that can change with pretty-printing.
@@ -469,12 +456,22 @@ class SyntaxDefine { variable body }
         [variable, body]!
 end
 
-class SyntaxClass { name slots interfaces directMethods instanceMethods }
+class SyntaxClass { name superclass slots interfaces directMethods instanceMethods }
     is Syntax
+
+    direct method name: name inherits: superclass
+        self
+            name: name
+            superclass: superclass
+            slots: False
+            interfaces: List new
+            directMethods: List new
+            instanceMethods: List new!
 
     direct method name: name slots: slots
         self
             name: name
+            superclass: False
             slots: slots
             interfaces: List new
             directMethods: List new
@@ -487,7 +484,7 @@ class SyntaxClass { name slots interfaces directMethods instanceMethods }
         visitor visitClass: self!
 
     method parts
-        [name, slots, interfaces, directMethods, instanceMethods]!
+        [name, superclass, slots, interfaces, directMethods, instanceMethods]!
 end
 
 class SyntaxInterface { name interfaces directMethods instanceMethods }

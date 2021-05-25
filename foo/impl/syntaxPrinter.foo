@@ -322,14 +322,18 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         -- Debug println: "/pp class {aClass name}".
         self print: "class ".
         self print: aClass name.
-        self print: " \{".
-        aClass slots
-            ifNotEmpty: { self print: " ".
-                          aClass slots
-                              do: { |slot|
-                                    slot visitBy: self.
-                                    self print: " " }}.
-        self print: "}".
+        let slots = aClass slots.
+        slots is False
+            ifTrue: { self print: " < ".
+                      self print: aClass superclass }
+            ifFalse: { self print: " \{".
+                       slots
+                           ifNotEmpty: { self print: " ".
+                                         aClass slots
+                                             do: { |slot|
+                                                   slot visitBy: self.
+                                                   self print: " " }}.
+                       self print: "}" }.
         self _visitTypeBody: aClass.
         self newline.
         self print: "end".

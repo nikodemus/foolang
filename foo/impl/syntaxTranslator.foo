@@ -287,7 +287,12 @@ class SyntaxTranslator { env currentMethod }
         astMethod!
 
     method visitClass: aClass
-        Tracer visitClass: aClass name.
+        aClass superclass is False
+            ifTrue: { self _visitNewClass: aClass }
+            ifFalse: { self _visitSubClass: aClass }!
+
+    method _visitNewClass: aClass
+        Tracer _visitNewClass: aClass name.
         let n = 0.
         let slots = aClass slots collect: { |each::Syntax|
                                             n = n + 1.
@@ -304,6 +309,19 @@ class SyntaxTranslator { env currentMethod }
         let instanceMethodVisitor = self child: (env addSlots: slots).
         theClass instanceMethods: (instanceMethodVisitor _visitEach: aClass instanceMethods).
         theClass!
+
+    method _visitSubClass: aClass
+        Tracer _visitSubClass: aClass name.
+        let theClass = AstClass
+                           name: aClass name
+                           superclass: (aClass superclass visitBy: self)
+                           interfaces: (self _visitEach: aClass interfaces).
+        let $MethodHome = theClass.
+        theClass directMethods: (self _visitEach: aClass directMethods).
+        let instanceMethodVisitor = self child: env.
+        theClass instanceMethods: (instanceMethodVisitor _visitEach: aClass instanceMethods).
+        theClass!
+
 
     method visitInterface: anInterface
         Tracer visitInterface: anInterface name.
