@@ -1181,10 +1181,9 @@ class TestTranspileClass { assert system }
              end"
             expect: "test class"!
 
-    method no_testRuntimeClass2
+    method testRuntimeClass2
         self transpileWithPrelude:
-            "class MyMetaclass \{}
-                 is Class
+            "class MyMetaclass < Class
                  method ping
                      #pong!
              end
