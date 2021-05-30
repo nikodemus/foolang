@@ -12,6 +12,7 @@ import lang.test_closure.TestClosure
 import lang.test_file.TestFile
 import lang.test_filepath.TestFilePath
 import lang.test_filestream.TestFileStream
+import lang.test_float.TestFloat
 import lang.test_integer.TestInteger
 import lang.test_list.TestList
 import lang.test_list.TestListAsIterable
@@ -30,18 +31,6 @@ class ShortStringSeqs {}
       block value: ["123", "", ""].
       block value: ["", "123", ""].
       block value: ["", "", "123"]!
-end
-
-class Floats {}
-   direct method do: block
-      block value: -0.0.
-      block value: 0.0.
-      block value: 1.0.
-      block value: -1.0.
-      block value: 0.1.
-      block value: -0.1.
-      let rng = Random new.
-      100 times: { block value: rng float }!
 end
 
 class Box { value }
@@ -79,6 +68,7 @@ class Main { assert system }
             TestCharacter,
             TestClosure,
             TestDictionary,
+            TestFloat,
             TestInteger,
             TestList,
             TestListAsIterable,
@@ -95,7 +85,6 @@ class Main { assert system }
             TestFileStream
         ] do: { |each| each runTests: assert in: system }.
         self testIs.
-        self testFloats.
         self testStringOutput.
         self testPrecedence.
         self testPrefix.
@@ -136,11 +125,6 @@ class Main { assert system }
                         and: (b1 == b2)
                         and: (a1 == b1) not }
               testing: "operator precedence"!
-
-    method testFloats
-       assert forAll: Floats
-              that: { |x| x + x == x * 2.0 }
-              testing: "float addition"!
 
     method testStringOutput
        assert forAll: ShortStringSeqs
