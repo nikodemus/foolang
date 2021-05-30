@@ -211,7 +211,7 @@ end
 class TestTranspilePreludeTime { assert system }
     is TranspilerTest
 
-    method testSystemClockTimes
+    method testSystemClockTime
         self transpile: "import lang.time
                          import lang.output
                          import lang.integer
@@ -223,7 +223,7 @@ class TestTranspilePreludeTime { assert system }
                                                    system: 0.1
                                                    real: 0.1.
                                  -- Easiest way to make sure t1 > t0 > 0.
-                                 let t0 = clock times + offset.
+                                 let t0 = clock time + offset.
                                  let t1 = t0 + offset.
                                  let delta = t1 - t0.
                                  (t1 > delta) debug!
