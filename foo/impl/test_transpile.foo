@@ -669,6 +669,8 @@ class TestTranspilePreludeTest { assert system }
 
     method test
         self transpile: "import lang.test
+                         import lang.time
+                         import lang.selector_ext
                          class Main \{}
                              is test.TestSuite
                              direct method run: command in: system
@@ -678,8 +680,8 @@ class TestTranspilePreludeTest { assert system }
                              method test_b
                                  True!
                          end"
-            expect: "- test_a
-- test_b
+            expect: "- test_a (0.0s)
+- test_b (0.0s)
 "!
 end
 
