@@ -22,6 +22,10 @@ extend Selector
     method sendTo: receiver
         self sendTo: receiver with: []!
 
+    method toSelector
+        -- FIXME: Doesn't belong at all.
+        self!
+
     method arity
         self isKeyword
             ifTrue: { return 1 + (self name count: { |c| c == ":" }) }.
