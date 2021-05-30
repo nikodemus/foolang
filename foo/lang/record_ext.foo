@@ -30,7 +30,7 @@ extend Record
         stream print: "\{".
         (Record keysIn: self) sorted
             do: { |key|
-                  stream print: key.
+                  stream print: key name.
                   stream print: ": ".
                   stream print: (key sendTo: self) }
             interleaving: { stream print: ", " }.

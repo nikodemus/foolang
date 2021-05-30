@@ -110,7 +110,7 @@ class TestTranspileLet { assert system }
                              direct method run: command in: system
                                  let x = 22.
                                  let y = 2.
-                                 (x * y) debug!
+                                 (x integerMul: y) debug!
                         end"
              expect: "#<Integer 44>"!
 
@@ -120,7 +120,7 @@ class TestTranspileLet { assert system }
                                  let x = 22.
                                  let y = 0.
                                  y = 2.
-                                 (x * y) debug!
+                                 (x integerMul: y) debug!
                         end"
              expect: "#<Integer 44>"!
 
@@ -486,8 +486,8 @@ class TestTranspilePreludeFileStream { assert system }
                              direct method run: command in: system
                                  let size = (system files / \"README.md\") forRead
                                      open: \{ |s| s size }.
-                                 (size > 1000) debug.
-                                 (size < 2000) debug!
+                                 (size integerGt: 1000) debug.
+                                 (size integerLt: 2000) debug!
                          end"
             expect: "#<Boolean True>#<Boolean True>"!
 end
@@ -524,6 +524,7 @@ class TestTranspilePreludeInterval { assert system }
 
     method test
         self transpile: "import lang.interval.Interval
+                         import lang.integer
                          class Main \{}
                              direct method run: command in: system
                                  (Interval from: 1 to: 5 by: 2)
@@ -537,12 +538,13 @@ class TestTranspilePreludeIterable { assert system }
 
     method test
         self transpile: "import lang.iterable.*
+                         import lang.integer
 
                          class MyIterator \{ pos thing }
                              is Iterator
                              method nextIfNone: block
                                 self hasNext
-                                    ifTrue: \{ pos = pos + 1.
+                                    ifTrue: \{ pos = pos integerAdd: 1.
                                                thing at: pos }
                                     ifFalse: block!
                              method hasNext
@@ -581,7 +583,7 @@ class TestTranspilePreludeObject { assert system }
                                  ((self x: 1) == (self x: 2)) debug.
                                  ((self x: 1) == (self x: 1)) debug!
                              method isEquivalent: other
-                                 (self x == other x)!
+                                 (self x is other x)!
                          end"
             expect: "#<Boolean False>#<Boolean True>"!
 end
@@ -735,7 +737,7 @@ class TestTranspileInterface { assert system }
                              direct method boop
                                  self new!
                              method ding
-                                 _value + 1!
+                                 _value integerAdd: 1!
                          end
                          class Main \{}
                              direct method run: command in: system
@@ -769,7 +771,7 @@ class TestTranspileKeyword { assert system }
                              direct method run: command in: system
                                  (self add: 40 and: 5) debug!
                              direct method add: x and: y
-                                 x + y!
+                                 x integerAdd: y!
                         end"
             expect: "#<Integer 45>"!
 end
@@ -806,7 +808,7 @@ class TestTranspileDefine { assert system }
             "class MyClass \{ x y }
                  is Object
                  method value
-                     x + y!
+                     x integerAdd: y!
              end
 
              define MyValue MyClass x: 40 y: 1202!
@@ -867,14 +869,16 @@ class TestTranspileBlock { assert system }
     is TranspilerTest
 
     method testValueValue
-        self transpile: "class Main \{}
+        self transpile: "import lang.integer
+                         class Main \{}
                              direct method run: command in: system
                                  (\{ |a b| a + b } value: 10 value: 30) debug!
                          end"
             expect: "#<Integer 40>"!
 
     method testBlockScope
-        self transpile: "class Main \{}
+        self transpile: "import lang.integer
+                         class Main \{}
                              direct method run: command in: system
                                  let x = 200.
                                  let b1 = \{ x + 11 * 2 }.
@@ -916,7 +920,7 @@ class TestTranspileSelfHosted { assert system }
         self transpileWithPrelude:
             "import impl.parser
              class Main \{\}
-                 direct method run: command in: system
+                direct method run: command in: system
                      let i = parser.Parser parseExpressions: \"123\".
                      system output print: i!
              end"
@@ -992,7 +996,7 @@ class TestTranspileBoolean { assert system }
         self transpile: "class Main \{}
                              direct method run: command in: system
                                  let n = 0.
-                                 \{ n is 10 } whileFalse: \{ n = n + 1 }.
+                                 \{ n is 10 } whileFalse: \{ n = n integerAdd: 1 }.
                                  n debug!
                          end"
             expect: "#<Integer 10>"!
@@ -1056,7 +1060,8 @@ class TestTranspileArray { assert system }
             expect: "#<Integer 999>#<Integer 42>"!
 
     method testArraySums
-        self transpile: "class Main \{}
+        self transpile: "import lang.integer
+                         class Main \{}
                              direct method run: command in: system
                                 (self sums: 10) debug!
                              direct method sum: n
@@ -1258,7 +1263,7 @@ class TestTranspileClass { assert system }
                                  instance double.
                                  instance read debug!
                              method double
-                                 x = x * 2!
+                                 x = x integerMul: 2!
                              method read
                                  x!
                          end"
@@ -1476,77 +1481,45 @@ class TestTranspileInteger { assert system }
                          end"
              expect: "#<Integer 123>"!
 
-    method testIntegerAdd
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (10 + 100 + 1) debug!
-                         end"
-             expect: "#<Integer 111>"!
+    method test0IntegerOps
+        -- Instead of importing lang.integer into N tests, we import a few more
+        -- things and test all ops in one test. Somewhat Faster, since imports
+        -- are SLOW at the moment.
+        self transpile: "import lang.integer
+                         import lang.output
+                         import lang.record_ext
+                         import lang.boolean
 
-    method testIntegerMul
-        self transpile: "class Main \{}
+                         class Main \{}
                              direct method run: command in: system
-                                 (10 * 100) debug!
+                                 system output print: \{
+                                     add: (10 + 100 + 1),
+                                     div: (20 / 2),
+                                     eq1: (1 == 1),
+                                     eq2: (1 == 2),
+                                     gt1: (1 > 2),
+                                     gt2: (2 > 1),
+                                     gt3: (1 > 1),
+                                     gte1: (1 >= 2),
+                                     gte2: (2 >= 1),
+                                     gte3: (1 >= 1),
+                                     lt1: (1 < 2),
+                                     lt2: (2 < 1),
+                                     lt3: (1 < 1),
+                                     lte1: (1 <= 2),
+                                     lte2: (2 <= 1),
+                                     lte3: (1 <= 1),
+                                     mul: (10 * 100),
+                                     sub: (20 - 2),
+                                 \}!
                          end"
-             expect: "#<Integer 1000>"!
-
-    method testIntegerDiv
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (20 / 2) debug!
-                         end"
-             expect: "#<Integer 10>"!
-
-    method testIntegerSub
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (20 - 2) debug!
-                         end"
-             expect: "#<Integer 18>"!
-
-    method testIntegerEquals
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (1 == 2) debug.
-                                 (1 == 1) debug!
-                         end"
-            expect: "#<Boolean False>#<Boolean True>"!
-
-    method testIntegerGreaterThan
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (1 > 2) debug.
-                                 (2 > 1) debug.
-                                 (1 > 1) debug!
-                         end"
-            expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
-
-    method testIntegerGreaterThanOrEqual
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (1 >= 2) debug.
-                                 (2 >= 1) debug.
-                                 (1 >= 1) debug!
-                         end"
-            expect: "#<Boolean False>#<Boolean True>#<Boolean True>"!
-
-    method testIntegerLessThan
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (1 < 2) debug.
-                                 (2 < 1) debug.
-                                 (1 < 1) debug!
-                         end"
-            expect: "#<Boolean True>#<Boolean False>#<Boolean False>"!
-
-    method testIntegerLessThanOrEqual
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (1 <= 2) debug.
-                                 (2 <= 1) debug.
-                                 (1 <= 1) debug!
-                         end"
-            expect: "#<Boolean True>#<Boolean False>#<Boolean True>"!
+             expect: ("\{add: 111, div: 10,
+eq1: True, eq2: False,
+gt1: False, gt2: True, gt3: False,
+gte1: False, gte2: True, gte3: True,
+lt1: True, lt2: False, lt3: False,
+lte1: True, lte2: False, lte3: True,
+mul: 1000, sub: 18\}" replace: "\n" with: " ")!
 end
 
 class TestTranspileString { assert system }
@@ -1732,7 +1705,7 @@ class TestTranspileExtend { assert system }
                          end
                          extend MyClass
                               method foo
-                                  self bar * 2!
+                                  self bar integerMul: 2!
                          end
                          class Main \{}
                               direct method run: command in: system
@@ -1761,7 +1734,7 @@ class TestTranspileExtend { assert system }
                          end
                          extend MyInterface
                               method foo
-                                  self bar * 2!
+                                  self bar integerMul: 2!
                          end
                          class Main \{}
                               direct method run: command in: system
