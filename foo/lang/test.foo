@@ -3,6 +3,9 @@ import .exception.*
 import .output
 
 interface TestSuite
+    direct method runTests: assert
+        (self assert: assert) runTests!
+
     method runTests
         self doTests: { |each| self runTest: each }.
         self!

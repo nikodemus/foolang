@@ -1,0 +1,36 @@
+import .float.Float
+import .test.TestSuite
+
+class SomeFloats {}
+   direct method do: block
+      block value: -0.0.
+      block value: 0.0.
+      block value: 1.0.
+      block value: -1.0.
+      block value: 0.1.
+      block value: -0.1.
+      let rng = Random new.
+      100 times: { block value: rng float }!
+end
+
+class TestFloat { assert }
+    is TestSuite
+
+    method testAdd
+        assert forAll: SomeFloats
+               that: { |x| x + x == x * 2 }
+               testing: "Float#+"!
+
+    method testDecimalString
+        assert forAll: [[1.01, "1.0"],
+                        [1.11, "1.1"],
+                        [1.54, "1.5"],
+                        [1.56, "1.6"],
+                        [-1.01, "-1.0"],
+                        [-1.11, "-1.1"],
+                        [-1.54, "-1.5"],
+                        [-1.56, "-1.6"]]
+               that: { |case|
+                       (case first decimalString: 1) == case second }
+               testing: "Float#decimalString:"!
+end

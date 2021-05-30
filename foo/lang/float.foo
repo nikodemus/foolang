@@ -15,6 +15,11 @@ extend Float
     method asFloat
         self!
 
+    method decimalString: n
+        let int = self truncate.
+        let dec = ((self abs - int abs) * (10 ^ n)) round.
+        "{int}.{dec}"!
+
     method addNumber: left
         left floatAdd: self!
     method subNumber: left
