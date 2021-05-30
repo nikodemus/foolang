@@ -1211,6 +1211,8 @@ class TestTranspileClass { assert system }
             "import lang.layout.Layout
              import lang.output
              import lang.selector_ext
+             import lang.boolean
+             import lang.array
 
              class BlockMethod \{ selector block \}
                  method invoke: args on: receiver
