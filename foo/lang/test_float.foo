@@ -1,4 +1,4 @@
-import .float.Float
+import .float
 import .test.TestSuite
 
 class SomeFloats {}

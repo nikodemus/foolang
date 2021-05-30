@@ -70,10 +70,6 @@ class TestArray { assert }
                        case first reversed.
                        case first == orig }
                testing: "Array#reversed no side effect"!
-
-    direct method runTests: assert
-        (self assert: assert) runTests!
-
 end
 
 class TestArrayAsIterable { assert }

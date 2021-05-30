@@ -1,3 +1,6 @@
+import .integer
+import .test.TestSuite
+
 -- Generates signed integers small enough to add without overflowing.
 class SmallIntegers {}
     direct method do: block
@@ -11,13 +14,7 @@ class SmallIntegers {}
 end
 
 class TestInteger { assert }
-    direct method runTests: assert
-        (self assert: assert)
-            ; testAdd
-            ; testAdditionCommutative
-            ; testSub
-            ; testPrintBase
-                !
+    is TestSuite
 
     method testAdd
         assert forAll: SmallIntegers

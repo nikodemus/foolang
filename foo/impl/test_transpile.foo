@@ -672,7 +672,7 @@ class TestTranspilePreludeTest { assert system }
                          class Main \{}
                              is test.TestSuite
                              direct method run: command in: system
-                                 self new runTests!
+                                 self new runTestsIn: system!
                              method test_a
                                  True!
                              method test_b

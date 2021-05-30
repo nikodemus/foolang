@@ -43,7 +43,7 @@ interface TestSelfHosting
                         system: system
                         ok: True
                         onFailure: block).
-        tests doTests: { |each| tests runTest: each }!
+        tests doTests: { |each| tests runTest: each in: system }!
 
     direct method runIn: system
         self runIn: system onFailure: { True }!

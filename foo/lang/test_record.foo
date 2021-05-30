@@ -1,10 +1,8 @@
-class TestRecord { assert }
+import .record
+import .test.TestSuite
 
-    direct method runTests: assert
-        (self assert: assert)
-            ; testBasic
-            ; testCompare
-                !
+class TestRecord { assert }
+    is TestSuite
 
     method testBasic
         assert that: { let r = {x: -10, y: 52}.

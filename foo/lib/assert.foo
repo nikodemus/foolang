@@ -97,10 +97,13 @@ class Assert { output failed }
         let assert = self reportingTo: system output.
         let tests = suite assert: assert.
         system output println: tests classOf name.
+        let start = system clock time.
         tests doTests: { |each|
-                         tests runTest: each.
+                         tests runTest: each in: system.
                          assert failed
                              ifTrue: failBlock }.
+        let stop = system clock time.
+        system output println: "  total: {(stop-start) real decimalString: 1}s".
         assert!
 
     method report: testResult

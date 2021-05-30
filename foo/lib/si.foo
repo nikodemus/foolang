@@ -23,6 +23,7 @@ Examples:
 ---
 
 import .assert.Assert
+import lang.test.TestSuite
 
 class Prefix {}
     direct method displaySpecs
@@ -592,8 +593,7 @@ define kg
     1 kg!
 
 class SI_Tests { assert }
-    direct method runTests: assert
-        (self assert: assert) runTests!
+    is TestSuite
 
     method runTests
         self testBaseUnitArithmetic.
