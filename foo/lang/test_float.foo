@@ -31,7 +31,6 @@ class TestFloat { assert }
                         [-1.54, "-1.5"],
                         [-1.56, "-1.6"]]
                that: { |case|
-                       Output debug println: "XXX: {case first} => {case first decimalString: 1}".
                        (case first decimalString: 1) == case second }
                testing: "Float#decimalString:"!
 end
