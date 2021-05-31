@@ -1,0 +1,68 @@
+import .selector
+import .test.TestSuite
+
+class TestSelector { assert }
+    is TestSuite
+
+    method check: results
+        results allTrue
+            ifTrue: { True }
+            ifFalse: { Error raise: "{results} not all true!" }!
+
+    method test_isKeyword
+        self check: [ #foo isKeyword not,
+                      #_bar isKeyword not,
+                      #+ isKeyword not,
+                      #quux: isKeyword,
+                      #a:b:c: isKeyword ]!
+
+    method test_isSymbol
+        self check: [ #foo isSymbol not,
+                      #_bar isSymbol not,
+                      #+ isSymbol,
+                      #quux: isSymbol not,
+                      #a:b:c: isSymbol not ]!
+
+    method test_isUnary
+        self check: [ #foo isUnary,
+                      #_bar isUnary,
+                      #+ isUnary not,
+                      #quux: isUnary not,
+                      #a:b:c: isUnary not]!
+
+    method test_arity
+        self check: [ #foo arity is 1,
+                      #_bar arity is 1,
+                      #+ arity is 2,
+                      #quux: arity is 2,
+                      #a:b:c: arity is 4]!
+
+    method test_sendTo_
+        self check: [ (#abs sendTo: -123) is 123 ]!
+
+    method test_sendTo_with_
+        self check: [ (#+ sendTo: 41 with: [1]) is 42 ]!
+
+    method test_value_
+        self check: [ (#abs value: -42) is 42]!
+
+    method test_value_value_
+        self check: [ (#+ value: 123 value: 19) is 142]!
+
+    method test_parts
+        self check: [ #foo parts isEquivalent: ["foo"],
+                      #_foo parts isEquivalent: ["_foo"],
+                      #+ parts isEquivalent: ["+"],
+                      #foo: parts isEquivalent: ["foo:"],
+                      #foo:bar:quux: parts isEquivalent: ["foo:", "bar:", "quux:"] ]!
+
+    method test_isEquivalent_
+        self check: [ #foo == #foo,
+                      (#bar == #foo) not,
+                      #foo isEquivalent: (Selector name: "foo") ]!
+
+    method test_toString
+        self check: [ #foo toString == "#foo",
+                      #+ toString == "#+",
+                      #foo:bar:quux: toString == "#foo:bar:quux:" ]!
+end

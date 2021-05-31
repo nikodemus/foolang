@@ -3,18 +3,21 @@ import .exception.*
 import .output
 
 interface TestSuite
-    direct method runTests: assert
-        (self assert: assert) runTests!
+    direct method runTests: assert in: system
+        (self assert: assert) runTestsIn: system!
 
-    method runTests
-        self doTests: { |each| self runTest: each }.
+    method runTestsIn: system
+        self doTests: { |each| self runTest: each in: system }.
         self!
 
-    method runTest: test
-        Output debug print: "- ".
-        Output debug println: test name.
-        Output debug flush.
-        test sendTo: self with: []!
+    method runTest: test in: system
+        let start = system clock time.
+        system output print: "- ".
+        system output print: test name.
+        system output flush.
+        test sendTo: self with: [].
+        let stop = system clock time.
+        system output println: " ({(stop-start) real decimalString: 1}s)"!
 
     method doTests: block
         let list = List new.

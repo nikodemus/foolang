@@ -1,0 +1,65 @@
+import .dictionary
+import .test.TestSuite
+
+class TestDictionary { assert }
+    is TestSuite
+
+    method testSyntax
+        assert that: { let d = { 1 + 1 + 40 -> "the" append: "Answer" }.
+                       (d at: 42) }
+               is: "theAnswer"
+               testing: "Dictionary syntax"!
+
+    method testPutAt
+        assert that: { let d = Dictionary new.
+                       d put: "foo" at: "bar".
+                       (d at: "bar") }
+               is: "foo"
+               testing: "Dictionary#put:at: and #at:"!
+
+    method testHas
+        assert that: { let orig = Dictionary new.
+                       orig put: 1 at: "one".
+                       let copy = orig copy.
+                       copy put: 2 at: "two".
+                       orig put: 3 at: "three".
+                       [orig at: "one", orig at: "two", orig at: "three",
+                        copy at: "one", copy at: "two", copy at: "three"] }
+        equals: [1,False,3,
+                 1,2,False]
+        testing: "Dictionary#copy, Dictionary#has:"!
+
+    method testEquality
+        assert forAll: [[True, { 1 -> 100, 2 -> 200 }, { 2 -> 200, 1 -> 100 }],
+                        [True, Dictionary new, Dictionary new],
+                        [False, { 1 -> 100, 2 -> 200 }, { 1 -> 1, 2 -> 2 }],
+                        [False, { 1 -> 100 }, { 1 -> 100, 2 -> 200 }],
+                        [False, { 1 -> 100, 2 -> 200 }, { 1 -> 100 }].
+                        [False, Dictionary new, { 1 -> 100 }],
+                        [False, { 1 -> 100 }, Dictionary new]]
+               that: { |case|
+                       case first is (case second == case third) }
+               testing: "Dictionary#=="!
+
+    method testMerge
+        assert forAll: [[Dictionary new, Dictionary new, Dictionary new],
+                        [{ 1 -> 10 }, Dictionary new, { 1 -> 10 }],
+                        [{ 1 -> 10 }, { 1 -> 10 }, Dictionary new],
+                        [{ 1 -> 10, 2 -> 20 }, { 1 -> 10 }, { 2 -> 20 }].
+                        [{ 1 -> 10, 2 -> 20 }, { 1 -> 10, 2 -> 2 }, { 2 -> 20 }]]
+               that: { |case|
+                       let mergeTo = case second.
+                       let mergeRes = mergeTo merge: case third.
+                       mergeRes is mergeTo and: case first == mergeRes }
+               testing: "Dictionary#merge:"!
+
+    method testDo
+        assert true: { let d = { 1 -> 100, 2 -> 200 }.
+                       let sk = 0.
+                       let sv = 0.
+                       d do: { |k v|
+                               sk = sk + k.
+                               sv = sv + v}.
+                       sk == 3 and: sv == 300 }
+               testing: "Dictionary#do:"!
+end

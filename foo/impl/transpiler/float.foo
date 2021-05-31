@@ -65,6 +65,12 @@ define FloatMethods
                       data[start2] = '0';
                   }
                   return INSTANCE(String, bytes);" },
+      #truncate
+          -> { signature: [], vars: 0,
+               body: "return foo_Integer_new(ctx->receiver.datum.float64);" },
+      #round
+           -> { signature: [], vars: 0,
+                body: "return foo_Integer_new(round(ctx->receiver.datum.float64));" },
       #floatAdd:
           -> { signature: [Float], vars: 0,
                body: "return foo_Float_new(ctx->receiver.datum.float64 + ctx->frame[0].datum.float64);" },

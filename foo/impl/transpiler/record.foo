@@ -6,17 +6,26 @@ define DirectMethods
           -> { signature: [Record], vars: 0,
                body: "struct FooClass* vt = ctx->frame[0].class;
 // Methods originating in the instance's class are reader methods
-// and correspond to slots, so we can identify them.
+// and correspond to slots, so we can identify them -- except for
+// #classOf and #__doSelectors:.
 size_t n = 0;
 for (size_t i = 0; i < vt->size; i++) \{
-    if (vt == vt->methods[i].class) \{
+    struct FooSelector* s = vt->methods[i].selector;
+    if (vt == vt->methods[i].class
+        && s != &FOO_classOf
+        && s != &FOO_____doSelectors_)
+   \{
         n++;
     }
 }
 struct FooArray* keys = FooArray_alloc(n);
 size_t j = 0;
 for (size_t i = 0; i < vt->size; i++) \{
-    if (vt == vt->methods[i].class) \{
+    struct FooSelector* s = vt->methods[i].selector;
+    if (vt == vt->methods[i].class
+        && s != &FOO_classOf
+        && s != &FOO_____doSelectors_)
+   \{
         const struct FooSelector* selector = vt->methods[i].selector;
         keys->data[j++] = (struct Foo)\{ .class = &FooClass_Selector,
                                          .datum = \{ .ptr = (void*)selector }};

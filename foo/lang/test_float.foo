@@ -1,4 +1,4 @@
-import .float.Float
+import .float
 import .test.TestSuite
 
 class SomeFloats {}
@@ -20,6 +20,21 @@ class TestFloat { assert }
         assert forAll: SomeFloats
                that: { |x| x + x == x * 2 }
                testing: "Float#+"!
+
+    method testTruncate
+        assert forAll: [[132.999, 132],
+                        [-123.999, -123]]
+               that: { |case|
+                       (case first truncate) is (case second) }
+               testing: "Float#round"!
+
+    method testRound
+        assert forAll: [[132.999, 133],
+                        [123.49, 123],
+                        [-123.999, -124]]
+               that: { |case|
+                       (case first round) is (case second) }
+               testing: "Float#round"!
 
     method testDecimalString
         assert forAll: [[1.01, "1.0"],

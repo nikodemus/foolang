@@ -1,8 +1,8 @@
 import lib.assert.Assert
 import lib.si.SI_Tests
 
-import lang.dictionary.TestDictionary
-import lang.selector.TestSelector
+import lang.test_dictionary.TestDictionary
+import lang.test_selector.TestSelector
 import lang.test_array.TestArray
 import lang.test_array.TestArrayAsIterable
 import lang.test_byteArray.TestByteArray
@@ -68,6 +68,9 @@ class Main { assert system }
             TestCharacter,
             TestClosure,
             TestDictionary,
+            TestFile,
+            TestFilePath,
+            TestFileStream,
             TestFloat,
             TestInteger,
             TestList,
@@ -78,11 +81,6 @@ class Main { assert system }
             TestSelector,
             TestString,
             SI_Tests
-        ] do: { |each| each runTests: assert }.
-        [
-            TestFile,
-            TestFilePath,
-            TestFileStream
         ] do: { |each| each runTests: assert in: system }.
         self testIs.
         self testStringOutput.

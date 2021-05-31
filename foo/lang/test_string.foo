@@ -1,13 +1,8 @@
 import .string.String
+import .test.TestSuite
 
 class TestString { assert }
-
-    direct method runTests: assert
-        (self assert: assert)
-            ; testLessThan
-            ; testTrimRight
-            ; testLines
-                !
+    is TestSuite
 
     method testLines
         assert forAll: [["foo\nbar", ["foo", "bar"]],
