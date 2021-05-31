@@ -1,0 +1,9 @@
+-- FIXME: A MASSIVE KLUDGE as self hosted arrays do not yet support element
+-- type, used by Array#from:to: (whole things needs to be rethought).
+
+import lang.any.Any
+
+extend Array
+    method arrayElementType
+        Any!
+end

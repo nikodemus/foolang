@@ -1170,8 +1170,12 @@ class TestTranspileClass { assert system }
               expect: "True"!
 
     method testRuntimeClass1
-        self transpileWithPrelude:
-            "class Main \{\}
+        self transpile:
+            "import lang.layout.Layout
+             import lang.output
+             import lang.selector_ext
+
+             class Main \{\}
                   direct method run: command in: system
                       let test = Class name: \"test class\"
                                        metaclass: Class
@@ -1181,10 +1185,13 @@ class TestTranspileClass { assert system }
              end"
             expect: "test class"!
 
-    method no_testRuntimeClass2
-        self transpileWithPrelude:
-            "class MyMetaclass \{}
-                 is Class
+    method testRuntimeClass2
+        self transpile:
+            "import lang.layout.Layout
+             import lang.output
+             import lang.selector_ext
+
+             class MyMetaclass < Class
                  method ping
                      #pong!
              end
@@ -1200,8 +1207,15 @@ class TestTranspileClass { assert system }
             expect: "#pong"!
 
     method testRuntimeClass3
-        self transpileWithPrelude:
-            "class BlockMethod \{ selector block \}
+        self transpile:
+            "import lang.layout.Layout
+             import lang.output
+             import lang.selector_ext
+             import lang.boolean
+             import lang.array
+             import lang.array_ext
+
+             class BlockMethod \{ selector block \}
                  method invoke: args on: receiver
                      block apply: ([receiver] append: args)!
              end

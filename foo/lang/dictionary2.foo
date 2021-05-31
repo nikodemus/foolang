@@ -2,15 +2,9 @@
 
 import .any.Any
 import .array.Array
+import .array_ext
 import .object.Object
 import .stringOutput.StringOutput
-
--- FIXME: A MASSIVE KLUDGE as self hosted arrays do not yet support element
--- type, used by Array#from:to: (whole things needs to be rethought).
-extend Array
-    method arrayElementType
-        Any!
-end
 
 class Dictionary { size _keys _values }
     is Object

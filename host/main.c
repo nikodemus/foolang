@@ -951,13 +951,6 @@ void foo_mark_none(void* ptr) {
 void foo_mark_array(void* ptr) {
   ENTER_TRACE("mark_array");
   struct FooArray* array = ptr;
-  char xxx = *((char*)&array->gc);
-  if (xxx && xxx != 1) {
-    FOO_XXX("BAD ARRAY: %p", ptr);
-    FOO_XXX("  size: %zu", array->size);
-    if (array->size)
-      FOO_XXX("  first class: %s", array->data[0].class->name->data);
-  }
   if (array->gc && foo_mark_live(array)) {
     for (size_t i = 0; i < array->size; i++) {
       foo_mark_object(array->data[i]);
@@ -967,8 +960,8 @@ void foo_mark_array(void* ptr) {
 }
 
 void foo_mark_class(void* ptr) {
-  ENTER_TRACE("mark_class");
   struct FooClass* class = ptr;
+  ENTER_TRACE("mark_class %p (%s)", ptr, class->name->data);
   if (class->gc && foo_mark_live(class)) {
     foo_mark_bytes(class->name);
     foo_mark_class(class->metaclass);
@@ -1015,7 +1008,6 @@ void foo_mark_context(struct FooContext* ctx) {
     if (ctx->type == METHOD_CONTEXT) {
       DEBUG_GC(" selector: %s", ctx->method->selector->name->data);
     }
-
   }
   if (ctx && foo_mark_live(ctx)) {
     foo_mark_object(ctx->receiver);
@@ -1074,10 +1066,12 @@ void foo_sweep() {
 
 void foo_gc(struct FooContext* ctx) {
   FOO_DEBUG("/foo_gc begin");
-  ENTER_TRACE("--GC--\n");
+  ENTER_TRACE("GC\n");
   foo_flip_mark();
   if (ctx->vars) {
-      foo_mark_array(ctx->vars);
+    ENTER_TRACE("vars");
+    foo_mark_array(ctx->vars);
+    EXIT_TRACE();
   }
   foo_mark_context(ctx);
   foo_sweep();

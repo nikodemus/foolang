@@ -322,10 +322,21 @@ class AstClass { name superclass _slots _interfaces _directMethods _instanceMeth
             _instanceMethods: False
             _allInterfaces: False!
 
-    method slots
+    method ifSuperclass: then ifNot: else
         superclass is False
-            ifTrue: { _slots }
-            ifFalse: { superclass definition slots }!
+            ifTrue: else
+            ifFalse: then!
+
+    method slots
+        self
+            ifSuperclass: { -- Debug println: "slots for {superclass definition}".
+                            superclass definition slots }
+            ifNot: { _slots }!
+
+    method isBuiltin
+        self
+            ifSuperclass: { superclass definition isBuiltin }
+            ifNot: { False }!
 
     method _interfaces
         _interfaces!
@@ -341,9 +352,10 @@ class AstClass { name superclass _slots _interfaces _directMethods _instanceMeth
 
     method _allInterfaces: list
         (_allInterfaces is False) assert: "Oops, _allInterfaces already set!".
-        superclass is False
-            ifTrue: { _allInterfaces = list asArray }
-            ifFalse: { _allInterfaces = ([superclass] append: list) asArray }!
+        -- FIXME: this should be in constructor
+        self
+            ifSuperclass: { _allInterfaces = ([superclass] append: list) asArray }
+            ifNot: { _allInterfaces = list asArray }!
 
     method _directMethods: methods
         _directMethods = methods!
@@ -352,7 +364,9 @@ class AstClass { name superclass _slots _interfaces _directMethods _instanceMeth
         _instanceMethods = methods!
 
     method markFunction
-        "foo_mark_array"!
+        self
+            ifSuperclass: { superclass definition markFunction }
+            ifNot: { "foo_mark_array" }!
 
     method _readerMethods
         self _methodDictionary:
