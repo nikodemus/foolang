@@ -1213,6 +1213,7 @@ class TestTranspileClass { assert system }
              import lang.selector_ext
              import lang.boolean
              import lang.array
+             import lang.array_ext
 
              class BlockMethod \{ selector block \}
                  method invoke: args on: receiver
