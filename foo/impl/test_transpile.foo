@@ -1165,13 +1165,17 @@ class TestTranspileClass { assert system }
              class MainClass \{ a b }
              end
 
-             class SubClass < MainClass
+             class MidClass < MainClass
+             end
+
+             class SubClass < MidClass
              end
 
              class Main \{\}
                  direct method run: command in: system
                      let x = SubClass a: 22 b: 20.
-                     system output print: (MainClass includes: x)!
+                     system output
+                          print: ((MainClass includes: x) and: (MidClass includes: x))!
              end
              "
               expect: "True"!
