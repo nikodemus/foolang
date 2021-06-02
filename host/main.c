@@ -417,10 +417,6 @@ struct Foo foo_class_typecheck(struct FooContext* ctx,
     if (class == list->data[i]) {
       return obj;
   }
-  FOO_XXX("Object class: %s", obj.class->name->data);
-  for (size_t i = 0; i < list->size; i++) {
-    FOO_XXX("  is %s", list->data[i]->name->data);
-  }
   foo_panicf(ctx, "Type error! Wanted: %s, got: %s",
              class->name->data, obj.class->name->data);
 }

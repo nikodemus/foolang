@@ -1188,8 +1188,7 @@ class TestTranspileClass { assert system }
 
              class Main \{\}
                   direct method run: command in: system
-                      let test = Class name: \"test class\"
-                                       metaclass: Class
+                      let test = Class new: \"test class\"
                                        layout: Layout empty
                                        methods: [].
                       system output print: test name!
@@ -1209,10 +1208,10 @@ class TestTranspileClass { assert system }
 
              class Main \{\}
                   direct method run: command in: system
-                      let test = Class name: \"test class\"
-                                       metaclass: MyMetaclass
-                                       layout: Layout empty
-                                       methods: [].
+                      let test = MyMetaclass
+                                     new: \"test class\"
+                                     layout: Layout empty
+                                     methods: [].
                       system output print: test ping!
              end"
             expect: "#pong"!
@@ -1233,16 +1232,14 @@ class TestTranspileClass { assert system }
 
              class Main \{\}
                   direct method run: command in: system
-                      let metaclass = Class name: \"test metaclass\"
-                                            metaclass: Class
+                      let metaclass = Class new: \"test metaclass\"
                                             layout: Layout empty
                                             methods: [(BlockMethod
                                                            selector: #ping
                                                            block: \{ |r| #pong \})].
-                      let test = Class name: \"test class\"
-                                       metaclass: metaclass
-                                       layout: Layout empty
-                                       methods: [].
+                      let test = metaclass new: \"test class\"
+                                           layout: Layout empty
+                                           methods: [].
                       system output print: test ping!
              end"
             expect: "#pong"!

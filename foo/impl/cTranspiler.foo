@@ -190,7 +190,7 @@ define Builtins [
          type: Class
          value: Class
          mark: "foo_mark_class"
-         directMethods: Dictionary new
+         directMethods: class.InstanceMethods -- class is its own instance
          instanceMethods: class.InstanceMethods,
      Builtin
          type: Class
