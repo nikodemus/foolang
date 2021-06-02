@@ -1109,7 +1109,7 @@ end
 class TestTranspileClass { assert system }
     is TranspilerTest
 
-    method testClassInheritanceCanUseSuperclassConstructor
+    method test_Superclass_constructor_works
         self transpile:
             "import lang.output
              import lang.integer
@@ -1117,7 +1117,10 @@ class TestTranspileClass { assert system }
              class MainClass \{ a b }
              end
 
-             class SubClass < MainClass
+             class MidClass < MainClass
+             end
+
+             class SubClass < MidClass
                 method sum
                    self a + self b!
              end
@@ -1130,7 +1133,7 @@ class TestTranspileClass { assert system }
              "
               expect: "42"!
 
-    method testClassInheritanceCanUseSuperclassMethods
+    method test_Superclass_methods_work
         self transpile:
             "import lang.output
              import lang.integer
@@ -1144,7 +1147,10 @@ class TestTranspileClass { assert system }
                     _b!
              end
 
-             class SubClass < MainClass
+             class MidClass < MainClass
+             end
+
+             class SubClass < MidClass
                 method sum
                    self a + self b!
              end
@@ -1157,7 +1163,7 @@ class TestTranspileClass { assert system }
              "
               expect: "42"!
 
-    method testClassInheritanceCreatesSubtype
+    method test_Class_inheritance_creates_subtype
         self transpile:
             "import lang.output
              import lang.boolean
@@ -1180,7 +1186,7 @@ class TestTranspileClass { assert system }
              "
               expect: "True"!
 
-    method testRuntimeClass1
+    method test_Instantiate_metaclass_at_runtime
         self transpile:
             "import lang.layout.Layout
              import lang.output
@@ -1195,15 +1201,18 @@ class TestTranspileClass { assert system }
              end"
             expect: "test class"!
 
-    method testRuntimeClass2
+    method test_Instantiate_class_at_runtime
         self transpile:
             "import lang.layout.Layout
              import lang.output
              import lang.selector_ext
 
-             class MyMetaclass < Class
+             class MidClass < Class
                  method ping
                      #pong!
+             end
+
+             class MyMetaclass < MidClass
              end
 
              class Main \{\}
@@ -1216,7 +1225,7 @@ class TestTranspileClass { assert system }
              end"
             expect: "#pong"!
 
-    method testRuntimeClass3
+    method test_Object_methods_in_metaclass_work
         self transpile:
             "import lang.layout.Layout
              import lang.output
@@ -1244,7 +1253,7 @@ class TestTranspileClass { assert system }
              end"
             expect: "#pong"!
 
-    method testMyClass
+    method test_Basic_direct_method_send
         self transpile: "class MyClass \{}
                              direct method test
                                  123!
@@ -1255,7 +1264,7 @@ class TestTranspileClass { assert system }
                          end"
             expect: "#<Integer 123>"!
 
-    method testCtor
+    method test_Basic_class_instantiation
         self transpile: "class Main \{}
                              direct method run: command in: system
                                  self new foo debug!
@@ -1264,14 +1273,7 @@ class TestTranspileClass { assert system }
                          end"
             expect: "#<Integer 542>"!
 
-    method testSlotReader
-        self transpile: "class Main \{ x }
-                             direct method run: command in: system
-                                (self x: 129408) x debug!
-                         end"
-            expect: "#<Integer 129408>"!
-
-    method testSlots
+    method test_Basic_slot_access
         self transpile: "class Main \{ x }
                              direct method run: command in: system
                                  let instance = self x: 1021.
@@ -1284,7 +1286,7 @@ class TestTranspileClass { assert system }
                          end"
             expect: "#<Integer 2042>"!
 
-    method testPrefixMethod
+    method test_Basic_prefix_method_send
         self transpile: "class Main \{}
                              direct method run: command in: system
                                  -(self foo) debug!
@@ -1293,7 +1295,7 @@ class TestTranspileClass { assert system }
                          end"
             expect: "#<Integer -42>"!
 
-    method testPrefixMethodDefinition
+    method test_Basic_prefix_method_definition
         self transpile: "class Main \{}
                              direct method prefix-
                                 -123!
