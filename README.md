@@ -4,9 +4,8 @@
 
 **_This is a toy language implemented by a single person&mdash;use for quiet enjoyment only._**
 
-The see the [Foolang website](https://foolang.org) is **https://foolang.org**
-for syntax, design notes, etc. This README is a smaller version of the main
-page there.
+See the https://foolang.org for syntax, design notes, etc. This README is a
+smaller version of the main page there.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for information on how to contribute.
 You'll be the first. :)
