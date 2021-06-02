@@ -12,8 +12,8 @@ You'll be the first. :)
 
 ## About
 
-Foolang is a Smalltalk-inspired language that, like all new languages, has what
-you might generously call _somewhat optimistic aspirations_:
+Foolang is a Smalltalk-inspired language that, like all new languages, has 
+somewhat _optimistic aspirations_:
 
 - **_Elegance and power of Smalltalk and Self:_** Smalltalk-like syntax, deep
   object orientation, and late binding.
@@ -32,10 +32,6 @@ Nope.
 Syntax is still settling down, early binding support isn't quite there, compiler
 is a work-in-progress trivial transpiler, agents and threads haven't even been
 started, and many things which should be first class objects aren't yet, etc.
-
-**_"When we going to get there?"_**
-
-Someday, I hope!
 
 ## Hello World
 

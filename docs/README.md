@@ -7,7 +7,7 @@
 **_The Foo Programming Language_**
 
 Foolang is a Smalltalk-inspired language that, like all new languages,
-has what you might generously call _somewhat optimistic aspirations_:
+has somewhat _optimistic aspirations_:
 
 - **_Elegance and power of Smalltalk and Self:_** Smalltalk-like syntax, deep object
   orientation, and late binding as default.
