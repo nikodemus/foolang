@@ -1,0 +1,35 @@
+---
+A quick and dirty NSubstitute -thingie
+
+See: https://nsubstitute.github.io/help/getting-started/
+---
+
+class Substitute { _methods _messages }
+    direct method new
+        self _methods: Dictionary new
+             _messages: Dictionary new!
+
+    direct method for: type
+        (Class new: "Substitute<{type name}>"
+               superclass: self
+               interfaces: [type])
+        new!
+
+    method on: selector returns: value
+        _methods at: selector name put: value!
+
+    method received: selector with: args
+        (_messages at: selector name ifNone: { return False })
+            includes: args!
+
+    method perform: selector with: args
+        let name = selector toSelector name.
+        let res = _methods
+                      at: name
+                      ifNone: { Error raise: "Substitute does not understand: {selector}" }.
+        let list = _messages
+                       at: name
+                       ifNonePut: { List new }.
+        list add: args.
+        res!
+end

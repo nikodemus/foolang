@@ -168,4 +168,10 @@ class Assert { output failed }
     method false: condition testing: thing
         self that: condition is: False testing: thing!
 
+    method true: condition
+        self that: condition is: True testing: "(anonymous test)"!
+
+    method false: condition
+        self that: condition is: False testing: "(anonymous test)"!
+
 end

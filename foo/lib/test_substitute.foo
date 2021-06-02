@@ -1,0 +1,27 @@
+import .substitute.Substitute
+import .assert.Assert
+
+interface MyInterface
+end
+
+class Main { assert }
+    is TestSuite
+
+    method test_Substitute_returns_as_specified
+        let sub = Substitute new.
+        sub on: (#add:to:) returns: 4212.
+        assert true: { 4212 == (sub add: 1 to: 2) }!
+
+    method test_Substitute_tracks_messages
+        let sub = Substitute new.
+        sub on: (#add:to:) returns: 4212.
+        sub add: 1 to: 2.
+        assert true: { sub received: (#add:to:) with: [1,2] }.
+        assert false: { sub received: (#add:to:) with: [2,1] }!
+
+    method test_Substitute_can_implement_interface
+        let sub = Substitute for: MyInterface.
+        sub on: #foo returns: #bar.
+        assert true: { MyInterface includes: sub }.
+        assert true: { #bar == sub foo }!
+end

@@ -3,6 +3,10 @@ import .exception.*
 import .output
 
 interface TestSuite
+    direct method run: command in: system
+        self runTests: (Assert reportingTo: system output)
+             in: system!
+
     direct method runTests: assert in: system
         (self assert: assert) runTestsIn: system!
 
