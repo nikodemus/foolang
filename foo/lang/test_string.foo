@@ -4,7 +4,7 @@ import .test.TestSuite
 class TestString { assert }
     is TestSuite
 
-    method testLines
+    method test_String_lines
         assert forAll: [["foo\nbar", ["foo", "bar"]],
                         ["foo", ["foo"]],
                         ["", [""]],
@@ -13,7 +13,7 @@ class TestString { assert }
                        test first lines == test second asList }
                testing: "String#lines"!
 
-    method testTrimRight
+    method test_String_trimRight
         assert forAll: [["foo", "foo"],
                         [" foo", " foo"],
                         [" foo ", " foo"],
@@ -23,16 +23,19 @@ class TestString { assert }
                        test first trimRight == test second }
                testing: "String#trimRight"!
 
-    method testLessThan
+    method test_String_less_than
         assert forAll: [["aQWE", "bQWE"],
                         ["aqwe", "b"],
-                        ["a", "bqwe"]]
+                        ["a", "bqwe"],
+                        ["asd", "asda"]]
                that: { |test|
                        test first < test second }
-               testing: "String#< (1)".
-        assert false: { "asd" < "asd" }
-               testing: "String#< (2)".
-        assert true: { "asd" < "asda" }
-               testing: "String#< (3)"!
-
+               testing: "String#< --> True".
+        assert forAll: [["asd", "asd"],
+                        ["b", "aqwe"],
+                        ["bqwe", "a"],
+                        ["asda", "asd"]]
+               that: { |test|
+                       (test first < test second) not }
+               testing: "String#< --> False"!
 end
