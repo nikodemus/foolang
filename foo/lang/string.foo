@@ -15,8 +15,8 @@ extend String
     method < other
         1 to: (self size min: other size)
           do: { |index|
-                let a = (self at: index) code.
-                let b = (other at: index) code.
+                let a = self at: index.
+                let b = other at: index.
                 a == b
                     ifFalse: { return a < b } }.
         self size < other size!

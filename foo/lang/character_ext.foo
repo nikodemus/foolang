@@ -31,6 +31,12 @@ import .object.Object
 extend Character
     is Object
 
+    method == other
+        self code == other code!
+
+    method < other
+        self code < other code!
+
     method isLowercase
         let code = self code.
         ASCII lowerA <= code and: code <= ASCII lowerZ!
