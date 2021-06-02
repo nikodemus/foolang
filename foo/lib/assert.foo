@@ -168,4 +168,16 @@ class Assert { output failed }
     method false: condition testing: thing
         self that: condition is: False testing: thing!
 
+    method true: condition
+        self that: condition is: True testing: "(anonymous test)"!
+
+    method false: condition
+        self that: condition is: False testing: "(anonymous test)"!
+
+end
+
+extend TestSuite
+    direct method run: command in: system
+        self runTests: (Assert reportingTo: system output)
+             in: system!
 end
