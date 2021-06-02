@@ -317,7 +317,7 @@ class AstClass { name superclass _slots _interfaces _directMethods _instanceMeth
             name: name
             superclass: superclass
             _slots: False
-            _interfaces: interfaces
+            _interfaces: ([superclass] append: interfaces)
             _directMethods: False
             _instanceMethods: False
             _allInterfaces: False!
@@ -352,10 +352,7 @@ class AstClass { name superclass _slots _interfaces _directMethods _instanceMeth
 
     method _allInterfaces: list
         (_allInterfaces is False) assert: "Oops, _allInterfaces already set!".
-        -- FIXME: this should be in constructor
-        self
-            ifSuperclass: { _allInterfaces = ([superclass] append: list) asArray }
-            ifNot: { _allInterfaces = list asArray }!
+        _allInterfaces = list asArray!
 
     method _directMethods: methods
         _directMethods = methods!
