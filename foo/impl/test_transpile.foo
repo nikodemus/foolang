@@ -60,7 +60,7 @@ interface TranspilerTest
             = system isUnix
                 ifTrue: { "unix" }
                 ifFalse: { "windows" }.
-        let buildCmd = "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall --std=c11 host/main.c host/system_{target}.c ext/dtoa.c".
+        let buildCmd = "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall -Werror --std=c11 host/main.c host/system_{target}.c ext/dtoa.c".
         let build = system command: buildCmd.
         self _reportStderr: build.
         build ok
@@ -1196,6 +1196,7 @@ class TestTranspileClass { assert system }
                   direct method run: command in: system
                       let test = Class new: \"test class\"
                                        layout: Layout empty
+                                       interfaces: []
                                        methods: [].
                       system output print: test name!
              end"
@@ -1220,10 +1221,56 @@ class TestTranspileClass { assert system }
                       let test = MyMetaclass
                                      new: \"test class\"
                                      layout: Layout empty
+                                     interfaces: []
                                      methods: [].
                       system output print: test ping!
              end"
             expect: "#pong"!
+
+    method test_Runtime_interface_inheritance
+        self transpile:
+            "import lang.layout.Layout
+             import lang.output
+             import lang.selector_ext
+
+             interface MyInterface
+                 direct method directPing
+                     #directPingFromInterface!
+                 method instancePing
+                     #instancePingFromInterface!
+             end
+
+             class Main \{\}
+                  direct method run: command in: system
+                      let testMetaclass1
+                        = Class
+                            new: \"*TestMetaClass1\"
+                            layout: Layout empty
+                            interfaces: [MyInterface classOf]
+                            methods: [].
+                      let testClass1
+                       = testMetaclass1
+                           new: \"*TestClass\"
+                           layout: Layout empty
+                           interfaces: []
+                           methods: [].
+                      system output println: testClass1 directPing.
+                      let testMetaclass2
+                        = Class
+                            new: \"*TestMetaClass1\"
+                            layout: Layout empty
+                            interfaces: [MyInterface]
+                            methods: [].
+                      let testClass2
+                       = testMetaclass2
+                           new: \"*TestClass\"
+                           layout: Layout empty
+                           interfaces: []
+                           methods: [].
+                      system output print: testClass2 instancePing!
+             end"
+            expect: "#directPingFromInterface
+#instancePingFromInterface"!
 
     method test_Object_methods_in_metaclass_work
         self transpile:
@@ -1243,11 +1290,13 @@ class TestTranspileClass { assert system }
                   direct method run: command in: system
                       let metaclass = Class new: \"test metaclass\"
                                             layout: Layout empty
+                                            interfaces: []
                                             methods: [(BlockMethod
                                                            selector: #ping
                                                            block: \{ |r| #pong \})].
                       let test = metaclass new: \"test class\"
                                            layout: Layout empty
+                                           interfaces: []
                                            methods: [].
                       system output print: test ping!
              end"
@@ -1498,7 +1547,7 @@ class TestTranspileInteger { assert system }
                          end"
              expect: "#<Integer 123>"!
 
-    method test0IntegerOps
+    method testIntegerOps
         -- Instead of importing lang.integer into N tests, we import a few more
         -- things and test all ops in one test. Somewhat Faster, since imports
         -- are SLOW at the moment.

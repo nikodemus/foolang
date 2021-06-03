@@ -393,6 +393,13 @@ struct FooClassList {
   struct FooClass* data[];
 };
 
+struct FooClassList* foo_ClassList_alloc(size_t size) {
+  struct FooClassList* list = foo_alloc(sizeof(struct FooClassList)
+                                        + size * sizeof(struct FooClass*));
+  list->size = size;
+  return list;
+}
+
 typedef void (*FooMarkFunction)(void* ptr);
 
 struct FooClass {
@@ -409,13 +416,21 @@ struct Foo foo_class_typecheck(struct FooContext* ctx,
                                 struct FooClass* class,
                                 struct Foo obj) {
   assert(class);
+  if (!obj.class) {
+    foo_panicf(ctx, "Object has no class to check: %p, wanted %s",
+               obj.datum.ptr, class->name->data);
+  }
   assert(obj.class);
   if (class == obj.class)
     return obj;
   struct FooClassList* list = obj.class->inherited;
-  for (size_t i = 0; i < list->size; i++)
-    if (class == list->data[i]) {
+  for (size_t i = 0; i < list->size; i++) {
+    if (class == list->data[i])
       return obj;
+  }
+  printf(" precedence list size: %zu\n", list->size);
+  for (size_t i = 0; i < list->size; i++) {
+    printf(" >> %s\n", list->data[i]->name->data);
   }
   foo_panicf(ctx, "Type error! Wanted: %s, got: %s",
              class->name->data, obj.class->name->data);
@@ -438,26 +453,52 @@ struct Foo foo_class_includes(struct FooContext* ctx,
   return foo_Boolean_new(false);
 }
 
-const struct FooMethod* foo_class_find_method(struct FooContext* ctx,
-                                               const struct FooClass* class,
-                                               const struct FooSelector* selector) {
-  assert(class);
-  FOO_DEBUG("/foo_class_find_method(%s#%s)", class->name->data, selector->name->data);
-  const struct FooMethod* fallback = NULL;
+const struct FooMethod* foo_class_find_method_in(const struct FooClass* class,
+                                                 const struct FooSelector* selector,
+                                                 const struct FooMethod** fallback)
+{
+  const bool trace = false;
+  if (trace)
+    FOO_XXX("foo_class_find_method_in(%s, #%s)",
+            class->name->data, selector->name->data);
   for (size_t i = 0; i < class->size; ++i) {
     const struct FooMethod* method = &class->methods[i];
+    if (trace)
+      FOO_XXX("  ? %s", method->selector->name->data);
     if (method->selector == selector) {
+      if (trace)
+        FOO_XXX("  #%s found!", selector->name->data);
       return method;
-    } else if (method->selector == &FOO_perform_with_) {
-      fallback = method;
+    } else if (!*fallback && method->selector == &FOO_perform_with_) {
+      if (trace)
+        FOO_XXX("  #perform:with: found! (fallback)");
+      *fallback = method;
     }
   }
-  if (fallback) {
-    FOO_DEBUG(" => fallback: %s", fallback->selector->name->data);
-    return fallback;
+  return NULL;
+}
+
+const struct FooMethod* foo_class_find_method(struct FooContext* ctx,
+                                              const struct FooClass* class,
+                                              const struct FooSelector* selector) {
+  assert(class);
+  const struct FooMethod* fallback = NULL;
+  const struct FooMethod* method = foo_class_find_method_in(class, selector, &fallback);
+  if (method) {
+    return method;
   }
+  const struct FooClassList* list = class->inherited;
+  for (size_t i = 0; i < list->size; i++) {
+    method = foo_class_find_method_in(list->data[i], selector, &fallback);
+    if (method) {
+      return method;
+    }
+  }
+  if (fallback)
+    return fallback;
+
   if (false) {
-    for (size_t i = 0; i < class->size; ++i) {
+    for (size_t i = 0; i < class->size; i++) {
       const struct FooMethod* method = &class->methods[i];
       printf("- %s\n", method->selector->name->data);
     }
@@ -696,7 +737,7 @@ struct Foo foo_method_doSelectors_(const struct FooMethod* method, struct FooCon
 struct Foo foo_method_classOf(const struct FooMethod* method, struct FooContext* ctx) {
   (void)method;
   return (struct Foo){ .class = ctx->receiver.class->metaclass,
-                        .datum = { .ptr = ctx->receiver.class } };
+                       .datum = { .ptr = ctx->receiver.class } };
 }
 
 struct Foo foo_method_includes_(const struct FooMethod* method, struct FooContext* ctx) {
@@ -962,6 +1003,12 @@ void foo_mark_class(void* ptr) {
   if (class->gc && foo_mark_live(class)) {
     foo_mark_bytes(class->name);
     foo_mark_class(class->metaclass);
+    foo_mark_live(class->inherited);
+    for (size_t i = 0; i < class->inherited->size; i++) {
+      struct FooClass* other = class->inherited->data[i];
+      if (other)
+        foo_mark_class(other);
+    }
     // foo_mark_ptr(class.inherited); // FIXME
     for (size_t i = 0; i < class->size; i++) {
       struct FooMethod* method = &class->methods[i];

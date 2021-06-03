@@ -789,7 +789,9 @@ class CTranspiler { output selectorMap closureFunctions
         let mangle = forMetaclass
                          ifTrue: { { |x| Name mangleMetaclass: x} }
                          ifFalse: { { |x| Name mangleClass: x } }.
-        let interfaces = anObject interfaceGlobals.
+        let interfaces = anObject interfaceGlobals asList.
+        forMetaclass
+            ifTrue: { interfaces add: (env global: "Class") }.
         output println: "struct FooClassList {inheritance} = \{".
         output println: "    .size = {interfaces size},".
         output println: "    .data = \{".
@@ -819,7 +821,8 @@ class CTranspiler { output selectorMap closureFunctions
         -- FIXME: Currently Any has it's own definition
         (directMethods find: { |each| each selector == #includes: }) is False
             ifTrue: { directMethods add: (self _generateClassIncludes: anInterface) }.
-        (anInterface instanceMethods reject: #isRequired)
+        let instanceMethods = anInterface instanceMethods reject: #isRequired.
+        instanceMethods
             do: { |each| self _writeMethod: each _for: anInterface name }.
         -- Interface metaclass
         -- FIXME: name says 'Foo interface', should be 'Foo class'!
@@ -830,7 +833,8 @@ class CTranspiler { output selectorMap closureFunctions
         let metaclassNameString = "{anInterface name} interface".
         output println: "struct FooClass {metaclassName} = ".
         output println: "\{".
-        output println: "    .name = &{self constantCName: metaclassNameString in: env},".
+        output println: "    .name = &{self constantCName: metaclassNameString in: env}, /* {metaclassNameString} */".
+        output println: "    .metaclass = &FooClass_Class,".
         output println: "    .inherited = &{metaclassInheritance},".
         output println: "    .mark = foo_mark_none,".
         output println: "    .gc = false,".
@@ -851,13 +855,22 @@ class CTranspiler { output selectorMap closureFunctions
         -- FIXME: for runtime instantiation of classes we need to add the instance methods here!
         output println: "struct FooClass {className} = ".
         output println: "\{".
-        output println: "    .name = &{self constantCName: anInterface name in: env},".
+        output println: "    .name = &{self constantCName: anInterface name in: env}, /* {anInterface name} */".
         output println: "    .metaclass = &{metaclassName},".
         output println: "    .inherited = &{classInheritance},".
         output println: "    .mark = foo_mark_none,".
         output println: "    .gc = false,".
-        output println: "    .size = 0,".
-        output println: "    .methods = \{}".
+        output println: "    .size = {instanceMethods size},".
+        output println: "    .methods = \{".
+        instanceMethods
+            do: { |each|
+                  output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
+                  output println: "                            .class = &{each methodHomeName},".
+                  output println: "                            .argCount = {each arity},".
+                  output println: "                            .frameSize = {each frameSize},".
+                  output println: "                            .function = &{each methodFunctionName},".
+                  output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
+        output println: "    }".
         output println: "};".
         output newline.
         -- Interface object
@@ -963,7 +976,7 @@ class CTranspiler { output selectorMap closureFunctions
                        let metaclassNameString = "{aClass name} class".
                        output println: "struct FooClass {metaclassName} = ".
                        output println: "\{".
-                       output println: "    .name = &{self constantCName: metaclassNameString in: env}, /* a */".
+                       output println: "    .name = &{self constantCName: metaclassNameString in: env}, /* {metaclassNameString} */".
                        output println: "    .metaclass = &FooClass_Class,".
                        output println: "    .inherited = &{metaclassInheritance},".
                        output println: "    .mark = foo_mark_class,".
@@ -988,7 +1001,7 @@ class CTranspiler { output selectorMap closureFunctions
         -- Debug println: "{aClass} => {aClass markFunction}".
         output println: "struct FooClass {className} = ".
         output println: "\{".
-        output println: "    .name = &{self constantCName: aClass name in: env}, /* b */".
+        output println: "    .name = &{self constantCName: aClass name in: env}, /* {aClass name} */".
         output println: "    .metaclass = &{metaclassName},".
         output println: "    .inherited = &{classInheritance},".
         output println: "    .mark = {aClass markFunction},".
