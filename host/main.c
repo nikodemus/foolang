@@ -428,10 +428,6 @@ struct Foo foo_class_typecheck(struct FooContext* ctx,
     if (class == list->data[i])
       return obj;
   }
-  printf(" precedence list size: %zu\n", list->size);
-  for (size_t i = 0; i < list->size; i++) {
-    printf(" >> %s\n", list->data[i]->name->data);
-  }
   foo_panicf(ctx, "Type error! Wanted: %s, got: %s",
              class->name->data, obj.class->name->data);
 }
