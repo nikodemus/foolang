@@ -1188,14 +1188,13 @@ class TestTranspileClass { assert system }
 
     method test_Instantiate_metaclass_at_runtime
         self transpile:
-            "import lang.layout.Layout
-             import lang.output
+            "import lang.output
              import lang.selector_ext
 
              class Main \{\}
                   direct method run: command in: system
                       let test = Class new: \"test class\"
-                                       layout: Layout empty
+                                       layout: Layout forClass
                                        interfaces: []
                                        methods: [].
                       system output print: test name!
@@ -1204,8 +1203,7 @@ class TestTranspileClass { assert system }
 
     method test_Instantiate_class_at_runtime
         self transpile:
-            "import lang.layout.Layout
-             import lang.output
+            "import lang.output
              import lang.selector_ext
 
              class MidClass < Class
@@ -1229,8 +1227,7 @@ class TestTranspileClass { assert system }
 
     method test_Runtime_interface_inheritance
         self transpile:
-            "import lang.layout.Layout
-             import lang.output
+            "import lang.output
              import lang.selector_ext
 
              interface MyInterface
@@ -1245,7 +1242,7 @@ class TestTranspileClass { assert system }
                       let testMetaclass1
                         = Class
                             new: \"*TestMetaClass1\"
-                            layout: Layout empty
+                            layout: Layout forClass
                             interfaces: [MyInterface classOf]
                             methods: [].
                       let testClass1
@@ -1258,13 +1255,13 @@ class TestTranspileClass { assert system }
                       let testMetaclass2
                         = Class
                             new: \"*TestMetaClass1\"
-                            layout: Layout empty
+                            layout: Layout forClass
                             interfaces: [MyInterface]
                             methods: [].
                       let testClass2
                        = testMetaclass2
                            new: \"*TestClass\"
-                           layout: Layout empty
+                           layout: Layout forClass
                            interfaces: []
                            methods: [].
                       system output print: testClass2 instancePing!
@@ -1272,10 +1269,45 @@ class TestTranspileClass { assert system }
             expect: "#directPingFromInterface
 #instancePingFromInterface"!
 
+    method test0_Runtime_class_instances
+        self transpile:
+            "import lang.output
+             import lang.selector_ext
+             import lang.array_ext
+
+             class BlockMethod \{ selector block \}
+                 method invoke: args on: receiver
+                     block apply: ([receiver] append: args)!
+             end
+
+             class Main \{\}
+                  direct method run: command in: system
+                      let layout = Layout empty.
+                      let testMetaclass
+                        = Class
+                            new: \"*TestMetaclass\"
+                            layout: Layout forClass
+                            interfaces: [Class]
+                            methods: [(BlockMethod
+                                        selector: (#new)
+                                        block: \{ |r|
+                                                  layout makeInstanceOf: r })].
+                      let testClass
+                        = testMetaclass
+                            new: \"*TestClass\"
+                            layout: layout
+                            interfaces: []
+                            methods: [(BlockMethod
+                                        selector: #ping
+                                        block: \{ |r|
+                                                  #pong })].
+                      system output print: testClass new ping!
+             end"
+            expect: "#pong"!
+
     method test_Object_methods_in_metaclass_work
         self transpile:
-            "import lang.layout.Layout
-             import lang.output
+            "import lang.output
              import lang.selector_ext
              import lang.boolean
              import lang.array
@@ -1289,7 +1321,7 @@ class TestTranspileClass { assert system }
              class Main \{\}
                   direct method run: command in: system
                       let metaclass = Class new: \"test metaclass\"
-                                            layout: Layout empty
+                                            layout: Layout forClass
                                             interfaces: []
                                             methods: [(BlockMethod
                                                            selector: #ping

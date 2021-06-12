@@ -1,0 +1,4 @@
+class Layout { nSlots }
+    direct method empty
+        self nSlots: 0!
+end

@@ -8,7 +8,7 @@ fi
 
 set -euo pipefail
 
-clang-format -i host/generated_*
+# clang-format -i host/generated_*
 
 clang \
     -o tmp_transpile_test.exe \
