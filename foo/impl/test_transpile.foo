@@ -1269,7 +1269,7 @@ class TestTranspileClass { assert system }
             expect: "#directPingFromInterface
 #instancePingFromInterface"!
 
-    method test0_Runtime_class_instances
+    method test_Runtime_class_instances
         self transpile:
             "import lang.output
              import lang.selector_ext

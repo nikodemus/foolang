@@ -162,9 +162,6 @@ end
 class SystemRandom {}
 end
 
-class Layout {}
-end
-
 define Builtins [
      Builtin
          type: Class

@@ -26,7 +26,6 @@ define WhitespaceASCII
      ASCII carriageReturn]!
 
 import .object.Object
-import .boolean
 
 -- FIXME: support unicode range
 class Character { code }
