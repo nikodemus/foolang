@@ -1,13 +1,13 @@
 define InstanceMethods {
      #new:layout:interfaces:methods:
-     -> { signature: [String, Any, Array, Array], vars: 1,
+     -> { signature: [String, Layout, Array, Array], vars: 1,
           body: "struct FooArray* methods = PTR(FooArray, ctx->frame[3].datum);
                  struct FooClass* newclass
                    = foo_alloc(sizeof(struct FooClass)
                                + methods->size * sizeof(struct FooMethod));
 
                  struct FooArray* interfaces = PTR(FooArray, ctx->frame[2].datum);
-                 struct FooClassList* inherited = foo_ClassList_alloc(interfaces->size);
+                 struct FooPointerList* inherited = foo_ClassList_alloc(interfaces->size);
                  for (size_t i = 0; i < interfaces->size; i++) \{
                      struct Foo obj = interfaces->data[i];
                      foo_class_typecheck(ctx, &FooClass_Class, obj);
@@ -17,7 +17,8 @@ define InstanceMethods {
                  newclass->name = PTR(FooBytes, ctx->frame[0].datum);
                  newclass->metaclass = PTR(FooClass, ctx->receiver.datum);
                  newclass->inherited = inherited;
-                 newclass->mark = foo_mark_none; /* FIXME: this is how we mark instances, should come from layout? */
+                 newclass->layout = PTR(FooLayout, ctx->frame[1].datum);
+                 newclass->mark = newclass->layout->mark;
                  newclass->gc = true;
                  newclass->size = 0;
 
@@ -33,7 +34,6 @@ define InstanceMethods {
                    inherited->data[i] = PTR(FooClass, class_object.datum);
                  }
 
-
                  for (size_t i = 0; i < methods->size; i++) \{
                    struct Foo method_object = methods->data[i];
                    struct Foo selector = foo_send(ctx, &FOO_selector, method_object, 0);
@@ -46,7 +46,7 @@ define InstanceMethods {
                    struct FooMethod* m = &newclass->methods[i];
                    m->class = newclass;
                    m->selector = PTR(FooSelector, selector.datum);
-                   m->argCount = method_arity; // selector_arity.datum.int64;
+                   m->argCount = method_arity;
                    m->frameSize = selector_arity.datum.int64;
                    m->function = foo_invoke_on;
                    m->object = method_object;

@@ -1,0 +1,33 @@
+define DirectMethods
+    {
+         #empty ->
+         {
+              signature: [], vars: 0,
+              body:
+              "return (struct Foo)\{ .class = &FooClass_Layout,
+                                     .datum = \{ .ptr = &TheEmptyLayout \}\};"
+         },
+         #forClass ->
+         {
+              signature: [], vars: 0,
+              body:
+              "struct FooLayout* layout = foo_FooLayout_forClass();
+               return (struct Foo)\{ .class = &FooClass_Layout,
+                                     .datum = \{ .ptr = layout \}\};"
+         }
+    }!
+
+define InstanceMethods
+    {
+         #makeInstanceOf: ->
+         {
+              signature: [Class], vars: 0,
+              body:
+              "struct FooClass* theClass = PTR(FooClass, ctx->frame[0].datum);
+               if (theClass->layout != &TheEmptyLayout) \{
+                   foo_panicf(ctx, \"Layout mismatch: %s layout is not the Layout\",
+                              theClass->name->data);
+               \}
+               return (struct Foo)\{ .class = theClass, .datum = \{ .ptr = NULL \}\};"
+        }
+    }!

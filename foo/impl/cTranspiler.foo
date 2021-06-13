@@ -11,6 +11,7 @@ import .transpiler.filepath
 import .transpiler.filestream
 import .transpiler.float
 import .transpiler.integer
+import .transpiler.layout
 import .transpiler.name.Name
 import .transpiler.output
 import .transpiler.selector
@@ -204,6 +205,12 @@ define Builtins [
          mark: "foo_mark_closure"
          directMethods: Dictionary new
          instanceMethods: closure.InstanceMethods,
+     Builtin
+         type: Class
+         value: Layout
+         mark: "foo_mark_layout"
+         directMethods: layout.DirectMethods
+         instanceMethods: layout.InstanceMethods,
      Builtin
          type: Class
          value: File
@@ -792,7 +799,9 @@ class CTranspiler { output selectorMap closureFunctions
         let interfaces = anObject interfaceGlobals asList.
         forMetaclass
             ifTrue: { interfaces add: (env global: "Class") }.
-        output println: "struct FooClassList {inheritance} = \{".
+        output println: "struct FooPointerList {inheritance} = \{".
+        output println: "    .gc = false,".
+        output println: "    .mark = foo_mark_class,".
         output println: "    .size = {interfaces size},".
         output println: "    .data = \{".
         interfaces

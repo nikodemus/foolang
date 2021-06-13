@@ -171,15 +171,6 @@ struct FooFileStream {
   FILE* ptr;
 };
 
-struct FooSlot {
-  const struct FooCString* name;
-};
-
-struct FooLayout {
-  size_t size;
-  struct FooSlot slots[];
-};
-
 struct FooCleanup;
 typedef void (*FooCleanupFunction)(struct FooContext*, struct FooCleanup*);
 
@@ -301,7 +292,7 @@ struct FooClass FooClass_Float;
 struct FooClass FooClass_Integer;
 struct FooClass FooClass_Selector;
 struct FooClass FooClass_String;
-struct FooClassList FooClassInheritance_Class;
+struct FooPointerList FooClassInheritance_Class;
 struct FooArray* FooArray_alloc(size_t size);
 struct Foo foo_Float_new(double f);
 struct Foo foo_Integer_new(int64_t n);
@@ -388,24 +379,49 @@ void foo_unbind(struct FooContext* sender, struct FooCleanup* cleanup) {
   sender->vars->data[unbind->index] = unbind->value;
 }
 
-struct FooClassList {
+typedef void (*FooMarkFunction)(void* ptr);
+void foo_mark_class(void* ptr);
+void foo_mark_none(void* ptr);
+
+struct FooPointerList {
+  bool gc;
+  FooMarkFunction mark;
   size_t size;
-  struct FooClass* data[];
+  void* data[];
 };
 
-struct FooClassList* foo_ClassList_alloc(size_t size) {
-  struct FooClassList* list = foo_alloc(sizeof(struct FooClassList)
-                                        + size * sizeof(struct FooClass*));
+struct FooPointerList* foo_ClassList_alloc(size_t size) {
+  struct FooPointerList* list
+    = foo_alloc(sizeof(struct FooPointerList)
+                + size * sizeof(void*));
+  list->gc = true;
+  list->mark = foo_mark_class;
   list->size = size;
   return list;
 }
 
-typedef void (*FooMarkFunction)(void* ptr);
+struct FooLayout {
+  FooMarkFunction mark;
+};
+
+struct FooLayout TheEmptyLayout = {
+  .mark = foo_mark_none
+};
+
+struct FooLayout* foo_FooLayout_forClass() {
+  // Empty layout can be shared, everything else needs to the unique: otherwise
+  // having layout to one class would allow direct access to instance variables
+  // of another class instance with shape.
+  struct FooLayout* layout = foo_alloc(sizeof(struct FooLayout));
+  layout->mark = foo_mark_class;
+  return layout;
+};
 
 struct FooClass {
   struct FooBytes* name;
   struct FooClass* metaclass;
-  struct FooClassList* inherited;
+  struct FooPointerList* inherited;
+  struct FooLayout* layout;
   FooMarkFunction mark;
   bool gc;
   size_t size;
@@ -415,18 +431,32 @@ struct FooClass {
 struct Foo foo_class_typecheck(struct FooContext* ctx,
                                 struct FooClass* class,
                                 struct Foo obj) {
+  const bool trace = false;
+  if (trace)
+    FOO_XXX("typecheck");
   assert(class);
+  if (trace)
+    FOO_XXX(" - want: %s", class->name->data);
   if (!obj.class) {
     foo_panicf(ctx, "Object has no class to check: %p, wanted %s",
                obj.datum.ptr, class->name->data);
   }
-  assert(obj.class);
-  if (class == obj.class)
+  if (trace)
+    FOO_XXX(" - have: %s", obj.class->name->data);
+  if (class == obj.class) {
+    if (trace)
+      FOO_XXX(" --> ok!");
     return obj;
-  struct FooClassList* list = obj.class->inherited;
+  }
+  if (trace)
+    FOO_XXX(" - checking inheritance");
+  struct FooPointerList* list = obj.class->inherited;
   for (size_t i = 0; i < list->size; i++) {
-    if (class == list->data[i])
+    if (class == list->data[i]) {
+      if (trace)
+        FOO_XXX(" --> ok!");
       return obj;
+    }
   }
   foo_panicf(ctx, "Type error! Wanted: %s, got: %s",
              class->name->data, obj.class->name->data);
@@ -441,7 +471,7 @@ struct Foo foo_class_includes(struct FooContext* ctx,
   assert(obj.class);
   if (class == obj.class)
     return foo_Boolean_new(true);
-  struct FooClassList* list = obj.class->inherited;
+  struct FooPointerList* list = obj.class->inherited;
   for (size_t i = 0; i < list->size; i++)
     if (class == list->data[i]) {
       return foo_Boolean_new(true);
@@ -483,7 +513,7 @@ const struct FooMethod* foo_class_find_method(struct FooContext* ctx,
   if (method) {
     return method;
   }
-  const struct FooClassList* list = class->inherited;
+  const struct FooPointerList* list = class->inherited;
   for (size_t i = 0; i < list->size; i++) {
     method = foo_class_find_method_in(list->data[i], selector, &fallback);
     if (method) {
@@ -649,7 +679,7 @@ void foo_print_backtrace(struct FooContext* context) {
 }
 
 struct Foo foo_activate(struct FooContext* context) {
-  FOO_DEBUG("/foo_activate")
+  FOO_DEBUG("/foo_activate(%u)", context->depth);
   if (context->depth > 200) {
     foo_panicf(context, "Stack blew up!");
   }
@@ -658,13 +688,17 @@ struct Foo foo_activate(struct FooContext* context) {
   context->ret = &ret;
   int jmp = setjmp(ret);
   if (jmp) {
-    FOO_DEBUG("/foo_activate -> non-local return from %s", context->method->selector->name->data);
+    FOO_DEBUG("/foo_activate(%u) -> non-local return from %s",
+              context->depth,
+              context->method->selector->name->data);
     return context->return_value;
   } else {
     FooMethodFunction function = context->method->function;
     assert(function);
     struct Foo res = function(context->method, context);
-    FOO_DEBUG("/foo_activate -> local return from %s", context->method->selector->name->data);
+    FOO_DEBUG("/foo_activate(%u) -> local return from %s",
+              context->depth,
+              context->method->selector->name->data);
     return res;
   }
 }
@@ -993,19 +1027,41 @@ void foo_mark_array(void* ptr) {
   EXIT_TRACE();
 }
 
-void foo_mark_class(void* ptr) {
+void foo_mark_layout(void* ptr) {
+  struct FooLayout* layout = ptr;
+  bool is_empty = layout == &TheEmptyLayout;
+  ENTER_TRACE("mark_layout (%s)", is_empty ? "empty" : "actual");
+  if (!is_empty) {
+    foo_mark_live(layout);
+  }
+  EXIT_TRACE();
+}
+
+void foo_mark_pointers(void* ptr) {
+  struct FooPointerList* list = ptr;
+  ENTER_TRACE("mark_pointers %p (size=%zu)", list, list->size);
+  if (list->gc && foo_mark_live(list)) {
+    for (size_t i = 0; i < list->size; i++) {
+      list->mark(list->data[i]);
+    }
+  }
+  EXIT_TRACE();
+}
+
+void foo_mark_class(void* ptr)
+{
   struct FooClass* class = ptr;
   ENTER_TRACE("mark_class %p (%s)", ptr, class->name->data);
   if (class->gc && foo_mark_live(class)) {
     foo_mark_bytes(class->name);
     foo_mark_class(class->metaclass);
-    foo_mark_live(class->inherited);
+    foo_mark_pointers(class->inherited);
+    foo_mark_layout(class->layout);
     for (size_t i = 0; i < class->inherited->size; i++) {
       struct FooClass* other = class->inherited->data[i];
       if (other)
         foo_mark_class(other);
     }
-    // foo_mark_ptr(class.inherited); // FIXME
     for (size_t i = 0; i < class->size; i++) {
       struct FooMethod* method = &class->methods[i];
       if (method->object.class)
@@ -1201,5 +1257,9 @@ struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size
   return (struct Foo){ .class = &FooClass_FileStream, .datum = { .ptr = stream } };
 }
 
-struct FooClassList FooClassInheritance_Class = { .size = 1,
-                                                  .data = { &FooClass_Class } };
+struct FooPointerList FooClassInheritance_Class = {
+  .gc = false,
+  .mark = foo_mark_class,
+  .size = 1,
+  .data = { &FooClass_Class }
+};
