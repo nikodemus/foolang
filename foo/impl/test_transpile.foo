@@ -1282,6 +1282,61 @@ class TestTranspileClass { assert system }
 
              class Main \{\}
                   direct method run: command in: system
+                      self testSlotlessIn: system.
+                      self testOneSlotIn: system.
+                      self testThreeSlotsIn: system!
+
+                  direct method testOneSlotIn: system
+                      let layout = Layout new: 1.
+                      let testMetaclass
+                        = Class
+                            new: \"*TestSlotsMetaclass\"
+                            layout: Layout forClass
+                            interfaces: [Class]
+                            methods: [(BlockMethod
+                                        selector: (#new:)
+                                        block: \{ |r a|
+                                                  layout makeInstanceOf: r
+                                                         with: a })].
+                      let testClass
+                        = testMetaclass
+                            new: \"*TestSlotsClass\"
+                            layout: layout
+                            interfaces: []
+                            methods: [(BlockMethod
+                                        selector: #ping
+                                        block: \{ |r|
+                                                   [layout at: 1 in: r] })].
+                      system output print: (testClass new: 123) ping!
+
+                  direct method testThreeSlotsIn: system
+                      let layout = Layout new: 3.
+                      let testMetaclass
+                        = Class
+                            new: \"*TestSlotsMetaclass\"
+                            layout: Layout forClass
+                            interfaces: [Class]
+                            methods: [(BlockMethod
+                                        selector: (#a:b:c:)
+                                        block: \{ |r a b c|
+                                                  layout makeInstanceOf: r
+                                                         with: a
+                                                         with: b
+                                                         with: c })].
+                      let testClass
+                        = testMetaclass
+                            new: \"*TestSlotsClass\"
+                            layout: layout
+                            interfaces: []
+                            methods: [(BlockMethod
+                                        selector: #ping
+                                        block: \{ |r|
+                                                  [layout at: 1 in: r,
+                                                   layout at: 2 in: r,
+                                                   layout at: 3 in: r] })].
+                      system output print: (testClass a: 10 b: 20 c: 30) ping!
+
+                  direct method testSlotlessIn: system
                       let layout = Layout empty.
                       let testMetaclass
                         = Class
@@ -1303,7 +1358,7 @@ class TestTranspileClass { assert system }
                                                   #pong })].
                       system output print: testClass new ping!
              end"
-            expect: "#pong"!
+            expect: "#pong[123][10, 20, 30]"!
 
     method test_Object_methods_in_metaclass_work
         self transpile:

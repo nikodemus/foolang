@@ -380,6 +380,7 @@ void foo_unbind(struct FooContext* sender, struct FooCleanup* cleanup) {
 }
 
 typedef void (*FooMarkFunction)(void* ptr);
+void foo_mark_array(void* ptr);
 void foo_mark_class(void* ptr);
 void foo_mark_none(void* ptr);
 
@@ -402,6 +403,7 @@ struct FooPointerList* foo_ClassList_alloc(size_t size) {
 
 struct FooLayout {
   FooMarkFunction mark;
+  size_t size;
 };
 
 struct FooLayout TheEmptyLayout = {
@@ -414,8 +416,19 @@ struct FooLayout* foo_FooLayout_forClass() {
   // of another class instance with shape.
   struct FooLayout* layout = foo_alloc(sizeof(struct FooLayout));
   layout->mark = foo_mark_class;
+  layout->size = 0;
   return layout;
-};
+}
+
+struct FooLayout* foo_FooLayout_new(size_t size) {
+  // Empty layout can be shared, everything else needs to the unique: otherwise
+  // having layout to one class would allow direct access to instance variables
+  // of another class instance with shape.
+  struct FooLayout* layout = foo_alloc(sizeof(struct FooLayout));
+  layout->mark = foo_mark_array;
+  layout->size = size;
+  return layout;
+}
 
 struct FooClass {
   struct FooBytes* name;
@@ -427,6 +440,25 @@ struct FooClass {
   size_t size;
   struct FooMethod methods[];
 };
+
+struct Foo foo_class_new(struct FooContext* ctx) {
+  struct FooClass* theClass = PTR(FooClass, ctx->frame[0].datum);
+  struct FooLayout* theLayout = PTR(FooLayout, ctx->receiver.datum);
+  if (theClass->layout != theLayout) {
+    foo_panicf(ctx, "Layout mismatch: invalid layout for %s",
+               theClass->name->data);
+  }
+  if (theLayout->size != ctx->size - 1) {
+    foo_panicf(ctx, "Layout mismatch: %s layout has %zu slots, using %zu slot constructor.",
+               theClass->name->data, theLayout->size, ctx->size - 1);
+  }
+  struct FooArray* new = FooArray_alloc(theLayout->size);
+  for (size_t i = 0; i < theLayout->size; i++) {
+    new->data[i] = ctx->frame[i+1];
+  }
+  return (struct Foo){ .class = theClass,
+                       .datum = { .ptr = new }};
+}
 
 struct Foo foo_class_typecheck(struct FooContext* ctx,
                                 struct FooClass* class,

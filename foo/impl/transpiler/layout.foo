@@ -14,6 +14,17 @@ define DirectMethods
               "struct FooLayout* layout = foo_FooLayout_forClass();
                return (struct Foo)\{ .class = &FooClass_Layout,
                                      .datum = \{ .ptr = layout \}\};"
+         },
+         #new: ->
+         {
+              signature: [Integer], vars: 0,
+              body:
+              "int64_t arg = ctx->frame[0].datum.int64;
+               if (arg < 0)
+                   foo_panicf(ctx, \"Negative layout size!\");
+               struct FooLayout* layout = foo_FooLayout_new((size_t)arg);
+               return (struct Foo)\{ .class = &FooClass_Layout,
+                                     .datum = \{ .ptr = layout \}\};"
          }
     }!
 
@@ -29,5 +40,52 @@ define InstanceMethods
                               theClass->name->data);
                \}
                return (struct Foo)\{ .class = theClass, .datum = \{ .ptr = NULL \}\};"
+        },
+        #makeInstanceOf:with: ->
+        {
+              signature: [Class, Any], vars: 0,
+              body:
+              "return foo_class_new(ctx);"
+        },
+        #makeInstanceOf:with:with: ->
+        {
+              signature: [Class, Any, Any], vars: 0,
+              body:
+              "return foo_class_new(ctx);"
+        },
+        #makeInstanceOf:with:with:with: ->
+        {
+              signature: [Class, Any, Any, Any], vars: 0,
+              body:
+              "return foo_class_new(ctx);"
+        },
+        #makeInstanceOf:with:with:with:with: ->
+        {
+              signature: [Class, Any, Any, Any, Any], vars: 0,
+              body:
+              "return foo_class_new(ctx);"
+        },
+        #makeInstanceOf:with:with:with:with:with: ->
+        {
+              signature: [Class, Any, Any, Any. Any, Any], vars: 0,
+              body:
+              "return foo_class_new(ctx);"
+        },
+        #at:in: ->
+        {
+             signature: [Integer, Any], vars: 0,
+             body:
+             "struct Foo receiver = ctx->frame[1];
+              struct FooLayout* theLayout = PTR(FooLayout, ctx->receiver.datum);
+              if (receiver.class->layout != theLayout) \{
+                  foo_panicf(ctx, \"Layout mismatch: invalid layout for %s\",
+                             receiver.class->name->data);
+              \}
+              int64_t index = ctx->frame[0].datum.int64;
+              if (index < 0 || theLayout->size < index) \{
+                  foo_panicf(ctx, \"Invalid slot index!\");
+              \}
+              struct FooArray* slots = PTR(FooArray, receiver.datum);
+              return slots->data[(size_t)(index - 1)];"
         }
     }!
