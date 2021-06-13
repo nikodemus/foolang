@@ -403,29 +403,34 @@ struct FooPointerList* foo_ClassList_alloc(size_t size) {
 
 struct FooLayout {
   FooMarkFunction mark;
+  bool gc;
   size_t size;
 };
 
 struct FooLayout TheEmptyLayout = {
-  .mark = foo_mark_none
+  .mark = foo_mark_none,
+  .gc = false,
+  .size = 0
 };
 
-struct FooLayout* foo_FooLayout_forClass() {
-  // Empty layout can be shared, everything else needs to the unique: otherwise
-  // having layout to one class would allow direct access to instance variables
-  // of another class instance with shape.
-  struct FooLayout* layout = foo_alloc(sizeof(struct FooLayout));
-  layout->mark = foo_mark_class;
-  layout->size = 0;
-  return layout;
-}
+struct FooLayout TheClassLayout = {
+  .mark = foo_mark_none,
+  .gc = false,
+  .size = 0
+};
 
 struct FooLayout* foo_FooLayout_new(size_t size) {
   // Empty layout can be shared, everything else needs to the unique: otherwise
   // having layout to one class would allow direct access to instance variables
   // of another class instance with shape.
+  //
+  // (The class layout is a special case, but user code should not be able
+  // to access it.)
+  if (size == 0)
+    return &TheEmptyLayout;
   struct FooLayout* layout = foo_alloc(sizeof(struct FooLayout));
   layout->mark = foo_mark_array;
+  layout->gc = true;
   layout->size = size;
   return layout;
 }
@@ -460,35 +465,27 @@ struct Foo foo_class_new(struct FooContext* ctx) {
                        .datum = { .ptr = new }};
 }
 
+bool foo_class_inherits(struct FooClass* want, struct FooClass* class) {
+  struct FooPointerList* list = class->inherited;
+  for (size_t i = 0; i < list->size; i++) {
+    struct FooClass* ptr = list->data[i];
+    if (want == ptr || foo_class_inherits(want, ptr)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 struct Foo foo_class_typecheck(struct FooContext* ctx,
-                                struct FooClass* class,
-                                struct Foo obj) {
-  const bool trace = false;
-  if (trace)
-    FOO_XXX("typecheck");
+                               struct FooClass* class,
+                               struct Foo obj) {
   assert(class);
-  if (trace)
-    FOO_XXX(" - want: %s", class->name->data);
   if (!obj.class) {
     foo_panicf(ctx, "Object has no class to check: %p, wanted %s",
                obj.datum.ptr, class->name->data);
   }
-  if (trace)
-    FOO_XXX(" - have: %s", obj.class->name->data);
-  if (class == obj.class) {
-    if (trace)
-      FOO_XXX(" --> ok!");
+  if (class == obj.class || foo_class_inherits(class, obj.class)) {
     return obj;
-  }
-  if (trace)
-    FOO_XXX(" - checking inheritance");
-  struct FooPointerList* list = obj.class->inherited;
-  for (size_t i = 0; i < list->size; i++) {
-    if (class == list->data[i]) {
-      if (trace)
-        FOO_XXX(" --> ok!");
-      return obj;
-    }
   }
   foo_panicf(ctx, "Type error! Wanted: %s, got: %s",
              class->name->data, obj.class->name->data);
@@ -501,14 +498,10 @@ struct Foo foo_class_includes(struct FooContext* ctx,
                                struct Foo obj) {
   assert(class);
   assert(obj.class);
-  if (class == obj.class)
+  if (class == obj.class || foo_class_inherits(class, obj.class))
     return foo_Boolean_new(true);
-  struct FooPointerList* list = obj.class->inherited;
-  for (size_t i = 0; i < list->size; i++)
-    if (class == list->data[i]) {
-      return foo_Boolean_new(true);
-  }
-  return foo_Boolean_new(false);
+  else
+    return foo_Boolean_new(false);
 }
 
 const struct FooMethod* foo_class_find_method_in(const struct FooClass* class,
@@ -1048,9 +1041,17 @@ void foo_mark_none(void* ptr) {
   (void)ptr;
 }
 
+void foo_mark_oops(void* ptr) {
+  foo_abort("Oops");
+}
+
 void foo_mark_array(void* ptr) {
   ENTER_TRACE("mark_array");
   struct FooArray* array = ptr;
+  uint8_t flag = *(uint8_t*)&array->gc;
+  if (flag != 1 && flag != 0) {
+    foo_abort("bad flag");
+  }
   if (array->gc && foo_mark_live(array)) {
     for (size_t i = 0; i < array->size; i++) {
       foo_mark_object(array->data[i]);
@@ -1062,8 +1063,12 @@ void foo_mark_array(void* ptr) {
 void foo_mark_layout(void* ptr) {
   struct FooLayout* layout = ptr;
   bool is_empty = layout == &TheEmptyLayout;
-  ENTER_TRACE("mark_layout (%s)", is_empty ? "empty" : "actual");
-  if (!is_empty) {
+  bool is_class = layout == &TheClassLayout;
+  (void)is_empty;
+  (void)is_class;
+  ENTER_TRACE("mark_layout (%s)",
+              is_empty ? "empty" : (is_class ? "class" : "object"));
+  if (layout->gc) {
     foo_mark_live(layout);
   }
   EXIT_TRACE();
@@ -1083,7 +1088,8 @@ void foo_mark_pointers(void* ptr) {
 void foo_mark_class(void* ptr)
 {
   struct FooClass* class = ptr;
-  ENTER_TRACE("mark_class %p (%s)", ptr, class->name->data);
+  ENTER_TRACE("mark_class %p (%s)", class, class->name->data);
+  assert(class);
   if (class->gc && foo_mark_live(class)) {
     foo_mark_bytes(class->name);
     foo_mark_class(class->metaclass);
@@ -1159,7 +1165,7 @@ static size_t allocation_bytes = 0;
 static size_t allocation_count = 0;
 
 // Intentionally low threshold so that GC gets exercised even for trivial tests.
-const size_t gc_threshold = 512;
+const size_t gc_threshold = 100 * 512;
 const bool gc_verbose = false;
 
 void foo_sweep() {

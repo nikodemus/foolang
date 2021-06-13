@@ -1,4 +1,64 @@
-define InstanceMethods {
+define InstanceMethods
+{
+     #subclass:interfaces:methods:
+     -> { signature: [String, Array, Array], vars: 1,
+          body: "struct FooArray* methods = PTR(FooArray, ctx->frame[2].datum);
+                 struct FooClass* newclass
+                   = foo_alloc(sizeof(struct FooClass)
+                               + methods->size * sizeof(struct FooMethod));
+                 struct FooClass* super = PTR(FooClass, ctx->receiver.datum);
+                 struct FooArray* interfaces = PTR(FooArray, ctx->frame[1].datum);
+                 struct FooPointerList* inherited = foo_ClassList_alloc(interfaces->size + 1);
+                 inherited->data[0] = super;
+                 for (size_t i = 0; i < interfaces->size; i++) \{
+                     struct Foo obj = interfaces->data[i];
+                     foo_class_typecheck(ctx, &FooClass_Class, obj);
+                     inherited->data[i+1] = obj.datum.ptr;
+                 \}
+
+                 if (!super->layout) \{
+                     assert(super->name);
+                     assert(super->name->data);
+                     foo_panicf(ctx, \"Superclass has no layout: %s\", super->name->data);
+                 \}
+
+                 newclass->name = PTR(FooBytes, ctx->frame[0].datum);
+                 newclass->metaclass = super->metaclass;
+                 newclass->inherited = inherited;
+                 newclass->layout = super->layout;
+                 newclass->mark = super->mark;
+                 newclass->gc = true;
+                 newclass->size = 0;
+
+                 /* Make the new class visible to GC. */
+                 ctx->frame[3] = (struct Foo)
+                   \{ .class = newclass->metaclass,
+                      .datum = \{ .ptr = newclass } };
+
+                 for (size_t i = 0; i < methods->size; i++) \{
+                   struct Foo method_object = methods->data[i];
+                   struct Foo selector = foo_send(ctx, &FOO_selector, method_object, 0);
+                   foo_class_typecheck(ctx, &FooClass_Selector, selector);
+
+                   struct Foo selector_arity = foo_send(ctx, &FOO_arity, selector, 0);
+                   foo_class_typecheck(ctx, &FooClass_Integer, selector_arity);
+                   int64_t method_arity = selector_arity.datum.int64 - 1;
+
+                   struct FooMethod* m = &newclass->methods[i];
+                   m->class = newclass;
+                   m->selector = PTR(FooSelector, selector.datum);
+                   m->argCount = method_arity;
+                   m->frameSize = selector_arity.datum.int64;
+                   m->function = foo_invoke_on;
+                   m->object = method_object;
+
+                   /* Update the size once the method is in place,
+                      so GC sees it. */
+                   newclass->size++;
+                 }
+                 return ctx->frame[3];"
+        },
+
      #new:layout:interfaces:methods:
      -> { signature: [String, Layout, Array, Array], vars: 1,
           body: "struct FooArray* methods = PTR(FooArray, ctx->frame[3].datum);
@@ -22,17 +82,10 @@ define InstanceMethods {
                  newclass->gc = true;
                  newclass->size = 0;
 
-                 /* Make the new class visible to GC. Null pointers
-                  * in inheritance list are allowed by GC. */
+                 /* Make the new class visible to GC. */
                  ctx->frame[4] = (struct Foo)
                    \{ .class = newclass->metaclass,
                       .datum = \{ .ptr = newclass } };
-
-                 for (size_t i = 0; i < interfaces->size; i++) \{
-                   struct Foo class_object = interfaces->data[i];
-                   foo_class_typecheck(ctx, &FooClass_Class, class_object);
-                   inherited->data[i] = PTR(FooClass, class_object.datum);
-                 }
 
                  for (size_t i = 0; i < methods->size; i++) \{
                    struct Foo method_object = methods->data[i];

@@ -7,14 +7,6 @@ define DirectMethods
               "return (struct Foo)\{ .class = &FooClass_Layout,
                                      .datum = \{ .ptr = &TheEmptyLayout \}\};"
          },
-         #forClass ->
-         {
-              signature: [], vars: 0,
-              body:
-              "struct FooLayout* layout = foo_FooLayout_forClass();
-               return (struct Foo)\{ .class = &FooClass_Layout,
-                                     .datum = \{ .ptr = layout \}\};"
-         },
          #new: ->
          {
               signature: [Integer], vars: 0,

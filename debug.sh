@@ -10,6 +10,10 @@ set -euo pipefail
 
 # clang-format -i host/generated_*
 
+# This tricks clang into using the internal symbolizer, leaving path
+# empty leaves the addresses unsymbolized.
+export ASAN_SYMBOLIZER_PATH=0
+
 clang \
     -o tmp_transpile_test.exe \
     -fsanitize=address -fsanitize=undefined \
