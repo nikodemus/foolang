@@ -1193,8 +1193,7 @@ class TestTranspileClass { assert system }
 
              class Main \{\}
                   direct method run: command in: system
-                      let test = Class new: \"test class\"
-                                       layout: Layout forClass
+                      let test = Class subclass: \"test class\"
                                        interfaces: []
                                        methods: [].
                       system output print: test name!
@@ -1241,8 +1240,7 @@ class TestTranspileClass { assert system }
                   direct method run: command in: system
                       let testMetaclass1
                         = Class
-                            new: \"*TestMetaClass1\"
-                            layout: Layout forClass
+                            subclass: \"*TestMetaClass1\"
                             interfaces: [MyInterface classOf]
                             methods: [].
                       let testClass1
@@ -1254,14 +1252,12 @@ class TestTranspileClass { assert system }
                       system output println: testClass1 directPing.
                       let testMetaclass2
                         = Class
-                            new: \"*TestMetaClass1\"
-                            layout: Layout forClass
+                            subclass: \"*TestMetaClass1\"
                             interfaces: [MyInterface]
                             methods: [].
                       let testClass2
                        = testMetaclass2
-                           new: \"*TestClass\"
-                           layout: Layout forClass
+                           subclass: \"*TestClass\"
                            interfaces: []
                            methods: [].
                       system output print: testClass2 instancePing!
@@ -1290,9 +1286,8 @@ class TestTranspileClass { assert system }
                       let layout = Layout new: 1.
                       let testMetaclass
                         = Class
-                            new: \"*TestSlotsMetaclass\"
-                            layout: Layout forClass
-                            interfaces: [Class]
+                            subclass: \"*TestSlotsMetaclass\"
+                            interfaces: []
                             methods: [(BlockMethod
                                         selector: (#new:)
                                         block: \{ |r a|
@@ -1313,9 +1308,8 @@ class TestTranspileClass { assert system }
                       let layout = Layout new: 3.
                       let testMetaclass
                         = Class
-                            new: \"*TestSlotsMetaclass\"
-                            layout: Layout forClass
-                            interfaces: [Class]
+                            subclass: \"*TestSlotsMetaclass\"
+                            interfaces: []
                             methods: [(BlockMethod
                                         selector: (#a:b:c:)
                                         block: \{ |r a b c|
@@ -1340,9 +1334,8 @@ class TestTranspileClass { assert system }
                       let layout = Layout empty.
                       let testMetaclass
                         = Class
-                            new: \"*TestMetaclass\"
-                            layout: Layout forClass
-                            interfaces: [Class]
+                            subclass: \"*TestMetaclass\"
+                            interfaces: []
                             methods: [(BlockMethod
                                         selector: (#new)
                                         block: \{ |r|
@@ -1375,8 +1368,7 @@ class TestTranspileClass { assert system }
 
              class Main \{\}
                   direct method run: command in: system
-                      let metaclass = Class new: \"test metaclass\"
-                                            layout: Layout forClass
+                      let metaclass = Class subclass: \"test metaclass\"
                                             interfaces: []
                                             methods: [(BlockMethod
                                                            selector: #ping

@@ -3,6 +3,7 @@ import .array.Array
 import .array_ext
 import .block.Block
 import .block.Function
+import .block_ext
 import .boolean.Boolean
 import .byteArray.ByteArray
 import .character_ext.Character

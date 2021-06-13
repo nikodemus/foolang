@@ -789,6 +789,19 @@ class CTranspiler { output selectorMap closureFunctions
             interleaving: { output print: ", " }.
         output print: ")"!
 
+    method _generateLayout: aClass
+        aClass isBuiltin
+            ifTrue: { return "NULL" }. -- FIXME: proper builtin layouts
+        -- FIXME: Since user doesn't have access to these layouts,
+        -- could/should intern them.
+        let name = "FooLayout_{aClass name}".
+        output println: "struct FooLayout {name} = \{".
+        output println: "    .mark = foo_mark_oops,".
+        output println: "    .gc = false,".
+        output println: "    .size = {aClass slots size}".
+        output println: "};".
+        return "&{name}"!
+
     method _generateInheritance: anObject forMetaclass: forMetaclass
         let inheritance = forMetaclass
                               ifTrue: { "FooMetaclassInheritance_{anObject name}" }
@@ -845,6 +858,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "    .name = &{self constantCName: metaclassNameString in: env}, /* {metaclassNameString} */".
         output println: "    .metaclass = &FooClass_Class,".
         output println: "    .inherited = &{metaclassInheritance},".
+        output println: "    .layout = &TheClassLayout,".
         output println: "    .mark = foo_mark_none,".
         output println: "    .gc = false,".
         output println: "    .size = {directMethods size},".
@@ -867,6 +881,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "    .name = &{self constantCName: anInterface name in: env}, /* {anInterface name} */".
         output println: "    .metaclass = &{metaclassName},".
         output println: "    .inherited = &{classInheritance},".
+        output println: "    .layout = NULL,". -- FIXME
         output println: "    .mark = foo_mark_none,".
         output println: "    .gc = false,".
         output println: "    .size = {instanceMethods size},".
@@ -988,6 +1003,7 @@ class CTranspiler { output selectorMap closureFunctions
                        output println: "    .name = &{self constantCName: metaclassNameString in: env}, /* {metaclassNameString} */".
                        output println: "    .metaclass = &FooClass_Class,".
                        output println: "    .inherited = &{metaclassInheritance},".
+                       output println: "    .layout = &TheClassLayout,".
                        output println: "    .mark = foo_mark_class,".
                        output println: "    .gc = false,".
                        output println: "    .size = {directMethods size},".
@@ -1007,12 +1023,16 @@ class CTranspiler { output selectorMap closureFunctions
         let classInheritance = isTheClass
                                    ifTrue: { "FooClassInheritance_Class" }
                                    ifFalse: { self _generateInheritance: aClass forMetaclass: False }.
+        let layout = isTheClass
+                         ifTrue: { "&TheClassLayout" }
+                         ifFalse: { self _generateLayout: aClass }.
         -- Debug println: "{aClass} => {aClass markFunction}".
         output println: "struct FooClass {className} = ".
         output println: "\{".
         output println: "    .name = &{self constantCName: aClass name in: env}, /* {aClass name} */".
         output println: "    .metaclass = &{metaclassName},".
         output println: "    .inherited = &{classInheritance},".
+        output println: "    .layout = {layout},".
         output println: "    .mark = {aClass markFunction},".
         output println: "    .gc = false,".
         output println: "    .size = {instanceMethods size + 1},".

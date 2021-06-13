@@ -1,0 +1,6 @@
+import .block.Block
+
+extend Block
+    method onPanic: other
+        self value!
+end
