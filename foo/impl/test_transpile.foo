@@ -1303,7 +1303,8 @@ class TestTranspileClass { assert system }
                             methods: [].
                       let testClass2
                        = testMetaclass2
-                           subclass: \"*TestClass\"
+                           new: \"*TestClass\"
+                           layout: Layout empty
                            interfaces: []
                            methods: [].
                       system output print: testClass2 instancePing!
