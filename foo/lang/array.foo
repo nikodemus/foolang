@@ -17,7 +17,7 @@ class Specialized { containerClass elementType }
         (containerClass includes: thing)
             ifTrue: { thing elementType is elementType }!
     method typecheck: thing
-        self includes: thing
+        (self includes: thing)
              ifFalse: { panic "TYPE OOPSIE: {thing} is not {self}!"
                         -- TypeError raise: thing expected: self
                         }.
