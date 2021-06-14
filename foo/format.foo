@@ -1,0 +1,21 @@
+import .impl.parser.Parser
+import .impl.syntaxPrinter.SyntaxPrinter
+
+class Main {}
+    direct method run: files in: system
+        files
+            do: { |file|
+                  let path = system files / file.
+                  system output println: "Formatting: {path}".
+                  self format: path }!
+
+    direct method format: path
+        let source = path readString.
+        let syntaxList = Parser parseDefinitions: source.
+        path forWrite
+            open: { |stream|
+                    syntaxList
+                        do: { |each|
+                              SyntaxPrinter print: each to: stream }
+                        interleaving: { stream newline } }!
+end
