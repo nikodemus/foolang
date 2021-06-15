@@ -1,0 +1,9 @@
+import .impl.environment.Environment
+
+class Main {}
+    direct method run: command in: system
+        let path = system files / command first.
+        let env = Environment load: path readString.
+        (env global: "Main")
+            value run: command rest in: system!
+end
