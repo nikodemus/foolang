@@ -233,9 +233,6 @@ class AstInterpreter { context process }
                                     source: aSend source
                                     context: context }} !
 
-    method visitComment: aComment
-        aComment value visitBy: self!
-
     method visitBlock: aBlock
         -- Debug println: "\nblock args: {aBlock argumentCount}, size: {aBlock frameSize}".
         AstBlockClosure

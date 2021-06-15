@@ -6,7 +6,6 @@ interface AstVisitor
     required method visitSeq: aSeq
     required method visitReturn: aReturn
     required method visitSend: aSend
-    required method visitComment: aComment
     required method visitBlock: aBlock
     required method visitSelfClass: aSelf
     required method visitSelfInstance: aSelf

@@ -1174,11 +1174,6 @@ class CTranspiler { output selectorMap closureFunctions
              _for: ret value.
         output print: ")"!
 
-    method visitComment: aComment
-        -- Tracer trace: #visitComment:.
-        -- FIXME: Include comments in generated source.
-        aComment value visitBy: self!
-
     method visitConstant: aConstant
         -- Tracer visitConstant: aConstant.
         self _writeValue: aConstant value _in: aConstant env _to: output!
