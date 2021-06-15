@@ -29,28 +29,120 @@ class TestFoolang { system ok onFailure }
             eval: "TestInterface3 includes: (TestInterface3Impl new foo)"
             expect: True!
 
-    method testInterface4
-        -- pretty-print
+    method test1_Line_comments_before_define
+        self parse: "-- foo
+                     -- bar
+                     define Foo 1!"
+            expect:
+                "-- foo
+-- bar
+define Foo 1!
+"!
+
+    method test1_Format_class_with_just_interfaces
+        self parse: "class TestInterface5Impl \{}
+                        is Object
+                        is TestInterface5
+                    end"
+            expect:
+                "class TestInterface5Impl \{}
+    is Object
+    is TestInterface5
+end
+"!
+
+    method test1_Line_comments_before_class
+        self parse: "-- foo
+                     -- bar
+                     class Foo \{\}
+                     end"
+            expect:
+                "-- foo
+-- bar
+class Foo \{\}
+end
+"!
+
+    method test_Line_comments_before_interface
+        self parse: "-- foo
+                     -- bar
+                     interface Foo
+                     end"
+            expect:
+                "-- foo
+-- bar
+interface Foo
+end
+"!
+
+    method test_Line_comments_before_extend
+        self parse: "-- foo
+                     -- bar
+                     extend Foo
+                     end"
+            expect:
+                "-- foo
+-- bar
+extend Foo
+end
+"!
+
+    method test_Multiple_line_comments_inside_class
+        self parse: "class Foo \{\}
+                        -- foo
+                        -- bar
+                        method quux
+                           42!
+                     end"
+            expect:
+                "class Foo \{\}
+
+    -- foo
+    -- bar
+
+    method quux
+        42!
+end
+"!
+
+    method test_Interface_format
         self parse: "interface TestInterface4
                         required direct method fooR
+                        required direct method fooRR
                         direct method foo
                             42!
+                        direct method foo2
+                            42!
                         required method barR
+                        required method barRR
                         method bar
+                            42!
+                        method bar2
                             42!
                     end"
              expect: "interface TestInterface4
     required direct method fooR
+    required direct method fooRR
+
     required method barR
+    required method barRR
+
     direct method foo
         42!
+
+    direct method foo2
+        42!
+
     method bar
+        42!
+
+    method bar2
         42!
 end
 "
                 !
 
-    method testInterface5
+    method test_Interface_required_method_missing_detected
         self load: "interface TestInterface5
                         required method fooxx
                         method bar
@@ -236,91 +328,173 @@ end
             eval: "ReturnTest test: True"
             expect: 42!
 
-    method testComment1
-        -- Prefix comment to let value
+    method test_Prefix_comment_to_let_value_format
         self
             parse: "           let x = -- boop\n 21.     x     *  2"
-            expect: "let x = -- boop\n        21.\nx * 2"!
+            expect: "let x = -- boop\n        21.\nx * 2\n"!
 
-    method testComment2
-        -- Suffix comment to let value
+    method test1_Suffix_comment_to_let_value_format
         self
             parse: "let x = 21 -- boop\n.\nx * 2"
-            expect: "let x = 21. -- boop\nx * 2".
+            expect: "let x = 21. -- boop\nx * 2\n".
         self
             parse: "let x = 21. -- boop\n\nx * 2"
-            expect: "let x = 21. -- boop\nx * 2"!
+            expect: "let x = 21. -- boop\nx * 2\n"!
 
-    method testComment3
-        -- Prefix comment in sequence
+    method test_Prefix_comment_in_sequence_format
         self
             parse: "    doo daa.\n    -- boop\n   self bar. \n x * 2"
-            expect: "doo daa.\n-- boop\nself bar.\nx * 2"!
+            expect: "doo daa.\n-- boop\nself bar.\nx * 2\n"!
 
-    method testComment4
-        -- Suffix comment in sequence
+    method test1_Suffix_comment_in_sequence_format
         self
             parse: "self bar. -- boop\n x * 2"
-            expect: "self bar. -- boop\nx * 2".
-        self
-            parse: "self bar -- boop\n. x * 2"
-            expect: "self bar. -- boop\nx * 2"!
+            expect: "self bar. -- boop\nx * 2\n"!
 
-    method testComment5
-        -- Prefix comment to class
+    method test1_Suffix_comment_to_keyword_message_in_sequence_format
+        self
+            parse: "self bleep: bar. -- boop\n x * 2"
+            expect: "self bleep: bar. -- boop\nx * 2\n"!
+
+    method test_Prefix_comment_to_class_format
         self
             parse: "-- boop\n    class   X   \{}   end"
-            expect: "-- boop\nclass X \{}\nend\n"!
+            expect: "-- boop
+class X \{\}
+end
+"!
 
-    method testComment6
-        -- Suffix comment to class
+    method test1_Suffix_comment_to_class_format
         self
             parse: "class   X   \{}   end -- boop"
             expect: "class X \{}\nend -- boop\n"!
 
-    method testComment7
-        -- Suffix comment to method signature == prefix comment to body
+    method test1_Prefix_comment_to_method_body_format
         self
-            parse: "class   X   \{}method bar -- boop\n42!\nend"
-            expect: "class X \{}\n    method bar\n        -- boop\n        42!\nend\n"!
+            parse: "class   X   \{}method bar -- boop
+42! end"
+            expect: "class X \{}
+    method bar
+        -- boop
+        42!
+end
+"!
 
-    method testComment8
-        -- Suffix comment to method body
+    method test0_Format_suffix_comment_to_method_body
         self
-            parse: "class X \{} method bar\n42! -- boop\nend"
-            expect: "class X \{}\n    method bar\n        42! -- boop\nend\n"!
+            parse: "class X \{}
+                        method bar
+                            42! -- boop
+                    end"
+            expect: "class X \{}
+    method bar
+        42! -- boop
+end
+"!
 
-    method testComment9
-        -- Prefix comment to method (does not work currently!)
+    method test0_Format_let_body_in_method
+        self
+            parse: "class Droop \{\}
+                        method bar
+                            let x = 123.
+                            x + x!
+                    end"
+            expect: "class Droop \{\}
+    method bar
+        let x = 123.
+        x + x!
+end
+"!
+
+    method test1_Format_suffix_comment_to_define
+        self
+            parse: "define ThisOne 312! -- oh yeah"
+            expect: "define ThisOne 312! -- oh yeah\n"!
+
+    method test_Prefix_comment_to_method_format
         self
             parse: "class X \{} -- boop\n method bar\n 42!\n end\n"
-            expect: "class X \{}\n    -- boop\n    method bar\n        42!\nend\n"!
+            expect: "class X \{}
 
-    method testComment10
-        -- block comment
+    -- boop
+
+    method bar
+        42!
+end
+"!
+
+    method test1_Format_comments_between_keyword_and_receiver
+        self parse: "asdas
+                                 -- deep
+                                 -- stuff
+                                 ifSo: ayay
+                                 ifElse: block"
+            expect: "asdas -- deep
+      -- stuff
+    ifSo: ayay
+    ifElse: block
+"!
+
+    method test1_Format_comments_between_unary_and_receiver
+        self parse: "asdas
+                                 -- deep
+                                 -- stuff
+                            doopdoop"
+            expect: "asdas -- deep
+      -- stuff
+    doopdoop
+"!
+
+    method test1_Format_single_comment_between_unary_and_receiver
+        self parse: "asdas -- deep
+                            doopdoop"
+            expect: "asdas -- deep
+    doopdoop
+"!
+
+    method test_Format_inside_class_comment_after_interface
+        self parse: "class Foo \{\}
+                        is A
+                        is B
+
+                        -- This is important
+                        -- This too
+
+                        method asdads
+                            129!
+                     end"
+            expect: "class Foo \{\}
+    is A
+    is B
+
+    -- This is important
+    -- This too
+
+    method asdads
+        129!
+end
+"!
+
+    method test_Block_comment_in_eval
         self eval: "---
                     This is a test.
                     ---
                     42"
             expect: 42!
 
-    method testComment11
-        -- block comment
+    method test_Block_comment_format
         self parse: "---\nThis is a test.\n---\n      42"
-            expect: "---\nThis is a test.\n---\n42"!
+            expect: "---\nThis is a test.\n---\n42\n"!
 
-    method testComment12
-        -- Line comment without space after
+    method test_Line_comment_in_eval
         self eval: "--> 42\n 42"
              expect: 42!
 
-    method testComment13
-        -- Block comment without space after
+    method test_Block_comment_without_space_in_eval
         self eval: "---XXX 42--- 42"
              expect: 42!
 
-    method testComment14
-        -- long comment fences
+    method test_Long_comment_fences_in_eval
         self eval: "----
                     --- This is a test.
                     ----
@@ -668,7 +842,7 @@ end
                        (p description == "foo") assert.
                        return True }!
 
-    method testExtend1
+    method test_Can_extend_class_with_direct_method
         self load: "class Foo \{}
                     end
                     extend Foo
@@ -678,7 +852,7 @@ end
             eval: "Foo bar"
             expect: 42!
 
-    method testExtend2
+    method test_Can_extend_class_with_instance_method
         self load: "class Foo \{}
                     end
                     extend Foo
@@ -688,7 +862,7 @@ end
             eval: "Foo new bar"
             expect: 42!
 
-    method testExtend3
+    method test_Can_extend_interface_with_interface
         self load: "interface Foo
                     end
                     extend Integer

@@ -97,29 +97,10 @@ class TokenString { string first last }
         { next < string size }
             whileTrue: { next = self _literalFrom: next into: parts.
                          next = self _interpolatedFrom: next into: parts }.
-        -- Debug println: "parts: {parts}".
-        parts = parts
-            collect: { |each|
-                       (SyntaxLiteral includes: each)
-                           ifTrue: { each }
-                           ifFalse: { let value
-                                          = SyntaxUnary
-                                              receiver: each
-                                              selector: #value
-                                              source: "<interpolation #value>".
-                                      SyntaxUnary
-                                          receiver: value
-                                          selector: #toString
-                                          source: "<interpolation #toString" } }.
-        (parts size > 0) assert.
-        let res = parts pop.
-        { parts isEmpty }
-            whileFalse: { res = SyntaxKeyword
-                              receiver: (parts pop)
-                              selector: (#append:)
-                              arguments: [res]
-                              source: "<interpolation #append>" }.
-        res!
+        (parts size is 1 and: (SyntaxLiteral includes: parts first))
+            ifTrue: { return parts first }.
+        SyntaxStringInterpolation
+            parts: parts!
 end
 
 class TokenFloat { string first last }

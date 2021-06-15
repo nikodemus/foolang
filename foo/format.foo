@@ -12,10 +12,10 @@ class Main {}
     direct method format: path
         let source = path readString.
         let syntaxList = Parser parseDefinitions: source.
-        path forWrite
+        path truncateExisting forWrite
             open: { |stream|
                     syntaxList
                         do: { |each|
-                              SyntaxPrinter print: each to: stream }
-                        interleaving: { stream newline } }!
+                              -- stream println: "-- {each classOf name}".
+                              SyntaxPrinter print: each to: stream } }!
 end

@@ -91,10 +91,23 @@ problem: {err description}" }.
                   with: { |out|
                           syntaxList1 do: { |syntax| SyntaxPrinter print: syntax to: out } }.
         printed == pretty
-            ifFalse: { Error raise: "print inconsistent with desired pretty-print!
+            ifFalse: { let printed2 = printed replace: "\n" with: "|\n".
+                       let pretty2 = pretty replace: "\n" with: "|\n".
+                       printed size == pretty size
+                           ifTrue: { 1 to: pretty size
+                                       do: { |i|
+                                             let x = printed at: i.
+                                             let y = pretty at: i.
+                                             x == y
+                                                 ifFalse: { Error raise: "print inconsistent with desired pretty-print!
 source:\n{source}
-printed:\n{printed}
-pretty:\n{pretty}" }!
+printed({x} at: {i}):\n{printed2}
+pretty({y} at: {i}):\n{pretty2}" } }.
+                                    panic "Never" }
+                           ifFalse: { Error raise: "print inconsistent with desired pretty-print!
+source:\n{source}
+printed(size: {printed size}):\n{printed2}
+pretty(size: {pretty size}):\n{pretty2}" } }!
 
     method eval: exprSource expect: expected
         self checkParsingBy: { |source| Parser parseExpressions: source }

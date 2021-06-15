@@ -26,7 +26,7 @@ interface Syntax
 
     method withSuffixComment: comment::String commentSource: source
         SyntaxSuffixComment
-            comment: comment
+            comments: (List with: comment)
             value: self
             source: source!
 
@@ -43,6 +43,18 @@ interface Syntax
 
     method toString
         self displayString!
+
+    method isSuffixComment
+        False!
+
+    method isLiteral
+        False!
+
+    method isSimple
+        self isLeaf!
+
+    method isLeaf
+        self isLiteral!
 
     method displayOn: stream
         stream print: "#<{self classOf name} ".
@@ -66,6 +78,9 @@ interface Literal
 
     method visitBy: visitor
         visitor visitLiteral: self!
+
+    method isLiteral
+        True!
 
     method parts
         [self value]!
@@ -102,6 +117,16 @@ class SyntaxBinaryLiteral { value }
                 do: { value toString }!
 end
 
+class SyntaxStringInterpolation { parts }
+    is Syntax
+
+    method isLeaf
+        True!
+
+    method visitBy: visitor
+        visitor visitStringInterpolation: self!
+end
+
 class SyntaxValueTypeDeclaration { value type }
     is Syntax
 
@@ -121,6 +146,9 @@ end
 
 class SyntaxArray { entries }
     is SyntaxCollection
+
+    method isSimple
+        entries allSatisfy: #isLeaf!
 
     method visitBy: visitor
         visitor visitArray: self!
@@ -156,6 +184,9 @@ class SyntaxReturn { value }
     method visitBy: visitor
         visitor visitReturn: self!
 
+    method isSimple
+        value isSimple!
+
     method parts
         [value]!
 end
@@ -165,6 +196,9 @@ class SyntaxPanic { value }
 
     method visitBy: visitor
         visitor visitPanic: self!
+
+    method isSimple
+        value isSimple!
 
     method parts
         [value]!
@@ -191,15 +225,25 @@ class SyntaxPrefixComment { comment value source fence }
         "#<SyntaxPrefixComment value: {value}>"!
 end
 
-class SyntaxSuffixComment { comment value source }
+class SyntaxSuffixComment { comments value source }
     is Syntax
+
+    method withSuffixComment: comment::String commentSource: source
+        comments add: comment.
+        self!
 
     method visitBy: visitor
         visitor visitSuffixComment: self!
 
+    method isSuffixComment
+        True!
+
+    method isSimple
+        value isSimple!
+
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
-        [comment, value]!
+        [comments, value]!
 
     method displayString
         "#<SyntaxSuffixComment value: {value}>"!
@@ -253,6 +297,9 @@ class SyntaxUnary { receiver selector source }
     method visitBy: visitor
         visitor visitUnaryMessage: self!
 
+    method isSimple
+        receiver isSimple!
+
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
         [receiver, selector]!
@@ -264,6 +311,9 @@ class SyntaxBinary { receiver selector argument source }
 
     method visitBy: visitor
         visitor visitBinaryMessage: self!
+
+    method isSimple
+        receiver isLeaf and: argument isLeaf!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
@@ -277,6 +327,11 @@ class SyntaxKeyword { receiver selector arguments source }
 
     method visitBy: visitor
         visitor visitKeywordMessage: self!
+
+    method isSimple
+        receiver isLeaf
+            and: (selector parts size is 1)
+            and: (arguments allSatisfy: #isSimple)!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal,
@@ -331,6 +386,9 @@ class SyntaxIs { left right }
     method visitBy: visitor
         visitor visitIs: self!
 
+    method isSimple
+        left isSimple and: right isSimple!
+
     method parts
         [left, right]!
 end
@@ -353,6 +411,9 @@ class SyntaxSelfInstance {}
     method visitBy: visitor
         visitor visitSelfInstance: self!
 
+    method isLeaf
+        True!
+
     method parts
         []!
 end
@@ -362,6 +423,9 @@ class SyntaxSelfClass {}
 
     method visitBy: visitor
         visitor visitSelfClass: self!
+
+    method isLeaf
+        True!
 
     method parts
         []!
@@ -375,6 +439,9 @@ class SyntaxVariable { name::String source }
 
     method isDynamic
         False!
+
+    method isLeaf
+        True!
 
     method type
         Any!
@@ -395,6 +462,9 @@ class SyntaxTypedVariable { name type }
     method isDynamic
         False!
 
+    method isLeaf
+        True!
+
     method parts
         [name]!
 end
@@ -406,6 +476,9 @@ class SyntaxDynamicVariable { name::String source }
         visitor visitDynamicVariable: self!
 
     method isDynamic
+        True!
+
+    method isLeaf
         True!
 
     method type
@@ -551,7 +624,7 @@ interface SyntaxMethod
 
     direct method signature: signature body: body
         self
-            comment: False
+            comments: List new
             signature: signature
             body: body!
 
@@ -587,24 +660,25 @@ interface SyntaxMethod
         [self signature, self body]!
 end
 
-class SyntaxInstanceMethod { comment signature body }
+class SyntaxInstanceMethod { comments signature body }
     is SyntaxMethod
 
     method addTo: thing
         thing instanceMethods add: self!
 
     method comment: aSpec
-        comment = aSpec!
+        comments add: aSpec!
+
 end
 
-class SyntaxDirectMethod { comment signature body }
+class SyntaxDirectMethod { comments signature body }
     is SyntaxMethod
-
-    method comment: aSpec
-        comment = aSpec!
 
     method addTo: thing
         thing directMethods add: self!
+
+    method comment: aSpec
+        comments add: aSpec!
 
     method isDirect
         True!

@@ -1,6 +1,10 @@
 import .syntaxVisitor.SyntaxVisitor
 
-class SyntaxPrinter { output indent printed blockStart suffixComment }
+class SyntaxPrinter { output
+                      indent
+                      printed
+                      blockStart
+                      last }
     is SyntaxVisitor
 
     direct method print: syntax to: output
@@ -9,7 +13,8 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
                              indent: 0
                              printed: 0
                              blockStart: False
-                             suffixComment: False)!
+                             last: False).
+        output newline!
 
     method toString
         "#<SyntaxPrinter>"!
@@ -20,7 +25,7 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
             indent: indent + 4
             printed: printed
             blockStart: False
-            suffixComment: False!
+            last: False!
 
     method indentHere
         SyntaxPrinter
@@ -28,7 +33,15 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
             indent: printed
             printed: printed
             blockStart: False
-            suffixComment: False!
+            last: False!
+
+    method indentOne
+        SyntaxPrinter
+            output: output
+            indent: printed + 1
+            printed: printed
+            blockStart: False
+            last: False!
 
     method indentBlock
         SyntaxPrinter
@@ -36,16 +49,28 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
             indent: printed
             printed: printed
             blockStart: True
-            suffixComment: False!
+            last: False!
 
     method newline
         output println: "".
-        indent times: { output print: " " }.
-        printed = indent!
+        printed = 0.
+        self doIndent.
+        self!
+
+    method doIndent
+        indent - printed times: { output print: " " }.
+        printed = indent.
+        self!
+
+    method skipline
+        output println: "".
+        printed = 0.
+        self!
 
     method print: string::String
         output print: string.
-        printed = printed + string size!
+        printed = printed + string size.
+        self!
 
     method println: string::String
         self print: string.
@@ -56,25 +81,23 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
             ifTrue: { self newline.
                       blockStart = False }!
 
-    method handleSuffixComment
-        suffixComment is False
-            ifFalse: { self print: suffixComment.
-                       suffixComment = False }!
-
     method visitLiteral: aLiteral
-        self print: aLiteral valueDisplayString!
+        self print: aLiteral valueDisplayString.
+        last = #literal!
 
     method visitValueTypeDeclaration: aNode
         aNode value visitBy: self.
         self print: "::".
-        aNode type visitBy: self!
+        aNode type visitBy: self.
+        last = #declaration!
 
     method visitArray: anArray
         self print: "[".
         anArray entries
             do: { |element| element visitBy: self }
             interleaving: { self print: ", " }.
-        self print: "]"!
+        self print: "]".
+        last = #paren!
 
     method visitRecord: aRecord
         self print: "\{".
@@ -84,7 +107,8 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
                   self print: " ".
                   entry value visitBy: self }
             interleaving: { self print: ", " }.
-        self print: "}"!
+        self print: "}".
+        last = #paren!
 
     method visitDictionary: aDictionary
         self print: "\{".
@@ -94,15 +118,34 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
                   self print: " -> ".
                   entry value visitBy: self }
             interleaving: { self print: ", " }.
-        self print: "}"!
+        self print: "}".
+        last = #paren!
 
     method visitSeq: aSeq
         self handleBlockStart.
-        aSeq first visitBy: self.
-        self print: ".".
-        self handleSuffixComment.
+        let first = aSeq first.
+        self visitMaybeSuffixComment: first
+             followedBy: ".".
         self newline.
         aSeq then visitBy: self!
+
+    method visitMaybeSuffixComment: syntax followedBy: mark
+        syntax isSuffixComment
+            ifTrue: { syntax value visitBy: self.
+                      self print: mark.
+                      self printSuffixComments: syntax comments }
+            ifFalse: { syntax visitBy: self.
+                       self print: mark }!
+
+    method visitStringInterpolation: anInterpolation
+        self print: "\"".
+        anInterpolation parts
+            do: { |each|
+                  each isLiteral
+                      ifTrue: { self print: each value }
+                      ifFalse: { each visitBy: self } }.
+        self print: "\"".
+        last = #string!
 
     method visitReturn: aReturn
         self print: "return ".
@@ -112,6 +155,9 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         self print: "panic ".
         aPanic value visitBy: self!
 
+    method setLast: newLast
+        last = newLast!
+
     method visitPrefixComment: aComment
         self handleBlockStart.
         let valueVisitor = self indentHere.
@@ -119,44 +165,75 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
             ifTrue: { self visitLineComment: aComment }
             ifFalse: { self visitBlockComment: aComment }.
         valueVisitor newline.
+        valueVisitor setLast: #comment.
         aComment value visitBy: valueVisitor!
+
+    method printSuffixComments: comments
+        let commentPrinter = self indentHere.
+        comments
+            do: { |each|
+                  commentPrinter print: " --".
+                  commentPrinter print: each.
+                  last = #comment }
+            interleaving: { commentPrinter newline }!
 
     method visitSuffixComment: aComment
         self handleBlockStart.
-        suffixComment not assert.
-        suffixComment = " --{aComment comment}".
-        aComment value visitBy: self!
+        aComment value visitBy: self.
+        self printSuffixComments: aComment comments!
 
     method visitPrefixMessage: aMessage
         self print: aMessage selector name.
-        aMessage receiver visitBy: self!
+        aMessage receiver visitBy: self.
+        last = #prefix!
 
     method visitUnaryMessage: aMessage
         aMessage receiver visitBy: self.
-        self print: " ".
-        self print: aMessage selector name!
+        let printer = (last == #paren or: last == #comment)
+                          ifTrue: { self indentBody newline }
+                          ifFalse: { self print: " " }.
+        printer print: aMessage selector name.
+        last = #unary!
 
     method visitBinaryMessage: aMessage
         aMessage receiver visitBy: self.
         self print: " ".
         self print: aMessage selector name.
         self print: " ".
-        aMessage argument visitBy: self!
+        aMessage argument visitBy: self.
+        last = #binary!
 
     method visitKeywordMessage: aMessage
-        aMessage receiver visitBy: self.
-        aMessage selector parts
+        let receiver = aMessage receiver.
+        receiver visitBy: self.
+        let parts = aMessage selector parts.
+        (receiver isLeaf and: parts size is 1)
+            ifTrue: {
+                      return parts
+                          with: aMessage arguments
+                          do: { |part arg|
+                                self print: " ".
+                                self print: part.
+                                self print: " ".
+                                arg visitBy: self } }.
+        let printer = (receiver isLeaf and: printed <= indent + 4)
+                          ifTrue: { (self print: " ")
+                                        indentHere }
+                          ifFalse: { self indentBody newline }.
+        parts
             with: aMessage arguments
             do: { |part arg|
-                  self print: " ".
-                  self print: part.
-                  self print: " ".
-                  arg visitBy: self }!
+                  printer print: part.
+                  printer print: " ".
+                  arg visitBy: printer }
+            interleaving: { printer newline }.
+        last = #keyword!
 
     method visitIs: anIs
         anIs left visitBy: self.
         self print: " is ".
-        anIs right visitBy: self!
+        anIs right visitBy: self.
+        last = #binary!
 
     method visitDynamicLet: aLet
         self visitLet: aLet!
@@ -166,9 +243,8 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         self print: "let ".
         aLet variable visitBy: self.
         self print: " = ".
-        aLet value visitBy: self.
-        self print: ".".
-        self handleSuffixComment.
+        self indentHere visitMaybeSuffixComment: aLet value
+                        followedBy: ".".
         self newline.
         aLet body visitBy: self!
 
@@ -178,19 +254,24 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
         aVar type visitBy: self!
 
     method visitUntypedVariable: aVar
-        self print: aVar name!
+        self print: aVar name.
+        last = #var!
 
     method visitSelfClass: aSelf
-        self print: "Self"!
+        self print: "Self".
+        last = #var!
 
     method visitSelfInstance: aSelf
-        self print: "self"!
+        self print: "self".
+        last = #var!
 
     method visitVariable: aVariable
-        self print: aVariable name!
+        self print: aVariable name.
+        last = #var!
 
     method visitDynamicVariable: aVariable
-        self print: aVariable name!
+        self print: aVariable name.
+        last = #var!
 
     method visitAssign: anAssign
         self print: anAssign variable name.
@@ -200,31 +281,49 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
     method visitParens: aParens
         self print: "(".
         aParens body visitBy: self indentHere.
-        self print: ")"!
+        self print: ")".
+        last = #paren!
 
     method visitBlock: aBlock
-        self print: "\{ ".
-        let bodyPrinter = self indentBlock.
+        let finish = self indentHere.
+        self print: "\{".
+        let bodyPrinter = self indentOne.
+        let header = False.
         aBlock parameters
-            ifNotEmpty: { self print: "|".
+            ifNotEmpty: { bodyPrinter print: " |".
                           aBlock parameters
-                              do: { |param| param visitBy: self }
-                              interleaving: { self print: " " }.
-                          self print: "| " }.
+                              do: { |param| param visitBy: bodyPrinter }
+                              interleaving: { bodyPrinter print: " " }.
+                          bodyPrinter print: "|".
+                          header = True }.
         aBlock returnType is Any
-            ifFalse: { self print: " -> ".
-                       aBlock returnType visitBy: self.
-                       self print: " " }.
+            ifFalse: { bodyPrinter print: " -> ".
+                       aBlock returnType visitBy: bodyPrinter.
+                       header = True }.
+        (header not or: aBlock body isSimple)
+            ifTrue: { bodyPrinter print: " " }
+            ifFalse: { bodyPrinter newline }.
         aBlock body visitBy: bodyPrinter.
-        self print: " }"!
+        -- If the block ended in a non-block comment add an ugly
+        -- newline.
+        bodyPrinter last == #comment
+            ifTrue: { finish newline }
+            ifFalse: { finish print: " " }.
+        self print: "}".
+        last = #paren!
 
     method visitDefine: aDefine
+        self _maybeToplevelNewline.
         self print: "define ".
         let bodyVisitor = self indentBody.
         aDefine variable visitBy: bodyVisitor.
-        self newline.
+        let body = aDefine body.
+        body isLeaf
+            ifTrue: { bodyVisitor print: " "}
+            ifFalse: { bodyVisitor newline }.
         aDefine body visitBy: bodyVisitor.
-        self println: "!"!
+        self print: "!".
+        last = #def!
 
     method _printModule: path
         self print: ("." join: path)!
@@ -235,6 +334,7 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
             ifTrue: { self print: "." }.
         self _printModule: anImport module.
         self newline.
+        last = #import.
         self _visitEach: anImport body!
 
     method visitNameImport: anImport
@@ -243,6 +343,7 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
             ifTrue: { self print: "." }.
         self _printModule: anImport module.
         self println: ".{anImport name}".
+        last = #import.
         self _visitEach: anImport body!
 
     method visitWildcardImport: anImport
@@ -251,16 +352,19 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
             ifTrue: { self print: "." }.
         self _printModule: anImport module.
         self println: ".*".
+        last = #import.
         self _visitEach: anImport body!
 
     method visitExternalRef: aRef
         self print: aRef module.
         self print: ".".
-        self print: aRef name!
+        self print: aRef name.
+        last = #var!
 
     method visitLineComment: comment
         self print: "--".
-        self print: comment comment!
+        self print: comment comment.
+        last = #comment!
 
     method visitBlockComment: comment
         let lines = comment comment.
@@ -284,13 +388,23 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
                     self newline.
                     self print: (lines at: i) }.
         self newline.
-        self print: comment fence!
+        self print: comment fence.
+        last = #blockComment!
+
+    method skipIfNotEmpty
+        printed > 1
+            ifTrue: { self skipline }!
 
     method visitMethod: aMethod
         -- Debug println: "/pp method {aMethod signature selector}".
-        aMethod comment is False
-            ifFalse: { aMethod comment visitBy: self.
-                       self newline }.
+        aMethod comments
+            ifNotEmpty: { self skipIfNotEmpty.
+                          aMethod comments reversed
+                              do: { |each|
+                                    self newline.
+                                    each visitBy: self }.
+                          self skipline }.
+        self newline.
         aMethod isRequired
             ifTrue: { self print: "required " }.
         aMethod isDirect
@@ -311,15 +425,22 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
             ifFalse: { self print: " -> ".
                        signature returnType visitBy: self }.
         aMethod isRequired
-            ifFalse: { let bodyVisitor = self indentBody.
-                       bodyVisitor println: "".
-                       aMethod body visitBy: bodyVisitor.
-                       bodyVisitor print: "!".
-                       -- no newline!
-                       bodyVisitor handleSuffixComment }!
+            ifFalse: { let bodyVisitor = self indentBody newline.
+                       bodyVisitor visitMaybeSuffixComment: aMethod body
+                                   followedBy: "!"
+                                       -- no newline!
+                     }.
+        last = #method!
+
+    method _maybeToplevelNewline
+        (last == #def)
+            ifTrue: { self skipline }.
+        (last is False or: last == #comment)
+            ifFalse: { self newline }!
 
     method visitClass: aClass
         -- Debug println: "/pp class {aClass name}".
+        self _maybeToplevelNewline.
         self print: "class ".
         self print: aClass name.
         let slots = aClass slots.
@@ -334,56 +455,47 @@ class SyntaxPrinter { output indent printed blockStart suffixComment }
                                                    slot visitBy: self.
                                                    self print: " " }}.
                        self print: "}" }.
-        self _visitTypeBody: aClass.
-        self newline.
-        self print: "end".
-        self handleSuffixComment.
-        self newline!
+        self _visitTypeBody: aClass!
 
     method visitInterfaceRef: aRef
+        self newline.
         self print: "is ".
         aRef name visitBy: self!
 
     method visitInterface: anInterface
+        self _maybeToplevelNewline.
         self print: "interface ".
         self print: anInterface name.
-        self _visitTypeBody: anInterface.
-        self newline.
-        self print: "end".
-        self handleSuffixComment.
-        self newline!
+        self _visitTypeBody: anInterface!
 
     method visitExtend: anExtend
+        self _maybeToplevelNewline.
         self print: "extend ".
         self print: anExtend name.
-        self _visitTypeBody: anExtend.
-        self newline.
-        self print: "end".
-        self handleSuffixComment.
-        self newline!
+        self _visitTypeBody: anExtend!
+
+    method _visitGroup: group in: parent
+        group
+            do: { |each| each visitBy: self }.
+        group
+            ifNotEmpty: { self skipline }!
 
     method _visitTypeBody: aType
         -- Debug println: "/pp methods of {aType name}".
         let bodyVisitor = self indentBody.
-        aType interfaces
-            do: { |each|
-                  bodyVisitor newline.
-                  each visitBy: bodyVisitor }.
-        (aType directMethods select: #isRequired)
-            do: { |m|
-                  bodyVisitor newline.
-                  m visitBy: bodyVisitor }.
-        (aType instanceMethods select: #isRequired)
-            do: { |m|
-                  bodyVisitor newline.
-                  m visitBy: bodyVisitor }.
-        (aType directMethods select: #isDefined)
-            do: { |m|
-                  bodyVisitor newline.
-                  m visitBy: bodyVisitor }.
-        (aType instanceMethods select: #isDefined)
-            do: { |m|
-                  bodyVisitor newline.
-                  m visitBy: bodyVisitor }!
+        bodyVisitor _visitGroup: aType interfaces
+                    in: self.
+        bodyVisitor _visitGroup: (aType directMethods select: #isRequired)
+                    in: self.
+        bodyVisitor _visitGroup: (aType instanceMethods select: #isRequired)
+                    in: self.
+        let defs = (aType directMethods select: #isDefined)
+                       concat: (aType instanceMethods select: #isDefined).
+        defs
+            do: { |def| def visitBy: bodyVisitor }
+            interleaving: { bodyVisitor skipline }.
+        bodyVisitor skipIfNotEmpty.
+        self print: "end".
+        last = #def!
 
 end
