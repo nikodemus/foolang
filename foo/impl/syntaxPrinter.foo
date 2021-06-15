@@ -92,21 +92,25 @@ class SyntaxPrinter { output
         last = #declaration!
 
     method visitArray: anArray
+        let flat = anArray entries allSatisfy: #isTiny.
         self print: "[".
+        let printer = self indentHere.
         anArray entries
-            do: { |element| element visitBy: self }
-            interleaving: { self print: ", " }.
-        self print: "]".
+            do: { |element| element visitBy: printer }
+            interleaving: { printer print: ",".
+                            flat ifFalse: { printer newline } }.
+        printer print: "]".
         last = #paren!
 
     method visitRecord: aRecord
         self print: "\{".
+        let printer = self indentHere.
         aRecord entries
             do: { |entry|
-                  self print: entry key.
-                  self print: " ".
-                  entry value visitBy: self }
-            interleaving: { self print: ", " }.
+                  printer print: entry key.
+                  printer print: " ".
+                  entry value visitBy: printer }
+            interleaving: { printer println: "," }.
         self print: "}".
         last = #paren!
 
@@ -128,14 +132,6 @@ class SyntaxPrinter { output
              followedBy: ".".
         self newline.
         aSeq then visitBy: self!
-
-    method visitMaybeSuffixComment: syntax followedBy: mark
-        syntax isSuffixComment
-            ifTrue: { syntax value visitBy: self.
-                      self print: mark.
-                      self printSuffixComments: syntax comments }
-            ifFalse: { syntax visitBy: self.
-                       self print: mark }!
 
     method visitStringInterpolation: anInterpolation
         self print: "\"".
@@ -168,6 +164,14 @@ class SyntaxPrinter { output
         valueVisitor setLast: #comment.
         aComment value visitBy: valueVisitor!
 
+    method visitMaybeSuffixComment: syntax followedBy: mark
+        syntax isSuffixComment
+            ifTrue: { syntax value visitBy: self.
+                      self print: mark.
+                      self printSuffixComments: syntax comments }
+            ifFalse: { syntax visitBy: self.
+                       self print: mark }!
+
     method printSuffixComments: comments
         let commentPrinter = self indentHere.
         comments
@@ -180,7 +184,8 @@ class SyntaxPrinter { output
     method visitSuffixComment: aComment
         self handleBlockStart.
         aComment value visitBy: self.
-        self printSuffixComments: aComment comments!
+        self printSuffixComments: aComment comments.
+        self newline!
 
     method visitPrefixMessage: aMessage
         self print: aMessage selector name.
@@ -190,7 +195,10 @@ class SyntaxPrinter { output
     method visitUnaryMessage: aMessage
         aMessage receiver visitBy: self.
         let printer = (last == #paren or: last == #comment)
-                          ifTrue: { self indentBody newline }
+                          ifTrue: { let p = self indentBody.
+                                    last == #paren
+                                        ifTrue: { p newline }
+                                        ifFalse: { p doIndent } }
                           ifFalse: { self print: " " }.
         printer print: aMessage selector name.
         last = #unary!
@@ -207,7 +215,7 @@ class SyntaxPrinter { output
         let receiver = aMessage receiver.
         receiver visitBy: self.
         let parts = aMessage selector parts.
-        (receiver isLeaf and: parts size is 1)
+        (receiver isTiny and: parts size is 1)
             ifTrue: {
                       return parts
                           with: aMessage arguments
@@ -216,10 +224,13 @@ class SyntaxPrinter { output
                                 self print: part.
                                 self print: " ".
                                 arg visitBy: self } }.
-        let printer = (receiver isLeaf and: printed <= indent + 4)
+        let printer = (receiver isTiny and: printed <= indent + 4)
                           ifTrue: { (self print: " ")
                                         indentHere }
-                          ifFalse: { self indentBody newline }.
+                          ifFalse: { let p = self indentBody.
+                                     last == #comment
+                                         ifTrue: { p doIndent }
+                                         ifFalse: { p newline } }.
         parts
             with: aMessage arguments
             do: { |part arg|
@@ -285,7 +296,6 @@ class SyntaxPrinter { output
         last = #paren!
 
     method visitBlock: aBlock
-        let finish = self indentHere.
         self print: "\{".
         let bodyPrinter = self indentOne.
         let header = False.
@@ -304,12 +314,11 @@ class SyntaxPrinter { output
             ifTrue: { bodyPrinter print: " " }
             ifFalse: { bodyPrinter newline }.
         aBlock body visitBy: bodyPrinter.
-        -- If the block ended in a non-block comment add an ugly
-        -- newline.
+        -- If the block ended in a non-block comment add an extra
+        -- space to align up.
         bodyPrinter last == #comment
-            ifTrue: { finish newline }
-            ifFalse: { finish print: " " }.
-        self print: "}".
+            ifTrue: { self print: "}" }
+            ifFalse: { self print: " }" }.
         last = #paren!
 
     method visitDefine: aDefine
@@ -318,11 +327,11 @@ class SyntaxPrinter { output
         let bodyVisitor = self indentBody.
         aDefine variable visitBy: bodyVisitor.
         let body = aDefine body.
-        body isLeaf
+        body isTiny
             ifTrue: { bodyVisitor print: " "}
             ifFalse: { bodyVisitor newline }.
-        aDefine body visitBy: bodyVisitor.
-        self print: "!".
+        bodyVisitor visitMaybeSuffixComment: body
+                    followedBy: "!".
         last = #def!
 
     method _printModule: path

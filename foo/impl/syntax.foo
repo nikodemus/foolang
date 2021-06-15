@@ -51,10 +51,13 @@ interface Syntax
         False!
 
     method isSimple
-        self isLeaf!
+        self weight <= 2!
 
-    method isLeaf
-        self isLiteral!
+    method isTiny
+        self weight <= 1!
+
+    method weight
+        10!
 
     method displayOn: stream
         stream print: "#<{self classOf name} ".
@@ -81,6 +84,9 @@ interface Literal
 
     method isLiteral
         True!
+
+    method weight
+        0!
 
     method parts
         [self value]!
@@ -120,8 +126,8 @@ end
 class SyntaxStringInterpolation { parts }
     is Syntax
 
-    method isLeaf
-        True!
+    method weight
+        parts sum: #weight!
 
     method visitBy: visitor
         visitor visitStringInterpolation: self!
@@ -133,6 +139,9 @@ class SyntaxValueTypeDeclaration { value type }
     method visitBy: visitor
         visitor visitValueTypeDeclaration: self!
 
+    method weight
+        value weight + 1!
+
     method parts
         [value, type]!
 end
@@ -140,15 +149,15 @@ end
 interface SyntaxCollection
     is Syntax
 
+    method weight
+        entries sum: #weight!
+
     method parts
         self entries!
 end
 
 class SyntaxArray { entries }
     is SyntaxCollection
-
-    method isSimple
-        entries allSatisfy: #isLeaf!
 
     method visitBy: visitor
         visitor visitArray: self!
@@ -159,6 +168,10 @@ class SyntaxRecord { entries }
 
     method visitBy: visitor
         visitor visitRecord: self!
+
+    method weight
+        entries size + ((entries collect: #value)
+                            sum: #weight)!
 end
 
 class SyntaxDictionary { entries }
@@ -174,6 +187,9 @@ class SyntaxSeq { first then }
     method visitBy: visitor
         visitor visitSeq: self!
 
+    method weight
+        first weight + then weight!
+
     method parts
         [first, then]!
 end
@@ -184,8 +200,8 @@ class SyntaxReturn { value }
     method visitBy: visitor
         visitor visitReturn: self!
 
-    method isSimple
-        value isSimple!
+    method weight
+        value weight + 1!
 
     method parts
         [value]!
@@ -197,8 +213,8 @@ class SyntaxPanic { value }
     method visitBy: visitor
         visitor visitPanic: self!
 
-    method isSimple
-        value isSimple!
+    method weight
+        value weight + 1!
 
     method parts
         [value]!
@@ -213,6 +229,9 @@ class SyntaxPrefixComment { comment value source fence }
             value: value
             source: source
             fence: False!
+
+    method weight
+        value weight!
 
     method visitBy: visitor
         visitor visitPrefixComment: self!
@@ -312,8 +331,8 @@ class SyntaxBinary { receiver selector argument source }
     method visitBy: visitor
         visitor visitBinaryMessage: self!
 
-    method isSimple
-        receiver isLeaf and: argument isLeaf!
+    method weight
+        receiver weight + argument weight + 1!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
@@ -328,15 +347,16 @@ class SyntaxKeyword { receiver selector arguments source }
     method visitBy: visitor
         visitor visitKeywordMessage: self!
 
-    method isSimple
-        receiver isLeaf
-            and: (selector parts size is 1)
-            and: (arguments allSatisfy: #isSimple)!
+    method weight
+        receiver weight + (arguments sum: #weight) + arguments size!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal,
         -- and might not do so after pretty-printing.
         [receiver, selector, arguments]!
+
+    method displayOn: stream
+        stream print: "#<{Self} {selector}>"!
 end
 
 class SyntaxModuleImport { module relative body }
@@ -375,6 +395,9 @@ class SyntaxExternalRef { module name source }
     method visitBy: visitor
         visitor visitExternalRef: self!
 
+    method weight
+        0!
+
     method parts
         -- Source ignored, since that can change with pretty-printing.
         [module, name]!
@@ -386,8 +409,8 @@ class SyntaxIs { left right }
     method visitBy: visitor
         visitor visitIs: self!
 
-    method isSimple
-        left isSimple and: right isSimple!
+    method weight
+        left weight + right weight + 1!
 
     method parts
         [left, right]!
@@ -411,8 +434,8 @@ class SyntaxSelfInstance {}
     method visitBy: visitor
         visitor visitSelfInstance: self!
 
-    method isLeaf
-        True!
+    method weight
+        0!
 
     method parts
         []!
@@ -424,8 +447,8 @@ class SyntaxSelfClass {}
     method visitBy: visitor
         visitor visitSelfClass: self!
 
-    method isLeaf
-        True!
+    method weight
+        0!
 
     method parts
         []!
@@ -440,8 +463,8 @@ class SyntaxVariable { name::String source }
     method isDynamic
         False!
 
-    method isLeaf
-        True!
+    method weight
+        0!
 
     method type
         Any!
@@ -462,8 +485,8 @@ class SyntaxTypedVariable { name type }
     method isDynamic
         False!
 
-    method isLeaf
-        True!
+    method weight
+        1!
 
     method parts
         [name]!
@@ -478,8 +501,8 @@ class SyntaxDynamicVariable { name::String source }
     method isDynamic
         True!
 
-    method isLeaf
-        True!
+    method weight
+        0!
 
     method type
         SyntaxLiteral value: Any!
@@ -495,6 +518,9 @@ class SyntaxAssign { variable value }
     method visitBy: visitor
         visitor visitAssign: self!
 
+    method weight
+        value weight + 1!
+
     method parts
         [variable, value]!
 end
@@ -505,6 +531,9 @@ class SyntaxParens { body }
     method visitBy: visitor
         visitor visitParens: self!
 
+    method weight
+        body weight + 1!
+
     method parts
         [body]!
 end
@@ -514,6 +543,9 @@ class SyntaxBlock { parameters returnType body }
 
     method visitBy: visitor
         visitor visitBlock: self!
+
+    method weight
+        body weight + 1!
 
     method parts
         [parameters, returnType, body]!
