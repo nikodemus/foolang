@@ -355,4 +355,14 @@ interface TestIterable
                equals: 3
                testing: "sum (not empty)"!
 
+    method test_withDoInterleaving
+        assert that: { let s = "".
+                       [1,2,3]
+                           with: [10,100,1000]
+                           do: { |a b| s = s append: (a + b) toString }
+                           interleaving: { s = s append: ", " }.
+                       s }
+               equals: "11, 102, 1003"
+               testing: "Iterable#with:do:interleaving:"!
+
 end

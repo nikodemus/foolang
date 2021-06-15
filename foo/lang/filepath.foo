@@ -9,6 +9,8 @@ extend FilePath
         self file forRead!
     method forWrite
         self file forWrite!
+    method truncateExisting
+        self file truncateExisting!
     method pathname
         self toString!
     method readString

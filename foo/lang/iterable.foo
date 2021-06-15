@@ -136,6 +136,16 @@ interface Iterable
                        ifFalse: { interBlock value }.
                    block value: elt }!
 
+    method with: iterable do: block interleaving: interBlock
+        let first = True.
+        self iterator
+            with: iterable iterator
+            do: { |a b|
+                   first
+                      ifTrue: { first = False }
+                      ifFalse: { interBlock value }.
+                  block value: a value: b }!
+
     method elementType
         Any!
 
