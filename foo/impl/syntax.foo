@@ -150,7 +150,7 @@ interface SyntaxCollection
     is Syntax
 
     method weight
-        entries sum: #weight!
+        self entries sum: #weight!
 
     method parts
         self entries!
