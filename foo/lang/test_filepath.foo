@@ -23,6 +23,19 @@ class TestFilePath { assert dir none file }
         assert true: { file isFile }
                testing: "FilePath#isFile (file)"!
 
+    method testTruncateExisting
+        let tmpfile = dir / "Filepath-testTruncateExisting.tmp".
+        tmpfile ifExists: { tmpfile deleteFile }.
+        tmpfile forWrite
+            create: { |f| f print: "0123456789" }.
+        tmpfile forWrite
+            open: { |f| f print: "00000" }.
+        assert true: { tmpfile readString == "0000056789" }
+               testing: "FilePath#truncateExisting (without)".
+        tmpfile forWrite truncateExisting
+            open: { |f| f print: "XXXXX" }.
+        assert true: { tmpfile readString == "XXXXX" }!
+
     method testDeleteFile
         let tmpfile = dir / "FilePath-testDeleteFile.tmp".
         -- Try to clean up first.
@@ -42,6 +55,8 @@ class TestFilePath { assert dir none file }
                          dir: system currentDirectory
                          none: (system currentDirectory / "does-not-exists")
                          file: (system currentDirectory / "README.md").
+
+        tests testTruncateExisting.
         tests testDeleteFile.
         tests testExists.
         tests testIsDirectory.
