@@ -1,9 +1,15 @@
 import .impl.environment.Environment
+import .impl.utils.FileModuleDictionary
 
 class Main {}
     direct method run: command in: system
         let path = system files / command first.
-        let env = Environment load: path readString.
+        let mods = FileModuleDictionary
+                       new: { "lang" -> system files / "foo/lang",
+                              "impl" -> system files / "foo/impl",
+                              "lib" -> system files / "foo/lib" }.
+        let env = (Environment modules: mods)
+                      load: path readString.
         (env global: "Main")
             value run: command rest in: system!
 end
