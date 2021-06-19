@@ -174,7 +174,7 @@ fn closure_arity(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
 
 fn closure_finally(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let res = receiver.closure_ref().apply(None, &[], env);
-    args[0].closure_ref().apply(None, &[], env)?;
+    args[0].send("value", &[], env)?;
     res
 }
 
