@@ -52,6 +52,33 @@ class SyntaxTranslator { env currentMethod }
         -- Tracer trace: #visitLiteral:.
         AstConstantRef value: aLiteral value env: env!
 
+    method visitStringInterpolation: anInterpolation
+        let parts
+            = anInterpolation parts
+                collect: { |each|
+                           let node = each visitBy: self.
+                           each isLiteral
+                               ifTrue: { node }
+                               ifFalse: { let value
+                                              = AstSend
+                                                  receiver: node
+                                                  selector: #value
+                                                  arguments: []
+                                                  source: "#<interpolation #valie>".
+                                          AstSend
+                                              receiver: value
+                                              selector: #toString
+                                              arguments: []
+                                              source: "#<interpolation #toString>" } }.
+        let res = parts pop.
+        { parts isEmpty }
+            whileFalse: { res = AstSend
+                              receiver: parts pop
+                              selector: (#append:)
+                              arguments: [res]
+                              source: "<interpolation #append>" }.
+        res!
+
     method visitValueTypeDeclaration: aNode
         -- Tracer trace: #visitValueTypeDeclaration.
         AstTypecheck
@@ -100,18 +127,10 @@ class SyntaxTranslator { env currentMethod }
         AstPanic value: (aPanic value visitBy: self)!
 
     method visitPrefixComment: aComment
-        -- Tracer trace: #visitPrefixComment:.
-        AstComment
-            comment: aComment comment
-            value: (aComment value visitBy: self)
-            source: aComment source!
+           aComment value visitBy: self!
 
     method visitSuffixComment: aComment
-        -- Tracer trace: #visitSuffixComment:.
-        AstComment
-            comment: aComment comment
-            value: (aComment value visitBy: self)
-            source: aComment source!
+           aComment value visitBy: self!
 
     method visitLet: aLet
         -- Tracer trace: #visitLet:.

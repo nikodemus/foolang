@@ -26,7 +26,7 @@ interface Syntax
 
     method withSuffixComment: comment::String commentSource: source
         SyntaxSuffixComment
-            comment: comment
+            comments: (List with: comment)
             value: self
             source: source!
 
@@ -43,6 +43,21 @@ interface Syntax
 
     method toString
         self displayString!
+
+    method isSuffixComment
+        False!
+
+    method isLiteral
+        False!
+
+    method isSimple
+        self weight <= 2!
+
+    method isTiny
+        self weight <= 1!
+
+    method weight
+        10!
 
     method displayOn: stream
         stream print: "#<{self classOf name} ".
@@ -66,6 +81,12 @@ interface Literal
 
     method visitBy: visitor
         visitor visitLiteral: self!
+
+    method isLiteral
+        True!
+
+    method weight
+        0!
 
     method parts
         [self value]!
@@ -102,11 +123,24 @@ class SyntaxBinaryLiteral { value }
                 do: { value toString }!
 end
 
+class SyntaxStringInterpolation { parts }
+    is Syntax
+
+    method weight
+        parts sum: #weight!
+
+    method visitBy: visitor
+        visitor visitStringInterpolation: self!
+end
+
 class SyntaxValueTypeDeclaration { value type }
     is Syntax
 
     method visitBy: visitor
         visitor visitValueTypeDeclaration: self!
+
+    method weight
+        value weight + 1!
 
     method parts
         [value, type]!
@@ -114,6 +148,9 @@ end
 
 interface SyntaxCollection
     is Syntax
+
+    method weight
+        self entries sum: #weight!
 
     method parts
         self entries!
@@ -131,6 +168,10 @@ class SyntaxRecord { entries }
 
     method visitBy: visitor
         visitor visitRecord: self!
+
+    method weight
+        entries size + ((entries collect: #value)
+                            sum: #weight)!
 end
 
 class SyntaxDictionary { entries }
@@ -146,6 +187,9 @@ class SyntaxSeq { first then }
     method visitBy: visitor
         visitor visitSeq: self!
 
+    method weight
+        first weight + then weight!
+
     method parts
         [first, then]!
 end
@@ -156,6 +200,9 @@ class SyntaxReturn { value }
     method visitBy: visitor
         visitor visitReturn: self!
 
+    method weight
+        value weight + 1!
+
     method parts
         [value]!
 end
@@ -165,6 +212,9 @@ class SyntaxPanic { value }
 
     method visitBy: visitor
         visitor visitPanic: self!
+
+    method weight
+        value weight + 1!
 
     method parts
         [value]!
@@ -180,6 +230,9 @@ class SyntaxPrefixComment { comment value source fence }
             source: source
             fence: False!
 
+    method weight
+        value weight!
+
     method visitBy: visitor
         visitor visitPrefixComment: self!
 
@@ -191,15 +244,25 @@ class SyntaxPrefixComment { comment value source fence }
         "#<SyntaxPrefixComment value: {value}>"!
 end
 
-class SyntaxSuffixComment { comment value source }
+class SyntaxSuffixComment { comments value source }
     is Syntax
+
+    method withSuffixComment: comment::String commentSource: source
+        comments add: comment.
+        self!
 
     method visitBy: visitor
         visitor visitSuffixComment: self!
 
+    method isSuffixComment
+        True!
+
+    method isSimple
+        value isSimple!
+
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
-        [comment, value]!
+        [comments, value]!
 
     method displayString
         "#<SyntaxSuffixComment value: {value}>"!
@@ -253,6 +316,9 @@ class SyntaxUnary { receiver selector source }
     method visitBy: visitor
         visitor visitUnaryMessage: self!
 
+    method isSimple
+        receiver isSimple!
+
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
         [receiver, selector]!
@@ -264,6 +330,9 @@ class SyntaxBinary { receiver selector argument source }
 
     method visitBy: visitor
         visitor visitBinaryMessage: self!
+
+    method weight
+        receiver weight + argument weight + 1!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
@@ -278,10 +347,16 @@ class SyntaxKeyword { receiver selector arguments source }
     method visitBy: visitor
         visitor visitKeywordMessage: self!
 
+    method weight
+        receiver weight + (arguments sum: #weight) + arguments size!
+
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal,
         -- and might not do so after pretty-printing.
         [receiver, selector, arguments]!
+
+    method displayOn: stream
+        stream print: "#<{Self} {selector}>"!
 end
 
 class SyntaxModuleImport { module relative body }
@@ -320,6 +395,9 @@ class SyntaxExternalRef { module name source }
     method visitBy: visitor
         visitor visitExternalRef: self!
 
+    method weight
+        0!
+
     method parts
         -- Source ignored, since that can change with pretty-printing.
         [module, name]!
@@ -330,6 +408,9 @@ class SyntaxIs { left right }
 
     method visitBy: visitor
         visitor visitIs: self!
+
+    method weight
+        left weight + right weight + 1!
 
     method parts
         [left, right]!
@@ -353,6 +434,9 @@ class SyntaxSelfInstance {}
     method visitBy: visitor
         visitor visitSelfInstance: self!
 
+    method weight
+        0!
+
     method parts
         []!
 end
@@ -362,6 +446,9 @@ class SyntaxSelfClass {}
 
     method visitBy: visitor
         visitor visitSelfClass: self!
+
+    method weight
+        0!
 
     method parts
         []!
@@ -375,6 +462,9 @@ class SyntaxVariable { name::String source }
 
     method isDynamic
         False!
+
+    method weight
+        0!
 
     method type
         Any!
@@ -395,6 +485,9 @@ class SyntaxTypedVariable { name type }
     method isDynamic
         False!
 
+    method weight
+        1!
+
     method parts
         [name]!
 end
@@ -407,6 +500,9 @@ class SyntaxDynamicVariable { name::String source }
 
     method isDynamic
         True!
+
+    method weight
+        0!
 
     method type
         SyntaxLiteral value: Any!
@@ -422,6 +518,9 @@ class SyntaxAssign { variable value }
     method visitBy: visitor
         visitor visitAssign: self!
 
+    method weight
+        value weight + 1!
+
     method parts
         [variable, value]!
 end
@@ -432,6 +531,9 @@ class SyntaxParens { body }
     method visitBy: visitor
         visitor visitParens: self!
 
+    method weight
+        body weight + 1!
+
     method parts
         [body]!
 end
@@ -441,6 +543,9 @@ class SyntaxBlock { parameters returnType body }
 
     method visitBy: visitor
         visitor visitBlock: self!
+
+    method weight
+        body weight + 1!
 
     method parts
         [parameters, returnType, body]!
@@ -551,7 +656,7 @@ interface SyntaxMethod
 
     direct method signature: signature body: body
         self
-            comment: False
+            comments: List new
             signature: signature
             body: body!
 
@@ -587,24 +692,25 @@ interface SyntaxMethod
         [self signature, self body]!
 end
 
-class SyntaxInstanceMethod { comment signature body }
+class SyntaxInstanceMethod { comments signature body }
     is SyntaxMethod
 
     method addTo: thing
         thing instanceMethods add: self!
 
     method comment: aSpec
-        comment = aSpec!
+        comments add: aSpec!
+
 end
 
-class SyntaxDirectMethod { comment signature body }
+class SyntaxDirectMethod { comments signature body }
     is SyntaxMethod
-
-    method comment: aSpec
-        comment = aSpec!
 
     method addTo: thing
         thing directMethods add: self!
+
+    method comment: aSpec
+        comments add: aSpec!
 
     method isDirect
         True!

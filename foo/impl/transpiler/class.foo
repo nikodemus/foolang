@@ -1,5 +1,11 @@
 define InstanceMethods
 {
+     #name
+     -> { signature: [], vars: 0,
+          body: "struct FooBytes* name = PTR(FooClass, ctx->receiver.datum)->name;
+                 return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = name } };"
+        },
+
      #subclass:interfaces:methods:
      -> { signature: [String, Array, Array], vars: 1,
           body: "struct FooArray* methods = PTR(FooArray, ctx->frame[2].datum);

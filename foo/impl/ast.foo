@@ -534,23 +534,6 @@ interface AstNode
     required method visitBy: visitor
 end
 
-class AstComment { comment value source }
-    is AstNode
-    is AstDefinition
-
-    method visitBy: visitor
-        visitor visitComment: self!
-
-    method defineIn: env
-        value defineIn: env!
-
-    method eval
-        value eval!
-
-    method parts
-        [comment, value]!
-end
-
 class AstArray { entries }
     is AstNode
 
