@@ -1,25 +1,6 @@
 import .impl.environment.Environment
+import .impl.utils.FileModuleDictionary
 import .impl.cTranspiler.CTranspiler
-
-class FileModuleDictionary { _dict }
-    direct method new: dict
-        self _dict: dict!
-    method at: fullPath ifNone: block
-        -- Debug println: "FILE: {fullPath}".
-        let path = fullPath butlast copy asList.
-        let filepath = (_dict at: path pop ifNone: block).
-        { path isEmpty }
-            whileFalse: { filepath = filepath / path pop }.
-        filepath / "{fullPath last}.foo"
-            ifExists: { |foopath|
-                        foopath file forRead open: { |f| f readString } }
-            ifDoesNotExist: block!
-end
-
-extend Dictionary
-    method asFileModules
-        FileModuleDictionary new: self!
-end
 
 class Main {}
     direct method run: command in: system
