@@ -1,16 +1,22 @@
 interface Any
     direct method includes: object
         True!
+
     direct method typecheck: object
         object!
+
     direct method == other
         self is other!
+
     direct method default
         False!
+
     direct method printOn: stream
         stream print: "Any"!
+
     direct method displayOn: stream
         stream print: "#<Any>"!
+
     method yourself
         self!
 end
