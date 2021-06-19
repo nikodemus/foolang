@@ -13,8 +13,7 @@ class SyntaxPrinter { output
                              indent: 0
                              printed: 0
                              blockStart: False
-                             last: False).
-        output newline!
+                             last: False)!
 
     method toString
         "#<SyntaxPrinter>"!

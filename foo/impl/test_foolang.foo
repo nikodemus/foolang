@@ -29,17 +29,16 @@ class TestFoolang { system ok onFailure }
             eval: "TestInterface3 includes: (TestInterface3Impl new foo)"
             expect: True!
 
-    method test__Line_comments_before_define
+    method test_Line_comments_before_define
         self parse: "-- foo
                      -- bar
                      define Foo 1!"
             expect:
                 "-- foo
 -- bar
-define Foo 1!
-"!
+define Foo 1!"!
 
-    method test__Format_class_with_just_interfaces
+    method test_Format_class_with_just_interfaces
         self parse: "class TestInterface5Impl \{}
                         is Object
                         is TestInterface5
@@ -48,10 +47,9 @@ define Foo 1!
                 "class TestInterface5Impl \{}
     is Object
     is TestInterface5
-end
-"!
+end"!
 
-    method test__Line_comments_before_class
+    method test_Line_comments_before_class
         self parse: "-- foo
                      -- bar
                      class Foo \{\}
@@ -60,8 +58,7 @@ end
                 "-- foo
 -- bar
 class Foo \{\}
-end
-"!
+end"!
 
     method test_Line_comments_before_interface
         self parse: "-- foo
@@ -72,8 +69,7 @@ end
                 "-- foo
 -- bar
 interface Foo
-end
-"!
+end"!
 
     method test_Line_comments_before_extend
         self parse: "-- foo
@@ -84,8 +80,7 @@ end
                 "-- foo
 -- bar
 extend Foo
-end
-"!
+end"!
 
     method test_Multiple_line_comments_inside_class
         self parse: "class Foo \{\}
@@ -102,8 +97,7 @@ end
 
     method quux
         42!
-end
-"!
+end"!
 
     method test_Interface_format
         self parse: "interface TestInterface4
@@ -138,9 +132,7 @@ end
 
     method bar2
         42!
-end
-"
-                !
+end"!
 
     method test_Interface_required_method_missing_detected
         self load: "interface TestInterface5
@@ -331,45 +323,44 @@ end
     method test_Prefix_comment_to_let_value_format
         self
             parse: "           let x = -- boop\n 21.     x     *  2"
-            expect: "let x = -- boop\n        21.\nx * 2\n"!
+            expect: "let x = -- boop\n        21.\nx * 2"!
 
-    method test__Suffix_comment_to_let_value_format
+    method test_Suffix_comment_to_let_value_format
         self
             parse: "let x = 21 -- boop\n.\nx * 2"
-            expect: "let x = 21. -- boop\nx * 2\n".
+            expect: "let x = 21. -- boop\nx * 2".
         self
             parse: "let x = 21. -- boop\n\nx * 2"
-            expect: "let x = 21. -- boop\nx * 2\n"!
+            expect: "let x = 21. -- boop\nx * 2"!
 
     method test_Prefix_comment_in_sequence_format
         self
             parse: "    doo daa.\n    -- boop\n   self bar. \n x * 2"
-            expect: "doo daa.\n-- boop\nself bar.\nx * 2\n"!
+            expect: "doo daa.\n-- boop\nself bar.\nx * 2"!
 
-    method test__Suffix_comment_in_sequence_format
+    method test_Suffix_comment_in_sequence_format
         self
             parse: "self bar. -- boop\n x * 2"
-            expect: "self bar. -- boop\nx * 2\n"!
+            expect: "self bar. -- boop\nx * 2"!
 
-    method test__Suffix_comment_to_keyword_message_in_sequence_format
+    method test_Suffix_comment_to_keyword_message_in_sequence_format
         self
             parse: "self bleep: bar. -- boop\n x * 2"
-            expect: "self bleep: bar. -- boop\nx * 2\n"!
+            expect: "self bleep: bar. -- boop\nx * 2"!
 
     method test_Prefix_comment_to_class_format
         self
             parse: "-- boop\n    class   X   \{}   end"
             expect: "-- boop
 class X \{\}
-end
-"!
+end"!
 
-    method test__Suffix_comment_to_class_format
+    method test_Suffix_comment_to_class_format
         self
             parse: "class   X   \{}   end -- boop"
-            expect: "class X \{}\nend -- boop\n\n"!
+            expect: "class X \{}\nend -- boop\n"!
 
-    method test__Prefix_comment_to_method_body_format
+    method test_Prefix_comment_to_method_body_format
         self
             parse: "class   X   \{}method bar -- boop
 42! end"
@@ -377,10 +368,14 @@ end
     method bar
         -- boop
         42!
-end
-"!
+end"!
 
-    method test__Format_suffix_comment_to_method_body
+    method test_Formatted_single_expression_has_no_trailing_newline
+        self
+            parse: "123"
+            expect: "123"!
+
+    method test_Format_suffix_comment_to_method_body
         self
             parse: "class X \{}
                         method bar
@@ -389,10 +384,9 @@ end
             expect: "class X \{}
     method bar
         42! -- boop
-end
-"!
+end"!
 
-    method test__Format_block_with_suffix_comment_after_literal
+    method test_Format_block_with_suffix_comment_after_literal
         self parse: "class X \{\}
                          method beep
                              \{ panic \"dundun\" -- oops
@@ -402,10 +396,9 @@ end
     method beep
         \{ panic \"dundun\" -- oops
           \}!
-end
-"!
+end"!
 
-    method test__Format_let_body_in_method
+    method test_Format_let_body_in_method
         self
             parse: "class Droop \{\}
                         method bar
@@ -416,27 +409,25 @@ end
     method bar
         let x = 123.
         x + x!
-end
-"!
+end"!
 
     method test_Format_suffix_comment_to_define
         self
             parse: "define ThisOne 312! -- oh yeah"
-            expect: "define ThisOne 312! -- oh yeah\n\n"!
+            expect: "define ThisOne 312! -- oh yeah\n"!
 
     method test_Prefix_comment_to_method_format
         self
-            parse: "class X \{} -- boop\n method bar\n 42!\n end\n"
+            parse: "class X \{} -- boop\n method bar\n 42!\n end"
             expect: "class X \{}
 
     -- boop
 
     method bar
         42!
-end
-"!
+end"!
 
-    method test__Format_comments_between_keyword_and_receiver
+    method test_Format_comments_between_keyword_and_receiver
         self parse: "asdasasd
                                  -- deep
                                  -- stuff
@@ -445,10 +436,9 @@ end
             expect: "asdasasd -- deep
          -- stuff
     ifSo: ayay
-    ifElse: block
-"!
+    ifElse: block"!
 
-    method test__Format_comments_between_keywors_and_short_receiver
+    method test_Format_comments_between_keywors_and_short_receiver
         self parse: "class Q \{\}
          method ding
            self
@@ -463,25 +453,22 @@ end
              -- of tests. Should either explain the rational or return False.
             ifTrue: { True }
             ifFalse: block!
-end
-"!
+end"!
 
-    method test__Format_comments_between_unary_and_receiver
+    method test_Format_comments_between_unary_and_receiver
         self parse: "asdas
                                  -- deep
                                  -- stuff
                             doopdoop"
             expect: "asdas -- deep
       -- stuff
-    doopdoop
-"!
+    doopdoop"!
 
-    method test__Format_single_comment_between_unary_and_receiver
+    method test_Format_single_comment_between_unary_and_receiver
         self parse: "asdas -- deep
                             doopdoop"
             expect: "asdas -- deep
-    doopdoop
-"!
+    doopdoop"!
 
     method test_Format_inside_class_comment_after_interface
         self parse: "class Foo \{\}
@@ -503,8 +490,7 @@ end
 
     method asdads
         129!
-end
-"!
+end"!
 
     method test_Block_comment_in_eval
         self eval: "---
@@ -515,7 +501,7 @@ end
 
     method test_Block_comment_format
         self parse: "---\nThis is a test.\n---\n      42"
-            expect: "---\nThis is a test.\n---\n42\n"!
+            expect: "---\nThis is a test.\n---\n42"!
 
     method test_Line_comment_in_eval
         self eval: "--> 42\n 42"

@@ -57,7 +57,8 @@ interface TestSelfHosting
                          with: { |out|
                                  syntaxList1
                                      do: { |syntax|
-                                           SyntaxPrinter print: syntax to: out } }.
+                                           SyntaxPrinter print: syntax to: out }
+                                     interleaving: { out newline } }.
         -- Debug println: "/parse2".
         let syntaxList2 = block value: pretty.
         -- Debug println: pretty.
@@ -89,7 +90,8 @@ problem: {err description}" }.
         let printed
             = StringOutput
                   with: { |out|
-                          syntaxList1 do: { |syntax| SyntaxPrinter print: syntax to: out } }.
+                          syntaxList1 do: { |syntax| SyntaxPrinter print: syntax to: out }
+                                      interleaving: { out newline } }.
         printed == pretty
             ifFalse: { let printed2 = printed replace: "\n" with: "|\n".
                        let pretty2 = pretty replace: "\n" with: "|\n".

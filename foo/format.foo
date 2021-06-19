@@ -17,5 +17,6 @@ class Main {}
                     syntaxList
                         do: { |each|
                               -- stream println: "-- {each classOf name}".
-                              SyntaxPrinter print: each to: stream } }!
+                              SyntaxPrinter print: each to: stream.
+                              stream newline } }!
 end
