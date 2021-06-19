@@ -1,5 +1,7 @@
 import .impl.environment.Environment
+import .impl.environment.Globals
 import .impl.utils.FileModuleDictionary
+import .impl.ast
 
 class Main {}
     direct method run: command in: system
@@ -8,8 +10,10 @@ class Main {}
                        new: { "lang" -> system files / "foo/lang",
                               "impl" -> system files / "foo/impl",
                               "lib" -> system files / "foo/lib" }.
-        let env = (Environment modules: mods)
-                      load: path readString.
-        (env global: "Main")
+        let baseEnv = Environment modules: mods.
+        let builtins = Globals dictionary: baseEnv builtins.
+        builtins define: Dictionary.
+        let userEnv = baseEnv load: path readString.
+        (userEnv global: "Main")
             value run: command rest in: system!
 end

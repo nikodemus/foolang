@@ -38,6 +38,7 @@ define Builtins
     g define: DoesNotUnderstand.
     g define: Error.
     g define: False.
+    g define: Float.
     g define: Integer.
     g define: List.
     g define: Object.
