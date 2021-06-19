@@ -621,7 +621,7 @@ interface MethodToken
             selector: selector
             parameters: parameters.
         MethodSignature
-            selector: (Selector new: selector content)
+            selector: (SyntaxSelector name: selector content)
             parameters: parameters
             returnType: returnType!
 end
@@ -847,13 +847,13 @@ class TokenSigil { precedence string first last }
     method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxPrefix
             receiver: (parser parseAtPrecedence: MaxPrecedence)
-            selector: (Selector name: string)
+            selector: (SyntaxSelector name: string)
             source: (parser sourceFrom: first to: last)!
 
     method parseAsSuffixOf: prefix with: parser
         SyntaxBinary
             receiver: prefix
-            selector: (Selector name: string)
+            selector: (SyntaxSelector name: string)
             argument: (parser parseAtPrecedence: precedence)
             source: (parser sourceFrom: first to: last)!
 
@@ -867,8 +867,7 @@ class TokenSigil { precedence string first last }
         Any!
 
     method parseAsLiteralWith: parser
-        SyntaxLiteral
-            value: (Selector new: string)!
+        SyntaxSelector name: string!
 
 end
 
@@ -911,7 +910,7 @@ class TokenWord { precedence string first last }
     method parseAsSuffixOf: prefix with: parser
         SyntaxUnary
             receiver: prefix
-            selector: (Selector name: string)
+            selector: (SyntaxSelector name: string)
             source: (parser sourceFrom: first to: last)!
 
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
@@ -928,8 +927,7 @@ class TokenWord { precedence string first last }
         Any!
 
     method parseAsLiteralWith: parser
-        SyntaxLiteral
-            value: (Selector new: string)!
+        SyntaxSelector name: string!
 end
 
 class TokenKeyword { string first last }
@@ -955,7 +953,7 @@ class TokenKeyword { string first last }
         whileTrue.
         SyntaxKeyword
             receiver: prefix
-            selector: (Selector name: selector content)
+            selector: (SyntaxSelector name: selector content)
             arguments: arguments
             source: (parser sourceFrom: first to: last)!
 
@@ -977,8 +975,7 @@ class TokenKeyword { string first last }
         let selector = StringOutput new: string.
         { TokenKeyword includes: parser lookahead }
             whileTrue: { selector print: parser nextToken string }.
-        SyntaxLiteral
-            value: (Selector new: selector content)!
+        SyntaxSelector name: selector content!
 end
 
 define SpecialCharacters

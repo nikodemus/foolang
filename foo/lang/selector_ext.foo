@@ -68,14 +68,6 @@ extend Selector
     method startsWith: part
         self name startsWith: part!
 
-    method parts
-        let parts = List new.
-        self name
-            split: { |c| c == ColonCharacter }
-            do:  { |part| parts add: part }.
-        parts ifEmpty: { parts add: self name }.
-        parts!
-
     method printOn: stream
         stream print: "#".
         stream print: self name!

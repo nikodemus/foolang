@@ -13,7 +13,7 @@ class TestOrdered { assert }
           ["foo:bar:", ["foo", "bar", ""]],
           [":foo:bar:", ["", "foo", "bar", ""]] ]!
 
-    method testSplitDo
+    method testSplitBy
         assert forAll: self splitCases
                that: { |case|
                        let split = (case first splitBy: ":" character) asArray.

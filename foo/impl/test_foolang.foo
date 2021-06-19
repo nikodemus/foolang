@@ -574,7 +574,7 @@ end"!
                                    let selectors = bt collect: { |f| f selector :: Selector }.
                                    selectors isEquivalent: [#value, #bang:, #foo, #bar, #test] }}!
 
-    method testAstSource
+    method test0_DoesNotUnderstand_has_source_location
          -- `is Object` required for the exception to happen as we want
         self load: "class SourceTest \{}
                          is Object

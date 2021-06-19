@@ -962,13 +962,28 @@ end
 class TestTranspileSelfHosted { assert system }
     is TranspilerTest
 
-    method testParser
+    method test_Parse_expression
         self transpileWithPrelude:
             "import impl.parser
              class Main \{\}
                 direct method run: command in: system
-                     let i = parser.Parser parseExpressions: \"123\".
-                     system output print: i!
+                     let syntax = parser.Parser parseExpressions: \"123\".
+                     system output print: syntax!
+             end"
+                expect: "[#<SyntaxLiteral 123>]"!
+
+    method test_Parse_interface
+        self transpileWithPrelude:
+            "import impl.parser
+             class Main \{\}
+                direct method run: command in: system
+                     let syntax = parser.Parser parseDefinitions:
+\"
+interface X
+    method y
+        42!
+\".
+                     system output print: syntax!
              end"
                 expect: "[#<SyntaxLiteral 123>]"!
 

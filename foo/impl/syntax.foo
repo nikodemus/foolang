@@ -211,6 +211,16 @@ class SyntaxReturn { value }
         [value]!
 end
 
+class SyntaxSelector { name }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitSelector: self!
+
+    method parts
+        [name]!
+end
+
 class SyntaxPanic { value }
     is Syntax
 
