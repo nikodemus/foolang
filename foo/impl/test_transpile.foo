@@ -1004,15 +1004,32 @@ interface X
              end"
             expect: "20 + 22"!
 
-    method test_Eval_literal
+    method test_Transpiled_evaluator
         self transpileWithPrelude:
             "import impl.environment.Environment
              class Main \{\}
                  direct method run: command in: system
-                      (Environment eval: \"123.0\") debug!
+                     let sources = [
+                                      [\"float-literal.test\", \"float-literal.test\"],
+                                   ].
+                     -- FIXME: Cannot currently intern selectors in transpiler
+                     -- [\"message-to-float.test\", \"message-to-float.result\"]
+                     let root = system files / \"foo/tests/self-hosting\".
+                     sources do: \{ |each|
+                                    let source = (root / each first) readString.
+                                    let res = (Environment eval: source) toString.
+                                    let expect = (root / each second) readString trim.
+                                    res == expect
+                                        ifFalse: \{ Error raise: \"FROM \{each first} EXPECTED:
+\{source}
+  --->
+\{expect displayString}
+GOT:
+\{res displayString}
+\"} }.
+                     system output print: #ok!
              end"
-            expect: "#<Float 123.0>"!
-
+            expect: "#ok"!
 end
 
 class TestTranspileBoolean { assert system }
