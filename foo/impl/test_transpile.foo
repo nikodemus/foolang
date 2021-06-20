@@ -48,7 +48,7 @@ interface TranspilerTest
         (system files / "host/generated_builtins.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c builtins }.
-        let path = system files / "tmp_transpile_test.exe".
+        let path = system currentDirectory / "tmp_transpile_test.exe".
         path ifExists: #deleteFile.
         path exists not assert: "executable cleared".
         -- KLUDGE: Windows CI host linker cannot find the sanitizer libraries,
