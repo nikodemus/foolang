@@ -98,9 +98,9 @@ extend Object
     method mismatch: other
         let err = StringOutput new.
         err print: self displayString.
-        err print: " <==> ".
-        err print: other displayString.
-        panic "Mismatch: {err content}"!
+        err println: "\n <==>".
+        err println: other displayString.
+        Error raise: "Mismatch:\n{err content}"!
 
     method displayString
         StringOutput with: { |out| self displayOn: out }!
