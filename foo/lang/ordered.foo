@@ -194,8 +194,18 @@ interface Ordered
                                 ifTrue: { return index } }.
         noneBlock value!
 
+    method positionFromRight: block ifNone: noneBlock
+        self size downTo: 1
+                  do: { |index|
+                        (block value: (self at: index))
+                            ifTrue: { return index } }.
+        noneBlock value!
+
     method position: block
-        self position: block ifNone: { return False }!
+        self position: block ifNone: { False }!
+
+    method positionFromRight: block
+        self positionFromRight: block ifNone: { False }!
 
     method with: other collect: block
         self with: other collect: block of: Any!
