@@ -17,11 +17,23 @@ class TestString { assert }
         assert forAll: [["foo", "foo"],
                         [" foo", " foo"],
                         [" foo ", " foo"],
-                        ["foo   ", "foo"],
+                        [" foo ", " foo"],
+                        ["    ", ""],
                         ["foo\n", "foo"]]
                that: { |test|
                        test first trimRight == test second }
                testing: "String#trimRight"!
+
+    method test_String_trim
+        assert forAll: [["foo", "foo"],
+                        [" foo", "foo"],
+                        [" foo ", "foo"],
+                        ["foo   ", "foo"],
+                        ["    ", ""],
+                        ["foo\n", "foo"]]
+               that: { |test|
+                       test first trim == test second }
+               testing: "String#trim"!
 
     method test_String_less_than
         assert forAll: [["aQWE", "bQWE"],

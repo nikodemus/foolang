@@ -211,6 +211,16 @@ class SyntaxReturn { value }
         [value]!
 end
 
+class SyntaxSelector { name }
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitSelector: self!
+
+    method parts
+        [name]!
+end
+
 class SyntaxPanic { value }
     is Syntax
 
@@ -297,7 +307,7 @@ class SyntaxBlockComment { fence lines source }
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
-        [lines]!
+        [fence, lines]!
 
     method displayString
         "#<SyntaxBlockComment {lines}>"!

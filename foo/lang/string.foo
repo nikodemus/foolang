@@ -25,17 +25,20 @@ extend String
         Character code: (self codeAt: index)!
 
     method trimRight
-        self trimRight: #isWhitespace!
+        self trimRight: { |each| each isWhitespace not }!
 
     method trimRight: block
-        let size = self size.
-        size downTo: 1
-             do: { |index|
-                   (block value: (self at: index))
-                       ifFalse: { index is size
-                                      ifTrue: { return self }
-                                      ifFalse: { return self from: 1 to: index } } }.
-        ""!
+        let stop = self positionFromRight: block ifNone: { return "" }.
+        self from: 1 to: stop!
+
+    method trim
+        self trim: { |each| each isWhitespace not }!
+
+    method trim: block
+        let start = self position: block
+                         ifNone: { return "" }.
+        let stop :: Integer = self positionFromRight: block.
+        self from: start to: stop!
 
     method newline
         self append: "\n"!

@@ -492,16 +492,16 @@ end"!
         129!
 end"!
 
-    method test_Block_comment_in_eval
+    method test1_Block_comment_in_eval
         self eval: "---
                     This is a test.
                     ---
                     42"
             expect: 42!
 
-    method test_Block_comment_format
+    method test0_Block_comment_format
         self parse: "---\nThis is a test.\n---\n      42"
-            expect: "---\nThis is a test.\n---\n42"!
+             expect: "---\nThis is a test.\n---\n42"!
 
     method test_Line_comment_in_eval
         self eval: "--> 42\n 42"
@@ -574,7 +574,7 @@ end"!
                                    let selectors = bt collect: { |f| f selector :: Selector }.
                                    selectors isEquivalent: [#value, #bang:, #foo, #bar, #test] }}!
 
-    method testAstSource
+    method test_DoesNotUnderstand_has_source_location
          -- `is Object` required for the exception to happen as we want
         self load: "class SourceTest \{}
                          is Object

@@ -962,17 +962,29 @@ end
 class TestTranspileSelfHosted { assert system }
     is TranspilerTest
 
-    method testParser
+    method test_Transpiled_Parser
         self transpileWithPrelude:
             "import impl.parser
              class Main \{\}
                 direct method run: command in: system
-                     let i = parser.Parser parseExpressions: \"123\".
-                     system output print: i!
-             end"
-                expect: "[#<SyntaxLiteral 123>]"!
+                     let exprs = parser.Parser parseExpressions: \"123\".
+                     system output print: exprs.
+                     let defs = parser.Parser parseDefinitions:
+\"
+interface X
+    method y
+        42!
+end
+\".
+                     system output print: defs!
 
-    method testSyntaxPrinter
+             end"
+                expect: "[#<SyntaxLiteral 123>][#<SyntaxInterface interface X
+    method y
+        42!
+end>]"!
+
+    method test_Transpiled_SyntaxPrinter
         self transpileWithPrelude:
             "import impl.syntaxPrinter
              import impl.syntax
@@ -989,15 +1001,32 @@ class TestTranspileSelfHosted { assert system }
              end"
             expect: "20 + 22"!
 
-    method test_Eval_literal
+    method test_Transpiled_evaluator
         self transpileWithPrelude:
             "import impl.environment.Environment
              class Main \{\}
                  direct method run: command in: system
-                      (Environment eval: \"123.0\") debug!
+                     let sources = [
+                                      [\"float-literal.test\", \"float-literal.test\"],
+                                   ].
+                     -- FIXME: Cannot currently intern selectors in transpiler
+                     -- [\"message-to-float.test\", \"message-to-float.result\"]
+                     let root = system files / \"foo/tests/self-hosting\".
+                     sources do: \{ |each|
+                                    let source = (root / each first) readString.
+                                    let res = (Environment eval: source) toString.
+                                    let expect = (root / each second) readString trim.
+                                    res == expect
+                                        ifFalse: \{ Error raise: \"FROM \{each first} EXPECTED:
+\{source}
+  --->
+\{expect displayString}
+GOT:
+\{res displayString}
+\"} }.
+                     system output print: #ok!
              end"
-            expect: "#<Float 123.0>"!
-
+            expect: "#ok"!
 end
 
 class TestTranspileBoolean { assert system }

@@ -1,5 +1,6 @@
 import .object.Object
 import .integer.Integer
+import .exception.Error
 
 class Chain { _first _last size }
     is Object
@@ -98,9 +99,9 @@ extend Object
     method mismatch: other
         let err = StringOutput new.
         err print: self displayString.
-        err print: " <==> ".
-        err print: other displayString.
-        panic "Mismatch: {err content}"!
+        err println: "\n <==>".
+        err println: other displayString.
+        Error raise: "Mismatch:\n{err content}"!
 
     method displayString
         StringOutput with: { |out| self displayOn: out }!

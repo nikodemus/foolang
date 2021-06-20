@@ -90,6 +90,10 @@ class SyntaxPrinter { output
         aNode type visitBy: self.
         last = #declaration!
 
+    method visitSelector: aSelector
+        self print: "#".
+        self print: aSelector name!
+
     method visitArray: anArray
         let flat = anArray entries allSatisfy: #isTiny.
         self print: "[".
@@ -213,7 +217,7 @@ class SyntaxPrinter { output
     method visitKeywordMessage: aMessage
         let receiver = aMessage receiver.
         receiver visitBy: self.
-        let parts = aMessage selector parts.
+        let parts = aMessage selector name splitBy: ":" character.
         (receiver isTiny and: parts size is 1)
             ifTrue: {
                       return parts
@@ -221,8 +225,9 @@ class SyntaxPrinter { output
                           do: { |part arg|
                                 self print: " ".
                                 self print: part.
-                                self print: " ".
-                                arg visitBy: self } }.
+                                self print: ": ".
+                                arg visitBy: self.
+                                last = #keyword } }.
         let printer = (receiver isTiny and: printed <= indent + 4)
                           ifTrue: { (self print: " ")
                                         indentHere }
@@ -234,7 +239,7 @@ class SyntaxPrinter { output
             with: aMessage arguments
             do: { |part arg|
                   printer print: part.
-                  printer print: " ".
+                  printer print: ": ".
                   arg visitBy: printer }
             interleaving: { printer newline }.
         last = #keyword!

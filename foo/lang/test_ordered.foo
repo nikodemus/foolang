@@ -5,6 +5,18 @@ class TestOrdered { assert }
     direct method runTests: assert
         (self assert: assert) runTests!
 
+    method test_position_vs_positionFromRight
+        let cases = [[ "123123", 2, 5 ]].
+        assert forAll: cases
+               that: { |case|
+                       let haystack = case first.
+                       let predicate = { |each| each == "2" character }.
+                       let fromLeft = haystack position: predicate.
+                       let fromRight = haystack positionFromRight: predicate.
+                       (fromLeft == case second) and: (fromRight == case third) }
+               testing: "Ordered#position: and #positionFromRight:"!
+
+
     method splitCases
         [ ["", [""]],
           [":", ["", ""]],
@@ -13,7 +25,7 @@ class TestOrdered { assert }
           ["foo:bar:", ["foo", "bar", ""]],
           [":foo:bar:", ["", "foo", "bar", ""]] ]!
 
-    method testSplitDo
+    method testSplitBy
         assert forAll: self splitCases
                that: { |case|
                        let split = (case first splitBy: ":" character) asArray.

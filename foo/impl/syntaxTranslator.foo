@@ -48,6 +48,10 @@ class SyntaxTranslator { env currentMethod }
                          importAll: module
                          relative: relative)!
 
+    method visitSelector: aSelector
+        AstConstantRef value: (Selector name: aSelector name)
+                       env: env!
+
     method visitLiteral: aLiteral
         -- Tracer trace: #visitLiteral:.
         AstConstantRef value: aLiteral value env: env!
@@ -163,7 +167,7 @@ class SyntaxTranslator { env currentMethod }
         -- Tracer trace: #visitUnaryMessage:.
         AstSend
             receiver: (aMessage receiver visitBy: self)
-            selector: aMessage selector
+            selector: (Selector name: aMessage selector name)
             arguments: []
             source: aMessage source!
 
@@ -171,7 +175,7 @@ class SyntaxTranslator { env currentMethod }
         -- Tracer trace: #visitBinaryMessage:.
         AstSend
             receiver: (aMessage receiver visitBy: self)
-            selector: aMessage selector
+            selector: (Selector name: aMessage selector name)
             arguments: [aMessage argument visitBy: self]
             source: aMessage source!
 
@@ -179,7 +183,7 @@ class SyntaxTranslator { env currentMethod }
         -- Tracer trace: #visitKeywordMessage:.
         AstSend
             receiver: (aMessage receiver visitBy: self)
-            selector: aMessage selector
+            selector: (Selector name: aMessage selector name)
             arguments: (aMessage arguments collect: { |arg| arg visitBy: self })
             source: aMessage source!
 
@@ -290,7 +294,7 @@ class SyntaxTranslator { env currentMethod }
         (argumentVariables size is signature parameters size) assert.
         let astMethod = AstMethod
                             home: $MethodHome
-                            selector: signature selector
+                            selector: (Selector name: signature selector name)
                             argumentVariables: argumentVariables
                             returnType: (self _visitType: signature returnType)
                             isDirect: aMethod isDirect
