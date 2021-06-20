@@ -1,14 +1,13 @@
 import .name.Name
 
--- Not implementing the non-primitive methods here for floats, they should come
--- from lang.number and lang.float!
---
--- Doing them for integers was OK, since it gave an opportunity to think about
--- things - doing them for floats here would be a waste of time.
---
--- toString is a perfect example of a how inlining these in here doesn't
--- make sense
-define FloatMethods
+define DirectMethods
+    { #parse:
+      -> { signature: [String], vars: 0,
+           body: "struct FooBytes* b = PTR(FooBytes, ctx->frame[0].datum);
+                  return foo_Float_new(strtod((char*)b->data, NULL));" },
+      }!
+
+define InstanceMethods
     { (Selector name: "prefix-")
           -> { signature: [], vars: 0,
                body: "return foo_Float_new(- ctx->receiver.datum.float64);" },

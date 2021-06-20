@@ -22,7 +22,7 @@ import .filepath.FilePath
 import .filestream.FileStream
 import .float.Float
 import .integer.Integer
--- import .interface.Interface
+import .interface2.Interface
 import .interval.Interval
 import .iterable.Iterable
 import .list.List

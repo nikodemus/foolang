@@ -1,0 +1,55 @@
+import .impl.environment.Environment
+import .impl.utils.FileModuleDictionary
+import .impl.cTranspiler.CTranspiler
+
+class Main {}
+    direct method run: command in: system
+        let sourceFile = command first.
+        let targetFile = command size > 1
+                             ifTrue: { command second }
+                             ifFalse: { "a.exe" }.
+        let path = system files / sourceFile.
+        let mods = FileModuleDictionary
+                       new: { "lang" -> system files / "foo/lang",
+                              "impl" -> system files / "foo/impl",
+                              "lib" -> system files / "foo/lib" }.
+        let c = CTranspiler
+                    transpile: path readString
+                    in: (Environment modules: mods)
+                    with: ["lang", "prelude"] asList.
+        let host = system files / "host".
+        (host / "generated_selectors.h")
+            forWrite truncateExisting
+                createOrOpen: { |f| f print: c selectors }.
+        (host / "generated_declarations.h")
+            forWrite truncateExisting
+                createOrOpen: { |f| f print: c declarations }.
+        (host / "generated_constants.c")
+            forWrite truncateExisting
+                createOrOpen: { |f| f print: c constants }.
+        (host / "generated_closures.c")
+            forWrite truncateExisting
+                createOrOpen: { |f| f print: c closures }.
+        (host / "generated_main.c")
+            forWrite truncateExisting
+                createOrOpen: { |f| f print: c main }.
+        (host / "generated_builtins.c")
+            forWrite truncateExisting
+                createOrOpen: { |f| f print: c builtins }.
+
+        let exe = system currentDirectory / targetFile.
+        exe ifExists: #deleteFile.
+
+        let sanitizerOptions = "-fsanitize=address -fsanitize=undefined".
+        let target
+            = system isUnix
+                ifTrue: { "unix" }
+                ifFalse: { "windows" }.
+        let buildCmd = "clang -o {exe} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall -Werror --std=c11 host/main.c host/system_{target}.c ext/dtoa.c".
+        let build = system command: buildCmd.
+        build stderr
+            ifNotEmpty: { system output println: "---stderr---".
+                          system output println: build stderr.
+                          system output println: "---" }.
+        build ok!
+end

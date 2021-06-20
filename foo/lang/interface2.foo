@@ -1,0 +1,5 @@
+import .object.Object
+
+interface Interface
+    is Object
+end

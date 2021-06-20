@@ -989,7 +989,7 @@ class TestTranspileSelfHosted { assert system }
              end"
             expect: "20 + 22"!
 
-    method wip_testEvalLiteral
+    method test_Eval_literal
         self transpileWithPrelude:
             "import impl.environment.Environment
              class Main \{\}

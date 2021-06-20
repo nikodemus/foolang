@@ -233,8 +233,8 @@ define Builtins [
          type: Class
          value: Float
          mark: "foo_mark_none"
-         directMethods: Dictionary new
-         instanceMethods: float.FloatMethods,
+         directMethods: float.DirectMethods
+         instanceMethods: float.InstanceMethods,
      Builtin
          type: Class
          value: Integer

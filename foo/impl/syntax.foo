@@ -149,9 +149,6 @@ end
 interface SyntaxCollection
     is Syntax
 
-    method weight
-        self entries sum: #weight!
-
     method parts
         self entries!
 end
@@ -161,6 +158,9 @@ class SyntaxArray { entries }
 
     method visitBy: visitor
         visitor visitArray: self!
+
+    method weight
+        self entries sum: #weight!
 end
 
 class SyntaxRecord { entries }
@@ -179,6 +179,10 @@ class SyntaxDictionary { entries }
 
     method visitBy: visitor
         visitor visitDictionary: self!
+
+    method weight
+        entries size + ((entries collect: #value)
+                            sum: #weight)!
 end
 
 class SyntaxSeq { first then }

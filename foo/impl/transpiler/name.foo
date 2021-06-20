@@ -26,15 +26,15 @@ class Name { out }
         self out: StringOutput new!
 
     direct method mangleSelector: selector::Selector
-        self _new
-            ; out print: "FOO_"
-            ; _mangleSelector: selector
-            ; content!
+        let s = self _new.
+        s out print: "FOO_".
+        s _mangleSelector: selector.
+        s content!
 
     direct method mangleMethod: aMethod
-        self _new
-            ; _mangleMethod: aMethod
-            ; content!
+        let s = self _new.
+        s _mangleMethod: aMethod.
+        s content!
 
     direct method mangleMethodClass: aMethod
         aMethod isDirect
@@ -42,29 +42,29 @@ class Name { out }
             ifFalse: { self mangleClass: aMethod home }!
 
     direct method mangleMetaclass: aClass
-        self _new
-            ; _mangleMetaclass: aClass
-            ; content!
+        let s = self _new.
+        s _mangleMetaclass: aClass.
+        s content!
 
     direct method mangleClass: aClass
-        self _new
-            ; _mangleClass: aClass
-            ; content!
+        let s = self _new.
+        s _mangleClass: aClass.
+        s content!
 
     direct method mangleName: name
-        self _new
-            ; _mangleName: name
-            ; content!
+        let s = self _new.
+        s _mangleName: name.
+        s content!
 
     direct method mangleGlobal: aVar
-        self _new
-            ; _mangleGlobal: aVar
-            ; content!
+        let s = self _new.
+        s _mangleGlobal: aVar.
+        s content!
 
     direct method mangleDynamic: aVar
-        self _new
-            ; _mangleDynamic: aVar
-            ; content!
+        let s = self _new.
+        s _mangleDynamic: aVar.
+        s content!
 
     method content
         out content!
