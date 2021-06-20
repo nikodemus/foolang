@@ -307,7 +307,7 @@ class SyntaxBlockComment { fence lines source }
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
-        [lines]!
+        [fence, lines]!
 
     method displayString
         "#<SyntaxBlockComment {lines}>"!
