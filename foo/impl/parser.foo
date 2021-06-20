@@ -247,6 +247,8 @@ class BlockCommentToken { string first last }
         let expr = (parser parseAtPrecedence: precedence).
         let origLines = (parser from: last + 1 to: endFence) lines.
         -- Block comments on one line don't get trimmed.
+        -- FIXME: Should trim depending on the position of the fence,
+        -- so that indented block lost the indentation amount of whitespace.
         let lines = origLines size > 1
                         ifTrue: { origLines collect: #trimRight }
                         ifFalse: { origLines }.
