@@ -6,7 +6,7 @@ class TestOrdered { assert }
         (self assert: assert) runTests!
 
     method test_position_vs_positionFromRight
-        let cases = [[ "123123", 2, 7 ]].
+        let cases = [[ "123123", 2, 5 ]].
         assert forAll: cases
                that: { |case|
                        let haystack = case first.
@@ -14,7 +14,7 @@ class TestOrdered { assert }
                        let fromLeft = haystack position: predicate.
                        let fromRight = haystack positionFromRight: predicate.
                        (fromLeft == case second) and: (fromRight == case third) }
-               testing: "Ordered#position: and #positionFromRigh"!
+               testing: "Ordered#position: and #positionFromRight:"!
 
 
     method splitCases
