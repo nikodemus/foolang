@@ -1,5 +1,6 @@
 import .object.Object
 import .integer.Integer
+import .exception.Error
 
 class Chain { _first _last size }
     is Object
