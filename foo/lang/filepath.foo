@@ -3,24 +3,34 @@ import .closure
 extend FilePath
     method displayOn: stream
         stream print: self toString!
+
     method forAppend
         self file forAppend!
+
     method forRead
         self file forRead!
+
     method forWrite
         self file forWrite!
+
     method truncateExisting
         self file truncateExisting!
+
     method pathname
         self toString!
+
     method readString
-        self forRead open: { |f| f readString }!
+        self forRead
+            open: { |f| f readString }!
+
     method readString: path
-        (self / path) readString!
+        (self / path)
+            readString!
+
     method ifExists: block
-        self
-            ifExists: block
-            ifDoesNotExist: { False }!
+        self ifExists: block
+             ifDoesNotExist: { False }!
+
     method ifExists: existsBlock ifDoesNotExist: doesNotExistBlock
         self exists
             ifTrue: { existsBlock cull: self }
