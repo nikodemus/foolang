@@ -99,7 +99,7 @@ end
 end
 "!
 
-    method test0_Format_small_array
+    method test_Format_small_array
         self parse: "[1,2,3,]"
             expect: "[1, 2, 3]"!
 
@@ -490,7 +490,7 @@ end
 end
 "!
 
-    method test0_Format_two_defines
+    method test_Format_two_defines
         self parseDefinitions:  "define A 100 foobar!
                                  define B 200 droopa!"
              expect:
@@ -501,7 +501,7 @@ define B
     200 droopa!
 "!
 
-    method test0_Format_two_classes
+    method test_Format_two_classes
         self parseDefinitions:  "class A \{\} end
                                  class B \{\} end"
             expect:
