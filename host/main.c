@@ -117,12 +117,12 @@ bool foo_bytes_equal(const struct FooBytes* a, const struct FooBytes* b) {
  */
 struct FooSelector {
   struct FooSelector* next;
-  const struct FooBytes* name;
+  struct FooBytes* name;
 };
 
 #include "generated_selectors.h"
 
-struct FooSelector* foo_intern_new_selector(const struct FooBytes* name) {
+struct FooSelector* foo_intern_new_selector(struct FooBytes* name) {
   name->gc = false; // prevent GC of the name!
   struct FooSelector* new = calloc(1, sizeof(struct FooSelector));
   new->name = name;
@@ -131,7 +131,7 @@ struct FooSelector* foo_intern_new_selector(const struct FooBytes* name) {
   return new;
 }
 
-struct FooSelector* foo_intern(const struct FooBytes* name) {
+struct FooSelector* foo_intern(struct FooBytes* name) {
   struct FooSelector* selector = FOO_InternedSelectors;
   while (selector != NULL) {
     if (foo_bytes_equal(selector->name, name)) {
