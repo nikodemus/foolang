@@ -3,12 +3,17 @@ import .closure
 extend File
     method displayOn: stream
         stream print: self toString!
+
     method open: block
         block with: self open!
+
     method create: block
         block with: self create!
+
     method createOrOpen: block
         block with: self createOrOpen!
+
     method readString
-        self forRead open: { |f| f readString }!
+        self forRead
+            open: { |f| f readString }!
 end
