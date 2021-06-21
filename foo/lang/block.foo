@@ -2,6 +2,7 @@ import .object.Object
 
 interface Function
     is Object
+
     -- Note: implementing #value methods directly is very
     -- likely worth it!
 
@@ -54,24 +55,24 @@ interface Block
         { self value is True
               ifFalse: { return r }.
           r = body value }
-        loop!
+            loop!
 
     method whileFalse: body
         let r = False.
         { self value is False
               ifFalse: { return r }.
           r = body value }
-        loop!
+            loop!
 
     method whileTrue
         { self value is True
               ifFalse: { return False } }
-        loop!
+            loop!
 
     method whileFalse
         { self value is False
               ifFalse: { return False } }
-        loop!
+            loop!
 
     -- Miscellany
 
@@ -84,21 +85,28 @@ interface Block
         -- Deserves a better verb than close, should probably
         -- steal python's __enter__ and __exit__ style names.
         -- and protocol.
-        { self value: value } finally: { value close }!
+        { self value: value }
+            finally: { value close }!
 
     method ascending
-        { |a b| (self value: a) < (self value: b) }!
+        { |a b|
+          (self value: a) < (self value: b) }!
 
     method descending
-        { |a b| (self value: a) > (self value: b) }!
+        { |a b|
+          (self value: a) > (self value: b) }!
 
     method on: condition do: block
-        condition withHandler: block do: self!
+        condition
+            withHandler: block
+            do: self!
 
-    method on: cond1 do: block1
-           on: cond2 do: block2
-        cond2 withHandler: block2
-              do: { cond1 withHandler: block1 do: self }!
+    method on: cond1 do: block1 on: cond2 do: block2
+        cond2
+            withHandler: block2
+            do: { cond1
+                      withHandler: block1
+                      do: self }!
 
     method catch: condition
         Catch
