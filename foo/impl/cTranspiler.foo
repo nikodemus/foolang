@@ -439,9 +439,9 @@ class CTranspiler { output selectorMap closureFunctions
                   output println: ";" }.
         output println: "    struct FooContext* ctx = foo_context_new_main(vars);".
         let main = Name mangleGlobal: {name: "Main"}.
-        output println: "    struct FooArray* array = FooArray_alloc(argc);".
-        output println: "    for (int i = 0; i < argc; i++)".
-        output println: "        array->data[i] = foo_String_new_from(argv[i]);".
+        output println: "    struct FooArray* array = FooArray_alloc(argc-1);".
+        output println: "    for (size_t i = 0; i < array->size; i++)".
+        output println: "        array->data[i] = foo_String_new_from(argv[i+1]);".
         output println: "    struct Foo args = \{ .class = &FooClass_Array, .datum = \{ .ptr = array } };".
         output println: "    struct Foo system = \{ .class = &FooClass_System, .datum = \{ .ptr = NULL } };".
         output println: "    foo_send(ctx, &{Name mangleSelector: #run:in:}, {main}, 2, args, system);".
