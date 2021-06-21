@@ -8,7 +8,7 @@ define DirectMethods
       }!
 
 define InstanceMethods
-    { (Selector name: "prefix-")
+    { (Selector intern: "prefix-")
           -> { signature: [], vars: 0,
                body: "return foo_Float_new(- ctx->receiver.datum.float64);" },
       #debug

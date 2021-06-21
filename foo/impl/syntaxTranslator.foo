@@ -49,7 +49,7 @@ class SyntaxTranslator { env currentMethod }
                          relative: relative)!
 
     method visitSelector: aSelector
-        AstConstantRef value: (Selector name: aSelector name)
+        AstConstantRef value: (Selector intern: aSelector name)
                        env: env!
 
     method visitLiteral: aLiteral
@@ -101,7 +101,7 @@ class SyntaxTranslator { env currentMethod }
                                      aRecord entries
                                          do: { |each| out print: each key } }.
         AstRecord
-            name: (Selector new: recordName)
+            name: (Selector intern: recordName)
             slots: (aRecord entries collect: { |each| each key butlast })
             values: (aRecord entries
                          collect: { |each| each value visitBy: self })!
@@ -159,7 +159,7 @@ class SyntaxTranslator { env currentMethod }
         -- Tracer trace: #visitPrefixMessage:.
         AstSend
             receiver: (aMessage receiver visitBy: self)
-            selector: (Selector name: "prefix{aMessage selector name}")
+            selector: (Selector intern: "prefix{aMessage selector name}")
             arguments: []
             source: aMessage source!
 
@@ -167,7 +167,7 @@ class SyntaxTranslator { env currentMethod }
         -- Tracer trace: #visitUnaryMessage:.
         AstSend
             receiver: (aMessage receiver visitBy: self)
-            selector: (Selector name: aMessage selector name)
+            selector: (Selector intern: aMessage selector name)
             arguments: []
             source: aMessage source!
 
@@ -175,7 +175,7 @@ class SyntaxTranslator { env currentMethod }
         -- Tracer trace: #visitBinaryMessage:.
         AstSend
             receiver: (aMessage receiver visitBy: self)
-            selector: (Selector name: aMessage selector name)
+            selector: (Selector intern: aMessage selector name)
             arguments: [aMessage argument visitBy: self]
             source: aMessage source!
 
@@ -183,7 +183,7 @@ class SyntaxTranslator { env currentMethod }
         -- Tracer trace: #visitKeywordMessage:.
         AstSend
             receiver: (aMessage receiver visitBy: self)
-            selector: (Selector name: aMessage selector name)
+            selector: (Selector intern: aMessage selector name)
             arguments: (aMessage arguments collect: { |arg| arg visitBy: self })
             source: aMessage source!
 
@@ -294,7 +294,7 @@ class SyntaxTranslator { env currentMethod }
         (argumentVariables size is signature parameters size) assert.
         let astMethod = AstMethod
                             home: $MethodHome
-                            selector: (Selector name: signature selector name)
+                            selector: (Selector intern: signature selector name)
                             argumentVariables: argumentVariables
                             returnType: (self _visitType: signature returnType)
                             isDirect: aMethod isDirect

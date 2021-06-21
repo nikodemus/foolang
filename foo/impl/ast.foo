@@ -393,7 +393,7 @@ class AstClass { name superclass _slots _interfaces _directMethods _instanceMeth
         self slots
             ifEmpty: { #new }
             ifNotEmpty: { Selector
-                              new: (StringOutput
+                              intern: (StringOutput
                                         with: { |out|
                                                 self slots
                                                     do: { |each|
@@ -416,7 +416,7 @@ end
 
 class AstReaderMethod { home slot }
     method selector
-        Selector new: slot name!
+        Selector intern: slot name!
     method signature
         []!
     method arity

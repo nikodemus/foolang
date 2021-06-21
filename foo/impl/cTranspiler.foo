@@ -589,7 +589,7 @@ class CTranspiler { output selectorMap closureFunctions
     method _recordClassFromRecord: aRecord
         let keys = (Record keysIn: aRecord) sorted.
         let name = Selector
-                       new: (StringOutput
+                       intern: (StringOutput
                                  with: { |out|
                                          keys do: { |each| out print: "{each}:" }}).
         self _ensureRecordClass: { name: name,
@@ -666,7 +666,7 @@ class CTranspiler { output selectorMap closureFunctions
                     out print: "    .data = \{ ".
                     slots
                         do: { |each|
-                              self _writeValue: ((Selector new: each name)
+                              self _writeValue: ((Selector intern: each name)
                                                      sendTo: value)
                                    _in: env
                                    _to: out.
@@ -1047,7 +1047,7 @@ class CTranspiler { output selectorMap closureFunctions
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
         -- #__doSelectors
         output println: "        (struct FooMethod)\{ .selector = &FOO_____doSelectors_,".
-        output println: "                            .class = NULL,".
+        output println: "                            .class = &{className},".
         output println: "                            .argCount = 1,".
         output println: "                            .frameSize = 1,".
         output println: "                            .function = &foo_method_doSelectors_,".

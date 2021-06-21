@@ -59,7 +59,7 @@ class TestSelector { assert }
     method test_isEquivalent_
         self check: [ #foo == #foo,
                       (#bar == #foo) not,
-                      #foo isEquivalent: (Selector name: "foo") ]!
+                      #foo isEquivalent: (Selector intern: "foo") ]!
 
     method test_toString
         self check: [ #foo toString == "#foo",

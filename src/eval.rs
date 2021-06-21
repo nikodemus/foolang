@@ -813,7 +813,7 @@ impl Env {
             Literal::Float(value) => Ok(self.foo.make_float(*value)),
             Literal::String(value) => Ok(self.foo.make_string(value)),
             Literal::Selector(value) => Ok(self.find_global_or_unwind("Selector")?.send(
-                "new:",
+                "intern:",
                 &[self.foo.make_string(value)],
                 self,
             )?),

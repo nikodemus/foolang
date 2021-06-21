@@ -1,5 +1,11 @@
-define DirectMethods
-    Dictionary new!
+define DirectMethods {
+    #intern:
+        -> {signature: [String], vars: 0,
+            body: "struct FooBytes* name = PTR(FooBytes, ctx->frame[0].datum);
+                   return (struct Foo)
+                      \{ .class = &FooClass_Selector,
+                         .datum = \{ .ptr = foo_intern(name) \}\};"}
+}!
 
 define InstanceMethods {
     #<
@@ -27,7 +33,7 @@ return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = name } };"},
     #sendTo:with:
         -> {signature: [Any, Array], vars: 0,
             body: "struct FooSelector* selector = PTR(FooSelector, ctx->receiver.datum);
-return foo_send_array(ctx->sender, selector, ctx->frame[0], ctx->frame[1]);"},
+return foo_send_array(ctx, selector, ctx->frame[0], ctx->frame[1]);"},
     #startsWith:
         -> {signature: [String], vars: 0,
             body: "const struct FooBytes* name = PTR(FooSelector, ctx->receiver.datum)->name;

@@ -10,7 +10,7 @@ extend String
         ""!
 
     method toSelector
-        Selector new: self!
+        Selector intern: self!
 
     method < other
         1 to: (self size min: other size)
