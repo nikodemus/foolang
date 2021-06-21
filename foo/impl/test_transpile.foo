@@ -976,8 +976,10 @@ interface X
         42!
 end
 \".
-                     system output print: defs!
-
+                     system output print: defs.
+                     let dictDefs = parser.Parser parseDefinitions:
+                         (system files / \"foo/lang/test_dictionary.foo\") readString.
+                     system output println: dictDefs size!
              end"
                 expect: "[#<SyntaxLiteral 123>][#<SyntaxInterface interface X
     method y
