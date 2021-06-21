@@ -1,6 +1,5 @@
 -- This is only loaded on self-hosted version. The bootstrap host
 -- loads just boolean.foo instead!
-
 import .object.Object
 
 interface Boolean
@@ -9,60 +8,54 @@ interface Boolean
     required method ifTrue: trueBlock ifFalse: falseBlock
 
     method assert: what
-        self ifFalse: { panic "{what} assertion failed!" }!
+        self ifFalse: { panic "{ what } assertion failed!" }!
 
     method assert
         self ifFalse: { panic "assertion failed!" }!
 
     method and: other
-        self
-           ifTrue: { other }
-           ifFalse: { False }!
+        self ifTrue: { other }
+             ifFalse: { False }!
 
     method and: other1 and: other2
-        self
-           ifTrue: { other1 and: other2 }
-           ifFalse: { False }!
+        self ifTrue: { other1 and: other2 }
+             ifFalse: { False }!
 
     method and: other1 and: other2 and: other3
-        self
-           ifTrue: { other1 and: other2 and: other3 }
-           ifFalse: { False }!
+        self ifTrue: { other1
+                           and: other2
+                           and: other3 }
+             ifFalse: { False }!
 
     method or: other
-        self
-           ifTrue: { True }
-           ifFalse: { other }!
+        self ifTrue: { True }
+             ifFalse: { other }!
 
     method or: other1 or: other2
-        (self or: other1) or: other2!
+        (self or: other1)
+            or: other2!
 
     method not
-        self
-           ifTrue: { False }
-           ifFalse: { True }!
+        self ifTrue: { False }
+             ifFalse: { True }!
 
     method ifTrue: block
-        self
-           ifTrue: block
-           ifFalse: { False }!
+        self ifTrue: block
+             ifFalse: { False }!
 
     method ifFalse: block
-        self
-           -- FIXME: returning True in the first leg seems strange, but breaks a couple
-           -- of tests. Should either explain the rational or return False.
-           ifTrue: { True }
-           ifFalse: block!
+        self -- FIXME: returning True in the first leg seems strange, but breaks a couple
+             -- of tests. Should either explain the rational or return False.
+            ifTrue: { True }
+            ifFalse: block!
 
     method toString
-        self
-           ifTrue: { "True" }
-           ifFalse: { "False" }!
+        self ifTrue: { "True" }
+             ifFalse: { "False" }!
 
     method name
-        self
-            ifTrue: { "True" }
-            ifFalse: { "False" }!
+        self ifTrue: { "True" }
+             ifFalse: { "False" }!
 
     method displayOn: stream
         stream print: self toString!
@@ -70,12 +63,14 @@ end
 
 class BooleanTrue {}
     is Boolean
+
     method ifTrue: trueBlock ifFalse: falseBlock
         trueBlock value!
 end
 
 class BooleanFalse {}
     is Boolean
+
     method ifTrue: trueBlock ifFalse: falseBlock
         falseBlock value!
 end
