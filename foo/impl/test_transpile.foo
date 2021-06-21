@@ -1847,12 +1847,12 @@ class TestTranspileSystem { assert system }
                          end"
              expect: "Hello!"!
 
-    method testCommandArgs
+    method test_Main_run_in_command_size
         self transpile: "class Main \{}
                              direct method run: command in: system
                                  command size debug!
                          end"
-            expect: "#<Integer 1>"!
+            expect: "#<Integer 0>"!
 
     method testRandom
         self transpile: "class Main \{}
