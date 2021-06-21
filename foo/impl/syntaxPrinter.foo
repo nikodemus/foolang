@@ -409,6 +409,26 @@ class SyntaxPrinter { output
         printed > 1
             ifTrue: { self skipline }!
 
+    method _visitMethodSignature: signature
+        let selector = signature selector.
+        let spacer = selector isKeyword
+                         ifTrue: { ": " }
+                         ifFalse: { " " }.
+        signature parameters isEmpty
+            ifTrue: { self print: " ".
+                      self print: selector name }
+            ifFalse: { (selector name splitBy: ":" character)
+                           with: signature parameters
+                           do: { |part param|
+                                 self print: " ".
+                                 self print: part.
+                                 self print: spacer.
+                                 param visitBy: self } }.
+        signature returnType is Any
+            ifFalse: { self print: " -> ".
+                       signature returnType visitBy: self }!
+
+
     method visitMethod: aMethod
         -- Debug println: "/pp method {aMethod signature selector}".
         aMethod comments
@@ -424,20 +444,7 @@ class SyntaxPrinter { output
         aMethod isDirect
             ifTrue: { self print: "direct " }.
         self print: "method".
-        let signature = aMethod signature.
-        signature parameters isEmpty
-            ifTrue: { self print: " ".
-                      self print: signature selector name }
-            ifFalse: { signature selector parts
-                           doWithIndex: { |part index|
-                                          self print: " ".
-                                          self print: part.
-                                          self print: " ".
-                                          let param =  signature parameters at: index.
-                                          param visitBy: self } }.
-        signature returnType is Any
-            ifFalse: { self print: " -> ".
-                       signature returnType visitBy: self }.
+        self _visitMethodSignature: aMethod signature.
         aMethod isRequired
             ifFalse: { let bodyVisitor = self indentBody newline.
                        bodyVisitor visitMaybeSuffixComment: aMethod body

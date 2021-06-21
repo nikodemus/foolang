@@ -49,6 +49,50 @@ define Foo 1!"!
     is TestInterface5
 end"!
 
+    method test_Format_method_with_multipart_keyword_selector
+        self parse: "class TestThis \{\}
+                         method a: simple test: case
+                             52!
+                     end"
+            expect:
+                "class TestThis \{\}
+    method a: simple test: case
+        52!
+end"!
+
+    method test_Format_method_with_binary_selector
+        self parse: "class TestThisToo \{\}
+                         method + x
+                             152!
+                     end"
+            expect:
+                "class TestThisToo \{\}
+    method + x
+        152!
+end"!
+
+    method test_Format_method_with_unary_selector
+        self parse: "class TestThisTooYes \{\}
+                         method beep
+                             15!
+                     end"
+            expect:
+                "class TestThisTooYes \{\}
+    method beep
+        15!
+end"!
+
+    method test_Format_method_with_prefix_selector
+        self parse: "class TestThisTooYesYes \{\}
+                         method prefix-
+                             1!
+                     end"
+            expect:
+                "class TestThisTooYesYes \{\}
+    method prefix-
+        1!
+end"!
+
     method test_Line_comments_before_class
         self parse: "-- foo
                      -- bar

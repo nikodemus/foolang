@@ -43,25 +43,36 @@ extend Selector
         self name < other name!
 
     method isKeyword
-        self name
+        Self isKeywordName: self name!
+
+    method isPrefix
+        Self isPrefixName: self name!
+
+    method isSymbol
+        Self isSymbolName: self name!
+
+    method isUnary
+        Self isUnaryName: self name!
+
+    direct method isKeywordName: name
+        name
             find: { |c| c == ":" }
             ifNone: { return False }.
         True!
 
-    method isSymbol
-        (self name at: 1) isSymbol!
+    direct method isSymbolName: name
+        (name at: 1) isSymbol!
 
-    method isPrefix
-        let name = self name.
+    direct method isPrefixName: name
         ((name size > 6) and: (name startsWith: "prefix"))
             -- Good enough until https://github.com/nikodemus/foolang/issues/331
             -- is implemented.
             ifTrue: { (name at: 7) isSymbol }!
 
-    method isUnary
-        self isSymbol
+    direct method isUnaryName: name
+        (self isSymbolName: name)
             ifTrue: { return False }.
-        self isKeyword
+        (self isKeywordName: name)
             ifTrue: { return False }.
         True!
 

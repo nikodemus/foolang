@@ -217,6 +217,9 @@ class SyntaxSelector { name }
     method visitBy: visitor
         visitor visitSelector: self!
 
+    method isKeyword
+        Selector isKeywordName: name!
+
     method parts
         [name]!
 end
