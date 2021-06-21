@@ -93,6 +93,10 @@ end"!
         1!
 end"!
 
+    method test0_Format_small_array
+        self parse: "[1,2,3,]"
+            expect: "[1, 2, 3]"!
+
     method test_Line_comments_before_class
         self parse: "-- foo
                      -- bar

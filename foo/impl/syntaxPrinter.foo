@@ -101,7 +101,9 @@ class SyntaxPrinter { output
         anArray entries
             do: { |element| element visitBy: printer }
             interleaving: { printer print: ",".
-                            flat ifFalse: { printer newline } }.
+                            flat
+                                ifTrue: { printer print: " " }
+                                ifFalse: { printer newline } }.
         printer print: "]".
         last = #paren!
 
