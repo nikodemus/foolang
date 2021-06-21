@@ -3,15 +3,20 @@ import .object.Object
 extend Output
     is Object
 
-    method println: string
-        string printOn: self.
+    method println: object
+        object printOn: self.
         self newline!
+
     method newline
-        self print: "\n"!
+        self writeString: "\n".
+        self flush!
+
     method print: object
         object printOn: self!
+
     method display: object
         object displayOn: self!
+
     method displayOn: stream
         stream print: self toString!
 end
