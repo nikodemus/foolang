@@ -39,6 +39,24 @@ class TestFoolang { system ok onFailure }
 define Foo 1!
 "!
 
+    method test_Format_import_and_define
+        self parseDefinitions: "import xyz
+                                define XYZ 42!"
+            expect: "import xyz
+
+define XYZ 42!
+"!
+
+    method test_Format_import_and_define_with_prefix_comment
+        self parseDefinitions: "import xyz
+                                -- Very Definitive
+                                define XYZ 42!"
+            expect: "import xyz
+
+-- Very Definitive
+define XYZ 42!
+"!
+
     method test_Format_class_with_just_interfaces
         self parse: "class TestInterface5Impl \{}
                         is Object
@@ -394,8 +412,14 @@ end
 
     method test_Format_prefix_comment_in_sequence
         self
-            parse: "    doo daa.\n    -- boop\n   self bar. \n x * 2"
-            expect: "doo daa.\n-- boop\nself bar.\nx * 2"!
+            parse: "doo daa.
+                    -- boop
+                    self bar.
+                    x * 2"
+            expect: "doo daa.
+-- boop
+self bar.
+x * 2"!
 
     method test_Format_suffix_comment_in_sequence
         self

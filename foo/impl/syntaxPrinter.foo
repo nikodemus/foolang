@@ -170,6 +170,8 @@ class SyntaxPrinter { output
         last = newLast!
 
     method visitPrefixComment: aComment
+        last == #import
+            ifTrue: { self skipline }.
         self handleBlockStart.
         let valueVisitor = self indentHere.
         aComment fence is False
