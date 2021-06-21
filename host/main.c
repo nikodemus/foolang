@@ -228,7 +228,7 @@ typedef struct Foo (*FooClosureFunction)(struct FooContext*);
 struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t frameOffset) {
   struct FooContext* context0 = context;
   size_t frameOffset0 = frameOffset;
-  FOO_DEBUG("/lexical_ref(index=%zu, frame=%zu)", index, frameOffset);
+  // FOO_DEBUG("/lexical_ref(index=%zu, frame=%zu)", index, frameOffset);
   while (frameOffset > 0) {
     assert(context->outer_context);
     context = context->outer_context;
@@ -244,7 +244,7 @@ struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t fram
 }
 
 struct Foo foo_lexical_set(struct FooContext* context, size_t index, size_t frame, struct Foo value) {
-  FOO_DEBUG("/lexical_set(index=%zu, frame=%zu, ...)", index, frame);
+  // FOO_DEBUG("/lexical_set(index=%zu, frame=%zu, ...)", index, frame);
   while (frame > 0) {
     assert(context->outer_context);
     context = context->outer_context;
@@ -551,7 +551,7 @@ const struct FooMethod* foo_class_find_method(struct FooContext* ctx,
 
 struct Foo foo_return(struct FooContext* ctx, struct Foo value) __attribute__ ((noreturn));
 struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
-  FOO_DEBUG("/foo_return(%s...)", foo_debug_context(ctx));
+  // FOO_DEBUG("/foo_return(%s...)", foo_debug_context(ctx));
   struct FooContext* return_context = ctx;
   while (return_context->outer_context) {
     return_context = return_context->outer_context;
@@ -630,7 +630,7 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
                                              const struct FooSelector* selector,
                                              struct Foo receiver,
                                              size_t nargs, va_list arguments) {
-  FOO_DEBUG("/foo_context_new_method_va");
+  // FOO_DEBUG("/foo_context_new_method_va");
   struct FooContext* context
     = foo_context_new_method_no_args(method, sender, receiver, method->argCount);
   if (selector != method->selector) {
@@ -728,7 +728,7 @@ struct Foo foo_activate(struct FooContext* context) {
   } else {
     FooMethodFunction function = method->function;
     assert(function);
-    FOO_DEBUG("/foo_activate(%u: %p) %s%s (%s)",
+    FOO_DEBUG("/foo_activate(%u: %p) %s#%s (%s)",
               depth, context,
               home->name->data,
               method->selector->name->data,
@@ -748,7 +748,7 @@ struct Foo foo_send_array(struct FooContext* sender,
                           const struct FooSelector* selector,
                           struct Foo receiver,
                           struct Foo array) {
-  FOO_DEBUG("/foo_send_array(?, %s, ...)", selector->name->data);
+  // FOO_DEBUG("/foo_send_array(?, %s, ...)", selector->name->data);
   if (!receiver.class) {
     foo_panicf(sender, "Invalid receiver for #%s", selector->name->data);
   }
@@ -763,8 +763,8 @@ struct Foo foo_send(struct FooContext* sender,
                     const struct FooSelector* selector,
                     struct Foo receiver,
                     size_t nargs, ...) {
-  FOO_DEBUG("/foo_send(?, %s, %s, ...)",
-            selector->name->data, receiver.class->name->data);
+  // FOO_DEBUG("/foo_send(?, %s, %s, ...)",
+  //           selector->name->data, receiver.class->name->data);
   va_list arguments;
   va_start(arguments, nargs);
   if (!receiver.class) {
