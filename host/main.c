@@ -741,7 +741,7 @@ struct Foo foo_activate(struct FooContext* context) {
   assert(home);
   uint32_t depth = context->depth;
 
-  if (depth > 200) {
+  if (depth > 1000) {
     foo_panicf(context, "Stack blew up!");
   }
   foo_maybe_gc(context);
@@ -1214,8 +1214,9 @@ static size_t allocation_bytes = 0;
 static size_t allocation_count = 0;
 
 // Intentionally low threshold so that GC gets exercised even for trivial tests.
-const size_t gc_threshold = 100 * 512;
-const bool gc_verbose = false;
+// const size_t gc_threshold = 1024;
+const size_t gc_threshold = 1024 * 1024 * 64;
+const bool gc_verbose = true;
 
 void foo_sweep() {
   struct FooAlloc** tail = &allocations;
@@ -1337,6 +1338,7 @@ struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size
     // that, so skipping for now.
     foo_panicf(ctx, "Unsupported file mode & flags: mode=%zu, flags=%zu!", file->mode, flags);
   }
+  FOO_DEBUG("fopen(%s, %s)", (char*)file->pathname->data, mode);
   stream->ptr = fopen((char*)file->pathname->data, mode);
   if (!stream->ptr) {
     foo_panicf(ctx, "fdopen() failed!");
