@@ -454,7 +454,7 @@ class CTranspiler { output selectorMap closureFunctions
         selectorMap do: { |name cname|
                          output print: "struct FooSelector ".
                          output print: cname.
-                         output print: " = \{ .name = &FOO_CSTRING(".
+                         output print: " = \{ .name = FOO_CSTRING(".
                          output display: name.
                          output print: "), .next = ".
                          output print: prev.

@@ -98,34 +98,32 @@ struct Foo {
   union FooDatum datum;
 };
 
-/** Out of line allocation of data for compatibility with C string literals.
- *
- *  FIXME: I'd really like to replace these with String.
- *  The big issue is that these cannot be passed out from selectors without
- *  copying. At least a class is needed...
- */
-struct FooCString {
+struct FooBytes {
+  bool gc;
   size_t size;
-  char* data;
+  uint8_t data[];
 };
 
 #define FOO_CSTRING(literal) \
-  ((struct FooCString){ .size = sizeof(literal)-1, .data = literal })
+  ((struct FooBytes*) \
+  &((struct { bool gc; size_t size; const char data[sizeof(literal)]; }) \
+     { .gc = false, .size = sizeof(literal)-1, .data = literal }))
 
-bool foo_cstring_equal(const struct FooCString* a, const struct FooCString* b) {
+bool foo_bytes_equal(const struct FooBytes* a, const struct FooBytes* b) {
   return a->size == b->size && !memcmp(a->data, b->data, a->size);
 }
 
 /** Simple intrusive list for interning. O(N), but fine to start with.
  */
 struct FooSelector {
-  const struct FooCString* name;
   struct FooSelector* next;
+  struct FooBytes* name;
 };
 
 #include "generated_selectors.h"
 
-struct FooSelector* foo_intern_new_selector(const struct FooCString* name) {
+struct FooSelector* foo_intern_new_selector(struct FooBytes* name) {
+  name->gc = false; // prevent GC of the name!
   struct FooSelector* new = calloc(1, sizeof(struct FooSelector));
   new->name = name;
   new->next = FOO_InternedSelectors;
@@ -133,10 +131,10 @@ struct FooSelector* foo_intern_new_selector(const struct FooCString* name) {
   return new;
 }
 
-struct FooSelector* foo_intern(const struct FooCString* name) {
+struct FooSelector* foo_intern(struct FooBytes* name) {
   struct FooSelector* selector = FOO_InternedSelectors;
   while (selector != NULL) {
-    if (foo_cstring_equal(selector->name, name)) {
+    if (foo_bytes_equal(selector->name, name)) {
       return selector;
     } else {
       selector = selector->next;
@@ -149,12 +147,6 @@ struct FooArray {
   bool gc;
   size_t size;
   struct Foo data[];
-};
-
-struct FooBytes {
-  bool gc;
-  size_t size;
-  uint8_t data[];
 };
 
 // FIXME: Don't like defining this in C.

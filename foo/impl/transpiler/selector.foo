@@ -4,8 +4,8 @@ define DirectMethods
 define InstanceMethods {
     #<
         -> {signature: [Selector], vars: 0,
-            body: "const struct FooCString* name1 = PTR(FooSelector, ctx->receiver.datum)->name;
-const struct FooCString* name2 = PTR(FooSelector, ctx->frame[0].datum)->name;
+            body: "const struct FooBytes* name1 = PTR(FooSelector, ctx->receiver.datum)->name;
+const struct FooBytes* name2 = PTR(FooSelector, ctx->frame[0].datum)->name;
 size_t n = min_size(name1->size, name2->size);
 for (size_t i = 0; i < n; i++) \{
     uint8_t c1 = name1->data[i];
@@ -17,14 +17,12 @@ for (size_t i = 0; i < n; i++) \{
 return foo_Boolean_new(name1->size < name2->size);"},
     #debug
         -> {signature: [], vars: 0,
-            body: "const char* name = PTR(FooSelector, ctx->receiver.datum)->name->data;
+            body: "const char* name = (char*)PTR(FooSelector, ctx->receiver.datum)->name->data;
 printf(\"#<Selector %s>\", name);
 return ctx->receiver;"},
     #name
         -> {signature: [], vars: 0,
-            body: "const struct FooCString* cname = PTR(FooSelector, ctx->receiver.datum)->name;
-struct FooBytes* name = FooBytes_alloc(cname->size);
-memcpy(name->data, cname->data, cname->size);
+            body: "struct FooBytes* name = PTR(FooSelector, ctx->receiver.datum)->name;
 return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = name } };"},
     #sendTo:with:
         -> {signature: [Any, Array], vars: 0,
@@ -32,7 +30,7 @@ return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = name } };"},
 return foo_send_array(ctx->sender, selector, ctx->frame[0], ctx->frame[1]);"},
     #startsWith:
         -> {signature: [String], vars: 0,
-            body: "const struct FooCString* name = PTR(FooSelector, ctx->receiver.datum)->name;
+            body: "const struct FooBytes* name = PTR(FooSelector, ctx->receiver.datum)->name;
 struct FooBytes* string = PTR(FooBytes, ctx->frame[0].datum);
 return foo_Boolean_new(name->size >= string->size &&
                        !memcmp(name->data, string->data, string->size));"}
