@@ -521,24 +521,38 @@ const struct FooMethod* foo_class_find_method_in(const struct FooClass* class,
   return NULL;
 }
 
+struct FooProcessTimes FooFindMethodProfile = {
+  .user = 0.0,
+  .system = 0.0,
+  .real = 0.0
+};
+size_t FooFindMethodCount = 0;
+
 const struct FooMethod* foo_class_find_method(struct FooContext* ctx,
                                               const struct FooClass* class,
                                               const struct FooSelector* selector) {
-  assert(class);
+  struct FooProcessTimes t0;
+  const bool time_find_method = false;
+  if (time_find_method) {
+    system_get_process_times(&t0);
+    assert(class);
+  }
   const struct FooMethod* fallback = NULL;
   const struct FooMethod* method = foo_class_find_method_in(class, selector, &fallback);
   if (method) {
-    return method;
+    goto found;
   }
   const struct FooPointerList* list = class->inherited;
   for (size_t i = 0; i < list->size; i++) {
     method = foo_class_find_method_in(list->data[i], selector, &fallback);
     if (method) {
-      return method;
+      goto found;
     }
   }
-  if (fallback)
-    return fallback;
+  if (fallback) {
+    method = fallback;
+    goto found;
+  }
 
   if (false) {
     for (size_t i = 0; i < class->size; i++) {
@@ -547,6 +561,25 @@ const struct FooMethod* foo_class_find_method(struct FooContext* ctx,
     }
   }
   foo_panicf(ctx, "%s does not understand: #%s", class->name->data, selector->name->data);
+
+ found:
+
+  if (time_find_method) {
+    struct FooProcessTimes t1;
+    system_get_process_times(&t1);
+    FooFindMethodProfile.user += t1.user - t0.user;
+    FooFindMethodProfile.system += t1.system - t0.system;
+    FooFindMethodProfile.real += t1.real - t0.real;
+    if (++FooFindMethodCount % 1000 == 0) {
+      FOO_XXX("find_method user: %f, system: %f, real: %f (%zu)",
+              FooFindMethodProfile.user,
+              FooFindMethodProfile.system,
+              FooFindMethodProfile.real,
+              FooFindMethodCount);
+    }
+  }
+
+  return method;
 }
 
 struct Foo foo_return(struct FooContext* ctx, struct Foo value) __attribute__ ((noreturn));
