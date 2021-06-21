@@ -38,14 +38,18 @@ class Character { code }
         self code < other code!
 
     method isLowercase
-        ASCII lowerA <= code and: code <= ASCII lowerZ!
+        ASCII lowerA <= code
+            and: code <= ASCII lowerZ!
 
     method isAlphanumeric
-        self isAlpha or: self isDigit!
+        self isAlpha
+            or: self isDigit!
 
     method isAlpha
-        (ASCII upperA <= code and: code <= ASCII upperZ)
-            ifFalse: { ASCII lowerA <= code and: code <= ASCII lowerZ }!
+        (ASCII upperA <= code
+             and: code <= ASCII upperZ)
+            ifFalse: { ASCII lowerA <= code
+                           and: code <= ASCII lowerZ }!
 
     method isSymbol
         code == ASCII underscore
@@ -60,9 +64,11 @@ class Character { code }
 
     method isDigit: base
         base <= 10
-            ifTrue: { ASCII digit0 <= code and: code < ASCII digit0 + base }
+            ifTrue: { ASCII digit0 <= code
+                          and: code < ASCII digit0 + base }
             ifFalse: { let hexBase = base - 10.
-                       (ASCII digit0 <= code and: code <= ASCII digit9)
+                       (ASCII digit0 <= code
+                            and: code <= ASCII digit9)
                            or: (ASCII upperA <= code
                                     and: code < ASCII upperA + hexBase)
                            or: (ASCII lowerA <= code
@@ -86,7 +92,7 @@ class Character { code }
         code is other code!
 
     method toString
-        "#<Character code: {code}>"!
+        "#<Character code: { code }>"!
 
     method isNewline
         self code is ASCII lineFeed!
