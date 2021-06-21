@@ -40,15 +40,19 @@ extend Character
 
     method isLowercase
         let code = self code.
-        ASCII lowerA <= code and: code <= ASCII lowerZ!
+        ASCII lowerA <= code
+            and: code <= ASCII lowerZ!
 
     method isAlphanumeric
-        self isAlpha or: self isDigit!
+        self isAlpha
+            or: self isDigit!
 
     method isAlpha
         let code = self code.
-        (ASCII upperA <= code and: code <= ASCII upperZ)
-            ifFalse: { ASCII lowerA <= code and: code <= ASCII lowerZ }!
+        (ASCII upperA <= code
+             and: code <= ASCII upperZ)
+            ifFalse: { ASCII lowerA <= code
+                           and: code <= ASCII lowerZ }!
 
     method isSymbol
         self code == ASCII underscore
@@ -56,19 +60,21 @@ extend Character
             ifFalse: { self isAlpha not }!
 
     method isWhitespace
-        WhitespaceASCII
-            anySatisfy: { |whitespaceCode| whitespaceCode is self code }!
+        WhitespaceASCII anySatisfy: { |whitespaceCode|
+                                      whitespaceCode is self code }!
 
     method isHorizontalWhitespace
-        HorizontalWhitespaceASCII
-            anySatisfy: { |whitespaceCode| whitespaceCode is self code }!
+        HorizontalWhitespaceASCII anySatisfy: { |whitespaceCode|
+                                                whitespaceCode is self code }!
 
     method isDigit: base
         let code = self code.
         base <= 10
-            ifTrue: { ASCII digit0 <= code and: code < ASCII digit0 + base }
+            ifTrue: { ASCII digit0 <= code
+                          and: code < ASCII digit0 + base }
             ifFalse: { let hexBase = base - 10.
-                       (ASCII digit0 <= code and: code <= ASCII digit9)
+                       (ASCII digit0 <= code
+                            and: code <= ASCII digit9)
                            or: (ASCII upperA <= code
                                     and: code < ASCII upperA + hexBase)
                            or: (ASCII lowerA <= code
@@ -93,7 +99,7 @@ extend Character
         self is other!
 
     method toString
-        "#<Character code: {self code}>"!
+        "#<Character code: { self code }>"!
 
     method isNewline
         self code is ASCII lineFeed!
