@@ -7,6 +7,12 @@ class SyntaxPrinter { output
                       last }
     is SyntaxVisitor
 
+    direct method printAll: syntaxList to: output
+        syntaxList
+            do: { |each|
+                  SyntaxPrinter print: each to: output }
+            interleaving: { output newline }!
+
     direct method print: syntax to: output
         syntax visitBy: (self
                              output: output

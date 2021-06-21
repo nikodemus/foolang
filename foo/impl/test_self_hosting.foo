@@ -71,11 +71,9 @@ problem: {err description}" }.
 source:\n{source}
 pretty:\n{pretty}
 problem: {err description}" }.
-        let printed
-            = StringOutput
-                  with: { |out|
-                          syntaxList1 do: { |syntax| SyntaxPrinter print: syntax to: out }
-                                      interleaving: { out newline } }.
+        let printed = StringOutput
+                          with: { |out|
+                                  SyntaxPrinter printAll: syntaxList1 to: out }.
         printed == pretty
             ifFalse: { let printed2 = printed replace: "\n" with: "|\n".
                        let pretty2 = pretty replace: "\n" with: "|\n".
