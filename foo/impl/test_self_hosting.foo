@@ -57,12 +57,12 @@ problem: {err description}" }.
         -- Debug println: "/done".
         res!
 
-    method parse: source expect: pretty
+    method parse: source using: selector expect: pretty
         -- Checks that parse pretty-prints as expected
         -- Debug println: "\n/parse source".
-        let syntaxList1 = Parser parseMixed: source.
+        let syntaxList1 = selector sendTo: Parser with: [source].
         -- Debug println: "\n/parse pretty".
-        let syntaxList2 = Parser parseMixed: pretty.
+        let syntaxList2 = selector sendTo: Parser with: [pretty].
         -- Debug println: "/check".
         { syntaxList1 checkEqual: syntaxList2 }
             on: Error
@@ -92,6 +92,12 @@ pretty({y} at: {i}):\n{pretty2}" } }.
 source:\n{source}
 printed(size: {printed size}):\n{printed2}
 pretty(size: {pretty size}):\n{pretty2}" } }!
+
+    method parse: source expect: pretty
+        self parse: source using: (#parseMixed:) expect: pretty!
+
+    method parseDefinitions: source expect: pretty
+        self parse: source using: (#parseDefinitions:) expect: pretty!
 
     method eval: exprSource expect: expected
         self checkParsingBy: { |source| Parser parseExpressions: source }
