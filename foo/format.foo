@@ -13,7 +13,7 @@ class Main {}
         let source = path readString.
         let syntaxList = Parser parseDefinitions: source.
         path truncateExisting forWrite
-            open: { |stream|
+            createOrOpen: { |stream|
                     syntaxList
                         do: { |each|
                               -- stream println: "-- {each classOf name}".
