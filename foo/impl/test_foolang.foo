@@ -500,6 +500,13 @@ end
 end
 "!
 
+    method test0_Format_suffix_comment_in_keyword_message
+        self parse: "receiver arg: arg1 -- the first arg
+                              arg: arg2"
+             expect: "receiver
+    arg: arg1 -- the first arg
+    arg: arg2"!
+
     method test_Format_let_body_in_method
         self
             parse: "class Droop \{\}

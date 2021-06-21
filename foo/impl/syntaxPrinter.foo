@@ -256,7 +256,8 @@ class SyntaxPrinter { output
                   printer print: part.
                   printer print: ": ".
                   arg visitBy: printer }
-            interleaving: { printer newline }.
+            interleaving: { printer last == #comment
+                                ifFalse: { printer newline } }.
         last = #keyword!
 
     method visitIs: anIs
