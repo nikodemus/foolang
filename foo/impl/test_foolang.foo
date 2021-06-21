@@ -386,6 +386,18 @@ end"!
         42! -- boop
 end"!
 
+    method test_Format_keyword_message_with_tiny_receiver_and_single_keyword
+        self
+            parse: "receiver println: argument"
+            expect: "receiver println: argument"!
+
+    method test_Format_keyword_message_with_tiny_receiver_and_multiple_keywords
+        self
+            parse: "receiver println: argument println: argument2"
+            expect: "receiver
+    println: argument
+    println: argument2"!
+
     method test_Format_block_with_suffix_comment_after_literal
         self parse: "class X \{\}
                          method beep

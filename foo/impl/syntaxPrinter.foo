@@ -217,10 +217,11 @@ class SyntaxPrinter { output
     method visitKeywordMessage: aMessage
         let receiver = aMessage receiver.
         receiver visitBy: self.
+        -- Parts gets a trailing empty string, with #with:do: terminates
+        -- before we hit it.
         let parts = aMessage selector name splitBy: ":" character.
-        (receiver isTiny and: parts size is 1)
-            ifTrue: {
-                      return parts
+        (receiver isTiny and: parts size is 2)
+            ifTrue: { return parts
                           with: aMessage arguments
                           do: { |part arg|
                                 self print: " ".
