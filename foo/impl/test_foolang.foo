@@ -99,7 +99,7 @@ end"!
         42!
 end"!
 
-    method test_Interface_format
+    method test_Format_interface
         self parse: "interface TestInterface4
                         required direct method fooR
                         required direct method fooRR
@@ -320,12 +320,12 @@ end"!
             eval: "ReturnTest test: True"
             expect: 42!
 
-    method test_Prefix_comment_to_let_value_format
+    method test_Format_prefix_comment_to_let_value
         self
             parse: "           let x = -- boop\n 21.     x     *  2"
             expect: "let x = -- boop\n        21.\nx * 2"!
 
-    method test_Suffix_comment_to_let_value_format
+    method test_Format_suffix_comment_to_let_value
         self
             parse: "let x = 21 -- boop\n.\nx * 2"
             expect: "let x = 21. -- boop\nx * 2".
@@ -333,34 +333,34 @@ end"!
             parse: "let x = 21. -- boop\n\nx * 2"
             expect: "let x = 21. -- boop\nx * 2"!
 
-    method test_Prefix_comment_in_sequence_format
+    method test_Format_prefix_comment_in_sequence
         self
             parse: "    doo daa.\n    -- boop\n   self bar. \n x * 2"
             expect: "doo daa.\n-- boop\nself bar.\nx * 2"!
 
-    method test_Suffix_comment_in_sequence_format
+    method test_Format_suffix_comment_in_sequence
         self
             parse: "self bar. -- boop\n x * 2"
             expect: "self bar. -- boop\nx * 2"!
 
-    method test_Suffix_comment_to_keyword_message_in_sequence_format
+    method test_Format_suffix_comment_to_keyword_message_in_sequence
         self
             parse: "self bleep: bar. -- boop\n x * 2"
             expect: "self bleep: bar. -- boop\nx * 2"!
 
-    method test_Prefix_comment_to_class_format
+    method test_Format_prefix_comment_to_class
         self
             parse: "-- boop\n    class   X   \{}   end"
             expect: "-- boop
 class X \{\}
 end"!
 
-    method test_Suffix_comment_to_class_format
+    method test_Format_suffix_comment_to_class
         self
             parse: "class   X   \{}   end -- boop"
             expect: "class X \{}\nend -- boop\n"!
 
-    method test_Prefix_comment_to_method_body_format
+    method test_Format_prefix_comment_to_method_body
         self
             parse: "class   X   \{}method bar -- boop
 42! end"
@@ -385,6 +385,18 @@ end"!
     method bar
         42! -- boop
 end"!
+
+    method test_Format_keyword_message_with_tiny_receiver_and_single_keyword
+        self
+            parse: "receiver println: argument"
+            expect: "receiver println: argument"!
+
+    method test_Format_keyword_message_with_tiny_receiver_and_multiple_keywords
+        self
+            parse: "receiver println: argument println: argument2"
+            expect: "receiver
+    println: argument
+    println: argument2"!
 
     method test_Format_block_with_suffix_comment_after_literal
         self parse: "class X \{\}
@@ -416,7 +428,7 @@ end"!
             parse: "define ThisOne 312! -- oh yeah"
             expect: "define ThisOne 312! -- oh yeah\n"!
 
-    method test_Prefix_comment_to_method_format
+    method test_Format_prefix_comment_to_method
         self
             parse: "class X \{} -- boop\n method bar\n 42!\n end"
             expect: "class X \{}
@@ -492,14 +504,14 @@ end"!
         129!
 end"!
 
-    method test1_Block_comment_in_eval
+    method test_Block_comment_in_eval
         self eval: "---
                     This is a test.
                     ---
                     42"
             expect: 42!
 
-    method test0_Block_comment_format
+    method test_Format_block_comment
         self parse: "---\nThis is a test.\n---\n      42"
              expect: "---\nThis is a test.\n---\n42"!
 
