@@ -107,20 +107,18 @@ class SyntaxFloatLiteral { string value }
 end
 
 
-class SyntaxHexLiteral { value }
+class SyntaxHexLiteral { string value }
     is Literal
 
     method valueDisplayString
-        Integer printBase: 16
-                do: { value toString }!
+        string!
 end
 
-class SyntaxBinaryLiteral { value }
+class SyntaxBinaryLiteral { string value }
     is Literal
 
     method valueDisplayString
-        Integer printBase: 2
-                do: { value toString }!
+        string!
 end
 
 class SyntaxStringInterpolation { parts }
