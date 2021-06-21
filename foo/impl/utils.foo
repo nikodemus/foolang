@@ -32,7 +32,7 @@ class DebugTracer { name }
     direct method trace: thing
         Debug println: thing!
     direct method perform: selectorName with: arguments
-        (Selector new: selectorName) parts
+        (Selector intern: selectorName) parts
             doWithIndex: { |each index|
                            index > 1
                                ifTrue: { Debug print: " #" }
@@ -46,7 +46,7 @@ class DebugTracer { name }
         Debug println: thing!
     method perform: selectorName with: arguments
         Debug print: name.
-        (Selector new: selectorName) parts
+        (Selector intern: selectorName) parts
             doWithIndex: { |each index|
                            index > 1
                                ifTrue: { Debug print: " #" }

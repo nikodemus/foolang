@@ -1,5 +1,11 @@
-define DirectMethods
-    Dictionary new!
+define DirectMethods {
+    #intern:
+        -> {signature: [String], vars: 0,
+            body: "struct FooBytes* name = PTR(FooBytes, ctx->frame[0].datum);
+                   return (struct Foo)
+                      \{ .class = &FooClass_Selector,
+                         .datum = \{ .ptr = foo_intern(name) \}\};"}
+}!
 
 define InstanceMethods {
     #<

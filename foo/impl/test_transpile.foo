@@ -1008,9 +1008,8 @@ end>]"!
                  direct method run: command in: system
                      let sources = [
                                       [\"float-literal.test\", \"float-literal.test\"],
+                                      [\"message-to-float.test\", \"message-to-float.result\"]
                                    ].
-                     -- FIXME: Cannot currently intern selectors in transpiler
-                     -- [\"message-to-float.test\", \"message-to-float.result\"]
                      let root = system files / \"foo/tests/self-hosting\".
                      sources do: \{ |each|
                                     let source = (root / each first) readString.

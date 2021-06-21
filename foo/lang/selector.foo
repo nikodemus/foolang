@@ -11,7 +11,8 @@ class Selector { name }
     is Object
     is Block
 
-    direct method new: name
+    direct method intern: name
+        -- Very fake...
         self name: name!
 
     method toSelector

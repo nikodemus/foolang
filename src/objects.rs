@@ -1475,7 +1475,7 @@ fn generic_do_selectors(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     for method in methods.keys() {
         args[0].send(
             "value:",
-            &[selector.send("new:", &[env.foo.make_string(method)], env)?],
+            &[selector.send("intern:", &[env.foo.make_string(method)], env)?],
             env,
         )?;
     }

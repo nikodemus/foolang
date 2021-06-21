@@ -589,7 +589,7 @@ class CTranspiler { output selectorMap closureFunctions
     method _recordClassFromRecord: aRecord
         let keys = (Record keysIn: aRecord) sorted.
         let name = Selector
-                       new: (StringOutput
+                       intern: (StringOutput
                                  with: { |out|
                                          keys do: { |each| out print: "{each}:" }}).
         self _ensureRecordClass: { name: name,
@@ -666,7 +666,7 @@ class CTranspiler { output selectorMap closureFunctions
                     out print: "    .data = \{ ".
                     slots
                         do: { |each|
-                              self _writeValue: ((Selector new: each name)
+                              self _writeValue: ((Selector intern: each name)
                                                      sendTo: value)
                                    _in: env
                                    _to: out.
