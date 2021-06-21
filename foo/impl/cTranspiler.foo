@@ -1047,7 +1047,7 @@ class CTranspiler { output selectorMap closureFunctions
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
         -- #__doSelectors
         output println: "        (struct FooMethod)\{ .selector = &FOO_____doSelectors_,".
-        output println: "                            .class = NULL,".
+        output println: "                            .class = &{className},".
         output println: "                            .argCount = 1,".
         output println: "                            .frameSize = 1,".
         output println: "                            .function = &foo_method_doSelectors_,".
