@@ -6,24 +6,37 @@ import .stringOutput.StringOutput
 
 class Specialized { containerClass elementType }
     direct method class: containerClass of: elementType
-        self containerClass: containerClass elementType: elementType!
+        self containerClass: containerClass
+             elementType: elementType!
+
     method new
-        containerClass of: elementType new: 0!
+        containerClass
+            of: elementType
+            new: 0!
+
     method new: size
-        containerClass of: elementType new: size!
+        containerClass
+            of: elementType
+            new: size!
+
     method new: size value: value
-        containerClass of: elementType new: size value: value!
+        containerClass
+            of: elementType
+            new: size
+            value: value!
+
     method includes: thing
         (containerClass includes: thing)
             ifTrue: { thing elementType is elementType }!
+
     method typecheck: thing
         (self includes: thing)
-             ifFalse: { panic "TYPE OOPSIE: {thing} is not {self}!"
-                        -- TypeError raise: thing expected: self
-                        }.
+            ifFalse: { panic "TYPE OOPSIE: { thing } is not { self }!" -- TypeError raise: thing expected: self
+                       }.
         thing!
+
     method displayOn: stream
-        stream print: "{containerClass} of: {elementType}"!
+        stream print: "{ containerClass } of: { elementType }"!
 end
 
 extend Array
@@ -34,46 +47,77 @@ extend Array
             ifTrue: { return ordered }.
         let new = self new: ordered size.
         1 to: new size
-          do: { |i| new put: (ordered at: i) at: i }.
+          do: { |i|
+                new put: (ordered at: i)
+                    at: i }.
         new!
 
     direct method new: size
-        self of: Any new: size value: False!
+        self of: Any
+             new: size
+             value: False!
 
     direct method new: size value: value
-        self of: Any new: size value: value!
+        self of: Any
+             new: size
+             value: value!
 
     direct method of: type
-        Specialized class: Array of: type!
+        Specialized
+            class: Array
+            of: type!
 
     direct method of: type new: size
-        self of: type new: size value: type default!
+        self of: type
+             new: size
+             value: type default!
 
     method from: first to: last
         let offset = first - 1.
-        let new = Array of: self arrayElementType new: last - offset.
+        let new = Array
+                      of: self arrayElementType
+                      new: last - offset.
         1 to: new size
-          do: { |i| new put: (self at: i + offset) at: i }.
+          do: { |i|
+                new put: (self at: i + offset)
+                    at: i }.
         new!
 
     method append: other
         let n = self size + other size.
-        let a = Array of: (self elementType) new: n.
-        a replaceFrom: 1 to: self size with: self startingAt: 1.
-        a replaceFrom: self size + 1 to: n with: other startingAt: 1.
+        let a = Array
+                    of: (self elementType)
+                    new: n.
+        a replaceFrom: 1
+          to: self size
+          with: self
+          startingAt: 1.
+        a replaceFrom: self size + 1
+          to: n
+          with: other
+          startingAt: 1.
         a!
 
     method + x
-        x broadcast: {|a b| a + b} to: self!
+        x broadcast: { |a b| a + b }
+          to: self!
+
     method - x
-        x broadcast: {|a b| a - b} to: self!
+        x broadcast: { |a b| a - b }
+          to: self!
+
     method * x
-        x broadcast: {|a b| a * b} to: self!
+        x broadcast: { |a b| a * b }
+          to: self!
+
     method / x
-        x broadcast: {|a b| a / b} to: self!
+        x broadcast: { |a b| a / b }
+          to: self!
 
     method broadcast: block to: collection
-        collection with: self collect: block!
+        collection
+            with: self
+            collect: block!
 
     method elementType
         -- KLUDGE: otherwise Iterator#elementType:
@@ -88,10 +132,12 @@ extend Array
         stream print: "]"!
 
     method displayOn: stream
-        self _emitOn: stream using: { |x| x displayOn: stream }!
+        self _emitOn: stream
+             using: { |x| x displayOn: stream }!
 
     method printOn: stream
-        self _emitOn: stream using: { |x| x printOn: stream }!
+        self _emitOn: stream
+             using: { |x| x printOn: stream }!
 
     method displayString
         StringOutput with: { |out| self displayOn: out }!
@@ -100,10 +146,14 @@ extend Array
         StringOutput with: { |out| self printOn: out }!
 
     method dot: other
-        self with: other sum: { |a b| a * b }!
+        self with: other
+             sum: { |a b| a * b }!
 
     method norm
-       (self inject: 0.0 into: { |abs elt| abs + (elt * elt) }) sqrt!
+        (self inject: 0.0
+              into: { |abs elt|
+                      abs + (elt * elt) })
+            sqrt!
 
     method normalized
         let reciprocal = 1.0 / (self norm).
@@ -116,11 +166,14 @@ extend Array
         ((self dot: other) / (other dot: other)) * other!
 
     method addNumber: left
-       self collect: { |elt| left + elt }!
+        self collect: { |elt| left + elt }!
+
     method subNumber: left
-       self collect: { |elt| left - elt }!
+        self collect: { |elt| left - elt }!
+
     method divNumber: left
-       self collect: { |elt| left / elt }!
+        self collect: { |elt| left / elt }!
+
     method mulNumber: left
-       self collect: { |elt| left * elt }!
+        self collect: { |elt| left * elt }!
 end
