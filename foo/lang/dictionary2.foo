@@ -54,8 +54,10 @@ class Dictionary { size _keys _values }
         _keys size > size
             ifFalse: { let inc = size atLeast: 8
                                       atMost: 128.
-                       _values = _values append: (Array new: inc).
-                       _keys = _keys append: (Array new: inc) }!
+                       _values = _values
+                                     append: (Array new: inc).
+                       _keys = _keys
+                                   append: (Array new: inc) }!
 
     method isEmpty
         size is 0!
@@ -78,8 +80,9 @@ class Dictionary { size _keys _values }
              ifNone: { False }!
 
     method at: key ifNone: block
-        _values at: (self _index: key
-                          _or: { return block value })!
+        _values
+            at: (self _index: key
+                      _or: { return block value })!
 
     method at: key ifNonePut: block
         self at: key
@@ -104,12 +107,14 @@ class Dictionary { size _keys _values }
     method doKeys: block
         1 to: size
           do: { |index|
-                block value: (_keys at: index) }!
+                block
+                    value: (_keys at: index) }!
 
     method doValues: block
         1 to: size
           do: { |index|
-                block value: (_values at: index) }.
+                block
+                    value: (_values at: index) }.
         self!
 
     method remove: key
@@ -132,16 +137,17 @@ class Dictionary { size _keys _values }
 
     method toString
         size is 0 ifTrue: { "Dictionary new" }.
-        StringOutput with: { |out|
-                             out print: "\{ ".
-                             self keys sort
-                                 do: { |each|
-                                       out display: each.
-                                       out print: " -> ".
-                                       out display: (self at: each) }
-                                 interleaving: { out println: ",".
-                                                 out print: "  " }.
-                             out print: " }" }!
+        StringOutput
+            with: { |out|
+                    out print: "\{ ".
+                    self keys sort
+                        do: { |each|
+                              out display: each.
+                              out print: " -> ".
+                              out display: (self at: each) }
+                        interleaving: { out println: ",".
+                                        out print: "  " }.
+                    out print: " }" }!
 
     method isEquivalent: other
         self size is other size
@@ -154,9 +160,10 @@ class Dictionary { size _keys _values }
         True!
 
     method merge: other
-        other doKeys: { |key|
-                        self put: (other at: key)
-                             at: key }.
+        other
+            doKeys: { |key|
+                      self put: (other at: key)
+                           at: key }.
         self!
 
     method removeAll: keys

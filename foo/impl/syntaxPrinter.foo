@@ -307,7 +307,7 @@ class SyntaxPrinter { output
     method visitAssign: anAssign
         self print: anAssign variable name.
         self print: " = ".
-        anAssign value visitBy: self!
+        anAssign value visitBy: self indentHere!
 
     method visitParens: aParens
         self print: "(".
