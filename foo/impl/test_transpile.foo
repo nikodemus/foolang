@@ -982,7 +982,8 @@ end
                 expect: "[#<SyntaxLiteral 123>][#<SyntaxInterface interface X
     method y
         42!
-end>]"!
+end
+>]"!
 
     method test_Transpiled_SyntaxPrinter
         self transpileWithPrelude:
