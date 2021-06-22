@@ -10,18 +10,21 @@ interface Iterator
     method next
         self nextIfNone: { -- IteratorExhausted raise: self
                            -- FIXME!
-                           panic "IteratorExhausted!" }!
+                           panic "IteratorExhausted!"}!
 
     method skip
         self next.
         self!
 
     method skip: count
-        1 to: count do: { self next }.
+        1 to: count
+          do: { self next }.
         self!
 
     method do: block
-        { block value: (self nextIfNone: { return self }) } loop!
+        { block
+              value: (self nextIfNone: { return self }) }
+            loop!
 
     method with: iterator do: block
         self with: iterator
@@ -31,9 +34,11 @@ interface Iterator
     method with: iterator do: block ifExhausted: exhaustedBlock
         { let each1 = self nextIfNone: { return self }.
           let each2 = iterator nextIfNone: exhaustedBlock.
-          block value: each1 value: each2 } loop!
+          block
+              value: each1
+              value: each2 }
+            loop!
 end
-
 ---
 Implementing classes want to implement the following methods in addition to
 `iterator` if possible, since the default implementations will reify the
@@ -50,7 +55,6 @@ iterator every time and won't perform as well.
 
 All other methods are implemented on top of these ones.
 ---
-
 interface Iterable
     is Object
 
@@ -82,17 +86,21 @@ interface Iterable
 
     method collect: block into: collection
         self do: { |each|
-                   collection add: (block value: each) }.
+                   collection
+                       add: (block value: each) }.
         collection!
 
     method collect: block as: type
-        self collect: block into: type new!
+        self collect: block
+             into: type new!
 
     method with: iterable collect: block into: collection
-        self
-            with: iterable
-            do: { |each1 each2|
-                  collection add: (block value: each1 value: each2) }.
+        self with: iterable
+             do: { |each1 each2|
+                   collection
+                       add: (block
+                                 value: each1
+                                 value: each2) }.
         collection!
 
     method count: block
@@ -106,7 +114,9 @@ interface Iterable
         let n = 0.
         self with: other
              do: { |each1 each2|
-                   (block value: each1 value: each2)
+                   (block
+                        value: each1
+                        value: each2)
                        ifTrue: { n = n + 1 } }.
         n!
 
@@ -115,10 +125,9 @@ interface Iterable
         self!
 
     method with: iterable do: block
-        self
-            with: iterable
-            do: block
-            ifExhausted: { return self }.
+        self with: iterable
+             do: block
+             ifExhausted: { return self }.
         self!
 
     method with: iterable do: block ifExhausted: exhaustedBlock
@@ -141,10 +150,12 @@ interface Iterable
         self iterator
             with: iterable iterator
             do: { |a b|
-                   first
+                  first
                       ifTrue: { first = False }
                       ifFalse: { interBlock value }.
-                  block value: a value: b }!
+                  block
+                      value: a
+                      value: b }!
 
     method elementType
         Any!
@@ -152,16 +163,16 @@ interface Iterable
     method equals: other
         (self is other)
             ifTrue: { True }
-            ifFalse: { self
-                           with: other
-                           do: { |each1 each2|
-                                 each1 == each2
-                                     ifFalse: { return False } }
-                           ifExhausted: { return False } }.
+            ifFalse: { self with: other
+                            do: { |each1 each2|
+                                  each1 == each2
+                                      ifFalse: { return False } }
+                            ifExhausted: { return False } }.
         True!
 
     method find: block
-        self find: block ifNone: { False }!
+        self find: block
+             ifNone: { False }!
 
     method find: block ifNone: noneBlock
         self do: { |each|
@@ -191,33 +202,34 @@ interface Iterable
         self anySatisfy: { |each| each == object }!
 
     method includesAll: iterable
-        iterable allSatisfy: { |each1|
-                               self anySatisfy: { |each2| each1 == each2 } }!
+        iterable
+            allSatisfy: { |each1|
+                          self anySatisfy: { |each2| each1 == each2 } }!
 
     method inject: value into: block
-        self
-            do: { |each|
-                  value = block
-                      value: value
-                      value: each }.
+        self do: { |each|
+                   value = block
+                               value: value
+                               value: each }.
         value!
 
     method with: iterable inject: value into: block
-        self
-            with: iterable
-            do: { |each1 each2|
-                  value = block
-                      value: value
-                      value: each1
-                      value: each2 }.
+        self with: iterable
+             do: { |each1 each2|
+                   value = block
+                               value: value
+                               value: each1
+                               value: each2 }.
         value!
 
     method with: iterable inject: value into: block ifExhausted: exhaustedBlock
-        self
-            with: iterable
-            do: { |each1 each2|
-                  value = block value: value value: each1 value: each2 }
-            ifExhausted: exhaustedBlock.
+        self with: iterable
+             do: { |each1 each2|
+                   value = block
+                               value: value
+                               value: each1
+                               value: each2 }
+             ifExhausted: exhaustedBlock.
         value!
 
     method isEmpty
@@ -248,14 +260,16 @@ interface Iterable
         let iter = self iterator.
         let value = iter next.
         { value = block
-              value: value
-              value: (iter nextIfNone: { return value }) } loop!
+                      value: value
+                      value: (iter nextIfNone: { return value }) }
+            loop!
 
     method second
         self iterator skip next!
 
     method select: block as: species
-        self select: block into: species new!
+        self select: block
+             into: species new!
 
     method select: block into: collection
         self do: { |each|
@@ -281,5 +295,4 @@ interface Iterable
         self inject: 0
              into: { |sum each|
                      sum + (block value: each) }!
-
 end
