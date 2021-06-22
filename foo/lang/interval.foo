@@ -3,8 +3,10 @@ import .iterable.Iterable
 
 class IntervalIterator { from to by }
     is Iterator
+
     method hasNext
         from <= to!
+
     method nextIfNone: block
         self hasNext
             ifTrue: { let value = from.
@@ -26,24 +28,29 @@ class Interval { from to by }
         True!
 
     method do: block
-       let i = from.
-       { i <= to }
-           whileTrue: { block value: i. i = i + by }.
-       self!
+        let i = from.
+        { i <= to }
+            whileTrue: { block value: i.
+                         i = i + by }.
+        self!
 
     method iterator
-       IntervalIterator from: from to: to by: by!
+        IntervalIterator
+            from: from
+            to: to
+            by: by!
 
     method size
-       by == 1
-          ifTrue: { 1 + to - from }
-          ifFalse: { (1 + to - from) truncate / by }!
+        by == 1
+            ifTrue: { 1 + to - from }
+            ifFalse: { (1 + to - from)
+                           truncate / by }!
 
     method displayOn: stream
-       by == 1
-         ifTrue: { stream print: "#<Interval {from} to: {to}>" }
-         ifFalse: { stream print: "#<Interval {from} to: {to} by: {by}>" }!
+        by == 1
+            ifTrue: { stream print: "#<Interval { from } to: { to }>" }
+            ifFalse: { stream print: "#<Interval { from } to: { to } by: { by }>" }!
 
     method printOn: stream
-       self displayOn: stream!
+        self displayOn: stream!
 end
