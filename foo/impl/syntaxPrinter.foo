@@ -7,6 +7,12 @@ class SyntaxPrinter { output
                       last }
     is SyntaxVisitor
 
+    direct method printAll: syntaxList to: output
+        syntaxList
+            do: { |each|
+                  SyntaxPrinter print: each to: output }
+            interleaving: { output newline }!
+
     direct method print: syntax to: output
         syntax visitBy: (self
                              output: output
@@ -56,6 +62,10 @@ class SyntaxPrinter { output
         self doIndent.
         self!
 
+    method reset
+        indent = 0.
+        self!
+
     method doIndent
         indent - printed times: { output print: " " }.
         printed = indent.
@@ -101,7 +111,9 @@ class SyntaxPrinter { output
         anArray entries
             do: { |element| element visitBy: printer }
             interleaving: { printer print: ",".
-                            flat ifFalse: { printer newline } }.
+                            flat
+                                ifTrue: { printer print: " " }
+                                ifFalse: { printer newline } }.
         printer print: "]".
         last = #paren!
 
@@ -158,6 +170,8 @@ class SyntaxPrinter { output
         last = newLast!
 
     method visitPrefixComment: aComment
+        last == #import
+            ifTrue: { self skipline }.
         self handleBlockStart.
         let valueVisitor = self indentHere.
         aComment fence is False
@@ -242,7 +256,8 @@ class SyntaxPrinter { output
                   printer print: part.
                   printer print: ": ".
                   arg visitBy: printer }
-            interleaving: { printer newline }.
+            interleaving: { printer last == #comment
+                                ifFalse: { printer newline } }.
         last = #keyword!
 
     method visitIs: anIs
@@ -337,6 +352,7 @@ class SyntaxPrinter { output
             ifFalse: { bodyVisitor newline }.
         bodyVisitor visitMaybeSuffixComment: body
                     followedBy: "!".
+        self newline.
         last = #def!
 
     method _printModule: path
@@ -455,7 +471,7 @@ class SyntaxPrinter { output
 
     method _maybeToplevelNewline
         (last == #def)
-            ifTrue: { self skipline }.
+            ifTrue: { self reset }.
         (last is False or: last == #comment)
             ifFalse: { self newline }!
 
@@ -516,7 +532,7 @@ class SyntaxPrinter { output
             do: { |def| def visitBy: bodyVisitor }
             interleaving: { bodyVisitor skipline }.
         bodyVisitor skipIfNotEmpty.
-        self print: "end".
+        self println: "end".
         last = #def!
 
 end

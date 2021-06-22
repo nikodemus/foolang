@@ -14,9 +14,5 @@ class Main {}
         let syntaxList = Parser parseDefinitions: source.
         path truncateExisting forWrite
             createOrOpen: { |stream|
-                    syntaxList
-                        do: { |each|
-                              -- stream println: "-- {each classOf name}".
-                              SyntaxPrinter print: each to: stream.
-                              stream newline } }!
+                            SyntaxPrinter printAll: syntaxList to: stream }!
 end

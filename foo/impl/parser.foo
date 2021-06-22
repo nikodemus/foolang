@@ -136,7 +136,7 @@ class TokenHexInteger { string first last }
           do: { |pos|
                 n = n * 16 + ((string at: pos) digit: 16) }.
         -- Want to retain the format info, hence not SyntaxLiteral.
-        SyntaxHexLiteral value: n!
+        SyntaxHexLiteral string: string value: n!
 end
 
 class TokenBinaryInteger { string first last }
@@ -150,7 +150,7 @@ class TokenBinaryInteger { string first last }
           do: { |pos|
                 n = n * 2 + ((string at: pos) digit: 2) }.
         -- Want to retain the format info, hence not SyntaxLiteral.
-        SyntaxBinaryLiteral value: n!
+        SyntaxBinaryLiteral string: string value: n!
 end
 
 class TokenEof { position }

@@ -36,7 +36,26 @@ class TestFoolang { system ok onFailure }
             expect:
                 "-- foo
 -- bar
-define Foo 1!"!
+define Foo 1!
+"!
+
+    method test_Format_import_and_define
+        self parseDefinitions: "import xyz
+                                define XYZ 42!"
+            expect: "import xyz
+
+define XYZ 42!
+"!
+
+    method test_Format_import_and_define_with_prefix_comment
+        self parseDefinitions: "import xyz
+                                -- Very Definitive
+                                define XYZ 42!"
+            expect: "import xyz
+
+-- Very Definitive
+define XYZ 42!
+"!
 
     method test_Format_class_with_just_interfaces
         self parse: "class TestInterface5Impl \{}
@@ -47,7 +66,8 @@ define Foo 1!"!
                 "class TestInterface5Impl \{}
     is Object
     is TestInterface5
-end"!
+end
+"!
 
     method test_Format_method_with_multipart_keyword_selector
         self parse: "class TestThis \{\}
@@ -58,7 +78,8 @@ end"!
                 "class TestThis \{\}
     method a: simple test: case
         52!
-end"!
+end
+"!
 
     method test_Format_method_with_binary_selector
         self parse: "class TestThisToo \{\}
@@ -69,7 +90,8 @@ end"!
                 "class TestThisToo \{\}
     method + x
         152!
-end"!
+end
+"!
 
     method test_Format_method_with_unary_selector
         self parse: "class TestThisTooYes \{\}
@@ -80,7 +102,8 @@ end"!
                 "class TestThisTooYes \{\}
     method beep
         15!
-end"!
+end
+"!
 
     method test_Format_method_with_prefix_selector
         self parse: "class TestThisTooYesYes \{\}
@@ -91,7 +114,12 @@ end"!
                 "class TestThisTooYesYes \{\}
     method prefix-
         1!
-end"!
+end
+"!
+
+    method test_Format_small_array
+        self parse: "[1,2,3,]"
+            expect: "[1, 2, 3]"!
 
     method test_Line_comments_before_class
         self parse: "-- foo
@@ -102,7 +130,8 @@ end"!
                 "-- foo
 -- bar
 class Foo \{\}
-end"!
+end
+"!
 
     method test_Line_comments_before_interface
         self parse: "-- foo
@@ -113,7 +142,8 @@ end"!
                 "-- foo
 -- bar
 interface Foo
-end"!
+end
+"!
 
     method test_Line_comments_before_extend
         self parse: "-- foo
@@ -124,7 +154,8 @@ end"!
                 "-- foo
 -- bar
 extend Foo
-end"!
+end
+"!
 
     method test_Multiple_line_comments_inside_class
         self parse: "class Foo \{\}
@@ -141,7 +172,8 @@ end"!
 
     method quux
         42!
-end"!
+end
+"!
 
     method test_Format_interface
         self parse: "interface TestInterface4
@@ -176,7 +208,8 @@ end"!
 
     method bar2
         42!
-end"!
+end
+"!
 
     method test_Interface_required_method_missing_detected
         self load: "interface TestInterface5
@@ -379,8 +412,14 @@ end"!
 
     method test_Format_prefix_comment_in_sequence
         self
-            parse: "    doo daa.\n    -- boop\n   self bar. \n x * 2"
-            expect: "doo daa.\n-- boop\nself bar.\nx * 2"!
+            parse: "doo daa.
+                    -- boop
+                    self bar.
+                    x * 2"
+            expect: "doo daa.
+-- boop
+self bar.
+x * 2"!
 
     method test_Format_suffix_comment_in_sequence
         self
@@ -397,12 +436,16 @@ end"!
             parse: "-- boop\n    class   X   \{}   end"
             expect: "-- boop
 class X \{\}
-end"!
+end
+"!
 
     method test_Format_suffix_comment_to_class
         self
             parse: "class   X   \{}   end -- boop"
-            expect: "class X \{}\nend -- boop\n"!
+            expect: "class X \{}
+end
+ -- boop
+"!
 
     method test_Format_prefix_comment_to_method_body
         self
@@ -412,7 +455,8 @@ end"!
     method bar
         -- boop
         42!
-end"!
+end
+"!
 
     method test_Formatted_single_expression_has_no_trailing_newline
         self
@@ -428,7 +472,8 @@ end"!
             expect: "class X \{}
     method bar
         42! -- boop
-end"!
+end
+"!
 
     method test_Format_keyword_message_with_tiny_receiver_and_single_keyword
         self
@@ -452,7 +497,15 @@ end"!
     method beep
         \{ panic \"dundun\" -- oops
           \}!
-end"!
+end
+"!
+
+    method test0_Format_suffix_comment_in_keyword_message
+        self parse: "receiver arg: arg1 -- the first arg
+                              arg: arg2"
+             expect: "receiver
+    arg: arg1 -- the first arg
+    arg: arg2"!
 
     method test_Format_let_body_in_method
         self
@@ -465,12 +518,36 @@ end"!
     method bar
         let x = 123.
         x + x!
-end"!
+end
+"!
+
+    method test_Format_two_defines
+        self parseDefinitions:  "define A 100 foobar!
+                                 define B 200 droopa!"
+             expect:
+                 "define A
+    100 foobar!
+
+define B
+    200 droopa!
+"!
+
+    method test_Format_two_classes
+        self parseDefinitions:  "class A \{\} end
+                                 class B \{\} end"
+            expect:
+                "class A \{\}
+end
+
+class B \{\}
+end
+"!
 
     method test_Format_suffix_comment_to_define
         self
             parse: "define ThisOne 312! -- oh yeah"
-            expect: "define ThisOne 312! -- oh yeah\n"!
+            expect: "define ThisOne 312!
+ -- oh yeah\n"!
 
     method test_Format_prefix_comment_to_method
         self
@@ -481,7 +558,8 @@ end"!
 
     method bar
         42!
-end"!
+end
+"!
 
     method test_Format_comments_between_keyword_and_receiver
         self parse: "asdasasd
@@ -509,7 +587,8 @@ end"!
              -- of tests. Should either explain the rational or return False.
             ifTrue: { True }
             ifFalse: block!
-end"!
+end
+"!
 
     method test_Format_comments_between_unary_and_receiver
         self parse: "asdas
@@ -546,7 +625,8 @@ end"!
 
     method asdads
         129!
-end"!
+end
+"!
 
     method test_Block_comment_in_eval
         self eval: "---
