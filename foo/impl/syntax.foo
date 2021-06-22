@@ -125,7 +125,12 @@ class SyntaxStringInterpolation { parts }
     is Syntax
 
     method weight
-        parts sum: #weight!
+        -- Literal parts have zero weight, discount the blocks
+        -- by one.
+        (parts sum: #weight)
+            - (parts count: { |each|
+                              (Literal includes: each)
+                                  not })!
 
     method visitBy: visitor
         visitor visitStringInterpolation: self!
@@ -179,8 +184,10 @@ class SyntaxDictionary { entries }
         visitor visitDictionary: self!
 
     method weight
-        entries size + ((entries collect: #value)
-                            sum: #weight)!
+        entries size
+            + (entries collect: { |each|
+                                  each key weight + each value weight })
+                       sum!
 end
 
 class SyntaxSeq { first then }
@@ -218,6 +225,9 @@ class SyntaxSelector { name }
     method isKeyword
         Selector isKeywordName: name!
 
+    method weight
+        0!
+
     method parts
         [name]!
 end
@@ -246,7 +256,7 @@ class SyntaxPrefixComment { comment value source fence }
             fence: False!
 
     method weight
-        value weight!
+        value weight + 2!
 
     method visitBy: visitor
         visitor visitPrefixComment: self!
@@ -320,6 +330,9 @@ class SyntaxPrefix { receiver selector source }
     method visitBy: visitor
         visitor visitPrefixMessage: self!
 
+    method weight
+        receiver weight + 1!
+
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
         [receiver, selector]!
@@ -333,6 +346,9 @@ class SyntaxUnary { receiver selector source }
 
     method isSimple
         receiver isSimple!
+
+    method weight
+        receiver weight + 1!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
@@ -363,7 +379,7 @@ class SyntaxKeyword { receiver selector arguments source }
         visitor visitKeywordMessage: self!
 
     method weight
-        receiver weight + (arguments sum: #weight) + arguments size!
+        receiver weight + (arguments sum: #weight) + arguments size + 1!
 
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal,
