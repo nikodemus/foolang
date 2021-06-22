@@ -44,8 +44,7 @@ extend Character
             and: code <= ASCII lowerZ!
 
     method isAlphanumeric
-        self isAlpha
-            or: self isDigit!
+        self isAlpha or: self isDigit!
 
     method isAlpha
         let code = self code.
@@ -60,12 +59,12 @@ extend Character
             ifFalse: { self isAlpha not }!
 
     method isWhitespace
-        WhitespaceASCII anySatisfy: { |whitespaceCode|
-                                      whitespaceCode is self code }!
+        WhitespaceASCII
+            anySatisfy: { |whitespaceCode| whitespaceCode is self code }!
 
     method isHorizontalWhitespace
-        HorizontalWhitespaceASCII anySatisfy: { |whitespaceCode|
-                                                whitespaceCode is self code }!
+        HorizontalWhitespaceASCII
+            anySatisfy: { |whitespaceCode| whitespaceCode is self code }!
 
     method isDigit: base
         let code = self code.

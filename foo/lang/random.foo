@@ -1,8 +1,10 @@
 extend Random
-   direct method integer
-      self new integer!
-   direct method float
-      self new float!
-   direct method boolean
-      self new boolean!
+    direct method integer
+        self new integer!
+
+    direct method float
+        self new float!
+
+    direct method boolean
+        self new boolean!
 end

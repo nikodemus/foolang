@@ -8,24 +8,27 @@ extend FileStream
     method readBytes
         let n = self size - self offset.
         let bytes = ByteArray new: n.
-        let got = self tryRead: n bytesInto: bytes at: 1.
+        let got = self tryRead: n
+                       bytesInto: bytes
+                       at: 1.
         got == n
-            ifFalse: { panic "Could not #readBytes from {self} upto end of file" }.
+            ifFalse: { panic "Could not #readBytes from { self } upto end of file" }.
         bytes!
 
     method read: n bytesInto: buffer at: index
-        let got = self tryRead: n bytesInto: buffer at: index.
+        let got = self tryRead: n
+                       bytesInto: buffer
+                       at: index.
         got == n
             ifTrue: { return n }
-            ifFalse: { panic "Could not read {n} bytes from {self}." }!
+            ifFalse: { panic "Could not read { n } bytes from { self }." }!
 
     method tryRead: n bytesInto: buffer at: index
         let total = 0.
         { n > 0 }
-            whileTrue: { let did = self
-                                       tryReadOnce: n
-                                       bytesInto: buffer
-                                       at: index.
+            whileTrue: { let did = self tryReadOnce: n
+                                        bytesInto: buffer
+                                        at: index.
                          did == 0
                              ifTrue: { return total }.
                          total = total + did.
@@ -47,18 +50,19 @@ extend FileStream
         object displayOn: self!
 
     method write: n bytesFrom: buffer at: index
-        let did = self tryWrite: n bytesFrom: buffer at: index.
+        let did = self tryWrite: n
+                       bytesFrom: buffer
+                       at: index.
         did == n
             ifTrue: { return n }
-            ifFalse: { panic "Could not write {n} bytes to {self}." }!
+            ifFalse: { panic "Could not write { n } bytes to { self }." }!
 
     method tryWrite: n bytesFrom: buffer at: index
         let total = 0.
         { n > 0 }
-            whileTrue: { let did = self
-                                       tryWriteOnce: n
-                                       bytesFrom: buffer
-                                       at: index.
+            whileTrue: { let did = self tryWriteOnce: n
+                                        bytesFrom: buffer
+                                        at: index.
                          did == 0
                              ifTrue: { return total }.
                          total = total + did.
@@ -68,9 +72,12 @@ extend FileStream
 
     method size
         let pos = self offset.
-        { self offsetFromEnd: 0. self offset }
+        { self offsetFromEnd: 0.
+          self offset }
             finally: { self offset: pos }!
 
     method writeBytes: bytes
-        self write: bytes size bytesFrom: bytes at: 1!
+        self write: bytes size
+             bytesFrom: bytes
+             at: 1!
 end

@@ -1,8 +1,6 @@
 -- Should this be "Standard" or "StandardObject" instead?
-
 -- Should be able to specify non-inherited methods for
 -- cases like #default. (direct method?)
-
 interface Object
     direct method == other
         self is other!
@@ -10,18 +8,18 @@ interface Object
     direct method isEquivalent: other
         self is other!
 
+    direct method printOn: stream
+        stream print: self toString!
+
+    direct method displayOn: stream
+        self printOn: stream!
+
     method == other
         (Self includes: other)
             ifTrue: { self isEquivalent: other }!
 
     method isEquivalent: other
         self is other!
-
-    direct method printOn: stream
-        stream print: self toString!
-
-    direct method displayOn: stream
-        self printOn: stream!
 
     method printOn: stream
         stream print: self toString!

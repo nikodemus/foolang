@@ -135,7 +135,8 @@ class Composition { block continuation }
     is Function
 
     method apply: arguments
-        continuation value: (block apply: arguments)!
+        continuation
+            value: (block apply: arguments)!
 
     method arity
         block arity!

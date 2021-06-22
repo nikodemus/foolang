@@ -2,7 +2,9 @@ import .character_ext
 import .closure.Block
 import .list.List
 import .stringOutput.StringOutput
-import .string -- for #find:ifNone
+
+-- for #find:ifNone
+import .string
 
 define ColonCharacter
     ":" character!
@@ -13,14 +15,39 @@ define UnderscoreCharacter
 extend Selector
     is Block
 
+    direct method isKeywordName: name
+        name find: { |c| c == ":" }
+             ifNone: { return False }.
+        True!
+
+    direct method isSymbolName: name
+        (name at: 1)
+            isSymbol!
+
+    direct method isPrefixName: name
+        ((name size > 6)
+             and: (name startsWith: "prefix")) -- Good enough until https://github.com/nikodemus/foolang/issues/331
+                                               -- is implemented.
+            ifTrue: { (name at: 7)
+                          isSymbol }!
+
+    direct method isUnaryName: name
+        (self isSymbolName: name)
+            ifTrue: { return False }.
+        (self isKeywordName: name)
+            ifTrue: { return False }.
+        True!
+
     method toSelector
         self!
 
     method apply: arguments
-        self sendTo: arguments first with: arguments rest!
+        self sendTo: arguments first
+             with: arguments rest!
 
     method sendTo: receiver
-        self sendTo: receiver with: []!
+        self sendTo: receiver
+             with: []!
 
     method toSelector
         -- FIXME: Doesn't belong at all.
@@ -28,7 +55,8 @@ extend Selector
 
     method arity
         self isKeyword
-            ifTrue: { return 1 + (self name count: { |c| c == ":" }) }.
+            ifTrue: { return 1 + (self name
+                                      count: { |c| c == ":" }) }.
         self isSymbol
             ifTrue: { return 2 }.
         1!
@@ -54,28 +82,6 @@ extend Selector
     method isUnary
         Self isUnaryName: self name!
 
-    direct method isKeywordName: name
-        name
-            find: { |c| c == ":" }
-            ifNone: { return False }.
-        True!
-
-    direct method isSymbolName: name
-        (name at: 1) isSymbol!
-
-    direct method isPrefixName: name
-        ((name size > 6) and: (name startsWith: "prefix"))
-            -- Good enough until https://github.com/nikodemus/foolang/issues/331
-            -- is implemented.
-            ifTrue: { (name at: 7) isSymbol }!
-
-    direct method isUnaryName: name
-        (self isSymbolName: name)
-            ifTrue: { return False }.
-        (self isKeywordName: name)
-            ifTrue: { return False }.
-        True!
-
     method startsWith: part
         self name startsWith: part!
 
@@ -84,5 +90,6 @@ extend Selector
         stream print: self name!
 
     method toString
-        StringOutput with: { |out| self printOn: out }!
+        StringOutput
+            with: { |out| self printOn: out }!
 end

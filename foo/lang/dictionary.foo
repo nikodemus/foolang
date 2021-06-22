@@ -11,8 +11,8 @@ extend Dictionary
     direct method keys: keys values: values
         let new = self new.
         keys with: values
-             do: { |k v| new
-                       at: k
+             do: { |k v|
+                   new at: k
                        put: v }.
         new!
 
@@ -54,16 +54,17 @@ extend Dictionary
                        new }!
 
     method toString
-        StringOutput with: { |out|
-                             out print: "\{ ".
-                             self keys sort
-                                 do: { |each|
-                                       out display: each.
-                                       out print: " -> ".
-                                       out display: (self at: each) }
-                                 interleaving: { out println: ",".
-                                                 out print: "  " }.
-                             out print: " }" }!
+        StringOutput
+            with: { |out|
+                    out print: "\{ ".
+                    self keys sort
+                        do: { |each|
+                              out display: each.
+                              out print: " -> ".
+                              out display: (self at: each) }
+                        interleaving: { out println: ",".
+                                        out print: "  " }.
+                    out print: " }" }!
 
     method isEquivalent: other
         self size is other size
@@ -76,9 +77,10 @@ extend Dictionary
         True!
 
     method merge: other
-        other doKeys: { |key|
-                        self put: (other at: key)
-                             at: key }.
+        other
+            doKeys: { |key|
+                      self put: (other at: key)
+                           at: key }.
         self!
 
     method removeAll: iter
@@ -112,7 +114,8 @@ extend Dictionary
 
     method doValues: block
         self doKeys: { |key|
-                       block value: (self at: key) }.
+                       block
+                           value: (self at: key) }.
         self!
 
     method copy

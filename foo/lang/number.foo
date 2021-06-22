@@ -8,33 +8,45 @@ interface Number
         0!
 
     method broadcast: block to: collection
-        collection collect: { |x| block value: x value: self }!
+        collection
+            collect: { |x|
+                       block
+                           value: x
+                           value: self }!
 
     method square
         self * self!
 
     method + right
         right addNumber: self!
+
     method - right
         right subNumber: self!
+
     method * right
         right mulNumber: self!
+
     method / right
         right divNumber: self!
 
     method < right
         right ltNumber: self!
+
     method > right
         right gtNumber: self!
+
     method <= right
         right lteNumber: self!
+
     method >= right
         right gteNumber: self!
 
     -- FIXME: Should support floating point exponents for floats at least
+
     method ^ power::Integer
         let result = 1.
-        power times: { result = result * self }.
+        power
+            times: { result = result * self }.
         result!
 
     method abs
@@ -53,33 +65,40 @@ interface Number
             ifFalse: { self }!
 
     method to: other by: step
-       Interval from: self to: other by: step!
+        Interval
+            from: self
+            to: other
+            by: step!
 
     method to: other
-        self to: other by: Self one!
+        self to: other
+             by: Self one!
 
     method downTo: other
-        self to: other by: -(Self one)!
+        self to: other
+             by: -(Self one)!
 
     method to: other do: block
         let i = self.
         let one = Self one.
         { i <= other }
-            whileTrue: { block value: i. i = i + one }.
+            whileTrue: { block value: i.
+                         i = i + one }.
         self!
 
     method downTo: other do: block
         let i = self.
         let one = Self one.
         { i >= other }
-            whileTrue: { block value: i. i = i - one }.
+            whileTrue: { block value: i.
+                         i = i - one }.
         self!
 
     method leftPad: width by: padding
-        padding size is 1 assert: "padding size is 1 in Number#leftPad:by:".
+        padding size is 1
+            assert: "padding size is 1 in Number#leftPad:by:".
         let padded = self toString.
         { padded size < width }
-            whileTrue: { padded = "{padding}{padded}" }.
+            whileTrue: { padded = "{ padding }{ padded }" }.
         padded!
-
 end

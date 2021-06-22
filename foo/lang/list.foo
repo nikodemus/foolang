@@ -10,6 +10,40 @@ class List { size data }
     is Ordered
     is Collection
 
+    direct method from: collection
+        let new = self withCapacity: collection size.
+        collection
+            do: { |elt| new add: elt }.
+        new!
+
+    direct method new: size
+        let new = self withCapacity: size.
+        1 to: size
+          do: { |_| new push: False }.
+        new!
+
+    direct method new: size value: init
+        let new = self withCapacity: size.
+        1 to: size
+          do: { |_| new push: init }.
+        new!
+
+    direct method with: element
+        let new = self new.
+        new add: element.
+        new!
+
+    direct method of: type withCapacity: capacity
+        self size: 0
+             data: (Array
+                        of: type
+                        new: capacity)!
+
+    direct method of: type
+        Specialized
+            class: List
+            of: type!
+
     method asArray
         Array from: self!
 
@@ -17,8 +51,12 @@ class List { size data }
         let first = self first.
         1 to: self size - 1
           do: { |index|
-                self data put: (self data at: index + 1) at: index }.
-        self data put: self elementType default at: size.
+                self data
+                    put: (self data at: index + 1)
+                    at: index }.
+        self data
+            put: self elementType default
+            at: size.
         size = size - 1.
         first!
 
@@ -34,65 +72,48 @@ class List { size data }
              interleaving: { ", " printOn: stream }.
         "] asList" printOn: stream.
         self elementType is Any
-            ifFalse: { "Of: {self elementType}" printOn: stream }!
+            ifFalse: { "Of: { self elementType }" printOn: stream }!
 
     method toString
-        StringOutput with: { |out| self printOn: out }!
+        StringOutput
+            with: { |out| self printOn: out }!
 
     method displayString
-        StringOutput with: { |out| self displayOn: out }!
-
-    direct method from: collection
-        let new = self withCapacity: collection size.
-        collection do: { |elt| new add: elt }.
-        new!
-
-    direct method new: size
-        let new = self withCapacity: size.
-        1 to: size do: { |_| new push: False }.
-        new!
-
-    direct method new: size value: init
-        let new = self withCapacity: size.
-        1 to: size do: { |_| new push: init }.
-        new!
-
-    direct method with: element
-        let new = self new.
-        new add: element.
-        new!
-
-    direct method of: type withCapacity: capacity
-        self size: 0 data: (Array of: type new: capacity)!
-
-    direct method of: type
-        Specialized class: List of: type!
+        StringOutput
+            with: { |out| self displayOn: out }!
 
     method elementType
         data elementType!
 
     method add: element
         self atCapacity
-            ifTrue: { let increase = size atLeast: 8 atMost: 128.
+            ifTrue: { let increase = size atLeast: 8
+                                          atMost: 128.
                       let newdata = Array new: size + increase.
                       1 to: size
                         do: { |i|
-                              newdata put: (data at: i) at: i }.
+                              newdata
+                                  put: (data at: i)
+                                  at: i }.
                       data = newdata }.
-        data put: element at: size + 1.
+        data put: element
+             at: size + 1.
         size = size + 1.
         self!
 
     method from: first to: last
         let list = List withCapacity: (last - first + 1).
-        first to: last
-              do: { |index| list add: (self at: index) }.
+        first
+            to: last
+            do: { |index|
+                  list add: (self at: index) }.
         list!
 
     method pop
         size > 0
             ifTrue: { let elt = data at: size.
-                      data at: size put: self elementType default.
+                      data at: size
+                           put: self elementType default.
                       size = size - 1.
                       elt }
             ifFalse: { panic "Cannot pop from empty List!" }!
@@ -102,7 +123,8 @@ class List { size data }
 
     method put: element at: index
         self checkIndex: index.
-        data put: element at: index!
+        data put: element
+             at: index!
 
     method at: index
         self checkIndex: index.
@@ -110,9 +132,9 @@ class List { size data }
 
     method checkIndex: index
         index < 1
-            ifTrue: { panic "Invalid list index: {index}" }.
+            ifTrue: { panic "Invalid list index: { index }" }.
         index > size
-            ifTrue: { panic "List index out of bounds: {index}, max: {size}" }.
+            ifTrue: { panic "List index out of bounds: { index }, max: { size }" }.
         index!
 
     method capacity
@@ -128,7 +150,8 @@ class List { size data }
     method concat: other
         let new = List withCapacity: self size + other size.
         self do: { |elt| new push: elt }.
-        other do: { |elt| new push: elt }.
+        other
+            do: { |elt| new push: elt }.
         new!
 
     method collect: block
@@ -136,7 +159,9 @@ class List { size data }
         let result = List withCapacity: size.
         1 to: size
           do: { |i|
-                result push: (block value: (self at: i)) }.
+                result
+                    push: (block
+                               value: (self at: i)) }.
         result!
 
     method copy
@@ -148,7 +173,8 @@ class List { size data }
         let n = 0.
         1 to: size
           do: { |i|
-                (block value: (self at: i))
+                (block
+                     value: (self at: i))
                     ifTrue: { n = n + 1 } }.
         n!
 
@@ -157,7 +183,10 @@ class List { size data }
         let result = List withCapacity: size.
         1 to: size
           do: { |i|
-                result push: (block value: (self at: i)  value: (list at: i)) }.
+                result
+                    push: (block
+                               value: (self at: i)
+                               value: (list at: i)) }.
         result!
 
     method with: list default: default collect: block
@@ -167,16 +196,27 @@ class List { size data }
         let result = List withCapacity: size.
         let common = size1 min: size2.
         1 to: common
-          do: { |i| result push: (block value: (self at: i) value: (list at: i)) }.
+          do: { |i|
+                result
+                    push: (block
+                               value: (self at: i)
+                               value: (list at: i)) }.
         common == size
             ifTrue: { return result }.
         let tailHandler = size1 < size2
                               ifTrue: { { |i|
-                                          block value: default value: (list at: i) } }
+                                          block
+                                              value: default
+                                              value: (list at: i) } }
                               ifFalse: { { |i|
-                                           block value: (self at: i) value: default } }.
-        common + 1 to: size
-                   do: { |i| result push: (tailHandler value: i) }.
+                                           block
+                                               value: (self at: i)
+                                               value: default } }.
+        common + 1
+            to: size
+            do: { |i|
+                  result
+                      push: (tailHandler value: i) }.
         result!
 
     method select: block
@@ -194,26 +234,39 @@ class List { size data }
         selection!
 
     method + x
-        x broadcast: {|a b| a + b} to: self!
+        x broadcast: { |a b| a + b }
+          to: self!
+
     method - x
-        x broadcast: {|a b| a - b} to: self!
+        x broadcast: { |a b| a - b }
+          to: self!
+
     method * x
-        x broadcast: {|a b| a * b} to: self!
+        x broadcast: { |a b| a * b }
+          to: self!
+
     method / x
-        x broadcast: {|a b| a / b} to: self!
+        x broadcast: { |a b| a / b }
+          to: self!
 
     method broadcast: block to: collection
-        collection with: self collect: block!
+        collection
+            with: self
+            collect: block!
 
     method dot: other
-        self with: other sum: { |a b| a * b }!
+        self with: other
+             sum: { |a b| a * b }!
 
     method norm
-       (self inject: 0.0 into: { |abs elt| abs + (elt * elt) }) sqrt!
+        (self inject: 0.0
+              into: { |abs elt|
+                      abs + (elt * elt) })
+            sqrt!
 
     method normalized
-       let reciprocal = 1.0 / (self norm).
-       self * reciprocal!
+        let reciprocal = 1.0 / (self norm).
+        self * reciprocal!
 
     method scalarProjectionOn: other
         (self dot: other) / other norm!
@@ -222,13 +275,16 @@ class List { size data }
         ((self dot: other) / (other dot: other)) * other!
 
     method addNumber: left
-       self collect: { |elt| left + elt }!
+        self collect: { |elt| left + elt }!
+
     method subNumber: left
-       self collect: { |elt| left - elt }!
+        self collect: { |elt| left - elt }!
+
     method divNumber: left
-       self collect: { |elt| left / elt }!
+        self collect: { |elt| left / elt }!
+
     method mulNumber: left
-       self collect: { |elt| left * elt }!
+        self collect: { |elt| left * elt }!
 end
 
 extend Ordered
@@ -240,10 +296,13 @@ extend Ordered
         1 to: self size
           do: { |index|
                 ((self at: index) == element)
-                    ifTrue: { list add: (self from: cursor to: index - 1).
+                    ifTrue: { list add: (self from: cursor
+                                              to: index - 1).
                               cursor = index + 1 } }.
-        list add: (self from: cursor to: self size).
+        list add: (self from: cursor
+                        to: self size).
         list!
+
     method asList
         List from: self!
 end

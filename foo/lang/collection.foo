@@ -31,7 +31,8 @@ interface Collection
     direct method from: iterable
         let new = self of: iterable elementType
                        withCapacity: iterable sizeEstimate.
-        iterable do: { |each| new add: each }.
+        iterable
+            do: { |each| new add: each }.
         new!
 
     direct method newOf: type
@@ -42,8 +43,7 @@ interface Collection
         self newOf: self defaultElementType!
 
     direct method new: size
-        self new
-            _initSize: size!
+        self new _initSize: size!
 
     direct method of: type new: size
         (self newOf: type)
@@ -57,7 +57,8 @@ interface Collection
     direct method of: type from: iterable
         let new = self of: type
                        withCapacity: iterable sizeEstimate.
-        iterable do: { |each| new add: each }.
+        iterable
+            do: { |each| new add: each }.
         new!
 
     direct method withCapacity: capacity
@@ -78,7 +79,8 @@ interface Collection
 
     method addAll: iterable
         self reserveCapacity: (self size + iterable sizeEstimate).
-        iterable do: { |each| self add: each }.
+        iterable
+            do: { |each| self add: each }.
         self!
 
     method reserveCapacity: size
@@ -97,7 +99,8 @@ interface Collection
         new!
 
     method reject: block
-        self select: { |each| (block value: each)
+        self select: { |each|
+                       (block value: each)
                            not }!
 
     method reject: rejectBy collect: collectBy
@@ -119,7 +122,8 @@ interface Collection
         self!
 
     method removeIfNot: block
-        self removeIf: { |each| (block value: each)
+        self removeIf: { |each|
+                         (block value: each)
                              not }.
         self!
 
@@ -159,7 +163,8 @@ interface Collection
     method do: block
         1 to: self size
           do: { |i|
-                block value: (self at: i) }.
+                block
+                    value: (self at: i) }.
         self!
 
     method inject: value into: block
@@ -172,7 +177,7 @@ interface Collection
 
     method reject: block
         let selection = Self withCapacity: (self size / 2 + 1)
-                            truncate.
+                                 truncate.
         self do: { |elt|
                    (block value: elt) is True
                        ifFalse: { selection push: elt } }.
@@ -180,7 +185,7 @@ interface Collection
 
     method select: block
         let selection = Self withCapacity: (self size / 2 + 1)
-                            truncate.
+                                 truncate.
         self do: { |elt|
                    (block value: elt) is True
                        ifTrue: { selection push: elt } }.
@@ -210,7 +215,8 @@ interface Collection
                 result
                     put: elt
                     at: i }.
-        common == size ifTrue: { return result }.
+        common == size
+            ifTrue: { return result }.
         let tailHandler = size1 < size2
                               ifTrue: { { |i|
                                           block

@@ -6,13 +6,13 @@ class OrderedIterator { object index }
     is Iterator
 
     direct method new: object
-        self object: object index: 1!
+        self object: object
+             index: 1!
 
     method nextIfNone: block
-
         let next = index > object size
-            ifTrue: { return block value }
-            ifFalse: { object at: index }.
+                       ifTrue: { return block value }
+                       ifFalse: { object at: index }.
         index = index + 1.
         next!
 
@@ -27,17 +27,23 @@ interface Ordered
     -- required method at: index
 
     method at: index put: elt
-        self put: elt at: index!
+        self put: elt
+             at: index!
 
     method bytes
         let bytes = ByteArray new: self size.
-        1 to: self size do: { |i| bytes put: (self at: i) at: i }.
+        1 to: self size
+          do: { |i|
+                bytes
+                    put: (self at: i)
+                    at: i }.
         bytes!
 
     method asArray
         let new = Array new: self size.
         self doWithIndex: { |each index|
-                            new put: each at: index }.
+                            new put: each
+                                at: index }.
         new!
 
     method iterator
@@ -63,10 +69,12 @@ interface Ordered
     method butlast
         self isEmpty
             ifTrue: { return self }.
-        self from: 1 to: (self size - 1)!
+        self from: 1
+             to: (self size - 1)!
 
     method rest
-        self from: 2 to: self size!
+        self from: 2
+             to: self size!
 
     method checkEqualInternal: other
         self size == other size
@@ -87,54 +95,72 @@ interface Ordered
         self size is 0!
 
     method copy
-        let copy = Self of: self elementType new: self size.
+        let copy = Self of: self elementType
+                        new: self size.
         self copyTo: copy!
 
     method copyTo: other
-         self copyTo: other startingAt: 1!
+        self copyTo: other
+             startingAt: 1!
 
     method copyTo: other startingAt: index
-        self from: 1 to: self size copyTo: other startingAt: index!
+        self from: 1
+             to: self size
+             copyTo: other
+             startingAt: index!
 
     method from: first to: last copyTo: other startingAt: index
         let offset = 0.
-        first to: last
-              do: { |i|
-                    other put: (self at: i) at: (index + offset).
-                    offset = offset + 1 }.
+        first
+            to: last
+            do: { |i|
+                  other
+                      put: (self at: i)
+                      at: (index + offset).
+                  offset = offset + 1 }.
         other!
 
     method concat: other
-        let copy = Self of: self elementType new: self size + other size.
+        let copy = Self of: self elementType
+                        new: self size + other size.
         self copyTo: copy.
-        other copyTo: copy startingAt: self size + 1!
+        other
+            copyTo: copy
+            startingAt: self size + 1!
 
     method species
         Self of: self elementType!
 
     method collect: block
-        self collect: block as: self species!
+        self collect: block
+             as: self species!
 
     method collectWithIndex: block
         let index = 0.
         self collect: { |each|
                         index = index + 1.
-                        block value: each value: index }
+                        block
+                            value: each
+                            value: index }
              as: self species!
 
     method collect: block of: type
-        self collect: block as: (Self of: type)!
+        self collect: block
+             as: (Self of: type)!
 
     method collect: block as: type
         let n = self size.
         let coll = type new: self size.
         1 to: n
           do: { |i|
-                coll put: (block value: (self at: i)) at: i }.
+                coll put: (block
+                               value: (self at: i))
+                     at: i }.
         coll!
 
     method reject: block
-        self reject: block as: self species!
+        self reject: block
+             as: self species!
 
     method reject: block as: type
         let capacity = self size.
@@ -145,11 +171,14 @@ interface Ordered
                 let maybe = self at: index.
                 (block value: maybe)
                     ifFalse: { n = n + 1.
-                               tmp put: maybe at: n } }.
-        tmp from: 1 to: n!
+                               tmp put: maybe
+                                   at: n } }.
+        tmp from: 1
+            to: n!
 
     method select: block
-        self select: block as: self species!
+        self select: block
+             as: self species!
 
     method select: block as: type
         let capacity = self size.
@@ -160,32 +189,43 @@ interface Ordered
                 let maybe = self at: index.
                 (block value: maybe)
                     ifTrue: { n = n + 1.
-                              tmp put: maybe at: n } }.
-        tmp from: 1 to: n!
+                              tmp put: maybe
+                                  at: n } }.
+        tmp from: 1
+            to: n!
 
     -- FIXME: Inconsistency between split:do: and splitBy:
     -- ...the use-cases are different, but at least the idea should be
     -- made clear in the names.
+
     method split: byBlock do: block
         let cursor = 1.
         1 to: self size
           do: { |index|
-                (byBlock value: (self at: index))
-                    ifTrue: { block value: (self from: cursor to: index).
+                (byBlock
+                     value: (self at: index))
+                    ifTrue: { block
+                                  value: (self from: cursor
+                                               to: index).
                               cursor = index + 1 } }.
         cursor <= self size
-            ifTrue: { block value: (self from: cursor to: self size) }!
+            ifTrue: { block
+                          value: (self from: cursor
+                                       to: self size) }!
 
     method do: block
         1 to: self size
           do: { |i|
-                block value: (self at: i) }.
+                block
+                    value: (self at: i) }.
         self!
 
     method doWithIndex: block
         1 to: self size
           do: { |i|
-                block value: (self at: i) value: i }.
+                block
+                    value: (self at: i)
+                    value: i }.
         self!
 
     method position: block ifNone: noneBlock
@@ -195,23 +235,31 @@ interface Ordered
         noneBlock value!
 
     method positionFromRight: block ifNone: noneBlock
-        self size downTo: 1
-                  do: { |index|
-                        (block value: (self at: index))
-                            ifTrue: { return index } }.
+        self size
+            downTo: 1
+            do: { |index|
+                  (block
+                       value: (self at: index))
+                      ifTrue: { return index } }.
         noneBlock value!
 
     method position: block
-        self position: block ifNone: { False }!
+        self position: block
+             ifNone: { False }!
 
     method positionFromRight: block
-        self positionFromRight: block ifNone: { False }!
+        self positionFromRight: block
+             ifNone: { False }!
 
     method with: other collect: block
-        self with: other collect: block of: Any!
+        self with: other
+             collect: block
+             of: Any!
 
     method with: other collect: block of: type
-        self with: other collect: block as: (Self of: type)!
+        self with: other
+             collect: block
+             as: (Self of: type)!
 
     method with: other collect: block as: species
         let new = species new: self size.
@@ -225,29 +273,38 @@ interface Ordered
 
     method with: other do: block
         1 to: (self size min: other size)
-          do: { |i| block value: (self at: i) value: (other at: i) }.
+          do: { |i|
+                block
+                    value: (self at: i)
+                    value: (other at: i) }.
         self!
 
     method with: other inject: value into: block
         let result = value.
-        self
-            with: other
-            do: { |a b| result = block value: result value: a value: b }.
+        self with: other
+             do: { |a b|
+                   result = block
+                                value: result
+                                value: a
+                                value: b }.
         result!
 
     method with: other sum: block
-        self
-            with: other
-            inject: 0
-            into: { |res a b|
-                    res + (block value: a value: b) }!
+        self with: other
+             inject: 0
+             into: { |res a b|
+                     res + (block
+                                value: a
+                                value: b) }!
 
     method replaceFrom: first to: last with: source startingAt: sourceFirst
         let j = sourceFirst.
-        first to: last
-              do: { |i|
-                    self at: i put: (source at: j).
-                    j = j + 1 }.
+        first
+            to: last
+            do: { |i|
+                  self at: i
+                       put: (source at: j).
+                  j = j + 1 }.
         self!
 
     method reverse
@@ -258,8 +315,9 @@ interface Ordered
                 let j = n - offset.
                 j <= i
                     ifTrue: { return self }.
-                self swap: i with: j }.
-          panic "BUG: this should never happen."!
+                self swap: i
+                     with: j }.
+        panic "BUG: this should never happen."!
 
     method reversed
         self copy reverse!
@@ -272,7 +330,9 @@ interface Ordered
         -- cannot propagate errors from the comparison function, so instead
         -- here's a quick and dirty quicksort. O(N^2) worst case, since I
         -- was too lazy to do the center pivot.
-        self _quicksort: 1 to: self size by: block!
+        self _quicksort: 1
+             to: self size
+             by: block!
 
     method sorted
         self copy sort!
@@ -282,9 +342,15 @@ interface Ordered
 
     method _quicksort: left to: right by: block
         left < right
-            ifTrue: { let p = self _partition: left to: right by: block.
-                      self _quicksort: left to: p - 1 by: block.
-                      self _quicksort: p + 1 to: right by: block }.
+            ifTrue: { let p = self _partition: left
+                                   to: right
+                                   by: block.
+                      self _quicksort: left
+                           to: p - 1
+                           by: block.
+                      self _quicksort: p + 1
+                           to: right
+                           by: block }.
         self!
 
     method _partition: left to: right by: block
@@ -293,16 +359,21 @@ interface Ordered
         left to: right
              do: { |j|
                    let x = self at: j.
-                   (block value: x value: pivot)
-                       ifTrue: { self swap: i with: j.
+                   (block
+                        value: x
+                        value: pivot)
+                       ifTrue: { self swap: i
+                                      with: j.
                                  i = i + 1 } }.
-        self swap: i with: right.
+        self swap: i
+             with: right.
         i!
 
     method swap: i with: j
         let tmp = self at: i.
-        self put: (self at: j) at: i.
-        self put: tmp at: j.
+        self put: (self at: j)
+             at: i.
+        self put: tmp
+             at: j.
         self!
-
 end

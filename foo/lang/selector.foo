@@ -15,11 +15,35 @@ class Selector { name }
         -- Very fake...
         self name: name!
 
+    direct method isKeywordName: name
+        name find: { |c| c == ":" }
+             ifNone: { return False }.
+        True!
+
+    direct method isSymbolName: name
+        (name at: 1)
+            isSymbol!
+
+    direct method isPrefixName: name
+        ((name size > 6)
+             and: (name startsWith: "prefix")) -- Good enough until https://github.com/nikodemus/foolang/issues/331
+                                               -- is implemented.
+            ifTrue: { (name at: 7)
+                          isSymbol }!
+
+    direct method isUnaryName: name
+        (self isSymbolName: name)
+            ifTrue: { return False }.
+        (self isKeywordName: name)
+            ifTrue: { return False }.
+        True!
+
     method toSelector
         self!
 
     method apply: arguments
-        self sendTo: arguments first with: arguments rest!
+        self sendTo: arguments first
+             with: arguments rest!
 
     method arity
         self isKeyword
@@ -29,10 +53,10 @@ class Selector { name }
         1!
 
     method loop
-        Error raise: "Cannot use #loop on {self}."!
+        Error raise: "Cannot use #loop on { self }."!
 
     method finally: cleanup
-        Error raise: "Cannot use #finally: on {self}."!
+        Error raise: "Cannot use #finally: on { self }."!
 
     method < other
         self name < other name!
@@ -49,34 +73,14 @@ class Selector { name }
     method isUnary
         Self isUnaryName: self name!
 
-    direct method isKeywordName: name
-        name
-            find: { |c| c == ":" }
-            ifNone: { return False }.
-        True!
-
-    direct method isSymbolName: name
-        (name at: 1) isSymbol!
-
-    direct method isPrefixName: name
-        ((name size > 6) and: (name startsWith: "prefix"))
-            -- Good enough until https://github.com/nikodemus/foolang/issues/331
-            -- is implemented.
-            ifTrue: { (name at: 7) isSymbol }!
-
-    direct method isUnaryName: name
-        (self isSymbolName: name)
-            ifTrue: { return False }.
-        (self isKeywordName: name)
-            ifTrue: { return False }.
-        True!
-
     method sendTo: receiver
-        name sendTo: receiver with: []!
+        name sendTo: receiver
+             with: []!
 
     method sendTo: receiver with: arguments
         -- Output debug println: "{receiver} <= {name} {arguments}".
-        name sendTo: receiver with: arguments asArray!
+        name sendTo: receiver
+             with: arguments asArray!
 
     method startsWith: part
         self name startsWith: part!
@@ -84,11 +88,13 @@ class Selector { name }
     method parts
         let parts = List new.
         name split: { |c| c == ColonCharacter }
-             do:  { |part| parts add: part }.
-        parts ifEmpty: { parts add: name }.
+             do: { |part| parts add: part }.
+        parts
+            ifEmpty: { parts add: name }.
         parts!
 
     -- FIXME: Should really intern selectors!
+
     method isEquivalent: other
         name == other name!
 
@@ -97,5 +103,6 @@ class Selector { name }
         stream print: name!
 
     method toString
-        StringOutput with: { |out| self printOn: out }!
+        StringOutput
+            with: { |out| self printOn: out }!
 end
