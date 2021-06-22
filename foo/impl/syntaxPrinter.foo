@@ -1,8 +1,13 @@
 import .syntaxVisitor.SyntaxVisitor
 
+class Box { value }
+    method value: new
+        value = new!
+end
+
 class SyntaxPrinter { output
                       indent
-                      printed
+                      _printed
                       blockStart
                       last }
     is SyntaxVisitor
@@ -17,48 +22,54 @@ class SyntaxPrinter { output
         syntax visitBy: (self
                              output: output
                              indent: 0
-                             printed: 0
+                             _printed: (Box value: 0)
                              blockStart: False
                              last: False)!
 
     method toString
         "#<SyntaxPrinter>"!
 
+    method printed
+        _printed value!
+
+    method printed: value
+        _printed value: value!
+
     method indentBody
         SyntaxPrinter
             output: output
             indent: indent + 4
-            printed: printed
+            _printed: _printed
             blockStart: False
             last: False!
 
     method indentHere
         SyntaxPrinter
             output: output
-            indent: printed
-            printed: printed
+            indent: self printed
+            _printed: _printed
             blockStart: False
             last: False!
 
     method indentOne
         SyntaxPrinter
             output: output
-            indent: printed + 1
-            printed: printed
+            indent: self printed + 1
+            _printed: _printed
             blockStart: False
             last: False!
 
     method indentBlock
         SyntaxPrinter
             output: output
-            indent: printed
-            printed: printed
+            indent: self printed
+            _printed: _printed
             blockStart: True
             last: False!
 
     method newline
         output println: "".
-        printed = 0.
+        self printed: 0.
         self doIndent.
         self!
 
@@ -67,18 +78,18 @@ class SyntaxPrinter { output
         self!
 
     method doIndent
-        indent - printed times: { output print: " " }.
-        printed = indent.
+        indent - self printed times: { output print: " " }.
+        self printed: indent.
         self!
 
     method skipline
         output println: "".
-        printed = 0.
+        self printed: 0.
         self!
 
     method print: string::String
         output print: string.
-        printed = printed + string size.
+        self printed: self printed + string size.
         self!
 
     method println: string::String
@@ -105,10 +116,12 @@ class SyntaxPrinter { output
         self print: aSelector name!
 
     method visitArray: anArray
-        let flat = anArray entries allSatisfy: #isTiny.
+        let entries = anArray entries.
+        let flat = anArray isTiny
+                       and: entries size <= 5.
         self print: "[".
         let printer = self indentHere.
-        anArray entries
+        entries
             do: { |element| element visitBy: printer }
             interleaving: { printer print: ",".
                             flat
@@ -230,20 +243,23 @@ class SyntaxPrinter { output
 
     method visitKeywordMessage: aMessage
         let receiver = aMessage receiver.
+        let arguments = aMessage arguments.
         receiver visitBy: self.
         -- Parts gets a trailing empty string, with #with:do: terminates
         -- before we hit it.
         let parts = aMessage selector name splitBy: ":" character.
-        (receiver isTiny and: parts size is 2)
+        (receiver isTiny
+             and: arguments size == 1
+             and: arguments first isTiny)
             ifTrue: { return parts
-                          with: aMessage arguments
+                          with: arguments
                           do: { |part arg|
                                 self print: " ".
                                 self print: part.
                                 self print: ": ".
                                 arg visitBy: self.
                                 last = #keyword } }.
-        let printer = (receiver isTiny and: printed <= indent + 4)
+        let printer = (receiver isTiny and: self printed <= indent + 4)
                           ifTrue: { (self print: " ")
                                         indentHere }
                           ifFalse: { let p = self indentBody.
@@ -347,7 +363,7 @@ class SyntaxPrinter { output
         let bodyVisitor = self indentBody.
         aDefine variable visitBy: bodyVisitor.
         let body = aDefine body.
-        body isTiny
+        body weight is 0
             ifTrue: { bodyVisitor print: " "}
             ifFalse: { bodyVisitor newline }.
         bodyVisitor visitMaybeSuffixComment: body
@@ -422,7 +438,7 @@ class SyntaxPrinter { output
         last = #blockComment!
 
     method skipIfNotEmpty
-        printed > 1
+        self printed > 1
             ifTrue: { self skipline }!
 
     method _visitMethodSignature: signature
