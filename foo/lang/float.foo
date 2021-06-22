@@ -17,46 +17,61 @@ extend Float
 
     method decimalString: n
         let int = self truncate.
-        let dec = ((self abs - int abs) * (10 ^ n)) round.
-        "{int}.{dec}"!
+        let dec = ((self abs - int abs) * (10 ^ n))
+                      round.
+        "{ int }.{ dec }"!
 
     method addNumber: left
         left floatAdd: self!
+
     method subNumber: left
         left floatSub: self!
+
     method mulNumber: left
         left floatMul: self!
+
     method divNumber: left
         left floatDiv: self!
 
     method eqNumber: left
         left floatEq: self!
+
     method ltNumber: left
         left floatLt: self!
+
     method gtNumber: left
         left floatGt: self!
+
     method lteNumber: left
         left floatLte: self!
+
     method gteNumber: left
         left floatGte: self!
 
     method integerAdd: right
         self floatAdd: right asFloat!
+
     method integerSub: right
         self floatSub: right asFloat!
+
     method integerMul: right
         self floatMul: right asFloat!
+
     method integerDiv: right
         self floatDiv: right asFloat!
 
     method integerEq: right
         self floatEq: right asFloat!
+
     method integerLt: right
         self floatLt: right asFloat!
+
     method integerGt: right
         self floatGt: right asFloat!
+
     method integerLte: right
         self floatLte: right asFloat!
+
     method integerGte: right
         self floatGte: right asFloat!
 
