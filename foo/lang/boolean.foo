@@ -6,6 +6,10 @@ extend Boolean
     direct method default
         False!
 
+    method => block
+        self
+            ifTrue: block!
+
     method assert: what
         self ifFalse: { panic "{ what } assertion failed!" }!
 
