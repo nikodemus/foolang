@@ -38,7 +38,7 @@ import .lang.stringOutput.StringOutput
 import .lang.test.TestSuite
 import .lang.time.Time
 
-class Foo {}
+class Foolang {}
     direct method isSelfHosted
         False!
 end

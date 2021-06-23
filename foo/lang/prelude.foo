@@ -39,7 +39,7 @@ import .stringOutput.StringOutput
 import .test.TestSuite
 import .time.Time
 
-class Foo {}
+class Foolang {}
     direct method isSelfHosted
         True!
 end
