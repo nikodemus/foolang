@@ -182,7 +182,7 @@ class AstInterpreter { context process }
         aRecord name
             sendTo: Record
             with: (aRecord values
-                       collect: { |each| each visitBy: self })!
+                       collect: { |each| each visitBy: self }) asArray!
 
     method visitDictionary: aDictionary
         let theDictionary = Dictionary withCapacity: (aDictionary entries size).
@@ -221,7 +221,7 @@ class AstInterpreter { context process }
         let $context = context.
         let $process = process.
         -- Debug println: "<- {selector}".
-        { selector sendTo: object with: arguments }
+        { selector sendTo: object with: arguments asArray }
             on: DoesNotUnderstand
             do: { |ex|
                   -- Add the source location to the error.
