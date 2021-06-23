@@ -359,6 +359,13 @@ class CTranspiler { output selectorMap closureFunctions
     method addTemp
         $home addTemp!
 
+    method _visitTemp: value
+        let tmp = self addTemp.
+        output print: "ctx->frame[{tmp}] = ".
+        value visitBy: self.
+        output print: ";".
+        tmp!
+
     method declare: global
         -- Debug println: "#declare: {global}".
         globals at: (global name)
@@ -781,12 +788,7 @@ class CTranspiler { output selectorMap closureFunctions
         let recordClass = self _ensureRecordClass: aRecord.
         output print: "(\{ ".
         let argVars = aRecord values
-                          collect: { |each|
-                                     let index = self addTemp.
-                                     output print: "ctx->frame[{index}] =  ".
-                                     each visitBy: self.
-                                     output print: "; ".
-                                     index }.
+                          collect: { |each| self _visitTemp: each }.
         output print: "foo_send(ctx".
         output print: ", &{Name mangleSelector: aRecord name}".
         output print: ", {Name mangleGlobal: recordClass}".
@@ -796,13 +798,6 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each|
                   output print: ", ctx->frame[{each}]" }.
         output print: "); })"!
-
-    method _visitTemp: value
-        let tmp = self addTemp.
-        output print: "ctx->frame[{tmp}] = ".
-        value visitBy: self.
-        output print: ";".
-        tmp!
 
     method visitDictionary: aDictionary
         -- Tracer visitDictionary: aDictionary
@@ -1164,14 +1159,9 @@ class CTranspiler { output selectorMap closureFunctions
 
     method visitIs: anIs
         -- Tracer trace: #visitIs:.
-        let left = self addTemp.
-        output print: "(\{ ctx->frame[{left}] = ".
-        anIs left visitBy: self.
-        output print: "; ".
-        let right = self addTemp.
-        output print: "ctx->frame[{right}] = ".
-        anIs right visitBy: self.
-        output print: "; ".
+        output print: "(\{".
+        let left = self _visitTemp: anIs left.
+        let right = self _visitTemp: anIs right.
         output print: "foo_Boolean_new(foo_eq(ctx->frame[{left}], ctx->frame[{right}])); ".
         output print: "})"!
 
@@ -1213,12 +1203,7 @@ class CTranspiler { output selectorMap closureFunctions
         -- Tracer visitSend: aSend selector.
         output print: "(\{ ".
         let argVars = aSend arguments
-                          collect: { |each|
-                                     let index = self addTemp.
-                                     output print: "ctx->frame[{index}] = ".
-                                     each visitBy: self.
-                                     output print: "; ".
-                                     index }.
+                          collect: { |each| self _visitTemp: each }.
         output print: "foo_send(ctx, &".
         output print: (self selectorCName: aSend selector).
         output print: ", ".
@@ -1248,10 +1233,7 @@ class CTranspiler { output selectorMap closureFunctions
         output print: " ctx->vars->data[{index}] = ".
         aBind value visitBy: self.
         output print: ";".
-        let res = self addTemp.
-        output print: " ctx->frame[{res}] = ".
-        aBind body visitBy: self.
-        output print: ";".
+        let res = self _visitTemp: aBind body.
         output print: " assert(&{unbind}.cleanup == ctx->cleanup);".
         output print: " ctx->cleanup = ctx->cleanup->next;".
         output print: " foo_unbind(ctx, &{unbind}.cleanup);".
