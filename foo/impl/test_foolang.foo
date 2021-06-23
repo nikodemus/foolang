@@ -674,13 +674,22 @@ end
         self eval: "[]"
              expect: []!
 
-    method testRecord1
+    method test_Record_without_trailing_comma
         self eval: "\{foo: 42, bar: 123}"
              expect: {foo: 42, bar: 123}!
 
-    method testRecord2
+    method test_Record_with_trailing_comma
         self eval: "\{foo: 42, bar: 123,}"
              expect: {foo: 42, bar: 123}!
+
+    method test_Record_evaluation_order
+        self eval: "let x = List new.
+                    \{ a: (x add: 1),
+                       b: (x add: 2) }.
+                    \{ d: (x add: 3),
+                       c: (x add: 4) \}.
+                    x asArray"
+             expect: [1, 2, 3, 4]!
 
     method testDictionary1
         self eval: "let x = 42. let y = 13. \{ x -> y, y + 1 -> x * 2 }"

@@ -649,25 +649,6 @@ class TestTranspilePreludeOutput { assert system }
             expect: "Hello World!\n42"!
 end
 
-class TestTranspilePreludeRecord { assert system }
-    is TranspilerTest
-
-    method test
-        self transpile: "import lang.record_ext.*
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 let a1 = \{ foo: 42 }.
-                                 let a2 = \{ foo: 42 }.
-                                 let b = \{ bar: 42 }.
-                                 let c = \{ foo: 42, bar: 42 }.
-                                 (a1 == a2) debug.
-                                 (a1 == b) debug.
-                                 (a1 == b) debug!
-                         end"
-            expect: "#<Boolean True>#<Boolean False>#<Boolean False>"!
-end
-
 class TestTranspilePreludeSelector { assert system }
     is TranspilerTest
 
@@ -881,17 +862,6 @@ class TestTranspileDefine { assert system }
                                  MyInteger debug!
                          end"
             expect: "#<Integer 1234>"!
-
-    method testDefineRecord
-        self transpile: "define MyRecord1 \{ foo: 42, bar: 123 }!
-                         define MyRecord2 \{ bar: 128947, foo: 99 }!
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 MyRecord1 foo debug.
-                                 MyRecord2 foo debug!
-                         end"
-            expect: "#<Integer 42>#<Integer 99>"!
 
     method testDefineSelector
         self transpile: "define MySelector #foobar!
@@ -1559,7 +1529,48 @@ end
 class TestTranspileRecord { assert system }
     is TranspilerTest
 
-    method test
+    method test_Define_record_in_transpiler
+        self transpile: "define MyRecord1 \{ foo: 42, bar: 123 }!
+                         define MyRecord2 \{ bar: 128947, foo: 99 }!
+
+                         class Main \{}
+                             direct method run: command in: system
+                                 MyRecord1 foo debug.
+                                 MyRecord2 foo debug!
+                         end"
+            expect: "#<Integer 42>#<Integer 99>"!
+
+    method test0_Eval_order_in_transpiled_record
+        self transpile: "class Main \{ out }
+                             direct method run: command in: system
+                                 (self out: system output) run!
+                             method value: x
+                                 out writeString: x.
+                                 x!
+                             method run
+                                 \{ a: ( self value: \"1\" ),
+                                    b: ( self value: \"2\" ) }.
+                                 \{ d: ( self value: \"3\" ),
+                                    c: ( self value: \"4\" ) }!
+                         end"
+            expect: "1234"!
+
+    method test_Record_equality_in_transpiler
+        self transpile: "import lang.record_ext.*
+
+                         class Main \{}
+                             direct method run: command in: system
+                                 let a1 = \{ foo: 42 }.
+                                 let a2 = \{ foo: 42 }.
+                                 let b = \{ bar: 42 }.
+                                 let c = \{ foo: 42, bar: 42 }.
+                                 (a1 == a2) debug.
+                                 (a1 == b) debug.
+                                 (a1 == b) debug!
+                         end"
+            expect: "#<Boolean True>#<Boolean False>#<Boolean False>"!
+
+    method test_Simple_record_in_transpiler
         self transpile: "class Main \{}
                              direct method run: command in: system
                                  let r = \{ foo: 42 }.
@@ -2289,7 +2300,6 @@ class Main {}
             "--prelude-iterable" -> TestTranspilePreludeIterable,
             "--prelude-object" -> TestTranspilePreludeObject,
             "--prelude-output" -> TestTranspilePreludeOutput,
-            "--prelude-record" -> TestTranspilePreludeRecord,
             "--prelude-selector" -> TestTranspilePreludeSelector,
             "--prelude-string" -> TestTranspilePreludeString,
             "--prelude-string-output" -> TestTranspilePreludeStringOutput,
