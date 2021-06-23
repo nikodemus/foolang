@@ -797,6 +797,29 @@ class CTranspiler { output selectorMap closureFunctions
                   output print: ", ctx->frame[{each}]" }.
         output print: "); })"!
 
+    method _visitTemp: value
+        let tmp = self addTemp.
+        output print: "ctx->frame[{tmp}] = ".
+        value visitBy: self.
+        output print: ";".
+        tmp!
+
+    method visitDictionary: aDictionary
+        -- Tracer visitDictionary: aDictionary
+        output print: "(\{".
+        let new = self selectorCName: #new.
+        let dict = self addTemp.
+        output print: "ctx->frame[{dict}] = foo_send(ctx, &{new}, ".
+        self visitGlobal: (env global: "Dictionary").
+        output print: ", 0);".
+        let putAt = self selectorCName: #put:at:.
+        aDictionary entries
+            do: { |each|
+                  let k = self _visitTemp: each key.
+                  let v = self _visitTemp: each value.
+                  output print: "foo_send(ctx, &{putAt}, ctx->frame[{dict}], 2, ctx->frame[{v}], ctx->frame[{k}]); " }.
+        output print: "ctx->frame[{dict}]; })"!
+
     method _generateLayout: aClass
         aClass isBuiltin
             ifTrue: { return "NULL" }. -- FIXME: proper builtin layouts

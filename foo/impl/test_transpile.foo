@@ -304,10 +304,10 @@ class TestTranspilePreludeClosure { assert system }
             expect: "#<Integer 53>#<Integer 312>"!
 end
 
-class TestTranspilePreludeDictionary { assert system }
+class TestTranspileDictionary { assert system }
     is TranspilerTest
 
-    method testRemove
+    method test_Dictionary_remove_transpiled
         self transpile: "import lang.dictionary2.Dictionary
                          import lang.output
                          import lang.string
@@ -322,7 +322,7 @@ class TestTranspilePreludeDictionary { assert system }
                          end"
             expect: "\{ 2 -> \"two\" }"!
 
-    method testToString
+    method test_Dictionary_toString_transpiled
         self transpile: "import lang.dictionary2.Dictionary
                          import lang.output
                          import lang.string
@@ -336,6 +336,26 @@ class TestTranspilePreludeDictionary { assert system }
                          end"
             expect: "\{ 1 -> \"one\",
   2 -> \"two\" }"!
+
+    method test0_Dictionary_constructor
+        self transpile: "import lang.dictionary2.Dictionary
+                         import lang.string
+                         import lang.character_ext
+                         class Main \{ out \}
+                             direct method run: command in: system
+                                 (self out: system output) run!
+                             method run
+                                 self value:
+                                 \{ (self value: \"c\") -> (self value: \"1\"),
+                                    (self value: \"b\") -> (self value: \"2\"),
+                                    (self value: \"a\") -> (self value: \"3\") } toString!
+                             method value: x
+                                 out writeString: x.
+                                 x!
+                         end"
+            expect: "c1b2a3\{ \"a\" -> \"3\",
+  \"b\" -> \"2\",
+  \"c\" -> \"1\" \}"!
 end
 
 class TestTranspilePreludeException { assert system }
@@ -1540,7 +1560,7 @@ class TestTranspileRecord { assert system }
                          end"
             expect: "#<Integer 42>#<Integer 99>"!
 
-    method test0_Eval_order_in_transpiled_record
+    method test_Eval_order_in_transpiled_record
         self transpile: "class Main \{ out }
                              direct method run: command in: system
                                  (self out: system output) run!
@@ -2273,6 +2293,7 @@ class Main {}
             "--byte-array" -> TestTranspileByteArray,
             "--class" -> TestTranspileClass,
             "--define" -> TestTranspileDefine,
+            "--dictionary" -> TestTranspileDictionary,
             "--dynamic" -> TestTranspileDynamic,
             "--extend" -> TestTranspileExtend,
             "--finally" -> TestTranspileFinally,
@@ -2289,7 +2310,6 @@ class Main {}
             "--prelude-boolean" -> TestTranspilePreludeBoolean,
             "--prelude-character" -> TestTranspilePreludeCharacter,
             "--prelude-closure" -> TestTranspilePreludeClosure,
-            "--prelude-dictionary" -> TestTranspilePreludeDictionary,
             "--prelude-exception" -> TestTranspilePreludeException,
             "--prelude-file" -> TestTranspilePreludeFile,
             "--prelude-filepath" -> TestTranspilePreludeFilePath,
