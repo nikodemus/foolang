@@ -998,15 +998,15 @@ void fooinit(void) {
 
  */
 
-#if 0
+bool trace_gc = false;
 size_t gc_trace_depth = 0;
+#define ENTER_TRACE(...) if (trace_gc) { fprintf(stderr, "\n"); for(size_t i = 0; i < gc_trace_depth; i++) fprintf(stderr, "  "); fprintf(stderr, "%zu: ", gc_trace_depth); fprintf(stderr, __VA_ARGS__); gc_trace_depth++; }
+#define EXIT_TRACE() if (trace_gc) { gc_trace_depth--; if (!gc_trace_depth) fprintf(stderr, "\n"); }
+
+#if 0
 #define DEBUG_GC(...) { fprintf(stderr, __VA_ARGS__); fflush(stderr); }
-#define ENTER_TRACE(...) { fprintf(stderr, "\n"); for(size_t i = 0; i < gc_trace_depth; i++) fprintf(stderr, "  "); fprintf(stderr, "%zu: ", gc_trace_depth); fprintf(stderr, __VA_ARGS__); gc_trace_depth++; }
-#define EXIT_TRACE() { gc_trace_depth--; if (!gc_trace_depth) fprintf(stderr, "\n"); }
 #else
 #define DEBUG_GC(...)
-#define ENTER_TRACE(...)
-#define EXIT_TRACE()
 #endif
 
 enum FooMark {
@@ -1216,7 +1216,7 @@ static size_t allocation_count = 0;
 // Intentionally low threshold so that GC gets exercised even for trivial tests.
 // const size_t gc_threshold = 1024;
 const size_t gc_threshold = 1024 * 1024 * 64;
-const bool gc_verbose = true;
+bool gc_verbose = true;
 
 void foo_sweep() {
   struct FooAlloc** tail = &allocations;
