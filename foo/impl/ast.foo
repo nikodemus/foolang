@@ -375,19 +375,26 @@ class AstClass { name superclass _slots _interfaces _directMethods _instanceMeth
         env define: name as: self!
 
     method eval
-        -- FIXME: This is so incorrect for self hosted object
-        -- model..
-        -- Debug println: "class {name} is {self interfaceObjects}".
-        Class
-            new: name
-            slots: (self slots
-                        collect: { |each|
-                                     { name: each name,
-                                       type: each type } }
-                        as: Array)
-            interfaces: self interfaceObjects asArray
-            directMethods: self ownDirectMethods
-            instanceMethods: self ownInstanceMethods!
+        Foo isSelfHosted
+            ifTrue: { let layout = Layout new: (self slots size).
+                      let metaclass = Class subclass: "{name} class"
+                                            interfaces: [] -- FIXME
+                                            methods: self ownDirectMethods asArray.
+                      metaclass new: name
+                                layout: layout
+                                interfaces: [] -- FIXME
+                                methods: [] -- FIXME
+                      }
+            ifFalse: { Class
+                           new: name
+                           slots: (self slots
+                                       collect: { |each|
+                                                  { name: each name,
+                                                    type: each type } }
+                                       as: Array)
+                           interfaces: self interfaceObjects asArray
+                           directMethods: self ownDirectMethods
+                           instanceMethods: self ownInstanceMethods }!
 
     method constructor
         self slots

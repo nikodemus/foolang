@@ -37,3 +37,8 @@ import .lang.stringOutput.Chain
 import .lang.stringOutput.StringOutput
 import .lang.test.TestSuite
 import .lang.time.Time
+
+class Foo {}
+    direct method isSelfHosted
+        False!
+end
