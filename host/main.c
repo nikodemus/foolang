@@ -998,15 +998,15 @@ void fooinit(void) {
 
  */
 
-#if 0
+bool trace_gc = false;
 size_t gc_trace_depth = 0;
+#define ENTER_TRACE(...) if (trace_gc) { fprintf(stderr, "\n"); for(size_t i = 0; i < gc_trace_depth; i++) fprintf(stderr, "  "); fprintf(stderr, "%zu: ", gc_trace_depth); fprintf(stderr, __VA_ARGS__); gc_trace_depth++; }
+#define EXIT_TRACE() if (trace_gc) { gc_trace_depth--; if (!gc_trace_depth) fprintf(stderr, "\n"); }
+
+#if 0
 #define DEBUG_GC(...) { fprintf(stderr, __VA_ARGS__); fflush(stderr); }
-#define ENTER_TRACE(...) { fprintf(stderr, "\n"); for(size_t i = 0; i < gc_trace_depth; i++) fprintf(stderr, "  "); fprintf(stderr, "%zu: ", gc_trace_depth); fprintf(stderr, __VA_ARGS__); gc_trace_depth++; }
-#define EXIT_TRACE() { gc_trace_depth--; if (!gc_trace_depth) fprintf(stderr, "\n"); }
 #else
 #define DEBUG_GC(...)
-#define ENTER_TRACE(...)
-#define EXIT_TRACE()
 #endif
 
 enum FooMark {
@@ -1207,7 +1207,7 @@ void foo_mark_context(struct FooContext* ctx) {
   EXIT_TRACE();
 }
 
-static struct FooAlloc* allocations = NULL;
+struct FooAlloc* allocations = NULL;
 static size_t allocation_count_since_gc = 0;
 static size_t allocation_bytes_since_gc = 0;
 static size_t allocation_bytes = 0;
@@ -1216,26 +1216,41 @@ static size_t allocation_count = 0;
 // Intentionally low threshold so that GC gets exercised even for trivial tests.
 // const size_t gc_threshold = 1024;
 const size_t gc_threshold = 1024 * 1024 * 64;
-const bool gc_verbose = true;
+bool gc_verbose = false;
 
 void foo_sweep() {
-  struct FooAlloc** tail = &allocations;
-  struct FooAlloc* head = *tail;
-  size_t freed_count = 0;
-  size_t freed_bytes = 0;
+  struct FooAlloc* head = allocations;
+  size_t freed_count = 0, freed_bytes = 0;
+  size_t live_count = 0, live_bytes = 0;
+
+  size_t n = 0;
+  struct FooAlloc* prev = NULL;
   while (head) {
+    n++;
     struct FooAlloc* next = head->next;
     if (current_live_mark != head->mark) {
-      *tail = next;
+      if (!prev) {
+        allocations = next;
+      } else {
+        prev->next = next;
+      }
       freed_bytes += head->size;
       freed_count += 1;
       free(head);
+    } else {
+      prev = head;
+      live_count += 1;
+      live_bytes += head->size;
     }
     head = next;
   }
+
+  assert(allocation_count == n);
+
   if (freed_count > 0) {
     allocation_bytes -= freed_bytes;
     allocation_count -= freed_count;
+
     if (gc_verbose) {
       fprintf(stderr, "** GC'd %zu bytes in %zu objects, %zu bytes in %zu objects remain.\n",
               freed_bytes, freed_count,
@@ -1243,6 +1258,10 @@ void foo_sweep() {
       fprintf(stderr, "** %zu bytes in %zu objects allocated since last gc.\n",
               allocation_bytes_since_gc, allocation_count_since_gc);
     }
+
+    assert(live_count == allocation_count);
+    assert(live_bytes == allocation_bytes);
+
     allocation_count_since_gc = 0;
     allocation_bytes_since_gc = 0;
   }

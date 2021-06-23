@@ -20,4 +20,4 @@ clang \
     -fno-omit-frame-pointer -g -Wall --std=c11 \
     host/main.c host/system_$ostype.c ext/dtoa.c
 echo "Built, running!"
-./tmp_transpile_test.exe "$@"
+time ./tmp_transpile_test.exe "$@"
