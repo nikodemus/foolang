@@ -156,12 +156,6 @@ class Builtin { type value markFunction _interfaces
         "#<Builtin{type name} {self name}>"!
 end
 
-class System {}
-end
-
-class SystemRandom {}
-end
-
 define Builtins [
      Builtin
          type: Class
@@ -267,13 +261,17 @@ define Builtins [
          instanceMethods: string.InstanceMethods,
     Builtin
          type: Class
-         value: System
+         value: (Foolang isSelfHosted
+                     ifTrue: { System }
+                     ifFalse: { { name: "System" } })
          mark: "foo_mark_none"
          directMethods: system.DirectMethods
          instanceMethods: system.InstanceMethods,
     Builtin
          type: Class
-         value: SystemRandom
+         value: (Foolang isSelfHosted
+                     ifTrue: { SystemRandom }
+                     ifFalse: { { name: "SystemRandom" } })
          mark: "foo_mark_none"
          directMethods: system_random.DirectMethods
          instanceMethods: system_random.InstanceMethods,
