@@ -779,15 +779,23 @@ class CTranspiler { output selectorMap closureFunctions
     method visitRecord: aRecord
         -- Tracer visitRecord: aRecord.
         let recordClass = self _ensureRecordClass: aRecord.
+        output print: "(\{ ".
+        let argVars = aRecord values
+                          collect: { |each|
+                                     let index = self addTemp.
+                                     output print: "ctx->frame[{index}] =  ".
+                                     each visitBy: self.
+                                     output print: "; ".
+                                     index }.
         output print: "foo_send(ctx".
         output print: ", &{Name mangleSelector: aRecord name}".
         output print: ", {Name mangleGlobal: recordClass}".
-        output print: ", {aRecord values size}".
         output print: ", ".
-        aRecord values
-            do: { |each| each visitBy: self }
-            interleaving: { output print: ", " }.
-        output print: ")"!
+        output print: argVars size.
+        argVars
+            do: { |each|
+                  output print: ", ctx->frame[{each}]" }.
+        output print: "); })"!
 
     method _generateLayout: aClass
         aClass isBuiltin
@@ -1193,8 +1201,7 @@ class CTranspiler { output selectorMap closureFunctions
         output print: ", ".
         aSend receiver visitBy: self.
         output print: ", ".
-        output print: aSend arguments size.
-        output print: "ul".
+        output print: argVars size.
         argVars
             do: { |index|
                   output print: ", ctx->frame[{index}]" }.
@@ -1229,7 +1236,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method visitBindLexical: aBind
         -- Tracer trace: #visitBindLexical:.
-        output print: "(\{ ctx->frame[{aBind variable index - 1}ul] = ".
+        output print: "(\{ ctx->frame[{aBind variable index - 1}] = ".
         self _generateTypecheck: aBind variable type
              _for: aBind value.
         output print: ";".
@@ -1238,7 +1245,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method visitLexicalRef: aRef
         -- Tracer trace: #visitLexicalRef:.
-        output print: "foo_lexical_ref(ctx, {aRef variable index - 1}ul, {aRef frameOffset}ul)"!
+        output print: "foo_lexical_ref(ctx, {aRef variable index - 1}, {aRef frameOffset}ul)"!
 
     method visitLexicalSet: aSet
         -- Tracer trace: #visitLexicalSet:.
