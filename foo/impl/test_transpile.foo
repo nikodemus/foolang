@@ -949,7 +949,7 @@ class TestTranspileGlobals { assert system }
                                  list.ThisIsReallyUndefined bang!
                          end"
             expectCompilerError: "Undefined variable: ThisIsReallyUndefined
-002                          class Main {}
+002                          class Main \{}
 003                              direct method run: command in: system
 004                                  list.ThisIsReallyUndefined bang!
                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^ Undefined variable: ThisIsReallyUndefined
