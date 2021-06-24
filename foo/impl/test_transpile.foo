@@ -89,6 +89,20 @@ interface TranspilerTest
              ok: False
              expect: output!
 
+    method transpileWithError: string
+        { let res = self prelude: False transpile: string.
+          Output debug println: "WTF:\{string}\n==>\n{res}".
+          return False }
+            on: Error
+            do: { |e|
+                  return e description }.
+        Error raise: "Expected transpiler error, but nothing happened:\n{string}"!
+
+    method transpile: string expectCompilerError: output::String
+        assert that: { self transpileWithError: string }
+               equals: output
+               testing: "transpile:expectCompilerError:"!
+
     method transpileWithPrelude: string expect: output
         self prelude: ["lang", "prelude"] asList
              transpile: string
@@ -337,7 +351,7 @@ class TestTranspileDictionary { assert system }
             expect: "\{ 1 -> \"one\",
   2 -> \"two\" }"!
 
-    method test0_Dictionary_constructor
+    method test_Dictionary_constructor
         self transpile: "import lang.dictionary2.Dictionary
                          import lang.string
                          import lang.character_ext
@@ -823,10 +837,10 @@ class TestTranspileKeyword { assert system }
             expect: "#<Integer 45>"!
 end
 
-class TestTranspileDefine { assert system }
+class TestTranspileGlobals { assert system }
     is TranspilerTest
 
-    method testDefineArray1
+    method test_Define_global_array
         self transpile: "define MyArray [1,2,3]!
                          class Main \{}
                              direct method run: command in: system
@@ -834,7 +848,7 @@ class TestTranspileDefine { assert system }
                          end"
             expect: "[#<Integer 1>, #<Integer 2>, #<Integer 3>]"!
 
-    method testDefineArray2
+    method test_Define_global_nested_array
         self transpile: "define MyArray [[1],[[1]],[[[1]]]]!
                          class Main \{}
                              direct method run: command in: system
@@ -842,7 +856,7 @@ class TestTranspileDefine { assert system }
                          end"
             expect: "[[#<Integer 1>], [[#<Integer 1>]], [[[#<Integer 1>]]]]"!
 
-    method testDefineBoolean
+    method test_Define_global_boolean
         self transpile: "define MyBoolean True!
                          class Main \{}
                              direct method run: command in: system
@@ -850,7 +864,7 @@ class TestTranspileDefine { assert system }
                          end"
             expect: "#<Boolean True>"!
 
-    method testDefineClassInstance
+    method test_Define_global_class_instance
         self transpileWithPrelude:
             "class MyClass \{ x y }
                  is Object
@@ -867,7 +881,7 @@ class TestTranspileDefine { assert system }
              end"
             expect: "#<Integer 1242>#<Integer 40>"!
 
-    method testDefineFloat
+    method test_Define_global_float
         self transpile: "define MyFloat 12.34!
                          class Main \{}
                              direct method run: command in: system
@@ -875,7 +889,7 @@ class TestTranspileDefine { assert system }
                          end"
             expect: "#<Float 12.34>"!
 
-    method testDefineInteger
+    method test_Define_global_integer
         self transpile: "define MyInteger 1234!
                          class Main \{}
                              direct method run: command in: system
@@ -883,7 +897,7 @@ class TestTranspileDefine { assert system }
                          end"
             expect: "#<Integer 1234>"!
 
-    method testDefineSelector
+    method test_Define_global_selector
         self transpile: "define MySelector #foobar!
 
                          class Main \{}
@@ -892,13 +906,55 @@ class TestTranspileDefine { assert system }
                          end"
             expect: "#<Selector foobar>"!
 
-    method testDefineString
+    method test_Define_global_string
         self transpile: "define MyString \"foobar\"!
                          class Main \{}
                              direct method run: command in: system
                                  MyString debug!
                          end"
             expect: "#<String foobar>"!
+
+    method test_Undefined_variable
+        self transpile: "class Main \{\}
+                             direct method run: command in: system
+                                 ThisIsUndefined bang!
+                         end"
+            expectCompilerError: "Undefined variable: ThisIsUndefined
+001 class Main \{}
+002                              direct method run: command in: system
+003                                  ThisIsUndefined bang!
+                                     ^^^^^^^^^^^^^^^ Undefined variable: ThisIsUndefined
+004                          end
+"!
+
+    method test_Undefined_import
+        self transpile: "import lang.list.ThisIsUndefinedToo
+                         class Main \{\}
+                             direct method run: command in: system
+                                 ThisIsUndefinedToo bang!
+                         end"
+            expectCompilerError: "Undefined variable: ThisIsUndefinedToo
+001 import lang.list.ThisIsUndefinedToo
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Undefined variable: ThisIsUndefinedToo
+002                          class Main \{\}
+003                              direct method run: command in: system
+004                                  ThisIsUndefinedToo bang!
+005                          end
+"!
+
+    method test_Undefined_external
+        self transpile: "import lang.list
+                         class Main \{\}
+                             direct method run: command in: system
+                                 list.ThisIsReallyUndefined bang!
+                         end"
+            expectCompilerError: "Undefined variable: ThisIsReallyUndefined
+002                          class Main \{}
+003                              direct method run: command in: system
+004                                  list.ThisIsReallyUndefined bang!
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^ Undefined variable: ThisIsReallyUndefined
+005                          end
+"!
 end
 
 class TestTranspileBlock { assert system }
@@ -2292,12 +2348,12 @@ class Main {}
             "--boolean" -> TestTranspileBoolean,
             "--byte-array" -> TestTranspileByteArray,
             "--class" -> TestTranspileClass,
-            "--define" -> TestTranspileDefine,
             "--dictionary" -> TestTranspileDictionary,
             "--dynamic" -> TestTranspileDynamic,
             "--extend" -> TestTranspileExtend,
             "--finally" -> TestTranspileFinally,
             "--float" -> TestTranspileFloat,
+            "--globals" -> TestTranspileGlobals,
             "--integer" -> TestTranspileInteger,
             "--includes" -> TestTranspileIncludes,
             "--interface" -> TestTranspileInterface,

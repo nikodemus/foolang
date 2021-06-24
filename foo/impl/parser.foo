@@ -697,7 +697,11 @@ class ImportToken { precedence string first last }
             name: name
             module: parts butlast
             relative: relative
-            body: body!
+            body: body
+            source: (SourceString
+                         string: parser source
+                         first: specFirst
+                         last: specLast)!
 end
 
 class SyntaxTable { where tokens }

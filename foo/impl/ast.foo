@@ -630,7 +630,7 @@ interface AstGlobalVariable
     method assertDefined: wanted
         self isDefined is wanted
             ifFalse: { wanted
-                           ifTrue: { Error raise: "Undefined global in AST: {self name}" }
+                           ifTrue: { Error raise: self noteUndefined }
                            ifFalse: { Error raise: "Global is already defined: {self name}" } }!
 
     method value
@@ -665,12 +665,15 @@ interface AstGlobalVariable
             ifTrue: { "<undefined>" }.
         self _value!
 
+    method noteUndefined
+        self sources
+            ifEmpty: { Error raise: "No source for global: {self name}" }.
+        let note = "Undefined variable: {self name}".
+        "{note}\n{self sources first note: note}"!
+
     method warnIfUndefined
         self isUndefined
-            ifTrue: { let note = "Undefined variable: {self name}".
-                      (self sources isEmpty not) assert.
-                      Output debug
-                          println: "\nWARNING: {note}\n{self sources first note: note}" }!
+            ifTrue: { Output debug println: "\nWARNING: {self noteUndefined}" }!
 
     method withSource: sourceLocation
         self sources add: sourceLocation.

@@ -156,12 +156,6 @@ class Builtin { type value markFunction _interfaces
         "#<Builtin{type name} {self name}>"!
 end
 
-class System {}
-end
-
-class SystemRandom {}
-end
-
 define Builtins [
      Builtin
          type: Class
@@ -267,13 +261,17 @@ define Builtins [
          instanceMethods: string.InstanceMethods,
     Builtin
          type: Class
-         value: System
+         value: (Foolang isSelfHosted
+                     ifTrue: { System }
+                     ifFalse: { { name: "System" } })
          mark: "foo_mark_none"
          directMethods: system.DirectMethods
          instanceMethods: system.InstanceMethods,
     Builtin
          type: Class
-         value: SystemRandom
+         value: (Foolang isSelfHosted
+                     ifTrue: { SystemRandom }
+                     ifFalse: { { name: "SystemRandom" } })
          mark: "foo_mark_none"
          directMethods: system_random.DirectMethods
          instanceMethods: system_random.InstanceMethods,
@@ -695,10 +693,20 @@ class CTranspiler { output selectorMap closureFunctions
                     out println: " }".
                     out println: "};" }!
 
+    method _printStringAsComment: s0 to: out
+        -- KLUDGE ARRGH do this properly FIXME
+        let s1 = s0 replace: "\\" with: "\\\\".
+        let s2 = s1 replace: "\n" with: "\\n".
+        let s3 = s2 replace: "\r" with: "\\r".
+        let s4 = s3 replace: "\"" with: "\\\"".
+        let s5 = s4 replace: "\{" with: "\\\{".
+        out println: "// \"{s5}\""!
+
     method _stringDefinition: value _called: cname
         StringOutput
             with: { |out|
-                    out println: "/* {value} */".
+                    value lines
+                        do: { |each| self _printStringAsComment: each to: out }.
                     out println: "struct FooBytes {cname} =".
                     out println: "\{".
                     out println: "    .gc = false,".
@@ -881,7 +889,7 @@ class CTranspiler { output selectorMap closureFunctions
         let metaclassNameString = "{anInterface name} interface".
         output println: "struct FooClass {metaclassName} = ".
         output println: "\{".
-        output println: "    .name = &{self constantCName: metaclassNameString in: env}, /* {metaclassNameString} */".
+        output println: "    .name = &{self constantCName: metaclassNameString in: env}, // {metaclassNameString}".
         output println: "    .metaclass = &FooClass_Class,".
         output println: "    .inherited = &{metaclassInheritance},".
         output println: "    .layout = &TheClassLayout,".
@@ -904,7 +912,7 @@ class CTranspiler { output selectorMap closureFunctions
         -- FIXME: for runtime instantiation of classes we need to add the instance methods here!
         output println: "struct FooClass {className} = ".
         output println: "\{".
-        output println: "    .name = &{self constantCName: anInterface name in: env}, /* {anInterface name} */".
+        output println: "    .name = &{self constantCName: anInterface name in: env}, // {anInterface name}".
         output println: "    .metaclass = &{metaclassName},".
         output println: "    .inherited = &{classInheritance},".
         output println: "    .layout = NULL,". -- FIXME
@@ -1026,7 +1034,7 @@ class CTranspiler { output selectorMap closureFunctions
                        let metaclassNameString = "{aClass name} class".
                        output println: "struct FooClass {metaclassName} = ".
                        output println: "\{".
-                       output println: "    .name = &{self constantCName: metaclassNameString in: env}, /* {metaclassNameString} */".
+                       output println: "    .name = &{self constantCName: metaclassNameString in: env}, // {metaclassNameString}".
                        output println: "    .metaclass = &FooClass_Class,".
                        output println: "    .inherited = &{metaclassInheritance},".
                        output println: "    .layout = &TheClassLayout,".
@@ -1055,7 +1063,7 @@ class CTranspiler { output selectorMap closureFunctions
         -- Debug println: "{aClass} => {aClass markFunction}".
         output println: "struct FooClass {className} = ".
         output println: "\{".
-        output println: "    .name = &{self constantCName: aClass name in: env}, /* {aClass name} */".
+        output println: "    .name = &{self constantCName: aClass name in: env}, // {aClass name}".
         output println: "    .metaclass = &{metaclassName},".
         output println: "    .inherited = &{classInheritance},".
         output println: "    .layout = {layout},".

@@ -13,6 +13,9 @@ class FileModuleDictionary { _dict }
             ifExists: { |foopath|
                         foopath file forRead open: { |f| f readString } }
             ifDoesNotExist: block!
+
+    method toString
+        "#<FileModuleDictionary {_dict keys}>"!
 end
 
 extend Dictionary
