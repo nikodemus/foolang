@@ -131,7 +131,7 @@ class SyntaxPrinter { output
         last = #paren!
 
     method visitRecord: aRecord
-        self print: "\{".
+        self print: "\{ ".
         let printer = self indentHere.
         aRecord entries
             do: { |entry|
@@ -139,18 +139,23 @@ class SyntaxPrinter { output
                   printer print: " ".
                   entry value visitBy: printer }
             interleaving: { printer println: "," }.
-        self print: "}".
+        self print: " }".
         last = #paren!
 
     method visitDictionary: aDictionary
-        self print: "\{".
+        self print: "\{ ".
+        let printer = self indentHere.
         aDictionary entries
             do: { |entry|
-                  entry key visitBy: self.
-                  self print: " -> ".
-                  entry value visitBy: self }
-            interleaving: { self print: ", " }.
-        self print: "}".
+                  entry key visitBy: printer.
+                  let value = entry value.
+                  let valuePrinter = value isSimple
+                                         ifTrue: { printer }
+                                         ifFalse: { printer newline }.
+                  valuePrinter print: " -> ".
+                  value visitBy: valuePrinter }
+            interleaving: { printer println: "," }.
+        self print: " }".
         last = #paren!
 
     method visitSeq: aSeq
