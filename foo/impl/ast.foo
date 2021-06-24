@@ -666,7 +666,8 @@ interface AstGlobalVariable
         self _value!
 
     method noteUndefined
-        (self sources isEmpty not) assert.
+        self sources
+            ifEmpty: { Error raise: "No source for global: {self name}" }.
         let note = "Undefined variable: {self name}".
         "{note}\n{self sources first note: note}"!
 
