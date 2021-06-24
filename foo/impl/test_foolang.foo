@@ -29,7 +29,25 @@ class TestFoolang { system ok onFailure }
             eval: "TestInterface3 includes: (TestInterface3Impl new foo)"
             expect: True!
 
-    method test_Line_comments_before_define
+    method test_Format_dictionary_with_small_values
+        self parse: "\{ 1 -> 100, 2 -> 200 \}"
+             expect:
+                 "\{ 1 -> 100,
+  2 -> 200 \}"!
+
+    method test_Format_dictionary_with_big_value
+        self parse: "\{ 1 -> \{ this: \"is\",
+                                a: \"big\",
+                                thing: \"verily\" },
+                        2 -> 200 \}"
+        expect:
+        "\{ 1
+   -> \{ this: \"is\",
+        a: \"big\",
+        thing: \"verily\" },
+  2 -> 200 \}"!
+
+    method test_Format_line_comments_before_define
         self parse: "-- foo
                      -- bar
                      define Foo 1!"
@@ -500,7 +518,7 @@ end
 end
 "!
 
-    method test0_Format_suffix_comment_in_keyword_message
+    method test_Format_suffix_comment_in_keyword_message
         self parse: "receiver arg: arg1 -- the first arg
                               arg: arg2"
              expect: "receiver
