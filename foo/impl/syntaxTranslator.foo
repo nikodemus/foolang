@@ -37,11 +37,12 @@ class SyntaxTranslator { env currentMethod }
                          import: module
                          relative: relative)!
 
-    method import: name from: module relative: relative
+    method import: name from: module relative: relative source: source
         self child: (env
                          import: name
                          from: module
-                         relative: relative)!
+                         relative: relative
+                         source: source)!
 
     method importAll: module relative: relative
         self child: (env
@@ -260,7 +261,8 @@ class SyntaxTranslator { env currentMethod }
         let bodyVisitor = self
                               import: anImport name
                               from: anImport module
-                              relative: anImport relative.
+                              relative: anImport relative
+                              source: anImport source.
         AstDefinitionList
             new: (bodyVisitor _visitEach: anImport body)!
 

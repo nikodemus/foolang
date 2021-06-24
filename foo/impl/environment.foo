@@ -224,11 +224,11 @@ class Environment { parent
                             name: moduleName last
                             module: module]!
 
-    method import: name from: moduleName relative: relative
+    method import: name from: moduleName relative: relative source: source
         (self depth is 1) assert.
         let global = (modules at: moduleName relative: relative in: self)
                          global: name.
-        self addGlobals: [global]!
+        self addGlobals: [global withSource: source]!
 
     method importAll: moduleName relative: relative
         (self depth is 1) assert.

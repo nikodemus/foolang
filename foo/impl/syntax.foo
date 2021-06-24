@@ -400,13 +400,14 @@ class SyntaxModuleImport { module relative body }
         [module, relative, body]!
 end
 
-class SyntaxNameImport { name module relative body }
+class SyntaxNameImport { name module relative body source }
     is Syntax
 
     method visitBy: visitor
         visitor visitNameImport: self!
 
     method parts
+        -- ignore source?
         [name, module, body]!
 end
 
