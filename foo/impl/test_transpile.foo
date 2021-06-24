@@ -927,7 +927,7 @@ class TestTranspileGlobals { assert system }
 004                          end
 "!
 
-    method test0_Undefined_import
+    method test_Undefined_import
         self transpile: "import lang.list.ThisIsUndefinedToo
                          class Main \{\}
                              direct method run: command in: system
@@ -939,6 +939,20 @@ class TestTranspileGlobals { assert system }
 002                          class Main \{\}
 003                              direct method run: command in: system
 004                                  ThisIsUndefinedToo bang!
+005                          end
+"!
+
+    method test_Undefined_external
+        self transpile: "import lang.list
+                         class Main \{\}
+                             direct method run: command in: system
+                                 list.ThisIsReallyUndefined bang!
+                         end"
+            expectCompilerError: "Undefined variable: ThisIsReallyUndefined
+002                          class Main {}
+003                              direct method run: command in: system
+004                                  list.ThisIsReallyUndefined bang!
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^ Undefined variable: ThisIsReallyUndefined
 005                          end
 "!
 end

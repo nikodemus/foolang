@@ -276,7 +276,9 @@ class SyntaxTranslator { env currentMethod }
 
     method visitExternalRef: aRef
         -- Tracer visitExternalRef: aRef.
-        env reference: aRef name inModule: aRef module!
+        env reference: aRef name
+            inModule: aRef module
+            source: aRef source!
 
     method _visitType: aType
         -- Tracer _visitType: aType name.
