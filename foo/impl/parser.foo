@@ -886,18 +886,15 @@ class TokenWord { precedence string first last }
     method parseAsPrefixWith: parser atPrecedence: _precedence
         (parser atChar: DotCharacter andThenNot: #isWhitespace)
             ifTrue: { parser advance.
-                      let nameFirst = parser position.
-                      let nameLast = parser
-                                         skipWhile: { (parser atWhitespace
-                                                           or: (parser atChar: BangCharacter))
-                                                      not }.
-                      let parts = (parser from: first to: nameLast)
-                                      splitBy: DotCharacter.
-                      (parts size is 2) assert.
+                      let name = parser nextToken.
+                      let source = parser sourceFrom: name first to: name last.
+                      (TokenWord includes: name)
+                          ifFalse: { let note = "Expected name".
+                                     Error raise: "{note}, got: {name string}\n{source note: note}" }.
                       let ref = SyntaxExternalRef
-                          module: parts first
-                          name: parts second
-                          source: (parser sourceFrom: first to: nameLast).
+                          module: string
+                          name: name string
+                          source: source.
                       return ref }.
         SyntaxVariable
             name: string
