@@ -99,6 +99,15 @@ pretty(size: {pretty size}):\n{pretty2}" } }!
     method parseDefinitions: source expect: pretty
         self parse: source using: (#parseDefinitions:) expect: pretty!
 
+    method parse: source expectError: type where: test
+        let result = { Parser parseExpressions: source }
+                         on: type
+                         do: { |e|
+                               (test value: e)
+                                   ifTrue: { return True }
+                                   ifFalse: { Error raise: "Expected error did not pass test, got: {e}" } }.
+        Error raise: "Expected error, got: {result}"!
+
     method eval: exprSource expect: expected
         self checkParsingBy: { |source| Parser parseExpressions: source }
              for: exprSource.

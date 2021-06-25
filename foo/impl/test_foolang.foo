@@ -75,6 +75,19 @@ define XYZ 42!
 define XYZ 42!
 "!
 
+    method test_Format_external_references_in_list
+        self parse: "[ext.Name1, ext.Name2]"
+            expect: "[ext.Name1, ext.Name2]"!
+
+    method test_Parse_bad_external_reference
+        self parse: "[ext.1Name1, ext.Name2]"
+             expectError: Error
+             where: { |e|
+                      e description == "Expected name, got: 1
+001 [ext.1Name1, ext.Name2]
+         ^ Expected name
+" }!
+
     method test_Format_class_with_just_interfaces
         self parse: "class TestInterface5Impl \{}
                         is Object

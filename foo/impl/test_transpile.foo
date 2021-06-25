@@ -952,7 +952,7 @@ class TestTranspileGlobals { assert system }
 002                          class Main \{}
 003                              direct method run: command in: system
 004                                  list.ThisIsReallyUndefined bang!
-                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^ Undefined variable: ThisIsReallyUndefined
+                                          ^^^^^^^^^^^^^^^^^^^^^ Undefined variable: ThisIsReallyUndefined
 005                          end
 "!
 end
