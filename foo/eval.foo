@@ -1,5 +1,5 @@
 import .impl.environment.Environment
-import .impl.environment.Globals
+import .impl.environment.BuiltinDictionary
 import .impl.utils.FileModuleDictionary
 import .impl.ast
 
@@ -11,7 +11,7 @@ class Main {}
                               "impl" -> system files / "foo/impl",
                               "lib" -> system files / "foo/lib" }.
         let baseEnv = Environment modules: mods.
-        let builtins = Globals dictionary: baseEnv builtins.
+        let builtins = BuiltinDictionary dictionary: baseEnv builtins.
         builtins define: Dictionary.
         let userEnv = baseEnv load: path readString.
         (userEnv global: "Main")

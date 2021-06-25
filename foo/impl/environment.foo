@@ -10,7 +10,7 @@ import .ast.AstDefinition
 import .parser.Parser
 import .ast.AstBuiltin
 
-class Globals { dictionary }
+class BuiltinDictionary { dictionary }
     direct method new
         self dictionary: Dictionary new!
     method define: builtin
@@ -28,7 +28,7 @@ end
 -- FIXME: use a cascade as soon as they're supported in self-hosted
 -- implementation...
 define Builtins
-    let g = Globals new.
+    let g = BuiltinDictionary new.
     g define: Any.
     g define: Array.
     g define: ByteArray.
