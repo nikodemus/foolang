@@ -501,9 +501,14 @@ const struct FooMethod* foo_class_find_method_in(const struct FooClass* class,
                                                  const struct FooMethod** fallback)
 {
   const bool trace = false;
-  if (trace)
+  if (trace) {
+    assert(class);
+    assert(class->name);
+    assert(selector);
+    assert(selector->name);
     FOO_XXX("foo_class_find_method_in(%s, #%s)",
             class->name->data, selector->name->data);
+  }
   for (size_t i = 0; i < class->size; ++i) {
     const struct FooMethod* method = &class->methods[i];
     if (trace)
