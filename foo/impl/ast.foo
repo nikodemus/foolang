@@ -131,6 +131,8 @@ class AstExtend { type interfaces directMethods instanceMethods }
 end
 
 interface AstMethodHome
+    is Object
+
     required method _interfaces
     required method _directMethods
     required method _instanceMethods
