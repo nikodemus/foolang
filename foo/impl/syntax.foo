@@ -390,35 +390,27 @@ class SyntaxKeyword { receiver selector arguments source }
         stream print: "#<{Self} {selector}>"!
 end
 
-class SyntaxModuleImport { module relative body }
+class SyntaxImport { name module relative source }
     is Syntax
 
     method visitBy: visitor
-        visitor visitModuleImport: self!
+        visitor visitImport: self!
+
+    method spec
+        StringOutput
+            with: { |out|
+                    relative is True ifTrue: { out print: "." }.
+                    module do: { |each| out print: each }
+                           interleaving: { out print: "." }.
+                    name is False
+                        ifFalse: { out print: ".".
+                                   out print: name } }!
 
     method parts
-        [module, relative, body]!
-end
+        [name, module, relative]!
 
-class SyntaxNameImport { name module relative body source }
-    is Syntax
-
-    method visitBy: visitor
-        visitor visitNameImport: self!
-
-    method parts
-        -- ignore source?
-        [name, module, body]!
-end
-
-class SyntaxWildcardImport { module relative body }
-    is Syntax
-
-    method visitBy: visitor
-        visitor visitWildcardImport: self!
-
-    method parts
-        [module, body]!
+    method toString
+        "#<SyntaxImport {self spec}>"!
 end
 
 class SyntaxExternalRef { module name source }

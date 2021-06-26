@@ -935,7 +935,7 @@ class TestTranspileGlobals { assert system }
                          end"
             expectCompilerError: "Undefined variable: ThisIsUndefinedToo
 001 import lang.list.ThisIsUndefinedToo
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Undefined variable: ThisIsUndefinedToo
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Undefined variable: ThisIsUndefinedToo
 002                          class Main \{\}
 003                              direct method run: command in: system
 004                                  ThisIsUndefinedToo bang!

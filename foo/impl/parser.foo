@@ -680,28 +680,19 @@ class ImportToken { precedence string first last }
         let relative = parts first == ""
                            ifTrue: { parts popFirst.
                                      True }.
-        let body = parser parseDefinitions.
-        -- FIXME: Syntax change imminent
+        let source = parser sourceFrom: first to: specLast.
+        -- FIXME: https://github.com/nikodemus/foolang/issues/674
         parts last first isLowercase
-            ifTrue: { return SyntaxModuleImport
+            ifTrue: { return SyntaxImport
+                          name: False
                           module: parts
                           relative: relative
-                          body: body }.
-        let name = parts last.
-        name == "*"
-            ifTrue: { return SyntaxWildcardImport
-                          module: parts butlast
-                          relative: relative
-                          body: body }.
-        SyntaxNameImport
-            name: name
+                          source: source }.
+        SyntaxImport
+            name: parts last
             module: parts butlast
             relative: relative
-            body: body
-            source: (SourceString
-                         string: parser source
-                         first: specFirst
-                         last: specLast)!
+            source: source!
 end
 
 class SyntaxTable { where tokens }

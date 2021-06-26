@@ -98,17 +98,38 @@ class AstDefine { name body frameSize isDynamic env }
         visitor visitDefine: self!
 end
 
-class AstImport { spec }
+-- FIXME: Would it be better to have ImportDescription and
+-- compose that into both AstImport and SyntaxImport?
+class AstImport { syntax }
     is AstDefinition
 
     method defineIn: env
-        self!
+        let name = self name.
+        name is False
+            => { return env import: self module
+                                 relative: self relative }.
+        name == "*"
+            => { return env importAll: self module
+                            relative: self relative }.
+        env import: name
+            from: self module
+            relative: self relative
+            source: syntax source!
 
-    method eval
-        self!
+    method name
+        syntax name!
+
+    method relative
+        syntax relative!
+
+    method module
+        syntax module!
+
+    method spec
+        syntax spec!
 
     method toString
-        "#<AstImport {spec}>"!
+        "#<AstImport {self spec}>"!
 end
 
 class AstExtend { type interfaces directMethods instanceMethods }
