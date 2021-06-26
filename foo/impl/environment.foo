@@ -27,6 +27,7 @@ end
 -- FIXME: cannot differentiate from local definitions!
 -- FIXME: use a cascade as soon as they're supported in self-hosted
 -- implementation...
+-- FIXME: uncomfortable duplicate vs. CompilerBuiltins
 define Builtins
     let g = BuiltinDictionary new.
     g define: Any.

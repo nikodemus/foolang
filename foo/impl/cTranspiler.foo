@@ -71,8 +71,7 @@ end
 define DatumClasses
     [Boolean, Character, Integer, Float]!
 
-class Builtin { type value markFunction _interfaces
-                _builtinDirectMethods _builtinInstanceMethods
+class CompilerBuiltin { type value markFunction _interfaces
                 _directMethods _instanceMethods _allInterfaces }
     is AstMethodHome
 
@@ -86,25 +85,12 @@ class Builtin { type value markFunction _interfaces
                            value: value
                            markFunction: mark
                            _interfaces: List new
-                           _builtinDirectMethods: directMethods
-                           _builtinInstanceMethods: instanceMethods
                            _directMethods: False
                            _instanceMethods: False
                            _allInterfaces: False.
         theClass _directMethods: directMethods.
         theClass _instanceMethods: instanceMethods.
         theClass!
-
-    -- FIXME/KLUDGE: This is a terrible hack borne out of bootstrap
-    -- host globals being mutable. If they weren't, then CTranspiler
-    -- would have to do the right thing instead of mutating static
-    -- objects...
-    method reset
-        _interfaces = List new.
-        _allInterfaces = False.
-        self _directMethods: _builtinDirectMethods.
-        self _instanceMethods: _builtinInstanceMethods.
-        self!
 
     method slots
         []!
@@ -153,135 +139,137 @@ class Builtin { type value markFunction _interfaces
         stream print: self toString!
 
     method toString
-        "#<Builtin{type name} {self name}>"!
+        "#<CompilerBuiltin {self name} ({type name})>"!
 end
 
-define Builtins [
-     Builtin
-         type: Class
-         value: Array
-         mark: "foo_mark_array"
-         directMethods: array.DirectMethods
-         instanceMethods: array.InstanceMethods,
-     Builtin
-         type: Class
-         value: Boolean
-         mark: "foo_mark_none"
-         directMethods: boolean.DirectMethods
-         instanceMethods: boolean.InstanceMethods,
-     Builtin
-         type: Class
-         value: ByteArray
-         mark: "foo_mark_bytes"
-         directMethods: byte_array.DirectMethods
-         instanceMethods: byte_array.InstanceMethods,
-     Builtin
-         type: Class
-         value: Character
-         mark: "foo_mark_none"
-         directMethods: character.DirectMethods
-         instanceMethods: character.InstanceMethods,
-     Builtin
-         type: Class
-         value: Class
-         mark: "foo_mark_class"
-         directMethods: class.InstanceMethods -- class is its own instance
-         instanceMethods: class.InstanceMethods,
-     Builtin
-         type: Class
-         value: Clock
-         mark: "foo_mark_none"
-         directMethods: clock.DirectMethods
-         instanceMethods: clock.InstanceMethods,
-     Builtin
-         type: Class
-         value: Closure
-         mark: "foo_mark_closure"
-         directMethods: Dictionary new
-         instanceMethods: closure.InstanceMethods,
-     Builtin
-         type: Class
-         value: Layout
-         mark: "foo_mark_layout"
-         directMethods: layout.DirectMethods
-         instanceMethods: layout.InstanceMethods,
-     Builtin
-         type: Class
-         value: File
-         mark: "foo_mark_file"
-         directMethods: file.DirectMethods
-         instanceMethods: file.InstanceMethods,
-     Builtin
-         type: Class
-         value: FilePath
-         mark: "foo_mark_bytes"
-         directMethods: filepath.DirectMethods
-         instanceMethods: filepath.InstanceMethods,
-     Builtin
-         type: Class
-         value: FileStream
-         mark: "foo_mark_filestream"
-         directMethods: filestream.DirectMethods
-         instanceMethods: filestream.InstanceMethods,
-     Builtin
-         type: Class
-         value: Float
-         mark: "foo_mark_none"
-         directMethods: float.DirectMethods
-         instanceMethods: float.InstanceMethods,
-     Builtin
-         type: Class
-         value: Integer
-         mark: "foo_mark_none"
-         directMethods: Dictionary new
-         instanceMethods: integer.IntegerMethods,
-     Builtin
-         type: Class
-         value: Output
-         mark: "foo_mark_none"
-         directMethods: output.DirectMethods
-         instanceMethods: output.InstanceMethods,
-     Builtin
-         type: Interface
-         value: Record
-         mark: "foo_mark_none"
-         directMethods: record.DirectMethods
-         instanceMethods: record.InstanceMethods,
-     Builtin
-         type: Class
-         value: Selector
-         mark: "foo_mark_none"
-         directMethods: selector.DirectMethods
-         instanceMethods: selector.InstanceMethods,
-     Builtin
-         type: Class
-         value: String
-         mark: "foo_mark_bytes"
-         directMethods: string.DirectMethods
-         instanceMethods: string.InstanceMethods,
-    Builtin
-         type: Class
-         value: (Foolang isSelfHosted
-                     ifTrue: { System }
-                     ifFalse: { { name: "System" } })
-         mark: "foo_mark_none"
-         directMethods: system.DirectMethods
-         instanceMethods: system.InstanceMethods,
-    Builtin
-         type: Class
-         value: (Foolang isSelfHosted
-                     ifTrue: { SystemRandom }
-                     ifFalse: { { name: "SystemRandom" } })
-         mark: "foo_mark_none"
-         directMethods: system_random.DirectMethods
-         instanceMethods: system_random.InstanceMethods,
-    Builtin
-         type: Class
-         value: Time
-         mark: "foo_mark_ptr"
-         directMethods: time.DirectMethods
-         instanceMethods: time.InstanceMethods
-]!
+class CompilerBuiltins {}
+    direct method all
+        [ CompilerBuiltin
+              type: Class
+              value: Array
+              mark: "foo_mark_array"
+              directMethods: array.DirectMethods
+              instanceMethods: array.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: Boolean
+              mark: "foo_mark_none"
+              directMethods: boolean.DirectMethods
+              instanceMethods: boolean.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: ByteArray
+              mark: "foo_mark_bytes"
+              directMethods: byte_array.DirectMethods
+              instanceMethods: byte_array.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: Character
+              mark: "foo_mark_none"
+              directMethods: character.DirectMethods
+              instanceMethods: character.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: Class
+              mark: "foo_mark_class"
+              directMethods: class.InstanceMethods -- class is its own instance
+              instanceMethods: class.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: Clock
+              mark: "foo_mark_none"
+              directMethods: clock.DirectMethods
+              instanceMethods: clock.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: Closure
+              mark: "foo_mark_closure"
+              directMethods: Dictionary new
+              instanceMethods: closure.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: Layout
+              mark: "foo_mark_layout"
+              directMethods: layout.DirectMethods
+              instanceMethods: layout.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: File
+              mark: "foo_mark_file"
+              directMethods: file.DirectMethods
+              instanceMethods: file.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: FilePath
+              mark: "foo_mark_bytes"
+              directMethods: filepath.DirectMethods
+              instanceMethods: filepath.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: FileStream
+              mark: "foo_mark_filestream"
+              directMethods: filestream.DirectMethods
+              instanceMethods: filestream.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: Float
+              mark: "foo_mark_none"
+              directMethods: float.DirectMethods
+              instanceMethods: float.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: Integer
+              mark: "foo_mark_none"
+              directMethods: Dictionary new
+              instanceMethods: integer.IntegerMethods,
+          CompilerBuiltin
+              type: Class
+              value: Output
+              mark: "foo_mark_none"
+              directMethods: output.DirectMethods
+              instanceMethods: output.InstanceMethods,
+          CompilerBuiltin
+              type: Interface
+              value: Record
+              mark: "foo_mark_none"
+              directMethods: record.DirectMethods
+              instanceMethods: record.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: Selector
+              mark: "foo_mark_none"
+              directMethods: selector.DirectMethods
+              instanceMethods: selector.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: String
+              mark: "foo_mark_bytes"
+              directMethods: string.DirectMethods
+              instanceMethods: string.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: (Foolang isSelfHosted
+                          ifTrue: { System }
+                          ifFalse: { { name: "System" } })
+              mark: "foo_mark_none"
+              directMethods: system.DirectMethods
+              instanceMethods: system.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: (Foolang isSelfHosted
+                          ifTrue: { SystemRandom }
+                          ifFalse: { { name: "SystemRandom" } })
+              mark: "foo_mark_none"
+              directMethods: system_random.DirectMethods
+              instanceMethods: system_random.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: Time
+              mark: "foo_mark_ptr"
+              directMethods: time.DirectMethods
+              instanceMethods: time.InstanceMethods
+        ]!
+end
 
 class SelectorMap { names }
     direct method new
@@ -311,8 +299,6 @@ class CTranspiler { output selectorMap closureFunctions
                     globals generatedMethods env }
 
     direct method transpile: string in: env with: prelude
-        -- Clean up from previous run.
-        Builtins do: #reset.
         env removeBuiltins: [
             "Any",
             "DoesNotUnderstand",
@@ -322,7 +308,7 @@ class CTranspiler { output selectorMap closureFunctions
             "StringOutput",
             "TypeError"
         ].
-        env replaceBuiltins: Builtins.
+        env replaceBuiltins: CompilerBuiltins all.
         prelude is False
             ifFalse: { env importPrelude: prelude }.
         env load: string.
@@ -379,7 +365,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method forwardDeclarationFor: aGlobal
         -- Debug println: "declare: {aGlobal}".
-        (Builtin includes: aGlobal)
+        (CompilerBuiltin includes: aGlobal)
             ifTrue: { self _classDeclarations: aGlobal }.
         (AstClass includes: aGlobal)
             ifTrue: { self _classDeclarations: aGlobal }.
@@ -483,9 +469,8 @@ class CTranspiler { output selectorMap closureFunctions
                                  env: env.
         builtinVisitor output println: "#include \"foo.h\"".
         -- FIXME: visit only referenced builtins
-        Builtins
-            do: { |each|
-                  builtinVisitor forwardDeclarationFor: each }.
+        self compilerBuiltins
+            do: { |each| builtinVisitor forwardDeclarationFor: each }.
         globals
             doValues: { |each|
                         builtinVisitor forwardDeclarationFor: each }.
@@ -494,6 +479,13 @@ class CTranspiler { output selectorMap closureFunctions
                   output print: closure declaration.
                   output println: ";" }.
         output!
+
+    method compilerBuiltins
+        -- Filter out module definitions
+        let globals = env builtins values
+                          select: { |each| AstGlobal includes: each }.
+        (globals collect: #definition)
+            select: { |each| CompilerBuiltin includes: each }!
 
     method generateBuiltins
         -- Debug println: "      #generateBuiltins:".
@@ -510,7 +502,7 @@ class CTranspiler { output selectorMap closureFunctions
                                  env: env.
         builtinVisitor output println: "#include \"foo.h\"".
         -- FIXME: used builtins only
-        Builtins
+        self compilerBuiltins
             do: { |each|
                   builtinVisitor visitClassDefinition: each }.
         output!
