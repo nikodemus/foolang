@@ -32,23 +32,6 @@ class SyntaxTranslator { env currentMethod }
     method addVariable: name type: type
         self child: (env addVariable: name type: type)!
 
-    method import: module relative: relative
-        self child: (env
-                         import: module
-                         relative: relative)!
-
-    method import: name from: module relative: relative source: source
-        self child: (env
-                         import: name
-                         from: module
-                         relative: relative
-                         source: source)!
-
-    method importAll: module relative: relative
-        self child: (env
-                         importAll: module
-                         relative: relative)!
-
     method visitSelector: aSelector
         AstConstantRef value: (Selector intern: aSelector name)
                        env: env!
@@ -248,31 +231,8 @@ class SyntaxTranslator { env currentMethod }
             frameSize: bodyVisitor env frame size
             isDynamic: aDefine variable isDynamic!
 
-    method visitModuleImport: anImport
-        -- Tracer visitModuleImport: anImport module.
-        let bodyVisitor = self
-                              import: anImport module
-                              relative: anImport relative.
-        AstDefinitionList
-            new: (bodyVisitor _visitEach: anImport body)!
-
-    method visitNameImport: anImport
-        -- Tracer visitNameImport: anImport module.
-        let bodyVisitor = self
-                              import: anImport name
-                              from: anImport module
-                              relative: anImport relative
-                              source: anImport source.
-        AstDefinitionList
-            new: (bodyVisitor _visitEach: anImport body)!
-
-    method visitWildcardImport: anImport
-        -- Tracer visitWildCardImport: anImport module.
-        let bodyVisitor = self
-                              importAll: anImport module
-                              relative: anImport relative.
-        AstDefinitionList
-            new: (bodyVisitor _visitEach: anImport body)!
+    method visitImport: anImport
+        AstImport syntax: anImport!
 
     method visitExternalRef: aRef
         -- Tracer visitExternalRef: aRef.

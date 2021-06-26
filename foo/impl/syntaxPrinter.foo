@@ -376,35 +376,11 @@ class SyntaxPrinter { output
         self newline.
         last = #def!
 
-    method _printModule: path
-        self print: ("." join: path)!
-
-    method visitModuleImport: anImport
+    method visitImport: anImport
         self print: "import ".
-        anImport relative
-            ifTrue: { self print: "." }.
-        self _printModule: anImport module.
+        self print: anImport spec.
         self newline.
-        last = #import.
-        self _visitEach: anImport body!
-
-    method visitNameImport: anImport
-        self print: "import ".
-        anImport relative
-            ifTrue: { self print: "." }.
-        self _printModule: anImport module.
-        self println: ".{anImport name}".
-        last = #import.
-        self _visitEach: anImport body!
-
-    method visitWildcardImport: anImport
-        self print: "import ".
-        anImport relative
-            ifTrue: { self print: "." }.
-        self _printModule: anImport module.
-        self println: ".*".
-        last = #import.
-        self _visitEach: anImport body!
+        last = #import!
 
     method visitExternalRef: aRef
         self print: aRef module.

@@ -17,8 +17,7 @@ interface SyntaxVisitor
     required method visitLet: aLet
     required method visitLiteral: aLiteral
     required method visitMethod: aMethod
-    required method visitModuleImport: aNode
-    required method visitNameImport: aNode
+    required method visitImport: aNode
     required method visitParens: aParens
     required method visitPrefixComment: aComment
     required method visitPrefixMessage: aMessage
@@ -30,5 +29,4 @@ interface SyntaxVisitor
     required method visitSuffixComment: aComment
     required method visitUnaryMessage: aMessage
     required method visitVariable: aVariable
-    required method visitWildcardImport: aNode
 end
