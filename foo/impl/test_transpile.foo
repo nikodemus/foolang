@@ -824,10 +824,10 @@ class TestTranspileInterface { assert system }
             expect: "#<Integer 4102>"!
 end
 
-class TestTranspileKeyword { assert system }
+class TestTranspileSend { assert system }
     is TranspilerTest
 
-    method testKeyword
+    method test_Send_keyword_keyword
         self transpile: "class Main \{}
                              direct method run: command in: system
                                  (self add: 40 and: 5) debug!
@@ -835,6 +835,25 @@ class TestTranspileKeyword { assert system }
                                  x integerAdd: y!
                         end"
             expect: "#<Integer 45>"!
+
+    method test_Send_eval_order
+        self transpile: "class Main \{ out }
+                             direct method run: command in: system
+                                 (self out: system output) run!
+                             method run
+                                 (self say: \"1\" return: self)
+                                    a: (self say: \"2\")
+                                    b: (self say: \"3\")
+                                    c: (self say: \"4\")!
+                             method say: x
+                                 self say: x return: x!
+                             method say: x return: y
+                                 out writeString: x.
+                                 y!
+                             method a: a b: b c: c
+                                 False!
+                       end"
+            expect: "1234"!
 end
 
 class TestTranspileGlobals { assert system }
@@ -2357,7 +2376,6 @@ class Main {}
             "--integer" -> TestTranspileInteger,
             "--includes" -> TestTranspileIncludes,
             "--interface" -> TestTranspileInterface,
-            "--keyword" -> TestTranspileKeyword,
             "--let" -> TestTranspileLet,
             "--lib" -> TestTranspileLib,
             "--panic" -> TestTranspilePanic,
@@ -2387,6 +2405,7 @@ class Main {}
             "--self" -> TestTranspileSelf,
             "--self-hosted" -> TestTranspileSelfHosted,
             "--selector" -> TestTranspileSelector,
+            "--send" -> TestTranspileSend,
             "--string" -> TestTranspileString,
             "--system" -> TestTranspileSystem,
             "--typecheck-01" -> TestTranspileTypecheck01,
