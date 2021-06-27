@@ -343,12 +343,22 @@ class CTranspiler { output selectorMap closureFunctions
     method addTemp
         $home addTemp!
 
+    method _visitWithOutputToString: value
+        let oldOutput = output.
+        let newOutput = StringOutput new.
+        { output = newOutput.
+          value visitBy: self }
+        finally: { output = oldOutput }.
+        newOutput content!
+
     method _visitTemp: value
+        value isImmediate
+            ifTrue: { return self _visitWithOutputToString: value }.
         let tmp = self addTemp.
         output print: "ctx->frame[{tmp}] = ".
         value visitBy: self.
         output print: ";".
-        tmp!
+        "ctx->frame[{tmp}]"!
 
     method declare: global
         -- Debug println: "#declare: {global}".
@@ -787,16 +797,16 @@ class CTranspiler { output selectorMap closureFunctions
         -- Tracer visitRecord: aRecord.
         let recordClass = self _ensureRecordClass: aRecord.
         output print: "(\{ ".
-        let argVars = aRecord values
-                          collect: { |each| self _visitTemp: each }.
+        let args = aRecord values
+                       collect: { |each| self _visitTemp: each }.
         output print: "foo_send(ctx".
         output print: ", &{Name mangleSelector: aRecord name}".
         output print: ", {Name mangleGlobal: recordClass}".
         output print: ", ".
-        output print: argVars size.
-        argVars
+        output print: args size.
+        args
             do: { |each|
-                  output print: ", ctx->frame[{each}]" }.
+                  output print: ", {each}" }.
         output print: "); })"!
 
     method visitDictionary: aDictionary
@@ -812,7 +822,7 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each|
                   let k = self _visitTemp: each key.
                   let v = self _visitTemp: each value.
-                  output print: "foo_send(ctx, &{putAt}, ctx->frame[{dict}], 2, ctx->frame[{v}], ctx->frame[{k}]); " }.
+                  output print: "foo_send(ctx, &{putAt}, ctx->frame[{dict}], 2, {v}, {k}); " }.
         output print: "ctx->frame[{dict}]; })"!
 
     method _generateLayout: aClass
@@ -1162,7 +1172,7 @@ class CTranspiler { output selectorMap closureFunctions
         output print: "(\{".
         let left = self _visitTemp: anIs left.
         let right = self _visitTemp: anIs right.
-        output print: "foo_Boolean_new(foo_eq(ctx->frame[{left}], ctx->frame[{right}])); ".
+        output print: "foo_Boolean_new(foo_eq({left}, {right})); ".
         output print: "})"!
 
     method visitSeq: seq
@@ -1202,17 +1212,16 @@ class CTranspiler { output selectorMap closureFunctions
     method visitSend: aSend
         -- Tracer visitSend: aSend selector.
         output print: "(\{ ".
-        let argVars = aSend arguments
+        let receiver = self _visitTemp: aSend receiver.
+        let args = aSend arguments
                           collect: { |each| self _visitTemp: each }.
         output print: "foo_send(ctx, &".
         output print: (self selectorCName: aSend selector).
-        output print: ", ".
-        aSend receiver visitBy: self.
-        output print: ", ".
-        output print: argVars size.
-        argVars
-            do: { |index|
-                  output print: ", ctx->frame[{index}]" }.
+        output print: ", {receiver}, ".
+        output print: args size.
+        args
+            do: { |each|
+                  output print: ", {each}" }.
         output print: "); })"!
 
     method visitSelfInstance: aSelf
@@ -1237,7 +1246,7 @@ class CTranspiler { output selectorMap closureFunctions
         output print: " assert(&{unbind}.cleanup == ctx->cleanup);".
         output print: " ctx->cleanup = ctx->cleanup->next;".
         output print: " foo_unbind(ctx, &{unbind}.cleanup);".
-        output print: " ctx->frame[{res}]; })"!
+        output print: " {res}; })"!
 
     method visitBindLexical: aBind
         -- Tracer trace: #visitBindLexical:.

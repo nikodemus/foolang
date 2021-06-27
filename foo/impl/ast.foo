@@ -561,6 +561,9 @@ end
 interface AstNode
     is Ast
 
+    method isImmediate
+        False!
+
     required method visitBy: visitor
 end
 
@@ -632,6 +635,9 @@ interface AstGlobalVariable
             _value: AstPending
             _definition: definition
             sources: List new!
+
+    method isImmediate
+        True!
 
     method isUndefined
         self _definition is False!
@@ -790,6 +796,9 @@ end
 class AstConstantRef { value env }
     is AstNode
 
+    method isImmediate
+        True!
+
     method visitBy: visitor
         visitor visitConstant: self!
 
@@ -872,6 +881,9 @@ end
 class AstSelfInstanceRef {}
     is AstNode
 
+    method isImmediate
+        True!
+
     method visitBy: visitor
         visitor visitSelfInstance: self!
 end
@@ -879,12 +891,18 @@ end
 class AstSelfClassRef {}
     is AstNode
 
+    method isImmediate
+        True!
+
     method visitBy: visitor
         visitor visitSelfClass: self!
 end
 
 class AstSlotRef { slot source }
     is AstNode
+
+    method isImmediate
+        True!
 
     direct method slot: slot
         self
@@ -928,6 +946,9 @@ end
 
 class AstLexicalRef { variable frameOffset::Integer source }
     is AstNode
+
+    method isImmediate
+        True!
 
     direct method variable: variable frameOffset: offset
         self
