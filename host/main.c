@@ -1102,10 +1102,6 @@ void foo_mark_oops(void* ptr) {
 void foo_mark_array(void* ptr) {
   ENTER_TRACE("mark_array");
   struct FooArray* array = ptr;
-  uint8_t flag = *(uint8_t*)&array->gc;
-  if (flag != 1 && flag != 0) {
-    foo_abort("bad flag");
-  }
   if (array->gc && foo_mark_live(array)) {
     for (size_t i = 0; i < array->size; i++) {
       foo_mark_object(array->data[i]);
