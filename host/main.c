@@ -1061,7 +1061,7 @@ void foo_mark_bytes(void* ptr) {
 }
 
 void foo_mark_file(void* ptr) {
-  ENTER_TRACE("mark_bytes");
+  ENTER_TRACE("mark_file");
   struct FooFile* file = ptr;
   if (file->gc) {
     foo_mark_live(file);
