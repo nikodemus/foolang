@@ -12,3 +12,5 @@ a.out
 *.lib
 *.exp
 foo/scratch/*
+host.*
+host-*
