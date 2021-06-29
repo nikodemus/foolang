@@ -1114,6 +1114,17 @@ void foo_mark_array(void* ptr) {
   EXIT_TRACE();
 }
 
+void foo_mark_instance(void* ptr) {
+  ENTER_TRACE("mark_instance");
+  struct FooArray* array = ptr;
+  if (array->gc && foo_mark_live(array)) {
+    for (size_t i = 0; i < array->size; i++) {
+      foo_mark_object(array->data[i]);
+    }
+  }
+  EXIT_TRACE();
+}
+
 void foo_mark_layout(void* ptr) {
   struct FooLayout* layout = ptr;
   bool is_empty = layout == &TheEmptyLayout;
