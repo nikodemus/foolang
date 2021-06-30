@@ -1015,15 +1015,9 @@ size_t gc_trace_depth = 0;
 #endif
 
 enum FooMark {
-  RED = 0,
-  BLUE = 1,
+  DEAD = 0,
+  LIVE = 1,
 };
-
-static enum FooMark current_live_mark = RED;
-
-void foo_flip_mark() {
-  current_live_mark = !current_live_mark;
-}
 
 struct FooAlloc {
   enum FooMark mark;
@@ -1036,9 +1030,8 @@ bool foo_mark_live(void* ptr) {
   ENTER_TRACE("mark_live %p", ptr);
   const size_t offset = offsetof(struct FooAlloc, data);
   struct FooAlloc* alloc = (void*)((char*)ptr-offset);
-  bool new_mark = alloc->mark != current_live_mark;
-  DEBUG_GC(" mark=%d, live=%d", alloc->mark, current_live_mark);
-  alloc->mark = current_live_mark;
+  bool new_mark = alloc->mark == DEAD;
+  alloc->mark = LIVE;
   EXIT_TRACE();
   return new_mark;
 }
@@ -1061,7 +1054,7 @@ void foo_mark_bytes(void* ptr) {
 }
 
 void foo_mark_file(void* ptr) {
-  ENTER_TRACE("mark_bytes");
+  ENTER_TRACE("mark_file");
   struct FooFile* file = ptr;
   if (file->gc) {
     foo_mark_live(file);
@@ -1102,10 +1095,6 @@ void foo_mark_oops(void* ptr) {
 void foo_mark_array(void* ptr) {
   ENTER_TRACE("mark_array");
   struct FooArray* array = ptr;
-  uint8_t flag = *(uint8_t*)&array->gc;
-  if (flag != 1 && flag != 0) {
-    foo_abort("bad flag");
-  }
   if (array->gc && foo_mark_live(array)) {
     for (size_t i = 0; i < array->size; i++) {
       foo_mark_object(array->data[i]);
@@ -1233,7 +1222,7 @@ void foo_sweep() {
   while (head) {
     n++;
     struct FooAlloc* next = head->next;
-    if (current_live_mark != head->mark) {
+    if (head->mark == DEAD) {
       if (!prev) {
         allocations = next;
       } else {
@@ -1275,14 +1264,25 @@ void foo_sweep() {
 void foo_gc(struct FooContext* ctx) {
   FOO_DEBUG("/foo_gc begin");
   ENTER_TRACE("GC\n");
-  foo_flip_mark();
+
+  // Mark everything dead
+  struct FooAlloc* head = allocations;
+  while (head) {
+    head->mark = DEAD;
+    head = head->next;
+  }
+
+  // Mark everything from ctx live
   if (ctx->vars) {
     ENTER_TRACE("vars");
     foo_mark_array(ctx->vars);
     EXIT_TRACE();
   }
   foo_mark_context(ctx);
+
+  // Free dead things
   foo_sweep();
+
   EXIT_TRACE();
   FOO_DEBUG("/foo_gc end");
 }
@@ -1301,7 +1301,7 @@ void* foo_alloc(size_t size) {
   }
   p->next = allocations;
   p->size = bytes;
-  p->mark = current_live_mark;
+  p->mark = LIVE;
   allocations = p;
 
   allocation_bytes_since_gc += bytes;
