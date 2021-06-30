@@ -10,10 +10,16 @@ import .ast.AstDefinition
 import .parser.Parser
 import .ast.AstBuiltin
 
+-- FIXME: cannot differentiate from local definitions!
+-- FIXME: use a cascade as soon as they're supported in self-hosted
+-- implementation...
+-- FIXME: uncomfortable duplicate vs. CompilerBuiltins
 class BuiltinDictionary { dictionary }
     direct method new
-        self dictionary: Dictionary new!
-    method define: builtin
+        (self dictionary: Dictionary new)
+            _init dictionary!
+
+    method _define: builtin
         let name = builtin name.
         let global = AstGlobal
                          name: name
@@ -22,34 +28,29 @@ class BuiltinDictionary { dictionary }
         dictionary
             put: global
             at: name!
-end
 
--- FIXME: cannot differentiate from local definitions!
--- FIXME: use a cascade as soon as they're supported in self-hosted
--- implementation...
--- FIXME: uncomfortable duplicate vs. CompilerBuiltins
-define Builtins
-    let g = BuiltinDictionary new.
-    g define: Any.
-    g define: Array.
-    g define: ByteArray.
-    g define: Boolean.
-    g define: Character.
-    g define: Class.
-    g define: DoesNotUnderstand.
-    g define: Error.
-    g define: False.
-    g define: Float.
-    g define: Integer.
-    g define: List.
-    g define: Object.
-    g define: Output.
-    g define: Selector.
-    g define: String.
-    g define: StringOutput.
-    g define: True.
-    g define: TypeError.
-    g dictionary!
+    method _init
+        self _define: Any.
+        self _define: Array.
+        self _define: ByteArray.
+        self _define: Boolean.
+        self _define: Character.
+        self _define: Class.
+        self _define: DoesNotUnderstand.
+        self _define: Error.
+        self _define: False.
+        self _define: Float.
+        self _define: Integer.
+        self _define: List.
+        self _define: Object.
+        self _define: Output.
+        self _define: Selector.
+        self _define: String.
+        self _define: StringOutput.
+        self _define: True.
+        self _define: TypeError.
+        self!
+end
 
 class Variable { name type index }
     is Object
@@ -153,7 +154,7 @@ class Environment { parent
 
     direct method new
         self
-            builtins: Builtins copy!
+            builtins: BuiltinDictionary new!
 
     direct method builtins: builtins
         self
@@ -162,7 +163,7 @@ class Environment { parent
 
     direct method modules: modules
         self
-            builtins: Builtins copy
+            builtins: BuiltinDictionary new
             modules: (ModuleDictionary new: modules)!
 
     direct method builtins: builtins modules: modules
