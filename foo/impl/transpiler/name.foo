@@ -19,6 +19,9 @@ define SymbolNames
       "#" -> "_xx"
       }!
 
+define ColonCharacter
+    ":" character!
+
 class Name { out }
     is Object
 
@@ -116,9 +119,9 @@ class Name { out }
         self _mangleName: selector name!
 
     method _mangleKeyword: selector
-        selector parts
-            do: { |part|
-                  self _mangleName: (part butlast).
+        (selector name splitBy: ColonCharacter) butlast
+            do: { |each|
+                  self _mangleName: each.
                   out print: "_" }!
 
     method _mangleName: name::String
