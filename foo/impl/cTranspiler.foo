@@ -1056,9 +1056,7 @@ class CTranspiler { output selectorMap closureFunctions
                        output println: "};".
                        output newline }.
         -- Instance Class
-        let classInheritance = isTheClass
-                                   ifTrue: { "FooClassInheritance_Class" }
-                                   ifFalse: { self _generateInheritance: aClass forMetaclass: False }.
+        let classInheritance = self _generateInheritance: aClass forMetaclass: False.
         let layout = isTheClass
                          ifTrue: { "&TheClassLayout" }
                          ifFalse: { self _generateLayout: aClass }.
