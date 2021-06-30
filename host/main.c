@@ -1064,8 +1064,7 @@ void foo_mark_bytes(void* ptr) {
 void foo_mark_file(void* ptr) {
   ENTER_TRACE("mark_file");
   struct FooFile* file = ptr;
-  if (file->gc) {
-    foo_mark_live(file);
+  if (file->gc && foo_mark_live(file)) {
     foo_mark_bytes(file->pathname);
   }
   EXIT_TRACE();
@@ -1074,8 +1073,7 @@ void foo_mark_file(void* ptr) {
 void foo_mark_filestream(void* ptr) {
   ENTER_TRACE("mark_bytes");
   struct FooFileStream* stream = ptr;
-  if (stream->gc) {
-    foo_mark_live(stream);
+  if (stream->gc && foo_mark_live(stream))  {
     foo_mark_bytes(stream->pathname);
   }
   EXIT_TRACE();
