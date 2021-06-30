@@ -286,6 +286,7 @@ struct FooClass FooClass_Selector;
 struct FooClass FooClass_String;
 struct FooPointerList FooClassInheritance_Class;
 struct FooArray* FooArray_alloc(size_t size);
+struct FooArray* FooArray_instance(size_t size);
 struct Foo foo_Float_new(double f);
 struct Foo foo_Integer_new(int64_t n);
 struct Foo foo_String_new(size_t len, const char* s);
@@ -909,6 +910,13 @@ struct FooArray* FooArray_alloc(size_t size) {
   return array;
 }
 
+struct FooArray* FooInstance_alloc(size_t size) {
+  struct FooArray* array = foo_alloc(sizeof(struct FooArray) + size*sizeof(struct Foo));
+  array->gc = true;
+  array->size = size;
+  return array;
+}
+
 struct Foo foo_Array_new(size_t size) {
   struct FooArray* array = FooArray_alloc(size);
   for (size_t i = 0; i < size; ++i) {
@@ -1094,6 +1102,17 @@ void foo_mark_oops(void* ptr) {
 
 void foo_mark_array(void* ptr) {
   ENTER_TRACE("mark_array");
+  struct FooArray* array = ptr;
+  if (array->gc && foo_mark_live(array)) {
+    for (size_t i = 0; i < array->size; i++) {
+      foo_mark_object(array->data[i]);
+    }
+  }
+  EXIT_TRACE();
+}
+
+void foo_mark_instance(void* ptr) {
+  ENTER_TRACE("mark_instance");
   struct FooArray* array = ptr;
   if (array->gc && foo_mark_live(array)) {
     for (size_t i = 0; i < array->size; i++) {

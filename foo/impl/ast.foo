@@ -386,7 +386,7 @@ class AstClass { name superclass _slots _interfaces _directMethods _instanceMeth
     method markFunction
         self
             ifSuperclass: { superclass definition markFunction }
-            ifNot: { "foo_mark_array" }!
+            ifNot: { "foo_mark_instance" }!
 
     method _readerMethods
         self _methodDictionary:
