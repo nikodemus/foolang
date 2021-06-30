@@ -49,13 +49,6 @@ class TestSelector { assert }
     method test_value_value_
         self check: [ (#+ value: 123 value: 19) is 142]!
 
-    method test_parts
-        self check: [ #foo parts isEquivalent: ["foo"],
-                      #_foo parts isEquivalent: ["_foo"],
-                      #+ parts isEquivalent: ["+"],
-                      #foo: parts isEquivalent: ["foo:"],
-                      #foo:bar:quux: parts isEquivalent: ["foo:", "bar:", "quux:"] ]!
-
     method test_isEquivalent_
         self check: [ #foo == #foo,
                       (#bar == #foo) not,
