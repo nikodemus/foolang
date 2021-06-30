@@ -1386,10 +1386,3 @@ struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size
   }
   return (struct Foo){ .class = &FooClass_FileStream, .datum = { .ptr = stream } };
 }
-
-struct FooPointerList FooClassInheritance_Class = {
-  .gc = false,
-  .mark = foo_mark_class,
-  .size = 1,
-  .data = { &FooClass_Class }
-};

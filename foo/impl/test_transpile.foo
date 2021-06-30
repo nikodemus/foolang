@@ -375,7 +375,7 @@ end
 class TestTranspilePreludeException { assert system }
     is TranspilerTest
 
-    method testDoesNotUnderstand
+    method test_Main_does_not_understand
         self transpile: "import lang.exception.*
                          import lang.closure
                          import lang.selector_ext
@@ -393,6 +393,26 @@ Backtrace:
   4: DoesNotUnderstand class#raise:with:on:source:context:
   3: DoesNotUnderstand class#raise:with:on:
   2: Object interface#perform:with: (Main class) #bang
+  1: Main class#run:in:
+"!
+
+    method test_Class_does_not_understand
+        self transpile: "import lang.exception.*
+                         import lang.class
+                         import lang.selector_ext
+
+                         class Main \{\}
+                             is Object
+                             direct method run: command in: system
+                                 Class bang!
+                         end"
+            expectError: "PANIC: UNHANDLED ERROR: Instances of Class do not understand: #bang
+Backtrace:
+  6: FallbackHandler class#raise:
+  5: Error#raise (DoesNotUnderstand)
+  4: DoesNotUnderstand class#raise:with:on:source:context:
+  3: DoesNotUnderstand class#raise:with:on:
+  2: Object#perform:with: (Class) #bang
   1: Main class#run:in:
 "!
 
