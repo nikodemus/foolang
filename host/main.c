@@ -1086,6 +1086,8 @@ void foo_mark_object(struct Foo obj) {
   if (obj.class) {
     DEBUG_GC(" %p (%s)", obj.datum.ptr, obj.class->name->data);
     obj.class->mark(obj.datum.ptr);
+  } else {
+    assert(!obj.datum.int64);
   }
   EXIT_TRACE();
 }
