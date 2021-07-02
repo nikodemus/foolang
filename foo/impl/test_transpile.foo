@@ -2150,7 +2150,7 @@ class TestTranspileExtend { assert system }
             expect: "#<Integer 84>"!
 end
 
-class TestTranspileTypecheck01 { assert system }
+class TestTranspileTypecheck { assert system }
     is TranspilerTest
 
     method testIntegerValueOk
@@ -2169,10 +2169,6 @@ class TestTranspileTypecheck01 { assert system }
 Backtrace:
   1: Main class#run:in:
 "!
-end
-
-class TestTranspileTypecheck02 { assert system }
-    is TranspilerTest
 
     method testIntegerMethodArgOk
         self transpile: "class Main \{}
@@ -2195,10 +2191,6 @@ Backtrace:
   2: Main class#foo:
   1: Main class#run:in:
 "!
-end
-
-class TestTranspileTypecheck03 { assert system }
-    is TranspilerTest
 
     method testIntegerBlockArgOk
         self transpile: "class Main \{}
@@ -2217,10 +2209,6 @@ Backtrace:
   2: Closure#value:
   1: Main class#run:in:
 "!
-end
-
-class TestTranspileTypecheck04 { assert system }
-    is TranspilerTest
 
     method testInterfaceOk
         self transpile: "interface MyInterface
@@ -2248,11 +2236,6 @@ Backtrace:
   1: Main class#run:in:
 "!
 
-end
-
-class TestTranspileTypecheck05 { assert system }
-    is TranspilerTest
-
     method testLetOk
         self transpile: "class Main \{}
                              direct method run: command in: system
@@ -2271,10 +2254,6 @@ class TestTranspileTypecheck05 { assert system }
 Backtrace:
   1: Main class#run:in:
 "!
-end
-
-class TestTranspileTypecheck06 { assert system }
-    is TranspilerTest
 
     method testAssignOops
         self transpile: "class Main \{}
@@ -2296,11 +2275,6 @@ Backtrace:
                                  x!
                          end"
             expect: "#<Integer 42>"!
-
-end
-
-class TestTranspileTypecheck07 { assert system }
-    is TranspilerTest
 
     method testSlotTypeInitOops
         self transpile: "class Main \{ x::Integer }
@@ -2325,11 +2299,6 @@ Backtrace:
                          end"
             expect: "#<Integer 42>"!
 
-end
-
-class TestTranspileTypecheck08 { assert system }
-    is TranspilerTest
-
     method testSlotTypeAssignOops
         self transpile: "class Main \{ x::Integer }
                              direct method run: command in: system
@@ -2352,10 +2321,6 @@ Backtrace:
                                  42!
                          end"
             expect: "#<Integer 42>"!
-end
-
-class TestTranspileTypecheck09 { assert system }
-    is TranspilerTest
 
     method testMethodReturnTypeOops
         self transpile: "class Main \{}
@@ -2381,10 +2346,6 @@ Backtrace:
                                  return 0!
                          end"
             expect: "#<Integer 427>"!
-end
-
-class TestTranspileTypecheck10 { assert system }
-    is TranspilerTest
 
     method testMethodNonLocalReturnTypeOops
         self transpile: "class Main \{}
@@ -2410,10 +2371,6 @@ Backtrace:
                                 (\{ |a| -> Integer a } value: 42) debug!
                          end"
             expect: "#<Integer 42>"!
-end
-
-class TestTranspileTypecheck11 { assert system }
-    is TranspilerTest
 
     method testBlockReturnTypeOops
         self transpile: "class Main \{}
@@ -2488,17 +2445,7 @@ class Main {}
             "--send" -> TestTranspileSend,
             "--string" -> TestTranspileString,
             "--system" -> TestTranspileSystem,
-            "--typecheck-01" -> TestTranspileTypecheck01,
-            "--typecheck-02" -> TestTranspileTypecheck02,
-            "--typecheck-03" -> TestTranspileTypecheck03,
-            "--typecheck-04" -> TestTranspileTypecheck04,
-            "--typecheck-05" -> TestTranspileTypecheck05,
-            "--typecheck-06" -> TestTranspileTypecheck06,
-            "--typecheck-07" -> TestTranspileTypecheck07,
-            "--typecheck-08" -> TestTranspileTypecheck08,
-            "--typecheck-09" -> TestTranspileTypecheck09,
-            "--typecheck-10" -> TestTranspileTypecheck10,
-            "--typecheck-11" -> TestTranspileTypecheck11
+            "--typecheck" -> TestTranspileTypecheck
         }.
         let all = tests keys sort.
         cmd == []
