@@ -993,6 +993,34 @@ class TestTranspileGlobals { assert system }
                                           ^^^^^^^^^^^^^^^^^^^^^ Undefined variable: ThisIsReallyUndefined
 005                          end
 "!
+
+    method test_Put_at_cannot_modify_global_nested_array
+        self transpile: "define ThisIsStatic [1, [2], 3]!
+                         class Main \{}
+                             direct method run: command in: system
+                                 let box = ThisIsStatic at: 2.
+                                 box put: 0 at: 2.
+                                 system output writeString: \"OOPS MODIFIED A GLOBAL!\"!
+                         end"
+            expectError: "PANIC: Cannot modify constant object!
+Backtrace:
+  2: Array#put:at:
+  1: Main class#run:in:
+"!
+
+    method test_At_put_cannot_modify_global_nested_array
+        self transpile: "define ThisIsStatic [[1], 2, 3]!
+                         class Main \{}
+                             direct method run: command in: system
+                                 let box = ThisIsStatic at: 1.
+                                 box at: 1 put: 0.
+                                 system output writeString: \"OOPS MODIFIED A GLOBAL!\"!
+                         end"
+            expectError: "PANIC: Cannot modify constant object!
+Backtrace:
+  2: Array#at:put:
+  1: Main class#run:in:
+"!
 end
 
 class TestTranspileBlock { assert system }
