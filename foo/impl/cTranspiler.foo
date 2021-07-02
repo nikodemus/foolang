@@ -540,10 +540,15 @@ class CTranspiler { output selectorMap closureFunctions
         -- Tracer constantCName: value.
         (Selector includes: value)
             ifTrue: { return self selectorCName: value }.
-        constants
-            do: { |each|
-                  each value == value
-                      ifTrue: { return each cname } }.
+        (Object includes: value)
+            ifTrue: { constants
+                          do: { |each|
+                                value == each value
+                                    ifTrue: { return each cname } } }
+            ifFalse: { constants
+                           do: { |each|
+                                value is each value
+                                   ifTrue: { return each cname } } }.
         (Class includes: value)
             ifTrue: { self declare: (self _targetClassOf: value
                                          _in: env).
@@ -1183,7 +1188,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method visitSlotSet: set
         -- Tracer trace: #visitSlotSet:.
-        output print: "(PTR(FooArray, ctx->receiver.datum)->data[".
+        output print: "(PTR(FooArray, foo_check_modification(ctx, ctx->receiver.datum))->data[".
         output print: (set slot index - 1).
         output print: "] = ".
         self _generateTypecheck: set slot type

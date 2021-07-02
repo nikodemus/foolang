@@ -906,7 +906,6 @@ class TestTranspileGlobals { assert system }
     method test_Define_global_class_instance
         self transpileWithPrelude:
             "class MyClass \{ x y }
-                 is Object
                  method value
                      x integerAdd: y!
              end
@@ -993,6 +992,67 @@ class TestTranspileGlobals { assert system }
 004                                  list.ThisIsReallyUndefined bang!
                                           ^^^^^^^^^^^^^^^^^^^^^ Undefined variable: ThisIsReallyUndefined
 005                          end
+"!
+
+    method test_Put_at_cannot_modify_global_nested_array
+        self transpile: "define ThisIsStatic [1, [2], 3]!
+                         class Main \{}
+                             direct method run: command in: system
+                                 let box = ThisIsStatic at: 2.
+                                 box put: 0 at: 2.
+                                 system output writeString: \"OOPS MODIFIED A GLOBAL!\"!
+                         end"
+            expectError: "PANIC: Cannot modify constant object!
+Backtrace:
+  2: Array#put:at:
+  1: Main class#run:in:
+"!
+
+    method test_Put_at_cannot_modify_global_ByteArray
+        self transpile: "define ThisIsStatic [ByteArray new: 1]!
+                         class Main \{}
+                             direct method run: command in: system
+                                 let bytes :: ByteArray = ThisIsStatic at: 1.
+                                 bytes put: 0 at: 1.
+                                 system output writeString: \"OOPS MODIFIED A GLOBAL!\"!
+                         end"
+            expectError: "PANIC: Cannot modify constant object!
+Backtrace:
+  2: ByteArray#put:at:
+  1: Main class#run:in:
+"!
+
+    method test_Cannot_modify_global_instances
+        self transpile: "import lang.object.Object
+                         class Counter \{ value }
+                             method inc
+                                 value = value integerAdd: 1!
+                         end
+                         define MyCounter
+                             Counter value: 0!
+                         class Main \{}
+                             direct method run: command in: system
+                                 MyCounter inc.
+                                 system output writeString: \"OOPS MODIFIED A GLOBAL!\"!
+                         end"
+            expectError: "PANIC: Cannot modify constant object!
+Backtrace:
+  2: Counter#inc
+  1: Main class#run:in:
+"!
+
+    method test_At_put_cannot_modify_global_nested_array
+        self transpile: "define ThisIsStatic [[1], 2, 3]!
+                         class Main \{}
+                             direct method run: command in: system
+                                 let box = ThisIsStatic at: 1.
+                                 box at: 1 put: 0.
+                                 system output writeString: \"OOPS MODIFIED A GLOBAL!\"!
+                         end"
+            expectError: "PANIC: Cannot modify constant object!
+Backtrace:
+  2: Array#at:put:
+  1: Main class#run:in:
 "!
 end
 
