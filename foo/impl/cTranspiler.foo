@@ -647,7 +647,7 @@ class CTranspiler { output selectorMap closureFunctions
             with: { |out|
                     out println: "struct FooArray {cname} =".
                     out println: "\{".
-                    out println: "    .gc = false,".
+                    out println: "    .header = \{ .gc = false },".
                     out println: "    .size = {value size},".
                     out print: "    .data = \{ ".
                     value do: { |each|
@@ -668,7 +668,7 @@ class CTranspiler { output selectorMap closureFunctions
             with: { |out|
                     out println: "struct FooArray {cname} =".
                     out println: "\{".
-                    out println: "    .gc = false,".
+                    out println: "    .header = \{ .gc = false },".
                     out println: "    .size = {slots size},".
                     out print: "    .data = \{ ".
                     slots
@@ -686,7 +686,7 @@ class CTranspiler { output selectorMap closureFunctions
             with: { |out|
                     out println: "struct FooArray {cname} =".
                     out println: "\{".
-                    out println: "    .gc = false,".
+                    out println: "    .header = \{ .gc = false },".
                     out println: "    .size = {Record sizeOf: value},".
                     out print: "    .data = \{ ".
                     value do: { |each|
@@ -711,7 +711,7 @@ class CTranspiler { output selectorMap closureFunctions
                         do: { |each| self _printStringAsComment: each to: out }.
                     out println: "struct FooBytes {cname} =".
                     out println: "\{".
-                    out println: "    .gc = false,".
+                    out println: "    .header = \{ .gc = false },".
                     out println: "    .size = {value size},".
                     out print: "    .data = \{ ".
                     value do: { |each|
@@ -832,8 +832,8 @@ class CTranspiler { output selectorMap closureFunctions
         -- could/should intern them.
         let name = "FooLayout_{aClass name}".
         output println: "struct FooLayout {name} = \{".
+        output println: "    .header = \{ .gc = false },".
         output println: "    .mark = foo_mark_oops,".
-        output println: "    .gc = false,".
         output println: "    .size = {aClass slots size}".
         output println: "};".
         return "&{name}"!
@@ -849,7 +849,7 @@ class CTranspiler { output selectorMap closureFunctions
         forMetaclass
             ifTrue: { interfaces add: (env global: "Class") }.
         output println: "struct FooPointerList {inheritance} = \{".
-        output println: "    .gc = false,".
+        output println: "    .header = \{ .gc = false },".
         output println: "    .mark = foo_mark_class,".
         output println: "    .size = {interfaces size},".
         output println: "    .data = \{".
@@ -891,12 +891,12 @@ class CTranspiler { output selectorMap closureFunctions
         let metaclassNameString = "{anInterface name} interface".
         output println: "struct FooClass {metaclassName} = ".
         output println: "\{".
+        output println: "    .header = \{ .gc = false },".
         output println: "    .name = &{self constantCName: metaclassNameString in: env}, // {metaclassNameString}".
         output println: "    .metaclass = &FooClass_Class,".
         output println: "    .inherited = &{metaclassInheritance},".
         output println: "    .layout = &TheClassLayout,".
         output println: "    .mark = foo_mark_none,".
-        output println: "    .gc = false,".
         output println: "    .size = {directMethods size},".
         output println: "    .methods = \{".
         directMethods
@@ -914,12 +914,12 @@ class CTranspiler { output selectorMap closureFunctions
         -- FIXME: for runtime instantiation of classes we need to add the instance methods here!
         output println: "struct FooClass {className} = ".
         output println: "\{".
+        output println: "    .header = \{ .gc = false },".
         output println: "    .name = &{self constantCName: anInterface name in: env}, // {anInterface name}".
         output println: "    .metaclass = &{metaclassName},".
         output println: "    .inherited = &{classInheritance},".
         output println: "    .layout = NULL,". -- FIXME
         output println: "    .mark = foo_mark_none,".
-        output println: "    .gc = false,".
         output println: "    .size = {instanceMethods size},".
         output println: "    .methods = \{".
         instanceMethods
@@ -1036,12 +1036,12 @@ class CTranspiler { output selectorMap closureFunctions
                        let metaclassNameString = "{aClass name} class".
                        output println: "struct FooClass {metaclassName} = ".
                        output println: "\{".
+                       output println: "    .header = \{ .gc = false },".
                        output println: "    .name = &{self constantCName: metaclassNameString in: env}, // {metaclassNameString}".
                        output println: "    .metaclass = &FooClass_Class,".
                        output println: "    .inherited = &{metaclassInheritance},".
                        output println: "    .layout = &TheClassLayout,".
                        output println: "    .mark = foo_mark_class,".
-                       output println: "    .gc = false,".
                        output println: "    .size = {directMethods size},".
                        output println: "    .methods = \{".
                        directMethods
@@ -1063,12 +1063,12 @@ class CTranspiler { output selectorMap closureFunctions
         -- Debug println: "{aClass} => {aClass markFunction}".
         output println: "struct FooClass {className} = ".
         output println: "\{".
+        output println: "    .header = \{ .gc = false },".
         output println: "    .name = &{self constantCName: aClass name in: env}, // {aClass name}".
         output println: "    .metaclass = &{metaclassName},".
         output println: "    .inherited = &{classInheritance},".
         output println: "    .layout = {layout},".
         output println: "    .mark = {aClass markFunction},".
-        output println: "    .gc = false,".
         output println: "    .size = {instanceMethods size + 1},".
         output println: "    .methods = \{".
         instanceMethods

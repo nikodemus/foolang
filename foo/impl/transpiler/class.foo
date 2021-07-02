@@ -28,12 +28,12 @@ define InstanceMethods
                      foo_panicf(ctx, \"Superclass has no layout: %s\", super->name->data);
                  \}
 
+                 newclass->header.gc = true;
                  newclass->name = PTR(FooBytes, ctx->frame[0].datum);
                  newclass->metaclass = super->metaclass;
                  newclass->inherited = inherited;
                  newclass->layout = super->layout;
                  newclass->mark = super->mark;
-                 newclass->gc = true;
                  newclass->size = 0;
 
                  /* Make the new class visible to GC. */
@@ -80,12 +80,12 @@ define InstanceMethods
                      inherited->data[i] = obj.datum.ptr;
                  }
 
+                 newclass->header.gc = true;
                  newclass->name = PTR(FooBytes, ctx->frame[0].datum);
                  newclass->metaclass = PTR(FooClass, ctx->receiver.datum);
                  newclass->inherited = inherited;
                  newclass->layout = PTR(FooLayout, ctx->frame[1].datum);
                  newclass->mark = newclass->layout->mark;
-                 newclass->gc = true;
                  newclass->size = 0;
 
                  /* Make the new class visible to GC. */

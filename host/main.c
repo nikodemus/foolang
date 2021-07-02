@@ -98,16 +98,20 @@ struct Foo {
   union FooDatum datum;
 };
 
-struct FooBytes {
+struct FooHeader {
   bool gc;
+};
+
+struct FooBytes {
+  struct FooHeader header;
   size_t size;
   uint8_t data[];
 };
 
 #define FOO_CSTRING(literal) \
   ((struct FooBytes*) \
-  &((struct { bool gc; size_t size; const char data[sizeof(literal)]; }) \
-     { .gc = false, .size = sizeof(literal)-1, .data = literal }))
+  &((struct { struct FooHeader header; size_t size; const char data[sizeof(literal)]; }) \
+     { .header = { .gc = false }, .size = sizeof(literal)-1, .data = literal }))
 
 bool foo_bytes_equal(const struct FooBytes* a, const struct FooBytes* b) {
   return a->size == b->size && !memcmp(a->data, b->data, a->size);
@@ -128,7 +132,7 @@ struct FooSelector* foo_intern_new_selector(struct FooBytes* name) {
   // be released.
   struct FooBytes* nameCopy = calloc(1, sizeof(struct FooBytes) + name->size + 1);
   memcpy(nameCopy->data, name->data, name->size);
-  nameCopy->gc = false;
+  nameCopy->header.gc = false;
   nameCopy->size = name->size;
   struct FooSelector* new = calloc(1, sizeof(struct FooSelector));
   new->name = nameCopy;
@@ -150,21 +154,21 @@ struct FooSelector* foo_intern(struct FooBytes* name) {
 }
 
 struct FooArray {
-  bool gc;
+  struct FooHeader header;
   size_t size;
   struct Foo data[];
 };
 
 // FIXME: Don't like defining this in C.
 struct FooFile {
-  bool gc;
+  struct FooHeader header;
   struct FooBytes* pathname;
   size_t mode;
 };
 
 // FIXME: Don't like defining this in C.
 struct FooFileStream {
-  bool gc;
+  struct FooHeader header;
   struct FooBytes* pathname;
   FILE* ptr;
 };
@@ -384,7 +388,7 @@ void foo_mark_class(void* ptr);
 void foo_mark_none(void* ptr);
 
 struct FooPointerList {
-  bool gc;
+  struct FooHeader header;
   FooMarkFunction mark;
   size_t size;
   void* data[];
@@ -394,27 +398,27 @@ struct FooPointerList* foo_ClassList_alloc(size_t size) {
   struct FooPointerList* list
     = foo_alloc(sizeof(struct FooPointerList)
                 + size * sizeof(void*));
-  list->gc = true;
+  list->header.gc = true;
   list->mark = foo_mark_class;
   list->size = size;
   return list;
 }
 
 struct FooLayout {
+  struct FooHeader header;
   FooMarkFunction mark;
-  bool gc;
   size_t size;
 };
 
 struct FooLayout TheEmptyLayout = {
+  .header = { .gc = false },
   .mark = foo_mark_none,
-  .gc = false,
   .size = 0
 };
 
 struct FooLayout TheClassLayout = {
+  .header = { .gc = false },
   .mark = foo_mark_none,
-  .gc = false,
   .size = 0
 };
 
@@ -428,19 +432,19 @@ struct FooLayout* foo_FooLayout_new(size_t size) {
   if (size == 0)
     return &TheEmptyLayout;
   struct FooLayout* layout = foo_alloc(sizeof(struct FooLayout));
+  layout->header.gc = true;
   layout->mark = foo_mark_array;
-  layout->gc = true;
   layout->size = size;
   return layout;
 }
 
 struct FooClass {
+  struct FooHeader header;
   struct FooBytes* name;
   struct FooClass* metaclass;
   struct FooPointerList* inherited;
   struct FooLayout* layout;
   FooMarkFunction mark;
-  bool gc;
   size_t size;
   struct FooMethod methods[];
 };
@@ -911,14 +915,14 @@ struct FooProcessTimes* FooProcessTimes_new(double user, double system, double r
 
 struct FooArray* FooArray_alloc(size_t size) {
   struct FooArray* array = foo_alloc(sizeof(struct FooArray) + size*sizeof(struct Foo));
-  array->gc = true;
+  array->header.gc = true;
   array->size = size;
   return array;
 }
 
 struct FooArray* FooInstance_alloc(size_t size) {
   struct FooArray* array = foo_alloc(sizeof(struct FooArray) + size*sizeof(struct Foo));
-  array->gc = true;
+  array->header.gc = true;
   array->size = size;
   return array;
 }
@@ -956,7 +960,7 @@ struct Foo foo_Float_new(double f) {
 
 struct FooBytes* FooBytes_alloc(size_t len) {
   struct FooBytes* bytes = (struct FooBytes*)foo_alloc(sizeof(struct FooBytes) + len + 1);
-  bytes->gc = true;
+  bytes->header.gc = true;
   bytes->size = len;
   return bytes;
 }
@@ -1061,7 +1065,7 @@ void foo_mark_ptr(void* ptr) {
 void foo_mark_bytes(void* ptr) {
   ENTER_TRACE("mark_bytes");
   struct FooBytes* bytes = ptr;
-  if (bytes->gc) {
+  if (bytes->header.gc) {
     foo_mark_live(ptr);
   }
   EXIT_TRACE();
@@ -1070,7 +1074,7 @@ void foo_mark_bytes(void* ptr) {
 void foo_mark_file(void* ptr) {
   ENTER_TRACE("mark_file");
   struct FooFile* file = ptr;
-  if (file->gc && foo_mark_live(file)) {
+  if (file->header.gc && foo_mark_live(file)) {
     foo_mark_bytes(file->pathname);
   }
   EXIT_TRACE();
@@ -1079,7 +1083,7 @@ void foo_mark_file(void* ptr) {
 void foo_mark_filestream(void* ptr) {
   ENTER_TRACE("mark_bytes");
   struct FooFileStream* stream = ptr;
-  if (stream->gc && foo_mark_live(stream))  {
+  if (stream->header.gc && foo_mark_live(stream))  {
     foo_mark_bytes(stream->pathname);
   }
   EXIT_TRACE();
@@ -1109,7 +1113,7 @@ void foo_mark_oops(void* ptr) {
 void foo_mark_array(void* ptr) {
   ENTER_TRACE("mark_array");
   struct FooArray* array = ptr;
-  if (array->gc && foo_mark_live(array)) {
+  if (array->header.gc && foo_mark_live(array)) {
     for (size_t i = 0; i < array->size; i++) {
       foo_mark_object(array->data[i]);
     }
@@ -1120,7 +1124,7 @@ void foo_mark_array(void* ptr) {
 void foo_mark_instance(void* ptr) {
   ENTER_TRACE("mark_instance");
   struct FooArray* array = ptr;
-  if (array->gc && foo_mark_live(array)) {
+  if (array->header.gc && foo_mark_live(array)) {
     for (size_t i = 0; i < array->size; i++) {
       foo_mark_object(array->data[i]);
     }
@@ -1136,7 +1140,7 @@ void foo_mark_layout(void* ptr) {
   (void)is_class;
   ENTER_TRACE("mark_layout (%s)",
               is_empty ? "empty" : (is_class ? "class" : "object"));
-  if (layout->gc) {
+  if (layout->header.gc) {
     foo_mark_live(layout);
   }
   EXIT_TRACE();
@@ -1145,7 +1149,7 @@ void foo_mark_layout(void* ptr) {
 void foo_mark_pointers(void* ptr) {
   struct FooPointerList* list = ptr;
   ENTER_TRACE("mark_pointers %p (size=%zu)", list, list->size);
-  if (list->gc && foo_mark_live(list)) {
+  if (list->header.gc && foo_mark_live(list)) {
     for (size_t i = 0; i < list->size; i++) {
       list->mark(list->data[i]);
     }
@@ -1158,7 +1162,7 @@ void foo_mark_class(void* ptr)
   struct FooClass* class = ptr;
   ENTER_TRACE("mark_class %p (%s)", class, class->name->data);
   assert(class);
-  if (class->gc && foo_mark_live(class)) {
+  if (class->header.gc && foo_mark_live(class)) {
     foo_mark_bytes(class->name);
     foo_mark_class(class->metaclass);
     foo_mark_pointers(class->inherited);
@@ -1357,7 +1361,7 @@ struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size
 
 struct Foo foo_File_new(struct FooBytes* pathname, size_t mode) {
   struct FooFile* file = foo_alloc(sizeof(struct FooFile));
-  file->gc = true;
+  file->header.gc = true;
   file->pathname = pathname;
   file->mode = mode;
   return (struct Foo){ .class = &FooClass_File, .datum = { .ptr = file } };
@@ -1366,7 +1370,7 @@ struct Foo foo_File_new(struct FooBytes* pathname, size_t mode) {
 struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size_t flags) {
   // FIXME: GC should close stream!
   struct FooFileStream* stream = foo_alloc(sizeof(struct FooFileStream));
-  stream->gc = true;
+  stream->header.gc = true;
   stream->pathname = file->pathname;
   const char* mode = NULL;
   if (flags == FooFile_OPEN && file->mode == FooFile_READ) {
