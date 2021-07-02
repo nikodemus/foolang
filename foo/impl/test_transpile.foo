@@ -1318,7 +1318,7 @@ class TestTranspileBacktrace { assert system }
                              direct method ok
                                  self ok2!
                          end"
-            expectError: "PANIC: Main class does not understand: #oops
+            expectError: "PANIC: Instances of Main class do not understand: #oops
 Backtrace:
   3: Aux interface#ok2 (Main class)
   2: Main class#ok
