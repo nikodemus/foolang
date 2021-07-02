@@ -123,9 +123,15 @@ struct FooSelector {
 #include "generated_selectors.h"
 
 struct FooSelector* foo_intern_new_selector(struct FooBytes* name) {
-  name->gc = false; // prevent GC of the name!
+  // Need to copy the name: list of selectors isn't scanned by
+  // GC, so if this becomes the only reference the memory would
+  // be released.
+  struct FooBytes* nameCopy = calloc(1, sizeof(struct FooBytes) + name->size + 1);
+  memcpy(nameCopy->data, name->data, name->size);
+  nameCopy->gc = false;
+  nameCopy->size = name->size;
   struct FooSelector* new = calloc(1, sizeof(struct FooSelector));
-  new->name = name;
+  new->name = nameCopy;
   new->next = FOO_InternedSelectors;
   FOO_InternedSelectors = new;
   return new;
