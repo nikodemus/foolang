@@ -581,7 +581,7 @@ const struct FooMethod* foo_class_find_method(struct FooContext* ctx,
       printf("- %s\n", method->selector->name->data);
     }
   }
-  foo_panicf(ctx, "%s does not understand: #%s", class->name->data, selector->name->data);
+  foo_panicf(ctx, "Instances of %s do not understand: #%s", class->name->data, selector->name->data);
 
  found:
 
