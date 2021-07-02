@@ -1303,7 +1303,8 @@ impl Object {
     // SEND
 
     pub fn send(&self, selector: &str, args: &[Object], env: &Env) -> Eval {
-        // println!("send: {} #{} {:?}", self, selector, args);
+        // let s = format!("send: {} #{} {:?}", self, selector, args);
+        // println!("{}", &s[0..std::cmp::min(80, s.len())]);
         match self.vtable.get(selector) {
             Some(m) => match &m {
                 Method::Primitive(method) => method(self, args, env),
