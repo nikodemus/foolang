@@ -647,7 +647,7 @@ class CTranspiler { output selectorMap closureFunctions
             with: { |out|
                     out println: "struct FooArray {cname} =".
                     out println: "\{".
-                    out println: "    .header = \{ .gc = false },".
+                    out println: "    .header = \{ .allocation = STATIC },".
                     out println: "    .size = {value size},".
                     out print: "    .data = \{ ".
                     value do: { |each|
@@ -668,7 +668,7 @@ class CTranspiler { output selectorMap closureFunctions
             with: { |out|
                     out println: "struct FooArray {cname} =".
                     out println: "\{".
-                    out println: "    .header = \{ .gc = false },".
+                    out println: "    .header = \{ .allocation = STATIC },".
                     out println: "    .size = {slots size},".
                     out print: "    .data = \{ ".
                     slots
@@ -686,7 +686,7 @@ class CTranspiler { output selectorMap closureFunctions
             with: { |out|
                     out println: "struct FooArray {cname} =".
                     out println: "\{".
-                    out println: "    .header = \{ .gc = false },".
+                    out println: "    .header = \{ .allocation = STATIC },".
                     out println: "    .size = {Record sizeOf: value},".
                     out print: "    .data = \{ ".
                     value do: { |each|
@@ -711,7 +711,7 @@ class CTranspiler { output selectorMap closureFunctions
                         do: { |each| self _printStringAsComment: each to: out }.
                     out println: "struct FooBytes {cname} =".
                     out println: "\{".
-                    out println: "    .header = \{ .gc = false },".
+                    out println: "    .header = \{ .allocation = STATIC },".
                     out println: "    .size = {value size},".
                     out print: "    .data = \{ ".
                     value do: { |each|
@@ -832,7 +832,7 @@ class CTranspiler { output selectorMap closureFunctions
         -- could/should intern them.
         let name = "FooLayout_{aClass name}".
         output println: "struct FooLayout {name} = \{".
-        output println: "    .header = \{ .gc = false },".
+        output println: "    .header = \{ .allocation = STATIC },".
         output println: "    .mark = foo_mark_oops,".
         output println: "    .size = {aClass slots size}".
         output println: "};".
@@ -849,7 +849,7 @@ class CTranspiler { output selectorMap closureFunctions
         forMetaclass
             ifTrue: { interfaces add: (env global: "Class") }.
         output println: "struct FooPointerList {inheritance} = \{".
-        output println: "    .header = \{ .gc = false },".
+        output println: "    .header = \{ .allocation = STATIC },".
         output println: "    .mark = foo_mark_class,".
         output println: "    .size = {interfaces size},".
         output println: "    .data = \{".
@@ -891,7 +891,7 @@ class CTranspiler { output selectorMap closureFunctions
         let metaclassNameString = "{anInterface name} interface".
         output println: "struct FooClass {metaclassName} = ".
         output println: "\{".
-        output println: "    .header = \{ .gc = false },".
+        output println: "    .header = \{ .allocation = STATIC },".
         output println: "    .name = &{self constantCName: metaclassNameString in: env}, // {metaclassNameString}".
         output println: "    .metaclass = &FooClass_Class,".
         output println: "    .inherited = &{metaclassInheritance},".
@@ -914,7 +914,7 @@ class CTranspiler { output selectorMap closureFunctions
         -- FIXME: for runtime instantiation of classes we need to add the instance methods here!
         output println: "struct FooClass {className} = ".
         output println: "\{".
-        output println: "    .header = \{ .gc = false },".
+        output println: "    .header = \{ .allocation = STATIC },".
         output println: "    .name = &{self constantCName: anInterface name in: env}, // {anInterface name}".
         output println: "    .metaclass = &{metaclassName},".
         output println: "    .inherited = &{classInheritance},".
@@ -1036,7 +1036,7 @@ class CTranspiler { output selectorMap closureFunctions
                        let metaclassNameString = "{aClass name} class".
                        output println: "struct FooClass {metaclassName} = ".
                        output println: "\{".
-                       output println: "    .header = \{ .gc = false },".
+                       output println: "    .header = \{ .allocation = STATIC },".
                        output println: "    .name = &{self constantCName: metaclassNameString in: env}, // {metaclassNameString}".
                        output println: "    .metaclass = &FooClass_Class,".
                        output println: "    .inherited = &{metaclassInheritance},".
@@ -1063,7 +1063,7 @@ class CTranspiler { output selectorMap closureFunctions
         -- Debug println: "{aClass} => {aClass markFunction}".
         output println: "struct FooClass {className} = ".
         output println: "\{".
-        output println: "    .header = \{ .gc = false },".
+        output println: "    .header = \{ .allocation = STATIC },".
         output println: "    .name = &{self constantCName: aClass name in: env}, // {aClass name}".
         output println: "    .metaclass = &{metaclassName},".
         output println: "    .inherited = &{classInheritance},".
