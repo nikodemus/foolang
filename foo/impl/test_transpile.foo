@@ -1008,6 +1008,20 @@ Backtrace:
   1: Main class#run:in:
 "!
 
+    method test_Put_at_cannot_modify_global_ByteArray
+        self transpile: "define ThisIsStatic [ByteArray new: 1]!
+                         class Main \{}
+                             direct method run: command in: system
+                                 let bytes :: ByteArray = ThisIsStatic at: 1.
+                                 bytes put: 0 at: 1.
+                                 system output writeString: \"OOPS MODIFIED A GLOBAL!\"!
+                         end"
+            expectError: "PANIC: Cannot modify constant object!
+Backtrace:
+  2: ByteArray#put:at:
+  1: Main class#run:in:
+"!
+
     method test_At_put_cannot_modify_global_nested_array
         self transpile: "define ThisIsStatic [[1], 2, 3]!
                          class Main \{}

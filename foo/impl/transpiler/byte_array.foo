@@ -29,9 +29,10 @@ printf(\">\");
 return ctx->receiver;"},
     #put:at:
         -> {signature: [Integer, Integer], vars: 0,
-            body: "int64_t value = ctx->frame[0].datum.int64;
+            body: "struct FooBytes* b = PTR(FooBytes, ctx->receiver.datum);
+foo_check_modification(ctx, (struct FooHeader*)b);
+int64_t value = ctx->frame[0].datum.int64;
 assert((value & 0xff) >= 0 && value <= 255);
-struct FooBytes* b = PTR(FooBytes, ctx->receiver.datum);
 int64_t index = ctx->frame[1].datum.int64;
 assert(index > 0);
 assert(index <= b->size);
