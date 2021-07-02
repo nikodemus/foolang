@@ -28,7 +28,7 @@ define InstanceMethods
                      foo_panicf(ctx, \"Superclass has no layout: %s\", super->name->data);
                  \}
 
-                 newclass->header.gc = true;
+                 newclass->header.allocation = HEAP;
                  newclass->name = PTR(FooBytes, ctx->frame[0].datum);
                  newclass->metaclass = super->metaclass;
                  newclass->inherited = inherited;
@@ -80,7 +80,7 @@ define InstanceMethods
                      inherited->data[i] = obj.datum.ptr;
                  }
 
-                 newclass->header.gc = true;
+                 newclass->header.allocation = HEAP;
                  newclass->name = PTR(FooBytes, ctx->frame[0].datum);
                  newclass->metaclass = PTR(FooClass, ctx->receiver.datum);
                  newclass->inherited = inherited;

@@ -98,8 +98,13 @@ struct Foo {
   union FooDatum datum;
 };
 
+enum FooAllocType {
+  STATIC,
+  HEAP
+};
+
 struct FooHeader {
-  bool gc;
+  enum FooAllocType allocation;
 };
 
 struct FooBytes {
@@ -111,7 +116,7 @@ struct FooBytes {
 #define FOO_CSTRING(literal) \
   ((struct FooBytes*) \
   &((struct { struct FooHeader header; size_t size; const char data[sizeof(literal)]; }) \
-     { .header = { .gc = false }, .size = sizeof(literal)-1, .data = literal }))
+     { .header = { .allocation = STATIC }, .size = sizeof(literal)-1, .data = literal }))
 
 bool foo_bytes_equal(const struct FooBytes* a, const struct FooBytes* b) {
   return a->size == b->size && !memcmp(a->data, b->data, a->size);
@@ -132,7 +137,7 @@ struct FooSelector* foo_intern_new_selector(struct FooBytes* name) {
   // be released.
   struct FooBytes* nameCopy = calloc(1, sizeof(struct FooBytes) + name->size + 1);
   memcpy(nameCopy->data, name->data, name->size);
-  nameCopy->header.gc = false;
+  nameCopy->header.allocation = STATIC;
   nameCopy->size = name->size;
   struct FooSelector* new = calloc(1, sizeof(struct FooSelector));
   new->name = nameCopy;
@@ -398,7 +403,7 @@ struct FooPointerList* foo_ClassList_alloc(size_t size) {
   struct FooPointerList* list
     = foo_alloc(sizeof(struct FooPointerList)
                 + size * sizeof(void*));
-  list->header.gc = true;
+  list->header.allocation = HEAP;
   list->mark = foo_mark_class;
   list->size = size;
   return list;
@@ -411,13 +416,13 @@ struct FooLayout {
 };
 
 struct FooLayout TheEmptyLayout = {
-  .header = { .gc = false },
+  .header = { .allocation = STATIC },
   .mark = foo_mark_none,
   .size = 0
 };
 
 struct FooLayout TheClassLayout = {
-  .header = { .gc = false },
+  .header = { .allocation = STATIC },
   .mark = foo_mark_none,
   .size = 0
 };
@@ -432,7 +437,7 @@ struct FooLayout* foo_FooLayout_new(size_t size) {
   if (size == 0)
     return &TheEmptyLayout;
   struct FooLayout* layout = foo_alloc(sizeof(struct FooLayout));
-  layout->header.gc = true;
+  layout->header.allocation = HEAP;
   layout->mark = foo_mark_array;
   layout->size = size;
   return layout;
@@ -915,14 +920,14 @@ struct FooProcessTimes* FooProcessTimes_new(double user, double system, double r
 
 struct FooArray* FooArray_alloc(size_t size) {
   struct FooArray* array = foo_alloc(sizeof(struct FooArray) + size*sizeof(struct Foo));
-  array->header.gc = true;
+  array->header.allocation = HEAP;
   array->size = size;
   return array;
 }
 
 struct FooArray* FooInstance_alloc(size_t size) {
   struct FooArray* array = foo_alloc(sizeof(struct FooArray) + size*sizeof(struct Foo));
-  array->header.gc = true;
+  array->header.allocation = HEAP;
   array->size = size;
   return array;
 }
@@ -960,7 +965,7 @@ struct Foo foo_Float_new(double f) {
 
 struct FooBytes* FooBytes_alloc(size_t len) {
   struct FooBytes* bytes = (struct FooBytes*)foo_alloc(sizeof(struct FooBytes) + len + 1);
-  bytes->header.gc = true;
+  bytes->header.allocation = HEAP;
   bytes->size = len;
   return bytes;
 }
@@ -1060,12 +1065,10 @@ void foo_mark_ptr(void* ptr) {
   EXIT_TRACE();
 }
 
-// FIXME: Move bytes->gc, etc into allocation header, allocating
-// global objects as (struct Allocation){ .gc = false, ... }.
 void foo_mark_bytes(void* ptr) {
   ENTER_TRACE("mark_bytes");
   struct FooBytes* bytes = ptr;
-  if (bytes->header.gc) {
+  if (bytes->header.allocation == HEAP) {
     foo_mark_live(ptr);
   }
   EXIT_TRACE();
@@ -1074,7 +1077,7 @@ void foo_mark_bytes(void* ptr) {
 void foo_mark_file(void* ptr) {
   ENTER_TRACE("mark_file");
   struct FooFile* file = ptr;
-  if (file->header.gc && foo_mark_live(file)) {
+  if (file->header.allocation == HEAP && foo_mark_live(file)) {
     foo_mark_bytes(file->pathname);
   }
   EXIT_TRACE();
@@ -1083,7 +1086,7 @@ void foo_mark_file(void* ptr) {
 void foo_mark_filestream(void* ptr) {
   ENTER_TRACE("mark_bytes");
   struct FooFileStream* stream = ptr;
-  if (stream->header.gc && foo_mark_live(stream))  {
+  if (stream->header.allocation == HEAP && foo_mark_live(stream))  {
     foo_mark_bytes(stream->pathname);
   }
   EXIT_TRACE();
@@ -1113,7 +1116,7 @@ void foo_mark_oops(void* ptr) {
 void foo_mark_array(void* ptr) {
   ENTER_TRACE("mark_array");
   struct FooArray* array = ptr;
-  if (array->header.gc && foo_mark_live(array)) {
+  if (array->header.allocation == HEAP && foo_mark_live(array)) {
     for (size_t i = 0; i < array->size; i++) {
       foo_mark_object(array->data[i]);
     }
@@ -1124,7 +1127,7 @@ void foo_mark_array(void* ptr) {
 void foo_mark_instance(void* ptr) {
   ENTER_TRACE("mark_instance");
   struct FooArray* array = ptr;
-  if (array->header.gc && foo_mark_live(array)) {
+  if (array->header.allocation == HEAP && foo_mark_live(array)) {
     for (size_t i = 0; i < array->size; i++) {
       foo_mark_object(array->data[i]);
     }
@@ -1140,7 +1143,7 @@ void foo_mark_layout(void* ptr) {
   (void)is_class;
   ENTER_TRACE("mark_layout (%s)",
               is_empty ? "empty" : (is_class ? "class" : "object"));
-  if (layout->header.gc) {
+  if (layout->header.allocation == HEAP) {
     foo_mark_live(layout);
   }
   EXIT_TRACE();
@@ -1149,7 +1152,7 @@ void foo_mark_layout(void* ptr) {
 void foo_mark_pointers(void* ptr) {
   struct FooPointerList* list = ptr;
   ENTER_TRACE("mark_pointers %p (size=%zu)", list, list->size);
-  if (list->header.gc && foo_mark_live(list)) {
+  if (list->header.allocation == HEAP && foo_mark_live(list)) {
     for (size_t i = 0; i < list->size; i++) {
       list->mark(list->data[i]);
     }
@@ -1162,7 +1165,7 @@ void foo_mark_class(void* ptr)
   struct FooClass* class = ptr;
   ENTER_TRACE("mark_class %p (%s)", class, class->name->data);
   assert(class);
-  if (class->header.gc && foo_mark_live(class)) {
+  if (class->header.allocation == HEAP && foo_mark_live(class)) {
     foo_mark_bytes(class->name);
     foo_mark_class(class->metaclass);
     foo_mark_pointers(class->inherited);
@@ -1361,7 +1364,7 @@ struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size
 
 struct Foo foo_File_new(struct FooBytes* pathname, size_t mode) {
   struct FooFile* file = foo_alloc(sizeof(struct FooFile));
-  file->header.gc = true;
+  file->header.allocation = HEAP;
   file->pathname = pathname;
   file->mode = mode;
   return (struct Foo){ .class = &FooClass_File, .datum = { .ptr = file } };
@@ -1370,7 +1373,7 @@ struct Foo foo_File_new(struct FooBytes* pathname, size_t mode) {
 struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size_t flags) {
   // FIXME: GC should close stream!
   struct FooFileStream* stream = foo_alloc(sizeof(struct FooFileStream));
-  stream->header.gc = true;
+  stream->header.allocation = HEAP;
   stream->pathname = file->pathname;
   const char* mode = NULL;
   if (flags == FooFile_OPEN && file->mode == FooFile_READ) {
