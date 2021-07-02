@@ -10,17 +10,19 @@ interface Ast
         False!
 end
 
-class AstBuiltin { value }
+class AstBuiltin { global value }
     is Object
 
     method eval
-        value!
+        global hasValue
+            ifTrue: { global eval }
+            ifFalse: { global value: value }!
 
     method isBuiltin
         True!
 
     method ownInterfaces
-        value interfaces collect: { |each| { eval: each } }!
+        value interfaces collect: { |each| { value: each } }!
 
     method visitBy: visitor
         visitor visitBuiltin: self!
@@ -35,79 +37,26 @@ class AstBuiltin { value }
         value __addInstanceMethod: anInstanceMethod!
 end
 
-interface AstDefinition
+interface AstToplevel
     is Object
-
-    method eval
-        Error raise: "{self classOf name}#eval -- should not happend!"!
-
-    method defineIn: env
-        Error raise: "{self classOf name}#defineIn: -- should not happen!"!
 
     method isBuiltin
         False!
 
     method isDynamic
         False!
-
-    method allocGlobal
-        let name = self name.
-        self isDynamic
-            ifTrue: { AstDynamic name: name }
-            ifFalse: { AstGlobal name: name }!
-end
-
-class AstDefinitionList { list }
-    is AstDefinition
-
-    direct method new: list
-        self
-            list: list!
-
-    method allocGlobal
-        panic "No global for AstDefinitionList"!
-
-    method defineIn: env
-        list do: { |each| each defineIn: env }!
-end
-
-class AstDefine { name body frameSize isDynamic env }
-    is AstDefinition
-
-    direct method name: name
-                  body: body
-                  frameSize: frameSize
-                  isDynamic: isDynamic
-        self name: name
-             body: body
-             frameSize: frameSize
-             isDynamic: isDynamic
-             env: False!
-
-    method defineIn: defEnv
-        env = defEnv.
-        defEnv define: name as: self!
-
-    method eval
-        AstInterpreter evalDefine: body frameSize: frameSize!
-
-    method toString
-        "#<AstDefine {self name}>"!
-
-    method visitBy: visitor
-        visitor visitDefine: self!
 end
 
 -- FIXME: Would it be better to have ImportDescription and
 -- compose that into both AstImport and SyntaxImport?
 class AstImport { syntax }
-    is AstDefinition
+    is AstToplevel
 
     method defineIn: env
         let name = self name.
         name is False
             => { return env import: self module
-                                 relative: self relative }.
+                            relative: self relative }.
         name == "*"
             => { return env importAll: self module
                             relative: self relative }.
@@ -133,7 +82,7 @@ class AstImport { syntax }
 end
 
 class AstExtend { type interfaces directMethods instanceMethods }
-    is AstDefinition
+    is AstToplevel
 
     method defineIn: env
         -- FIXME: This should use a mirror for host, or
@@ -188,8 +137,7 @@ interface AstMethodHome
         -- Order is important, so these must be kept in a list!
         let interfaces = self _interfaces.
         (interfaces contains: anInterface)
-            ifTrue: { -- Debug println: "FOO: {self name} already {anInterface}".
-                      return False }.
+            ifTrue: { return False }.
         self _interfaces push: anInterface!
 
     method directMethods: methods
@@ -211,13 +159,13 @@ interface AstMethodHome
         self _interfaces!
 
     method interfaceDefinitions
-        self allInterfaces collect: #definition!
+        self allInterfaces collect: #definition as: Array!
 
     method interfaceGlobals
-        self allInterfaces collect: #yourself!
+        self allInterfaces collect: #yourself as: Array!
 
     method interfaceObjects
-        self allInterfaces collect: #eval!
+        self allInterfaces collect: #eval as: Array!
 
     method _ownDirectMethods
         let dict = Dictionary new.
@@ -274,25 +222,85 @@ interface AstMethodHome
             values: methods!
 end
 
-class AstInterface { name _interfaces _directMethods _instanceMethods _allInterfaces }
+interface AstDefinition
+    is AstToplevel
+
+    method idOr: block
+        self global idOr: block!
+
+    method defineIn: env
+        self global isDefined assert: "undefined global: {self}"!
+
+    method definition
+        self!
+end
+
+class AstDefine { global body frameSize }
+    is AstDefinition
+
+    direct method name: name
+                  body: body
+                  frameSize: frameSize
+                  env: env
+        let global = env global: name.
+        let theDefine = self global: global
+                             body: body
+                             frameSize: frameSize.
+        global define: theDefine.
+        theDefine!
+
+    method name
+        global name!
+
+    method isDynamic
+        global isDynamic!
+
+    method eval
+        global hasValue
+            ifTrue: { return global eval }.
+        let result = AstInterpreter
+                         evalDefine: body
+                         frameSize: frameSize.
+        global value: result!
+
+    method toString
+        "#<AstDefine {self name}>"!
+
+    method visitBy: visitor
+        visitor visitDefine: self!
+end
+
+class AstInterface { name _interfaces _directMethods _instanceMethods _allInterfaces
+                     global _env }
     is AstDefinition
     is AstMethodHome
 
     direct method name: name
                   interfaces: interfaces
-        self
-            name: name
-            _interfaces: interfaces
-            _directMethods: False
-            _instanceMethods: False
-            _allInterfaces: False!
+                  env: env
+        let global = env global: name.
+        let theInterface = self
+                               name: name
+                               _interfaces: interfaces
+                               _directMethods: False
+                               _instanceMethods: False
+                               _allInterfaces: False
+                               global: global
+                               _env: env.
+        global define: theInterface.
+        theInterface!
 
     method eval
-        Interface
-            new: name
-            interfaces: self interfaceObjects asArray
-            directMethods: self ownDirectMethods
-            instanceMethods: self ownInstanceMethods!
+        global hasValue
+            ifTrue: { return global eval }.
+        { let result = Interface
+                           new: name
+                           interfaces: self interfaceObjects
+                           directMethods: self ownDirectMethods
+                           instanceMethods: self ownInstanceMethods.
+          _env classes at: result put: self.
+          global value: result }
+        finally: { _env = False }!
 
     method _interfaces
         _interfaces!
@@ -322,9 +330,6 @@ class AstInterface { name _interfaces _directMethods _instanceMethods _allInterf
     method _instanceMethods: methods
         _instanceMethods = methods!
 
-    method defineIn: env
-        env define: name as: self!
-
     method visitBy: visitor
         visitor visitInterfaceDefinition: self!
 
@@ -332,33 +337,47 @@ class AstInterface { name _interfaces _directMethods _instanceMethods _allInterf
         "#<AstInterface {name}>"!
 end
 
-class AstClass { name superclass _slots _interfaces _directMethods _instanceMethods _allInterfaces }
+class AstClass { name superclass _slots
+                 _interfaces _directMethods _instanceMethods
+                 _allInterfaces global _env }
     is AstDefinition
     is AstMethodHome
 
     direct method name: name
                   slots: slots
                   interfaces: interfaces
-        self
-            name: name
-            superclass: False
-            _slots: slots
-            _interfaces: interfaces
-            _directMethods: False
-            _instanceMethods: False
-            _allInterfaces: False!
+                  env: env
+        let global = env global: name.
+        let theClass = self
+                           name: name
+                           superclass: False
+                           _slots: slots
+                           _interfaces: interfaces
+                           _directMethods: False
+                           _instanceMethods: False
+                           _allInterfaces: False
+                           global: global
+                           _env: env.
+        global define: theClass.
+        theClass!
 
     direct method name: name
                   superclass: superclass
                   interfaces: interfaces
-        self
-            name: name
-            superclass: superclass
-            _slots: False
-            _interfaces: ([superclass] append: interfaces)
-            _directMethods: False
-            _instanceMethods: False
-            _allInterfaces: False!
+                  env: env
+        let global = env global: name.
+        let theClass = self
+                           name: name
+                           superclass: superclass
+                           _slots: False
+                           _interfaces: ([superclass] append: interfaces)
+                           _directMethods: False
+                           _instanceMethods: False
+                           _allInterfaces: False
+                           global: global
+                           _env: env.
+        global define: theClass.
+        theClass!
 
     method ifSuperclass: then ifNot: else
         superclass is False
@@ -409,30 +428,34 @@ class AstClass { name superclass _slots _interfaces _directMethods _instanceMeth
                  collect: { |each|
                             AstReaderMethod home: self slot: each })!
 
-    method defineIn: env
-        env define: name as: self!
-
     method eval
-        Foolang isSelfHosted
-            ifTrue: { let layout = Layout new: (self slots size).
-                      let metaclass = Class subclass: "{name} class"
-                                            interfaces: [] -- FIXME
-                                            methods: self ownDirectMethods asArray.
-                      metaclass new: name
-                                layout: layout
-                                interfaces: [] -- FIXME
-                                methods: [] -- FIXME
-                      }
-            ifFalse: { Class
-                           new: name
-                           slots: (self slots
-                                       collect: { |each|
-                                                  { name: each name,
-                                                    type: each type } }
-                                       as: Array)
-                           interfaces: self interfaceObjects asArray
-                           directMethods: self ownDirectMethods
-                           instanceMethods: self ownInstanceMethods }!
+        global hasValue
+            ifTrue: {
+                return global eval }.
+        { let result
+              = Foolang isSelfHosted
+                  ifTrue: { let layout = Layout new: (self slots size).
+                            let metaclass = Class subclass: "{name} class"
+                                                  interfaces: [] -- FIXME
+                                                  methods: self ownDirectMethods asArray.
+                            -- FIXME interfaces and methods below
+                            metaclass new: name
+                                      layout: layout
+                                      interfaces: []
+                                      methods: [] }
+                  ifFalse: { Class
+                                 new: name
+                                 slots: (self slots
+                                             collect: { |each|
+                                                        { name: each name,
+                                                          type: each type } }
+                                             as: Array)
+                                 interfaces: self interfaceObjects
+                                 directMethods: self ownDirectMethods
+                                 instanceMethods: self ownInstanceMethods }.
+          _env classes put: self at: result.
+          global value: result }
+        finally: { _env = False }!
 
     method constructor
         self slots
@@ -622,34 +645,35 @@ class AstDictionary { entries }
         entries!
 end
 
-class AstValueMarker { string }
-    is Object
-    method toString
-        string!
-end
-
-define AstUndefined AstValueMarker string: "<undefined>"!
-define AstPending AstValueMarker string: "<pending>"!
-define AstInProgress AstValueMarker string: "<in-progress>"!
+define _Unevaluated { name: "<unevaluated>" }!
+define _BeingEvaluated { name: "<being-evaluated>" }!
+define _Evaluated { name: "<evaluated>" }!
 
 interface AstGlobalVariable
     is AstNode
 
     direct method name: name
-        -- Debug println: "{self name}#name: {name}".
         self
             name: name
-            _value: AstUndefined
+            _id: False
+            _value: False
+            _state: _Unevaluated
             _definition: False
             sources: List new!
 
     direct method name: name definition: definition
-        -- Debug println: "{self name}#name: {name} (defined)".
         self
             name: name
-            _value: AstPending
+            _id: False
+            _value: False
+            _state: _Unevaluated
             _definition: definition
             sources: List new!
+
+    method isBuiltin
+        self isDefined
+            ifTrue: { self _definition isBuiltin }
+            ifFalse: { False }!
 
     method isImmediate
         True!
@@ -661,39 +685,43 @@ interface AstGlobalVariable
         self isUndefined not!
 
     method definition
-        self assertDefined: True.
+        self assertDefined: True in: "#definition".
         self _definition!
 
     method define: definition
-        -- Debug println: "AstGlobalVariable#define: {name}".
-        self assertDefined: False.
-        self _value: AstPending.
+        self assertDefined: False in: "#define:".
         self _definition: definition.
-        self isDefined assert!
+        self isDefined assert: "invalid definition for global".
+        definition!
 
-    method assertDefined: wanted
+    method assertDefined: wanted in: where
         self isDefined is wanted
             ifFalse: { wanted
-                           ifTrue: { Error raise: self noteUndefined }
-                           ifFalse: { Error raise: "Global is already defined: {self name}" } }!
+                           ifTrue: { Error raise: "{self noteUndefined} (in {where})" }
+                           ifFalse: { Error raise: "Global is already defined: {self name} (in {where})" } }!
 
-    method value
-        self assertDefined: True.
-        self _value is AstInProgress
-            ifTrue: { Error raise: "Cyclic definition: {self name}" }.
-        self _value is AstPending
-            ifTrue: { self _value: AstInProgress.
-                      self _value: self _definition eval }.
+    method eval
+        self _state is _Evaluated
+            ifFalse: { self assertDefined: True in: "#eval".
+                       self _state is _BeingEvaluated
+                           ifTrue: { Error raise: "Cyclic definition: {self name}" }.
+                       self _state: _BeingEvaluated.
+                       self _definition eval.
+                       self _state is _Evaluated
+                           assert: "Evaluating definition did not set global" }.
         self _value!
 
+    method value: value
+        self hasValue not
+            assert: "Cannot set value of global: already has value".
+        self isDefined
+            assert: "Cannot set value of global: undefined".
+        self _value: value.
+        self _state: _Evaluated.
+        value!
+
     method hasValue
-        self _value is AstUndefined
-            ifTrue: { return False }.
-        self _value is AstInProgress
-            ifTrue: { return False }.
-        self _value is AstPending
-            ifTrue: { return False }.
-        return True!
+        self _state is _Evaluated!
 
     method isConstant
         True!
@@ -702,12 +730,7 @@ interface AstGlobalVariable
         self!
 
     method toString
-        "#<{self classOf name} {self name}: {self _info}>"!
-
-    method _info
-        self isUndefined
-            ifTrue: { "<undefined>" }.
-        self _value!
+        "#<{self classOf name} {self name} {self _state name} ({self _id})>"!
 
     method noteUndefined
         self sources
@@ -724,14 +747,37 @@ interface AstGlobalVariable
         self!
 end
 
-class AstGlobal { name::String _value _definition sources }
+class AstGlobal { name::String _id _value _state _definition sources }
     is AstGlobalVariable
+
+    method isDynamic
+        False!
+
+    method _id
+        _id!
+
+    method idOr: block
+        -- A bit of a KLUDGE: builtin globals have definitions
+        -- in main.c, and we want their names to be consistent.
+        --
+        -- See also: CompilerBuiltin#idOr:
+        self isBuiltin
+            ifTrue: { _id = "" }.
+        _id is False
+            ifTrue: { _id = block value }
+            ifFalse: { _id }!
 
     method _value: new
         _value = new!
 
     method _value
         _value!
+
+    method _state: new
+        _state = new!
+
+    method _state
+        _state!
 
     method _definition: new
         _definition = new!
@@ -742,17 +788,8 @@ class AstGlobal { name::String _value _definition sources }
     method visitBy: visitor
         visitor visitGlobal: self!
 
-    method isDynamic
-        False!
-
-    method isBuiltin
-        _definition isBuiltin!
-
     method ownInterfaces
         self definition ownInterfaces!
-
-    method eval
-        self value!
 
     method assign: value
         panic "Cannot assign to global! {name} = {value}"!
@@ -760,28 +797,41 @@ class AstGlobal { name::String _value _definition sources }
     -- KLUDGE: Currently types are either Any or AstGlobals. This is marginally
     -- than the previous mess, but still not nice.
     method typecheck: object
-        self value typecheck: object!
+        self eval typecheck: object!
 
     method redefine: newDefinition
+        self hasValue not
+            assert: "Cannot redefine a materialized global".
         -- FIXME: This is a bit dodgy: the usage is currently for replacing
         -- host definitions of builtins in transpiler, but it seems to me that
         -- value should be updated too if it has been materialized...
         --
         -- (See #redefineUsing:)
-        _definition = newDefinition!
+        _definition = newDefinition.
+        newDefinition global: self.
+        newDefinition!
 
     method redefineUsing: global
         _definition = global definition.
         sources = global sources.
-        self hasValue
-                ifTrue: { global hasValue
-                              ifTrue: { _value = global value }
-                              ifFalse: { _value =  AstPending } }!
+        global hasValue
+            ifTrue: { self value: global eval }!
 
 end
 
-class AstDynamic { name::String _value _definition sources }
+class AstDynamic { name::String _id _value _state _definition sources }
     is AstGlobalVariable
+
+    method isDynamic
+        True!
+
+    method _id
+        _id!
+
+    method idOr: block
+        _id is False
+            ifTrue: { _id = block value }
+            ifFalse: { _id }!
 
     method _definition
         _definition!
@@ -795,6 +845,12 @@ class AstDynamic { name::String _value _definition sources }
     method _value: new
         _value = new!
 
+    method _state
+        _state!
+
+    method _state: new
+        _state = new!
+
     method bind: newValue in: block
         let oldValue = _value.
         _value = newValue.
@@ -803,12 +859,9 @@ class AstDynamic { name::String _value _definition sources }
 
     method visitBy: visitor
         visitor visitDynamic: self!
-
-    method isDynamic
-        True!
 end
 
-class AstConstantRef { value env }
+class AstConstantRef { value source }
     is AstNode
 
     method isImmediate

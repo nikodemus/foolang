@@ -33,12 +33,15 @@ class SyntaxTranslator { env currentMethod }
         self child: (env addVariable: name type: type)!
 
     method visitSelector: aSelector
-        AstConstantRef value: (Selector intern: aSelector name)
-                       env: env!
+        AstConstantRef
+            value: (Selector intern: aSelector name)
+            source: aSelector source!
 
     method visitLiteral: aLiteral
         -- Tracer trace: #visitLiteral:.
-        AstConstantRef value: aLiteral value env: env!
+        AstConstantRef
+            value: aLiteral value
+            source: aLiteral source!
 
     method visitStringInterpolation: anInterpolation
         let parts
@@ -191,8 +194,8 @@ class SyntaxTranslator { env currentMethod }
             withSource: aVariable source!
 
     method visitDynamicVariable: aVariable
-        -- Tracer trace: #visitDynamicVariable:.
-        (env dynamic: aVariable name)
+        -- Tracer visitDynamicVariable: aVariable.
+        (env global: aVariable name)
             withSource: aVariable source!
                 
     method visitInterfaceRef: aRef
@@ -200,7 +203,7 @@ class SyntaxTranslator { env currentMethod }
         aRef name visitBy: self!
 
     method visitAssign: anAssign
-        Tracer visitAssign: anAssign.
+        -- Tracer visitAssign: anAssign.
         (anAssign variable visitBy: self)
             assign: (anAssign value visitBy: self)!
 
@@ -223,13 +226,14 @@ class SyntaxTranslator { env currentMethod }
             frameSize: bodyEnv frame size!
 
     method visitDefine: aDefine
-        Tracer visitDefine: aDefine variable name.
+        Tracer visitDefine: aDefine.
+        let name = aDefine variable name.
         let bodyVisitor = self child: env newFrame.
         AstDefine
-            name: aDefine variable name
+            name: name
             body: (aDefine body visitBy: bodyVisitor)
             frameSize: bodyVisitor env frame size
-            isDynamic: aDefine variable isDynamic!
+            env: env!
 
     method visitImport: anImport
         AstImport syntax: anImport!
@@ -279,7 +283,7 @@ class SyntaxTranslator { env currentMethod }
             ifFalse: { self _visitSubClass: aClass }!
 
     method _visitNewClass: aClass
-        Tracer _visitNewClass: aClass name.
+        -- Tracer _visitNewClass: aClass.
         let n = 0.
         let slots = aClass slots collect: { |each::Syntax|
                                             n = n + 1.
@@ -290,7 +294,8 @@ class SyntaxTranslator { env currentMethod }
         let theClass = AstClass
                            name: aClass name
                            slots: slots
-                           interfaces: (self _visitEach: aClass interfaces).
+                           interfaces: (self _visitEach: aClass interfaces)
+                           env: env.
         let $MethodHome = theClass.
         theClass directMethods: (self _visitEach: aClass directMethods).
         let instanceMethodVisitor = self child: (env addSlots: slots).
@@ -298,30 +303,31 @@ class SyntaxTranslator { env currentMethod }
         theClass!
 
     method _visitSubClass: aClass
-        Tracer _visitSubClass: aClass name.
+        -- Tracer _visitSubClass: aClass.
         let theClass = AstClass
                            name: aClass name
                            superclass: (aClass superclass visitBy: self)
-                           interfaces: (self _visitEach: aClass interfaces).
+                           interfaces: (self _visitEach: aClass interfaces)
+                           env: env.
         let $MethodHome = theClass.
         theClass directMethods: (self _visitEach: aClass directMethods).
         let instanceMethodVisitor = self child: env.
         theClass instanceMethods: (instanceMethodVisitor _visitEach: aClass instanceMethods).
         theClass!
 
-
     method visitInterface: anInterface
-        Tracer visitInterface: anInterface name.
+        Tracer visitInterface: anInterface.
         let theInterface = AstInterface
                                name: anInterface name
-                               interfaces: (self _visitEach: anInterface interfaces).
+                               interfaces: (self _visitEach: anInterface interfaces)
+                               env: env.
         let $MethodHome = theInterface.
         theInterface directMethods: (self _visitEach: anInterface directMethods).
         theInterface instanceMethods: (self _visitEach: anInterface instanceMethods).
         theInterface!
 
     method visitExtend: anExtend
-        Tracer trace: #visitExtend:.
+        Tracer visitExtend: anExtend.
         let type = env reference: anExtend name.
         let $MethodHome = type definition.
         AstExtend

@@ -196,10 +196,10 @@ class AstInterpreter { context process }
         theDictionary!
 
     method visitGlobal: aVar
-        aVar value!
+        aVar eval!
 
     method visitDynamic: aVar
-        aVar value!
+        aVar eval!
 
     method visitIs: anIs
         (anIs left visitBy: self) is (anIs right visitBy: self)!
@@ -220,7 +220,7 @@ class AstInterpreter { context process }
         let arguments = aSend arguments collect: { |arg| arg visitBy: self }.
         let $context = context.
         let $process = process.
-        -- Debug println: "<- {selector}".
+        -- Debug println: "{object} {selector}".
         { selector sendTo: object with: arguments asArray }
             on: DoesNotUnderstand
             do: { |ex|

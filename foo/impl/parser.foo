@@ -75,7 +75,10 @@ class TokenString { string first last }
         whileTrue: { next = self _scanCharFrom: next into: literal }.
 
         from is next
-            ifFalse: { parts add: (SyntaxLiteral value: literal content) }.
+            ifFalse: { parts
+                           add: (SyntaxLiteral
+                                     value: literal content
+                                     source: False) }.
         next!
 
     method _interpolatedFrom: next into: parts
@@ -91,7 +94,9 @@ class TokenString { string first last }
     method parseAsPrefixWith: parser atPrecedence: _precedence
         -- Debug println: "parse string: '{string}'".
         string size is 2 -- just ""
-            ifTrue: { return SyntaxLiteral value: "" }.
+            ifTrue: { return SyntaxLiteral
+                          value: ""
+                          source: (parser sourceFrom: first to: last)}.
         let parts = List new.
         let next = 2.
         { next < string size }
@@ -109,7 +114,8 @@ class TokenFloat { string first last }
     method parseAsPrefixWith: parser atPrecedence: _precedence
         SyntaxFloatLiteral
             string: string
-            value: (Float parse: string)!
+            value: (Float parse: string)
+            source: (parser sourceFrom: first to: last)!
 end
 
 class TokenDecimalInteger { string first last }
@@ -122,7 +128,9 @@ class TokenDecimalInteger { string first last }
         1 to: string size
           do: { |pos|
                 n = n * 10 + (string at: pos) digit }.
-        SyntaxLiteral value: n!
+        SyntaxLiteral
+            value: n
+            source: (parser sourceFrom: first to: last)!
 end
 
 class TokenHexInteger { string first last }
@@ -136,7 +144,10 @@ class TokenHexInteger { string first last }
           do: { |pos|
                 n = n * 16 + ((string at: pos) digit: 16) }.
         -- Want to retain the format info, hence not SyntaxLiteral.
-        SyntaxHexLiteral string: string value: n!
+        SyntaxHexLiteral
+            string: string
+            value: n
+            source: (parser sourceFrom: first to: last)!
 end
 
 class TokenBinaryInteger { string first last }
@@ -150,7 +161,10 @@ class TokenBinaryInteger { string first last }
           do: { |pos|
                 n = n * 2 + ((string at: pos) digit: 2) }.
         -- Want to retain the format info, hence not SyntaxLiteral.
-        SyntaxBinaryLiteral string: string value: n!
+        SyntaxBinaryLiteral
+            string: string
+            value: n
+            source: (parser sourceFrom: first to: last)!
 end
 
 class TokenEof { position }
@@ -618,12 +632,15 @@ interface MethodToken
     method _parseMethodSignatureWith: parser
         let selector = StringOutput new.
         let parameters = List new.
-        let returnType = parser nextToken
-            parseAsMethodSignatureWith: parser
-            selector: selector
-            parameters: parameters.
+        let returnType
+            = parser nextToken
+                parseAsMethodSignatureWith: parser
+                selector: selector
+                parameters: parameters.
         MethodSignature
-            selector: (SyntaxSelector name: selector content)
+            selector: (SyntaxSelector
+                           name: selector content
+                           source: False)
             parameters: parameters
             returnType: returnType!
 end
@@ -842,17 +859,23 @@ class TokenSigil { precedence string first last }
         UnknownOperatorPrecedence!
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
+        let source = parser sourceFrom: first to: last.
         SyntaxPrefix
             receiver: (parser parseAtPrecedence: MaxPrecedence)
-            selector: (SyntaxSelector name: string)
-            source: (parser sourceFrom: first to: last)!
+            selector: (SyntaxSelector
+                           name: string
+                           source: source)
+            source: source!
 
     method parseAsSuffixOf: prefix with: parser
+        let source = parser sourceFrom: first to: last.
         SyntaxBinary
             receiver: prefix
-            selector: (SyntaxSelector name: string)
+            selector: (SyntaxSelector
+                           name: string
+                           source: source)
             argument: (parser parseAtPrecedence: precedence)
-            source: (parser sourceFrom: first to: last)!
+            source: source!
 
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
         -- Debug println: "TokenSigil#parseAsMethodSignatureWith:selector:parameters:".
@@ -864,7 +887,9 @@ class TokenSigil { precedence string first last }
         Any!
 
     method parseAsLiteralWith: parser
-        SyntaxSelector name: string!
+        SyntaxSelector
+            name: string
+            source: (parser sourceFrom: first to: last)!
 
 end
 
@@ -902,10 +927,13 @@ class TokenWord { precedence string first last }
             source: (parser sourceFrom: first to: last)!
 
     method parseAsSuffixOf: prefix with: parser
+        let source = parser sourceFrom: first to: last.
         SyntaxUnary
             receiver: prefix
-            selector: (SyntaxSelector name: string)
-            source: (parser sourceFrom: first to: last)!
+            selector: (SyntaxSelector
+                           name: string
+                           source: source)
+            source: source!
 
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
         -- Debug println: "TokenWord#parseAsMethodSignatureWith:selector:parameters:".
@@ -921,7 +949,9 @@ class TokenWord { precedence string first last }
         Any!
 
     method parseAsLiteralWith: parser
-        SyntaxSelector name: string!
+        SyntaxSelector
+            name: string
+            source: (parser sourceFrom: first to: last)!
 end
 
 class TokenKeyword { string first last }
@@ -945,11 +975,14 @@ class TokenKeyword { string first last }
                         selector print: token string.
                         True } }
         whileTrue.
+        let source = parser sourceFrom: first to: last.
         SyntaxKeyword
             receiver: prefix
-            selector: (SyntaxSelector name: selector content)
+            selector: (SyntaxSelector
+                           name: selector content
+                           source: source)
             arguments: arguments
-            source: (parser sourceFrom: first to: last)!
+            source: source!
 
     method parseAsMethodSignatureWith: parser selector: selector parameters: parameters
         -- Debug println: "TokenKeyord#parseAsMethodSignatureWith:selector:parameters:".
@@ -969,7 +1002,9 @@ class TokenKeyword { string first last }
         let selector = StringOutput new: string.
         { TokenKeyword includes: parser lookahead }
             whileTrue: { selector print: parser nextToken string }.
-        SyntaxSelector name: selector content!
+        SyntaxSelector
+            name: selector content
+            source: (parser sourceFrom: first to: last)!
 end
 
 define SpecialCharacters
