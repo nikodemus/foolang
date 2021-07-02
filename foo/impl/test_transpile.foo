@@ -879,6 +879,15 @@ end
 class TestTranspileGlobals { assert system }
     is TranspilerTest
 
+    method test_Define_global_interface
+        self transpile: "import lang.any.Any
+                         define X Any!
+                         class Main \{}
+                             direct method run: command in: system
+                                 system output writeString: X name!
+                         end"
+            expect: "Any"!
+
     method test_Define_global_array
         self transpile: "define MyArray [1,2,3]!
                          class Main \{}
