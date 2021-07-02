@@ -906,7 +906,6 @@ class TestTranspileGlobals { assert system }
     method test_Define_global_class_instance
         self transpileWithPrelude:
             "class MyClass \{ x y }
-                 is Object
                  method value
                      x integerAdd: y!
              end
