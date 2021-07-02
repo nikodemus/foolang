@@ -1188,7 +1188,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method visitSlotSet: set
         -- Tracer trace: #visitSlotSet:.
-        output print: "(PTR(FooArray, ctx->receiver.datum)->data[".
+        output print: "(PTR(FooArray, foo_check_modification(ctx, ctx->receiver.datum))->data[".
         output print: (set slot index - 1).
         output print: "] = ".
         self _generateTypecheck: set slot type

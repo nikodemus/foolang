@@ -499,10 +499,11 @@ struct Foo foo_class_typecheck(struct FooContext* ctx,
              class->name->data, obj.class->name->data);
 }
 
-void foo_check_modification(struct FooContext* ctx, struct FooHeader* header) {
-  if (header->allocation == STATIC) {
+union FooDatum foo_check_modification(struct FooContext* ctx, union FooDatum datum) {
+  if (((struct FooHeader*)datum.ptr)->allocation == STATIC) {
     foo_panicf(ctx, "Cannot modify constant object!");
   }
+  return datum;
 }
 
 struct Foo foo_Boolean_new(bool t);

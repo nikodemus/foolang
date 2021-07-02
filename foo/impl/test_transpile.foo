@@ -1022,6 +1022,25 @@ Backtrace:
   1: Main class#run:in:
 "!
 
+    method test_Cannot_modify_global_instances
+        self transpile: "import lang.object.Object
+                         class Counter \{ value }
+                             method inc
+                                 value = value integerAdd: 1!
+                         end
+                         define MyCounter
+                             Counter value: 0!
+                         class Main \{}
+                             direct method run: command in: system
+                                 MyCounter inc.
+                                 system output writeString: \"OOPS MODIFIED A GLOBAL!\"!
+                         end"
+            expectError: "PANIC: Cannot modify constant object!
+Backtrace:
+  2: Counter#inc
+  1: Main class#run:in:
+"!
+
     method test_At_put_cannot_modify_global_nested_array
         self transpile: "define ThisIsStatic [[1], 2, 3]!
                          class Main \{}

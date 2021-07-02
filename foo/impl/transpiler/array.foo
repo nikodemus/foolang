@@ -50,8 +50,7 @@ assert(i < array->size);
 return array->data[i];"},
       #at:put:
           -> {signature: [Integer, Any], vars: 0,
-              body: "struct FooArray* array = PTR(FooArray, ctx->receiver.datum);
-foo_check_modification(ctx, (struct FooHeader*)array);
+              body: "struct FooArray* array = PTR(FooArray, foo_check_modification(ctx, ctx->receiver.datum));
 int64_t i = ctx->frame[0].datum.int64 - 1;
 assert(i >= 0);
 assert(i < array->size);
@@ -66,8 +65,7 @@ for (size_t i = 0; i < self->size; i++) \{
 return (struct Foo)\{ .class = &FooClass_Array, .datum = \{ .ptr = new } };"},
       #put:at:
           -> {signature: [Any, Integer], vars: 0,
-              body: "struct FooArray* array = PTR(FooArray, ctx->receiver.datum);
-foo_check_modification(ctx, (struct FooHeader*)array);
+              body: "struct FooArray* array = PTR(FooArray, foo_check_modification(ctx, ctx->receiver.datum));
 int64_t i = ctx->frame[1].datum.int64 - 1;
 assert(i >= 0);
 assert(i < array->size);
