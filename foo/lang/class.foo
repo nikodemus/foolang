@@ -2,4 +2,7 @@ import .object.Object
 
 extend Class
     is Object
+
+    method displayOn: stream
+        stream writeString: self name!
 end
