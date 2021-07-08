@@ -1933,13 +1933,13 @@ class TestTranspileInteger { assert system }
                                      sub: (20 - 2),
                                  \}!
                          end"
-             expect: ("\{add: 111, div: 10,
+             expect: ("\{ add: 111, div: 10,
 eq1: True, eq2: False,
 gt1: False, gt2: True, gt3: False,
 gte1: False, gte2: True, gte3: True,
 lt1: True, lt2: False, lt3: False,
 lte1: True, lte2: False, lte3: True,
-mul: 1000, sub: 18\}" replace: "\n" with: " ")!
+mul: 1000, sub: 18 \}" replace: "\n" with: " ")!
 end
 
 class TestTranspileString { assert system }
