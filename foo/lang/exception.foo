@@ -19,6 +19,8 @@ end
 define $error FallbackHandler!
 
 class Handler { on block next }
+    is Object
+
     direct method on: on block: block
         self on: on
              block: block
@@ -30,8 +32,10 @@ class Handler { on block next }
                       block value: ex }.
         next raise: ex!
 
-    method toString
-        "#<Handler { on }>"!
+    method displayOn: stream
+        stream writeString: "#<Handler ".
+        stream print: on.
+        stream writeString: ">"!
 end
 
 interface Error
