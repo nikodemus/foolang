@@ -53,18 +53,21 @@ extend Dictionary
                             at: key.
                        new }!
 
-    method toString
-        StringOutput
-            with: { |out|
-                    out print: "\{ ".
-                    self keys sort
-                        do: { |each|
-                              out display: each.
-                              out print: " -> ".
-                              out display: (self at: each) }
-                        interleaving: { out println: ",".
-                                        out print: "  " }.
-                    out print: " }" }!
+    method writeOn: out using: block
+        self size is 0
+            ifTrue: { out writeString: "Dictionary new".
+                      return out }.
+        out print: "\{ ".
+        self keys sort
+            do: { |each|
+                  block value: each value: out.
+                  out writeString: " -> ".
+                  block value: (self at: each) value: out }
+            interleaving: { out writeString: ",\n  " }.
+        out print: " }"!
+
+    method displayOn: out
+        self writeOn: out using: (#displayOn:)!
 
     method isEquivalent: other
         self size is other size
