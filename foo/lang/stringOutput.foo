@@ -50,6 +50,10 @@ end
 class StringOutput { _chain }
     is Object
 
+    direct method toString
+        -- FIXME: Should inherit from Object!
+        "StringOutput"!
+
     direct method new: string
         self new print: string!
 

@@ -10,6 +10,10 @@ class List { size data }
     is Ordered
     is Collection
 
+    direct method toString
+        -- FIXME: Should inherit from Object!
+        "List"!
+
     direct method from: collection
         let new = self withCapacity: collection size.
         collection

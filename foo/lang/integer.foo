@@ -5,6 +5,10 @@ define $IntegerPrintBase 10!
 extend Integer
     is Number
 
+    direct method toString
+        -- FIXME: Should inherit from Object!
+        "Integer"!
+
     direct method default
         0!
 

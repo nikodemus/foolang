@@ -3,6 +3,10 @@ import .number.Number
 extend Float
     is Number
 
+    direct method toString
+        -- FIXME: Should inherit from Object!
+        "Float"!
+
     direct method default
         0.0!
 
