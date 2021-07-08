@@ -1,10 +1,13 @@
 import .any.Any
+import .object.Object
 import .iterable.Iterator
 import .iterable.Iterable
 import .ordered.Ordered
 import .stringOutput.StringOutput
 
 class Specialized { containerClass elementType }
+    is Object
+
     direct method class: containerClass of: elementType
         self containerClass: containerClass
              elementType: elementType!
@@ -138,14 +141,6 @@ extend Array
     method printOn: stream
         self _emitOn: stream
              using: { |x| x printOn: stream }!
-
-    method displayString
-        StringOutput
-            with: { |out| self displayOn: out }!
-
-    method toString
-        StringOutput
-            with: { |out| self printOn: out }!
 
     method dot: other
         self with: other
