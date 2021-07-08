@@ -548,7 +548,8 @@ class TestTranspilePreludeFilePath { assert system }
              expect: "#<Boolean True>#<Boolean False>"!
 
     method testToString
-        self transpile: "class Main \{}
+        self transpile: "import lang.filepath
+                         class Main \{}
                               direct method run: command in: system
                                   (system files / \"foo\") toString debug!
                          end"
