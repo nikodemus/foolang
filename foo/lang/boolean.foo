@@ -56,12 +56,8 @@ extend Boolean
         self ifTrue: { "True" }
              ifFalse: { "False" }!
 
-    method name
-        self ifTrue: { "True" }
-             ifFalse: { "False" }!
-
     method displayOn: stream
-        stream print: self toString!
+        stream writeString: self toString!
 end
 
 extend Object
