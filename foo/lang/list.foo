@@ -68,7 +68,7 @@ class List { size data }
         stream writeString: "[".
         self do: { |each| block value: each value: stream }
              interleaving: { stream writeString: ", "  }.
-        stream writeString: "] asList"!
+        stream writeString: "]"!
 
     method displayOn: stream
         self writeOn: stream using: (#displayOn:)!
