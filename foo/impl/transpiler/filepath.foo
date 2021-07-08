@@ -39,7 +39,7 @@ define InstanceMethods {
                 if (sys_stat((char*)PTR(FooBytes, ctx->receiver.datum)->data, &s))
                     return foo_Boolean_new(false);
                 return foo_Boolean_new(SYS_ISREG(s.st_mode));" },
-    #toString
+    #pathname
     -> { signature: [], vars: 0,
          body: "return (struct Foo)\{ .class = &FooClass_String, .datum = ctx->receiver.datum };" },
 }!

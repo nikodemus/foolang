@@ -55,7 +55,7 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("isDirectory", filepath_is_directory);
     vt.add_primitive_method_or_panic("isFile", filepath_is_file);
     vt.add_primitive_method_or_panic("/", filepath_slash);
-    vt.add_primitive_method_or_panic("toString", filepath_to_string);
+    vt.add_primitive_method_or_panic("pathname", filepath_to_pathname);
     vt
 }
 
@@ -75,7 +75,7 @@ fn filepath_delete_file(receiver: &Object, _args: &[Object], _env: &Env) -> Eval
     }
 }
 
-fn filepath_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+fn filepath_to_pathname(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env
         .foo
         .into_string(format!("{}", receiver.as_filepath("in FilePath#toString")?.path.display())))
