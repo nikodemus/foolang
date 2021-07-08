@@ -1331,7 +1331,10 @@ class TestTranspileBacktrace { assert system }
                              direct method ok
                                  self ok2!
                          end"
-            expectError: "PANIC: Main does not understand: #oops
+            -- This gets the "instance of ..." message because Main is
+            -- not an object, so this is the panic from the runtime
+            -- instead of a DoesNotUnderstand.
+            expectError: "PANIC: Instances of Main class do not understand: #oops
 Backtrace:
   3: Aux interface#ok2 (Main class)
   2: Main class#ok
