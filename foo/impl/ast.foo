@@ -690,24 +690,24 @@ interface AstGlobalVariable
         self isUndefined not!
 
     method definition
-        self assertDefined: True in: "#definition".
+        self assertDefined: True.
         self _definition!
 
     method define: definition
-        self assertDefined: False in: "#define:".
+        self assertDefined: False.
         self _definition: definition.
         self isDefined assert: "invalid definition for global".
         definition!
 
-    method assertDefined: wanted in: where
+    method assertDefined: wanted
         self isDefined is wanted
             ifFalse: { wanted
-                           ifTrue: { Error raise: "{self noteUndefined} (in {where})" }
-                           ifFalse: { Error raise: "Global is already defined: {self name} (in {where})" } }!
+                           ifTrue: { Error raise: self noteUndefined }
+                           ifFalse: { Error raise: "Global is already defined: {self name}" } }!
 
     method eval
         self _state is _Evaluated
-            ifFalse: { self assertDefined: True in: "#eval".
+            ifFalse: { self assertDefined: True.
                        self _state is _BeingEvaluated
                            ifTrue: { Error raise: "Cyclic definition: {self name}" }.
                        self _state: _BeingEvaluated.
