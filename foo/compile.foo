@@ -40,12 +40,27 @@ class Main {}
         let exe = system currentDirectory / targetFile.
         exe ifExists: #deleteFile.
 
-        let sanitizerOptions = "-fsanitize=address -fsanitize=undefined".
+        let sanitizerOptions = " -fsanitize=address -fsanitize=undefined".
         let target
             = system isUnix
                 ifTrue: { "unix" }
                 ifFalse: { "windows" }.
-        let buildCmd = "clang -o {exe} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall -Werror --std=c11 host/main.c host/system_{target}.c ext/dtoa.c".
+        let stackSize = 0x400000. -- 4MiB
+        let linkerOptions
+            = system isUnix
+                ifTrue: { " -Wl,-stack-size -W,{stackSize}" }
+                ifFalse: { " -Wl,/STACK:{stackSize}" }.
+        let buildOptions
+            = " -fno-omit-frame-pointer -g -Wall -Werror --std=c11".
+        let buildCmd = StringOutput
+                           with: { |out|
+                                   out print: "clang -o {exe}".
+                                   out print: linkerOptions.
+                                   out print: sanitizerOptions.
+                                   out print: buildOptions.
+                                   out print: " host/main.c".
+                                   out print: " host/system_{target}.c".
+                                   out print: " ext/dtoa.c" }.
         let build = system command: buildCmd.
         build stderr
             ifNotEmpty: { system output println: "---stderr---".
