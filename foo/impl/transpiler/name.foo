@@ -83,7 +83,11 @@ class Name { out }
         out print: aVar name!
 
     method _mangleMetaclass: aClass
+        -- KLUDGE: Class is its own metaclass.
+        aClass name == "Class"
+            ifTrue: { return out print: "FooClass_Class" }.
         -- XXX: Why do I need a distinct mangling for metaclasses?
+        -- Why not just FooClass_MyClass$class?
         out print: "FooMetaclass_".
         self _mangleName: aClass name!
 
