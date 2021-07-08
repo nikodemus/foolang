@@ -59,9 +59,9 @@ class Name { out }
         s _mangleName: name.
         s content!
 
-    direct method mangleGlobal: aVar
+    direct method mangleGlobal: aVar id: n
         let s = self _new.
-        s _mangleGlobal: aVar.
+        s _mangleGlobal: aVar id: n.
         s content!
 
     direct method mangleDynamic: aVar
@@ -76,15 +76,20 @@ class Name { out }
         out print: "FooDynamic_".
         out print: aVar name!
 
-    method _mangleGlobal: aVar
-        out print: "FooGlobal_".
+    method _mangleGlobal: aVar id: n
+        out print: "FooGlobal".
+        out print: n.
+        out print: "_".
         out print: aVar name!
 
     method _mangleMetaclass: aClass
-        (aClass isBuiltin and: aClass name == "Class")
-            ifTrue: { out print: "FooClass_Class" }
-            ifFalse: { out print: "FooMetaclass_".
-                       self _mangleName: aClass name }!
+        -- KLUDGE: Class is its own metaclass.
+        aClass name == "Class"
+            ifTrue: { return out print: "FooClass_Class" }.
+        -- XXX: Why do I need a distinct mangling for metaclasses?
+        -- Why not just FooClass_MyClass$class?
+        out print: "FooMetaclass_".
+        self _mangleName: aClass name!
 
     method _mangleClass: aClass
         out print: "FooClass_".

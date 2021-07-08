@@ -31,17 +31,24 @@ class Debug {}
         self println: message!
 end
 
+define ColonCharacter ":" character!
+
 class DebugTracer { name }
     direct method trace: thing
         Debug println: thing!
+    direct method _splitName: name
+        let parts = name toString splitBy: ColonCharacter.
+        parts size > 1
+            ifTrue: { parts = parts butlast
+                          collect: { |each| each append: ":" }}.
+        parts!
+
     direct method perform: selectorName with: arguments
-        (Selector intern: selectorName) parts
+        (DebugTracer _splitName: selectorName)
             doWithIndex: { |each index|
-                           index > 1
-                               ifTrue: { Debug print: " #" }
-                               ifFalse: { Debug print: "#" }.
-                           Debug print: each.
                            Debug print: " ".
+                           Debug print: each.
+                           Debug print: ": ".
                            Debug print: (arguments at: index) }.
         Debug newline!
     method trace: thing
@@ -49,11 +56,9 @@ class DebugTracer { name }
         Debug println: thing!
     method perform: selectorName with: arguments
         Debug print: name.
-        (Selector intern: selectorName) parts
+        (DebugTracer _splitName: selectorName)
             doWithIndex: { |each index|
-                           index > 1
-                               ifTrue: { Debug print: " #" }
-                               ifFalse: { Debug print: "#" }.
+                           Debug print: " ".
                            Debug print: each.
                            Debug print: " ".
                            Debug print: (arguments at: index) }.

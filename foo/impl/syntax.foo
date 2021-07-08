@@ -60,17 +60,7 @@ interface Syntax
         10!
 
     method displayOn: stream
-        stream print: "#<{self classOf name} ".
-        { SyntaxPrinter print: self to: stream }
-            on: Error
-            do: { |e|
-                  { stream print: "<error printing: {e description}>>".
-                    return self }
-                      on: Error
-                      do: { |e|
-                            stream print: "<error printing>>".
-                            return self } }.
-        stream print: ">"!
+        stream print: "#<{self classOf name} {self descriptor}>"!
 end
 
 interface Literal
@@ -88,18 +78,25 @@ interface Literal
     method weight
         0!
 
+    method descriptor
+        self valueDisplayString!
+
     method parts
         [self value]!
 end
 
-class SyntaxLiteral { value }
+class SyntaxLiteral { value source }
     is Literal
+
+    direct method value: value
+        self value: value
+             source: False!
 
     method valueDisplayString
         value displayString!
 end
 
-class SyntaxFloatLiteral { string value }
+class SyntaxFloatLiteral { string value source }
     is Literal
 
     method valueDisplayString
@@ -107,14 +104,14 @@ class SyntaxFloatLiteral { string value }
 end
 
 
-class SyntaxHexLiteral { string value }
+class SyntaxHexLiteral { string value source }
     is Literal
 
     method valueDisplayString
         string!
 end
 
-class SyntaxBinaryLiteral { string value }
+class SyntaxBinaryLiteral { string value source }
     is Literal
 
     method valueDisplayString
@@ -134,6 +131,9 @@ class SyntaxStringInterpolation { parts }
 
     method visitBy: visitor
         visitor visitStringInterpolation: self!
+
+    method descriptor
+        parts size!
 end
 
 class SyntaxValueTypeDeclaration { value type }
@@ -147,6 +147,9 @@ class SyntaxValueTypeDeclaration { value type }
 
     method parts
         [value, type]!
+
+    method descriptor
+        "{value descriptor} :: {type name}"!
 end
 
 interface SyntaxCollection
@@ -154,6 +157,9 @@ interface SyntaxCollection
 
     method parts
         self entries!
+
+    method descriptor
+        self size!
 end
 
 class SyntaxArray { entries }
@@ -201,6 +207,9 @@ class SyntaxSeq { first then }
 
     method parts
         [first, then]!
+
+    method descriptor
+        "{first descriptor}..."!
 end
 
 class SyntaxReturn { value }
@@ -214,9 +223,12 @@ class SyntaxReturn { value }
 
     method parts
         [value]!
+
+    method descriptor
+        value descriptor!
 end
 
-class SyntaxSelector { name }
+class SyntaxSelector { name source }
     is Syntax
 
     method visitBy: visitor
@@ -230,6 +242,9 @@ class SyntaxSelector { name }
 
     method parts
         [name]!
+
+    method descriptor
+        name!
 end
 
 class SyntaxPanic { value }
@@ -243,6 +258,9 @@ class SyntaxPanic { value }
 
     method parts
         [value]!
+
+    method descriptor
+        value descriptor!
 end
 
 class SyntaxPrefixComment { comment value source fence }
@@ -267,6 +285,9 @@ class SyntaxPrefixComment { comment value source fence }
 
     method displayString
         "#<SyntaxPrefixComment value: {value}>"!
+
+    method descriptor
+        value descriptor!
 end
 
 class SyntaxSuffixComment { comments value source }
@@ -354,6 +375,8 @@ class SyntaxUnary { receiver selector source }
         -- Source left out intentionally, since it doesn't need to compere equal.
         [receiver, selector]!
 
+    method descriptor
+        "{receiver descriptor} {selector name}"!
 end
 
 class SyntaxBinary { receiver selector argument source }
@@ -368,6 +391,9 @@ class SyntaxBinary { receiver selector argument source }
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
         [receiver, selector, argument]!
+
+    method descriptor
+        "{receiver descriptor} + {argument descriptor}"!
 end
 
 -- FIXME: Currently multi-keyword syntax gets as source the first
@@ -388,6 +414,9 @@ class SyntaxKeyword { receiver selector arguments source }
 
     method displayOn: stream
         stream print: "#<{Self} {selector}>"!
+
+    method descriptor
+        "{receiver descriptor} {selector name}"!
 end
 
 class SyntaxImport { name module relative source }
@@ -425,6 +454,9 @@ class SyntaxExternalRef { module name source }
     method parts
         -- Source ignored, since that can change with pretty-printing.
         [module, name]!
+
+    method descriptor
+        "{module}.{name}"!
 end
 
 class SyntaxIs { left right }
@@ -463,6 +495,9 @@ class SyntaxSelfInstance {}
 
     method parts
         []!
+
+    method descriptor
+        "self"!
 end
 
 class SyntaxSelfClass {}
@@ -476,6 +511,9 @@ class SyntaxSelfClass {}
 
     method parts
         []!
+
+    method descriptor
+        "Self"!
 end
 
 class SyntaxVariable { name::String source }
@@ -496,6 +534,9 @@ class SyntaxVariable { name::String source }
     method parts
         -- Source ignored, since that can change with pretty-printing.
         [name]!
+
+    method descriptor
+        name!
 end
 
 -- FIXME: missing source, could probably unify with SyntaxVariable
@@ -514,6 +555,9 @@ class SyntaxTypedVariable { name type }
 
     method parts
         [name]!
+
+    method descriptor
+        "{name} :: {type name}"!
 end
 
 class SyntaxDynamicVariable { name::String source }
@@ -534,6 +578,9 @@ class SyntaxDynamicVariable { name::String source }
     method parts
         -- Source ignored, since that can change with pretty-printing.
         [name]!
+
+    method descriptor
+        "{name}"!
 end
 
 class SyntaxAssign { variable value }
@@ -547,6 +594,9 @@ class SyntaxAssign { variable value }
 
     method parts
         [variable, value]!
+
+    method descriptor
+        "{variable name} = {value descriptor}"!
 end
 
 class SyntaxParens { body }
@@ -560,6 +610,9 @@ class SyntaxParens { body }
 
     method parts
         [body]!
+
+    method descriptor
+        "({body descriptor})"!
 end
 
 class SyntaxBlock { parameters returnType body }
@@ -573,6 +626,20 @@ class SyntaxBlock { parameters returnType body }
 
     method parts
         [parameters, returnType, body]!
+
+    method descriptor
+        StringOutput
+            with: { |output|
+                    output print: "\{ ".
+                    parameters
+                        ifNotEmpty: { output print: "|".
+                                      parameters
+                                          do: { |each|
+                                                output print: each name }
+                                          interleaving: { output print: " " }.
+                                      output print: "| " }.
+                    output print: body descriptor.
+                    output print: " }" }!
 end
 
 class SyntaxDefine { variable body }
@@ -583,6 +650,9 @@ class SyntaxDefine { variable body }
 
     method parts
         [variable, body]!
+
+    method descriptor
+        variable name!
 end
 
 class SyntaxClass { name superclass slots interfaces directMethods instanceMethods }
@@ -614,6 +684,9 @@ class SyntaxClass { name superclass slots interfaces directMethods instanceMetho
 
     method parts
         [name, superclass, slots, interfaces, directMethods, instanceMethods]!
+
+    method descriptor
+        name!
 end
 
 class SyntaxInterface { name interfaces directMethods instanceMethods }
@@ -634,6 +707,9 @@ class SyntaxInterface { name interfaces directMethods instanceMethods }
 
     method parts
         [name, interfaces, directMethods, instanceMethods]!
+
+    method descriptor
+        name!
 end
 
 class SyntaxExtend { name interfaces directMethods instanceMethods }
@@ -654,6 +730,9 @@ class SyntaxExtend { name interfaces directMethods instanceMethods }
 
     method parts
         [name, interfaces, directMethods, instanceMethods]!
+
+    method descriptor
+        name!
 end
 
 interface DefinitionPart
@@ -714,6 +793,9 @@ interface SyntaxMethod
 
     method parts
         [self signature, self body]!
+
+    method descriptor
+        self selector name!
 end
 
 class SyntaxInstanceMethod { comments signature body }
@@ -724,7 +806,6 @@ class SyntaxInstanceMethod { comments signature body }
 
     method comment: aSpec
         comments add: aSpec!
-
 end
 
 class SyntaxDirectMethod { comments signature body }

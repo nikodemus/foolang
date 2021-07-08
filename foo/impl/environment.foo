@@ -21,10 +21,10 @@ class BuiltinDictionary { dictionary }
 
     method _define: builtin
         let name = builtin name.
-        let global = AstGlobal
-                         name: name
-                         definition: (AstBuiltin value: builtin).
-        global value. -- finalize
+        let global = AstGlobal name: name.
+        global define: (AstBuiltin
+                            global: global
+                            value: builtin).
         dictionary
             put: global
             at: name!
@@ -44,6 +44,7 @@ class BuiltinDictionary { dictionary }
         self _define: List.
         self _define: Object.
         self _define: Output.
+        self _define: Record.
         self _define: Selector.
         self _define: String.
         self _define: StringOutput.
@@ -116,7 +117,8 @@ class ModuleDictionary { available translated }
         let $CurrentModulePath = path.
         { (Environment
                builtins: env builtins
-               modules: self)
+               modules: self
+               classes: env classes)
           load: source }
             on: Error
             do: { |e|
@@ -149,8 +151,18 @@ class Environment { parent
                     depth
                     globals
                     builtins
-                    modules }
+                    modules
+                    classes }
     is Object
+
+    method describe
+        Debug println: "---".
+        Debug println: "bindings = {bindings}".
+        Debug println: "globals = {globals}".
+        Debug println: "modules = {modules}".
+        Debug println: "depth = {depth}".
+        parent is False
+            ifFalse: { parent describe }!
 
     direct method new
         self
@@ -167,6 +179,12 @@ class Environment { parent
             modules: (ModuleDictionary new: modules)!
 
     direct method builtins: builtins modules: modules
+        self
+            builtins: builtins
+            modules: modules
+            classes: Dictionary new!
+
+    direct method builtins: builtins modules: modules classes: classes
         Environment
             parent: False
             bindings: []
@@ -174,7 +192,8 @@ class Environment { parent
             depth: 1
             globals: Dictionary new
             builtins: builtins
-            modules: modules!
+            modules: modules
+            classes: classes!
 
     method addGlobals: bindings
         self checkToplevel.
@@ -193,7 +212,8 @@ class Environment { parent
             depth: depth + 1
             globals: globals
             builtins: builtins
-            modules: modules!
+            modules: modules
+            classes: classes!
 
     method augment: bindings
         Environment
@@ -203,16 +223,22 @@ class Environment { parent
             depth: depth
             globals: globals
             builtins: builtins
-            modules: modules!
+            modules: modules
+            classes: classes!
 
     method removeBuiltins: names
         builtins removeAll: names!
+
+    method makeGlobal: name
+        (name startsWith: "$")
+            ifTrue: { AstDynamic name: name }
+            ifFalse: { AstGlobal name: name }!
 
     method replaceBuiltins: newBuiltins
         newBuiltins do: { |each|
                           let global = builtins
                                            at: each name
-                                           ifNonePut: { AstGlobal name: each name }.
+                                           ifNonePut: { self makeGlobal: each name }.
                           global redefine: each }!
 
     method import: moduleName relative: relative
@@ -346,6 +372,9 @@ class Environment { parent
     method checkGlobals
         globals doValues: #warnIfUndefined!
 
+    method builtin: name
+        builtins at: name!
+
     method global: name
         -- Debug println: "Environment#global: {name}".
         -- Debug println: "has builtins:\n{builtins}".
@@ -354,23 +383,8 @@ class Environment { parent
             at: name
             ifNone: { globals
                           at: name
-                          ifNonePut: { AstGlobal name: name } }!
-
-    method dynamic: name
-        -- Debug println: "Environment#dynamic: {name}".
-        globals
-            at: name
-            ifNonePut: { AstDynamic name: name }!
-
-    method define: name as: definition
-        -- Debug println: "Environment#define:as: {name}".
-        (builtins has: name)
-            ifTrue: { Error raise: "Cannot redefine a builtin: {name}" }.
-        let global = globals
-                         at: name
-                         ifNonePut: { definition allocGlobal }.
-        let res = global define: definition.
-        -- Debug println: "--".
-        res!
-
+                          ifNonePut: { name == "AstValueMarker"
+                                           ifTrue: { Debug println: "XXX: AstValueMarker ({Foolang isSelfHosted})".
+                                                     self describe }.
+                                       self makeGlobal: name } }!
 end

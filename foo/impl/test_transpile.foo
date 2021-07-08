@@ -931,7 +931,21 @@ class TestTranspileGlobals { assert system }
                      MyValue value debug.
                      MyValue x debug!
              end"
-            expect: "#<Integer 1242>#<Integer 40>"!
+                expect: "#<Integer 1242>#<Integer 40>"!
+
+    method test0_Define_depends_on_class_defined_after
+        self transpile: "define A_Definition A_Class status: \"yes!\"!
+                         class A_Class \{ status }
+                             method ok status!
+                         end
+                         class Main \{}
+                             direct method run: command in: system
+                                 system output
+                                     writeString: (self ok: A_Definition)!
+                             direct method ok: x
+                                 x ok!
+                         end"
+            expect: "yes!"!
 
     method test_Define_global_float
         self transpile: "define MyFloat 12.34!
@@ -1138,11 +1152,7 @@ end
                      system output print: defs!
 
              end"
-                expect: "[#<SyntaxLiteral 123>][#<SyntaxInterface interface X
-    method y
-        42!
-end
->]"!
+                expect: "[#<SyntaxLiteral 123>][#<SyntaxInterface X>]"!
 
     method test_Transpiled_SyntaxPrinter
         self transpileWithPrelude:
