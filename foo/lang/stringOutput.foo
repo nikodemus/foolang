@@ -50,6 +50,10 @@ end
 class StringOutput { _chain }
     is Object
 
+    direct method toString
+        -- FIXME: Should inherit from Object!
+        "StringOutput"!
+
     direct method new: string
         self new print: string!
 
@@ -96,21 +100,22 @@ class StringOutput { _chain }
 end
 
 extend Object
+    direct method displayString
+        StringOutput with: { |out| self displayOn: out }!
+
+    direct method toString
+        StringOutput with: { |out| self printOn: out }!
+
+    method displayString
+        StringOutput with: { |out| self displayOn: out }!
+
+    method toString
+        StringOutput with: { |out| self printOn: out }!
+
     method mismatch: other
         let err = StringOutput new.
         err print: self displayString.
         err println: "\n <==>".
         err println: other displayString.
         Error raise: "Mismatch:\n{err content}"!
-
-    method displayString
-        StringOutput with: { |out| self displayOn: out }!
-
-    direct method displayString
-        StringOutput with: { |out| self displayOn: out }!
-end
-
-extend Integer
-    method toString
-        StringOutput with: { |s| self printOn: s }!
 end

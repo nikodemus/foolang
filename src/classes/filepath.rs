@@ -55,7 +55,7 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("isDirectory", filepath_is_directory);
     vt.add_primitive_method_or_panic("isFile", filepath_is_file);
     vt.add_primitive_method_or_panic("/", filepath_slash);
-    vt.add_primitive_method_or_panic("toString", filepath_to_string);
+    vt.add_primitive_method_or_panic("pathname", filepath_to_pathname);
     vt
 }
 
@@ -69,36 +69,36 @@ fn into_filepath(path: PathBuf, env: &Env) -> Object {
 }
 
 fn filepath_delete_file(receiver: &Object, _args: &[Object], _env: &Env) -> Eval {
-    match std::fs::remove_file(&receiver.as_filepath("in FilePath#deleteFile")?.path) {
+    match std::fs::remove_file(&receiver.as_filepath("FilePath#deleteFile")?.path) {
         Ok(()) => Ok(receiver.clone()),
         Err(e) => Unwind::error(&format!("Could not delete {:?} ({:?})", receiver, e.kind())),
     }
 }
 
-fn filepath_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+fn filepath_to_pathname(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env
         .foo
-        .into_string(format!("{}", receiver.as_filepath("in FilePath#toString")?.path.display())))
+        .into_string(format!("{}", receiver.as_filepath("FilePath#toString")?.path.display())))
 }
 
 fn filepath_exists(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    Ok(env.foo.make_boolean(receiver.as_filepath("in FilePath#exists")?.path.exists()))
+    Ok(env.foo.make_boolean(receiver.as_filepath("FilePath#exists")?.path.exists()))
 }
 
 fn filepath_file(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    Ok(crate::classes::file::make_file(&receiver.as_filepath("in FilePath#file")?.path, env))
+    Ok(crate::classes::file::make_file(&receiver.as_filepath("FilePath#file")?.path, env))
 }
 
 fn filepath_is_directory(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    Ok(env.foo.make_boolean(receiver.as_filepath("in FilePath#isDirectory")?.path.is_dir()))
+    Ok(env.foo.make_boolean(receiver.as_filepath("FilePath#isDirectory")?.path.is_dir()))
 }
 
 fn filepath_is_file(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
-    Ok(env.foo.make_boolean(receiver.as_filepath("in FilePath#isFile")?.path.is_file()))
+    Ok(env.foo.make_boolean(receiver.as_filepath("FilePath#isFile")?.path.is_file()))
 }
 
 fn filepath_slash(receiver: &Object, args: &[Object], env: &Env) -> Eval {
-    let filepath = receiver.as_filepath("in FilePath#Path")?;
+    let filepath = receiver.as_filepath("FilePath#Path")?;
     let path = filepath.path.as_path();
     let arg = args[0].string_as_str();
     let more = Path::new(arg);

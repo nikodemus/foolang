@@ -19,6 +19,8 @@ end
 define $error FallbackHandler!
 
 class Handler { on block next }
+    is Object
+
     direct method on: on block: block
         self on: on
              block: block
@@ -30,12 +32,17 @@ class Handler { on block next }
                       block value: ex }.
         next raise: ex!
 
-    method toString
-        "#<Handler { on }>"!
+    method displayOn: stream
+        stream writeString: "#<Handler ".
+        stream print: on.
+        stream writeString: ">"!
 end
 
 interface Error
     is Object
+
+    direct method toString
+        "Error"!
 
     direct method raise: description::String
         SimpleError raise: description!
@@ -120,6 +127,10 @@ end
 class DoesNotUnderstand { receiver selector arguments source context }
     is Error
 
+    direct method toString
+        -- FIXME: Should inherit from Object!
+        "DoesNotUnderstand"!
+
     direct method raise: selector with: arguments on: receiver
         (self raise: selector
               with: arguments
@@ -150,7 +161,7 @@ class DoesNotUnderstand { receiver selector arguments source context }
             ifFalse: { context backtrace }!
 
     method _note
-        { "{ receiver } does not understand: { selector }" }
+        { "{ receiver displayString } does not understand: { selector }" }
             on: Error
             do: { |e|
                   -- FIXME: Workaround for the lack of metaclasses in transpiler

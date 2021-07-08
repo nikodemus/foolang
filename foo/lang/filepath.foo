@@ -1,8 +1,8 @@
 import .closure
+import .object.Object
 
 extend FilePath
-    method displayOn: stream
-        stream print: self toString!
+    is Object
 
     method forAppend
         self file forAppend!
@@ -15,9 +15,6 @@ extend FilePath
 
     method truncateExisting
         self file truncateExisting!
-
-    method pathname
-        self toString!
 
     method readString
         self forRead
@@ -35,4 +32,12 @@ extend FilePath
         self exists
             ifTrue: { existsBlock cull: self }
             ifFalse: { doesNotExistBlock cull: self }!
+
+    method toString
+        self pathname!
+
+    method displayOn: stream
+        stream writeString: "#<FilePath ".
+        stream writeString: self pathname.
+        stream writeString: ">"!
 end

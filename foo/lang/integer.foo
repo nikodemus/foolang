@@ -5,6 +5,10 @@ define $IntegerPrintBase 10!
 extend Integer
     is Number
 
+    direct method toString
+        -- FIXME: Should inherit from Object!
+        "Integer"!
+
     direct method default
         0!
 
@@ -21,11 +25,11 @@ extend Integer
     method truncate
         self!
 
-    method printOn: stream in: base radix: printRadix
+    method writeOn: stream in: base radix: printRadix
         self < 0
             ifTrue: { stream print: "-".
                       return -self
-                          printOn: stream
+                          writeOn: stream
                           in: base
                           radix: printRadix }.
         printRadix
@@ -37,21 +41,21 @@ extend Integer
                                       from: index
                                       to: index) }
             ifFalse: { let q = self / base.
-                       q printOn: stream
+                       q writeOn: stream
                          in: base
                          radix: False.
                        let r = self - (q * base).
-                       r printOn: stream
+                       r writeOn: stream
                          in: base
                          radix: False }!
 
-    method printOn: stream in: base
-        self printOn: stream
+    method writeOn: stream in: base
+        self writeOn: stream
              in: base
              radix: True!
 
-    method printOn: stream
-        self printOn: stream
+    method displayOn: stream
+        self writeOn: stream
              in: $IntegerPrintBase!
 
     method radixString

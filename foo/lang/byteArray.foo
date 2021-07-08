@@ -23,7 +23,4 @@ extend ByteArray
 
     method elementType
         Byte!
-
-    method displayOn: stream
-        stream print: self toString!
 end

@@ -1,7 +1,6 @@
 import .object.Object
 import .array -- for Array#sorted
 import .string   -- for String#==
-import .stringOutput.StringOutput
 
 extend Record
     is Object
@@ -23,16 +22,17 @@ extend Record
             do: { |each|
                   block value: (each sendTo: self) }!
 
-    method toString
-        StringOutput with: { |out| self printOn: out }!
+    method displayOn: stream
+        self writeOn: stream using: (#displayOn:)!
 
-    method printOn: stream
-        stream print: "\{".
+    method writeOn: stream using: block
+        stream writeString: "\{".
         (Record keysIn: self) sorted
             do: { |key|
-                  stream print: key.
-                  stream print: ": ".
-                  stream print: (key sendTo: self) }
-            interleaving: { stream print: ", " }.
-        stream print: "}"!
+                  -- NOTE: on bootstrap host keys are strings.
+                  stream writeString: key .
+                  stream writeString: ": ".
+                  block value: (key sendTo: self) value: stream }
+            interleaving: { stream writeString: ", " }.
+        stream writeString: "}"!
 end

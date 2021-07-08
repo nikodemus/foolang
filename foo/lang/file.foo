@@ -1,8 +1,8 @@
 import .closure
+import .object.Object
 
 extend File
-    method displayOn: stream
-        stream print: self toString!
+    is Object
 
     method open: block
         block with: self open!
@@ -16,4 +16,9 @@ extend File
     method readString
         self forRead
             open: { |f| f readString }!
+
+    method displayOn: stream
+        stream writeString: "#<File ".
+        stream writeString: self pathname.
+        stream writeString: ">"!
 end

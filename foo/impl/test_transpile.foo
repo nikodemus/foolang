@@ -325,6 +325,7 @@ class TestTranspileDictionary { assert system }
         self transpile: "import lang.dictionary2.Dictionary
                          import lang.output
                          import lang.string
+                         import lang.selector_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -340,6 +341,7 @@ class TestTranspileDictionary { assert system }
         self transpile: "import lang.dictionary2.Dictionary
                          import lang.output
                          import lang.string
+                         import lang.selector_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -355,6 +357,8 @@ class TestTranspileDictionary { assert system }
         self transpile: "import lang.dictionary2.Dictionary
                          import lang.string
                          import lang.character_ext
+                         import lang.selector_ext
+
                          class Main \{ out \}
                              direct method run: command in: system
                                  (self out: system output) run!
@@ -386,7 +390,7 @@ class TestTranspilePreludeException { assert system }
                              direct method run: command in: system
                                  self bang!
                          end"
-            expectError: "PANIC: UNHANDLED ERROR: Instances of Main class do not understand: #bang
+            expectError: "PANIC: UNHANDLED ERROR: Main does not understand: #bang
 Backtrace:
   6: FallbackHandler class#raise:
   5: Error#raise (DoesNotUnderstand)
@@ -406,7 +410,7 @@ Backtrace:
                              direct method run: command in: system
                                  Class bang!
                          end"
-            expectError: "PANIC: UNHANDLED ERROR: Instances of Class do not understand: #bang
+            expectError: "PANIC: UNHANDLED ERROR: Class does not understand: #bang
 Backtrace:
   6: FallbackHandler class#raise:
   5: Error#raise (DoesNotUnderstand)
@@ -544,7 +548,8 @@ class TestTranspilePreludeFilePath { assert system }
              expect: "#<Boolean True>#<Boolean False>"!
 
     method testToString
-        self transpile: "class Main \{}
+        self transpile: "import lang.filepath
+                         class Main \{}
                               direct method run: command in: system
                                   (system files / \"foo\") toString debug!
                          end"
@@ -1327,6 +1332,9 @@ class TestTranspileBacktrace { assert system }
                              direct method ok
                                  self ok2!
                          end"
+            -- This gets the "instance of ..." message because Main is
+            -- not an object, so this is the panic from the runtime
+            -- instead of a DoesNotUnderstand.
             expectError: "PANIC: Instances of Main class do not understand: #oops
 Backtrace:
   3: Aux interface#ok2 (Main class)
@@ -1929,13 +1937,13 @@ class TestTranspileInteger { assert system }
                                      sub: (20 - 2),
                                  \}!
                          end"
-             expect: ("\{add: 111, div: 10,
+             expect: ("\{ add: 111, div: 10,
 eq1: True, eq2: False,
 gt1: False, gt2: True, gt3: False,
 gte1: False, gte2: True, gte3: True,
 lt1: True, lt2: False, lt3: False,
 lte1: True, lte2: False, lte3: True,
-mul: 1000, sub: 18\}" replace: "\n" with: " ")!
+mul: 1000, sub: 18 \}" replace: "\n" with: " ")!
 end
 
 class TestTranspileString { assert system }

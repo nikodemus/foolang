@@ -104,6 +104,7 @@ fn array_of(receiver: &Object, args: &[Object], env: &Env) -> Eval {
 pub fn class_vtable() -> Vtable {
     let vt = Vtable::for_class("Array");
     vt.add_primitive_method_or_panic("of:new:value:", class_array_of_new_value);
+    vt.add_primitive_method_or_panic("toString", class_array_to_string);
     vt
 }
 
@@ -113,6 +114,7 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("at:", array_at);
     vt.add_primitive_method_or_panic("put:at:", array_put_at);
     vt.add_primitive_method_or_panic("size", array_size);
+    vt.add_primitive_method_or_panic("toString", array_to_string);
     vt.add_primitive_method_or_panic("arrayElementType", array_element_type);
     vt
 }
@@ -127,6 +129,14 @@ fn class_array_of_new_value(_receiver: &Object, args: &[Object], env: &Env) -> E
         v.push(elt);
     }
     Ok(into_array(&env.foo, v, Some(etype)))
+}
+
+fn class_array_to_string(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_string("Array"))
+}
+
+fn array_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_string(&format!("{}", receiver.as_array("Array#toString")?)))
 }
 
 fn array_element_type(receiver: &Object, _args: &[Object], env: &Env) -> Eval {

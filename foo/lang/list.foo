@@ -10,6 +10,10 @@ class List { size data }
     is Ordered
     is Collection
 
+    direct method toString
+        -- FIXME: Should inherit from Object!
+        "List"!
+
     direct method from: collection
         let new = self withCapacity: collection size.
         collection
@@ -60,27 +64,14 @@ class List { size data }
         size = size - 1.
         first!
 
-    method printOn: stream
-        "[" printOn: stream.
-        self do: { |each| each printOn: stream }
-             interleaving: { ", " printOn: stream }.
-        "]" printOn: stream!
+    method writeOn: stream using: block
+        stream writeString: "[".
+        self do: { |each| block value: each value: stream }
+             interleaving: { stream writeString: ", "  }.
+        stream writeString: "]"!
 
     method displayOn: stream
-        "[" printOn: stream.
-        self do: { |each| each displayOn: stream }
-             interleaving: { ", " printOn: stream }.
-        "] asList" printOn: stream.
-        self elementType is Any
-            ifFalse: { "Of: { self elementType }" printOn: stream }!
-
-    method toString
-        StringOutput
-            with: { |out| self printOn: out }!
-
-    method displayString
-        StringOutput
-            with: { |out| self displayOn: out }!
+        self writeOn: stream using: (#displayOn:)!
 
     method elementType
         data elementType!

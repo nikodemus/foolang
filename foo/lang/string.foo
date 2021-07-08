@@ -6,6 +6,10 @@ import .stringOutput.StringOutput
 extend String
     is Ordered
 
+    direct method toString
+        -- FIXME: Should inherit from Object!
+        "String"!
+
     direct method default
         ""!
 

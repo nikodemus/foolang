@@ -18,5 +18,5 @@ extend Output
         object displayOn: self!
 
     method displayOn: stream
-        stream print: self toString!
+        stream writeString: "#<Output stdout>"!
 end

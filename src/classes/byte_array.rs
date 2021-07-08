@@ -54,6 +54,7 @@ impl fmt::Debug for ByteArray {
 pub fn class_vtable() -> Vtable {
     let vt = Vtable::for_class("ByteArray");
     vt.add_primitive_method_or_panic("new:", class_byte_array_new);
+    vt.add_primitive_method_or_panic("toString", class_byte_array_to_string);
     vt
 }
 
@@ -62,7 +63,16 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("at:", byte_array_at);
     vt.add_primitive_method_or_panic("put:at:", byte_array_put_at);
     vt.add_primitive_method_or_panic("size", byte_array_size);
+    vt.add_primitive_method_or_panic("toString", byte_array_to_string);
     vt
+}
+
+fn class_byte_array_to_string(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_string("ByteArray"))
+}
+
+fn byte_array_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_string(&format!("{:?}", receiver.as_byte_array("ByteArray#toString")?)))
 }
 
 pub fn as_byte_array<'a>(obj: &'a Object, ctx: &str) -> Result<&'a ByteArray, Unwind> {

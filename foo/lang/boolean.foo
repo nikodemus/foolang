@@ -52,16 +52,18 @@ extend Boolean
             ifTrue: { True }
             ifFalse: block!
 
+    -- True and False are globals and get defined as builtins
+    -- in the self-hosted impl, and we expect builtins to have
+    -- names.
+    method name
+        self toString!
+
     method toString
         self ifTrue: { "True" }
              ifFalse: { "False" }!
 
-    method name
-        self ifTrue: { "True" }
-             ifFalse: { "False" }!
-
     method displayOn: stream
-        stream print: self toString!
+        stream writeString: self toString!
 end
 
 extend Object

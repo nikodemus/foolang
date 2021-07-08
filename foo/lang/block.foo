@@ -37,9 +37,6 @@ interface Function
 
     method value: arg1 value: arg2 value: arg3
         self apply: [arg1, arg2, arg3]!
-
-    method displayOn: stream
-        stream print: self toString!
 end
 
 interface Block
