@@ -852,7 +852,7 @@ class AstDynamic { name::String _id _value _state _definition sources }
         _state = new!
 
     method bind: newValue in: block
-        let oldValue = _value.
+        let oldValue = self eval.
         _value = newValue.
         { block value }
             finally: { _value = oldValue }!
