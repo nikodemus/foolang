@@ -16,6 +16,9 @@ extend Float
     direct method one
         1.0!
 
+    method displayOn: stream
+        stream writeString: self toString!
+
     method asFloat
         self!
 

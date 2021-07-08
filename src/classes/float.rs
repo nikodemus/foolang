@@ -35,10 +35,20 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("sqrt", float_sqrt);
     vt.add_primitive_method_or_panic("truncate", float_truncate);
     vt.add_primitive_method_or_panic("round", float_round);
+    vt.add_primitive_method_or_panic("toString", float_to_string);
     vt
 }
 
 // FUNDAMENTAL METHODS
+
+fn float_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    let x = &receiver.float();
+    if x - x.floor() == 0.0 {
+        Ok(env.foo.make_string(&format!("{}.0", x)))
+    } else {
+        Ok(env.foo.make_string(&format!("{}", x)))
+    }
+}
 
 fn float_round(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_integer(receiver.float().round() as i64))
