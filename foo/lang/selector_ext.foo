@@ -85,11 +85,10 @@ extend Selector
     method startsWith: part
         self name startsWith: part!
 
-    method printOn: stream
-        stream print: "#".
-        stream print: self name!
+    method displayOn: stream
+        stream writeString: "#".
+        stream writeString: self name!
 
     method toString
-        StringOutput
-            with: { |out| self printOn: out }!
+        "#" append: self name!
 end
