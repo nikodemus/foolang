@@ -91,7 +91,7 @@ class AstExtend { type interfaces directMethods instanceMethods }
         -- FIXME: Does this mean we should resolve name in env instead
         -- of the way it is now done?
         let target = type definition.
-        interfaces do: { |each| target __addInterface: each }.
+        interfaces do: { |each| target __addInterface: each eval }.
         directMethods do: { |each| target __addDirectMethod: each }.
         instanceMethods do: { |each| target __addInstanceMethod: each }.
         target!
