@@ -161,7 +161,7 @@ class DoesNotUnderstand { receiver selector arguments source context }
             ifFalse: { context backtrace }!
 
     method _note
-        { "{ receiver } does not understand: { selector }" }
+        { "{ receiver displayString } does not understand: { selector }" }
             on: Error
             do: { |e|
                   -- FIXME: Workaround for the lack of metaclasses in transpiler

@@ -22,13 +22,17 @@ extend Record
             do: { |each|
                   block value: (each sendTo: self) }!
 
-    method printOn: stream
-        stream print: "\{".
+    method displayOn: stream
+        self writeOn: stream using: (#displayOn:)!
+
+    method writeOn: stream using: block
+        stream writeString: "\{ ".
         (Record keysIn: self) sorted
             do: { |key|
-                  stream print: key name.
-                  stream print: ": ".
-                  stream print: (key sendTo: self) }
-            interleaving: { stream print: ", " }.
-        stream print: "}"!
+                  -- NOTE: on target keys are selectors
+                  stream writeString: key name.
+                  stream writeString: ": ".
+                  block value: (key sendTo: self) value: stream }
+            interleaving: { stream writeString: ", " }.
+        stream writeString: " }"!
 end
