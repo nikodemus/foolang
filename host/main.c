@@ -1,6 +1,7 @@
 // FIXME: fopen() on Windows, should use fopen_s instead.
 #define _CRT_SECURE_NO_WARNINGS 1
 
+#include <ctype.h>
 #include <math.h>
 #include <float.h>
 #include <stdint.h>
