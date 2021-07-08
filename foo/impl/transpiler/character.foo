@@ -5,7 +5,24 @@ define DirectMethods {
 }!
 
 define InstanceMethods {
+    #==
+        -> { signature: [Character], vars: 0,
+             body: "return foo_Boolean_new(
+                        ctx->receiver.datum.int64 == ctx->frame[0].datum.int64);" },
+    #<
+        -> { signature: [Character], vars: 0,
+             body: "return foo_Boolean_new(
+                        ctx->receiver.datum.int64 < ctx->frame[0].datum.int64);" },
     #code
         -> { signature: [], vars: 0,
-             body: "return foo_Integer_new(ctx->receiver.datum.int64);" }
+             body: "return foo_Integer_new(ctx->receiver.datum.int64);" },
+    #isAlpha
+        -> { signature: [], vars: 0,
+             body: "return foo_Boolean_new(isalpha(ctx->receiver.datum.int64));" },
+    #isWhitespace
+        -> { signature: [], vars: 0,
+             body: "return foo_Boolean_new(isspace(ctx->receiver.datum.int64));" },
+    #isDigit
+        -> { signature: [], vars: 0,
+             body: "return foo_Boolean_new(isdigit(ctx->receiver.datum.int64));" }
 }!

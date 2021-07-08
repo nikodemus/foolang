@@ -18,25 +18,12 @@ define HorizontalWhitespaceASCII
     [ASCII space,
      ASCII tab]!
 
-define WhitespaceASCII
-    [ASCII space,
-     ASCII tab,
-     ASCII lineFeed,
-     ASCII formFeed,
-     ASCII carriageReturn]!
-
 import .object.Object
 import .boolean
 
 -- FIXME: support unicode range
 extend Character
     is Object
-
-    method == other
-        self code == other code!
-
-    method < other
-        self code < other code!
 
     method isLowercase
         let code = self code.
@@ -46,21 +33,10 @@ extend Character
     method isAlphanumeric
         self isAlpha or: self isDigit!
 
-    method isAlpha
-        let code = self code.
-        (ASCII upperA <= code
-             and: code <= ASCII upperZ)
-            ifFalse: { ASCII lowerA <= code
-                           and: code <= ASCII lowerZ }!
-
     method isSymbol
         self code == ASCII underscore
             ifTrue: { False }
             ifFalse: { self isAlpha not }!
-
-    method isWhitespace
-        WhitespaceASCII
-            anySatisfy: { |whitespaceCode| whitespaceCode is self code }!
 
     method isHorizontalWhitespace
         HorizontalWhitespaceASCII
@@ -78,9 +54,6 @@ extend Character
                                     and: code < ASCII upperA + hexBase)
                            or: (ASCII lowerA <= code
                                     and: code < ASCII lowerA + hexBase) }!
-
-    method isDigit
-        self isDigit: 10!
 
     method digit: base
         let code = self code.

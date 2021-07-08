@@ -43,6 +43,14 @@ else
       #integerSub:
           -> { signature: [Integer], vars: 0,
                body: "return foo_Integer_new(ctx->receiver.datum.int64 - ctx->frame[0].datum.int64);" },
+      #to:do:
+          -> { signature: [Integer, Closure], vars: 0,
+               body: "int64_t from = ctx->receiver.datum.int64;
+                      int64_t to = ctx->frame[0].datum.int64;
+                      for (int64_t i = from; i <= to; i++) \{
+                           foo_send(ctx, &FOO_value_, ctx->frame[1], 1, foo_Integer_new(i));
+                      \}
+                      return ctx->receiver;" },
       #toString
           -> {signature: [], vars: 0,
               body: "char buffer[22];
