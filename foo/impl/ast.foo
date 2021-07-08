@@ -163,6 +163,27 @@ interface AstMethodHome
     required method _allInterfaces
     required method _allInterfaces: interfaces
 
+    method _maybeAddMethod: newMethod to: aDictionary
+        let name = newMethod selector name.
+        let oldMethod = aDictionary
+                            at: name
+                            ifNone: { aDictionary
+                                          put: newMethod
+                                          at: name.
+                                      return True }.
+        oldMethod isRequired
+            ifTrue: { aDictionary
+                          put: newMethod
+                          at: name.
+                      return True }.
+        False!
+
+    method __addDirectMethod: aMethod
+        self _maybeAddMethod: aMethod to: self _directMethods!
+
+    method __addInstanceMethod: aMethod
+        self _maybeAddMethod: aMethod to: self _instanceMethods!
+
     method __addInterface: anInterface
         -- Order is important, so these must be kept in a list!
         let interfaces = self _interfaces.
@@ -170,12 +191,6 @@ interface AstMethodHome
             ifTrue: { -- Debug println: "FOO: {self name} already {anInterface}".
                       return False }.
         self _interfaces push: anInterface!
-
-    method __addDirectMethod: aDirectMethod
-        self _directMethods at: aDirectMethod selector name put: aDirectMethod!
-
-    method __addInstanceMethod: anInstanceMethod
-        self _instanceMethods at: anInstanceMethod selector name put: anInstanceMethod!
 
     method directMethods: methods
         (self _directMethods is False) assert: "Direct methods already set.".
