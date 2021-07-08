@@ -64,7 +64,7 @@ for (size_t i = 0; i < self->size; i++) \{
 }
 return (struct Foo)\{ .class = &FooClass_Array, .datum = \{ .ptr = new } };"},
       #do:
-          -> {signature: [Block], vars: 0,
+          -> {signature: [Closure], vars: 0,
               body: "struct FooArray* self = PTR(FooArray, ctx->receiver.datum);
                      for (size_t i = 0; i < self->size; i++) \{
                          foo_send(ctx, &FOO_value_, ctx->frame[0], 1 self->data[i]);
