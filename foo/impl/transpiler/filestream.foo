@@ -3,6 +3,10 @@ define DirectMethods
 
 -- FIXME: duplicates Output pretty much
 define InstanceMethods {
+    #pathname
+    -> { signature: [], vars: 0,
+         body: "struct FooFileStream* stream = PTR(FooFileStream, ctx->receiver.datum);
+                return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = stream->pathname } };" },
     #close
     -> { signature: [], vars: 0,
          body: "struct FooFileStream* stream = PTR(FooFileStream, ctx->receiver.datum);

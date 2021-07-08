@@ -1,6 +1,8 @@
 extend FileStream
     method displayOn: stream
-        stream print: self toString!
+        stream writeString: "#<FileStream ".
+        stream writeString: self pathname.
+        stream writeString: ">"!
 
     method isOpen
         self isClosed not!
