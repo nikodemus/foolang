@@ -769,7 +769,7 @@ struct Foo foo_activate(struct FooContext* context) {
   assert(home);
   uint32_t depth = context->depth;
 
-  if (depth > 400) {
+  if (depth > 500) {
     foo_panicf(context, "Stack blew up!");
   }
   foo_maybe_gc(context);
