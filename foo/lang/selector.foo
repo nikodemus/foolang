@@ -85,16 +85,14 @@ class Selector { name }
     method startsWith: part
         self name startsWith: part!
 
-    -- FIXME: Should really intern selectors!
-
+    -- FIXME: Should really intern selectors on host...
     method isEquivalent: other
         name == other name!
 
-    method printOn: stream
-        stream print: "#".
-        stream print: name!
+    method displayOn: stream
+        stream writeString: "#".
+        stream writeString: name!
 
-    method toString
-        StringOutput
-            with: { |out| self printOn: out }!
+   method toString
+        "#" append: self name!
 end
