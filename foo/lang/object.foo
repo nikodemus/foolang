@@ -9,10 +9,20 @@ interface Object
         self is other!
 
     direct method printOn: stream
-        stream print: self toString!
+        stream writeString: self name!
 
     direct method displayOn: stream
-        self printOn: stream!
+        stream writeString: "#<".
+        stream writeString: self name.
+        stream writeString: ">"!
+
+    method printOn: stream
+        self displayOn: stream!
+
+    method displayOn: stream
+        stream writeString: "#<a ".
+        stream writeString: Self name.
+        stream writeString: ">"!
 
     method == other
         (Self includes: other)
@@ -20,12 +30,6 @@ interface Object
 
     method isEquivalent: other
         self is other!
-
-    method printOn: stream
-        stream print: self toString!
-
-    method displayOn: stream
-        self printOn: stream!
 
     method yourself
         self!

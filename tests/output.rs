@@ -372,7 +372,7 @@ fn test_interface_typecheck() -> Test {
     cmd.assert()
         .failure()
         .stdout(predicates::str::contains("YesI: True"))
-        .stdout(predicates::str::contains("Type error: I expected, got NotI: #<NotI>"));
+        .stdout(predicates::str::contains("Type error: I expected, got NotI: #<a NotI>"));
     Ok(())
 }
 
