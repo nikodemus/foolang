@@ -9,12 +9,10 @@ interface Object
         self is other!
 
     direct method printOn: stream
-        stream writeString: self name!
+        self displayOn: stream!
 
     direct method displayOn: stream
-        stream writeString: "#<".
-        stream writeString: self name.
-        stream writeString: ">"!
+        stream writeString: self name!
 
     method printOn: stream
         self displayOn: stream!
