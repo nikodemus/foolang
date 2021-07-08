@@ -88,6 +88,10 @@ end
 class SyntaxLiteral { value source }
     is Literal
 
+    direct method value: value
+        self value: value
+             source: False!
+
     method valueDisplayString
         value displayString!
 end
