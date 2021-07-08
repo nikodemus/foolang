@@ -325,6 +325,7 @@ class TestTranspileDictionary { assert system }
         self transpile: "import lang.dictionary2.Dictionary
                          import lang.output
                          import lang.string
+                         import lang.selector_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -340,6 +341,7 @@ class TestTranspileDictionary { assert system }
         self transpile: "import lang.dictionary2.Dictionary
                          import lang.output
                          import lang.string
+                         import lang.selector_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -355,6 +357,8 @@ class TestTranspileDictionary { assert system }
         self transpile: "import lang.dictionary2.Dictionary
                          import lang.string
                          import lang.character_ext
+                         import lang.selector_ext
+
                          class Main \{ out \}
                              direct method run: command in: system
                                  (self out: system output) run!
