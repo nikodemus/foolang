@@ -17,6 +17,9 @@ interface Any
     direct method displayOn: stream
         stream print: "#<Any>"!
 
+    direct method toString
+        "Any"!
+
     method yourself
         self!
 end
