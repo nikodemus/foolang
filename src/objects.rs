@@ -969,6 +969,13 @@ impl Object {
         }
     }
 
+    pub fn is_closure(&self) -> bool {
+        match &self.datum {
+            Datum::Closure(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn compiler(&self) -> Rc<classes::compiler::Compiler> {
         match &self.datum {
             Datum::Compiler(compiler) => Rc::clone(compiler),
@@ -1303,8 +1310,10 @@ impl Object {
     // SEND
 
     pub fn send(&self, selector: &str, args: &[Object], env: &Env) -> Eval {
-        // let s = format!("send: {} #{} {:?}", self, selector, args);
-        // println!("{}", &s[0..std::cmp::min(80, s.len())]);
+        if false && selector != "typecheck:" && !self.is_closure() && !self.is_boolean() {
+            let s = format!("send: {} #{} {:?}", self, selector, args);
+            println!("{}", &s[0..std::cmp::min(80, s.len())]);
+        }
         match self.vtable.get(selector) {
             Some(m) => match &m {
                 Method::Primitive(method) => method(self, args, env),
