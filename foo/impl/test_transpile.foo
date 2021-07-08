@@ -390,7 +390,7 @@ class TestTranspilePreludeException { assert system }
                              direct method run: command in: system
                                  self bang!
                          end"
-            expectError: "PANIC: UNHANDLED ERROR: Instances of Main class do not understand: #bang
+            expectError: "PANIC: UNHANDLED ERROR: Main does not understand: #bang
 Backtrace:
   6: FallbackHandler class#raise:
   5: Error#raise (DoesNotUnderstand)
@@ -410,7 +410,7 @@ Backtrace:
                              direct method run: command in: system
                                  Class bang!
                          end"
-            expectError: "PANIC: UNHANDLED ERROR: Instances of Class do not understand: #bang
+            expectError: "PANIC: UNHANDLED ERROR: Class does not understand: #bang
 Backtrace:
   6: FallbackHandler class#raise:
   5: Error#raise (DoesNotUnderstand)
@@ -1331,7 +1331,7 @@ class TestTranspileBacktrace { assert system }
                              direct method ok
                                  self ok2!
                          end"
-            expectError: "PANIC: Instances of Main class do not understand: #oops
+            expectError: "PANIC: Main does not understand: #oops
 Backtrace:
   3: Aux interface#ok2 (Main class)
   2: Main class#ok
