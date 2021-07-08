@@ -1335,7 +1335,7 @@ impl Object {
                 args[1].as_usize("#__put:__atSlot:")?,
             ),
             None if selector == "__doSelectors:" => generic_do_selectors(self, args, env),
-            None if selector == "toString" => generic_to_string(self, args, env),
+            None if selector == "__toString" => generic_to_string(self, args, env),
             None => {
                 // println!("known: {:?}", self.vtable.selectors());
                 let not_understood = vec![env.foo.make_string(selector), env.foo.make_array(args)];
