@@ -80,6 +80,7 @@ pub fn class_vtable() -> Vtable {
 
 pub fn instance_vtable() -> Vtable {
     let vt = Vtable::for_instance("File");
+    vt.add_primitive_method_or_panic("pathname", file_pathname);
     vt.add_primitive_method_or_panic("create", file_create);
     vt.add_primitive_method_or_panic("createOrOpen", file_create_or_open);
     vt.add_primitive_method_or_panic("forAppend", file_for_append);
@@ -102,6 +103,10 @@ pub fn make_file(path: &Path, env: &Env) -> Object {
         write_mode: WriteMode::None,
     }
     .object(env)
+}
+
+fn file_pathname(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.into_string(format!("{}", receiver.as_file("File#pathname")?.path.display())))
 }
 
 fn file_create(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
