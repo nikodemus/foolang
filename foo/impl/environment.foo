@@ -176,7 +176,12 @@ class Environment { parent
     direct method modules: modules
         self
             builtins: BuiltinDictionary new
-            modules: (ModuleDictionary new: modules)
+            modules: (ModuleDictionary new: modules)!
+
+    direct method builtins: builtins modules: modules
+        self
+            builtins: builtins
+            modules: modules
             classes: Dictionary new!
 
     direct method builtins: builtins modules: modules classes: classes
