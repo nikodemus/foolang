@@ -87,11 +87,16 @@ class AstExtend { type interfaces directMethods instanceMethods }
     method defineIn: env
         -- FIXME: This should use a mirror for host, or
         -- existing metaobjects for self-hosted classes.
-        --
-        -- FIXME: Does this mean we should resolve name in env instead
-        -- of the way it is now done?
         let target = type definition.
-        interfaces do: { |each| target __addInterface: each eval }.
+        -- KLUDGE: in case of adding interfaces to AstMethodHome
+        -- we want to have the definition instead of the interface
+        -- object. Consider this more fallout from lack of
+        -- mirrors / reflective capabilities.
+        (AstMethodHome includes: target)
+            ifTrue: { interfaces
+                          do: { |each| target __addInterface: each } }
+            ifFalse: { interfaces
+                          do: { |each| target __addInterface: each eval } }.
         directMethods do: { |each| target __addDirectMethod: each }.
         instanceMethods do: { |each| target __addInstanceMethod: each }.
         target!
