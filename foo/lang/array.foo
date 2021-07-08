@@ -128,19 +128,14 @@ extend Array
         --  is Iterable except: [#elementType]
         self arrayElementType!
 
-    method _emitOn: stream using: block
-        stream print: "[".
-        self do: { |x| block value: x }
-             interleaving: { stream print: ", " }.
-        stream print: "]"!
+    method writeOn: stream using: block
+        stream writeString: "[".
+        self do: { |x| block value: x value: stream }
+             interleaving: { stream writeString: ", " }.
+        stream writeString: "]"!
 
     method displayOn: stream
-        self _emitOn: stream
-             using: { |x| x displayOn: stream }!
-
-    method printOn: stream
-        self _emitOn: stream
-             using: { |x| x printOn: stream }!
+        self writeOn: stream using: (#displayOn:)!
 
     method dot: other
         self with: other
