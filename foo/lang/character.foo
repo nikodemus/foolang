@@ -92,8 +92,10 @@ class Character { code }
     method isEquivalent: other
         code is other code!
 
-    method toString
-        "#<Character code: { code }>"!
+    method displayOn: stream
+        stream writeString: "#<Character code: ".
+        stream print: self code.
+        stream writeString: ">"!
 
     method isNewline
         self code is ASCII lineFeed!

@@ -70,8 +70,10 @@ extend Character
     method isEquivalent: other
         self is other!
 
-    method toString
-        "#<Character code: { self code }>"!
+    method displayOn: stream
+        stream writeString: "#<Character code: ".
+        stream print: self code.
+        stream writeString: ">"!
 
     method isNewline
         self code is ASCII lineFeed!
