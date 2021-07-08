@@ -8,7 +8,6 @@ define UnderscoreCharacter
     "_" character!
 
 class Selector { name }
-    is Object
     is Block
 
     direct method intern: name

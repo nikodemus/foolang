@@ -1,7 +1,5 @@
 import .character_ext
 import .closure.Block
-import .list.List
-import .stringOutput.StringOutput
 
 -- for #find:ifNone
 import .string
