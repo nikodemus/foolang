@@ -1147,11 +1147,7 @@ end
                      system output print: defs!
 
              end"
-                expect: "[#<SyntaxLiteral 123>][#<SyntaxInterface interface X
-    method y
-        42!
-end
->]"!
+                expect: "[#<SyntaxLiteral 123>][#<SyntaxInterface X>]"!
 
     method test_Transpiled_SyntaxPrinter
         self transpileWithPrelude:
