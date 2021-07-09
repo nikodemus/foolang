@@ -3,6 +3,19 @@ import .exception.TypeError
 import .layout_ext.*
 import .stringOutput.StringOutput
 
+class _ConstructorName {}
+    direct method forSlots: slots
+        slots
+            ifEmpty: { return #new }.
+        (StringOutput
+             with: { |out|
+                     slots
+                         do: { |each|
+                               out print: each name.
+                               out print: ":" } })
+        toSelector!
+end
+
 extend Class
     is Object
 
@@ -23,30 +36,18 @@ extend Class
            directMethods: directMethods
            instanceMethods: instanceMethods
         let layout = Layout new: (slots size).
+        let ctor = layout constructorMethod: (_ConstructorName forSlots: slots).
         let metaclass = Class
                             subclass: "{name} classOf"
                             interfaces: (interfaces collect: #classOf)
-                            methods: (directMethods
-                                          append: [layout constructorMethod: (self _constructorNameForSlots: slots)]).
+                            methods: (directMethods append: [ctor]).
+        let readers = (slots reject: { |each| each name startsWith: "_" })
+                          collect: { |each|
+                                     layout readerMethod: each name toSelector
+                                            for: each index }.
         metaclass
             new: name
             layout: layout
             interfaces: interfaces
-            methods: (instanceMethods
-                          append: ((slots reject: { |each| each name startsWith: "_" })
-                                       collect: { |each|
-                                                  layout readerMethod: each name toSelector
-                                                         for: each index }))!
-
-    method _constructorNameForSlots: slots
-        slots
-            ifEmpty: { return #new }.
-        (StringOutput
-             with: { |out|
-                     slots
-                         do: { |each|
-                               out print: each name.
-                               out print: ":" } })
-        toSelector!
-
+            methods: (instanceMethods append: readers)!
 end
