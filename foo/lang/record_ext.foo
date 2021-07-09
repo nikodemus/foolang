@@ -1,9 +1,49 @@
 import .object.Object
 import .array        -- for Array#sorted
 import .selector_ext -- for Selector#==
+import .exception.Error
+
+define ColonCharacter ":" character!
+
+class RecordConstructorMethod { selector layout }
+    method invoke: args on: receiver
+           layout makeInstanceOf: receiver
+                  from: args!
+end
+
+class RecordReaderMethod { selector index layout }
+    method invoke: args on: receiver
+        layout at: index
+               in: receiver!
+end
 
 extend Record
     is Object
+
+    direct method classFor: ctorSelector
+        ctorSelector isKeyword
+            ifFalse: { Error raise: "Cannot create a Record class for constructor: {ctorSelector}" }.
+        let keys = (ctorSelector name splitBy: ColonCharacter) butlast asArray.
+        let layout = Layout new: (keys size).
+        let metaclass = Class
+                            subclass: "*Record<{ctorSelector name}> class"
+                            interfaces: [Record classOf]
+                            methods: [(RecordConstructorMethod
+                                           selector: ctorSelector
+                                           layout: layout)].
+        metaclass
+            new: "*Record<{ctorSelector name}>"
+            layout: layout
+            interfaces: [Record]
+            methods: (keys collectWithIndex: { |each index|
+                                               RecordReaderMethod
+                                                   selector: each toSelector
+                                                   index: index
+                                                   layout: layout })!
+
+    direct method perform: selector with: arguments
+        selector sendTo: (self classFor: selector)
+                 with: arguments!
 
     direct method sizeOf: record
         (Record keysIn: record) size!

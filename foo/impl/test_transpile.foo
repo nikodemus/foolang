@@ -1731,6 +1731,18 @@ end
 class TestTranspileRecord { assert system }
     is TranspilerTest
 
+    method test_Ad_Hoc_Record_in_transpiler
+        self transpile: "import lang.record_ext
+                         import lang.array_ext
+                         class Main \{}
+                             direct method run: command in: system
+                                 let record = Record a: 1 b: 2.
+                                 record a debug.
+                                 record b debug.
+                                 (Record keysIn: record) debug!
+                         end"
+            expect: "#<Integer 1>#<Integer 2>[#<Selector a>, #<Selector b>]"!
+
     method test_Define_record_in_transpiler
         self transpile: "define MyRecord1 \{ foo: 42, bar: 123 }!
                          define MyRecord2 \{ bar: 128947, foo: 99 }!
