@@ -157,7 +157,7 @@ class DoesNotUnderstand { receiver selector arguments source context }
 
     method backtrace
         context is False
-            ifTrue: { False }
+            ifTrue: { [] }
             ifFalse: { context backtrace }!
 
     method _note
@@ -170,11 +170,19 @@ class DoesNotUnderstand { receiver selector arguments source context }
                   return "Instances of { className } do not understand: { selector }"}!
 
     method _description
-        let note = self _note.
-        source is False
-            ifTrue: { self _note }
-            ifFalse: { "{ note }
-{ source note: self _note }" }!
+        self _descriptionOutput:
+            { |out|
+              out print: (source is False
+                              ifTrue: { self _note }
+                              ifFalse: { "{ self _note }\n{ source note: self _note }" }).
+              let backtrace = self backtrace.
+              backtrace
+                  ifNotEmpty: { out println: "\nInterpreter backtrace:".
+                                let n = backtrace size.
+                                backtrace
+                                    do: { |each|
+                                          out println: "  {n}: {each receiver classOf name}{each selector}".
+                                          n = n - 1 } } }!
 end
 
 class TypeError { value expected source }
