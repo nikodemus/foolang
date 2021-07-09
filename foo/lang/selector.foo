@@ -72,6 +72,9 @@ class Selector { name }
     method isUnary
         Self isUnaryName: self name!
 
+    method isPrivate
+        self name startsWith: "_"!
+
     method sendTo: receiver
         name sendTo: receiver
              with: []!

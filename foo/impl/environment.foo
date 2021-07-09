@@ -263,10 +263,9 @@ class Environment { parent
         let module = (modules at: moduleName relative: relative in: self).
         let bindings = List new.
         module globals
-            doKeys: { |name|
-                      (name startsWith: "_")
-                          ifFalse: { -- Debug println: "importing: {name}".
-                                     bindings add: (module global: name) } }.
+            do: { |name global|
+                  name isPrivate
+                      ifFalse: { bindings add: global } }.
         self addGlobals: bindings!
 
     method importPrelude: moduleName
@@ -274,7 +273,7 @@ class Environment { parent
         let module = (modules at: moduleName relative: False in: self).
         module globals
             do: { |name global|
-                      (name startsWith: "_")
+                  name isPrivate
                       ifFalse: { -- Debug println: "prelude: {name}".
                                  (builtins has: name)
                                      ifTrue: { (builtins at: name)

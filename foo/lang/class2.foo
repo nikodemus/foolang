@@ -41,7 +41,7 @@ extend Class
                             subclass: "{name} classOf"
                             interfaces: (interfaces collect: #classOf)
                             methods: (directMethods append: [ctor]).
-        let readers = (slots reject: { |each| each name startsWith: "_" })
+        let readers = (slots reject: #isPrivate)
                           collect: { |each|
                                      layout readerMethod: each name toSelector
                                             for: each index }.

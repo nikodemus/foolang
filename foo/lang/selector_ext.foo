@@ -80,6 +80,9 @@ extend Selector
     method isUnary
         Self isUnaryName: self name!
 
+    method isPrivate
+        self name startsWith: "_"!
+
     method startsWith: part
         self name startsWith: part!
 
