@@ -227,7 +227,10 @@ impl Error {
 
 impl MessageError {
     pub fn what(&self) -> String {
-        format!("{:?} does not understand: {} {:?}", self.receiver, self.message, self.arguments)
+        format!(
+            "{:?} does not understand: {} {:?} (bootstrap evaluator)",
+            self.receiver, self.message, self.arguments
+        )
     }
 }
 
@@ -240,7 +243,7 @@ impl SimpleError {
 impl TypeError {
     pub fn what(&self) -> String {
         format!(
-            "{} expected, got {}: {:?}",
+            "{} expected, got {}: {:?} (bootstrap evaluator)",
             self.expected,
             self.value.vtable.name.clone(),
             self.value,
