@@ -169,23 +169,6 @@ class TestPrelude08 { system ok onFailure }
              expect: "Oops"!
 end
 
-class TestPrelude09 { system ok onFailure }
-    is TestSelfHosting
-
-    method testPrelude_9_Boolean
-        let lang = system files / "foo/lang".
-        self without: ["Boolean", "True", "False", "Any", "Object", "StringOutput"]
-             modules: { "lang" -> lang } asFileModules
-             load: "import lang.boolean0
-                    class Test \{}
-                        direct method test
-                           boolean0.True
-                               ifTrue: \{ 42 }!
-                    end"
-             eval: "Test test"
-             expect: 42!
-end
-
 class TestPrelude10 { system ok onFailure }
     is TestSelfHosting
 
@@ -223,7 +206,6 @@ class Main {}
             "--prelude-06" -> TestPrelude06,
             "--prelude-07" -> TestPrelude07,
             "--prelude-08" -> TestPrelude08,
-            "--prelude-09" -> TestPrelude09,
             "--prelude-10" -> TestPrelude10,
         }.
         let all = tests keys sort.
