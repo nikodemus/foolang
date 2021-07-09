@@ -1,0 +1,52 @@
+import .object.Object
+import .exception.TypeError
+import .layout_ext.*
+import .stringOutput.StringOutput
+
+extend Class
+    is Object
+
+    method displayOn: stream
+        stream writeString: self name!
+
+    method typecheck: value
+        -- Output debug println: "{self} typecheck: {value}".
+        (self includes: value)
+            ifTrue: { value }
+            ifFalse: { TypeError
+                           raise: value
+                           expected: self }!
+
+    direct method new: name
+                  slots: slots
+                  interfaces: interfaces
+                  directMethods: directMethods
+                  instanceMethods: instanceMethods
+        let layout = Layout new: (slots size).
+        let metaclass = Class
+                            subclass: "{name} classOf"
+                            interfaces: (interfaces collect: #classOf)
+                            methods: (directMethods
+                                          append: [layout constructorMethod: (self _constructorNameForSlots: slots)]).
+        metaclass
+            new: name
+            layout: layout
+            interfaces: interfaces
+            methods: (instanceMethods
+                          append: ((slots reject: { |each| each name startsWith: "_" })
+                                       collect: { |each|
+                                                  layout readerMethod: each name toSelector
+                                                         for: each index }))!
+
+    direct method _constructorNameForSlots: slots
+        slots
+            ifEmpty: { return #new }.
+        (StringOutput
+             with: { |out|
+                     slots
+                         do: { |each|
+                               out print: each name.
+                               out print: ":" } })
+        toSelector!
+
+end
