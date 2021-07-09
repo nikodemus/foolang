@@ -489,7 +489,8 @@ end
 
 class AstReaderMethod { home slot }
     method selector
-        Selector intern: slot name!
+        -- KLUDGE: host vs target difference
+        slot name toSelector!
     method signature
         []!
     method arity
