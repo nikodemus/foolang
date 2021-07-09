@@ -241,14 +241,6 @@ extend Object
     -- Erg. This gets us a nice error, but loses the source locations I
     -- worked to get right. BLarggkashdaskjhfklajfshd.
 
-    direct method typecheck: value
-        -- Output debug println: "{Self} typecheck: {value}".
-        (Self includes: value)
-            ifTrue: { value }
-            ifFalse: { TypeError
-                           raise: value
-                           expected: Self }!
-
     method perform: selector with: arguments
         DoesNotUnderstand
             raise: selector toSelector

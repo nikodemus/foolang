@@ -240,7 +240,7 @@ impl SimpleError {
 impl TypeError {
     pub fn what(&self) -> String {
         format!(
-            "{} expected, got {}: {:?}",
+            "{} expected, got {}: {:?} (bootstrap evaluator)",
             self.expected,
             self.value.vtable.name.clone(),
             self.value,

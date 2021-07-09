@@ -1,8 +1,17 @@
 import .object.Object
+import .exception.TypeError
 
 extend Class
     is Object
 
     method displayOn: stream
         stream writeString: self name!
+
+    method typecheck: value
+        -- Output debug println: "{self} typecheck: {value}".
+        (self includes: value)
+            ifTrue: { value }
+            ifFalse: { TypeError
+                           raise: value
+                           expected: self }!
 end
