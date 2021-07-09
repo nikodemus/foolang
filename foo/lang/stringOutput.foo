@@ -119,3 +119,8 @@ extend Object
         err println: other displayString.
         Error raise: "Mismatch:\n{err content}"!
 end
+
+extend Error
+    method _descriptionOutput: block
+        StringOutput with: block!
+end

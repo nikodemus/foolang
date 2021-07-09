@@ -730,7 +730,7 @@ end
         self eval: "let x = 42. let y = 13. \{ x -> y, y + 1 -> x * 2, }"
              expect: { 42 -> 13, 14 -> 84 }!
 
-    method testBacktrace
+    method test_DoesNotUnderstand_has_backtrace_available
         self load: "class BacktraceTest \{}
                         is Object
                         method bang: block
@@ -746,9 +746,42 @@ end
             expectError: DoesNotUnderstand
             where: { |e|
                      e selector == #nope
-                         ifTrue: { let bt = e context backtrace.
-                                   let selectors = bt collect: { |f| f selector :: Selector }.
+                         ifTrue: { let selectors = e backtrace collect: { |f| f selector :: Selector }.
                                    selectors isEquivalent: [#value, #bang:, #foo, #bar, #test] }}!
+
+    method test_DoesNotUnderstand_has_backtrace_in_description
+        self load: "class BacktraceTest \{}
+                        is Object
+                        method bang: block
+                           block value!
+                        method foo
+                            self bang: \{ self nope }!
+                        method bar
+                           self foo!
+                        direct method test
+                           self new bar!
+                    end"
+            eval: "BacktraceTest test"
+            expectError: DoesNotUnderstand
+            where: { |e|
+                     e selector == #nope
+                         ifTrue: { let description = e description.
+                                   let expected = "#<a BacktraceTest> does not understand: #nope
+004                            block value!
+005                         method foo
+006                             self bang: \{ self nope }!
+                                                  ^^^^ #<a BacktraceTest> does not understand: #nope
+007                         method bar
+008                            self foo!
+
+Interpreter backtrace:
+  5: BacktraceTest#value
+  4: BacktraceTest#bang:
+  3: BacktraceTest#foo
+  2: BacktraceTest#bar
+  1: BacktraceTest classOf#test
+".
+                                   description == expected } }!
 
     method test_DoesNotUnderstand_has_source_location
          -- `is Object` required for the exception to happen as we want
