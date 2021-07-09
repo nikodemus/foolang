@@ -39,7 +39,7 @@ type is useless.
 
 ## Proposal
 
-Record interface now longer works as ad-hoc constructor for records: the
+Record interface no longer works as ad-hoc constructor for records: the
 syntactic form must be used. This ensures that all records types are statically
 known.
 

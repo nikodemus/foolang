@@ -474,6 +474,22 @@ struct Foo foo_class_new(struct FooContext* ctx) {
                        .datum = { .ptr = new }};
 }
 
+struct Foo foo_class_new_from_array(struct FooContext* ctx) {
+  struct FooClass* theClass = PTR(FooClass, ctx->frame[0].datum);
+  struct FooLayout* theLayout = PTR(FooLayout, ctx->receiver.datum);
+  if (theClass->layout != theLayout) {
+    foo_panicf(ctx, "Layout mismatch: invalid layout for %s",
+               theClass->name->data);
+  }
+  struct FooArray* theArray = PTR(FooArray, ctx->frame[1].datum);
+  if (theLayout->size != theArray->size) {
+    foo_panicf(ctx, "Layout mismatch: %s layout has %zu slots, array has %zu elements.",
+               theClass->name->data, theLayout->size, theArray->size);
+  }
+  return (struct Foo){ .class = theClass,
+                       .datum = { .ptr = theArray }};
+}
+
 bool foo_class_inherits(struct FooClass* want, struct FooClass* class) {
   struct FooPointerList* list = class->inherited;
   for (size_t i = 0; i < list->size; i++) {
