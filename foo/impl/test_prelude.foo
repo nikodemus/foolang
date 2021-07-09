@@ -1,12 +1,9 @@
 import .test_self_hosting.TestSelfHosting
 
--- prelude tests numbered so that they sort in order
--- of complexity, roughly.
-
-class TestPrelude01 { system ok onFailure }
+class TestPreludeAny { system ok onFailure }
     is TestSelfHosting
 
-    method testPrelude_1_Any
+    method testPreludeAny
         let lang = system files / "foo/lang".
         self without: ["Any"]
              modules: { "lang" -> lang } asFileModules
@@ -19,10 +16,10 @@ class TestPrelude01 { system ok onFailure }
              expect: True!
 end
 
-class TestPrelude02 { system ok onFailure }
+class TestPreludeObject { system ok onFailure }
     is TestSelfHosting
 
-    method testPrelude_2_Object
+    method testPreludeObject
         let lang = system files / "foo/lang".
         self without: ["Object"]
              modules: { "lang" -> lang } asFileModules
@@ -40,10 +37,10 @@ class TestPrelude02 { system ok onFailure }
              expect: [True, False]!
 end
 
-class TestPrelude03 { system ok onFailure }
+class TestPreludeCharacter { system ok onFailure }
     is TestSelfHosting
 
-    method testPrelude_3_Character
+    method testPreludeCharacter
         let lang = system files / "foo/lang".
         self without: ["Character", "Object", "StringOutput"]
              modules: { "lang" -> lang } asFileModules
@@ -65,10 +62,10 @@ class TestPrelude03 { system ok onFailure }
              expect: [#gotcha, True]!
 end
 
-class TestPrelude04 { system ok onFailure }
+class TestPreludeIterable { system ok onFailure }
     is TestSelfHosting
 
-    method testPrelude_4_Iterable
+    method testPreludeIterable
         let lang = system files / "foo/lang".
         self without: ["Iterable", "Any", "Object", "StringOutput"]
              modules: { "lang" -> lang } asFileModules
@@ -82,10 +79,10 @@ class TestPrelude04 { system ok onFailure }
              expect: [1,2,3] asList!
 end
 
-class TestPrelude05 { system ok onFailure }
+class TestPreludeInterval { system ok onFailure }
     is TestSelfHosting
 
-    method testPrelude_5_Interval
+    method testPreludeInterval
         let lang = system files / "foo/lang".
         self without: ["Interval", "Any", "Object", "StringOutput"]
              modules: { "lang" -> lang } asFileModules
@@ -96,10 +93,10 @@ class TestPrelude05 { system ok onFailure }
              expect: 100!
 end
 
-class TestPrelude06 { system ok onFailure }
+class TestPreludeCollection { system ok onFailure }
     is TestSelfHosting
 
-    method testPrelude_6_Collection
+    method testPreludeCollection
         let lang = system files / "foo/lang".
         self without: ["Collection", "Iterable", "Any", "Object", "StringOutput"]
              modules: { "lang" -> lang } asFileModules
@@ -127,10 +124,10 @@ class TestPrelude06 { system ok onFailure }
              expect: [[1,2,3] asList, True]!
 end
 
-class TestPrelude07 { system ok onFailure }
+class TestPreludeBlock { system ok onFailure }
     is TestSelfHosting
 
-    method testPrelude_7_Block
+    method testPreludeBlock
         let lang = system files / "foo/lang".
         self without: ["Block", "Any", "Object", "StringOutput"]
              modules: { "lang" -> lang } asFileModules
@@ -152,10 +149,10 @@ class TestPrelude07 { system ok onFailure }
              expect: [2,12,103] asList!
 end
 
-class TestPrelude08 { system ok onFailure }
+class TestPreludeException { system ok onFailure }
     is TestSelfHosting
 
-    method testPrelude_8_Exception
+    method testPreludeException
         let lang = system files / "foo/lang".
         self without: ["Error", "TypeError", "DoesNotUnderstand", "Any", "Object", "StringOutput"]
              modules: { "lang" -> lang } asFileModules
@@ -169,27 +166,10 @@ class TestPrelude08 { system ok onFailure }
              expect: "Oops"!
 end
 
-class TestPrelude09 { system ok onFailure }
+class TestPreludeOrdered { system ok onFailure }
     is TestSelfHosting
 
-    method testPrelude_9_Boolean
-        let lang = system files / "foo/lang".
-        self without: ["Boolean", "True", "False", "Any", "Object", "StringOutput"]
-             modules: { "lang" -> lang } asFileModules
-             load: "import lang.boolean0
-                    class Test \{}
-                        direct method test
-                           boolean0.True
-                               ifTrue: \{ 42 }!
-                    end"
-             eval: "Test test"
-             expect: 42!
-end
-
-class TestPrelude10 { system ok onFailure }
-    is TestSelfHosting
-
-    method testPrelude_10_Ordered
+    method testPreludeOrdered
         let lang = system files / "foo/lang".
         self without: ["Ordered", "Iterable", "Iterator", "Any", "Object", "StringOutput"]
              modules: { "lang" -> lang } asFileModules
@@ -215,16 +195,15 @@ end
 class Main {}
     direct method run: cmd in: system
         let tests = {
-            "--prelude-01" -> TestPrelude01,
-            "--prelude-02" -> TestPrelude02,
-            "--prelude-03" -> TestPrelude03,
-            "--prelude-04" -> TestPrelude04,
-            "--prelude-05" -> TestPrelude05,
-            "--prelude-06" -> TestPrelude06,
-            "--prelude-07" -> TestPrelude07,
-            "--prelude-08" -> TestPrelude08,
-            "--prelude-09" -> TestPrelude09,
-            "--prelude-10" -> TestPrelude10,
+            "--any" -> TestPreludeAny,
+            "--object" -> TestPreludeObject,
+            "--character" -> TestPreludeCharacter,
+            "--iterable" -> TestPreludeIterable,
+            "--interval" -> TestPreludeInterval,
+            "--collection" -> TestPreludeCollection,
+            "--block" -> TestPreludeBlock,
+            "--exception" -> TestPreludeException,
+            "--ordered" -> TestPreludeOrdered,
         }.
         let all = tests keys sort.
         cmd == []
