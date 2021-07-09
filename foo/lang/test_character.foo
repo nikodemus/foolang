@@ -146,4 +146,12 @@ class TestCharacter { assert }
                        s character isHorizontalWhitespace not }
                testing: "Character#isHorizontalWhitespace for non-whitespace"!
 
+    method test_Character_equals
+        assert forAll: [[":" character, ":" character, True],
+                        ["a" character, "b" character, False],
+                        ["x" character, 123, False]]
+               that: { |case|
+                       (case first == case second) is case third }
+               testing: "Character#=="!
+
 end
