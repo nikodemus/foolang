@@ -17,11 +17,11 @@ extend Class
                            raise: value
                            expected: self }!
 
-    direct method new: name
-                  slots: slots
-                  interfaces: interfaces
-                  directMethods: directMethods
-                  instanceMethods: instanceMethods
+    method new: name
+           slots: slots
+           interfaces: interfaces
+           directMethods: directMethods
+           instanceMethods: instanceMethods
         let layout = Layout new: (slots size).
         let metaclass = Class
                             subclass: "{name} classOf"
@@ -38,7 +38,7 @@ extend Class
                                                   layout readerMethod: each name toSelector
                                                          for: each index }))!
 
-    direct method _constructorNameForSlots: slots
+    method _constructorNameForSlots: slots
         slots
             ifEmpty: { return #new }.
         (StringOutput
