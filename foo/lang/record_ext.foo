@@ -2,20 +2,9 @@ import .object.Object
 import .array        -- for Array#sorted
 import .selector_ext -- for Selector#==
 import .exception.Error
+import .layout_ext.*
 
 define ColonCharacter ":" character!
-
-class RecordConstructorMethod { selector layout }
-    method invoke: args on: receiver
-           layout makeInstanceOf: receiver
-                  from: args!
-end
-
-class RecordReaderMethod { selector index layout }
-    method invoke: args on: receiver
-        layout at: index
-               in: receiver!
-end
 
 extend Record
     is Object
@@ -28,18 +17,14 @@ extend Record
         let metaclass = Class
                             subclass: "*Record<{ctorSelector name}> class"
                             interfaces: [Record classOf]
-                            methods: [(RecordConstructorMethod
-                                           selector: ctorSelector
-                                           layout: layout)].
+                            methods: [(layout constructorMethod: ctorSelector)].
         metaclass
             new: "*Record<{ctorSelector name}>"
             layout: layout
             interfaces: [Record]
             methods: (keys collectWithIndex: { |each index|
-                                               RecordReaderMethod
-                                                   selector: each toSelector
-                                                   index: index
-                                                   layout: layout })!
+                                               layout readerMethod: each toSelector
+                                                      for: index })!
 
     direct method perform: selector with: arguments
         selector sendTo: (self classFor: selector)

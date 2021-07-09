@@ -1,0 +1,23 @@
+class ConstructorMethod { selector layout }
+    method invoke: args on: receiver
+           layout makeInstanceOf: receiver
+                  from: args!
+end
+
+class ReaderMethod { selector index layout }
+    method invoke: args on: receiver
+        layout at: index
+               in: receiver!
+end
+
+extend Layout
+    method constructorMethod: selector
+        ConstructorMethod
+            selector: selector
+            layout: self!
+    method readerMethod: selector for: index
+        ReaderMethod
+            selector: selector
+            index: index
+            layout: self!
+end

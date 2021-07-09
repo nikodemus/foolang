@@ -7,7 +7,7 @@ import .block_ext
 import .boolean.Boolean
 import .byteArray.ByteArray
 import .character_ext.Character
-import .class.Class
+import .class2.Class
 import .closure.Closure
 import .collection.Collection
 import .dictionary2.Dictionary
@@ -25,6 +25,7 @@ import .integer.Integer
 import .interface2.Interface
 import .interval.Interval
 import .iterable.Iterable
+import .layout_ext
 import .list.List
 import .number.Number
 import .object.Object

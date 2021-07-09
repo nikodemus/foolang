@@ -438,26 +438,16 @@ class AstClass { name superclass _slots
             ifTrue: {
                 return global eval }.
         { let result
-              = Foolang isSelfHosted
-                  ifTrue: { let layout = Layout new: (self slots size).
-                            let metaclass = Class subclass: "{name} class"
-                                                  interfaces: [] -- FIXME
-                                                  methods: self ownDirectMethods asArray.
-                            -- FIXME interfaces and methods below
-                            metaclass new: name
-                                      layout: layout
-                                      interfaces: []
-                                      methods: [] }
-                  ifFalse: { Class
-                                 new: name
-                                 slots: (self slots
-                                             collect: { |each|
-                                                        { name: each name,
-                                                          type: each type } }
-                                             as: Array)
-                                 interfaces: self interfaceObjects
-                                 directMethods: self ownDirectMethods
-                                 instanceMethods: self ownInstanceMethods }.
+              = Class
+                  new: name
+                  slots: (self slots
+                              collect: { |each|
+                                         { name: each name,
+                                           type: each type } }
+                              as: Array)
+                  interfaces: self interfaceObjects
+                  directMethods: self ownDirectMethods
+                  instanceMethods: self ownInstanceMethods.
           _env classes put: self at: result.
           global value: result }
         finally: { _env = False }!
