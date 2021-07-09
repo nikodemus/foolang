@@ -67,9 +67,6 @@ extend Character
     method digit
         self digit: 10!
 
-    method isEquivalent: other
-        self is other!
-
     method displayOn: stream
         stream writeString: "#<Character code: ".
         stream print: self code.

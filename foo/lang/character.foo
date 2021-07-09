@@ -31,9 +31,6 @@ import .object.Object
 class Character { code }
     is Object
 
-    method == other
-        self code == other code!
-
     method < other
         self code < other code!
 
