@@ -227,7 +227,10 @@ impl Error {
 
 impl MessageError {
     pub fn what(&self) -> String {
-        format!("{:?} does not understand: {} {:?}", self.receiver, self.message, self.arguments)
+        format!(
+            "{:?} does not understand: {} {:?} (bootstrap evaluator)",
+            self.receiver, self.message, self.arguments
+        )
     }
 }
 
