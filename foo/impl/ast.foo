@@ -429,7 +429,7 @@ class AstClass { name superclass _slots
 
     method _readerMethods
         self _methodDictionary:
-            ((self slots reject: { |each| each name startsWith: "_" })
+            ((self slots reject: #isPrivate)
                  collect: { |each|
                             AstReaderMethod home: self slot: each })!
 
@@ -440,11 +440,7 @@ class AstClass { name superclass _slots
         { let result
               = Class
                   new: name
-                  slots: (self slots
-                              collect: { |each|
-                                         { name: each name,
-                                           type: each type } }
-                              as: Array)
+                  slots: self slots asArray
                   interfaces: self interfaceObjects
                   directMethods: self ownDirectMethods
                   instanceMethods: self ownInstanceMethods.
@@ -475,6 +471,9 @@ class AstSlot { name index type }
 
     method referenceUpwards: offset
         AstSlotRef slot: self!
+
+    method isPrivate
+        name isPrivate!
 end
 
 class AstReaderMethod { home slot }

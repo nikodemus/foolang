@@ -50,6 +50,10 @@ extend String
     method printOn: stream
         stream writeString: self!
 
+    method isPrivate
+        -- KLUDGE: host uses strings where target uses selectors
+        self startsWith: "_"!
+
     method _escapeOn: stream
         [["\"", "\\\""],
          ["\\", "\\\\"],
