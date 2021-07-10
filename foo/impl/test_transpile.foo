@@ -933,7 +933,7 @@ class TestTranspileGlobals { assert system }
              end"
                 expect: "#<Integer 1242>#<Integer 40>"!
 
-    method test0_Define_depends_on_class_defined_after
+    method test_Define_depends_on_class_defined_after
         self transpile: "define A_Definition A_Class status: \"yes!\"!
                          class A_Class \{ status }
                              method ok status!
