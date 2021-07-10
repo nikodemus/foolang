@@ -1129,7 +1129,7 @@ class CTranspiler { output selectorMap closureFunctions
                        -- is its own metaclass.
                        let metaclassInheritance
                            = self _generateInheritance: aClass forMetaclass: True.
-                       let metaclassNameString = "{aClass name} class".
+                       let metaclassNameString = "{aClass name} classOf".
                        output println: "struct FooClass {metaclassName} = ".
                        output println: "\{".
                        output println: "    .header = \{ .allocation = STATIC },".
