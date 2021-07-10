@@ -648,7 +648,7 @@ class CTranspiler { output selectorMap closureFunctions
         (Record includes: value)
             ifTrue: { return self _recordClassFromRecord: value }.
         -- KLUDGE: Dictionary is builtin on bootstrap host, so
-        -- _env classes don't know about it. Instead of this
+        -- env classes don't know about it. Instead of this
         -- should somehow include it it compiler builtins,
         -- maybe with a "redefined: True" flag?
         (Dictionary includes: value)
