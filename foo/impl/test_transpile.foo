@@ -1176,18 +1176,24 @@ end
             "import impl.environment.Environment
              class Main \{\}
                  direct method run: command in: system
-                     let sources = [
-                                      [\"float-literal.test\", \"float-literal.test\"],
-                                      [\"message-to-float.test\", \"message-to-float.result\"]
-                                   ].
+                     let tests = [
+                                    [[\"float-literal.test\"], \"float-literal.test\"],
+                                    [[\"message-to-float.test\"], \"message-to-float.result\"],
+                                    [[\"class-classOf.def\", \"class-classOf.test\"], \"class-classOf.result\"]
+                                 ].
                      let root = system files / \"foo/tests/self-hosting\".
-                     sources do: \{ |each|
-                                    let source = (root / each first) readString.
-                                    let res = (Environment eval: source) toString.
-                                    let expect = (root / each second) readString trim.
+                     tests do: \{ |eachTest|
+                                    let sources = eachTest first.
+                                    let env = Environment new.
+                                    sources butlast
+                                        do: \{ |eachDef|
+                                               env load: (root / eachDef) readString \}.
+                                    let script = (root / sources last) readString trim.
+                                    let res = (env eval: script) displayString.
+                                    let expect = (root / eachTest second) readString trim.
                                     res == expect
-                                        ifFalse: \{ Error raise: \"FROM \{each first} EXPECTED:
-\{source}
+                                        ifFalse: \{ Error raise: \"FROM \{sources} EXPECTED:
+\{script}
   --->
 \{expect displayString}
 GOT:
@@ -1470,6 +1476,32 @@ class TestTranspileClass { assert system }
                       system output print: test ping!
              end"
             expect: "#pong"!
+
+    method test_Runtime_class_default_methods
+        self transpile:
+            "import lang.output
+             import lang.array_ext
+             import lang.selector_ext
+             import lang.class2
+
+             class Main \{\}
+                  direct method run: command in: system
+                      let myClass = Class
+                                        new: \"MyTest\"
+                                        slots: []
+                                        interfaces: []
+                                        directMethods: []
+                                        instanceMethods: [].
+                      system output println: myClass name.
+                      system output println: myClass classOf name.
+                      system output println: myClass classOf classOf name.
+                      system output println: (myClass includes: myClass new)!
+             end"
+            expect: "MyTest
+MyTest classOf
+Class
+True
+"!
 
     method test_Runtime_interface_inheritance
         self transpile:
