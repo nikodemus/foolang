@@ -1032,6 +1032,11 @@ class AstLexicalRef { variable frameOffset::Integer source }
             variable: variable
             frameOffset: frameOffset
             value: value!
+
+    method displayOn: stream
+        stream writeString: "#<AstLexicalRef ".
+        stream writeString: variable name.
+        stream writeString: ">"!
 end
 
 class AstLexicalSet { variable frameOffset::Integer value }
