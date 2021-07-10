@@ -38,9 +38,10 @@ extend Class
            instanceMethods: instanceMethods
         let layout = Layout new: (slots size).
         let ctor = layout constructorMethod: (_ConstructorName forSlots: slots).
-        slots
-            doWithIndex: { |each index|
-                           each index is index assert: "Slot index must match slot position" }.
+        slots doWithIndex: { |each index|
+                             each index is index
+                                 assert: "Slot index must match slot position".
+                             each layout: layout }.
         let metaclass = Class
                             subclass: "{name} classOf"
                             interfaces: (interfaces collect: #classOf)

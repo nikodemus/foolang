@@ -1,4 +1,15 @@
-class Layout { nSlots }
-    direct method empty
-        self nSlots: 0!
+class Layout {}
+    direct method dummy
+        self new!
+
+    method at: index
+           in: object
+        object __atSlot: index - 1!
+
+    method put: value
+           at: index
+           in: object
+        object
+            __put: value
+            __atSlot: index - 1!
 end

@@ -73,17 +73,33 @@ define InstanceMethods
         {
              signature: [Integer, Any], vars: 0,
              body:
-             "struct Foo receiver = ctx->frame[1];
-              struct FooLayout* theLayout = PTR(FooLayout, ctx->receiver.datum);
-              if (receiver.class->layout != theLayout) \{
-                  foo_panicf(ctx, \"Layout mismatch: invalid layout for %s\",
-                             receiver.class->name->data);
-              \}
+             "struct FooLayout* theLayout = PTR(FooLayout, ctx->receiver.datum);
               int64_t index = ctx->frame[0].datum.int64;
-              if (index < 0 || theLayout->size < index) \{
+              struct Foo object = ctx->frame[1];
+              if (object.class->layout != theLayout) \{
+                  foo_panicf(ctx, \"Layout mismatch: cannot read slots of %s using this layout\",
+                             object.class->name->data);
+              \}
+              if (index < 1 || theLayout->size < index) \{
                   foo_panicf(ctx, \"Invalid slot index!\");
               \}
-              struct FooArray* slots = PTR(FooArray, receiver.datum);
-              return slots->data[(size_t)(index - 1)];"
-        }
+              return PTR(FooArray, object.datum)->data[(size_t)(index - 1)];"
+        },
+        #put:at:in: ->
+        {
+             signature: [Any, Integer, Any], vars: 0,
+             body:
+             "struct FooLayout* theLayout = PTR(FooLayout, ctx->receiver.datum);
+              struct Foo value = ctx->frame[0];
+              int64_t index = ctx->frame[1].datum.int64;
+              struct Foo object = ctx->frame[2];
+              if (object.class->layout != theLayout) \{
+                  foo_panicf(ctx, \"Layout mismatch: cannot write slots of %s using this layout\",
+                             object.class->name->data);
+              \}
+              if (index < 1 || theLayout->size < index) \{
+                  foo_panicf(ctx, \"Invalid slot index!\");
+              \}
+              return PTR(FooArray, object.datum)->data[(size_t)(index - 1)] = value;"
+        },
     }!

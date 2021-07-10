@@ -246,13 +246,14 @@ class AstInterpreter { context process }
         context receiver!
 
     method visitSlotRef: aSlotRef
-        context receiver __atSlot: aSlotRef slot index - 1!
+        aSlotRef slot at: context receiver!
 
     method visitSlotSet: aSlotSet
-        context receiver
-            __put: (aSlotSet slot type
-                        typecheck: (aSlotSet value visitBy: self))
-            __atSlot: aSlotSet slot index - 1!
+        let slot = aSlotSet slot.
+        let value = slot type
+                        typecheck: (aSlotSet value visitBy: self).
+        slot put: value
+             at: context receiver!
 
     method visitBindDynamic: aBind
         aBind variable
