@@ -8,21 +8,21 @@ return ctx->receiver;" } }!
 
 define InstanceMethods
     { #ifTrue:ifFalse:
-          -> { signature: [Closure, Closure], vars: 0,
+          -> { signature: [Any, Any], vars: 0,
                body: "if (ctx->receiver.datum.boolean) \{
     return foo_send(ctx, &{Name mangleSelector: #value}, ctx->frame[0], 0);
 } else \{
     return foo_send(ctx, &{Name mangleSelector: #value}, ctx->frame[1], 0);
 }" },
  #ifTrue:
-          -> { signature: [Closure], vars: 0,
+          -> { signature: [Any], vars: 0,
                body: "if (ctx->receiver.datum.boolean) \{
     return foo_send(ctx, &{Name mangleSelector: #value}, ctx->frame[0], 0);
 } else \{
     return FooGlobal_False;
 }" },
  #ifFalse:
-          -> { signature: [Closure], vars: 0,
+          -> { signature: [Any], vars: 0,
                body: "if (ctx->receiver.datum.boolean) \{
     return FooGlobal_True;
 } else \{
