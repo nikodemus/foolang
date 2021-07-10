@@ -47,7 +47,6 @@ class BuiltinDictionary { dictionary }
         self _define: Record.
         self _define: Selector.
         self _define: String.
-        self _define: StringOutput.
         self _define: True.
         self _define: TypeError.
         self!
