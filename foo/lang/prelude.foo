@@ -35,7 +35,6 @@ import .output.Output
 import .record_ext.Record
 import .selector_ext.Selector
 import .string.String
-import .stringOutput.Chain
 import .stringOutput.StringOutput
 import .test.TestSuite
 import .time.Time
