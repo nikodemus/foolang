@@ -1,0 +1,189 @@
+class AstPrinter { output indent position stack }
+
+    direct method print: ast to: output
+        ast visitBy: (self output: output
+                           indent: 0
+                           position: 0
+                           stack: List new)!
+
+    direct method print: ast withIndent: indent to: output
+        ast visitBy: (self output: output
+                           indent: indent
+                           position: indent
+                           stack: List new)!
+
+    method print: anObject
+        let string = anObject toString.
+        output writeString: string.
+        position = position + string size!
+
+    method println: anObject
+        -- Done this way for consistency with #print.
+        output writeString: anObject toString.
+        self newline!
+
+    method newline
+        output newline.
+        indent times: { output writeString: " " }.
+        position = indent!
+
+    method pushIndent
+        stack push: indent.
+        indent = position!
+
+    method popIndent
+        position = indent.
+        indent = stack pop!
+
+    method visitTypecheck: aNode
+        aNode value visitBy: self.
+        self print: " :: ".
+        aNode type visitBy: self!
+
+    method visitConstant: aNode
+        output print: aNode value displayString!
+
+    method visitArray: aNode
+        self print: "[".
+        self pushIndent.
+        aNode entries
+            do: { |each| each visitBy: self }
+            interleaving: { self println: "," }.
+        self popIndent.
+        self print: "]"!
+
+    method visitRecord: aNode
+        self print: "\{ ".
+        self pushIndent.
+        aNode slots
+            with: aNode values
+            do: { |key value|
+                  self print: key.
+                  self print: ": ".
+                  self pushIndent.
+                  value visitBy: self.
+                  self popIndent }
+            interleaving: { self println: "," }.
+        self popIndent.
+        self print: " \}"!
+
+    method visitDictionary: aNode
+        self print: "\{ ".
+        self pushIndent.
+        aNode entries
+            do: { |each|
+                  each key visitBy: self.
+                  self print: " -> ".
+                  self pushIndent.
+                  each value visitBy: self.
+                  self popIndent }
+            interleaving: { self println: "," }.
+        self popIndent.
+        self print: " \}"!
+
+    method visitGlobal: aNode
+        self print: aNode name!
+
+    method visitDynamic: aNode
+        self print: aNode name!
+
+    method visitIs: aNode
+        aNode left visitBy: self.
+        self print: " is ".
+        aNode right visitBy: self!
+
+    method visitSeq: aNode
+        aNode first visitBy: self.
+        self println: ".".
+        aNode then visitBy: self!
+
+    method visitReturn: aNode
+        self print: "return ".
+        aNode value visitBy: self!
+
+    method visitPanic: aNode
+        self print: "panic ".
+        aNode value visitBy: self!
+
+    method visitSend: aNode
+        aNode arguments
+            ifEmpty: { aNode receiver visitBy: self.
+                       self print: " ".
+                       return self print: aNode selector name }.
+        self print: "(".
+        self pushIndent.
+        aNode receiver visitBy: self.
+        aNode selector isSymbol
+            ifTrue: { self print: " ".
+                      self print: aNode selector name.
+                      self print: " ".
+                      aNode arguments first visitBy: self }
+            ifFalse: { let parts = aNode selector name splitBy: ":" character.
+                       self newline.
+                       self print: "    ".
+                       self pushIndent.
+                       parts
+                           with: aNode arguments
+                           do: { |key arg|
+                                 self print: key.
+                                 self print: ": ".
+                                 self pushIndent.
+                                 arg visitBy: self.
+                                 self popIndent }
+                           interleaving: { self newline }.
+                       self popIndent }.
+        self popIndent.
+        self print: ")"!
+
+    method visitBlock: aNode
+        self print: "\{ ".
+        self pushIndent.
+        aNode argumentVariables
+            ifNotEmpty: { self print: "|".
+                          aNode argumentVariables
+                              do: { |each|
+                                    self print: each name.
+                                    self print: "::".
+                                    self print: each type name }.
+                          self print: "|" }.
+        self newline.
+        aNode body visitBy: self.
+        self popIndent.
+        self print: " \}"!
+
+    method visitSelfClass: aNode
+        self print: "Self"!
+
+    method visitSelfInstance: aNode
+        self print: "self"!
+
+    method visitSlotRef: aNode
+        self print: aNode slot name!
+
+    method visitSlotSet: aNode
+        self print: aNode slot name.
+        self print: " = ".
+        aNode value visitBy: self!
+
+    method visitBind: aNode
+        self print: "let ".
+        self print: aNode variable name.
+        self print: " = ".
+        aNode value visitBy: self.
+        self println: ".".
+        aNode body visitBy: self!
+
+    method visitBindDynamic: aNode
+        self visitBind: aNode!
+
+    method visitBindLexical: aNode
+        self visitBind: aNode!
+
+    method visitLexicalRef: aNode
+        self print: aNode variable name!
+
+    method visitLexicalSet: aNode
+        self print: aNode variable name.
+        self print: " = ".
+        aNode value visitBy: self!
+end
