@@ -437,13 +437,21 @@ class AstClass { name superclass _slots
         global hasValue
             ifTrue: {
                 return global eval }.
-        { let result
+        { let slots = self slots asArray.
+          let result
               = Class
                   new: name
-                  slots: self slots asArray
+                  slots: slots
                   interfaces: self interfaceObjects
                   directMethods: self ownDirectMethods
                   instanceMethods: self ownInstanceMethods.
+          -- KLUDGE: Bootstrap implementation doesn't do layouts,
+          -- but the layout object is how we access slots in objects.
+          -- Put in a dummy one that uses the bootstrap host __atSlot:
+          -- methods.
+          Foolang isSelfHosted
+              ifFalse: { let layout = Layout dummy.
+                         slots do: { |each| each layout: layout } }.
           _env classes put: self at: result.
           global value: result }
         finally: { _env = False }!
@@ -466,14 +474,45 @@ class AstClass { name superclass _slots
         "#<AstClass {name}>"!
 end
 
-class AstSlot { name index type }
+class AstSlot { name index type _layout }
     is Object
+
+    direct method name: name
+                  index: index
+                  type: type
+        self name: name
+             index: index
+             type: type
+             _layout: False!
 
     method referenceUpwards: offset
         AstSlotRef slot: self!
 
     method isPrivate
         name isPrivate!
+
+    method layout: layout
+        _layout is False
+            assert: "AstSlot layout already set!".
+        _layout = layout!
+
+    method at: object
+        _layout is False
+            ifTrue: { panic "{self} layout not set, cannot read from {object}" }.
+        _layout at: index
+                in: object!
+
+    method put: value at: object
+        _layout is False
+            ifTrue: { panic "{self} layout not set, cannot write to {object}" }.
+        _layout put: value
+                at: index
+                in: object!
+
+    method displayOn: stream
+        stream writeString: "#<AstSlot ".
+        stream print: name.
+        stream writeString: ">"!
 end
 
 class AstReaderMethod { home slot }
