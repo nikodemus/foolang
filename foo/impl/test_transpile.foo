@@ -204,7 +204,7 @@ class TestTranspilePanic { assert system }
                          end"
             expectError: "PANIC: Let's Panic You And Me!
 Backtrace:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 end
 
@@ -392,12 +392,12 @@ class TestTranspilePreludeException { assert system }
                          end"
             expectError: "PANIC: UNHANDLED ERROR: Main does not understand: #bang
 Backtrace:
-  6: FallbackHandler class#raise:
+  6: FallbackHandler classOf#raise:
   5: Error#raise (DoesNotUnderstand)
-  4: DoesNotUnderstand class#raise:with:on:source:context:
-  3: DoesNotUnderstand class#raise:with:on:
-  2: Object interface#perform:with: (Main class) #bang
-  1: Main class#run:in:
+  4: DoesNotUnderstand classOf#raise:with:on:source:context:
+  3: DoesNotUnderstand classOf#raise:with:on:
+  2: Object interface#perform:with: (Main classOf) #bang
+  1: Main classOf#run:in:
 "!
 
     method test_Class_does_not_understand
@@ -412,12 +412,12 @@ Backtrace:
                          end"
             expectError: "PANIC: UNHANDLED ERROR: Class does not understand: #bang
 Backtrace:
-  6: FallbackHandler class#raise:
+  6: FallbackHandler classOf#raise:
   5: Error#raise (DoesNotUnderstand)
-  4: DoesNotUnderstand class#raise:with:on:source:context:
-  3: DoesNotUnderstand class#raise:with:on:
+  4: DoesNotUnderstand classOf#raise:with:on:source:context:
+  3: DoesNotUnderstand classOf#raise:with:on:
   2: Object#perform:with: (Class) #bang
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method testErrorRaise
@@ -435,16 +435,16 @@ Backtrace:
                          end"
             expectError: "#<Integer 1>PANIC: UNHANDLED ERROR: Bang!
 Backtrace:
-  11: FallbackHandler class#raise:
+  11: FallbackHandler classOf#raise:
   10: Handler#raise:
   9: Error#raise (SimpleError)
-  8: SimpleError class#raise:
+  8: SimpleError classOf#raise:
   7: Error interface#raise:
-  6: Main class#bang
+  6: Main classOf#bang
   4: Closure#value
   3: Error interface#withHandler:do:
   2: Block#on:do: (Closure)
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
 end
@@ -1033,7 +1033,7 @@ class TestTranspileGlobals { assert system }
             expectError: "PANIC: Cannot modify constant object!
 Backtrace:
   2: Array#put:at:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method test_Put_at_cannot_modify_global_ByteArray
@@ -1047,7 +1047,7 @@ Backtrace:
             expectError: "PANIC: Cannot modify constant object!
 Backtrace:
   2: ByteArray#put:at:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method test_Cannot_modify_global_instances
@@ -1066,7 +1066,7 @@ Backtrace:
             expectError: "PANIC: Cannot modify constant object!
 Backtrace:
   2: Counter#inc
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method test_At_put_cannot_modify_global_nested_array
@@ -1080,7 +1080,7 @@ Backtrace:
             expectError: "PANIC: Cannot modify constant object!
 Backtrace:
   2: Array#at:put:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 end
 
@@ -1351,11 +1351,11 @@ class TestTranspileBacktrace { assert system }
             -- This gets the "instance of ..." message because Main is
             -- not an object, so this is the panic from the runtime
             -- instead of a DoesNotUnderstand.
-            expectError: "PANIC: Instances of Main class do not understand: #oops
+            expectError: "PANIC: Instances of Main classOf do not understand: #oops
 Backtrace:
-  3: Aux interface#ok2 (Main class)
-  2: Main class#ok
-  1: Main class#run:in:
+  3: Aux interface#ok2 (Main classOf)
+  2: Main classOf#ok
+  1: Main classOf#run:in:
 "!
 end
 
@@ -2238,7 +2238,7 @@ class TestTranspileTypecheck { assert system }
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method testIntegerMethodArgOk
@@ -2259,8 +2259,8 @@ Backtrace:
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  2: Main class#foo:
-  1: Main class#run:in:
+  2: Main classOf#foo:
+  1: Main classOf#run:in:
 "!
 
     method testIntegerBlockArgOk
@@ -2278,7 +2278,7 @@ Backtrace:
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
   2: Closure#value:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method testInterfaceOk
@@ -2304,7 +2304,7 @@ Backtrace:
                          end"
             expectError: "PANIC: Type error! Wanted: MyInterface, got: Integer
 Backtrace:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method testLetOk
@@ -2323,7 +2323,7 @@ Backtrace:
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method testAssignOops
@@ -2335,7 +2335,7 @@ Backtrace:
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method testSlotTypeInitOk
@@ -2356,8 +2356,8 @@ Backtrace:
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  2: Main class#x:
-  1: Main class#run:in:
+  2: Main classOf#x:
+  1: Main classOf#run:in:
 "!
 
     method testSlotTypeAssignOk
@@ -2381,7 +2381,7 @@ Backtrace:
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
   2: Main#frob
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method testMethodReturnTypeOk
@@ -2402,8 +2402,8 @@ Backtrace:
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  2: Main class#foo
-  1: Main class#run:in:
+  2: Main classOf#foo
+  1: Main classOf#run:in:
 "!
 
     method testMethodNonLocalReturnTypeOk
@@ -2431,9 +2431,9 @@ Backtrace:
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
   4: Closure#value
-  3: Main class#bar:
-  2: Main class#foo
-  1: Main class#run:in:
+  3: Main classOf#bar:
+  2: Main classOf#foo
+  1: Main classOf#run:in:
 "!
 
     method testBlockReturnTypeOk
@@ -2451,7 +2451,7 @@ Backtrace:
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
   2: Closure#value:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method testClassTypeIncludes
