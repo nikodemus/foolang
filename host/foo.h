@@ -10,8 +10,8 @@ struct FooProcessTimes {
 #define INSTANCE(classname, value) \
   ((struct Foo){ .class = &FooClass_ ## classname, .datum = { .ptr = value } })
 
-#define FLOAT(value) \
-  ((struct Foo){ .class = &FooClass_Float, .datum = { .float64 = value } })
+#define FOO_FLOAT(value) \
+  ((struct Foo){ .class = &FooClass_Float, .datum = { .float64 = (double)(value) } })
 
 #define FOO_INTEGER(value) \
   ((struct Foo){ .class = &FooClass_Integer, .datum = { .int64 = (int64_t)(value) } })

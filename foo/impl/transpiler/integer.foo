@@ -8,7 +8,7 @@ define IntegerMethods
                body: "return FOO_INTEGER(- ctx->receiver.datum.int64);" },
       #asFloat
           -> { signature: [], vars: 0,
-               body: "return FLOAT(ctx->receiver.datum.int64);" },
+               body: "return FOO_FLOAT(ctx->receiver.datum.int64);" },
       #debug -> {signature: [], vars: 0,
                  body: "printf(\"#<Integer %\" PRId64 \">\", ctx->receiver.datum.int64);
 return ctx->receiver;"},

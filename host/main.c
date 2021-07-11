@@ -963,11 +963,6 @@ struct Foo foo_Array_alloc(size_t size) {
   return (struct Foo){ .class = &FooClass_Array, .datum = { .ptr = array } };
 }
 
-struct Foo foo_Float_new(double f) {
-  return (struct Foo){ .class = &FooClass_Float, .datum = { .float64 = f } };
-}
-
-
 struct FooBytes* FooBytes_alloc(size_t len) {
   struct FooBytes* bytes = (struct FooBytes*)foo_alloc(sizeof(struct FooBytes) + len + 1);
   bytes->header.allocation = HEAP;

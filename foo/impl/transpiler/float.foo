@@ -4,13 +4,13 @@ define DirectMethods
     { #parse:
       -> { signature: [String], vars: 0,
            body: "struct FooBytes* b = PTR(FooBytes, ctx->frame[0].datum);
-                  return foo_Float_new(strtod((char*)b->data, NULL));" },
+                  return FOO_FLOAT(strtod((char*)b->data, NULL));" },
       }!
 
 define InstanceMethods
     { (Selector intern: "prefix-")
           -> { signature: [], vars: 0,
-               body: "return foo_Float_new(- ctx->receiver.datum.float64);" },
+               body: "return FOO_FLOAT(- ctx->receiver.datum.float64);" },
       #debug
       -> { signature: [], vars: 1,
            body: "ctx->frame[0] = foo_send(ctx, &FOO_toString, ctx->receiver, 0);
@@ -72,10 +72,10 @@ define InstanceMethods
                 body: "return FOO_INTEGER(round(ctx->receiver.datum.float64));" },
       #floatAdd:
           -> { signature: [Float], vars: 0,
-               body: "return foo_Float_new(ctx->receiver.datum.float64 + ctx->frame[0].datum.float64);" },
+               body: "return FOO_FLOAT(ctx->receiver.datum.float64 + ctx->frame[0].datum.float64);" },
       #floatDiv:
           -> { signature: [Float], vars: 0,
-               body: "return foo_Float_new(ctx->receiver.datum.float64 / ctx->frame[0].datum.float64);" },
+               body: "return FOO_FLOAT(ctx->receiver.datum.float64 / ctx->frame[0].datum.float64);" },
       #floatEq:
           -> { signature: [Float], vars: 0,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.float64 == ctx->frame[0].datum.float64);" },
@@ -93,8 +93,8 @@ define InstanceMethods
                body: "return FOO_BOOLEAN(ctx->receiver.datum.float64 <= ctx->frame[0].datum.float64);" },
       #floatMul:
           -> { signature: [Float], vars: 0,
-               body: "return foo_Float_new(ctx->receiver.datum.float64 * ctx->frame[0].datum.float64);" },
+               body: "return FOO_FLOAT(ctx->receiver.datum.float64 * ctx->frame[0].datum.float64);" },
       #floatSub:
           -> { signature: [Float], vars: 0,
-               body: "return foo_Float_new(ctx->receiver.datum.float64 - ctx->frame[0].datum.float64);" },
+               body: "return FOO_FLOAT(ctx->receiver.datum.float64 - ctx->frame[0].datum.float64);" },
     }!
