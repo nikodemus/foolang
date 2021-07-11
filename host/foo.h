@@ -19,4 +19,7 @@ struct FooProcessTimes {
 #define FOO_BOOLEAN(value) \
   ((struct Foo){ .class = &FooClass_Boolean, .datum = { .boolean = (bool)(value) } })
 
+#define FOO_CHARACTER(value) \
+  ((struct Foo){ .class = &FooClass_Character, .datum = { .int64 = (int64_t)(value) } })
+
 #endif // __FOO_H_

@@ -964,11 +964,6 @@ struct Foo foo_Array_alloc(size_t size) {
   return (struct Foo){ .class = &FooClass_Array, .datum = { .ptr = array } };
 }
 
-struct Foo foo_Character_new(int64_t n) {
-  assert(n >= 0);
-  return (struct Foo){ .class = &FooClass_Character, .datum = { .int64 = n } };
-}
-
 struct Foo foo_Integer_new(int64_t n) {
   return (struct Foo){ .class = &FooClass_Integer, .datum = { .int64 = n } };
 }
