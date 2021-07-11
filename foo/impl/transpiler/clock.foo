@@ -12,5 +12,5 @@ define InstanceMethods {
                 return ctx->receiver;" },
     #time
     -> { signature: [], vars: 0,
-         body: "return INSTANCE(Time, FooProcessTimes_now());" },
+         body: "return FOO_INSTANCE(Time, FooProcessTimes_now());" },
 }!

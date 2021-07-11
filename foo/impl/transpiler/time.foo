@@ -5,7 +5,7 @@ define DirectMethods {
                     = FooProcessTimes_new(ctx->frame[0].datum.float64,
                                           ctx->frame[1].datum.float64,
                                           ctx->frame[2].datum.float64);
-                return INSTANCE(Time, times);" }
+                return FOO_INSTANCE(Time, times);" }
 }!
 
 define InstanceMethods {

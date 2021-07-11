@@ -7,8 +7,8 @@ struct FooProcessTimes {
   double real;
 };
 
-#define INSTANCE(classname, value) \
-  ((struct Foo){ .class = &FooClass_ ## classname, .datum = { .ptr = value } })
+#define FOO_INSTANCE(classname, value) \
+  ((struct Foo){ .class = &FooClass_ ## classname, .datum = { .ptr = (void*)(value) } })
 
 #define FOO_FLOAT(value) \
   ((struct Foo){ .class = &FooClass_Float, .datum = { .float64 = (double)(value) } })

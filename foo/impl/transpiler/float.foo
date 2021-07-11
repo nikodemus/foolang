@@ -21,7 +21,7 @@ define InstanceMethods
            body: "double arg = ctx->receiver.datum.float64;
                   if (arg == 0.0) \{
                       // FIXME: signed zero!
-                      return INSTANCE(String, FooBytes_from(\"0.0\"));
+                      return FOO_INSTANCE(String, FooBytes_from(\"0.0\"));
                   }
                   int mode = 0;    // we want the shortest representation
                   int ndigits = 0; // mode zero ignores ndigits.
@@ -63,7 +63,7 @@ define InstanceMethods
                   } else \{
                       data[start2] = '0';
                   }
-                  return INSTANCE(String, bytes);" },
+                  return FOO_INSTANCE(String, bytes);" },
       #truncate
           -> { signature: [], vars: 0,
                body: "return FOO_INTEGER(ctx->receiver.datum.float64);" },
