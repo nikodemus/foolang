@@ -6,7 +6,7 @@ class Chain { _first _last size }
     is Object
 
     direct method new
-        let array = Array new: 128.
+        let array = Array new: 8.
         -- First element contains number of elements
         -- Last elements contains link to next array.
         array put: 0 at: 1.

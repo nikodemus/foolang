@@ -3,6 +3,7 @@ import .exception.TypeError
 import .exception.Error
 import .layout_ext.*
 import .stringOutput.StringOutput
+import .any.Any
 
 class _ConstructorName {}
     direct method forSlots: slots
@@ -36,6 +37,9 @@ extend Class
            interfaces: interfaces
            directMethods: directMethods
            instanceMethods: instanceMethods
+        let interfaces = (interfaces contains: Any)
+                             ifTrue: { interfaces }
+                             ifFalse: { interfaces append: [Any] }.
         let layout = Layout new: (slots size).
         let ctor = layout constructorMethod: (_ConstructorName forSlots: slots).
         slots doWithIndex: { |each index|

@@ -20,6 +20,10 @@ interface Any
     direct method toString
         "Any"!
 
+    method classOf
+        Self!
+
     method yourself
         self!
+
 end

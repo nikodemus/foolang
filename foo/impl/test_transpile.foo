@@ -204,7 +204,7 @@ class TestTranspilePanic { assert system }
                          end"
             expectError: "PANIC: Let's Panic You And Me!
 Backtrace:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 end
 
@@ -392,12 +392,12 @@ class TestTranspilePreludeException { assert system }
                          end"
             expectError: "PANIC: UNHANDLED ERROR: Main does not understand: #bang
 Backtrace:
-  6: FallbackHandler class#raise:
+  6: FallbackHandler classOf#raise:
   5: Error#raise (DoesNotUnderstand)
-  4: DoesNotUnderstand class#raise:with:on:source:context:
-  3: DoesNotUnderstand class#raise:with:on:
-  2: Object interface#perform:with: (Main class) #bang
-  1: Main class#run:in:
+  4: DoesNotUnderstand classOf#raise:with:on:source:context:
+  3: DoesNotUnderstand classOf#raise:with:on:
+  2: Object interface#perform:with: (Main classOf) #bang
+  1: Main classOf#run:in:
 "!
 
     method test_Class_does_not_understand
@@ -412,12 +412,12 @@ Backtrace:
                          end"
             expectError: "PANIC: UNHANDLED ERROR: Class does not understand: #bang
 Backtrace:
-  6: FallbackHandler class#raise:
+  6: FallbackHandler classOf#raise:
   5: Error#raise (DoesNotUnderstand)
-  4: DoesNotUnderstand class#raise:with:on:source:context:
-  3: DoesNotUnderstand class#raise:with:on:
+  4: DoesNotUnderstand classOf#raise:with:on:source:context:
+  3: DoesNotUnderstand classOf#raise:with:on:
   2: Object#perform:with: (Class) #bang
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method testErrorRaise
@@ -435,16 +435,16 @@ Backtrace:
                          end"
             expectError: "#<Integer 1>PANIC: UNHANDLED ERROR: Bang!
 Backtrace:
-  11: FallbackHandler class#raise:
+  11: FallbackHandler classOf#raise:
   10: Handler#raise:
   9: Error#raise (SimpleError)
-  8: SimpleError class#raise:
+  8: SimpleError classOf#raise:
   7: Error interface#raise:
-  6: Main class#bang
+  6: Main classOf#bang
   4: Closure#value
   3: Error interface#withHandler:do:
   2: Block#on:do: (Closure)
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
 end
@@ -933,7 +933,7 @@ class TestTranspileGlobals { assert system }
              end"
                 expect: "#<Integer 1242>#<Integer 40>"!
 
-    method test0_Define_depends_on_class_defined_after
+    method test_Define_depends_on_class_defined_after
         self transpile: "define A_Definition A_Class status: \"yes!\"!
                          class A_Class \{ status }
                              method ok status!
@@ -1033,7 +1033,7 @@ class TestTranspileGlobals { assert system }
             expectError: "PANIC: Cannot modify constant object!
 Backtrace:
   2: Array#put:at:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method test_Put_at_cannot_modify_global_ByteArray
@@ -1047,7 +1047,7 @@ Backtrace:
             expectError: "PANIC: Cannot modify constant object!
 Backtrace:
   2: ByteArray#put:at:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method test_Cannot_modify_global_instances
@@ -1066,7 +1066,7 @@ Backtrace:
             expectError: "PANIC: Cannot modify constant object!
 Backtrace:
   2: Counter#inc
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method test_At_put_cannot_modify_global_nested_array
@@ -1080,7 +1080,7 @@ Backtrace:
             expectError: "PANIC: Cannot modify constant object!
 Backtrace:
   2: Array#at:put:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 end
 
@@ -1176,18 +1176,24 @@ end
             "import impl.environment.Environment
              class Main \{\}
                  direct method run: command in: system
-                     let sources = [
-                                      [\"float-literal.test\", \"float-literal.test\"],
-                                      [\"message-to-float.test\", \"message-to-float.result\"]
-                                   ].
+                     let tests = [
+                                    [[\"float-literal.test\"], \"float-literal.test\"],
+                                    [[\"message-to-float.test\"], \"message-to-float.result\"],
+                                    [[\"class-classOf.def\", \"class-classOf.test\"], \"class-classOf.result\"]
+                                 ].
                      let root = system files / \"foo/tests/self-hosting\".
-                     sources do: \{ |each|
-                                    let source = (root / each first) readString.
-                                    let res = (Environment eval: source) toString.
-                                    let expect = (root / each second) readString trim.
+                     tests do: \{ |eachTest|
+                                    let sources = eachTest first.
+                                    let env = Environment new.
+                                    sources butlast
+                                        do: \{ |eachDef|
+                                               env load: (root / eachDef) readString \}.
+                                    let script = (root / sources last) readString trim.
+                                    let res = (env eval: script) displayString.
+                                    let expect = (root / eachTest second) readString trim.
                                     res == expect
-                                        ifFalse: \{ Error raise: \"FROM \{each first} EXPECTED:
-\{source}
+                                        ifFalse: \{ Error raise: \"FROM \{sources} EXPECTED:
+\{script}
   --->
 \{expect displayString}
 GOT:
@@ -1345,11 +1351,11 @@ class TestTranspileBacktrace { assert system }
             -- This gets the "instance of ..." message because Main is
             -- not an object, so this is the panic from the runtime
             -- instead of a DoesNotUnderstand.
-            expectError: "PANIC: Instances of Main class do not understand: #oops
+            expectError: "PANIC: Instances of Main classOf do not understand: #oops
 Backtrace:
-  3: Aux interface#ok2 (Main class)
-  2: Main class#ok
-  1: Main class#run:in:
+  3: Aux interface#ok2 (Main classOf)
+  2: Main classOf#ok
+  1: Main classOf#run:in:
 "!
 end
 
@@ -1470,6 +1476,32 @@ class TestTranspileClass { assert system }
                       system output print: test ping!
              end"
             expect: "#pong"!
+
+    method test_Runtime_class_default_methods
+        self transpile:
+            "import lang.output
+             import lang.array_ext
+             import lang.selector_ext
+             import lang.class2
+
+             class Main \{\}
+                  direct method run: command in: system
+                      let myClass = Class
+                                        new: \"MyTest\"
+                                        slots: []
+                                        interfaces: []
+                                        directMethods: []
+                                        instanceMethods: [].
+                      system output println: myClass name.
+                      system output println: myClass classOf name.
+                      system output println: myClass classOf classOf name.
+                      system output println: (myClass includes: myClass new)!
+             end"
+            expect: "MyTest
+MyTest classOf
+Class
+True
+"!
 
     method test_Runtime_interface_inheritance
         self transpile:
@@ -2216,7 +2248,7 @@ class TestTranspileTypecheck { assert system }
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method testIntegerMethodArgOk
@@ -2237,8 +2269,8 @@ Backtrace:
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  2: Main class#foo:
-  1: Main class#run:in:
+  2: Main classOf#foo:
+  1: Main classOf#run:in:
 "!
 
     method testIntegerBlockArgOk
@@ -2256,7 +2288,7 @@ Backtrace:
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
   2: Closure#value:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method testInterfaceOk
@@ -2282,7 +2314,7 @@ Backtrace:
                          end"
             expectError: "PANIC: Type error! Wanted: MyInterface, got: Integer
 Backtrace:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method testLetOk
@@ -2301,7 +2333,7 @@ Backtrace:
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method testAssignOops
@@ -2313,7 +2345,7 @@ Backtrace:
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method testSlotTypeInitOk
@@ -2334,8 +2366,8 @@ Backtrace:
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  2: Main class#x:
-  1: Main class#run:in:
+  2: Main classOf#x:
+  1: Main classOf#run:in:
 "!
 
     method testSlotTypeAssignOk
@@ -2359,7 +2391,7 @@ Backtrace:
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
   2: Main#frob
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method testMethodReturnTypeOk
@@ -2380,8 +2412,8 @@ Backtrace:
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  2: Main class#foo
-  1: Main class#run:in:
+  2: Main classOf#foo
+  1: Main classOf#run:in:
 "!
 
     method testMethodNonLocalReturnTypeOk
@@ -2409,9 +2441,9 @@ Backtrace:
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
   4: Closure#value
-  3: Main class#bar:
-  2: Main class#foo
-  1: Main class#run:in:
+  3: Main classOf#bar:
+  2: Main classOf#foo
+  1: Main classOf#run:in:
 "!
 
     method testBlockReturnTypeOk
@@ -2429,7 +2461,7 @@ Backtrace:
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
   2: Closure#value:
-  1: Main class#run:in:
+  1: Main classOf#run:in:
 "!
 
     method testClassTypeIncludes

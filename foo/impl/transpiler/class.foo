@@ -4,7 +4,13 @@ define InstanceMethods
      -> { signature: [], vars: 0,
           body: "struct FooBytes* name = PTR(FooClass, ctx->receiver.datum)->name;
                  return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = name } };"
-        },
+          },
+
+     #classOf
+     -> { signature: [], vars: 0,
+          body: "struct FooClass* classOf = ctx->receiver.class;
+                 return (struct Foo)\{ .class = classOf->metaclass, .datum = \{ .ptr = classOf } };"
+          },
 
      #subclass:interfaces:methods:
      -> { signature: [String, Array, Array], vars: 1,
