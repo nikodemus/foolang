@@ -669,11 +669,12 @@ class CTranspiler { output selectorMap closureFunctions
                               panic "No AstClass for: {value} ({theClass})\nenv classes: {env classes keys}\nbuiltins: {builtins keys}" } }!
 
     method _recordClassFromRecord: aRecord
-        let keys = (Record keysIn: aRecord) sorted.
+        let keys = (Record keysIn: aRecord) sorted
+                       collect: #name.
         let name = Selector
                        intern: (StringOutput
-                                 with: { |out|
-                                         keys do: { |each| out print: "{each}:" }}).
+                                    with: { |out|
+                                            keys do: { |each| out print: each }}).
         self _ensureRecordClass: { name: name,
                                    slots: keys }!
 

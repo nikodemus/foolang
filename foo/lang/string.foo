@@ -126,4 +126,9 @@ extend String
         let out = StringOutput new.
         n times: { out print: self }.
         out content!
+
+    method name
+        -- KLUDGE to bridge over differences between host and target.
+        -- (Host uses strings where target expects selectors.)
+        self!
 end

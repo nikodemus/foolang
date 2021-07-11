@@ -12,14 +12,18 @@ extend Record
     direct method classFor: ctorSelector
         ctorSelector isKeyword
             ifFalse: { Error raise: "Cannot create a Record class for constructor: {ctorSelector}" }.
+        let className = "Record_"
+                            append: (ctorSelector name
+                                         replace: ":"
+                                         with: "$").
         let keys = (ctorSelector name splitBy: ColonCharacter) butlast asArray.
         let layout = Layout new: (keys size).
         let metaclass = Class
-                            subclass: "*Record<{ctorSelector name}> class"
+                            subclass: (className append: " classOf")
                             interfaces: [Record classOf]
                             methods: [(layout constructorMethod: ctorSelector)].
         metaclass
-            new: "*Record<{ctorSelector name}>"
+            new: className
             layout: layout
             interfaces: [Record]
             methods: (keys collectWithIndex: { |each index|
