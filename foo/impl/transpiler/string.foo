@@ -77,7 +77,7 @@ return foo_String_new((size_t)(end-start), (char*)PTR(FooBytes, ctx->receiver.da
 int64_t i = ctx->frame[0].datum.int64;
 assert(i > 0);
 assert(i <= s->size);
-return foo_Integer_new(s->data[i-1]);"},
+return FOO_INTEGER(s->data[i-1]);"},
 
     #printOn:
         -> {signature: [Any], vars: 0,
@@ -85,7 +85,7 @@ return foo_Integer_new(s->data[i-1]);"},
 
     #size
         -> {signature: [], vars: 0,
-            body: "return foo_Integer_new(PTR(FooBytes, ctx->receiver.datum)->size);"},
+            body: "return FOO_INTEGER(PTR(FooBytes, ctx->receiver.datum)->size);"},
 
     #toString
         -> { signature: [], vars: 0,

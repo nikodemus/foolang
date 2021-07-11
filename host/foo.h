@@ -7,13 +7,19 @@ struct FooProcessTimes {
   double real;
 };
 
-#define INSTANCE(classname, value) \
-  ((struct Foo){ .class = &FooClass_ ## classname, .datum = { .ptr = value } })
+#define FOO_INSTANCE(classname, value) \
+  ((struct Foo){ .class = &FooClass_ ## classname, .datum = { .ptr = (void*)(value) } })
 
-#define FLOAT(value) \
-  ((struct Foo){ .class = &FooClass_Float, .datum = { .float64 = value } })
+#define FOO_FLOAT(value) \
+  ((struct Foo){ .class = &FooClass_Float, .datum = { .float64 = (double)(value) } })
 
-#define INTEGER(value) \
-  ((struct Foo){ .class = &FooClass_Integer, .datum = { .int64 = value } })
+#define FOO_INTEGER(value) \
+  ((struct Foo){ .class = &FooClass_Integer, .datum = { .int64 = (int64_t)(value) } })
+
+#define FOO_BOOLEAN(value) \
+  ((struct Foo){ .class = &FooClass_Boolean, .datum = { .boolean = (bool)(value) } })
+
+#define FOO_CHARACTER(value) \
+  ((struct Foo){ .class = &FooClass_Character, .datum = { .int64 = (int64_t)(value) } })
 
 #endif // __FOO_H_

@@ -304,7 +304,6 @@ struct FooPointerList FooClassInheritance_Class;
 struct FooArray* FooArray_alloc(size_t size);
 struct FooArray* FooArray_instance(size_t size);
 struct Foo foo_Float_new(double f);
-struct Foo foo_Integer_new(int64_t n);
 struct Foo foo_String_new(size_t len, const char* s);
 struct Foo foo_class_typecheck(struct FooContext* ctx, struct FooClass* class, struct Foo obj);
 struct Foo FooGlobal_True;
@@ -523,17 +522,12 @@ union FooDatum foo_check_modification(struct FooContext* ctx, union FooDatum dat
   return datum;
 }
 
-struct Foo foo_Boolean_new(bool t);
-
 struct Foo foo_class_includes(struct FooContext* ctx,
                                struct FooClass* class,
                                struct Foo obj) {
   assert(class);
   assert(obj.class);
-  if (class == obj.class || foo_class_inherits(class, obj.class))
-    return foo_Boolean_new(true);
-  else
-    return foo_Boolean_new(false);
+  return FOO_BOOLEAN(class == obj.class || foo_class_inherits(class, obj.class));
 }
 
 const struct FooMethod* foo_class_find_method_in(const struct FooClass* class,
@@ -968,24 +962,6 @@ struct Foo foo_Array_alloc(size_t size) {
   struct FooArray* array = FooArray_alloc(size);
   return (struct Foo){ .class = &FooClass_Array, .datum = { .ptr = array } };
 }
-
-struct Foo foo_Boolean_new(bool t) {
-  return (struct Foo){ .class = &FooClass_Boolean, .datum = { .boolean = t } };
-}
-
-struct Foo foo_Character_new(int64_t n) {
-  assert(n >= 0);
-  return (struct Foo){ .class = &FooClass_Character, .datum = { .int64 = n } };
-}
-
-struct Foo foo_Integer_new(int64_t n) {
-  return (struct Foo){ .class = &FooClass_Integer, .datum = { .int64 = n } };
-}
-
-struct Foo foo_Float_new(double f) {
-  return (struct Foo){ .class = &FooClass_Float, .datum = { .float64 = f } };
-}
-
 
 struct FooBytes* FooBytes_alloc(size_t len) {
   struct FooBytes* bytes = (struct FooBytes*)foo_alloc(sizeof(struct FooBytes) + len + 1);

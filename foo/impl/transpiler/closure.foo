@@ -5,7 +5,7 @@ define InstanceMethods
     { #arity
           -> {signature: [], vars: 0,
               body: "struct FooClosure* closure = PTR(FooClosure, ctx->receiver.datum);
-return foo_Integer_new((int64_t)closure->argCount);"},
+return FOO_INTEGER((int64_t)closure->argCount);"},
       #apply:
           -> {signature: [Array], vars: 0,
               body: "struct FooArray* array = PTR(FooArray, ctx->frame[0].datum);

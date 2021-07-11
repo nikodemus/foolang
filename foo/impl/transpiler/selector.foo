@@ -17,10 +17,10 @@ for (size_t i = 0; i < n; i++) \{
     uint8_t c1 = name1->data[i];
     uint8_t c2 = name2->data[i];
     if (c1 != c2) \{
-        return foo_Boolean_new(c1 < c2);
+        return FOO_BOOLEAN(c1 < c2);
     }
 }
-return foo_Boolean_new(name1->size < name2->size);"},
+return FOO_BOOLEAN(name1->size < name2->size);"},
     #debug
         -> {signature: [], vars: 0,
             body: "const char* name = (char*)PTR(FooSelector, ctx->receiver.datum)->name->data;
@@ -38,6 +38,6 @@ return foo_send_array(ctx, selector, ctx->frame[0], ctx->frame[1]);"},
         -> {signature: [String], vars: 0,
             body: "const struct FooBytes* name = PTR(FooSelector, ctx->receiver.datum)->name;
 struct FooBytes* string = PTR(FooBytes, ctx->frame[0].datum);
-return foo_Boolean_new(name->size >= string->size &&
+return FOO_BOOLEAN(name->size >= string->size &&
                        !memcmp(name->data, string->data, string->size));"}
 }!
