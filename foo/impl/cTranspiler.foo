@@ -1266,7 +1266,7 @@ class CTranspiler { output selectorMap closureFunctions
         output print: "(\{".
         let left = self _visitTemp: anIs left.
         let right = self _visitTemp: anIs right.
-        output print: "foo_Boolean_new(foo_eq({left}, {right})); ".
+        output print: "FOO_BOOLEAN(foo_eq({left}, {right})); ".
         output print: "})"!
 
     method visitSeq: seq

@@ -28,19 +28,19 @@ define InstanceMethods {
     #isAppend
     -> { signature: [], vars: 0,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
-                return foo_Boolean_new(file->mode & FooFile_APPEND);" },
+                return FOO_BOOLEAN(file->mode & FooFile_APPEND);" },
     #isRead
     -> { signature: [], vars: 0,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
-                return foo_Boolean_new(file->mode & FooFile_READ);" },
+                return FOO_BOOLEAN(file->mode & FooFile_READ);" },
     #isTruncate
     -> { signature: [], vars: 0,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
-                return foo_Boolean_new(file->mode & FooFile_TRUNCATE);" },
+                return FOO_BOOLEAN(file->mode & FooFile_TRUNCATE);" },
     #isWrite
     -> { signature: [], vars: 0,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
-                return foo_Boolean_new(file->mode & FooFile_WRITE);" },
+                return FOO_BOOLEAN(file->mode & FooFile_WRITE);" },
     #open
     -> { signature: [], vars: 0,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);

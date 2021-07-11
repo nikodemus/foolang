@@ -78,19 +78,19 @@ define InstanceMethods
                body: "return foo_Float_new(ctx->receiver.datum.float64 / ctx->frame[0].datum.float64);" },
       #floatEq:
           -> { signature: [Float], vars: 0,
-               body: "return foo_Boolean_new(ctx->receiver.datum.float64 == ctx->frame[0].datum.float64);" },
+               body: "return FOO_BOOLEAN(ctx->receiver.datum.float64 == ctx->frame[0].datum.float64);" },
       #floatGt:
           -> { signature: [Float], vars: 0,
-               body: "return foo_Boolean_new(ctx->receiver.datum.float64 > ctx->frame[0].datum.float64);" },
+               body: "return FOO_BOOLEAN(ctx->receiver.datum.float64 > ctx->frame[0].datum.float64);" },
       #floatGte:
           -> { signature: [Float], vars: 0,
-               body: "return foo_Boolean_new(ctx->receiver.datum.float64 >= ctx->frame[0].datum.float64);" },
+               body: "return FOO_BOOLEAN(ctx->receiver.datum.float64 >= ctx->frame[0].datum.float64);" },
       #floatLt:
           -> { signature: [Float], vars: 0,
-               body: "return foo_Boolean_new(ctx->receiver.datum.float64 < ctx->frame[0].datum.float64);" },
+               body: "return FOO_BOOLEAN(ctx->receiver.datum.float64 < ctx->frame[0].datum.float64);" },
       #floatLte:
           -> { signature: [Float], vars: 0,
-               body: "return foo_Boolean_new(ctx->receiver.datum.float64 <= ctx->frame[0].datum.float64);" },
+               body: "return FOO_BOOLEAN(ctx->receiver.datum.float64 <= ctx->frame[0].datum.float64);" },
       #floatMul:
           -> { signature: [Float], vars: 0,
                body: "return foo_Float_new(ctx->receiver.datum.float64 * ctx->frame[0].datum.float64);" },

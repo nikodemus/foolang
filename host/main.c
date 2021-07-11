@@ -523,17 +523,12 @@ union FooDatum foo_check_modification(struct FooContext* ctx, union FooDatum dat
   return datum;
 }
 
-struct Foo foo_Boolean_new(bool t);
-
 struct Foo foo_class_includes(struct FooContext* ctx,
                                struct FooClass* class,
                                struct Foo obj) {
   assert(class);
   assert(obj.class);
-  if (class == obj.class || foo_class_inherits(class, obj.class))
-    return foo_Boolean_new(true);
-  else
-    return foo_Boolean_new(false);
+  return FOO_BOOLEAN(class == obj.class || foo_class_inherits(class, obj.class));
 }
 
 const struct FooMethod* foo_class_find_method_in(const struct FooClass* class,
@@ -967,10 +962,6 @@ struct Foo foo_Array_new(size_t size) {
 struct Foo foo_Array_alloc(size_t size) {
   struct FooArray* array = FooArray_alloc(size);
   return (struct Foo){ .class = &FooClass_Array, .datum = { .ptr = array } };
-}
-
-struct Foo foo_Boolean_new(bool t) {
-  return (struct Foo){ .class = &FooClass_Boolean, .datum = { .boolean = t } };
 }
 
 struct Foo foo_Character_new(int64_t n) {

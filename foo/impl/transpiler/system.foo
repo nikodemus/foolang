@@ -16,7 +16,7 @@ define InstanceMethods {
     #gc
     -> { signature: [], vars: 0,
          body: "foo_gc(ctx);
-                return foo_Boolean_new(true);" },
+                return FOO_BOOLEAN(true);" },
     #gcTrace
     -> { signature: [], vars: 0,
          body: "bool old_trace = trace_gc;
@@ -26,14 +26,14 @@ define InstanceMethods {
                 foo_gc(ctx);
                 gc_verbose = old_verbose;
                 trace_gc = old_trace;
-                return foo_Boolean_new(true);" },
+                return FOO_BOOLEAN(true);" },
     #gcVerbose
     -> { signature: [], vars: 0,
          body: "bool old_verbose = gc_verbose;
                 gc_verbose = true;
                 foo_gc(ctx);
                 gc_verbose = old_verbose;
-                return foo_Boolean_new(true);" },
+                return FOO_BOOLEAN(true);" },
     #output
     -> { signature: [], vars: 0,
          body: "return INSTANCE(Output, stdout);" },

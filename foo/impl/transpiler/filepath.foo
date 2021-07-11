@@ -18,11 +18,11 @@ define InstanceMethods {
                 return (struct Foo)\{ .class = &FooClass_FilePath, .datum = \{ .ptr = b3 } };" },
     #deleteFile
     -> { signature: [], vars: 0,
-         body: "return foo_Boolean_new(
+         body: "return FOO_BOOLEAN(
                     0 == remove((char*)PTR(FooBytes, ctx->receiver.datum)->data));" },
     #exists
     -> { signature: [], vars: 0,
-         body: "return foo_Boolean_new(
+         body: "return FOO_BOOLEAN(
                     0 == sys_access((char*)PTR(FooBytes, ctx->receiver.datum)->data, 0));" },
     #file
     -> { signature: [], vars: 0,
@@ -31,14 +31,14 @@ define InstanceMethods {
     -> { signature: [], vars: 0,
          body: "struct sys_stat s;
                 if (sys_stat((char*)PTR(FooBytes, ctx->receiver.datum)->data, &s))
-                    return foo_Boolean_new(false);
-                return foo_Boolean_new(SYS_ISDIR(s.st_mode));" },
+                    return FOO_BOOLEAN(false);
+                return FOO_BOOLEAN(SYS_ISDIR(s.st_mode));" },
     #isFile
     -> { signature: [], vars: 0,
          body: "struct sys_stat s;
                 if (sys_stat((char*)PTR(FooBytes, ctx->receiver.datum)->data, &s))
-                    return foo_Boolean_new(false);
-                return foo_Boolean_new(SYS_ISREG(s.st_mode));" },
+                    return FOO_BOOLEAN(false);
+                return FOO_BOOLEAN(SYS_ISREG(s.st_mode));" },
     #pathname
     -> { signature: [], vars: 0,
          body: "return (struct Foo)\{ .class = &FooClass_String, .datum = ctx->receiver.datum };" },

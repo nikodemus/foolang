@@ -24,19 +24,19 @@ else
     foo_unimplemented(\"DivideByZero handling\");" },
       #integerEq:
           -> { signature: [Integer], vars: 0,
-               body: "return foo_Boolean_new(ctx->receiver.datum.int64 == ctx->frame[0].datum.int64);" },
+               body: "return FOO_BOOLEAN(ctx->receiver.datum.int64 == ctx->frame[0].datum.int64);" },
       #integerGt:
           -> { signature: [Integer], vars: 0,
-               body: "return foo_Boolean_new(ctx->receiver.datum.int64 > ctx->frame[0].datum.int64);" },
+               body: "return FOO_BOOLEAN(ctx->receiver.datum.int64 > ctx->frame[0].datum.int64);" },
       #integerGte:
           -> { signature: [Integer], vars: 0,
-               body: "return foo_Boolean_new(ctx->receiver.datum.int64 >= ctx->frame[0].datum.int64);" },
+               body: "return FOO_BOOLEAN(ctx->receiver.datum.int64 >= ctx->frame[0].datum.int64);" },
       #integerLt:
           -> { signature: [Integer], vars: 0,
-               body: "return foo_Boolean_new(ctx->receiver.datum.int64 < ctx->frame[0].datum.int64);" },
+               body: "return FOO_BOOLEAN(ctx->receiver.datum.int64 < ctx->frame[0].datum.int64);" },
       #integerLte:
           -> { signature: [Integer], vars: 0,
-               body: "return foo_Boolean_new(ctx->receiver.datum.int64 <= ctx->frame[0].datum.int64);" },
+               body: "return FOO_BOOLEAN(ctx->receiver.datum.int64 <= ctx->frame[0].datum.int64);" },
       #integerMul:
           -> { signature: [Integer], vars: 0,
                body: "return foo_Integer_new(ctx->receiver.datum.int64 * ctx->frame[0].datum.int64);" },

@@ -13,9 +13,9 @@ define InstanceMethods {
                 if (stream->ptr) \{
                     fclose(stream->ptr);
                     stream->ptr = NULL;
-                    return foo_Boolean_new(true);
+                    return FOO_BOOLEAN(true);
                 }
-                return foo_Boolean_new(false);" },
+                return FOO_BOOLEAN(false);" },
     #flush
     -> { signature: [], vars: 0,
          body: "fflush(ctx->receiver.datum.ptr);
@@ -23,7 +23,7 @@ define InstanceMethods {
     #isClosed
     -> { signature: [], vars: 0,
          body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
-                return foo_Boolean_new(f);" },
+                return FOO_BOOLEAN(f == NULL);" },
     #offset
     -> { signature: [], vars: 0,
          body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;

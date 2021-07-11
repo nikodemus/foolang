@@ -16,4 +16,7 @@ struct FooProcessTimes {
 #define INTEGER(value) \
   ((struct Foo){ .class = &FooClass_Integer, .datum = { .int64 = value } })
 
+#define FOO_BOOLEAN(value) \
+  ((struct Foo){ .class = &FooClass_Boolean, .datum = { .boolean = (bool)(value) } })
+
 #endif // __FOO_H_
