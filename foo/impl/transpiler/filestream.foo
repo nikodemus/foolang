@@ -28,7 +28,7 @@ define InstanceMethods {
     -> { signature: [], vars: 0,
          body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
                 if (f)
-                    return foo_Integer_new(ftell(f));
+                    return FOO_INTEGER(ftell(f));
                 else
                     foo_panicf(ctx, \"FileStream#offset on closed stream.\");" },
     #offset:

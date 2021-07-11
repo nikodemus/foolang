@@ -304,7 +304,6 @@ struct FooPointerList FooClassInheritance_Class;
 struct FooArray* FooArray_alloc(size_t size);
 struct FooArray* FooArray_instance(size_t size);
 struct Foo foo_Float_new(double f);
-struct Foo foo_Integer_new(int64_t n);
 struct Foo foo_String_new(size_t len, const char* s);
 struct Foo foo_class_typecheck(struct FooContext* ctx, struct FooClass* class, struct Foo obj);
 struct Foo FooGlobal_True;
@@ -962,10 +961,6 @@ struct Foo foo_Array_new(size_t size) {
 struct Foo foo_Array_alloc(size_t size) {
   struct FooArray* array = FooArray_alloc(size);
   return (struct Foo){ .class = &FooClass_Array, .datum = { .ptr = array } };
-}
-
-struct Foo foo_Integer_new(int64_t n) {
-  return (struct Foo){ .class = &FooClass_Integer, .datum = { .int64 = n } };
 }
 
 struct Foo foo_Float_new(double f) {

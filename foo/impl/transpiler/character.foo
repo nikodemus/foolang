@@ -15,7 +15,7 @@ define InstanceMethods {
                         ctx->receiver.datum.int64 < ctx->frame[0].datum.int64);" },
     #code
         -> { signature: [], vars: 0,
-             body: "return foo_Integer_new(ctx->receiver.datum.int64);" },
+             body: "return FOO_INTEGER(ctx->receiver.datum.int64);" },
     #isAlpha
         -> { signature: [], vars: 0,
              body: "return FOO_BOOLEAN(isalpha(ctx->receiver.datum.int64));" },

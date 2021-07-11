@@ -93,5 +93,5 @@ for (size_t i = start; i < end;) \{
 return (struct Foo)\{ .class = &FooClass_Array, .datum = \{ .ptr = new } };"},
       #size
               -> {signature: [], vars: 0,
-                  body: "return foo_Integer_new(PTR(FooArray, ctx->receiver.datum)->size);"}
+                  body: "return FOO_INTEGER(PTR(FooArray, ctx->receiver.datum)->size);"}
 }!

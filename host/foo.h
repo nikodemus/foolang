@@ -13,8 +13,8 @@ struct FooProcessTimes {
 #define FLOAT(value) \
   ((struct Foo){ .class = &FooClass_Float, .datum = { .float64 = value } })
 
-#define INTEGER(value) \
-  ((struct Foo){ .class = &FooClass_Integer, .datum = { .int64 = value } })
+#define FOO_INTEGER(value) \
+  ((struct Foo){ .class = &FooClass_Integer, .datum = { .int64 = (int64_t)(value) } })
 
 #define FOO_BOOLEAN(value) \
   ((struct Foo){ .class = &FooClass_Boolean, .datum = { .boolean = (bool)(value) } })
