@@ -2088,6 +2088,16 @@ class TestTranspileSystem { assert system }
                                 (a is b) debug!
                         end"
             expect: "#<Boolean False>"!
+
+    method test_System_currentDirectory
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                 let path = system currentDirectory / \"foo/prelude.foo\".
+                                 system output writeString: path pathname.
+                                 path exists
+                                     ifTrue: \{ system output writeString: \" ok!\" }!
+                         end"
+            expect: ".//foo/prelude.foo ok!"!
 end
 
 class TestTranspileDynamic { assert system }
