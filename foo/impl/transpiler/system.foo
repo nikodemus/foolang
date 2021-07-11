@@ -34,6 +34,14 @@ define InstanceMethods {
                 foo_gc(ctx);
                 gc_verbose = old_verbose;
                 return FOO_BOOLEAN(true);" },
+    #isUnix
+    -> { signature: [], vars: 0,
+         body: "return FOO_BOOLEAN(system_is_unix());" },
+
+    #isWindows
+    -> { signature: [], vars: 0,
+         body: "return FOO_BOOLEAN(system_is_windows());" },
+
     #output
     -> { signature: [], vars: 0,
          body: "return FOO_INSTANCE(Output, stdout);" },

@@ -12,6 +12,14 @@
 
 #include "system.h"
 
+bool system_is_unix(void) {
+  return true;
+}
+
+bool system_is_windows(void) {
+  return false;
+}
+
 double timeval_as_double(struct timeval t) {
   return (double)t.tv_sec + (double)t.tv_usec / 1e6;
 }
