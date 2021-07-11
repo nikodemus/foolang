@@ -1,5 +1,3 @@
-#include "system.h"
-
 #define WIN32_LEAN_AND_MEAN
 #define _CRT_RAND_S
 
@@ -11,6 +9,16 @@
 #undef NDEBUG
 #include <assert.h>
 #include <stdio.h>
+
+#include "system.h"
+
+bool system_is_unix(void) {
+  return false;
+}
+
+bool system_is_windows(void) {
+  return true;
+}
 
 uint64_t filetime_as_u64(FILETIME t) {
   return (uint64_t)t.dwHighDateTime << 32 | (uint64_t)t.dwLowDateTime;

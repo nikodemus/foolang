@@ -2,9 +2,12 @@
 #define __SYSTEM_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "foo.h"
 
+bool system_is_unix(void);
+bool system_is_windows(void);
 double system_time_seconds(void);
 void system_get_process_times(struct FooProcessTimes* times);
 void system_sleep(double seconds);
