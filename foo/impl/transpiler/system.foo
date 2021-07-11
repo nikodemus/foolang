@@ -9,6 +9,10 @@ define InstanceMethods {
     -> { signature: [], vars: 0,
          body: "struct FooBytes* root = FooBytes_from(\"\");
                 return INSTANCE(FilePath, root);" },
+    #currentDirectory
+    -> { signature: [], vars: 0,
+         body: "struct FooBytes* root = FooBytes_from(\"./\");
+                return INSTANCE(FilePath, root);" },
     #gc
     -> { signature: [], vars: 0,
          body: "foo_gc(ctx);
