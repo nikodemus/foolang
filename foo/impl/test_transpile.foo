@@ -306,7 +306,7 @@ class TestTranspileDictionary { assert system }
     is TranspilerTest
 
     method test_Dictionary_remove_transpiled
-        self transpile: "import lang.dictionary2.Dictionary
+        self transpile: "import lang.dictionary_target.Dictionary
                          import lang.output
                          import lang.string
                          import lang.selector_ext
@@ -322,7 +322,7 @@ class TestTranspileDictionary { assert system }
             expect: "\{ 2 -> \"two\" }"!
 
     method test_Dictionary_toString_transpiled
-        self transpile: "import lang.dictionary2.Dictionary
+        self transpile: "import lang.dictionary_target.Dictionary
                          import lang.output
                          import lang.string
                          import lang.selector_ext
@@ -338,7 +338,7 @@ class TestTranspileDictionary { assert system }
   2 -> \"two\" }"!
 
     method test_Dictionary_constructor
-        self transpile: "import lang.dictionary2.Dictionary
+        self transpile: "import lang.dictionary_target.Dictionary
                          import lang.string
                          import lang.character_target_ext
                          import lang.selector_ext

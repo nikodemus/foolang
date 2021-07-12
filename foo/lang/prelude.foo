@@ -11,7 +11,7 @@ import .character_target_ext
 import .class_target_ext
 import .closure_ext
 import .collection.Collection
-import .dictionary2.Dictionary
+import .dictionary_target.Dictionary
 import .exception.DivideByZero
 import .exception.DoesNotUnderstand
 import .exception.Error
