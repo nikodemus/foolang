@@ -1093,6 +1093,11 @@ Interpreter backtrace:
             eval: "Foo new bar"
             expect: 42!
 
+    method test_Define_with_bang_immediately_after_literal_selector_symbol
+        self load: "define Thing #<!"
+             eval: "Thing"
+             expect: #<!
+
     method test_Can_extend_interface_with_interface
         self load: "interface Foo
                     end
