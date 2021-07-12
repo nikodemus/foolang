@@ -1,4 +1,3 @@
-import .selector
 import .test.TestSuite
 
 class TestSelector { assert }

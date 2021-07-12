@@ -32,7 +32,7 @@ import .lang.ordered.Ordered
 import .lang.output_ext
 import .lang.random_host_ext
 import .lang.record_host_ext
-import .lang.selector.Selector
+import .lang.selector_host.Selector
 import .lang.string.String
 import .lang.stringOutput.StringOutput
 import .lang.test.TestSuite

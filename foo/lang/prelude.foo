@@ -34,7 +34,7 @@ import .ordered.Ordered
 import .output_ext
 -- import .random.Random
 import .record_target_ext
-import .selector_ext.Selector
+import .selector_target_ext
 import .string.String
 import .stringOutput.StringOutput
 import .system_ext

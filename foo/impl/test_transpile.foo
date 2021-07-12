@@ -309,7 +309,7 @@ class TestTranspileDictionary { assert system }
         self transpile: "import lang.dictionary_target.Dictionary
                          import lang.output_ext
                          import lang.string
-                         import lang.selector_ext
+                         import lang.selector_target_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -325,7 +325,7 @@ class TestTranspileDictionary { assert system }
         self transpile: "import lang.dictionary_target.Dictionary
                          import lang.output_ext
                          import lang.string
-                         import lang.selector_ext
+                         import lang.selector_target_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -341,7 +341,7 @@ class TestTranspileDictionary { assert system }
         self transpile: "import lang.dictionary_target.Dictionary
                          import lang.string
                          import lang.character_target_ext
-                         import lang.selector_ext
+                         import lang.selector_target_ext
 
                          class Main \{ out \}
                              direct method run: command in: system
@@ -366,7 +366,7 @@ class TestTranspilePreludeException { assert system }
     method test_Main_does_not_understand
         self transpile: "import lang.exception.*
                          import lang.closure_ext
-                         import lang.selector_ext
+                         import lang.selector_target_ext
                          import lang.object.Object
 
                          class Main \{\}
@@ -387,7 +387,7 @@ Backtrace:
     method test_Class_does_not_understand
         self transpile: "import lang.exception.*
                          import lang.class_target_ext
-                         import lang.selector_ext
+                         import lang.selector_target_ext
 
                          class Main \{\}
                              is Object
@@ -696,7 +696,7 @@ class TestTranspilePreludeSelector { assert system }
     is TranspilerTest
 
     method test
-        self transpile: "import lang.selector_ext.*
+        self transpile: "import lang.selector_target_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -742,7 +742,7 @@ class TestTranspilePreludeTest { assert system }
     method test
         self transpile: "import lang.test
                          import lang.time
-                         import lang.selector_ext
+                         import lang.selector_target_ext
                          class Main \{}
                              is test.TestSuite
                              direct method run: command in: system
@@ -1442,7 +1442,7 @@ class TestTranspileClass { assert system }
     method test_Instantiate_metaclass_at_runtime
         self transpile:
             "import lang.output_ext
-             import lang.selector_ext
+             import lang.selector_target_ext
 
              class Main \{\}
                   direct method run: command in: system
@@ -1456,7 +1456,7 @@ class TestTranspileClass { assert system }
     method test_Instantiate_class_at_runtime
         self transpile:
             "import lang.output_ext
-             import lang.selector_ext
+             import lang.selector_target_ext
 
              class MidClass < Class
                  method ping
@@ -1481,7 +1481,7 @@ class TestTranspileClass { assert system }
         self transpile:
             "import lang.output_ext
              import lang.array_target_ext
-             import lang.selector_ext
+             import lang.selector_target_ext
              import lang.class_target_ext
 
              class Main \{\}
@@ -1506,7 +1506,7 @@ True
     method test_Runtime_interface_inheritance
         self transpile:
             "import lang.output_ext
-             import lang.selector_ext
+             import lang.selector_target_ext
 
              interface MyInterface
                  direct method directPing
@@ -1548,7 +1548,7 @@ True
     method test_Runtime_class_instances
         self transpile:
             "import lang.output_ext
-             import lang.selector_ext
+             import lang.selector_target_ext
              import lang.array_target_ext
 
              class BlockMethod \{ selector block \}
@@ -1636,7 +1636,7 @@ True
     method test_Object_methods_in_metaclass_work
         self transpile:
             "import lang.output_ext
-             import lang.selector_ext
+             import lang.selector_target_ext
              import lang.boolean_ext
              import lang.array
              import lang.array_target_ext
