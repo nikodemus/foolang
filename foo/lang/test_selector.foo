@@ -1,5 +1,3 @@
-import .test.TestSuite
-
 class TestSelector { assert }
     is TestSuite
 

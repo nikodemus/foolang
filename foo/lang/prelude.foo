@@ -38,7 +38,7 @@ import .selector_target_ext
 import .string.String
 import .stringOutput.StringOutput
 import .system_target_ext
-import .test.TestSuite
+import .testSuite.TestSuite
 import .time.Time
 
 class Foolang {}

@@ -1,6 +1,3 @@
-import .iterable.Iterable
-import .test.TestSuite
-
 ---
 This test interface required a `make:` method which should construct an instance
 of iterable to be tested containing the speficied elements.

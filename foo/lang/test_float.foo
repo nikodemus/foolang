@@ -1,5 +1,3 @@
-import .test.TestSuite
-
 class SomeFloats {}
    direct method do: block
       block value: -0.0.

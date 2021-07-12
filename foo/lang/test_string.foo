@@ -1,6 +1,3 @@
-import .string.String
-import .test.TestSuite
-
 class TestString { assert }
     is TestSuite
 
