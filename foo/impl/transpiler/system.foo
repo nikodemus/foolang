@@ -5,6 +5,13 @@ define InstanceMethods {
     #clock
     -> { signature: [], vars: 0,
          body: "return FOO_INSTANCE(Clock, NULL);" },
+    #_command:
+    -> { signature: [String], vars: 0,
+         body: "struct FooBytes* bytes = PTR(FooBytes, ctx->frame[0].datum);
+                char* command = (char*)bytes->data;
+                // FIXME: capture output and exit code!
+                int result = system(command);
+                return FOO_BOOLEAN(result == 0);" },
     #files
     -> { signature: [], vars: 0,
          body: "struct FooBytes* root = FooBytes_from(\"\");
