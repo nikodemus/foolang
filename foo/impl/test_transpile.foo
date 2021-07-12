@@ -256,7 +256,7 @@ class TestTranspilePreludeTime { assert system }
     is TranspilerTest
 
     method testSystemClockTime
-        self transpile: "import lang.time
+        self transpile: "import lang.time_ext
                          import lang.output_ext
                          import lang.integer_ext
 
@@ -741,7 +741,7 @@ class TestTranspilePreludeTest { assert system }
 
     method test
         self transpile: "import lang.testSuite.TestSuite
-                         import lang.time
+                         import lang.time_ext
                          import lang.selector_target_ext
                          class Main \{}
                              is TestSuite

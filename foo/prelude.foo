@@ -36,7 +36,7 @@ import .lang.selector_host.Selector
 import .lang.string.String
 import .lang.stringOutput.StringOutput
 import .lang.testSuite.TestSuite
-import .lang.time.Time
+import .lang.time_ext
 
 class Foolang {}
     direct method isSelfHosted

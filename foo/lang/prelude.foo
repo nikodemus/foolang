@@ -39,7 +39,7 @@ import .string.String
 import .stringOutput.StringOutput
 import .system_target_ext
 import .testSuite.TestSuite
-import .time.Time
+import .time_ext
 
 class Foolang {}
     direct method isSelfHosted
