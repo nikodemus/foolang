@@ -30,7 +30,7 @@ import .lang.number.Number
 import .lang.object.Object
 import .lang.ordered.Ordered
 import .lang.output_ext
-import .lang.random.Random
+import .lang.random_host_ext
 import .lang.record.Record
 import .lang.selector.Selector
 import .lang.string.String
