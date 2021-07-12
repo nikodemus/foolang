@@ -30,22 +30,22 @@ interface TranspilerTest
                                  "lib" -> system files / "foo/lib", }
                       asFileModules.
         let c = CTranspiler transpile: string in: env with: prelude.
-        (system files / "host/generated_selectors.h")
+        (system files / "c/generated_selectors.h")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c selectors }.
-        (system files / "host/generated_declarations.h")
+        (system files / "c/generated_declarations.h")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c declarations }.
-        (system files / "host/generated_constants.c")
+        (system files / "c/generated_constants.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c constants }.
-        (system files / "host/generated_closures.c")
+        (system files / "c/generated_closures.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c closures }.
-        (system files / "host/generated_main.c")
+        (system files / "c/generated_main.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c main }.
-        (system files / "host/generated_builtins.c")
+        (system files / "c/generated_builtins.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c builtins }.
         let path = system currentDirectory / "tmp_transpile_test.exe".
@@ -61,7 +61,7 @@ interface TranspilerTest
             = system isUnix
                 ifTrue: { "unix" }
                 ifFalse: { "windows" }.
-        let buildCmd = "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall -Werror --std=c11 host/main.c host/system_{target}.c ext/dtoa.c".
+        let buildCmd = "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall -Werror --std=c11 c/main.c c/system_{target}.c ext/dtoa.c".
         let build = system command: buildCmd.
         self _reportStderr: build.
         build ok
