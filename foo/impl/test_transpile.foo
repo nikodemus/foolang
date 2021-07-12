@@ -2483,7 +2483,6 @@ class Main {}
             "--panic" -> TestTranspilePanic,
             "--perform-with" -> TestTranspilePerformWith,
             "--prelude-any" -> TestTranspilePreludeAny,
-            "--prelude-boolean" -> TestTranspilePreludeBoolean,
             "--prelude-character" -> TestTranspilePreludeCharacter,
             "--prelude-closure" -> TestTranspilePreludeClosure,
             "--prelude-exception" -> TestTranspilePreludeException,
