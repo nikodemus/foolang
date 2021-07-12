@@ -467,7 +467,7 @@ class TestTranspilePreludeFile { assert system }
             expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
 
     method testOpenBlock
-        self transpile: "import lang.file
+        self transpile: "import lang.file_ext
                          class Main \{}
                              direct method run: command in: system
                                  let f = (system files / \"test.tmp\") file.
@@ -570,7 +570,7 @@ class TestTranspilePreludeFileStream { assert system }
     method testSize
         self transpile: "import lang.filestream
                          import lang.filepath
-                         import lang.file
+                         import lang.file_ext
                          class Main \{}
                              direct method run: command in: system
                                  let size = (system files / \"README.md\") forRead

@@ -17,7 +17,7 @@ import .lang.exception.Panic
 import .lang.exception.RequiredMethodMissing
 import .lang.exception.TypeError
 import .lang.layout0.Layout
-import .lang.file.File
+import .lang.file_ext
 import .lang.filepath.FilePath
 import .lang.filestream.FileStream
 import .lang.float.Float
