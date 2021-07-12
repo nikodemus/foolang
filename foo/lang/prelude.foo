@@ -19,7 +19,7 @@ import .exception.Panic
 import .exception.RequiredMethodMissing
 import .exception.TypeError
 import .file_ext
-import .filepath.FilePath
+import .filepath_ext
 import .filestream.FileStream
 import .float.Float
 import .integer.Integer
