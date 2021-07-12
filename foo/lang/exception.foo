@@ -1,4 +1,5 @@
 import .object.Object
+import .closure_ext
 
 class Panic { description context }
     is Object
