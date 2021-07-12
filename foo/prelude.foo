@@ -21,7 +21,7 @@ import .lang.file_ext
 import .lang.filepath_ext
 import .lang.filestream_ext
 import .lang.float_ext
-import .lang.integer.Integer
+import .lang.integer_ext
 import .lang.interface.Interface
 import .lang.interval.Interval
 import .lang.iterable.Iterable

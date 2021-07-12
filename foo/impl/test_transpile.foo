@@ -258,7 +258,7 @@ class TestTranspilePreludeTime { assert system }
     method testSystemClockTime
         self transpile: "import lang.time
                          import lang.output
-                         import lang.integer
+                         import lang.integer_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -599,7 +599,7 @@ class TestTranspilePreludeInteger { assert system }
     is TranspilerTest
 
     method test
-        self transpile: "import lang.integer
+        self transpile: "import lang.integer_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -613,7 +613,7 @@ class TestTranspilePreludeInterval { assert system }
 
     method test
         self transpile: "import lang.interval.Interval
-                         import lang.integer
+                         import lang.integer_ext
                          class Main \{}
                              direct method run: command in: system
                                  (Interval from: 1 to: 5 by: 2)
@@ -627,7 +627,7 @@ class TestTranspilePreludeIterable { assert system }
 
     method test
         self transpile: "import lang.iterable.*
-                         import lang.integer
+                         import lang.integer_ext
 
                          class MyIterator \{ pos thing }
                              is Iterator
@@ -682,7 +682,7 @@ class TestTranspilePreludeOutput { assert system }
 
     method test
         self transpile: "import lang.output.Output
-                         import lang.integer
+                         import lang.integer_ext
 
                          class Main \{ x }
                              direct method run: command in: system
@@ -1072,7 +1072,7 @@ class TestTranspileBlock { assert system }
     is TranspilerTest
 
     method testValueValue
-        self transpile: "import lang.integer
+        self transpile: "import lang.integer_ext
                          class Main \{}
                              direct method run: command in: system
                                  (\{ |a b| a + b } value: 10 value: 30) debug!
@@ -1080,7 +1080,7 @@ class TestTranspileBlock { assert system }
             expect: "#<Integer 40>"!
 
     method testBlockScope
-        self transpile: "import lang.integer
+        self transpile: "import lang.integer_ext
                          class Main \{}
                              direct method run: command in: system
                                  let x = 200.
@@ -1310,7 +1310,7 @@ class TestTranspileArray { assert system }
             expect: "#<Integer 999>#<Integer 42>"!
 
     method testArraySums
-        self transpile: "import lang.integer
+        self transpile: "import lang.integer_ext
                          class Main \{}
                              direct method run: command in: system
                                 (self sums: 10) debug!
@@ -1365,7 +1365,7 @@ class TestTranspileClass { assert system }
     method test_Superclass_constructor_works
         self transpile:
             "import lang.output
-             import lang.integer
+             import lang.integer_ext
 
              class MainClass \{ a b }
              end
@@ -1389,7 +1389,7 @@ class TestTranspileClass { assert system }
     method test_Superclass_methods_work
         self transpile:
             "import lang.output
-             import lang.integer
+             import lang.integer_ext
 
              class MainClass \{ _a _b }
                  direct method a: a b: b
@@ -1960,10 +1960,10 @@ class TestTranspileInteger { assert system }
              expect: "#<Integer 123>"!
 
     method testIntegerOps
-        -- Instead of importing lang.integer into N tests, we import a few more
+        -- Instead of importing lang.integer_ext into N tests, we import a few more
         -- things and test all ops in one test. Somewhat Faster, since imports
         -- are SLOW at the moment.
-        self transpile: "import lang.integer
+        self transpile: "import lang.integer_ext
                          import lang.output
                          import lang.record_ext
                          import lang.boolean_ext
