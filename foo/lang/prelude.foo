@@ -8,7 +8,7 @@ import .boolean_ext
 import .byte.Byte
 import .byteArray_ext.ByteArray
 import .character_target_ext.Character
-import .class2.Class
+import .class_target_ext.Class
 import .closure.Closure
 import .collection.Collection
 import .dictionary2.Dictionary

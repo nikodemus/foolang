@@ -6,7 +6,7 @@ import .lang.boolean_ext
 import .lang.byte.Byte
 import .lang.byteArray_ext.ByteArray
 import .lang.character_host.Character
-import .lang.class.Class
+import .lang.class_host.Class
 import .lang.closure.Closure
 import .lang.collection.Collection
 import .lang.dictionary.Dictionary

@@ -386,7 +386,7 @@ Backtrace:
 
     method test_Class_does_not_understand
         self transpile: "import lang.exception.*
-                         import lang.class
+                         import lang.class_target_ext
                          import lang.selector_ext
 
                          class Main \{\}
@@ -1482,7 +1482,7 @@ class TestTranspileClass { assert system }
             "import lang.output
              import lang.array_target_ext
              import lang.selector_ext
-             import lang.class2
+             import lang.class_target_ext
 
              class Main \{\}
                   direct method run: command in: system
