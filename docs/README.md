@@ -68,11 +68,11 @@ scoped lexically. Smalltalk-style blocks are lexical closures.
 Smalltalk's it is very simple and ergonomic.
 
 <span class="done">&check;</span>
-**No ambient authority**: all OS interfaces must be passed through dependency
-injection, starting from the [system object](system.md) passed to
-`Main##run:in:`&mdash;there is no such thing as a globally accessible `File` or
-`Socket` class. (Note: the system object doesn't contain nearly all facilities
-it should yet!)
+**No ambient authority**: all OS interfaces must be passed explicitly, starting
+from the [system object](system.md) passed to `Main##run:in:`&mdash;without it
+there is no way to open a file or a socket, check the clock, or run an external
+program. (Note: the system object doesn't contain nearly all facilities it
+should yet!)
 
 <span class="done">&check;</span>
 **Reified types**: Types like _Integer_ are runtime objects capable of
@@ -115,23 +115,25 @@ unwinding the stack when appropriate.
 a dynamic and interactive way of working: in development mode existing methods
 can be redefined and new classes added while the program is running.
 
+<span class="done">&check;</span>
+**Self-Hosted**: Foolang is implemented in Foolang: it has a self-hosted parser,
+interpreter, and a transpiler-to-C, making it capable of building itself.
+(Bootstrap is currently through an interpreter written in Rust.)
+
 ### Pending
 
 <span class="todo">&cross;</span>
-**Self-Hosted**: self-hosted parser and
-interpreter are done, work on self-hosted transpiler to C for bootstrapping
-is around 90% complete.
+**Compiled**: Foolang is intended to be capable of producing native, monolithic
+executables&mdash;without compromising the interactive development experience.
+The current compiler does produce monolithic executables, but there's no
+interactive experience with the compiler yet.
 
 <span class="todo">&cross;</span>
-**Compiled**: Foolang is intended to be
-capable of producing native, monolithic executables&mdash;without compromising
-the interactive development experience.
-
-<span class="todo">&cross;</span>
-**Performant**: type-annotated and compiled Foolang code should perform about as well
-as equivalent `-O0` C++ code. To be fair: this will require more effort from
-the compiler than C++, but not drastically so&mdash;a partial evaluation pass
-should cover most of it.
+**Performant**: type-annotated and compiled Foolang code should perform about as
+well as equivalent `-O0` C++ code. To be fair: this will require more effort
+from the compiler than C++, but not drastically so&mdash;a partial evaluation
+pass should cover most of it. Current compiler is *definititely* not there yet:
+it's ~7 x slower than the bootstrap evaluator at the moment!
 
 <span class="todo">&cross;</span>
 **Type inference**: while Foolang's typesystem should be considered
