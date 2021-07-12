@@ -29,7 +29,7 @@ import .lang.list.List
 import .lang.number.Number
 import .lang.object.Object
 import .lang.ordered.Ordered
-import .lang.output.Output
+import .lang.output_ext
 import .lang.random.Random
 import .lang.record.Record
 import .lang.selector.Selector

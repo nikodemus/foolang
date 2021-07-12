@@ -31,7 +31,7 @@ import .list.List
 import .number.Number
 import .object.Object
 import .ordered.Ordered
-import .output.Output
+import .output_ext
 -- import .random.Random
 import .record_ext.Record
 import .selector_ext.Selector

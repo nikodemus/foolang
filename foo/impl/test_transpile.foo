@@ -257,7 +257,7 @@ class TestTranspilePreludeTime { assert system }
 
     method testSystemClockTime
         self transpile: "import lang.time
-                         import lang.output
+                         import lang.output_ext
                          import lang.integer_ext
 
                          class Main \{}
@@ -307,7 +307,7 @@ class TestTranspileDictionary { assert system }
 
     method test_Dictionary_remove_transpiled
         self transpile: "import lang.dictionary_target.Dictionary
-                         import lang.output
+                         import lang.output_ext
                          import lang.string
                          import lang.selector_ext
 
@@ -323,7 +323,7 @@ class TestTranspileDictionary { assert system }
 
     method test_Dictionary_toString_transpiled
         self transpile: "import lang.dictionary_target.Dictionary
-                         import lang.output
+                         import lang.output_ext
                          import lang.string
                          import lang.selector_ext
 
@@ -681,7 +681,7 @@ class TestTranspilePreludeOutput { assert system }
     is TranspilerTest
 
     method test
-        self transpile: "import lang.output.Output
+        self transpile: "import lang.output_ext
                          import lang.integer_ext
 
                          class Main \{ x }
@@ -1364,7 +1364,7 @@ class TestTranspileClass { assert system }
 
     method test_Superclass_constructor_works
         self transpile:
-            "import lang.output
+            "import lang.output_ext
              import lang.integer_ext
 
              class MainClass \{ a b }
@@ -1388,7 +1388,7 @@ class TestTranspileClass { assert system }
 
     method test_Superclass_methods_work
         self transpile:
-            "import lang.output
+            "import lang.output_ext
              import lang.integer_ext
 
              class MainClass \{ _a _b }
@@ -1418,7 +1418,7 @@ class TestTranspileClass { assert system }
 
     method test_Class_inheritance_creates_subtype
         self transpile:
-            "import lang.output
+            "import lang.output_ext
              import lang.boolean_ext
 
              class MainClass \{ a b }
@@ -1441,7 +1441,7 @@ class TestTranspileClass { assert system }
 
     method test_Instantiate_metaclass_at_runtime
         self transpile:
-            "import lang.output
+            "import lang.output_ext
              import lang.selector_ext
 
              class Main \{\}
@@ -1455,7 +1455,7 @@ class TestTranspileClass { assert system }
 
     method test_Instantiate_class_at_runtime
         self transpile:
-            "import lang.output
+            "import lang.output_ext
              import lang.selector_ext
 
              class MidClass < Class
@@ -1479,7 +1479,7 @@ class TestTranspileClass { assert system }
 
     method test_Runtime_class_default_methods
         self transpile:
-            "import lang.output
+            "import lang.output_ext
              import lang.array_target_ext
              import lang.selector_ext
              import lang.class_target_ext
@@ -1505,7 +1505,7 @@ True
 
     method test_Runtime_interface_inheritance
         self transpile:
-            "import lang.output
+            "import lang.output_ext
              import lang.selector_ext
 
              interface MyInterface
@@ -1547,7 +1547,7 @@ True
 
     method test_Runtime_class_instances
         self transpile:
-            "import lang.output
+            "import lang.output_ext
              import lang.selector_ext
              import lang.array_target_ext
 
@@ -1635,7 +1635,7 @@ True
 
     method test_Object_methods_in_metaclass_work
         self transpile:
-            "import lang.output
+            "import lang.output_ext
              import lang.selector_ext
              import lang.boolean_ext
              import lang.array
@@ -1964,7 +1964,7 @@ class TestTranspileInteger { assert system }
         -- things and test all ops in one test. Somewhat Faster, since imports
         -- are SLOW at the moment.
         self transpile: "import lang.integer_ext
-                         import lang.output
+                         import lang.output_ext
                          import lang.record_ext
                          import lang.boolean_ext
 
