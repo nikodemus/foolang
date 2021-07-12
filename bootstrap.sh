@@ -14,6 +14,8 @@ export ASAN_SYMBOLIZER_PATH=0
 BOOTSTRAP_COMPILER=./bootstrap-fooc$EXT
 TARGET_COMPILER=./fooc$EXT
 
+trap "./beep.sh" EXIT
+
 echo "Building $BOOTSTRAP_COMPILER..."
 time cargo run -- foo/compile.foo -- foo/compile.foo $BOOTSTRAP_COMPILER
 rm -rf bootstrap-c
