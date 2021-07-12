@@ -585,7 +585,7 @@ class TestTranspilePreludeFloat { assert system }
     is TranspilerTest
 
     method test
-        self transpile: "import lang.float
+        self transpile: "import lang.float_ext
 
                          class Main \{}
                              direct method run: command in: system

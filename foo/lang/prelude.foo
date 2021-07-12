@@ -21,7 +21,7 @@ import .exception.TypeError
 import .file_ext
 import .filepath_ext
 import .filestream_ext
-import .float.Float
+import .float_ext
 import .integer.Integer
 import .interface2.Interface
 import .interval.Interval
