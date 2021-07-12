@@ -1,4 +1,3 @@
-import .record
 import .test.TestSuite
 
 class TestRecord { assert }

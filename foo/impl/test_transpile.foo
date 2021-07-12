@@ -1764,7 +1764,7 @@ class TestTranspileRecord { assert system }
     is TranspilerTest
 
     method test_Ad_Hoc_Record_in_transpiler
-        self transpile: "import lang.record_ext
+        self transpile: "import lang.record_target_ext
                          import lang.array_target_ext
                          class Main \{}
                              direct method run: command in: system
@@ -1802,7 +1802,7 @@ class TestTranspileRecord { assert system }
             expect: "1234"!
 
     method test_Record_equality_in_transpiler
-        self transpile: "import lang.record_ext.*
+        self transpile: "import lang.record_target_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -1965,7 +1965,7 @@ class TestTranspileInteger { assert system }
         -- are SLOW at the moment.
         self transpile: "import lang.integer_ext
                          import lang.output_ext
-                         import lang.record_ext
+                         import lang.record_target_ext
                          import lang.boolean_ext
 
                          class Main \{}
