@@ -5,7 +5,8 @@ import .block.Block
 import .block.Function
 import .block_target_ext
 import .boolean_ext
-import .byteArray.ByteArray
+import .byte.Byte
+import .byteArray_ext.ByteArray
 import .character_ext.Character
 import .class2.Class
 import .closure.Closure

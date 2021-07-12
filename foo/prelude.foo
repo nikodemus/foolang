@@ -3,7 +3,8 @@ import .lang.array.Array
 import .lang.block.Block
 import .lang.block.Function
 import .lang.boolean_ext
-import .lang.byteArray.ByteArray
+import .lang.byte.Byte
+import .lang.byteArray_ext.ByteArray
 import .lang.character.Character
 import .lang.class.Class
 import .lang.closure.Closure
