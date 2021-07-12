@@ -1,0 +1,9 @@
+extend System
+    method command: command
+        -- The target _command: doesn't capture output, because
+        -- I wanted to work on the compiler instead of writing
+        -- that stuff for both POSIX and Windows...
+        { ok: self _command: command,
+          stdout: "<<System#command stdout not captured!>>",
+          stderr: "<<System#command stderr not captured!>>" }!
+end

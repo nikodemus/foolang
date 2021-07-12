@@ -6,9 +6,8 @@ define DirectMethods {
 
 define InstanceMethods {
     #==
-        -> { signature: [Character], vars: 0,
-             body: "return FOO_BOOLEAN(
-                        ctx->receiver.datum.int64 == ctx->frame[0].datum.int64);" },
+        -> { signature: [Any], vars: 0,
+             body: "return FOO_BOOLEAN(foo_eq(ctx->receiver, ctx->frame[0]));" },
     #<
         -> { signature: [Character], vars: 0,
              body: "return FOO_BOOLEAN(
