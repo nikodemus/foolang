@@ -105,10 +105,7 @@ class ModuleDictionary { available translated }
     method _loadPath: path _in: env _as: dotPath
         -- Debug pad: $LoadDepth println: "load: {dotPath} ...".
         let $LoadDepth = $LoadDepth + 1.
-        let source
-            = self available
-                at: path
-                ifNone: { Error raise: "Unknown module: {dotPath}, available: {available}" }.
+        let source = self available at: path.
         self _translateSource: source _for: path _in: env!
 
     method _translateSource: source _for: path _in: env
