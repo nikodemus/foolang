@@ -1147,7 +1147,9 @@ class TestTranspileSelfHosted { assert system }
                              direct method run: command in: system
                                 system exit!
                          end"
-            expectCompilerError: "Import error: file foo\\lang\\lang.foo does not exist."!
+            expectCompilerError: (system isUnix
+                                      ifTrue: { "Import error: file foo/lang/lang.foo does not exist." }
+                                      ifFalse: { "Import error: file foo\\lang\\lang.foo does not exist." })!
 
     method test_Transpiled_Parser
         self transpileWithPrelude:
