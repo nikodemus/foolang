@@ -9,7 +9,7 @@ import .byte.Byte
 import .byteArray_ext.ByteArray
 import .character_target_ext.Character
 import .class_target_ext.Class
-import .closure.Closure
+import .closure_ext
 import .collection.Collection
 import .dictionary2.Dictionary
 import .exception.DivideByZero

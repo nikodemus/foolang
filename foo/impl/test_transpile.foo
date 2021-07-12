@@ -292,7 +292,7 @@ class TestTranspilePreludeClosure { assert system }
     is TranspilerTest
 
     method test
-        self transpile: "import lang.closure.*
+        self transpile: "import lang.closure_ext
 
                          class Main \{ x }
                              direct method run: command in: system
@@ -365,7 +365,7 @@ class TestTranspilePreludeException { assert system }
 
     method test_Main_does_not_understand
         self transpile: "import lang.exception.*
-                         import lang.closure
+                         import lang.closure_ext
                          import lang.selector_ext
                          import lang.object.Object
 
@@ -406,7 +406,7 @@ Backtrace:
 
     method testErrorRaise
         self transpile: "import lang.exception.*
-                         import lang.closure.* -- for #on:do:
+                         import lang.closure_ext
 
                          class Main \{}
                              direct method run: command in: system

@@ -1,4 +1,4 @@
-import .closure
+import .closure_ext
 import .object.Object
 
 extend FilePath

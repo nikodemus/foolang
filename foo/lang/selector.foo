@@ -1,5 +1,5 @@
 import .string.String
-import .closure.Block
+import .block.Block
 
 define ColonCharacter
     ":" character!
