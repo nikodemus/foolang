@@ -23,7 +23,7 @@ import .filepath_ext
 import .filestream_ext
 import .float_ext
 import .integer_ext
-import .interface2.Interface
+import .interface.Interface
 import .interval.Interval
 import .iterable.Iterable
 import .layout_ext

@@ -1,5 +1,19 @@
 import .object.Object
 
-extend Interface
+interface Interface
     is Object
+
+    direct method new: name
+                  interfaces: interfaces
+                  directMethods: directMethods
+                  instanceMethods: instanceMethods
+        let metaclass = Class
+                            subclass: "{name} classOf"
+                            interfaces: (interfaces collect: #classOf)
+                            methods: directMethods.
+        metaclass
+            new: name
+            layout: Layout empty
+            interfaces: interfaces
+            methods: instanceMethods!
 end

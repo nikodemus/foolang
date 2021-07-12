@@ -22,7 +22,7 @@ import .lang.filepath_ext
 import .lang.filestream_ext
 import .lang.float_ext
 import .lang.integer_ext
-import .lang.interface.Interface
+import .lang.interface_host_ext
 import .lang.interval.Interval
 import .lang.iterable.Iterable
 import .lang.layout0.Layout
