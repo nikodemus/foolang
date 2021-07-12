@@ -240,7 +240,7 @@ class TestTranspilePreludeCharacter { assert system }
     is TranspilerTest
 
     method testIsWhitespace
-        self transpile: "import lang.character_ext
+        self transpile: "import lang.character_target_ext
                          import lang.string -- for String#at:
 
                          class Main \{}
@@ -340,7 +340,7 @@ class TestTranspileDictionary { assert system }
     method test_Dictionary_constructor
         self transpile: "import lang.dictionary2.Dictionary
                          import lang.string
-                         import lang.character_ext
+                         import lang.character_target_ext
                          import lang.selector_ext
 
                          class Main \{ out \}

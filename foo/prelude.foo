@@ -5,7 +5,7 @@ import .lang.block.Function
 import .lang.boolean_ext
 import .lang.byte.Byte
 import .lang.byteArray_ext.ByteArray
-import .lang.character.Character
+import .lang.character_host.Character
 import .lang.class.Class
 import .lang.closure.Closure
 import .lang.collection.Collection

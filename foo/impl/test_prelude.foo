@@ -37,31 +37,6 @@ class TestPreludeObject { system ok onFailure }
              expect: [True, False]!
 end
 
-class TestPreludeCharacter { system ok onFailure }
-    is TestSelfHosting
-
-    method testPreludeCharacter
-        let lang = system files / "foo/lang".
-        self without: ["Character", "Object", "StringOutput"]
-             modules: { "lang" -> lang } asFileModules
-             load: "import lang.character
-                    class X \{ c::character.Character }
-                    end
-                    class Test \{}
-                       direct method testError
-                           \{ X c: 42 }
-                              on: TypeError
-                              do: \{ |e| return #gotcha }!
-                       direct method testOk
-                           -- Need to take some care to avoid constructing
-                           -- a host character!
-                           let aCode = \"a\" character code.
-                           (X c: (character.Character code: aCode)) c code == 0x61!
-                    end"
-             eval: "[Test testError, Test testOk]"
-             expect: [#gotcha, True]!
-end
-
 class TestPreludeIterable { system ok onFailure }
     is TestSelfHosting
 
@@ -197,7 +172,6 @@ class Main {}
         let tests = {
             "--any" -> TestPreludeAny,
             "--object" -> TestPreludeObject,
-            "--character" -> TestPreludeCharacter,
             "--iterable" -> TestPreludeIterable,
             "--interval" -> TestPreludeInterval,
             "--collection" -> TestPreludeCollection,
