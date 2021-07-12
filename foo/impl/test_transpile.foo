@@ -1135,6 +1135,20 @@ end
 class TestTranspileSelfHosted { assert system }
     is TranspilerTest
 
+    method test_Bad_import
+        -- The uppercase Integer makes parser want to import
+        -- the global integer defined in lang.foo, and module
+        -- setup uses lang both as the root and as the file.
+        -- It's not perfect, but it's semi-logical. See
+        -- https://github.com/nikodemus/foolang/issues/674 for what
+        -- future.
+        self transpile: "import lang.Integer
+                         class Main \{}
+                             direct method run: command in: system
+                                system exit!
+                         end"
+            expectCompilerError: "Import error: file foo\\lang\\lang.foo does not exist."!
+
     method test_Transpiled_Parser
         self transpileWithPrelude:
             "import impl.parser

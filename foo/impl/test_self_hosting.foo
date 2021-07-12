@@ -2,17 +2,9 @@ import .environment.Environment
 import .parser.Parser
 import .utils.Debug
 import .utils.FileModuleDictionary
+import .utils.StringModuleDictionary
 import .syntaxTranslator.SyntaxTranslator
 import .syntaxPrinter.SyntaxPrinter
-
-class StringModuleDictionary { _dict }
-    direct method new: dict
-        self _dict: dict!
-    method at: fullPath ifNone: block
-        -- Debug println: "STRING: {fullPath}".
-        let path = "." join: fullPath.
-        _dict at: path ifNone: block!
-end
 
 extend Dictionary
     method asStringModules
