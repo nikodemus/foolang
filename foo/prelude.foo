@@ -19,7 +19,7 @@ import .lang.exception.TypeError
 import .lang.layout0.Layout
 import .lang.file_ext
 import .lang.filepath_ext
-import .lang.filestream.FileStream
+import .lang.filestream_ext
 import .lang.float.Float
 import .lang.integer.Integer
 import .lang.interface.Interface

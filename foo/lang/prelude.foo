@@ -20,7 +20,7 @@ import .exception.RequiredMethodMissing
 import .exception.TypeError
 import .file_ext
 import .filepath_ext
-import .filestream.FileStream
+import .filestream_ext
 import .float.Float
 import .integer.Integer
 import .interface2.Interface

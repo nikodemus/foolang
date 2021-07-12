@@ -568,7 +568,7 @@ class TestTranspilePreludeFileStream { assert system }
 
 
     method testSize
-        self transpile: "import lang.filestream
+        self transpile: "import lang.filestream_ext
                          import lang.filepath_ext
                          import lang.file_ext
                          class Main \{}
