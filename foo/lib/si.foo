@@ -23,7 +23,6 @@ Examples:
 ---
 
 import .assert.Assert
-import lang.test.TestSuite
 
 class Prefix {}
     direct method displaySpecs

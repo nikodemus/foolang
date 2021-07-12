@@ -256,9 +256,9 @@ class TestTranspilePreludeTime { assert system }
     is TranspilerTest
 
     method testSystemClockTime
-        self transpile: "import lang.time
-                         import lang.output
-                         import lang.integer
+        self transpile: "import lang.time_ext
+                         import lang.output_ext
+                         import lang.integer_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -292,7 +292,7 @@ class TestTranspilePreludeClosure { assert system }
     is TranspilerTest
 
     method test
-        self transpile: "import lang.closure.*
+        self transpile: "import lang.closure_ext
 
                          class Main \{ x }
                              direct method run: command in: system
@@ -306,10 +306,10 @@ class TestTranspileDictionary { assert system }
     is TranspilerTest
 
     method test_Dictionary_remove_transpiled
-        self transpile: "import lang.dictionary2.Dictionary
-                         import lang.output
+        self transpile: "import lang.dictionary_target.Dictionary
+                         import lang.output_ext
                          import lang.string
-                         import lang.selector_ext
+                         import lang.selector_target_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -322,10 +322,10 @@ class TestTranspileDictionary { assert system }
             expect: "\{ 2 -> \"two\" }"!
 
     method test_Dictionary_toString_transpiled
-        self transpile: "import lang.dictionary2.Dictionary
-                         import lang.output
+        self transpile: "import lang.dictionary_target.Dictionary
+                         import lang.output_ext
                          import lang.string
-                         import lang.selector_ext
+                         import lang.selector_target_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -338,10 +338,10 @@ class TestTranspileDictionary { assert system }
   2 -> \"two\" }"!
 
     method test_Dictionary_constructor
-        self transpile: "import lang.dictionary2.Dictionary
+        self transpile: "import lang.dictionary_target.Dictionary
                          import lang.string
                          import lang.character_target_ext
-                         import lang.selector_ext
+                         import lang.selector_target_ext
 
                          class Main \{ out \}
                              direct method run: command in: system
@@ -365,8 +365,7 @@ class TestTranspilePreludeException { assert system }
 
     method test_Main_does_not_understand
         self transpile: "import lang.exception.*
-                         import lang.closure
-                         import lang.selector_ext
+                         import lang.selector_target_ext
                          import lang.object.Object
 
                          class Main \{\}
@@ -386,8 +385,8 @@ Backtrace:
 
     method test_Class_does_not_understand
         self transpile: "import lang.exception.*
-                         import lang.class
-                         import lang.selector_ext
+                         import lang.class_target_ext
+                         import lang.selector_target_ext
 
                          class Main \{\}
                              is Object
@@ -406,7 +405,7 @@ Backtrace:
 
     method testErrorRaise
         self transpile: "import lang.exception.*
-                         import lang.closure.* -- for #on:do:
+                         import lang.closure_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -467,7 +466,7 @@ class TestTranspilePreludeFile { assert system }
             expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
 
     method testOpenBlock
-        self transpile: "import lang.file
+        self transpile: "import lang.file_ext
                          class Main \{}
                              direct method run: command in: system
                                  let f = (system files / \"test.tmp\") file.
@@ -491,7 +490,7 @@ class TestTranspilePreludeFilePath { assert system }
     is TranspilerTest
 
     method testExists
-        self transpile: "import lang.filepath
+        self transpile: "import lang.filepath_ext
                          class Main \{}
                               direct method run: command in: system
                                   (system files / \"foo\")
@@ -504,7 +503,7 @@ class TestTranspilePreludeFilePath { assert system }
              expect: "foo ok, nosuchthing ok"!
 
     method testFile
-        self transpile: "import lang.filepath
+        self transpile: "import lang.filepath_ext
                          class Main \{}
                              direct method run: command in: system
                                  (system files / \"README.md\") pathname printOn: system output!
@@ -532,7 +531,7 @@ class TestTranspilePreludeFilePath { assert system }
              expect: "#<Boolean True>#<Boolean False>"!
 
     method testToString
-        self transpile: "import lang.filepath
+        self transpile: "import lang.filepath_ext
                          class Main \{}
                               direct method run: command in: system
                                   (system files / \"foo\") toString debug!
@@ -568,9 +567,9 @@ class TestTranspilePreludeFileStream { assert system }
 
 
     method testSize
-        self transpile: "import lang.filestream
-                         import lang.filepath
-                         import lang.file
+        self transpile: "import lang.filestream_ext
+                         import lang.filepath_ext
+                         import lang.file_ext
                          class Main \{}
                              direct method run: command in: system
                                  let size = (system files / \"README.md\") forRead
@@ -585,7 +584,7 @@ class TestTranspilePreludeFloat { assert system }
     is TranspilerTest
 
     method test
-        self transpile: "import lang.float
+        self transpile: "import lang.float_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -599,7 +598,7 @@ class TestTranspilePreludeInteger { assert system }
     is TranspilerTest
 
     method test
-        self transpile: "import lang.integer
+        self transpile: "import lang.integer_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -613,7 +612,7 @@ class TestTranspilePreludeInterval { assert system }
 
     method test
         self transpile: "import lang.interval.Interval
-                         import lang.integer
+                         import lang.integer_ext
                          class Main \{}
                              direct method run: command in: system
                                  (Interval from: 1 to: 5 by: 2)
@@ -627,7 +626,7 @@ class TestTranspilePreludeIterable { assert system }
 
     method test
         self transpile: "import lang.iterable.*
-                         import lang.integer
+                         import lang.integer_ext
 
                          class MyIterator \{ pos thing }
                              is Iterator
@@ -681,8 +680,8 @@ class TestTranspilePreludeOutput { assert system }
     is TranspilerTest
 
     method test
-        self transpile: "import lang.output.Output
-                         import lang.integer
+        self transpile: "import lang.output_ext
+                         import lang.integer_ext
 
                          class Main \{ x }
                              direct method run: command in: system
@@ -696,7 +695,7 @@ class TestTranspilePreludeSelector { assert system }
     is TranspilerTest
 
     method test
-        self transpile: "import lang.selector_ext.*
+        self transpile: "import lang.selector_target_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -740,11 +739,11 @@ class TestTranspilePreludeTest { assert system }
     is TranspilerTest
 
     method test
-        self transpile: "import lang.test
-                         import lang.time
-                         import lang.selector_ext
+        self transpile: "import lang.testSuite.TestSuite
+                         import lang.time_ext
+                         import lang.selector_target_ext
                          class Main \{}
-                             is test.TestSuite
+                             is TestSuite
                              direct method run: command in: system
                                  self new runTestsIn: system!
                              method test_a
@@ -1072,7 +1071,7 @@ class TestTranspileBlock { assert system }
     is TranspilerTest
 
     method testValueValue
-        self transpile: "import lang.integer
+        self transpile: "import lang.integer_ext
                          class Main \{}
                              direct method run: command in: system
                                  (\{ |a b| a + b } value: 10 value: 30) debug!
@@ -1080,7 +1079,7 @@ class TestTranspileBlock { assert system }
             expect: "#<Integer 40>"!
 
     method testBlockScope
-        self transpile: "import lang.integer
+        self transpile: "import lang.integer_ext
                          class Main \{}
                              direct method run: command in: system
                                  let x = 200.
@@ -1310,7 +1309,7 @@ class TestTranspileArray { assert system }
             expect: "#<Integer 999>#<Integer 42>"!
 
     method testArraySums
-        self transpile: "import lang.integer
+        self transpile: "import lang.integer_ext
                          class Main \{}
                              direct method run: command in: system
                                 (self sums: 10) debug!
@@ -1364,8 +1363,8 @@ class TestTranspileClass { assert system }
 
     method test_Superclass_constructor_works
         self transpile:
-            "import lang.output
-             import lang.integer
+            "import lang.output_ext
+             import lang.integer_ext
 
              class MainClass \{ a b }
              end
@@ -1388,8 +1387,8 @@ class TestTranspileClass { assert system }
 
     method test_Superclass_methods_work
         self transpile:
-            "import lang.output
-             import lang.integer
+            "import lang.output_ext
+             import lang.integer_ext
 
              class MainClass \{ _a _b }
                  direct method a: a b: b
@@ -1418,7 +1417,7 @@ class TestTranspileClass { assert system }
 
     method test_Class_inheritance_creates_subtype
         self transpile:
-            "import lang.output
+            "import lang.output_ext
              import lang.boolean_ext
 
              class MainClass \{ a b }
@@ -1441,8 +1440,8 @@ class TestTranspileClass { assert system }
 
     method test_Instantiate_metaclass_at_runtime
         self transpile:
-            "import lang.output
-             import lang.selector_ext
+            "import lang.output_ext
+             import lang.selector_target_ext
 
              class Main \{\}
                   direct method run: command in: system
@@ -1455,8 +1454,8 @@ class TestTranspileClass { assert system }
 
     method test_Instantiate_class_at_runtime
         self transpile:
-            "import lang.output
-             import lang.selector_ext
+            "import lang.output_ext
+             import lang.selector_target_ext
 
              class MidClass < Class
                  method ping
@@ -1479,10 +1478,10 @@ class TestTranspileClass { assert system }
 
     method test_Runtime_class_default_methods
         self transpile:
-            "import lang.output
+            "import lang.output_ext
              import lang.array_target_ext
-             import lang.selector_ext
-             import lang.class2
+             import lang.selector_target_ext
+             import lang.class_target_ext
 
              class Main \{\}
                   direct method run: command in: system
@@ -1505,8 +1504,8 @@ True
 
     method test_Runtime_interface_inheritance
         self transpile:
-            "import lang.output
-             import lang.selector_ext
+            "import lang.output_ext
+             import lang.selector_target_ext
 
              interface MyInterface
                  direct method directPing
@@ -1547,8 +1546,8 @@ True
 
     method test_Runtime_class_instances
         self transpile:
-            "import lang.output
-             import lang.selector_ext
+            "import lang.output_ext
+             import lang.selector_target_ext
              import lang.array_target_ext
 
              class BlockMethod \{ selector block \}
@@ -1635,8 +1634,8 @@ True
 
     method test_Object_methods_in_metaclass_work
         self transpile:
-            "import lang.output
-             import lang.selector_ext
+            "import lang.output_ext
+             import lang.selector_target_ext
              import lang.boolean_ext
              import lang.array
              import lang.array_target_ext
@@ -1764,7 +1763,7 @@ class TestTranspileRecord { assert system }
     is TranspilerTest
 
     method test_Ad_Hoc_Record_in_transpiler
-        self transpile: "import lang.record_ext
+        self transpile: "import lang.record_target_ext
                          import lang.array_target_ext
                          class Main \{}
                              direct method run: command in: system
@@ -1802,7 +1801,7 @@ class TestTranspileRecord { assert system }
             expect: "1234"!
 
     method test_Record_equality_in_transpiler
-        self transpile: "import lang.record_ext.*
+        self transpile: "import lang.record_target_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -1960,12 +1959,12 @@ class TestTranspileInteger { assert system }
              expect: "#<Integer 123>"!
 
     method testIntegerOps
-        -- Instead of importing lang.integer into N tests, we import a few more
+        -- Instead of importing lang.integer_ext into N tests, we import a few more
         -- things and test all ops in one test. Somewhat Faster, since imports
         -- are SLOW at the moment.
-        self transpile: "import lang.integer
-                         import lang.output
-                         import lang.record_ext
+        self transpile: "import lang.integer_ext
+                         import lang.output_ext
+                         import lang.record_target_ext
                          import lang.boolean_ext
 
                          class Main \{}

@@ -1,8 +1,8 @@
 import .object.Object
-import .array        -- for Array#sorted
-import .selector_ext -- for Selector#==
+import .array               -- for Array#sorted
+import .selector_target_ext -- for Selector#==
 import .exception.Error
-import .layout_ext.*
+import .layout_target_ext
 
 define ColonCharacter ":" character!
 

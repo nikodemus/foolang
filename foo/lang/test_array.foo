@@ -1,6 +1,4 @@
-import .array.*
 import .test_iterable.TestIterable
-import .test.TestSuite
 
 class TestArray { assert }
     is TestSuite

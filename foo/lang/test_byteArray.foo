@@ -1,5 +1,3 @@
-import .byteArray_ext.ByteArray
-import .test.TestSuite
 import .test_iterable.TestIterable
 
 class TestByteArray { assert }

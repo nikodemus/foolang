@@ -36,6 +36,7 @@ class BuiltinDictionary { dictionary }
         self _define: Boolean.
         self _define: Character.
         self _define: Class.
+        self _define: Closure.
         self _define: DoesNotUnderstand.
         self _define: Error.
         self _define: False.

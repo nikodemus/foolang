@@ -1,8 +1,5 @@
-import .character_target_ext
-import .closure.Block
-
--- for #find:ifNone
-import .string
+import .string.String
+import .block.Block
 
 define ColonCharacter
     ":" character!
@@ -10,8 +7,12 @@ define ColonCharacter
 define UnderscoreCharacter
     "_" character!
 
-extend Selector
+class Selector { name }
     is Block
+
+    direct method intern: name
+        -- Very fake...
+        self name: name!
 
     direct method isKeywordName: name
         name find: { |c| c == ":" }
@@ -43,27 +44,18 @@ extend Selector
         self sendTo: arguments first
              with: arguments rest!
 
-    method sendTo: receiver
-        self sendTo: receiver
-             with: []!
-
-    method toSelector
-        -- FIXME: Doesn't belong at all.
-        self!
-
     method arity
         self isKeyword
-            ifTrue: { return 1 + (self name
-                                      count: { |c| c == ":" }) }.
+            ifTrue: { return 1 + (name count: { |c| c == ":" }) }.
         self isSymbol
             ifTrue: { return 2 }.
         1!
 
     method loop
-        panic "Cannot use #loop on a selector."!
+        Error raise: "Cannot use #loop on { self }."!
 
     method finally: cleanup
-        panic "Cannot use #finally on a selector."!
+        Error raise: "Cannot use #finally: on { self }."!
 
     method < other
         self name < other name!
@@ -83,13 +75,26 @@ extend Selector
     method isPrivate
         self name startsWith: "_"!
 
+    method sendTo: receiver
+        name sendTo: receiver
+             with: []!
+
+    method sendTo: receiver with: arguments
+        -- Output debug println: "{receiver} <= {name} {arguments}".
+        name sendTo: receiver
+             with: arguments asArray!
+
     method startsWith: part
         self name startsWith: part!
 
+    -- FIXME: Should really intern selectors on host...
+    method isEquivalent: other
+        name == other name!
+
     method displayOn: stream
         stream writeString: "#".
-        stream writeString: self name!
+        stream writeString: name!
 
-    method toString
+   method toString
         "#" append: self name!
 end

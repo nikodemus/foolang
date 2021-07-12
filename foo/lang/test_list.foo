@@ -1,5 +1,3 @@
-import .list.List
-import .test.TestSuite
 import .test_iterable.TestIterable
 
 class TestList { assert }

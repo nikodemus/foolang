@@ -1,6 +1,3 @@
-import .integer
-import .test.TestSuite
-
 -- Generates signed integers small enough to add without overflowing.
 class SmallIntegers {}
     direct method do: block
