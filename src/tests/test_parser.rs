@@ -121,6 +121,18 @@ fn test_sequence4() {
 }
 
 #[test]
+fn test_define0() {
+    assert_eq!(
+        parse_def("define m #<!"),
+        Ok(Def::DefineDef(DefineDef {
+            source_location: SourceLocation::span(&(7..8)),
+            name: "m".to_string(),
+            init: selector(9..11, "<")
+        }))
+    )
+}
+
+#[test]
 fn test_define1() {
     assert_eq!(
         parse_def("define m 1!"),

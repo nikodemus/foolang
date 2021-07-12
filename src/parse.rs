@@ -1684,6 +1684,10 @@ pub mod utils {
         Const::expr(SourceLocation::span(&span), Literal::Integer(value))
     }
 
+    pub(crate) fn selector(span: Span, value: &str) -> Expr {
+        Const::expr(SourceLocation::span(&span), Literal::Selector(value.to_string()))
+    }
+
     pub(crate) fn keyword(span: Span, name: &str, left: Expr, args: Vec<Expr>) -> Expr {
         left.send(Message {
             source_location: SourceLocation::span(&span),
