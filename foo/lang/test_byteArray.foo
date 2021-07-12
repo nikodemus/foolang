@@ -1,4 +1,4 @@
-import .byteArray.ByteArray
+import .byteArray_ext.ByteArray
 import .test.TestSuite
 import .test_iterable.TestIterable
 

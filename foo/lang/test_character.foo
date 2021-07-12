@@ -1,5 +1,4 @@
 import .test.TestSuite
-import .character.Character
 
 class TestCharacter { assert }
     is TestSuite

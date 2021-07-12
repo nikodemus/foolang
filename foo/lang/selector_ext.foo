@@ -1,4 +1,4 @@
-import .character_ext
+import .character_target_ext
 import .closure.Block
 
 -- for #find:ifNone

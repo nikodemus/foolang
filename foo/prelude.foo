@@ -2,9 +2,10 @@ import .lang.any.Any
 import .lang.array.Array
 import .lang.block.Block
 import .lang.block.Function
-import .lang.boolean.Boolean
-import .lang.byteArray.ByteArray
-import .lang.character.Character
+import .lang.boolean_ext
+import .lang.byte.Byte
+import .lang.byteArray_ext.ByteArray
+import .lang.character_host.Character
 import .lang.class.Class
 import .lang.closure.Closure
 import .lang.collection.Collection

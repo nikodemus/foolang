@@ -236,27 +236,11 @@ class TestTranspilePreludeAny { assert system }
 end
 
 
-class TestTranspilePreludeBoolean { assert system }
-    is TranspilerTest
-
-    method test
-        self transpile: "import lang.boolean.*
-
-                         class Main \{ x }
-                             direct method run: command in: system
-                                 True not debug.
-                                 False not debug!
-                         end"
-            expect: "#<Boolean False>#<Boolean True>"!
-
-
-end
-
 class TestTranspilePreludeCharacter { assert system }
     is TranspilerTest
 
     method testIsWhitespace
-        self transpile: "import lang.character_ext
+        self transpile: "import lang.character_target_ext
                          import lang.string -- for String#at:
 
                          class Main \{}
@@ -356,7 +340,7 @@ class TestTranspileDictionary { assert system }
     method test_Dictionary_constructor
         self transpile: "import lang.dictionary2.Dictionary
                          import lang.string
-                         import lang.character_ext
+                         import lang.character_target_ext
                          import lang.selector_ext
 
                          class Main \{ out \}
@@ -1419,7 +1403,7 @@ class TestTranspileClass { assert system }
     method test_Class_inheritance_creates_subtype
         self transpile:
             "import lang.output
-             import lang.boolean
+             import lang.boolean_ext
 
              class MainClass \{ a b }
              end
@@ -1437,7 +1421,7 @@ class TestTranspileClass { assert system }
                           print: ((MainClass includes: x) and: (MidClass includes: x))!
              end
              "
-              expect: "True"!
+             expect: "True"!
 
     method test_Instantiate_metaclass_at_runtime
         self transpile:
@@ -1480,7 +1464,7 @@ class TestTranspileClass { assert system }
     method test_Runtime_class_default_methods
         self transpile:
             "import lang.output
-             import lang.array_ext
+             import lang.array_target_ext
              import lang.selector_ext
              import lang.class2
 
@@ -1549,7 +1533,7 @@ True
         self transpile:
             "import lang.output
              import lang.selector_ext
-             import lang.array_ext
+             import lang.array_target_ext
 
              class BlockMethod \{ selector block \}
                  method invoke: args on: receiver
@@ -1637,9 +1621,9 @@ True
         self transpile:
             "import lang.output
              import lang.selector_ext
-             import lang.boolean
+             import lang.boolean_ext
              import lang.array
-             import lang.array_ext
+             import lang.array_target_ext
 
              class BlockMethod \{ selector block \}
                  method invoke: args on: receiver
@@ -1765,7 +1749,7 @@ class TestTranspileRecord { assert system }
 
     method test_Ad_Hoc_Record_in_transpiler
         self transpile: "import lang.record_ext
-                         import lang.array_ext
+                         import lang.array_target_ext
                          class Main \{}
                              direct method run: command in: system
                                  let record = Record a: 1 b: 2.
@@ -1966,7 +1950,7 @@ class TestTranspileInteger { assert system }
         self transpile: "import lang.integer
                          import lang.output
                          import lang.record_ext
-                         import lang.boolean
+                         import lang.boolean_ext
 
                          class Main \{}
                              direct method run: command in: system
@@ -2499,7 +2483,6 @@ class Main {}
             "--panic" -> TestTranspilePanic,
             "--perform-with" -> TestTranspilePerformWith,
             "--prelude-any" -> TestTranspilePreludeAny,
-            "--prelude-boolean" -> TestTranspilePreludeBoolean,
             "--prelude-character" -> TestTranspilePreludeCharacter,
             "--prelude-closure" -> TestTranspilePreludeClosure,
             "--prelude-exception" -> TestTranspilePreludeException,

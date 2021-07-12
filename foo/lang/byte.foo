@@ -1,0 +1,8 @@
+interface Byte
+    method default
+        0!
+
+    method includes: other
+        (Integer includes: other)
+            ifTrue: { 0 <= other and: other <= 255 }!
+end
