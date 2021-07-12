@@ -1464,7 +1464,7 @@ class TestTranspileClass { assert system }
     method test_Runtime_class_default_methods
         self transpile:
             "import lang.output
-             import lang.array_ext
+             import lang.array_target_ext
              import lang.selector_ext
              import lang.class2
 
@@ -1533,7 +1533,7 @@ True
         self transpile:
             "import lang.output
              import lang.selector_ext
-             import lang.array_ext
+             import lang.array_target_ext
 
              class BlockMethod \{ selector block \}
                  method invoke: args on: receiver
@@ -1623,7 +1623,7 @@ True
              import lang.selector_ext
              import lang.boolean_ext
              import lang.array
-             import lang.array_ext
+             import lang.array_target_ext
 
              class BlockMethod \{ selector block \}
                  method invoke: args on: receiver
@@ -1749,7 +1749,7 @@ class TestTranspileRecord { assert system }
 
     method test_Ad_Hoc_Record_in_transpiler
         self transpile: "import lang.record_ext
-                         import lang.array_ext
+                         import lang.array_target_ext
                          class Main \{}
                              direct method run: command in: system
                                  let record = Record a: 1 b: 2.
