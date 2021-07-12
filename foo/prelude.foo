@@ -4,7 +4,7 @@ import .lang.block.Block
 import .lang.block.Function
 import .lang.boolean_ext
 import .lang.byte.Byte
-import .lang.byteArray_ext.ByteArray
+import .lang.byteArray_ext
 import .lang.character_host.Character
 import .lang.class_host_ext
 import .lang.closure_ext

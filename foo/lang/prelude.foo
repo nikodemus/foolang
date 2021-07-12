@@ -6,9 +6,9 @@ import .block.Function
 import .block_target_ext
 import .boolean_ext
 import .byte.Byte
-import .byteArray_ext.ByteArray
-import .character_target_ext.Character
-import .class_target_ext.Class
+import .byteArray_ext
+import .character_target_ext
+import .class_target_ext
 import .closure_ext
 import .collection.Collection
 import .dictionary2.Dictionary
