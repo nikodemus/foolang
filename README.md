@@ -49,7 +49,7 @@ docs/      Markdown files for the https://foolang.org website
 elisp/     Emacs mode for Foolang
 ext/       External C code included in the runtime, like dtoa.c.
 foo/       Foolang code, including prelude, self hosting, tests, and examples
-host/      Scaffolding for transpiled-to-C code
+c/         Scaffolding for transpiled-to-C code
 src/       Rust code for the bootstrap interpreter
 tests/     Rust code for integration tests
 ```

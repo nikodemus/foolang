@@ -17,50 +17,50 @@ class Main {}
                     transpile: path readString
                     in: (Environment modules: mods)
                     with: ["lang", "prelude"] asList.
-        let host = system files / "host".
-        (host / "generated_selectors.h")
+        let files = system files / "c".
+        (files / "generated_selectors.h")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c selectors }.
-        (host / "generated_declarations.h")
+        (files / "generated_declarations.h")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c declarations }.
-        (host / "generated_constants.c")
+        (files / "generated_constants.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c constants }.
-        (host / "generated_closures.c")
+        (files / "generated_closures.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c closures }.
-        (host / "generated_main.c")
+        (files / "generated_main.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c main }.
-        (host / "generated_builtins.c")
+        (files / "generated_builtins.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c builtins }.
 
         let exe = system currentDirectory / targetFile.
         exe ifExists: #deleteFile.
 
-        let sanitizerOptions = " -fsanitize=address -fsanitize=undefined".
-        let target
-            = system isUnix
-                ifTrue: { "unix" }
-                ifFalse: { "windows" }.
         let stackSize = 0x400000. -- 4MiB
         let linkerOptions
             = system isUnix
                 ifTrue: { " -Wl,-stack-size -W,{stackSize}" }
                 ifFalse: { " -Wl,/STACK:{stackSize}" }.
+        let sanitizerOptions = " -fsanitize=address -fsanitize=undefined".
         let buildOptions
             = " -fno-omit-frame-pointer -g -Wall -Werror --std=c11".
+        let system_c
+            = system isUnix
+                ifTrue: { " c/system_unix.c" }
+                ifFalse: { " c/system_windows.c" }.
         let buildCmd = StringOutput
                            with: { |out|
                                    out print: "clang -o {exe}".
                                    out print: linkerOptions.
                                    out print: sanitizerOptions.
                                    out print: buildOptions.
-                                   out print: " host/main.c".
-                                   out print: " host/system_{target}.c".
-                                   out print: " ext/dtoa.c" }.
+                                   out print: " c/main.c".
+                                   out print: " ext/dtoa.c".
+                                   out print: system_c }.
         let build = system command: buildCmd.
         build stderr
             ifNotEmpty: { system output println: "---stderr---".
