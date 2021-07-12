@@ -19,7 +19,7 @@ define HorizontalWhitespaceASCII
      ASCII tab]!
 
 import .object.Object
-import .boolean
+import .boolean_ext
 
 -- FIXME: support unicode range
 extend Character

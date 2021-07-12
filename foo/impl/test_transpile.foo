@@ -236,22 +236,6 @@ class TestTranspilePreludeAny { assert system }
 end
 
 
-class TestTranspilePreludeBoolean { assert system }
-    is TranspilerTest
-
-    method test
-        self transpile: "import lang.boolean.*
-
-                         class Main \{ x }
-                             direct method run: command in: system
-                                 True not debug.
-                                 False not debug!
-                         end"
-            expect: "#<Boolean False>#<Boolean True>"!
-
-
-end
-
 class TestTranspilePreludeCharacter { assert system }
     is TranspilerTest
 
@@ -1419,7 +1403,7 @@ class TestTranspileClass { assert system }
     method test_Class_inheritance_creates_subtype
         self transpile:
             "import lang.output
-             import lang.boolean
+             import lang.boolean_ext
 
              class MainClass \{ a b }
              end
@@ -1437,7 +1421,7 @@ class TestTranspileClass { assert system }
                           print: ((MainClass includes: x) and: (MidClass includes: x))!
              end
              "
-              expect: "True"!
+             expect: "True"!
 
     method test_Instantiate_metaclass_at_runtime
         self transpile:
@@ -1637,7 +1621,7 @@ True
         self transpile:
             "import lang.output
              import lang.selector_ext
-             import lang.boolean
+             import lang.boolean_ext
              import lang.array
              import lang.array_ext
 
@@ -1966,7 +1950,7 @@ class TestTranspileInteger { assert system }
         self transpile: "import lang.integer
                          import lang.output
                          import lang.record_ext
-                         import lang.boolean
+                         import lang.boolean_ext
 
                          class Main \{}
                              direct method run: command in: system

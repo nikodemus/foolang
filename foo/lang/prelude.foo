@@ -4,7 +4,7 @@ import .array_target_ext
 import .block.Block
 import .block.Function
 import .block_target_ext
-import .boolean.Boolean
+import .boolean_ext
 import .byteArray.ByteArray
 import .character_ext.Character
 import .class2.Class
