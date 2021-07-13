@@ -9,10 +9,6 @@ fi
 
 set -u
 
-# This tricks clang into using the internal symbolizer, leaving path
-# empty leaves the addresses unsymbolized.
-export ASAN_SYMBOLIZER_PATH=0
-
 BOOTSTRAP_COMPILER=./bootstrap-fooc$EXT
 TARGET_COMPILER=./fooc$EXT
 
