@@ -636,7 +636,14 @@ fn literal_prefix(parser: &Parser) -> Parse {
         (Token::KEYWORD, span) => {
             parser.next_token()?;
             selector.push_str(parser.slice_at(span.clone()));
+            let mut end = span.end;
             while let (Token::KEYWORD, span) = parser.lookahead()? {
+                // No whitespace in between!
+                if span.start == end {
+                    end = span.end;
+                } else {
+                    break;
+                }
                 parser.next_token()?;
                 selector.push_str(parser.slice_at(span.clone()));
             }

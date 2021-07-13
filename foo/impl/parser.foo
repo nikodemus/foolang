@@ -1000,8 +1000,10 @@ class TokenKeyword { string first last }
 
     method parseAsLiteralWith: parser
         let selector = StringOutput new: string.
-        { TokenKeyword includes: parser lookahead }
-            whileTrue: { selector print: parser nextToken string }.
+        { parser atWhitespace
+              ifTrue: { False }
+              ifFalse: { TokenKeyword includes: parser lookahead } }
+        whileTrue: { selector print: parser nextToken string }.
         SyntaxSelector
             name: selector content
             source: (parser sourceFrom: first to: last)!
