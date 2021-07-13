@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eo pipefail
 
 if [ -z "$WINDIR" ]; then
     EXT=""
@@ -7,9 +7,7 @@ else
     EXT=".exe"
 fi
 
-# This tricks clang into using the internal symbolizer, leaving path
-# empty leaves the addresses unsymbolized.
-export ASAN_SYMBOLIZER_PATH=0
+set -u
 
 BOOTSTRAP_COMPILER=./bootstrap-fooc$EXT
 TARGET_COMPILER=./fooc$EXT

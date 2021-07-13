@@ -43,7 +43,7 @@ class Main {}
         let stackSize = 0x400000. -- 4MiB
         let linkerOptions
             = system isUnix
-                ifTrue: { " -Wl,-stack-size -W,{stackSize}" }
+                ifTrue: { " -Wl,-z,stack-size={stackSize}" }
                 ifFalse: { " -Wl,/STACK:{stackSize}" }.
         let sanitizerOptions = " -fsanitize=address -fsanitize=undefined".
         let buildOptions
@@ -66,5 +66,6 @@ class Main {}
             ifNotEmpty: { system output println: "---stderr---".
                           system output println: build stderr.
                           system output println: "---" }.
-        build ok!
+        build ok
+	  ifFalse: { system exit: 1 }!
 end
