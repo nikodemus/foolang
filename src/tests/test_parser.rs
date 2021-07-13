@@ -315,6 +315,19 @@ fn test_comments1() {
 }
 
 #[test]
+fn test_parse_keyword_literal_as_argument_to_keyword_message() {
+    assert_eq!(
+        parse_expr("List collectUsing: #doSelectors: from: self"),
+        Ok(keyword(
+            5..43,
+            "collectUsing:from:",
+            var(0..4, "List"),
+            vec![selector(19..32, "doSelectors:"), var(39..43, "self")]
+        ))
+    );
+}
+
+#[test]
 fn test_parse_string1() {
     assert_eq!(parse_expr(r#" "foo" "#), Ok(string(1..6, "foo")))
 }
