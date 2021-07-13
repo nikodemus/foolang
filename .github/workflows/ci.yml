@@ -1,43 +1,28 @@
 name: "CI"
+
 on:
   pull_request:
   push:
     branches:
       - master
+
 defaults:
   run:
     shell: bash
-
 env:
-  # Transpiled code currently leaks like a sieve, intentionally
-  # never freeing anything.
-  ASAN_OPTIONS: detect_leaks=0
   UBSAN_OPTIONS: print_stacktrace=1
   RUST_BACKTRACE: 1
 
 jobs:
 
-  bootstrap-and-test:
-    name: "Bootstrap and test"
-    runs-on: ${{ matrix.os }}
+  test-mac:
+    # Mac runners slower and harder to come by: don't want to have
+    # others queued behind this.
+    name: "Test Mac"
+    runs-on: macos-latest
     timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-
-      # Clang is installed on the Windows image, but is not in path.
-      - name: Extend path
-        run: echo 'C:\msys64\mingw64\bin' >> $GITHUB_PATH
-        if: ${{ runner.os == 'Windows' }}
-
-      - name: Systeminfo for Windows
-        run: systeminfo
-        if: ${{ runner.os == 'Windows' }}
-
-      - name: Clang version
-        run: clang --version
+      - uses: actions/checkout@v2
 
       - name: Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -49,26 +34,16 @@ jobs:
       - name: Rustc version
         run: rustc --version
 
-      - name: Environment
-        run: env
-
-      - name: Checkout
-        uses: actions/checkout@v2
-
       - name: Cache dependencies
         uses: actions/cache@v2
         with:
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-build
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-
-      - name: Check formatting
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -- --check
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
 
       - name: Test Rust
         uses: actions-rs/cargo@v1
@@ -76,23 +51,114 @@ jobs:
           command: test
           args: --all
 
-      - name: Test Foolang
+      - name: Built bootstrap interpreter
         uses: actions-rs/cargo@v1
         with:
-          command: run
-          args: -- foo/impl/test_foolang.foo --use=foo/lib
+          command: build
+
+      - run: mkdir -p bin && cp target/debug/foo ./bin/
+
+      - name: Test Foolang
+        run: ./bin/foo foo/impl/test_foolang.foo --use=foo/lib
 
       - name: Test Prelude
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: -- foo/impl/test_prelude.foo --use=foo/lib
+        run: ./bin/foo foo/impl/test_prelude.foo --use=foo/lib
+
+      - name: Clang version
+        run: clang --version
 
       - name: Test Transpile
+        run: ./bin/foo foo/impl/test_transpile.foo --use=foo/lib
+
+      - name: Bootstrap compiler
+        run: ./bin/foo foo/compile.foo ./bin/bootstrap-fooc
+
+      - name: Self-compile
+        run: ./bin/bootstrap-fooc foo/compile.foo ./bin/fooc
+
+  build-host:
+    name: "Build host"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: rustfmt
+
+      - name: Rustc version
+        run: rustc --version
+
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-build
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+
+      - name: Built bootstrap interpreter
         uses: actions-rs/cargo@v1
         with:
-          command: run
-          args: -- foo/impl/test_transpile.foo --use=foo/lib
+          command: build
+
+      - name: Upload bootstrap interpreter (Windows)
+        uses: actions/upload-artifact@v2
+        with:
+          name: foo-${{ runner.os }}
+          path: target/debug/foo.exe
+        if: ${{ runner.os == 'Windows' }}
+
+      - name: Upload bootstrap interpreter (Unix)
+        uses: actions/upload-artifact@v2
+        with:
+          name: foo-${{ runner.os }}
+          path: target/debug/foo
+        if: ${{ runner.os != 'Windows' }}
+
+  test-host:
+    name: "Test host"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: rustfmt
+
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-test
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+
+      - name: Test Rust
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all
 
       - name: Test large
         uses: actions-rs/cargo@v1
@@ -100,9 +166,119 @@ jobs:
           command: test
           args: -- --ignored
 
+  test-foolang:
+    name: "Test Foolang"
+    needs: build-host
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download bootstrap interpreter
+        uses: actions/download-artifact@v2
+        with:
+          name: foo-${{ runner.os }}
+          path: bin/
+
+      - name: Make bootstrap interpreter executable
+        run: chmod a+x bin/foo
+        if: ${{ runner.os != 'Windows' }}
+
+      - name: Test
+        run: ./bin/foo foo/impl/test_foolang.foo --use=foo/lib
+
+  test-prelude:
+    name: "Test Prelude"
+    needs: build-host
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download bootstrap interpreter
+        uses: actions/download-artifact@v2
+        with:
+          name: foo-${{ runner.os }}
+          path: bin/
+
+      - name: Make bootstrap interpreter executable
+        run: chmod a+x bin/foo
+        if: ${{ runner.os != 'Windows' }}
+
+      - name: Test Prelude
+        run: ./bin/foo foo/impl/test_prelude.foo --use=foo/lib
+
+  test-transpile:
+    name: "Test Transpile"
+    needs: build-host
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download bootstrap interpreter
+        uses: actions/download-artifact@v2
+        with:
+          name: foo-${{ runner.os }}
+          path: bin/
+
+      - name: Make bootstrap interpreter executable
+        run: chmod a+x bin/foo
+        if: ${{ runner.os != 'Windows' }}
+
+      # Clang is installed on the Windows image, but is not in path.
+      - name: Extend path to include Clang
+        run: echo 'C:\msys64\mingw64\bin' >> $GITHUB_PATH
+        if: ${{ runner.os == 'Windows' }}
+
+      - name: Clang version
+        run: clang --version
+
+      - name: Test Transpile
+        run: ./bin/foo foo/impl/test_transpile.foo --use=foo/lib
+
+  test-compiler:
+    # Not running this on Windows because the linker clang uses
+    # there doesn't accept either VS style nor GNU style stack-
+    # size specification, and I don't want to figure it out now.
+    name: "Test compiler"
+    needs: build-host
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download bootstrap interpreter
+        uses: actions/download-artifact@v2
+        with:
+          name: foo-${{ runner.os }}
+          path: bin/
+
+      - name: Make bootstrap interpreter executable
+        run: chmod a+x bin/foo
+
+      - name: Clang version
+        run: clang --version
+
+      - name: Bootstrap compiler
+        run: ./bin/foo foo/compile.foo -- foo/compile.foo ./bin/bootstrap-fooc
+
+      - name: Self-compile
+        run: ./bin/bootstrap-fooc foo/compile.foo ./bin/fooc
+
   test-foolang-mode:
     name: "Test foolang Emacs mode"
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v2
 
