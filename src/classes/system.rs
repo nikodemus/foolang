@@ -21,6 +21,7 @@ pub fn vtable() -> Vtable {
     vt.add_primitive_method_or_panic("input", system_input);
     vt.add_primitive_method_or_panic("isWindows", system_is_windows);
     vt.add_primitive_method_or_panic("isUnix", system_is_unix);
+    vt.add_primitive_method_or_panic("isMacOS", system_is_macos);
     vt.add_primitive_method_or_panic("output", system_output);
     vt.add_primitive_method_or_panic("output:", system_output_arg);
     vt.add_primitive_method_or_panic("random", system_random);
@@ -100,6 +101,10 @@ fn system_is_unix(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
 
 fn system_is_windows(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.make_boolean(cfg!(target_family = "windows")))
+}
+
+fn system_is_macos(_receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    Ok(env.foo.make_boolean(cfg!(target_os = "macos")))
 }
 
 fn system_output(receiver: &Object, _args: &[Object], env: &Env) -> Eval {

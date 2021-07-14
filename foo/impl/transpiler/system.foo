@@ -49,6 +49,10 @@ define InstanceMethods {
     -> { signature: [], vars: 0,
          body: "return FOO_BOOLEAN(system_is_windows());" },
 
+    #isMacOS
+    -> { signature: [], vars: 0,
+         body: "return FOO_BOOLEAN(system_is_macos());" },
+
     #output
     -> { signature: [], vars: 0,
          body: "return FOO_INSTANCE(Output, stdout);" },

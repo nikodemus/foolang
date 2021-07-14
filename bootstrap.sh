@@ -22,6 +22,6 @@ echo "$BOOTSTRAP_COMPILER built!"
 
 echo "Building $TARGET_COMPILER..."
 time $BOOTSTRAP_COMPILER foo/compile.foo $TARGET_COMPILER
-rm -f target-c
+rm -rf target-c
 cp -a c target-c
 echo "$TARGET_COMPILER built!"
