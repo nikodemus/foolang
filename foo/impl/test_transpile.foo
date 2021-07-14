@@ -2057,6 +2057,16 @@ end
 class TestTranspileSystem { assert system }
     is TranspilerTest
 
+    method test_System_getenv
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                 (system getenv: \"no such variable\") is False
+                                     ifTrue: \{ system output writeString: \"undef, \" }.
+                                 (String includes: (system getenv: \"PATH\"))
+                                     ifTrue: \{ system output writeString: \"path\" }!
+                        end"
+            expect: "undef, path"!
+
     method testClock
         self transpile: "class Main \{}
                              -- Just a small smoketest
