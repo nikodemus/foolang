@@ -4,14 +4,14 @@ import .utils.Debug
 class TestFoolang { system ok onFailure }
     is TestSelfHosting
 
-    method test0_Parse_simple_cascade
+    method test_Parse_cascade
         self parse: "List new; add: 1; add: 2; add: 3"
             expect: "List new
     ; add: 1
     ; add: 2
     ; add: 3"!
 
-    method test1_Simple_cascade
+    method test_Interpret_cascade
         self eval: "List new
                         ; add: 1
                         ; add: 2
