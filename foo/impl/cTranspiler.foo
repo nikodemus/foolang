@@ -323,6 +323,9 @@ class Counter { value }
         value = value + 1!
 end
 
+define $CascadeReceiverTemp
+    "<<<not in cascade>>>"!
+
 class CTranspiler { output selectorMap closureFunctions
                     constants variables tmpCounter
                     globals globalsCounter
@@ -1303,6 +1306,18 @@ class CTranspiler { output selectorMap closureFunctions
     method visitConstant: aConstant
         -- Tracer visitConstant: aConstant.
         self _writeValue: aConstant value _to: output!
+
+    method visitCascade: aCascade
+        output print: "(\{".
+        let $CascadeReceiverTemp = self _visitTemp: aCascade receiver.
+        aCascade messages
+            do: { |each|
+                  each visitBy: self.
+                  output print: ";" }.
+        output print: "});"!
+
+    method visitCascadeReceiver: _
+        output print: $CascadeReceiverTemp!
 
     method visitSend: aSend
         -- Tracer visitSend: aSend selector.

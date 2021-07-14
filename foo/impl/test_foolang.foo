@@ -4,6 +4,21 @@ import .utils.Debug
 class TestFoolang { system ok onFailure }
     is TestSelfHosting
 
+    method test_Parse_cascade
+        self parse: "List new; add: 1; add: 2; add: 3"
+            expect: "List new
+    ; add: 1
+    ; add: 2
+    ; add: 3"!
+
+    method test_Interpret_cascade
+        self eval: "List new
+                        ; add: 1
+                        ; add: 2
+                        ; add: 3
+                        ; collect: \{ |each| each * 10 \} as: Array"
+            expect: [10, 20, 30]!
+
     method testInterface1
         self load: "interface TestInterface1
                         direct method answer

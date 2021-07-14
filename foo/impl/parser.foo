@@ -302,6 +302,15 @@ class AssignmentToken { precedence string first last }
             value: parser parseSingle!
 end
 
+class CascadeToken { precedence string first last }
+    is Token
+
+    method parseAsSuffixOf: prefix with: parser
+        (parser parseSuffixOf: (prefix toCascade)
+                with: precedence)
+           finishCascade!
+end
+
 class OpenBraceToken { precedence string first last }
     is Token
 
@@ -785,6 +794,7 @@ define ExpressionSyntaxTable
          "\{" -> SyntaxEntry tokenClass: OpenBraceToken precedence: 3,
          "[" -> SyntaxEntry tokenClass: ArrayStartToken precedence: 3,
          "(" -> SyntaxEntry tokenClass: OpenParenToken precedence: 3,
+         ";" -> SyntaxEntry tokenClass: CascadeToken precedence: 3,
          "=" -> SyntaxEntry tokenClass: AssignmentToken precedence: 2,
          "." -> SyntaxEntry tokenClass: SequenceToken precedence: 2,
          "!" -> SyntaxEntry tokenClass: BangToken precedence: 1

@@ -142,6 +142,16 @@ class SyntaxTranslator { env currentMethod }
             value: (aLet value visitBy: self)
             body: (aLet body visitBy: self)!
 
+    method visitCascade: aCascade
+        AstCascade
+            receiver: (aCascade receiver visitBy: self)
+            messages: (aCascade messages
+                           collect: { |each|
+                                      each visitBy: self})!
+
+    method visitCascadeReceiver: aCascadeReceiver
+        TheAstCascadeReceiver!
+
     method visitPrefixMessage: aMessage
         -- Tracer trace: #visitPrefixMessage:.
         AstSend

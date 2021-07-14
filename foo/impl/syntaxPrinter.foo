@@ -222,6 +222,17 @@ class SyntaxPrinter { output
         self printSuffixComments: aComment comments.
         self newline!
 
+    method visitCascade: aCascade
+        aCascade receiver visitBy: self.
+        let cascadeVisitor = self indentBody.
+        aCascade messages
+            do: { |each|
+                  each visitBy: cascadeVisitor }!
+
+    method visitCascadeReceiver: aReceiver
+        self newline.
+        self print: ";"!
+
     method visitPrefixMessage: aMessage
         self print: aMessage selector name.
         aMessage receiver visitBy: self.
@@ -249,10 +260,10 @@ class SyntaxPrinter { output
     method visitKeywordMessage: aMessage
         let receiver = aMessage receiver.
         let arguments = aMessage arguments.
-        receiver visitBy: self.
         -- Parts gets a trailing empty string, with #with:do: terminates
         -- before we hit it.
         let parts = aMessage selector name splitBy: ":" character.
+        receiver visitBy: self.
         (receiver isTiny
              and: arguments size == 1
              and: arguments first isTiny)
