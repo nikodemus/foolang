@@ -240,7 +240,7 @@ interface AstDefinition
         self!
 end
 
-class AstDefine { global body frameSize }
+class AstDefine { global body frameSize compilerInfo }
     is AstDefinition
 
     direct method name: name
@@ -250,7 +250,8 @@ class AstDefine { global body frameSize }
         let global = env global: name.
         let theDefine = self global: global
                              body: body
-                             frameSize: frameSize.
+                             frameSize: frameSize
+                             compilerInfo: List new.
         global define: theDefine.
         theDefine!
 
@@ -276,7 +277,7 @@ class AstDefine { global body frameSize }
 end
 
 class AstInterface { name _interfaces _directMethods _instanceMethods _allInterfaces
-                     global _env }
+                     global _env compilerInfo }
     is AstDefinition
     is AstMethodHome
 
@@ -291,7 +292,8 @@ class AstInterface { name _interfaces _directMethods _instanceMethods _allInterf
                                _instanceMethods: False
                                _allInterfaces: False
                                global: global
-                               _env: env.
+                               _env: env
+                               compilerInfo: List new.
         global define: theInterface.
         theInterface!
 
@@ -344,7 +346,8 @@ end
 
 class AstClass { name superclass _slots
                  _interfaces _directMethods _instanceMethods
-                 _allInterfaces global _env }
+                 _allInterfaces global _env
+                 compilerInfo }
     is AstDefinition
     is AstMethodHome
 
@@ -362,7 +365,8 @@ class AstClass { name superclass _slots
                            _instanceMethods: False
                            _allInterfaces: False
                            global: global
-                           _env: env.
+                           _env: env
+                           compilerInfo: List new.
         global define: theClass.
         theClass!
 
@@ -380,7 +384,8 @@ class AstClass { name superclass _slots
                            _instanceMethods: False
                            _allInterfaces: False
                            global: global
-                           _env: env.
+                           _env: env
+                           compilerInfo: List new.
         global define: theClass.
         theClass!
 
@@ -781,7 +786,12 @@ interface AstGlobalVariable
         self!
 end
 
-class AstGlobal { name::String _id _value _state _definition sources }
+class AstGlobal { name::String
+                  _id
+                  _value
+                  _state
+                  _definition
+                  sources }
     is AstGlobalVariable
 
     method isDynamic
@@ -853,7 +863,12 @@ class AstGlobal { name::String _id _value _state _definition sources }
 
 end
 
-class AstDynamic { name::String _id _value _state _definition sources }
+class AstDynamic { name::String
+                   _id
+                   _value
+                   _state
+                   _definition
+                   sources }
     is AstGlobalVariable
 
     method isDynamic

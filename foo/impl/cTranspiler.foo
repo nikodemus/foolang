@@ -73,7 +73,7 @@ define DatumClasses
 
 class CompilerBuiltin { type value markFunction _id _interfaces
                         _directMethods _instanceMethods _allInterfaces
-                        _global }
+                        _global compilerInfo }
     is AstMethodHome
 
     direct method type: type
@@ -90,7 +90,8 @@ class CompilerBuiltin { type value markFunction _id _interfaces
                            _directMethods: False
                            _instanceMethods: False
                            _allInterfaces: False
-                           _global: False.
+                           _global: False
+                           compilerInfo: List new.
         theClass _directMethods: directMethods.
         theClass _instanceMethods: instanceMethods.
         theClass!
@@ -330,7 +331,7 @@ class CTranspiler { output selectorMap closureFunctions
                     constants variables tmpCounter
                     globals globalsCounter
                     recordClasses
-                    generatedMethods env builtins visited }
+                    generatedMethods env builtins }
 
     direct method transpile: string in: env with: prelude
         env removeBuiltins: [
@@ -364,8 +365,7 @@ class CTranspiler { output selectorMap closureFunctions
                           env: env
                           builtins: (Dictionary
                                          keys: (builtins collect: #value)
-                                         values: builtins)
-                          visited: Dictionary new.
+                                         values: builtins).
         visitor output println: "#include \"foo.h\"".
         -- KLUDGE: ensure selectors with references from C code
         AlwaysEmittedSelectors
@@ -528,8 +528,7 @@ class CTranspiler { output selectorMap closureFunctions
                                  recordClasses: recordClasses
                                  generatedMethods: generatedMethods
                                  env: env
-                                 builtins: builtins
-                                 visited: visited.
+                                 builtins: builtins.
         builtinVisitor output println: "#include \"foo.h\"".
         -- FIXME: visit only referenced builtins
         self compilerBuiltins
@@ -565,8 +564,7 @@ class CTranspiler { output selectorMap closureFunctions
                                  recordClasses: recordClasses
                                  generatedMethods: generatedMethods
                                  env: env
-                                 builtins: builtins
-                                 visited: visited.
+                                 builtins: builtins.
         builtinVisitor output println: "#include \"foo.h\"".
         -- FIXME: used builtins only
         self compilerBuiltins
@@ -830,8 +828,7 @@ class CTranspiler { output selectorMap closureFunctions
                                recordClasses: recordClasses
                                generatedMethods: generatedMethods
                                env: env
-                               builtins: builtins
-                               visited: visited.
+                               builtins: builtins.
         closureVisitor _generateTypecheck: closure returnType
                      _for: closure body.
         output println: ";\n}".
@@ -845,9 +842,9 @@ class CTranspiler { output selectorMap closureFunctions
         self!
 
     method visitDefine: aDefine
-        (visited has: aDefine)
+        (aDefine compilerInfo contains: #visited)
             ifTrue: { return False }.
-        visited put: True at: aDefine.
+        aDefine compilerInfo add: #visited.
         Tracer visitDefine: aDefine.
         aDefine isDynamic
             ifTrue: { output println: "struct Foo {Name mangleDynamic: aDefine} = " }
@@ -949,9 +946,9 @@ class CTranspiler { output selectorMap closureFunctions
         inheritance!
 
     method visitInterfaceDefinition: anInterface
-        (visited has: anInterface)
+        (anInterface compilerInfo contains: #visited)
             ifTrue: { return False }.
-        visited put: True at: anInterface.
+        anInterface compilerInfo add: #visited.
         Tracer visitInterfaceDefinition: anInterface name.
         output println: "/**
 * {anInterface name} (an interface)
@@ -1093,9 +1090,9 @@ class CTranspiler { output selectorMap closureFunctions
           methodFunctionName: "foo_method_classOf" }!
 
     method visitClassDefinition: aClass
-        (visited has: aClass)
+        (aClass compilerInfo contains: #visited)
             ifTrue: { return False }.
-        visited put: True at: aClass.
+        aClass compilerInfo add: #visited.
         Tracer visitClassDefinition: aClass name.
         let classNote = aClass isBuiltin
                        ifTrue: { "{aClass name} (builtin)" }
