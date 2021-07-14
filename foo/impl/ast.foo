@@ -1078,6 +1078,25 @@ class AstLexicalRef { variable frameOffset::Integer source }
         stream writeString: ">"!
 end
 
+class AstCascadeReceiver {}
+    is AstNode
+
+    method isImmediate
+        True!
+
+    method visitBy: visitor
+        visitor visitCascadeReceiver: self!
+end
+
+define TheAstCascadeReceiver AstCascadeReceiver new!
+
+class AstCascade { receiver messages }
+    is AstNode
+
+    method visitBy: visitor
+        visitor visitCascade: self!
+end
+
 class AstLexicalSet { variable frameOffset::Integer value }
     is AstNode
 

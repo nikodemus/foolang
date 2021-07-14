@@ -208,6 +208,24 @@ Backtrace:
 "!
 end
 
+class TestTranspileCascade { assert system }
+    is TranspilerTest
+
+    method test_Compile_cascade
+        self transpileWithPrelude:
+            "class Main \{}
+                 direct method run: command in: system
+                     system output
+                         print: (List new
+                                      ; add: 1
+                                      ; add: 2
+                                      ; add: 3
+                                      ; collect: \{ |each| each * 10 \}
+                                        as: Array)!
+            end"
+            expect: "[10, 20, 30]"!
+end
+
 class TestTranspilePerformWith { assert system }
     is TranspilerTest
 
@@ -2483,6 +2501,7 @@ class Main {}
             "--block" -> TestTranspileBlock,
             "--boolean" -> TestTranspileBoolean,
             "--byte-array" -> TestTranspileByteArray,
+            "--cascade" -> TestTranspileCascade,
             "--class" -> TestTranspileClass,
             "--dictionary" -> TestTranspileDictionary,
             "--dynamic" -> TestTranspileDynamic,

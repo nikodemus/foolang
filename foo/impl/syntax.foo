@@ -59,6 +59,9 @@ interface Syntax
     method weight
         10!
 
+    method toCascade
+        SyntaxCascade new: self!
+
     method displayOn: stream
         stream print: "#<{self classOf name} {self descriptor}>"!
 end
@@ -345,6 +348,59 @@ class SyntaxBlockComment { fence lines source }
         "#<SyntaxBlockComment {lines}>"!
 end
 
+class SyntaxCascadeReceiver {}
+    is Syntax
+
+    method visitBy: visitor
+        visitor visitCascadeReceiver: self!
+
+    method weight
+        0!
+
+    method parts
+        []!
+
+    method descriptor
+        ";"!
+end
+
+define CascadeReceiver SyntaxCascadeReceiver new!
+
+class SyntaxCascade { receiver messages }
+    is Syntax
+
+    direct method new: receiver
+        self receiver: receiver
+             messages: List new!
+
+    method toCascade
+        self!
+
+    method finishCascade
+        self!
+
+    method addMessage: message
+        message receiver: CascadeReceiver.
+        messages add: message!
+
+    method parts
+        [receiver, messages]!
+
+    method visitBy: visitor
+        visitor visitCascade: self!
+
+    method descriptor
+        "{receiver descriptor} ; ..."!
+end
+
+interface CascadeMessage
+    method finishCascade
+        let cascade = self receiver toCascade.
+        self receiver: cascade receiver.
+        cascade addMessage: self.
+        cascade!
+end
+
 class SyntaxPrefix { receiver selector source }
     is Syntax
 
@@ -360,7 +416,11 @@ class SyntaxPrefix { receiver selector source }
 end
 
 class SyntaxUnary { receiver selector source }
+    is CascadeMessage
     is Syntax
+
+    method receiver: new
+        receiver = new!
 
     method visitBy: visitor
         visitor visitUnaryMessage: self!
@@ -380,7 +440,11 @@ class SyntaxUnary { receiver selector source }
 end
 
 class SyntaxBinary { receiver selector argument source }
+    is CascadeMessage
     is Syntax
+
+    method receiver: new
+        receiver = new!
 
     method visitBy: visitor
         visitor visitBinaryMessage: self!
@@ -399,7 +463,11 @@ end
 -- FIXME: Currently multi-keyword syntax gets as source the first
 -- keyword only. Should support non-contigous source regions for this.
 class SyntaxKeyword { receiver selector arguments source }
+    is CascadeMessage
     is Syntax
+
+    method receiver: new
+        receiver = new!
 
     method visitBy: visitor
         visitor visitKeywordMessage: self!
