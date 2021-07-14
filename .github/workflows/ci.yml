@@ -58,6 +58,12 @@ jobs:
 
       - run: mkdir -p bin && cp target/debug/foo ./bin/
 
+      - name: Bootstrap compiler
+        run: ./bin/foo foo/compile.foo -- foo/compile.foo ./bin/bootstrap-fooc
+
+      - name: Self-compile
+        run: ./bin/bootstrap-fooc foo/compile.foo ./bin/fooc
+
       - name: Test Foolang
         run: ./bin/foo foo/impl/test_foolang.foo --use=foo/lib
 
@@ -69,12 +75,6 @@ jobs:
 
       - name: Test Transpile
         run: ./bin/foo foo/impl/test_transpile.foo --use=foo/lib
-
-      - name: Bootstrap compiler
-        run: ./bin/foo foo/compile.foo ./bin/bootstrap-fooc
-
-      - name: Self-compile
-        run: ./bin/bootstrap-fooc foo/compile.foo ./bin/fooc
 
   build-host:
     name: "Build host"

@@ -1,0 +1,99 @@
+import .environment.Environment
+import .utils.FileModuleDictionary
+import .cTranspiler.CTranspiler
+
+-- FIXME: POA: doesn't need hole system, just files and
+-- OS type.
+class Compiler { source target system prelude stackSize }
+    direct method source: source
+                  target: target
+                  system: system
+                  prelude: prelude
+        self source: source
+             target: target
+             system: system
+             prelude: prelude
+             stackSize: False!
+
+    method compile
+        let modules = FileModuleDictionary
+                       new: { "lang" -> system files / "foo/lang",
+                              "impl" -> system files / "foo/impl",
+                              "lib" -> system files / "foo/lib" }.
+        let c = CTranspiler
+                    transpile: source
+                    in: (Environment modules: modules)
+                    with: prelude.
+        let files = system files / "c".
+        (files / "generated_selectors.h")
+            forWrite truncateExisting
+                createOrOpen: { |f| f print: c selectors }.
+        (files / "generated_declarations.h")
+            forWrite truncateExisting
+                createOrOpen: { |f| f print: c declarations }.
+        (files / "generated_constants.c")
+            forWrite truncateExisting
+                createOrOpen: { |f| f print: c constants }.
+        (files / "generated_closures.c")
+            forWrite truncateExisting
+                createOrOpen: { |f| f print: c closures }.
+        (files / "generated_main.c")
+            forWrite truncateExisting
+                createOrOpen: { |f| f print: c main }.
+        (files / "generated_builtins.c")
+            forWrite truncateExisting
+                createOrOpen: { |f| f print: c builtins }.
+
+        target ifExists: #deleteFile.
+
+        let buildOptions
+            = " -fno-omit-frame-pointer -g -Wall -Werror --std=c11".
+        let buildCmd = StringOutput
+                           with: { |out|
+                                   out print: "clang -o ".
+                                   out print: target pathname.
+                                   out print: self linkerOptions.
+                                   out print: self sanitizerOptions.
+                                   out print: buildOptions.
+                                   out print: " c/main.c".
+                                   out print: " ext/dtoa.c".
+                                   out print: self systemC }.
+        let build = system command: buildCmd.
+        build ok
+            ifFalse: { Error raise: "External build failed!
+Command: {buildCmd}
+---stdout---
+{build stdout}
+--stderr---
+{build stderr}" }!
+
+    method linkerOptions
+        stackSize is False
+            ifTrue: { return "" }.
+        system isWindows
+            => { return " -Wl,/STACK:{stackSize}" }.
+        system isMacOS
+            => { -- MacOS linker defaults to 8MB the manpage says,
+                 -- setting the option requires giving the number
+                 -- as hexadecimal.
+                 stackSize <= 0x800000
+                     assert: "Setting stacksize > 8MiB for MacOS not implemented".
+                 return "" }.
+        -- GNU linker as fallback
+        " -Wl,-z,stack-size={stackSize}"!
+
+    method sanitizerOptions
+        -- KLUDGE: Windows CI host linker cannot find the sanitizer libraries,
+        -- so we conditionalize on the environment and host.
+        (system isUnix or: (system getenv: "GITHUB_ACTION") is False)
+            ifTrue: { " -fsanitize=address -fsanitize=undefined" }
+            ifFalse: { "" }!
+
+    method systemC
+        system isWindows
+            => { return " c/system_windows.c" }.
+        system isMacOS
+            => { return " -DFOO_MACOS c/system_unix.c" }.
+        " c/system_unix.c"!
+
+end

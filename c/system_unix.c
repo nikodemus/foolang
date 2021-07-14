@@ -16,6 +16,14 @@ bool system_is_unix(void) {
   return true;
 }
 
+bool system_is_macos(void) {
+#ifdef FOO_MACOS
+  return true;
+#else
+  return false;
+#endif
+}
+
 bool system_is_windows(void) {
   return false;
 }

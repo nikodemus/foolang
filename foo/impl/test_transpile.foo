@@ -1,8 +1,4 @@
-import .cTranspiler.CTranspiler
-import .environment.Environment
-import .parser.Parser
-import .syntaxTranslator.SyntaxTranslator
-
+import .compiler
 import .utils.Debug
 
 import lib.assert.Assert
@@ -24,53 +20,19 @@ interface TranspilerTest
         TestTranspileWrapper test: self system: system!
 
     method prelude: prelude transpile: string
-        let env = Environment
-                      modules: { "impl" -> system files / "foo/impl",
-                                 "lang" -> system files / "foo/lang",
-                                 "lib" -> system files / "foo/lib", }
-                      asFileModules.
-        let c = CTranspiler transpile: string in: env with: prelude.
-        (system files / "c/generated_selectors.h")
-            forWrite truncateExisting
-                createOrOpen: { |f| f print: c selectors }.
-        (system files / "c/generated_declarations.h")
-            forWrite truncateExisting
-                createOrOpen: { |f| f print: c declarations }.
-        (system files / "c/generated_constants.c")
-            forWrite truncateExisting
-                createOrOpen: { |f| f print: c constants }.
-        (system files / "c/generated_closures.c")
-            forWrite truncateExisting
-                createOrOpen: { |f| f print: c closures }.
-        (system files / "c/generated_main.c")
-            forWrite truncateExisting
-                createOrOpen: { |f| f print: c main }.
-        (system files / "c/generated_builtins.c")
-            forWrite truncateExisting
-                createOrOpen: { |f| f print: c builtins }.
-        let path = system currentDirectory / "tmp_transpile_test.exe".
-        path ifExists: #deleteFile.
-        path exists not assert: "executable cleared".
-        -- KLUDGE: Windows CI host linker cannot find the sanitizer libraries,
-        -- so we conditionalize on the environment and host.
-        let sanitizerOptions
-            = (((system getenv: "GITHUB_ACTION") is False) or: system isUnix)
-                ifTrue: { "-fsanitize=address -fsanitize=undefined" }
-                ifFalse: { "" }.
-        let target
-            = system isUnix
-                ifTrue: { "unix" }
-                ifFalse: { "windows" }.
-        let buildCmd = "clang -o {path} {sanitizerOptions} -fno-omit-frame-pointer -g -Wall -Werror --std=c11 c/main.c c/system_{target}.c ext/dtoa.c".
-        let build = system command: buildCmd.
-        self _reportStderr: build.
-        build ok
-            ifFalse: { Error raise: "Build failed: {buildCmd}" }.
-        path exists assert: "executable created".
-        let exec = system command: path toString.
-        self _reportStderr: exec!
-
-    method _reportStderr: cmd
+        let target = system currentDirectory / "tmp_transpile_test.exe".
+        target ifExists: #deleteFile.
+        target exists not
+            assert: "executable cleared".
+        (compiler.Compiler
+             source: string
+             target: target
+             system: system
+             prelude: prelude)
+            compile.
+        target exists
+            assert: "executable created".
+        let cmd = system command: target pathname.
         cmd stderr isEmpty
             ifFalse: { Debug println: "---stderr---".
                        Debug println: cmd stderr.
@@ -2094,6 +2056,16 @@ end
 
 class TestTranspileSystem { assert system }
     is TranspilerTest
+
+    method test_System_getenv
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                 (system getenv: \"no such variable\") is False
+                                     ifTrue: \{ system output writeString: \"undef, \" }.
+                                 (String includes: (system getenv: \"PATH\"))
+                                     ifTrue: \{ system output writeString: \"path\" }!
+                        end"
+            expect: "undef, path"!
 
     method testClock
         self transpile: "class Main \{}

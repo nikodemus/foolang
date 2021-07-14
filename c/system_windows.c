@@ -16,6 +16,10 @@ bool system_is_unix(void) {
   return false;
 }
 
+bool system_is_macos(void) {
+  return false;
+}
+
 bool system_is_windows(void) {
   return true;
 }
