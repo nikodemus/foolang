@@ -10,7 +10,7 @@ class BacktraceFrame { receiver selector::Selector arguments }
 end
 
 define $AstCascadeReceiver
-    { Error raise: "Not in cascade" }!
+    "<<<not in cascade>>>"!
 
 class InterpreterContext {
         sender
@@ -218,8 +218,7 @@ class AstInterpreter { context process }
         panic (aPanic value visitBy: self)!
 
     method visitCascade: aCascade
-        let receiver = aCascade receiver visitBy: self.
-        let $AstCascadeReceiver = { receiver }.
+        let $AstCascadeReceiver = aCascade receiver visitBy: self.
         let result = False.
         aCascade messages
             do: { |each|
@@ -227,7 +226,7 @@ class AstInterpreter { context process }
         result!
 
     method visitCascadeReceiver: aReceiver
-        $AstCascadeReceiver value!
+        $AstCascadeReceiver!
 
     method visitSend: aSend
         let selector = aSend selector.
