@@ -141,7 +141,7 @@ class Riddle { street }
                   -- 6. The person who smokes Pall Mall rears birds
                   { cigarette == #pallmall } <-> { pet == #birds }.
                   -- 7. The owner of the yellow house smokes Dunhill
-                  { cigarette == #dunhill } <-> { color == #red }.
+                  { color == #yellow } <-> { cigarette == #dunhill }.
                   -- 8. The man living in the centre house drinks milk
                   { number == 3 } <-> { drink == #milk }.
                   -- 9. The Norwegian lives in the first house
