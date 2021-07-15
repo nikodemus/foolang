@@ -207,19 +207,19 @@ class Riddle { street }
     Utilities used by house property generators.
     ---
 
-    method thereExists: selector thatIs: option
-        -- Is there is already a house with a swedish owner?
-        --
-        --     self thereExists: #owner thatIs: #swede` tells us
-        --
-        street anySatisfy: { |house| (selector sendTo: house) == option }!
-
     method allUnused: selector from: options
         -- All house numbers that don't yet exists on the street:
         --
         --     self allUnused: #number from: [1, 2, 3, 4, 5]
         --
         options reject: { |option| self thereExists: selector thatIs: option }!
+
+    method thereExists: selector thatIs: option
+        -- Is there is already a house with a swedish owner?
+        --
+        --     self thereExists: #owner thatIs: #swede` tells us
+        --
+        street anySatisfy: { |house| (selector sendTo: house) == option }!
 end
 
 class Main {}
