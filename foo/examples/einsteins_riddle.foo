@@ -84,6 +84,8 @@ class Riddle { street }
 
     method assertOnLeft: house1 of: house2
         -- Assert that house1 is to the left of house2, backtracking if not.
+        -- Numbering is arbitrary, so it doesn't matter if we consider
+        -- smaller numbers to be on the left or right.
         house1 number - house2 number == 1
             ifFalse: { Backtracking failure }!
 
