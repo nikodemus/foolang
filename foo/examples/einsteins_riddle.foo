@@ -126,20 +126,24 @@ class Riddle { street }
         -- that would allow rejecting invalid answer earlier.
         self tryOwner:
         { |owner|
+
           self tryColor:
           { |color|
             -- 1. The Brit lives in the red house
             { owner == #brit } <-> { color == #red }.
+
             self tryPet:
             { |pet|
               -- 2. The Swede keeps dogs as pets
               { owner == #swede } <-> { pet == #dogs }.
+
               self tryDrink:
               { |drink|
                 -- 3. The Dane drinks tea
                 { owner == #dane } <-> { drink == #tea }.
                 -- 5. The green house's owner drinks coffee
                 { color == #green } <-> { drink == #coffee }.
+
                 self tryCigarette:
                 { |cigarette|
                   -- 6. The person who smokes Pall Mall rears birds
@@ -164,6 +168,7 @@ class Riddle { street }
                                 cigarette: cigarette,
                                 number: number }.
                   street push: house.
+
                   -- Pass control to the block, removing the house
                   -- from the steet on unwind.
                   { block value }
