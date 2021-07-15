@@ -424,6 +424,11 @@ class CTranspiler { output selectorMap closureFunctions
         "tmp{tmpCounter}_{name}"!
 
     method forwardDeclarationFor: aGlobal
+        (AstBuiltin includes: aGlobal)
+            ifTrue: { return False }.
+        (aGlobal compilerInfo contains: #declared)
+            ifTrue: { return False }.
+        aGlobal compilerInfo add: #declared.
         -- Debug println: "declare: {aGlobal}".
         (CompilerBuiltin includes: aGlobal)
             ifTrue: { self _classDeclarations: aGlobal }.
@@ -431,15 +436,15 @@ class CTranspiler { output selectorMap closureFunctions
             ifTrue: { self _classDeclarations: aGlobal }.
         (AstInterface includes: aGlobal)
             ifTrue: { self _interfaceDeclarations: aGlobal }.
-        (AstBuiltin includes: aGlobal)
-            ifTrue: { return False }.
         aGlobal isDynamic
             ifTrue: { self declareDynamic: aGlobal.
                       output println: "struct Foo {Name mangleDynamic: aGlobal};" }
             ifFalse: {  output println: "struct Foo {self mangleGlobal: aGlobal};" }!
 
     method _classDeclarations: aClass
-        output println: "struct FooClass {Name mangleMetaclass: aClass};".
+        -- Class is it's own metaclass, declare only once.
+        ((CompilerBuiltin includes: aClass) and: aClass name == "Class")
+            ifFalse: { output println: "struct FooClass {Name mangleMetaclass: aClass};" }.
         output println: "struct FooClass {Name mangleClass: aClass};".
         let isOwnDefinition
                 = { |def| def home is aClass }.

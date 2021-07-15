@@ -272,8 +272,14 @@ jobs:
       - name: Bootstrap compiler
         run: ./bin/foo foo/compile.foo -- foo/compile.foo ./bin/bootstrap-fooc
 
+      - name: No duplicate declarations from bootstrap compile
+        run: ./no_duplicate_declarations.sh
+
       - name: Self-compile
         run: ./bin/bootstrap-fooc foo/compile.foo ./bin/fooc
+
+      - name: No duplicate declarations from self-compile
+        run: ./no_duplicate_declarations.sh
 
   test-foolang-mode:
     name: "Test foolang Emacs mode"
