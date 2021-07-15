@@ -1,0 +1,53 @@
+-- Dynamic variables for backtracking control flow.
+define $BacktrackingFailure False!
+define $BacktrackingSuccess False!
+
+class Backtracking {}
+    direct method failure
+        -- Return the the nearest active choise point.
+        $BacktrackingFailure is False
+            ifTrue: { Error raise: "Backtracking failed: no solution found" }.
+        $BacktrackingFailure value!
+
+    direct method success: value
+        -- Returns the success value from outermost forAll:try:.
+        $BacktrackingSuccess is False
+            ifTrue: { Error raise: "Not backtracking: cannot use #success:" }.
+        $BacktrackingSuccess value: value!
+
+    direct method _try: block _with: value
+        -- Establish choise point: failure returns from here.
+        let $BacktrackingFailure = { return False }.
+         block value: value!
+
+    direct method forAll: options try: block
+        -- Run block with all options, establishing a choise point
+        -- to pick the next option on failure. If none of the options
+        -- result in success causes a backtracking failure.
+        let $BacktrackingSuccess
+            = $BacktrackingSuccess is False
+                ifTrue: { { |value| return value } }
+                ifFalse: { $BacktrackingSuccess }.
+        options
+            do: { |each|
+                  Backtracking _try: block _with: each }.
+        Backtracking failure!
+end
+
+extend Closure
+    ---
+    Extend closure with some niceties for backtracking
+    ---
+
+    method <-> other
+        -- Bidirectional implication, Backtracking
+        -- failure if not valid. (Self and other
+        -- must be both True or both False.)
+        (self value :: Boolean) is other value
+            ifFalse: { Backtracking failure }!
+
+    method tryForAll: options
+        -- Wrapper around Backtracking forAll:do:
+        -- for concise expressions.
+        Backtracking forAll: options try: self!
+end

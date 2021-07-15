@@ -1,0 +1,246 @@
+---
+"The Einstein's Riddle".
+
+There are five houses in a row, each of different color.
+
+Each has an owner of a different nationality.
+
+Each owner has a unique favorite drink, type of cigarette, and a pet.
+
+    1. The Brit lives in the red house
+    2. The Swede keeps dogs as pets
+    3. The Dane drinks tea
+    4. The green house is on the left of the white house
+    5. The green house's owner drinks coffee
+    6. The person who smokes Pall Mall rears birds
+    7. The owner of the yellow house smokes Dunhill
+    8. The man living in the centre house drinks milk
+    9. The Norwegian lives in the first house
+   10. The person who smokes Marlboro lives next to the one who keeps cats
+   11. The person who keeps horses lives next to the person who smokes Dunhill
+   12. The person who smokes Winfield drinks beer
+   13. The German smokes Rothmans
+   14. The Norwegian lives next to the blue house
+   15. The person who smokes Marlboro has a neigbor who drinks water
+
+Question: Who owns the fish?
+
+We're going to solve this using lib.backtracking.
+
+Foolang backtracking library is pretty minimal (~60 lines!), just providing a
+Backtracking object which allows us to set up choice points to which we can
+backtrack as long as we make sure to undo any side-effects on unwind.
+
+Trivial example, finding a number greater than one from 1-3.
+
+   Backtracking forAll: [1, 2, 3]
+                try: { |n|
+                       (n > 1)
+                           ifTrue: { Backtracking success: n }
+                           ifFalse: { Backtracking failure } }
+
+   --> 2
+
+---
+
+import lib.backtracking.Backtracking
+
+class Riddle { street }
+
+    direct method solve
+        -- We represent the riddle with an instance of Riddle, which holds a potential
+        -- solution we're building.
+        let riddle = Riddle new.
+
+        -- We generate a street and assert the neighbour constraints from
+        -- the riddle. All houses on the generated street already have
+        -- their local properties ("The Brit lives in the red house") asserted.
+        riddle aStreet:
+        {
+          -- 4. The green house is on the left of the white house
+          let green = riddle houseWhere: #color is: #green.
+          let white = riddle houseWhere: #color is: #white.
+          riddle assertOnLeft: green of: white.
+
+          -- 10. The person who smokes Marlboro lives next to the one who keeps cats
+          let marlboro = riddle houseWhere: #cigarette is: #marlboro.
+          let cats = riddle houseWhere: #pet is: #cats.
+          riddle assertNeighbours: marlboro and: cats.
+
+          -- 11. The person who keeps horses lives next to the person who smokes Dunhill
+          let horses = riddle houseWhere: #pet is: #horses.
+          let dunhill = riddle houseWhere: #cigarette is: #dunhill.
+          riddle assertNeighbours: horses and: dunhill.
+
+          -- 14. The Norwegian lives next to the blue house
+          let norwegian = riddle houseWhere: #owner is: #norwegian.
+          let blue = riddle houseWhere: #color is: #blue.
+          riddle assertNeighbours: norwegian and: blue.
+
+          -- 15. The person who smokes Marlboro has a neigbor who drinks water
+          let water = riddle houseWhere: #drink is: #water.
+          riddle assertNeighbours: marlboro and: water.
+
+          -- If we managed to assert all these, we have a solution!
+          Backtracking success: (riddle houseWhere: #pet is: #fish) }!
+
+    direct method new
+        -- Initially our street is empty.
+        self street: List new!
+
+    method houseWhere: what is: value
+        -- Find a specific house on the street.
+        street find: { |each| (what sendTo: each) == value }
+               ifNone: { Error raise: "No house where {what} is {value}" }!
+
+    method assertOnLeft: house1 of: house2
+        -- Assert that house1 is to the left of house2, backtracking if not.
+        -- Numbering is arbitrary, so it doesn't matter if we consider
+        -- smaller numbers to be on the left or right.
+        house1 number - house2 number == 1
+            ifFalse: { Backtracking failure }!
+
+    method assertNeighbours: house1 and: house2
+        -- Assert that house1 and house2 are neighbours, backtracking if not.
+        (house1 number - house2 number) abs == 1
+            ifFalse: { Backtracking failure }!
+
+    method aStreet: block
+        -- To build a street we add five houses on it.
+        self addHouses: 5 try: block!
+
+    method addHouses: n try: block
+        -- Build required number of houses on the street, then execute block.
+        -- Recursive to allow backtracking to earlier houses.
+        n is 0
+            ifTrue: { block value }
+            ifFalse: { self addHouse: n
+                            try: { self addHouses: n - 1 try: block } }!
+
+    method addHouse: number try: block
+        -- We first generate all properties a house has, and assert their
+        -- validity, backtracking on failure.
+        --
+        -- If we succeed in building a house we add it to the street, and
+        -- pass control to block, removing the house on unwind.
+        --
+        -- Each of the #tryXXX: methods generates a possible value for a house property.
+        --
+        -- We encode local requirements of the puzzle as bidirectional implications, such
+        -- as:
+        --
+        --     { owner == #brit } <-> { color == #red }
+        --
+        -- (This is an utility method on blocks provided by the backtracking library,
+        -- causing the system to backtrack if the implication doesn't hold.)
+        --
+        -- We assert the facts in the same order as theyr appear in the puzzle for clarity,
+        -- even though it would be more efficient to assert them as soon as possible:
+        -- that would allow rejecting invalid answers earlier.
+        self tryOwner:
+        { |owner|
+
+          self tryColor:
+          { |color|
+            -- 1. The Brit lives in the red house
+            { owner == #brit } <-> { color == #red }.
+
+            self tryPet:
+            { |pet|
+              -- 2. The Swede keeps dogs as pets
+              { owner == #swede } <-> { pet == #dogs }.
+
+              self tryDrink:
+              { |drink|
+                -- 3. The Dane drinks tea
+                { owner == #dane } <-> { drink == #tea }.
+                -- 5. The green house's owner drinks coffee
+                { color == #green } <-> { drink == #coffee }.
+
+                self tryCigarette:
+                { |cigarette|
+                  -- 6. The person who smokes Pall Mall rears birds
+                  { cigarette == #pallmall } <-> { pet == #birds }.
+                  -- 7. The owner of the yellow house smokes Dunhill
+                  { color == #yellow } <-> { cigarette == #dunhill }.
+                  -- 8. The man living in the centre house drinks milk
+                  { number == 3 } <-> { drink == #milk }.
+                  -- 9. The Norwegian lives in the first house
+                  { owner == #norwegian } <-> { number == 1 }.
+                  -- 12. The person who smokes Winfield drinks beer
+                  { cigarette == #winfield } <-> { drink == #beer }.
+                  -- 13. The German smokes Rothmans
+                  { owner == #german } <-> { cigarette == #rothmans }.
+
+                  -- Now we have a legal set of house properties,
+                  -- so we build the house and add it to the street.
+                  let house = { owner: owner,
+                                color: color,
+                                pet: pet,
+                                drink: drink,
+                                cigarette: cigarette,
+                                number: number }.
+                  street push: house.
+
+                  -- Pass control to the block, removing the house
+                  -- from the steet on unwind.
+                  { block value }
+                      finally: { street pop } } } } } }!
+
+    ---
+    Generating different house properties with backtracking: eg. `self tryColor: { ... }`
+    tries to execute the block with each house color that doesn't yet exist on the
+    street, backtracking to the next option on failure, and failing if there
+    are no more options.
+
+    #tryForAll: is an extension on blocks provided by the backtracking library.
+    ---
+
+    method tryColor: block
+        block
+            tryForAll: (self allUnused: #color
+                             from: [#red, #green, #white, #yellow, #blue])!
+
+    method tryOwner: block
+        block
+            tryForAll: (self allUnused: #owner
+                             from: [#brit, #swede, #dane, #norwegian, #german])!
+
+    method tryPet: block
+        block
+            tryForAll: (self allUnused: #pet
+                             from: [#dogs, #birds, #cats, #horses, #fish])!
+
+    method tryDrink: block
+        block
+            tryForAll: (self allUnused: #drink
+                             from: [#tea, #coffee, #milk, #beer, #water])!
+
+    method tryCigarette: block
+        block
+            tryForAll: (self allUnused: #cigarette
+                             from: [#pallmall, #dunhill, #marlboro, #winfield, #rothmans])!
+
+    ---
+    Utilities used by house property generators.
+    ---
+
+    method allUnused: selector from: options
+        -- All house numbers that don't yet exists on the street:
+        --
+        --     self allUnused: #number from: [1, 2, 3, 4, 5]
+        --
+        options reject: { |option| self thereExists: selector thatIs: option }!
+
+    method thereExists: selector thatIs: option
+        -- Is there is already a house with a swedish owner?
+        --
+        --     self thereExists: #owner thatIs: #swede` tells us
+        --
+        street anySatisfy: { |house| (selector sendTo: house) == option }!
+end
+
+class Main {}
+    direct method run: command in: system
+        system output println: Riddle solve!
+end
