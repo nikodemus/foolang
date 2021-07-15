@@ -145,7 +145,7 @@ class Riddle { street }
                   -- 8. The man living in the centre house drinks milk
                   { number == 3 } <-> { drink == #milk }.
                   -- 9. The Norwegian lives in the first house
-                  { number == 1 } <-> { owner == #norwegian }.
+                  { owner == #norwegian } <-> { number == 1 }.
                   -- 12. The person who smokes Winfield drinks beer
                   { cigarette == #winfield } <-> { drink == #beer }.
                   -- 13. The German smokes Rothmans
