@@ -25,11 +25,22 @@ Each owner has a unique favorite drink, type of cigarette, and a pet.
 
 Question: Who owns the fish?
 
-We're going to solve this using backtracking.
+We're going to solve this using lib.backtracking.
 
-The backtracking library is pretty minimal (~60 lines!), but provides
-Backtracking object which allows us to up choise points to which we can backtrack
-as long as we make sure to undo any side-effects on unwind.
+Foolang backtracking library is pretty minimal (~60 lines!), just providing a
+Backtracking object which allows us to set up choice points to which we can
+backtrack as long as we make sure to undo any side-effects on unwind.
+
+Trivial example, finding a number greater than one from 1-3.
+
+   Backtracking forAll: [1, 2, 3]
+                try: { |n|
+                       (n > 1)
+                           ifTrue: { Backtracking success: n }
+                           ifFalse: { Backtracking failure } }
+
+   --> 2
+
 ---
 
 import lib.backtracking.Backtracking
@@ -120,12 +131,12 @@ class Riddle { street }
         --
         --     { owner == #brit } <-> { color == #red }
         --
-        -- (This is an utility method on closures provided by the backtracking library,
+        -- (This is an utility method on blocks provided by the backtracking library,
         -- causing the system to backtrack if the implication doesn't hold.)
         --
-        -- We assert the facts in the same order as their appear in the puzzle for clarity,
+        -- We assert the facts in the same order as theyr appear in the puzzle for clarity,
         -- even though it would be more efficient to assert them as soon as possible:
-        -- that would allow rejecting invalid answer earlier.
+        -- that would allow rejecting invalid answers earlier.
         self tryOwner:
         { |owner|
 
@@ -208,7 +219,7 @@ class Riddle { street }
     method tryCigarette: block
         block
             tryForAll: (self allUnused: #cigarette
-                            from: [#pallmall, #dunhill, #marlboro, #winfield, #rothmans])!
+                             from: [#pallmall, #dunhill, #marlboro, #winfield, #rothmans])!
 
     ---
     Utilities used by house property generators.
