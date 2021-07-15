@@ -120,6 +120,10 @@ class Riddle { street }
         --
         -- (This is an utility method on closures provided by the backtracking library,
         -- causing the system to backtrack if the implication doesn't hold.)
+        --
+        -- We assert the facts in the same order as their appear in the puzzle for clarity,
+        -- even though it would be more efficient to assert them as soon as possible:
+        -- that would allow rejecting invalid answer earlier.
         self tryOwner:
         { |owner|
           self tryColor:
