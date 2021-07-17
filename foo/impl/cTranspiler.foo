@@ -574,7 +574,7 @@ class CTranspiler { output selectorMap closureFunctions
         builtinVisitor output println: "#include \"foo.h\"".
         -- FIXME: visit only referenced builtins
         builtins
-            do: { |each| builtinVisitor forwardDeclarationFor: each value }.
+            do: { |each| builtinVisitor forwardDeclarationFor: each }.
         globals
             do: { |each|
                   builtinVisitor forwardDeclarationFor: each definition }.
@@ -604,7 +604,7 @@ class CTranspiler { output selectorMap closureFunctions
         -- FIXME: used builtins only
         builtins
             do: { |each|
-                  builtinVisitor visitClassDefinition: each value }.
+                  builtinVisitor visitClassDefinition: each }.
         output!
 
     method generateClosures
