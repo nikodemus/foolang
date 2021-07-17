@@ -21,6 +21,7 @@ import .transpiler.system_random
 import .transpiler.time
 import .ast.*
 import .utils.*
+import .environment.ModuleBinding
 
 define CEscapes
     { "'" -> "\\'",
@@ -402,9 +403,7 @@ class CTranspiler { output selectorMap closureFunctions
                           recordClasses: Dictionary new
                           generatedMethods: Dictionary new
                           env: env
-                          builtins: (Dictionary
-                                         keys: (builtins collect: #value)
-                                         values: builtins).
+                          builtins: builtins.
         visitor output println: "#include \"foo.h\"".
         -- KLUDGE: ensure selectors with references from C code
         AlwaysEmittedSelectors
@@ -574,8 +573,8 @@ class CTranspiler { output selectorMap closureFunctions
                                  builtins: builtins.
         builtinVisitor output println: "#include \"foo.h\"".
         -- FIXME: visit only referenced builtins
-        self compilerBuiltins
-            do: { |each| builtinVisitor forwardDeclarationFor: each }.
+        builtins
+            do: { |each| builtinVisitor forwardDeclarationFor: each value }.
         globals
             do: { |each|
                   builtinVisitor forwardDeclarationFor: each definition }.
@@ -584,13 +583,6 @@ class CTranspiler { output selectorMap closureFunctions
                   output print: closure declaration.
                   output println: ";" }.
         output!
-
-    method compilerBuiltins
-        -- Filter out module definitions
-        let builtinGlobals = env builtins values
-                          select: { |each| AstGlobal includes: each }.
-        (builtinGlobals collect: #definition)
-            select: { |each| CompilerBuiltin includes: each }!
 
     method generateBuiltins
         -- Debug println: "      #generateBuiltins:".
@@ -610,9 +602,9 @@ class CTranspiler { output selectorMap closureFunctions
                                  builtins: builtins.
         builtinVisitor output println: "#include \"foo.h\"".
         -- FIXME: used builtins only
-        self compilerBuiltins
+        builtins
             do: { |each|
-                  builtinVisitor visitClassDefinition: each }.
+                  builtinVisitor visitClassDefinition: each value }.
         output!
 
     method generateClosures
@@ -703,14 +695,12 @@ class CTranspiler { output selectorMap closureFunctions
                          ifFalse: { value classOf }.
         return env classes
             at: theClass
-            ifNone: { builtins
-                          at: theClass
-                          ifNone: {
-                              Debug println: "looking for: {value} ({theClass})".
-                              env classes keys
-                                  do: { |each|
-                                        Debug println: "- {each} ({each is theClass})" }.
-                              panic "No AstClass for: {value} ({theClass})\nenv classes: {env classes keys}\nbuiltins: {builtins keys}" } }!
+            ifNone: { self _findBuiltinFor: theClass
+                           _ifNone: { panic "No 'ast class' for: {value} ({theClass})\nenv classes: {env classes keys}\nbuiltins: {builtins}" } }!
+
+    method _findBuiltinFor: value _ifNone: block
+        builtins find: { |each| each value is value }
+                 ifNone: block!
 
     method _recordClassFromRecord: aRecord
         let keys = (Record keysIn: aRecord) sorted
