@@ -351,6 +351,11 @@ class CompilerDictionary { table }
         table put: value at: key!
 end
 
+class CompilerRecordClass { definition }
+    direct method new: theClass
+        self definition: theClass!
+end
+
 class CTranspiler { output selectorMap closureFunctions
                     constants variables tmpCounter
                     globals globalsCounter
@@ -886,8 +891,8 @@ class CTranspiler { output selectorMap closureFunctions
         let aRecordClass = recordClasses
             at: aRecord name name -- Selector don't play nice in bootstrap host dictionary!
             ifNonePut: { self _createRecordClass: aRecord }.
-        globals at: aRecordClass
-                ifNonePut: { aRecordClass }!
+        self declare: aRecordClass.
+        aRecordClass definition!
 
     method _createRecordClass: aRecord
         let name = String concat: ["Record_", aRecord name name replace: ":" with: "$"].
@@ -902,7 +907,8 @@ class CTranspiler { output selectorMap closureFunctions
                            env: env.
         theClass directMethods: [].
         theClass instanceMethods: [].
-        theClass!
+        CompilerRecordClass
+            new: theClass!
 
     method visitRecord: aRecord
         -- Tracer visitRecord: aRecord.
