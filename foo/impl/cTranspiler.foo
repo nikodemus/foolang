@@ -71,7 +71,7 @@ end
 define DatumClasses
     [Boolean, Character, Integer, Float]!
 
-class CompilerBuiltin { type value markFunction _id _interfaces
+class CompilerBuiltin { type value markFunction _interfaces
                         _directMethods _instanceMethods _allInterfaces
                         _global compilerInfo }
     is AstMethodHome
@@ -85,7 +85,6 @@ class CompilerBuiltin { type value markFunction _id _interfaces
                            type: type
                            value: value
                            markFunction: mark
-                           _id: False
                            _interfaces: List new
                            _directMethods: False
                            _instanceMethods: False
