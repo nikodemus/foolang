@@ -326,6 +326,31 @@ end
 define $CascadeReceiverTemp
     "<<<not in cascade>>>"!
 
+class CompilerDictionary { table }
+    direct method new
+        self table: Dictionary new!
+
+    method at: key ifNone: block
+        table at: key
+              ifNone: block!
+
+    method at: key ifNonePut: block
+        table at: key
+              ifNonePut: block!
+
+    method isEmpty
+        table isEmpty!
+
+    method doValues: block
+        table doValues: block!
+
+    method do: block
+        table do: block!
+
+    method put: value at: key
+        table put: value at: key!
+end
+
 class CTranspiler { output selectorMap closureFunctions
                     constants variables tmpCounter
                     globals globalsCounter
@@ -357,7 +382,7 @@ class CTranspiler { output selectorMap closureFunctions
                           constants: List new
                           variables: Dictionary new
                           tmpCounter: 0
-                          globals: Dictionary new
+                          globals: CompilerDictionary new
                           globalsCounter: Counter new
                           recordClasses: Dictionary new
                           generatedMethods: Dictionary new
@@ -470,10 +495,10 @@ class CTranspiler { output selectorMap closureFunctions
     method writeDefinitions
         -- Processing a definition can produce new global references. Visit
         -- each definition only once, finish with the full collection.
-        let allGlobals = Dictionary new.
+        let allGlobals = CompilerDictionary new.
         { globals isEmpty }
             whileFalse: { let old = globals.
-                          globals = Dictionary new.
+                          globals = CompilerDictionary new.
                           old do: { |global def|
                                     allGlobals at: global
                                                ifNone: { allGlobals put: def at: global.
