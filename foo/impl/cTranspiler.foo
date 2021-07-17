@@ -331,26 +331,33 @@ class CompilerDictionary { list }
         self list: List new!
 
     method at: global ifNone: block
-        (global compilerInfo contains: self)
+        (global compilerInfo contains: #inCompilerDictionary)
             ifTrue: { global definition }
             ifFalse: block!
 
     method ensure: global
-        (global compilerInfo contains: self)
-            ifFalse: { list add: global }!
+        (global compilerInfo contains: #inCompilerDictionary)
+            ifFalse: { global compilerInfo add: #inCompilerDictionary.
+                       list add: global }!
 
     method isEmpty
         list isEmpty!
 
-    method doValues: block
-        list do: { |each|
-                   block
-                       value: each definition }!
-
     method do: block
-        list do: { |each|
-                   block value: each
-                         value: each definition }!
+        list do: block!
+
+    method takeAll
+        let old = list.
+        list = List new.
+        old!
+
+    method restoreAll: all
+        all do: { |each|
+                  (each compilerInfo contains: #inCompilerDictionary)
+                      assert: "Restoring new things to CompilerDictionary!" }.
+        list isEmpty
+            assert: "CompilerDictionary not empty on restore.".
+        list = all!
 end
 
 class CompilerRecordClass { definition compilerInfo }
@@ -502,15 +509,15 @@ class CTranspiler { output selectorMap closureFunctions
     method writeDefinitions
         -- Processing a definition can produce new global references. Visit
         -- each definition only once, finish with the full collection.
-        let allGlobals = CompilerDictionary new.
+        let allGlobals = List new.
         { globals isEmpty }
-            whileFalse: { let old = globals.
-                          globals = CompilerDictionary new.
-                          old do: { |global def|
-                                    allGlobals at: global
-                                               ifNone: { allGlobals ensure: global.
-                                                         def visitBy: self } } }.
-        globals = allGlobals!
+            whileFalse: { globals takeAll
+                              do: { |global|
+                                    (global compilerInfo contains: #inAllGlobals)
+                                        ifFalse: { global compilerInfo add: #inAllGlobals.
+                                                   allGlobals add: global.
+                                                   global definition visitBy: self } } }.
+        globals restoreAll: allGlobals!
 
     method writeMain: main
         output println: "int main".
@@ -570,8 +577,8 @@ class CTranspiler { output selectorMap closureFunctions
         self compilerBuiltins
             do: { |each| builtinVisitor forwardDeclarationFor: each }.
         globals
-            doValues: { |each|
-                        builtinVisitor forwardDeclarationFor: each }.
+            do: { |each|
+                  builtinVisitor forwardDeclarationFor: each definition }.
         closureFunctions
             do: { |closure|
                   output print: closure declaration.
