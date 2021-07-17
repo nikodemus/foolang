@@ -326,29 +326,31 @@ end
 define $CascadeReceiverTemp
     "<<<not in cascade>>>"!
 
-class CompilerDictionary { table }
+class CompilerDictionary { list }
     direct method new
-        self table: Dictionary new!
+        self list: List new!
 
-    method at: key ifNone: block
-        table at: key
-              ifNone: block!
+    method at: global ifNone: block
+        (global compilerInfo contains: self)
+            ifTrue: { global definition }
+            ifFalse: block!
 
-    method at: key ifNonePut: block
-        table at: key
-              ifNonePut: block!
+    method ensure: global
+        (global compilerInfo contains: self)
+            ifFalse: { list add: global }!
 
     method isEmpty
-        table isEmpty!
+        list isEmpty!
 
     method doValues: block
-        table doValues: block!
+        list do: { |each|
+                   block
+                       value: each definition }!
 
     method do: block
-        table do: block!
-
-    method put: value at: key
-        table put: value at: key!
+        list do: { |each|
+                   block value: each
+                         value: each definition }!
 end
 
 class CompilerRecordClass { definition }
@@ -441,8 +443,7 @@ class CTranspiler { output selectorMap closureFunctions
         "ctx->frame[{tmp}]"!
 
     method declare: global
-        globals at: global
-                ifNonePut: { global definition }!
+        globals ensure: global!
 
     method declareDynamic: var
         self declare: var.
@@ -506,7 +507,7 @@ class CTranspiler { output selectorMap closureFunctions
                           globals = CompilerDictionary new.
                           old do: { |global def|
                                     allGlobals at: global
-                                               ifNone: { allGlobals put: def at: global.
+                                               ifNone: { allGlobals ensure: global.
                                                          def visitBy: self } } }.
         globals = allGlobals!
 
