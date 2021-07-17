@@ -353,9 +353,10 @@ class CompilerDictionary { list }
                          value: each definition }!
 end
 
-class CompilerRecordClass { definition }
+class CompilerRecordClass { definition compilerInfo }
     direct method new: theClass
-        self definition: theClass!
+        self definition: theClass
+             compilerInfo: List new!
 end
 
 class CTranspiler { output selectorMap closureFunctions

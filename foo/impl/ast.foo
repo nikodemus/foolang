@@ -240,7 +240,7 @@ interface AstDefinition
         self!
 end
 
-class AstDefine { global body frameSize compilerInfo }
+class AstDefine { global body frameSize }
     is AstDefinition
 
     direct method name: name
@@ -250,13 +250,15 @@ class AstDefine { global body frameSize compilerInfo }
         let global = env global: name.
         let theDefine = self global: global
                              body: body
-                             frameSize: frameSize
-                             compilerInfo: List new.
+                             frameSize: frameSize.
         global define: theDefine.
         theDefine!
 
     method name
         global name!
+
+    method compilerInfo
+        global compilerInfo!
 
     method isDynamic
         global isDynamic!
@@ -277,7 +279,7 @@ class AstDefine { global body frameSize compilerInfo }
 end
 
 class AstInterface { name _interfaces _directMethods _instanceMethods _allInterfaces
-                     global _env compilerInfo }
+                     global _env }
     is AstDefinition
     is AstMethodHome
 
@@ -292,8 +294,7 @@ class AstInterface { name _interfaces _directMethods _instanceMethods _allInterf
                                _instanceMethods: False
                                _allInterfaces: False
                                global: global
-                               _env: env
-                               compilerInfo: List new.
+                               _env: env.
         global define: theInterface.
         theInterface!
 
@@ -308,6 +309,9 @@ class AstInterface { name _interfaces _directMethods _instanceMethods _allInterf
           _env classes at: result put: self.
           global value: result }
         finally: { _env = False }!
+
+    method compilerInfo
+        global compilerInfo!
 
     method _interfaces
         _interfaces!
@@ -346,8 +350,7 @@ end
 
 class AstClass { name superclass _slots
                  _interfaces _directMethods _instanceMethods
-                 _allInterfaces global _env
-                 compilerInfo }
+                 _allInterfaces global _env }
     is AstDefinition
     is AstMethodHome
 
@@ -365,8 +368,7 @@ class AstClass { name superclass _slots
                            _instanceMethods: False
                            _allInterfaces: False
                            global: global
-                           _env: env
-                           compilerInfo: List new.
+                           _env: env.
         global define: theClass.
         theClass!
 
@@ -384,10 +386,12 @@ class AstClass { name superclass _slots
                            _instanceMethods: False
                            _allInterfaces: False
                            global: global
-                           _env: env
-                           compilerInfo: List new.
+                           _env: env.
         global define: theClass.
         theClass!
+
+    method compilerInfo
+        global compilerInfo!
 
     method ifSuperclass: then ifNot: else
         superclass is False
@@ -698,7 +702,8 @@ interface AstGlobalVariable
             _value: False
             _state: _Unevaluated
             _definition: False
-            sources: List new!
+            sources: List new
+            compilerInfo: List new!
 
     direct method name: name definition: definition
         self
@@ -707,7 +712,8 @@ interface AstGlobalVariable
             _value: False
             _state: _Unevaluated
             _definition: definition
-            sources: List new!
+            sources: List new
+            compilerInfo: List new!
 
     method isBuiltin
         self isDefined
@@ -791,7 +797,8 @@ class AstGlobal { name::String
                   _value
                   _state
                   _definition
-                  sources }
+                  sources
+                  compilerInfo }
     is AstGlobalVariable
 
     method isDynamic
@@ -868,7 +875,8 @@ class AstDynamic { name::String
                    _value
                    _state
                    _definition
-                   sources }
+                   sources
+                   compilerInfo }
     is AstGlobalVariable
 
     method isDynamic
