@@ -185,7 +185,7 @@ interface AstMethodHome
         let dict = self _ownDirectMethods.
         self _collectFromInterfaces: #directMethods
             _into: dict.
-        dict values!
+        dict values sort: #selector ascending!
 
     ---
     KLUDGE & FIXME: does not include reader methods, since bootstrap host
@@ -206,7 +206,7 @@ interface AstMethodHome
              _into: dict.
         self _collectFromInterfaces: #instanceMethods
             _into: dict.
-        dict values!
+        dict values sort: #selector ascending!
 
     method _collectFromInterfaces: selector _into: dict
         self interfaceDefinitions :: Ordered
