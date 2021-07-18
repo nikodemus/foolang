@@ -322,6 +322,36 @@ interface Ordered
     method reversed
         self copy reverse!
 
+    method binarySearch: key
+        self binarySearch: key
+             ifNone: { return False }!
+
+    method binarySearch: key ifNone: block
+        let first = 1.
+        let last = self size.
+        { first <= last }
+            whileTrue: { let middle = (last + first) / 2.
+                         let value = self at: middle.
+                         key == value
+                             ifTrue: { return middle }.
+                         key < value
+                             ifTrue: { last = middle - 1}
+                             ifFalse: { first = middle + 1 } }.
+        block value!
+
+    method binarySearch: key by: block ifNone: noneBlock
+        let first = 1.
+        let last = self size.
+        { first <= last }
+            whileTrue: { let middle = (last + first) / 2.
+                         let value = block value: (self at: middle).
+                         key == value
+                             ifTrue: { return middle }.
+                         key < value
+                             ifTrue: { last = middle - 1}
+                             ifFalse: { first = middle + 1 } }.
+        noneBlock value!
+
     method sort
         self sort: { |a b| a < b }!
 
