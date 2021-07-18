@@ -721,23 +721,93 @@ class ImportToken { precedence string first last }
             source: source!
 end
 
-class SyntaxTable { where tokens }
+class TokenDictionary { entries }
+    -- This class is a KLUGDE for two reasons:
+    --
+    -- 1. We want to have defined dictionaries in consistent order
+    --    to generate consistent code from bootstrap host
+    --    and self compiler.
+    --
+    -- 2. Target dictionaries have a linear search ATM, which makes
+    --    the self-hosted parser really slow.
+
+    direct method from: aDictionary
+        let entries = List withCapacity: aDictionary size.
+        aDictionary
+            do: { |key value|
+                  entries add: { key: key, value: value } }.
+        entries sort: #key ascending.
+        self entries: entries!
+
+    method size
+        entries size!
+
+    method do: block
+        entries do: { |each|
+                      block cull: each key
+                            value: each value }!
+
+    method merged: aDictionary
+        let new = TokenDictionary entries: (entries copy).
+        let added = List new.
+        aDictionary
+            do: { |key value|
+                  let entry = { key: key, value: value }.
+                  let index = new _index: key
+                                  _ifNone: { added add: entry.
+                                             False }.
+                  index is False
+                      ifFalse: { entries put: entry at: index } }.
+        new entries addAll: added.
+        new entries sort: #key ascending.
+        new!
+
+    method _index: key _ifNone: block
+        let index = entries
+                        binarySearch: key
+                        by: #key
+                        ifNone: block.
+        index!
+
+    method at: key ifNone: block
+        let index = self _index: key
+                         _ifNone: { return block value }.
+         (entries at: index) value!
+
+    method displayString
+        "#<TokenDictionary {entries collect: #key}>"!
+end
+
+class SyntaxTable { where _tokens }
     is Object
+
+    direct method where: where tokens: tokens
+        self where: where
+             _tokens: (TokenDictionary from: tokens)!
+
+    method tokens
+        _tokens!
 
     method where: newWhere tokens: newTokens
         SyntaxTable
             where: newWhere
-            tokens: (tokens copy merge: newTokens)!
+            _tokens: (_tokens merged: newTokens)!
 
+    method displayString
+        "#<SyntaxTable {where}>"!
 end
 
 -- FIXME: call it binding power, it's more accurate
 class SyntaxEntry { tokenClass precedence }
     is Object
+
+    method displayString
+        "#<SyntaxEntry {tokenClass} ({precedence})>"!
 end
 
 class SigilEntry { precedence }
     is Object
+
     method tokenClass
         TokenSigil!
 end
