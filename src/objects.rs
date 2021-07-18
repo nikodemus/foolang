@@ -1011,6 +1011,13 @@ impl Object {
         }
     }
 
+    pub fn is_integer(&self) -> bool {
+        match self.datum {
+            Datum::Integer(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn as_i64(&self, ctx: &str) -> Result<i64, Unwind> {
         match self.datum {
             Datum::Integer(i) => Ok(i),
@@ -1310,7 +1317,12 @@ impl Object {
     // SEND
 
     pub fn send(&self, selector: &str, args: &[Object], env: &Env) -> Eval {
-        if false && selector != "typecheck:" && !self.is_closure() && !self.is_boolean() {
+        if false
+            && selector != "typecheck:"
+            && !self.is_closure()
+            && !self.is_boolean()
+            && !self.is_integer()
+        {
             let s = format!("send: {} #{} {:?}", self, selector, args);
             println!("{}", &s[0..std::cmp::min(80, s.len())]);
         }
