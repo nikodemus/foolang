@@ -729,6 +729,13 @@ class CTranspiler { output selectorMap closureFunctions
                             declaration: "struct FooArray {cname};",
                             definition: (self _arrayDefinition: value
                                               _called: cname) } }.
+        (Dictionary includes: value)
+            ifTrue: { return
+                          { value: value,
+                            cname: cname,
+                            declaration: "struct FooArray {cname};",
+                            definition: (self _dictionaryDefinition: value
+                                              _called: cname) } }.
         (Record includes: value)
             ifTrue: { return
                           { value: value,
@@ -764,6 +771,32 @@ class CTranspiler { output selectorMap closureFunctions
                     out println: " }".
                     out println: "};" }!
 
+    -- Dictionary is special cases because it is builtin
+    -- on bootstrap host.
+    method _dictionaryDefinition: value _called: cname
+        -- Tracer _instanceDefinition: value _called: cname
+        let theClass = self _astClassOf: value.
+        self declare: theClass.
+        let slots = theClass definition slots
+                        collect: { |each| each name toSelector }
+                        as: Array.
+        slots == [#size, #_keys, #_values]
+            assert: "Dictionary layout has changed! Got: {slots}".
+        StringOutput
+            with: { |out|
+                    out println: "struct FooArray {cname} =".
+                    out println: "\{".
+                    out println: "    .header = \{ .allocation = STATIC },".
+                    out println: "    .size = {slots size},".
+                    out print: "    .data = \{ ".
+                    [#size, #keys, #values]
+                        do: { |each|
+                              self _writeValue: (each sendTo: value)
+                                   _to: out.
+                              out print: "," }.
+                    out println: " }".
+                    out println: "};" }!
+
     method _instanceDefinition: value _called: cname
         -- Tracer _instanceDefinition: value _called: cname
         let theClass = self _astClassOf: value.
@@ -778,8 +811,7 @@ class CTranspiler { output selectorMap closureFunctions
                     out print: "    .data = \{ ".
                     slots
                         do: { |each|
-                              self _writeValue: ((Selector intern: each name)
-                                                     sendTo: value)
+                              self _writeValue: (each at: value)
                                    _to: out.
                               out print: "," }.
                     out println: " }".
