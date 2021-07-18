@@ -1,5 +1,5 @@
 import .iterable.Iterator
-import .iterable.Iterable
+import .ordered.Ordered
 
 class IntervalIterator { from to by }
     is Iterator
@@ -16,7 +16,13 @@ class IntervalIterator { from to by }
 end
 
 class Interval { from to by }
-    is Iterable
+    is Ordered
+
+    method at: index
+        from + by * (index - 1)!
+
+    method size
+        to - from + 1!
 
     method isEquivalent: other
         from == other from
