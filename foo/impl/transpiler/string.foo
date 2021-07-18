@@ -38,6 +38,27 @@ if (!memcmp(argBytes->data, selfBytes->data, argBytes->size)) \{
     return FooGlobal_False;
 }"},
 
+    #==
+        -> {signature: [Any], vars: 0,
+            body: "if (ctx->frame[0].class != &FooClass_String) \{
+                       return FOO_BOOLEAN(false);
+                   }
+                   struct Foo arg = ctx->frame[0];
+                   struct Foo self = ctx->receiver;
+                   if (arg.datum.ptr == self.datum.ptr) \{
+                       return FOO_BOOLEAN(true);
+                   }
+                   struct FooBytes* argBytes = PTR(FooBytes, arg.datum);
+                   struct FooBytes* selfBytes = PTR(FooBytes, self.datum);
+                   if (argBytes->size != selfBytes->size) \{
+                       return FOO_BOOLEAN(false);
+                   }
+                   if (!memcmp(argBytes->data, selfBytes->data, argBytes->size)) \{
+                       return FOO_BOOLEAN(true);
+                   } else \{
+                       return FOO_BOOLEAN(false);
+                   }"},
+
     #append:
         -> {signature: [String], vars: 0,
             body: "struct FooBytes* b1 = PTR(FooBytes, ctx->receiver.datum);
