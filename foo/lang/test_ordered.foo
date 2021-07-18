@@ -1,7 +1,37 @@
+import lib.assert.Assert
+
 class TestOrdered { assert }
     is TestSuite
     direct method runTests: assert
         (self assert: assert) runTests!
+
+    method binarySearchCaseFor: index in: size
+        (1 <= index and: index <= size)
+            ifTrue: { return { search: index * 100,
+                               in: (1 to: size) asArray * 100,
+                               finds: index } }
+            ifFalse: { return { search: index * 100,
+                                in: (1 to: size) asArray * 100,
+                                finds: False } }!
+
+    method binarySearchCases
+        let cases = List new.
+        cases add: { search: 42, in: [], finds: False }.
+        1 to: 5
+          do: { |size|
+                0 to: size+1
+                  do: { |index|
+                        cases add: (self binarySearchCaseFor: index
+                                         in: size) } }.
+        cases!
+
+    method test_binarySearch
+        assert forAll: self binarySearchCases
+               that: { |case|
+                       Output debug println: "test: {case}".
+                       case finds is (case in
+                                          binarySearch: case search) }
+               testing: "Ordered#binarySearch:"!
 
     method test_position_vs_positionFromRight
         let cases = [[ "123123", 2, 5 ]].
@@ -51,4 +81,11 @@ class TestOrdered { assert }
                        let notRejected = case first reject: case second.
                        notRejected == case third }
                testing: "Ordered#selectBy:"!
+end
+
+class Main { assert system }
+    direct method run: command in: system
+        let assert = Assert reportingTo: system output.
+        TestOrdered runTests: assert in: system.
+        system exit: assert exitCode!
 end
