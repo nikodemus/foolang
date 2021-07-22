@@ -1243,7 +1243,7 @@ static size_t allocation_count = 0;
 // Intentionally low threshold so that GC gets exercised even for trivial tests.
 // const size_t gc_threshold = 1024;
 const size_t gc_threshold = 1024 * 1024 * 64;
-bool gc_verbose = false;
+bool gc_verbose = true;
 
 void foo_sweep() {
   struct FooAlloc* head = allocations;
