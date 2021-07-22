@@ -1284,6 +1284,7 @@ void foo_sweep() {
               allocation_bytes, allocation_count);
       fprintf(stderr, "** %zu bytes in %zu objects allocated since last gc.\n",
               allocation_bytes_since_gc, allocation_count_since_gc);
+      fflush(stderr);
     }
 
     assert(live_count == allocation_count);
