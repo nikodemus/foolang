@@ -24,6 +24,8 @@ class Compiler { source target system prelude stackSize }
                     transpile: source
                     in: (Environment modules: modules)
                     with: prelude.
+        system output println: "-- transpile ok".
+
         let files = system files / "c".
         (files / "generated_selectors.h")
             forWrite truncateExisting
@@ -43,6 +45,7 @@ class Compiler { source target system prelude stackSize }
         (files / "generated_builtins.c")
             forWrite truncateExisting
                 createOrOpen: { |f| f print: c builtins }.
+        system output println: "-- generated sources written ok".
 
         target ifExists: #deleteFile.
 
@@ -58,7 +61,10 @@ class Compiler { source target system prelude stackSize }
                                    out print: " c/main.c".
                                    out print: " ext/dtoa.c".
                                    out print: self systemC }.
+
+        system output println: "-- running build command".
         let build = system command: buildCmd.
+        system output println: "-- build command complete".
         build ok
             ifFalse: { Error raise: "External build failed!
 Command: {buildCmd}
