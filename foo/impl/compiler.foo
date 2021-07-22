@@ -91,9 +91,7 @@ Command: {buildCmd}
     method sanitizerOptions
         -- KLUDGE: Windows CI host linker cannot find the sanitizer libraries,
         -- so we conditionalize on the environment and host.
-        (system isUnix or: (system getenv: "GITHUB_ACTION") is False)
-            ifTrue: { " -fsanitize=address -fsanitize=undefined" }
-            ifFalse: { "" }!
+        ""!
 
     method systemC
         system isWindows
