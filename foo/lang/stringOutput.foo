@@ -16,7 +16,7 @@ class Chain { _first _last size }
     method add: elt
         let n = _last at: 1.
         ((n + 2) is (_last size))
-            ifTrue: { let new = Array new: (n * 2).
+            ifTrue: { let new = Array new: ((n * 2) min: 128).
                       _last put: new at: _last size.
                       new put: 0 at: 1.
                       new put: False at: new size.
