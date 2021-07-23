@@ -12,6 +12,23 @@
 
 #include "system.h"
 
+void system_print_memstats(void) {
+#ifdef FOO_MACOS
+  return;
+#else
+  FILE* f = fopen("/proc/self/statm", "r");
+  if (!f) {
+    fprintf(stderr, "Could not open /proc/self/statm\n");
+  } else {
+    int c;
+    while (EOF != (c = fgetc(f))) {
+      fputc(c, stderr);
+    }
+    fflush(stderr);
+  }
+#endif
+}
+
 bool system_is_unix(void) {
   return true;
 }

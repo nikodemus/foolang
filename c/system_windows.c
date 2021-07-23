@@ -12,6 +12,10 @@
 
 #include "system.h"
 
+void system_print_memstats(void) {
+  // FIXME
+}
+
 bool system_is_unix(void) {
   return false;
 }
