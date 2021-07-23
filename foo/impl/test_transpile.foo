@@ -847,6 +847,34 @@ end
 class TestTranspileGlobals { assert system }
     is TranspilerTest
 
+    method test_Define_global_with_private_slots
+        self transpile: "class HasPrivates \{ _private1 _private2 }
+                             direct method new
+                                 self _private1: \"1\"
+                                      _private2: \"2\"!
+                             method toString
+                                 \"a = \{_private1}, b = \{_private2\}\"!
+                         end
+                         define ThisHasPrivates HasPrivates new!
+                         class Main \{\}
+                             direct method run: command in: system
+                                 system output
+                                     writeString: ThisHasPrivates toString!
+                         end"
+            expect: "a = 1, b = 2"!
+
+    method test_Define_global_dictionary
+        self transpile: "import lang.dictionary_target.Dictionary
+                         define Dict \{ \"a\" -> \"A\", \"b\" -> \"B\" \}!
+                         class Main \{\}
+                             direct method run: command in: system
+                                 system output
+                                     writeString: (Dict at: \"a\").
+                                 system output
+                                     writeString: (Dict at: \"b\")!
+                         end"
+            expect: "AB"!
+
     method test_Define_global_interface
         self transpile: "import lang.any.Any
                          define X Any!
