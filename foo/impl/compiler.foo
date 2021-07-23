@@ -74,19 +74,20 @@ Command: {buildCmd}
 {build stderr}" }!
 
     method linkerOptions
+        let base = " -lm".
         stackSize is False
-            ifTrue: { return "" }.
+            ifTrue: { return base }.
         system isWindows
-            => { return " -Wl,/STACK:{stackSize}" }.
+            => { return "{base} -Wl,/STACK:{stackSize}" }.
         system isMacOS
             => { -- MacOS linker defaults to 8MB the manpage says,
                  -- setting the option requires giving the number
                  -- as hexadecimal.
                  stackSize <= 0x800000
                      assert: "Setting stacksize > 8MiB for MacOS not implemented".
-                 return "" }.
+                 return base }.
         -- GNU linker as fallback
-        " -Wl,-z,stack-size={stackSize}"!
+        "{base} -Wl,-z,stack-size={stackSize}"!
 
     method sanitizerOptions
         -- KLUDGE: Windows CI host linker cannot find the sanitizer libraries,
