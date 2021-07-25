@@ -4,7 +4,7 @@ define DirectMethods
               body: "int64_t size = ctx->frame[1].datum.int64;
 // FIXME: error instead!
 assert(size >= 0);
-struct FooArray* new = FooArray_alloc(size);
+struct FooArray* new = FooArray_alloc(ctx, size);
 struct Foo value = ctx->frame[2];
 for (int64_t i = 0; i < size; i++) \{
     new->data[i] = value;
@@ -15,13 +15,13 @@ return (struct Foo)\{ .class = &FooClass_Array, .datum = \{ .ptr = new } };"},
               body: "size_t size = ctx->frame[0].datum.int64;
 // FIXME: error instead!
 assert(size >= 0);
-return foo_Array_new(size);"},
+return foo_Array_new(ctx, size);"},
       #new:value:
           -> {signature: [Integer, Any], vars: 0,
               body: "int64_t size = ctx->frame[0].datum.int64;
 // FIXME: error instead!
 assert(size >= 0);
-struct FooArray* new = FooArray_alloc(size);
+struct FooArray* new = FooArray_alloc(ctx, size);
 struct Foo value = ctx->frame[1];
 for (int64_t i = 0; i < size; i++) \{
     new->data[i] = value;
@@ -58,7 +58,7 @@ return array->data[i] = ctx->frame[1];"},
       #copy
           -> {signature: [], vars: 0,
               body: "struct FooArray* self = PTR(FooArray, ctx->receiver.datum);
-struct FooArray* new = FooArray_alloc(self->size);
+struct FooArray* new = FooArray_alloc(ctx, self->size);
 for (size_t i = 0; i < self->size; i++) \{
     new->data[i] = self->data[i];
 }
@@ -85,7 +85,7 @@ struct FooArray* self = PTR(FooArray, ctx->receiver.datum);
 // FIXME: errors instead!
 assert(start <= end);
 assert(end <= self->size);
-struct FooArray* new = FooArray_alloc((size_t)(end-start));
+struct FooArray* new = FooArray_alloc(ctx, (size_t)(end-start));
 size_t offset = 0;
 for (size_t i = start; i < end;) \{
     new->data[offset++] = self->data[i++];

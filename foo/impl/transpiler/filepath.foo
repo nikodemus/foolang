@@ -11,7 +11,7 @@ define InstanceMethods {
                     foo_panicf(ctx, \"Invalid pathname in FilePath#/\");
                 if (b1->size == 0)
                     return (struct Foo)\{ .class = &FooClass_FilePath, .datum = \{ .ptr = b2 } };
-                struct FooBytes* b3 = FooBytes_alloc(b1->size + b2->size + 1);
+                struct FooBytes* b3 = FooBytes_alloc(ctx, b1->size + b2->size + 1);
                 memcpy(b3->data, b1->data, b1->size);
                 b3->data[b1->size] = '/';
                 memcpy(b3->data + b1->size + 1, b2->data, b2->size);
@@ -26,7 +26,7 @@ define InstanceMethods {
                     0 == sys_access((char*)PTR(FooBytes, ctx->receiver.datum)->data, 0));" },
     #file
     -> { signature: [], vars: 0,
-         body: "return foo_File_new(PTR(FooBytes, ctx->receiver.datum), 0);" },
+         body: "return foo_File_new(ctx, PTR(FooBytes, ctx->receiver.datum), 0);" },
     #isDirectory
     -> { signature: [], vars: 0,
          body: "struct sys_stat s;

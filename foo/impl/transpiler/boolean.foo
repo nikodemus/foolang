@@ -30,7 +30,7 @@ define InstanceMethods
 }" },
       #toString
           -> { signature: [], vars: 0,
-               body: "return foo_String_new_from(ctx->receiver.datum.boolean ? \"True\" : \"False\");" },
+               body: "return foo_String_new_from(ctx, ctx->receiver.datum.boolean ? \"True\" : \"False\");" },
       #debug
           -> { signature: [], vars: 0,
                body: "printf(\"#<Boolean %s>\", ctx->receiver.datum.boolean ? \"True\" : \"False\");

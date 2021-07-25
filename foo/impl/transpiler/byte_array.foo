@@ -3,7 +3,7 @@ define DirectMethods {
         -> {signature: [Integer], vars: 0,
             body: "int64_t isize = ctx->frame[0].datum.int64;
 assert(isize >= 0);
-struct FooBytes* b = FooBytes_alloc((size_t)isize);
+struct FooBytes* b = FooBytes_alloc(ctx, (size_t)isize);
 return (struct Foo)\{ .class = &FooClass_ByteArray, .datum = \{ .ptr = b } };"}
 }!
 

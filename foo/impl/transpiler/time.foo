@@ -2,7 +2,8 @@ define DirectMethods {
     #user:system:real:
     -> { signature: [Float, Float, Float], vars: 0,
          body: "struct FooProcessTimes* times
-                    = FooProcessTimes_new(ctx->frame[0].datum.float64,
+                    = FooProcessTimes_new(ctx,
+                                          ctx->frame[0].datum.float64,
                                           ctx->frame[1].datum.float64,
                                           ctx->frame[2].datum.float64);
                 return FOO_INSTANCE(Time, times);" }

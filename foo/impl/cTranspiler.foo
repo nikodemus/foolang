@@ -523,7 +523,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "    (int argc, char** argv)".
         output println: "\{".
         output println: "    fooinit();".
-        output println: "    struct FooArray* vars = FooArray_alloc({variables size});".
+        output println: "    struct FooArray* vars = FooArray_alloc(NULL, {variables size});".
         variables
             do: { |name offset|
                   let var = {name: name}.
@@ -531,9 +531,9 @@ class CTranspiler { output selectorMap closureFunctions
                   output print: (Name mangleDynamic: var).
                   output println: ";" }.
         output println: "    struct FooContext* ctx = foo_context_new_main(vars);".
-        output println: "    struct FooArray* array = FooArray_alloc(argc-1);".
+        output println: "    struct FooArray* array = FooArray_alloc(NULL, argc-1);".
         output println: "    for (size_t i = 0; i < array->size; i++)".
-        output println: "        array->data[i] = foo_String_new_from(argv[i+1]);".
+        output println: "        array->data[i] = foo_String_new_from(NULL, argv[i+1]);".
         output println: "    struct Foo args = \{ .class = &FooClass_Array, .datum = \{ .ptr = array } };".
         output println: "    struct Foo system = \{ .class = &FooClass_System, .datum = \{ .ptr = NULL } };".
         output println: "    foo_send(ctx, &{Name mangleSelector: #run:in:}, {self mangleGlobal: main}, 2, args, system);".
@@ -1106,7 +1106,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "\{".
         output println: "    (void)method;".
         output println: "    (void)ctx;".
-        output println: "    struct FooArray* new = FooInstance_alloc({aClass slots size});".
+        output println: "    struct FooArray* new = FooInstance_alloc(ctx, {aClass slots size});".
         aClass slots
             doWithIndex: { |each index|
                            let type = each type. -- FIXME: visit the type
@@ -1458,7 +1458,7 @@ class CTranspiler { output selectorMap closureFunctions
         -- Tracer trace: #visitArray:.
         let entries = anArray entries.
         let array = self addTemp.
-        output print: "(\{ ctx->frame[{array}] = foo_Array_alloc({entries size}); ".
+        output print: "(\{ ctx->frame[{array}] = foo_Array_alloc(ctx, {entries size}); ".
         entries isEmpty
             ifFalse: { let p = self genTemp: "arrayPtr".
                        output print: "struct FooArray* {p} = PTR(FooArray, ctx->frame[{array}].datum);".

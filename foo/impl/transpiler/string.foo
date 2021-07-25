@@ -10,7 +10,7 @@ for (size_t i = 0; i < content->size; i++) \{
     size += s->size;
 }
 size_t offset = 0;
-struct FooBytes* string = FooBytes_alloc(size);
+struct FooBytes* string = FooBytes_alloc(ctx, size);
 for (size_t i = 0; i < content->size; i++) \{
     struct FooBytes* s = PTR(FooBytes, content->data[i].datum);
     memcpy(string->data+offset, s->data, s->size);
@@ -63,7 +63,7 @@ if (!memcmp(argBytes->data, selfBytes->data, argBytes->size)) \{
         -> {signature: [String], vars: 0,
             body: "struct FooBytes* b1 = PTR(FooBytes, ctx->receiver.datum);
 struct FooBytes* b2 = PTR(FooBytes, ctx->frame[0].datum);
-struct FooBytes* b3 = FooBytes_alloc(b1->size + b2->size);
+struct FooBytes* b3 = FooBytes_alloc(ctx, b1->size + b2->size);
 memcpy(b3->data, b1->data, b1->size);
 memcpy(b3->data+b1->size, b2->data, b2->size);
 return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = b3 } };"},
@@ -78,7 +78,7 @@ return ctx->receiver;"},
             body: "struct Foo block = ctx->frame[0];
 struct FooBytes* s = PTR(FooBytes, ctx->receiver.datum);
 for (size_t i = 0; i < s->size; i++) \{
-    ctx->frame[1] = foo_String_new(1, (char*)s->data+i);
+    ctx->frame[1] = foo_String_new(ctx, 1, (char*)s->data+i);
     foo_send(ctx, &FOO_value_, block, 1, ctx->frame[1]);
 }
 return ctx->receiver;"},
@@ -90,7 +90,7 @@ int64_t end = ctx->frame[1].datum.int64;
 // FIXME: errors instead!
 assert(start <= end);
 assert(end <= PTR(FooBytes, ctx->receiver.datum)->size);
-return foo_String_new((size_t)(end-start), (char*)PTR(FooBytes, ctx->receiver.datum)->data+start);"},
+return foo_String_new(ctx, (size_t)(end-start), (char*)PTR(FooBytes, ctx->receiver.datum)->data+start);"},
 
     #codeAt:
         -> {signature: [Integer], vars: 0,

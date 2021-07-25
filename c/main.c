@@ -65,8 +65,7 @@ size_t min_size(size_t a, size_t b) {
 #define FOO_XXX(...) { fprintf(stderr, "XXX: "); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); fflush(stderr); }
 
 struct FooContext;
-void* foo_alloc(size_t bytes);
-void foo_maybe_gc(struct FooContext* ctx);
+void* foo_alloc(struct FooContext*, size_t bytes);
 
 struct Foo foo_panic(struct FooContext* ctx, struct Foo message) __attribute__((noreturn));
 struct Foo foo_panicf(struct FooContext* ctx, const char* fmt, ...) __attribute__((noreturn));
@@ -222,9 +221,9 @@ struct FooContext {
   struct Foo frame[];
 };
 
-struct FooContext* foo_alloc_context(size_t size) {
+struct FooContext* foo_alloc_context(struct FooContext* sender, size_t size) {
   struct FooContext* ctx
-    = foo_alloc(sizeof(struct FooContext) + size * sizeof(struct Foo));
+    = foo_alloc(sender, sizeof(struct FooContext) + size * sizeof(struct Foo));
   ctx->size = size;
   return ctx;
 }
@@ -301,17 +300,17 @@ struct FooClass FooClass_Integer;
 struct FooClass FooClass_Selector;
 struct FooClass FooClass_String;
 struct FooClassList FooClassInheritance_Class;
-struct FooArray* FooArray_alloc(size_t size);
+struct FooArray* FooArray_alloc(struct FooContext* sender, size_t size);
 struct FooArray* FooArray_instance(size_t size);
 struct Foo foo_Float_new(double f);
-struct Foo foo_String_new(size_t len, const char* s);
+struct Foo FooString_new(size_t len, const char* s);
 struct Foo foo_class_typecheck(struct FooContext* ctx, struct FooClass* class, struct Foo obj);
 struct Foo FooGlobal_True;
 struct Foo FooGlobal_False;
 struct FooContext* foo_context_new_closure(struct FooContext* ctx);
 
 struct FooContext* foo_context_new_main(struct FooArray* vars) {
-  struct FooContext* context = foo_alloc_context(0);
+  struct FooContext* context = foo_alloc_context(NULL, 0);
   context->type = ROOT_CONTEXT;
   context->depth = 0;
   context->method = NULL;
@@ -324,7 +323,7 @@ struct FooContext* foo_context_new_main(struct FooArray* vars) {
 
 struct FooContext* foo_context_new_closure(struct FooContext* sender) {
   struct FooClosure* closure = sender->receiver.datum.ptr;
-  struct FooContext* context = foo_alloc_context(closure->frameSize);
+  struct FooContext* context = foo_alloc_context(sender, closure->frameSize);
   context->type = CLOSURE_CONTEXT;
   context->depth = sender->depth + 1;
   context->method = NULL;
@@ -340,7 +339,7 @@ struct FooContext* foo_context_new_closure(struct FooContext* sender) {
 struct FooContext* foo_context_new_closure_array(struct FooContext* sender,
                                                  struct FooArray* array) {
   struct FooClosure* closure = sender->receiver.datum.ptr;
-  struct FooContext* context = foo_alloc_context(closure->frameSize);
+  struct FooContext* context = foo_alloc_context(sender, closure->frameSize);
   context->type = CLOSURE_CONTEXT;
   context->depth = sender->depth + 1;
   context->method = NULL;
@@ -354,15 +353,15 @@ struct FooContext* foo_context_new_closure_array(struct FooContext* sender,
   return context;
 }
 
-struct FooContext* foo_context_new_unwind(struct FooContext* ctx, struct FooClosure* closure) {
-  struct FooContext* context = foo_alloc_context(closure->frameSize);
+struct FooContext* foo_context_new_unwind(struct FooContext* sender, struct FooClosure* closure) {
+  struct FooContext* context = foo_alloc_context(sender, closure->frameSize);
   context->type = UNWIND_CONTEXT;
-  context->depth = ctx->depth + 1;
+  context->depth = sender->depth + 1;
   context->method = NULL;
   context->receiver = closure->context->receiver;
-  context->sender = ctx;
+  context->sender = sender;
   context->outer_context = closure->context;
-  context->vars = ctx->vars;
+  context->vars = sender->vars;
   assert(closure->argCount == 0);
   return context;
 }
@@ -398,10 +397,9 @@ struct FooClassList {
   void* data[];
 };
 
-struct FooClassList* foo_ClassList_alloc(size_t size) {
+struct FooClassList* FooClassList_alloc(struct FooContext* sender, size_t size) {
   struct FooClassList* list
-    = foo_alloc(sizeof(struct FooClassList)
-                + size * sizeof(void*));
+    = foo_alloc(sender, sizeof(struct FooClassList) + size * sizeof(void*));
   list->header.allocation = HEAP;
   list->size = size;
   return list;
@@ -425,7 +423,7 @@ struct FooLayout TheClassLayout = {
   .size = 0
 };
 
-struct FooLayout* foo_FooLayout_new(size_t size) {
+struct FooLayout* foo_Layout_new(struct FooContext* sender, size_t size) {
   // Empty layout can be shared, everything else needs to the unique: otherwise
   // having layout to one class would allow direct access to instance variables
   // of another class instance with shape.
@@ -434,7 +432,7 @@ struct FooLayout* foo_FooLayout_new(size_t size) {
   // to access it.)
   if (size == 0)
     return &TheEmptyLayout;
-  struct FooLayout* layout = foo_alloc(sizeof(struct FooLayout));
+  struct FooLayout* layout = foo_alloc(sender, sizeof(struct FooLayout));
   layout->header.allocation = HEAP;
   layout->mark = foo_mark_array;
   layout->size = size;
@@ -463,7 +461,7 @@ struct Foo foo_class_new(struct FooContext* ctx) {
     foo_panicf(ctx, "Layout mismatch: %s layout has %zu slots, using %zu slot constructor.",
                theClass->name->data, theLayout->size, ctx->size - 1);
   }
-  struct FooArray* new = FooArray_alloc(theLayout->size);
+  struct FooArray* new = FooArray_alloc(ctx, theLayout->size);
   for (size_t i = 0; i < theLayout->size; i++) {
     new->data[i] = ctx->frame[i+1];
   }
@@ -656,7 +654,7 @@ struct FooContext* foo_context_new_method_no_args(const struct FooMethod* method
                                                   struct Foo receiver,
                                                   size_t nargs) {
   foo_check_method_argcount(sender, nargs, method);
-  struct FooContext* context = foo_alloc_context(method->frameSize);
+  struct FooContext* context = foo_alloc_context(sender, method->frameSize);
   context->type = METHOD_CONTEXT;
   context->depth = sender->depth + 1;
   context->method = method;
@@ -708,7 +706,7 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
     assert(method->argCount == 2);
     context->frame[0] = (struct Foo){ .class = &FooClass_Selector,
                                       .datum = { .ptr = (void*)selector }};
-    struct FooArray* array = FooArray_alloc(nargs);
+    struct FooArray* array = FooArray_alloc(context, nargs);
     for (size_t i = 0; i < nargs; i++) {
       array->data[i] = va_arg(arguments, struct Foo);
     }
@@ -781,7 +779,6 @@ struct Foo foo_activate(struct FooContext* context) {
   if (depth > 1000) {
     foo_panicf(context, "Stack blew up!");
   }
-  foo_maybe_gc(context);
 
   jmp_buf ret;
   context->ret = &ret;
@@ -851,7 +848,7 @@ struct Foo foo_send(struct FooContext* sender,
 /**
  * Used as method function in methods implemented by objects. */
 struct Foo foo_invoke_on(const struct FooMethod* method, struct FooContext* context) {
-  struct FooArray* args = FooArray_alloc(method->argCount);
+  struct FooArray* args = FooArray_alloc(context, method->argCount);
   for (size_t i = 0; i < args->size; i++) {
     args->data[i] = context->frame[i];
   }
@@ -892,12 +889,12 @@ struct Foo foo_method_name(const struct FooMethod* method, struct FooContext* ct
   return (struct Foo){ .class = &FooClass_String, .datum = { .ptr = class->name } };
 }
 
-struct Foo foo_closure_new(struct FooContext* context,
+struct Foo foo_closure_new(struct FooContext* sender,
                            FooClosureFunction function,
                            size_t argCount,
                            size_t frameSize) {
-  struct FooClosure* closure = foo_alloc(sizeof(struct FooClosure));
-  closure->context = context;
+  struct FooClosure* closure = foo_alloc(sender, sizeof(struct FooClosure));
+  closure->context = sender;
   closure->function = function;
   closure->argCount = argCount;
   closure->frameSize = frameSize;
@@ -916,73 +913,73 @@ struct Foo FooGlobal_False =
    .datum = { .boolean = 0 }
   };
 
-struct FooProcessTimes* FooProcessTimes_alloc() {
-  return foo_alloc(sizeof(struct FooProcessTimes));
+struct FooProcessTimes* FooProcessTimes_alloc(struct FooContext* sender) {
+  return foo_alloc(sender, sizeof(struct FooProcessTimes));
 }
 
-struct FooProcessTimes* FooProcessTimes_now() {
-  struct FooProcessTimes* times = FooProcessTimes_alloc();
+struct FooProcessTimes* FooProcessTimes_now(struct FooContext* sender) {
+  struct FooProcessTimes* times = FooProcessTimes_alloc(sender);
   system_get_process_times(times);
   return times;
 }
 
-struct FooProcessTimes* FooProcessTimes_new(double user, double system, double real) {
-  struct FooProcessTimes* times = FooProcessTimes_alloc();
+struct FooProcessTimes* FooProcessTimes_new(struct FooContext* sender, double user, double system, double real) {
+  struct FooProcessTimes* times = FooProcessTimes_alloc(sender);
   times->user = user;
   times->system = system;
   times->real = real;
   return times;
 }
 
-struct FooArray* FooArray_alloc(size_t size) {
-  struct FooArray* array = foo_alloc(sizeof(struct FooArray) + size*sizeof(struct Foo));
+struct FooArray* FooArray_alloc(struct FooContext* sender, size_t size) {
+  struct FooArray* array = foo_alloc(sender, sizeof(struct FooArray) + size*sizeof(struct Foo));
   array->header.allocation = HEAP;
   array->size = size;
   return array;
 }
 
-struct FooArray* FooInstance_alloc(size_t size) {
-  struct FooArray* array = foo_alloc(sizeof(struct FooArray) + size*sizeof(struct Foo));
+struct FooArray* FooInstance_alloc(struct FooContext* sender, size_t size) {
+  struct FooArray* array = foo_alloc(sender, sizeof(struct FooArray) + size*sizeof(struct Foo));
   array->header.allocation = HEAP;
   array->size = size;
   return array;
 }
 
-struct Foo foo_Array_new(size_t size) {
-  struct FooArray* array = FooArray_alloc(size);
+struct Foo foo_Array_new(struct FooContext* sender, size_t size) {
+  struct FooArray* array = FooArray_alloc(sender, size);
   for (size_t i = 0; i < size; ++i) {
     array->data[i] = FooGlobal_False;
   }
   return (struct Foo){ .class = &FooClass_Array, .datum = { .ptr = array } };
 }
 
-struct Foo foo_Array_alloc(size_t size) {
-  struct FooArray* array = FooArray_alloc(size);
+struct Foo foo_Array_alloc(struct FooContext* sender, size_t size) {
+  struct FooArray* array = FooArray_alloc(sender, size);
   return (struct Foo){ .class = &FooClass_Array, .datum = { .ptr = array } };
 }
 
-struct FooBytes* FooBytes_alloc(size_t len) {
-  struct FooBytes* bytes = (struct FooBytes*)foo_alloc(sizeof(struct FooBytes) + len + 1);
+struct FooBytes* FooBytes_alloc(struct FooContext* sender, size_t len) {
+  struct FooBytes* bytes = (struct FooBytes*)foo_alloc(sender, sizeof(struct FooBytes) + len + 1);
   bytes->header.allocation = HEAP;
   bytes->size = len;
   return bytes;
 }
 
-struct FooBytes* FooBytes_from(const char* s) {
+struct FooBytes* FooBytes_from(struct FooContext* sender, const char* s) {
   size_t len = strlen(s);
-  struct FooBytes* bytes = FooBytes_alloc(len);
+  struct FooBytes* bytes = FooBytes_alloc(sender, len);
   memcpy(bytes->data, s, len);
   return bytes;
 }
 
-struct Foo foo_String_new(size_t len, const char* s) {
-  struct FooBytes* bytes = FooBytes_alloc(len);
+struct Foo foo_String_new(struct FooContext* sender, size_t len, const char* s) {
+  struct FooBytes* bytes = FooBytes_alloc(sender, len);
   memcpy(bytes->data, s, len);
   return (struct Foo) { .class = &FooClass_String, .datum = { .ptr = bytes } };
 }
 
-struct Foo foo_String_new_from(const char* s) {
-  return foo_String_new(strlen(s), s);
+struct Foo foo_String_new_from(struct FooContext* sender, const char* s) {
+  return foo_String_new(sender, strlen(s), s);
 }
 
 struct Foo foo_panic(struct FooContext* ctx, struct Foo message) {
@@ -1322,13 +1319,10 @@ void foo_gc(struct FooContext* ctx) {
   FOO_DEBUG("/foo_gc end");
 }
 
-void foo_maybe_gc(struct FooContext* ctx) {
-  if (allocation_bytes_since_gc > gc_threshold) {
-    foo_gc(ctx);
+void* foo_alloc(struct FooContext* sender, size_t size) {
+  if (allocation_bytes_since_gc > gc_threshold && sender) {
+    foo_gc(sender);
   }
-}
-
-void* foo_alloc(size_t size) {
   size_t bytes = sizeof(struct FooAlloc) + size;
   struct FooAlloc* p = calloc(1, bytes);
   if (!p) {
@@ -1356,7 +1350,7 @@ const size_t FooFile_OPEN           = 0b01;
 const size_t FooFile_CREATE         = 0b10;
 const size_t FooFile_CREATE_OR_OPEN = 0b11;
 
-struct Foo foo_File_new(struct FooBytes* path, size_t mode);
+struct Foo foo_File_new(struct FooContext* sender, struct FooBytes* path, size_t mode);
 struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size_t flags);
 
 #include "generated_declarations.h"
@@ -1365,8 +1359,8 @@ struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size
 #include "generated_closures.c"
 #include "generated_main.c"
 
-struct Foo foo_File_new(struct FooBytes* pathname, size_t mode) {
-  struct FooFile* file = foo_alloc(sizeof(struct FooFile));
+struct Foo foo_File_new(struct FooContext* sender, struct FooBytes* pathname, size_t mode) {
+  struct FooFile* file = foo_alloc(sender, sizeof(struct FooFile));
   file->header.allocation = HEAP;
   file->pathname = pathname;
   file->mode = mode;
@@ -1375,7 +1369,7 @@ struct Foo foo_File_new(struct FooBytes* pathname, size_t mode) {
 
 struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size_t flags) {
   // FIXME: GC should close stream!
-  struct FooFileStream* stream = foo_alloc(sizeof(struct FooFileStream));
+  struct FooFileStream* stream = foo_alloc(ctx, sizeof(struct FooFileStream));
   stream->header.allocation = HEAP;
   stream->pathname = file->pathname;
   const char* mode = NULL;

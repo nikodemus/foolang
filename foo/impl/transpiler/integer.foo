@@ -54,10 +54,9 @@ else
       #toString
           -> {signature: [], vars: 0,
               body: "char buffer[22];
-assert(22 == sizeof(buffer));
 int n = snprintf(buffer, sizeof(buffer), \"%\" PRId64, ctx->receiver.datum.int64);
 if (-1 < n && n < sizeof(buffer)) \{
-    struct FooBytes* bytes = FooBytes_alloc(n);
+    struct FooBytes* bytes = FooBytes_alloc(ctx, n);
     memcpy(bytes->data, buffer, n);
     return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = bytes }};
 } else \{

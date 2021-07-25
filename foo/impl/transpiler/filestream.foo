@@ -74,7 +74,7 @@ define InstanceMethods {
                 assert(!fseek(f, 0, SEEK_END));
                 size_t size = ftell(f) - pos;
                 assert(!fseek(f, pos, SEEK_SET));
-                struct FooBytes* bytes = FooBytes_alloc(size);
+                struct FooBytes* bytes = FooBytes_alloc(ctx, size);
                 assert(size == fread(bytes->data, 1, size, f));
                 return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = bytes } };" },
     #resize:
@@ -82,7 +82,7 @@ define InstanceMethods {
          body: "foo_panicf(ctx, \"FileStream#resize: not implemented\");" },
     #toString:
     -> { signature: [], vars: 0,
-         body: "return foo_String_new_from(\"#<FileStream>\");" },
+         body: "return foo_String_new_from(ctx, \"#<FileStream>\");" },
     #tryReadOnce:bytesInto:at:
     -> { signature: [], vars: 0,
          body: "foo_panicf(ctx, \"FileStream#tryReadOnce:bytesInto:at: not implemented\");" },
