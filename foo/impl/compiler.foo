@@ -57,6 +57,7 @@ class Compiler { source target system prelude stackSize addressSanitizer }
                                    out print: self sanitizerOptions.
                                    out print: buildOptions.
                                    out print: " c/main.c".
+                                   out print: " c/mark-and-sweep.c".
                                    out print: " ext/dtoa.c".
                                    out print: self systemC }.
         let build = system command: buildCmd.
