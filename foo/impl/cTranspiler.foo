@@ -997,9 +997,8 @@ class CTranspiler { output selectorMap closureFunctions
         let interfaces = anObject interfaceGlobals asList.
         forMetaclass
             ifTrue: { interfaces add: (env global: "Class") }.
-        output println: "struct FooPointerList {inheritance} = \{".
+        output println: "struct FooClassList {inheritance} = \{".
         output println: "    .header = \{ .allocation = STATIC },".
-        output println: "    .mark = foo_mark_class,".
         output println: "    .size = {interfaces size},".
         output println: "    .data = \{".
         interfaces

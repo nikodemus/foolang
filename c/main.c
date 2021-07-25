@@ -300,7 +300,7 @@ struct FooClass FooClass_Float;
 struct FooClass FooClass_Integer;
 struct FooClass FooClass_Selector;
 struct FooClass FooClass_String;
-struct FooPointerList FooClassInheritance_Class;
+struct FooClassList FooClassInheritance_Class;
 struct FooArray* FooArray_alloc(size_t size);
 struct FooArray* FooArray_instance(size_t size);
 struct Foo foo_Float_new(double f);
@@ -392,19 +392,17 @@ void foo_mark_array(void* ptr);
 void foo_mark_class(void* ptr);
 void foo_mark_none(void* ptr);
 
-struct FooPointerList {
+struct FooClassList {
   struct FooHeader header;
-  FooMarkFunction mark;
   size_t size;
   void* data[];
 };
 
-struct FooPointerList* foo_ClassList_alloc(size_t size) {
-  struct FooPointerList* list
-    = foo_alloc(sizeof(struct FooPointerList)
+struct FooClassList* foo_ClassList_alloc(size_t size) {
+  struct FooClassList* list
+    = foo_alloc(sizeof(struct FooClassList)
                 + size * sizeof(void*));
   list->header.allocation = HEAP;
-  list->mark = foo_mark_class;
   list->size = size;
   return list;
 }
@@ -447,7 +445,7 @@ struct FooClass {
   struct FooHeader header;
   struct FooBytes* name;
   struct FooClass* metaclass;
-  struct FooPointerList* inherited;
+  struct FooClassList* inherited;
   struct FooLayout* layout;
   FooMarkFunction mark;
   size_t size;
@@ -490,7 +488,7 @@ struct Foo foo_class_new_from_array(struct FooContext* ctx) {
 }
 
 bool foo_class_inherits(struct FooClass* want, struct FooClass* class) {
-  struct FooPointerList* list = class->inherited;
+  struct FooClassList* list = class->inherited;
   for (size_t i = 0; i < list->size; i++) {
     struct FooClass* ptr = list->data[i];
     if (want == ptr || foo_class_inherits(want, ptr)) {
@@ -581,7 +579,7 @@ const struct FooMethod* foo_class_find_method(struct FooContext* ctx,
   if (method) {
     goto found;
   }
-  const struct FooPointerList* list = class->inherited;
+  const struct FooClassList* list = class->inherited;
   for (size_t i = 0; i < list->size; i++) {
     method = foo_class_find_method_in(list->data[i], selector, &fallback);
     if (method) {
@@ -1150,12 +1148,12 @@ void foo_mark_layout(void* ptr) {
   EXIT_TRACE();
 }
 
-void foo_mark_pointers(void* ptr) {
-  struct FooPointerList* list = ptr;
-  ENTER_TRACE("mark_pointers %p (size=%zu)", list, list->size);
+void foo_mark_class_list(void* ptr) {
+  struct FooClassList* list = ptr;
+  ENTER_TRACE("mark_class_list %p (size=%zu)", list, list->size);
   if (list->header.allocation == HEAP && foo_mark_live(list)) {
     for (size_t i = 0; i < list->size; i++) {
-      list->mark(list->data[i]);
+      foo_mark_class(list->data[i]);
     }
   }
   EXIT_TRACE();
@@ -1169,7 +1167,7 @@ void foo_mark_class(void* ptr)
   if (class->header.allocation == HEAP && foo_mark_live(class)) {
     foo_mark_bytes(class->name);
     foo_mark_class(class->metaclass);
-    foo_mark_pointers(class->inherited);
+    foo_mark_class_list(class->inherited);
     foo_mark_layout(class->layout);
     for (size_t i = 0; i < class->inherited->size; i++) {
       struct FooClass* other = class->inherited->data[i];
