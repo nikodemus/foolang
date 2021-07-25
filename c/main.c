@@ -1240,7 +1240,7 @@ static size_t allocation_bytes_since_gc = 0;
 static size_t allocation_bytes = 0;
 static size_t allocation_count = 0;
 
-// Intentionally low threshold so that GC gets exercised even for trivial tests.
+// For testing: low threshold so that GC gets exercised way more.
 // const size_t gc_threshold = 1024;
 const size_t gc_threshold = 1024 * 1024 * 64;
 bool gc_verbose = false;
@@ -1279,11 +1279,14 @@ void foo_sweep() {
     allocation_count -= freed_count;
 
     if (gc_verbose) {
-      fprintf(stderr, "** GC'd %zu bytes in %zu objects, %zu bytes in %zu objects remain.\n",
+      fprintf(stderr,
+              "-- %zu bytes in %zu objects allocated since last gc\n"
+              "-- %zu bytes in %zu objects collected\n"
+              "-- %zu bytes in %zu objects remain\n",
+              allocation_bytes_since_gc, allocation_count_since_gc,
               freed_bytes, freed_count,
               allocation_bytes, allocation_count);
-      fprintf(stderr, "** %zu bytes in %zu objects allocated since last gc.\n",
-              allocation_bytes_since_gc, allocation_count_since_gc);
+      fflush(stderr);
     }
 
     assert(live_count == allocation_count);
