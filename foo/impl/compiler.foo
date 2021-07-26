@@ -70,11 +70,17 @@ Command: {buildCmd}
 {build stderr}" }!
 
     method linkerOptions
-        " -lm{self stackSizeOptions}"!
+        -- On Windows round() doesn't need -lm, it's all in
+        -- CRT.
+        StringOutput
+            with: { |out|
+                    system isWindows
+                        ifFalse: { out print: " -lm" }.
+                    out print: self stackSizeOptions }!
 
     method stackSizeOptions
         stackSize is False
-            ifTrue: { return "" }.
+            => { return "" }.
         system isWindows
             => { return " -Wl,/STACK:{stackSize}" }.
         system isMacOS
