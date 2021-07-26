@@ -281,6 +281,15 @@ jobs:
       - name: No duplicate declarations from self-compile
         run: ./no_duplicate_declarations.sh
 
+      - name: Ls
+        run: ls -l ./bin/
+
+      - name: Compile hello
+        run: ./bin/fooc foo/examples/hello.foo ./bin/hello
+
+      - name: Hello
+        run: ./bin/hello
+
   test-foolang-mode:
     name: "Test foolang Emacs mode"
     runs-on: ubuntu-latest
