@@ -87,12 +87,18 @@ Command: {buildCmd}
         " -Wl,-z,stack-size={stackSize}"!
 
     method sanitizerOptions
+        -- KLUDGE: Getting the sanitizer libraries linked on all
+        -- CI hosts is too much trouble right now.
+        (system getenv: "GITHUB_ACTION") is False
+            ifFalse: { return "" }.
         StringOutput
             with: { |out|
+                    -- ASAN has 2 x cost, more for us since we
+                    -- malloc and free a LOT at the moment.
                     addressSanitizer
                         ifTrue: { out print: " -fsanitize=address" }.
-                    out print: " -fsanitize=undefined".
-                    out print: " -fno-sanitize-recover" }!
+                    -- UBSAN is cheap enough to use always.
+                    out print: " -fno-sanitize-recover=undefined" }!
 
     method systemC
         system isWindows
