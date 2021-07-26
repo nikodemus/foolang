@@ -218,7 +218,7 @@ jobs:
     name: "Test Transpile"
     needs: build-host
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -253,7 +253,7 @@ jobs:
     name: "Test compiler"
     needs: build-host
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v2
 
