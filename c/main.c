@@ -1279,13 +1279,14 @@ void foo_sweep() {
     allocation_count -= freed_count;
 
     if (gc_verbose) {
+      double mb = 1024.0 * 1024.0;
       fprintf(stderr,
-              "-- %zu bytes in %zu objects allocated since last gc\n"
-              "-- %zu bytes in %zu objects collected\n"
-              "-- %zu bytes in %zu objects remain\n",
-              allocation_bytes_since_gc, allocation_count_since_gc,
-              freed_bytes, freed_count,
-              allocation_bytes, allocation_count);
+              "-- %.2fMB in %zu objects allocated since last gc\n"
+              "-- %.2fMB in %zu objects collected\n"
+              "-- %.2fMB in %zu objects remain\n",
+              allocation_bytes_since_gc / mb, allocation_count_since_gc,
+              freed_bytes / mb, freed_count,
+              allocation_bytes / mb, allocation_count);
       fflush(stderr);
     }
 
