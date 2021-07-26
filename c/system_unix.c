@@ -6,11 +6,66 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <unistd.h>
 
 #undef NDEBUG
 #include <assert.h>
 
 #include "system.h"
+
+void system_print_memstats(void) {
+#ifdef FOO_MACOS
+  return;
+#else
+  unsigned long
+    size = 0, resident = 0, shared = 0,
+    lib = 0, data = 0, dt = 0;
+  long score = 0;
+  long pagesize = sysconf(_SC_PAGESIZE);
+  FILE* statm = fopen("/proc/self/statm", "r");
+
+  if (statm)
+    {
+      fscanf(statm, "%lu %lu %lu %lu %lu %lu", &size, &resident, &shared, &lib, &data, &dt);
+      size *= pagesize;
+      resident *= pagesize;
+      shared *= pagesize;
+      data *= pagesize;
+      fclose(statm);
+    };
+  FILE* oom_score = fopen("/proc/self/oom_score", "r");
+  if (oom_score)
+    {
+      fscanf(oom_score, "%ld", &score);
+      fclose(oom_score);
+    }
+
+  double mega = 1024.0 * 1024.0;
+
+  if (statm && oom_score) {
+    fprintf(stderr, "VmSize=%.1fMB, VmRSS=%.1fMB, shared=%.1fMB, data=%.1fMB, OOM score=%ld\n",
+	    size / mega,
+	    resident / mega,
+	    shared / mega,
+	    data / mega,
+	    score);
+  }
+  else if (statm) {
+    fprintf(stderr, "VmSize=%.1fMB, VmRSS=%.1fMB, shared=%.1fMB, data=%.1fMB\n",
+            size / mega,
+            resident / mega,
+	    shared / mega,
+            data / mega);
+  }
+  else if (oom_score) {
+    fprintf(stderr, "OOM score=%ld\n",
+            score);
+  } else {
+    fprintf(stderr, "No memstats!\n");
+  }
+  fflush(stderr);
+#endif
+}
 
 bool system_is_unix(void) {
   return true;

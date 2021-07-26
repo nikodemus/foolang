@@ -6,6 +6,7 @@
 
 #include "foo.h"
 
+void system_print_memstats(void);
 bool system_is_unix(void);
 bool system_is_windows(void);
 bool system_is_macos(void);
