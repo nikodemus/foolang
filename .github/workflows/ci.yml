@@ -253,9 +253,12 @@ jobs:
     name: "Test compiler"
     needs: build-host
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v2
+
+      - name: Install Valgrind
+        run: sudo apt install valgrind
 
       - name: Download bootstrap interpreter
         uses: actions/download-artifact@v2
@@ -276,7 +279,7 @@ jobs:
         run: ./no_duplicate_declarations.sh
 
       - name: Self-compile
-        run: ./bin/bootstrap-fooc foo/compile.foo ./bin/fooc
+        run: valgrind ./bin/bootstrap-fooc foo/compile.foo ./bin/fooc
 
       - name: No duplicate declarations from self-compile
         run: ./no_duplicate_declarations.sh
