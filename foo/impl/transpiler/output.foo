@@ -20,8 +20,8 @@ define InstanceMethods {
     -> { signature: [], vars: 0,
          body: "void* ptr = ctx->receiver.datum.ptr;
                 if (ptr == stdout)
-                    return foo_String_new_from(\"#<Output stdout\");
+                    return foo_String_new_from(ctx, \"#<Output stdout\");
                 if (ptr == stderr)
-                    return foo_String_new_from(\"#<Output stderr>\");
-                return foo_String_new_from(\"#<Output file>\");" }
+                    return foo_String_new_from(ctx, \"#<Output stderr>\");
+                return foo_String_new_from(ctx, \"#<Output file>\");" }
 }!

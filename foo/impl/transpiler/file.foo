@@ -16,15 +16,15 @@ define InstanceMethods {
     #forAppend
     -> { signature: [], vars: 0,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
-                return foo_File_new(file->pathname, (file->mode | FooFile_APPEND) & ~FooFile_WRITE);" },
+                return foo_File_new(ctx, file->pathname, (file->mode | FooFile_APPEND) & ~FooFile_WRITE);" },
     #forRead
     -> { signature: [], vars: 0,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
-                return foo_File_new(file->pathname, file->mode | FooFile_READ);" },
+                return foo_File_new(ctx, file->pathname, file->mode | FooFile_READ);" },
     #forWrite
     -> { signature: [], vars: 0,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
-                return foo_File_new(file->pathname, (file->mode | FooFile_WRITE) & ~FooFile_APPEND);" },
+                return foo_File_new(ctx, file->pathname, (file->mode | FooFile_WRITE) & ~FooFile_APPEND);" },
     #isAppend
     -> { signature: [], vars: 0,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
@@ -52,5 +52,5 @@ define InstanceMethods {
     #truncateExisting
     -> { signature: [], vars: 0,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
-                return foo_File_new(file->pathname, file->mode | FooFile_TRUNCATE);" },
+                return foo_File_new(ctx, file->pathname, file->mode | FooFile_TRUNCATE);" },
 }!

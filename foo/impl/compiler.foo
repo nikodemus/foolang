@@ -57,6 +57,7 @@ class Compiler { source target system prelude stackSize addressSanitizer }
                                    out print: self sanitizerOptions.
                                    out print: buildOptions.
                                    out print: " c/main.c".
+                                   out print: " c/mark-and-sweep.c".
                                    out print: " ext/dtoa.c".
                                    out print: self systemC }.
         let build = system command: buildCmd.
@@ -69,11 +70,17 @@ Command: {buildCmd}
 {build stderr}" }!
 
     method linkerOptions
-        " -lm{self stackSizeOptions}"!
+        -- On Windows round() doesn't need -lm, it's all in
+        -- CRT.
+        StringOutput
+            with: { |out|
+                    system isWindows
+                        ifFalse: { out print: " -lm" }.
+                    out print: self stackSizeOptions }!
 
     method stackSizeOptions
         stackSize is False
-            ifTrue: { return "" }.
+            => { return "" }.
         system isWindows
             => { return " -Wl,/STACK:{stackSize}" }.
         system isMacOS
