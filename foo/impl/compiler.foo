@@ -68,6 +68,9 @@ Command: {buildCmd}
 {build stderr}" }!
 
     method linkerOptions
+        " -lm{self stackSizeOptions}"!
+
+    method stackSizeOptions
         stackSize is False
             ifTrue: { return "" }.
         system isWindows
