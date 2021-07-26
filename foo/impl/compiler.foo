@@ -2,9 +2,9 @@ import .environment.Environment
 import .utils.FileModuleDictionary
 import .cTranspiler.CTranspiler
 
--- FIXME: POA: doesn't need hole system, just files and
+-- FIXME: POA: doesn't need the whole system, just files and
 -- OS type.
-class Compiler { source target system prelude stackSize }
+class Compiler { source target system prelude stackSize addressSanitizer }
     direct method source: source
                   target: target
                   system: system
@@ -13,7 +13,8 @@ class Compiler { source target system prelude stackSize }
              target: target
              system: system
              prelude: prelude
-             stackSize: False!
+             stackSize: False
+             addressSanitizer: False!
 
     method compile
         let modules = FileModuleDictionary
@@ -83,11 +84,12 @@ Command: {buildCmd}
         " -Wl,-z,stack-size={stackSize}"!
 
     method sanitizerOptions
-        -- KLUDGE: Windows CI host linker cannot find the sanitizer libraries,
-        -- so we conditionalize on the environment and host.
-        (system isUnix or: (system getenv: "GITHUB_ACTION") is False)
-            ifTrue: { " -fsanitize=address -fsanitize=undefined" }
-            ifFalse: { "" }!
+        StringOutput
+            with: { |out|
+                    addressSanitizer
+                        ifTrue: { out print: " -fsanitize=address" }.
+                    out print: " -fsanitize=undefined".
+                    out print: " -fno-sanitize-recover" }!
 
     method systemC
         system isWindows

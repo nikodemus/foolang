@@ -9,6 +9,7 @@ class Main {}
              prelude: ["lang", "prelude"]
              -- 4MiB, default tends to be 1MiB, which is too
              -- little for self-compilation.
-             stackSize: 0x400000)
+             stackSize: 0x400000
+             addressSanitizer: False)
         compile!
 end
