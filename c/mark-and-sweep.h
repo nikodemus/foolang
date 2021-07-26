@@ -2,6 +2,7 @@
 #define __MARK_AND_SWEEP_H_
 
 #include <stdbool.h>
+#include <stddef.h>
 
 void foo_mark_array(void* ptr);
 void foo_mark_bytes(void* ptr);
