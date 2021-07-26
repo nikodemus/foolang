@@ -2,9 +2,9 @@ import .environment.Environment
 import .utils.FileModuleDictionary
 import .cTranspiler.CTranspiler
 
--- FIXME: POA: doesn't need hole system, just files and
+-- FIXME: POA: doesn't need the whole system, just files and
 -- OS type.
-class Compiler { source target system prelude stackSize }
+class Compiler { source target system prelude stackSize addressSanitizer }
     direct method source: source
                   target: target
                   system: system
@@ -13,7 +13,8 @@ class Compiler { source target system prelude stackSize }
              target: target
              system: system
              prelude: prelude
-             stackSize: False!
+             stackSize: False
+             addressSanitizer: False!
 
     method compile
         let modules = FileModuleDictionary
@@ -68,6 +69,9 @@ Command: {buildCmd}
 {build stderr}" }!
 
     method linkerOptions
+        " -lm{self stackSizeOptions}"!
+
+    method stackSizeOptions
         stackSize is False
             ifTrue: { return "" }.
         system isWindows
@@ -83,11 +87,18 @@ Command: {buildCmd}
         " -Wl,-z,stack-size={stackSize}"!
 
     method sanitizerOptions
-        -- KLUDGE: Windows CI host linker cannot find the sanitizer libraries,
-        -- so we conditionalize on the environment and host.
-        (system isUnix or: (system getenv: "GITHUB_ACTION") is False)
-            ifTrue: { " -fsanitize=address -fsanitize=undefined" }
-            ifFalse: { "" }!
+        -- KLUDGE: Getting the sanitizer libraries linked on all
+        -- CI hosts is too much trouble right now.
+        (system getenv: "GITHUB_ACTION") is False
+            ifFalse: { return "" }.
+        StringOutput
+            with: { |out|
+                    -- ASAN has 2 x cost, more for us since we
+                    -- malloc and free a LOT at the moment.
+                    addressSanitizer
+                        ifTrue: { out print: " -fsanitize=address" }.
+                    -- UBSAN is cheap enough to use always.
+                    out print: " -fno-sanitize-recover=undefined" }!
 
     method systemC
         system isWindows
