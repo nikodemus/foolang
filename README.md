@@ -12,26 +12,30 @@ You'll be the first. :)
 
 ## About
 
-Foolang is a Smalltalk-inspired language that, like all new languages, has 
+Foolang is a Smalltalk-inspired language that, like all new languages, has
 somewhat _optimistic aspirations_:
 
-- **_Elegance and power of Smalltalk and Self:_** Smalltalk-like syntax, deep
-  object orientation, and late binding.
+- **_Elegance and power of Smalltalk and Self:_** Smalltalk/Objective-C -like
+  syntax, deep object orientation, late binding, interactive development.
 
-- **_Performance of C++:_** Support for early binding when you need it so that the
-  compiler can go to town. Low-level operations which allow eliding overflow
-  checking in tight loops, etc.
+- **_Performance of C++:_** AOT compilation to native code, support for early
+  binding so that the compiler can do its thing, low-level datatypes and
+  operations when you need them for performance.
 
-- **_Fault tolerance of Erlang:_** Agent-model, isolated heaps, and supervisors.
-  No undefined behaviour.
+- **_Fault tolerance of Erlang:_** Actor-model, isolated heaps, and supervisors.
+  No undefined behaviour. No deadlocks, or memory errors or races.
+
+- **_Multiplatform Citizen of the Web:_** WASM is a supported target in addition
+  to Windows, MacOS, Linux, and BSDs.
 
 **_"Are we there yet?"_**
 
-Nope.
+:rofl:
 
-Syntax is still settling down, early binding support isn't quite there, compiler
-is a work-in-progress trivial transpiler, agents and threads haven't even been
-started, and many things which should be first class objects aren't yet, etc.
+Syntax is still going to change, WASM isn't supported, BSDs might work but
+aren't tested, early binding support isn't quite there, compiler is a
+work-in-progress trivial transpiler, actors and continuations haven't even been
+started, there is no interactive development environment to speak of, etc.
 
 ## Hello World
 
@@ -42,14 +46,16 @@ class Main {}
 end
 ```
 
-## Repository organization:
+## Repository Organization
+
+In rough order of interest:
 
 ```
+foo/       Foolang code, including prelude, self hosting, tests, and examples
+src/       Rust code for the bootstrap interpreter
 docs/      Markdown files for the https://foolang.org website
 elisp/     Emacs mode for Foolang
-ext/       External C code included in the runtime, like dtoa.c.
-foo/       Foolang code, including prelude, self hosting, tests, and examples
 c/         Scaffolding for transpiled-to-C code
-src/       Rust code for the bootstrap interpreter
 tests/     Rust code for integration tests
+ext/       External C code included in the runtime, like dtoa.c.
 ```

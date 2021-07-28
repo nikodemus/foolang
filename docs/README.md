@@ -6,27 +6,30 @@
 
 **_The Foo Programming Language_**
 
-Foolang is a Smalltalk-inspired language that, like all new languages,
-has somewhat _optimistic aspirations_:
+Foolang is a Smalltalk-inspired language that, like all new languages, has
+somewhat _optimistic aspirations_:
 
-- **_Elegance and power of Smalltalk and Self:_** Smalltalk-like syntax, deep object
-  orientation, and late binding as default.
+- **_Elegance and power of Smalltalk and Self:_** Smalltalk/Objective-C -like
+  syntax, deep object orientation, late binding, interactive development.
 
-- **_Performance of C++:_** Support for early binding when you need it, so that
-  the compiler can go to town. Low-level operations which allow eliding overflow
-  checking in tight loops, etc.
+- **_Performance of C++:_** AOT compilation to native code, support for early
+  binding so that the compiler can do its thing, low-level datatypes and
+  operations when you need them for performance.
 
-- **_Fault tolerance of Erlang:_** Agent-model, isolated heaps, and supervisors.
-  No undefined behavior.
+- **_Fault tolerance of Erlang:_** Actor-model, isolated heaps, and supervisors.
+  No undefined behaviour. No deadlocks, or memory errors or races.
+
+- **_Multiplatform Citizen of the Web:_** WASM is a supported target in addition
+  to Windows, MacOS, Linux, and BSDs.
 
 **_"Are we there yet?"_**
 
-Nope.
+:rofl:
 
-Syntax is still settling down, early binding support isn't quite there, the
-compiler is an work-in-progress trivial transpiler, agents and threads haven't
-even been started yet, and many things which should be first class objects
-aren't yet, etc.
+Syntax is still going to change, WASM isn't supported, BSDs might work but
+aren't tested, early binding support isn't quite there, compiler is a
+work-in-progress trivial transpiler, actors and continuations haven't even been
+started, there is no interactive development environment to speak of, etc.
 
 **_"When we going to get there?"_**
 
@@ -48,12 +51,18 @@ end
    ``` shell
    git clone https://github.com/nikodemus/foolang.git
    ```
-3. Build Foolang & run the REPL:
+3. Build Foolang bootstrap interpreter & run the REPL:
    ``` shell
    cd foolang
    cargo run -- foo/repl.foo
    ```
-4. Read the [syntax](syntax.md#foolang-syntax) document, read the code, play around.
+3. Bootstrap the Foolang compiler (you'll need Clang installed for this):
+   ``` shell
+   ./bootstrap.sh
+   bin/fooc foo/examples/hello.foo bin/hello
+   bin/hello
+   ```
+4. Read the [syntax](syntax.md#foolang-syntax) document, read the code (particularly under `foo/`), and play around.
 
 ## Features & Status
 
@@ -113,27 +122,27 @@ unwinding the stack when appropriate.
 <span class="done">&check;</span>
 **Interactive development**: Foolang supports
 a dynamic and interactive way of working: in development mode existing methods
-can be redefined and new classes added while the program is running.
+can be redefined and new classes added while the program is running. ...kind of.
+The bootstrap interpreter REPL qualifies, but the self-hosted environment
+isn't interactive yet.
 
 <span class="done">&check;</span>
 **Self-Hosted**: Foolang is implemented in Foolang: it has a self-hosted parser,
 interpreter, and a transpiler-to-C, making it capable of building itself.
 (Bootstrap is currently through an interpreter written in Rust.)
 
-### Pending
-
-<span class="todo">&cross;</span>
+<span class="done">&check;</span>
 **Compiled**: Foolang is intended to be capable of producing native, monolithic
-executables&mdash;without compromising the interactive development experience.
-The current compiler does produce monolithic executables, but there's no
-interactive experience with the compiler yet.
+executables for delivery.
+
+### Pending
 
 <span class="todo">&cross;</span>
 **Performant**: type-annotated and compiled Foolang code should perform about as
 well as equivalent `-O0` C++ code. To be fair: this will require more effort
 from the compiler than C++, but not drastically so&mdash;a partial evaluation
 pass should cover most of it. Current compiler is *definititely* not there yet:
-it's ~7 x slower than the bootstrap evaluator at the moment!
+it's barely faster than the bootstrap evaluator at the moment!
 
 <span class="todo">&cross;</span>
 **Type inference**: while Foolang's typesystem should be considered
@@ -141,14 +150,20 @@ weaksauce by today's standards, doing basic type inference is critical for
 the intendend functionality.
 
 <span class="todo">&cross;</span>
-**Supervised and isolated threads**: Foolang threads will not share memory,
-hopefully providing a subtrate for fault tolerant computing akin to what Erlang
-does. (Unlike Erlang Foolang does allow thread-local side-effects.)
+**Actor model**: Foolang is intended to have lightweight threads implementing an
+actor model without shared memory, using an N:M mapping to native threads. This
+is intended to provide a substrate for fault tolerant computing akin to what
+Erlang does. (Unlike Erlang Foolang does allow thread-local side-effects.)
 
 <span class="todo">&cross;</span>
 **Smalltalkish development environment**: while Foolang keeps it's code in files
 and allows you to use your favorite editor, it still wants to provide an
-integrated experience similar to Smalltalks.
+integrated experience similar to Smalltalk's.
+
+<span class="todo">&cross;</span>
+**Delimited continuations**: plan is to implement shift/reset style of continuations
+at the core, and provide nice abtractions like coroutines and non-deterministic
+choise operators on top of them.
 
 <span class="todo">&cross;</span>
 **Extensible syntax & code generation**: Foolang is intended to offer a
