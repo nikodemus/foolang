@@ -44,7 +44,7 @@ class TestFoolang { system ok onFailure }
             eval: "TestInterface3 includes: (TestInterface3Impl new foo)"
             expect: True!
 
-    method test0_Interface_methods_cannot_use_slots_from_implementing_class
+    method test_Interface_methods_cannot_use_slots_from_implementing_class
         self load: "interface Corrupted
                         method fallFromGrace
                             oops!
@@ -288,6 +288,19 @@ end
             eval: "TestInterface5Impl new bar"
             expectError: RequiredMethodMissing
             where: { |e| e selector == #fooxx }!
+
+    method test_Extension_method_can_refer_to_Self_and_self
+        self load: "class ToBeExtended \{\}
+                    end
+                    extend ToBeExtended
+                        method me
+                            self!
+                        method Me
+                            Self!
+                    end"
+            eval: "let instance = ToBeExtended new.
+                   instance Me includes: instance me"
+            expect: True!
 
     method testInterface6
         -- Self
