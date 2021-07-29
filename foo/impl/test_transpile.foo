@@ -552,12 +552,11 @@ class TestTranspilePreludeFileStream { assert system }
                          import lang.file_ext
                          class Main \{}
                              direct method run: command in: system
-                                 let size = (system files / \"README.md\") forRead
+                                 let size = (system files / \"data/132-bytes.txt\") forRead
                                      open: \{ |s| s size }.
-                                 (size integerGt: 1000) debug.
-                                 (size integerLt: 2000) debug!
+                                 size debug!
                          end"
-            expect: "#<Boolean True>#<Boolean True>"!
+            expect: "#<Integer 132>"!
 end
 
 class TestTranspilePreludeFloat { assert system }
