@@ -14,6 +14,13 @@ TARGET_COMPILER=./fooc$EXT
 
 trap "./beep.sh" EXIT
 
+# Overwrite default "unknown" with git version.
+V=foo/lang/build_info.foo
+echo 'define Version'                   > $V
+echo '    "'$(git describe --tags)'"!' >> $V
+
+trap "git checkout HEAD foo/lang/build_info.foo" EXIT
+
 echo "Building $BOOTSTRAP_COMPILER..."
 time cargo run -- foo/compile.foo -- foo/compile.foo $BOOTSTRAP_COMPILER
 rm -rf bootstrap-c

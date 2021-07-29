@@ -1,0 +1,7 @@
+---
+This file gets overwritten during bootstrap.sh with
+generated information, and restored afterwards.
+---
+
+define Version
+    "unknown-version"!

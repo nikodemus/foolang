@@ -41,8 +41,11 @@ import .stringOutput.StringOutput
 import .system_target_ext
 import .testSuite.TestSuite
 import .time_ext
+import .build_info
 
 class Foolang {}
     direct method isSelfHosted
         True!
+    direct method version
+        build_info.Version!
 end
