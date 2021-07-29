@@ -10,6 +10,7 @@ import .transpiler.file
 import .transpiler.filepath
 import .transpiler.filestream
 import .transpiler.float
+import .transpiler.input
 import .transpiler.integer
 import .transpiler.layout
 import .transpiler.name.Name
@@ -239,6 +240,12 @@ class CompilerBuiltins {}
               mark: "foo_mark_none"
               directMethods: float.DirectMethods
               instanceMethods: float.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: Input
+              mark: "foo_mark_none"
+              directMethods: input.DirectMethods
+              instanceMethods: input.InstanceMethods,
           CompilerBuiltin
               type: Class
               value: Integer

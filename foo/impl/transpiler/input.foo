@@ -1,0 +1,5 @@
+define DirectMethods
+    Dictionary new!
+
+define InstanceMethods
+    Dictionary new!
