@@ -1,0 +1,41 @@
+import .stringOutput.StringOutput
+import .exception.Error
+import .boolean_ext
+import .byteArray_ext
+
+define ReturnCharacter
+    "\r" character!
+
+define NewlineCharacter
+    "\n" character!
+
+class InputBuffer { next bytes }
+    direct method new
+        self next: 1
+             bytes: (ByteArray new: 100)!
+    method addChar: char
+        next > bytes size
+            ifTrue: { bytes = bytes resize: next * 2 }.
+        bytes put: char code at: next.
+        next = next + 1!
+    method string
+        bytes stringFrom: 1 to: next - 1!
+end
+
+extend Input
+    method readline_onEof: block
+        let buffer = InputBuffer new.
+        let char = self readChar_onEof: block.
+        { char == NewlineCharacter or: char == ReturnCharacter }
+            whileFalse: { buffer addChar: char.
+                          char = self readChar_onEof: block }.
+        -- In case of \r\n discard the \n as well
+        ReturnCharacter == char
+            ifTrue: { let next = self readChar_onEof: { char }.
+                      NewlineCharacter == next
+                          ifFalse: self unreadChar: next }.
+        buffer string!
+
+    method readline
+        self readline_onEof: { Error raise: "EOF on input" }!
+end

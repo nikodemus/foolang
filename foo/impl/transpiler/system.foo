@@ -41,6 +41,7 @@ define InstanceMethods {
                 foo_gc(ctx);
                 gc_verbose = old_verbose;
                 return FOO_BOOLEAN(true);" },
+
     #getenv:
     -> { signature: [String], vars: 0,
          body: "struct FooBytes* bytes = PTR(FooBytes, ctx->frame[0].datum);
@@ -50,6 +51,10 @@ define InstanceMethods {
                 } else \{
                     return FOO_BOOLEAN(false);
                 }" },
+    #input
+    -> { signature: [], vars: 0,
+         body: "return FOO_INSTANCE(Input, stdin);"},
+
     #isUnix
     -> { signature: [], vars: 0,
          body: "return FOO_BOOLEAN(system_is_unix());" },
@@ -65,6 +70,7 @@ define InstanceMethods {
     #output
     -> { signature: [], vars: 0,
          body: "return FOO_INSTANCE(Output, stdout);" },
+
     #random
     -> { signature: [], vars: 0,
          body: "return FOO_INSTANCE(SystemRandom, NULL);" },

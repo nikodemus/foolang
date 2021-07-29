@@ -15,4 +15,12 @@ extend ByteArray
 
     method elementType
         Byte!
+
+    method resize: newSize
+        let new = Self new: newSize.
+        1 to: (self size min: newSize)
+          do: { |index|
+                new put: (self at: index)
+                    at: index }.
+        new!
 end
