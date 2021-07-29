@@ -2,4 +2,21 @@ define DirectMethods
     Dictionary new!
 
 define InstanceMethods
-    Dictionary new!
+{
+     #redirect:
+     -> { signature: [File], vars: 0,
+          body: "struct FooFile* file = PTR(FooFile, ctx->frame[0].datum);
+                 return foo_Input_reopen(ctx, file, FooFile_OPEN);" },
+
+     #readChar_onEof:
+     -> { signature: [Any], vars: 0,
+          body: "int c = fgetc(ctx->receiver.datum.ptr);
+                 if (c == EOF)
+                     return foo_send(ctx, &FOO_value, ctx->frame[0], 0);
+                 return FOO_CHARACTER(c);" },
+
+     #unreadChar:
+     -> { signature: [Character], vars: 0,
+          body: "ungetc((int)ctx->frame[0].datum.int64, ctx->receiver.datum.ptr);
+                 return FOO_BOOLEAN(false);" }
+}!

@@ -873,6 +873,7 @@ const size_t FooFile_CREATE_OR_OPEN = 0b11;
 
 struct Foo foo_File_new(struct FooContext* sender, struct FooBytes* path, size_t mode);
 struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size_t flags);
+struct Foo foo_Input_reopen(struct FooContext* sender, struct FooFile* file, size_t flags);
 
 #include "generated_declarations.h"
 #include "generated_constants.c"
@@ -918,4 +919,32 @@ struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size
     foo_panicf(ctx, "fdopen() failed!");
   }
   return (struct Foo){ .class = &FooClass_FileStream, .datum = { .ptr = stream } };
+}
+
+struct Foo foo_Input_reopen(struct FooContext* ctx, struct FooFile* file, size_t flags) {
+  const char* mode = NULL;
+  // FIXME: These don't all make sensor for stdin...
+  if (flags == FooFile_OPEN && file->mode == FooFile_READ) {
+    mode = "rb";
+  } else if (flags == FooFile_OPEN && file->mode == (FooFile_READ | FooFile_WRITE)) {
+    mode = "r+b";
+  } else if (flags == FooFile_CREATE_OR_OPEN && file->mode == (FooFile_TRUNCATE | FooFile_WRITE)) {
+    mode = "wb";
+  } else if (flags == FooFile_CREATE_OR_OPEN && file->mode == (FooFile_TRUNCATE | FooFile_READ | FooFile_WRITE)) {
+    mode = "w+b";
+  } else if (flags == FooFile_CREATE_OR_OPEN && file->mode == FooFile_APPEND) {
+    mode = "ab";
+  } else if (flags == FooFile_CREATE_OR_OPEN && file->mode == (FooFile_APPEND | FooFile_READ)) {
+    mode = "a+b";
+  } else {
+    // Eg. open for append, don't create. FIXME: Need to implement on top of
+    // open() instead, but windows compat via _sopen_s is more than one line for
+    // that, so skipping for now.
+    foo_panicf(ctx, "Unsupported file mode & flags: mode=%zu, flags=%zu!", file->mode, flags);
+  }
+  FOO_DEBUG("freopen(%s, %s, stdin)", (char*)file->pathname->data, mode);
+  if (!freopen((char*)file->pathname->data, mode, stdin)) {
+    foo_panicf(ctx, "freopen() failed!");
+  }
+  return FOO_INSTANCE(Input, stdin);
 }

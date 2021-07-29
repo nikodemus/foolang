@@ -2131,22 +2131,24 @@ class TestTranspileSystem { assert system }
                          end"
             expect: "Hello!"!
 
-    method test0_System_input_exists
+    method test_System_input_exists
         self transpile: "class Main \{}
                              direct method run: command in: system
                                  system output writeString: system input classOf name!
                          end"
             expect: "Input"!
 
-    method test0_System_input_readline
-        self transpile: "class Main \{}
+    method test_System_input_readline
+        self transpile: "import lang.input_target_ext
+                         class Main \{}
                              direct method run: command in: system
+                                 system input
+                                     redirect: (system files / \"data/lorem_ipsum.txt\")
+                                                   file forRead.
                                  system output
                                      writeString: system input readline!
                          end"
-            withInput: "this is a quick test that passses
-because this text is not read"
-            expect: "this is a quick test that passes"!
+            expect: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor"!
 
     method test_Main_run_in_command_size
         self transpile: "class Main \{}

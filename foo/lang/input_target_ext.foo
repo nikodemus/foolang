@@ -1,0 +1,30 @@
+import .stringOutput.StringOutput
+import .exception.Error
+import .boolean_ext
+import .selector_target_ext
+
+define ReturnCharacter
+    "\r" character!
+
+define NewlineCharacter
+    "\n" character!
+
+extend Input
+    -- FIXME: This is absolutely horrible. Should read to a ByteArray
+    -- (or many, if it takes many), and the slice that into a string.
+    method readline_onEof: block
+        StringOutput
+            with: { |out|
+                    let char = self readChar_onEof: block.
+                    { char == NewlineCharacter or: char == ReturnCharacter }
+                        whileFalse: { out writeString: char string.
+                                      char = self readChar_onEof: block }.
+                    -- In case of \r\n discard the \n as well
+                    ReturnCharacter == char
+                        ifTrue: { let next = self readChar_onEof: { char }.
+                                  NewlineCharacter == next
+                                      ifFalse: self unreadChar: next } }!
+
+    method readline
+        self readline_onEof: { Error raise: "EOF on input" }!
+end
