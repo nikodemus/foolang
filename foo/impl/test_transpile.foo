@@ -2139,16 +2139,30 @@ class TestTranspileSystem { assert system }
             expect: "Input"!
 
     method test_System_input_readline
-        self transpile: "import lang.input_target_ext
+        self transpileWithPrelude: "
                          class Main \{}
                              direct method run: command in: system
                                  system input
                                      redirect: (system files / \"data/lorem_ipsum.txt\")
                                                    file forRead.
-                                 system output
-                                     writeString: system input readline!
+                                 let line = system input readline.
+                                 system output print: line size.
+                                 system output print: \":\".
+                                 system output writeString: line!
                          end"
-            expect: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor"!
+            expect: "78:Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor"!
+
+    method test_System_input_readline_long_line
+        self transpileWithPrelude: "
+                         class Main \{}
+                             direct method run: command in: system
+                                 system input
+                                     redirect: (system files / \"data/1001-character-line.txt\")
+                                                   file forRead.
+                                 system output
+                                     print: (system input readline) size!
+                         end"
+            expect: "1001"!
 
     method test_Main_run_in_command_size
         self transpile: "class Main \{}
