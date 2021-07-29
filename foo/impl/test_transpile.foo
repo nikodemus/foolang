@@ -19,7 +19,7 @@ interface TranspilerTest
     direct method system: system
         TestTranspileWrapper test: self system: system!
 
-    method prelude: prelude transpile: string
+    method prelude: prelude transpile: string input: input
         let target = system currentDirectory / "tmp_transpile_test.exe".
         target ifExists: #deleteFile.
         target exists not
@@ -32,7 +32,7 @@ interface TranspilerTest
             compile.
         target exists
             assert: "executable created".
-        let cmd = system command: target pathname.
+        let cmd = system command: "echo '{input}' | {target pathname}".
         cmd stderr isEmpty
             ifFalse: { Debug println: "---stderr---".
                        Debug println: cmd stderr.
@@ -51,8 +51,16 @@ interface TranspilerTest
              ok: False
              expect: output!
 
+    method transpile: string withInput: input expect: output
+        assert that: { let res = self prelude: False
+                                      transpile: string
+                                      input: input.
+                        [res ok, res stdout] }
+               equals: [True, output]
+               testing: "transpiler"!
+
     method transpileWithError: string
-        { let res = self prelude: False transpile: string.
+        { let res = self prelude: False transpile: string input: "".
           Output debug println: "WTF:\{string}\n==>\n{res}".
           return False }
             on: Error
@@ -79,14 +87,16 @@ interface TranspilerTest
 
     method prelude: name transpile: string ok: maybe expect: output
         assert that: { let res = self prelude: name
-                                      transpile: string.
+                                      transpile: string
+                                      input: "".
                        [res ok, res stdout] }
                equals: [maybe, output]
                testing: "transpiler"!
 
     method prelude: name transpile: string ok: maybe check: block
         assert true: { let res = self prelude: name
-                                      transpile: string.
+                                      transpile: string
+                                      input: "".
                        block value: res }
                testing: "transpiler"!
 end
@@ -2119,7 +2129,24 @@ class TestTranspileSystem { assert system }
                              direct method run: command in: system
                                  system output writeString: \"Hello!\"!
                          end"
-             expect: "Hello!"!
+            expect: "Hello!"!
+
+    method test0_System_input_exists
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                 system output writeString: system input classOf name!
+                         end"
+            expect: "Input"!
+
+    method test0_System_input_readline
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                 system output
+                                     writeString: system input readline!
+                         end"
+            withInput: "this is a quick test that passses
+because this text is not read"
+            expect: "this is a quick test that passes"!
 
     method test_Main_run_in_command_size
         self transpile: "class Main \{}
