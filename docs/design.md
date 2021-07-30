@@ -59,7 +59,6 @@ are quite stale.
 - [Enums](Enums.md)
 - [Extension Methods](Extension_Methods.md)
 - [Finalization](Finalization.md)
-- [Functions](Functions.md)
 - [IDE](IDE.md)
 - [IRs](IR.md)
 - [Interfaces](Interfaces.md)
