@@ -59,7 +59,6 @@ are quite stale.
 - [Extension Methods](Extension_Methods.md)
 - [Finalization](Finalization.md)
 - [IDE](IDE.md)
-- [IRs](IR.md)
 - [Interfaces](Interfaces.md)
 - [Miscellany](Miscellany.md)
 - [Modules](Modules.md)
