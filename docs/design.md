@@ -55,7 +55,6 @@ are quite stale.
 - [Arrays](Arrays.md)
 - [Booleans](Booleans.md)
 - [Comprehensions](Comprehensions.md)
-- [Iterators](iterators.md)
 - [Enums](Enums.md)
 - [Extension Methods](Extension_Methods.md)
 - [Finalization](Finalization.md)
