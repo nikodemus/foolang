@@ -17,6 +17,10 @@ extend Output
     method display: object
         object displayOn: self!
 
+    method displayln: object
+        object displayOn: self.
+        self newline!
+
     method displayOn: stream
         stream writeString: "#<Output stdout>"!
 end
