@@ -1160,7 +1160,7 @@ class Parser { source::String
     method toString
         "#<Parser position: {self position}>"!
 
-    direct method _new: source syntaxTable: syntaxTable
+    direct method _new: source::String syntaxTable: syntaxTable
         source
             ifEmpty: { Error raise: "Cannot parse empty string!" }.
         self

@@ -1,7 +1,35 @@
-import .impl.environment.Environment
 import .impl.repl.REPL
+import .impl.interpreter.Interpreter
+
+define Options
+    { "-h"     -> #help:in:,
+      "--help" -> #help:in: }!
 
 class Main {}
     direct method run: command in: system
-        REPL runIn: system!
+        command isEmpty
+            => { return REPL runIn: system }.
+        let selector
+            = Options at: command first
+                      ifNone: { #interpret:in: }.
+        selector sendTo: self with: [command, system]!
+
+    direct method interpret: command in: system
+        Interpreter run: command first
+                    in: system
+                    with: command rest!
+
+    direct method help: _command in: system
+        system
+            ; println: "usage: foo [options] [filename] [argument*]"
+            ; newline
+            ; println: "    When run without any arguments, start a REPL."
+            ; newline
+            ; println: "    When run with non-option arguments takes the first"
+            ; println: "    one as the path to a program to run, and the"
+            ; println: "    remaining ones as command-line arguments to that"
+            ; newline
+            ; println: "  Options:"
+            ; newline
+            ; println: "    -h, --help    Prints this message."!
 end

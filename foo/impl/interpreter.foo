@@ -1,0 +1,16 @@
+import .environment.Environment
+import .utils.FileModuleDictionary
+
+class Interpreter { system }
+    direct method run: program in: system with: args
+        let modules = FileModuleDictionary
+                          new: { "lang"     -> system files / "foo/lang",
+                                 "impl"     -> system files / "foo/impl",
+                                 "lib"      -> system files / "foo/lib",
+                                 "examples" -> system files / "foo/examples" }.
+        let source = (system files / program) readString.
+        let env = Environment modules: modules
+                      ; load: source.
+        let main = env global: "Main".
+        main eval run: args in: system!
+end
