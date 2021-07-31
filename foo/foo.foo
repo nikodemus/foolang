@@ -31,7 +31,7 @@ class Main { command system }
 
     method help
         system output
-            ; println: "usage: foo [option] [filename] [argument*]"
+            ; println: "usage: foo [option] [file.foo] [argument*]"
             ; newline
             ; println: "    When run without any arguments, start a REPL."
             ; newline
@@ -42,7 +42,8 @@ class Main { command system }
             ; println: "  Options:"
             ; newline
             ; println: "    -h, --help     Print this message."
-            ; println: "    -c, --compile  Compile the specified file."
+            ; println: "    -c, --compile  Compile the specified file, producing"
+            ; println: "                   an executable next to the original."
             ; println: "    -f, --format   Format (pretty-print) the specified file"
             ; println: "                   to standard output."
             ; println: "    -F, --format-in-place"
@@ -52,31 +53,36 @@ class Main { command system }
 
     method interpret
         Interpreter
-            run: command first
+            run: (self fooFile: command first)
             in: system
             with: command rest!
 
     method compile
         compiler.Compiler
-            compile: self justOneArg
+            compile: self justOneArgFooFileArg.
             in: system!
 
     method formatInPlace
-        let file = system files / self justOneArg.
+        let file = system files / self justOneFooFileArg.
         Formatter formatInPlace: file reportingTo: system output!
 
     method formatToOutput
-        let file = system files / self justOneArg.
+        let file = system files / self justOneFooFileArg.
         Formatter format: file to: system output!
 
-    method justOneArg
+    method fooFile: filename
+        (filename endsWith: ".foo")
+            ifFalse: { self abort: "ABORTED: Not a Foolang source file: {filename}" }.
+        filename!
+
+    method justOneFooFileArg
         command size > 2
-            ifTrue: { self abort: "Too many arguments to {command first}!" }.
-        command second!
+            ifTrue: { self abort: "ABORTED: Too many arguments to {command first}!" }.
+        self fooFile: command second!
 
     method abort: message
         system output println: message.
-        self help: [] in: system.
+        self help.
         system exit: 1!
 
 end
