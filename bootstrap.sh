@@ -12,7 +12,8 @@ set -u
 mkdir -p bin/
 BOOTSTRAP_INTERPRETER=bin/bootstrap-interpreter$EXT
 BOOTSTRAP_COMPILER=bin/bootstrap-foo$EXT
-TARGET=bin/foo$EXT
+TARGET0=bin/foo0$EXT
+TARGET1=bin/foo$EXT
 
 trap "./beep.sh" EXIT
 
@@ -29,7 +30,7 @@ trap "git checkout --quiet HEAD foo/lang/build_info.foo > /dev/null" EXIT
 if [[ "$@" != "--skip-interpreter-build" ]]; then
     rm -f $BOOTSTRAP_INTERPRETER
     cargo build
-    cp -v target/debug/bootstrap-interpreter$EXT  $BOOTSTRAP_INTERPRETER
+    mv -v target/debug/bootstrap-interpreter$EXT  $BOOTSTRAP_INTERPRETER
     echo "$BOOTSTRAP_INTERPRETER ok"
 fi
 
@@ -40,8 +41,21 @@ cp -a c bootstrap-c
 echo "$BOOTSTRAP_COMPILER ok"
 
 time $BOOTSTRAP_COMPILER --compile foo/foo.foo
-mv -v foo/foo$EXT $TARGET
-rm -rf target-c
-cp -a c target-c
-echo "$TARGET ok"
-echo "Foolang bootstrap complete, enjoy quietly!"
+mv -v foo/foo$EXT $TARGET0
+rm -rf target0-c
+cp -a c target0-c
+echo "$TARGET0 ok"
+
+time $TARGET0 --compile foo/foo.foo
+mv -v foo/foo$EXT $TARGET1
+rm -rf target1-c
+cp -a c target1-c
+echo "$TARGET1 ok"
+
+if diff --recursive --brief target0-c target1-c; then
+    echo "Foolang bootstrapped, enjoy quietly!"
+else
+    echo "Foolang bootstrap complete, but builds differ: tread carefully!"
+fi
+
+echo "Foolang binary: $TARGET1"
