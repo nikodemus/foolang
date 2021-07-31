@@ -309,8 +309,12 @@ class AssignmentToken { precedence string first last }
     is Token
 
     method parseAsSuffixOf: prefix with: parser
+        (SyntaxVariable includes: prefix)
+            ifFalse: { let note = "Cannot parse".
+                       Error raise: "Invalid assignment {parser syntaxTable where}:
+{(parser sourceFrom: self first to: self last) note: note}" }.
         SyntaxAssign
-            variable: prefix::SyntaxVariable
+            variable: prefix
             value: parser parseSingle!
 end
 
