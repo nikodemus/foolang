@@ -1,0 +1,103 @@
+---
+Terminal REPL.
+
+TODO
+- Everything needs a default displayOn: (classes don't have it by default)
+- Try running under self-compiled evaluator.
+- Would like to catch panics.
+- Factor out the parse/translate/eval logic from
+  the loop, so that code can be reused for even driven
+  webrepll
+- Commands:
+  * :exit
+  * :help
+  * :apropos
+  * :<number>  <historical value>
+- Tests
+- Add lib and example modules to environment.
+- Expose a proxy object as self to interpreted code,
+  giving access to system and environment.
+- Add System#console for dealing with line input mode, and maybe going full
+  blown line editor + colors and all...
+- Add System#atExit: for resetting console
+- Use syntaxprinter to indent for next line (needs to deal with incomplete ast)
+---
+
+import .environment.Environment
+import .parser.Parser
+import .syntaxTranslator.SyntaxTranslator
+
+-- KLUDGE: Cannot define global blocks, so using this instead
+-- for default $OnEof.
+class EofAbort {}
+    direct method value
+        Error raise: "EOF"!
+end
+
+define $OnEof EofAbort!
+
+class REPL { system env translator }
+    direct method in: system
+        let env = Environment new.
+        REPL system: system
+             env: env
+             translator: (SyntaxTranslator env: env)!
+
+    direct method runIn: system
+        (REPL in: system) run!
+
+    method run
+        let $OnEof = { return self }.
+        self printBanner.
+        { system input atEof }
+            whileFalse: { self readEvalPrintOnce }!
+
+    method printBanner
+        system output println: "Welcome to Foolang! ({Foolang version})".
+        system output println: "Press Ctrl-C to exit."!
+
+    method readEvalPrintOnce
+        { self printPrompt.
+          self print: (self eval: self read) }
+        on: Error
+        do: { |e|
+              system output println: "ERROR: {e description}".
+              return e }!
+
+    method printPrompt
+        system output print: "> ".
+        system output flush!
+
+    method printContinuationPrompt
+        system output print: "| ".
+        system output flush!
+
+    method read
+        let syntax = False.
+        let source = StringOutput new.
+        { syntax is False }
+            whileTrue: { source isEmpty
+                             ifFalse: { self printContinuationPrompt }.
+                         source println: self readline.
+                         syntax = self tryParse: source copyContent }.
+        syntax!
+
+    method translateSyntax: syntax
+        syntax visitBy: translator!
+
+    method eval: syntax
+        let result = False.
+        syntax do: { |each|
+                     let ast = self translateSyntax: each.
+                     result = ast evalIn: env }.
+        result!
+
+    method print: value
+        system output displayln: value!
+
+    method readline
+        system input readline_onEof: $OnEof!
+
+    method tryParse: string
+        Parser parseMixed: string onEof: { return False }!
+end
