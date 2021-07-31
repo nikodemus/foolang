@@ -33,7 +33,7 @@ class Main { command system }
             do: { |options selector|
                   (options contains: opt)
                       ifTrue: { return selector sendTo: self } }.
-        self abort: "Unknown command-line option: {opt}".
+        self abort: "Unknown command-line option: {opt}"!
 
     method usage
         system output
@@ -81,7 +81,7 @@ class Main { command system }
 
     method compile
         compiler.Compiler
-            compile: self justOneArgFooFileArg
+            compile: self justOneFooFileArg
             in: system!
 
     method formatInPlace

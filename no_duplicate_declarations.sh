@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [ "-$@" = "---build" ]; then
-    cargo run foo/compile.foo -- foo/examples/hello.foo hello.exe
+    cargo run foo/foo.foo -- --compile foo/examples/hello.foo
 fi
 
 sort c/generated_declarations.h > sorted_declarations.tmp

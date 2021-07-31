@@ -51,30 +51,20 @@ jobs:
           command: test
           args: --all
 
-      - name: Built bootstrap interpreter
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-
-      - run: mkdir -p bin && cp target/debug/foo ./bin/
-
-      - name: Bootstrap compiler
-        run: ./bin/foo foo/compile.foo -- foo/compile.foo ./bin/bootstrap-fooc
-
-      - name: Self-compile
-        run: ./bin/bootstrap-fooc foo/compile.foo ./bin/fooc
-
-      - name: Test Foolang
-        run: ./bin/foo foo/impl/test_foolang.foo --use=foo/lib
-
-      - name: Test Prelude
-        run: ./bin/foo foo/impl/test_prelude.foo --use=foo/lib
-
       - name: Clang version
         run: clang --version
 
+      - name: Bootstrap
+        run: ./bootstrap.sh
+
+      - name: Test Foolang
+        run: ./bin/bootstrap-interpreter foo/impl/test_foolang.foo --use=foo/lib
+
+      - name: Test Prelude
+        run: ./bin/bootstrap-interpreter foo/impl/test_prelude.foo --use=foo/lib
+
       - name: Test Transpile
-        run: ./bin/foo foo/impl/test_transpile.foo --use=foo/lib
+        run: ./bin/bootstrap-interpreter foo/impl/test_transpile.foo --use=foo/lib
 
   build-host:
     name: "Build host"
@@ -115,15 +105,15 @@ jobs:
       - name: Upload bootstrap interpreter (Windows)
         uses: actions/upload-artifact@v2
         with:
-          name: foo-${{ runner.os }}
-          path: target/debug/foo.exe
+          name: bootstrap-interpreter-${{ runner.os }}
+          path: target/debug/bootstrap-interpreter.exe
         if: ${{ runner.os == 'Windows' }}
 
       - name: Upload bootstrap interpreter (Unix)
         uses: actions/upload-artifact@v2
         with:
-          name: foo-${{ runner.os }}
-          path: target/debug/foo
+          name: bootstrap-interpreter-${{ runner.os }}
+          path: target/debug/bootstrap-interpreter
         if: ${{ runner.os != 'Windows' }}
 
   test-host:
@@ -180,15 +170,15 @@ jobs:
       - name: Download bootstrap interpreter
         uses: actions/download-artifact@v2
         with:
-          name: foo-${{ runner.os }}
+          name: bootstrap-interpreter-${{ runner.os }}
           path: bin/
 
       - name: Make bootstrap interpreter executable
-        run: chmod a+x bin/foo
+        run: chmod a+x bin/bootstrap-interpreter
         if: ${{ runner.os != 'Windows' }}
 
       - name: Test
-        run: ./bin/foo foo/impl/test_foolang.foo --use=foo/lib
+        run: ./bin/bootstrap-interpreter foo/impl/test_foolang.foo --use=foo/lib
 
   test-prelude:
     name: "Test Prelude"
@@ -204,15 +194,15 @@ jobs:
       - name: Download bootstrap interpreter
         uses: actions/download-artifact@v2
         with:
-          name: foo-${{ runner.os }}
+          name: bootstrap-interpreter-${{ runner.os }}
           path: bin/
 
       - name: Make bootstrap interpreter executable
-        run: chmod a+x bin/foo
+        run: chmod a+x bin/bootstrap-interpreter
         if: ${{ runner.os != 'Windows' }}
 
       - name: Test Prelude
-        run: ./bin/foo foo/impl/test_prelude.foo --use=foo/lib
+        run: ./bin/bootstrap-interpreter foo/impl/test_prelude.foo --use=foo/lib
 
   test-transpile:
     name: "Test Transpile"
@@ -228,11 +218,11 @@ jobs:
       - name: Download bootstrap interpreter
         uses: actions/download-artifact@v2
         with:
-          name: foo-${{ runner.os }}
+          name: bootstrap-interpreter-${{ runner.os }}
           path: bin/
 
       - name: Make bootstrap interpreter executable
-        run: chmod a+x bin/foo
+        run: chmod a+x bin/bootstrap-interpreter
         if: ${{ runner.os != 'Windows' }}
 
       # Clang is installed on the Windows image, but is not in path.
@@ -244,13 +234,13 @@ jobs:
         run: clang --version
 
       - name: Test Transpile
-        run: ./bin/foo foo/impl/test_transpile.foo --use=foo/lib
+        run: ./bin/bootstrap-interpreter foo/impl/test_transpile.foo --use=foo/lib
 
-  test-compiler:
+  test-full-bootstrap:
     # Not running this on Windows because the linker clang uses
     # there doesn't accept either VS style nor GNU style stack-
     # size specification, and I don't want to figure it out now.
-    name: "Test compiler"
+    name: "Test full bootstrap"
     needs: build-host
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -260,25 +250,19 @@ jobs:
       - name: Download bootstrap interpreter
         uses: actions/download-artifact@v2
         with:
-          name: foo-${{ runner.os }}
+          name: bootstrap-interpreter-${{ runner.os }}
           path: bin/
 
       - name: Make bootstrap interpreter executable
-        run: chmod a+x bin/foo
+        run: chmod a+x bin/bootstrap-interpreter
 
       - name: Clang version
         run: clang --version
 
-      - name: Bootstrap compiler
-        run: ./bin/foo foo/compile.foo -- foo/compile.foo ./bin/bootstrap-fooc
+      - name: Bootstrap
+        run: ./bootstrap.sh --skip-interpreter-build
 
-      - name: No duplicate declarations from bootstrap compile
-        run: ./no_duplicate_declarations.sh
-
-      - name: Self-compile
-        run: ./bin/bootstrap-fooc foo/compile.foo ./bin/fooc
-
-      - name: No duplicate declarations from self-compile
+      - name: No duplicate declarations
         run: ./no_duplicate_declarations.sh
 
   test-foolang-mode:

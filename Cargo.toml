@@ -8,11 +8,11 @@ homepage = "https://foolang.org"
 repository = "https://github.com/nikodemus/foolang"
 keywords = ["foolang", "language"]
 edition = "2018"
-default-run = "foo"
+default-run = "bootstrap-interpreter"
 exclude = ["docs/papers/*"]
 
 [[bin]]
-name = "foo"
+name = "bootstrap-interpreter"
 path = "src/main.rs"
 
 [profile.dev]
