@@ -1,40 +1,35 @@
 import .impl.repl.REPL
 import .impl.interpreter.Interpreter
-import .impl.compiler.Compiler
+import .impl.formatter.Formatter
+
+-- KLUDGE: prefix import to avoid colliding with bootstrap evaluator class
+-- called compiler.
+import .impl.compiler
 
 define Options
-    { "-h"        -> #help:in:,
-      "--help"    -> #help:in:,
-      "-c"        -> #compile:in:,
-      "--compile" -> #compile:in: }!
+    { "-h"        -> #help,
+      "--help"    -> #help,
+      "-c"        -> #compile,
+      "--compile" -> #compile,
+      "-f"        -> #formatToOutput,
+      "--format"  -> #formatToOutput,
+      "-F"        -> #formatInPlace,
+      "--format-in-place" -> #formatInPlace }!
 
-class Main {}
+class Main { command system }
     direct method run: command in: system
+        (self command: command
+              system: system)
+        run!
+
+    method run
         command isEmpty
             => { return REPL runIn: system }.
-        let selector
-            = Options at: command first
-                      ifNone: { #interpret:in: }.
-        selector sendTo: self with: [command, system]!
+        let selector = Options at: command first
+                               ifNone: { #interpret }.
+        selector sendTo: self!
 
-    direct method interpret: command in: system
-        Interpreter run: command first
-                    in: system
-                    with: command rest!
-
-    direct method compile: command in: system
-        let compileCommand = command rest.
-        compileCommand size > 1
-            ifTrue: { self abort: "Too many arguments to --compile!" in: system }.
-        Compiler compile: compileCommand first
-                 in: system!
-
-    direct method abort: message in: system
-        system output println: message.
-        self help: [] in: system.
-        system exit: 1!
-
-    direct method help: _command in: system
+    method help
         system output
             ; println: "usage: foo [option] [filename] [argument*]"
             ; newline
@@ -46,6 +41,42 @@ class Main {}
             ; newline
             ; println: "  Options:"
             ; newline
-            ; println: "    -h, --help     Prints this message."
-            ; println: "    -c, --compile  Compile the specified file."!
+            ; println: "    -h, --help     Print this message."
+            ; println: "    -c, --compile  Compile the specified file."
+            ; println: "    -f, --format   Format (pretty-print) the specified file"
+            ; println: "                   to standard output."
+            ; println: "    -F, --format-in-place"
+            ; println: "                   Format (pretty-print) the specified file"
+            ; println: "                   in place."
+        !
+
+    method interpret
+        Interpreter
+            run: command first
+            in: system
+            with: command rest!
+
+    method compile
+        compiler.Compiler
+            compile: self justOneArg
+            in: system!
+
+    method formatInPlace
+        let file = system files / self justOneArg.
+        Formatter formatInPlace: file reportingTo: system output!
+
+    method formatToOutput
+        let file = system files / self justOneArg.
+        Formatter format: file to: system output!
+
+    method justOneArg
+        command size > 2
+            ifTrue: { self abort: "Too many arguments to {command first}!" }.
+        command second!
+
+    method abort: message
+        system output println: message.
+        self help: [] in: system.
+        system exit: 1!
+
 end
