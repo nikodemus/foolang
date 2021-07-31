@@ -22,6 +22,10 @@ interface Object
         stream writeString: Self name.
         stream writeString: ">"!
 
+    method => block
+        self is False
+            ifFalse: { block cull: self }!
+
     method == other
         (Self includes: other)
             ifTrue: { self isEquivalent: other }!
