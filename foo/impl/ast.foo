@@ -6,6 +6,9 @@ import .c3.C3Linearization
 interface Ast
     is Object
 
+    method evalIn: env
+        AstInterpreter eval: self in: env!
+
     method isConstant
         False!
 end
@@ -39,6 +42,9 @@ end
 
 interface AstToplevel
     is Object
+
+    method evalIn: env
+        self defineIn: env!
 
     method isBuiltin
         False!
@@ -235,6 +241,10 @@ interface AstDefinition
 
     method defineIn: env
         self global isDefined assert: "undefined global: {self}"!
+
+    method evalIn: env
+        self defineIn: env.
+        self eval!
 
     method definition
         self!
