@@ -1,0 +1,23 @@
+import .parser.Parser
+import .syntaxPrinter.SyntaxPrinter
+
+class Formatter {}
+    direct method formatInPlace: path reportingTo: output
+        output println: "Formatting: {path}".
+        let syntax = self parse: path.
+        path truncateExisting forWrite
+            createOrOpen: { |stream|
+                            SyntaxPrinter
+                                printAll: syntax
+                                to: stream }!
+
+    direct method format: path to: stream
+        let syntax = self parse: path.
+        SyntaxPrinter
+            printAll: syntax
+            to: stream!
+
+    direct method parse: path
+        Parser
+            parseDefinitions: path readString!
+end

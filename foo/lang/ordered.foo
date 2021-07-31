@@ -251,6 +251,19 @@ interface Ordered
         self positionFromRight: block
              ifNone: { False }!
 
+    method endsWith: other
+        let n = other size.
+        n > self size
+            ifTrue: { return False }.
+        let base = self size - n.
+        1 to: n
+          do: { |index|
+                let a = self at: base + index.
+                let b = other at: index.
+                a == b
+                    ifFalse: { return False } }.
+        True!
+
     method with: other collect: block
         self with: other
              collect: block
