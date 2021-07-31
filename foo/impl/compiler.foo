@@ -16,6 +16,36 @@ class Compiler { source target system prelude stackSize addressSanitizer }
              stackSize: False
              addressSanitizer: False!
 
+    direct method compile: source in: system
+        let target = self targetNameForSource: source in: system.
+        -- Seems like a good idea to annouce it since the name
+        -- is implicit.
+        system output println: "compiling: {source} -> {target}".
+        self compile: source
+             in: system
+             as: target!
+
+    direct method targetNameForSource: source in: system
+        let parts = source splitBy: "." character.
+        parts size > 1
+            ifTrue: { parts = parts butlast }.
+        let target = String concat: parts asArray.
+        system isWindows
+            => { return target append: ".exe" }.
+        target!
+
+    direct method compile: source in: system as: target
+        (self
+             source: (system files / source) readString
+             target: system files / target
+             system: system
+             prelude: ["lang", "prelude"]
+             -- 4MiB, default tends to be 1MiB, which is too
+             -- little for self-compilation.
+             stackSize: 0x400000
+             addressSanitizer: False)
+        compile!
+
     method compile
         let modules = FileModuleDictionary
                        new: { "lang" -> system files / "foo/lang",
