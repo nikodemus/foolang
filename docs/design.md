@@ -29,7 +29,7 @@ only gives you freedom from race conditions relating to object state. You can
 still create filesystem races and have actors that are badly behaved unless they
 receive messages in specific order, etc.
 
-## Design Notes
+## Current Design Notes
 
 Reorganization of design notes into more coherent and future proof form
 in in progress, this is the current status:
@@ -45,21 +45,20 @@ in in progress, this is the current status:
 - 012 - [Record Implementation](design/012-record-implementation.md)
 - 013 - [Tower of Babel](design/013-tower-of-babel.md)
 - 014 - [Object Model](design/014-object-model.md)
+- 015 - [WASM Support](design/015-wasm-support.md)
 
-### Old Design Notes
+## Old Design Notes
 
-Most of the notes haven't been migrated yet:
+These notes haven't been migrated to the design note format, and some of them
+are quite stale.
 
 - [Arrays](Arrays.md)
 - [Booleans](Booleans.md)
 - [Comprehensions](Comprehensions.md)
-- [Iterators](iterators.md)
 - [Enums](Enums.md)
 - [Extension Methods](Extension_Methods.md)
 - [Finalization](Finalization.md)
-- [Functions](Functions.md)
 - [IDE](IDE.md)
-- [IRs](IR.md)
 - [Interfaces](Interfaces.md)
 - [Miscellany](Miscellany.md)
 - [Modules](Modules.md)
