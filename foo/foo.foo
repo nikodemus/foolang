@@ -6,15 +6,12 @@ import .impl.formatter.Formatter
 -- called compiler.
 import .impl.compiler
 
-define Options
-    { "-h"        -> #help,
-      "--help"    -> #help,
-      "-c"        -> #compile,
-      "--compile" -> #compile,
-      "-f"        -> #formatToOutput,
-      "--format"  -> #formatToOutput,
-      "-F"        -> #formatInPlace,
-      "--format-in-place" -> #formatInPlace }!
+define CommandLineOptions
+    { ["-h", "--help"]    -> #help,
+      ["-v", "--version"] -> #version,
+      ["-c", "--compile"] -> #compile,
+      ["-f", "--format"]  -> #formatToOutput,
+      ["-F", "--format-in-place"] -> #formatInPlace }!
 
 class Main { command system }
     direct method run: command in: system
@@ -25,41 +22,66 @@ class Main { command system }
     method run
         command isEmpty
             => { return REPL runIn: system }.
-        let selector = Options at: command first
-                               ifNone: { #interpret }.
-        selector sendTo: self!
+        let option = command first.
+        (command first startsWith: "-")
+            ifTrue: { return self parseOptions }.
+        self interpret!
+
+    method parseOptions
+        let opt = command first.
+        CommandLineOptions
+            do: { |options selector|
+                  (options contains: opt)
+                      ifTrue: { return selector sendTo: self } }.
+        self abort: "Unknown command-line option: {opt}".
+
+    method usage
+        system output
+            println: "usage: foo [option] [filename] [argument*]"!
 
     method help
+        self usage.
         system output
-            ; println: "usage: foo [option] [file.foo] [argument*]"
+            ; println: "usage: foo [option] [filename] [argument*]"
             ; newline
-            ; println: "    When run without any arguments, start a REPL."
+            ; println: "  When run without any arguments, start a REPL."
             ; newline
-            ; println: "    When run with non-option arguments takes the first"
-            ; println: "    one as the path to a program to run, and the"
-            ; println: "    remaining ones as command-line arguments to that"
+            ; println: "  When run with non-option arguments runs the specified"
+            ; println: "  file as a script, passing the remaining command-line"
+            ; println: "  arguments to it."
             ; newline
             ; println: "  Options:"
             ; newline
-            ; println: "    -h, --help     Print this message."
-            ; println: "    -c, --compile  Compile the specified file, producing"
-            ; println: "                   an executable next to the original."
-            ; println: "    -f, --format   Format (pretty-print) the specified file"
-            ; println: "                   to standard output."
-            ; println: "    -F, --format-in-place"
-            ; println: "                   Format (pretty-print) the specified file"
-            ; println: "                   in place."
+            ; println: "  -v, --version  Print the Foolang version."
+            ; println: "  -h, --help     Print this message."
+            ; println: "  -c, --compile  Compile the specified file."
+            ; println: "  -f, --format   Format the specified file to stdout."
+            ; println: "  -F, --format-in-place"
+            ; println: "                 Format (pretty-print) the specified file."
+            ; newline
+            ; println: "  Compiler and formatter both require the filename to have"
+            ; println: "  a .foo extension, but files with arbitrary extensions"
+            ; println: "  can be run as scripts."
+            ; newline
+            ; println: "  Compiler produces the executable in the same directory"
+            ; println: "  as the original file, naming it following the plaform"
+            ; println: "  convention."
         !
 
+    method version
+        system output println: "Foolang {Foolang version}"!
+
     method interpret
+        -- Interpreter doesn't check for .foo extension, so that shebang
+        -- scripts don't have to carry it.
         Interpreter
-            run: (self fooFile: command first)
+            run: command first
             in: system
             with: command rest!
 
     method compile
         compiler.Compiler
-            compile: self justOneArgFooFileArg.
+            compile: self justOneArgFooFileArg
             in: system!
 
     method formatInPlace
@@ -70,19 +92,18 @@ class Main { command system }
         let file = system files / self justOneFooFileArg.
         Formatter format: file to: system output!
 
-    method fooFile: filename
-        (filename endsWith: ".foo")
-            ifFalse: { self abort: "ABORTED: Not a Foolang source file: {filename}" }.
-        filename!
-
     method justOneFooFileArg
         command size > 2
-            ifTrue: { self abort: "ABORTED: Too many arguments to {command first}!" }.
-        self fooFile: command second!
+            ifTrue: { self abort: "Too many arguments to {command first}!" }.
+        let filename = command second.
+        (filename endsWith: ".foo")
+            ifFalse: { self abort: "Not a Foolang source file: {filename}" }.
+        filename!
 
     method abort: message
+        system output print: "Invalid command-line. "
         system output println: message.
-        self help.
+        self shortHelp.
         system exit: 1!
 
 end
