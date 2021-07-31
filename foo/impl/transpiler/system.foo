@@ -12,6 +12,12 @@ define InstanceMethods {
                 // FIXME: capture output and exit code!
                 int result = system(command);
                 return FOO_BOOLEAN(result == 0);" },
+    #exit
+    -> { signature: [], vars: 0,
+         body: "system_exit(0);" },
+    #exit:
+    -> { signature: [Integer], vars: 0,
+         body: "system_exit((int)ctx->frame[0].datum.int64);" },
     #files
     -> { signature: [], vars: 0,
          body: "struct FooBytes* root = FooBytes_from(ctx, \"\"); // FIXME: could be static string

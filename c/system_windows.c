@@ -12,6 +12,10 @@
 
 #include "system.h"
 
+void system_exit(int code) {
+  exit(code);
+}
+
 bool system_is_unix(void) {
   return false;
 }

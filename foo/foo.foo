@@ -1,9 +1,12 @@
 import .impl.repl.REPL
 import .impl.interpreter.Interpreter
+import .impl.compiler.Compiler
 
 define Options
-    { "-h"     -> #help:in:,
-      "--help" -> #help:in: }!
+    { "-h"        -> #help:in:,
+      "--help"    -> #help:in:,
+      "-c"        -> #compile:in:,
+      "--compile" -> #compile:in: }!
 
 class Main {}
     direct method run: command in: system
@@ -19,9 +22,21 @@ class Main {}
                     in: system
                     with: command rest!
 
+    direct method compile: command in: system
+        let compileCommand = command rest.
+        compileCommand size > 1
+            ifTrue: { self abort: "Too many arguments to --compile!" in: system }.
+        Compiler compile: compileCommand first
+                 in: system!
+
+    direct method abort: message in: system
+        system output println: message.
+        self help: [] in: system.
+        system exit: 1!
+
     direct method help: _command in: system
-        system
-            ; println: "usage: foo [options] [filename] [argument*]"
+        system output
+            ; println: "usage: foo [option] [filename] [argument*]"
             ; newline
             ; println: "    When run without any arguments, start a REPL."
             ; newline
@@ -31,5 +46,6 @@ class Main {}
             ; newline
             ; println: "  Options:"
             ; newline
-            ; println: "    -h, --help    Prints this message."!
+            ; println: "    -h, --help     Prints this message."
+            ; println: "    -c, --compile  Compile the specified file."!
 end

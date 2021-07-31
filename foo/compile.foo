@@ -2,14 +2,9 @@ import .impl.compiler
 
 class Main {}
     direct method run: command in: system
-        (compiler.Compiler
-             source: (system files / command first) readString
-             target: system currentDirectory / command second
-             system: system
-             prelude: ["lang", "prelude"]
-             -- 4MiB, default tends to be 1MiB, which is too
-             -- little for self-compilation.
-             stackSize: 0x400000
-             addressSanitizer: False)
-        compile!
+        -- KLUDGE: prefix to avoid colliding with bootstrap evaluator
+        -- class called compiler.
+        compiler.Compiler compile: command first
+                          in: system
+                          as: command second!
 end

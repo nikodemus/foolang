@@ -1,5 +1,6 @@
 #define _POSIX_C_SOURCE 199309L // minimum for clock_gettime()
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <inttypes.h>
 #include <stddef.h>
@@ -11,6 +12,10 @@
 #include <assert.h>
 
 #include "system.h"
+
+void system_exit(int code) {
+  exit(code);
+}
 
 bool system_is_unix(void) {
   return true;
