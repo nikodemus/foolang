@@ -19,7 +19,7 @@ interface TranspilerTest
     direct method system: system
         TestTranspileWrapper test: self system: system!
 
-    method prelude: prelude transpile: string input: input
+    method prelude: prelude transpile: string
         let target = system currentDirectory / "tmp_transpile_test.exe".
         target ifExists: #deleteFile.
         target exists not
@@ -32,7 +32,7 @@ interface TranspilerTest
             compile.
         target exists
             assert: "executable created".
-        let cmd = system command: "echo '{input}' | {target pathname}".
+        let cmd = system command: target pathname.
         cmd stderr isEmpty
             ifFalse: { Debug println: "---stderr---".
                        Debug println: cmd stderr.
@@ -51,16 +51,8 @@ interface TranspilerTest
              ok: False
              expect: output!
 
-    method transpile: string withInput: input expect: output
-        assert that: { let res = self prelude: False
-                                      transpile: string
-                                      input: input.
-                        [res ok, res stdout] }
-               equals: [True, output]
-               testing: "transpiler"!
-
     method transpileWithError: string
-        { let res = self prelude: False transpile: string input: "".
+        { let res = self prelude: False transpile: string.
           Output debug println: "WTF:\{string}\n==>\n{res}".
           return False }
             on: Error
@@ -87,16 +79,14 @@ interface TranspilerTest
 
     method prelude: name transpile: string ok: maybe expect: output
         assert that: { let res = self prelude: name
-                                      transpile: string
-                                      input: "".
+                                      transpile: string.
                        [res ok, res stdout] }
                equals: [maybe, output]
                testing: "transpiler"!
 
     method prelude: name transpile: string ok: maybe check: block
         assert true: { let res = self prelude: name
-                                      transpile: string
-                                      input: "".
+                                      transpile: string.
                        block value: res }
                testing: "transpiler"!
 end
@@ -2131,36 +2121,71 @@ class TestTranspileSystem { assert system }
                          end"
             expect: "Hello!"!
 
-    method test_System_input_exists
+    method test_System_input
         self transpile: "class Main \{}
                              direct method run: command in: system
                                  system output writeString: system input classOf name!
                          end"
             expect: "Input"!
 
+    method test_System_input_atEof
+        self transpile: "class Main \{}
+                             direct method run: command in: system
+                                 -- EOF isn't detected until a failed read, for better or worse
+                                 system input readChar_onEof: \{ False }.
+                                 let status = system input atEof
+                                                  ifTrue: \{ \"eof!\" }
+                                                  ifFalse: \{ \"good to go...\" }.
+                                 system output writeString: status!
+                         end"
+            expect: "eof!"!
+
+    method test_System_input_lines
+        self transpile: "import lang.input_target_ext
+                         class Main \{}
+                             direct method run: command in: system
+                                 system input
+                                     redirect: (system files / \"data/lorem_ipsum.txt\")
+                                                   file forRead.
+                                 let result = system input lines size is 6
+                                                 ifTrue: \{ \"ok\" }
+                                                 ifFalse: \{ \"nope\" }.
+                                 system output writeString: result!
+                         end"
+            expect: "ok"!
+
     method test_System_input_readline
-        self transpileWithPrelude: "
+        self transpile: "import lang.input_target_ext
                          class Main \{}
                              direct method run: command in: system
                                  system input
                                      redirect: (system files / \"data/lorem_ipsum.txt\")
                                                    file forRead.
                                  let line = system input readline.
-                                 system output print: line size.
-                                 system output print: \":\".
                                  system output writeString: line!
                          end"
-            expect: "78:Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor"!
+            expect: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor"!
 
     method test_System_input_readline_long_line
-        self transpileWithPrelude: "
+        -- FIXME: This kind of jumping through the hoops to avoid loading
+        -- full prelude saves ~5-10s from the test time, but takes effort.
+        --
+        -- Instead I should really make it so that I can load the prelude
+        -- once, and keep it immutable. (Creating copies if extensions)
+        -- are added later.
+        --
+        -- ...could even include it in the compiler, so that unless
+        -- a specific prelude is requested, the built-in one is used.
+        self transpile: "import lang.input_target_ext
                          class Main \{}
                              direct method run: command in: system
                                  system input
                                      redirect: (system files / \"data/1001-character-line.txt\")
                                                    file forRead.
-                                 system output
-                                     print: (system input readline) size!
+                                 let result = (system input readline) size is 1001
+                                                  ifTrue: \{ \"1001\" }
+                                                  ifFalse: \{ \"nope\" }.
+                                 system output writeString: result!
                          end"
             expect: "1001"!
 

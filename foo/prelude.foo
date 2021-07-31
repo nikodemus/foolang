@@ -37,8 +37,11 @@ import .lang.string.String
 import .lang.stringOutput.StringOutput
 import .lang.testSuite.TestSuite
 import .lang.time_ext
+import .lang.build_info
 
 class Foolang {}
     direct method isSelfHosted
         False!
+    direct method version
+        "{build_info.Version}-bootstrap-evaluator"!
 end

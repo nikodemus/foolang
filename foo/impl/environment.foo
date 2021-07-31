@@ -361,9 +361,8 @@ class Environment { parent
         let res = False.
         (Parser parseExpressions: string)
             do: { |syntax|
-                  res = AstInterpreter
-                            eval: (SyntaxTranslator translate: syntax in: self)
-                            inEnv: self }.
+                  res = (SyntaxTranslator translate: syntax in: self)
+                      evalIn: self }.
         res!
 
     method checkGlobals

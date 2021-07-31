@@ -13,6 +13,7 @@ class Chain { _first _last size }
         self _first: array
              _last: array
              size: 0!
+
     method add: elt
         let n = _last at: 1.
         ((n + 2) is (_last size))
@@ -26,6 +27,7 @@ class Chain { _first _last size }
         _last put: elt at: newsize + 1.
         size = size + 1.
         self!
+
     method do: block
         let next = _first.
         { next is False }
@@ -33,6 +35,7 @@ class Chain { _first _last size }
                             do: { |each|
                                   block value: (next at: (each + 1))}.
                           next = next at: next size }!
+
     method content
         let array = Array new: size.
         let i = 1.
@@ -42,7 +45,17 @@ class Chain { _first _last size }
         _last = _first.
         _first put: 0 at: 1.
         _first put: False at: (_first size).
+        size = 0.
         array!
+
+    method copyContent
+        let array = Array new: size.
+        let i = 1.
+        self do: { |each|
+                   array put: each at: i.
+                   i = i + 1 }.
+        array!
+
     method displayOn: stream
         stream print: "#<Chain>"!
 end
@@ -65,8 +78,14 @@ class StringOutput { _chain }
         block value: out.
         out content!
 
+    method isEmpty
+        _chain size is 0!
+
     method content
         String concat: _chain content!
+
+    method copyContent
+        String concat: _chain copyContent!
 
     method printOn: stream
         _chain do: { |each| stream print: each }!

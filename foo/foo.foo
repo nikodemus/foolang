@@ -1,0 +1,7 @@
+import .impl.environment.Environment
+import .impl.repl.REPL
+
+class Main {}
+    direct method run: command in: system
+        REPL runIn: system!
+end

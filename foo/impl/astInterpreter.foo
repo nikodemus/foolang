@@ -112,7 +112,7 @@ define $context
 class AstInterpreter { context process }
     is AstVisitor
 
-    direct method eval: ast inEnv: env
+    direct method eval: ast in: env
         self
             eval: ast
             with: (InterpreterContext new: env frame size)

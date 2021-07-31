@@ -167,11 +167,23 @@ class TokenBinaryInteger { string first last }
             source: (parser sourceFrom: first to: last)!
 end
 
-class TokenEof { position }
+class DefaultEof {}
+    direct method cull: eof
+        let note = "Cannot parse".
+        Error raise: "Cannot parse EOF in prefix position {eof parser syntaxTable where}:
+{(eof parser sourceFrom: eof first to: eof last) note: note}"!
+end
+
+define $EOF DefaultEof!
+
+class TokenEof { position parser }
     is Token
 
     direct method at: position in: parser
-        self position: position!
+        self position: position parser: parser!
+
+    method parseAsPrefixWith: parser atPrecedence: _precedence
+        $EOF cull: self!
 
     method precedence
         0!
@@ -297,8 +309,12 @@ class AssignmentToken { precedence string first last }
     is Token
 
     method parseAsSuffixOf: prefix with: parser
+        (SyntaxVariable includes: prefix)
+            ifFalse: { let note = "Cannot parse".
+                       Error raise: "Invalid assignment {parser syntaxTable where}:
+{(parser sourceFrom: self first to: self last) note: note}" }.
         SyntaxAssign
-            variable: prefix::SyntaxVariable
+            variable: prefix
             value: parser parseSingle!
 end
 
@@ -1180,8 +1196,20 @@ class Parser { source::String
             parseDefinitions!
 
     direct method parseMixed: source
+        -- for REPL where both definitions and expressions may
+        -- appear
         (self _new: source syntaxTable: MixedSyntaxTable)
-            _parseAll: #parse! -- wwwhhhhaaaaa
+            _parseAll: #parse!
+
+    direct method parseMixed: source onEof: block
+        -- for REPL where both definitions and expressions may
+        -- appear
+        --
+        -- The EOF block is called if we hit EOF in prefix
+        -- position.
+        let $EOF = block.
+        (self _new: source syntaxTable: MixedSyntaxTable)
+            _parseAll: #parse!
 
     method parseDefinitions
         self _parseAll: #parsePrefix!

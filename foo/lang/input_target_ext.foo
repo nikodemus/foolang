@@ -1,7 +1,8 @@
 import .stringOutput.StringOutput
 import .exception.Error
-import .boolean_ext
 import .byteArray_ext
+import .boolean_ext
+import .list.List
 
 define ReturnCharacter
     "\r" character!
@@ -19,7 +20,9 @@ class InputBuffer { next bytes }
         bytes put: char code at: next.
         next = next + 1!
     method string
-        bytes stringFrom: 1 to: next - 1!
+        next is 1
+            ifTrue: { "" }
+            ifFalse: { bytes stringFrom: 1 to: next - 1 }!
 end
 
 extend Input
@@ -33,8 +36,17 @@ extend Input
         ReturnCharacter == char
             ifTrue: { let next = self readChar_onEof: { char }.
                       NewlineCharacter == next
-                          ifFalse: self unreadChar: next }.
+                          ifFalse: { self unreadChar: next } }.
         buffer string!
+
+    method doLines: block
+        { block value: (self readline_onEof: { return False }) }
+            loop!
+
+    method lines
+        let lines = List new.
+        self doLines: { |each| lines add: each }.
+        lines!
 
     method readline
         self readline_onEof: { Error raise: "EOF on input" }!
