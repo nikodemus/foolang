@@ -25,10 +25,40 @@ class TestOrdered { assert }
                                          in: size) } }.
         cases!
 
+    method test_startsWith_returns_True_when_sequence_starts_with_prefix
+        assert true: { [1,2,3] startsWith: [1,2] }!
+
+    method test_startsWith_returns_False_when_sequence_doesnt_start_with_prefix
+        assert false: { [1,2,3] startsWith: [2,1] }!
+
+    method test_startsWith_returns_False_when_sequnce_is_shorter_than_prefix
+        assert false: { [1,2] startsWith: [1,2,3] }!
+
+    method test_startsWith_returns_True_for_empty_prefix
+        assert true: { [1,2,3] startsWith: [] }!
+
+    method test_startsWith_returns_True_for_empty_prefix_on_empty_sequence
+        assert true: { [] startsWith: [] }!
+
+    method test_endsWith_returns_True_when_sequence_ends_with_suffix
+        assert true: { [1,2,3] endsWith: [2,3] }!
+
+    method test_endsWith_return_False_when_sequence_doesnt_end_with_suffix
+        assert false: { [1,2,3] endsWith: [3,2] }!
+
+    method test_endsWith_returns_False_when_sequnce_is_shorter_than_suffix
+        assert false: { [1,2] endsWith: [1,2,3] }!
+
+    method test_endsWith_returns_True_for_empty_suffix
+        assert true: { [1,2,3] endsWith: [] }!
+
+    method test_endsWith_returns_True_for_empty_suffix_on_empty_sequence
+        assert true: { [] endsWith: [] }!
+
     method test_binarySearch
         assert forAll: self binarySearchCases
                that: { |case|
-                       Output debug println: "test: {case}".
+                       -- Output debug println: "test: {case}".
                        case finds is (case in
                                           binarySearch: case search) }
                testing: "Ordered#binarySearch:"!

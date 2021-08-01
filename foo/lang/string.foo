@@ -70,13 +70,6 @@ extend String
         self do: { |c| c _escapeOn: stream }.
         stream writeString: "\""!
 
-    method startsWith: other
-        1 to: other size
-          do: { |i|
-                (self at: i) == (other at: i)
-                    ifFalse: { return False } }.
-        True!
-
     method sendTo: recv
         self sendTo: recv with: []!
 

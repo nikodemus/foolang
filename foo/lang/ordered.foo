@@ -251,15 +251,25 @@ interface Ordered
         self positionFromRight: block
              ifNone: { False }!
 
-    method endsWith: other
-        let n = other size.
+    method startsWith: prefix
+        let n = prefix size.
+        n > self size
+            ifTrue: { return False }.
+        1 to: prefix size
+          do: { |i|
+                (self at: i) == (prefix at: i)
+                    ifFalse: { return False } }.
+        True!
+
+    method endsWith: suffix
+        let n = suffix size.
         n > self size
             ifTrue: { return False }.
         let base = self size - n.
         1 to: n
           do: { |index|
                 let a = self at: base + index.
-                let b = other at: index.
+                let b = suffix at: index.
                 a == b
                     ifFalse: { return False } }.
         True!
