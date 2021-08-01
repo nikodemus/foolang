@@ -3,15 +3,101 @@ import .utils.FileModuleDictionary
 import .ast.AstClass
 import .ast.AstSlot
 
+class BuiltinMethodWrapper { selector block }
+    direct method method: selector returns: astClass
+        self selector: selector
+             block: { |this args|
+                      Output debug println: "method: {selector}".
+                      astClass eval
+                          secret: (selector
+                                       sendTo: this secret
+                                       with: args) }! -- FIXME: should map to secrets!
+
+    direct method ctor: selector returns: builtin
+        self selector: selector
+             block: { |this args|
+                      Output debug println: "ctor: {selector}".
+                      this secret: (selector
+                                        sendTo: builtin
+                                        with: args) }! -- FIXME: should map to secrets!
+
+    method invoke: args on: receiver
+        block value: receiver value: args!
+
+    method isRequired
+        False!
+end
+
+---
+TODO:
+- AstInterpreter needs wrap constants.
+- AstInterpreter Main needs to also have the command and system wrapped.
+- Would be cleaner if AstClass linked directly to the generated class.
+- AstInterpreter needs to be careful about `is`.
+---
+
+extend AstClass
+    method defineDirectMethod: selector as: block
+        self __addDirectMethod: (BuiltinMethodWrapper
+                                     selector: selector
+                                     block: block)!
+
+    method defineInstanceMethod: selector as: block
+        self __addInstanceMethod: (BuiltinMethodWrapper
+                                       selector: selector
+                                       block: block)!
+
+    method method: selector returns: astClass
+        self __addInstanceMethod: (BuiltinMethodWrapper
+                                       method: selector
+                                       returns: astClass)!
+
+    method ctor: selector returns: builtin
+        self __addDirectMethod: (BuiltinMethodWrapper
+                                     ctor: selector
+                                     returns: builtin)!
+end
+
 class AllInterpreterBuiltins { env }
     direct method redefineIn: env
         (self env: env)
             redefineAll!
 
     method redefineAll
-        env builtins
-            do: { |each|
-                  self redefine: each definition value }!
+        let integer = (self redefine: Integer)
+                          ; defineInstanceMethod: #debug
+                              as: { |this|
+                                    Output debug println: "#<Integer secret: {this secret}>".
+                                    this }
+                          ; yourself.
+        (self redefine: Array)
+            ; ctor: #of:new:value: returns: Array
+            ; method: #size returns: integer.
+        (self redefine: Selector)
+            ; defineInstanceMethod: #toSelector
+                as: { |this| this }.
+        -- FIXME: need to return a wrapped integer!
+        self
+            ; redefine: ByteArray
+            ; redefine: Boolean
+            ; redefine: Character
+            ; redefine: Class
+            ; redefine: Closure
+            ; redefine: False
+            ; redefine: File
+            ; redefine: FilePath
+            ; redefine: FileStream
+            ; redefine: Float
+            ; redefine: Input
+            ; redefine: Integer
+            ; redefine: Layout
+            ; redefine: Object
+            ; redefine: Output
+            ; redefine: Record
+            ; redefine: System
+            ; redefine: String
+            ; redefine: Time
+            ; redefine: True!
 
     method redefine: builtin
         -- Output debug println: "redefining: {builtin name}".
@@ -27,14 +113,23 @@ class AllInterpreterBuiltins { env }
         -- the list of AstBuiltins in environment.foo.
         --
         -- Easy, Simple Matter of Programming!
-        (AstClass
-             name: builtin name
-             slots: [AstSlot name: "_value" index: 1 type: builtin]
-             interfaces: []
-             env: env
-             isBuiltin: True)
-        ; directMethods: List new
-        ; instanceMethods: List new!
+        --
+        -- This gets us through loading prelude, but breaks on
+        -- first method call to one of these.
+        --
+        -- ...which is Array #of:new:value: when trying to
+        -- run hello_dict.foo.
+        --
+        -- And then starting from Array it's time to add the methods.
+        let theClass = AstClass
+                           name: builtin name
+                           slots: [AstSlot name: "secret" index: 1 type: builtin]
+                           interfaces: []
+                           env: env
+                           isBuiltin: True.
+        theClass directMethods: List new.
+        theClass instanceMethods: List new.
+        theClass!
 end
 
 class Interpreter { system }

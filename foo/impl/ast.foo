@@ -472,8 +472,7 @@ class AstClass { name superclass _slots
 
     method eval
         global hasValue
-            ifTrue: {
-                return global eval }.
+            ifTrue: { return global eval }.
         { let slots = self slots asArray.
           let result
               = Class
