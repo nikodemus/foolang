@@ -64,7 +64,7 @@ jobs:
         run: cargo run foo/impl/test_prelude.foo --use=foo/lib
 
       - name: Test Transpile
-        run: carfgo run foo/impl/test_transpile.foo --use=foo/lib
+        run: cargo run foo/impl/test_transpile.foo --use=foo/lib
 
   build-host:
     name: "Build host"
