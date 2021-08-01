@@ -61,7 +61,7 @@ fn test_abort() -> Test {
 fn test_print_flush() -> Test {
     let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_print_flush.foo");
-    cmd.assert().success().stdout("bootstrap-interpreter");
+    cmd.assert().success().stdout("print-flush-ok");
     Ok(())
 }
 

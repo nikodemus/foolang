@@ -1,5 +1,5 @@
 class Main {}
   direct method run: command in: system
-     (system output print: "Foo") flush.
+     (system output print: "print-flush-ok") flush.
      system exit!
 end
