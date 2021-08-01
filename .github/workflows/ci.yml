@@ -58,13 +58,13 @@ jobs:
         run: ./bootstrap.sh
 
       - name: Test Foolang
-        run: ./bin/bootstrap-interpreter foo/impl/test_foolang.foo --use=foo/lib
+        run: cargo run foo/impl/test_foolang.foo --use=foo/lib
 
       - name: Test Prelude
-        run: ./bin/bootstrap-interpreter foo/impl/test_prelude.foo --use=foo/lib
+        run: cargo run foo/impl/test_prelude.foo --use=foo/lib
 
       - name: Test Transpile
-        run: ./bin/bootstrap-interpreter foo/impl/test_transpile.foo --use=foo/lib
+        run: carfgo run foo/impl/test_transpile.foo --use=foo/lib
 
   build-host:
     name: "Build host"
@@ -247,14 +247,16 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      # This copies it to same place where Rust puts it, because
+      # that's where bootstrap expects it.
       - name: Download bootstrap interpreter
         uses: actions/download-artifact@v2
         with:
           name: bootstrap-interpreter-${{ runner.os }}
-          path: bin/
+          path: target/debug/
 
       - name: Make bootstrap interpreter executable
-        run: chmod a+x bin/bootstrap-interpreter
+        run: chmod a+x target/debug/bootstrap-interpreter
 
       - name: Clang version
         run: clang --version
