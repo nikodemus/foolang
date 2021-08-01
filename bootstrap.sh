@@ -29,7 +29,7 @@ on_exit_if_tty play_beep
 
 if [[ "$@" != "--skip-interpreter-build" ]]; then
     start_clock "bootstrap interpreter"
-    if cargo build &> build/bootstrap-interpreter-log; then
+    if cargo build &> build/bootstrap-interpreter.log; then
         ok
     else
         fail build/bootstrap-interpreter.log
