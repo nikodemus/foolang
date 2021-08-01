@@ -41,14 +41,21 @@ class BuiltinDictionary { dictionary }
             ; _define: DoesNotUnderstand
             ; _define: Error
             ; _define: False
+            ; _define: File
+            ; _define: FilePath
+            ; _define: FileStream
             ; _define: Float
+            ; _define: Input
             ; _define: Integer
+            ; _define: Layout
             ; _define: List
             ; _define: Object
             ; _define: Output
             ; _define: Record
             ; _define: Selector
+            ; _define: System
             ; _define: String
+            ; _define: Time
             ; _define: True
             ; _define: TypeError.
         self!

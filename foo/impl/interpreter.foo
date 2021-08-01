@@ -3,14 +3,36 @@ import .utils.FileModuleDictionary
 import .ast.AstClass
 import .ast.AstSlot
 
-class AllInterpreterBuiltins {}
+class AllInterpreterBuiltins { env }
     direct method redefineIn: env
+        (self env: env)
+            redefineAll!
+
+    method redefineAll
+        env builtins
+            do: { |each|
+                  self redefine: each definition value }!
+
+    method redefine: builtin
+        -- Output debug println: "redefining: {builtin name}".
+        -- Creating the class is easy..
+        --
+        -- More work: define explicit wrapper methods for the builtin
+        -- methods, so that their return values get wrapped as well.
+        --
+        -- More work: the interpreter needs to create instances of these
+        -- classes for constants.
+        --
+        -- Then instead of this implicit creation this will replace
+        -- the list of AstBuiltins in environment.foo.
+        --
+        -- Easy, Simple Matter of Programming!
         (AstClass
-            name: "Integer"
-            slots: [AstSlot name: "_value" index: 1 type: Integer]
-            interfaces: []
-            env: env
-            isBuiltin: True)
+             name: builtin name
+             slots: [AstSlot name: "_value" index: 1 type: builtin]
+             interfaces: []
+             env: env
+             isBuiltin: True)
         ; directMethods: List new
         ; instanceMethods: List new!
 end
