@@ -1383,7 +1383,7 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each|
                   each visitBy: self.
                   output print: ";" }.
-        output print: "});"!
+        output print: "})"!
 
     method visitCascadeReceiver: _
         output print: $CascadeReceiverTemp!
