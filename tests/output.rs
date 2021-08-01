@@ -6,7 +6,7 @@ type Test = Result<(), Box<dyn std::error::Error>>;
 
 #[test]
 fn example_hello() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/examples/hello.foo");
     cmd.assert().success().stdout("Hello world!\n");
     Ok(())
@@ -14,7 +14,7 @@ fn example_hello() -> Test {
 
 #[test]
 fn example_hello_x() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/examples/hello_x.foo")
         .write_stdin("Joe User\nXXXXX")
         .assert()
@@ -25,7 +25,7 @@ fn example_hello_x() -> Test {
 
 #[test]
 fn test_exit_zero() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_exit_zero.foo");
     cmd.assert().success().stdout("");
     Ok(())
@@ -33,7 +33,7 @@ fn test_exit_zero() -> Test {
 
 #[test]
 fn test_exit_42() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_exit_42.foo");
     cmd.assert().failure().code(42).stdout("");
     Ok(())
@@ -41,7 +41,7 @@ fn test_exit_42() -> Test {
 
 #[test]
 fn test_test() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test.foo");
     cmd.arg("--use=foo/lib");
     cmd.arg("--use=foo/lang");
@@ -51,7 +51,7 @@ fn test_test() -> Test {
 
 #[test]
 fn test_abort() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_abort.foo");
     cmd.assert().failure().stdout("");
     Ok(())
@@ -59,15 +59,15 @@ fn test_abort() -> Test {
 
 #[test]
 fn test_print_flush() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_print_flush.foo");
-    cmd.assert().success().stdout("Foo");
+    cmd.assert().success().stdout("bootstrap-interpreter");
     Ok(())
 }
 
 #[test]
 fn test_class_comment1() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_class_comment1.foo");
     cmd.assert().success().stdout("ok\n");
     Ok(())
@@ -75,7 +75,7 @@ fn test_class_comment1() -> Test {
 
 #[test]
 fn test_class_comment2() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_class_comment2.foo");
     cmd.assert().success().stdout("ok\n");
     Ok(())
@@ -83,7 +83,7 @@ fn test_class_comment2() -> Test {
 
 #[test]
 fn test_class_comment3() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_class_comment3.foo");
     cmd.assert().success().stdout("ok\n");
     Ok(())
@@ -91,7 +91,7 @@ fn test_class_comment3() -> Test {
 
 #[test]
 fn test_bad_class() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_bad_class.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Not valid in value position: }
@@ -107,7 +107,7 @@ fn test_bad_class() -> Test {
 
 #[test]
 fn test_define_let_leak() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_define_let_leak.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         " ERROR: Unbound variable: y
@@ -121,7 +121,7 @@ fn test_define_let_leak() -> Test {
 
 #[test]
 fn test_unbound_variable_location() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_unbound_variable_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Unbound variable: oops
@@ -139,7 +139,7 @@ fn test_unbound_variable_location() -> Test {
 
 #[test]
 fn test_value_type_error_location() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_value_type_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: String expected, got Integer: 14
@@ -153,7 +153,7 @@ fn test_value_type_error_location() -> Test {
 
 #[test]
 fn test_slot_type_error_location() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_slot_type_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: String expected, got Integer: 123
@@ -167,7 +167,7 @@ fn test_slot_type_error_location() -> Test {
 
 #[test]
 fn test_var_type_error_location() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_var_type_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: String expected, got Integer: 12312
@@ -181,7 +181,7 @@ fn test_var_type_error_location() -> Test {
 
 #[test]
 fn test_var_init_type_error_location() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_var_init_type_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: String expected, got Integer: 123124
@@ -195,7 +195,7 @@ fn test_var_init_type_error_location() -> Test {
 
 #[test]
 fn test_method_arg_type_error_location() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_method_arg_type_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: String expected, got Integer: 42
@@ -209,7 +209,7 @@ fn test_method_arg_type_error_location() -> Test {
 
 #[test]
 fn test_block_arg_type_error_location() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_block_arg_type_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: String expected, got Integer: 42
@@ -224,7 +224,7 @@ fn test_block_arg_type_error_location() -> Test {
 
 #[test]
 fn test_import_error_location() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_import_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         " ERROR: Cannot import ThisClassDoesNotExist: not defined in module
@@ -236,7 +236,7 @@ fn test_import_error_location() -> Test {
 
 #[test]
 fn test_expr_at_toplevel_error_location() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_expr_at_toplevel_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Expression at toplevel
@@ -248,7 +248,7 @@ fn test_expr_at_toplevel_error_location() -> Test {
 
 #[test]
 fn test_redefinition_error_location() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_redefinition_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Cannot redefine Integer
@@ -261,7 +261,7 @@ fn test_redefinition_error_location() -> Test {
 
 #[test]
 fn test_undefined_value_type_error_location() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_undefined_value_type_error_location.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Undefined type: 'UndefinedType'
@@ -275,7 +275,7 @@ fn test_undefined_value_type_error_location() -> Test {
 
 #[test]
 fn test_undefined_var_type_error_location() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_undefined_var_type_error_location.foo");
     // FIXME: Error points to variable, not the type
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
@@ -290,7 +290,7 @@ fn test_undefined_var_type_error_location() -> Test {
 
 #[test]
 fn test_undefined_interface_error_location() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_undefined_interface_error_location.foo");
     // FIXME: Error points to class
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
@@ -304,7 +304,7 @@ fn test_undefined_interface_error_location() -> Test {
 
 #[test]
 fn test_panic_location() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_panic_location.foo");
     // FIXME: Error points to class
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
@@ -319,7 +319,7 @@ fn test_panic_location() -> Test {
 
 #[test]
 fn test_does_not_understand_location() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_does_not_understand_location.foo");
     // FIXME: Error points to class
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
@@ -334,7 +334,7 @@ fn test_does_not_understand_location() -> Test {
 
 #[test]
 fn test_interface_unimplemented() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_interface_unimplemented.foo");
     cmd.assert()
         .failure()
@@ -345,7 +345,7 @@ fn test_interface_unimplemented() -> Test {
 
 #[test]
 fn test_interface_bad_signature() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_interface_bad_signature.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: C#quux is () -> Any, interface I specifies () -> Integer",
@@ -355,7 +355,7 @@ fn test_interface_bad_signature() -> Test {
 
 #[test]
 fn test_interface_ok() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_interface_ok.foo");
     cmd.assert()
         .success()
@@ -367,7 +367,7 @@ fn test_interface_ok() -> Test {
 
 #[test]
 fn test_interface_typecheck() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_interface_typecheck.foo");
     cmd.assert()
         .failure()
@@ -378,7 +378,7 @@ fn test_interface_typecheck() -> Test {
 
 #[test]
 fn test_interface_inheritance() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_interface_inheritance.foo");
     cmd.assert()
         .success()
@@ -390,7 +390,7 @@ fn test_interface_inheritance() -> Test {
 
 #[test]
 fn test_import_x_local() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_import_x_local.foo");
     cmd.assert().failure().code(123).stdout("");
     Ok(())
@@ -398,7 +398,7 @@ fn test_import_x_local() -> Test {
 
 #[test]
 fn test_class_comments() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_class_comments.foo");
     cmd.assert().success().stdout("");
     Ok(())
@@ -406,7 +406,7 @@ fn test_class_comments() -> Test {
 
 #[test]
 fn test_import_x() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_import_x.foo");
     cmd.arg("--use");
     cmd.arg("foo/tests/x.foo");
@@ -416,7 +416,7 @@ fn test_import_x() -> Test {
 
 #[test]
 fn test_import_x_no_use_no_local() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_import_x.foo");
     cmd.assert()
         .failure()
@@ -427,7 +427,7 @@ fn test_import_x_no_use_no_local() -> Test {
 
 #[test]
 fn test_import_x_identity() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_import_x_Identity.foo");
     cmd.arg("--use");
     cmd.arg("foo/tests/x.foo");
@@ -437,7 +437,7 @@ fn test_import_x_identity() -> Test {
 
 #[test]
 fn test_import_x_star() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_import_x_star.foo");
     cmd.arg("--use");
     cmd.arg("foo/tests/x.foo");
@@ -447,7 +447,7 @@ fn test_import_x_star() -> Test {
 
 #[test]
 fn test_import_bar_y() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_import_bar_y.foo");
     cmd.arg("--use");
     cmd.arg("foo/tests/bar");
@@ -457,7 +457,7 @@ fn test_import_bar_y() -> Test {
 
 #[test]
 fn test_prefixed_import() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_prefixed_import.foo");
     cmd.assert().failure().stdout(predicates::str::contains(
         "X = eks
@@ -473,7 +473,7 @@ FATAL - ERROR: Unbound variable: _Y
 
 #[test]
 fn test_prelude1() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_prelude.foo");
     cmd.assert().failure().code(2).stdout("");
     Ok(())
@@ -481,7 +481,7 @@ fn test_prelude1() -> Test {
 
 #[test]
 fn test_prelude2() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_prelude.foo");
     cmd.arg("--prelude");
     cmd.arg("foo/tests/empty.foo");
@@ -494,7 +494,7 @@ fn test_prelude2() -> Test {
 
 #[test]
 fn test_array_let1() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_array_let1.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Unbound variable: x
@@ -510,7 +510,7 @@ fn test_array_let1() -> Test {
 
 #[test]
 fn test_array_let2() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_array_let2.foo");
     cmd.assert().failure().code(1).stdout(predicates::str::contains(
         "ERROR: Unbound variable: x
@@ -525,7 +525,7 @@ fn test_array_let2() -> Test {
 
 #[test]
 fn test_repl() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/repl.foo")
         .write_stdin(
             r#"class Point { x y }
@@ -575,7 +575,7 @@ fn test_repl() -> Test {
 
 #[test]
 fn test_benchmarks() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_benchmarks.foo");
     cmd.assert()
         .success()
@@ -590,7 +590,7 @@ fn test_benchmarks() -> Test {
 #[test]
 #[ignore]
 fn example_flying() -> Test {
-    let mut cmd = Command::cargo_bin("foo")?;
+    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/examples/flying.foo");
     cmd.assert()
         .success()
