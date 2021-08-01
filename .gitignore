@@ -14,5 +14,4 @@ a.out
 foo/scratch/*
 host.*
 host-*
-bootstrap-*/
-target-*/
+build/
