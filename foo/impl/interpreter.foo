@@ -10,6 +10,7 @@ class Interpreter { system }
                                  "examples" -> system files / "foo/examples" }.
         let source = (system files / program) readString.
         let env = Environment modules: modules
+                      ; importPrelude: ["lang", "prelude"]
                       ; load: source.
         let main = env global: "Main".
         main eval run: args in: system!
