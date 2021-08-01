@@ -57,7 +57,7 @@ define InstanceMethods
                    int64_t method_arity = selector_arity.datum.int64 - 1;
 
                    struct FooMethod* m = &newclass->methods[i];
-                   m->class = newclass;
+                   m->home = newclass;
                    m->selector = PTR(FooSelector, selector.datum);
                    m->argCount = method_arity;
                    m->frameSize = selector_arity.datum.int64;
@@ -109,7 +109,7 @@ define InstanceMethods
                    int64_t method_arity = selector_arity.datum.int64 - 1;
 
                    struct FooMethod* m = &newclass->methods[i];
-                   m->class = newclass;
+                   m->home = newclass;
                    m->selector = PTR(FooSelector, selector.datum);
                    m->argCount = method_arity;
                    m->frameSize = selector_arity.datum.int64;

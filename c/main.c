@@ -578,7 +578,7 @@ void foo_print_backtrace(struct FooContext* context) {
   while (context && context->depth) {
     switch (context->type) {
     case METHOD_CONTEXT:
-      home = context->method->class;
+      home = context->method->home;
       here = context->receiver.class;
       printf("  %u: ", context->depth);
       struct FooSelector* selector = context->method->selector;
@@ -618,7 +618,7 @@ struct Foo foo_activate(struct FooContext* context) {
   assert(method);
   struct FooClass* here = context->receiver.class;
   assert(here);
-  struct FooClass* home = method->class;
+  struct FooClass* home = method->home;
   assert(home);
   uint32_t depth = context->depth;
 

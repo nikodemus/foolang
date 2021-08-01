@@ -117,7 +117,7 @@ typedef struct Foo (*FooMethodFunction)(const struct FooMethod*, struct FooConte
 typedef struct Foo (*FooClosureFunction)(struct FooContext*);
 
 struct FooMethod {
-  struct FooClass* class; // FIXME: rename to home
+  struct FooClass* home;
   struct FooSelector* selector;
   size_t argCount;
   size_t frameSize;

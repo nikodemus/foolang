@@ -1058,7 +1058,7 @@ class CTranspiler { output selectorMap closureFunctions
         directMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                  output println: "                            .class = &{each methodHomeName},".
+                  output println: "                            .home = &{each methodHomeName},".
                   output println: "                            .argCount = {each arity},".
                   output println: "                            .frameSize = {each frameSize},".
                   output println: "                            .function = &{each methodFunctionName},".
@@ -1081,7 +1081,7 @@ class CTranspiler { output selectorMap closureFunctions
         instanceMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                  output println: "                            .class = &{each methodHomeName},".
+                  output println: "                            .home = &{each methodHomeName},".
                   output println: "                            .argCount = {each arity},".
                   output println: "                            .frameSize = {each frameSize},".
                   output println: "                            .function = &{each methodFunctionName},".
@@ -1216,7 +1216,7 @@ class CTranspiler { output selectorMap closureFunctions
                        directMethods
                            do: { |each|
                                  output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                                 output println: "                            .class = &{each methodHomeName},".
+                                 output println: "                            .home = &{each methodHomeName},".
                                  output println: "                            .argCount = {each arity},".
                                  output println: "                            .frameSize = {each frameSize},".
                                  output println: "                            .function = &{each methodFunctionName},".
@@ -1243,14 +1243,14 @@ class CTranspiler { output selectorMap closureFunctions
         instanceMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                  output println: "                            .class = &{each methodHomeName},".
+                  output println: "                            .home = &{each methodHomeName},".
                   output println: "                            .argCount = {each arity},".
                   output println: "                            .frameSize = {each frameSize},".
                   output println: "                            .function = &{each methodFunctionName},".
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
         -- #__doSelectors
         output println: "        (struct FooMethod)\{ .selector = &FOO_____doSelectors_,".
-        output println: "                            .class = &{className},".
+        output println: "                            .home = &{className},".
         output println: "                            .argCount = 1,".
         output println: "                            .frameSize = 1,".
         output println: "                            .function = &foo_method_doSelectors_,".
