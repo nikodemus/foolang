@@ -1,5 +1,19 @@
 import .environment.Environment
 import .utils.FileModuleDictionary
+import .ast.AstClass
+import .ast.AstSlot
+
+class AllInterpreterBuiltins {}
+    direct method redefineIn: env
+        (AstClass
+            name: "Integer"
+            slots: [AstSlot name: "_value" index: 1 type: Integer]
+            interfaces: []
+            env: env
+            isBuiltin: True)
+        ; directMethods: List new
+        ; instanceMethods: List new!
+end
 
 class Interpreter { system }
     direct method run: program in: system with: args
@@ -9,7 +23,24 @@ class Interpreter { system }
                                  "lib"      -> system files / "foo/lib",
                                  "examples" -> system files / "foo/examples" }.
         let source = (system files / program) readString.
-        let env = Environment modules: modules
+        let builtinEnv = Environment modules: modules
+                             -- These are things defined in the prelude.
+                             ; removeBuiltins: [
+                                 "Any",
+                                 "DoesNotUnderstand",
+                                 "Error",
+                                 "List",
+                                 "Object",
+                                 "TypeError" ].
+        -- These are the actual builtins. We need to replace AstBuiltins with fresh
+        -- AstClasses so that the host environment stays separate from the
+        -- interpreter.
+        --
+        -- One this is done the AstClass definitions can move to Environment
+        -- instead, and we can get rid of the AstBuiltins, which were a dodgy
+        -- shortcut for referring to the host environment.
+        AllInterpreterBuiltins redefineIn: builtinEnv.
+        let env = builtinEnv
                       ; importPrelude: ["lang", "prelude"]
                       ; load: source.
         let main = env global: "Main".

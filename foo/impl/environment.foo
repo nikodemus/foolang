@@ -157,6 +157,7 @@ class Environment { parent
         Debug println: "---".
         Debug println: "bindings = {bindings}".
         Debug println: "globals = {globals}".
+        Debug println: "builtins = {builtins}".
         Debug println: "modules = {modules}".
         Debug println: "depth = {depth}".
         parent is False
@@ -225,19 +226,23 @@ class Environment { parent
             classes: classes!
 
     method removeBuiltins: names
-        builtins removeAll: names!
+        builtins removeAll: names.
+        self!
 
     method makeGlobal: name
         (name startsWith: "$")
             ifTrue: { AstDynamic name: name }
             ifFalse: { AstGlobal name: name }!
 
+    method redefineBuiltin: definition
+        let global = builtins
+                         at: definition name
+                         ifNonePut: { self makeGlobal: definition name }.
+        global redefine: definition!
+
     method replaceBuiltins: newBuiltins
-        newBuiltins do: { |each|
-                          let global = builtins
-                                           at: each name
-                                           ifNonePut: { self makeGlobal: each name }.
-                          global redefine: each }!
+        newBuiltins do: { |each| self redefineBuiltin: each }.
+        self!
 
     method import: moduleName relative: relative
         (self depth is 1) assert.
@@ -379,8 +384,5 @@ class Environment { parent
             at: name
             ifNone: { globals
                           at: name
-                          ifNonePut: { name == "AstValueMarker"
-                                           ifTrue: { Debug println: "XXX: AstValueMarker ({Foolang isSelfHosted})".
-                                                     self describe }.
-                                       self makeGlobal: name } }!
+                          ifNonePut: { self makeGlobal: name } }!
 end

@@ -368,18 +368,31 @@ class AstClass { name superclass _slots
                   slots: slots
                   interfaces: interfaces
                   env: env
+        self name: name
+             slots: slots
+             interfaces: interfaces
+             env: env
+             isBuiltin: False!
+
+    direct method name: name
+                  slots: slots
+                  interfaces: interfaces
+                  env: env
+                  isBuiltin: isBuiltin
         let global = env global: name.
         let theClass = self
                            name: name
                            superclass: False
                            _slots: slots
-                           _interfaces: interfaces
+                           _interfaces: interfaces asList
                            _directMethods: False
                            _instanceMethods: False
                            _allInterfaces: False
                            global: global
                            _env: env.
-        global define: theClass.
+        isBuiltin
+            ifTrue: { global redefine: theClass }
+            ifFalse: { global define: theClass }.
         theClass!
 
     direct method name: name
@@ -399,6 +412,11 @@ class AstClass { name superclass _slots
                            _env: env.
         global define: theClass.
         theClass!
+
+    method global: new
+        -- This should always be a NOP for AstClass -- make sure it is.
+        new is global
+            assert: "Cannot accept a new global for AstClass!"!
 
     method compilerInfo
         global compilerInfo!
