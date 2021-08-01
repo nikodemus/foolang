@@ -11,7 +11,7 @@
 # This takes around 10min. Keep myself entertained by printing stuff
 # in pretty colors.
 #
-set -eo pipefail
+set -euo pipefail
 
 source build_utils.sh
 
@@ -19,7 +19,7 @@ mkdir -p build/
 BOOTSTRAP_INTERPRETER=$(exename target/debug/bootstrap-interpreter)
 BOOTSTRAP_COMPILER=$(exename build/bootstrap-foo$)
 SELF_COMPILER=$(exename build/self-compiler)
-FOO=$(exename foo)
+FOO=$(exename build/foo)
 
 echo "Expected bootstrap time: ~5-10min"
 
