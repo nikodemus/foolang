@@ -13,6 +13,15 @@ class BuiltinMethodWrapper { selector block }
                                        sendTo: this secret
                                        with: args) }! -- FIXME: should map to secrets!
 
+    direct method method: selector
+        self selector: selector
+             block: { |this args|
+                      Output debug println: "method: {selector}".
+                      selector
+                          sendTo: this secret
+                          with: args. -- FIXME: should map to secrets!
+                      this }!
+
     direct method ctor: selector returns: builtin
         self selector: selector
              block: { |this args|
@@ -52,6 +61,10 @@ extend AstClass
                                        method: selector
                                        returns: astClass)!
 
+    method method: selector
+        self __addInstanceMethod: (BuiltinMethodWrapper
+                                       method: selector)!
+
     method ctor: selector returns: builtin
         self __addDirectMethod: (BuiltinMethodWrapper
                                      ctor: selector
@@ -72,6 +85,10 @@ class AllInterpreterBuiltins { env }
                           ; yourself.
         (self redefine: Array)
             ; ctor: #of:new:value: returns: Array
+            ; ctor: #new: returns: Array
+            ; ctor: #new:value: returns: Array
+            ; method: #debug
+            -- ; method: #at: returns: FUCK
             ; method: #size returns: integer.
         (self redefine: Selector)
             ; defineInstanceMethod: #toSelector
