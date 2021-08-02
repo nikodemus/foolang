@@ -3,35 +3,13 @@ import .utils.FileModuleDictionary
 import .ast.AstClass
 import .ast.AstSlot
 
-class BuiltinMethodWrapper { selector block }
-    direct method method: selector returns: astClass
-        self selector: selector
-             block: { |this args|
-                      Output debug println: "method: {selector}".
-                      astClass eval
-                          secret: (selector
-                                       sendTo: this secret
-                                       with: args) }! -- FIXME: should map to secrets!
+class Delegator { target }
+    method selector
+        #perform:with:!
 
-    direct method method: selector
-        self selector: selector
-             block: { |this args|
-                      Output debug println: "method: {selector}".
-                      selector
-                          sendTo: this secret
-                          with: args. -- FIXME: should map to secrets!
-                      this }!
-
-    direct method ctor: selector returns: builtin
-        self selector: selector
-             block: { |this args|
-                      Output debug println: "ctor: {selector}".
-                      this secret: (selector
-                                        sendTo: builtin
-                                        with: args) }! -- FIXME: should map to secrets!
-
-    method invoke: args on: receiver
-        block value: receiver value: args!
+    method invoke: args on: _receiver
+        args first sendTo: target
+                   with: args second!
 
     method isRequired
         False!
@@ -39,36 +17,13 @@ end
 
 ---
 TODO:
-- AstInterpreter needs wrap constants.
-- AstInterpreter Main needs to also have the command and system wrapped.
-- Would be cleaner if AstClass linked directly to the generated class.
-- AstInterpreter needs to be careful about `is`.
+- Would be cleaner if AstClass linked directly to the generated class: the
+  delegation block could then fetch the delegate from the receiver.
 ---
 
 extend AstClass
-    method defineDirectMethod: selector as: block
-        self __addDirectMethod: (BuiltinMethodWrapper
-                                     selector: selector
-                                     block: block)!
-
-    method defineInstanceMethod: selector as: block
-        self __addInstanceMethod: (BuiltinMethodWrapper
-                                       selector: selector
-                                       block: block)!
-
-    method method: selector returns: astClass
-        self __addInstanceMethod: (BuiltinMethodWrapper
-                                       method: selector
-                                       returns: astClass)!
-
-    method method: selector
-        self __addInstanceMethod: (BuiltinMethodWrapper
-                                       method: selector)!
-
-    method ctor: selector returns: builtin
-        self __addDirectMethod: (BuiltinMethodWrapper
-                                     ctor: selector
-                                     returns: builtin)!
+    method delegateTo: builtin
+        self __addDirectMethod: (Delegator target: builtin)!
 end
 
 class AllInterpreterBuiltins { env }
@@ -77,29 +32,14 @@ class AllInterpreterBuiltins { env }
             redefineAll!
 
     method redefineAll
-        let integer = (self redefine: Integer)
-                          ; defineInstanceMethod: #debug
-                              as: { |this|
-                                    Output debug println: "#<Integer secret: {this secret}>".
-                                    this }
-                          ; yourself.
-        (self redefine: Array)
-            ; ctor: #of:new:value: returns: Array
-            ; ctor: #new: returns: Array
-            ; ctor: #new:value: returns: Array
-            ; method: #debug
-            -- ; method: #at: returns: FUCK
-            ; method: #size returns: integer.
-        (self redefine: Selector)
-            ; defineInstanceMethod: #toSelector
-                as: { |this| this }.
-        -- FIXME: need to return a wrapped integer!
         self
+            ; redefine: Array
             ; redefine: ByteArray
             ; redefine: Boolean
             ; redefine: Character
             ; redefine: Class
             ; redefine: Closure
+            ; redefine: Clock
             ; redefine: False
             ; redefine: File
             ; redefine: FilePath
@@ -112,6 +52,7 @@ class AllInterpreterBuiltins { env }
             ; redefine: Output
             ; redefine: Record
             ; redefine: System
+            ; redefine: Selector
             ; redefine: String
             ; redefine: Time
             ; redefine: True!
@@ -146,7 +87,7 @@ class AllInterpreterBuiltins { env }
                            isBuiltin: True.
         theClass directMethods: List new.
         theClass instanceMethods: List new.
-        theClass!
+        theClass delegateTo: builtin!
 end
 
 class Interpreter { system }
