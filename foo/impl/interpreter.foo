@@ -18,7 +18,17 @@ end
 ---
 TODO:
 - Would be cleaner if AstClass linked directly to the generated class: the
-  delegation block could then fetch the delegate from the receiver.
+  delegator could then fetch the delegate from the receiver directly, allowing
+  all classes to share the same delegator instance.
+
+- Need a way to tell interpreter classes apart from builtins.
+  Additional 'level' property for classes? (builtins 0, interpreter classes 1,
+  interpreter running in interpreter 2, etc).
+
+- AstInterpreter needs to map classOf to return the wrapper class instead
+  of the real class.
+
+- Instance methods are going to be funky.
 ---
 
 extend AstClass
@@ -52,6 +62,7 @@ class AllInterpreterBuiltins { env }
             ; redefine: Output
             ; redefine: Record
             ; redefine: System
+            ; redefine: SystemRandom
             ; redefine: Selector
             ; redefine: String
             ; redefine: Time

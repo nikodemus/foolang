@@ -873,7 +873,7 @@ class AstGlobal { name::String
         panic "Cannot assign to global! {name} = {value}"!
 
     -- KLUDGE: Currently types are either Any or AstGlobals. This is marginally
-    -- than the previous mess, but still not nice.
+    -- better than the previous mess, but still not nice.
     method typecheck: object
         self eval typecheck: object!
 

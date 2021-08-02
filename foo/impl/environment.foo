@@ -37,6 +37,7 @@ class BuiltinDictionary { dictionary }
             ; _define: Boolean
             ; _define: Character
             ; _define: Class
+            ; _define: Clock
             ; _define: Closure
             ; _define: DoesNotUnderstand
             ; _define: Error
@@ -54,6 +55,7 @@ class BuiltinDictionary { dictionary }
             ; _define: Record
             ; _define: Selector
             ; _define: System
+            ; _define: SystemRandom
             ; _define: String
             ; _define: Time
             ; _define: True
