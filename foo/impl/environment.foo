@@ -65,6 +65,14 @@ class AllBuiltins { env }
                            slots: []
                            interfaces: []
                            env: env.
+        -- FIXME: I can access the compiler method
+        -- dictionaries here, and define explicit wrappers
+        -- for all methods automatically. Adding a small annotation to
+        -- the compiler method definitions can tell how the result
+        -- should be wrapped.
+        --
+        -- Then I just need to make the interpreter convert
+        -- constants into wrapped objects and pretty well off.
         theClass
             ; directMethods: List new
             ; instanceMethods: List new
