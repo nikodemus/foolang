@@ -46,7 +46,6 @@ class REPL { system env translator }
         let env = Environment modules: modules
                       -- These are things defined in the prelude.
                       ; removeBuiltins: [
-                          "Error",
                           "List",
                           "Object",
                           "TypeError" ]
