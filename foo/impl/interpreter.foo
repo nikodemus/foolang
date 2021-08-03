@@ -3,13 +3,24 @@ import .utils.FileModuleDictionary
 import .ast.AstClass
 import .ast.AstSlot
 
-class Delegator { target }
+class GenericDelegator { target }
     method selector
         #perform:with:!
 
     method invoke: args on: _receiver
         args first sendTo: target
                    with: args second!
+
+    method isRequired
+        False!
+end
+
+class TypecheckDelegator { target }
+    method selector
+        #typecheck:!
+
+    method invoke: args on: _receiver
+        target typecheck: (args at: 1)!
 
     method isRequired
         False!
@@ -33,7 +44,8 @@ TODO:
 
 extend AstClass
     method delegateTo: builtin
-        self __addDirectMethod: (Delegator target: builtin)!
+        self __addDirectMethod: (GenericDelegator target: builtin).
+        self __addDirectMethod: (TypecheckDelegator target: builtin)!
 end
 
 class AllInterpreterBuiltins { env }
@@ -69,30 +81,9 @@ class AllInterpreterBuiltins { env }
             ; redefine: True!
 
     method redefine: builtin
-        -- Output debug println: "redefining: {builtin name}".
-        -- Creating the class is easy..
-        --
-        -- More work: define explicit wrapper methods for the builtin
-        -- methods, so that their return values get wrapped as well.
-        --
-        -- More work: the interpreter needs to create instances of these
-        -- classes for constants.
-        --
-        -- Then instead of this implicit creation this will replace
-        -- the list of AstBuiltins in environment.foo.
-        --
-        -- Easy, Simple Matter of Programming!
-        --
-        -- This gets us through loading prelude, but breaks on
-        -- first method call to one of these.
-        --
-        -- ...which is Array #of:new:value: when trying to
-        -- run hello_dict.foo.
-        --
-        -- And then starting from Array it's time to add the methods.
         let theClass = AstClass
                            name: builtin name
-                           slots: [AstSlot name: "secret" index: 1 type: builtin]
+                           slots: []
                            interfaces: []
                            env: env
                            isBuiltin: True.
