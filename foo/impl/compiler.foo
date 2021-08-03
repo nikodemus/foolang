@@ -40,9 +40,10 @@ class Compiler { source target system prelude stackSize addressSanitizer }
              target: system files / target
              system: system
              prelude: ["lang", "prelude"]
-             -- 4MiB, default tends to be 1MiB, which is too
-             -- little for self-compilation.
-             stackSize: 0x400000
+             -- 8MiB, default tends to be 1MiB, which is too
+             -- little for self-compilation, let alone a metacircular
+             -- REPL.
+             stackSize: 0x800000
              addressSanitizer: False)
         compile!
 
