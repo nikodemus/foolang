@@ -30,7 +30,6 @@ class Interpreter { system }
         let builtinEnv = Environment modules: modules
                              -- These are things defined in the prelude.
                              ; removeBuiltins: [
-                                 "DoesNotUnderstand",
                                  "Error",
                                  "List",
                                  "Object",

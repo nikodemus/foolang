@@ -102,7 +102,6 @@ class AllBuiltins { env }
         -- Yes, this is a mess and a massive KLUDGE.
         self
             ; define: Clock
-            ; define: DoesNotUnderstand
             ; define: Error
             ; define: List
             ; define: Object
