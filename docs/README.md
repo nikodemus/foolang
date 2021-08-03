@@ -59,8 +59,8 @@ end
 3. Bootstrap the Foolang compiler (you'll need Clang installed for this):
    ``` shell
    ./bootstrap.sh
-   bin/fooc foo/examples/hello.foo bin/hello
-   bin/hello
+   build/foo --compile foo/examples/hello.foo
+   foo/example/hello
    ```
 4. Read the [syntax](syntax.md#foolang-syntax) document, read the code (particularly under `foo/`), and play around.
 
