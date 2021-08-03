@@ -101,7 +101,6 @@ class AllBuiltins { env }
         -- Whereas these ones use host definitions directly.
         -- Yes, this is a mess and a massive KLUDGE.
         self
-            ; define: Any
             ; define: Clock
             ; define: DoesNotUnderstand
             ; define: Error
