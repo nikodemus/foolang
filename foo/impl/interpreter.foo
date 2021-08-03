@@ -62,7 +62,6 @@ class AllInterpreterBuiltins { env }
             ; redefine: Class
             ; redefine: Closure
             ; redefine: Clock
-            ; redefine: False
             ; redefine: File
             ; redefine: FilePath
             ; redefine: FileStream
@@ -77,8 +76,7 @@ class AllInterpreterBuiltins { env }
             ; redefine: SystemRandom
             ; redefine: Selector
             ; redefine: String
-            ; redefine: Time
-            ; redefine: True!
+            ; redefine: Time!
 
     method redefine: builtin
         let theClass = AstClass
