@@ -1,0 +1,11 @@
+class Main {}
+    direct method run: command in: system
+        let responses = Dictionary new
+                            ; put: "Yo" at: "informal"
+                            ; put: "Greetings" at: "formal".
+        command isEmpty
+            ifTrue: { return system output println: "Hi there" }.
+        system output println: (responses
+                                    at: command first
+                                    ifNone: { "Wazzup" })!
+end

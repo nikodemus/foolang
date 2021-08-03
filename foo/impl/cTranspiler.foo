@@ -108,6 +108,8 @@ class CompilerBuiltin { type value markFunction _interfaces
         ""!
 
     method eval
+        _global is False
+            => { Error raise: "CompilerBuiltin#eval called too early." }.
         _global hasValue
             ifTrue: { _global eval }
             ifFalse: { _global value: value }!

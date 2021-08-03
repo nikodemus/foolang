@@ -234,7 +234,7 @@ class AstInterpreter { context process }
         let arguments = aSend arguments collect: { |arg| arg visitBy: self }.
         let $context = context.
         let $process = process.
-        -- Debug println: "{object} {selector}".
+        -- Debug println: "send: {object classOf name} {selector}".
         { selector sendTo: object with: arguments asArray }
             on: DoesNotUnderstand
             do: { |ex|

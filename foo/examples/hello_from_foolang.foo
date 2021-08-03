@@ -1,0 +1,4 @@
+class Main {}
+    direct method run: command in: system
+        system output println: "Hello from Foolang {Foolang version}"!
+end

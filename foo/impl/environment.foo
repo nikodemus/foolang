@@ -37,20 +37,32 @@ class BuiltinDictionary { dictionary }
             ; _define: Boolean
             ; _define: Character
             ; _define: Class
+            ; _define: Clock
             ; _define: Closure
             ; _define: DoesNotUnderstand
             ; _define: Error
             ; _define: False
+            ; _define: File
+            ; _define: FilePath
+            ; _define: FileStream
             ; _define: Float
+            ; _define: Input
             ; _define: Integer
+            ; _define: Layout
             ; _define: List
             ; _define: Object
             ; _define: Output
             ; _define: Record
             ; _define: Selector
             ; _define: String
+            ; _define: Time
             ; _define: True
             ; _define: TypeError.
+        -- These ones don't exist on bootstrap host, but happily
+        -- that on doesn't care about undefined variables either...
+        Foolang isSelfHosted
+            ifTrue: { self; _define: System
+                          ; _define: SystemRandom }.
         self!
 end
 
@@ -157,6 +169,7 @@ class Environment { parent
         Debug println: "---".
         Debug println: "bindings = {bindings}".
         Debug println: "globals = {globals}".
+        Debug println: "builtins = {builtins}".
         Debug println: "modules = {modules}".
         Debug println: "depth = {depth}".
         parent is False
@@ -225,19 +238,23 @@ class Environment { parent
             classes: classes!
 
     method removeBuiltins: names
-        builtins removeAll: names!
+        builtins removeAll: names.
+        self!
 
     method makeGlobal: name
         (name startsWith: "$")
             ifTrue: { AstDynamic name: name }
             ifFalse: { AstGlobal name: name }!
 
+    method redefineBuiltin: definition
+        let global = builtins
+                         at: definition name
+                         ifNonePut: { self makeGlobal: definition name }.
+        global redefine: definition!
+
     method replaceBuiltins: newBuiltins
-        newBuiltins do: { |each|
-                          let global = builtins
-                                           at: each name
-                                           ifNonePut: { self makeGlobal: each name }.
-                          global redefine: each }!
+        newBuiltins do: { |each| self redefineBuiltin: each }.
+        self!
 
     method import: moduleName relative: relative
         (self depth is 1) assert.
@@ -379,8 +396,5 @@ class Environment { parent
             at: name
             ifNone: { globals
                           at: name
-                          ifNonePut: { name == "AstValueMarker"
-                                           ifTrue: { Debug println: "XXX: AstValueMarker ({Foolang isSelfHosted})".
-                                                     self describe }.
-                                       self makeGlobal: name } }!
+                          ifNonePut: { self makeGlobal: name } }!
 end
