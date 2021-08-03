@@ -54,12 +54,15 @@ class BuiltinDictionary { dictionary }
             ; _define: Output
             ; _define: Record
             ; _define: Selector
-            ; _define: System
-            ; _define: SystemRandom
             ; _define: String
             ; _define: Time
             ; _define: True
             ; _define: TypeError.
+        -- These ones don't exist on bootstrap host, but happily
+        -- that on doesn't care about undefined variables either...
+        Foolang isSelfHosted
+            ifTrue: { self; _define: System
+                          ; _define: SystemRandom }.
         self!
 end
 
