@@ -394,7 +394,6 @@ class CTranspiler { output selectorMap closureFunctions
 
     direct method transpile: string in: env with: prelude
         env removeBuiltins: [
-            "Object",
             "TypeError"
         ].
         let builtins = CompilerBuiltins all.
