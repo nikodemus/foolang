@@ -64,6 +64,11 @@ class TestInteger { assert }
         1 to: 10 do: { |i| n = n + i }.
         assert that: { n } is: 55!
 
+    method test_modulus
+        assert that: { 7 % 10 } is: 7.
+        assert that: { 3 % 2 } is: 1.
+        assert that: { 4 % 2 } is: 0!
+
     method testAdditionCommutative
         assert forAll: SmallIntegers
                that: { |x| x + 1 == 1 + x }
