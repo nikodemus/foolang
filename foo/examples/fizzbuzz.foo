@@ -1,0 +1,18 @@
+class Main {}
+    direct method run: command in: system
+        (1 to: 30)
+            do: { |each|
+                  self fizzbuzz: each
+                       to: system output }
+            interpolating: { system output print: ", " }.
+        system output newline!
+
+    direct method fizzbuzz: number to: output
+        number % 15 is 0
+            => { return output print: "fizzbuff" }.
+        number % 5 is 0
+            => { return output print: "buzz" }.
+        number % 3 is 0
+            => { return output print: "fizz" }.
+        output print: number!
+end
