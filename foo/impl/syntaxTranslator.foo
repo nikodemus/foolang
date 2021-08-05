@@ -224,7 +224,7 @@ class SyntaxTranslator { env currentMethod }
     method visitBlock: aBlock
         -- Tracer visitBlock: aBlock.
         let bodyEnv = env newFrame
-                          addVariables: (aBlock parameters collect: #name)
+                          addArguments: (aBlock parameters collect: #name)
                           types: (aBlock parameters
                                       collect: { |each| self _visitType: each type }).
         let argumentVariables = bodyEnv bindings.
@@ -264,7 +264,7 @@ class SyntaxTranslator { env currentMethod }
         -- Tracer visitMethod: aMethod selector.
         let signature = aMethod signature.
         let bodyEnv = env newFrame
-                          addVariables: (signature parameters collect: #name)
+                          addArguments: (signature parameters collect: #name)
                           types: (signature parameters
                                       collect: { |each|
                                                  self _visitType: each type }).

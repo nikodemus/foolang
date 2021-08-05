@@ -306,16 +306,8 @@ class Environment { parent
         -- Debug println: "addVariable: {name}".
         self addVariable: name type: Any!
 
-    method addVariables: names
-        -- Debug println: "addVariables: {names}".
-        self augment: (names collect: { |each|
-                                        Variable
-                                            name: each
-                                            type: Any
-                                            frame: frame })!
-
-    method addVariables: names types: types
-        -- Debug println: "addVariables: {names} types: {types}".
+    method addArguments: names types: types
+        -- Debug println: "addArguments: {names} types: {types}".
         (names size is types size) assert.
         self augment: (names with: types
                              collect: { |name type|
