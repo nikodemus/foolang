@@ -481,8 +481,7 @@ struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
 
 struct FooContext* foo_context_new_method_no_args(const struct FooMethod* method,
                                                   struct FooContext* sender,
-                                                  struct Foo receiver,
-                                                  size_t nargs) {
+                                                  struct Foo receiver) {
   struct FooContext* context = foo_alloc_context(sender, method->frameSize);
   context->type = METHOD_CONTEXT;
   context->depth = sender->depth + 1;
@@ -500,7 +499,7 @@ struct FooContext* foo_context_new_method_array(const struct FooMethod* method,
                                                 struct Foo receiver,
                                                 struct Foo arguments) {
   struct FooContext* context
-    = foo_context_new_method_no_args(method, sender, receiver, method->argCount);
+    = foo_context_new_method_no_args(method, sender, receiver);
   if (selector != method->selector) {
     // DoesNotUnderstand case
     assert(&FOO_perform_with_ == method->selector);
@@ -529,7 +528,7 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
                                              size_t nargs, va_list arguments) {
   // FOO_DEBUG("/foo_context_new_method_va");
   struct FooContext* context
-    = foo_context_new_method_no_args(method, sender, receiver, method->argCount);
+    = foo_context_new_method_no_args(method, sender, receiver);
   if (selector != method->selector) {
     assert(&FOO_perform_with_ == method->selector);
     assert(method->argCount == 2);
