@@ -608,18 +608,14 @@ void foo_print_backtrace(struct FooContext* context) {
   }
 }
 
-struct Foo foo_activate(struct FooContext* context) {
-  assert(context);
-  if (context->depth > 2000) {
-    foo_panicf(context, "Stack blew up!");
-  }
-  return context->method->function(context->method, context);
-}
-
 struct Foo foo_send_array(struct FooContext* sender,
                           const struct FooSelector* selector,
                           struct Foo receiver,
                           struct Foo array) {
+  assert(sender);
+  if (sender->depth > 2000) {
+    foo_panicf(sender, "Stack blew up!");
+  }
   // FOO_DEBUG("/foo_send_array(?, %s, ...)", selector->name->data);
   if (!receiver.class) {
     foo_panicf(sender, "Invalid receiver for #%s", selector->name->data);
@@ -628,13 +624,17 @@ struct Foo foo_send_array(struct FooContext* sender,
     = foo_class_find_method(sender, receiver.class, selector);
   struct FooContext* context
     = foo_context_new_method_array(method, sender, selector, receiver, array);
-  return foo_activate(context);
+  return method->function(method, context);
 }
 
 struct Foo foo_send(struct FooContext* sender,
                     const struct FooSelector* selector,
                     struct Foo receiver,
                     size_t nargs, ...) {
+  assert(sender);
+  if (sender->depth > 2000) {
+    foo_panicf(sender, "Stack blew up!");
+  }
   // FOO_DEBUG("/foo_send(?, %s, %s, ...)",
   //           selector->name->data, receiver.class->name->data);
   va_list arguments;
@@ -646,7 +646,7 @@ struct Foo foo_send(struct FooContext* sender,
     = foo_class_find_method(sender, receiver.class, selector);
   struct FooContext* context
     = foo_context_new_method_va(method, sender, selector, receiver, nargs, arguments);
-  return foo_activate(context);
+  return method->function(method, context);
 }
 
 
