@@ -131,7 +131,7 @@ char* foo_debug_context(struct FooContext* ctx) {
   return s;
 }
 
-struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t frameOffset) {
+struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t frameOffset, struct FooContext* outer) {
   struct FooContext* context0 = context;
   size_t frameOffset0 = frameOffset;
   // FOO_DEBUG("/lexical_ref(index=%zu, frame=%zu)", index, frameOffset);
@@ -139,6 +139,9 @@ struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t fram
     assert(context->outer_context);
     context = context->outer_context;
     --frameOffset;
+  }
+  if (context != outer) {
+    foo_panicf(context0, "Miscomputed outer context.");
   }
   assert(index < context->size);
   struct Foo res = context->frame[index];
