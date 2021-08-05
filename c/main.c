@@ -646,7 +646,9 @@ struct Foo foo_send(struct FooContext* sender,
     = foo_class_find_method(sender, receiver.class, selector);
   struct FooContext* context
     = foo_context_new_method_va(method, sender, selector, receiver, nargs, arguments);
-  return method->function(method, context);
+  struct Foo result = method->function(method, context);
+  va_end(arguments);
+  return result;
 }
 
 
