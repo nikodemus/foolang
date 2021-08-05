@@ -1443,10 +1443,16 @@ class CTranspiler { output selectorMap closureFunctions
         aBind body visitBy: self.
         output print: "; })"!
 
+    method visitVariable: aVar
+        output print: "ctx->frame[{aVar index - 1}]"!
+
+    method visitArgument: anArg
+        output print: "ctx->frame[{anArg index - 1}]"!
+
     method visitLexicalRef: aRef
         -- Tracer trace: #visitLexicalRef:.
         aRef frameOffset is 0
-            ifTrue: { output print: "ctx->frame[{aRef variable index - 1}]" }
+            ifTrue: { aRef variable visitBy: self }
             ifFalse: { output print: "foo_lexical_ref(ctx, {aRef variable index - 1}, {aRef frameOffset})" }!
 
     method visitLexicalSet: aSet
