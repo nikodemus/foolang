@@ -1453,21 +1453,21 @@ class CTranspiler { output selectorMap closureFunctions
         -- Tracer trace: #visitLexicalRef:.
         aRef frameOffset is 0
             ifTrue: { aRef variable visitBy: self }
-            ifFalse: { output print: "foo_lexical_ref(ctx, {aRef variable index - 1}, {aRef frameOffset}, ".
-                       output print: "ctx".
+            ifFalse: { output print: "ctx".
                        aRef frameOffset
                            times: { output print: "->outer_context" }.
-                       output print: ")" }!
+                       output print: "->frame[{aRef variable index - 1}]" }!
 
     method visitLexicalSet: aSet
         -- Tracer trace: #visitLexicalSet:.
+        output print: "(".
         aSet frameOffset is 0
-            ifTrue: { output print: "(ctx->frame[{aSet variable index - 1}] = " }
-            ifFalse: { output print: "foo_lexical_set(ctx, {aSet variable index - 1}, {aSet frameOffset}, ".
-                       output print: "ctx".
+            ifTrue: { aSet variable visitBy: self }
+            ifFalse: { output print: "ctx".
                        aSet frameOffset
                            times: { output print: "->outer_context" }.
-                       output print: ", " }.
+                       output print: "->frame[{aSet variable index - 1}]" }.
+        output print: " = ".
         self _generateTypecheck: aSet variable type
              _for: aSet value.
         output print: ")"!
