@@ -133,7 +133,6 @@ char* foo_debug_context(struct FooContext* ctx) {
 
 struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t frameOffset, struct FooContext* outer) {
   struct FooContext* context0 = context;
-  size_t frameOffset0 = frameOffset;
   // FOO_DEBUG("/lexical_ref(index=%zu, frame=%zu)", index, frameOffset);
   while (frameOffset > 0) {
     assert(context->outer_context);
@@ -141,23 +140,22 @@ struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t fram
     --frameOffset;
   }
   if (context != outer) {
-    foo_panicf(context0, "Miscomputed outer context.");
+    foo_panicf(context0, "Miscomputed outer context in ref.");
   }
   assert(index < context->size);
-  struct Foo res = context->frame[index];
-  if (!res.class) {
-    foo_panicf(context0, "Invalid lexical reference at index: %zu, frameOffset: %zu",
-               index, frameOffset0);
-  }
-  return res;
+  return context->frame[index];
 }
 
-struct Foo foo_lexical_set(struct FooContext* context, size_t index, size_t frame, struct Foo value) {
+struct Foo foo_lexical_set(struct FooContext* context, size_t index, size_t frameOffset, struct FooContext* outer, struct Foo value) {
+  struct FooContext* context0 = context;
   // FOO_DEBUG("/lexical_set(index=%zu, frame=%zu, ...)", index, frame);
-  while (frame > 0) {
+  while (frameOffset > 0) {
     assert(context->outer_context);
     context = context->outer_context;
-    --frame;
+    --frameOffset;
+  }
+  if (context != outer) {
+    foo_panicf(context0, "Miscomputed outer context in set.");
   }
   assert(index < context->size);
   context->frame[index] = value;
