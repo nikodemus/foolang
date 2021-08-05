@@ -479,26 +479,10 @@ struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
   foo_panicf(ctx, "INTERNAL ERROR: longjmp() fell through!");
 }
 
-void foo_check_method_argcount(struct FooContext* sender,
-                               size_t nargs,
-                               const struct FooMethod* method) {
-  if (nargs != method->argCount) {
-    foo_panicf(sender, "Wrong number of arguments! %s requires %zu, got %zu",
-               method->selector->name->data, method->argCount, nargs);
-  }
-  if (method->frameSize < nargs) {
-    foo_panicf(sender, "INTERNAL ERROR: Method %s frame too small: %zu, got %zu arguments!",
-               method->selector->name->data,
-               method->frameSize,
-               nargs);
-  }
-}
-
 struct FooContext* foo_context_new_method_no_args(const struct FooMethod* method,
                                                   struct FooContext* sender,
                                                   struct Foo receiver,
                                                   size_t nargs) {
-  foo_check_method_argcount(sender, nargs, method);
   struct FooContext* context = foo_alloc_context(sender, method->frameSize);
   context->type = METHOD_CONTEXT;
   context->depth = sender->depth + 1;
@@ -558,7 +542,6 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
     context->frame[1] = (struct Foo){ .class = &FooClass_Array,
                                       .datum = { .ptr = array } };
   } else {
-    foo_check_method_argcount(sender, nargs, method);
     for (size_t i = 0; i < nargs; i++) {
       context->frame[i] = va_arg(arguments, struct Foo);
     }
