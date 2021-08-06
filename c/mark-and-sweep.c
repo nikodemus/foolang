@@ -311,7 +311,8 @@ void* foo_alloc(struct FooContext* sender, size_t size) {
   size_t bytes = sizeof(struct FooAlloc) + size;
   struct FooAlloc* p = calloc(1, bytes);
   if (!p) {
-    foo_abort("calloc");
+    foo_panicf(sender, "Allocation failed. Tried to allocate %zu bytes, total allocated %zu bytes.",
+               bytes, allocation_bytes);
   }
   p->next = allocations;
   p->size = bytes;
@@ -327,11 +328,11 @@ void* foo_alloc(struct FooContext* sender, size_t size) {
 }
 
 void* foo_alloc_no_gc(struct FooContext* sender, size_t size) {
-  (void)sender;
   size_t bytes = sizeof(struct FooAlloc) + size;
   struct FooAlloc* p = calloc(1, bytes);
   if (!p) {
-    foo_abort("calloc");
+    foo_panicf(sender, "Allocation failed. Tried to allocate %zu bytes, total allocated %zu bytes.",
+               bytes, allocation_bytes);
   }
   p->next = allocations;
   p->size = bytes;
