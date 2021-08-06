@@ -463,34 +463,6 @@ struct FooContext* foo_context_new_method_no_args(const struct FooMethod* method
   return context;
 }
 
-struct FooContext* foo_context_new_method_array(const struct FooMethod* method,
-                                                struct FooContext* sender,
-                                                const struct FooSelector* selector,
-                                                struct Foo receiver,
-                                                struct Foo arguments) {
-  struct FooContext* context
-    = foo_context_new_method_no_args(method, sender, receiver);
-  if (selector != method->selector) {
-    // DoesNotUnderstand case
-    assert(&FOO_perform_with_ == method->selector);
-    assert(method->argCount == 2);
-    context->frame[0] = (struct Foo){ .class = &FooClass_Selector,
-                                      .datum = { .ptr = (void*)selector } };
-    context->frame[1] = arguments;
-  } else {
-    // normal case
-    struct FooArray* array = PTR(FooArray, arguments.datum);
-    if (array->size != method->argCount) {
-      foo_panicf(context, "Invalid number of arguments to #%s, wanted %zu, got %zu",
-                 method->selector->name->data, method->argCount, array->size);
-    }
-    for (size_t i = 0; i < array->size; i++) {
-      context->frame[i] = array->data[i];
-    }
-  }
-  return context;
-}
-
 struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
                                              struct FooContext* sender,
                                              const struct FooSelector* selector,
@@ -560,25 +532,6 @@ void foo_print_backtrace(struct FooContext* context) {
   }
 }
 
-struct Foo foo_send_array(struct FooContext* sender,
-                          const struct FooSelector* selector,
-                          struct Foo receiver,
-                          struct Foo array) {
-  assert(sender);
-  if (sender->depth > 2000) {
-    foo_panicf(sender, "Stack blew up!");
-  }
-  // FOO_DEBUG("/foo_send_array(?, %s, ...)", selector->name->data);
-  if (!receiver.class) {
-    foo_panicf(sender, "Invalid receiver for #%s", selector->name->data);
-  }
-  const struct FooMethod* method
-    = foo_class_find_method(sender, receiver.class, selector);
-  struct FooContext* context
-    = foo_context_new_method_array(method, sender, selector, receiver, array);
-  return method->function(method, context);
-}
-
 struct Foo foo_send(struct FooContext* sender,
                     const struct FooSelector* selector,
                     struct Foo receiver,
@@ -601,6 +554,42 @@ struct Foo foo_send(struct FooContext* sender,
   struct Foo result = method->function(method, context);
   va_end(arguments);
   return result;
+}
+
+struct Foo foo_send_array(struct FooContext* sender,
+                          const struct FooSelector* selector,
+                          struct Foo receiver,
+                          struct Foo argumentsArray) {
+  assert(sender);
+  if (sender->depth > 2000) {
+    foo_panicf(sender, "Stack blew up!");
+  }
+  if (!receiver.class) {
+    foo_panicf(sender, "Invalid receiver for #%s", selector->name->data);
+  }
+  struct FooArray* array = PTR(FooArray, argumentsArray.datum);
+  switch (array->size) {
+  case 0:
+    return foo_send(sender, selector, receiver, 0);
+  case 1:
+    return foo_send(sender, selector, receiver, 1, array->data[0]);
+  case 2:
+    return foo_send(sender, selector, receiver, 2, array->data[0], array->data[1]);
+  case 3:
+    return foo_send(sender, selector, receiver, 3, array->data[0], array->data[1], array->data[2]);
+  case 4:
+    return foo_send(sender, selector, receiver, 4, array->data[0], array->data[1], array->data[2], array->data[3]);
+  case 5:
+    return foo_send(sender, selector, receiver, 5, array->data[0], array->data[1], array->data[2], array->data[3], array->data[4]);
+  case 14:
+    return foo_send(sender, selector, receiver, 14,
+                    array->data[0], array->data[1], array->data[2], array->data[3], array->data[4],
+                    array->data[5], array->data[6], array->data[7], array->data[8], array->data[9],
+                    array->data[10], array->data[11], array->data[12], array->data[13]);
+  default:
+    foo_panicf(sender, "foo_send_array() not implemented for arrays of size > 5, %zu encountered",
+               array->size);
+  }
 }
 
 
