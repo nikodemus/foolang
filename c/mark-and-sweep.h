@@ -19,6 +19,7 @@ void foo_mark_ptr(void* ptr);
 struct FooContext;
 
 void* foo_alloc(struct FooContext*, size_t);
+void* foo_alloc_no_gc(struct FooContext*, size_t);
 void foo_gc(struct FooContext*);
 
 extern bool trace_gc;

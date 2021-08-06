@@ -1,6 +1,7 @@
 #ifndef __FOO_H_
 #define __FOO_H_
 
+#include <stdarg.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <setjmp.h>
@@ -54,6 +55,13 @@ struct FooBytes {
   struct FooHeader header;
   size_t size;
   uint8_t data[];
+};
+
+/** Simple intrusive list for interning. O(N), but fine to start with.
+ */
+struct FooSelector {
+  struct FooSelector* next;
+  struct FooBytes* name;
 };
 
 struct FooCleanup;
@@ -113,7 +121,13 @@ struct FooFileStream {
   FILE* ptr;
 };
 
-typedef struct Foo (*FooMethodFunction)(const struct FooMethod*, struct FooContext*);
+typedef struct Foo (*FooMethodFunction)
+    (const struct FooMethod*,
+     const struct FooSelector*,
+     struct FooContext*,
+     struct Foo,
+     size_t,
+     va_list);
 typedef struct Foo (*FooClosureFunction)(struct FooContext*);
 
 struct FooMethod {
