@@ -5,30 +5,24 @@ usage: build.sh [option*]
   Foolang build script.
 
   By default:
-    1. build the bootstrap compiler unless it is already built.
+    1. build the bootstrap compiler.
     2. build current compiler with the bootstrap compiler.
     3. build current compiler with itself.
     4. verify that steps #2 and #3 result in identical builds.
 
   Options:
 
-    --bootstrap
+    --skip-interpreter-build
 
-        Build bootstrap compiler build even if it already exists.
+        Skip building the bootstrap interpreter. This is for CI use only.
 
-    --bootstrap-skip-interpreter-build
+    --no-bootstrap
 
-        Build bootstrap compiler build even if it already exists, but skip
-        building the bootstrap interpreter. This is for CI use.
-
-    --clean
-
-        Delete build directory first. Forces full bootstrap.
+        Don't build the bootstrap compiler if it already exists.
 
     --no-verify
 
-        Skip steps #3 and #4 for a faster build. Don't use this option when
-        working on the compiler.
+        Skip steps #3 and #4.
 
 EOF
 )
@@ -45,8 +39,8 @@ SELF_COMPILER=$(exename build/foo)
 SECOND_GENERATION=$(exename build/second-generation-foo)
 
 CLEAN=false
-FORCE_BOOTSTRAP=false
-SKIP_INTERPRETER_BUILD=false
+NO_BOOTSTRAP=false
+NO_INTERPRETER_BUILD=false
 VERIFY=true
 
 for option in $@
@@ -56,17 +50,15 @@ do
             echo "$USAGE"
             exit
             ;;
-        --bootstrap)
-            FORCE_BOOTSTRAP=true
+        --no-bootstrap)
+            NO_BOOTSTRAP=true
             ;;
-        --bootstrap-*)
-            FORCE_BOOTSTRAP=true
-            SKIP_INTERPRETER_BUILD=true
-            ;;
-        --clean)
-            CLEAN=true
+        --no-interpreter-build)
+            NO_INTERPRETER_BUILD=true
             ;;
         --no-verify)
+            # It's just easier to keep verify option this way around,
+            # and the others negated.
             VERIFY=false
             ;;
         *)
@@ -77,18 +69,17 @@ do
     esac
 done
 
-if $CLEAN; then
-    rm -rf build/
-fi
 mkdir -p build/
 
-if $FORCE_BOOTSTRAP || $CLEAN; then
-    BOOTSTRAP=true
-elif ! [[ -e $BOOTSTRAP_COMPILER ]]; then
-    echo "Bootstrap compiler not found."
-    BOOTSTRAP=true
-else
+# Figure out if we need a bootstrap or not.
+if $NO_BOOTSTRAP && [[ -e $BOOTSTRAP_COMPILER ]]; then
+    echo "Skipping bootstrap."
     BOOTSTRAP=false
+else
+    if $NO_BOOTSTRAP; then
+        echo "Bootstrap compiler not found, bootstrap forced despite --no-bootstrap."
+    fi
+    BOOTSTRAP=true
 fi
 
 if $BOOTSTRAP && $VERIFY; then
@@ -103,11 +94,11 @@ fi
 
 if $BOOTSTRAP; then
 
-    if $SKIP_INTERPRETER_BUILD && [[ -e $BOOTSTRAP_INTERPRETER ]]; then
+    if $NO_INTERPRETER_BUILD && [[ -e $BOOTSTRAP_INTERPRETER ]]; then
         echo "Skipping bootstrap interpreter build"
     else
-        if $SKIP_INTERPRETER_BUILD; then
-            echo "Bootstrap interpreter not found: cannot skip."
+        if $NO_INTERPRETER_BUILD; then
+            echo "Bootstrap interpreter not found: build forced despite --no-interpreter-build."
         fi
         start_clock "bootstrap interpreter"
         if cargo build &> build/bootstrap-interpreter.log; then
@@ -155,28 +146,23 @@ if $VERIFY; then
     else
         fail build/foo.log
     fi
-    if diff --recursive --brief build/second-generation-c build/self-compiler-c \
-        &> build/bootstrap-diff.log
+    if diff -u --recursive build/self-compiler-c build/second-generation-c \
+        &> build/self-build.diff
     then
         echo "Self-build complete, enjoy quietly!"
     else
-        echo "************************************"
-        echo "* $(red WARNING: INCONSISTENT SELF-BUILD) *"
-        echo "************************************"
-        if $BOOTSTRAP
+        echo -n "$(red WARNING): inconsistent self-build!"
+        if $NO_BOOTSTRAP;
         then
-            echo -n "Host: "
-            uname -a
-            echo -n "Foolang: "
-            git describe --tags --dirty 2> /dev/null || echo "version-info-missing"
-            echo
-            echo "Please report the above to: https://github.com/nikodemus/foolang"
-
+            echo " Please try without --no-bootstrap option."
         else
-            echo "Please try with full bootstrap."
+            # Bootstrap wasn't intentionally skipped, something is borken.
+            echo
+            echo "Please report with contents of build/self-build.diff to"
+            echo
+            echo "    https://github.com/nikodemus/foolang"
+            echo
         fi
-        echo
-        echo "Anyhow, the binary is *probably* fine. Enjoy quietly!"
     fi
 else
     echo "Unverified build, consistency not checked - enjoy quietly!"
