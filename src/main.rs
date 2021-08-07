@@ -4,29 +4,26 @@ use foolang::time::TimeInfo;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-fn oops<T: std::fmt::Display>(what: T, app: Option<&App>) -> ! {
-    println!("FATAL - {}\n---", what);
-    if app.is_some() {
-        app.unwrap().clone().print_help().unwrap();
-    }
+fn oops<T: std::fmt::Display>(what: T) -> ! {
+    println!("FATAL - {}\n", what);
     std::process::exit(1)
 }
 
 fn find_module_or_abort(spec: &str, app: &App) -> (String, PathBuf) {
     let path = match std::fs::canonicalize(Path::new(&spec)) {
         Ok(path) => path,
-        Err(_) => oops(format!("cannot find module: {}", spec), Some(app)),
+        Err(_) => oops(format!("cannot find module: {}", spec)),
     };
     let root = match path.parent() {
         Some(path) => path.to_path_buf(),
-        None => oops(format!("cannot determine root of module: {}", spec), Some(app)),
+        None => oops(format!("cannot determine root of module: {}", spec)),
     };
     let name = match path.file_name() {
         Some(name) => match name.to_str() {
             Some(name) => name.to_string(),
-            None => oops(format!("module has invalid filename: {}", spec), Some(app)),
+            None => oops(format!("module has invalid filename: {}", spec)),
         },
-        None => oops(format!("cannot determine name of module: {}", spec), Some(app)),
+        None => oops(format!("cannot determine name of module: {}", spec)),
     };
     return (name, root);
 }
@@ -104,7 +101,7 @@ fn foo_main() {
         };
         let foo = match Foolang::new(prelude, module_roots) {
             Ok(foo) => foo,
-            Err(err) => oops(err, Some(&app)),
+            Err(err) => oops(err),
         };
         let command = foo.into_array(
             matches
@@ -115,7 +112,7 @@ fn foo_main() {
         // FIXME: pass in env and argv to run
         match foo.run(&program, command) {
             Ok(_) => std::process::exit(0),
-            Err(err) => oops(err, Some(&app)),
+            Err(err) => oops(err),
         }
     }
 }
