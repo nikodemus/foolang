@@ -467,9 +467,12 @@ struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
   foo_panicf(ctx, "INTERNAL ERROR: longjmp() fell through!");
 }
 
-struct FooContext* foo_context_new_method_frame(const struct FooMethod* method,
+// This is a dummy context for debugger and backtraces, containing only a single
+// argument, in a specific frame slot, all others initialized to False.
+struct FooContext* foo_context_new_method_dummy(const struct FooMethod* method,
                                                 struct FooContext* sender,
-                                                struct Foo receiver) {
+                                                struct Foo receiver,
+                                                size_t index, struct Foo arg) {
   struct FooContext* context = foo_alloc_context(sender, method->frameSize);
   context->type = METHOD_CONTEXT;
   context->depth = sender->depth + 1;
@@ -478,17 +481,6 @@ struct FooContext* foo_context_new_method_frame(const struct FooMethod* method,
   context->receiver = receiver;
   context->outer_context = NULL;
   context->vars = sender->vars;
-  return context;
-}
-
-// This is a dummy frame containing only a single argument, in a specific
-// frame slot, all others initialized to False.
-struct FooContext* foo_context_new_method_dummy(const struct FooMethod* method,
-                                                struct FooContext* sender,
-                                                struct Foo receiver,
-                                                size_t index, struct Foo arg) {
-  struct FooContext* context
-    = foo_context_new_method_frame(method, sender, receiver);
   for (size_t i = 0; i < method->frameSize; i++) {
     if (i == index) {
       context->frame[i] = arg;
@@ -499,14 +491,21 @@ struct FooContext* foo_context_new_method_dummy(const struct FooMethod* method,
   return context;
 }
 
+// This is a regular method context.
 struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
                                              struct FooContext* sender,
                                              const struct FooSelector* selector,
                                              struct Foo receiver,
                                              size_t nargs, va_list arguments) {
   // FOO_DEBUG("/foo_context_new_method_va");
-  struct FooContext* context
-    = foo_context_new_method_frame(method, sender, receiver);
+  struct FooContext* context = foo_alloc_context(sender, method->frameSize);
+  context->type = METHOD_CONTEXT;
+  context->depth = sender->depth + 1;
+  context->method = method;
+  context->sender = sender;
+  context->receiver = receiver;
+  context->outer_context = NULL;
+  context->vars = sender->vars;
   if (selector != method->selector) {
     assert(&FOO_perform_with_ == method->selector);
     assert(method->argCount == 2);
