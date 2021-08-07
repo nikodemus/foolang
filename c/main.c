@@ -492,6 +492,13 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
                                              struct Foo receiver,
                                              size_t frameSize,
                                              size_t nargs, va_list arguments) {
+  if (selector != method->selector) {
+    foo_panicf(sender, "Selector mismatch. Method %s#s activated through %s\n%zu arguments, frame size %zy",
+               method->home->name->data,
+               method->selector->name->data,
+               selector->name->data,
+               nargs, frameSize);
+  }
   // FOO_DEBUG("/foo_context_new_method_va");
   struct FooContext* context = foo_alloc_context(sender, frameSize);
   context->type = METHOD_CONTEXT;
@@ -501,20 +508,8 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
   context->receiver = receiver;
   context->outer_context = NULL;
   context->vars = sender->vars;
-  if (selector != method->selector) {
-    assert(&FOO_perform_with_ == method->selector);
-    context->frame[0] = (struct Foo){ .class = &FooClass_Selector,
-                                      .datum = { .ptr = (void*)selector }};
-    struct FooArray* array = FooArray_alloc_no_gc(context, nargs);
-    for (size_t i = 0; i < nargs; i++) {
-      array->data[i] = va_arg(arguments, struct Foo);
-    }
-    context->frame[1] = (struct Foo){ .class = &FooClass_Array,
-                                      .datum = { .ptr = array } };
-  } else {
-    for (size_t i = 0; i < nargs; i++) {
-      context->frame[i] = va_arg(arguments, struct Foo);
-    }
+  for (size_t i = 0; i < nargs; i++) {
+    context->frame[i] = va_arg(arguments, struct Foo);
   }
   return context;
 }
@@ -561,24 +556,39 @@ void foo_print_backtrace(struct FooContext* context) {
   }
 }
 
+struct Foo foo_send_perform_with(const struct FooMethod* method,
+                                 struct FooContext* sender,
+                                 struct Foo receiver, ...) {
+  va_list arguments;
+  va_start(arguments, receiver);
+  struct Foo result = method->function(method, &FOO_perform_with_, sender, receiver, 2, arguments);
+  va_end(arguments);
+  return result;
+}
+
 struct Foo foo_send(struct FooContext* sender,
                     const struct FooSelector* selector,
                     struct Foo receiver,
                     size_t nargs, ...) {
-  assert(sender);
   if (sender->depth > 2000) {
     foo_panicf(sender, "Stack blew up!");
   }
-  // FOO_DEBUG("/foo_send(?, %s, %s, ...)",
-  //           selector->name->data, receiver.class->name->data);
   va_list arguments;
   va_start(arguments, nargs);
-  if (!receiver.class) {
-    foo_panicf(sender, "Invalid receiver for #%s", selector->name->data);
-  }
   const struct FooMethod* method
     = foo_class_find_method(sender, receiver.class, selector);
-  struct Foo result = method->function(method, selector, sender, receiver, nargs, arguments);
+  struct Foo result;
+  if (method->selector != selector) {
+    // This isn't the requested method, but rather #perform:with:
+    struct FooArray* array = FooArray_alloc(sender, nargs);
+    for (size_t i = 0; i < nargs; i++) {
+      array->data[i] = va_arg(arguments, struct Foo);
+    }
+    result = foo_send_perform_with(method, sender, receiver,
+                                   FOO_INSTANCE(Selector, selector), FOO_INSTANCE(Array, array));
+  } else {
+    result = method->function(method, selector, sender, receiver, nargs, arguments);
+  }
   va_end(arguments);
   return result;
 }
@@ -626,25 +636,10 @@ struct Foo foo_invoke_on(const struct FooMethod* method,
                          struct FooContext* sender,
                          struct Foo receiver,
                          size_t nargs, va_list arguments) {
+  assert(method->selector == selector);
   struct FooArray* args = FooArray_alloc_no_gc(sender, nargs);
   for (size_t i = 0; i < nargs; i++) {
     args->data[i] = va_arg(arguments, struct Foo);
-  }
-  if (method->selector != selector) {
-    assert(&FOO_perform_with_ == method->selector);
-    // #perform:with: -case.
-    //
-    // Consider:
-    //
-    //     receiver foo: 1 bar: 2
-    //
-    //     == perform: #foo:bar: with: [1, 2]
-    //
-    // ...which is how we need to invoke.
-    struct FooArray* perform_with_args = FooArray_alloc_no_gc(sender, 2);
-    perform_with_args->data[0] = FOO_INSTANCE(Selector, selector);
-    perform_with_args->data[1] = FOO_INSTANCE(Array, args);
-    args = perform_with_args;
   }
   return foo_send(sender, &FOO_invoke_on_, method->object,
                   2,
