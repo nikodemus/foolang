@@ -207,8 +207,11 @@ class SyntaxTranslator { env currentMethod methodEnv }
 
     method visitVariable: aVariable
         -- Tracer visitVariable: aVariable.
-        (env reference: aVariable name)
-            withSource: aVariable source!
+        let ref = (env reference: aVariable name)
+                      withSource: aVariable source.
+        ref isNonLocal
+            ifTrue: { currentMethod noteNonLocalReference }.
+        ref!
 
     method visitDynamicVariable: aVariable
         -- Tracer visitDynamicVariable: aVariable.

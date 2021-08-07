@@ -596,7 +596,7 @@ class AstReaderMethod { home slot }
 end
 
 class AstMethod { home selector argumentVariables returnType _body frameSize
-                  isDirect isRequired hasNonLocalReturns }
+                  isDirect isRequired hasNonLocalReturns hasNonLocalReferences }
     is Object
 
     direct method home: home
@@ -614,10 +614,14 @@ class AstMethod { home selector argumentVariables returnType _body frameSize
             frameSize: False
             isDirect: isDirect
             isRequired: isRequired
-            hasNonLocalReturns: False!
+            hasNonLocalReturns: False
+            hasNonLocalReferences: False!
 
     method noteNonLocalReturn
         hasNonLocalReturns = True!
+
+    method noteNonLocalReference
+        hasNonLocalReferences = True!
 
     method methodFunctionName
         Name mangleMethod: self!
@@ -817,6 +821,11 @@ interface AstGlobalVariable
 
     method hasValue
         self _state is _Evaluated!
+
+    method isNonLocal
+        -- FIXME: This refers to capturing reference. Terrible
+        -- name here because I don't have AstGlobalRefs separately.
+        False!
 
     method isConstant
         True!
@@ -1090,6 +1099,9 @@ class AstSlotRef { slot source }
     method isImmediate
         True!
 
+    method isNonLocal
+        False!
+
     direct method slot: slot
         self
             slot: slot
@@ -1135,6 +1147,9 @@ class AstLexicalRef { variable frameOffset::Integer source }
 
     method isImmediate
         True!
+
+    method isNonLocal
+        frameOffset > 0!
 
     direct method variable: variable frameOffset: offset
         self
