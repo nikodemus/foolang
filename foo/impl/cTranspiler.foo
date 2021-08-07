@@ -1345,15 +1345,19 @@ class CTranspiler { output selectorMap closureFunctions
                                           -- FIXME: visit the type
                                           type is Any
                                               ifFalse: { output println: "    foo_class_typecheck(ctx, &{Name mangleClass: type}, ctx->frame[{index-1}ul]);" } }.
-                       output println: "    jmp_buf ret;".
-                       output println: "    ctx->ret = &ret;".
-                       output println: "    if (setjmp(ret)) \{".
-                       output println: "        return ctx->return_value;".
-                       output println: "    } else \{".
-                       output print: "          return ".
-                       output print: body.
-                       output println: ";".
-                       output println: "    }".
+                       aMethod hasNonLocalReturns
+                           ifTrue: { output println: "    jmp_buf ret;".
+                                     output println: "    ctx->ret = &ret;".
+                                     output println: "    if (setjmp(ret)) \{".
+                                     output println: "        return ctx->return_value;".
+                                     output println: "    } else \{".
+                                     output print: "          return ".
+                                     output print: body.
+                                     output println: ";".
+                                     output println: "    }" }
+                           ifFalse: { output print: "    return ".
+                                      output print: body.
+                                      output println: ";" }.
                        output println: "}" }.
         -- Debug println: "  => method done".
         output newline.
