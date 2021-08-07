@@ -93,6 +93,7 @@ enum FooContextType {
 // FIXME: vars doesn't really belong in context, but easier right now.
 #define FOOCONTEXT_IMPL(prefix, frameSize)            \
   prefix {                                            \
+    struct FooHeader header;                          \
     enum FooContextType type;                         \
     uint32_t depth;                                   \
     uint64_t heap;                                    \
