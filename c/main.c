@@ -496,8 +496,17 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
                                              struct FooContext* sender,
                                              const struct FooSelector* selector,
                                              struct Foo receiver,
+                                             size_t frameSize,
                                              size_t nargs, va_list arguments) {
   // FOO_DEBUG("/foo_context_new_method_va");
+  if (frameSize != method->frameSize) {
+    foo_panicf(sender,
+               "Method frameSize mismatch in %s%s!\n"
+               "actual frameSize = %zu, call claims %zu",
+               receiver.class->name->data,
+               selector->name->data,
+               method->frameSize, frameSize);
+  }
   struct FooContext* context = foo_alloc_context(sender, method->frameSize);
   context->type = METHOD_CONTEXT;
   context->depth = sender->depth + 1;

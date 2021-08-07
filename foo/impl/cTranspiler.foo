@@ -1322,7 +1322,7 @@ class CTranspiler { output selectorMap closureFunctions
                       output println: "}" }
             ifFalse: { -- Debug println: "  - normal method".
                        output println: "    struct FooContext* ctx".
-                       output println: "        = foo_context_new_method_va(method, sender, selector, receiver, nargs, arguments);".
+                       output println: "        = foo_context_new_method_va(method, sender, selector, receiver, {aMethod frameSize}, nargs, arguments);".
                        output println: "    (void)ctx;".
                        aMethod signature
                            doWithIndex: { |type index|
