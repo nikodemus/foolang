@@ -1337,14 +1337,41 @@ class CTranspiler { output selectorMap closureFunctions
                       output println: "}" }
             ifFalse: { -- We need to compile the method body to know how the required framesize.
                        let body = self compileMethodBody: aMethod.
-                       output println: "    struct FooContext* ctx".
-                       output println: "        = foo_context_new_method_va(method, sender, selector, receiver, {aMethod frameSize}, nargs, arguments);".
-                       output println: "    (void)ctx;".
-                       aMethod signature
-                           doWithIndex: { |type index|
-                                          -- FIXME: visit the type
-                                          type is Any
-                                              ifFalse: { output println: "    foo_class_typecheck(ctx, &{Name mangleClass: type}, ctx->frame[{index-1}ul]);" } }.
+                       aMethod hasNonLocalReferences
+                           ifTrue: { output println: "    struct FooContext* ctx".
+                                     output println: "        = foo_context_new_method_va(method, sender, selector, receiver, {aMethod frameSize}, nargs, arguments);".
+                                     output println: "    (void)ctx;".
+                                     aMethod signature
+                                         doWithIndex: { |type index|
+                                                        -- FIXME: visit the type
+                                                        type is Any
+                                                            ifFalse: { output println: "    foo_class_typecheck(ctx, &{Name mangleClass: type}, ctx->frame[{index-1}ul]);" } } }
+                          ifFalse: {  output println: "    assert(selector == method->selector);". -- perform:with:?
+                                      aMethod signature
+                                          doWithIndex: { |type index|
+                                                         type is Any
+                                                             ifTrue: { output print: "    struct Foo arg{index} = va_arg(arguments, struct Foo);" }
+                                                             ifFalse: { output print: "    struct Foo arg{index} = foo_class_typecheck(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo));" } }.
+
+                                      output println: "    struct FooContext* ctx = FOOCONTEXT_OF_SIZE({aMethod frameSize}) \{".
+                                      output println: "        .header = \{ .allocation = STACK },".
+                                      output println: "        .type = METHOD_CONTEXT,".
+                                      output println: "        .depth = sender->depth + 1,".
+                                      output println: "        .method = method,".
+                                      output println: "        .receiver = receiver,".
+                                      output println: "        .sender = sender,".
+                                      output println: "        .outer_context = NULL,".
+                                      output println: "        .vars = sender->vars,".
+                                      output println: "        .cleanup = NULL,".
+                                      output println: "        .return_value = FOO_BOOLEAN(false),".
+                                      output println: "        .ret = NULL,".
+                                      output println: "        .size = {aMethod frameSize},".
+                                      output println: "        .frame = \{".
+                                      1 to: aMethod arity
+                                        do: { |index| output println: "            arg{index}," }.
+                                      output println: "\n        }".
+                                      output println: "    };".
+                                      output println: "    (void)ctx;" }.
                        aMethod hasNonLocalReturns
                            ifTrue: { output println: "    jmp_buf ret;".
                                      output println: "    ctx->ret = &ret;".
