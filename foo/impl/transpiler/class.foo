@@ -110,12 +110,10 @@ define InstanceMethods
 
                    struct Foo selector_arity = foo_send(ctx, &FOO_arity, method_selector, 0);
                    foo_class_typecheck(ctx, &FooClass_Integer, selector_arity);
-                   int64_t method_arity = selector_arity.datum.int64 - 1;
 
                    struct FooMethod* m = &newclass->methods[i];
                    m->home = newclass;
                    m->selector = PTR(FooSelector, method_selector.datum);
-                   m->argCount = method_arity;
                    m->frameSize = selector_arity.datum.int64;
                    m->function = foo_invoke_on;
                    m->object = method_object;
@@ -162,12 +160,10 @@ define InstanceMethods
 
                    struct Foo selector_arity = foo_send(ctx, &FOO_arity, method_selector, 0);
                    foo_class_typecheck(ctx, &FooClass_Integer, selector_arity);
-                   int64_t method_arity = selector_arity.datum.int64 - 1;
 
                    struct FooMethod* m = &newclass->methods[i];
                    m->home = newclass;
                    m->selector = PTR(FooSelector, method_selector.datum);
-                   m->argCount = method_arity;
                    m->frameSize = selector_arity.datum.int64;
                    m->function = foo_invoke_on;
                    m->object = method_object;

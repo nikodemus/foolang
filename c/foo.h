@@ -138,7 +138,6 @@ typedef struct Foo (*FooClosureFunction)(struct FooContext*);
 struct FooMethod {
   struct FooClass* home;
   struct FooSelector* selector;
-  size_t argCount;
   size_t frameSize;
   // Native method functions directly implement the method
   // Object method functions send #invoke:inContext: to the object
