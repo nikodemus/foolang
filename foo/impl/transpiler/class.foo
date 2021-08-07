@@ -114,7 +114,6 @@ define InstanceMethods
                    struct FooMethod* m = &newclass->methods[i];
                    m->home = newclass;
                    m->selector = PTR(FooSelector, method_selector.datum);
-                   m->frameSize = selector_arity.datum.int64;
                    m->function = foo_invoke_on;
                    m->object = method_object;
 
@@ -164,7 +163,6 @@ define InstanceMethods
                    struct FooMethod* m = &newclass->methods[i];
                    m->home = newclass;
                    m->selector = PTR(FooSelector, method_selector.datum);
-                   m->frameSize = selector_arity.datum.int64;
                    m->function = foo_invoke_on;
                    m->object = method_object;
 

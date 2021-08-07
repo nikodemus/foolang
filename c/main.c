@@ -322,7 +322,7 @@ struct Foo foo_class_typecheck(struct FooContext* sender,
 struct FooContext* foo_context_new_method_dummy(const struct FooMethod* method,
                                                 struct FooContext* sender,
                                                 struct Foo receiver,
-                                                size_t index, struct Foo arg);
+                                                struct Foo arg);
 
 // For use in methods which don't allocate their own context:
 // creates a mock context on failure.
@@ -339,7 +339,7 @@ struct Foo foo_class_typecheck_ctor_argument(struct FooContext* sender,
   if (class == obj.class || foo_class_inherits(class, obj.class)) {
     return obj;
   }
-  struct FooContext* dummy = foo_context_new_method_dummy(method, sender, sender->receiver, index, obj);
+  struct FooContext* dummy = foo_context_new_method_dummy(method, sender, sender->receiver, obj);
   foo_panicf(dummy, "Type error! Wanted: %s, got: %s",
              class->name->data, obj.class->name->data);
 }
@@ -468,12 +468,12 @@ struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
 }
 
 // This is a dummy context for debugger and backtraces, containing only a single
-// argument, in a specific frame slot, all others initialized to False.
+// argument.
 struct FooContext* foo_context_new_method_dummy(const struct FooMethod* method,
                                                 struct FooContext* sender,
                                                 struct Foo receiver,
-                                                size_t index, struct Foo arg) {
-  struct FooContext* context = foo_alloc_context(sender, method->frameSize);
+                                                struct Foo arg) {
+  struct FooContext* context = foo_alloc_context(sender, 1);
   context->type = METHOD_CONTEXT;
   context->depth = sender->depth + 1;
   context->method = method;
@@ -481,13 +481,7 @@ struct FooContext* foo_context_new_method_dummy(const struct FooMethod* method,
   context->receiver = receiver;
   context->outer_context = NULL;
   context->vars = sender->vars;
-  for (size_t i = 0; i < method->frameSize; i++) {
-    if (i == index) {
-      context->frame[i] = arg;
-    } else {
-      context->frame[i] = FOO_BOOLEAN(false);
-    }
-  }
+  context->frame[0] = arg;
   return context;
 }
 
@@ -499,15 +493,7 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
                                              size_t frameSize,
                                              size_t nargs, va_list arguments) {
   // FOO_DEBUG("/foo_context_new_method_va");
-  if (frameSize != method->frameSize) {
-    foo_panicf(sender,
-               "Method frameSize mismatch in %s%s!\n"
-               "actual frameSize = %zu, call claims %zu",
-               receiver.class->name->data,
-               selector->name->data,
-               method->frameSize, frameSize);
-  }
-  struct FooContext* context = foo_alloc_context(sender, method->frameSize);
+  struct FooContext* context = foo_alloc_context(sender, frameSize);
   context->type = METHOD_CONTEXT;
   context->depth = sender->depth + 1;
   context->method = method;

@@ -1080,7 +1080,6 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                   output println: "                            .home = &{each methodHomeName},".
-                  output println: "                            .frameSize = {each frameSize},".
                   output println: "                            .function = &{each methodFunctionName},".
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL } } }," }.
         output println: "    }".
@@ -1102,7 +1101,6 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                   output println: "                            .home = &{each methodHomeName},".
-                  output println: "                            .frameSize = {each frameSize},".
                   output println: "                            .function = &{each methodFunctionName},".
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
         output println: "    }".
@@ -1247,7 +1245,6 @@ class CTranspiler { output selectorMap closureFunctions
                            do: { |each|
                                  output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                                  output println: "                            .home = &{each methodHomeName},".
-                                 output println: "                            .frameSize = {each frameSize},".
                                  output println: "                            .function = &{each methodFunctionName},".
                                  output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL } } }," }.
                        output println: "    }".
@@ -1273,7 +1270,6 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                   output println: "                            .home = &{each methodHomeName},".
-                  output println: "                            .frameSize = {each frameSize},".
                   output println: "                            .function = &{each methodFunctionName},".
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
         output println: "    }".
