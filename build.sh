@@ -160,15 +160,21 @@ if $VERIFY; then
     then
         echo "Self-build complete, enjoy quietly!"
     else
-        echo "***********************************"
+        echo "************************************"
         echo "* $(red WARNING: INCONSISTENT SELF-BUILD) *"
-        echo "***********************************"
-        echo -n "Host: "
-        uname -a
-        echo -n "Foolang: "
-        git describe --tags --dirty 2> /dev/null || echo "version-info-missing"
-        echo
-        echo "Please report the above to: https://github.com/nikodemus/foolang"
+        echo "************************************"
+        if $BOOTSTRAP
+        then
+            echo -n "Host: "
+            uname -a
+            echo -n "Foolang: "
+            git describe --tags --dirty 2> /dev/null || echo "version-info-missing"
+            echo
+            echo "Please report the above to: https://github.com/nikodemus/foolang"
+
+        else
+            echo "Please try with full bootstrap."
+        fi
         echo
         echo "Anyhow, the binary is *probably* fine. Enjoy quietly!"
     fi
