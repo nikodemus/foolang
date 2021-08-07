@@ -2,7 +2,7 @@ import .name.Name
 
 define DirectMethods {
     #concat:
-        -> {signature: [Array], vars: 0,
+        -> {signature: [Array], vars: 0, stackContext: True,
             body: "size_t size = 0;
 struct FooArray* content = PTR(FooArray, ctx->frame[0].datum);
 for (size_t i = 0; i < content->size; i++) \{
@@ -21,7 +21,7 @@ return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = string } };"
 
 define InstanceMethods {
     #isEquivalent:
-        -> {signature: [String], vars: 0,
+        -> {signature: [String], vars: 0, stackContext: True,
             body: "struct Foo arg = ctx->frame[0];
 struct Foo self = ctx->receiver;
 if (arg.datum.ptr == self.datum.ptr) \{
@@ -39,7 +39,7 @@ if (!memcmp(argBytes->data, selfBytes->data, argBytes->size)) \{
 }"},
 
     #==
-        -> {signature: [Any], vars: 0,
+        -> {signature: [Any], vars: 0, stackContext: True,
             body: "if (ctx->frame[0].class != &FooClass_String) \{
                        return FOO_BOOLEAN(false);
                    }
@@ -60,7 +60,7 @@ if (!memcmp(argBytes->data, selfBytes->data, argBytes->size)) \{
                    }"},
 
     #append:
-        -> {signature: [String], vars: 0,
+        -> {signature: [String], vars: 0, stackContext: True,
             body: "struct FooBytes* b1 = PTR(FooBytes, ctx->receiver.datum);
 struct FooBytes* b2 = PTR(FooBytes, ctx->frame[0].datum);
 struct FooBytes* b3 = FooBytes_alloc(ctx, b1->size + b2->size);
@@ -69,12 +69,12 @@ memcpy(b3->data+b1->size, b2->data, b2->size);
 return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = b3 } };"},
 
     #debug
-        -> {signature: [], vars: 0,
+        -> {signature: [], vars: 0, stackContext: True,
             body: "printf(\"#<String %s>\", (char*)PTR(FooBytes, ctx->receiver.datum)->data);
 return ctx->receiver;"},
 
     #do:
-        -> {signature: [Any], vars: 1,
+        -> {signature: [Any], vars: 1, stackContext: True,
             body: "struct Foo block = ctx->frame[0];
 struct FooBytes* s = PTR(FooBytes, ctx->receiver.datum);
 for (size_t i = 0; i < s->size; i++) \{
@@ -84,7 +84,7 @@ for (size_t i = 0; i < s->size; i++) \{
 return ctx->receiver;"},
 
     #from:to:
-        -> {signature: [Integer, Integer], vars: 0,
+        -> {signature: [Integer, Integer], vars: 0, stackContext: True,
             body: "int64_t start = ctx->frame[0].datum.int64 - 1;
 int64_t end = ctx->frame[1].datum.int64;
 // FIXME: errors instead!
@@ -93,7 +93,7 @@ assert(end <= PTR(FooBytes, ctx->receiver.datum)->size);
 return foo_String_new(ctx, (size_t)(end-start), (char*)PTR(FooBytes, ctx->receiver.datum)->data+start);"},
 
     #codeAt:
-        -> {signature: [Integer], vars: 0,
+        -> {signature: [Integer], vars: 0, stackContext: True,
             body: "struct FooBytes* s = PTR(FooBytes, ctx->receiver.datum);
     assert(ctx);
     int64_t i = ctx->frame[0].datum.int64;
@@ -104,14 +104,14 @@ return foo_String_new(ctx, (size_t)(end-start), (char*)PTR(FooBytes, ctx->receiv
     return FOO_INTEGER(s->data[i-1]);"},
 
     #printOn:
-        -> {signature: [Any], vars: 0,
+        -> {signature: [Any], vars: 0, stackContext: True,
             body: "return foo_send(ctx, &FOO_writeString_, ctx->frame[0], 1, ctx->receiver);"},
 
     #size
-        -> {signature: [], vars: 0,
+        -> {signature: [], vars: 0, stackContext: True,
             body: "return FOO_INTEGER(PTR(FooBytes, ctx->receiver.datum)->size);"},
 
     #toString
-        -> { signature: [], vars: 0,
+        -> { signature: [], vars: 0, stackContext: True,
              body: "return ctx->receiver;" },
 }!

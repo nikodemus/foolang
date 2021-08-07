@@ -6,11 +6,11 @@ define DirectMethods
 
 define InstanceMethods {
     #create
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return foo_FileStream_new(ctx, file, FooFile_CREATE);" },
     #createOrOpen
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return foo_FileStream_new(ctx, file, FooFile_CREATE_OR_OPEN);" },
     #delete
@@ -18,43 +18,43 @@ define InstanceMethods {
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return FOO_BOOLEAN(0 == remove((char*)(file->pathname->data)));" },
     #forAppend
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return foo_File_new(ctx, file->pathname, (file->mode | FooFile_APPEND) & ~FooFile_WRITE);" },
     #forRead
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return foo_File_new(ctx, file->pathname, file->mode | FooFile_READ);" },
     #forWrite
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return foo_File_new(ctx, file->pathname, (file->mode | FooFile_WRITE) & ~FooFile_APPEND);" },
     #isAppend
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return FOO_BOOLEAN(file->mode & FooFile_APPEND);" },
     #isRead
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return FOO_BOOLEAN(file->mode & FooFile_READ);" },
     #isTruncate
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return FOO_BOOLEAN(file->mode & FooFile_TRUNCATE);" },
     #isWrite
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return FOO_BOOLEAN(file->mode & FooFile_WRITE);" },
     #open
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return foo_FileStream_new(ctx, file, FooFile_OPEN);" },
     #pathname
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = file->pathname } };" },
     #truncateExisting
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return foo_File_new(ctx, file->pathname, file->mode | FooFile_TRUNCATE);" },
 }!

@@ -2,36 +2,36 @@ import .name.Name
 
 define DirectMethods
     { #debug
-          -> { signature: [], vars: 0,
+          -> { signature: [], vars: 0, stackContext: True,
                body: "printf(\"#<Class Boolean>\");
 return ctx->receiver;" } }!
 
 define InstanceMethods
     { #ifTrue:ifFalse:
-          -> { signature: [Any, Any], vars: 0,
+          -> { signature: [Any, Any], vars: 0, stackContext: True,
                body: "if (ctx->receiver.datum.boolean) \{
     return foo_send(ctx, &{Name mangleSelector: #value}, ctx->frame[0], 0);
 } else \{
     return foo_send(ctx, &{Name mangleSelector: #value}, ctx->frame[1], 0);
 }" },
  #ifTrue:
-          -> { signature: [Any], vars: 0,
+          -> { signature: [Any], vars: 0, stackContext: True,
                body: "if (ctx->receiver.datum.boolean) \{
     return foo_send(ctx, &{Name mangleSelector: #value}, ctx->frame[0], 0);
 } else \{
     return FooGlobal_False;
 }" },
  #ifFalse:
-          -> { signature: [Any], vars: 0,
+          -> { signature: [Any], vars: 0, stackContext: True,
                body: "if (ctx->receiver.datum.boolean) \{
     return FooGlobal_True;
 } else \{
     return foo_send(ctx, &{Name mangleSelector: #value}, ctx->frame[0], 0);
 }" },
       #toString
-          -> { signature: [], vars: 0,
+          -> { signature: [], vars: 0, stackContext: True,
                body: "return foo_String_new_from(ctx, ctx->receiver.datum.boolean ? \"True\" : \"False\");" },
       #debug
-          -> { signature: [], vars: 0,
+          -> { signature: [], vars: 0, stackContext: True,
                body: "printf(\"#<Boolean %s>\", ctx->receiver.datum.boolean ? \"True\" : \"False\");
 return ctx->receiver;" } }!

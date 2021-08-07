@@ -3,46 +3,46 @@ define DirectMethods
 
 define InstanceMethods
     { #arity
-          -> {signature: [], vars: 0,
+          -> {signature: [], vars: 0, stackContext: True,
               body: "struct FooClosure* closure = PTR(FooClosure, ctx->receiver.datum);
 return FOO_INTEGER((int64_t)closure->argCount);"},
       #apply:
-          -> {signature: [Array], vars: 0,
+          -> {signature: [Array], vars: 0, stackContext: False,
               body: "struct FooArray* array = PTR(FooArray, ctx->frame[0].datum);
 struct FooContext* closure_ctx = foo_context_new_closure_array(ctx, array);
 return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
       #loop
-          -> {signature: [], vars: 0,
+          -> {signature: [], vars: 0, stackContext: True,
               body: "for (;;) \{
     foo_send(ctx, &FOO_value, ctx->receiver, 0);
 };
 return FooGlobal_False;"},
       #value
-          -> {signature: [], vars: 0,
+          -> {signature: [], vars: 0, stackContext: False,
               body: "struct FooContext* closure_ctx = foo_context_new_closure(ctx);
 return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
       #value:
-          -> {signature: [Any], vars: 0,
+          -> {signature: [Any], vars: 0, stackContext: False,
               body: "struct FooContext* closure_ctx = foo_context_new_closure(ctx);
 return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
       #value:value:
-          -> {signature: [Any, Any], vars: 0,
+          -> {signature: [Any, Any], vars: 0, stackContext: False,
               body: "struct FooContext* closure_ctx = foo_context_new_closure(ctx);
 return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
       #whileFalse:
-          -> {signature: [Any], vars: 0,
+          -> {signature: [Any], vars: 0, stackContext: True,
               body: "while (foo_eq(FooGlobal_False, foo_send(ctx, &FOO_value, ctx->receiver, 0))) \{
     foo_send(ctx, &FOO_value, ctx->frame[0], 0);
 };
 return FooGlobal_False;"},
       #whileTrue:
-          -> {signature: [Any], vars: 0,
+          -> {signature: [Any], vars: 0, stackContext: True,
               body: "while (foo_eq(FooGlobal_True, foo_send(ctx, &FOO_value, ctx->receiver, 0))) \{
     foo_send(ctx, &FOO_value, ctx->frame[0], 0);
 };
 return FooGlobal_False;"},
       #finally:
-          -> {signature: [Closure], vars: 1,
+          -> {signature: [Closure], vars: 1, stackContext: False,
               body: "struct FooFinally finally = \{
     .cleanup = \{
         .function = foo_finally,

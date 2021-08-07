@@ -2,22 +2,22 @@
 -- right now.
 define DirectMethods {
     #debug ->
-    { signature: [], vars: 0,
+    { signature: [], vars: 0, stackContext: True,
       body: "return (struct Foo)\{ .class = &FooClass_Output, .datum = \{ .ptr = stdout } };" }
 }!
 
 define InstanceMethods {
     #flush
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "fflush(ctx->receiver.datum.ptr);
                 return ctx->receiver;" },
     #writeString:
-    -> { signature: [String], vars: 0,
+    -> { signature: [String], vars: 0, stackContext: True,
          body: "struct FooBytes* bytes = PTR(FooBytes, ctx->frame[0].datum);
                 fwrite(bytes->data, 1, bytes->size, ctx->receiver.datum.ptr);
                 return ctx->frame[0];" },
     #toString:
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "void* ptr = ctx->receiver.datum.ptr;
                 if (ptr == stdout)
                     return foo_String_new_from(ctx, \"#<Output stdout\");

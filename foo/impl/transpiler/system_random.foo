@@ -3,6 +3,6 @@ define DirectMethods
 
 define InstanceMethods {
     #integer
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "return FOO_INTEGER(system_random());" },
 }!

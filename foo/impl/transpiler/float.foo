@@ -2,22 +2,22 @@ import .name.Name
 
 define DirectMethods
     { #parse:
-      -> { signature: [String], vars: 0,
+      -> { signature: [String], vars: 0, stackContext: True,
            body: "struct FooBytes* b = PTR(FooBytes, ctx->frame[0].datum);
                   return FOO_FLOAT(strtod((char*)b->data, NULL));" },
       }!
 
 define InstanceMethods
     { (Selector intern: "prefix-")
-          -> { signature: [], vars: 0,
+          -> { signature: [], vars: 0, stackContext: True,
                body: "return FOO_FLOAT(- ctx->receiver.datum.float64);" },
       #debug
-      -> { signature: [], vars: 1,
+      -> { signature: [], vars: 1, stackContext: True,
            body: "ctx->frame[0] = foo_send(ctx, &FOO_toString, ctx->receiver, 0);
                   printf(\"#<Float %s>\", PTR(FooBytes, ctx->frame[0].datum)->data);
                   return ctx->receiver;"},
       #toString
-      -> { signature: [], vars: 0,
+      -> { signature: [], vars: 0, stackContext: True,
            body: "double arg = ctx->receiver.datum.float64;
                   if (arg == 0.0) \{
                       // FIXME: signed zero!
@@ -74,36 +74,36 @@ define InstanceMethods
                   assert(bytes->size == strlen(data));
                   return FOO_INSTANCE(String, bytes);" },
       #truncate
-          -> { signature: [], vars: 0,
+          -> { signature: [], vars: 0, stackContext: True,
                body: "return FOO_INTEGER(ctx->receiver.datum.float64);" },
       #round
-           -> { signature: [], vars: 0,
+           -> { signature: [], vars: 0, stackContext: True,
                 body: "return FOO_INTEGER(round(ctx->receiver.datum.float64));" },
       #floatAdd:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, stackContext: True,
                body: "return FOO_FLOAT(ctx->receiver.datum.float64 + ctx->frame[0].datum.float64);" },
       #floatDiv:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, stackContext: True,
                body: "return FOO_FLOAT(ctx->receiver.datum.float64 / ctx->frame[0].datum.float64);" },
       #floatEq:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, stackContext: True,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.float64 == ctx->frame[0].datum.float64);" },
       #floatGt:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, stackContext: True,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.float64 > ctx->frame[0].datum.float64);" },
       #floatGte:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, stackContext: True,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.float64 >= ctx->frame[0].datum.float64);" },
       #floatLt:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, stackContext: True,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.float64 < ctx->frame[0].datum.float64);" },
       #floatLte:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, stackContext: True,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.float64 <= ctx->frame[0].datum.float64);" },
       #floatMul:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, stackContext: True,
                body: "return FOO_FLOAT(ctx->receiver.datum.float64 * ctx->frame[0].datum.float64);" },
       #floatSub:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, stackContext: True,
                body: "return FOO_FLOAT(ctx->receiver.datum.float64 - ctx->frame[0].datum.float64);" },
     }!

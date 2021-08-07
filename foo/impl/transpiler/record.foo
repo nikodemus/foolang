@@ -3,7 +3,7 @@ define InstanceMethods
 
 define DirectMethods
     { #keysIn:
-          -> { signature: [Record], vars: 0,
+          -> { signature: [Record], vars: 0, stackContext: True,
                body: "struct FooClass* vt = ctx->frame[0].class;
 // Methods originating in the instance's class are reader methods
 // and correspond to slots, so we can identify them -- except for

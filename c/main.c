@@ -453,6 +453,7 @@ const struct FooMethod* foo_class_find_method(struct FooContext* ctx,
 struct Foo foo_return(struct FooContext* ctx, struct Foo value) __attribute__ ((noreturn));
 struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
   // FOO_DEBUG("/foo_return(%s...)", foo_debug_context(ctx));
+  assert(ctx);
   struct FooContext* return_context = ctx;
   while (return_context->outer_context) {
     return_context = return_context->outer_context;

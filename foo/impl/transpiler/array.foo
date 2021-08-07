@@ -1,6 +1,6 @@
 define DirectMethods
     { #of:new:value:
-          -> {signature: [Any, Integer, Any], vars: 0,
+          -> {signature: [Any, Integer, Any], vars: 0, stackContext: True,
               body: "int64_t size = ctx->frame[1].datum.int64;
 // FIXME: error instead!
 assert(size >= 0);
@@ -11,13 +11,13 @@ for (int64_t i = 0; i < size; i++) \{
 }
 return (struct Foo)\{ .class = &FooClass_Array, .datum = \{ .ptr = new } };"},
       #new:
-          -> {signature: [Integer], vars: 0,
+          -> {signature: [Integer], vars: 0, stackContext: True,
               body: "size_t size = ctx->frame[0].datum.int64;
 // FIXME: error instead!
 assert(size >= 0);
 return foo_Array_new(ctx, size);"},
       #new:value:
-          -> {signature: [Integer, Any], vars: 0,
+          -> {signature: [Integer, Any], vars: 0, stackContext: True,
               body: "int64_t size = ctx->frame[0].datum.int64;
 // FIXME: error instead!
 assert(size >= 0);
@@ -31,7 +31,7 @@ return (struct Foo)\{ .class = &FooClass_Array, .datum = \{ .ptr = new } };"}
 
 define InstanceMethods
     { #debug
-          -> {signature: [], vars: 0,
+          -> {signature: [], vars: 0, stackContext: True,
               body: "struct FooArray* array = PTR(FooArray, ctx->receiver.datum);
 printf(\"[\");
 for (size_t i = 0; i < array->size; i++) \{
@@ -42,21 +42,21 @@ for (size_t i = 0; i < array->size; i++) \{
 printf(\"]\");
 return ctx->receiver;"},
       #at:
-          -> {signature: [Integer], vars: 0,
+          -> {signature: [Integer], vars: 0, stackContext: True,
               body: "struct FooArray* array = PTR(FooArray, ctx->receiver.datum);
 int64_t i = ctx->frame[0].datum.int64 - 1;
 assert(i >= 0);
 assert(i < array->size);
 return array->data[i];"},
       #at:put:
-          -> {signature: [Integer, Any], vars: 0,
+          -> {signature: [Integer, Any], vars: 0, stackContext: True,
               body: "struct FooArray* array = PTR(FooArray, foo_check_modification(ctx, ctx->receiver.datum));
 int64_t i = ctx->frame[0].datum.int64 - 1;
 assert(i >= 0);
 assert(i < array->size);
 return array->data[i] = ctx->frame[1];"},
       #copy
-          -> {signature: [], vars: 0,
+          -> {signature: [], vars: 0, stackContext: True,
               body: "struct FooArray* self = PTR(FooArray, ctx->receiver.datum);
 struct FooArray* new = FooArray_alloc(ctx, self->size);
 for (size_t i = 0; i < self->size; i++) \{
@@ -64,21 +64,21 @@ for (size_t i = 0; i < self->size; i++) \{
 }
 return (struct Foo)\{ .class = &FooClass_Array, .datum = \{ .ptr = new } };"},
       #do:
-          -> {signature: [Any], vars: 0,
+          -> {signature: [Any], vars: 0, stackContext: True,
               body: "struct FooArray* self = PTR(FooArray, ctx->receiver.datum);
                      for (size_t i = 0; i < self->size; i++) \{
                          foo_send(ctx, &FOO_value_, ctx->frame[0], 1, self->data[i]);
                      \};
                      return ctx->receiver;"},
       #put:at:
-          -> {signature: [Any, Integer], vars: 0,
+          -> {signature: [Any, Integer], vars: 0, stackContext: True,
               body: "struct FooArray* array = PTR(FooArray, foo_check_modification(ctx, ctx->receiver.datum));
 int64_t i = ctx->frame[1].datum.int64 - 1;
 assert(i >= 0);
 assert(i < array->size);
 return array->data[i] = ctx->frame[0];"},
       #from:to:
-          -> {signature: [Integer, Integer], vars: 0,
+          -> {signature: [Integer, Integer], vars: 0, stackContext: True,
               body: "int64_t start = ctx->frame[0].datum.int64 - 1;
 int64_t end = ctx->frame[1].datum.int64;
 struct FooArray* self = PTR(FooArray, ctx->receiver.datum);
@@ -92,6 +92,6 @@ for (size_t i = start; i < end;) \{
 }
 return (struct Foo)\{ .class = &FooClass_Array, .datum = \{ .ptr = new } };"},
       #size
-              -> {signature: [], vars: 0,
+              -> {signature: [], vars: 0, stackContext: True,
                   body: "return FOO_INTEGER(PTR(FooArray, ctx->receiver.datum)->size);"}
 }!

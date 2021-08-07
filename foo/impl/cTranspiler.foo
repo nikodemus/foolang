@@ -46,6 +46,10 @@ class BuiltinMethod { home selector definition isDirect }
                                  definition: definition
                                  isDirect: areDirect) }.
         dict!
+    method hasNonLocalReturns
+        False!
+    method stackContext
+        definition stackContext!
     method isBuiltin
         True!
     method isRequired
@@ -564,7 +568,10 @@ class CTranspiler { output selectorMap closureFunctions
         output!
 
     method compileMethodBody: aMethod
+        aMethod isBuiltin
+            ifTrue: { return aMethod body }.
         let newOutput = StringOutput new.
+        newOutput print: "return ".
         let methodVisitor = CTranspiler
                                  output: newOutput
                                  selectorMap: selectorMap
@@ -1306,13 +1313,14 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "     size_t nargs,".
         output println: "     va_list arguments)".
         output println: "\{".
-        aMethod isBuiltin
-            ifTrue: { output println: "    assert(selector == method->selector);". -- perform:with:?
-                      aMethod signature
+        -- Need to compile the body before we know how big the frame is.
+        let body = self compileMethodBody: aMethod.
+        aMethod stackContext
+            ifTrue: { aMethod signature
                           doWithIndex: { |type index|
                                          type is Any
-                                             ifTrue: { output print: "    struct Foo arg{index} = va_arg(arguments, struct Foo);" }
-                                             ifFalse: { output print: "    struct Foo arg{index} = foo_class_typecheck(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo));" } }.
+                                             ifTrue: { output println: "    struct Foo arg{index} = va_arg(arguments, struct Foo);" }
+                                             ifFalse: { output println: "    struct Foo arg{index} = foo_class_typecheck(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo));" } }.
                       output println: "    struct FooContext* ctx = FOOCONTEXT_OF_SIZE({aMethod frameSize}) \{".
                       output println: "        .header = \{ .allocation = STACK },".
                       output println: "        .type = METHOD_CONTEXT,".
@@ -1323,69 +1331,38 @@ class CTranspiler { output selectorMap closureFunctions
                       output println: "        .outer_context = NULL,".
                       output println: "        .vars = sender->vars,".
                       output println: "        .cleanup = NULL,".
-                      output println: "        .return_value = FOO_BOOLEAN(false),".
+                      output println: "        .return_value = FOO_INTEGER(0),".
                       output println: "        .ret = NULL,".
                       output println: "        .size = {aMethod frameSize},".
                       output println: "        .frame = \{".
                       1 to: aMethod arity
                         do: { |index| output println: "            arg{index}," }.
+                      aMethod frameSize - aMethod arity
+                          times: { output println: "            FOO_INTEGER(0)," }.
                       output println: "\n        }".
                       output println: "    };".
-                      output println: "    (void)ctx;".
-                      output print: "    ".
-                      output println: aMethod body.
-                      output println: "}" }
-            ifFalse: { -- We need to compile the method body to know how the required framesize.
-                       let body = self compileMethodBody: aMethod.
-                       aMethod hasNonLocalReferences
-                           ifTrue: { output println: "    struct FooContext* ctx".
-                                     output println: "        = foo_context_new_method_va(method, sender, selector, receiver, {aMethod frameSize}, nargs, arguments);".
-                                     output println: "    (void)ctx;".
-                                     aMethod signature
-                                         doWithIndex: { |type index|
-                                                        -- FIXME: visit the type
-                                                        type is Any
-                                                            ifFalse: { output println: "    foo_class_typecheck(ctx, &{Name mangleClass: type}, ctx->frame[{index-1}ul]);" } } }
-                          ifFalse: {  output println: "    assert(selector == method->selector);". -- perform:with:?
-                                      aMethod signature
-                                          doWithIndex: { |type index|
-                                                         type is Any
-                                                             ifTrue: { output print: "    struct Foo arg{index} = va_arg(arguments, struct Foo);" }
-                                                             ifFalse: { output print: "    struct Foo arg{index} = foo_class_typecheck(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo));" } }.
-
-                                      output println: "    struct FooContext* ctx = FOOCONTEXT_OF_SIZE({aMethod frameSize}) \{".
-                                      output println: "        .header = \{ .allocation = STACK },".
-                                      output println: "        .type = METHOD_CONTEXT,".
-                                      output println: "        .depth = sender->depth + 1,".
-                                      output println: "        .method = method,".
-                                      output println: "        .receiver = receiver,".
-                                      output println: "        .sender = sender,".
-                                      output println: "        .outer_context = NULL,".
-                                      output println: "        .vars = sender->vars,".
-                                      output println: "        .cleanup = NULL,".
-                                      output println: "        .return_value = FOO_BOOLEAN(false),".
-                                      output println: "        .ret = NULL,".
-                                      output println: "        .size = {aMethod frameSize},".
-                                      output println: "        .frame = \{".
-                                      1 to: aMethod arity
-                                        do: { |index| output println: "            arg{index}," }.
-                                      output println: "\n        }".
-                                      output println: "    };".
-                                      output println: "    (void)ctx;" }.
-                       aMethod hasNonLocalReturns
-                           ifTrue: { output println: "    jmp_buf ret;".
-                                     output println: "    ctx->ret = &ret;".
-                                     output println: "    if (setjmp(ret)) \{".
-                                     output println: "        return ctx->return_value;".
-                                     output println: "    } else \{".
-                                     output print: "          return ".
-                                     output print: body.
-                                     output println: ";".
-                                     output println: "    }" }
-                           ifFalse: { output print: "    return ".
-                                      output print: body.
-                                      output println: ";" }.
-                       output println: "}" }.
+                      output println: "    (void)ctx;" }
+            ifFalse: { output println: "    struct FooContext* ctx".
+                       output println: "        = foo_context_new_method_va(method, sender, selector, receiver, {aMethod frameSize}, nargs, arguments);".
+                       output println: "    (void)ctx;".
+                       aMethod signature
+                           doWithIndex: { |type index|
+                                          type is Any
+                                              ifFalse: { output println: "    foo_class_typecheck(ctx, &{Name mangleClass: type}, ctx->frame[{index-1}ul]);" } } }.
+        aMethod hasNonLocalReturns
+            ifTrue: { output println: "    jmp_buf ret;".
+                      output println: "    ctx->ret = &ret;".
+                      output println: "    if (setjmp(ret)) \{".
+                      output println: "        return ctx->return_value;".
+                      output println: "    } else \{".
+                      output print: "          return ".
+                      output print: body.
+                      output println: ";".
+                      output println: "    }" }
+            ifFalse: { output print: "    ".
+                       output print: body.
+                       output println: ";" }.
+        output println: "}" }.
         -- Debug println: "  => method done".
         output newline.
         aMethod!

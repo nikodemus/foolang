@@ -4,7 +4,7 @@ define DirectMethods
 -- FIXME: #exists swallows access errors
 define InstanceMethods {
     #/
-    -> { signature: [String], vars: 0,
+    -> { signature: [String], vars: 0, stackContext: True,
          body: "struct FooBytes* b1 = PTR(FooBytes, ctx->receiver.datum);
                 struct FooBytes* b2 = PTR(FooBytes, ctx->frame[0].datum);
                 if (b2->size == 0)
@@ -17,29 +17,29 @@ define InstanceMethods {
                 memcpy(b3->data + b1->size + 1, b2->data, b2->size);
                 return (struct Foo)\{ .class = &FooClass_FilePath, .datum = \{ .ptr = b3 } };" },
     #deleteFile
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "return FOO_BOOLEAN(
                     0 == remove((char*)PTR(FooBytes, ctx->receiver.datum)->data));" },
     #exists
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "return FOO_BOOLEAN(
                     0 == sys_access((char*)PTR(FooBytes, ctx->receiver.datum)->data, 0));" },
     #file
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "return foo_File_new(ctx, PTR(FooBytes, ctx->receiver.datum), 0);" },
     #isDirectory
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "struct sys_stat s;
                 if (sys_stat((char*)PTR(FooBytes, ctx->receiver.datum)->data, &s))
                     return FOO_BOOLEAN(false);
                 return FOO_BOOLEAN(SYS_ISDIR(s.st_mode));" },
     #isFile
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "struct sys_stat s;
                 if (sys_stat((char*)PTR(FooBytes, ctx->receiver.datum)->data, &s))
                     return FOO_BOOLEAN(false);
                 return FOO_BOOLEAN(SYS_ISREG(s.st_mode));" },
     #pathname
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, stackContext: True,
          body: "return (struct Foo)\{ .class = &FooClass_String, .datum = ctx->receiver.datum };" },
 }!

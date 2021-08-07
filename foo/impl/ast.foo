@@ -579,8 +579,8 @@ class AstReaderMethod { home slot }
         False!
     method hasNonLocalReturns
         False!
-    method hasNonLocalReferences
-        False!
+    method stackContext
+        True!
     method returnType
         -- FIXME: Since setters check the type, the readers don't
         -- need to -- but it would be nice for senders to know the type.
@@ -624,6 +624,9 @@ class AstMethod { home selector argumentVariables returnType _body frameSize
 
     method noteNonLocalReference
         hasNonLocalReferences = True!
+
+    method stackContext
+        hasNonLocalReferences is False!
 
     method methodFunctionName
         Name mangleMethod: self!

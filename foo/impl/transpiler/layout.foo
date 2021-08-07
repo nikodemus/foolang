@@ -2,14 +2,14 @@ define DirectMethods
     {
          #empty ->
          {
-              signature: [], vars: 0,
+              signature: [], vars: 0, stackContext: True,
               body:
               "return (struct Foo)\{ .class = &FooClass_Layout,
                                      .datum = \{ .ptr = &TheEmptyLayout \}\};"
          },
          #new: ->
          {
-              signature: [Integer], vars: 0,
+              signature: [Integer], vars: 0, stackContext: True,
               body:
               "int64_t arg = ctx->frame[0].datum.int64;
                if (arg < 0)
@@ -27,13 +27,13 @@ define InstanceMethods
     {
          #makeInstanceOf:from: ->
          {
-              signature: [Class, Array], vars: 0,
+              signature: [Class, Array], vars: 0, stackContext: True,
               body:
               "return foo_class_new_from_array(ctx);"
         },
          #makeInstanceOf: ->
          {
-              signature: [Class], vars: 0,
+              signature: [Class], vars: 0, stackContext: True,
               body:
               "struct FooClass* theClass = PTR(FooClass, ctx->frame[0].datum);
                if (theClass->layout != &TheEmptyLayout) \{
@@ -44,37 +44,37 @@ define InstanceMethods
         },
         #makeInstanceOf:with: ->
         {
-              signature: [Class, Any], vars: 0,
+              signature: [Class, Any], vars: 0, stackContext: True,
               body:
               "return foo_class_new(ctx);"
         },
         #makeInstanceOf:with:with: ->
         {
-              signature: [Class, Any, Any], vars: 0,
+              signature: [Class, Any, Any], vars: 0, stackContext: True,
               body:
               "return foo_class_new(ctx);"
         },
         #makeInstanceOf:with:with:with: ->
         {
-              signature: [Class, Any, Any, Any], vars: 0,
+              signature: [Class, Any, Any, Any], vars: 0, stackContext: True,
               body:
               "return foo_class_new(ctx);"
         },
         #makeInstanceOf:with:with:with:with: ->
         {
-              signature: [Class, Any, Any, Any, Any], vars: 0,
+              signature: [Class, Any, Any, Any, Any], vars: 0, stackContext: True,
               body:
               "return foo_class_new(ctx);"
         },
         #makeInstanceOf:with:with:with:with:with: ->
         {
-              signature: [Class, Any, Any, Any. Any, Any], vars: 0,
+              signature: [Class, Any, Any, Any. Any, Any], vars: 0, stackContext: True,
               body:
               "return foo_class_new(ctx);"
         },
         #at:in: ->
         {
-             signature: [Integer, Any], vars: 0,
+             signature: [Integer, Any], vars: 0, stackContext: True,
              body:
              "struct FooLayout* theLayout = PTR(FooLayout, ctx->receiver.datum);
               int64_t index = ctx->frame[0].datum.int64;
@@ -90,7 +90,7 @@ define InstanceMethods
         },
         #put:at:in: ->
         {
-             signature: [Any, Integer, Any], vars: 0,
+             signature: [Any, Integer, Any], vars: 0, stackContext: True,
              body:
              "struct FooLayout* theLayout = PTR(FooLayout, ctx->receiver.datum);
               struct Foo value = ctx->frame[0];

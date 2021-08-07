@@ -4,50 +4,50 @@ import .name.Name
 -- yet.
 define IntegerMethods
     { (Selector intern: "prefix-")
-          -> { signature: [], vars: 0,
+          -> { signature: [], vars: 0, stackContext: True,
                body: "return FOO_INTEGER(- ctx->receiver.datum.int64);" },
       #asFloat
-          -> { signature: [], vars: 0,
+          -> { signature: [], vars: 0, stackContext: True,
                body: "return FOO_FLOAT(ctx->receiver.datum.int64);" },
-      #debug -> {signature: [], vars: 0,
+      #debug -> {signature: [], vars: 0, stackContext: True,
                  body: "printf(\"#<Integer %\" PRId64 \">\", ctx->receiver.datum.int64);
 return ctx->receiver;"},
       #%
-          -> { signature: [Integer], vars: 0,
+          -> { signature: [Integer], vars: 0, stackContext: True,
                body: "return FOO_INTEGER(ctx->receiver.datum.int64 % ctx->frame[0].datum.int64);" },
       #integerAdd:
-          -> { signature: [Integer], vars: 0,
+          -> { signature: [Integer], vars: 0, stackContext: True,
                body: "return FOO_INTEGER(ctx->receiver.datum.int64 + ctx->frame[0].datum.int64);" },
       #integerDiv:
-          -> { signature: [Integer], vars: 0,
+          -> { signature: [Integer], vars: 0, stackContext: True,
                body: "int64_t div = ctx->frame[0].datum.int64;
 if (div)
     return FOO_INTEGER(ctx->receiver.datum.int64 / div);
 else
     foo_panicf(ctx, \"Divide by zero! (DivideByZero not supported on target yet)\");" },
       #integerEq:
-          -> { signature: [Integer], vars: 0,
+          -> { signature: [Integer], vars: 0, stackContext: True,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.int64 == ctx->frame[0].datum.int64);" },
       #integerGt:
-          -> { signature: [Integer], vars: 0,
+          -> { signature: [Integer], vars: 0, stackContext: True,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.int64 > ctx->frame[0].datum.int64);" },
       #integerGte:
-          -> { signature: [Integer], vars: 0,
+          -> { signature: [Integer], vars: 0, stackContext: True,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.int64 >= ctx->frame[0].datum.int64);" },
       #integerLt:
-          -> { signature: [Integer], vars: 0,
+          -> { signature: [Integer], vars: 0, stackContext: True,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.int64 < ctx->frame[0].datum.int64);" },
       #integerLte:
-          -> { signature: [Integer], vars: 0,
+          -> { signature: [Integer], vars: 0, stackContext: True,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.int64 <= ctx->frame[0].datum.int64);" },
       #integerMul:
-          -> { signature: [Integer], vars: 0,
+          -> { signature: [Integer], vars: 0, stackContext: True,
                body: "return FOO_INTEGER(ctx->receiver.datum.int64 * ctx->frame[0].datum.int64);" },
       #integerSub:
-          -> { signature: [Integer], vars: 0,
+          -> { signature: [Integer], vars: 0, stackContext: True,
                body: "return FOO_INTEGER(ctx->receiver.datum.int64 - ctx->frame[0].datum.int64);" },
       #to:do:
-          -> { signature: [Integer, Any], vars: 0,
+          -> { signature: [Integer, Any], vars: 0, stackContext: True,
                body: "int64_t from = ctx->receiver.datum.int64;
                       int64_t to = ctx->frame[0].datum.int64;
                       for (int64_t i = from; i <= to; i++) \{
@@ -55,7 +55,7 @@ else
                       \}
                       return ctx->receiver;" },
       #toString
-          -> {signature: [], vars: 0,
+          -> {signature: [], vars: 0, stackContext: True,
               body: "char buffer[22];
 int n = snprintf(buffer, sizeof(buffer), \"%\" PRId64, ctx->receiver.datum.int64);
 if (-1 < n && n < sizeof(buffer)) \{
