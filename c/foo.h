@@ -38,7 +38,8 @@ struct Foo {
 
 enum FooAllocType {
   STATIC,
-  HEAP
+  HEAP,
+  STACK
 };
 
 struct FooHeader {
