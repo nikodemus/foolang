@@ -199,10 +199,14 @@ class SyntaxTranslator { env currentMethod methodEnv }
 
     method visitSelfInstance: aSelf
         -- Tracer trace: #visitSelfInstance:.
+        env is methodEnv
+            ifFalse: { currentMethod noteNonLocalReference }.
         AstSelfInstanceRef new!
 
     method visitSelfClass: aSelf
         -- Tracer trace: #visitSelfClass:.
+        env is methodEnv
+            ifFalse: { currentMethod noteNonLocalReference }.
         AstSelfClassRef new!
 
     method visitVariable: aVariable
