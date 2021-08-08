@@ -31,6 +31,10 @@ return ctx->receiver;"},
             body: "struct FooSelector* selectorPtr = PTR(FooSelector, ctx->receiver.datum);
                    return (struct Foo)\{ .class = &FooClass_String,
                                          .datum = \{ .ptr = selectorPtr->name } };"},
+    #value:
+        -> {signature: [Any], vars: 0, stackContext: True,
+            body: "struct FooSelector* self = PTR(FooSelector, receiver.datum);
+                   return foo_send(ctx, self, ctx->frame[0], 0);"},
     #sendTo:with:
         -> {signature: [Any, Array], vars: 0,
             body: "struct FooSelector* target_selector = PTR(FooSelector, ctx->receiver.datum);
