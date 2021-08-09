@@ -4,11 +4,15 @@ usage: build.sh [option*]
 
   Foolang build script.
 
-  By default:
-    1. build the bootstrap compiler.
+  Stages:
+
+    1. build the bootstrap compiler unless it already exists.
     2. build current compiler with the bootstrap compiler.
-    3. build current compiler with itself.
-    4. verify that steps #2 and #3 result in identical builds.
+    3. build current compiler with compiler from stage 2.
+    4. build current compiler with compiler from stage 3.
+    5. verify that steps #3 and #4 result in identical builds.
+
+    The stage 3 build always is the final artefact.
 
   Options:
 
@@ -16,13 +20,13 @@ usage: build.sh [option*]
 
         Skip building the bootstrap interpreter. This is for CI use only.
 
-    --no-bootstrap
+    --bootstrap
 
-        Don't build the bootstrap compiler if it already exists.
+        Force stage 1. even if bootstrap compiler already exists.
 
     --no-verify
 
-        Skip steps #3 and #4.
+        Skip steps #4 and #5.
 
 EOF
 )
@@ -35,11 +39,12 @@ on_exit_if_tty play_beep
 
 BOOTSTRAP_INTERPRETER=$(exename target/debug/bootstrap-interpreter)
 BOOTSTRAP_COMPILER=$(exename build/bootstrap-compiler)
-SELF_COMPILER=$(exename build/foo)
-SECOND_GENERATION=$(exename build/second-generation-foo)
+SELF_COMPILER=$(exename build/self-compiler)
+FOO=$(exename build/foo)
+FOO2=$(exename build/foo2)
 
 CLEAN=false
-NO_BOOTSTRAP=false
+BOOTSTRAP=false
 NO_INTERPRETER_BUILD=false
 VERIFY=true
 
@@ -50,15 +55,14 @@ do
             echo "$USAGE"
             exit
             ;;
-        --no-bootstrap)
-            NO_BOOTSTRAP=true
+        --bootstrap)
+            BOOTSTRAP=true
             ;;
         --no-interpreter-build)
             NO_INTERPRETER_BUILD=true
             ;;
         --no-verify)
-            # It's just easier to keep verify option this way around,
-            # and the others negated.
+            # It's just easier to keep verify option this way around.
             VERIFY=false
             ;;
         *)
@@ -72,33 +76,28 @@ done
 mkdir -p build/
 
 # Figure out if we need a bootstrap or not.
-if $NO_BOOTSTRAP && [[ -e $BOOTSTRAP_COMPILER ]]; then
-    echo "Skipping bootstrap."
-    BOOTSTRAP=false
-else
-    if $NO_BOOTSTRAP; then
-        echo "Bootstrap compiler not found, bootstrap forced despite --no-bootstrap."
-    fi
+if ! $BOOTSTRAP  && ! [[ -e $BOOTSTRAP_COMPILER ]]; then
+    echo "Bootstrap compiler not found, bootstrapping."
     BOOTSTRAP=true
 fi
 
 if $BOOTSTRAP && $VERIFY; then
-    echo "Expected build time: ~8min (bootstrap, self-build, verify)"
+    echo "Expected build time: ~7min (bootstrap, self-build, foo, verify)"
 elif $BOOTSTRAP; then
-    echo "Expected build time: ~6min (bootstrap, self-build)"
+    echo "Expected build time: ~6min (bootstrap, self-build, foo)"
 elif $VERIFY; then
-    echo "Expected build time: ~4min (self-build, verify)"
+    echo "Expected build time: ~3min (self-build, foo, verify)"
 else
-    echo "Expected build time: ~2min (self-build)"
+    echo "Expected build time: ~1.5min (self-build, foo)"
 fi
 
 if $BOOTSTRAP; then
 
     if $NO_INTERPRETER_BUILD && [[ -e $BOOTSTRAP_INTERPRETER ]]; then
-        echo "Skipping bootstrap interpreter build"
+        echo "Skipping bootstrap interpreter build."
     else
         if $NO_INTERPRETER_BUILD; then
-            echo "Bootstrap interpreter not found: build forced despite --no-interpreter-build."
+            echo "Bootstrap interpreter not found, build forced."
         fi
         start_clock "bootstrap interpreter"
         if cargo build &> build/bootstrap-interpreter.log; then
@@ -134,38 +133,44 @@ else
     fail build/self-compiler.log
 fi
 
-rm -rf build/second-generation-c
+rm -rf build/foo-c
+start_clock "foo"
+if $SELF_COMPILER --compile foo/foo.foo \
+    &> build/foo.log
+then
+    ok
+    mv $(exename foo/foo) $FOO
+    cp -a c build/foo-c
+else
+    fail build/foo.log
+fi
+
+rm -rf build/foo2-c
 if $VERIFY; then
-    start_clock "second generation self-compiler"
-    if $SELF_COMPILER --compile foo/foo.foo \
-        &> build/foo.log
+    start_clock "second generation foo"
+    if $FOO --compile foo/foo.foo \
+        &> build/foo2.log
     then
         ok
-        mv $(exename foo/foo) $SECOND_GENERATION
-        cp -a c build/second-generation-c
+        mv $(exename foo/foo) $FOO2
+        cp -a c build/foo2-c
     else
-        fail build/foo.log
+        fail build/foo2.log
     fi
-    if diff -u --recursive build/self-compiler-c build/second-generation-c \
+    if diff -u --recursive build/foo-c build/foo2-c \
         &> build/self-build.diff
     then
         echo "Self-build complete, enjoy quietly!"
     else
         echo -n "$(red WARNING): inconsistent self-build!"
-        if $NO_BOOTSTRAP;
-        then
-            echo " Please try without --no-bootstrap option."
-        else
-            # Bootstrap wasn't intentionally skipped, something is borken.
-            echo
-            echo "Please report with contents of build/self-build.diff to"
-            echo
-            echo "    https://github.com/nikodemus/foolang"
-            echo
-        fi
+        echo
+        echo "Please report with contents of build/self-build.diff to"
+        echo
+        echo "    https://github.com/nikodemus/foolang"
+        echo
     fi
 else
     echo "Unverified build, consistency not checked - enjoy quietly!"
 fi
 
-echo "Binary: $SELF_COMPILER"
+echo "Binary: $FOO"
