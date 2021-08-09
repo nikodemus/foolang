@@ -1,32 +1,32 @@
 define DirectMethods {
     #code:
-        -> { signature: [Integer], vars: 0, stackContext: True,
+        -> { signature: [Integer], vars: 0,
              body: "return FOO_CHARACTER(ctx->frame[0].datum.int64);" }
 }!
 
 define InstanceMethods {
     #string
-        -> { signature: [], vars: 0, stackContext: True,
+        -> { signature: [], vars: 0,
              body: "struct FooBytes* s = FooBytes_alloc(ctx, 1);
                     s->data[0] = (uint8_t)ctx->receiver.datum.int64;
                     return FOO_INSTANCE(String, s);" },
     #==
-        -> { signature: [Any], vars: 0, stackContext: True,
+        -> { signature: [Any], vars: 0,
              body: "return FOO_BOOLEAN(foo_eq(ctx->receiver, ctx->frame[0]));" },
     #<
-        -> { signature: [Character], vars: 0, stackContext: True,
+        -> { signature: [Character], vars: 0,
              body: "return FOO_BOOLEAN(
                         ctx->receiver.datum.int64 < ctx->frame[0].datum.int64);" },
     #code
-        -> { signature: [], vars: 0, stackContext: True,
+        -> { signature: [], vars: 0,
              body: "return FOO_INTEGER(ctx->receiver.datum.int64);" },
     #isAlpha
-        -> { signature: [], vars: 0, stackContext: True,
+        -> { signature: [], vars: 0,
              body: "return FOO_BOOLEAN(isalpha(ctx->receiver.datum.int64));" },
     #isWhitespace
-        -> { signature: [], vars: 0, stackContext: True,
+        -> { signature: [], vars: 0,
              body: "return FOO_BOOLEAN(isspace(ctx->receiver.datum.int64));" },
     #isDigit
-        -> { signature: [], vars: 0, stackContext: True,
+        -> { signature: [], vars: 0,
              body: "return FOO_BOOLEAN(isdigit(ctx->receiver.datum.int64));" }
 }!

@@ -4,13 +4,13 @@ define DirectMethods
 -- FIXME: Rename "Time" to "ProcessTimes".
 define InstanceMethods {
     #seconds
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "return FOO_FLOAT(system_time_seconds());" },
     #sleep:
-    -> { signature: [Float], vars: 0, stackContext: True,
+    -> { signature: [Float], vars: 0,
          body: "system_sleep(ctx->frame[0].datum.float64);
                 return ctx->receiver;" },
     #time
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "return FOO_INSTANCE(Time, FooProcessTimes_now(ctx));" },
 }!

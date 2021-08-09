@@ -4,18 +4,18 @@ define DirectMethods
 define InstanceMethods
 {
      #atEof
-     -> { signature: [], vars: 0, stackContext: True,
+     -> { signature: [], vars: 0,
           body: "return FOO_BOOLEAN(0 != feof(ctx->receiver.datum.ptr));" },
 
      #readChar_onEof:
-     -> { signature: [Any], vars: 0, stackContext: True,
+     -> { signature: [Any], vars: 0,
           body: "int c = fgetc(ctx->receiver.datum.ptr);
                  if (c == EOF)
                      return foo_send(ctx, &FOO_value, ctx->frame[0], 0);
                  return FOO_CHARACTER(c);" },
 
      #unreadChar:
-     -> { signature: [Character], vars: 0, stackContext: True,
+     -> { signature: [Character], vars: 0,
           body: "ungetc((int)ctx->frame[0].datum.int64, ctx->receiver.datum.ptr);
                  return FOO_BOOLEAN(false);" }
 }!

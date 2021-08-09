@@ -4,11 +4,11 @@ define DirectMethods
 -- FIXME: duplicates Output pretty much
 define InstanceMethods {
     #pathname
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "struct FooFileStream* stream = PTR(FooFileStream, ctx->receiver.datum);
                 return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = stream->pathname } };" },
     #close
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "struct FooFileStream* stream = PTR(FooFileStream, ctx->receiver.datum);
                 if (stream->ptr) \{
                     fclose(stream->ptr);
@@ -36,22 +36,22 @@ define InstanceMethods {
                 \}" },
 
     #flush
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "fflush(ctx->receiver.datum.ptr);
                 return ctx->receiver;" },
     #isClosed
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
                 return FOO_BOOLEAN(f == NULL);" },
     #offset
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
                 if (f)
                     return FOO_INTEGER(ftell(f));
                 else
                     foo_panicf(ctx, \"FileStream#offset on closed stream.\");" },
     #offset:
-    -> { signature: [Integer], vars: 0, stackContext: True,
+    -> { signature: [Integer], vars: 0,
          body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
                 int64_t arg = ctx->frame[0].datum.int64;
                 if (arg < 0)
@@ -63,7 +63,7 @@ define InstanceMethods {
                     foo_panicf(ctx, \"FileStream#offset: on closed stream.\");
                 return ctx->frame[0];" },
     #offsetFromEnd:
-    -> { signature: [Integer], vars: 0, stackContext: True,
+    -> { signature: [Integer], vars: 0,
          body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
                 int64_t arg = ctx->frame[0].datum.int64;
                 if (arg > 0)
@@ -74,7 +74,7 @@ define InstanceMethods {
                     foo_panicf(ctx, \"FileStream#offsetFromEnd: on closed stream.\");
                 return ctx->frame[0];" },
     #offsetFromHere:
-    -> { signature: [Integer], vars: 0, stackContext: True,
+    -> { signature: [Integer], vars: 0,
          body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
                 int64_t arg = ctx->frame[0].datum.int64;
                 if (f)
@@ -83,7 +83,7 @@ define InstanceMethods {
                     foo_panicf(ctx, \"FileStream#offsetFromHere: on closed stream.\");
                 return ctx->frame[0];" },
     #readString
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
                 if (!f) \{
                     foo_panicf(ctx, \"Cannot read from closed FileStream.\");
@@ -97,19 +97,19 @@ define InstanceMethods {
                 assert(size == fread(bytes->data, 1, size, f));
                 return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = bytes } };" },
     #resize:
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "foo_panicf(ctx, \"FileStream#resize: not implemented\");" },
     #toString:
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "return foo_String_new_from(ctx, \"#<FileStream>\");" },
     #tryReadOnce:bytesInto:at:
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "foo_panicf(ctx, \"FileStream#tryReadOnce:bytesInto:at: not implemented\");" },
     #tryWriteOnce:bytesFrom:at:
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "foo_panicf(ctx, \"FileStream#tryWriteOnce:bytesFrom:at: not implemented\");" },
     #writeString:
-    -> { signature: [String], vars: 0, stackContext: True,
+    -> { signature: [String], vars: 0,
          body: "struct FooBytes* bytes = PTR(FooBytes, ctx->frame[0].datum);
                 FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
                 fwrite(bytes->data, 1, bytes->size, f);

@@ -49,7 +49,7 @@ class BuiltinMethod { home selector definition isDirect }
     method hasNonLocalReturns
         False!
     method stackContext
-        definition stackContext!
+        True!
     method isBuiltin
         True!
     method isRequired

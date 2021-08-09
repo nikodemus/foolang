@@ -1,6 +1,6 @@
 define DirectMethods {
     #intern:
-        -> {signature: [String], vars: 0, stackContext: True,
+        -> {signature: [String], vars: 0,
             body: "struct FooBytes* name = PTR(FooBytes, ctx->frame[0].datum);
                    return (struct Foo)
                       \{ .class = &FooClass_Selector,
@@ -9,7 +9,7 @@ define DirectMethods {
 
 define InstanceMethods {
     #<
-        -> {signature: [Selector], vars: 0, stackContext: True,
+        -> {signature: [Selector], vars: 0,
             body: "const struct FooBytes* name1 = PTR(FooSelector, ctx->receiver.datum)->name;
 const struct FooBytes* name2 = PTR(FooSelector, ctx->frame[0].datum)->name;
 size_t n = min_size(name1->size, name2->size);
@@ -22,25 +22,25 @@ for (size_t i = 0; i < n; i++) \{
 }
 return FOO_BOOLEAN(name1->size < name2->size);"},
     #debug
-        -> {signature: [], vars: 0, stackContext: True,
+        -> {signature: [], vars: 0,
             body: "const char* name = (char*)PTR(FooSelector, ctx->receiver.datum)->name->data;
 printf(\"#<Selector %s>\", name);
 return ctx->receiver;"},
     #name
-        -> {signature: [], vars: 0, stackContext: True,
+        -> {signature: [], vars: 0,
             body: "struct FooSelector* selectorPtr = PTR(FooSelector, ctx->receiver.datum);
                    return (struct Foo)\{ .class = &FooClass_String,
                                          .datum = \{ .ptr = selectorPtr->name } };"},
     #value:
-        -> {signature: [Any], vars: 0, stackContext: True,
+        -> {signature: [Any], vars: 0,
             body: "struct FooSelector* self = PTR(FooSelector, receiver.datum);
                    return foo_send(ctx, self, ctx->frame[0], 0);"},
     #sendTo:with:
-        -> {signature: [Any, Array], vars: 0, stackContext: True,
+        -> {signature: [Any, Array], vars: 0,
             body: "struct FooSelector* target_selector = PTR(FooSelector, ctx->receiver.datum);
 return foo_send_array(ctx, target_selector, ctx->frame[0], ctx->frame[1]);"},
     #startsWith:
-        -> {signature: [String], vars: 0, stackContext: True,
+        -> {signature: [String], vars: 0,
             body: "const struct FooBytes* name = PTR(FooSelector, ctx->receiver.datum)->name;
 struct FooBytes* string = PTR(FooBytes, ctx->frame[0].datum);
 return FOO_BOOLEAN(name->size >= string->size &&

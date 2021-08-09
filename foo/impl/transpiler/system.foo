@@ -3,35 +3,35 @@ define DirectMethods
 
 define InstanceMethods {
     #clock
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "return FOO_INSTANCE(Clock, NULL);" },
     #_command:
-    -> { signature: [String], vars: 0, stackContext: True,
+    -> { signature: [String], vars: 0,
          body: "struct FooBytes* bytes = PTR(FooBytes, ctx->frame[0].datum);
                 char* command = (char*)bytes->data;
                 // FIXME: capture output and exit code!
                 int result = system(command);
                 return FOO_BOOLEAN(result == 0);" },
     #exit
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "system_exit(0);" },
     #exit:
-    -> { signature: [Integer], vars: 0, stackContext: True,
+    -> { signature: [Integer], vars: 0,
          body: "system_exit((int)ctx->frame[0].datum.int64);" },
     #files
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "struct FooBytes* root = FooBytes_from(ctx, \"\"); // FIXME: could be static string
                 return FOO_INSTANCE(FilePath, root);" },
     #currentDirectory
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "struct FooBytes* root = FooBytes_from(ctx, \"./\"); // FIXME: could be a static string
                 return FOO_INSTANCE(FilePath, root);" },
     #gc
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "foo_gc(ctx);
                 return FOO_BOOLEAN(true);" },
     #gcTrace
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "bool old_trace = trace_gc;
                 bool old_verbose = gc_verbose;
                 trace_gc = true;
@@ -41,7 +41,7 @@ define InstanceMethods {
                 trace_gc = old_trace;
                 return FOO_BOOLEAN(true);" },
     #gcVerbose
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "bool old_verbose = gc_verbose;
                 gc_verbose = true;
                 foo_gc(ctx);
@@ -49,7 +49,7 @@ define InstanceMethods {
                 return FOO_BOOLEAN(true);" },
 
     #getenv:
-    -> { signature: [String], vars: 0, stackContext: True,
+    -> { signature: [String], vars: 0,
          body: "struct FooBytes* bytes = PTR(FooBytes, ctx->frame[0].datum);
                 char* var = getenv((char*)bytes->data);
                 if (var) \{
@@ -58,26 +58,26 @@ define InstanceMethods {
                     return FOO_BOOLEAN(false);
                 }" },
     #input
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "return FOO_INSTANCE(Input, stdin);"},
 
     #isUnix
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "return FOO_BOOLEAN(system_is_unix());" },
 
     #isWindows
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "return FOO_BOOLEAN(system_is_windows());" },
 
     #isMacOS
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "return FOO_BOOLEAN(system_is_macos());" },
 
     #output
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "return FOO_INSTANCE(Output, stdout);" },
 
     #random
-    -> { signature: [], vars: 0, stackContext: True,
+    -> { signature: [], vars: 0,
          body: "return FOO_INSTANCE(SystemRandom, NULL);" },
 }!

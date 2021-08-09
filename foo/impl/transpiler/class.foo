@@ -1,13 +1,13 @@
 define InstanceMethods
 {
      #name
-     -> { signature: [], vars: 0, stackContext: True,
+     -> { signature: [], vars: 0,
           body: "struct FooBytes* name = PTR(FooClass, ctx->receiver.datum)->name;
                  return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = name } };"
           },
 
      #classOf
-     -> { signature: [], vars: 0, stackContext: True,
+     -> { signature: [], vars: 0,
           body: "struct FooClass* classOf = ctx->receiver.class;
                  return (struct Foo)\{ .class = classOf->metaclass, .datum = \{ .ptr = classOf } };"
           },
@@ -69,7 +69,7 @@ define InstanceMethods
                  return ctx->frame[0];" },
 
      #subclass:interfaces:methods:
-     -> { signature: [String, Array, Array], vars: 1, stackContext: True,
+     -> { signature: [String, Array, Array], vars: 1,
           body: "struct FooArray* methods = PTR(FooArray, ctx->frame[2].datum);
                  struct FooClass* newclass
                    = foo_alloc(ctx, sizeof(struct FooClass)
@@ -125,7 +125,7 @@ define InstanceMethods
         },
 
      #new:layout:interfaces:methods:
-     -> { signature: [String, Layout, Array, Array], vars: 1, stackContext: True,
+     -> { signature: [String, Layout, Array, Array], vars: 1,
           body: "struct FooArray* methods = PTR(FooArray, ctx->frame[3].datum);
                  struct FooClass* newclass
                    = foo_alloc(ctx, sizeof(struct FooClass)
