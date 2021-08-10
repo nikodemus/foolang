@@ -209,7 +209,19 @@ interface AstMethodHome
         let dict = self _ownDirectMethods.
         self _collectFromInterfaces: #directMethods
             _into: dict.
-        dict values sort: #selector ascending!
+        self _collectMethods: self _standardDirectMethods
+             _into: dict.
+        dict values
+            sort: { |each| each selector name }
+                      ascending!
+
+    method _standardDirectMethods
+        StandardDirectMethodSelectors
+            collect: { |each|
+                       StandardDirectMethod
+                           -- FIXME: Again a host/target hack
+                           selector: each toSelector
+                           home: self }!
 
     ---
     KLUDGE & FIXME: does not include reader methods, since bootstrap host
@@ -230,8 +242,9 @@ interface AstMethodHome
              _into: dict.
         self _collectFromInterfaces: #instanceMethods
             _into: dict.
-        -- FIXME: This should really come from Object, or Any?
-        dict values sort: #selector ascending!
+        dict values
+            sort: { |each| each selector name }
+                      ascending!
 
     method _collectFromInterfaces: selector _into: dict
         self interfaceDefinitions :: Ordered
@@ -243,6 +256,8 @@ interface AstMethodHome
     method _collectMethods: methods _into: dict
         methods
             do: { |aMethod|
+                  -- KLUDGE Host dictionaries don't play well with
+                  -- selectors.
                   dict at: aMethod selector name
                        ifNonePut: { aMethod } }!
 
@@ -306,6 +321,38 @@ class AstDefine { global body frameSize }
     method visitBy: visitor
         visitor visitDefine: self!
 end
+
+class StandardDirectMethod { selector home }
+    is Object
+
+    method isBuiltin
+        False!
+
+    method isStandard
+        True!
+
+    method isDirect
+        True!
+
+    method isRequired
+        False!
+
+    method methodHomeName
+        Name mangleMetaclass: self home!
+
+    method methodFunctionName
+        Name mangleStandardMethod: selector!
+
+    method body
+        self isStandard assert: "please".
+        Error raise: "why?"!
+
+    method displayOn: stream
+        stream writeString: "#<StandardDirectMethod {home name} {selector name}>"!
+end
+
+define StandardDirectMethodSelectors
+    [#includes:, #name, #classOf]!
 
 class AstInterface { name _interfaces _directMethods _instanceMethods _allInterfaces
                      global _env }
@@ -595,6 +642,8 @@ class AstReaderMethod { home slot }
         0!
     method frameSize
         0!
+    method isStandard
+        False!
     method isBuiltin
         False!
     method isDirect
@@ -642,6 +691,9 @@ class AstStandardMethod { home selector argumentVariables returnType _body frame
             isRequired: isRequired
             hasNonLocalReturns: False
             hasNonLocalReferences: False!
+
+    method isStandard
+        False!
 
     method noteNonLocalReturn
         hasNonLocalReturns = True!
@@ -707,9 +759,9 @@ class AstStandardMethod { home selector argumentVariables returnType _body frame
     method isBuiltin
         False!
 
-    method printOn: stream
+    method displayOn: stream
         self isDirect
-            ifTrue: { stream print: "#<AstMethod {home name} {selector name}>" }
+            ifTrue: { stream print: "#<AstMethod {home name} classOf{selector}>" }
             ifFalse: { stream print: "#<AstMethod {home name}{selector}>" }!
 
     method toString

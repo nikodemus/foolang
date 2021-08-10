@@ -216,6 +216,8 @@ class ModuleBinding { name module }
         module global: name!
     method warnIfUndefined
         self!
+    method displayOn: stream
+        stream writeString: "#<ModuleBinding {name}>"!
 end
 
 ---
