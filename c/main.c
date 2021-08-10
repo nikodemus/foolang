@@ -565,6 +565,27 @@ struct Foo foo_send_perform_with(const struct FooMethod* method,
   return result;
 }
 
+struct Foo foo_call_known_method(struct FooContext* sender,
+                                 struct FooClass* home,
+                                 struct FooSelector* selector,
+                                 FooMethodFunction method_function,
+                                 struct Foo receiver,
+                                 size_t nargs, ...) {
+  if (sender->depth > 2000) {
+    foo_panicf(sender, "Stack blew up!");
+  }
+  va_list arguments;
+  va_start(arguments, nargs);
+  struct FooMethod fakeMethod;
+  fakeMethod.selector = selector;
+  fakeMethod.home = home;
+  fakeMethod.function = method_function;
+  struct Foo result
+    = method_function(&fakeMethod, selector, sender, receiver, nargs, arguments);
+  va_end(arguments);
+  return result;
+}
+
 struct Foo foo_call_method(const struct FooMethod* method,
                            const struct FooSelector* selector,
                            struct FooContext* sender,
