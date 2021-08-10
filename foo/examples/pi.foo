@@ -7,7 +7,7 @@ end
 class Calc {}
     direct method pi: random
         let inside = 0.
-        let n = 1000000.
+        let n = 1_000_000.
         n times: { let x = random float square.
                    let y = random float square.
                    x + y < 1.0

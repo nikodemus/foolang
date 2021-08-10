@@ -127,7 +127,9 @@ class TokenDecimalInteger { string first last }
         let n = 0.
         1 to: string size
           do: { |pos|
-                n = n * 10 + (string at: pos) digit }.
+                let char = (string at: pos).
+                char == UnderscoreCharacter
+                    ifFalse: { n = n * 10 + char digit } }.
         SyntaxLiteral
             value: n
             source: (parser sourceFrom: first to: last)!
@@ -142,7 +144,9 @@ class TokenHexInteger { string first last }
         let n = 0.
         3 to: string size
           do: { |pos|
-                n = n * 16 + ((string at: pos) digit: 16) }.
+                let char = string at: pos.
+                char == UnderscoreCharacter
+                    ifFalse: { n = n * 16 + (char digit: 16) } }.
         -- Want to retain the format info, hence not SyntaxLiteral.
         SyntaxHexLiteral
             string: string
@@ -159,7 +163,9 @@ class TokenBinaryInteger { string first last }
         let n = 0.
         3 to: string size
           do: { |pos|
-                n = n * 2 + ((string at: pos) digit: 2) }.
+                let char = string at: pos.
+                char == UnderscoreCharacter
+                    ifFalse: { n = n * 2 + (char digit: 2) } }.
         -- Want to retain the format info, hence not SyntaxLiteral.
         SyntaxBinaryLiteral
             string: string
@@ -1371,6 +1377,9 @@ class Parser { source::String
     method atDigit
         self isAt: #isDigit!
 
+    method atDigitOrUnderscore
+        self isAt: { |char| char == UnderscoreCharacter or: char isDigit }!
+
     method atDoublequote
         self isAt: { |char| char == DoublequoteCharacter }!
 
@@ -1508,11 +1517,11 @@ class Parser { source::String
                           from: start
                           to: (self skipWhile: { self atWord })
                           in: self }.
-        let integerEnd = self skipWhile: { self atDigit }.
+        let integerEnd = self skipWhile: { self atDigitOrUnderscore }.
         let isFloat
             = (self atChar: DotCharacter andThenNot: #isWhitespace)
                 ifTrue: { self advance.
-                          self skipWhile: { self atDigit }.
+                          self skipWhile: { self atDigitOrUnderscore }.
                           True }.
         isFloat = (self atAnyOf: "eE")
                   ifTrue: { self advance.
