@@ -127,6 +127,20 @@ interface AstMethodHome
     required method _allInterfaces
     required method _allInterfaces: interfaces
 
+    method findInstanceMethod: selector
+        self instanceMethods
+            do: { |each|
+                  each selector == selector
+                      ifTrue: { return each } }.
+        False!
+
+    method findDirectMethod: selector
+        self directMethods
+            do: { |each|
+                  each selector == selector
+                      ifTrue: { return each } }.
+        False!
+
     method _maybeAddMethod: newMethod to: aDictionary
         let name = newMethod selector name.
         let oldMethod = aDictionary
@@ -565,7 +579,13 @@ class AstSlot { name index type layout }
         stream writeString: ">"!
 end
 
+interface AstMethod
+    is Object
+end
+
 class AstReaderMethod { home slot }
+    is AstMethod
+
     method selector
         -- KLUDGE: host vs target difference
         slot name toSelector!
@@ -601,9 +621,9 @@ class AstReaderMethod { home slot }
         Name mangleMethodClass: self!
 end
 
-class AstMethod { home selector argumentVariables returnType _body frameSize
-                  isDirect isRequired hasNonLocalReturns hasNonLocalReferences }
-    is Object
+class AstStandardMethod { home selector argumentVariables returnType _body frameSize
+                          isDirect isRequired hasNonLocalReturns hasNonLocalReferences }
+    is AstMethod
 
     direct method home: home
                   selector: selector

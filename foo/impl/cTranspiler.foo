@@ -156,13 +156,6 @@ class CompilerBuiltin { type value markFunction _interfaces
         (self _instanceMethods is False) assert: "Builtin instance methods already set.".
         _instanceMethods = BuiltinMethod forEach: methods in: self direct: False!
 
-    method findInstanceMethod: selector
-        self instanceMethods
-            do: { |each|
-                  each selector == selector
-                      ifTrue: { return each } }.
-        False!
-
     method visitBy: visitor
         visitor visitBuiltin: self!
 
@@ -1510,11 +1503,10 @@ class CTranspiler { output selectorMap closureFunctions
 
     method visitSend: aSend
         -- Tracer visitSend: aSend selector.
-        Debug println: "rcv: {aSend receiver} is {aSend receiver type}".
         (aSend receiver type findMethod: aSend selector in: env)
             => { |aMethod|
-                 Debug println: "found: {aMethod}".
                  return self generateKnownSend: aSend using: aMethod }.
+        -- Debug println: "{aSend selector} -> {aSend receiver type} ({aSend receiver})".
         output print: "(\{ ".
         let receiver = self _visitTemp: aSend receiver.
         let args = aSend arguments
