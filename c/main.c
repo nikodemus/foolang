@@ -569,6 +569,22 @@ struct Foo foo_send_perform_with(const struct FooMethod* method,
   return result;
 }
 
+struct Foo foo_call_method(const struct FooMethod* method,
+                           const struct FooSelector* selector,
+                           struct FooContext* sender,
+                           struct Foo receiver,
+                           size_t nargs, ...) {
+  if (sender->depth > 2000) {
+    foo_panicf(sender, "Stack blew up!");
+  }
+  va_list arguments;
+  va_start(arguments, nargs);
+  struct Foo result;
+  result = method->function(method, selector, sender, receiver, nargs, arguments);
+  va_end(arguments);
+  return result;
+}
+
 struct Foo foo_send(struct FooContext* sender,
                     const struct FooSelector* selector,
                     struct Foo receiver,

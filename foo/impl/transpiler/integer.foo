@@ -57,9 +57,16 @@ else
       #times:
           -> { signature: [Any], vars: 0,
                body: "int64_t to = receiver.datum.int64;
-                      struct Foo block = ctx->frame[0];
-                      for (int64_t i = 0; i < to; i++) \{
-                           foo_send(ctx, &FOO_value, block, 0);
+                      const struct FooMethod* valueMethod
+                        = foo_class_find_method(ctx, arg1.class, &FOO_value);
+                      if (method->selector == &FOO_value) \{
+                          for (int64_t i = 0; i < to; i++) \{
+                               foo_call_method(valueMethod, &FOO_value, ctx, arg1, 0);
+                          \}
+                      \} else \{
+                          for (int64_t i = 0; i < to; i++) \{
+                               foo_send(ctx, &FOO_value, arg1, 0);
+                          \}
                       \}
                       return receiver;" },
       #toString
