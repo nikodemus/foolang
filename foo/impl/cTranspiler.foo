@@ -1484,6 +1484,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method visitSend: aSend
         -- Tracer visitSend: aSend selector.
+        -- Debug println: "rcv: {aSend receiver type}".
         output print: "(\{ ".
         let receiver = self _visitTemp: aSend receiver.
         let args = aSend arguments

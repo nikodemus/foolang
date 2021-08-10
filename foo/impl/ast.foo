@@ -2,9 +2,13 @@ import .utils.Debug
 import .transpiler.name.Name
 import .astInterpreter.AstInterpreter
 import .c3.C3Linearization
+import .types.*
 
 interface Ast
     is Object
+
+    method type
+        UnknownType!
 
     method evalIn: env
         AstInterpreter eval: self in: env!
@@ -710,6 +714,9 @@ end
 class AstArray { entries }
     is AstNode
 
+    method type
+        TheArrayType!
+
     method visitBy: visitor
         visitor visitArray: self!
 
@@ -871,6 +878,9 @@ class AstGlobal { name::String
     method _id
         _id!
 
+    method type
+        EqType value: self eval!
+
     method idOr: block
         -- A bit of a KLUDGE: builtin globals have definitions
         -- in main.c, and we want their names to be consistent.
@@ -943,6 +953,10 @@ class AstDynamic { name::String
                    compilerInfo }
     is AstGlobalVariable
 
+    -- FIXME: AstDefine should include type information.
+    method type
+        TheUnknownType!
+
     method isDynamic
         True!
 
@@ -985,6 +999,9 @@ end
 class AstConstantRef { value source }
     is AstNode
 
+    method type
+        EqType value: value!
+
     method isImmediate
         True!
 
@@ -1000,6 +1017,9 @@ end
 
 class AstIs { left right }
     is AstNode
+
+    method type
+        TheBooleanType!
 
     method visitBy: visitor
         visitor visitIs: self!
@@ -1045,6 +1065,9 @@ class AstSend {
     }
     is AstNode
 
+    method type
+        TheUnknownType!
+
     method visitBy: visitor
         visitor visitSend: self!
 
@@ -1054,6 +1077,11 @@ end
 
 class AstBlock { body argumentVariables returnType frameSize }
     is AstNode
+
+    method type
+        ClosureType
+            argumentTypes: (argumentVariables collect: #type)
+            returnType: returnType!
 
     method selector
         self argumentCount is 0
@@ -1078,8 +1106,12 @@ class AstBlock { body argumentVariables returnType frameSize }
         argumentVariables size!
 end
 
-class AstSelfInstanceRef {}
+class AstSelfInstanceRef { home }
     is AstNode
+
+    -- FIXME: meaning of this depends on instance vs direct method!
+    method type
+        ReceiverType definition: home!
 
     method isImmediate
         True!
@@ -1088,8 +1120,12 @@ class AstSelfInstanceRef {}
         visitor visitSelfInstance: self!
 end
 
-class AstSelfClassRef {}
+class AstSelfClassRef { home }
     is AstNode
+
+    -- FIXME: meaning of this depends on instance vs direct method!
+    method type
+        ClassType definition: home!
 
     method isImmediate
         True!
@@ -1100,6 +1136,9 @@ end
 
 class AstSlotRef { slot source }
     is AstNode
+
+    method type
+        slot type!
 
     method isImmediate
         True!
@@ -1150,6 +1189,9 @@ end
 class AstLexicalRef { variable frameOffset::Integer source }
     is AstNode
 
+    method type
+        variable type!
+
     method isImmediate
         True!
 
@@ -1184,6 +1226,9 @@ end
 
 class AstCascadeReceiver {}
     is AstNode
+
+    method type
+        TheCascadeReceiverType!
 
     method isImmediate
         True!
