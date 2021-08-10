@@ -732,8 +732,8 @@ class AstReaderMethod { home slot }
         Name mangleMethodClass: self!
 end
 
-class AstStandardMethod { home selector argumentVariables returnType _body frameSize
-                          isDirect isRequired hasNonLocalReturns hasNonLocalReferences }
+class AstDefinedMethod { home selector argumentVariables returnType _body frameSize
+                         isDirect isRequired hasNonLocalReturns hasNonLocalReferences }
     is AstMethod
 
     direct method home: home

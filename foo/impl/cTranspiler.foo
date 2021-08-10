@@ -39,6 +39,8 @@ define Tracer NullTracer!
 class BuiltinMethod { home selector definition isDirect }
     is Object
 
+    -- FIXME: Should be AstMethod
+
     direct method forEach: builtins in: home direct: areDirect
         let dict = Dictionary new.
         builtins
