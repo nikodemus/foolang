@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <setjmp.h>
 
+#include "random.h"
+
 #if 0
 # define FOO_DEBUG(...) { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); fflush(stderr); }
 #else
@@ -185,6 +187,10 @@ void foo_unbind(struct FooContext* sender, struct FooCleanup* cleanup);
 
 extern struct FooLayout TheEmptyLayout;
 extern struct FooLayout TheClassLayout;
+extern struct FooClass FooClass_Float;
+extern struct FooClass FooClass_Boolean;
+extern struct FooClass FooClass_Integer;
+extern struct FooClass FooClass_Character;
 
 #define FOO_INSTANCE(classname, value) \
   ((struct Foo){ .class = &FooClass_ ## classname, .datum = { .ptr = (void*)(value) } })

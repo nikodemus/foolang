@@ -16,6 +16,11 @@ define InstanceMethods
            body: "ctx->frame[0] = foo_send(ctx, &FOO_toString, ctx->receiver, 0);
                   printf(\"#<Float %s>\", PTR(FooBytes, ctx->frame[0].datum)->data);
                   return ctx->receiver;"},
+
+      #square
+      -> { signature: [], vars: 0,
+           body: "return FOO_FLOAT(receiver.datum.float64 * receiver.datum.float64);" },
+
       #toString
       -> { signature: [], vars: 0,
            body: "double arg = ctx->receiver.datum.float64;

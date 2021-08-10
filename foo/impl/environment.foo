@@ -52,6 +52,7 @@ class BuiltinDictionary { dictionary }
             ; _define: List
             ; _define: Object
             ; _define: Output
+            ; _define: Random
             ; _define: Record
             ; _define: Selector
             ; _define: String

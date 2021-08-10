@@ -1,0 +1,26 @@
+define DirectMethods
+{
+     #new:
+     -> { signature: [Integer], vars: 0,
+          body: "uint64_t seed = (uint64_t)receiver.datum.int64;
+                 return FOO_INSTANCE(Random, FooRandom_new(ctx, seed));" }
+}!
+
+define InstanceMethods
+{
+     #float
+     -> { signature: [], vars: 0,
+          body: "return FOO_FLOAT((double)foo_random_next(receiver.datum.ptr) / (double)UINT64_MAX);" },
+
+     #integer
+     -> { signature: [], vars: 0,
+          body: "return FOO_INTEGER(foo_random_next(receiver.datum.ptr));" },
+
+     #boolean
+     -> { signature: [], vars: 0,
+          body: "return FOO_BOOLEAN(1 & foo_random_next(receiver.datum.ptr));" },
+
+     #character
+     -> { signature: [], vars: 0,
+          body: "return FOO_CHARACTER(foo_random_next(receiver.datum.ptr));" },
+}!
