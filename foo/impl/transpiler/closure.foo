@@ -13,9 +13,11 @@ struct FooContext* closure_ctx = foo_context_new_closure_array(ctx, array);
 return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
       #loop
           -> {signature: [], vars: 0,
-              body: "for (;;) \{
-    foo_send(ctx, &FOO_value, ctx->receiver, 0);
-};
+              body: "const struct FooMethod* valueMethod
+  = foo_class_find_method(ctx, receiver.class, &FOO_value);
+for (;;) \{
+    foo_call_method(valueMethod, &FOO_value, ctx, receiver, 0);
+\}
 return FooGlobal_False;"},
       #value
           -> {signature: [], vars: 0,
@@ -30,15 +32,23 @@ return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
               body: "struct FooContext* closure_ctx = foo_context_new_closure(ctx);
 return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
       #whileFalse:
-          -> {signature: [Any], vars: 0,
-              body: "while (foo_eq(FooGlobal_False, foo_send(ctx, &FOO_value, ctx->receiver, 0))) \{
-    foo_send(ctx, &FOO_value, ctx->frame[0], 0);
+          -> {signature: [Block], vars: 0,
+              body: "const struct FooMethod* testMethod
+  = foo_class_find_method(ctx, receiver.class, &FOO_value);
+const struct FooMethod* blockMethod
+  = foo_class_find_method(ctx, arg1.class, &FOO_value);
+while (foo_eq(FooGlobal_False, foo_call_method(testMethod, &FOO_value, ctx, receiver, 0))) \{
+    foo_call_method(blockMethod, &FOO_value, ctx, arg1, 0);
 };
 return FooGlobal_False;"},
       #whileTrue:
           -> {signature: [Any], vars: 0,
-              body: "while (foo_eq(FooGlobal_True, foo_send(ctx, &FOO_value, ctx->receiver, 0))) \{
-    foo_send(ctx, &FOO_value, ctx->frame[0], 0);
+              body: "const struct FooMethod* testMethod
+  = foo_class_find_method(ctx, receiver.class, &FOO_value);
+const struct FooMethod* blockMethod
+  = foo_class_find_method(ctx, arg1.class, &FOO_value);
+while (foo_eq(FooGlobal_True, foo_call_method(testMethod, &FOO_value, ctx, receiver, 0))) \{
+    foo_call_method(blockMethod, &FOO_value, ctx, arg1, 0);
 };
 return FooGlobal_False;"},
       #finally:

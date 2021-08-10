@@ -580,7 +580,18 @@ struct Foo foo_call_method(const struct FooMethod* method,
   va_list arguments;
   va_start(arguments, nargs);
   struct Foo result;
-  result = method->function(method, selector, sender, receiver, nargs, arguments);
+  if (method->selector != selector) {
+    // This isn't the requested method, but rather #perform:with:
+    assert(method->selector == &FOO_perform_with_);
+    struct FooArray* array = FooArray_alloc(sender, nargs);
+    for (size_t i = 0; i < nargs; i++) {
+      array->data[i] = va_arg(arguments, struct Foo);
+    }
+    result = foo_send_perform_with(method, sender, receiver,
+                                   FOO_INSTANCE(Selector, selector), FOO_INSTANCE(Array, array));
+  } else {
+    result = method->function(method, selector, sender, receiver, nargs, arguments);
+  }
   va_end(arguments);
   return result;
 }
@@ -599,6 +610,7 @@ struct Foo foo_send(struct FooContext* sender,
   struct Foo result;
   if (method->selector != selector) {
     // This isn't the requested method, but rather #perform:with:
+    assert(method->selector == &FOO_perform_with_);
     struct FooArray* array = FooArray_alloc(sender, nargs);
     for (size_t i = 0; i < nargs; i++) {
       array->data[i] = va_arg(arguments, struct Foo);
