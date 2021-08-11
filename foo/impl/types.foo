@@ -57,6 +57,16 @@ end
             ifFalse: { targetClass findInstanceMethod: selector }!
     ---
 
+class DefinitionType { definition }
+    is Type
+
+    method displayOn: stream
+        stream writeString: "#<DefinitionType {definition name}>"!
+
+    method findMethod: selector in: _env
+        definition findInstanceMethod: selector!
+end
+
 class HostType { hostType }
     is Type
 

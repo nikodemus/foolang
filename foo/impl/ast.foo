@@ -838,7 +838,9 @@ class AstTypecheck { value assertType }
     is AstNode
 
     method type
-        HostType type: assertType!
+        (AstGlobal includes: assertType)
+            ifTrue: { DefinitionType definition: assertType definition }
+            ifFalse: { HostType type: assertType }!
 
     method visitBy: visitor
         visitor visitTypecheck: self!
@@ -1244,7 +1246,10 @@ class AstSlotRef { slot source }
     is AstNode
 
     method type
-        HostType type: slot type!
+        let type = slot type.
+        (AstGlobal includes: type)
+            ifTrue: { DefinitionType definition: type definition }
+            ifFalse: { HostType type: type }!
 
     method isImmediate
         True!
@@ -1296,7 +1301,10 @@ class AstLexicalRef { variable frameOffset::Integer source }
     is AstNode
 
     method type
-        HostType type: variable type!
+        let type = variable type.
+        (AstGlobal includes: type)
+            ifTrue: { DefinitionType definition: type definition }
+            ifFalse: { HostType type: type }!
 
     method isImmediate
         True!
