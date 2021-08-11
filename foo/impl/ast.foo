@@ -799,9 +799,8 @@ end
 class AstTypecheck { value assertType }
     is AstNode
 
-    -- FIXME: assertType is not a "type"
     method type
-        TheUnknownType!
+        HostType type: assertType!
 
     method visitBy: visitor
         visitor visitTypecheck: self!
@@ -1141,6 +1140,7 @@ class AstSend {
     }
     is AstNode
 
+    -- FIXME: Need to convert to AstKnownSend with a bound method.
     method type
         TheUnknownType!
 
@@ -1213,9 +1213,8 @@ end
 class AstSlotRef { slot source }
     is AstNode
 
-    -- FIXME: Could refer to slot type, but that's not a "type".
     method type
-        TheUnknownType!
+        HostType type: slot type!
 
     method isImmediate
         True!
@@ -1266,9 +1265,8 @@ end
 class AstLexicalRef { variable frameOffset::Integer source }
     is AstNode
 
-    -- FIXME: Could refer to variable type, but that's not a "type"
     method type
-        TheUnknownType!
+        HostType type: variable type!
 
     method isImmediate
         True!

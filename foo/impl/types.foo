@@ -36,6 +36,16 @@ class EqType { value }
         stream writeString: "#<EqType {value classOf name}>"!
 end
 
+class HostType { hostType }
+    is Type
+    direct method type: hostType
+        hostType is Any
+            ifTrue: { TheUnknownType }
+            ifFalse: { self hostType: hostType }!
+    method displayOn: stream
+        stream writeString: "#<HostType {hostType name}"!
+end
+
 class UnknownType {}
     is Type
 
