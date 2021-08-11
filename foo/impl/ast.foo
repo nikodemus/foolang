@@ -198,6 +198,9 @@ interface AstMethodHome
 
     method _ownDirectMethods
         let dict = Dictionary new.
+        (self isBuiltin not and: self isClass)
+            ifTrue: { dict put: (AstConstructorMethod home: self)
+                           at: self constructor }.
         self _collectMethods: self _directMethods
              _into: dict.
         dict!
@@ -551,7 +554,8 @@ class AstClass { name superclass _slots
                   new: name
                   slots: slots
                   interfaces: self interfaceObjects
-                  directMethods: self ownDirectMethods
+                  directMethods: (self ownDirectMethods
+                                      reject: #isConstructor)
                   instanceMethods: self ownInstanceMethods.
           -- KLUDGE: Bootstrap implementation doesn't do layouts,
           -- but the layout object is how we access slots in objects.
@@ -636,6 +640,29 @@ interface AstMethod
     is Object
 end
 
+class AstConstructorMethod { home }
+    is AstMethod
+
+    method displayOn: stream
+        stream writeString: "#<AstConstructorMethod {home name}>"!
+    method isConstructor
+        True!
+    method isBuiltin
+        False!
+    method isStandard
+        False!
+    method isDirect
+        True!
+    method isRequired
+        False!
+    method selector
+        home constructor!
+    method methodFunctionName
+        Name mangleMethod: self!
+    method methodHomeName
+        Name mangleMethodClass: self!
+end
+
 class AstReaderMethod { home slot }
     is AstMethod
 
@@ -653,6 +680,8 @@ class AstReaderMethod { home slot }
     method isBuiltin
         False!
     method isDirect
+        False!
+    method isConstructor
         False!
     method isRequired
         False!
@@ -699,6 +728,9 @@ class AstStandardMethod { home selector argumentVariables returnType _body frame
             hasNonLocalReferences: False!
 
     method isStandard
+        False!
+
+    method isConstructor
         False!
 
     method noteNonLocalReturn
