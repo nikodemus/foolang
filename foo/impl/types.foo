@@ -36,12 +36,44 @@ class EqType { value }
         stream writeString: "#<EqType {value classOf name}>"!
 end
 
+    --- For EqType
+    method findMethod: selector for: compiler
+        (Record includes: value)
+            ifTrue: { let recordClass =  compiler _recordClassFromRecord: value.
+                      return recordClass findInstanceMethod: selector }.
+        let wantDirectMethod = (Class includes: value) or: (Interface includes: value).
+        let hostClass = wantDirectMethod
+                            ifTrue: { value }
+                            ifFalse: { value classOf }.
+        let targetClass = compiler env classes
+                              at: hostClass
+                              ifNone: { let builtin
+                                            = compiler _findBuiltinFor: hostClass
+                                                       _ifNone: { Debug println: "!!! could not map {hostClass}".
+                                                                  return False }.
+                                        builtin definition }.
+        wantDirectMethod
+            ifTrue: { targetClass findDirectMethod: selector }
+            ifFalse: { targetClass findInstanceMethod: selector }!
+    ---
+
 class HostType { hostType }
     is Type
+
     direct method type: hostType
         hostType is Any
             ifTrue: { TheUnknownType }
             ifFalse: { self hostType: hostType }!
+
+
+    method findMethod: selector in: env
+        -- FIXME: look for builtin as well
+        let targetType = env classes
+                             at: hostType
+                             ifNone: { return False }.
+        targetType isClass
+            ifTrue: { targetType findInstanceMethod: selector }!
+
     method displayOn: stream
         stream writeString: "#<HostType {hostType name}"!
 end
@@ -56,6 +88,11 @@ end
 class ReceiverType { definition }
     is Type
 
+    method findMethod: selector in: _env
+        -- Interface methods can be overridden!
+        definition isClass
+            ifTrue: { definition findInstanceMethod: selector }!
+
     method displayOn: stream
         stream writeString: "#<ReceiverType {definition name}>"!
 end
@@ -63,8 +100,20 @@ end
 class ReceiverClassType { definition }
     is Type
 
+    method findMethod: selector in: _env
+        -- Interface methods can be overridden!
+        definition isClass
+            ifTrue: { definition findDirectMethod: selector }!
+
     method displayOn: stream
         stream writeString: "#<ReceiverClassType {definition name}>"!
+end
+
+class ReceiverMetaclassType { definition }
+    is Type
+
+    method displayOn: stream
+        stream writeString: "#<ReceiverMetaclassType {definition name}>"!
 end
 
 class BooleanType {}

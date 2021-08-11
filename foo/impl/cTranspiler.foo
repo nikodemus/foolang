@@ -23,6 +23,7 @@ import .transpiler.system_random
 import .transpiler.time
 import .ast.*
 import .utils.*
+import .types.*
 import .environment.ModuleBinding
 
 define CEscapes
@@ -117,6 +118,9 @@ class CompilerBuiltin { type value markFunction _interfaces
         --
         -- See also: AstGlobal#idOr:
         ""!
+
+    method isClass
+        type is Class!
 
     method eval
         _global is False
