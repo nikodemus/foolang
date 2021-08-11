@@ -10,6 +10,14 @@ interface Type
                      definition findInstanceMethod: selector }.
         False!
 
+    method withDefinitionFor: type in: env do: block
+        let definition = env classes
+                             at: type
+                             ifNone: { let builtin = env findBuiltinFor: type
+                                                         ifNone: { return False }.
+                                        builtin definitionIn: env }.
+        block value: definition!
+
     method earlyBinding
         False!
 end
@@ -23,14 +31,14 @@ class EqType { value }
             ifFalse: { self findInstanceMethod: selector in: env }!
 
     method findDirectMethod: selector in: env
-        -- FIXME: should look for builtins, but they're not in the environment!
-        let targetClass = env classes at: value ifNone: { return False }.
-        targetClass findDirectMethod: selector!
+        self withDefinitionFor: value
+             in: env
+             do: { |def| def findDirectMethod: selector }!
 
     method findInstanceMethod: selector in: env
-        -- FIXME: should look for builtins, but they're not in the environment!
-        let targetClass = env classes at: value classOf ifNone: { return False }.
-        targetClass findInstanceMethod: selector!
+        self withDefinitionFor: value classOf
+             in: env
+             do: { |def| def findInstanceMethod: selector }!
 
     method displayOn: stream
         stream writeString: "#<EqType {value classOf name}>"!
@@ -47,11 +55,9 @@ end
                             ifFalse: { value classOf }.
         let targetClass = compiler env classes
                               at: hostClass
-                              ifNone: { let builtin
-                                            = compiler _findBuiltinFor: hostClass
-                                                       _ifNone: { Debug println: "!!! could not map {hostClass}".
-                                                                  return False }.
-                                        builtin definition }.
+                              ifNone: { let builtin = compiler env findBuiltinFor: hostClass
+                                                                   ifNone: { return False }.
+                                         builtin definition }.
         wantDirectMethod
             ifTrue: { targetClass findDirectMethod: selector }
             ifFalse: { targetClass findInstanceMethod: selector }!
@@ -77,12 +83,11 @@ class HostType { hostType }
 
 
     method findMethod: selector in: env
-        -- FIXME: look for builtin as well
-        let targetType = env classes
-                             at: hostType
-                             ifNone: { return False }.
-        targetType isClass
-            ifTrue: { targetType findInstanceMethod: selector }!
+        self withDefinitionFor: hostType
+             in: env
+             do: { |def|
+                   def isClass
+                       ifTrue: { def findInstanceMethod: selector } }!
 
     method displayOn: stream
         stream writeString: "#<HostType {hostType name}"!

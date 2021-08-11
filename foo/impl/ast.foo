@@ -17,33 +17,6 @@ interface Ast
         False!
 end
 
-class AstBuiltin { global value }
-    is Object
-
-    method eval
-        global hasValue
-            ifTrue: { global eval }
-            ifFalse: { global value: value }!
-
-    method isBuiltin
-        True!
-
-    method ownInterfaces
-        value interfaces collect: { |each| { value: each } }!
-
-    method visitBy: visitor
-        visitor visitBuiltin: self!
-
-    method __addInterface: anInterface
-        value __addInterface: anInterface!
-
-    method __addDirectMethod: aDirectMethod
-        value __addDirectMethod: aDirectMethod!
-
-    method __addInstanceMethod: anInstanceMethod
-        value __addInstanceMethod: anInstanceMethod!
-end
-
 interface AstToplevel
     is Object
 
@@ -268,6 +241,57 @@ interface AstMethodHome
         Dictionary
             keys: (methods collect: { |each| each selector name })
             values: methods!
+end
+
+class AstBuiltin { global value }
+    is AstMethodHome
+
+    method eval
+        global hasValue
+            ifTrue: { global eval }
+            ifFalse: { global value: value }!
+
+    method isBuiltin
+        True!
+
+    method _interfaces
+        value interfaces collect: { |each| { value: each } }!
+
+    method _directMethods
+        value _directMethods!
+
+    method _instanceMethods
+        value _instanceMethods!
+
+    method _directMethods: newMethods
+        panic "nope: AstBuiltin#_directMethods:"!
+
+    method _instanceMethods: newMethods
+        panic "nope: AstBuiltin#_instanceMethods:"!
+
+    method _readerMethods
+        panic "nope: AstBuiltin#_readerMethods"!
+
+    method _allInterfaces
+        panic "nope: AstBuiltin#_allInterfaces"!
+
+    method _allInterfaces: newInterfaces
+        panic "nope: AstBuiltin#_allInterfaces:"!
+
+    method definitionIn: env
+        (env globals at: (value name)) definition!
+
+    method visitBy: visitor
+        visitor visitBuiltin: self!
+
+    method __addInterface: anInterface
+        value definition __addInterface: anInterface!
+
+    method __addDirectMethod: aDirectMethod
+        value definition __addDirectMethod: aDirectMethod!
+
+    method __addInstanceMethod: anInstanceMethod
+        value definition __addInstanceMethod: anInstanceMethod!
 end
 
 interface AstDefinition
@@ -638,6 +662,23 @@ end
 
 interface AstMethod
     is Object
+
+    required method selector
+
+    method isRequired
+        False!
+
+    method isConstructor
+        False!
+
+    method name
+        self selector name!
+
+    method isBuiltin
+        False!
+
+    method isStandard
+        False!
 end
 
 class AstConstructorMethod { home }
@@ -647,14 +688,8 @@ class AstConstructorMethod { home }
         stream writeString: "#<AstConstructorMethod {home name}>"!
     method isConstructor
         True!
-    method isBuiltin
-        False!
-    method isStandard
-        False!
     method isDirect
         True!
-    method isRequired
-        False!
     method selector
         home constructor!
     method methodFunctionName
@@ -675,15 +710,7 @@ class AstReaderMethod { home slot }
         0!
     method frameSize
         0!
-    method isStandard
-        False!
-    method isBuiltin
-        False!
     method isDirect
-        False!
-    method isConstructor
-        False!
-    method isRequired
         False!
     method hasNonLocalReturns
         False!
@@ -727,12 +754,6 @@ class AstStandardMethod { home selector argumentVariables returnType _body frame
             hasNonLocalReturns: False
             hasNonLocalReferences: False!
 
-    method isStandard
-        False!
-
-    method isConstructor
-        False!
-
     method noteNonLocalReturn
         hasNonLocalReturns = True!
 
@@ -771,9 +792,6 @@ class AstStandardMethod { home selector argumentVariables returnType _body frame
         frameSize = frameSize + 1.
         offset!
 
-    method name
-        selector name!
-
     method invoke: arguments on: receiver
         AstInterpreter
             invokeMethod: self
@@ -793,9 +811,6 @@ class AstStandardMethod { home selector argumentVariables returnType _body frame
 
     method argumentCount
         argumentVariables size!
-
-    method isBuiltin
-        False!
 
     method displayOn: stream
         self isDirect

@@ -136,6 +136,9 @@ class CompilerBuiltin { type value markFunction _interfaces
             assert: "Bad global for CompilerBuiltin".
         _global = global!
 
+    method definitionIn: _env
+        self!
+
     method definition
         self!
 
@@ -742,12 +745,8 @@ class CTranspiler { output selectorMap closureFunctions
                          ifFalse: { value classOf }.
         return env classes
             at: theClass
-            ifNone: { self _findBuiltinFor: theClass
-                           _ifNone: { panic "No 'ast class' for: {value} ({theClass})\nenv classes: {env classes keys}\nbuiltins: {builtins}" } }!
-
-    method _findBuiltinFor: value _ifNone: block
-        builtins find: { |each| each value is value }
-                 ifNone: block!
+            ifNone: { env findBuiltinFor: theClass
+                          ifNone: { panic "No 'ast class' for: {value} ({theClass})\nenv classes: {env classes keys}\nbuiltins: {builtins}" } }!
 
     method _recordClassFromRecord: aRecord
         let keys = (Record keysIn: aRecord) sorted
@@ -1141,7 +1140,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "     const struct FooSelector* selector,".
         output println: "     struct FooContext* sender,".
         output println: "     struct Foo receiver,".
-        output println: "     size_t nargs, va_list arguments)".
+        output println: "     size_t nargs, va_list arguments) /* CTOR */".
         output println: "\{".
         output println: "    (void)selector;".
         output println: "    (void)nargs;".
@@ -1258,12 +1257,12 @@ class CTranspiler { output selectorMap closureFunctions
         -- Debug println: "_writeMethod: {aMethod}".
         aMethod isStandard
             ifTrue: { return False }.
-        aMethod isConstructor
-            ifTrue: { return self _writeConstructor: aMethod for: aClass }.
         let name = Name mangleMethod: aMethod.
         generatedMethods
             at: name
-            ifNonePut: { self _actuallyGenerateMethod: aMethod _as: name _for: aClass }!
+            ifNonePut: { aMethod isConstructor
+                             ifTrue: { self _writeConstructor: aMethod for: aClass }
+                             ifFalse: { self _actuallyGenerateMethod: aMethod _as: name _for: aClass } }!
 
     method generateMethodFunctionHeader: name
         output print: "struct Foo ".
@@ -1273,7 +1272,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "     struct FooContext* sender,".
         output println: "     struct Foo receiver,".
         output println: "     size_t nargs,".
-        output println: "     va_list arguments)"!
+        output println: "     va_list arguments) /* MF-header */"!
 
     method generateStackContextFor: aMethod
         -- Debug println: "stack: {aMethod home name}#{aMethod selector name}".

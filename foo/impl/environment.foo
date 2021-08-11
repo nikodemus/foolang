@@ -6,22 +6,15 @@ import .ast.AstDynamic
 import .ast.AstGlobal
 import .ast.AstInterface
 import .ast.AstLexicalRef
+import .ast.AstMethod
 import .ast.AstSlotRef
 import .astInterpreter.AstInterpreter
 import .parser.Parser
 import .syntaxTranslator.SyntaxTranslator
 import .utils.Debug
 
-interface SimpleMethod
-    method isRequired
-        False!
-
-    method name
-        self selector name!
-end
-
 class GenericDelegator { target }
-    is SimpleMethod
+    is AstMethod
 
     method selector
         #perform:with:!
@@ -32,16 +25,13 @@ class GenericDelegator { target }
 end
 
 class TypecheckDelegator { target }
-    is SimpleMethod
+    is AstMethod
 
     method selector
         #typecheck:!
 
     method invoke: args on: _receiver
         target typecheck: (args at: 1)!
-
-    method isRequired
-        False!
 end
 
 -- FIXME: cannot differentiate from local definitions!
@@ -212,6 +202,8 @@ class ModuleBinding { name module }
     is Object
     method referenceUpwards: _
         self!
+    method isBuiltin
+        False!
     method global: name
         module global: name!
     method warnIfUndefined
@@ -332,6 +324,17 @@ class Environment { parent
     method replaceBuiltins: newBuiltins
         newBuiltins do: { |each| self redefineBuiltin: each }.
         self!
+
+    -- Returns the built-in corresponding to host class.
+    method findBuiltinFor: aClass ifNone: block
+        builtins
+            doValues: { |each|
+                        -- FIXME: in interpreter environment
+                        -- we just have AstClasses here!
+                        each isBuiltin
+                            ifTrue: { each definition value is aClass
+                                          ifTrue: { return each definition } } }.
+        block value!
 
     method import: moduleName relative: relative
         (self depth is 1) assert.
