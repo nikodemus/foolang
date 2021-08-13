@@ -747,7 +747,7 @@ class CTranspiler { output selectorMap closureFunctions
                        intern: (StringOutput
                                     with: { |out|
                                             keys do: { |each| out print: each }}).
-        let recordClass = self _ensureRecordClass: { name: name,
+        let recordClass = env _ensureRecordClass: { name: name,
                                                      slots: keys }.
         self declare: recordClass.
         recordClass definition!
@@ -958,26 +958,9 @@ class CTranspiler { output selectorMap closureFunctions
         output println: ";".
         output newline!
 
-    method _ensureRecordClass: aRecord
-        recordClasses
-            at: aRecord name name -- Selector don't play nice in bootstrap host dictionary!
-            ifNonePut: { let name = String concat: ["Record_", aRecord name name replace: ":" with: "$"].
-                         let theClass = AstClass
-                             name: name
-                             slots: (aRecord slots
-                                         collectWithIndex: { |each index|
-                                                             AstSlot name: each
-                                                                     index: index
-                                                                     type: Any })
-                                         interfaces: [env global: "Record"]
-                                         env: env.
-                         theClass directMethods: [].
-                         theClass instanceMethods: [].
-                         theClass }!
-
     method visitRecord: aRecord
         -- Tracer visitRecord: aRecord.
-        let recordClass = self _ensureRecordClass: aRecord.
+        let recordClass = env _ensureRecordClass: aRecord.
         self declare: recordClass.
         output print: "(\{ ".
         let args = aRecord values
