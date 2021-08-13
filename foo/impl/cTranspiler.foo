@@ -722,7 +722,7 @@ class CTranspiler { output selectorMap closureFunctions
         (Record includes: value)
             ifTrue: { let recordClass = env recordClassFromRecord: value.
                       self declare: recordClass.
-                      return recordClass definition }.
+                      return recordClass }.
         -- KLUDGE: Dictionary is builtin on bootstrap host, so
         -- env classes don't know about it. Instead of this
         -- should somehow include it it compiler builtins,

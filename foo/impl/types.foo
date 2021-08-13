@@ -48,7 +48,7 @@ end
     method findMethod: selector for: compiler
         (Record includes: value)
             ifTrue: { let recordClass = compiler env recordClassFromRecord: value.
-                      return recordClass definition findInstanceMethod: selector }.
+                      return recordClass findInstanceMethod: selector }.
         let wantDirectMethod = (Class includes: value) or: (Interface includes: value).
         let hostClass = wantDirectMethod
                             ifTrue: { value }
