@@ -47,7 +47,7 @@ end
     --- For EqType
     method findMethod: selector for: compiler
         (Record includes: value)
-            ifTrue: { let recordClass =  compiler _recordClassFromRecord: value.
+            ifTrue: { let recordClass = compiler env _recordClassFromRecord: value.
                       compiler declare: recordClass.
                       return recordClass definition findInstanceMethod: selector }.
         let wantDirectMethod = (Class includes: value) or: (Interface includes: value).
