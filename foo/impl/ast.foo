@@ -100,6 +100,9 @@ interface AstMethodHome
     required method _allInterfaces
     required method _allInterfaces: interfaces
 
+    method type
+        DefinitionType definition: self!
+
     method findInstanceMethod: selector
         self instanceMethods
             do: { |each|
@@ -302,6 +305,10 @@ end
 interface AstDefinition
     is AstToplevel
 
+    method global: newGlobal
+        self global is newGlobal
+            assert: "{Self name}#global cannot be changed."!
+
     method idOr: block
         self global idOr: block!
 
@@ -331,6 +338,10 @@ class AstDefine { global body frameSize compilerInfo }
         global define: theDefine.
         theDefine!
 
+    method body: newBody
+        body = newBody.
+        self!
+
     method name
         global name!
 
@@ -353,10 +364,7 @@ class AstDefine { global body frameSize compilerInfo }
 end
 
 class StandardDirectMethod { selector home }
-    is Object
-
-    method isBuiltin
-        False!
+    is AstMethod
 
     method isStandard
         True!
@@ -364,18 +372,11 @@ class StandardDirectMethod { selector home }
     method isDirect
         True!
 
-    method isRequired
-        False!
-
     method methodHomeName
         Name mangleMetaclass: self home!
 
     method methodFunctionName
         Name mangleStandardMethod: selector!
-
-    method body
-        self isStandard assert: "please".
-        Error raise: "why?"!
 
     method displayOn: stream
         stream writeString: "#<StandardDirectMethod {home name} {selector name}>"!
@@ -384,10 +385,20 @@ end
 define StandardDirectMethodSelectors
     [#includes:, #name, #classOf]!
 
-class AstInterface { name _interfaces _directMethods _instanceMethods _allInterfaces
-                     global _env compilerInfo }
+class AstInterface { name _interfaces _directMethods _instanceMethods
+                     _allInterfaces global _env compilerInfo }
     is AstDefinition
     is AstMethodHome
+
+    method copyCollectingMethods: block
+        Self name: name
+             _interfaces: _interfaces
+             _directMethods: (_directMethods collect: block)
+             _instanceMethods: (_instanceMethods collect: block)
+             _allInterfaces: _allInterfaces
+             global: global
+             _env: _env
+             compilerInfo: compilerInfo!
 
     direct method name: name
                   interfaces: interfaces
@@ -461,6 +472,18 @@ class AstClass { name superclass _slots
     is AstDefinition
     is AstMethodHome
 
+    method copyCollectingMethods: block
+        Self name: name
+             superclass: superclass
+             _slots: _slots
+             _interfaces: _interfaces
+             _directMethods: (_directMethods collect: block)
+             _instanceMethods: (_instanceMethods collect: block)
+             _allInterfaces: _allInterfaces
+             global: global
+             _env: _env
+             compilerInfo: compilerInfo!
+
     direct method name: name
                   slots: slots
                   interfaces: interfaces
@@ -514,11 +537,6 @@ class AstClass { name superclass _slots
 
     method isClass
         True!
-
-    method global: new
-        -- This should always be a NOP for AstClass -- make sure it is.
-        new is global
-            assert: "Cannot accept a new global for AstClass!"!
 
     method ifSuperclass: then ifNot: else
         superclass is False
@@ -664,8 +682,18 @@ interface AstMethod
     is Object
 
     required method selector
+    required method isDirect
 
     method isRequired
+        False!
+
+    method returnType
+        TheUnknownType!
+
+    method visitBy: visitor
+        visitor visitMethod: self!
+
+    method hasBody
         False!
 
     method isConstructor
@@ -679,23 +707,45 @@ interface AstMethod
 
     method isStandard
         False!
+
+    method isDefined
+        True!
+
+    method methodFunctionName
+        Name mangleMethod: self!
+
+    method methodHomeName
+        Name mangleMethodClass: self!
+
+    method invoke: arguments on: receiver
+        self selector
+            sendTo: receiver
+            with: arguments!
 end
 
 class AstConstructorMethod { home }
     is AstMethod
 
+    method visitBy: visitor
+        visitor visitMethod: self!
+
     method displayOn: stream
         stream writeString: "#<AstConstructorMethod {home name}>"!
+
     method isConstructor
         True!
+
     method isDirect
         True!
+
     method selector
         home constructor!
-    method methodFunctionName
-        Name mangleMethod: self!
-    method methodHomeName
-        Name mangleMethodClass: self!
+
+    method hasNonLocalReturns
+        False!
+
+    method returnType
+        home!
 end
 
 class AstReaderMethod { home slot }
@@ -704,36 +754,42 @@ class AstReaderMethod { home slot }
     method selector
         -- KLUDGE: host vs target difference
         slot name toSelector!
+
     method signature
         []!
+
     method arity
         0!
+
     method frameSize
         0!
+
     method isDirect
         False!
+
     method hasNonLocalReturns
         False!
+
     method stackContext
         True!
+
     method returnType
         -- FIXME: Since setters check the type, the readers don't
         -- need to -- but it would be nice for senders to know the type.
         -- So returnType needs to be split into returnTypeCheck and
         -- declaredReturnType?
         Any!
+
     method body
         slot referenceUpwards: False!
+
     method printOn: stream
         stream print: "#<AstReaderMethod {home name}#{slot name}>"!
-    method methodFunctionName
-        Name mangleMethod: self!
-    method methodHomeName
-        Name mangleMethodClass: self!
 end
 
 class AstDefinedMethod { home selector argumentVariables returnType _body frameSize
-                         isDirect isRequired hasNonLocalReturns hasNonLocalReferences }
+                         isDirect isRequired hasNonLocalReturns hasNonLocalReferences
+                         compilerInfo }
     is AstMethod
 
     direct method home: home
@@ -752,7 +808,8 @@ class AstDefinedMethod { home selector argumentVariables returnType _body frameS
             isDirect: isDirect
             isRequired: isRequired
             hasNonLocalReturns: False
-            hasNonLocalReferences: False!
+            hasNonLocalReferences: False
+            compilerInfo: List new!
 
     method noteNonLocalReturn
         hasNonLocalReturns = True!
@@ -763,18 +820,14 @@ class AstDefinedMethod { home selector argumentVariables returnType _body frameS
     method stackContext
         hasNonLocalReferences is False!
 
-    method methodFunctionName
-        Name mangleMethod: self!
-
-    method methodHomeName
-        Name mangleMethodClass: self!
+    method hasBody
+        self isRequired not!
 
     method body: bodyVal
         isRequired
             ifTrue: { Error raise: "Required methods have no body: {selector}" }.
-        _body is False
-            ifFalse: { Error raise: "Method body already set: {selector}" }.
-        _body = bodyVal!
+        _body = bodyVal.
+        self!
 
     method body
         isRequired
@@ -797,9 +850,6 @@ class AstDefinedMethod { home selector argumentVariables returnType _body frameS
             invokeMethod: self
             on: receiver
             with: arguments!
-
-    method isDefined
-        (_body is False) not!
 
     method signature
         argumentVariables collect: { |var| var type }!
@@ -839,6 +889,10 @@ end
 class AstArray { entries }
     is AstNode
 
+    method entries: newEntries
+        entries = newEntries.
+        self!
+
     method type
         TheArrayType!
 
@@ -851,6 +905,10 @@ end
 
 class AstTypecheck { value assertType }
     is AstNode
+
+    method value: newValue
+        value = newValue.
+        self!
 
     method type
         (AstGlobal includes: assertType)
@@ -867,6 +925,10 @@ end
 class AstRecord { name slots values }
     is AstNode
 
+    method values: newValues
+        values = newValues.
+        self!
+
     method visitBy: visitor
         visitor visitRecord: self!
 
@@ -876,6 +938,10 @@ end
 
 class AstDictionary { entries }
     is AstNode
+
+    method entries: newEntries
+        entries = newEntries.
+        self!
 
     method visitBy: visitor
         visitor visitDictionary: self!
@@ -1055,8 +1121,10 @@ class AstGlobal { name::String
         self eval typecheck: object!
 
     method redefine: newDefinition
+        _definition is newDefinition
+            => { return newDefinition }.
         self hasValue not
-            assert: "Cannot redefine a materialized global".
+            assert: "Cannot redefine a materialized global: {name}".
         -- FIXME: This is a bit dodgy: the usage is currently for replacing
         -- host definitions of builtins in transpiler, but it seems to me that
         -- value should be updated too if it has been materialized...
@@ -1123,6 +1191,18 @@ class AstDynamic { name::String
 
     method visitBy: visitor
         visitor visitDynamic: self!
+
+    method redefine: newDefinition
+        self hasValue not
+            assert: "Cannot redefine a materialized global".
+        -- FIXME: This is a bit dodgy: the usage is currently for replacing
+        -- host definitions of builtins in transpiler, but it seems to me that
+        -- value should be updated too if it has been materialized...
+        --
+        -- (See #redefineUsing:)
+        _definition = newDefinition.
+        newDefinition global: self.
+        newDefinition!
 end
 
 class AstConstantRef { value source }
@@ -1150,12 +1230,22 @@ class AstIs { left right }
     method type
         TheBooleanType!
 
+    method left: newLeft right: newRight
+        left = newLeft.
+        right = newRight.
+        self!
+
     method visitBy: visitor
         visitor visitIs: self!
 end
 
 class AstSeq { first then }
     is AstNode
+
+    method first: newFirst then: newThen
+        first = newFirst.
+        then = newThen.
+        self!
 
     method visitBy: visitor
         visitor visitSeq: self!
@@ -1175,12 +1265,20 @@ class AstReturn { from value isLocal isTail }
         -- pending typecheck!
         isTail = True!
 
+    method value: newValue
+        value = newValue.
+        self!
+
     method visitBy: visitor
         visitor visitReturn: self!
 end
 
 class AstPanic { value }
     is AstNode
+
+    method value: newValue
+        value = newValue.
+        self!
 
     method visitBy: visitor
         visitor visitPanic: self!
@@ -1197,6 +1295,11 @@ class AstSend {
     method type
         TheUnknownType!
 
+    method receiver: newReceiver arguments: newArguments
+        receiver = newReceiver.
+        arguments = newArguments.
+        self!
+
     method visitBy: visitor
         visitor visitSend: self!
 
@@ -1204,21 +1307,31 @@ class AstSend {
         stream print: "#<AstSend {selector} to {receiver} with {arguments}>"!
 end
 
-class AstCallMethod { knownMethod receiver arguments source }
+class AstCallMethod { target receiver arguments source }
     is AstNode
 
+    method target: newTarget receiver: newReceiver arguments: newArguments
+        target = newTarget.
+        receiver = newReceiver.
+        arguments = newArguments.
+        self!
+
     method type
-        HostType type: knownMethod returnType!
+        HostType type: target returnType!
 
     method visitBy: visitor
         visitor visitCallMethod: self!
 
     method printOn: stream
-        stream print: "#<AstCallMethod {knownMethod home name}#{knownMethod selector name}>"!
+        stream print: "#<AstCallMethod {target home name}#{target selector name}>"!
 end
 
 class AstBlock { body argumentVariables returnType frameSize }
     is AstNode
+
+    method body: newBody
+        body = newBody.
+        self!
 
     method type
         ClosureType
@@ -1305,6 +1418,10 @@ end
 class AstSlotSet { slot value }
     is AstNode
 
+    method value: newValue
+        value = newValue.
+        self!
+
     method visitBy: visitor
         visitor visitSlotSet: self!
 end
@@ -1312,12 +1429,22 @@ end
 class AstBindLexical { variable value body }
     is AstNode
 
+    method value: newValue body: newBody
+        value = newValue.
+        body = newBody.
+        self!
+
     method visitBy: visitor
         visitor visitBindLexical: self!
 end
 
 class AstBindDynamic { variable value body }
     is AstNode
+
+    method value: newValue body: newBody
+        value = newValue.
+        body = newBody.
+        self!
 
     method visitBy: visitor
         visitor visitBindDynamic: self!
@@ -1382,12 +1509,21 @@ define TheAstCascadeReceiver AstCascadeReceiver new!
 class AstCascade { receiver messages }
     is AstNode
 
+    method receiver: newReceiver messages: newMessages
+        receiver = newReceiver.
+        messages = newMessages.
+        self!
+
     method visitBy: visitor
         visitor visitCascade: self!
 end
 
 class AstLexicalSet { variable frameOffset::Integer value }
     is AstNode
+
+    method value: newValue
+        value = newValue.
+        self!
 
     method visitBy: visitor
         visitor visitLexicalSet: self!

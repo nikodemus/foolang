@@ -127,4 +127,11 @@ extend Dictionary
                        copy put: (self at: key)
                             at: key }.
         copy!
+
+    method collect: block
+        let result = Dictionary new.
+        self do: { |key value|
+                   result put: (block cull: key value: value)
+                          at: key }.
+        result!
 end

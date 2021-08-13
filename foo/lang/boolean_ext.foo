@@ -7,10 +7,10 @@ extend Boolean
         False!
 
     method assert: what
-        self ifFalse: { panic "{ what } assertion failed!" }!
+        self ifFalse: { panic "{ what } -- Assertion failed!" }!
 
     method assert
-        self ifFalse: { panic "assertion failed!" }!
+        self ifFalse: { panic "Assertion failed!" }!
 
     method and: other::Boolean
         self ifTrue: { other }

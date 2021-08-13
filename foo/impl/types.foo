@@ -98,6 +98,9 @@ end
 class UnknownType {}
     is Type
 
+    method name
+        "<<UnknownType>>"!
+
     method displayOn: stream
         stream writeString: "#<UnknownType>"!
 end

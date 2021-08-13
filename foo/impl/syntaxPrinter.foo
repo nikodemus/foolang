@@ -534,8 +534,8 @@ class SyntaxPrinter { output
                     in: self.
         bodyVisitor _visitGroup: (aType instanceMethods select: #isRequired)
                     in: self.
-        let defs = (aType directMethods select: #isDefined)
-                       concat: (aType instanceMethods select: #isDefined).
+        let defs = (aType directMethods reject: #isRequired)
+                       concat: (aType instanceMethods reject: #isRequired).
         defs
             do: { |def| def visitBy: bodyVisitor }
             interleaving: { bodyVisitor skipline }.

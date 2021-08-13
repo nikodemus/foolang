@@ -25,6 +25,7 @@ import .ast.*
 import .utils.*
 import .types.*
 import .environment.ModuleBinding
+import .astOptimizer.KnownMethodResolver
 
 define CEscapes
     { "'" -> "\\'",
@@ -69,7 +70,7 @@ class BuiltinMethod { home selector definition isDirect }
         self arity + self definition vars!
     method signature
         definition signature!
-    method body
+    method builtinBody
         definition body!
     method printOn: stream
         stream print: "#<BuiltinMethod {selector}>"!
@@ -86,18 +87,18 @@ end
 define DatumClasses
     [Boolean, Character, Integer, Float]!
 
-class CompilerBuiltin { type value markFunction _interfaces
+class CompilerBuiltin { kind value markFunction _interfaces
                         _directMethods _instanceMethods _allInterfaces
                         _global compilerInfo }
     is AstMethodHome
 
-    direct method type: type
+    direct method kind: kind
                   value: value
                   mark: mark
                   directMethods: directMethods
                   instanceMethods: instanceMethods
         let theClass = self
-                           type: type
+                           kind: kind
                            value: value
                            markFunction: mark
                            _interfaces: List new
@@ -110,6 +111,9 @@ class CompilerBuiltin { type value markFunction _interfaces
         theClass _instanceMethods: instanceMethods.
         theClass!
 
+    method type
+        HostType type: kind!
+
     method slots
         []!
 
@@ -121,7 +125,7 @@ class CompilerBuiltin { type value markFunction _interfaces
         ""!
 
     method isClass
-        type is Class!
+        kind is Class!
 
     method eval
         _global is False
@@ -184,127 +188,127 @@ class CompilerBuiltin { type value markFunction _interfaces
         stream print: self toString!
 
     method toString
-        "#<CompilerBuiltin {self name} ({type name})>"!
+        "#<CompilerBuiltin {self name} ({kind name})>"!
 end
 
 class CompilerBuiltins {}
     direct method all
         [ CompilerBuiltin
-              type: Class
+              kind: Class
               value: Array
               mark: "foo_mark_array"
               directMethods: array.DirectMethods
               instanceMethods: array.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Boolean
               mark: "foo_mark_none"
               directMethods: boolean.DirectMethods
               instanceMethods: boolean.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: ByteArray
               mark: "foo_mark_bytes"
               directMethods: byte_array.DirectMethods
               instanceMethods: byte_array.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Character
               mark: "foo_mark_none"
               directMethods: character.DirectMethods
               instanceMethods: character.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Class
               mark: "foo_mark_class"
               directMethods: class.InstanceMethods -- class is its own instance
               instanceMethods: class.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Clock
               mark: "foo_mark_none"
               directMethods: clock.DirectMethods
               instanceMethods: clock.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Closure
               mark: "foo_mark_closure"
               directMethods: Dictionary new
               instanceMethods: closure.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Layout
               mark: "foo_mark_layout"
               directMethods: layout.DirectMethods
               instanceMethods: layout.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: File
               mark: "foo_mark_file"
               directMethods: file.DirectMethods
               instanceMethods: file.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: FilePath
               mark: "foo_mark_bytes"
               directMethods: filepath.DirectMethods
               instanceMethods: filepath.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: FileStream
               mark: "foo_mark_filestream"
               directMethods: filestream.DirectMethods
               instanceMethods: filestream.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Float
               mark: "foo_mark_none"
               directMethods: float.DirectMethods
               instanceMethods: float.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Input
               mark: "foo_mark_none"
               directMethods: input.DirectMethods
               instanceMethods: input.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Integer
               mark: "foo_mark_none"
               directMethods: Dictionary new
               instanceMethods: integer.IntegerMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Output
               mark: "foo_mark_none"
               directMethods: output.DirectMethods
               instanceMethods: output.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Random
               mark: "foo_mark_none"
               directMethods: random.DirectMethods
               instanceMethods: random.InstanceMethods,
           CompilerBuiltin
-              type: Interface
+              kind: Interface
               value: Record
               mark: "foo_mark_none"
               directMethods: record.DirectMethods
               instanceMethods: record.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Selector
               mark: "foo_mark_none"
               directMethods: selector.DirectMethods
               instanceMethods: selector.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: String
               mark: "foo_mark_bytes"
               directMethods: string.DirectMethods
               instanceMethods: string.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: (Foolang isSelfHosted
                           ifTrue: { System }
                           ifFalse: { { name: "System" } })
@@ -312,7 +316,7 @@ class CompilerBuiltins {}
               directMethods: system.DirectMethods
               instanceMethods: system.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: (Foolang isSelfHosted
                           ifTrue: { SystemRandom }
                           ifFalse: { { name: "SystemRandom" } })
@@ -320,7 +324,7 @@ class CompilerBuiltins {}
               directMethods: system_random.DirectMethods
               instanceMethods: system_random.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Time
               mark: "foo_mark_ptr"
               directMethods: time.DirectMethods
@@ -426,7 +430,9 @@ class CTranspiler { output selectorMap closureFunctions
         AlwaysEmittedSelectors
             do: { |each| visitor selectorMap map: each }.
         let builtins = visitor generateBuiltins.
-        let main = env global: "Main".
+        let main = KnownMethodResolver
+                       optimize: (env global: "Main")
+                       in: env.
         visitor declare: main.
         visitor writeDefinitions.
         visitor writeMain: main.
@@ -574,7 +580,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method compileMethodBody: aMethod
         aMethod isBuiltin
-            ifTrue: { return aMethod body }.
+            ifTrue: { return aMethod builtinBody }.
         let $home = aMethod.
         let newOutput = StringOutput new.
         newOutput print: "return ".
@@ -1397,21 +1403,22 @@ class CTranspiler { output selectorMap closureFunctions
     method visitCascadeReceiver: _
         output print: $CascadeReceiverTemp!
 
-    method generateKnownSend: aSend using: aMethod
+    method visitCallMethod: aCall
         -- These are never #perform:with: or object methods, thanks to #findMethod:in:
-        let methodFunction = Name mangleMethod: aMethod.
-        let selector = self selectorCName: aMethod selector.
+        let target = aCall target.
+        let methodFunction = Name mangleMethod: target.
+        let selector = self selectorCName: target selector.
         output print: "(\{ ".
-        let receiver = self _visitTemp: aSend receiver.
-        let args = aSend arguments
+        let receiver = self _visitTemp: aCall receiver.
+        let args = aCall arguments
                        collect: { |each| self _visitTemp: each }.
         output
             ; print: "foo_call_known_method(ctx, &"
-            ; print: aMethod methodHomeName
+            ; print: target methodHomeName
             ; print: ", &"
             ; print: selector
             ; print: ", "
-            ; print: aMethod methodFunctionName
+            ; print: target methodFunctionName
             ; print: ", "
             ; print: receiver
             ; print: ", "
@@ -1424,11 +1431,6 @@ class CTranspiler { output selectorMap closureFunctions
 
     method visitSend: aSend
         -- Tracer visitSend: aSend selector.
-        (aSend receiver type findMethod: aSend selector in: env)
-            => { |aMethod|
-                 -- Debug println: "HIT {aSend selector} -> {aSend receiver type} ({aSend receiver})".
-                 return self generateKnownSend: aSend using: aMethod }.
-        -- Debug println: "MISS {aSend selector} -> {aSend receiver type} ({aSend receiver})".
         output print: "(\{ ".
         let receiver = self _visitTemp: aSend receiver.
         let args = aSend arguments

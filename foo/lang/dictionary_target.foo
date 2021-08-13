@@ -189,4 +189,11 @@ class Dictionary { size::Integer
             size: size
             _keys: _keys copy
             _values: _values copy!
+
+    method collect: block
+        let result = Dictionary new.
+        self do: { |key value|
+                   result put: (block cull: key value: value)
+                          at: key }.
+        result!
 end
