@@ -229,7 +229,7 @@ class Environment { parent
                     recordClasses }
     is Object
 
-    method _recordClassFromRecord: aRecord
+    method recordClassFromRecord: aRecord
         let keys = (Record keysIn: aRecord) sorted
                        collect: #name.
         let name = Selector

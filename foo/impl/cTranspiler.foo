@@ -725,7 +725,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method _astClassOf: value
         (Record includes: value)
-            ifTrue: { let recordClass = env _recordClassFromRecord: value.
+            ifTrue: { let recordClass = env recordClassFromRecord: value.
                       self declare: recordClass.
                       return recordClass definition }.
         -- KLUDGE: Dictionary is builtin on bootstrap host, so
