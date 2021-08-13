@@ -1,0 +1,25 @@
+import .astRewriter.AstRewriter
+import .ast.AstCallMethod
+import .utils.*
+
+class KnownMethodResolver { env }
+    is AstRewriter
+
+    direct method optimize: ast in: env
+        ast visitBy: (self env: env)!
+
+    method visitSend: aSend
+        let recv = aSend receiver visitBy: self.
+        let args = aSend arguments collect: { |each| each visitBy: self }.
+        let type = recv type.
+        (type findMethod: aSend selector in: env)
+            => { |aMethod|
+                 return AstCallMethod
+                     target: aMethod
+                     receiver: recv
+                     arguments: args
+                     source: aSend source }.
+        aSend
+            receiver: recv
+            arguments: args!
+end

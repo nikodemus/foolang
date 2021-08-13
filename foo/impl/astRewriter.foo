@@ -1,0 +1,144 @@
+import .astVisitor.AstVisitor
+import .ast.*
+
+interface AstRewriter
+    is AstVisitor
+
+    method visitConstant: aConstant
+        aConstant!
+
+    method visitGlobal: aGlobal
+        -- Definitions cannot change their identity
+        aGlobal definition visitBy: self.
+        aGlobal!
+
+    method visitDynamic: aDynamic
+        -- Definitions cannot change their identity
+        aDynamic definition visitBy: self.
+        aDynamic!
+
+    method visitIs: anIs
+        anIs left: (anIs left visitBy: self)
+             right: (anIs right visitBy: self)!
+
+    method visitSeq: aSeq
+        aSeq first: (aSeq first visitBy: self)
+             then: (aSeq then visitBy: self)!
+
+    method visitPanic: aPanic
+        aPanic value: (aPanic value visitBy: self)!
+
+    method visitReturn: aReturn
+        aReturn value: (aReturn value visitBy: self)!
+
+    method visitCallMethod: aCall
+        Debug println: "visitCall: {aCall}".
+        aCall
+            target: (aCall target visitBy: self)
+            receiver: (aCall receiver visitBy: self)
+            arguments: (aCall arguments
+                            collect: { |each| each visitBy: self })!
+
+    method visitSend: aSend
+        aSend
+            receiver: (aSend receiver visitBy: self)
+            arguments: (aSend arguments
+                            collect: { |each| each visitBy: self })!
+
+    method visitCascade: aCascade
+        aCascade
+            receiver: (aCascade receiver visitBy: self)
+            messages: (aCascade messages
+                           collect: { |each| each visitBy: self })!
+
+    method visitCascadeReceiver: aReceiver
+        aReceiver!
+
+    method visitTypecheck: aTypecheck
+        aTypecheck value: (aTypecheck value visitBy: self)!
+
+    method visitBlock: aBlock
+        aBlock body: (aBlock body visitBy: self)!
+
+    method visitDefine: aDefine
+        -- By default ignore defines: we can just evaluate them.
+        aDefine!
+
+    method visitBuiltin: aBuiltin
+        aBuiltin!
+
+    method visitImport: anImport
+        anImport!
+
+    method visitSelfClass: aSelf
+        aSelf!
+
+    method visitSelfInstance: aSelf
+        aSelf!
+
+    method visitClassDefinition: aClass
+        (aClass compilerInfo includes: self)
+            ifTrue: { return aClass }.
+        aClass compilerInfo add: self.
+        aClass directMethods
+            do: { |each| each visitBy: self }.
+        aClass instanceMethods
+            do: { |each| each visitBy: self }.
+        aClass!
+
+    method visitInterfaceDefinition: anInterface
+        (anInterface compilerInfo includes: self)
+            ifTrue: { return anInterface }.
+        anInterface compilerInfo add: self.
+        anInterface directMethods
+            do: { |each| each visitBy: self }.
+        anInterface instanceMethods
+            do: { |each| each visitBy: self }.
+        anInterface!
+
+    method visitMethod: aMethod
+        aMethod hasBody
+            ifFalse: { return aMethod }.
+        (aMethod compilerInfo includes: self)
+            ifTrue: { return aMethod }.
+        aMethod compilerInfo add: self.
+        aMethod body: (aMethod body visitBy: self)!
+
+    method visitArray: anArray
+        anArray
+            entries: (anArray entries
+                          collect: { |each| each visitBy: self })!
+
+    method visitDictionary: aDictionary
+        aDictionary
+            entries: (aDictionary entries
+                          collect: { |each| { key: (each key visitBy: self),
+                                              value: (each value visitBy: self) } })!
+
+    method visitRecord: aRecord
+        aRecord
+            values: (aRecord values collect: { |each| each visitBy: self })!
+
+    method visitSlotRef: aSlotRef
+        aSlotRef!
+
+    method visitSlotSet: aSlotSet
+        aSlotSet
+            value: (aSlotSet value visitBy: self)!
+
+    method visitBindDynamic: aBind
+        aBind
+            value: (aBind value visitBy: self)
+            body: (aBind body visitBy: self)!
+
+    method visitBindLexical: aBind
+        aBind
+            value: (aBind value visitBy: self)
+            body: (aBind body visitBy: self)!
+
+    method visitLexicalRef: aRef
+        aRef!
+
+    method visitLexicalSet: aSet
+        aSet value: (aSet value visitBy: self)!
+end

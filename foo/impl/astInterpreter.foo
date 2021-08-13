@@ -147,12 +147,12 @@ class AstInterpreter { context process }
             finally: { context invalidate } !
 
     direct method invokeMethod: astMethod on: receiver with: arguments
-        astMethod isDefined
-            ifFalse: { -- required method not defined in implementation
-                       RequiredMethodMissing
-                           raise: astMethod selector
-                           on: receiver
-                           isDirect: astMethod isDirect }.
+        astMethod isRequired
+            ifTrue: { -- required method not defined in implementation
+                      RequiredMethodMissing
+                          raise: astMethod selector
+                          on: receiver
+                          isDirect: astMethod isDirect }.
         let frame = Array new: astMethod frameSize.
         let nArgs = arguments size.
         astMethod argumentCount is nArgs
@@ -241,7 +241,9 @@ class AstInterpreter { context process }
     method visitSend: aSend
         let selector = aSend selector.
         let object = aSend receiver visitBy: self.
-        let arguments = aSend arguments collect: { |arg| arg visitBy: self }.
+        let arguments = aSend arguments
+                            collect: { |arg| arg visitBy: self }
+                            as: Array.
         let $context = context.
         let $process = process.
         -- Debug println: "send: {object classOf name} {selector}".
@@ -256,6 +258,17 @@ class AstInterpreter { context process }
                                     on: object
                                     source: aSend source
                                     context: context }} !
+
+    method visitCallMethod: aCall
+        let receiver = aCall receiver visitBy: self.
+        let arguments = aCall arguments
+                            collect: { |arg| arg visitBy: self }
+                            as: Array.
+        let $context = context.
+        let $process = process.
+        aCall target
+            invoke: arguments
+            on: receiver!
 
     method visitBlock: aBlock
         -- Debug println: "\nblock args: {aBlock argumentCount}, size: {aBlock frameSize}".

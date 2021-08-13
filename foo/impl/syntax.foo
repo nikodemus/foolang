@@ -856,9 +856,6 @@ interface SyntaxMethod
     method isRequired
         self body is False!
 
-    method isDefined
-        self isRequired not!
-
     method isDirect
         False!
 
