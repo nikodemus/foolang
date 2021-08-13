@@ -967,23 +967,20 @@ class CTranspiler { output selectorMap closureFunctions
     method _ensureRecordClass: aRecord
         recordClasses
             at: aRecord name name -- Selector don't play nice in bootstrap host dictionary!
-            ifNonePut: { self _createRecordClass: aRecord }!
-
-    method _createRecordClass: aRecord
-        let name = String concat: ["Record_", aRecord name name replace: ":" with: "$"].
-        let theClass = AstClass
-                           name: name
-                           slots: (aRecord slots
-                                       collectWithIndex: { |each index|
-                                                           AstSlot name: each
-                                                                   index: index
-                                                                   type: Any })
-                           interfaces: [env global: "Record"]
-                           env: env.
-        theClass directMethods: [].
-        theClass instanceMethods: [].
-        CompilerRecordClass
-            new: theClass!
+            ifNonePut: { let name = String concat: ["Record_", aRecord name name replace: ":" with: "$"].
+                         let theClass = AstClass
+                                            name: name
+                                            slots: (aRecord slots
+                                                        collectWithIndex: { |each index|
+                                                                            AstSlot name: each
+                                                                                    index: index
+                                                                                    type: Any })
+                                                        interfaces: [env global: "Record"]
+                                                        env: env.
+                         theClass directMethods: [].
+                         theClass instanceMethods: [].
+                         CompilerRecordClass
+                             new: theClass }!
 
     method visitRecord: aRecord
         -- Tracer visitRecord: aRecord.
