@@ -229,7 +229,7 @@ class Environment { parent
                     recordClasses }
     is Object
 
-    method _ensureRecordClass: aRecord
+    method ensureRecordClass: aRecord
         recordClasses
             at: aRecord name name -- Selector don't play nice in bootstrap host dictionary!
             ifNonePut: { let name = String concat: ["Record_", aRecord name name replace: ":" with: "$"].

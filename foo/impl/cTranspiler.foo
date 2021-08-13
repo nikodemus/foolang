@@ -749,8 +749,8 @@ class CTranspiler { output selectorMap closureFunctions
                        intern: (StringOutput
                                     with: { |out|
                                             keys do: { |each| out print: each }}).
-        let recordClass = env _ensureRecordClass: { name: name,
-                                                     slots: keys }.
+        let recordClass = env ensureRecordClass: { name: name,
+                                                   slots: keys }.
         self declare: recordClass.
         recordClass!
 
@@ -962,7 +962,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method visitRecord: aRecord
         -- Tracer visitRecord: aRecord.
-        let recordClass = env _ensureRecordClass: aRecord.
+        let recordClass = env ensureRecordClass: aRecord.
         self declare: recordClass.
         output print: "(\{ ".
         let args = aRecord values
