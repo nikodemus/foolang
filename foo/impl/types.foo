@@ -36,6 +36,9 @@ class EqType { value }
              do: { |def| def findDirectMethod: selector }!
 
     method findInstanceMethod: selector in: env
+        (Record includes: value)
+            ifTrue: { let recordClass = env recordClassFromRecord: value.
+                      return recordClass findInstanceMethod: selector }.
         self withDefinitionFor: value classOf
              in: env
              do: { |def| def findInstanceMethod: selector }!
@@ -45,18 +48,18 @@ class EqType { value }
 end
 
     --- For EqType
-    method findMethod: selector for: compiler
+    method findMethod: selector in: env
         (Record includes: value)
-            ifTrue: { let recordClass = compiler env recordClassFromRecord: value.
+            ifTrue: { let recordClass = env recordClassFromRecord: value.
                       return recordClass findInstanceMethod: selector }.
         let wantDirectMethod = (Class includes: value) or: (Interface includes: value).
         let hostClass = wantDirectMethod
                             ifTrue: { value }
                             ifFalse: { value classOf }.
-        let targetClass = compiler env classes
+        let targetClass = env classes
                               at: hostClass
-                              ifNone: { let builtin = compiler env findBuiltinFor: hostClass
-                                                                   ifNone: { return False }.
+                              ifNone: { let builtin = env findBuiltinFor: hostClass
+                                                          ifNone: { return False }.
                                          builtin definition }.
         wantDirectMethod
             ifTrue: { targetClass findDirectMethod: selector }
@@ -81,7 +84,6 @@ class HostType { hostType }
             ifTrue: { TheUnknownType }
             ifFalse: { self hostType: hostType }!
 
-
     method findMethod: selector in: env
         self withDefinitionFor: hostType
              in: env
@@ -104,7 +106,10 @@ class ReceiverType { definition }
     is Type
 
     method findMethod: selector in: _env
-        -- Interface methods can be overridden!
+        -- Interface methods can be overridden, so cannot early bind
+        -- to them.
+        -- * Clone methods from interfaces to classes.
+        -- * Add final qualifier for non-overridable interface methods.
         definition isClass
             ifTrue: { definition findInstanceMethod: selector }!
 
@@ -116,7 +121,10 @@ class ReceiverClassType { definition }
     is Type
 
     method findMethod: selector in: _env
-        -- Interface methods can be overridden!
+        -- Interface methods can be overridden, so cannot early bind
+        -- to them.
+        -- * Clone methods from interfaces to classes.
+        -- * Add final qualifier for non-overridable interface methods.
         definition isClass
             ifTrue: { definition findDirectMethod: selector }!
 
