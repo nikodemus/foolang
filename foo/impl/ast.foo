@@ -1194,7 +1194,6 @@ class AstSend {
     }
     is AstNode
 
-    -- FIXME: Need to convert to AstKnownSend with a bound method.
     method type
         TheUnknownType!
 
@@ -1203,6 +1202,19 @@ class AstSend {
 
     method printOn: stream
         stream print: "#<AstSend {selector} to {receiver} with {arguments}>"!
+end
+
+class AstCallMethod { knownMethod receiver arguments source }
+    is AstNode
+
+    method type
+        HostType type: knownMethod returnType!
+
+    method visitBy: visitor
+        visitor visitCallMethod: self!
+
+    method printOn: stream
+        stream print: "#<AstCallMethod {knownMethod home name}#{knownMethod selector name}>"!
 end
 
 class AstBlock { body argumentVariables returnType frameSize }
