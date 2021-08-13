@@ -229,6 +229,16 @@ class Environment { parent
                     recordClasses }
     is Object
 
+    method _recordClassFromRecord: aRecord
+        let keys = (Record keysIn: aRecord) sorted
+                       collect: #name.
+        let name = Selector
+                       intern: (StringOutput
+                                    with: { |out|
+                                            keys do: { |each| out print: each }}).
+        self ensureRecordClass: { name: name,
+                                  slots: keys }!
+
     method ensureRecordClass: aRecord
         recordClasses
             at: aRecord name name -- Selector don't play nice in bootstrap host dictionary!
