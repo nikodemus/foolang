@@ -144,6 +144,11 @@ extend AstMethod
             withArguments: arguments!
 end
 
+extend AstTypecheck
+    method isSimple
+        self value isSimple!
+end
+
 extend AstSend
     method isTrivial
         self receiver isSimple
