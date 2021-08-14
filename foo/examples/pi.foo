@@ -8,7 +8,7 @@ class Calc {}
     direct method square: f :: Float -> Float
         f * f!
 
-    direct method pi: random
+    direct method pi: random :: Random
         let inside = 0.
         let n = 1_000_000.
         n times: { let x = self square: random float.
