@@ -1077,6 +1077,9 @@ class AstGlobal { name::String
     method type
         EqType value: self eval!
 
+    method includes: value
+        self eval includes: value!
+
     method idOr: block
         -- A bit of a KLUDGE: builtin globals have definitions
         -- in main.c, and we want their names to be consistent.
