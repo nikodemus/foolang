@@ -75,13 +75,6 @@ class TrivialMethodInliner { didNothing }
                            receiver: recv
                            arguments: args
                            source: aCall source }!
-
-    method inline: aMethod on: receiver withArguments: arguments
-        Debug println: "inline: {aMethod}".
-        -- FIXME: Need to make sure receiver and arguments are immediate,
-        -- otherwise bodies with multiple refererences to them
-        -- would evaluate them multiply.
-        aMethod inlineOn: receiver!
 end
 
 extend Ast
@@ -91,26 +84,35 @@ extend Ast
         False!
 end
 
-extend AstMethod
-    method isTrivial
-        self body isTrivial
-            ifTrue: { True }
-            ifFalse: { Debug println: "nontrivial: {self} == {self body}".
-                       False }!
-end
-
 extend AstConstantRef
     method isSimple
         True!
     method inlineOn: _receiver withArguments: _arguments
+        Debug println: "inlining constant: {self}".
         self!
 end
 
 extend AstSelfInstanceRef
     method isSimple
         True!
-    method inlineOn: _receiver withArguments: _arguments
-        _receiver!
+    method inlineOn: receiver withArguments: _arguments
+        Debug println: "inlining self".
+        receiver!
+end
+
+extend AstMethod
+    method isTrivial
+        self body isTrivial
+            ifTrue: { Debug println: "trivial: {self}".
+                      True }
+            ifFalse: { Debug println: "nontrivial: {self} == {self body}".
+                       False }!
+
+    method inlineOn: receiver withArguments: arguments
+        Debug println: "inlining: {self} on: {receiver} with: {arguments}".
+        self body
+            inlineOn: receiver
+            withArguments: arguments!
 end
 
 extend AstCallMethod
@@ -122,4 +124,17 @@ extend AstCallMethod
                                      False } }
             ifFalse: { Debug println: "nonsimple receiver: {self receiver}".
                        False }!
+
+    method inlineOn: receiver withArguments: arguments
+        Debug println: "inlining: {self} on: {receiver} with: {arguments}".
+        AstCallMethod
+            target: self target
+            receiver: (self receiver
+                           inlineOn: receiver
+                           withArguments: arguments)
+            arguments: (self arguments
+                            collect: { |each|
+                                       each inlineOn: receiver
+                                            withArguments: arguments})
+            source: self source!
 end
