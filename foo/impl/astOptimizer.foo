@@ -45,6 +45,16 @@ class KnownMethodResolver { env didNothing }
             arguments: args!
 end
 
+---
+Trivial methods contain at most one send or call.
+
+We extend selected AST classes with #isTrivial and
+#isSimple methods.
+
+#isSimple is stricter than #isTrivial: it is used
+to check receiver and arguments or a call or send,
+and hence doesn't allow calls or sends.
+---
 class TrivialMethodInliner { didNothing }
     is AstRewriter
 
@@ -74,6 +84,8 @@ end
 
 extend Ast
     method isTrivial
+        self isSimple!
+    method isSimple
         False!
 end
 
@@ -86,17 +98,17 @@ extend AstMethod
 end
 
 extend AstConstantRef
-    method isTrivial
+    method isSimple
         True!
 end
 
 extend AstCallMethod
     method isTrivial
-        self receiver isTrivial
-            ifTrue: { (self arguments allSatisfy: #isTrivial)
+        self receiver isSimple
+            ifTrue: { (self arguments allSatisfy: #isSimple)
                           ifTrue: { True }
-                          ifFalse: { Debug println: "nontrivial arguments: {self arguments}".
+                          ifFalse: { Debug println: "nonsimple arguments: {self arguments}".
                                      False } }
-            ifFalse: { Debug println: "nontrivial receiver: {self receiver}".
+            ifFalse: { Debug println: "nonsimple receiver: {self receiver}".
                        False }!
 end
