@@ -89,6 +89,8 @@ class HostType { hostType }
     is Type
 
     direct method type: hostType
+        (Type includes: hostType)
+            => { return hostType }.
         hostType is Any
             ifTrue: { TheUnknownType }
             ifFalse: { self hostType: hostType }!
