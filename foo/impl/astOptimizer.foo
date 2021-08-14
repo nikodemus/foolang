@@ -1,5 +1,5 @@
 import .astRewriter.AstRewriter
-import .ast.AstCallMethod
+import .ast.*
 import .utils.*
 
 interface AstOptimizer
@@ -49,5 +49,15 @@ class TrivialMethodInliner { didNothing }
         self didNothing: True!
 
     method visitCallMethod: aCall
+        aCall target isTrivial
+            ifTrue: { self inline: aCall }
+            ifFalse: { aCall }!
+
+    method inline: aCall
         aCall!
+end
+
+extend Ast
+    method isTrivial
+        False!
 end
