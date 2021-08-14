@@ -3,6 +3,12 @@ import .utils.Debug
 interface Type
     is Object
 
+    method isSubtypeOf: type
+        type is Any
+            ifTrue: { True }
+            ifFalse: { Debug println: "subtype? {self} of {type}".
+                       False }!
+
     method findMethod: selector in: env
         self earlyBinding
             => { |name|
