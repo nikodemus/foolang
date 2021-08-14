@@ -1022,21 +1022,17 @@ Interpreter backtrace:
     method test_typecheck_direct_binary_method_arg_ok
         self load: "class Foo \{}
                         direct method @ x::String
-                            let res = (x at: 1) code.
-                            x = \"ok\".
-                            [res, x]!
+                            [x]!
                     end"
             eval: "Foo @ \"a\""
-            expect: [97, "ok"]!
+            expect: ["a"]!
 
     method test_typecheck_direct_binary_method_arg_fail
         self load: "class Foo \{}
                         direct method @ x::String
-                            let res = (x at: 1) code.
-                            x = res.
-                            [res, x]!
+                            [x]!
                     end"
-            eval: "Foo @ \"a\""
+            eval: "Foo @ 97"
             expectError: TypeError
             where: { |e|
                      e value is 97 and: e expected is String }!
@@ -1050,12 +1046,6 @@ Interpreter backtrace:
              expectError: TypeError
              where: { |e|
                       e value is 42 and: e expected is String }!
-
-    method test_typecheck_block_arg_assignment_fail
-        self eval: "\{ |x::String| x = x size. x } value: \"ok\""
-             expectError: TypeError
-             where: { |e|
-                      e value is 2 and: e expected is String }!
 
     method test_typecheck_method_return_type_ok
         self load: "class Foo \{}
