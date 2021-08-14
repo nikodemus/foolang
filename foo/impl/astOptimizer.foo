@@ -176,7 +176,7 @@ end
 extend AstCallMethod
     method isTrivial
         self receiver isSimple
-            ifTrue: { (self arguments isEmpty )
+            ifTrue: { (self arguments allSatisfy: #isSimple )
                           ifTrue: { True }
                           ifFalse: { Debug println: "nonsimple arguments: {self arguments}".
                                      False } }
