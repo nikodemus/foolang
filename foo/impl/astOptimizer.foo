@@ -35,6 +35,7 @@ class KnownMethodResolver { env didNothing }
         (type findMethod: aSend selector in: env)
             => { |aMethod|
                  didNothing = False.
+                 Debug println: "known: {aMethod}".
                  return AstCallMethod
                      target: aMethod
                      receiver: recv
@@ -52,6 +53,7 @@ class TrivialMethodInliner { didNothing }
         self didNothing: True!
 
     method visitCallMethod: aCall
+        Debug println: "tryInline: {aCall}".
         aCall target isTrivial
             ifTrue: { didNothing = False.
                       self inline: aCall }
@@ -69,7 +71,10 @@ end
 
 extend AstMethod
     method isTrivial
-        self body isTrivial!
+        self body isTrivial
+            ifTrue: { True }
+            ifFalse: { Debug println: "nontrivial: {self} == {self body}".
+                       False }!
 end
 
 extend AstConstantRef
