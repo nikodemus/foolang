@@ -8,7 +8,7 @@ interface Ast
     is Object
 
     method type
-        UnknownType!
+        TheUnknownType!
 
     method evalIn: env
         AstInterpreter eval: self in: env!
