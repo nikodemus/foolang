@@ -70,17 +70,18 @@ class TokenString { string first last }
     method _literalFrom: next into: parts
         let literal = StringOutput new.
         let from = next.
+        let nextPos = next.
 
-        { next < string size
-              ifTrue: { (self _isInterpolationStart: next) not } }
-        whileTrue: { next = self _scanCharFrom: next into: literal }.
+        { nextPos < string size
+              ifTrue: { (self _isInterpolationStart: nextPos) not } }
+        whileTrue: { nextPos = self _scanCharFrom: nextPos into: literal }.
 
-        from is next
+        from is nextPos
             ifFalse: { parts
                            add: (SyntaxLiteral
                                      value: literal content
                                      source: False) }.
-        next!
+        nextPos!
 
     method _interpolatedFrom: next into: parts
         (next < string size)
