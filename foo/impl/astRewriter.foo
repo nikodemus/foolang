@@ -32,7 +32,6 @@ interface AstRewriter
         aReturn value: (aReturn value visitBy: self)!
 
     method visitCallMethod: aCall
-        Debug println: "visitCall: {aCall}".
         aCall
             target: (aCall target visitBy: self)
             receiver: (aCall receiver visitBy: self)
