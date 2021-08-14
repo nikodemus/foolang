@@ -113,17 +113,24 @@ class AllBuiltins { env }
                 !
 end
 
-class Variable { name type index hasAssignments boundBy }
+class Variable { name declaredType index hasAssignments boundBy }
     is Object
 
     direct method name: name type: type frame: frame
         let var = self name: name
-                       type: type
+                       declaredType: type
                        index: frame size + 1
                        hasAssignments: False
                        boundBy: False.
         frame add: var.
         var!
+
+    method type
+        hasAssignments
+            ifTrue: { declaredType }
+            ifFalse: { declaredType is Any
+                           ifTrue: { boundBy value type }
+                           ifFalse: { Any } }!
 
     method boundBy: aBinding
         boundBy is False

@@ -298,7 +298,7 @@ class AstInterpreter { context process }
             in: { aBind body visitBy: self }!
 
     method visitBindLexical: aBind
-        let type = aBind variable type.
+        let type = aBind variable declaredType.
         let value = aBind value visitBy: self.
         context
             put: (type typecheck: value)
@@ -314,7 +314,7 @@ class AstInterpreter { context process }
 
     method visitLexicalSet: aSet
         -- Debug println: "set: {aSet variable}".
-        let type = aSet variable type.
+        let type = aSet variable declaredType.
         let value = aSet value visitBy: self.
         context
             put: (type typecheck: value)

@@ -1471,7 +1471,7 @@ class CTranspiler { output selectorMap closureFunctions
     method visitBindLexical: aBind
         -- Tracer trace: #visitBindLexical:.
         output print: "(\{ ctx->frame[{aBind variable index - 1}] = ".
-        self _generateTypecheck: aBind variable type
+        self _generateTypecheck: aBind variable declaredType
              _for: aBind value.
         output print: ";".
         aBind body visitBy: self.
