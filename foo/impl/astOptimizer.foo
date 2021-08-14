@@ -89,3 +89,14 @@ extend AstConstantRef
     method isTrivial
         True!
 end
+
+extend AstCallMethod
+    method isTrivial
+        self receiver isTrivial
+            ifTrue: { (self arguments allSatisfy: #isTrivial)
+                          ifTrue: { True }
+                          ifFalse: { Debug println: "nontrivial arguments: {self arguments}".
+                                     False } }
+            ifFalse: { Debug println: "nontrivial receiver: {self receiver}".
+                       False }!
+end
