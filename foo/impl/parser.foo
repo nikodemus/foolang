@@ -55,13 +55,14 @@ class TokenString { string first last }
             ifNone: { panic "Unknown escape character: {char}" }!
 
     method _scanCharFrom: next into: literal
-        let char = string from: next to: next.
-        next = next + 1.
+        let nextPos = next.
+        let char = string from: nextPos to: nextPos.
+        nextPos = nextPos + 1.
         char == "\\"
-            ifTrue: { literal print: (self _escapeChar: (string from: next to: next)).
-                      next = next + 1 }
+            ifTrue: { literal print: (self _escapeChar: (string from: nextPos to: nextPos)).
+                      nextPos = nextPos + 1 }
             ifFalse: { literal print: char }.
-        next!
+        nextPos!
 
     method _isInterpolationStart: next
         "\{" == (string from: next to: next)!
