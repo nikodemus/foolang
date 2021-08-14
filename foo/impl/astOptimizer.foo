@@ -61,3 +61,8 @@ extend Ast
     method isTrivial
         False!
 end
+
+extend AstMethod
+    method isTrivial
+        self body isTrivial!
+end
