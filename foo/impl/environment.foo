@@ -118,7 +118,7 @@ class Variable { name type index hasAssignments }
         frame add: var.
         var!
 
-    method noteAssignment
+    method noteAssignment: _source
         hasAssignments = True!
 
     method referenceUpwards: offset
@@ -144,6 +144,10 @@ class Argument { name type index }
 
     method printOn: stream
         stream print: "#<Argument {name}>"!
+
+    method noteAssignment: source
+        let note = "Cannot assign to argument.".
+        Error raise: "{note}\n{source note: note}"!
 
     method visitBy: visitor
         visitor visitArgument: self!
