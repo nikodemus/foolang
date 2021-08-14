@@ -10,6 +10,9 @@ interface AstOptimizer
             resolver didNothing
                 => { return ast }.
 
+            -- Trivial methods are such that inlining them
+            -- never blows up code size, so we can do this
+            -- unconditionally.
             let inliner = TrivialMethodInliner new.
             ast = ast visitBy: inliner.
             inliner didNothing
