@@ -6,7 +6,8 @@ import .iterable.Iterator
 import .ordered.Ordered
 import .stringOutput.StringOutput
 
-class List { size data }
+class List { size :: Integer
+             data :: Array }
     is Ordered
     is Collection
 
