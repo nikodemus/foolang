@@ -1512,6 +1512,7 @@ class AstLexicalRef { variable frameOffset::Integer source }
         visitor visitLexicalRef: self!
 
     method assign: value
+        variable noteAssignment.
         AstLexicalSet
             variable: variable
             frameOffset: frameOffset
