@@ -1426,12 +1426,22 @@ class AstSlotSet { slot value }
         visitor visitSlotSet: self!
 end
 
-class AstBindLexical { variable value body }
+class AstBindLexical { variable value _body }
     is AstNode
+
+    direct method variable: variable value: value body: body
+        let binding = self variable: variable
+                           value: value
+                           _body: body.
+        variable boundBy: binding.
+        binding!
+
+    method body
+        _body!
 
     method value: newValue body: newBody
         value = newValue.
-        body = newBody.
+        _body = newBody.
         self!
 
     method visitBy: visitor
