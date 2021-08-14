@@ -133,6 +133,30 @@ extend AstMethod
             withArguments: arguments!
 end
 
+extend AstSend
+    method isTrivial
+        self receiver isSimple
+            ifTrue: { (self arguments isEmpty )
+                          ifTrue: { True }
+                          ifFalse: { Debug println: "nonsimple arguments: {self arguments}".
+                                     False } }
+            ifFalse: { Debug println: "nonsimple receiver: {self receiver}".
+                       False }!
+
+    method inlineOn: receiver withArguments: arguments
+        Debug println: "inlining: {self} on: {receiver} with: {arguments}".
+        AstSend
+            receiver: (self receiver
+                           inlineOn: receiver
+                           withArguments: arguments)
+            selector: self selector
+            arguments: (self arguments
+                            collect: { |each|
+                                       each inlineOn: receiver
+                                            withArguments: arguments})
+            source: self source!
+end
+
 extend AstCallMethod
     method isTrivial
         self receiver isSimple
