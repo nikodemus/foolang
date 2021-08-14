@@ -1,6 +1,7 @@
 import .astRewriter.AstRewriter
 import .ast.*
 import .utils.*
+import .environment.Argument
 
 class AstOptimizer { ast env continue }
 
@@ -83,6 +84,8 @@ class TrivialMethodInliner { didNothing }
         let recv = aCall receiver visitBy: self.
         let args = aCall arguments collect: { |each| each visitBy: self }.
         Debug println: "tryInline: {aCall}".
+        -- FIXME: This is broken if inlining duplicates any of the arguments
+        -- and they're not immediate.
         aCall target isTrivial
             ifTrue: { didNothing = False.
                       aCall target
@@ -108,6 +111,14 @@ extend AstConstantRef
     method inlineOn: _receiver withArguments: _arguments
         Debug println: "inlining constant: {self}".
         self!
+end
+
+extend AstLexicalRef
+    method isSimple
+        self frameOffset is 0 and: (Argument includes: self variable)!
+    method inlineOn: _receiver withArguments: arguments
+        Debug println: "inlining argument: {self} -> {arguments at: self variable index}".
+        arguments at: self variable index!
 end
 
 extend AstSelfInstanceRef
@@ -136,9 +147,9 @@ end
 extend AstSend
     method isTrivial
         self receiver isSimple
-            ifTrue: { (self arguments isEmpty )
+            ifTrue: { (self arguments allSatisfy: #isSimple)
                           ifTrue: { True }
-                          ifFalse: { Debug println: "nonsimple arguments: {self arguments}".
+                          ifFalse: { Debug println: "nonsimple arguments: {self arguments reject: #isSimple}".
                                      False } }
             ifFalse: { Debug println: "nonsimple receiver: {self receiver}".
                        False }!
