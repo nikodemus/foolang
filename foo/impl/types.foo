@@ -49,6 +49,9 @@ class EqType { value }
              in: env
              do: { |def| def findInstanceMethod: selector }!
 
+    method isSubtypeOf: type
+        type includes: value!
+
     method displayOn: stream
         stream writeString: "#<EqType {value classOf name}>"!
 end

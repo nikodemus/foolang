@@ -5,11 +5,14 @@ class Main {}
 end
 
 class Calc {}
+    direct method square: f :: Float -> Float
+        f * f!
+
     direct method pi: random
         let inside = 0.
         let n = 1_000_000.
-        n times: { let x = random float square.
-                   let y = random float square.
+        n times: { let x = self square: random float.
+                   let y = self square: random float.
                    x + y < 1.0
                        ifTrue: { inside = inside + 1 } }.
         4.0 * inside / n!
