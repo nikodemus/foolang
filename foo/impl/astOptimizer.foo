@@ -139,9 +139,11 @@ extend AstMethod
 
     method inlineOn: receiver withArguments: arguments
         Debug println: "inlining: {self} on: {receiver} with: {arguments}".
-        self body
-            inlineOn: receiver
-            withArguments: arguments!
+        (arguments allSatisfy: #isImmediate)
+            ifTrue: { self body
+                          inlineOn: receiver
+                          withArguments: arguments }
+            ifFalse: { Error raise: "Cannot inline with: {arguments reject: #isImmediate}" }!
 end
 
 extend AstSend
