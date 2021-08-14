@@ -32,11 +32,9 @@ class KnownMethodResolver { env didNothing }
         let recv = aSend receiver visitBy: self.
         let args = aSend arguments collect: { |each| each visitBy: self }.
         let type = recv type.
-        Debug println: "tryResolve: {aSend}".
         (type findMethod: aSend selector in: env)
             => { |aMethod|
                  didNothing = False.
-                 Debug println: "known: {aMethod}".
                  return AstCallMethod
                      target: (aMethod visitBy: self)
                      receiver: recv
