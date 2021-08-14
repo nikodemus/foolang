@@ -2,23 +2,41 @@ import .astRewriter.AstRewriter
 import .ast.*
 import .utils.*
 
-interface AstOptimizer
-    direct method optimize: ast in: env
-        {
-            let resolver = KnownMethodResolver new: env.
-            ast = ast visitBy: resolver.
-            resolver didNothing
-                => { return ast }.
+class AstOptimizer { ast env continue }
 
-            -- Trivial methods are such that inlining them
-            -- never blows up code size, so we can do this
-            -- unconditionally.
+    direct method optimize: ast in: env
+        (self ast: ast
+              env: env
+              continue: True)
+            optimize!
+
+    method optimize
+        {
+            self resolveKnownMethods
+                ifTrue: { self inlineTrivialMethods }
+                ifFalse: { False }
+        }
+            whileTrue.
+        ast!
+
+    method resolveKnownMethods
+        let resolver = KnownMethodResolver new: env.
+        ast = ast visitBy: resolver.
+        resolver didNothing not!
+
+    method inlineTrivialMethods
+        -- Trivial methods are such that inlining them
+        -- never blows up code size too much.
+        let didSomething = False.
+        {
             let inliner = TrivialMethodInliner new.
             ast = ast visitBy: inliner.
-            inliner didNothing
-                => { return ast }
-
-        } loop!
+            let didNow = inliner didNothing not.
+            didSomething = didSomething or: didNow.
+            didNow
+        }
+            whileTrue.
+        didSomething!
 end
 
 class KnownMethodResolver { env didNothing }
@@ -96,7 +114,7 @@ extend AstSelfInstanceRef
     method isSimple
         True!
     method inlineOn: receiver withArguments: _arguments
-        Debug println: "inlining self".
+        Debug println: "inlining: self".
         receiver!
 end
 
