@@ -1497,9 +1497,11 @@ class AstLexicalRef { variable frameOffset::Integer source }
 
     method type
         let type = variable type.
+        (Type includes: type)
+            => { return type }.
         (AstGlobal includes: type)
-            ifTrue: { DefinitionType definition: type definition }
-            ifFalse: { HostType type: type }!
+            => { return DefinitionType definition: type definition }.
+        HostType type: type!
 
     method isImmediate
         True!
