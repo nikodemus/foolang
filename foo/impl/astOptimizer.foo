@@ -2,11 +2,16 @@ import .astRewriter.AstRewriter
 import .ast.AstCallMethod
 import .utils.*
 
-class KnownMethodResolver { env }
+interface AstOptimizer
     is AstRewriter
 
     direct method optimize: ast in: env
         ast visitBy: (self env: env)!
+
+end
+
+class KnownMethodResolver { env }
+    is AstOptimizer
 
     method visitSend: aSend
         let recv = aSend receiver visitBy: self.
@@ -22,4 +27,11 @@ class KnownMethodResolver { env }
         aSend
             receiver: recv
             arguments: args!
+end
+
+class TrivialMethodInliner { env }
+    is AstOptimizer
+
+    method visitCallMethod: aCall
+        aCall!
 end
