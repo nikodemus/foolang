@@ -53,15 +53,24 @@ class TrivialMethodInliner { didNothing }
         self didNothing: True!
 
     method visitCallMethod: aCall
+        let recv = aCall receiver visitBy: self.
+        let args = aCall arguments collect: { |each| each visitBy: self }.
         Debug println: "tryInline: {aCall}".
         aCall target isTrivial
             ifTrue: { didNothing = False.
-                      self inline: aCall }
-            ifFalse: { aCall }!
+                      self inline: aCall target
+                           on: recv
+                           withArguments: args }
+            ifFalse: { AstCallMethod
+                           target: aCall target
+                           receiver: recv
+                           arguments: args
+                           source: aCall source }!
 
-    method inline: aCall
-        Debug println: "inline: {aCall}".
-        aCall body!
+    method inline: aMethod on: receiver withArguments: arguments
+        Debug println: "inline: {aMethod}".
+        -- Only constant references are trivial at the moment.
+        aMethod body!
 end
 
 extend Ast
