@@ -113,13 +113,19 @@ class AllBuiltins { env }
                 !
 end
 
-class Variable { name type index }
+class Variable { name type index hasAssignments }
     is Object
 
     direct method name: name type: type frame: frame
-        let var = self name: name type: type index: frame size + 1.
+        let var = self name: name
+                       type: type
+                       index: frame size + 1
+                       hasAssignments: False.
         frame add: var.
         var!
+
+    method noteAssignment
+        hasAssignments = True!
 
     method referenceUpwards: offset
         AstLexicalRef variable: self frameOffset: offset!
