@@ -107,16 +107,22 @@ class AllBuiltins { env }
                 !
 end
 
-class Variable { name type index hasAssignments }
+class Variable { name type index hasAssignments boundBy }
     is Object
 
     direct method name: name type: type frame: frame
         let var = self name: name
                        type: type
                        index: frame size + 1
-                       hasAssignments: False.
+                       hasAssignments: False
+                       boundBy: False.
         frame add: var.
         var!
+
+    method boundBy: aBinding
+        boundBy is False
+            ifTrue: { boundBy = aBinding }
+            ifFalse: { Error raise: "{self} already has the bind node set." }!
 
     method noteAssignment: _source
         hasAssignments = True!
