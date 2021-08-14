@@ -1312,7 +1312,7 @@ class CTranspiler { output selectorMap closureFunctions
     method _generateTypecheck: type _for: value
         -- Tracer _generateTypecheck: type _for: value.
         -- Debug println: "_generateTypecheck: {type} _for: {value}".
-        type is Any
+        (value type isSubtypeOf: type)
             ifTrue: { return value visitBy: self }.
         let type = type::AstGlobal.
         self declare: type.
