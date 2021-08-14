@@ -207,11 +207,12 @@ interface Iterable
                           self anySatisfy: { |each2| each1 == each2 } }!
 
     method inject: value into: block
+        let result = value.
         self do: { |each|
-                   value = block
-                               value: value
+                   result = block
+                               value: result
                                value: each }.
-        value!
+        result!
 
     method with: iterable inject: value into: block
         self with: iterable
