@@ -67,9 +67,9 @@ class TrivialMethodInliner { didNothing }
         Debug println: "tryInline: {aCall}".
         aCall target isTrivial
             ifTrue: { didNothing = False.
-                      self inline: aCall target
-                           on: recv
-                           withArguments: args }
+                      aCall target
+                          inlineOn: recv
+                          withArguments: args }
             ifFalse: { AstCallMethod
                            target: aCall target
                            receiver: recv
@@ -78,8 +78,10 @@ class TrivialMethodInliner { didNothing }
 
     method inline: aMethod on: receiver withArguments: arguments
         Debug println: "inline: {aMethod}".
-        -- Only constant references are trivial at the moment.
-        aMethod body!
+        -- FIXME: Need to make sure receiver and arguments are immediate,
+        -- otherwise bodies with multiple refererences to them
+        -- would evaluate them multiply.
+        aMethod inlineOn: receiver!
 end
 
 extend Ast
@@ -100,12 +102,21 @@ end
 extend AstConstantRef
     method isSimple
         True!
+    method inlineOn: _receiver withArguments: _arguments
+        self!
+end
+
+extend AstSelfInstanceRef
+    method isSimple
+        True!
+    method inlineOn: _receiver withArguments: _arguments
+        _receiver!
 end
 
 extend AstCallMethod
     method isTrivial
         self receiver isSimple
-            ifTrue: { (self arguments allSatisfy: #isSimple)
+            ifTrue: { (self arguments isEmpty )
                           ifTrue: { True }
                           ifFalse: { Debug println: "nonsimple arguments: {self arguments}".
                                      False } }
