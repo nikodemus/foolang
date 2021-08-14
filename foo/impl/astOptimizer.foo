@@ -53,11 +53,13 @@ class TrivialMethodInliner { didNothing }
 
     method visitCallMethod: aCall
         aCall target isTrivial
-            ifTrue: { self inline: aCall }
+            ifTrue: { didNothing = False.
+                      self inline: aCall }
             ifFalse: { aCall }!
 
     method inline: aCall
-        aCall!
+        Debug println: "inline: {aCall}".
+        aCall body!
 end
 
 extend Ast
@@ -68,4 +70,9 @@ end
 extend AstMethod
     method isTrivial
         self body isTrivial!
+end
+
+extend AstConstantRef
+    method isTrivial
+        True!
 end
