@@ -62,16 +62,18 @@ extend FileStream
             ifFalse: { panic "Could not write { n } bytes to { self }." }!
 
     method tryWrite: n bytesFrom: buffer at: index
+        let bytesLeft = n.
+        let nextIndex = index.
         let total = 0.
-        { n > 0 }
-            whileTrue: { let did = self tryWriteOnce: n
+        { bytesLeft > 0 }
+            whileTrue: { let did = self tryWriteOnce: bytesLeft
                                         bytesFrom: buffer
-                                        at: index.
+                                        at: nextIndex.
                          did == 0
                              ifTrue: { return total }.
                          total = total + did.
-                         n = n - did.
-                         index = index + did }.
+                         bytesLeft = bytesLeft - did.
+                         nextIndex = nextIndex + did }.
         total!
 
     method size
