@@ -25,7 +25,7 @@ import .ast.*
 import .utils.*
 import .types.*
 import .environment.ModuleBinding
-import .astOptimizer.KnownMethodResolver
+import .astOptimizer.AstOptimizer
 
 define CEscapes
     { "'" -> "\\'",
@@ -430,7 +430,7 @@ class CTranspiler { output selectorMap closureFunctions
         AlwaysEmittedSelectors
             do: { |each| visitor selectorMap map: each }.
         let builtins = visitor generateBuiltins.
-        let main = KnownMethodResolver
+        let main = AstOptimizer
                        optimize: (env global: "Main")
                        in: env.
         visitor declare: main.

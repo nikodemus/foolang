@@ -3,15 +3,27 @@ import .ast.AstCallMethod
 import .utils.*
 
 interface AstOptimizer
-    is AstRewriter
-
     direct method optimize: ast in: env
-        ast visitBy: (self env: env)!
+        {
+            let resolver = KnownMethodResolver new: env.
+            ast = ast visitBy: resolver.
+            resolver didNothing
+                => { return ast }.
 
+            let inliner = TrivialMethodInliner new.
+            ast = ast visitBy: inliner.
+            inliner didNothing
+                => { return ast }
+
+        } loop!
 end
 
-class KnownMethodResolver { env }
-    is AstOptimizer
+class KnownMethodResolver { env didNothing }
+    is AstRewriter
+
+    direct method new: env
+        self env: env
+             didNothing: True!
 
     method visitSend: aSend
         let recv = aSend receiver visitBy: self.
@@ -19,6 +31,7 @@ class KnownMethodResolver { env }
         let type = recv type.
         (type findMethod: aSend selector in: env)
             => { |aMethod|
+                 didNothing = False.
                  return AstCallMethod
                      target: aMethod
                      receiver: recv
@@ -29,8 +42,11 @@ class KnownMethodResolver { env }
             arguments: args!
 end
 
-class TrivialMethodInliner { env }
-    is AstOptimizer
+class TrivialMethodInliner { didNothing }
+    is AstRewriter
+
+    direct method new
+        self didNothing: True!
 
     method visitCallMethod: aCall
         aCall!
