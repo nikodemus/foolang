@@ -5,6 +5,12 @@ define DirectMethods
     Dictionary new!
 
 define InstanceMethods {
+    #hash
+    -> { signature: [], vars: 0,
+         body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
+                uint64_t hash = foo_hash(&FooClass_FilePath, file->pathname->data, file->pathname->size);
+                hash = foo_hashmix(hash, foo_hash(&FooClass_File, &file->mode, sizeof(file->mode)));
+                return FOO_INTEGER(hash);" },
     #create
     -> { signature: [], vars: 0,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);

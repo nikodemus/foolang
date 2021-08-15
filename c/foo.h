@@ -27,6 +27,10 @@ inline uint64_t foo_hash(struct FooClass* class, const void* data, size_t size) 
   return XXH3_64bits_withSeed(data, size, (uintptr_t)class);
 }
 
+inline uint64_t foo_identity_hash(const void* ptr) {
+  return XXH3_64bits(&ptr, sizeof(ptr));
+}
+
 inline uint64_t foo_hashmix(uint64_t a, uint64_t b) {
   a ^= b + 0x9e3779b9 + (a << 6) + (b >> 2);
   return a;

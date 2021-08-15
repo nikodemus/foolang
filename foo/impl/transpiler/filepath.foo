@@ -3,6 +3,10 @@ define DirectMethods
 
 -- FIXME: #exists swallows access errors
 define InstanceMethods {
+    #hash
+    -> { signature: [], vars: 0,
+         body: "struct FooBytes* b = PTR(FooBytes, ctx->receiver.datum);
+                return FOO_INTEGER(foo_hash(&FooClass_FilePath, b->data, b->size));" },
     #/
     -> { signature: [String], vars: 0,
          body: "struct FooBytes* b1 = PTR(FooBytes, ctx->receiver.datum);

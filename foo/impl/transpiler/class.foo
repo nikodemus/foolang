@@ -68,6 +68,10 @@ define InstanceMethods
 
                  return ctx->frame[0];" },
 
+     #hash
+     -> { signature: [], vars: 0,
+          body: "return FOO_INTEGER(foo_identity_hash(receiver.datum.ptr));" },
+
      #subclass:interfaces:methods:
      -> { signature: [String, Array, Array], vars: 1,
           body: "struct FooArray* methods = PTR(FooArray, ctx->frame[2].datum);

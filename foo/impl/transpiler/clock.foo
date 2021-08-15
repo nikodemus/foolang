@@ -10,6 +10,9 @@ define InstanceMethods {
     -> { signature: [Float], vars: 0,
          body: "system_sleep(ctx->frame[0].datum.float64);
                 return ctx->receiver;" },
+    #hash
+    -> { signature: [], vars: 0,
+          body: "return FOO_INTEGER(foo_identity_hash(receiver.datum.ptr));" },
     #time
     -> { signature: [], vars: 0,
          body: "return FOO_INSTANCE(Time, FooProcessTimes_now(ctx));" },
