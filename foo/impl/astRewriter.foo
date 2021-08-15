@@ -79,9 +79,9 @@ interface AstRewriter
         aSelf!
 
     method visitClassDefinition: aClass
-        (aClass compilerInfo includes: self)
+        (aClass compilerInfo tag is self)
             ifTrue: { return aClass }.
-        aClass compilerInfo add: self.
+        aClass compilerInfo tag: self.
         aClass allInterfaces
             do: { |each| self visit: each }.
         aClass directMethods
@@ -91,9 +91,9 @@ interface AstRewriter
         aClass!
 
     method visitInterfaceDefinition: anInterface
-        (anInterface compilerInfo includes: self)
+        (anInterface compilerInfo tag is self)
             ifTrue: { return anInterface }.
-        anInterface compilerInfo add: self.
+        anInterface compilerInfo tag: self.
         anInterface allInterfaces
             do: { |each| self visit: each }.
         anInterface directMethods
@@ -105,9 +105,9 @@ interface AstRewriter
     method visitMethod: aMethod
         aMethod hasBody
             ifFalse: { return aMethod }.
-        (aMethod compilerInfo includes: self)
+        (aMethod compilerInfo tag is self)
             ifTrue: { return aMethod }.
-        aMethod compilerInfo add: self.
+        aMethod compilerInfo tag: self.
         aMethod body: (self visit: aMethod body)!
 
     method visitArray: anArray

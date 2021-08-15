@@ -4,6 +4,22 @@ import .astInterpreter.AstInterpreter
 import .c3.C3Linearization
 import .types.*
 
+class CompilerInfo { tag properties }
+    direct method new
+        self tag: False
+             properties: List new!
+
+    method contains: property
+        properties contains: property!
+
+    method add: property
+        properties add: property!
+
+    method tag: newTag
+        tag = newTag.
+        self!
+end
+
 interface Ast
     is Object
 
@@ -329,7 +345,7 @@ class AstBuiltin { global value compilerInfo }
     direct method global: global value: value
         self global: global
              value: value
-             compilerInfo: List new!
+             compilerInfo: CompilerInfo new!
 
     method eval
         global hasValue
@@ -366,7 +382,7 @@ class AstDefine { global body frameSize compilerInfo }
         let theDefine = self global: global
                              body: body
                              frameSize: frameSize
-                             compilerInfo: List new.
+                             compilerInfo: CompilerInfo new.
         global define: theDefine.
         theDefine!
 
@@ -434,7 +450,7 @@ class AstInterface { name _interfaces _directMethods _instanceMethods
                                _allInterfaces: False
                                global: global
                                _env: env
-                               compilerInfo: List new.
+                               compilerInfo: CompilerInfo new.
         global define: theInterface.
         theInterface!
 
@@ -520,7 +536,7 @@ class AstClass { name superclass _slots
                            _allInterfaces: False
                            global: global
                            _env: env
-                           compilerInfo: List new.
+                           compilerInfo: CompilerInfo new.
         isBuiltin
             ifTrue: { global redefine: theClass }
             ifFalse: { global define: theClass }.
@@ -822,7 +838,7 @@ class AstDefinedMethod { home selector argumentVariables returnType _body frameS
             isRequired: isRequired
             hasNonLocalReturns: False
             hasNonLocalReferences: False
-            compilerInfo: List new!
+            compilerInfo: CompilerInfo new!
 
     method noteNonLocalReturn
         hasNonLocalReturns = True!
