@@ -86,13 +86,18 @@ interface AstRewriter
         aClass!
 
     method visitInterfaceDefinition: anInterface
+        (anInterface name == "Ordered")
+            ifTrue: { Debug println: "ORDERED SEEN" }.
         (anInterface compilerInfo includes: self)
             ifTrue: { return anInterface }.
         anInterface compilerInfo add: self.
         anInterface directMethods
             do: { |each| each visitBy: self }.
         anInterface instanceMethods
-            do: { |each| each visitBy: self }.
+            do: { |each|
+                  (anInterface name == "Ordered")
+                      ifTrue: { Debug println: "XXX: {each}" }.
+                  each visitBy: self }.
         anInterface!
 
     method visitMethod: aMethod
