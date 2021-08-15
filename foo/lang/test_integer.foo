@@ -55,6 +55,15 @@ class TestInteger { assert }
         assert that: { 20 - 2 }
                is: 18!
 
+    method test_hash
+        assert that: { 0 hash }
+               is: 2800485498833346775.
+        assert that: { -123 hash }
+               is: 7574510902475996257.
+        assert that: { 123 hash }
+               is: 9083884930233392067!
+
+
     method test_decimal_sepators
         assert that: { 123_897_789 } is: 123897789!
 

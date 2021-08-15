@@ -8,9 +8,9 @@ define InstanceMethods {
     #hash
     -> { signature: [], vars: 0,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
-                uint64_t hash = foo_hash(&FooClass_FilePath, file->pathname->data, file->pathname->size);
-                hash = foo_hashmix(hash, foo_hash(&FooClass_File, &file->mode, sizeof(file->mode)));
-                return FOO_INTEGER(hash);" },
+                uint64_t hash = foo_hash(0xF2099A8C7C77D920, file->pathname->data, file->pathname->size);
+                hash = foo_hashmix(hash, foo_hash(0x85926533544C593E, &file->mode, sizeof(file->mode)));
+                return FOO_INTEGER(MASK_SIGN(hash));" },
     #create
     -> { signature: [], vars: 0,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);

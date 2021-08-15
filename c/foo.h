@@ -23,9 +23,14 @@
 struct FooContext;
 struct FooClass;
 
+#define MASK_SIGN(x) ((x) & 0x7FFFFFFFFFFFFFFF)
+
 // FIXME: inline foo_hash_fixed, out of line for non-fixed
-inline uint64_t foo_hash(struct FooClass* class, const void* data, size_t size) {
-  return XXH3_64bits_withSeed(data, size, (uintptr_t)class);
+//
+// When constructing an integer the sign bit needs to be masked out
+// unless you actually want a negative hash.
+inline uint64_t foo_hash(uint64_t salt, const void* data, size_t size) {
+  return XXH3_64bits_withSeed(data, size, salt);
 }
 
 inline uint64_t foo_identity_hash(const void* ptr) {

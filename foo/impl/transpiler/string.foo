@@ -71,7 +71,7 @@ return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = b3 } };"},
     #hash
         -> {signature: [], vars: 0,
             body: "struct FooBytes* b = PTR(FooBytes, ctx->receiver.datum);
-                   return FOO_INTEGER(foo_hash(&FooClass_String, b->data, b->size));"},
+                   return FOO_INTEGER(MASK_SIGN(foo_hash(0xF372CC4BE4E77B67, b->data, b->size)));"},
 
     #debug
         -> {signature: [], vars: 0,

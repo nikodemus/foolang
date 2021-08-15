@@ -15,6 +15,14 @@ class TestArray { assert }
         assert true: { [] toString == "[]" }.
         assert true: { [1,2,3] toString == "[1, 2, 3]" }!
 
+    method test_hash
+        assert that: { [1,2,3] hash }
+               is: 938994897039145489.
+        assert that: { [3,2,1] hash }
+               is: 831586986328803217.
+        assert that: { [] hash }
+               is: 202634434632196117!
+
     method test_size
         assert true: { 0 == [] size }.
         assert true: { 3 == [1,2,3] size }!

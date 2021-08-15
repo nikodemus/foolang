@@ -40,7 +40,7 @@ return ctx->receiver;"},
     #hash
           -> { signature: [], vars: 0,
                body: "struct FooBytes* b = PTR(FooBytes, receiver.datum);
-                      return FOO_INTEGER(foo_hash(&FooClass_ByteArray, b->data, b->size));" },
+                      return FOO_INTEGER(MASK_SIGN(foo_hash(0xD93E80248C1CF910, b->data, b->size)));" },
     #size
         -> {signature: [], vars: 0,
             body: "struct FooBytes* b = PTR(FooBytes, ctx->receiver.datum);

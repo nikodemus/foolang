@@ -21,7 +21,7 @@ for (;;) \{
 return FooGlobal_False;"},
       #hash
           -> { signature: [], vars: 0,
-               body: "return FOO_INTEGER(foo_identity_hash(receiver.datum.ptr));" },
+               body: "return FOO_INTEGER(MASK_SIGN(foo_identity_hash(receiver.datum.ptr)));" },
       #value
           -> {signature: [], vars: 0,
               body: "struct FooContext* closure_ctx = foo_context_new_closure(ctx);

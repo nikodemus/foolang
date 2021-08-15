@@ -13,6 +13,12 @@ class TestString { assert }
         assert that: { "\\" size }
                equals: 1!
 
+    method test_hash
+        assert that: { "Foolang" hash }
+               is: 5802701093198167323.
+        assert that: { "" hash }
+               is: 3133334841946951420!
+
     method test_isEquivalent
         assert true: { "foo" isEquivalent: "foo" }.
         assert false: { "foo" isEquivalent: "Foo" }!

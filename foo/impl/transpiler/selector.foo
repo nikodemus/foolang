@@ -29,7 +29,7 @@ return ctx->receiver;"},
     #hash
         -> {signature: [], vars: 0,
             body: "struct FooBytes* name = PTR(FooSelector, ctx->receiver.datum)->name;
-                   return FOO_INTEGER(foo_hash(&FooClass_Selector, name->data, name->size));"},
+                   return FOO_INTEGER(MASK_SIGN(foo_hash(0x71FB0B75F486D43E, name->data, name->size)));"},
     #name
         -> {signature: [], vars: 0,
             body: "struct FooSelector* selectorPtr = PTR(FooSelector, ctx->receiver.datum);

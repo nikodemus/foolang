@@ -59,7 +59,7 @@ else
       #hash
           -> { signature: [], vars: 0,
                body: "int64_t i = receiver.datum.int64;
-                      return FOO_INTEGER(foo_hash(&FooClass_Integer, &i, sizeof(i)));" },
+                      return FOO_INTEGER(MASK_SIGN(foo_hash(0xAEFCF07DE64E4CEE, &i, sizeof(i))));" },
       #times:
           -> { signature: [Any], vars: 0,
                body: "int64_t to = receiver.datum.int64;
