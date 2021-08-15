@@ -1,9 +1,10 @@
-import .astRewriter.AstRewriter
+import .astRewriter.*
 import .ast.*
 import .utils.*
 import .environment.Argument
 
 class AstOptimizer { ast env continue }
+    is Object
 
     direct method optimize: ast in: env
         (self ast: ast
@@ -21,11 +22,13 @@ class AstOptimizer { ast env continue }
         ast!
 
     method resolveKnownMethods
+        Debug println: "--- RESOLVE KNOWN METHODS ---".
         let resolver = KnownMethodResolver new: env.
         ast = ast visitBy: resolver.
         resolver didNothing not!
 
     method inlineTrivialMethods
+        Debug println: "--- INLINE TRIVIAL METHODS ---".
         -- Trivial methods are such that inlining them
         -- never blows up code size too much.
         let didSomething = False.
@@ -51,16 +54,20 @@ class KnownMethodResolver { env didNothing }
         let recv = aSend receiver visitBy: self.
         let args = aSend arguments collect: { |each| each visitBy: self }.
         let type = recv type.
+        $InSplitBy
+            => { Debug println: "RESOLVE? {aSend selector} to {recv} :: {type}" }.
         (type findMethod: aSend selector in: env)
             => { |aMethod|
+                 $InSplitBy
+                     => { Debug println: "RESOLVED! {aSend selector} to {recv} :: {type}" }.
                  didNothing = False.
                  return AstCallMethod
                      target: (aMethod visitBy: self)
                      receiver: recv
                      arguments: args
                      source: aSend source }.
-        (aSend selector == #to:do:)
-            => { Debug println: "NORESOLVE: #to:do: with receiver: {recv} :: {type}" }.
+        $InSplitBy
+            => { Debug println: "NORESOLVE: {aSend selector} to {recv} :: {type}" }.
         aSend
             receiver: recv
             arguments: args!
