@@ -773,6 +773,9 @@ class AstReaderMethod { home slot }
     method stackContext
         True!
 
+    method argumentVariables
+        []!
+
     method returnType
         -- FIXME: Since setters check the type, the readers don't
         -- need to -- but it would be nice for senders to know the type.
@@ -905,6 +908,15 @@ end
 
 class AstTypecheck { value assertType }
     is AstNode
+
+    direct method value: value type: type
+        type is Any
+            => { return value }.
+        (value type isSubtypeOf: type)
+            => { return value }.
+        self
+            value: value
+            assertType: type!
 
     method value: newValue
         value = newValue.
