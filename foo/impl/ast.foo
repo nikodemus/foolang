@@ -1363,6 +1363,9 @@ class AstCallMethod { target receiver arguments source }
         arguments = newArguments.
         self!
 
+    method selector
+        target selector!
+
     method type
         HostType type: target returnType!
 

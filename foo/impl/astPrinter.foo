@@ -135,6 +135,37 @@ class AstPrinter { output indent position stack }
         self popIndent.
         self print: ")"!
 
+    method visitCallMethod: aNode
+        aNode arguments
+            ifEmpty: { aNode receiver visitBy: self.
+                       self print: " ".
+                       return self print: aNode selector name }.
+        self print: "(".
+        self pushIndent.
+        aNode receiver visitBy: self.
+        self print: " <known: {aNode target home name}>".
+        aNode selector isSymbol
+            ifTrue: { self print: " ".
+                      self print: aNode selector name.
+                      self print: " ".
+                      aNode arguments first visitBy: self }
+            ifFalse: { let parts = aNode selector name splitBy: ":" character.
+                       self newline.
+                       self print: "    ".
+                       self pushIndent.
+                       parts
+                           with: aNode arguments
+                           do: { |key arg|
+                                 self print: key.
+                                 self print: ": ".
+                                 self pushIndent.
+                                 arg visitBy: self.
+                                 self popIndent }
+                           interleaving: { self newline }.
+                       self popIndent }.
+        self popIndent.
+        self print: ")"!
+
     method visitBlock: aNode
         self print: "\{ ".
         self pushIndent.
