@@ -42,7 +42,6 @@
 
 #include "foo.h"
 #include "system.h"
-#include "ext.h"
 #include "mark-and-sweep.h"
 
 size_t min_size(size_t a, size_t b) {
@@ -52,9 +51,6 @@ size_t min_size(size_t a, size_t b) {
     return b;
   }
 }
-
-#define PTR(type, datum) \
-  ((struct type*)datum.ptr)
 
 void foo_unimplemented(const char* message) {
   printf("UNIMPLEMENTED: %s", message);

@@ -7,6 +7,7 @@
 #include <setjmp.h>
 
 #include "random.h"
+#include "ext.h"
 
 #if 0
 # define FOO_DEBUG(...) { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); fflush(stderr); }
@@ -16,7 +17,20 @@
 
 #define FOO_XXX(...) { fprintf(stderr, "XXX: "); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); fflush(stderr); }
 
+#define PTR(type, datum) \
+  ((struct type*)datum.ptr)
+
 struct FooContext;
+struct FooClass;
+
+inline uint64_t foo_hash(struct FooClass* class, const void* data, size_t size) {
+  return XXH3_64bits_withSeed(data, size, (uintptr_t)class);
+}
+
+inline uint64_t foo_hashmix(uint64_t a, uint64_t b) {
+  a ^= b + 0x9e3779b9 + (a << 6) + (b >> 2);
+  return a;
+}
 
 struct Foo foo_panic(struct FooContext* ctx, struct Foo message) __attribute__((noreturn));
 struct Foo foo_panicf(struct FooContext* ctx, const char* fmt, ...) __attribute__((noreturn));

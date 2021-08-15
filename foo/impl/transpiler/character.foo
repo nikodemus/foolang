@@ -17,6 +17,10 @@ define InstanceMethods {
         -> { signature: [Character], vars: 0,
              body: "return FOO_BOOLEAN(
                         ctx->receiver.datum.int64 < ctx->frame[0].datum.int64);" },
+    #hash
+        -> { signature: [], vars: 0,
+             body: "int64_t i = receiver.datum.int64;
+                    return FOO_INTEGER(foo_hash(&FooClass_Character, &i, sizeof(i)));" },
     #code
         -> { signature: [], vars: 0,
              body: "return FOO_INTEGER(ctx->receiver.datum.int64);" },

@@ -3,4 +3,7 @@
 
 char * dtoa(double dd, int mode, int ndigits, int *decpt, int *sign, char **rve);
 
+#define XXH_INLINE_ALL
+#include "../ext/xxhash.h"
+
 #endif // __EXT_H_
