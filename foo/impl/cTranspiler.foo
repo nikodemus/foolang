@@ -107,7 +107,7 @@ class CompilerBuiltin { kind value markFunction _interfaces
                            _instanceMethods: False
                            _allInterfaces: False
                            _global: False
-                           compilerInfo: List new.
+                           compilerInfo: CompilerInfo new.
         theClass _directMethods: directMethods.
         theClass _instanceMethods: instanceMethods.
         theClass!
@@ -941,9 +941,9 @@ class CTranspiler { output selectorMap closureFunctions
         self!
 
     method visitDefine: aDefine
-        (aDefine compilerInfo contains: #visited)
+        (aDefine compilerInfo tag is self)
             ifTrue: { return False }.
-        aDefine compilerInfo add: #visited.
+        aDefine compilerInfo tag: self.
         Tracer visitDefine: aDefine.
         aDefine isDynamic
             ifTrue: { output println: "struct Foo {Name mangleDynamic: aDefine} = " }
@@ -1023,9 +1023,9 @@ class CTranspiler { output selectorMap closureFunctions
         inheritance!
 
     method visitInterfaceDefinition: anInterface
-        (anInterface compilerInfo contains: #visited)
+        (anInterface compilerInfo tag is self)
             ifTrue: { return False }.
-        anInterface compilerInfo add: #visited.
+        anInterface compilerInfo tag: self.
         Tracer visitInterfaceDefinition: anInterface name.
         output println: "/**
 * {anInterface name} (an interface)
@@ -1127,9 +1127,9 @@ class CTranspiler { output selectorMap closureFunctions
           methodFunctionName: "foo_method_classOf" }!
 
     method visitClassDefinition: aClass
-        (aClass compilerInfo contains: #visited)
+        (aClass compilerInfo tag is self)
             ifTrue: { return False }.
-        aClass compilerInfo add: #visited.
+        aClass compilerInfo tag: self.
         Tracer visitClassDefinition: aClass name.
         let classNote = aClass isBuiltin
                        ifTrue: { "{aClass name} (builtin)" }
