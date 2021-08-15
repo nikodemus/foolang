@@ -25,6 +25,10 @@ class TestString { assert }
         assert that: { "XXbarXX" from: 3 to: 2 }
                equals: ""!
 
+    method test_toUppercase
+        assert that: { "asdfXlhj123@ ASd!,." toUppercase }
+               equals: "ASDFXLHJ123@ ASD!,."!
+
     method test_interpolation_1
         let fourtyTwo = 42.
         let q = 123.

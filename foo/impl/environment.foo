@@ -135,7 +135,7 @@ class ModuleDictionary { available translated }
     method _translatePath: path _in: env
         let dotPath = "." join: path.
         self translated
-            at: dotPath
+            at: dotPath toUppercase
             ifNonePut: { self _loadPath: path _in: env _as: dotPath }!
 
     method _loadPath: path _in: env _as: dotPath

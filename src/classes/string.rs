@@ -4,6 +4,7 @@ use crate::unwind::Unwind;
 
 pub fn instance_vtable() -> Vtable {
     let vt = Vtable::for_instance("String");
+    vt.add_primitive_method_or_panic("toUppercase", string_to_uppercase);
     vt.add_primitive_method_or_panic("append:", string_append_);
     vt.add_primitive_method_or_panic("toString", string_to_string);
     vt.add_primitive_method_or_panic("size", string_size);
@@ -51,6 +52,11 @@ fn string_send_to_with(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     let receiver2 = &args[0];
     let args2 = &args[1].as_array("String#sendTo:with:")?.borrow();
     receiver2.send(selector2, args2, env)
+}
+
+fn string_to_uppercase(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let s = receiver.string_as_str().to_string().to_uppercase();
+    Ok(env.foo.into_string(s))
 }
 
 fn string_append_(receiver: &Object, args: &[Object], env: &Env) -> Eval {
