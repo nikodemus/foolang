@@ -1,8 +1,17 @@
 import .astVisitor.AstVisitor
 import .ast.*
+import .utils.Debug
+
+define $InSplitBy
+    False!
 
 interface AstRewriter
     is AstVisitor
+
+    method visit: something
+        $InSplitBy
+            => { Debug println: "in splitBy: {something} ({self})" }.
+        something visitBy: self!
 
     method visitConstant: aConstant
         aConstant!
@@ -22,8 +31,8 @@ interface AstRewriter
              right: (anIs right visitBy: self)!
 
     method visitSeq: aSeq
-        aSeq first: (aSeq first visitBy: self)
-             then: (aSeq then visitBy: self)!
+        aSeq first: (self visit: aSeq first)
+             then: (self visit: aSeq then)!
 
     method visitPanic: aPanic
         aPanic value: (aPanic value visitBy: self)!
@@ -39,6 +48,8 @@ interface AstRewriter
                             collect: { |each| each visitBy: self })!
 
     method visitSend: aSend
+        $InSplitBy
+            => { Debug println: "SPLITBY vanilla: {aSend} ({self})" }.
         aSend
             receiver: (aSend receiver visitBy: self)
             arguments: (aSend arguments
@@ -114,6 +125,7 @@ interface AstRewriter
         (aMethod selector == #splitBy:)
             ifTrue: { Debug println: "PROCESSING SPLITBY: {aMethod body}" }.
         aMethod compilerInfo add: self.
+        let $InSplitBy = (aMethod selector == #splitBy:).
         aMethod body: (aMethod body visitBy: self)!
 
     method visitArray: anArray
