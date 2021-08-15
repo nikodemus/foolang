@@ -133,9 +133,17 @@ extend AstMethod
         self body isTrivial!
 
     method inlineOn: receiver withArguments: arguments
-        self body
-            inlineOn: receiver
-            withArguments: arguments!
+        let args = arguments
+                       with: self argumentVariables
+                       collect: { |arg var|
+                                  AstTypecheck
+                                      value: arg
+                                      type: var declaredType }.
+        AstTypecheck
+            value: (self body
+                        inlineOn: receiver
+                        withArguments: args)
+            type: self returnType!
 end
 
 extend AstSend
