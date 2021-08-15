@@ -2,6 +2,10 @@ define DirectMethods
     Dictionary new!
 
 define InstanceMethods {
+     #hash
+     -> { signature: [], vars: 0,
+          body: "return FOO_INTEGER(0xb5f99fd84e31da5d);" },
+
     #clock
     -> { signature: [], vars: 0,
          body: "return FOO_INSTANCE(Clock, NULL);" },

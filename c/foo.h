@@ -23,6 +23,7 @@
 struct FooContext;
 struct FooClass;
 
+// FIXME: inline foo_hash_fixed, out of line for non-fixed
 inline uint64_t foo_hash(struct FooClass* class, const void* data, size_t size) {
   return XXH3_64bits_withSeed(data, size, (uintptr_t)class);
 }
