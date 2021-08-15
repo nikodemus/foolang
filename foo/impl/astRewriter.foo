@@ -79,6 +79,8 @@ interface AstRewriter
         (aClass compilerInfo includes: self)
             ifTrue: { return aClass }.
         aClass compilerInfo add: self.
+        aClass allInterfaces
+            do: { |each| each visitBy: self }.
         aClass directMethods
             do: { |each| each visitBy: self }.
         aClass instanceMethods
@@ -91,6 +93,8 @@ interface AstRewriter
         (anInterface compilerInfo includes: self)
             ifTrue: { return anInterface }.
         anInterface compilerInfo add: self.
+        anInterface allInterfaces
+            do: { |each| each visitBy: self }.
         anInterface directMethods
             do: { |each| each visitBy: self }.
         anInterface instanceMethods
