@@ -59,6 +59,8 @@ class KnownMethodResolver { env didNothing }
                      receiver: recv
                      arguments: args
                      source: aSend source }.
+        (aSend selector == #to:do:)
+            => { Debug println: "NORESOLVE: #to:do: with receiver: {recv} :: {type}" }.
         aSend
             receiver: recv
             arguments: args!
