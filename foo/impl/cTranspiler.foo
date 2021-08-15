@@ -1433,14 +1433,6 @@ class CTranspiler { output selectorMap closureFunctions
         output print: "); })"!
 
     method visitSend: aSend
-        ((aSend selector name == "to:do:") and: ($home selector name == "splitBy:"))
-            => { Debug println: "WTF???".
-                 Debug println: "method home: {$home home}".
-                 Debug println: "info: {$home compilerInfo}".
-                 Debug println: "send: {aSend}".
-                 Debug println: "AST:".
-                 AstPrinter print: $home body to: Debug.
-                 panic "This will not stand" }.
         -- Tracer visitSend: aSend selector.
         output print: "(\{ ".
         let receiver = self _visitTemp: aSend receiver.
