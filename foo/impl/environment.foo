@@ -150,13 +150,18 @@ class Variable { name declaredType index hasAssignments boundBy }
         visitor visitVariable: self!
 end
 
-class Argument { name type index }
+class Argument { name declaredType index }
     is Object
 
     direct method name: name type: type frame: frame
-        let var = self name: name type: type index: frame size + 1.
+        let var = self name: name
+                       declaredType: type
+                       index: frame size + 1.
         frame add: var.
         var!
+
+    method type
+        declaredType!
 
     method referenceUpwards: offset
         AstLexicalRef variable: self frameOffset: offset!
