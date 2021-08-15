@@ -4,10 +4,7 @@ interface Type
     is Object
 
     method isSubtypeOf: type
-        type is Any
-            ifTrue: { True }
-            ifFalse: { Debug println: "subtype? {self} of {type}".
-                       False }!
+        type is Any!
 
     method findMethod: selector in: env
         self earlyBinding
