@@ -14,7 +14,11 @@ define IntegerMethods
 return ctx->receiver;"},
       #%
           -> { signature: [Integer], vars: 0,
-               body: "return FOO_INTEGER(ctx->receiver.datum.int64 % ctx->frame[0].datum.int64);" },
+               body: "int64_t mod = ctx->frame[0].datum.int64;
+                      if (mod == 0)
+                          return ctx->frame[0];
+                      else
+                          return FOO_INTEGER(receiver.datum.int64 % mod);" },
       #integerAdd:
           -> { signature: [Integer], vars: 0,
                body: "return FOO_INTEGER(ctx->receiver.datum.int64 + ctx->frame[0].datum.int64);" },
