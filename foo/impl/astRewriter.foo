@@ -18,57 +18,57 @@ interface AstRewriter
 
     method visitGlobal: aGlobal
         -- Definitions cannot change their identity
-        aGlobal definition visitBy: self.
+        self visit: aGlobal definition.
         aGlobal!
 
     method visitDynamic: aDynamic
         -- Definitions cannot change their identity
-        aDynamic definition visitBy: self.
+        self visit: aDynamic definition.
         aDynamic!
 
     method visitIs: anIs
-        anIs left: (anIs left visitBy: self)
-             right: (anIs right visitBy: self)!
+        anIs left: (self visit: anIs left)
+             right: (self visit: anIs right)!
 
     method visitSeq: aSeq
         aSeq first: (self visit: aSeq first)
              then: (self visit: aSeq then)!
 
     method visitPanic: aPanic
-        aPanic value: (aPanic value visitBy: self)!
+        aPanic value: (self visit: aPanic value)!
 
     method visitReturn: aReturn
-        aReturn value: (aReturn value visitBy: self)!
+        aReturn value: (self visit: aReturn value)!
 
     method visitCallMethod: aCall
         aCall
-            target: (aCall target visitBy: self)
-            receiver: (aCall receiver visitBy: self)
+            target: (self visit: aCall target)
+            receiver: (self visit: aCall receiver)
             arguments: (aCall arguments
-                            collect: { |each| each visitBy: self })!
+                            collect: { |each| self visit: each })!
 
     method visitSend: aSend
         $InSplitBy
             => { Debug println: "SPLITBY vanilla: {aSend} ({self})" }.
         aSend
-            receiver: (aSend receiver visitBy: self)
+            receiver: (self visit: aSend receiver)
             arguments: (aSend arguments
-                            collect: { |each| each visitBy: self })!
+                            collect: { |each| self visit: each })!
 
     method visitCascade: aCascade
         aCascade
-            receiver: (aCascade receiver visitBy: self)
+            receiver: (self visit: aCascade receiver)
             messages: (aCascade messages
-                           collect: { |each| each visitBy: self })!
+                           collect: { |each| self visit: each })!
 
     method visitCascadeReceiver: aReceiver
         aReceiver!
 
     method visitTypecheck: aTypecheck
-        aTypecheck value: (aTypecheck value visitBy: self)!
+        aTypecheck value: (self visit: aTypecheck value)!
 
     method visitBlock: aBlock
-        aBlock body: (aBlock body visitBy: self)!
+        aBlock body: (self visit: aBlock body)!
 
     method visitDefine: aDefine
         -- By default ignore defines: we can just evaluate them.
@@ -91,78 +91,69 @@ interface AstRewriter
             ifTrue: { return aClass }.
         aClass compilerInfo add: self.
         aClass allInterfaces
-            do: { |each| each visitBy: self }.
+            do: { |each| self visit: each }.
         aClass directMethods
-            do: { |each| each visitBy: self }.
+            do: { |each| self visit: each }.
         aClass instanceMethods
-            do: { |each| each visitBy: self }.
+            do: { |each| self visit: each }.
         aClass!
 
     method visitInterfaceDefinition: anInterface
-        (anInterface name == "Ordered")
-            ifTrue: { Debug println: "ORDERED SEEN" }.
         (anInterface compilerInfo includes: self)
             ifTrue: { return anInterface }.
         anInterface compilerInfo add: self.
         anInterface allInterfaces
-            do: { |each| each visitBy: self }.
+            do: { |each| self visit: each }.
         anInterface directMethods
-            do: { |each| each visitBy: self }.
+            do: { |each| self visit: each }.
         anInterface instanceMethods
-            do: { |each|
-                  (anInterface name == "Ordered")
-                      ifTrue: { Debug println: "XXX: {each}" }.
-                  each visitBy: self }.
+            do: { |each| self visit: each }.
         anInterface!
 
     method visitMethod: aMethod
-        (aMethod selector == #splitBy:)
-            ifTrue: { Debug println: "SPLITBY: seen {aMethod}" }.
         aMethod hasBody
             ifFalse: { return aMethod }.
         (aMethod compilerInfo includes: self)
             ifTrue: { return aMethod }.
-        (aMethod selector == #splitBy:)
-            ifTrue: { Debug println: "PROCESSING SPLITBY: {aMethod body}" }.
         aMethod compilerInfo add: self.
         let $InSplitBy = (aMethod selector == #splitBy:).
-        aMethod body: (aMethod body visitBy: self)!
+        aMethod body: (self visit: aMethod body)!
 
     method visitArray: anArray
         anArray
             entries: (anArray entries
-                          collect: { |each| each visitBy: self })!
+                          collect: { |each| self visit: each })!
 
     method visitDictionary: aDictionary
         aDictionary
             entries: (aDictionary entries
-                          collect: { |each| { key: (each key visitBy: self),
-                                              value: (each value visitBy: self) } })!
+                          collect: { |each| { key: (self visit: each key),
+                                              value: (self visit: each value) } })!
 
     method visitRecord: aRecord
         aRecord
-            values: (aRecord values collect: { |each| each visitBy: self })!
+            values: (aRecord values collect: { |each| self visit: each })!
 
     method visitSlotRef: aSlotRef
         aSlotRef!
 
     method visitSlotSet: aSlotSet
         aSlotSet
-            value: (aSlotSet value visitBy: self)!
+            value: (self visit: aSlotSet value)!
 
     method visitBindDynamic: aBind
         aBind
-            value: (aBind value visitBy: self)
-            body: (aBind body visitBy: self)!
+            value: (self visit: aBind value)
+            body: (self visit: aBind body)!
 
     method visitBindLexical: aBind
         aBind
-            value: (aBind value visitBy: self)
-            body: (aBind body visitBy: self)!
+            value: (self visit: aBind value)
+            body: (self visit: aBind body)!
 
     method visitLexicalRef: aRef
         aRef!
 
     method visitLexicalSet: aSet
-        aSet value: (aSet value visitBy: self)!
+        aSet value: (self visit: aSet value)!
 end
