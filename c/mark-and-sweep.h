@@ -5,16 +5,16 @@
 #include <stddef.h>
 
 void foo_mark_array(void* ptr);
-void foo_mark_bytes(void* ptr);
+void foo_mark_binary(void* ptr);
 void foo_mark_class(void* ptr);
 void foo_mark_closure(void* ptr);
 void foo_mark_file(void* ptr);
 void foo_mark_filestream(void* ptr);
 void foo_mark_instance(void* ptr);
 void foo_mark_layout(void* ptr);
-void foo_mark_none(void* ptr);
+void foo_mark_immediate(void* ptr);
 void foo_mark_oops(void* ptr);
-void foo_mark_ptr(void* ptr);
+void foo_mark_selector(void* ptr);
 
 struct FooContext;
 

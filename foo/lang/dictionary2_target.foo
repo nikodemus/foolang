@@ -1,0 +1,277 @@
+import .any.Any
+import .array.Array
+import .array_target_ext
+import .object.Object
+import .stringOutput.StringOutput
+import .exception.Error
+import .list.List
+
+define MaxProbeDepth
+    4!
+
+define Tombstone
+    ["Tombstone"]!
+
+class Dictionary { size::Integer
+                   _keys::Array
+                   _values::Array }
+    is Object
+
+    direct method new
+        -- Output debug println: "Dictionary new".
+        self size: 0
+             _keys: (Array new: 8 value: Tombstone)
+             _values: (Array new: 8)!
+
+    direct method withCapacity: capacity
+        -- Output debug println: "Dictionary withCapacity:".
+        let allocSize = (capacity + 1) * 2.
+        self size: 0
+              _keys: (Array new: allocSize value: Tombstone)
+              _values: (Array new: allocSize)!
+
+    direct method keys: keys values: values
+        -- Output debug println: "Dictionary keys:values:".
+        let size = keys size.
+        size == values size
+            ifFalse: { Error raise: "Size mismatch: keys {size}, values {values size}" }.
+        let new = self withCapacity: size.
+        keys
+            with: values
+            do: { |eachKey eachValue|
+                  new put: eachValue
+                      at: eachKey }.
+        new!
+
+    -- For CTranspiler's serialization.
+    method _values
+        _values!
+
+    -- For CTranspiler's serialization.
+    method _keys
+        _keys!
+
+    method put: value at: key
+        -- Output debug println: "Dictionary#put:at:".
+        { (self _tryPut: value _at: key)
+              ifTrue: { return value }.
+           self _grow }
+        loop!
+
+    method isEmpty
+        -- Output debug println: "Dictionary#isEmpty".
+        size is 0!
+
+    method at: key put: value
+        -- Output debug println: "Dictionary#at:put:".
+        self put: value
+             at: key!
+
+    method at: key
+        (self _valueIndex: key)
+            => { |index| return _values at: index }.
+        False!
+
+    method at: key ifNone: block
+        -- Output debug println: "Dictionary#at:ifNone:".
+        -- Output debug println: "key: {key}".
+        -- Output debug println: self.
+        (self _valueIndex: key)
+            => { |index| return _values at: index }.
+        block value!
+
+    method at: key ifNonePut: block
+        -- Output debug println: "Dictionary#at:ifNonePut:".
+        (self _valueIndex: key)
+            => { |index| return _values at: index }.
+        self put: block value
+             at: key!
+
+    method has: key
+        -- Output debug println: "Dictionary#has:".
+        self at: key
+             ifNone: { return False }.
+        True!
+
+    method do: block
+        -- Output debug println: "Dictionary#do:".
+        1 to: _keys size
+          do: { |index|
+                let key = _keys at: index.
+                key is Tombstone
+                    ifFalse: { block
+                                   optional: key
+                                   value: (_values at: index) } }.
+        self!
+
+    method doKeys: block
+        1 to: _keys size
+          do: { |index|
+                let key = _keys at: index.
+                key is Tombstone
+                    ifFalse: { block value: key } }.
+        self!
+
+    method doValues: block
+        -- Output debug println: "Dictionary#doValues:".
+        1 to: _keys size
+          do: { |index|
+                let key = _keys at: index.
+                key is Tombstone
+                    ifFalse: { block value: (_values at: index) } }.
+        self!
+
+    method remove: key
+        -- Output debug println: "Dictionary#remove:".
+        let index = self _valueIndex: key.
+        index is False
+            ifTrue: { return False }.
+        _keys put: Tombstone
+              at: index.
+        _values put: False
+                at: index.
+        size = size - 1.
+        True!
+
+    method _tryPut: value _at: key
+        -- Output debug println: "Dictionary#_tryPut:_at:".
+        (self _keyIndex: key)
+            => { |index|
+                 _values
+                     put: value
+                     at: index.
+                 return True }.
+        False!
+
+    -- Returns a valid index corresponding to the key, or
+    -- False if no such index exists.
+    --
+    -- Guarantees that (_keys at: index) == key, but status
+    -- of (_values at: index) is unspecified.
+    method _keyIndex: key
+        -- Output debug println: "Dictionary#_keyIndex:".
+        let nKeys::Integer = _keys size.
+        let start::Integer = (key hash :: Integer % nKeys) :: Integer + 1.
+        let free = False.
+        start to: (nKeys min: (start + MaxProbeDepth))
+              do: { |index|
+                    let other = _keys at: index.
+                    (other == key) :: Boolean
+                        ifTrue: { return index }.
+                    other is Tombstone
+                        ifTrue: { free is False
+                                      ifTrue: { free = index } } }.
+        free is False
+            ifFalse: { _keys put: key at: free.
+                       size = size + 1 }.
+        free!
+
+    -- Returns a valid index corresponding to a value stored
+    -- at the key, or False is no such index exists.
+    --
+    -- Guarantees that (_keys at: index) == key, and that
+    -- (_values at: index) holds a value stored there using
+    -- an equal key.
+    method _valueIndex: key
+        -- Output debug println: "Dictionary#_valueIndex: {key}".
+        let nKeys::Integer = _keys size.
+        -- FIXME: Not a huge fan of how the dictionary lookup
+        -- doesn't wrap around to start.
+        --
+        -- Also not a huge fan of the duplication between this
+        -- and _keyIndex: -- easy to break.
+        let start::Integer = (key hash :: Integer % nKeys) :: Integer + 1.
+        start to: (nKeys min: (start + MaxProbeDepth))
+              do: { |index|
+                    let other = _keys at: index.
+                    other == key
+                        ifTrue: { return index } }.
+        False!
+
+    method _grow
+        -- Output debug println: "Dictionary#_grow:".
+        let oldKeys = _keys.
+        let oldValues = _values.
+        { let newSize = (_keys size * 2) truncate.
+          size = 0.
+          _keys = Array new: newSize value: Tombstone.
+          _values = Array new: newSize.
+          self
+              _tryRehashKeys: oldKeys
+              _withValues: oldValues }
+        whileFalse!
+
+    method _tryRehashKeys: keys _withValues: values
+        -- Output debug println: "Dictionary#_tryRehashKeys:_withValues:".
+        keys
+            with: values
+            do: { |eachKey eachValue|
+                  eachKey is Tombstone
+                      ifFalse: { (self _tryPut: eachValue _at: eachKey)
+                                     ifFalse: { return False } } }.
+        True!
+
+    method writeOn: out using: block
+        self size is 0
+            ifTrue: { out writeString: "Dictionary new".
+                      return out }.
+        out print: "\{ ".
+        self keys sort
+            do: { |each|
+                  block value: each value: out.
+                  out writeString: " -> ".
+                  block value: (self at: each) value: out }
+            interleaving: { out writeString: ",\n  " }.
+        out print: " }"!
+
+    method displayOn: out
+        self writeOn: out using: (#displayOn:)!
+
+    method isEquivalent: other
+        -- Output debug println: "Dictionary#isEquivalent:".
+        self size is other size
+            ifFalse: { return False }.
+        self doKeys: { |key|
+                       (other
+                            at: key
+                            ifNone: { return False }) == (self at: key)
+                       ifFalse: { return False } }.
+        True!
+
+    method merge: other
+        -- Output debug println: "Dictionary#merge:".
+        other
+            doKeys: { |key|
+                      self put: (other at: key)
+                           at: key }.
+        self!
+
+    method removeAll: keys
+        -- Output debug println: "Dictionary#removeAll:".
+        keys do: { |each| self remove: each }.
+        self!
+
+    method keys
+        let list = List new.
+        self doKeys: { |each| list add: each }.
+        list!
+
+    method values
+        let list = List new.
+        self doValues: { |each| list add: each }.
+        list!
+
+    method copy
+        Self
+            size: size
+            _keys: _keys copy
+            _values: _values copy!
+
+    method collect: block
+        -- Output debug println: "Dictionary#collect:".
+        let result = Self new.
+        self do: { |key value|
+                   result put: (block optional: key value: value)
+                          at: key }.
+        result!
+end

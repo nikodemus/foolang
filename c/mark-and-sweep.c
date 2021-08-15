@@ -83,13 +83,14 @@ bool foo_mark_live(void* ptr) {
   return new_mark;
 }
 
-void foo_mark_ptr(void* ptr) {
-  ENTER_TRACE("mark_ptr");
-  foo_mark_live(ptr);
-  EXIT_TRACE();
+void foo_mark_selector(void* ptr) {
+  (void)ptr;
+  // Currently never freed, so a NOP -- but distinct
+  // from foo_mark_immediate because we want to use the
+  // latter to identify non-pointer immediates!
 }
 
-void foo_mark_bytes(void* ptr) {
+void foo_mark_binary(void* ptr) {
   ENTER_TRACE("mark_bytes");
   struct FooBytes* bytes = ptr;
   if (bytes->header.allocation == HEAP) {
@@ -102,7 +103,7 @@ void foo_mark_file(void* ptr) {
   ENTER_TRACE("mark_file");
   struct FooFile* file = ptr;
   if (file->header.allocation == HEAP && foo_mark_live(file)) {
-    foo_mark_bytes(file->pathname);
+    foo_mark_binary(file->pathname);
   }
   EXIT_TRACE();
 }
@@ -111,7 +112,7 @@ void foo_mark_filestream(void* ptr) {
   ENTER_TRACE("mark_bytes");
   struct FooFileStream* stream = ptr;
   if (stream->header.allocation == HEAP && foo_mark_live(stream))  {
-    foo_mark_bytes(stream->pathname);
+    foo_mark_binary(stream->pathname);
   }
   EXIT_TRACE();
 }
@@ -125,12 +126,15 @@ void foo_mark_object(struct Foo obj) {
     foo_mark_class(obj.class);
     obj.class->mark(obj.datum.ptr);
   } else {
+    if (obj.datum.int64) {
+      FOO_XXX("WTF? %p, %zu", obj.datum.ptr, (size_t)obj.datum.int64);
+    }
     assert(!obj.datum.int64);
   }
   EXIT_TRACE();
 }
 
-void foo_mark_none(void* ptr) {
+void foo_mark_immediate(void* ptr) {
   (void)ptr;
 }
 
@@ -193,7 +197,7 @@ void foo_mark_class(void* ptr)
   DEBUG_GC(" (%s)", class->name->data);
   assert(class);
   if (class->header.allocation == HEAP && foo_mark_live(class)) {
-    foo_mark_bytes(class->name);
+    foo_mark_binary(class->name);
     foo_mark_class(class->metaclass);
     foo_mark_class_list(class->inherited);
     foo_mark_layout(class->layout);
@@ -214,7 +218,7 @@ void foo_mark_class(void* ptr)
 void foo_mark_closure(void* ptr) {
   ENTER_TRACE("mark_closure");
   struct FooClosure* closure = ptr;
-  if (foo_mark_live(closure)) {
+  if (closure->header.allocation == HEAP && foo_mark_live(closure)) {
     foo_mark_context(closure->context);
   }
   EXIT_TRACE();

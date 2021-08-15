@@ -1,5 +1,15 @@
 define InstanceMethods
-    Dictionary new!
+    { #hash
+          -> { signature: [], vars: 0,
+               body: "struct FooArray* instance = PTR(FooArray, receiver.datum);
+                      int64_t hash = 0;
+                      for (size_t i = 0; i < instance->size; i++) \{
+                           struct Foo slot_hash = foo_class_typecheck(sender, &FooClass_Integer, foo_send(sender, &FOO_hash, instance->data[i], 0));
+                           hash = foo_hashmix(hash, slot_hash.datum.int64);
+                      }
+                      return FOO_INTEGER(MASK_SIGN(hash));" },
+
+         }!
 
 define DirectMethods
     { #keysIn:

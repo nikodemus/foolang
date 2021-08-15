@@ -215,19 +215,19 @@ class CompilerBuiltins {}
           CompilerBuiltin
               kind: Class
               value: Boolean
-              mark: "foo_mark_none"
+              mark: "foo_mark_immediate"
               directMethods: boolean.DirectMethods
               instanceMethods: boolean.InstanceMethods,
           CompilerBuiltin
               kind: Class
               value: ByteArray
-              mark: "foo_mark_bytes"
+              mark: "foo_mark_binary"
               directMethods: byte_array.DirectMethods
               instanceMethods: byte_array.InstanceMethods,
           CompilerBuiltin
               kind: Class
               value: Character
-              mark: "foo_mark_none"
+              mark: "foo_mark_immediate"
               directMethods: character.DirectMethods
               instanceMethods: character.InstanceMethods,
           CompilerBuiltin
@@ -239,7 +239,7 @@ class CompilerBuiltins {}
           CompilerBuiltin
               kind: Class
               value: Clock
-              mark: "foo_mark_none"
+              mark: "foo_mark_immediate"
               directMethods: clock.DirectMethods
               instanceMethods: clock.InstanceMethods,
           CompilerBuiltin
@@ -263,7 +263,7 @@ class CompilerBuiltins {}
           CompilerBuiltin
               kind: Class
               value: FilePath
-              mark: "foo_mark_bytes"
+              mark: "foo_mark_binary"
               directMethods: filepath.DirectMethods
               instanceMethods: filepath.InstanceMethods,
           CompilerBuiltin
@@ -275,71 +275,67 @@ class CompilerBuiltins {}
           CompilerBuiltin
               kind: Class
               value: Float
-              mark: "foo_mark_none"
+              mark: "foo_mark_immediate"
               directMethods: float.DirectMethods
               instanceMethods: float.InstanceMethods,
           CompilerBuiltin
               kind: Class
               value: Input
-              mark: "foo_mark_none"
+              mark: "foo_mark_immediate"
               directMethods: input.DirectMethods
               instanceMethods: input.InstanceMethods,
           CompilerBuiltin
               kind: Class
               value: Integer
-              mark: "foo_mark_none"
+              mark: "foo_mark_immediate"
               directMethods: Dictionary new
               instanceMethods: integer.IntegerMethods,
           CompilerBuiltin
               kind: Class
               value: Output
-              mark: "foo_mark_none"
+              mark: "foo_mark_immediate"
               directMethods: output.DirectMethods
               instanceMethods: output.InstanceMethods,
           CompilerBuiltin
               kind: Class
               value: Random
-              mark: "foo_mark_none"
+              mark: "foo_mark_binary"
               directMethods: random.DirectMethods
               instanceMethods: random.InstanceMethods,
           CompilerBuiltin
               kind: Interface
               value: Record
-              mark: "foo_mark_none"
+              mark: "foo_mark_immediate"
               directMethods: record.DirectMethods
               instanceMethods: record.InstanceMethods,
           CompilerBuiltin
               kind: Class
               value: Selector
-              mark: "foo_mark_none"
+              mark: "foo_mark_selector"
               directMethods: selector.DirectMethods
               instanceMethods: selector.InstanceMethods,
           CompilerBuiltin
               kind: Class
               value: String
-              mark: "foo_mark_bytes"
+              mark: "foo_mark_binary"
               directMethods: string.DirectMethods
               instanceMethods: string.InstanceMethods,
           CompilerBuiltin
               kind: Class
-              value: (Foolang isSelfHosted
-                          ifTrue: { System }
-                          ifFalse: { { name: "System" } })
-              mark: "foo_mark_none"
+              value: System
+              mark: "foo_mark_immediate"
               directMethods: system.DirectMethods
               instanceMethods: system.InstanceMethods,
           CompilerBuiltin
               kind: Class
-              value: (Foolang isSelfHosted
-                          ifTrue: { SystemRandom }
-                          ifFalse: { { name: "SystemRandom" } })
-              mark: "foo_mark_none"
+              value: SystemRandom
+              mark: "foo_mark_immediate"
               directMethods: system_random.DirectMethods
               instanceMethods: system_random.InstanceMethods,
           CompilerBuiltin
               kind: Class
               value: Time
-              mark: "foo_mark_ptr"
+              mark: "foo_mark_binary"
               directMethods: time.DirectMethods
               instanceMethods: time.InstanceMethods
         ]!
@@ -355,14 +351,25 @@ class SelectorMap { names }
             ifNonePut: { Name mangleSelector: selector }!
 
     method do: block
-        names do: block!
+        -- Sorted order for consistency.
+        names keys sort
+            do: { |each|
+                  block value: each
+                        value: (names at: each) }!
 end
 
 define AlwaysEmittedSelectors
-    [#invoke:on:,
+    [#name,
+     #displayOn:,
+     #classOf,
+     #hash,
+     #identityHash,
+     #__doSelectors:,
+     #invoke:on:,
      #perform:with:,
      #selector,
-     #writeString:]!
+     #writeString:,
+     #==]!
 
 define $home
         False!
@@ -583,14 +590,17 @@ class CTranspiler { output selectorMap closureFunctions
         let output = StringOutput new.
         let prev = "NULL".
         selectorMap do: { |name cname|
-                         output print: "struct FooSelector ".
-                         output print: cname.
-                         output print: " = \{ .name = FOO_CSTRING(".
-                         output display: name.
-                         output print: "), .next = ".
-                         output print: prev.
-                         output print: " };\n".
-                         prev = "&{cname}" }.
+                          output print: "struct FooSelector ".
+                          output print: cname.
+                          output println: " = \{ ".
+                          output println: "       .header = \{ .allocation = STATIC, .identity_hash = {self identityHash: name toSelector} },".
+                          output println: "       .name = FOO_CSTRING(".
+                          output display: name.
+                          output println: "),".
+                          output println: "       .next = ".
+                          output print: prev.
+                          output println: " };".
+                          prev = "&{cname}" }.
         output println: "struct FooSelector* FOO_InternedSelectors = {prev};".
         output!
 
@@ -634,11 +644,14 @@ class CTranspiler { output selectorMap closureFunctions
                                  builtins: builtins.
         builtinVisitor output println: "#include \"foo.h\"".
         -- FIXME: visit only referenced builtins
+        builtinVisitor output println: "// BUILTIN DECLARATIONS".
         builtins
             do: { |each| builtinVisitor forwardDeclarationFor: each }.
+        builtinVisitor output println: "// GLOBAL DECLARATIONS".
         globals
             do: { |each|
                   builtinVisitor forwardDeclarationFor: each definition }.
+        builtinVisitor output println: "// CLOSURE DECLARATIONS".
         closureFunctions
             do: { |closure|
                   output print: closure declaration.
@@ -680,8 +693,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method generateConstantsOn: out
         constants do: { |each| out println: each declaration }.
-        constants do: { |each|
-                        out println: each definition }.
+        constants do: { |each| out println: each definition }.
         out!
 
     method selectorCName: selector
@@ -809,7 +821,7 @@ class CTranspiler { output selectorMap closureFunctions
             with: { |out|
                     out println: "struct FooArray {cname} =".
                     out println: "\{".
-                    out println: "    .header = \{ .allocation = STATIC },".
+                    out println: "    .header = \{ .allocation = STATIC, .identity_hash = {self identityHash: value} },".
                     out println: "    .size = {value size},".
                     out print: "    .data = \{ ".
                     value do: { |each|
@@ -825,21 +837,24 @@ class CTranspiler { output selectorMap closureFunctions
         -- Tracer _instanceDefinition: value _called: cname
         let theClass = self _astClassOf: value.
         self declare: theClass.
-        let slots = theClass definition slots
-                        collect: { |each| each name toSelector }
-                        as: Array.
-        slots == [#size, #_keys, #_values]
-            assert: "Dictionary layout has changed! Got: {slots}".
+        let targetValue = theClass eval new.
+        -- Insert in sorted order for consistency.
+        value keys sort
+            do: { |each|
+                  targetValue
+                        put: (value at: each)
+                        at: each }.
+        let slots = theClass definition slots.
         StringOutput
             with: { |out|
                     out println: "struct FooArray {cname} =".
                     out println: "\{".
-                    out println: "    .header = \{ .allocation = STATIC },".
+                    out println: "    .header = \{ .allocation = STATIC, .identity_hash = {self identityHash: value} },".
                     out println: "    .size = {slots size},".
                     out print: "    .data = \{ ".
-                    [#size, #keys, #values]
+                    slots
                         do: { |each|
-                              self _writeValue: (each sendTo: value)
+                              self _writeValue: (each at: targetValue)
                                    _to: out.
                               out print: "," }.
                     out println: " }".
@@ -854,7 +869,7 @@ class CTranspiler { output selectorMap closureFunctions
             with: { |out|
                     out println: "struct FooArray {cname} =".
                     out println: "\{".
-                    out println: "    .header = \{ .allocation = STATIC },".
+                    out println: "    .header = \{ .allocation = STATIC, .identity_hash = {self identityHash: value} },".
                     out println: "    .size = {slots size},".
                     out print: "    .data = \{ ".
                     slots
@@ -870,7 +885,7 @@ class CTranspiler { output selectorMap closureFunctions
             with: { |out|
                     out println: "struct FooArray {cname} =".
                     out println: "\{".
-                    out println: "    .header = \{ .allocation = STATIC },".
+                    out println: "    .header = \{ .allocation = STATIC, .identity_hash = {self identityHash: value} },".
                     out println: "    .size = {Record sizeOf: value},".
                     out print: "    .data = \{ ".
                     value do: { |each|
@@ -896,7 +911,7 @@ class CTranspiler { output selectorMap closureFunctions
                         do: { |each| self _printStringAsComment: each to: out }.
                     out println: "struct FooBytes {cname} =".
                     out println: "\{".
-                    out println: "    .header = \{ .allocation = STATIC },".
+                    out println: "    .header = \{ .allocation = STATIC, .identity_hash = {self identityHash: value} },".
                     out println: "    .size = {value size},".
                     out print: "    .data = \{ ".
                     value do: { |each|
@@ -1000,13 +1015,17 @@ class CTranspiler { output selectorMap closureFunctions
 
     method _generateLayout: aClass
         -- Tracer _generateLayout: aClass.
+        -- FIXME: proper builtin layouts
         aClass isBuiltin
-            ifTrue: { return "NULL" }. -- FIXME: proper builtin layouts
-        -- FIXME: Since user doesn't have access to these layouts,
-        -- could/should intern them.
+            ifTrue: { return "NULL" }.
+        -- Since user doesn't have access to these layouts, could/should I
+        -- intern them. Will they be accessible through mirrors?
         let name = "FooLayout_{aClass name}".
         output println: "struct FooLayout {name} = \{".
-        output println: "    .header = \{ .allocation = STATIC },".
+        -- The object doesn't exist yet, so we can't hash it -- but it should not
+        -- be accessible either, so we'll hash the C-name instead.
+        -- (Too paranoid to just stick a 0 in here.)
+        output println: "    .header = \{ .allocation = STATIC, .identity_hash = {self hash: name} },".
         output println: "    .mark = foo_mark_oops,".
         output println: "    .size = {aClass slots size}".
         output println: "};".
@@ -1023,7 +1042,10 @@ class CTranspiler { output selectorMap closureFunctions
         forMetaclass
             ifTrue: { interfaces add: (env global: "Class") }.
         output println: "struct FooClassList {inheritance} = \{".
-        output println: "    .header = \{ .allocation = STATIC },".
+        -- The object doesn't exist yet, so we can't hash it -- but it should not
+        -- be accessible either, so we'll hash the C-name instead.
+        -- (Too paranoid to just stick a 0 in here.)
+        output println: "    .header = \{ .allocation = STATIC, .identity_hash = {self hash: inheritance} },".
         output println: "    .size = {interfaces size},".
         output println: "    .data = \{".
         interfaces
@@ -1065,12 +1087,13 @@ class CTranspiler { output selectorMap closureFunctions
         let metaclassNameString = "{anInterface name} interface".
         output println: "struct FooClass {metaclassName} = ".
         output println: "\{".
-        output println: "    .header = \{ .allocation = STATIC },".
+        -- Deferred hash: cannot necessarily construct the instance on host.
+        output println: "    .header = \{ .allocation = STATIC, .identity_hash = {self identityHashBy: { anInterface eval classOf}} },".
         output println: "    .name = &{self constantCName: metaclassNameString}, // {metaclassNameString}".
         output println: "    .metaclass = &FooClass_Class,".
         output println: "    .inherited = &{metaclassInheritance},".
         output println: "    .layout = &TheClassLayout,".
-        output println: "    .mark = foo_mark_none,".
+        output println: "    .mark = foo_mark_class,".
         output println: "    .size = {directMethods size},".
         output println: "    .methods = \{".
         directMethods
@@ -1086,12 +1109,13 @@ class CTranspiler { output selectorMap closureFunctions
         -- FIXME: for runtime instantiation of classes we need to add the instance methods here!
         output println: "struct FooClass {className} = ".
         output println: "\{".
-        output println: "    .header = \{ .allocation = STATIC },".
+        -- Use the C name hash for consistency.
+        output println: "    .header = \{ .allocation = STATIC, .identity_hash = {self identityHashBy: { anInterface eval}} },".
         output println: "    .name = &{self constantCName: anInterface name}, // {anInterface name}".
         output println: "    .metaclass = &{metaclassName},".
         output println: "    .inherited = &{classInheritance},".
         output println: "    .layout = NULL,". -- FIXME
-        output println: "    .mark = foo_mark_none,".
+        output println: "    .mark = foo_mark_class,".
         output println: "    .size = {instanceMethods size},".
         output println: "    .methods = \{".
         instanceMethods
@@ -1180,7 +1204,8 @@ class CTranspiler { output selectorMap closureFunctions
                        let metaclassNameString = "{aClass name} classOf".
                        output println: "struct FooClass {metaclassName} = ".
                        output println: "\{".
-                       output println: "    .header = \{ .allocation = STATIC },".
+                       -- Use the name for consistent identity hash, matches with Class#hash does.
+                       output println: "    .header = \{ .allocation = STATIC, .identity_hash = {self identityHashBy: { aClass eval classOf } } },".
                        output println: "    .name = &{self constantCName: metaclassNameString}, // {metaclassNameString}".
                        output println: "    .metaclass = &FooClass_Class,".
                        output println: "    .inherited = &{metaclassInheritance},".
@@ -1205,7 +1230,7 @@ class CTranspiler { output selectorMap closureFunctions
         -- Debug println: "{aClass} => {aClass markFunction}".
         output println: "struct FooClass {className} = ".
         output println: "\{".
-        output println: "    .header = \{ .allocation = STATIC },".
+        output println: "    .header = \{ .allocation = STATIC, .identity_hash = {self identityHashBy: { aClass eval } } },".
         output println: "    .name = &{self constantCName: aClass name}, // {aClass name}".
         output println: "    .metaclass = &{metaclassName},".
         output println: "    .inherited = &{classInheritance},".
@@ -1230,6 +1255,21 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "};".
         output newline.
         True!
+
+    method hash: object
+        Foolang isSelfHosted
+            ifTrue: { object hash }
+            ifFalse: { 0 }!
+
+    method identityHash: object
+        Foolang isSelfHosted
+            ifTrue: { object identityHash }
+            ifFalse: { 0 }!
+
+    method identityHashBy: block
+        Foolang isSelfHosted
+            ifTrue: { block value identityHash }
+            ifFalse: { 0 }!
 
     method _writeMethod: aMethod _for: aClass
         -- Tracer _writeMethod: aMethod _for: type.
@@ -1261,7 +1301,8 @@ class CTranspiler { output selectorMap closureFunctions
                                ifTrue: { output println: "    struct Foo arg{index} = va_arg(arguments, struct Foo);" }
                                ifFalse: { output println: "    struct Foo arg{index} = foo_class_typecheck_argument(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo), method);" } }.
         output println: "    struct FooContext* ctx = FOOCONTEXT_OF_SIZE({aMethod frameSize}) \{".
-        output println: "        .header = \{ .allocation = STACK },".
+        -- Never hashed.
+        output println: "        .header = \{ .allocation = STACK, .identity_hash = 0 },".
         output println: "        .type = METHOD_CONTEXT,".
         output println: "        .depth = sender->depth + 1,".
         output println: "        .method = method,".

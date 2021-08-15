@@ -209,18 +209,28 @@ interface AstMethodHome
         self _collectMethods: self _standardDirectMethods
              _into: dict.
         let methods = dict values
-            sort: { |each| each selector name }
-                ascending.
+                          sort: { |each| each selector name }
+                              ascending.
         self _directMethodCache: methods.
         methods!
+
+    method _standardInstanceMethods
+        StandardInstanceMethodSelectors
+            collect: { |each|
+                       StandardMethod
+                           -- FIXME: Again a host/target hack for selectors
+                           selector: each toSelector
+                           home: self
+                           isDirect: False }!
 
     method _standardDirectMethods
         StandardDirectMethodSelectors
             collect: { |each|
-                       StandardDirectMethod
-                           -- FIXME: Again a host/target hack
+                       StandardMethod
+                           -- FIXME: Again a host/target hack for selectors
                            selector: each toSelector
-                           home: self }!
+                           home: self
+                           isDirect: True }!
 
     ---
     KLUDGE & FIXME: does not include reader methods, since bootstrap host
@@ -243,6 +253,8 @@ interface AstMethodHome
              _into: dict.
         self _collectFromInterfaces: #instanceMethods
             _into: dict.
+        self _collectMethods: self _standardInstanceMethods
+             _into: dict.
         let methods = dict values
                           sort: { |each| each selector name }
                               ascending.
@@ -387,27 +399,12 @@ class AstDefine { global body frameSize compilerInfo }
         visitor visitDefine: self!
 end
 
-class StandardDirectMethod { selector home }
-    is AstMethod
+define StandardInstanceMethodSelectors
+    [#classOf, #displayOn:, #hash, #identityHash, #==]!
 
-    method isStandard
-        True!
-
-    method isDirect
-        True!
-
-    method methodHomeName
-        Name mangleMetaclass: self home!
-
-    method methodFunctionName
-        Name mangleStandardMethod: selector!
-
-    method displayOn: stream
-        stream writeString: "#<StandardDirectMethod {home name} {selector name}>"!
-end
-
+-- FIXME: Why don't I just have these as Class instance methods?
 define StandardDirectMethodSelectors
-    [#includes:, #name, #classOf]!
+    [#classOf, #displayOn:, #hash, #identityHash, #includes:, #name, #==]!
 
 class AstInterface { name _interfaces _directMethods _instanceMethods
                      _allInterfaces global _env compilerInfo
@@ -450,9 +447,9 @@ class AstInterface { name _interfaces _directMethods _instanceMethods
             ifTrue: { return global eval }.
         { let result = Interface
                            new: name
-                           interfaces: self interfaceObjects
-                           directMethods: self ownDirectMethods
-                           instanceMethods: self ownInstanceMethods.
+                           interfaces: self interfaceObjects asArray
+                           directMethods: self ownDirectMethods asArray
+                           instanceMethods: self ownInstanceMethods asArray.
           _env classes at: result put: self.
           global value: result }
         finally: { _env = False }!
@@ -629,10 +626,10 @@ class AstClass { name superclass _slots
               = Class
                   new: name
                   slots: slots
-                  interfaces: self interfaceObjects
+                  interfaces: self interfaceObjects asArray
                   directMethods: (self ownDirectMethods
-                                      reject: #isConstructor)
-                  instanceMethods: self ownInstanceMethods.
+                                      reject: #isConstructor) asArray
+                  instanceMethods: self ownInstanceMethods asArray.
           -- KLUDGE: Bootstrap implementation doesn't do layouts,
           -- but the layout object is how we access slots in objects.
           -- Put in a dummy one that uses the bootstrap host __atSlot:
@@ -755,6 +752,26 @@ interface AstMethod
         self selector
             sendTo: receiver
             with: arguments!
+end
+
+class StandardMethod { selector home isDirect }
+    is AstMethod
+
+    method isStandard
+        True!
+
+    method methodHomeName
+        -- XXX: Is this right for instance methods as well?
+        Name mangleMetaclass: self home!
+
+    method methodFunctionName
+        Name mangleStandardMethod: selector!
+
+    method displayOn: stream
+        let maybeClassOf = isDirect
+                               ifTrue: { " classOf" }
+                               ifFalse: { "" }.
+        stream writeString: "#<StandardMethod {home name}{maybeClassOf}#{selector name}>"!
 end
 
 class AstConstructorMethod { home }

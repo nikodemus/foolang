@@ -21,11 +21,6 @@ define InstanceMethods
       -> { signature: [], vars: 0, returnType: Float,
            body: "return FOO_FLOAT(receiver.datum.float64 * receiver.datum.float64);" },
 
-      #hash
-          -> { signature: [], vars: 0, returnType: Integer,
-               body: "double f = receiver.datum.float64;
-                      return FOO_INTEGER(MASK_SIGN(foo_hash(0x35F5875BD5391630, &f, sizeof(f))));" },
-
       #toString
       -> { signature: [], vars: 0, returnType: String,
            body: "double arg = ctx->receiver.datum.float64;
