@@ -407,7 +407,6 @@ class CTranspiler { output selectorMap closureFunctions
     direct method transpile: string in: env with: prelude
         let builtins = CompilerBuiltins all.
         env replaceBuiltins: builtins.
-        -- FIXME: move "target class map" to environment?
         prelude is False
             ifFalse: { env importPrelude: prelude }.
         env load: string.
@@ -432,9 +431,11 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each| visitor selectorMap map: each }.
         -- Important to do this before emitting the builtins,
         -- so that they've been optimized as well.
-        let main = AstOptimizer
-                       optimize: (env global: "Main")
-                       in: env.
+        let main = Foolang isSelfHosted
+                       ifTrue: { AstOptimizer
+                                     optimize: (env global: "Main")
+                                     in: env }
+                       ifFalse: { (env global: "Main") }.
         let builtins = visitor generateBuiltins.
         visitor declare: main.
         visitor writeDefinitions.
