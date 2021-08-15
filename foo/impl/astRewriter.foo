@@ -117,7 +117,14 @@ interface AstRewriter
             ifTrue: { return aMethod }.
         aMethod compilerInfo add: self.
         let $InSplitBy = (aMethod selector == #splitBy:).
-        aMethod body: (self visit: aMethod body)!
+        $InSplitBy
+            => { Debug println: "#splitBy:, BEFORE".
+                 AstPrinter print: aMethod body to: Debug }.
+        aMethod body: (self visit: aMethod body).
+        $InSplitBy
+            => { Debug println: "#splitBy:, AFTER".
+                 AstPrinter print: aMethod body to: Debug }.
+        aMethod!
 
     method visitArray: anArray
         anArray
