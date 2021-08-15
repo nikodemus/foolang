@@ -422,16 +422,6 @@ class AstInterface { name _interfaces _directMethods _instanceMethods
     is AstDefinition
     is AstMethodHome
 
-    method copyCollectingMethods: block
-        Self name: name
-             _interfaces: _interfaces
-             _directMethods: (_directMethods collect: block)
-             _instanceMethods: (_instanceMethods collect: block)
-             _allInterfaces: _allInterfaces
-             global: global
-             _env: _env
-             compilerInfo: compilerInfo!
-
     direct method name: name
                   interfaces: interfaces
                   env: env
@@ -503,18 +493,6 @@ class AstClass { name superclass _slots
                  _allInterfaces global _env compilerInfo }
     is AstDefinition
     is AstMethodHome
-
-    method copyCollectingMethods: block
-        Self name: name
-             superclass: superclass
-             _slots: _slots
-             _interfaces: _interfaces
-             _directMethods: (_directMethods collect: block)
-             _instanceMethods: (_instanceMethods collect: block)
-             _allInterfaces: _allInterfaces
-             global: global
-             _env: _env
-             compilerInfo: compilerInfo!
 
     direct method name: name
                   slots: slots
