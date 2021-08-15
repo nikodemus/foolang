@@ -28,12 +28,6 @@ class Dictionary { size::Integer
              _keys: (Array from: keys)
              _values: (Array from: values)!
 
-    method _keys
-        _keys!
-
-    method _values
-        _values!
-
     method _index: key _or: block
         1 to: size
           do: { |index|

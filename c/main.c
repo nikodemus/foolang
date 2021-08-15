@@ -86,6 +86,7 @@ struct FooSelector* foo_intern_new_selector(struct FooBytes* name) {
   nameCopy->header.allocation = STATIC;
   nameCopy->size = name->size;
   struct FooSelector* new = calloc(1, sizeof(struct FooSelector));
+  new->header.allocation = STATIC;
   new->name = nameCopy;
   new->next = FOO_InternedSelectors;
   FOO_InternedSelectors = new;
@@ -233,13 +234,13 @@ struct FooClassList* FooClassList_alloc(struct FooContext* sender, size_t size) 
 
 struct FooLayout TheEmptyLayout = {
   .header = { .allocation = STATIC },
-  .mark = foo_mark_none,
+  .mark = foo_mark_binary,
   .size = 0
 };
 
 struct FooLayout TheClassLayout = {
   .header = { .allocation = STATIC },
-  .mark = foo_mark_none,
+  .mark = foo_mark_binary,
   .size = 0
 };
 
@@ -709,6 +710,86 @@ struct Foo foo_method_classOf(const struct FooMethod* method,
                        .datum = { .ptr = receiver.class } };
 }
 
+const struct FooBytes* foo_displayOn_prefix = FOO_CSTRING("#<");
+const struct FooBytes* foo_displayOn_suffix = FOO_CSTRING(">");
+
+struct Foo foo_method_displayOn_(const struct FooMethod* method,
+                                 const struct FooSelector* selector,
+                                 struct FooContext* sender,
+                                 struct Foo receiver,
+                                 size_t nargs, va_list arguments) {
+  (void)method;
+  (void)selector;
+  (void)nargs;
+  struct Foo stream = va_arg(arguments, struct Foo);
+  foo_send(sender, &FOO_writeString_, stream, 1, FOO_INSTANCE(String, foo_displayOn_prefix));
+  foo_send(sender, &FOO_writeString_, stream, 1, FOO_INSTANCE(String, receiver.class->name));
+  foo_send(sender, &FOO_writeString_, stream, 1, FOO_INSTANCE(String, foo_displayOn_suffix));
+  return receiver;
+}
+
+struct Foo foo_method_doSelectors_(const struct FooMethod* method,
+                                   const struct FooSelector* selector,
+                                   struct FooContext* sender,
+                                   struct Foo receiver,
+                                   size_t nargs, va_list arguments) {
+  (void)method;
+  (void)selector;
+  (void)nargs;
+  struct FooClass* vt = receiver.class;
+  struct Foo block = va_arg(arguments, struct Foo);
+  for (size_t i = 0; i < vt->size; i++) {
+    foo_send(sender, &FOO_value_, block, 1,
+             (struct Foo){ .class = &FooClass_Selector,
+                           .datum = { .ptr = vt->methods[i].selector } });
+  }
+  return receiver;
+}
+
+struct FooRandom FooIdentityPRNG = {
+  .header = { .allocation = STATIC, .identity_hash = 0x1c1b67a35e80dadf },
+};
+
+static inline struct Foo foo_identity_hash(struct Foo receiver) {
+  if (receiver.class->mark == foo_mark_immediate) {
+    // Instances of different immediate classes with same datum bytes will
+    // collide, but that is almost certainly a non-issue.
+    return FOO_INTEGER(MASK_SIGN(foo_hash(&receiver.datum.int64, sizeof(int64_t))));
+  }
+  int64_t* cache = &((struct FooHeader*)receiver.datum.ptr)->identity_hash;
+  int64_t cached = *cache;
+  if (!cached) {
+    *cache = cached = MASK_SIGN(foo_random_next(&FooIdentityPRNG));
+  }
+  return FOO_INTEGER(cached);
+}
+
+struct Foo foo_method_hash(const struct FooMethod* method,
+                           const struct FooSelector* selector,
+                           struct FooContext* sender,
+                           struct Foo receiver,
+                           size_t nargs, va_list arguments) {
+  (void)method;
+  (void)selector;
+  (void)sender;
+  (void)nargs;
+  (void)arguments;
+  return foo_identity_hash(receiver);
+}
+
+struct Foo foo_method_identityHash(const struct FooMethod* method,
+                                   const struct FooSelector* selector,
+                                   struct FooContext* sender,
+                                   struct Foo receiver,
+                                   size_t nargs, va_list arguments) {
+  (void)method;
+  (void)selector;
+  (void)sender;
+  (void)nargs;
+  (void)arguments;
+  return foo_identity_hash(receiver);
+}
+
 struct Foo foo_method_includes_(const struct FooMethod* method,
                                 const struct FooSelector* selector,
                                 struct FooContext* sender,
@@ -734,11 +815,25 @@ struct Foo foo_method_name(const struct FooMethod* method,
   return (struct Foo){ .class = &FooClass_String, .datum = { .ptr = class->name } };
 }
 
+struct Foo foo_method__eq_eq(const struct FooMethod* method,
+                             const struct FooSelector* selector,
+                             struct FooContext* sender,
+                             struct Foo receiver,
+                             size_t nargs, va_list arguments) {
+  (void)method;
+  (void)selector;
+  (void)sender;
+  (void)nargs;
+  struct Foo other = va_arg(arguments, struct Foo);
+  return FOO_BOOLEAN(receiver.class == other.class && receiver.datum.int64 == other.datum.int64);
+}
+
 struct Foo foo_closure_new(struct FooContext* sender,
                            FooClosureFunction function,
                            size_t argCount,
                            size_t frameSize) {
   struct FooClosure* closure = foo_alloc(sender, sizeof(struct FooClosure));
+  closure->header.allocation = HEAP;
   closure->context = sender;
   closure->function = function;
   closure->argCount = argCount;
@@ -759,7 +854,9 @@ struct Foo FooGlobal_False =
   };
 
 struct FooProcessTimes* FooProcessTimes_alloc(struct FooContext* sender) {
-  return foo_alloc(sender, sizeof(struct FooProcessTimes));
+  struct FooProcessTimes* times = foo_alloc(sender, sizeof(struct FooProcessTimes));
+  times->header.allocation = HEAP;
+  return times;
 }
 
 struct FooProcessTimes* FooProcessTimes_now(struct FooContext* sender) {
@@ -866,6 +963,7 @@ void fooinit(void) {
   _setmode(_fileno(stdout), O_BINARY);
   _setmode(_fileno(stderr), O_BINARY);
 #endif
+  foo_random_init(&FooIdentityPRNG, 0x006c25789eff86fe);
 }
 
 const size_t FooFile_READ      = 0b0001;

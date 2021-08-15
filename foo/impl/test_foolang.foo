@@ -776,11 +776,11 @@ end
                     x asArray"
              expect: [1, 2, 3, 4]!
 
-    method testDictionary1
+    method test_Dictionary_without_trailing_comma
         self eval: "let x = 42. let y = 13. \{ x -> y, y + 1 -> x * 2 }"
              expect: { 42 -> 13, 14 -> 84 }!
 
-    method testDictionary2
+    method test_Dictionary_with_trailing_comma
         self eval: "let x = 42. let y = 13. \{ x -> y, y + 1 -> x * 2, }"
              expect: { 42 -> 13, 14 -> 84 }!
 

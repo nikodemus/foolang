@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <setjmp.h>
 
-#include "random.h"
 #include "ext.h"
 
 #if 0
@@ -22,6 +21,7 @@
 
 struct FooContext;
 struct FooClass;
+struct FooRandom;
 
 #define MASK_SIGN(x) ((x) & 0x7FFFFFFFFFFFFFFF)
 
@@ -29,18 +29,22 @@ struct FooClass;
 //
 // When constructing an integer the sign bit needs to be masked out
 // unless you actually want a negative hash.
-static inline uint64_t foo_hash(uint64_t salt, const void* data, size_t size) {
-  return XXH3_64bits_withSeed(data, size, salt);
-}
-
-static inline uint64_t foo_identity_hash(const void* ptr) {
-  return XXH3_64bits(&ptr, sizeof(ptr));
+static inline uint64_t foo_hash(const void* data, size_t size) {
+  return XXH3_64bits(data, size);
 }
 
 static inline uint64_t foo_hashmix(uint64_t a, uint64_t b) {
   a ^= b + 0x9e3779b9 + (a << 6) + (b >> 2);
   return a;
 }
+
+uint64_t foo_random_next(struct FooRandom* random);
+void foo_random_jump(struct FooRandom* random);
+void foo_random_long_jump(struct FooRandom* random);
+uint64_t foo_random_fast(uint64_t* state);
+void foo_random_init(struct FooRandom* random, uint64_t seed);
+
+struct FooRandom* FooRandom_new(struct FooContext* sender, uint64_t seed);
 
 struct Foo foo_panic(struct FooContext* ctx, struct Foo message) __attribute__((noreturn));
 struct Foo foo_panicf(struct FooContext* ctx, const char* fmt, ...) __attribute__((noreturn));
@@ -70,6 +74,12 @@ enum FooAllocType {
 
 struct FooHeader {
   enum FooAllocType allocation;
+  int64_t identity_hash;
+};
+
+struct FooRandom {
+  struct FooHeader header;
+  uint64_t state[4];
 };
 
 struct FooArray {
@@ -87,6 +97,7 @@ struct FooBytes {
 /** Simple intrusive list for interning. O(N), but fine to start with.
  */
 struct FooSelector {
+  struct FooHeader header;
   struct FooSelector* next;
   struct FooBytes* name;
 };
@@ -94,16 +105,19 @@ struct FooSelector {
 struct FooCleanup;
 typedef void (*FooCleanupFunction)(struct FooContext*, struct FooCleanup*);
 
+// Never seen as on object, always stack-allocated: no header.
 struct FooCleanup {
   FooCleanupFunction function;
   struct FooCleanup* next;
 };
 
+// Never seen as on object, always stack-allocated: no header.
 struct FooFinally {
   struct FooCleanup cleanup;
   struct FooClosure* closure;
 };
 
+// Never seen as on object, always stack-allocated: no header.
 struct FooUnbind {
   struct FooCleanup cleanup;
   size_t index;
@@ -161,6 +175,7 @@ typedef struct Foo (*FooMethodFunction)
      va_list);
 typedef struct Foo (*FooClosureFunction)(struct FooContext*);
 
+// Doesn't appear as an object on its own, no header.
 struct FooMethod {
   struct FooClass* home;
   struct FooSelector* selector;
@@ -194,6 +209,7 @@ struct FooClassList {
 };
 
 struct FooClosure {
+  struct FooHeader header;
   struct FooContext* context;
   size_t argCount;
   size_t frameSize;
@@ -201,6 +217,7 @@ struct FooClosure {
 };
 
 struct FooProcessTimes {
+  struct FooHeader header;
   double user;
   double system;
   double real;

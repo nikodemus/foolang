@@ -7,11 +7,16 @@ import .impl.formatter.Formatter
 import .impl.compiler
 
 define CommandLineOptions
-    { ["-h", "--help"]    -> #help,
-      ["-v", "--version"] -> #version,
-      ["-c", "--compile"] -> #compile,
-      ["-f", "--format"]  -> #formatToOutput,
-      ["-F", "--format-in-place"] -> #formatInPlace }!
+    { "-h"     -> #help,
+      "--help" -> #help,
+      "-v"        -> #version,
+      "--version" -> #version,
+      "-c"        -> #compile,
+      "--compile" -> #compile,
+      "-f"       -> #formatToOutput,
+      "--format" -> #formatToOutput,
+      "-F"                -> #formatInPlace,
+      "--format-in-place" -> #formatInPlace }!
 
 class Main { command system }
     direct method run: command in: system
@@ -29,11 +34,10 @@ class Main { command system }
 
     method parseOptions
         let opt = command first.
-        CommandLineOptions
-            do: { |options selector|
-                  (options includes: opt)
-                      ifTrue: { return selector sendTo: self } }.
-        self abort: "Unknown command-line option: {opt}"!
+        let selector = CommandLineOptions
+                           at: opt
+                           ifNone: { self abort: "Unknown command-line option: {opt}" }.
+        selector sendTo: self!
 
     method usage
         system output
