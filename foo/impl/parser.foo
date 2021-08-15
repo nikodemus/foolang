@@ -816,7 +816,7 @@ class SyntaxTable { where _tokens }
         self where: where
              _tokens: (TokenDictionary from: tokens)!
 
-    method tokens
+    method tokens -> TokenDictionary
         _tokens!
 
     method where: newWhere tokens: newTokens
@@ -1163,7 +1163,7 @@ class Parser { source::String
                first::Integer
                last::Integer
                stack::List
-               syntaxTable }
+               syntaxTable::SyntaxTable }
     is Object
 
     method position -> Integer
