@@ -83,7 +83,6 @@ class TrivialMethodInliner { didNothing }
     method visitCallMethod: aCall
         let recv = aCall receiver visitBy: self.
         let args = aCall arguments collect: { |each| each visitBy: self }.
-        Debug println: "tryInline: {aCall}".
         -- Since we're not yet introducing new bindings for arguments
         -- we need to restrict inlining to simple receiver and
         -- arguments.
@@ -112,7 +111,6 @@ extend AstConstantRef
     method isSimple
         True!
     method inlineOn: _receiver withArguments: _arguments
-        Debug println: "inlining constant: {self}".
         self!
 end
 
@@ -120,7 +118,6 @@ extend AstLexicalRef
     method isSimple
         self frameOffset is 0 and: (Argument includes: self variable)!
     method inlineOn: _receiver withArguments: arguments
-        Debug println: "inlining argument: {self} -> {arguments at: self variable index}".
         arguments at: self variable index!
 end
 
@@ -128,20 +125,14 @@ extend AstSelfInstanceRef
     method isSimple
         True!
     method inlineOn: receiver withArguments: _arguments
-        Debug println: "inlining: self".
         receiver!
 end
 
 extend AstMethod
     method isTrivial
-        self body isTrivial
-            ifTrue: { Debug println: "trivial: {self}".
-                      True }
-            ifFalse: { Debug println: "non-trivial: {self} == {self body}".
-                       False }!
+        self body isTrivial!
 
     method inlineOn: receiver withArguments: arguments
-        Debug println: "inlining: {self} on: {receiver} with: {arguments}".
         self body
             inlineOn: receiver
             withArguments: arguments!
@@ -150,15 +141,10 @@ end
 extend AstSend
     method isTrivial
         self receiver isSimple
-            ifTrue: { (self arguments allSatisfy: #isSimple)
-                          ifTrue: { True }
-                          ifFalse: { Debug println: "non-simple arguments: {self arguments reject: #isSimple}".
-                                     False } }
-            ifFalse: { Debug println: "non-simple receiver: {self receiver}".
-                       False }!
+            ifTrue: { self arguments allSatisfy: #isSimple }
+            ifFalse: { False }!
 
     method inlineOn: receiver withArguments: arguments
-        Debug println: "inlining: {self} on: {receiver} with: {arguments}".
         AstSend
             receiver: (self receiver
                            inlineOn: receiver
@@ -174,15 +160,10 @@ end
 extend AstCallMethod
     method isTrivial
         self receiver isSimple
-            ifTrue: { (self arguments allSatisfy: #isSimple )
-                          ifTrue: { True }
-                          ifFalse: { Debug println: "non-simple arguments: {self arguments}".
-                                     False } }
-            ifFalse: { Debug println: "non-simple receiver: {self receiver}".
-                       False }!
+            ifTrue: { self arguments allSatisfy: #isSimple }
+            ifFalse: { False }!
 
     method inlineOn: receiver withArguments: arguments
-        Debug println: "inlining: {self} on: {receiver} with: {arguments}".
         AstCallMethod
             target: self target
             receiver: (self receiver
