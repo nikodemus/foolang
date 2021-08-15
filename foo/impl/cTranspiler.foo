@@ -430,10 +430,12 @@ class CTranspiler { output selectorMap closureFunctions
         -- KLUDGE: ensure selectors with references from C code
         AlwaysEmittedSelectors
             do: { |each| visitor selectorMap map: each }.
-        let builtins = visitor generateBuiltins.
+        -- Important to do this before emitting the builtins,
+        -- so that they've been optimized as well.
         let main = AstOptimizer
                        optimize: (env global: "Main")
                        in: env.
+        let builtins = visitor generateBuiltins.
         visitor declare: main.
         visitor writeDefinitions.
         visitor writeMain: main.
