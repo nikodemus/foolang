@@ -3,7 +3,8 @@ define DirectMethods
           -> {signature: [Any, Integer, Any], vars: 0,
               body: "int64_t size = ctx->frame[1].datum.int64;
 // FIXME: error instead!
-assert(size >= 0);
+if (size < 0)
+   foo_panicf(ctx, \"Negative size! size: %\" PRId64, size);
 struct FooArray* new = FooArray_alloc(ctx, size);
 struct Foo value = ctx->frame[2];
 for (int64_t i = 0; i < size; i++) \{
@@ -14,13 +15,15 @@ return (struct Foo)\{ .class = &FooClass_Array, .datum = \{ .ptr = new } };"},
           -> {signature: [Integer], vars: 0,
               body: "size_t size = ctx->frame[0].datum.int64;
 // FIXME: error instead!
-assert(size >= 0);
+if (size < 0)
+   foo_panicf(ctx, \"Negative size! size: %\" PRId64, size);
 return foo_Array_new(ctx, size);"},
       #new:value:
           -> {signature: [Integer, Any], vars: 0,
               body: "int64_t size = ctx->frame[0].datum.int64;
 // FIXME: error instead!
-assert(size >= 0);
+if (size < 0)
+   foo_panicf(ctx, \"Negative size! size: %\" PRId64, size);
 struct FooArray* new = FooArray_alloc(ctx, size);
 struct Foo value = ctx->frame[1];
 for (int64_t i = 0; i < size; i++) \{
@@ -45,15 +48,19 @@ return ctx->receiver;"},
           -> {signature: [Integer], vars: 0,
               body: "struct FooArray* array = PTR(FooArray, ctx->receiver.datum);
 int64_t i = ctx->frame[0].datum.int64 - 1;
-assert(i >= 0);
-assert(i < array->size);
+if (i < 0)
+   foo_panicf(ctx, \"Invalid index! index: %\" PRId64, i + 1);
+if (i >= array->size)
+   foo_panicf(ctx, \"Index out of bounds! index: %\" PRId64 \"size: %\" PRId64, i + 1, array->size);
 return array->data[i];"},
       #at:put:
           -> {signature: [Integer, Any], vars: 0,
               body: "struct FooArray* array = PTR(FooArray, foo_check_modification(ctx, ctx->receiver.datum));
 int64_t i = ctx->frame[0].datum.int64 - 1;
-assert(i >= 0);
-assert(i < array->size);
+if (i < 0)
+   foo_panicf(ctx, \"Invalid index! index: %\" PRId64, i + 1);
+if (i >= array->size)
+   foo_panicf(ctx, \"Index out of bounds! index: %\" PRId64 \"size: %\" PRId64, i + 1, array->size);
 return array->data[i] = ctx->frame[1];"},
       #copy
           -> {signature: [], vars: 0,
@@ -74,8 +81,10 @@ return (struct Foo)\{ .class = &FooClass_Array, .datum = \{ .ptr = new } };"},
           -> {signature: [Any, Integer], vars: 0,
               body: "struct FooArray* array = PTR(FooArray, foo_check_modification(ctx, ctx->receiver.datum));
 int64_t i = ctx->frame[1].datum.int64 - 1;
-assert(i >= 0);
-assert(i < array->size);
+if (i < 0)
+   foo_panicf(ctx, \"Invalid index! index: %\" PRId64, i + 1);
+if (i >= array->size)
+   foo_panicf(ctx, \"Index out of bounds! index: %\" PRId64 \"size: %\" PRId64, i + 1, array->size);
 return array->data[i] = ctx->frame[0];"},
       #from:to:
           -> {signature: [Integer, Integer], vars: 0,
@@ -83,8 +92,10 @@ return array->data[i] = ctx->frame[0];"},
 int64_t end = ctx->frame[1].datum.int64;
 struct FooArray* self = PTR(FooArray, ctx->receiver.datum);
 // FIXME: errors instead!
-assert(start <= end);
-assert(end <= self->size);
+if (start > end)
+   foo_panicf(ctx, \"Start after end! start: %\" PRId64 \" end: %\" PRId64, start, end);
+if (end > self->size)
+   foo_panicf(ctx, \"End out of bounds! end: %\" PRId64 \" size: %\" PRId64, end, self->size);
 struct FooArray* new = FooArray_alloc(ctx, (size_t)(end-start));
 size_t offset = 0;
 for (size_t i = start; i < end;) \{
