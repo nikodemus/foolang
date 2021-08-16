@@ -201,14 +201,18 @@ interface AstMethodHome
         self _ownDirectMethods values!
 
     method directMethods
+        self _directMethodCache
+            => { |cached| return cached }.
         let dict = self _ownDirectMethods.
         self _collectFromInterfaces: #directMethods
             _into: dict.
         self _collectMethods: self _standardDirectMethods
              _into: dict.
-        dict values
+        let methods = dict values
             sort: { |each| each selector name }
-                      ascending!
+                ascending.
+        self _directMethodCache: methods.
+        methods!
 
     method _standardDirectMethods
         StandardDirectMethodSelectors
@@ -232,14 +236,18 @@ interface AstMethodHome
         self _ownInstanceMethods values!
 
     method instanceMethods
+        self _instanceMethodCache
+            => { |cached| return cached }.
         let dict = self _ownInstanceMethods.
         self _collectMethods: self _readerMethods
              _into: dict.
         self _collectFromInterfaces: #instanceMethods
             _into: dict.
-        dict values
-            sort: { |each| each selector name }
-                      ascending!
+        let methods = dict values
+                          sort: { |each| each selector name }
+                              ascending.
+        self _instanceMethodCache: methods.
+        methods!
 
     method _collectFromInterfaces: selector _into: dict
         self interfaceDefinitions :: Ordered
@@ -402,7 +410,8 @@ define StandardDirectMethodSelectors
     [#includes:, #name, #classOf]!
 
 class AstInterface { name _interfaces _directMethods _instanceMethods
-                     _allInterfaces global _env compilerInfo }
+                     _allInterfaces global _env compilerInfo
+                     _directMethodCache _instanceMethodCache }
     is AstDefinition
     is AstMethodHome
 
@@ -418,9 +427,23 @@ class AstInterface { name _interfaces _directMethods _instanceMethods
                                _allInterfaces: False
                                global: global
                                _env: env
-                               compilerInfo: CompilerInfo new.
+                               compilerInfo: CompilerInfo new
+                               _directMethodCache: False
+                               _instanceMethodCache: False.
         global define: theInterface.
         theInterface!
+
+    method _directMethodCache
+        _directMethodCache!
+
+    method _instanceMethodCache
+        _instanceMethodCache!
+
+    method _directMethodCache: cached
+        _directMethodCache = cached!
+
+    method _instanceMethodCache: cached
+        _instanceMethodCache = cached!
 
     method eval
         global hasValue
@@ -474,7 +497,8 @@ end
 
 class AstClass { name superclass _slots
                  _interfaces _directMethods _instanceMethods
-                 _allInterfaces global _env compilerInfo }
+                 _allInterfaces global _env compilerInfo
+                 _directMethodCache _instanceMethodCache }
     is AstDefinition
     is AstMethodHome
 
@@ -504,7 +528,9 @@ class AstClass { name superclass _slots
                            _allInterfaces: False
                            global: global
                            _env: env
-                           compilerInfo: CompilerInfo new.
+                           compilerInfo: CompilerInfo new
+                           _directMethodCache: False
+                           _instanceMethodCache: False.
         isBuiltin
             ifTrue: { global redefine: theClass }
             ifFalse: { global define: theClass }.
@@ -525,7 +551,9 @@ class AstClass { name superclass _slots
                            _allInterfaces: False
                            global: global
                            _env: env
-                           compilerInfo: List new.
+                           compilerInfo: CompilerInfo new
+                           _directMethodCache: False
+                           _instanceMethodCache: False.
         global define: theClass.
         theClass!
 
@@ -547,6 +575,18 @@ class AstClass { name superclass _slots
         self
             ifSuperclass: { superclass definition isBuiltin }
             ifNot: { False }!
+
+    method _directMethodCache
+        _directMethodCache!
+
+    method _instanceMethodCache
+        _instanceMethodCache!
+
+    method _directMethodCache: cached
+        _directMethodCache = cached!
+
+    method _instanceMethodCache: cached
+        _instanceMethodCache = cached!
 
     method _interfaces
         _interfaces!

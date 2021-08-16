@@ -90,7 +90,8 @@ define DatumClasses
 
 class CompilerBuiltin { kind value markFunction _interfaces
                         _directMethods _instanceMethods _allInterfaces
-                        _global compilerInfo }
+                        _global compilerInfo
+                        _directMethodCache _instanceMethodCache }
     is AstMethodHome
 
     direct method kind: kind
@@ -107,7 +108,9 @@ class CompilerBuiltin { kind value markFunction _interfaces
                            _instanceMethods: False
                            _allInterfaces: False
                            _global: False
-                           compilerInfo: CompilerInfo new.
+                           compilerInfo: CompilerInfo new
+                           _directMethodCache: False
+                           _instanceMethodCache: False.
         theClass _directMethods: directMethods.
         theClass _instanceMethods: instanceMethods.
         theClass!
@@ -143,8 +146,21 @@ class CompilerBuiltin { kind value markFunction _interfaces
     method definitionIn: _env
         self!
 
+    -- FIXME: Why both this and above?
     method definition
         self!
+
+    method _directMethodCache
+        _directMethodCache!
+
+    method _instanceMethodCache
+        _instanceMethodCache!
+
+    method _directMethodCache: cached
+        _directMethodCache = cached!
+
+    method _instanceMethodCache: cached
+        _instanceMethodCache = cached!
 
     method _interfaces
         _interfaces!
