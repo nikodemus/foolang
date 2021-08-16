@@ -151,14 +151,6 @@ interface TestIterable
                 asList
             testing: "with:collect:into: (size 3)"!
 
-    method testContains
-        self assert
-            true: { ["foo"] contains: "foo" }
-            testing: "contains: (true)".
-        self assert
-            false: { ["foo"] contains: "bar" }
-            testing: "contains: (false)"!
-
     method testCount
         self assert
             that: { (self make: [])
@@ -350,21 +342,19 @@ interface TestIterable
             testing: "ifNotEmpty: (not)"!
 
     method testIncludes
-        self assert
-            that: { (self make: [])
-                        includes: 42 }
-            equals: False
-            testing: "includes: (empty)".
-        self assert
-            that: { (self make: [1, 2, 3])
-                        includes: 42 }
-            equals: False
-            testing: "includes: (non-empty, false)".
-        self assert
-            that: { (self make: [1, 42, 3])
-                        includes: 42 }
-            equals: True
-            testing: "includes: (non-empty, true)"!
+        self assert true: { ["foo"] includes: "foo" }
+                    testing: "includes: (true)".
+        self assert false: { ["foo"] includes: "bar" }
+                    testing: "includes: (false)".
+        self assert that: { (self make: []) includes: 42 }
+                    equals: False
+                    testing: "includes: (empty)".
+        self assert that: { (self make: [1,2,3]) includes: 42 }
+                    equals: False
+                    testing: "includes: (non-empty, false)".
+        self assert that: { (self make: [1,42,3]) includes: 42 }
+                    equals: True
+                    testing: "includes: (non-empty, true)"!
 
     method testIncludesAll
         self assert

@@ -370,12 +370,12 @@ class CompilerDictionary { list }
         self list: List new!
 
     method at: global ifNone: block
-        (global compilerInfo contains: #inCompilerDictionary)
+        (global compilerInfo has: #inCompilerDictionary)
             ifTrue: { global definition }
             ifFalse: block!
 
     method ensure: global
-        (global compilerInfo contains: #inCompilerDictionary)
+        (global compilerInfo has: #inCompilerDictionary)
             ifFalse: { global compilerInfo add: #inCompilerDictionary.
                        list add: global }!
 
@@ -392,7 +392,7 @@ class CompilerDictionary { list }
 
     method restoreAll: all
         all do: { |each|
-                  (each compilerInfo contains: #inCompilerDictionary)
+                  (each compilerInfo has: #inCompilerDictionary)
                       assert: "Restoring new things to CompilerDictionary!" }.
         list isEmpty
             assert: "CompilerDictionary not empty on restore.".
@@ -490,7 +490,7 @@ class CTranspiler { output selectorMap closureFunctions
     method forwardDeclarationFor: aGlobal
         (AstBuiltin includes: aGlobal)
             ifTrue: { return False }.
-        (aGlobal compilerInfo contains: #declared)
+        (aGlobal compilerInfo has: #declared)
             ifTrue: { return False }.
         aGlobal compilerInfo add: #declared.
         -- Debug println: "declare: {aGlobal}".
@@ -539,7 +539,7 @@ class CTranspiler { output selectorMap closureFunctions
         { globals isEmpty }
             whileFalse: { globals takeAll
                               do: { |global|
-                                    (global compilerInfo contains: #inAllGlobals)
+                                    (global compilerInfo has: #inAllGlobals)
                                         ifFalse: { global compilerInfo add: #inAllGlobals.
                                                    allGlobals add: global.
                                                    global definition visitBy: self } } }.
@@ -709,7 +709,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method _isPtr: value
         let theClass = value classOf.
-        (DatumClasses contains: theClass)
+        (DatumClasses includes: theClass)
             ifTrue: { return False }.
         True!
 
