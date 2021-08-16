@@ -280,12 +280,6 @@ interface Iterable
                        ifTrue: { collection add: each } }.
         collection!
 
-    method contains: object
-        self do: { |each|
-                   each == object
-                       ifTrue: { return True } }.
-        False!
-
     method sizeEstimate
         self isEmpty
             ifTrue: { 0 }

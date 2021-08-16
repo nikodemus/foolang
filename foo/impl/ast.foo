@@ -9,8 +9,8 @@ class CompilerInfo { tag properties }
         self tag: False
              properties: List new!
 
-    method contains: property
-        properties contains: property!
+    method has: property
+        properties includes: property!
 
     method add: property
         properties add: property!
@@ -157,7 +157,7 @@ interface AstMethodHome
     method __addInterface: anInterface
         -- Order is important, so these must be kept in a list!
         let interfaces = self _interfaces.
-        (interfaces contains: anInterface)
+        (interfaces includes: anInterface)
             ifTrue: { return False }.
         self _interfaces push: anInterface!
 
