@@ -3,11 +3,11 @@ define DirectMethods
 
 define InstanceMethods {
      #hash
-     -> { signature: [], vars: 0,
+     -> { signature: [], vars: 0, returnType: Integer,
           body: "return FOO_INTEGER(0xb5f99fd84e31da5d);" },
 
     #clock
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Clock,
          body: "return FOO_INSTANCE(Clock, NULL);" },
     #_command:
     -> { signature: [String], vars: 0,
@@ -23,11 +23,11 @@ define InstanceMethods {
     -> { signature: [Integer], vars: 0,
          body: "system_exit((int)ctx->frame[0].datum.int64);" },
     #files
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: FilePath,
          body: "struct FooBytes* root = FooBytes_from(ctx, \"\"); // FIXME: could be static string
                 return FOO_INSTANCE(FilePath, root);" },
     #currentDirectory
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: FilePath,
          body: "struct FooBytes* root = FooBytes_from(ctx, \"./\"); // FIXME: could be a static string
                 return FOO_INSTANCE(FilePath, root);" },
     #gc
@@ -53,7 +53,7 @@ define InstanceMethods {
                 return FOO_BOOLEAN(true);" },
 
     #getenv:
-    -> { signature: [String], vars: 0,
+    -> { signature: [String], vars: 0, returnType: String,
          body: "struct FooBytes* bytes = PTR(FooBytes, ctx->frame[0].datum);
                 char* var = getenv((char*)bytes->data);
                 if (var) \{
@@ -62,26 +62,26 @@ define InstanceMethods {
                     return FOO_BOOLEAN(false);
                 }" },
     #input
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Input,
          body: "return FOO_INSTANCE(Input, stdin);"},
 
     #isUnix
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Boolean,
          body: "return FOO_BOOLEAN(system_is_unix());" },
 
     #isWindows
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Boolean,
          body: "return FOO_BOOLEAN(system_is_windows());" },
 
     #isMacOS
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Boolean,
          body: "return FOO_BOOLEAN(system_is_macos());" },
 
     #output
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Output,
          body: "return FOO_INSTANCE(Output, stdout);" },
 
     #random
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: SystemRandom,
          body: "return FOO_INSTANCE(SystemRandom, NULL);" },
 }!
