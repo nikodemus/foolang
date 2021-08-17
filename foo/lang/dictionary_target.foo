@@ -5,7 +5,9 @@ import .array_target_ext
 import .object.Object
 import .stringOutput.StringOutput
 
-class Dictionary { size _keys _values }
+class Dictionary { size::Integer
+                   _keys::Array
+                   _values::Array }
     is Object
 
     direct method new
