@@ -52,6 +52,10 @@ class BuiltinMethod { home selector definition isDirect }
                                  definition: definition
                                  isDirect: areDirect) }.
         dict!
+    method returnType
+        { definition returnType }
+            on: DoesNotUnderstand
+            do: { return Any }!
     method hasNonLocalReturns
         False!
     method stackContext
