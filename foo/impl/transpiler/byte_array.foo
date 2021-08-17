@@ -9,7 +9,7 @@ return (struct Foo)\{ .class = &FooClass_ByteArray, .datum = \{ .ptr = b } };"}
 
 define InstanceMethods {
     #at:
-        -> {signature: [Integer], vars: 0,
+        -> {signature: [Integer], vars: 0, returnType: Integer,
             body: "int64_t index = ctx->frame[0].datum.int64;
 struct FooBytes* b = PTR(FooBytes, ctx->receiver.datum);
 assert(index > 0);
@@ -38,15 +38,15 @@ assert(index <= b->size);
 b->data[index-1] = value;
 return ctx->receiver;"},
     #hash
-          -> { signature: [], vars: 0,
+          -> { signature: [], vars: 0, returnType: Integer,
                body: "struct FooBytes* b = PTR(FooBytes, receiver.datum);
                       return FOO_INTEGER(MASK_SIGN(foo_hash(0xD93E80248C1CF910, b->data, b->size)));" },
     #size
-        -> {signature: [], vars: 0,
+        -> {signature: [], vars: 0, returnType: Integer,
             body: "struct FooBytes* b = PTR(FooBytes, ctx->receiver.datum);
 return FOO_INTEGER(b->size);"},
     #stringFrom:to:
-        -> {signature: [Integer, Integer], vars: 0,
+        -> {signature: [Integer, Integer], vars: 0, returnType: String,
             body: "int64_t from = ctx->frame[0].datum.int64;
                    int64_t to = ctx->frame[1].datum.int64;
                    struct FooBytes* self = PTR(FooBytes, ctx->receiver.datum);
