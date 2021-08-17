@@ -4,14 +4,14 @@ define DirectMethods
 -- FIXME: duplicates Output pretty much
 define InstanceMethods {
     #hash
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Integer,
          body: "return FOO_INTEGER(MASK_SIGN(foo_identity_hash(receiver.datum.ptr)));" },
     #pathname
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: String,
          body: "struct FooFileStream* stream = PTR(FooFileStream, ctx->receiver.datum);
                 return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = stream->pathname } };" },
     #close
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Boolean,
          body: "struct FooFileStream* stream = PTR(FooFileStream, ctx->receiver.datum);
                 if (stream->ptr) \{
                     fclose(stream->ptr);
@@ -39,15 +39,15 @@ define InstanceMethods {
                 \}" },
 
     #flush
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: FileStream,
          body: "fflush(ctx->receiver.datum.ptr);
                 return ctx->receiver;" },
     #isClosed
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Boolean,
          body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
                 return FOO_BOOLEAN(f == NULL);" },
     #offset
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Integer,
          body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
                 if (f)
                     return FOO_INTEGER(ftell(f));
@@ -86,7 +86,7 @@ define InstanceMethods {
                     foo_panicf(ctx, \"FileStream#offsetFromHere: on closed stream.\");
                 return ctx->frame[0];" },
     #readString
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: String,
          body: "FILE* f = PTR(FooFileStream, ctx->receiver.datum)->ptr;
                 if (!f) \{
                     foo_panicf(ctx, \"Cannot read from closed FileStream.\");
@@ -103,7 +103,7 @@ define InstanceMethods {
     -> { signature: [], vars: 0,
          body: "foo_panicf(ctx, \"FileStream#resize: not implemented\");" },
     #toString:
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: String,
          body: "return foo_String_new_from(ctx, \"#<FileStream>\");" },
     #tryReadOnce:bytesInto:at:
     -> { signature: [], vars: 0,
