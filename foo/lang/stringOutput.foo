@@ -2,7 +2,9 @@ import .object.Object
 import .integer_ext
 import .exception.Error
 
-class Chain { _first _last size }
+class Chain { _first::Array
+              _last::Array
+              size::Integer }
     is Object
 
     direct method new
@@ -60,7 +62,7 @@ class Chain { _first _last size }
         stream print: "#<Chain>"!
 end
 
-class StringOutput { _chain }
+class StringOutput { _chain::Chain }
     is Object
 
     direct method toString
