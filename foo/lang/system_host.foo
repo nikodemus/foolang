@@ -1,0 +1,3 @@
+-- Bootstrap host does not have this, so a wafer-thin fake.
+class System {}
+end

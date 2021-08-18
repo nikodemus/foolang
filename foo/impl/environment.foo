@@ -95,19 +95,15 @@ class AllBuiltins { env }
             ; defineClass: Record
             ; defineClass: Selector
             ; defineClass: String
+            ; defineClass: System
+            ; defineClass: SystemRandom
             ; defineClass: Time
                 .
-        -- These ones don't exist on bootstrap host, but happily
-        -- that one doesn't care about undefined variables either...
-        Foolang isSelfHosted
-            ifTrue: { self
-                          ; defineClass: System
-                          ; defineClass: SystemRandom }.
+        -- Constants don't get wrappers.
         self
             ; define: False
             ; define: True
-                .
-        self!
+                !
 end
 
 class Variable { name type index }

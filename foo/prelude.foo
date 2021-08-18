@@ -35,6 +35,7 @@ import .lang.record_host_ext
 import .lang.selector_host.Selector
 import .lang.string.String
 import .lang.stringOutput.StringOutput
+import .lang.system_host.System
 import .lang.system_random_host.SystemRandom
 import .lang.testSuite.TestSuite
 import .lang.time_ext
