@@ -24,7 +24,7 @@ interface Object
 
     method => block
         self is False
-            ifFalse: { block cull: self }!
+            ifFalse: { block optional: self }!
 
     method == other
         (Self includes: other)

@@ -102,7 +102,7 @@ class Dictionary { size::Integer
         1 to: size
           do: { |index|
                 block
-                    cull: (_keys at: index)
+                    optional: (_keys at: index)
                     value: (_values at: index) }.
         self!
 
@@ -193,7 +193,7 @@ class Dictionary { size::Integer
     method collect: block
         let result = Dictionary new.
         self do: { |key value|
-                   result put: (block cull: key value: value)
+                   result put: (block optional: key value: value)
                           at: key }.
         result!
 end

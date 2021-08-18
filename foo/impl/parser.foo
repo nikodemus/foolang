@@ -176,7 +176,7 @@ class TokenBinaryInteger { string first last }
 end
 
 class DefaultEof {}
-    direct method cull: eof
+    direct method optional: eof
         let note = "Cannot parse".
         Error raise: "Cannot parse EOF in prefix position {eof parser syntaxTable where}:
 {(eof parser sourceFrom: eof first to: eof last) note: note}"!
@@ -191,7 +191,7 @@ class TokenEof { position parser }
         self position: position parser: parser!
 
     method parseAsPrefixWith: parser atPrecedence: _precedence
-        $EOF cull: self!
+        $EOF optional: self!
 
     method precedence
         0!
@@ -775,7 +775,7 @@ class TokenDictionary { entries }
 
     method do: block
         entries do: { |each|
-                      block cull: each key
+                      block optional: each key
                             value: each value }!
 
     method merged: aDictionary

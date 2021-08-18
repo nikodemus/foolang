@@ -2,8 +2,8 @@ class TestTargetClosure { assert }
     is TestSuite
 
     method test_cull
-        assert that: { { 53 } cull: 123 } is: 53.
-        assert that: { { |x| x } cull: 675 } is: 675!
+        assert that: { { 53 } optional: 123 } is: 53.
+        assert that: { { |x| x } optional: 675 } is: 675!
 
     method test_finally_block_executes_after_fallthrough
         let log = StringOutput new.
