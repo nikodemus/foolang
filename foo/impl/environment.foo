@@ -71,7 +71,7 @@ class AllBuiltins { env }
             ; __addDirectMethod: (TypecheckDelegator target: builtin).
 
         global is theClass global
-            assert: "Correct global for builtin class."!
+            ifFalse: { Error raise: "#defineClass: {builtin name} went wrong:\nThe following are not the same!\nglobal: {global}\ntheClass global: {theClass global}" }!
 
     method defineAll
         -- Wrappers for builtin classes so that
