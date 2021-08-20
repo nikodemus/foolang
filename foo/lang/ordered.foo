@@ -181,6 +181,15 @@ interface Ordered
         self select: block
              as: self species!
 
+    method < other
+        1 to: (self size min: other size)
+          do: { |index|
+                let a = self at: index.
+                let b = other at: index.
+                a == b
+                    ifFalse: { return a < b } }.
+        self size < other size!
+
     method select: block as: type
         let capacity = self size.
         let tmp = type new: capacity.
