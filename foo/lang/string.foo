@@ -16,15 +16,6 @@ extend String
     method toSelector
         Selector intern: self!
 
-    method < other
-        1 to: (self size min: other size)
-          do: { |index|
-                let a = self at: index.
-                let b = other at: index.
-                a == b
-                    ifFalse: { return a < b } }.
-        self size < other size!
-
     method at: index
         Character code: (self codeAt: index)!
 
