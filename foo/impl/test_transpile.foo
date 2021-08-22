@@ -1080,7 +1080,6 @@ Backtrace:
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  2: Main classOf#foo:
   1: Main classOf#run:in:
 "!
 
@@ -1139,7 +1138,6 @@ Backtrace:
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
-  2: Main classOf#x:
   1: Main classOf#run:in:
 "!
 
