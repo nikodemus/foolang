@@ -54,7 +54,7 @@ fn string_send_to_with(receiver: &Object, args: &[Object], env: &Env) -> Eval {
     receiver2.send(selector2, args2, env)
 }
 
-fn string_to_uppercase(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+fn string_to_uppercase(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     let s = receiver.string_as_str().to_string().to_uppercase();
     Ok(env.foo.into_string(s))
 }
