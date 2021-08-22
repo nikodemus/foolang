@@ -254,12 +254,6 @@ class CompilerBuiltins {}
               instanceMethods: closure.InstanceMethods,
           CompilerBuiltin
               kind: Class
-              value: Layout
-              mark: "foo_mark_layout"
-              directMethods: layout.DirectMethods
-              instanceMethods: layout.InstanceMethods,
-          CompilerBuiltin
-              kind: Class
               value: File
               mark: "foo_mark_file"
               directMethods: file.DirectMethods
@@ -296,6 +290,12 @@ class CompilerBuiltins {}
               instanceMethods: integer.IntegerMethods,
           CompilerBuiltin
               kind: Class
+              value: Layout
+              mark: "foo_mark_layout"
+              directMethods: layout.DirectMethods
+              instanceMethods: layout.InstanceMethods,
+          CompilerBuiltin
+              kind: Class
               value: Output
               mark: "foo_mark_immediate"
               directMethods: output.DirectMethods
@@ -309,7 +309,7 @@ class CompilerBuiltins {}
           CompilerBuiltin
               kind: Interface
               value: Record
-              mark: "foo_mark_immediate"
+              mark: "foo_mark_immediate" -- uh, this is an interface...
               directMethods: record.DirectMethods
               instanceMethods: record.InstanceMethods,
           CompilerBuiltin

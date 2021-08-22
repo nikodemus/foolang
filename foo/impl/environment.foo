@@ -5,6 +5,7 @@ import .ast.AstDefinition
 import .ast.AstDynamic
 import .ast.AstGlobal
 import .ast.AstInterface
+import .ast.AstInterface
 import .ast.AstLexicalRef
 import .ast.AstMethod
 import .ast.AstSlot
@@ -55,7 +56,7 @@ class AllBuiltins { env }
                             global: global
                             value: builtin)!
 
-    method defineClass: builtin
+    method defineClass: builtin mark: markFunction
         let global = env ensureBuiltin: builtin name.
         let theClass = AstClass
                            name: builtin name
@@ -68,6 +69,9 @@ class AllBuiltins { env }
         -- the compiler method definitions can tell how the result
         -- should be wrapped.
         --
+        -- Given this I can load the prelude-defined extensions
+        -- into the wrapper classes.
+        --
         -- Then I just need to make the interpreter convert
         -- constants into wrapped objects and pretty well off.
         theClass
@@ -79,34 +83,47 @@ class AllBuiltins { env }
         global is theClass global
             ifFalse: { Error raise: "#defineClass: {builtin name} went wrong:\nThe following are not the same!\nglobal: {global}\ntheClass global: {theClass global}" }!
 
+    method defineInterface: builtin
+        let global = env ensureBuiltin: builtin name.
+        let theInterface = AstInterface
+                           name: builtin name
+                           interfaces: []
+                           env: env.
+        theInterface
+            ; directMethods: List new
+            ; instanceMethods: List new
+            ; __addDirectMethod: (GenericDelegator target: builtin)
+            ; __addDirectMethod: (TypecheckDelegator target: builtin).
+
+        global is theInterface global
+            ifFalse: { Error raise: "#defineInterface: {builtin name} went wrong:\nThe following are not the same!\nglobal: {global}\ntheInterface global: {theInterface global}" }!
+
     method defineAll
         -- Wrappers for builtin classes so that
         -- prelude can extend them.
         self
-            ; defineClass: Array
-            ; defineClass: Boolean
-            ; defineClass: ByteArray
-            ; defineClass: Class
-            ; defineClass: Clock
-            ; defineClass: Character
-            ; defineClass: Closure
-            ; defineClass: File
-            ; defineClass: FilePath
-            ; defineClass: FileStream
-            ; defineClass: Float
-            ; defineClass: Integer
-            ; defineClass: Input
-            ; defineClass: Layout
-            ; defineClass: Output
-            ; defineClass: Random
-            ; defineClass: Record
-            ; defineClass: Selector
-            ; defineClass: String
-            ; defineClass: System
-            ; defineClass: SystemRandom
-            ; defineClass: Time
-                .
-        -- Constants don't get wrappers.
+            ; defineClass: Array mark: "foo_mark_array"
+            ; defineClass: Boolean mark: "foo_mark_immediate"
+            ; defineClass: ByteArray mark: "foo_mark_binary"
+            ; defineClass: Character mark: "foo_mark_immediate"
+            ; defineClass: Class mark: "foo_mark_class"
+            ; defineClass: Clock mark: "foo_mark_immediate"
+            ; defineClass: Closure mark: "foo_mark_closure"
+            ; defineClass: File mark: "foo_mark_file"
+            ; defineClass: FilePath mark: "foo_mark_binary"
+            ; defineClass: FileStream mark: "foo_mark_filestream"
+            ; defineClass: Float mark: "foo_mark_immediate"
+            ; defineClass: Input mark: "foo_mark_immediate"
+            ; defineClass: Integer mark: "foo_mark_immediate"
+            ; defineClass: Layout mark: "foo_mark_layout"
+            ; defineClass: Output mark: "foo_mark_immediate"
+            ; defineClass: Random mark: "foo_mark_binary"
+            ; defineInterface: Record
+            ; defineClass: Selector mark: "foo_mark_selector"
+            ; defineClass: String mark: "foo_mark_binary"
+            ; defineClass: System mark: "foo_mark_immediate"
+            ; defineClass: SystemRandom mark: "foo_mark_immediate"
+            ; defineClass: Time mark: "foo_mark_binary".
         self
             ; define: False
             ; define: True

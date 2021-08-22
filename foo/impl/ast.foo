@@ -495,7 +495,8 @@ end
 class AstClass { name superclass _slots
                  _interfaces _directMethods _instanceMethods
                  _allInterfaces global _env compilerInfo
-                 _directMethodCache _instanceMethodCache }
+                 _directMethodCache _instanceMethodCache
+                 markFunction }
     is AstDefinition
     is AstMethodHome
 
@@ -507,12 +508,14 @@ class AstClass { name superclass _slots
              slots: slots
              interfaces: interfaces
              env: env
+             markFunction: "foo_mark_instance"
              isBuiltin: False!
 
     direct method name: name
                   slots: slots
                   interfaces: interfaces
                   env: env
+                  markFunction: markFunction
                   isBuiltin: isBuiltin
         let global = env global: name.
         let theClass = self
@@ -527,7 +530,8 @@ class AstClass { name superclass _slots
                            _env: env
                            compilerInfo: CompilerInfo new
                            _directMethodCache: False
-                           _instanceMethodCache: False.
+                           _instanceMethodCache: False
+                           markFunction: markFunction.
         isBuiltin
             ifTrue: { global redefine: theClass }
             ifFalse: { global define: theClass }.
@@ -550,7 +554,8 @@ class AstClass { name superclass _slots
                            _env: env
                            compilerInfo: CompilerInfo new
                            _directMethodCache: False
-                           _instanceMethodCache: False.
+                           _instanceMethodCache: False
+                           markFunction: superclass definition markFunction.
         global define: theClass.
         theClass!
 
@@ -606,11 +611,6 @@ class AstClass { name superclass _slots
 
     method _instanceMethods: methods
         _instanceMethods = methods!
-
-    method markFunction
-        self
-            ifSuperclass: { superclass definition markFunction }
-            ifNot: { "foo_mark_instance" }!
 
     method _readerMethods
         self _methodDictionary:
