@@ -1,7 +1,5 @@
 import .name.Name
 
--- FIXME: Overly restrictive types, mixed integer and float arithmetic not supported
--- yet.
 define IntegerMethods
     { (Selector intern: "prefix-")
           -> { signature: [], vars: 0, returnType: Integer,
