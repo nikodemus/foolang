@@ -15,7 +15,7 @@ import .parser.Parser
 import .syntaxTranslator.SyntaxTranslator
 import .utils.Debug
 
-class GenericDelegator { target }
+class DirectDelegator { target }
     is AstMethod
 
     method isDirect
@@ -78,7 +78,7 @@ class AllBuiltins { env }
         theClass
             ; directMethods: List new
             ; instanceMethods: List new
-            ; __addDirectMethod: (GenericDelegator target: builtin)
+            ; __addDirectMethod: (DirectDelegator target: builtin)
             ; __addDirectMethod: (TypecheckDelegator target: builtin).
 
         global is theClass global
@@ -93,7 +93,7 @@ class AllBuiltins { env }
         theInterface
             ; directMethods: List new
             ; instanceMethods: List new
-            ; __addDirectMethod: (GenericDelegator target: builtin)
+            ; __addDirectMethod: (DirectDelegator target: builtin)
             ; __addDirectMethod: (TypecheckDelegator target: builtin).
 
         global is theInterface global
