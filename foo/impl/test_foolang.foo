@@ -1029,6 +1029,8 @@ Interpreter backtrace:
 
     method test_typecheck_direct_binary_method_arg_fail
         self load: "class Foo \{}
+                        direct method y: y::String
+                            y!
                         direct method @ x::String
                             [x]!
                     end"

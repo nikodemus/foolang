@@ -715,8 +715,10 @@ interface AstMethod
     required method selector
     required method isDirect
 
-    method isRequired
-        False!
+    -- KLUDGE: bootstrap interpreter uses method names, not selectors,
+    -- and expects them to be strings.
+    method name
+        self selector name!
 
     method returnType
         TheUnknownType!
@@ -730,8 +732,8 @@ interface AstMethod
     method isConstructor
         False!
 
-    method name
-        self selector name!
+    method isRequired
+        False!
 
     method isBuiltin
         False!
