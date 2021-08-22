@@ -58,9 +58,10 @@ class AllBuiltins { env }
 
     method defineClass: builtin mark: markFunction
         let global = env ensureBuiltin: builtin name.
+        let slot = AstSlot name: "builtin" index: 1 type: builtin.
         let theClass = AstClass
                            name: builtin name
-                           slots: []
+                           slots: [slot]
                            interfaces: []
                            env: env.
         -- FIXME: I can access the compiler method
