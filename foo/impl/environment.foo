@@ -29,6 +29,20 @@ class DirectDelegator { target }
                    with: args second!
 end
 
+class InstanceDelegator { slot }
+    is AstMethod
+
+    method selector
+        #perform:with:!
+
+    method invoke: args on: receiver
+        args first sendTo: (slot at: receiver)
+                   with: args second!
+
+    method isDirect
+        True!
+end
+
 class TypecheckDelegator { target }
     is AstMethod
 
@@ -79,7 +93,8 @@ class AllBuiltins { env }
             ; directMethods: List new
             ; instanceMethods: List new
             ; __addDirectMethod: (DirectDelegator target: builtin)
-            ; __addDirectMethod: (TypecheckDelegator target: builtin).
+            ; __addDirectMethod: (TypecheckDelegator target: builtin)
+            ; __addInstanceMethod: (InstanceDelegator slot: slot).
 
         global is theClass global
             ifFalse: { Error raise: "#defineClass: {builtin name} went wrong:\nThe following are not the same!\nglobal: {global}\ntheClass global: {theClass global}" }!
