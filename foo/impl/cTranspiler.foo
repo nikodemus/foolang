@@ -1162,11 +1162,6 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "}".
         output newline!
 
-    method _generateInstanceClassOf: aClass
-        { selector: #classOf,
-          methodHomeName: (Name mangleClass: aClass),
-          methodFunctionName: "foo_method_classOf" }!
-
     method visitClassDefinition: aClass
         (aClass compilerInfo tag is self)
             ifTrue: { return False }.
@@ -1199,7 +1194,6 @@ class CTranspiler { output selectorMap closureFunctions
                                ifFalse:{ directMethods }.
         (classMethods anySatisfy: { |each| each selector toSelector == #includes: })
             ifFalse: { Error raise: "Every class must have an #includes: method, {aClass} didn't:\n{classMethods}." }.
-        instanceMethods add: (self _generateInstanceClassOf: aClass).
         isTheClass
             ifFalse: { -- Class metaclass, not needed for Class which
                        -- is its own metaclass.
