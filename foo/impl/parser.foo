@@ -1166,7 +1166,7 @@ class Parser { source::String
                syntaxTable }
     is Object
 
-    method position
+    method position -> Integer
         _position!
 
     method position: pos
@@ -1317,7 +1317,7 @@ class Parser { source::String
     method parsePrefixAtPrecedence: precedence
         self nextToken parseAsPrefixWith: self atPrecedence: precedence!
 
-    method parseSuffixOf: prefix with: precedence
+    method parseSuffixOf: prefix with: precedence::Integer
         let expr = prefix.
         { -- Debug println: "expr: {expr displayString}, precedence={precedence}, next={self lookahead}?, nextPrecedence={self nextPrecedence} in: {syntaxTable where}".
           precedence < self nextPrecedence }
@@ -1329,7 +1329,7 @@ class Parser { source::String
     method parseSuffixOf: prefix
         self nextToken parseAsSuffixOf: prefix with: self!
 
-    method nextPrecedence
+    method nextPrecedence -> Integer
         self lookahead precedence!
 
     method lookahead
@@ -1365,27 +1365,27 @@ class Parser { source::String
             ifTrue: { return self _scanWord }.
         Error raise: "Don't know how to scan pos: {self position} in: {source}"!
 
-    method atEof
+    method atEof -> Boolean
         self atEof: self position!
 
-    method atEof: position
+    method atEof: position -> Boolean
         position > last!
 
-    method atSpecial
+    method atSpecial -> Boolean
         self isAt: { |char|
                      SpecialCharacters
                          anySatisfy: { |special| special == char } }!
 
-    method atDigit
+    method atDigit -> Boolean
         self isAt: #isDigit!
 
-    method atDigitOrUnderscore
+    method atDigitOrUnderscore -> Boolean
         self isAt: { |char| char == UnderscoreCharacter or: char isDigit }!
 
-    method atDoublequote
+    method atDoublequote -> Boolean
         self isAt: { |char| char == DoublequoteCharacter }!
 
-    method atComment
+    method atComment -> Boolean
         self atChar: DashCharacter and: DashCharacter!
 
     method _scanComment
@@ -1395,7 +1395,7 @@ class Parser { source::String
             to: (self skipWhile: { self atChar: DashCharacter })
             in: self!
 
-    method find: aString
+    method find: aString -> Integer
         let start = self position.
         { aString
               allSatisfy: { |s|
@@ -1407,38 +1407,38 @@ class Parser { source::String
         whileFalse: { start = self position: start + 1 }.
         start - 1!
 
-    method atWord
+    method atWord -> Boolean
         self isAt: { |char|
                      char isAlphanumeric or: char == UnderscoreCharacter }!
 
-    method atTerminating
+    method atTerminating -> Boolean
         self atSpecial or: self atWhitespace!
 
-    method atNewline
+    method atNewline -> Boolean
         self isAt: #isNewline!
 
-    method atHorizontalWhitespace
+    method atHorizontalWhitespace -> Boolean
         self isAt: #isHorizontalWhitespace!
 
-    method atSigil
+    method atSigil -> Boolean
         self atEof not
             ifTrue: { (self atWord or: self atTerminating) not }!
 
-    method atWhitespace
+    method atWhitespace -> Boolean
         self isAt: #isWhitespace!
 
-    method atChar: char
+    method atChar: char -> Boolean
         self atEof
             ifTrue: { return False }.
         (source at: self position) == char!
 
-    method atChar: char1 or: char2
+    method atChar: char1 or: char2 -> Boolean
         self atEof
             ifTrue: { return False }.
         let here = (source at: self position).
         here == char1 or: here == char2!
 
-    method atChar: char1 and: char2
+    method atChar: char1 and: char2 -> Boolean
         self atEof
             ifTrue: { return False }.
         (source at: self position) == char1
@@ -1446,7 +1446,7 @@ class Parser { source::String
         (self position + 1 > last)
             ifFalse: { ((source at: self position + 1) == char2) }!
 
-    method atChar: char1 notFollowedBy: char2
+    method atChar: char1 notFollowedBy: char2 -> Boolean
         self atEof
             ifTrue: { return False }.
         (source at: self position) == char1
@@ -1454,7 +1454,7 @@ class Parser { source::String
         (self position + 1 > last)
             ifFalse: { ((source at: self position + 1) == char2) not }!
 
-    method atChar: char1 andThen: test
+    method atChar: char1 andThen: test -> Boolean
         self atEof
             ifTrue: { return False }.
         (source at: self position) == char1
@@ -1462,10 +1462,10 @@ class Parser { source::String
         (self position + 1 > last)
             ifFalse: { (test value: (source at: self position + 1)) }!
 
-    method atChar: char1 andThenNot: testNot
+    method atChar: char1 andThenNot: testNot -> Boolean
         self atChar: char1 andThen: { |char| (testNot value: char) not }!
 
-    method atAnyOf: string
+    method atAnyOf: string -> Boolean
         self atEof
             ifTrue: { return False }.
         1 to: string size
@@ -1474,13 +1474,13 @@ class Parser { source::String
                     ifTrue: { return True } }.
         False!
 
-    method atEscape
+    method atEscape -> Boolean
         (self atEof: self position)
             ifTrue: { return False }.
         (self position >= first)
             ifTrue: { (source at: self position) == EscapeCharacter }!
 
-    method isAt: block
+    method isAt: block -> Boolean
         self atEof
             ifTrue: { False }
             ifFalse: { block value: (source at: self position) }!
