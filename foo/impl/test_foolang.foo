@@ -924,33 +924,33 @@ Interpreter backtrace:
         self eval: "#foo:bar:"
              expect: #foo:bar: !
 
-    method testTypeDecl01
+    method test_typecheck_expression_ok
         self eval: "42::Integer"
              expect: 42!
 
-    method testTypeDecl02
+    method test_typecheck_expression_fail
         self eval: "42::String"
              expectError: TypeError
              where: { |e|
                       e value is 42 and: e expected is String }!
 
-    method testTypeDecl03
+    method test_typecheck_let_init_ok
         self eval: "let x::Integer = 12. 12 + 30"
              expect: 42!
 
-    method testTypeDecl04
+    method test_typecheck_let_init_fail
         self eval: "let x::String = 12. 12 + 30"
              expectError: TypeError
              where: { |e|
                       e value is 12 and: e expected is String }!
 
-    method testTypeDecl05
+    method test_typecheck_let_set_fail
         self eval: "let x::String = \"foo\". x = 123"
              expectError: TypeError
              where: { |e|
                       e value is 123 and: e expected is String }!
 
-    method testTypeDecl06
+    method test_typecheck_slot_init_ok
         self load: "class Foo \{ baz::Integer }
                        method quux
                           baz!
@@ -958,7 +958,7 @@ Interpreter backtrace:
             eval: "(Foo baz: 42) quux"
             expect: 42!
 
-    method testTypeDecl07
+    method test_typecheck_slot_init_fail
         self load: "class Foo \{ bar::String }
                     end"
             eval: "Foo bar: 42"
@@ -966,7 +966,7 @@ Interpreter backtrace:
             where: { |e|
                      e value is 42 and: e expected is String }!
 
-    method testTypeDecl08
+    method test_typecheck_slot_set_fail
         self load: "class Foo \{ bar::String }
                         method boop: x
                             bar = x!
@@ -977,7 +977,7 @@ Interpreter backtrace:
             where: { |e|
                      e value is 42 and: e expected is String }!
 
-    method testTypeDecl09
+    method test_typecheck_method_arg_ok
         self load: "class Foo \{}
                         direct method bar: x::Integer
                             x + 1!
@@ -985,7 +985,7 @@ Interpreter backtrace:
             eval: "Foo bar: 41"
             expect: 42!
 
-    method testTypeDecl10
+    method test_typecheck_method_arg_fail
         self load: "class Foo \{}
                         direct method bar: x::String
                             x at: 1!
@@ -995,7 +995,7 @@ Interpreter backtrace:
             where: { |e|
                      e value is 41 and: e expected is String }!
 
-    method testTypeDecl11
+    method test_typecheck_binary_method_arg_ok
         self load: "class Foo \{}
                         direct method @ x::Integer
                             x + 1!
@@ -1003,7 +1003,7 @@ Interpreter backtrace:
             eval: "Foo @ 41"
             expect: 42!
 
-    method testTypeDecl12
+    method test_typecheck_binary_method_arg_fail
         self load: "class Foo \{}
                         direct method @ x::String
                             x at: 1!
@@ -1013,7 +1013,7 @@ Interpreter backtrace:
             where: { |e|
                      e value is 41 and: e expected is String }!
 
-    method testTypeDecl13
+    method test_typecheck_direct_binary_method_arg_ok
         self load: "class Foo \{}
                         direct method @ x::String
                             let res = (x at: 1) code.
@@ -1023,7 +1023,7 @@ Interpreter backtrace:
             eval: "Foo @ \"a\""
             expect: [97, "ok"]!
 
-    method testTypeDecl14
+    method test_typecheck_direct_binary_method_arg_fail
         self load: "class Foo \{}
                         direct method @ x::String
                             let res = (x at: 1) code.
@@ -1035,23 +1035,23 @@ Interpreter backtrace:
             where: { |e|
                      e value is 97 and: e expected is String }!
 
-    method testTypeDecl15
+    method test_typecheck_block_arg_ok
         self eval: "\{ |x::Integer| x } value: 42"
              expect: 42!
 
-    method testTypeDecl16
+    method test_typecheck_block_arg_fail
         self eval: "\{ |x::String| x } value: 42"
              expectError: TypeError
              where: { |e|
                       e value is 42 and: e expected is String }!
 
-    method testTypeDecl17
+    method test_typecheck_block_arg_assignment_fail
         self eval: "\{ |x::String| x = x size. x } value: \"ok\""
              expectError: TypeError
              where: { |e|
                       e value is 2 and: e expected is String }!
 
-    method testTypeDecl18
+    method test_typecheck_method_return_type_ok
         self load: "class Foo \{}
                        direct method bar -> Integer
                            42!
@@ -1059,7 +1059,7 @@ Interpreter backtrace:
             eval: "Foo bar"
             expect: 42!
 
-    method testTypeDecl19
+    method test_typecheck_method_return_type_fail
         self load: "class Foo \{}
                        direct method bar -> Integer
                            \"oops\"!
@@ -1069,35 +1069,35 @@ Interpreter backtrace:
             where: { |e|
                      e value is "oops" and: e expected is Integer }!
 
-    method testTypeDecl20
+    method test_typecheck_block_return_type_no_args_ok
         self eval: "\{ -> Integer 42 } value"
              expect: 42!
 
-    method testTypeDecl21
+    method test_typecheck_block_return_type_with_arg_ok
         self eval: "\{ |x| -> Integer x * 2 } value: 21"
              expect: 42!
 
-    method testTypeDecl22
+    method test_typecheck_block_return_type_no_args_fail
         self eval: "\{ -> String 42 } value"
              expectError: TypeError
              where: { |e|
                       e value is 42 and: e expected is String }!
 
-    method testTypeDecl23
+    method test_typecheck_block_return_type_with_arg_fail
         self eval: "\{ |x| -> String x * 2 } value: 21"
              expectError: TypeError
              where: { |e|
                       e value is 42 and: e expected is String }!
 
-    method testTypeDecl24
-        self eval: "123::Integer - 1"
-             expect: 122!
+    method test_typecheck_operator_precedence_is_high
+        self eval: "123::Integer toString"
+             expect: "123"!
 
-    method testFloat1
+    method test_eval_float
         self eval: "123.123"
              expect: 123.123!
 
-    method testFloat2
+    method test_eval_float_scientific
         self eval: "1.1e2"
              expect: 110.0!
 
