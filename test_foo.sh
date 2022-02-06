@@ -12,7 +12,6 @@ run() {
 
 if [ -z "$@" ]; then
     run test_foolang.foo
-    run test_prelude.foo
     run test_transpile.foo
 else
     for test in "$@"; do
