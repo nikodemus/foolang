@@ -1101,6 +1101,10 @@ Interpreter backtrace:
         self eval: "1.1e2"
              expect: 110.0!
 
+    method test_42_classOf_is_Integer
+        self eval: "42 classOf is Integer"
+             expect: True!
+
     method testDynamicBinding1
         self load: "define $foo 0!
                     class Test \{}
