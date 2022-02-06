@@ -83,7 +83,7 @@ else
     echo -n "Host: "
     uname -a
     echo -n "Foolang: "
-    git describe --tags --dirty
+    git describe --tags --dirty 2> /dev/null || echo "version-info-missing"
     echo
     echo "Please report the above to: https://github.com/nikodemus/foolang"
     echo

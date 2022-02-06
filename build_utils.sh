@@ -71,7 +71,7 @@ function write_build_info() {
     echo '-- This will be automatically replaced by the default'     >> $v
     echo '-- "unknown-version" once bootstrap.sh has finished.'      >> $v
     echo 'define Version'                  >> $v
-    echo '    "'$(git describe --tags --dirty)'"!' >> $v
+    echo '    "'$(git describe --tags --dirty 2> /dev/null || echo "version-info-missing")'"!' >> $v
 }
 
 function restore_build_info() {
