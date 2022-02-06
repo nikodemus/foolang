@@ -55,11 +55,8 @@ jobs:
       - name: Clang version
         run: clang --version
 
-      - name: Ls
-        run: ls -lha
-
       - name: Bootstrap
-        run: ./build.sh --bootstrap
+        run: bash build.sh --bootstrap
 
       - name: Test Foolang
         run: cargo run foo/impl/test_foolang.foo --use=foo/lib
@@ -239,10 +236,10 @@ jobs:
         run: clang --version
 
       - name: Bootstrap
-        run: ./build.sh --no-interpreter-build
+        run: bash build.sh --no-interpreter-build
 
       - name: No duplicate declarations
-        run: ./no_duplicate_declarations.sh
+        run: bash no_duplicate_declarations.sh
 
   test-foolang-mode:
     name: "Test foolang Emacs mode"
@@ -257,4 +254,4 @@ jobs:
           sudo apt-get install -y emacs26-nox
 
       - name: Test foolang-mode
-        run: ./test-elisp.sh
+        run: bash test-elisp.sh
