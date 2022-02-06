@@ -18,7 +18,7 @@ FOO=$(exename build/foo)
 
 if [[ ! -e $BOOTSTRAP_COMPILER ]]; then
     echo "Bootstrap compiler not found: bootstrapping!"
-    exec bootstrap.sh
+    exec ./bootstrap.sh
 fi
 
 echo "Expected build time: ~1-2min"
