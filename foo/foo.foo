@@ -27,7 +27,6 @@ class Main { command system }
     method run
         command isEmpty
             => { return REPL runIn: system }.
-        let option = command first.
         (command first startsWith: "-")
             ifTrue: { return self parseOptions }.
         self interpret!
