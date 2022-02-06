@@ -55,6 +55,9 @@ jobs:
       - name: Clang version
         run: clang --version
 
+      - name: Ls
+        run: ls -lha
+
       - name: Bootstrap
         run: ./build.sh --bootstrap
 
@@ -236,7 +239,7 @@ jobs:
         run: clang --version
 
       - name: Bootstrap
-        run: ./build.sh --skip-interpreter-build
+        run: ./build.sh --no-interpreter-build
 
       - name: No duplicate declarations
         run: ./no_duplicate_declarations.sh

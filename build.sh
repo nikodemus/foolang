@@ -16,13 +16,13 @@ usage: build.sh [option*]
 
   Options:
 
-    --skip-interpreter-build
-
-        Skip building the bootstrap interpreter. This is for CI use only.
-
     --bootstrap
 
         Force stage 1. even if bootstrap compiler already exists.
+
+    --no-interpreter-build
+
+        Skip building the bootstrap interpreter. This is for CI use only.
 
     --no-verify
 
