@@ -13,7 +13,7 @@ set -euo pipefail
 source build_utils.sh
 
 mkdir -p build/
-BOOTSTRAP_COMPILER=$(exename build/bootstrap-foo)
+BOOTSTRAP_COMPILER=$(exename build/bootstrap-compiler)
 FOO=$(exename build/foo)
 
 if [[ ! -e $BOOTSTRAP_COMPILER ]]; then

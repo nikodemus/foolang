@@ -17,7 +17,7 @@ source build_utils.sh
 
 mkdir -p build/
 BOOTSTRAP_INTERPRETER=$(exename target/debug/bootstrap-interpreter)
-BOOTSTRAP_COMPILER=$(exename build/bootstrap-foo$)
+BOOTSTRAP_COMPILER=$(exename build/bootstrap-compiler)
 SELF_COMPILER=$(exename build/self-compiler)
 FOO=$(exename build/foo)
 
