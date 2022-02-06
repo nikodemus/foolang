@@ -56,7 +56,7 @@ jobs:
         run: clang --version
 
       - name: Bootstrap
-        run: ./bootstrap.sh
+        run: ./build.sh --bootstrap
 
       - name: Test Foolang
         run: cargo run foo/impl/test_foolang.foo --use=foo/lib
@@ -236,7 +236,7 @@ jobs:
         run: clang --version
 
       - name: Bootstrap
-        run: ./bootstrap.sh --skip-interpreter-build
+        run: ./build.sh --skip-interpreter-build
 
       - name: No duplicate declarations
         run: ./no_duplicate_declarations.sh
