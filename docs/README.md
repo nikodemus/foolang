@@ -58,7 +58,7 @@ end
    ```
 3. Bootstrap the Foolang compiler (you'll need Clang installed for this):
    ``` shell
-   ./bootstrap.sh
+   ./build.sh
    build/foo --compile foo/examples/hello.foo
    foo/example/hello
    ```

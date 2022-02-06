@@ -472,27 +472,6 @@ FATAL - ERROR: Unbound variable: _Y
 }
 
 #[test]
-fn test_prelude1() -> Test {
-    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
-    cmd.arg("foo/tests/test_prelude.foo");
-    cmd.assert().failure().code(2).stdout("");
-    Ok(())
-}
-
-#[test]
-fn test_prelude2() -> Test {
-    let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
-    cmd.arg("foo/tests/test_prelude.foo");
-    cmd.arg("--prelude");
-    cmd.arg("foo/tests/empty.foo");
-    cmd.assert()
-        .failure()
-        .code(1)
-        .stdout(predicates::str::contains("ERROR: 1 does not understand: + [1]"));
-    Ok(())
-}
-
-#[test]
 fn test_array_let1() -> Test {
     let mut cmd = Command::cargo_bin("bootstrap-interpreter")?;
     cmd.arg("foo/tests/test_array_let1.foo");

@@ -56,13 +56,10 @@ jobs:
         run: clang --version
 
       - name: Bootstrap
-        run: ./bootstrap.sh
+        run: bash build.sh --bootstrap
 
       - name: Test Foolang
         run: cargo run foo/impl/test_foolang.foo --use=foo/lib
-
-      - name: Test Prelude
-        run: cargo run foo/impl/test_prelude.foo --use=foo/lib
 
       - name: Test Transpile
         run: cargo run foo/impl/test_transpile.foo --use=foo/lib
@@ -181,30 +178,6 @@ jobs:
       - name: Test
         run: ./bin/bootstrap-interpreter foo/impl/test_foolang.foo --use=foo/lib
 
-  test-prelude:
-    name: "Test Prelude"
-    needs: build-host
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 5
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Download bootstrap interpreter
-        uses: actions/download-artifact@v2
-        with:
-          name: bootstrap-interpreter-${{ runner.os }}
-          path: bin/
-
-      - name: Make bootstrap interpreter executable
-        run: chmod a+x bin/bootstrap-interpreter
-        if: ${{ runner.os != 'Windows' }}
-
-      - name: Test Prelude
-        run: ./bin/bootstrap-interpreter foo/impl/test_prelude.foo --use=foo/lib
-
   test-transpile:
     name: "Test Transpile"
     needs: build-host
@@ -244,7 +217,7 @@ jobs:
     name: "Test full bootstrap"
     needs: build-host
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v2
 
@@ -263,10 +236,10 @@ jobs:
         run: clang --version
 
       - name: Bootstrap
-        run: ./bootstrap.sh --skip-interpreter-build
+        run: bash build.sh --no-interpreter-build
 
       - name: No duplicate declarations
-        run: ./no_duplicate_declarations.sh
+        run: bash no_duplicate_declarations.sh
 
   test-foolang-mode:
     name: "Test foolang Emacs mode"
@@ -281,4 +254,4 @@ jobs:
           sudo apt-get install -y emacs26-nox
 
       - name: Test foolang-mode
-        run: ./test-elisp.sh
+        run: bash test-elisp.sh

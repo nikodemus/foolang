@@ -46,6 +46,7 @@ in in progress, this is the current status:
 - 013 - [Tower of Babel](design/013-tower-of-babel.md)
 - 014 - [Object Model](design/014-object-model.md)
 - 015 - [WASM Support](design/015-wasm-support.md)
+- 016 - [Class Extensions](design/016-class-extensions.md)
 
 ## Old Design Notes
 
