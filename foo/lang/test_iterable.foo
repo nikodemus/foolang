@@ -9,357 +9,530 @@ depending on order and one not.
 FIXME: Should have in iterable that is not ordered to test these: currently
 many tests exercise ordered instead!
 ---
-
-
-
 interface TestIterable
     is TestSuite
 
     required method make: elements
 
     direct method runTests: assert
-        (self assert: assert) runTests!
+        (self assert: assert)
+            runTests!
 
     method testAllSatisfy
-        assert true: { (self make: []) allSatisfy: { |each| False } }
-               testing: "allSatisfy: -> True (empty)".
-
-        assert true: { (self make: [42]) allSatisfy: { |each| each is 42 } }
-               testing: "allSatisfy: -> True (size 1)".
-        assert true: { (self make: [42, 42, 42]) allSatisfy: { |each| each is 42 } }
-               testing: "allSatisfy: -> True (size 3)".
-
-        assert false: { (self make: [0]) allSatisfy: { |each| each is 42 } }
-               testing: "allSatisfy: -> False (size 1)".
-        assert false: { (self make: [42, 42, 0]) allSatisfy: { |each| each is 42 } }
-               testing: "allSatisfy: -> False (size 3)".
-        assert false: { (self make: [42, 0, 42, 42]) allSatisfy: { |each| each is 42 } }
-               testing: "allSatisfy: -> False (size 4)"!
+        self assert
+            true: { (self make: [])
+                        allSatisfy: { |each| False } }
+            testing: "allSatisfy: -> True (empty)".
+        self assert
+            true: { (self make: [42])
+                        allSatisfy: { |each| each is 42 } }
+            testing: "allSatisfy: -> True (size 1)".
+        self assert
+            true: { (self make: [42, 42, 42])
+                        allSatisfy: { |each| each is 42 } }
+            testing: "allSatisfy: -> True (size 3)".
+        self assert
+            false: { (self make: [0])
+                         allSatisfy: { |each| each is 42 } }
+            testing: "allSatisfy: -> False (size 1)".
+        self assert
+            false: { (self make: [42, 42, 0])
+                         allSatisfy: { |each| each is 42 } }
+            testing: "allSatisfy: -> False (size 3)".
+        self assert
+            false: { (self make: [42, 0, 42, 42])
+                         allSatisfy: { |each| each is 42 } }
+            testing: "allSatisfy: -> False (size 4)"!
 
     method testAnySatisfy
-        assert false: { (self make: []) anySatisfy: { |each| True } }
-               testing: "anySatisfy: -> False (empty)".
-
-        assert true: { (self make: [42]) anySatisfy: { |each| each is 42 }}
-               testing: "anySatisfy: -> True (size 1)".
-        assert false: { (self make: [0]) anySatisfy: { |each| each is 42 }}
-               testing: "anySatisfy: -> False (size 1)".
-
-        assert true: { (self make: [0, 0, 42]) anySatisfy: { |each| each is 42 }}
-               testing: "anySatisfy: -> True (size 3)".
-        assert true: { (self make: [0, 0, 42, 0, 0]) anySatisfy: { |each| each is 42 }}
-               testing: "anySatisfy: -> True (size 5)".
-
-        assert false: { (self make: [0, 0, 0]) anySatisfy: { |each| each is 42 }}
-               testing: "anySatisfy: -> False (size 3)"!
+        self assert
+            false: { (self make: [])
+                         anySatisfy: { |each| True } }
+            testing: "anySatisfy: -> False (empty)".
+        self assert
+            true: { (self make: [42])
+                        anySatisfy: { |each| each is 42 } }
+            testing: "anySatisfy: -> True (size 1)".
+        self assert
+            false: { (self make: [0])
+                         anySatisfy: { |each| each is 42 } }
+            testing: "anySatisfy: -> False (size 1)".
+        self assert
+            true: { (self make: [0, 0, 42])
+                        anySatisfy: { |each| each is 42 } }
+            testing: "anySatisfy: -> True (size 3)".
+        self assert
+            true: { (self make: [0, 0, 42, 0, 0])
+                        anySatisfy: { |each| each is 42 } }
+            testing: "anySatisfy: -> True (size 5)".
+        self assert
+            false: { (self make: [0, 0, 0])
+                         anySatisfy: { |each| each is 42 } }
+            testing: "anySatisfy: -> False (size 3)"!
 
     method testCollectAs
-        assert that: { (self make: []) collect: { |each| 42 } as: List }
-               equals: [] asList
-               testing: "collect:as: (empty)".
-        assert that: { ((self make: [1, 2, 3, 4])
-                            collect: { |each| each + 40 }
-                            as: List)
-                           sort }
-               equals: [41, 42, 43, 44] asList
-               testing: "collect:as: (size 4)"!
+        self assert
+            that: { (self make: [])
+                        collect: { |each| 42 }
+                        as: List }
+            equals: []
+                asList
+            testing: "collect:as: (empty)".
+        self assert
+            that: { ((self make: [1, 2, 3, 4])
+                         collect: { |each| each + 40 }
+                         as: List)
+                        sort }
+            equals: [41, 42, 43, 44]
+                asList
+            testing: "collect:as: (size 4)"!
 
     method testCollectInto
-        assert that: { (self make: []) collect: { |each| 42 } into: [123] asList }
-               equals: [123] asList
-               testing: "collect:into: (empty)".
-        assert that: { ((self make: [1,2,3]) collect: { |each| -each } into: [213] asList )
-                           sort }
-               equals: [-3, -2, -1, 213] asList
-               testing: "collect:into: (size 3)"!
+        self assert
+            that: { (self make: [])
+                        collect: { |each| 42 }
+                        into: [123]
+                            asList }
+            equals: [123]
+                asList
+            testing: "collect:into: (empty)".
+        self assert
+            that: { ((self make: [1, 2, 3])
+                         collect: { |each| -each }
+                         into: [213]
+                             asList)
+                        sort }
+            equals: [-3,
+                     -2,
+                     -1,
+                     213]
+                asList
+            testing: "collect:into: (size 3)"!
 
     method testCollectWithAs
-        assert that: { (self make: [])
-                           with: [1,2]
-                           collect: { |each1 each2| each1 / each2 }
-                           as: List }
-               equals: [] asList
-               testing: "with:collect:as: (empty)".
-        assert that: { ((self make: [10, 20, 30])
-                           with: [10, 2, 0.3, 1000]
-                           collect: { |each1 each2| (each1 / each2) truncate }
-                           as: List)
-                       sort }
-               equals: [1, 10, 100] asList
-               testing: "with:collect:as: (size 3)"!
+        self assert
+            that: { (self make: [])
+                        with: [1, 2]
+                        collect: { |each1 each2| each1 / each2 }
+                        as: List }
+            equals: []
+                asList
+            testing: "with:collect:as: (empty)".
+        self assert
+            that: { ((self make: [10, 20, 30])
+                         with: [10, 2, 0.3, 1000]
+                         collect: { |each1 each2| (each1 / each2)
+                                        truncate }
+                         as: List)
+                        sort }
+            equals: [1, 10, 100]
+                asList
+            testing: "with:collect:as: (size 3)"!
 
     method testCollectWithInto
-        assert that: { (self make: [])
-                           with: [1,2]
-                           collect: { |each1 each2| each1 / each2 }
-                           into: [123] asList }
-               equals: [123] asList
-               testing: "with:collect:into: (empty)".
-        assert that: { ((self make: [10, 20, 30])
-                           with: [10, 2, 0.3, 1000]
-                           collect: { |each1 each2| (each1 / each2) truncate }
-                           into: [123] asList)
-                       sort }
-               equals: [1, 10, 100, 123] asList
-               testing: "with:collect:into: (size 3)"!
+        self assert
+            that: { (self make: [])
+                        with: [1, 2]
+                        collect: { |each1 each2| each1 / each2 }
+                        into: [123]
+                            asList }
+            equals: [123]
+                asList
+            testing: "with:collect:into: (empty)".
+        self assert
+            that: { ((self make: [10, 20, 30])
+                         with: [10, 2, 0.3, 1000]
+                         collect: { |each1 each2| (each1 / each2)
+                                        truncate }
+                         into: [123]
+                             asList)
+                        sort }
+            equals: [1, 10, 100, 123]
+                asList
+            testing: "with:collect:into: (size 3)"!
 
     method testContains
-        assert true: { ["foo"] contains: "foo" }
-               testing: "contains: (true)".
-        assert false: { ["foo"] contains: "bar" }
-               testing: "contains: (false)"!
+        self assert
+            true: { ["foo"] contains: "foo" }
+            testing: "contains: (true)".
+        self assert
+            false: { ["foo"] contains: "bar" }
+            testing: "contains: (false)"!
 
     method testCount
-        assert that: { (self make: []) count: { |each| True }}
-               equals: 0
-               testing: "count: (empty)".
-        assert that: { (self make: [1,10,1,10,1,1,10]) count: { |each| each == 10 }}
-               equals: 3
-               testing: "count: (size 7)"!
+        self assert
+            that: { (self make: [])
+                        count: { |each| True } }
+            equals: 0
+            testing: "count: (empty)".
+        self assert
+            that: { (self make: [1,
+                                 10,
+                                 1,
+                                 10,
+                                 1,
+                                 1,
+                                 10])
+                        count: { |each| each == 10 } }
+            equals: 3
+            testing: "count: (size 7)"!
 
     method testCountWith
-        assert that: { (self make: [])
-                           with: [1, 2]
-                           count: { |each1 each2| True } }
-               equals: 0
-               testing: "with:count: (empty, non-empty)".
-        assert that: { (self make: [1,10,1,10,1,1,10,10,10])
-                           with: [1,0,1,0,0,1,0]
-                           count: { |each1 each2| each1 == each2 } }
-               equals: 3
-               testing: "with:count: (size 7)"!
+        self assert
+            that: { (self make: [])
+                        with: [1, 2]
+                        count: { |each1 each2| True } }
+            equals: 0
+            testing: "with:count: (empty, non-empty)".
+        self assert
+            that: { (self make: [1,
+                                 10,
+                                 1,
+                                 10,
+                                 1,
+                                 1,
+                                 10,
+                                 10,
+                                 10])
+                        with: [1,
+                               0,
+                               1,
+                               0,
+                               0,
+                               1,
+                               0]
+                        count: { |each1 each2| each1 == each2 } }
+            equals: 3
+            testing: "with:count: (size 7)"!
 
     method testDo
-        assert that: { (self make: []) do: { |each| panic "never" }}
-               equals: (self make: [])
-               testing: "do: (empty)".
-        assert that: { let elts = List new.
-                       let iter = self make: [1, 2, 3].
-                       let res = iter do: { |each| elts add: each }.
-                       res is iter
-                           ifFalse: { panic "oops" }.
-                       elts }
-               equals: [1,2,3] asList
-               testing: "do: (size 3)"!
+        self assert
+            that: { (self make: [])
+                        do: { |each| panic "never" } }
+            equals: (self make: [])
+            testing: "do: (empty)".
+        self assert
+            that: { let elts = List new.
+                    let iter = self make: [1, 2, 3].
+                    let res = iter do: { |each| elts add: each }.
+                    res is iter
+                        ifFalse: { panic "oops" }.
+                    elts }
+            equals: [1, 2, 3]
+                asList
+            testing: "do: (size 3)"!
 
     method testDoWith
-        assert that: { (self make: [1,2])
-                           with: []
-                           do: { |each1 each2| panic "never" } }
-               equals: (self make: [1,2])
-               testing: "with:do: (empty)".
-        assert that: { let elts = List new.
-                       let iter = self make: [100, 20, 200].
-                       let res = iter
-                                     with: [1, 2]
-                                     do: { |each1 each2|
-                                           elts add: (each1 / each2) }.
-                       res is iter
-                           ifFalse: { panic "oops" }.
-                       elts }
-               equals: [100, 10] asList
-               testing: "with:do: (size 2)"!
+        self assert
+            that: { (self make: [1, 2])
+                        with: []
+                        do: { |each1 each2| panic "never" } }
+            equals: (self make: [1, 2])
+            testing: "with:do: (empty)".
+        self assert
+            that: { let elts = List new.
+                    let iter = self make: [100, 20, 200].
+                    let res = iter with: [1, 2]
+                                   do: { |each1 each2|
+                                         elts add: (each1 / each2) }.
+                    res is iter
+                        ifFalse: { panic "oops" }.
+                    elts }
+            equals: [100, 10]
+                asList
+            testing: "with:do: (size 2)"!
 
     method testDoWithIfExhausted
-        assert that: { (self make: [])
-                           with: [1, 2]
-                           do: { |each1 each2| panic "never" }
-                           ifExhausted: { panic "never" } }
-               equals: (self make: [])
-               testing: "with:do:ifExhausted: (empty)".
-        assert that: { let elts = List new.
-                       let iter = self make: [10,200,210,220].
-                       let res = iter
-                                     with: [10, 20]
-                                     do: { |each1 each2|
-                                           elts add: (each1 / each2) }
-                                     ifExhausted: { 10 }.
-                       res is iter
-                           ifFalse: { panic "oops" }.
-                       elts }
-               equals: [1, 10, 21, 22 ] asList
-               testing: "with:do:ifExhausted: (size 4)"!
+        self assert
+            that: { (self make: [])
+                        with: [1, 2]
+                        do: { |each1 each2| panic "never" }
+                        ifExhausted: { panic "never" } }
+            equals: (self make: [])
+            testing: "with:do:ifExhausted: (empty)".
+        self assert
+            that: { let elts = List new.
+                    let iter = self make: [10, 200, 210, 220].
+                    let res = iter with: [10, 20]
+                                   do: { |each1 each2|
+                                         elts add: (each1 / each2) }
+                                   ifExhausted: { 10 }.
+                    res is iter
+                        ifFalse: { panic "oops" }.
+                    elts }
+            equals: [1, 10, 21, 22]
+                asList
+            testing: "with:do:ifExhausted: (size 4)"!
 
     method testEquals
-        assert true: { (self make: [1,2,3]) == (self make: [1,2,3]) }
-               testing: "equals: (true)".
-        assert false: { (self make: [1,2,3,4]) == (self make: [1,2,3]) }
-               testing: "equals: (false)"!
+        self assert
+            true: { (self make: [1, 2, 3]) == (self make: [1, 2, 3]) }
+            testing: "equals: (true)".
+        self assert
+            false: { (self make: [1, 2, 3, 4]) == (self make: [1, 2, 3]) }
+            testing: "equals: (false)"!
 
     method testFind
-        assert that: { (self make: [1,2,100,1]) find: { |each| each > 10 } }
-               equals: 100
-               testing: "find: (yes)".
-        assert that: { (self make: [1,2,10,1]) find: { |each| each > 10 } }
-               equals: False
-               testing: "find: (no)"!
+        self assert
+            that: { (self make: [1, 2, 100, 1])
+                        find: { |each| each > 10 } }
+            equals: 100
+            testing: "find: (yes)".
+        self assert
+            that: { (self make: [1, 2, 10, 1])
+                        find: { |each| each > 10 } }
+            equals: False
+            testing: "find: (no)"!
 
     method testFindIfNone
-        assert that: { (self make: [1,2,100,1])
-                           find: { |each| each > 10 }
-                           ifNone: { 42 }}
-               equals: 100
-               testing: "find:ifNone: (yes)".
-        assert that: { (self make: [1,2,10,1])
-                           find: { |each| each > 10 }
-                           ifNone: { 42 }}
-               equals: 42
-               testing: "find:ifNone: (no)"!
+        self assert
+            that: { (self make: [1, 2, 100, 1])
+                        find: { |each| each > 10 }
+                        ifNone: { 42 } }
+            equals: 100
+            testing: "find:ifNone: (yes)".
+        self assert
+            that: { (self make: [1, 2, 10, 1])
+                        find: { |each| each > 10 }
+                        ifNone: { 42 } }
+            equals: 42
+            testing: "find:ifNone: (no)"!
 
     method testFirst
-        assert that: { (self make: [1,2]) first }
-               equals: 1
-               testing: "first (ok)".
-        assert that: { { (self make: []) first }
-                           onPanic: { |e| 123 } }
-               equals: 123
-               testing: "first (empty)"!
+        self assert
+            that: { (self make: [1, 2])
+                        first }
+            equals: 1
+            testing: "first (ok)".
+        self assert
+            that: { { (self make: [])
+                          first }
+                        onPanic: { |e| 123 } }
+            equals: 123
+            testing: "first (empty)"!
 
     method testIfEmpty
-        assert that: { (self make: []) ifEmpty: { 123 } }
-               equals: 123
-               testing: "ifEmpty: (empty)".
-        assert that: { (self make: [1]) ifEmpty: { 123 } }
-               equals: False
-               testing: "ifEmpty: (not)"!
+        self assert
+            that: { (self make: [])
+                        ifEmpty: { 123 } }
+            equals: 123
+            testing: "ifEmpty: (empty)".
+        self assert
+            that: { (self make: [1])
+                        ifEmpty: { 123 } }
+            equals: False
+            testing: "ifEmpty: (not)"!
 
     method testIfEmptyNotEmpty
-        assert that: { (self make: []) ifEmpty: { 123 } ifNotEmpty: { "foo" } }
-               equals: 123
-               testing: "ifEmpty:IifNotEmpty: (empty)".
-        assert that: { (self make: [1]) ifEmpty: { "foo" } ifNotEmpty: { 123 } }
-               equals: 123
-               testing: "ifEmpty:ifNotEmpty: (not)"!
+        self assert
+            that: { (self make: [])
+                        ifEmpty: { 123 }
+                        ifNotEmpty: { "foo" } }
+            equals: 123
+            testing: "ifEmpty:IifNotEmpty: (empty)".
+        self assert
+            that: { (self make: [1])
+                        ifEmpty: { "foo" }
+                        ifNotEmpty: { 123 } }
+            equals: 123
+            testing: "ifEmpty:ifNotEmpty: (not)"!
 
     method testIfNotEmpty
-        assert that: { (self make: []) ifNotEmpty: { "foo" } }
-               equals: False
-               testing: "ifNotEmpty: (empty)".
-        assert that: { (self make: [1]) ifNotEmpty: { 123 } }
-               equals: 123
-               testing: "ifNotEmpty: (not)"!
+        self assert
+            that: { (self make: [])
+                        ifNotEmpty: { "foo" } }
+            equals: False
+            testing: "ifNotEmpty: (empty)".
+        self assert
+            that: { (self make: [1])
+                        ifNotEmpty: { 123 } }
+            equals: 123
+            testing: "ifNotEmpty: (not)"!
 
     method testIncludes
-        assert that: { (self make: []) includes: 42 }
-               equals: False
-               testing: "includes: (empty)".
-        assert that: { (self make: [1,2,3]) includes: 42 }
-               equals: False
-               testing: "includes: (non-empty, false)".
-        assert that: { (self make: [1,42,3]) includes: 42 }
-               equals: True
-               testing: "includes: (non-empty, true)"!
+        self assert
+            that: { (self make: [])
+                        includes: 42 }
+            equals: False
+            testing: "includes: (empty)".
+        self assert
+            that: { (self make: [1, 2, 3])
+                        includes: 42 }
+            equals: False
+            testing: "includes: (non-empty, false)".
+        self assert
+            that: { (self make: [1, 42, 3])
+                        includes: 42 }
+            equals: True
+            testing: "includes: (non-empty, true)"!
 
     method testIncludesAll
-        assert that: { (self make: []) includesAll: [] }
-               equals: True
-               testing: "includesAll: (empties)".
-        assert that: { (self make: [1,2,3]) includesAll: [2,3] }
-               equals: True
-               testing: "includesAll: (true)".
-        assert that: { (self make: [1,2]) includesAll: [1,2,3] }
-               equals: False
-               testing: "includesAll: (false)"!
+        self assert
+            that: { (self make: [])
+                        includesAll: [] }
+            equals: True
+            testing: "includesAll: (empties)".
+        self assert
+            that: { (self make: [1, 2, 3])
+                        includesAll: [2, 3] }
+            equals: True
+            testing: "includesAll: (true)".
+        self assert
+            that: { (self make: [1, 2])
+                        includesAll: [1, 2, 3] }
+            equals: False
+            testing: "includesAll: (false)"!
 
     method testInject
-        assert that: { (self make: [])
-                           inject: "foo"
-                           into: { |acc each| panic "never" } }
-               equals: "foo"
-               testing: "inject:into: (empty)".
-        assert that: { (self make: [1,2,3])
-                           inject: 100
-                           into: { |acc each| acc + each } }
-               equals: 106
-               testing: "inject:into: (size 3)"!
+        self assert
+            that: { (self make: [])
+                        inject: "foo"
+                        into: { |acc each| panic "never" } }
+            equals: "foo"
+            testing: "inject:into: (empty)".
+        self assert
+            that: { (self make: [1, 2, 3])
+                        inject: 100
+                        into: { |acc each| acc + each } }
+            equals: 106
+            testing: "inject:into: (size 3)"!
 
     method testIsEmpty
-        assert true: { (self make: []) isEmpty }
-               testing: "isEmpty (true)".
-        assert false: { (self make: [1]) isEmpty }
-               testing: "isEmpty (false)"!
+        self assert
+            true: { (self make: [])
+                        isEmpty }
+            testing: "isEmpty (true)".
+        self assert
+            false: { (self make: [1])
+                         isEmpty }
+            testing: "isEmpty (false)"!
 
     method testMaxArg
-        ((self make: []) elementType includes: "x")
+        ((self make: [])
+             elementType
+             includes: "x")
             ifFalse: { return False }.
         -- Run only if we can store strings.
-        assert that: { (self make: ["a", "bb", "ccc", "d"]) max: { |each| each size } }
-               equals: "ccc"
-               testing: "max:"!
+        self assert
+            that: { (self make: ["a", "bb", "ccc", "d"])
+                        max: { |each| each size } }
+            equals: "ccc"
+            testing: "max:"!
 
     method testMax
-        assert that: { (self make: [1, 100, 1, 1]) max }
-               equals: 100
-               testing: "max"!
+        self assert
+            that: { (self make: [1, 100, 1, 1])
+                        max }
+            equals: 100
+            testing: "max"!
 
     method testMinArg
-        ((self make: []) elementType includes: "x")
+        ((self make: [])
+             elementType
+             includes: "x")
             ifFalse: { return False }.
-        assert that: { (self make: ["aa", "bb", "ccc", "x", "dd", "fff"]) min: { |each| each size } }
-               equals: "x"
-               testing: "min:"!
+        self assert
+            that: { (self make: ["aa",
+                                 "bb",
+                                 "ccc",
+                                 "x",
+                                 "dd",
+                                 "fff"])
+                        min: { |each| each size } }
+            equals: "x"
+            testing: "min:"!
 
     method testMin
-        assert that: { (self make: [10, 7, 11, 100, 123]) min }
-               equals: 7
-               testing: "min"!
+        self assert
+            that: { (self make: [10, 7, 11, 100, 123])
+                        min }
+            equals: 7
+            testing: "min"!
 
     method testReduce
-        assert that: { (self make: [1]) reduce: { |sum each| panic "never" } }
-               equals: 1
-               testing: "reduce: (one)".
-        assert that: { (self make: [1, 2, 3]) reduce: { |sum each| sum + each } }
-               equals: 6
-               testing: "reduce: (three)"!
+        self assert
+            that: { (self make: [1])
+                        reduce: { |sum each| panic "never" } }
+            equals: 1
+            testing: "reduce: (one)".
+        self assert
+            that: { (self make: [1, 2, 3])
+                        reduce: { |sum each| sum + each } }
+            equals: 6
+            testing: "reduce: (three)"!
 
     method testSecond
-        assert that: { (self make: [1,2]) second }
-               equals: 2
-               testing: "second (not empty)"!
+        self assert
+            that: { (self make: [1, 2])
+                        second }
+            equals: 2
+            testing: "second (not empty)"!
 
     method testSelectAs
-        assert that: { (self make: [1,10,1,100]) select: { |each| each > 1 } as: List }
-               equals: [10, 100] asList
-               testing: "select:as:"!
+        self assert
+            that: { (self make: [1, 10, 1, 100])
+                        select: { |each| each > 1 }
+                        as: List }
+            equals: [10, 100]
+                asList
+            testing: "select:as:"!
 
     method testSelectInto
-        assert that: { (self make: [1,10,1,100])
-                           select: { |each| each > 1 } into: [123] asList }
-               equals: [123,10,100] asList
-               testing: "select:into:"!
+        self assert
+            that: { (self make: [1, 10, 1, 100])
+                        select: { |each| each > 1 }
+                        into: [123]
+                            asList }
+            equals: [123, 10, 100]
+                asList
+            testing: "select:into:"!
 
     method testSizeEstimate
-        assert that: { (self make: []) sizeEstimate }
-               equals: 0
-               testing: "sizeEstimate (zero)".
-        assert that: { (self make: [1,2,3]) sizeEstimate > 0 }
-               equals: True
-               testing: "sizeEstimate (> 0)"!
+        self assert
+            that: { (self make: [])
+                        sizeEstimate }
+            equals: 0
+            testing: "sizeEstimate (zero)".
+        self assert
+            that: { (self make: [1, 2, 3])
+                        sizeEstimate > 0 }
+            equals: True
+            testing: "sizeEstimate (> 0)"!
 
     method testSumArg
-        assert that: { (self make: []) sum: { |each| panic "never" } }
-               equals: 0
-               testing: "sum: (empty)".
-        assert that: { (self make: [1,2]) sum: { |each| each * 100 } }
-               equals: 300
-               testing: "sum: (not empty)"!
+        self assert
+            that: { (self make: [])
+                        sum: { |each| panic "never" } }
+            equals: 0
+            testing: "sum: (empty)".
+        self assert
+            that: { (self make: [1, 2])
+                        sum: { |each| each * 100 } }
+            equals: 300
+            testing: "sum: (not empty)"!
 
     method testSum
-        assert that: { (self make: []) sum }
-               equals: 0
-               testing: "sum (empty)".
-        assert that: { (self make: [1,2]) sum }
-               equals: 3
-               testing: "sum (not empty)"!
+        self assert
+            that: { (self make: [])
+                        sum }
+            equals: 0
+            testing: "sum (empty)".
+        self assert
+            that: { (self make: [1, 2])
+                        sum }
+            equals: 3
+            testing: "sum (not empty)"!
 
     method test_withDoInterleaving
-        assert that: { let s = "".
-                       [1,2,3]
-                           with: [10,100,1000]
-                           do: { |a b| s = s append: (a + b) toString }
-                           interleaving: { s = s append: ", " }.
-                       s }
-               equals: "11, 102, 1003"
-               testing: "Iterable#with:do:interleaving:"!
-
+        self assert
+            that: { let s = "".
+                    [1, 2, 3]
+                        with: [10, 100, 1000]
+                        do: { |a b|
+                              s = s append: (a + b)
+                                        toString }
+                        interleaving: { s = s append: ", " }.
+                    s }
+            equals: "11, 102, 1003"
+            testing: "Iterable#with:do:interleaving:"!
 end
