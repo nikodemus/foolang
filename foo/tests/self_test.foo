@@ -1,6 +1,7 @@
 import lib.assert.Assert
 
 import lang.test_array.TestArray
+import lang.test_byteArray.TestByteArray
 import lang.test_class.TestClass
 import lang.test_selector.TestSelector
 
@@ -14,6 +15,7 @@ class Main { assert system }
     method test
         [
             TestArray,
+            TestByteArray,
             TestClass,
             TestSelector,
         ]
