@@ -1,15 +1,19 @@
 import lib.assert.Assert
 import lib.si.SI_Tests
 
-import lang.test_dictionary.TestDictionary
-import lang.test_selector.TestSelector
+-- In self_test.foo
 import lang.test_array.TestArray
-import lang.test_array.TestArrayAsIterable
 import lang.test_byteArray.TestByteArray
-import lang.test_byteArray.TestByteArrayAsIterable
 import lang.test_character.TestCharacter
 import lang.test_closure.TestClosure
 import lang.test_file.TestFile
+import lang.test_selector.TestSelector
+
+-- Cannot go to self_test.foo yet
+import lang.test_array.TestArrayAsIterable
+import lang.test_byteArray.TestByteArrayAsIterable
+import lang.test_closure.TestClosure
+import lang.test_dictionary.TestDictionary
 import lang.test_filepath.TestFilePath
 import lang.test_filestream.TestFileStream
 import lang.test_float.TestFloat

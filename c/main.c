@@ -705,18 +705,6 @@ struct Foo foo_invoke_on(const struct FooMethod* method, struct FooContext* cont
                   context->receiver);
 }
 
-struct Foo foo_method_doSelectors_(const struct FooMethod* method, struct FooContext* ctx) {
-  (void)method;
-  struct FooClass* vt = ctx->receiver.class;
-  struct Foo block = ctx->frame[0];
-  for (size_t i = 0; i < vt->size; i++) {
-    foo_send(ctx, &FOO_value_, block, 1,
-             (struct Foo){ .class = &FooClass_Selector,
-                            .datum = { .ptr = vt->methods[i].selector } });
-  }
-  return ctx->receiver;
-}
-
 struct Foo foo_method_classOf(const struct FooMethod* method, struct FooContext* ctx) {
   (void)method;
   return (struct Foo){ .class = ctx->receiver.class->metaclass,

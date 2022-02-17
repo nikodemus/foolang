@@ -108,8 +108,8 @@ define XYZ 42!
             expect: "[ext.Name1, ext.Name2]"!
 
     method test_Parse_literal_keyword_argument_to_keyword_message
-        self parse: "List collectUsing: #doSelectors: from: self"
-             expect: "List collectUsing: #doSelectors:
+        self parse: "List collectUsing: #doStuff: from: self"
+             expect: "List collectUsing: #doStuff:
      from: self"!
 
     method test_Parse_bad_external_reference

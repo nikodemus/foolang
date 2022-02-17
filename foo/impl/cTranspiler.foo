@@ -317,8 +317,7 @@ class SelectorMap { names }
 end
 
 define AlwaysEmittedSelectors
-    [#__doSelectors:,
-     #invoke:on:,
+    [#invoke:on:,
      #perform:with:,
      #selector,
      #writeString:]!
@@ -1127,10 +1126,15 @@ class CTranspiler { output selectorMap closureFunctions
         output newline.
         ctor!
 
+
+    method _generateDefaultInstanceMethodsFor: aClass _in: table
+        (table find: { |each| each selector == #classOf }) is False
+            ifTrue: { table add: (self _generateInstanceClassOf: aClass) }!
+
     method _generateDefaultDirectMethodsFor: aClass _in: table
         (table find: { |each| each selector == #includes: }) is False
             ifTrue: { table add: (self _generateDirectMethod_includes: aClass) }.
-        (table find: { |each| each selector == #classOf: }) is False
+        (table find: { |each| each selector == #classOf }) is False
             ifTrue: { table add: (self _generateDirectMethod_classOf: aClass) }.
         (table find: { |each| each selector == #name }) is False
             ifTrue: { table add: (self _generateDirectMethod_name: aClass) }!
@@ -1197,8 +1201,10 @@ class CTranspiler { output selectorMap closureFunctions
                                ifTrue: { instanceMethods }
                                ifFalse:{ directMethods }.
         self _generateDefaultDirectMethodsFor: aClass
-            _in: classMethods.
-        instanceMethods add: (self _generateInstanceClassOf: aClass).
+             _in: classMethods.
+        self _generateDefaultInstanceMethodsFor: aClass
+             _in: instanceMethods.
+
         isTheClass
             ifFalse: { -- Class metaclass, not needed for Class which
                        -- is its own metaclass.
@@ -1240,7 +1246,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "    .inherited = &{classInheritance},".
         output println: "    .layout = {layout},".
         output println: "    .mark = {aClass markFunction},".
-        output println: "    .size = {instanceMethods size + 1},".
+        output println: "    .size = {instanceMethods size},".
         output println: "    .methods = \{".
         instanceMethods
             do: { |each|
@@ -1250,13 +1256,6 @@ class CTranspiler { output selectorMap closureFunctions
                   output println: "                            .frameSize = {each frameSize},".
                   output println: "                            .function = &{each methodFunctionName},".
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
-        -- #__doSelectors
-        output println: "        (struct FooMethod)\{ .selector = &FOO_____doSelectors_,".
-        output println: "                            .home = &{className},".
-        output println: "                            .argCount = 1,".
-        output println: "                            .frameSize = 1,".
-        output println: "                            .function = &foo_method_doSelectors_,".
-        output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\},".
         output println: "    }".
         output println: "};".
         output newline.

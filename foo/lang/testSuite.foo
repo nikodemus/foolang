@@ -3,6 +3,8 @@ import .exception.*
 import .output_ext
 
 interface TestSuite
+    is Object
+
     direct method runTests: assert in: system
         (self assert: assert) runTestsIn: system!
 
@@ -21,9 +23,10 @@ interface TestSuite
 
     method doTests: block
         let list = List new.
-        self __doSelectors: { |selector|
-                              (selector startsWith: "test")
-                                  ifTrue: { list add: selector } }.
+        Class selectorsOf: self
+              do: { |each|
+                    (each startsWith: "test")
+                        ifTrue: { list add: each } }.
         list isEmpty
             ifTrue: { Error raise: "Not tests for {self}!" }.
         list sort do: block.

@@ -212,6 +212,7 @@ interface AstMethodHome
              _into: dict.
         self _collectFromInterfaces: #instanceMethods
             _into: dict.
+        -- FIXME: This should really come from Object, or Any?
         dict values sort: #selector ascending!
 
     method _collectFromInterfaces: selector _into: dict
