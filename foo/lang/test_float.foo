@@ -1,21 +1,12 @@
-class SomeFloats {}
-   direct method do: block
-      block value: -0.0.
-      block value: 0.0.
-      block value: 1.0.
-      block value: -1.0.
-      block value: 0.1.
-      block value: -0.1.
-      let rng = Random new.
-      100 times: { block value: rng float }!
-end
-
 class TestFloat { assert }
     is TestSuite
 
     method testAdd
-        assert forAll: SomeFloats
-               that: { |x| x + x == x * 2 }
+        assert forAll: [{a: 1.42, b: 2.2, sum: 3.62},
+                        {a: 0.0, b: 112.123, sum: 112.123},
+                        {a: -0.1, b: -1.0, sum: -1.1}]
+               that: { |case|
+                       case a + case b == case sum }
                testing: "Float#+"!
 
     method testTruncate
