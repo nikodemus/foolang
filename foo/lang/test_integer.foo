@@ -6,8 +6,10 @@ class SmallIntegers {}
         block value: 0.
         block value: 1.
         -- Then random numbers
-        let rng = Random new.
-        100 times: { block value: (rng integer / 2) }!
+        block value: 100.
+        block value: 1203987.
+        block value: -987.
+        block value: -876421!
 end
 
 class TestInteger { assert }

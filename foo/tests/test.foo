@@ -8,6 +8,7 @@ import lang.test_character.TestCharacter
 import lang.test_closure.TestClosure
 import lang.test_file.TestFile
 import lang.test_float.TestFloat
+import lang.test_integer.TestInteger
 import lang.test_selector.TestSelector
 
 -- Cannot go to self_test.foo yet
@@ -17,7 +18,6 @@ import lang.test_closure.TestClosure
 import lang.test_dictionary.TestDictionary
 import lang.test_filepath.TestFilePath
 import lang.test_filestream.TestFileStream
-import lang.test_integer.TestInteger
 import lang.test_list.TestList
 import lang.test_list.TestListAsIterable
 import lang.test_object.TestObject
