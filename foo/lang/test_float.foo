@@ -1,7 +1,7 @@
 class TestFloat { assert }
     is TestSuite
 
-    method testAdd
+    method test_plus
         assert forAll: [{a: 1.42, b: 2.2, sum: 3.62},
                         {a: 0.0, b: 112.123, sum: 112.123},
                         {a: -0.1, b: -1.0, sum: -1.1}]
@@ -9,14 +9,14 @@ class TestFloat { assert }
                        case a + case b == case sum }
                testing: "Float#+"!
 
-    method testTruncate
+    method test_truncate
         assert forAll: [[132.999, 132],
                         [-123.999, -123]]
                that: { |case|
                        (case first truncate) is (case second) }
                testing: "Float#round"!
 
-    method testRound
+    method test_round
         assert forAll: [[132.999, 133],
                         [123.49, 123],
                         [-123.999, -124]]
@@ -24,7 +24,7 @@ class TestFloat { assert }
                        (case first round) is (case second) }
                testing: "Float#round"!
 
-    method testDecimalString
+    method test_decimalString
         assert forAll: [[1.01, "1.0"],
                         [1.11, "1.1"],
                         [1.54, "1.5"],
