@@ -317,7 +317,7 @@ fn test_comments1() {
 #[test]
 fn test_parse_keyword_literal_as_argument_to_keyword_message() {
     assert_eq!(
-        parse_expr("List collectUsing: #doSelectors: from: self"),
+        parse_expr("List collectUsing: #doStuff: from: self"),
         Ok(keyword(
             5..43,
             "collectUsing:from:",

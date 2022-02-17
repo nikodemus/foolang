@@ -1,0 +1,17 @@
+import lib.assert.Assert
+
+import lang.test_class.TestClass
+
+class Main { assert system }
+    direct method run: cmd in: system
+        let instance = self assert: (Assert reportingTo: system output)
+                            system: system.
+        instance test.
+        system exit: instance assert exitCode!
+
+    method test
+        [
+            TestClass,
+        ] do: { |each| each runTests: assert in: system }!
+
+end

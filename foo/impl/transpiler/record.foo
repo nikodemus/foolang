@@ -7,13 +7,11 @@ define DirectMethods
                body: "struct FooClass* vt = ctx->frame[0].class;
 // Methods originating in the instance's class are reader methods
 // and correspond to slots, so we can identify them -- except for
-// #classOf and #__doSelectors:.
+// #classOf.
 size_t n = 0;
 for (size_t i = 0; i < vt->size; i++) \{
     struct FooSelector* s = vt->methods[i].selector;
-    if (vt == vt->methods[i].home
-        && s != &FOO_classOf
-        && s != &FOO_____doSelectors_)
+    if (vt == vt->methods[i].home && s != &FOO_classOf)
    \{
         n++;
     }
@@ -22,9 +20,7 @@ struct FooArray* keys = FooArray_alloc(ctx, n);
 size_t j = 0;
 for (size_t i = 0; i < vt->size; i++) \{
     struct FooSelector* s = vt->methods[i].selector;
-    if (vt == vt->methods[i].home
-        && s != &FOO_classOf
-        && s != &FOO_____doSelectors_)
+    if (vt == vt->methods[i].home && s != &FOO_classOf)
    \{
         const struct FooSelector* selector = vt->methods[i].selector;
         keys->data[j++] = (struct Foo)\{ .class = &FooClass_Selector,

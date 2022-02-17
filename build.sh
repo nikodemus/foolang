@@ -32,10 +32,9 @@ EOF
 )
 set -euo pipefail
 
-source build_utils.sh
+source utils.sh
 write_build_info
 on_exit restore_build_info
-on_exit_if_tty play_beep
 
 BOOTSTRAP_INTERPRETER=$(exename target/debug/bootstrap-interpreter)
 BOOTSTRAP_COMPILER=$(exename build/bootstrap-compiler)
@@ -99,7 +98,7 @@ if $BOOTSTRAP; then
         if $NO_INTERPRETER_BUILD; then
             echo "Bootstrap interpreter not found, build forced."
         fi
-        start_clock "bootstrap interpreter"
+        start_clock "building bootstrap interpreter"
         if cargo build &> build/bootstrap-interpreter.log; then
             ok
         else
@@ -108,7 +107,7 @@ if $BOOTSTRAP; then
     fi
 
     rm -rf build/bootstrap-compiler-c
-    start_clock "bootstrap compiler"
+    start_clock "building bootstrap compiler"
     if $BOOTSTRAP_INTERPRETER foo/foo.foo -- --compile foo/foo.foo \
         &> build/bootstrap-compiler.log
     then
@@ -122,7 +121,7 @@ if $BOOTSTRAP; then
 fi
 
 rm -rf build/self-compiler-c
-start_clock "self-compiler"
+start_clock "building self-compiler"
 if $BOOTSTRAP_COMPILER --compile foo/foo.foo \
     &> build/self-compiler.log
 then
@@ -134,7 +133,7 @@ else
 fi
 
 rm -rf build/foo-c
-start_clock "foo"
+start_clock "building foo"
 if $SELF_COMPILER --compile foo/foo.foo \
     &> build/foo.log
 then
@@ -147,7 +146,7 @@ fi
 
 rm -rf build/foo2-c
 if $VERIFY; then
-    start_clock "second generation foo"
+    start_clock "building second generation foo"
     if $FOO --compile foo/foo.foo \
         &> build/foo2.log
     then

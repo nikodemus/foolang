@@ -28,8 +28,15 @@ printf(\"#<Selector %s>\", name);
 return ctx->receiver;"},
     #name
         -> {signature: [], vars: 0,
-            body: "struct FooBytes* name = PTR(FooSelector, ctx->receiver.datum)->name;
-return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = name } };"},
+            body: "struct FooSelector* selector = PTR(FooSelector, ctx->receiver.datum);
+                   // Got corrupted selectors with 1 as the datum, pointers should
+                   // not be odd...
+                   if (selector && !((intptr_t)selector & 1)) \{
+                       return (struct Foo)\{ .class = &FooClass_String,
+                                             .datum = \{ .ptr = selector->name } };
+                   \} else \{
+                       foo_panicf(ctx, \"Invalid selector datum\");
+                   \}"},
     #sendTo:with:
         -> {signature: [Any, Array], vars: 0,
             body: "struct FooSelector* selector = PTR(FooSelector, ctx->receiver.datum);

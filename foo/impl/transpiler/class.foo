@@ -12,6 +12,62 @@ define InstanceMethods
                  return (struct Foo)\{ .class = classOf->metaclass, .datum = \{ .ptr = classOf } };"
           },
 
+     #selectorsOf:do:
+     -> { signature: [Any, Block], vars: 0,
+          body: "const struct FooClass* class = ctx->frame[0].class;
+                 const struct Foo block = ctx->frame[1];
+                 const struct FooSelector* seen[1024];
+                 size_t n = 0;
+                 // First go through own methods, registering them in seen.
+                 for (size_t i = 0; i < class->size; i++) \{
+                     struct FooSelector* selector = class->methods[i].selector;
+
+                     // Skip private selectors.
+                     if (selector->name->data[0] == '_') continue;
+
+                     if (n < sizeof(seen)) \{
+                         seen[n++] = selector;
+                         foo_send(ctx, &FOO_value_, block, 1,
+                                  (struct Foo)\{ .class = &FooClass_Selector,
+                                                 .datum = \{ .ptr = selector \}\});
+                     \} else \{
+                         foo_panicf(ctx, \"Too many selectors in class: %s\", class->name->data);
+                     \}
+                 \}
+
+                 // Then go through the inherited interfaces
+                 const struct FooClassList* interfaces = class->inherited;
+                 for (size_t i = 0; i < interfaces->size; i++) \{
+                     const struct FooClass* interface = interfaces->data[i];
+                     for (size_t j = 0; j < interface->size; j++) \{
+                         struct FooSelector* selector = interface->methods[j].selector;
+
+                         // Skip private selectors.
+                         if (selector->name->data[0] == '_') continue;
+
+                         // Check if we've seen this one already
+                         bool new = true;
+                         for (size_t k = 0; k < n; k++) \{
+                             if (seen[k] == selector) \{
+                                 new = false;
+                                 break;
+                             \}
+                         \}
+                         if (new) \{
+                             if (n < sizeof(seen)) \{
+                                 seen[n++] = selector;
+                                 foo_send(ctx, &FOO_value_, block, 1,
+                                          (struct Foo)\{ .class = &FooClass_Selector,
+                                                         .datum = \{ .ptr = selector \}\});
+                             \} else \{
+                                 foo_panicf(ctx, \"Too many selectors in class: %s\", class->name->data);
+                             \}
+                         \}
+                     \}
+                 \}
+
+                 return ctx->frame[0];" },
+
      #subclass:interfaces:methods:
      -> { signature: [String, Array, Array], vars: 1,
           body: "struct FooArray* methods = PTR(FooArray, ctx->frame[2].datum);

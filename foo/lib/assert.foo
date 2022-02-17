@@ -162,6 +162,13 @@ class Assert { output failed }
             using: { |actual expected| actual == expected }
             testing: thing!
 
+    method that: condition equals: value
+        self
+            that: condition
+            matches: value
+            using: { |actual expected| actual == expected }
+            testing: "an assert"!
+
     method true: condition testing: thing
         self that: condition is: True testing: thing!
 

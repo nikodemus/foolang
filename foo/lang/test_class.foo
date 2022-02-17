@@ -1,0 +1,59 @@
+interface _ClassTestInterface
+    direct method interfaceDirectMethod
+        "foo"!
+    method interfaceInstanceMethod
+        "bar"!
+
+    direct method _privateInterfaceDirectMethod
+        "quux"!
+    method _privateInterfaceInstanceMethod
+        "zot"!
+end
+
+class _ClassTestClass {}
+    is _ClassTestInterface
+
+    direct method directMethod1
+        1!
+    direct method directMethod2
+        2!
+    direct method _privateDirectMethod
+        3!
+
+    method instanceMethod1
+        4!
+    method instanceMethod2
+        5!
+    method _privateInstanceMethod
+        6!
+end
+
+class TestClass { assert }
+    is TestSuite
+
+    method selectorsOf: object
+        let list = List new.
+        Class selectorsOf: object
+              do: { |each| list add: each }.
+        list!
+
+    method test_Class_selectorsOf_do_finds_direct_methods
+        assert true: { (self selectorsOf: _ClassTestClass)
+                           includesAll: [#directMethod1, #directMethod2, #interfaceDirectMethod] }!
+
+    method test_Class_selectorsOf_do_does_not_find_private_direct_methods
+        assert false: { (self selectorsOf: _ClassTestClass)
+                            anySatisfy: { |each|
+                                          [#_privateInterfaceDirectMethod, #_privateDirectMethod]
+                                              includes: each } }!
+
+    method test_Class_selectorsOf_do_finds_instance_methods
+        assert true: { (self selectorsOf: _ClassTestClass new)
+                           includesAll: [#instanceMethod1, #instanceMethod2, #interfaceInstanceMethod] }!
+
+    method test_Class_selectorsOf_do_does_not_find_private_instance_methods
+        assert false: { (self selectorsOf: _ClassTestClass new)
+                            anySatisfy: { |each|
+                                          [#_privateInterfaceInstanceMethod, #_privateInstanceMethod]
+                                              includes: each } }!
+end
