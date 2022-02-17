@@ -1861,27 +1861,6 @@ end
 class TestTranspileFloat { assert system }
     is TranspilerTest
 
-    method testToString
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 [0.0 toString,
-                                  2123.0 toString,
-                                  -2.0 toString,
-                                  0.01 toString,
-                                  -0.01 toString] debug!
-                         end"
-            expect: "[#<String 0.0>, #<String 2123.0>, #<String -2.0>, #<String 0.01>, #<String -0.01>]"!
-
-    method testFloatArithmetic1
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 -(1.01) debug.
-                                 (2.0 floatMul: 3.0) debug.
-                                 ((1.0 floatAdd: 10.0) floatAdd: 0.1) debug.
-                                 (10.0 floatSub: 0.1) debug!
-                         end"
-            expect: "#<Float -1.01>#<Float 6.0>#<Float 11.1>#<Float 9.9>"!
-
     method testFloatArithmetic2
         self transpile: "class Main \{}
                              direct method run: command in: system
