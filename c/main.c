@@ -2,19 +2,18 @@
 #define _CRT_SECURE_NO_WARNINGS 1
 
 #include <ctype.h>
-#include <math.h>
-#include <float.h>
-#include <stdint.h>
-#include <inttypes.h>
-#include <string.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <setjmp.h>
 #include <errno.h>
+#include <float.h>
+#include <inttypes.h>
+#include <math.h>
+#include <setjmp.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 
 #undef NDEBUG
@@ -904,7 +903,8 @@ struct Foo foo_FileStream_new(struct FooContext* ctx, struct FooFile* file, size
   FOO_DEBUG("fopen(%s, %s)", (char*)file->pathname->data, mode);
   stream->ptr = fopen((char*)file->pathname->data, mode);
   if (!stream->ptr) {
-    foo_panicf(ctx, "fdopen() failed!");
+    foo_panicf(ctx, "fopen(\"%s\", \"%s\") failed: %s",
+               (char*)file->pathname->data, mode, strerror(errno));
   }
   return (struct Foo){ .class = &FooClass_FileStream, .datum = { .ptr = stream } };
 }
