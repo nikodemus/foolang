@@ -2,6 +2,7 @@ import lib.assert.Assert
 
 import lang.test_array.TestArray
 import lang.test_class.TestClass
+import lang.test_selector.TestSelector
 
 class Main { assert system }
     direct method run: cmd in: system
@@ -14,6 +15,7 @@ class Main { assert system }
         [
             TestArray,
             TestClass,
+            TestSelector,
         ]
             do: { |each| each runTests: assert in: system }!
 
