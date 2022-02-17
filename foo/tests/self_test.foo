@@ -1,5 +1,6 @@
 import lib.assert.Assert
 
+import lang.test_array.TestArray
 import lang.test_class.TestClass
 
 class Main { assert system }
@@ -11,7 +12,9 @@ class Main { assert system }
 
     method test
         [
+            TestArray,
             TestClass,
-        ] do: { |each| each runTests: assert in: system }!
+        ]
+            do: { |each| each runTests: assert in: system }!
 
 end
