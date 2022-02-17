@@ -13,7 +13,7 @@ define InstanceMethods
           },
 
      #selectorsOf:do:
-     -> { signature: [Any, Block], vars: 0,
+     -> { signature: [Any, Any], vars: 0,
           body: "const struct FooClass* class = ctx->frame[0].class;
                  const struct Foo block = ctx->frame[1];
                  const struct FooSelector* seen[1024];
