@@ -319,10 +319,10 @@ fn test_parse_keyword_literal_as_argument_to_keyword_message() {
     assert_eq!(
         parse_expr("List collectUsing: #doStuff: from: self"),
         Ok(keyword(
-            5..43,
+            5..39,
             "collectUsing:from:",
             var(0..4, "List"),
-            vec![selector(19..32, "doSelectors:"), var(39..43, "self")]
+            vec![selector(19..28, "doStuff:"), var(35..39, "self")]
         ))
     );
 }

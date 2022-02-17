@@ -4,6 +4,9 @@ import .exception.TypeError
 extend Class
     is Object
 
+    direct method selectorsOf: object do: block
+        object __doSelectors: block!
+
     method displayOn: stream
         stream writeString: self name!
 

@@ -1346,6 +1346,7 @@ impl Object {
                 &args[0],
                 args[1].as_usize("#__put:__atSlot:")?,
             ),
+            None if selector == "__doSelectors:" => generic_do_selectors(self, args, env),
             None if selector == "__toString" => generic_to_string(self, args, env),
             None => {
                 // println!("known: {:?}", self.vtable.selectors());
@@ -1488,6 +1489,19 @@ fn generic_to_string(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
         }
         _ => Ok(env.foo.into_string(format!("{}", receiver))),
     }
+}
+
+fn generic_do_selectors(receiver: &Object, args: &[Object], env: &Env) -> Eval {
+    let methods = receiver.vtable.methods.borrow();
+    let selector = env.find_global_or_unwind("Selector")?;
+    for method in methods.keys() {
+        args[0].send(
+            "value:",
+            &[selector.send("intern:", &[env.foo.make_string(method)], env)?],
+            env,
+        )?;
+    }
+    Ok(receiver.clone())
 }
 
 pub fn read_instance_variable(receiver: &Object, index: usize) -> Eval {
