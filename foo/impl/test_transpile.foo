@@ -225,19 +225,6 @@ class TestTranspilePreludeTime { assert system }
             expect: "#<Boolean True>"!
 end
 
-class TestTranspilePreludeWhole { assert system }
-    is TranspilerTest
-
-    method test
-        self transpile: "import lang.prelude
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 system output print: \"ok\"!
-                         end"
-            expect: "ok"!
-end
-
 class TestTranspilePreludeClosure { assert system }
     is TranspilerTest
 
@@ -2246,7 +2233,6 @@ class Main {}
             "--prelude-string-output" -> TestTranspilePreludeStringOutput,
             "--prelude-test" -> TestTranspilePreludeTest,
             "--prelude-time" -> TestTranspilePreludeTime,
-            "--prelude-whole" -> TestTranspilePreludeWhole,
             "--record" -> TestTranspileRecord,
             "--return" -> TestTranspileReturn,
             "--self" -> TestTranspileSelf,
