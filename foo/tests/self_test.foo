@@ -14,6 +14,8 @@ import lang.test_selector.TestSelector
 import lang.test_string.TestString
 import lang.test_target_record.TestTargetRecord
 
+import lib.test_substitute.TestSubstitute
+
 class Main { assert system }
     direct method run: cmd in: system
         let instance = self assert: (Assert reportingTo: system output)
@@ -36,6 +38,8 @@ class Main { assert system }
             TestSelector,
             TestString,
             TestTargetRecord,
+            -- Libs
+            TestSubstitute,
         ]
             do: { |each| each runTests: assert in: system }!
 

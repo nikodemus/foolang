@@ -123,39 +123,6 @@ class TestTranspileLet { assert system }
              expect: "#<Integer 1142>"!
 end
 
-class TestTranspileLib { assert system }
-    is TranspilerTest
-
-    method checkLines: lines match: array
-        lines with: array
-              do: { |actual expected|
-                    (actual startsWith: expected)
-                        ifFalse: { system output println: "\ncheckLines: '{actual}' does not start with '{expected}'".
-                                   return False } }
-                        ifExhausted: { system output println: "\ncheckLines: size mismatch! {lines size} lines, expected {array size}".
-                                       system output println: "got: {lines}".
-                                       return False }.
-        True!
-
-    method test_Substitute
-        self
-            transpileWithPrelude:
-                "import lib.test_substitute.*
-                 import lib.assert
-
-                 class Main \{}
-                     direct method run: command in: system
-                         TestSubstitute run: command in: system!
-                 end"
-            check: { |res|
-                     res ok
-                         ifTrue: { self checkLines: (res stdout lines reject: #isEmpty)
-                                        match: ["- test_Substitute_can_implement_interface",
-                                                "- test_Substitute_returns_as_specified",
-                                                "- test_Substitute_tracks_messages"] }
-                        ifFalse: { False } }!
-end
-
 class TestTranspilePanic { assert system }
     is TranspilerTest
 
@@ -2198,7 +2165,6 @@ class Main {}
             "--includes" -> TestTranspileIncludes,
             "--interface" -> TestTranspileInterface,
             "--let" -> TestTranspileLet,
-            "--lib" -> TestTranspileLib,
             "--panic" -> TestTranspilePanic,
             "--perform-with" -> TestTranspilePerformWith,
             "--prelude-closure" -> TestTranspilePreludeClosure,
