@@ -12,6 +12,7 @@ import lang.test_lang.TestLang
 import lang.test_ordered.TestOrdered
 import lang.test_selector.TestSelector
 import lang.test_string.TestString
+import lang.test_target_record.TestTargetRecord
 
 class Main { assert system }
     direct method run: cmd in: system
@@ -34,6 +35,7 @@ class Main { assert system }
             TestOrdered,
             TestSelector,
             TestString,
+            TestTargetRecord,
         ]
             do: { |each| each runTests: assert in: system }!
 

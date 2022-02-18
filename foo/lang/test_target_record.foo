@@ -1,0 +1,28 @@
+define _TestTargetRecord_1 { foo: 42, bar: 124 }!
+define _TestTargetRecord_2 { bar: 12349, foo: 99 }!
+
+class TestTargetRecord { assert }
+    is TestSuite
+
+    method _log: x in: log
+        log print: x.
+        x!
+
+    method test_ad_hoc_record
+        let record = Record a: 1 b: 2.
+        assert true: { 1 == record a }.
+        assert true: { 2 == record b }!
+
+    method test_defined_record
+        assert true: { 42 == _TestTargetRecord_1 foo }.
+        assert true: { 99 == _TestTargetRecord_2 foo }!
+
+    method test_record_eval_order
+        let log = StringOutput new.
+        { a: (self _log: "1" in: log),
+          b: (self _log: "2" in: log) }.
+        { b: (self _log: "3" in: log),
+          a: (self _log: "4" in: log) }.
+        assert true: { "1234" == log content }!
+
+end
