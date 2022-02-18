@@ -11,10 +11,10 @@ class TestByteArray { assert }
 
     method test_accessors
         let bytes = ByteArray new: 3.
-        bytes put: -1 at: 1. -- Should be a TypeError, maybe?
+        bytes put: 10 at: 1.
         bytes put: 100 at: 2.
         bytes put: 200 at: 3.
-        assert true: { 255 == (bytes at: 1) }.
+        assert true: { 10 == (bytes at: 1) }.
         assert true: { 100 == (bytes at: 2) }.
         assert true: { 200 == (bytes at: 3) }!
 
