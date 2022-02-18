@@ -1542,21 +1542,6 @@ class TestTranspileRecord { assert system }
             expect: "#<Boolean True>#<Boolean False>#<Boolean False>"!
 end
 
-class TestTranspileReturn { assert system }
-    is TranspilerTest
-
-    method testNonLocalReturn
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 self foo debug!
-                             direct method foo
-                                 100 + (self bar: \{ |x| return x })!
-                             direct method bar: block
-                                 block value: 420!
-                         end"
-            expect: "#<Integer 420>"!
-end
-
 class TestTranspileSelector { assert system }
     is TranspilerTest
 
@@ -2133,7 +2118,6 @@ class Main {}
             "--prelude-string-output" -> TestTranspilePreludeStringOutput,
             "--prelude-time" -> TestTranspilePreludeTime,
             "--record" -> TestTranspileRecord,
-            "--return" -> TestTranspileReturn,
             "--self" -> TestTranspileSelf,
             "--self-hosted" -> TestTranspileSelfHosted,
             "--selector" -> TestTranspileSelector,
