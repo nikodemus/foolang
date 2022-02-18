@@ -1858,70 +1858,6 @@ class TestTranspileSelector { assert system }
             expect: "#<Selector foo>#<String bar>"!
 end
 
-class TestTranspileFloat { assert system }
-    is TranspilerTest
-
-    method testFloatArithmetic2
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (8.0 floatDiv: 2.0) debug.
-                                 (0.0 floatMul: 10.0) debug!
-                         end"
-            expect: "#<Float 4.0>#<Float 0.0>"!
-
-    method testFloatEq
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (1.0 floatEq: 1.0) debug.
-                                 (1.0 floatEq: 2.0) debug!
-                         end"
-            expect: "#<Boolean True>#<Boolean False>"!
-
-    method testFloatIs
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (1.0 is 1.0) debug.
-                                 (1.0 is 2.0) debug!
-                         end"
-            expect: "#<Boolean True>#<Boolean False>"!
-
-    method testFloatGt
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (1.0 floatGt: 2.0) debug.
-                                 (2.0 floatGt: 1.0) debug.
-                                 (1.0 floatGt: 1.0) debug!
-                         end"
-            expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
-
-    method testFloatGte
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (1.0 floatGte: 2.0) debug.
-                                 (2.0 floatGte: 1.0) debug.
-                                 (1.0 floatGte: 1.0) debug!
-                         end"
-            expect: "#<Boolean False>#<Boolean True>#<Boolean True>"!
-
-    method testFloatLt
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (1.0 floatLt: 2.0) debug.
-                                 (2.0 floatLt: 1.0) debug.
-                                 (1.0 floatLt: 1.0) debug!
-                         end"
-            expect: "#<Boolean True>#<Boolean False>#<Boolean False>"!
-
-    method testFloatLte
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (1.0 floatLte: 2.0) debug.
-                                 (2.0 floatLte: 1.0) debug.
-                                 (1.0 floatLte: 1.0) debug!
-                         end"
-            expect: "#<Boolean True>#<Boolean False>#<Boolean True>"!
-end
-
 class TestTranspileIncludes { assert system }
     is TranspilerTest
 
@@ -2553,7 +2489,6 @@ class Main {}
             "--dynamic" -> TestTranspileDynamic,
             "--extend" -> TestTranspileExtend,
             "--finally" -> TestTranspileFinally,
-            "--float" -> TestTranspileFloat,
             "--globals" -> TestTranspileGlobals,
             "--integer" -> TestTranspileInteger,
             "--includes" -> TestTranspileIncludes,
