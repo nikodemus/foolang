@@ -8,7 +8,12 @@ interface TestSuite
     direct method runTests: assert in: system
         (self assert: assert) runTestsIn: system!
 
+    method system: system
+        False!
+
     method runTestsIn: system
+        -- Extension spot for grabbing the system.
+        self system: system.
         self doTests: { |each| self runTest: each in: system }.
         self!
 
