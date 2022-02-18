@@ -611,27 +611,6 @@ class TestTranspilePreludeStringOutput { assert system }
             expect: "#<String Ok!>"!
 end
 
-class TestTranspilePreludeTest { assert system }
-    is TranspilerTest
-
-    method test
-        self transpile: "import lang.testSuite.TestSuite
-                         import lang.time_ext
-                         import lang.selector_target_ext
-                         class Main \{}
-                             is TestSuite
-                             direct method run: command in: system
-                                 self new runTestsIn: system!
-                             method test_a
-                                 True!
-                             method test_b
-                                 True!
-                         end"
-            expect: "- test_a (0.0s)
-- test_b (0.0s)
-"!
-end
-
 class TestTranspileInterface { assert system }
     is TranspilerTest
 
@@ -2152,7 +2131,6 @@ class Main {}
             "--prelude-object" -> TestTranspilePreludeObject,
             "--prelude-output" -> TestTranspilePreludeOutput,
             "--prelude-string-output" -> TestTranspilePreludeStringOutput,
-            "--prelude-test" -> TestTranspilePreludeTest,
             "--prelude-time" -> TestTranspilePreludeTime,
             "--record" -> TestTranspileRecord,
             "--return" -> TestTranspileReturn,
