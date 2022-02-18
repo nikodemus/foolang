@@ -32,6 +32,9 @@ class TestString { assert }
                        test first trim == test second }
                testing: "String#trim"!
 
+    method test_String_join
+        assert true: { "a to b to c" == (" to " join: ["a", "b", "c"]) }!
+
     method test_String_less_than
         assert forAll: [["aQWE", "bQWE"],
                         ["aqwe", "b"],

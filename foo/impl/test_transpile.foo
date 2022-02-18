@@ -91,71 +91,6 @@ interface TranspilerTest
                testing: "transpiler"!
 end
 
-class TestTranspileLet { assert system }
-    is TranspilerTest
-
-    method testLet
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let x = 22.
-                                 let y = 2.
-                                 (x integerMul: y) debug!
-                        end"
-             expect: "#<Integer 44>"!
-
-    method testLetAssign
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let x = 22.
-                                 let y = 0.
-                                 y = 2.
-                                 (x integerMul: y) debug!
-                        end"
-             expect: "#<Integer 44>"!
-
-    method testLetAssignOuter
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let n = 0.
-                                 \{ n = 1142 } value.
-                                 n debug!
-                        end"
-             expect: "#<Integer 1142>"!
-end
-
-class TestTranspileLib { assert system }
-    is TranspilerTest
-
-    method checkLines: lines match: array
-        lines with: array
-              do: { |actual expected|
-                    (actual startsWith: expected)
-                        ifFalse: { system output println: "\ncheckLines: '{actual}' does not start with '{expected}'".
-                                   return False } }
-                        ifExhausted: { system output println: "\ncheckLines: size mismatch! {lines size} lines, expected {array size}".
-                                       system output println: "got: {lines}".
-                                       return False }.
-        True!
-
-    method test_Substitute
-        self
-            transpileWithPrelude:
-                "import lib.test_substitute.*
-                 import lib.assert
-
-                 class Main \{}
-                     direct method run: command in: system
-                         TestSubstitute run: command in: system!
-                 end"
-            check: { |res|
-                     res ok
-                         ifTrue: { self checkLines: (res stdout lines reject: #isEmpty)
-                                        match: ["- test_Substitute_can_implement_interface",
-                                                "- test_Substitute_returns_as_specified",
-                                                "- test_Substitute_tracks_messages"] }
-                        ifFalse: { False } }!
-end
-
 class TestTranspilePanic { assert system }
     is TranspilerTest
 
@@ -202,22 +137,6 @@ class TestTranspilePerformWith { assert system }
             expect: "#<Selector doop:boop:>[#<Integer 123>, #<Integer 321>]"!
 end
 
-class TestTranspilePreludeCharacter { assert system }
-    is TranspilerTest
-
-    method testIsWhitespace
-        self transpile: "import lang.character_target_ext
-                         import lang.string -- for String#at:
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 let s = \" x \".
-                                 1 to: s size
-                                   do: \{ |index| (s at: index) isWhitespace debug }!
-                         end"
-            expect: "#<Boolean True>#<Boolean False>#<Boolean True>"!
-end
-
 class TestTranspilePreludeTime { assert system }
     is TranspilerTest
 
@@ -239,19 +158,6 @@ class TestTranspilePreludeTime { assert system }
                                  (t1 > delta) debug!
                          end"
             expect: "#<Boolean True>"!
-end
-
-class TestTranspilePreludeWhole { assert system }
-    is TranspilerTest
-
-    method test
-        self transpile: "import lang.prelude
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 system output print: \"ok\"!
-                         end"
-            expect: "ok"!
 end
 
 class TestTranspilePreludeClosure { assert system }
@@ -656,33 +562,6 @@ class TestTranspilePreludeOutput { assert system }
             expect: "Hello World!\n42"!
 end
 
-class TestTranspilePreludeSelector { assert system }
-    is TranspilerTest
-
-    method test
-        self transpile: "import lang.selector_target_ext
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 #foo isKeyword debug.
-                                 (#foo:) isKeyword debug!
-                         end"
-            expect: "#<Boolean False>#<Boolean True>"!
-end
-
-class TestTranspilePreludeString { assert system }
-    is TranspilerTest
-
-    method test
-        self transpile: "import lang.string.*
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 (\" to \" join: [\"a\", \"b\", \"c\"]) debug!
-                         end"
-            expect: "#<String a to b to c>"!
-end
-
 class TestTranspilePreludeStringOutput { assert system }
     is TranspilerTest
 
@@ -698,27 +577,6 @@ class TestTranspilePreludeStringOutput { assert system }
                                      debug!
                          end"
             expect: "#<String Ok!>"!
-end
-
-class TestTranspilePreludeTest { assert system }
-    is TranspilerTest
-
-    method test
-        self transpile: "import lang.testSuite.TestSuite
-                         import lang.time_ext
-                         import lang.selector_target_ext
-                         class Main \{}
-                             is TestSuite
-                             direct method run: command in: system
-                                 self new runTestsIn: system!
-                             method test_a
-                                 True!
-                             method test_b
-                                 True!
-                         end"
-            expect: "- test_a (0.0s)
-- test_b (0.0s)
-"!
 end
 
 class TestTranspileInterface { assert system }
@@ -1601,21 +1459,6 @@ True
             expect: "#<Integer -123>"!
 end
 
-class TestTranspileByteArray { assert system }
-    is TranspilerTest
-
-    method testByteArray1
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let bytes = ByteArray new: 3.
-                                 bytes put: 0 at: 1.
-                                 bytes put: 100 at: 2.
-                                 bytes put: 200 at: 3.
-                                 bytes debug!
-                         end"
-            expect: "#<ByteArray 0, 100, 200>"!
-end
-
 class TestTranspileFinally { assert system }
     is TranspilerTest
 
@@ -1651,44 +1494,6 @@ end
 class TestTranspileRecord { assert system }
     is TranspilerTest
 
-    method test_Ad_Hoc_Record_in_transpiler
-        self transpile: "import lang.record_target_ext
-                         import lang.array_target_ext
-                         class Main \{}
-                             direct method run: command in: system
-                                 let record = Record a: 1 b: 2.
-                                 record a debug.
-                                 record b debug.
-                                 (Record keysIn: record) debug!
-                         end"
-            expect: "#<Integer 1>#<Integer 2>[#<Selector a>, #<Selector b>]"!
-
-    method test_Define_record_in_transpiler
-        self transpile: "define MyRecord1 \{ foo: 42, bar: 123 }!
-                         define MyRecord2 \{ bar: 128947, foo: 99 }!
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 MyRecord1 foo debug.
-                                 MyRecord2 foo debug!
-                         end"
-            expect: "#<Integer 42>#<Integer 99>"!
-
-    method test_Eval_order_in_transpiled_record
-        self transpile: "class Main \{ out }
-                             direct method run: command in: system
-                                 (self out: system output) run!
-                             method value: x
-                                 out writeString: x.
-                                 x!
-                             method run
-                                 \{ a: ( self value: \"1\" ),
-                                    b: ( self value: \"2\" ) }.
-                                 \{ d: ( self value: \"3\" ),
-                                    c: ( self value: \"4\" ) }!
-                         end"
-            expect: "1234"!
-
     method test_Record_equality_in_transpiler
         self transpile: "import lang.record_target_ext
 
@@ -1703,29 +1508,6 @@ class TestTranspileRecord { assert system }
                                  (a1 == b) debug!
                          end"
             expect: "#<Boolean True>#<Boolean False>#<Boolean False>"!
-
-    method test_Simple_record_in_transpiler
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let r = \{ foo: 42 }.
-                                 r foo debug!
-                        end"
-            expect: "#<Integer 42>"!
-end
-
-class TestTranspileReturn { assert system }
-    is TranspilerTest
-
-    method testNonLocalReturn
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 self foo debug!
-                             direct method foo
-                                 100 + (self bar: \{ |x| return x })!
-                             direct method bar: block
-                                 block value: 420!
-                         end"
-            expect: "#<Integer 420>"!
 end
 
 class TestTranspileSelector { assert system }
@@ -1917,74 +1699,6 @@ class TestTranspileSystem { assert system }
                                  system output writeString: \"Hello!\"!
                          end"
             expect: "Hello!"!
-
-    method test_System_input
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 system output writeString: system input classOf name!
-                         end"
-            expect: "Input"!
-
-    method test_System_input_atEof
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 -- EOF isn't detected until a failed read, for better or worse
-                                 system input readChar_onEof: \{ False }.
-                                 let status = system input atEof
-                                                  ifTrue: \{ \"eof!\" }
-                                                  ifFalse: \{ \"good to go...\" }.
-                                 system output writeString: status!
-                         end"
-            expect: "eof!"!
-
-    method test_System_input_lines
-        self transpile: "import lang.input_target_ext
-                         class Main \{}
-                             direct method run: command in: system
-                                 system input
-                                     redirect: (system files / \"data/lorem_ipsum.txt\")
-                                                   file forRead.
-                                 let result = system input lines size is 6
-                                                 ifTrue: \{ \"ok\" }
-                                                 ifFalse: \{ \"nope\" }.
-                                 system output writeString: result!
-                         end"
-            expect: "ok"!
-
-    method test_System_input_readline
-        self transpile: "import lang.input_target_ext
-                         class Main \{}
-                             direct method run: command in: system
-                                 system input
-                                     redirect: (system files / \"data/lorem_ipsum.txt\")
-                                                   file forRead.
-                                 let line = system input readline.
-                                 system output writeString: line!
-                         end"
-            expect: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor"!
-
-    method test_System_input_readline_long_line
-        -- FIXME: This kind of jumping through the hoops to avoid loading
-        -- full prelude saves ~5-10s from the test time, but takes effort.
-        --
-        -- Instead I should really make it so that I can load the prelude
-        -- once, and keep it immutable. (Creating copies if extensions)
-        -- are added later.
-        --
-        -- ...could even include it in the compiler, so that unless
-        -- a specific prelude is requested, the built-in one is used.
-        self transpile: "import lang.input_target_ext
-                         class Main \{}
-                             direct method run: command in: system
-                                 system input
-                                     redirect: (system files / \"data/1001-character-line.txt\")
-                                                   file forRead.
-                                 let result = (system input readline) size is 1001
-                                                  ifTrue: \{ \"1001\" }
-                                                  ifFalse: \{ \"nope\" }.
-                                 system output writeString: result!
-                         end"
-            expect: "1001"!
 
     method test_Main_run_in_command_size
         self transpile: "class Main \{}
@@ -2277,7 +1991,6 @@ class Main {}
         let tests = {
             "--backtrace" -> TestTranspileBacktrace,
             "--boolean" -> TestTranspileBoolean,
-            "--byte-array" -> TestTranspileByteArray,
             "--cascade" -> TestTranspileCascade,
             "--class" -> TestTranspileClass,
             "--dictionary" -> TestTranspileDictionary,
@@ -2288,11 +2001,8 @@ class Main {}
             "--integer" -> TestTranspileInteger,
             "--includes" -> TestTranspileIncludes,
             "--interface" -> TestTranspileInterface,
-            "--let" -> TestTranspileLet,
-            "--lib" -> TestTranspileLib,
             "--panic" -> TestTranspilePanic,
             "--perform-with" -> TestTranspilePerformWith,
-            "--prelude-character" -> TestTranspilePreludeCharacter,
             "--prelude-closure" -> TestTranspilePreludeClosure,
             "--prelude-exception" -> TestTranspilePreludeException,
             "--prelude-file" -> TestTranspilePreludeFile,
@@ -2304,14 +2014,9 @@ class Main {}
             "--prelude-iterable" -> TestTranspilePreludeIterable,
             "--prelude-object" -> TestTranspilePreludeObject,
             "--prelude-output" -> TestTranspilePreludeOutput,
-            "--prelude-selector" -> TestTranspilePreludeSelector,
-            "--prelude-string" -> TestTranspilePreludeString,
             "--prelude-string-output" -> TestTranspilePreludeStringOutput,
-            "--prelude-test" -> TestTranspilePreludeTest,
             "--prelude-time" -> TestTranspilePreludeTime,
-            "--prelude-whole" -> TestTranspilePreludeWhole,
             "--record" -> TestTranspileRecord,
-            "--return" -> TestTranspileReturn,
             "--self" -> TestTranspileSelf,
             "--self-hosted" -> TestTranspileSelfHosted,
             "--selector" -> TestTranspileSelector,

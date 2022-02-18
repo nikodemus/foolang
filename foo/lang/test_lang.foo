@@ -25,36 +25,41 @@ class TestLang { assert }
         block value.
         panic "never"!
 
-    method test_value_typecheck_ok
+    method test_typecheck_value_ok
         assert true: { 11 == (11 :: Integer) }!
 
-    method test_method_arg_typecheck_ok
+    method test_typecheck_method_arg_ok
         assert true: { 21378 == (self _arg_typecheck: 21378) }!
 
-    method test_method_return_typecheck_ok
+    method test_typecheck_method_return_ok
         assert true: { 933 == (self _return_typecheck: { 933.1 round }) }!
 
-    method test_method_nonlocal_return_typecheck_ok
+    method test_typecheck_method_nonlocal_return_ok
         assert true: { 371 == (self _nonlocal_return_typecheck: { 371.1 round }) }!
 
-    method test_block_arg_typecheck_ok
+    method test_typecheck_block_arg_ok
         assert true: { 98013 == ({ |x::Integer| x } value: 98013) }!
 
-    method test_interface_in_typecheck_ok
+    method test_typecheck_interface_in_ok
         assert true: { 9 == (_TestLangClass new :: _TestLangInterface)
                            value }!
 
-    method test_let_typecheck_ok
+    method test_typecheck_let_ok
         let x :: Integer = 42.
         x = x + 100.
         assert true: { 142 == x }!
 
-    method test_slot_init_typecheck_ok
+    method test_typecheck_slot_init_ok
         assert true: { 283 ==  (_TestLangClass value: 283) value }!
 
-    method test_slot_assign_typecheck_ok
+    method test_typecheck_slot_assign_ok
         let obj = _TestLangClass new.
         obj value: 78.
         assert true: { 78 == obj value }!
 
+    method test_return_nonlocal
+        assert true: { 420 == (self _test_return_nonlocal_aux) }!
+
+    method _test_return_nonlocal_aux
+        1000 + (self _noreturn_apply: { return 420 })!
 end
