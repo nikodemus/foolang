@@ -1572,21 +1572,6 @@ True
             expect: "#<Integer -123>"!
 end
 
-class TestTranspileByteArray { assert system }
-    is TranspilerTest
-
-    method testByteArray1
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let bytes = ByteArray new: 3.
-                                 bytes put: 0 at: 1.
-                                 bytes put: 100 at: 2.
-                                 bytes put: 200 at: 3.
-                                 bytes debug!
-                         end"
-            expect: "#<ByteArray 0, 100, 200>"!
-end
-
 class TestTranspileFinally { assert system }
     is TranspilerTest
 
@@ -2202,7 +2187,6 @@ class Main {}
         let tests = {
             "--backtrace" -> TestTranspileBacktrace,
             "--boolean" -> TestTranspileBoolean,
-            "--byte-array" -> TestTranspileByteArray,
             "--cascade" -> TestTranspileCascade,
             "--class" -> TestTranspileClass,
             "--dictionary" -> TestTranspileDictionary,
