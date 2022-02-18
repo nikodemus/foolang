@@ -91,38 +91,6 @@ interface TranspilerTest
                testing: "transpiler"!
 end
 
-class TestTranspileLet { assert system }
-    is TranspilerTest
-
-    method testLet
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let x = 22.
-                                 let y = 2.
-                                 (x integerMul: y) debug!
-                        end"
-             expect: "#<Integer 44>"!
-
-    method testLetAssign
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let x = 22.
-                                 let y = 0.
-                                 y = 2.
-                                 (x integerMul: y) debug!
-                        end"
-             expect: "#<Integer 44>"!
-
-    method testLetAssignOuter
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let n = 0.
-                                 \{ n = 1142 } value.
-                                 n debug!
-                        end"
-             expect: "#<Integer 1142>"!
-end
-
 class TestTranspilePanic { assert system }
     is TranspilerTest
 
@@ -2033,7 +2001,6 @@ class Main {}
             "--integer" -> TestTranspileInteger,
             "--includes" -> TestTranspileIncludes,
             "--interface" -> TestTranspileInterface,
-            "--let" -> TestTranspileLet,
             "--panic" -> TestTranspilePanic,
             "--perform-with" -> TestTranspilePerformWith,
             "--prelude-closure" -> TestTranspilePreludeClosure,
