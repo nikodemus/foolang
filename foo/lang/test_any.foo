@@ -1,0 +1,9 @@
+class TestAny { assert }
+    is TestSuite
+
+    method test_Any_is_Any
+        assert true: { Any is Any }!
+
+    method test_Any_includes_42
+        assert true: { Any includes: 42 }!
+end

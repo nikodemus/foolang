@@ -3,6 +3,30 @@ import .test_iterable.TestIterable
 class TestArray { assert }
     is TestSuite
 
+    method test_of_new_value
+        let new = Array of: Float new: 3 value: 12.3.
+        assert true: { new == [12.3, 12.3, 12.3] }!
+
+    method test_new_value
+        let new = Array new: 3 value: "foo".
+        assert true: { new == ["foo", "foo", "foo"] }!
+
+    method test_toString
+        assert true: { [] toString == "[]" }.
+        assert true: { [1,2,3] toString == "[1, 2, 3]" }!
+
+    method test_size
+        assert true: { 0 == [] size }.
+        assert true: { 3 == [1,2,3] size }!
+
+    method test_at
+        assert true: { 300 == ([100,200,300,400] at: 3) }!
+
+    method test_at_put
+        let a = [1,2,3,999,5].
+        a at: 4 put: "four".
+        assert true: { "four" == (a at: 4) }!
+
     method equalityCases
         [[ [1,2,3], [1,2,3], True ],
          [ [1, 2, [3, 4]], [1, 2, [3, 4]], True ],

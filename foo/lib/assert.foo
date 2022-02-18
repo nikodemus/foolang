@@ -155,6 +155,12 @@ class Assert { output failed }
                          ifTrue: { test value: actual } }
             testing: thing!
 
+    method that: condition raises: ex where: test
+        self that: condition
+             raises: ex
+             where: test
+             testing: "(anonymous test)"!
+
     method that: condition equals: value testing: thing
         self
             that: condition

@@ -1,0 +1,14 @@
+class TestBlock { assert }
+    is TestSuite
+
+    method test_value_value
+        assert true: { 40 == ({ |a b| a + b } value: 10 value: 30) }!
+
+    method test_scope
+        let x = 200.
+        let b1 = { x + 11 * 2 }.
+        let b2 = { let x = 0. b1 value }.
+        let x = 1.
+        assert true: { 222 == b2 value }!
+
+end

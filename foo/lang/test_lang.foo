@@ -1,0 +1,60 @@
+interface _TestLangInterface
+end
+
+class _TestLangClass { value :: Integer }
+    is _TestLangInterface
+    direct method new
+        self value: 9!
+    method value: new
+        value = new!
+end
+
+class TestLang { assert }
+    is TestSuite
+
+    method _arg_typecheck: arg :: Integer
+        arg!
+
+    method _return_typecheck: arg -> Integer
+        arg value!
+
+    method _nonlocal_return_typecheck: arg -> Integer
+        self _noreturn_apply: { return arg value }!
+
+    method _noreturn_apply: block
+        block value.
+        panic "never"!
+
+    method test_value_typecheck_ok
+        assert true: { 11 == (11 :: Integer) }!
+
+    method test_method_arg_typecheck_ok
+        assert true: { 21378 == (self _arg_typecheck: 21378) }!
+
+    method test_method_return_typecheck_ok
+        assert true: { 933 == (self _return_typecheck: { 933.1 round }) }!
+
+    method test_method_nonlocal_return_typecheck_ok
+        assert true: { 371 == (self _nonlocal_return_typecheck: { 371.1 round }) }!
+
+    method test_block_arg_typecheck_ok
+        assert true: { 98013 == ({ |x::Integer| x } value: 98013) }!
+
+    method test_interface_in_typecheck_ok
+        assert true: { 9 == (_TestLangClass new :: _TestLangInterface)
+                           value }!
+
+    method test_let_typecheck_ok
+        let x :: Integer = 42.
+        x = x + 100.
+        assert true: { 142 == x }!
+
+    method test_slot_init_typecheck_ok
+        assert true: { 283 ==  (_TestLangClass value: 283) value }!
+
+    method test_slot_assign_typecheck_ok
+        let obj = _TestLangClass new.
+        obj value: 78.
+        assert true: { 78 == obj value }!
+
+end

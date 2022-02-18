@@ -28,6 +28,41 @@ class TestFloat { assert }
     method test_floatSub
         assert true: { 9.9 == (10.0 floatSub: 0.1) }!
 
+    method test_floatDiv
+        assert true: { 4.0 == (8.0 floatDiv: 2.0) }!
+
+    method test_floatMul
+        assert true: { 0.0 == (0.0 floatMul: 10.0) }.
+        assert true: { 22.0 == (11.0 floatMul: 2.0) }!
+
+    method test_floatEq
+        assert true: { 1.0 floatEq: 1.0 }.
+        assert false: { 1.0 floatEq: 2.0 }!
+
+    method test_float_is
+        assert true: { 1.0 is (0.5 + 0.5) }.
+        assert false: { 1.0 is 0.00 }!
+
+    method test_floatGt
+        assert true: { 2.0 floatGt: 1.0 }.
+        assert false: { 1.0 floatGt: 2.0 }.
+        assert false: { 1.0 floatGt: 1.0 }!
+
+    method test_floatGte
+        assert true: { 2.0 floatGte: 2.0 }.
+        assert false: { 1.0 floatGte: 2.0 }.
+        assert true: { 1.0 floatGte: 1.0 }!
+
+    method test_floatLt
+        assert false: { 2.0 floatLt: 1.0 }.
+        assert true: { 1.0 floatLt: 2.0 }.
+        assert false: { 1.0 floatLt: 1.0 }!
+
+    method test_FloatLte
+        assert false: { 2.0 floatLte: 1.0 }.
+        assert true: { 1.0 floatLte: 2.0}.
+        assert true: { 1.0 floatLte: 1.0 }!
+
     method test_plus
         assert forAll: [{a: 1.42, b: 2.2, sum: 3.62},
                         {a: 0.0, b: 112.123, sum: 112.123},
