@@ -202,22 +202,6 @@ class TestTranspilePerformWith { assert system }
             expect: "#<Selector doop:boop:>[#<Integer 123>, #<Integer 321>]"!
 end
 
-class TestTranspilePreludeCharacter { assert system }
-    is TranspilerTest
-
-    method testIsWhitespace
-        self transpile: "import lang.character_target_ext
-                         import lang.string -- for String#at:
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 let s = \" x \".
-                                 1 to: s size
-                                   do: \{ |index| (s at: index) isWhitespace debug }!
-                         end"
-            expect: "#<Boolean True>#<Boolean False>#<Boolean True>"!
-end
-
 class TestTranspilePreludeTime { assert system }
     is TranspilerTest
 
@@ -2292,7 +2276,6 @@ class Main {}
             "--lib" -> TestTranspileLib,
             "--panic" -> TestTranspilePanic,
             "--perform-with" -> TestTranspilePerformWith,
-            "--prelude-character" -> TestTranspilePreludeCharacter,
             "--prelude-closure" -> TestTranspilePreludeClosure,
             "--prelude-exception" -> TestTranspilePreludeException,
             "--prelude-file" -> TestTranspilePreludeFile,
