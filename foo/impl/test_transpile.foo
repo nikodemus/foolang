@@ -1245,86 +1245,6 @@ class TestTranspileBoolean { assert system }
 
 end
 
-class TestTranspileArray { assert system }
-    is TranspilerTest
-
-    method testOfNewValue
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (Array of: Float new: 3 value: 12.3) debug!
-                         end"
-            expect: "[#<Float 12.3>, #<Float 12.3>, #<Float 12.3>]"!
-
-    method testNewValue
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (Array new: 3 value: True) debug!
-                         end"
-            expect: "[#<Boolean True>, #<Boolean True>, #<Boolean True>]"!
-
-    method testArrayCtor1
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 [1, 2, 3] debug!
-                         end"
-            expect: "[#<Integer 1>, #<Integer 2>, #<Integer 3>]"!
-
-    method testArrayCtor2
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 [\"[\", \"]\", 123] debug!
-                         end"
-            expect: "[#<String [>, #<String ]>, #<Integer 123>]"!
-
-    method testArraySize
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 [1, 2, 3] size debug.
-                                 [] size debug!
-                         end"
-            expect: "#<Integer 3>#<Integer 0>"!
-
-    method testArrayAt
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                ([1,2,3,999,5] at: 4) debug!
-                         end"
-            expect: "#<Integer 999>"!
-
-    method testArrayAtPut
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                let a = [1,2,3,999,5].
-                                (a at: 4) debug.
-                                a at: 4 put: 42.
-                                (a at: 4) debug!
-                         end"
-            expect: "#<Integer 999>#<Integer 42>"!
-
-    method testArraySums
-        self transpile: "import lang.integer_ext
-                         class Main \{}
-                             direct method run: command in: system
-                                (self sums: 10) debug!
-                             direct method sum: n
-                                 let array = Array new: n.
-                                 1 to: n
-                                   do: \{ |each|
-                                         array at: each put: each * 2 }.
-                                 let sum = 0.
-                                 1 to: n
-                                   do: \{ |each|
-                                         sum = sum + (array at: each) }.
-                                 sum!
-                             direct method sums: n
-                                n > 0
-                                   ifTrue: \{ (self sum: n) + (self sums: n - 1) }
-                                   ifFalse: \{ 0 }!
-                         end"
-            expect: "#<Integer 440>"!
-
-end
-
 class TestTranspileBacktrace { assert system }
     is TranspilerTest
 
@@ -2464,7 +2384,6 @@ end
 class Main {}
     direct method run: cmd in: system
         let tests = {
-            "--array" -> TestTranspileArray,
             "--backtrace" -> TestTranspileBacktrace,
             "--block" -> TestTranspileBlock,
             "--boolean" -> TestTranspileBoolean,
