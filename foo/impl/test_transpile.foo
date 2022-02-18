@@ -202,20 +202,6 @@ class TestTranspilePerformWith { assert system }
             expect: "#<Selector doop:boop:>[#<Integer 123>, #<Integer 321>]"!
 end
 
-class TestTranspilePreludeAny { assert system }
-    is TranspilerTest
-
-    method test
-        self transpile: "import lang.any.Any
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 (Any is Any) debug!
-                         end"
-            expect: "#<Boolean True>"!
-end
-
-
 class TestTranspilePreludeCharacter { assert system }
     is TranspilerTest
 
@@ -2497,7 +2483,6 @@ class Main {}
             "--lib" -> TestTranspileLib,
             "--panic" -> TestTranspilePanic,
             "--perform-with" -> TestTranspilePerformWith,
-            "--prelude-any" -> TestTranspilePreludeAny,
             "--prelude-character" -> TestTranspilePreludeCharacter,
             "--prelude-closure" -> TestTranspilePreludeClosure,
             "--prelude-exception" -> TestTranspilePreludeException,
