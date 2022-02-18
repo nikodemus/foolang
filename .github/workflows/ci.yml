@@ -58,6 +58,9 @@ jobs:
       - name: Bootstrap
         run: bash build.sh --bootstrap
 
+      - name: Self Test
+        run: bash test_foo2.sh
+
       - name: Test Foolang
         run: cargo run foo/impl/test_foolang.foo --use=foo/lib
 
@@ -237,6 +240,9 @@ jobs:
 
       - name: Bootstrap
         run: bash build.sh --no-interpreter-build
+
+      - name: Self Test
+        run: bash test_foo2.sh
 
       - name: No duplicate declarations
         run: bash no_duplicate_declarations.sh

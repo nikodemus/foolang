@@ -28,20 +28,22 @@ define InstanceMethods
                   int ndigits = 0; // mode zero ignores ndigits.
                   int dec;         // decimal exponent (number of digits / leading zeros)
                   int sign;        // 0 for no sign, 1 for negative
-                  char *s = dtoa(arg, mode, ndigits, &dec, &sign, NULL);
-                  size_t n = strlen(s);
+                  char* rve = NULL;
+                  char *s = dtoa(arg, mode, ndigits, &dec, &sign, &rve);
+                  int n = (int)(rve-s);
                   struct FooBytes *bytes;
                   size_t dec_digits = dec, zeros = 0, start1 = 0, start2, dot;
-                  if (dec == n) \{
-                      // Integer value
-                      bytes = FooBytes_alloc(ctx, sign + n + 2);
+                  if (dec >= n) \{
+                      // Integer value, for numbers with trailing zeros N counts
+                      // only the leading digits.
+                      bytes = FooBytes_alloc(ctx, sign + dec_digits + 2);
                       start1 = sign;
-                      dot = start1 + n;
+                      dot = start1 + dec_digits;
                       start2 = dot + 1;
                   } else if (dec > 0) \{
                       bytes = FooBytes_alloc(ctx, sign + n + 1);
                       start1 = sign;
-                      dot = start1 + dec;
+                      dot = start1 + dec_digits;
                       start2 = dot + 1;
                   } else \{
                       dec_digits = 0;
@@ -54,7 +56,12 @@ define InstanceMethods
                   if (sign)
                       data[0] = '-';
                   if (dec_digits) \{
-                      memcpy(data + start1, s, dec_digits);
+                      if (dec > n) \{
+                          memcpy(data + start1, s, n);
+                          memset(data + start1 + n, '0', dec-n);
+                      \} else \{
+                          memcpy(data + start1, s, dec_digits);
+                      \}
                   } else \{
                       memset(data + sign, '0', zeros);
                   }
@@ -64,6 +71,7 @@ define InstanceMethods
                   } else \{
                       data[start2] = '0';
                   }
+                  assert(bytes->size == strlen(data));
                   return FOO_INSTANCE(String, bytes);" },
       #truncate
           -> { signature: [], vars: 0,
