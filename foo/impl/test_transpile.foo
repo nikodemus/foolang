@@ -2115,13 +2115,6 @@ end
 class TestTranspileTypecheck { assert system }
     is TranspilerTest
 
-    method testIntegerValueOk
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (12::Integer) debug!
-                         end"
-            expect: "#<Integer 12>"!
-
     method testIntegerValueOops
         self transpile: "class Main \{}
                              direct method run: command in: system
@@ -2131,15 +2124,6 @@ class TestTranspileTypecheck { assert system }
 Backtrace:
   1: Main classOf#run:in:
 "!
-
-    method testIntegerMethodArgOk
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 self foo: 12!
-                             direct method foo: x::Integer
-                                 x debug!
-                         end"
-            expect: "#<Integer 12>"!
 
     method testIntegerMethodArgOops
         self transpile: "class Main \{}
@@ -2154,13 +2138,6 @@ Backtrace:
   1: Main classOf#run:in:
 "!
 
-    method testIntegerBlockArgOk
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 \{ |x::Integer| x debug } value: 12!
-                         end"
-            expect: "#<Integer 12>"!
-
     method testIntegerBlockArgOops
         self transpile: "class Main \{}
                              direct method run: command in: system
@@ -2171,20 +2148,6 @@ Backtrace:
   2: Closure#value:
   1: Main classOf#run:in:
 "!
-
-    method testInterfaceOk
-        self transpile: "interface MyInterface
-                         end
-                         class MyClass \{}
-                             is MyInterface
-                             method value
-                                 9!
-                         end
-                         class Main \{}
-                             direct method run: command in: system
-                                 MyClass new :: MyInterface value debug!
-                         end"
-            expect: "#<Integer 9>"!
 
     method testInterfaceOops
         self transpile: "interface MyInterface
@@ -2197,14 +2160,6 @@ Backtrace:
 Backtrace:
   1: Main classOf#run:in:
 "!
-
-    method testLetOk
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let x :: Integer = 42.
-                                 x debug!
-                         end"
-            expect: "#<Integer 42>"!
 
     method testLetOops
         self transpile: "class Main \{}
@@ -2229,15 +2184,6 @@ Backtrace:
   1: Main classOf#run:in:
 "!
 
-    method testSlotTypeInitOk
-        self transpile: "class Main \{ x::Integer }
-                             direct method run: command in: system
-                                 (self x: 42) x debug!
-                             method x
-                                 x!
-                         end"
-            expect: "#<Integer 42>"!
-
     method testSlotTypeInitOops
         self transpile: "class Main \{ x::Integer }
                              direct method run: command in: system
@@ -2250,16 +2196,6 @@ Backtrace:
   2: Main classOf#x:
   1: Main classOf#run:in:
 "!
-
-    method testSlotTypeAssignOk
-        self transpile: "class Main \{ x::Integer }
-                             direct method run: command in: system
-                                 (self x: 0) frob debug!
-                             method frob
-                                 x = 42.
-                                 x!
-                         end"
-            expect: "#<Integer 42>"!
 
     method testSlotTypeAssignOops
         self transpile: "class Main \{ x::Integer }
@@ -2275,15 +2211,6 @@ Backtrace:
   1: Main classOf#run:in:
 "!
 
-    method testMethodReturnTypeOk
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 self foo debug!
-                             direct method foo -> Integer
-                                 42!
-                         end"
-            expect: "#<Integer 42>"!
-
     method testMethodReturnTypeOops
         self transpile: "class Main \{}
                              direct method run: command in: system
@@ -2296,18 +2223,6 @@ Backtrace:
   2: Main classOf#foo
   1: Main classOf#run:in:
 "!
-
-    method testMethodNonLocalReturnTypeOk
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 self foo debug!
-                             direct method foo -> Integer
-                                 self bar: \{ return 427 }!
-                             direct method bar: block
-                                 block value.
-                                 return 0!
-                         end"
-            expect: "#<Integer 427>"!
 
     method testMethodNonLocalReturnTypeOops
         self transpile: "class Main \{}

@@ -8,6 +8,7 @@ import lang.test_character.TestCharacter
 import lang.test_class.TestClass
 import lang.test_file.TestFile
 import lang.test_float.TestFloat
+import lang.test_lang.TestLang
 import lang.test_ordered.TestOrdered
 import lang.test_selector.TestSelector
 import lang.test_string.TestString
@@ -29,6 +30,7 @@ class Main { assert system }
             TestClass,
             TestFile,
             TestFloat,
+            TestLang,
             TestOrdered,
             TestSelector,
             TestString,
