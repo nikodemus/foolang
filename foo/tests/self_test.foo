@@ -9,11 +9,13 @@ import lang.test_character.TestCharacter
 import lang.test_class.TestClass
 import lang.test_file.TestFile
 import lang.test_float.TestFloat
+import lang.test_input.TestInput
+import lang.test_integer.TestInteger
 import lang.test_lang.TestLang
 import lang.test_ordered.TestOrdered
 import lang.test_selector.TestSelector
 import lang.test_string.TestString
-import lang.test_input.TestInput
+import lang.test_target_dictionary.TestTargetDictionary
 import lang.test_target_record.TestTargetRecord
 
 import lib.test_substitute.TestSubstitute
@@ -37,14 +39,22 @@ class Main { assert system }
             TestFile,
             TestFloat,
             TestInput,
+            TestInteger,
             TestLang,
             TestOrdered,
             TestSelector,
             TestString,
+            -- FIXME: These should be replaced by shared tests
+            -- but Object#== is broken in evaluator, causing trouble.
             TestTargetRecord,
+            TestTargetDictionary,
             -- Libs
             TestSubstitute,
         ]
-            do: { |each| each runTests: assert in: system }!
+                do: { |each|
+                      each runTests: assert in: system.
+                      assert failed
+                          ifTrue: { return False } }.
+        True!
 
 end

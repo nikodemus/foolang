@@ -21,7 +21,7 @@ return ctx->receiver;"},
 if (div)
     return FOO_INTEGER(ctx->receiver.datum.int64 / div);
 else
-    foo_unimplemented(\"DivideByZero handling\");" },
+    foo_panicf(ctx, \"Divide by zero! (DivideByZero not supported on target yet)\");" },
       #integerEq:
           -> { signature: [Integer], vars: 0,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.int64 == ctx->frame[0].datum.int64);" },

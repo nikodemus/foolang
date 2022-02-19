@@ -156,64 +156,6 @@ class TestTranspilePreludeClosure { assert system }
             expect: "#<Integer 53>#<Integer 312>"!
 end
 
-class TestTranspileDictionary { assert system }
-    is TranspilerTest
-
-    method test_Dictionary_remove_transpiled
-        self transpile: "import lang.dictionary_target.Dictionary
-                         import lang.output_ext
-                         import lang.string
-                         import lang.selector_target_ext
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 let dict = Dictionary new.
-                                 dict at: 1 put: \"one\".
-                                 dict at: 2 put: \"two\".
-                                 dict remove: 1.
-                                 system output print: dict!
-                         end"
-            expect: "\{ 2 -> \"two\" }"!
-
-    method test_Dictionary_toString_transpiled
-        self transpile: "import lang.dictionary_target.Dictionary
-                         import lang.output_ext
-                         import lang.string
-                         import lang.selector_target_ext
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 let dict = Dictionary new.
-                                 dict at: 1 put: \"one\".
-                                 dict at: 2 put: \"two\".
-                                 system output print: dict!
-                         end"
-            expect: "\{ 1 -> \"one\",
-  2 -> \"two\" }"!
-
-    method test_Dictionary_constructor
-        self transpile: "import lang.dictionary_target.Dictionary
-                         import lang.string
-                         import lang.character_target_ext
-                         import lang.selector_target_ext
-
-                         class Main \{ out \}
-                             direct method run: command in: system
-                                 (self out: system output) run!
-                             method run
-                                 self value:
-                                 \{ (self value: \"c\") -> (self value: \"1\"),
-                                    (self value: \"b\") -> (self value: \"2\"),
-                                    (self value: \"a\") -> (self value: \"3\") } toString!
-                             method value: x
-                                 out writeString: x.
-                                 x!
-                         end"
-            expect: "c1b2a3\{ \"a\" -> \"3\",
-  \"b\" -> \"2\",
-  \"c\" -> \"1\" \}"!
-end
-
 class TestTranspilePreludeException { assert system }
     is TranspilerTest
 
@@ -1205,57 +1147,6 @@ class TestTranspileIncludes { assert system }
             expect: "#<Boolean True>#<Boolean False>"!
 end
 
-class TestTranspileInteger { assert system }
-    is TranspilerTest
-
-    method testLiteralInteger
-        self transpile: "class Main \{}
-                             direct method run: command in: system -- FIXME: : cmd in: sys
-                                 123 debug!
-                         end"
-             expect: "#<Integer 123>"!
-
-    method testIntegerOps
-        -- Instead of importing lang.integer_ext into N tests, we import a few more
-        -- things and test all ops in one test. Somewhat Faster, since imports
-        -- are SLOW at the moment.
-        self transpile: "import lang.integer_ext
-                         import lang.output_ext
-                         import lang.record_target_ext
-                         import lang.boolean_ext
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 system output print: \{
-                                     add: (10 + 100 + 1),
-                                     div: (20 / 2),
-                                     eq1: (1 == 1),
-                                     eq2: (1 == 2),
-                                     gt1: (1 > 2),
-                                     gt2: (2 > 1),
-                                     gt3: (1 > 1),
-                                     gte1: (1 >= 2),
-                                     gte2: (2 >= 1),
-                                     gte3: (1 >= 1),
-                                     lt1: (1 < 2),
-                                     lt2: (2 < 1),
-                                     lt3: (1 < 1),
-                                     lte1: (1 <= 2),
-                                     lte2: (2 <= 1),
-                                     lte3: (1 <= 1),
-                                     mul: (10 * 100),
-                                     sub: (20 - 2),
-                                 \}!
-                         end"
-             expect: ("\{ add: 111, div: 10,
-eq1: True, eq2: False,
-gt1: False, gt2: True, gt3: False,
-gte1: False, gte2: True, gte3: True,
-lt1: True, lt2: False, lt3: False,
-lte1: True, lte2: False, lte3: True,
-mul: 1000, sub: 18 \}" replace: "\n" with: " ")!
-end
-
 class TestTranspileString { assert system }
     is TranspilerTest
 
@@ -1662,12 +1553,10 @@ class Main {}
         let tests = {
             "--backtrace" -> TestTranspileBacktrace,
             "--class" -> TestTranspileClass,
-            "--dictionary" -> TestTranspileDictionary,
             "--dynamic" -> TestTranspileDynamic,
             "--extend" -> TestTranspileExtend,
             "--finally" -> TestTranspileFinally,
             "--globals" -> TestTranspileGlobals,
-            "--integer" -> TestTranspileInteger,
             "--includes" -> TestTranspileIncludes,
             "--interface" -> TestTranspileInterface,
             "--panic" -> TestTranspilePanic,
