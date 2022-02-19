@@ -14,6 +14,7 @@ import lang.test_ordered.TestOrdered
 import lang.test_selector.TestSelector
 import lang.test_string.TestString
 import lang.test_input.TestInput
+import lang.test_target_dictionary.TestTargetDictionary
 import lang.test_target_record.TestTargetRecord
 
 import lib.test_substitute.TestSubstitute
@@ -41,7 +42,10 @@ class Main { assert system }
             TestOrdered,
             TestSelector,
             TestString,
+            -- FIXME: These should be replaced by shared tests
+            -- but Object#== is broken in evaluator, causing trouble.
             TestTargetRecord,
+            TestTargetDictionary,
             -- Libs
             TestSubstitute,
         ]

@@ -156,64 +156,6 @@ class TestTranspilePreludeClosure { assert system }
             expect: "#<Integer 53>#<Integer 312>"!
 end
 
-class TestTranspileDictionary { assert system }
-    is TranspilerTest
-
-    method test_Dictionary_remove_transpiled
-        self transpile: "import lang.dictionary_target.Dictionary
-                         import lang.output_ext
-                         import lang.string
-                         import lang.selector_target_ext
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 let dict = Dictionary new.
-                                 dict at: 1 put: \"one\".
-                                 dict at: 2 put: \"two\".
-                                 dict remove: 1.
-                                 system output print: dict!
-                         end"
-            expect: "\{ 2 -> \"two\" }"!
-
-    method test_Dictionary_toString_transpiled
-        self transpile: "import lang.dictionary_target.Dictionary
-                         import lang.output_ext
-                         import lang.string
-                         import lang.selector_target_ext
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 let dict = Dictionary new.
-                                 dict at: 1 put: \"one\".
-                                 dict at: 2 put: \"two\".
-                                 system output print: dict!
-                         end"
-            expect: "\{ 1 -> \"one\",
-  2 -> \"two\" }"!
-
-    method test_Dictionary_constructor
-        self transpile: "import lang.dictionary_target.Dictionary
-                         import lang.string
-                         import lang.character_target_ext
-                         import lang.selector_target_ext
-
-                         class Main \{ out \}
-                             direct method run: command in: system
-                                 (self out: system output) run!
-                             method run
-                                 self value:
-                                 \{ (self value: \"c\") -> (self value: \"1\"),
-                                    (self value: \"b\") -> (self value: \"2\"),
-                                    (self value: \"a\") -> (self value: \"3\") } toString!
-                             method value: x
-                                 out writeString: x.
-                                 x!
-                         end"
-            expect: "c1b2a3\{ \"a\" -> \"3\",
-  \"b\" -> \"2\",
-  \"c\" -> \"1\" \}"!
-end
-
 class TestTranspilePreludeException { assert system }
     is TranspilerTest
 
@@ -1662,7 +1604,6 @@ class Main {}
         let tests = {
             "--backtrace" -> TestTranspileBacktrace,
             "--class" -> TestTranspileClass,
-            "--dictionary" -> TestTranspileDictionary,
             "--dynamic" -> TestTranspileDynamic,
             "--extend" -> TestTranspileExtend,
             "--finally" -> TestTranspileFinally,

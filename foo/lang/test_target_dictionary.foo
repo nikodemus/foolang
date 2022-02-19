@@ -1,0 +1,31 @@
+class TestTargetDictionary { assert }
+    is TestSuite
+
+    method test_remove
+        let dict = Dictionary new.
+        dict at: 1 put: "one".
+        dict at: 2 put: "two".
+        dict remove: 1.
+        assert true: { dict has: 2 }.
+        assert false: { dict has: 1 }!
+
+    method test_toString
+        let dict = Dictionary new.
+        dict at: 2 put: "two".
+        dict at: 1 put: "one".
+        assert that: { dict toString }
+               equals: "\{ 1 -> \"one\",
+  2 -> \"two\" }"!
+
+    method test_syntax
+        let log = StringOutput new.
+        let dict = { (self _note: "c" in: log) -> (self _note: 1 in: log),
+                     (self _note: "b" in: log) -> (self _note: 2 in: log),
+                     (self _note: "a" in: log) -> (self _note: 3 in: log) }.
+        assert true: { dict isEquivalent: { "a" -> 3, "b" -> 2, "c" -> 1 } }!
+
+    method _note: obj in: log
+        log print: obj.
+        obj!
+
+end
