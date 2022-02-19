@@ -1479,7 +1479,6 @@ class Main {}
             "--prelude-object" -> TestTranspilePreludeObject,
             "--prelude-output" -> TestTranspilePreludeOutput,
             "--prelude-string-output" -> TestTranspilePreludeStringOutput,
-            "--prelude-time" -> TestTranspilePreludeTime,
             "--self" -> TestTranspileSelf,
             "--self-hosted" -> TestTranspileSelfHosted,
             "--selector" -> TestTranspileSelector,
