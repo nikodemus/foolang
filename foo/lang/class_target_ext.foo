@@ -33,6 +33,26 @@ extend Class
                            raise: value
                            expected: self }!
 
+    method _layoutForSlots: slots
+        -- Sanity check
+        slots doWithIndex: { |each index|
+                             each index is index
+                                 assert: "Slot index must match slot position" }.
+        -- Option 1: empty layout
+        slots ifEmpty: { return Layout empty }.
+        -- Option 2: new layout, set it to slots
+        (slots noneSatisfy: { |each| each hasLayout })
+            ifTrue: { let layout = Layout new: (slots size).
+                      slots do: { |each| each layout: layout }.
+                      return layout }.
+        -- Option 3: existing layout (all slots have the same layout, this is
+        -- a subclass.) FIXME: Why do I have subclasses, bah...
+        let firstLayout = slots first layout.
+        (slots allSatisfy: { |each| each layout is firstLayout })
+            ifTrue: { return firstLayout }.
+        -- Option 4: mixed layout, not acceptable.
+        Error raise: "Slots have mixed layout: {slots}"!
+
     method new: name
            slots: slots
            interfaces: interfaces
@@ -41,12 +61,8 @@ extend Class
         let interfaces = (interfaces contains: Any)
                              ifTrue: { interfaces }
                              ifFalse: { interfaces append: [Any] }.
-        let layout = Layout new: (slots size).
+        let layout = self _layoutForSlots: slots.
         let ctor = layout constructorMethod: (_ConstructorName forSlots: slots).
-        slots doWithIndex: { |each index|
-                             each index is index
-                                 assert: "Slot index must match slot position".
-                             each layout: layout }.
         let metaclass = Class
                             subclass: "{name} classOf"
                             interfaces: (interfaces collect: #classOf)

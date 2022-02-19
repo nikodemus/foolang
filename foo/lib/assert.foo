@@ -139,6 +139,13 @@ class Assert { output failed }
             using: { |actual expected| actual is expected }
             testing: thing!
 
+    method that: condition is: value
+        self
+            that: condition
+            matches: value
+            using: { |actual expected| actual is expected }
+            testing: "(anon assert)"!
+
     method _test: test _catching: ex
         { test
             on: ex
