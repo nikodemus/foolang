@@ -1289,57 +1289,6 @@ class TestTranspileSystem { assert system }
             expect: ".//foo/prelude.foo ok!"!
 end
 
-class TestTranspileDynamic { assert system }
-    is TranspilerTest
-
-    method testDynamicDefine
-        self transpile: "define $MyVar 999!
-                         class Main \{}
-                             direct method run: command in: system
-                                 self foo debug!
-                             direct method foo
-                                 $MyVar!
-                         end"
-            expect: "#<Integer 999>"!
-
-    method testDynamicBindBinds
-        self transpile: "define $MyVar 999!
-                         class Main \{}
-                             direct method run: command in: system
-                                 \{ let $MyVar = 1234.
-                                    self foo debug } value!
-                             direct method foo
-                                 $MyVar!
-                         end"
-            expect: "#<Integer 1234>"!
-
-    method testDynamicBindRestores
-        self transpile: "define $MyVar 999!
-                         class Main \{}
-                             direct method run: command in: system
-                                 \{ let $MyVar = 1234.
-                                    self foo } value debug.
-                                 self foo debug!
-                             direct method foo
-                                 $MyVar!
-                         end"
-            expect: "#<Integer 1234>#<Integer 999>"!
-
-    method testDynamicBindRestoresOnUnwind
-        self transpile: "define $MyVar 999!
-                         class Main \{}
-                             direct method run: command in: system
-                                 self bar debug.
-                                 self foo debug!
-                             direct method bar
-                                 \{ let $MyVar = 1234.
-                                    return self foo } value!
-                             direct method foo
-                                 $MyVar!
-                         end"
-            expect: "#<Integer 1234>#<Integer 999>"!
-end
-
 class TestTranspileExtend { assert system }
     is TranspilerTest
 
@@ -1553,7 +1502,6 @@ class Main {}
         let tests = {
             "--backtrace" -> TestTranspileBacktrace,
             "--class" -> TestTranspileClass,
-            "--dynamic" -> TestTranspileDynamic,
             "--extend" -> TestTranspileExtend,
             "--finally" -> TestTranspileFinally,
             "--globals" -> TestTranspileGlobals,

@@ -9,6 +9,8 @@ class _TestLangClass { value :: Integer }
         value = new!
 end
 
+define $_LangTestVar 999!
+
 class TestLang { assert }
     is TestSuite
 
@@ -24,6 +26,28 @@ class TestLang { assert }
     method _noreturn_apply: block
         block value.
         panic "never"!
+
+    method test_dynamic_define
+        assert that: { $_LangTestVar }
+               is: 999!
+
+    method test_dynamic_let
+        assert that: { let $_LangTestVar = 6789.
+                       self _test_dynamic_let_aux1 }
+               is: 6789.
+        assert that: { self _test_dynamic_let_aux1 }
+               is: 999.
+        assert that: { self _test_dynamic_let_aux2 }
+               is: 237.
+        assert that: { self _test_dynamic_let_aux1 }
+               is: 999!
+
+    method _test_dynamic_let_aux1
+        $_LangTestVar!
+
+    method _test_dynamic_let_aux2
+        { let $_LangTestVar = 237.
+          return self _test_dynamic_let_aux1 } value!
 
     method test_typecheck_value_ok
         assert true: { 11 == (11 :: Integer) }!
