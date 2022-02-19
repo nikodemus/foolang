@@ -62,4 +62,15 @@ class TestLang { assert }
 
     method _test_return_nonlocal_aux
         1000 + (self _noreturn_apply: { return 420 })!
+
+    method test_is
+        let b1 = { 123 }.
+        let b2 = { 42 }.
+        assert true: { b1 is b1 }.
+        assert true: { b2 is b2 }.
+        assert false: { b1 is b2 }.
+        assert false: { 1 is b1 }.
+        assert false: { b1 is 1 }.
+        assert true: { 1 is 1 }.
+        assert false: { 1 is 2 }!
 end
