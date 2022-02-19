@@ -83,6 +83,7 @@ pub fn instance_vtable() -> Vtable {
     vt.add_primitive_method_or_panic("pathname", file_pathname);
     vt.add_primitive_method_or_panic("create", file_create);
     vt.add_primitive_method_or_panic("createOrOpen", file_create_or_open);
+    vt.add_primitive_method_or_panic("delete", file_delete);
     vt.add_primitive_method_or_panic("forAppend", file_for_append);
     vt.add_primitive_method_or_panic("forRead", file_for_read);
     vt.add_primitive_method_or_panic("forWrite", file_for_write);
@@ -107,6 +108,14 @@ pub fn make_file(path: &Path, env: &Env) -> Object {
 
 fn file_pathname(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
     Ok(env.foo.into_string(format!("{}", receiver.as_file("File#pathname")?.path.display())))
+}
+
+fn file_delete(receiver: &Object, _args: &[Object], env: &Env) -> Eval {
+    let file = receiver.as_file("File#delete")?;
+    match std::fs::remove_file(&file.path) {
+        Ok(_) => Ok(env.foo.make_boolean(true)),
+        Err(_) => Ok(env.foo.make_boolean(false)),
+    }
 }
 
 fn file_create(receiver: &Object, _args: &[Object], env: &Env) -> Eval {

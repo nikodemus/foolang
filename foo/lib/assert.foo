@@ -15,14 +15,17 @@ class TestFailure { case input expected result }
         let resultMessage = expected is Nothing
                                 ifTrue: { "" }
                                 ifFalse: { ", expected '{expected}', got '{result}'" }.
-        output println: "! FAILURE in {case name}{valueMessage}{resultMessage}"!
+        let name = case name.
+        name is False
+            ifTrue: { output print: "\n! FAILURE{valueMessage}{resultMessage}" }
+            ifFalse: { output print: "\n! FAILUREin {case name}{valueMessage}{resultMessage}" }!
 end
 
 class TestError { case input what }
     method reportOn: output
         input is Nothing
-            ifTrue: { output println: "! ERROR in {case name}: {what}" }
-            ifFalse: { output println: "! ERROR in {case name} on {input}: {what}" }!
+            ifTrue: { output print: "! ERROR in {case name}: {what}" }
+            ifFalse: { output print: "! ERROR in {case name} on {input}: {what}" }!
 end
 
 class TestCase { name condition successCount failureCount errorCount }
@@ -36,20 +39,6 @@ class TestCase { name condition successCount failureCount errorCount }
 
     method failed
         failureCount + errorCount > 0!
-
-    method summarizeOn: output
-        self failed
-            ifTrue: { self summarizeFailureOn: output }
-            ifFalse: { self summarizeSuccessOn: output }!
-
-    method summarizeSuccessOn: output
-        -- This makes sense for #forAll:... but not individual
-        -- asserts -- too noisy by far.
-        successCount > 1
-            ifTrue: { output println: "  {name}: {successCount} asserts ok" }!
-
-    method summarizeFailureOn: output
-        output println: "--{name}: {failureCount} failures, {errorCount} errors, {successCount} successes"!
 
     method expect: expected using: block
         let actual = { condition value }
@@ -109,13 +98,9 @@ class Assert { output failed }
     method report: testResult
         testResult reportOn: output!
 
-    method summarize: testCase
-        testCase summarizeOn: output!
-
     method forAll: inputs that: condition testing: thing
         let test = TestCase name: thing condition: condition.
         inputs do: { |input| self report: (test tryOn: input) }.
-        self summarize: test.
         failed = failed or: test failed!
 
     method passed
@@ -129,7 +114,6 @@ class Assert { output failed }
     method that: condition matches: value using: block testing: thing
         let test = TestCase name: thing condition: condition.
         self report: (test expect: value using: block).
-        self summarize: test.
         failed = failed or: test failed!
 
     method that: condition is: value testing: thing
@@ -144,7 +128,7 @@ class Assert { output failed }
             that: condition
             matches: value
             using: { |actual expected| actual is expected }
-            testing: "(anon assert)"!
+            testing: False!
 
     method _test: test _catching: ex
         { test
@@ -166,7 +150,7 @@ class Assert { output failed }
         self that: condition
              raises: ex
              where: test
-             testing: "(anonymous test)"!
+             testing: False!
 
     method that: condition equals: value testing: thing
         self
@@ -180,7 +164,7 @@ class Assert { output failed }
             that: condition
             matches: value
             using: { |actual expected| actual == expected }
-            testing: "an assert"!
+            testing: False!
 
     method true: condition testing: thing
         self that: condition is: True testing: thing!
@@ -189,10 +173,10 @@ class Assert { output failed }
         self that: condition is: False testing: thing!
 
     method true: condition
-        self that: condition is: True testing: "(anonymous test)"!
+        self that: condition is: True!
 
     method false: condition
-        self that: condition is: False testing: "(anonymous test)"!
+        self that: condition is: False!
 
 end
 

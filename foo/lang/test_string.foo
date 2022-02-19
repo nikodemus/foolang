@@ -1,6 +1,45 @@
 class TestString { assert }
     is TestSuite
 
+    method test_codeAt
+        assert that: { ("aaaxbbb" codeAt: 4) }
+               is: 120!
+
+    method test_size
+        assert that: { "foo" size }
+               equals: 3.
+        assert that: { "" size }
+               equals: 0.
+        assert that: { "\\" size }
+               equals: 1!
+
+    method test_isEquivalent
+        assert true: { "foo" isEquivalent: "foo" }.
+        assert false: { "foo" isEquivalent: "Foo" }!
+
+    method test_from_to
+        assert that: { "XXbarXX" from: 3 to: 5 }
+               equals: "bar"!
+
+    method test_from_to_empty
+        assert that: { "XXbarXX" from: 3 to: 2 }
+               equals: ""!
+
+    method test_interpolation_1
+        let fourtyTwo = 42.
+        let q = 123.
+        assert that: { "Answer is {fourtyTwo}, right? {q is 123}!" }
+               equals: "Answer is 42, right? True!"!
+
+    method test_interpolation_2
+        let note = "<note>".
+        let parser = { syntaxTable: { where: "<where>" } }.
+        assert that: { "{note}: '{self _interpolation_2_aux}' in suffix position {parser syntaxTable where}:" }
+               equals: "<note>: '<string>' in suffix position <where>:"!
+
+    method _interpolation_2_aux
+        "<string>"!
+
     method test_String_lines
         assert forAll: [["foo\nbar", ["foo", "bar"]],
                         ["foo", ["foo"]],

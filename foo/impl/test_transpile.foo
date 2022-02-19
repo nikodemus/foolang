@@ -105,20 +105,6 @@ Backtrace:
 "!
 end
 
-class TestTranspilePerformWith { assert system }
-    is TranspilerTest
-
-    method test
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 self doop: 123 boop: 321!
-                             direct method perform: selector with: args
-                                 selector debug.
-                                 args debug!
-                         end"
-            expect: "#<Selector doop:boop:>[#<Integer 123>, #<Integer 321>]"!
-end
-
 class TestTranspilePreludeClosure { assert system }
     is TranspilerTest
 
@@ -203,60 +189,6 @@ Backtrace:
   1: Main classOf#run:in:
 "!
 
-end
-
-class TestTranspilePreludeFile { assert system }
-    is TranspilerTest
-
-    method testForAppend
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let f = (system files / \"new\") file.
-                                 f isAppend debug.
-                                 f forAppend isAppend debug.
-                                 f isAppend debug!
-                         end"
-            expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
-
-    method testForRead
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let f = (system files / \"new\") file.
-                                 f isRead debug.
-                                 f forRead isRead debug.
-                                 f isRead debug!
-                         end"
-            expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
-
-    method testForWrite
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let f = (system files / \"new\") file.
-                                 f isWrite debug.
-                                 f forWrite isWrite debug.
-                                 f isWrite debug!
-                         end"
-            expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
-
-    method testOpenBlock
-        self transpile: "import lang.file_ext
-                         class Main \{}
-                             direct method run: command in: system
-                                 let f = (system files / \"test.tmp\") file.
-                                 f forWrite truncateExisting createOrOpen: \{ |s| s writeString: \"test ok\" }.
-                                 f readString printOn: system output!
-                         end"
-            expect: "test ok"!
-
-    method testTruncateExisting
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let f = (system files / \"new\") file.
-                                 f isTruncate debug.
-                                 f truncateExisting isTruncate debug.
-                                 f isTruncate debug!
-                         end"
-            expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
 end
 
 class TestTranspilePreludeFilePath { assert system }
@@ -1105,81 +1037,6 @@ class TestTranspileIncludes { assert system }
             expect: "#<Boolean True>#<Boolean False>"!
 end
 
-class TestTranspileString { assert system }
-    is TranspilerTest
-
-    method testStringCodeAt
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (\"aaaxbbb\" codeAt: 4) debug!
-                         end"
-            expect: "#<Integer 120>"!
-
-    method testStringLiterals
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 \"foo\" debug.
-                                 \"\" debug.
-                                 \"\\\\\" debug!
-                         end"
-            expect: "#<String foo>#<String >#<String \\>"!
-
-    method testStringEquivalent
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (\"foo\" isEquivalent: \"foo\") debug.
-                                 (\"foo\" isEquivalent: \"Foo\") debug!
-                         end"
-            expect: "#<Boolean True>#<Boolean False>"!
-
-    method testStringFromTo
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 ((self string) from: 3 to: 5) debug!
-                             direct method string
-                                 \"XXbarXX\"!
-                         end"
-            expect: "#<String bar>"!
-
-    method testStringInterpolation1
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let fourtytwo = 42.
-                                 let q = 123.
-                                 \"Answer is \{fourtytwo\}, right? \{q is 123\}!\" debug!
-                         end"
-            expect: "#<String Answer is 42, right? True!>"!
-
-    method testStringInterpolation2
-        self transpile: "class Main \{}
-                             direct method string
-                                 \"<string>\"!
-                             direct method run: command in: system
-                                 let note = \"<note>\".
-                                 let parser = \{ syntaxTable: \{ where: \"<where>\" } }.
-                                 \"\{note}: '\{self string}' in suffix position \{parser syntaxTable where}:\" debug!
-                        end"
-            expect: "#<String <note>: '<string>' in suffix position <where>:>"!
-
-    method testStringFromToEmpty
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 ((self string) from: 3 to: 2) debug!
-                             direct method string
-                                 \"XXbarXX\"!
-                         end"
-            expect: "#<String >"!
-
-    method testStringSize
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 self string size debug!
-                             direct method string
-                                 \"1234567890\"!
-                         end"
-            expect: "#<Integer 10>"!
-end
-
 class TestTranspileSystem { assert system }
     is TranspilerTest
 
@@ -1466,10 +1323,8 @@ class Main {}
             "--includes" -> TestTranspileIncludes,
             "--interface" -> TestTranspileInterface,
             "--panic" -> TestTranspilePanic,
-            "--perform-with" -> TestTranspilePerformWith,
             "--prelude-closure" -> TestTranspilePreludeClosure,
             "--prelude-exception" -> TestTranspilePreludeException,
-            "--prelude-file" -> TestTranspilePreludeFile,
             "--prelude-filepath" -> TestTranspilePreludeFilePath,
             "--prelude-filestream" -> TestTranspilePreludeFileStream,
             "--prelude-float" -> TestTranspilePreludeFloat,
@@ -1483,7 +1338,6 @@ class Main {}
             "--self-hosted" -> TestTranspileSelfHosted,
             "--selector" -> TestTranspileSelector,
             "--send" -> TestTranspileSend,
-            "--string" -> TestTranspileString,
             "--system" -> TestTranspileSystem,
             "--typecheck" -> TestTranspileTypecheck
         }.

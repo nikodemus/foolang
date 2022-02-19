@@ -5,6 +5,8 @@ class _TestLangClass { value :: Integer }
     is _TestLangInterface
     direct method new
         self value: 9!
+    direct method perform: selector with: args
+        "GOT: {selector} with: {args}"!
     method value: new
         value = new!
 end
@@ -107,4 +109,7 @@ class TestLang { assert }
         assert that: { res }
                equals: "123"!
 
+    method test_perform_with
+        assert that: { _TestLangClass foo: 1 bar: 2 }
+               equals: "GOT: #foo:bar: with: [1, 2]"!
 end
