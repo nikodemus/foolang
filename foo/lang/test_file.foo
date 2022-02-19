@@ -1,5 +1,48 @@
-class TestFile {}
-    direct method runTests: assert in: system
+class TestFile { assert system }
+    is TestSuite
+
+    direct method assert: assert
+        self assert: assert system: False!
+
+    method system: new
+        system = new!
+
+    method aFile
+        (system files / "test.tmp") file!
+
+    method test_forAppend
+        let f = self aFile.
+        assert false: { f isAppend }.
+        assert true: { f forAppend isAppend }.
+        assert false: { f isAppend }!
+
+    method test_forRead
+        let f = self aFile.
+        assert false: { f isRead }.
+        assert true: { f forRead isRead }.
+        assert false: { f isRead }!
+
+    method test_forWrite
+        let f = self aFile.
+        assert false: { f isWrite }.
+        assert true: { f forWrite isWrite }.
+        assert false: { f isWrite }!
+
+    method test_truncateExisting
+        let f = self aFile.
+        assert false: { f isTruncate }.
+        assert true: { f truncateExisting isTruncate }.
+        assert false: { f isTruncate }!
+
+    method test_open_with_block
+        let f = self aFile.
+        f forWrite truncateExisting
+            createOrOpen: { |s| s print: "this is success!" }.
+        assert that: { f readString }
+               equals: "this is success!".
+        f delete!
+
+    method test_file
         let file = system currentDirectory file.
         assert false: { file isAppend }
                testing: "FilePath#file creates file without append".

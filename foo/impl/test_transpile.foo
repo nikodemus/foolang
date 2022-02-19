@@ -191,60 +191,6 @@ Backtrace:
 
 end
 
-class TestTranspilePreludeFile { assert system }
-    is TranspilerTest
-
-    method testForAppend
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let f = (system files / \"new\") file.
-                                 f isAppend debug.
-                                 f forAppend isAppend debug.
-                                 f isAppend debug!
-                         end"
-            expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
-
-    method testForRead
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let f = (system files / \"new\") file.
-                                 f isRead debug.
-                                 f forRead isRead debug.
-                                 f isRead debug!
-                         end"
-            expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
-
-    method testForWrite
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let f = (system files / \"new\") file.
-                                 f isWrite debug.
-                                 f forWrite isWrite debug.
-                                 f isWrite debug!
-                         end"
-            expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
-
-    method testOpenBlock
-        self transpile: "import lang.file_ext
-                         class Main \{}
-                             direct method run: command in: system
-                                 let f = (system files / \"test.tmp\") file.
-                                 f forWrite truncateExisting createOrOpen: \{ |s| s writeString: \"test ok\" }.
-                                 f readString printOn: system output!
-                         end"
-            expect: "test ok"!
-
-    method testTruncateExisting
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let f = (system files / \"new\") file.
-                                 f isTruncate debug.
-                                 f truncateExisting isTruncate debug.
-                                 f isTruncate debug!
-                         end"
-            expect: "#<Boolean False>#<Boolean True>#<Boolean False>"!
-end
-
 class TestTranspilePreludeFilePath { assert system }
     is TranspilerTest
 
@@ -1379,7 +1325,6 @@ class Main {}
             "--panic" -> TestTranspilePanic,
             "--prelude-closure" -> TestTranspilePreludeClosure,
             "--prelude-exception" -> TestTranspilePreludeException,
-            "--prelude-file" -> TestTranspilePreludeFile,
             "--prelude-filepath" -> TestTranspilePreludeFilePath,
             "--prelude-filestream" -> TestTranspilePreludeFileStream,
             "--prelude-float" -> TestTranspilePreludeFloat,
