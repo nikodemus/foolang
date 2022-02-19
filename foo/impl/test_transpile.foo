@@ -1104,25 +1104,6 @@ class TestTranspileFinally { assert system }
             expect: "#<Integer 2>#<Integer 100>"!
 end
 
-class TestTranspileRecord { assert system }
-    is TranspilerTest
-
-    method test_Record_equality_in_transpiler
-        self transpile: "import lang.record_target_ext
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 let a1 = \{ foo: 42 }.
-                                 let a2 = \{ foo: 42 }.
-                                 let b = \{ bar: 42 }.
-                                 let c = \{ foo: 42, bar: 42 }.
-                                 (a1 == a2) debug.
-                                 (a1 == b) debug.
-                                 (a1 == b) debug!
-                         end"
-            expect: "#<Boolean True>#<Boolean False>#<Boolean False>"!
-end
-
 class TestTranspileSelector { assert system }
     is TranspilerTest
 
