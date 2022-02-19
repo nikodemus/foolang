@@ -9,11 +9,12 @@ import lang.test_character.TestCharacter
 import lang.test_class.TestClass
 import lang.test_file.TestFile
 import lang.test_float.TestFloat
+import lang.test_input.TestInput
+import lang.test_integer.TestInteger
 import lang.test_lang.TestLang
 import lang.test_ordered.TestOrdered
 import lang.test_selector.TestSelector
 import lang.test_string.TestString
-import lang.test_input.TestInput
 import lang.test_target_dictionary.TestTargetDictionary
 import lang.test_target_record.TestTargetRecord
 
@@ -38,6 +39,7 @@ class Main { assert system }
             TestFile,
             TestFloat,
             TestInput,
+            TestInteger,
             TestLang,
             TestOrdered,
             TestSelector,
@@ -49,6 +51,10 @@ class Main { assert system }
             -- Libs
             TestSubstitute,
         ]
-            do: { |each| each runTests: assert in: system }!
+                do: { |each|
+                      each runTests: assert in: system.
+                      assert failed
+                          ifTrue: { return False } }.
+        True!
 
 end
