@@ -13,6 +13,10 @@ define InstanceMethods {
     -> { signature: [], vars: 0,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return foo_FileStream_new(ctx, file, FooFile_CREATE_OR_OPEN);" },
+    #delete
+    -> { signature: [], vars: 0,
+         body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
+                return FOO_BOOLEAN(0 == remove((char*)(file->pathname->data)));" },
     #forAppend
     -> { signature: [], vars: 0,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
