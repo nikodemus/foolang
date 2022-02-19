@@ -511,7 +511,13 @@ class AstClass { name superclass _slots
         "#<AstClass {name}>"!
 end
 
-class AstSlot { name index type _layout }
+-- FIXME: Not happy with layout being public. Should be
+-- able to hand out a single slot without exposing the
+-- whole instance through the layout. However, subclasses
+-- have shared slots and layout, but class_target_ext.foo
+-- gets slots and creates the layout -- so it needs the
+-- access. Should probably pass in the layout there instead.
+class AstSlot { name index type layout }
     is Object
 
     direct method name: name
@@ -520,7 +526,7 @@ class AstSlot { name index type _layout }
         self name: name
              index: index
              type: type
-             _layout: False!
+             layout: False!
 
     method referenceUpwards: offset
         AstSlotRef slot: self!
@@ -528,23 +534,26 @@ class AstSlot { name index type _layout }
     method isPrivate
         name isPrivate!
 
-    method layout: layout
-        _layout is False
+    method hasLayout
+        return (layout is False) not!
+
+    method layout: new
+        layout is False
             assert: "AstSlot layout already set!".
-        _layout = layout!
+        layout = new!
 
     method at: object
-        _layout is False
+        layout is False
             ifTrue: { panic "{self} layout not set, cannot read from {object}" }.
-        _layout at: index
-                in: object!
+        layout at: index
+               in: object!
 
     method put: value at: object
-        _layout is False
+        layout is False
             ifTrue: { panic "{self} layout not set, cannot write to {object}" }.
-        _layout put: value
-                at: index
-                in: object!
+        layout put: value
+               at: index
+               in: object!
 
     method displayOn: stream
         stream writeString: "#<AstSlot ".

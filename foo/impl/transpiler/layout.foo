@@ -14,6 +14,9 @@ define DirectMethods
               "int64_t arg = ctx->frame[0].datum.int64;
                if (arg < 0)
                    foo_panicf(ctx, \"Negative layout size!\");
+               if (arg == 0)
+                   return (struct Foo)\{ .class = &FooClass_Layout,
+                                         .datum = \{ .ptr = &TheEmptyLayout \}\};
                struct FooLayout* layout = foo_Layout_new(ctx, (size_t)arg);
                return (struct Foo)\{ .class = &FooClass_Layout,
                                      .datum = \{ .ptr = layout \}\};"

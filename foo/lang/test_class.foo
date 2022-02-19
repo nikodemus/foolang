@@ -8,6 +8,11 @@ interface _ClassTestInterface
         "quux"!
     method _privateInterfaceInstanceMethod
         "zot"!
+
+    direct method ping
+        #directPingFromInterface!
+    method ping
+        #instancePingFromInterface!
 end
 
 class _ClassTestClass {}
@@ -28,6 +33,34 @@ class _ClassTestClass {}
         6!
 end
 
+class _ClassTestMainClass { _a _b }
+    method a _a!
+    method b _b!
+end
+
+class _ClassTestMidClass < _ClassTestMainClass
+    direct method a: a b: b
+        self _a: a _b: b!
+end
+
+class _ClassTestSubClass < _ClassTestMidClass
+    method sum
+        self a + self b!
+end
+
+class _ClassTestSuperMetaclass < Class
+    method ping
+        #pong!
+end
+
+class _ClassTestMetaclass < _ClassTestSuperMetaclass
+end
+
+class _ClassTestBlockMethod { selector block }
+    method invoke: args on: receiver
+        block apply: ([receiver] append: args)!
+end
+
 class TestClass { assert }
     is TestSuite
 
@@ -36,6 +69,77 @@ class TestClass { assert }
         Class selectorsOf: object
               do: { |each| list add: each }.
         list!
+
+    method test_superclass
+        let obj = _ClassTestSubClass a: 22 b: 20.
+        assert that: { obj sum } equals: 42!
+
+    method test_subclass_inheritance_creates_a_subtype
+        let obj = _ClassTestSubClass a: 7 b: 9.
+        assert true: { _ClassTestMainClass includes: obj }.
+        assert true: { _ClassTestMidClass includes: obj }!
+
+    method test_instantiate_metaclass
+        let test = Class subclass: "test class"
+                         interfaces: []
+                         methods: [].
+        assert true: { "test class" == test name }!
+
+    method test_instantiate_class
+        let test = _ClassTestMetaclass
+                       new: "test class"
+                       layout: Layout empty
+                       interfaces: []
+                       methods: [].
+        assert true: { #pong is test ping }!
+
+    method test_runtime_class_default_methods
+        let myClass = Class new: "MyTest"
+                            slots: []
+                            interfaces: []
+                            directMethods: []
+                            instanceMethods: [].
+        assert true: { "MyTest" == myClass name }.
+        assert true: { "MyTest classOf" == myClass classOf name }.
+        assert true: { "Class" == myClass classOf classOf name }.
+        assert true: { myClass includes: myClass new }!
+
+    method test_runtime_interface_inherited_1
+        let testMetaclass
+            = Class subclass: "*TestMetaClass"
+                    interfaces: [_ClassTestInterface classOf]
+                    methods: [].
+        let testClass
+            = testMetaclass new: "*TestClass"
+                            layout: Layout empty
+                            interfaces: []
+                            methods: [].
+        assert true: { #directPingFromInterface == testClass ping }!
+
+    method test_runtime_interface_inherited_2
+        let testMetaclass
+            = Class subclass: "*TestMetaClass"
+                    interfaces: [_ClassTestInterface]
+                    methods: [].
+        let testClass
+            = testMetaclass new: "*TestClass"
+                            layout: Layout empty
+                            interfaces: []
+                            methods: [].
+        assert true: { #instancePingFromInterface == testClass ping }!
+
+    method test_method_in_runtime_metaclass
+        let metaclass = Class subclass: "*TestMetaclass"
+                              interfaces: []
+                              methods: [(_ClassTestBlockMethod
+                                             selector: #ping
+                                             block: { |r| #asdf })].
+        let test = metaclass new: "*TestClass"
+                             layout: Layout empty
+                             interfaces: []
+                             methods: [].
+        assert that: { test ping }
+               is: #asdf!
 
     method test_Class_selectorsOf_do_finds_direct_methods
         assert true: { (self selectorsOf: _ClassTestClass)
