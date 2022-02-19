@@ -119,29 +119,6 @@ class TestTranspilePerformWith { assert system }
             expect: "#<Selector doop:boop:>[#<Integer 123>, #<Integer 321>]"!
 end
 
-class TestTranspilePreludeTime { assert system }
-    is TranspilerTest
-
-    method testSystemClockTime
-        self transpile: "import lang.time_ext
-                         import lang.output_ext
-                         import lang.integer_ext
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 let clock = system clock.
-                                 let offset = Time user: 0.1
-                                                   system: 0.1
-                                                   real: 0.1.
-                                 -- Easiest way to make sure t1 > t0 > 0.
-                                 let t0 = clock time + offset.
-                                 let t1 = t0 + offset.
-                                 let delta = t1 - t0.
-                                 (t1 > delta) debug!
-                         end"
-            expect: "#<Boolean True>"!
-end
-
 class TestTranspilePreludeClosure { assert system }
     is TranspilerTest
 
@@ -1104,25 +1081,6 @@ class TestTranspileFinally { assert system }
             expect: "#<Integer 2>#<Integer 100>"!
 end
 
-class TestTranspileRecord { assert system }
-    is TranspilerTest
-
-    method test_Record_equality_in_transpiler
-        self transpile: "import lang.record_target_ext
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 let a1 = \{ foo: 42 }.
-                                 let a2 = \{ foo: 42 }.
-                                 let b = \{ bar: 42 }.
-                                 let c = \{ foo: 42, bar: 42 }.
-                                 (a1 == a2) debug.
-                                 (a1 == b) debug.
-                                 (a1 == b) debug!
-                         end"
-            expect: "#<Boolean True>#<Boolean False>#<Boolean False>"!
-end
-
 class TestTranspileSelector { assert system }
     is TranspilerTest
 
@@ -1287,57 +1245,6 @@ class TestTranspileSystem { assert system }
                                      ifTrue: \{ system output writeString: \" ok!\" }!
                          end"
             expect: ".//foo/prelude.foo ok!"!
-end
-
-class TestTranspileDynamic { assert system }
-    is TranspilerTest
-
-    method testDynamicDefine
-        self transpile: "define $MyVar 999!
-                         class Main \{}
-                             direct method run: command in: system
-                                 self foo debug!
-                             direct method foo
-                                 $MyVar!
-                         end"
-            expect: "#<Integer 999>"!
-
-    method testDynamicBindBinds
-        self transpile: "define $MyVar 999!
-                         class Main \{}
-                             direct method run: command in: system
-                                 \{ let $MyVar = 1234.
-                                    self foo debug } value!
-                             direct method foo
-                                 $MyVar!
-                         end"
-            expect: "#<Integer 1234>"!
-
-    method testDynamicBindRestores
-        self transpile: "define $MyVar 999!
-                         class Main \{}
-                             direct method run: command in: system
-                                 \{ let $MyVar = 1234.
-                                    self foo } value debug.
-                                 self foo debug!
-                             direct method foo
-                                 $MyVar!
-                         end"
-            expect: "#<Integer 1234>#<Integer 999>"!
-
-    method testDynamicBindRestoresOnUnwind
-        self transpile: "define $MyVar 999!
-                         class Main \{}
-                             direct method run: command in: system
-                                 self bar debug.
-                                 self foo debug!
-                             direct method bar
-                                 \{ let $MyVar = 1234.
-                                    return self foo } value!
-                             direct method foo
-                                 $MyVar!
-                         end"
-            expect: "#<Integer 1234>#<Integer 999>"!
 end
 
 class TestTranspileExtend { assert system }
@@ -1553,7 +1460,6 @@ class Main {}
         let tests = {
             "--backtrace" -> TestTranspileBacktrace,
             "--class" -> TestTranspileClass,
-            "--dynamic" -> TestTranspileDynamic,
             "--extend" -> TestTranspileExtend,
             "--finally" -> TestTranspileFinally,
             "--globals" -> TestTranspileGlobals,
@@ -1573,8 +1479,6 @@ class Main {}
             "--prelude-object" -> TestTranspilePreludeObject,
             "--prelude-output" -> TestTranspilePreludeOutput,
             "--prelude-string-output" -> TestTranspilePreludeStringOutput,
-            "--prelude-time" -> TestTranspilePreludeTime,
-            "--record" -> TestTranspileRecord,
             "--self" -> TestTranspileSelf,
             "--self-hosted" -> TestTranspileSelfHosted,
             "--selector" -> TestTranspileSelector,

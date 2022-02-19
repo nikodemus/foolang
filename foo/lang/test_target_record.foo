@@ -25,4 +25,13 @@ class TestTargetRecord { assert }
           a: (self _log: "4" in: log) }.
         assert true: { "1234" == log content }!
 
+    method test_isEquivalent
+        let a1 = { foo: 42 }.
+        let a2 = { foo: 42 }.
+        let b = { bar: 42 }.
+        let c = { foo: 678 }.
+        -- BUG: #851
+        assert true: { a1 isEquivalent: a2 }.
+        assert false: { a1 isEquivalent: b }.
+        assert false: { a1 isEquivalent: b }!
 end
