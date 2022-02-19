@@ -1338,7 +1338,6 @@ class Main {}
             "--self-hosted" -> TestTranspileSelfHosted,
             "--selector" -> TestTranspileSelector,
             "--send" -> TestTranspileSend,
-            "--string" -> TestTranspileString,
             "--system" -> TestTranspileSystem,
             "--typecheck" -> TestTranspileTypecheck
         }.
