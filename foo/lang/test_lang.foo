@@ -73,4 +73,14 @@ class TestLang { assert }
         assert false: { b1 is 1 }.
         assert true: { 1 is 1 }.
         assert false: { 1 is 2 }!
+
+    method test_cascade
+        let res = StringOutput new
+                      ; print: 1
+                      ; print: 2
+                      ; print: 3
+                      ; content.
+        assert that: { res }
+               equals: "123"!
+
 end
