@@ -7,6 +7,7 @@ import lang.test_boolean.TestBoolean
 import lang.test_byteArray.TestByteArray
 import lang.test_character.TestCharacter
 import lang.test_class.TestClass
+import lang.test_clock.TestClock
 import lang.test_file.TestFile
 import lang.test_float.TestFloat
 import lang.test_input.TestInput
@@ -36,6 +37,7 @@ class Main { assert system }
             TestByteArray,
             TestCharacter,
             TestClass,
+            TestClock,
             TestFile,
             TestFloat,
             TestInput,
