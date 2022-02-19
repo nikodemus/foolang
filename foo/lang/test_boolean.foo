@@ -1,0 +1,18 @@
+class TestBoolean { assert }
+    is TestSuite
+
+    method test_boolean_constants
+        assert true: { True }.
+        assert false: { False }!
+
+    method test_boolean_ifTrue_ifFalse
+        assert that: { True ifTrue: { 67 } ifFalse: { 0 } }
+               equals: 67.
+        assert that: { False ifTrue: { 0 } ifFalse: { 78 } }
+               equals: 78!
+
+    method test_whileFalse
+        let n = 0.
+        { n is 10 } whileFalse: { n = n + 1 }.
+        assert true: { n is 10 }!
+end

@@ -105,24 +105,6 @@ Backtrace:
 "!
 end
 
-class TestTranspileCascade { assert system }
-    is TranspilerTest
-
-    method test_Compile_cascade
-        self transpileWithPrelude:
-            "class Main \{}
-                 direct method run: command in: system
-                     system output
-                         print: (List new
-                                      ; add: 1
-                                      ; add: 2
-                                      ; add: 3
-                                      ; collect: \{ |each| each * 10 \}
-                                        as: Array)!
-            end"
-            expect: "[10, 20, 30]"!
-end
-
 class TestTranspilePerformWith { assert system }
     is TranspilerTest
 
@@ -1028,55 +1010,6 @@ GOT:
                      system output print: #ok!
              end"
             expect: "#ok"!
-end
-
-class TestTranspileBoolean { assert system }
-    is TranspilerTest
-
-    method testBooleanLiteral
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 True debug.
-                                 False debug!
-                         end"
-            expect: "#<Boolean True>#<Boolean False>"!
-
-    method testBooleanIfTrueIfFalse
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 True
-                                     ifTrue: \{ 42 debug }
-                                     ifFalse: \{ 13 debug }.
-                                 False
-                                     ifTrue: \{ 13 debug }
-                                     ifFalse: \{ 42 debug }!
-                         end"
-            expect: "#<Integer 42>#<Integer 42>"!
-
-    method testIs
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let b1 = { 123 }.
-                                 let b2 = { 42 }.
-                                 (b1 is b2) debug.
-                                 (1 is b1) debug.
-                                 (b1 is 1) debug.
-                                 (1 is 2) debug.
-                                 (1 is 1) debug.
-                                 (b1 is b1) debug.
-                                 (b2 is b2) debug!
-                         end"
-            expect: "#<Boolean False>#<Boolean False>#<Boolean False>#<Boolean False>#<Boolean True>#<Boolean True>#<Boolean True>"!
-
-    method testWhileFalse
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let n = 0.
-                                 \{ n is 10 } whileFalse: \{ n = n integerAdd: 1 }.
-                                 n debug!
-                         end"
-            expect: "#<Integer 10>"!
-
 end
 
 class TestTranspileBacktrace { assert system }
@@ -1990,8 +1923,6 @@ class Main {}
     direct method run: cmd in: system
         let tests = {
             "--backtrace" -> TestTranspileBacktrace,
-            "--boolean" -> TestTranspileBoolean,
-            "--cascade" -> TestTranspileCascade,
             "--class" -> TestTranspileClass,
             "--dictionary" -> TestTranspileDictionary,
             "--dynamic" -> TestTranspileDynamic,
