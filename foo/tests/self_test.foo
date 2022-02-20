@@ -12,6 +12,7 @@ import lang.test_file.TestFile
 import lang.test_float.TestFloat
 import lang.test_input.TestInput
 import lang.test_integer.TestInteger
+import lang.test_interval.TestInterval
 import lang.test_lang.TestLang
 import lang.test_ordered.TestOrdered
 import lang.test_selector.TestSelector
@@ -42,6 +43,7 @@ class Main { assert system }
             TestFloat,
             TestInput,
             TestInteger,
+            TestInterval,
             TestLang,
             TestOrdered,
             TestSelector,

@@ -284,20 +284,6 @@ class TestTranspilePreludeFileStream { assert system }
             expect: "#<Integer 132>"!
 end
 
-class TestTranspilePreludeInterval { assert system }
-    is TranspilerTest
-
-    method test
-        self transpile: "import lang.interval.Interval
-                         import lang.integer_ext
-                         class Main \{}
-                             direct method run: command in: system
-                                 (Interval from: 1 to: 5 by: 2)
-                                     do: \{ |each| each debug }!
-                         end"
-            expect: "#<Integer 1>#<Integer 3>#<Integer 5>"!
-end
-
 class TestTranspilePreludeIterable { assert system }
     is TranspilerTest
 
@@ -1300,7 +1286,6 @@ class Main {}
             "--prelude-exception" -> TestTranspilePreludeException,
             "--prelude-filepath" -> TestTranspilePreludeFilePath,
             "--prelude-filestream" -> TestTranspilePreludeFileStream,
-            "--prelude-interval" -> TestTranspilePreludeInterval,
             "--prelude-iterable" -> TestTranspilePreludeIterable,
             "--prelude-object" -> TestTranspilePreludeObject,
             "--prelude-output" -> TestTranspilePreludeOutput,

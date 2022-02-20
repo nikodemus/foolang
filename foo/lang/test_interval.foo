@@ -1,0 +1,10 @@
+class TestInterval { assert }
+    is TestSuite
+
+    method test_to_by
+        let log = StringOutput new.
+        (Interval from: 1 to: 5 by: 2)
+            do: { |each| log print: "{each}" }
+            interleaving: { log print: ", " }.
+        assert that: { log content } equals: "1, 3, 5"!
+end
