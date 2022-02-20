@@ -1227,13 +1227,6 @@ Backtrace:
   1: Main classOf#run:in:
 "!
 
-    method testBlockReturnTypeOk
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                (\{ |a| -> Integer a } value: 42) debug!
-                         end"
-            expect: "#<Integer 42>"!
-
     method testBlockReturnTypeOops
         self transpile: "class Main \{}
                              direct method run: command in: system
@@ -1245,16 +1238,6 @@ Backtrace:
   1: Main classOf#run:in:
 "!
 
-    method testClassTypeIncludes
-        self transpile: "class A \{} end
-                         class B \{} end
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 (A includes: (A new)) debug.
-                                 (A includes: (B new)) debug!
-                         end"
-            expect: "#<Boolean True>#<Boolean False>"!
 end
 
 class Main {}
