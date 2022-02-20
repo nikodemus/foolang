@@ -141,6 +141,11 @@ class TestClass { assert }
         assert that: { test ping }
                is: #asdf!
 
+    method test_includes
+        assert true: { _ClassTestClass includes: (_ClassTestClass new) }.
+        assert false: { _ClassTestClass includes: self }!
+
+
     method test_Class_selectorsOf_do_finds_direct_methods
         assert true: { (self selectorsOf: _ClassTestClass)
                            includesAll: [#directMethod1, #directMethod2, #interfaceDirectMethod] }!

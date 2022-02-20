@@ -1245,16 +1245,6 @@ Backtrace:
   1: Main classOf#run:in:
 "!
 
-    method testClassTypeIncludes
-        self transpile: "class A \{} end
-                         class B \{} end
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 (A includes: (A new)) debug.
-                                 (A includes: (B new)) debug!
-                         end"
-            expect: "#<Boolean True>#<Boolean False>"!
 end
 
 class Main {}
