@@ -66,6 +66,10 @@ class TestLang { assert }
     method test_typecheck_block_arg_ok
         assert true: { 98013 == ({ |x::Integer| x } value: 98013) }!
 
+    method test_typecheck_block_return_ok
+        assert that: { { |a| -> Integer a round } value: 42.42 }
+               is: 42!
+
     method test_typecheck_interface_in_ok
         assert true: { 9 == (_TestLangClass new :: _TestLangInterface)
                            value }!
