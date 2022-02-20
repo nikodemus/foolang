@@ -105,20 +105,6 @@ Backtrace:
 "!
 end
 
-class TestTranspilePreludeClosure { assert system }
-    is TranspilerTest
-
-    method test
-        self transpile: "import lang.closure_ext
-
-                         class Main \{ x }
-                             direct method run: command in: system
-                                 (\{ 53 } cull: 123) debug.
-                                 (\{ |x| x } cull: 312) debug!
-                         end"
-            expect: "#<Integer 53>#<Integer 312>"!
-end
-
 class TestTranspilePreludeException { assert system }
     is TranspilerTest
 
@@ -1282,7 +1268,6 @@ class Main {}
             "--includes" -> TestTranspileIncludes,
             "--interface" -> TestTranspileInterface,
             "--panic" -> TestTranspilePanic,
-            "--prelude-closure" -> TestTranspilePreludeClosure,
             "--prelude-exception" -> TestTranspilePreludeException,
             "--prelude-filepath" -> TestTranspilePreludeFilePath,
             "--prelude-filestream" -> TestTranspilePreludeFileStream,

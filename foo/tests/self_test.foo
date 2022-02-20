@@ -17,6 +17,7 @@ import lang.test_lang.TestLang
 import lang.test_ordered.TestOrdered
 import lang.test_selector.TestSelector
 import lang.test_string.TestString
+import lang.test_target_closure.TestTargetClosure
 import lang.test_target_dictionary.TestTargetDictionary
 import lang.test_target_record.TestTargetRecord
 
@@ -50,8 +51,11 @@ class Main { assert system }
             TestString,
             -- FIXME: These should be replaced by shared tests
             -- but Object#== is broken in evaluator, causing trouble.
-            TestTargetRecord,
+            -- FIXME: Another source of trouble is finally: expecting
+            -- a closure, which AstBlockClosure is not.
+            TestTargetClosure,
             TestTargetDictionary,
+            TestTargetRecord,
             -- Libs
             TestSubstitute,
         ]

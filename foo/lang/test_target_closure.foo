@@ -1,0 +1,7 @@
+class TestTargetClosure { assert }
+    is TestSuite
+
+    method test_cull
+        assert that: { { 53 } cull: 123 } is: 53.
+        assert that: { { |x| x } cull: 675 } is: 675!
+end
