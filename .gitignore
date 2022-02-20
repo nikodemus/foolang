@@ -15,3 +15,7 @@ foo/scratch/*
 host.*
 host-*
 build/
+cmake-build-debug
+c/.idea
+old.*
+.idea
