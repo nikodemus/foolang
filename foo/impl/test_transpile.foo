@@ -298,19 +298,6 @@ class TestTranspilePreludeFloat { assert system }
             expect: "#<Float 1.0>#<Float 2.0>"!
 end
 
-class TestTranspilePreludeInteger { assert system }
-    is TranspilerTest
-
-    method test
-        self transpile: "import lang.integer_ext
-
-                         class Main \{}
-                             direct method run: command in: system
-                                 1 to: 3 do: \{ |i| i debug }!
-                         end"
-            expect: "#<Integer 1>#<Integer 2>#<Integer 3>"!
-end
-
 class TestTranspilePreludeInterval { assert system }
     is TranspilerTest
 
@@ -1328,7 +1315,6 @@ class Main {}
             "--prelude-filepath" -> TestTranspilePreludeFilePath,
             "--prelude-filestream" -> TestTranspilePreludeFileStream,
             "--prelude-float" -> TestTranspilePreludeFloat,
-            "--prelude-integer" -> TestTranspilePreludeInteger,
             "--prelude-interval" -> TestTranspilePreludeInterval,
             "--prelude-iterable" -> TestTranspilePreludeIterable,
             "--prelude-object" -> TestTranspilePreludeObject,
