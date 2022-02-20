@@ -76,7 +76,7 @@ class TestFloat { assert }
                         [-123.999, -123]]
                that: { |case|
                        (case first truncate) is (case second) }
-               testing: "Float#round"!
+               testing: "Float#truncate"!
 
     method test_round
         assert forAll: [[132.999, 133],
