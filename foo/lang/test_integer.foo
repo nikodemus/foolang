@@ -59,6 +59,11 @@ class TestInteger { assert }
         assert that: { 1246789 toString }
                equals: "1246789"!
 
+    method test_to_do
+        let n = 0.
+        1 to: 10 do: { |i| n = n + i }.
+        assert that: { n } is: 55!
+
     method testAdditionCommutative
         assert forAll: SmallIntegers
                that: { |x| x + 1 == 1 + x }

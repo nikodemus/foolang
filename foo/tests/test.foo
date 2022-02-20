@@ -9,6 +9,7 @@ import lang.test_closure.TestClosure
 import lang.test_file.TestFile
 import lang.test_float.TestFloat
 import lang.test_integer.TestInteger
+import lang.test_interval.TestInterval
 import lang.test_selector.TestSelector
 
 -- Cannot go to self_test.foo yet
@@ -77,6 +78,7 @@ class Main { assert system }
             TestFileStream,
             TestFloat,
             TestInteger,
+            TestInterval,
             TestList,
             TestListAsIterable,
             TestObject,
