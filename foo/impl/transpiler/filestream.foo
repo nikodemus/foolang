@@ -16,6 +16,25 @@ define InstanceMethods {
                     return FOO_BOOLEAN(true);
                 }
                 return FOO_BOOLEAN(false);" },
+
+    #asInput
+    -> { signature: [], vars: 0,
+         body: "struct FooFileStream* stream = PTR(FooFileStream, ctx->receiver.datum);
+                if (stream->ptr) \{
+                    return FOO_INSTANCE(Input, stream->ptr);
+                \} else \{
+                    foo_panicf(ctx, \"#asInput on a closed FileStream\");
+                \}" },
+
+    #asOutput
+    -> { signature: [], vars: 0,
+         body: "struct FooFileStream* stream = PTR(FooFileStream, ctx->receiver.datum);
+                if (stream->ptr) \{
+                    return FOO_INSTANCE(Output, stream->ptr);
+                \} else \{
+                    foo_panicf(ctx, \"#asOutput on a closed FileStream\");
+                \}" },
+
     #flush
     -> { signature: [], vars: 0,
          body: "fflush(ctx->receiver.datum.ptr);
