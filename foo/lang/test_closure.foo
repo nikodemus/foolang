@@ -17,15 +17,6 @@ class TestClosure { assert }
     direct method runTests: assert
         (self assert: assert) runTests!
 
-    method testCull
-        assert forAll: [
-            [{ 42 }, 123, 42 ],
-            [{ |x| x }, 42, 42 ]
-        ]
-            that: { |case|
-                    (case first cull: case second) == case third }
-            testing: "Closure#cull:"!
-
     method testSignature
         assert forAll: [
             [{ 42 }, []],
