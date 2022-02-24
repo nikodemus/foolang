@@ -63,18 +63,6 @@ class TestClosure { assert }
                equals: [True, 104]
                testing: "Closure#with: (unwind)"!
 
-    method testAscending
-        assert that: { ["a", "aaaa", "aa", "", "aaa"]
-                           sort: { |array| array size } ascending }
-               equals: ["", "a", "aa", "aaa", "aaaa"]
-               testing: "Closure#ascending"!
-
-    method testDescending
-        assert that: { ["a", "aaaa", "aa", "", "aaa"]
-                           sort: { |array| array size } descending }
-               equals: ["aaaa", "aaa", "aa", "a", ""]
-               testing: "Closure#descending"!
-
     method testApply
         assert that: { { |x y| x + y } apply: [1, 2] }
                equals: 3

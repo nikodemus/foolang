@@ -60,4 +60,16 @@ class TestTargetClosure { assert }
         assert true: { 1 == { 1 } value }
                testing: "Closure#value"!
 
+    method test_ascending
+        assert that: { ["a", "aaaa", "aa", "", "aaa"]
+                           sort: { |array| array size } ascending }
+               equals: ["", "a", "aa", "aaa", "aaaa"]
+               testing: "Closure#ascending"!
+
+    method test_descending
+        assert that: { ["a", "aaaa", "aa", "", "aaa"]
+                           sort: { |array| array size } descending }
+               equals: ["aaaa", "aaa", "aa", "a", ""]
+               testing: "Closure#descending"!
+
 end
