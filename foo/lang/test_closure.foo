@@ -52,16 +52,6 @@ class TestClosure { assert }
                          onPanic: { |p| True } }
                testing: "Closure#onPanic"!
 
-    method testWhileFalse
-        let a = 0.
-        assert that: { { a == 10 } whileFalse: { a = a + 1 }. a }
-               is: 10
-               testing: "Closure#whileFalse:".
-        let b = 0.
-        assert that: { { b = b + 1. b == 10 } whileFalse. b }
-               is: 10
-               testing: "Closure#whileFalse"!
-
     method auxTestLoop
         let a = 0.
         { a = a + 1. a == 10 ifTrue: { return a } } loop!
