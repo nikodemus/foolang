@@ -25,4 +25,15 @@ class TestTargetClosure { assert }
     method test_finally_returns_value_of_main_block_after_fallthrough
         let res = { 192 } finally: { 666 }.
         assert that: { res } equals: 192!
+
+    method test_whileTrue
+        let a = 0.
+        assert that: { { a < 10 } whileTrue: { a = a + 1 }. a }
+               is: 10
+               testing: "Closure#whileTrue:".
+        let b = 0.
+        assert that: { { b = b + 1. b < 10 } whileTrue. b }
+               is: 10
+               testing: "Closure#whileTrue"!
+
 end
