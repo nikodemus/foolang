@@ -46,4 +46,14 @@ class TestTargetClosure { assert }
                is: 10
                testing: "Closure#whileFalse"!
 
+    method test_loop
+        let a = 0.
+        assert that: { self _test_loop_aux }
+               is: 10
+               testing: "Closure#loop"!
+
+    method _test_loop_aux
+        let a = 0.
+        { a = a + 1. a == 10 ifTrue: { return a } } loop!
+
 end

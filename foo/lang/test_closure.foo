@@ -52,16 +52,6 @@ class TestClosure { assert }
                          onPanic: { |p| True } }
                testing: "Closure#onPanic"!
 
-    method auxTestLoop
-        let a = 0.
-        { a = a + 1. a == 10 ifTrue: { return a } } loop!
-
-    method testLoop
-        let a = 0.
-        assert that: { self auxTestLoop }
-               is: 10
-               testing: "Closure#loop"!
-
     method testWith
         assert false: { (_Closable closed: False) closed }
                testing: "Closure#with: (sanity check)".
