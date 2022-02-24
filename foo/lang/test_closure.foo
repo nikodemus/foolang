@@ -43,10 +43,6 @@ class TestClosure { assert }
         assert true: { TestSelfRefInClosure test }
                testing: "reference to self inside closure"!
 
-    method testApplication
-        assert true: { 1 == { 1 } value }
-               testing: "Closure#value"!
-
     method testOnPanic
         assert true: { { panic "Foo". False }
                          onPanic: { |p| True } }

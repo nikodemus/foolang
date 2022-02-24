@@ -56,4 +56,8 @@ class TestTargetClosure { assert }
         let a = 0.
         { a = a + 1. a == 10 ifTrue: { return a } } loop!
 
+    method test_value
+        assert true: { 1 == { 1 } value }
+               testing: "Closure#value"!
+
 end
