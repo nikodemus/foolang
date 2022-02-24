@@ -926,38 +926,6 @@ class TestTranspileClass { assert system }
             expect: "#pong[123][10, 20, 30]"!
 end
 
-class TestTranspileFinally { assert system }
-    is TranspilerTest
-
-    method testBlockFinally1
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 \{ 1 debug } finally: \{ 2 debug }!
-                         end"
-            expect: "#<Integer 1>#<Integer 2>"!
-
-    method testBlockFinally2
-        self transpile: "class Main \{}
-                             direct method test
-                                 \{ return 1 } finally: \{ 2 debug }!
-                             direct method run: command in: system
-                                 self test debug!
-                         end"
-            expect: "#<Integer 2>#<Integer 1>"!
-
-    method testBlockFinally3
-        self transpile: "class Main \{}
-                             direct method test
-                                let x = 2.
-                                self inner: \{ |y| \{ return y } finally: \{ x debug } }!
-                             direct method run: command in: system
-                                 self test debug!
-                             direct method inner: block
-                                 block value: 100!
-                         end"
-            expect: "#<Integer 2>#<Integer 100>"!
-end
-
 class TestTranspileSelector { assert system }
     is TranspilerTest
 
@@ -1239,7 +1207,6 @@ class Main {}
             "--backtrace" -> TestTranspileBacktrace,
             "--class" -> TestTranspileClass,
             "--extend" -> TestTranspileExtend,
-            "--finally" -> TestTranspileFinally,
             "--globals" -> TestTranspileGlobals,
             "--includes" -> TestTranspileIncludes,
             "--interface" -> TestTranspileInterface,
