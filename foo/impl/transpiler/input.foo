@@ -14,11 +14,6 @@ define InstanceMethods
                      return foo_send(ctx, &FOO_value, ctx->frame[0], 0);
                  return FOO_CHARACTER(c);" },
 
-     #redirect:
-     -> { signature: [File], vars: 0,
-          body: "struct FooFile* file = PTR(FooFile, ctx->frame[0].datum);
-                 return foo_Input_reopen(ctx, file, FooFile_OPEN);" },
-
      #unreadChar:
      -> { signature: [Character], vars: 0,
           body: "ungetc((int)ctx->frame[0].datum.int64, ctx->receiver.datum.ptr);
