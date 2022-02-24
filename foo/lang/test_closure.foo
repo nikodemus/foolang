@@ -52,13 +52,6 @@ class TestClosure { assert }
                          onPanic: { |p| True } }
                testing: "Closure#onPanic"!
 
-    method testFinally
-        assert true: { let flag = False.
-                       { { panic "Foo". False }
-                             finally: { flag = True } }
-                       onPanic: { |p| flag } }
-               testing: "Closure#finally"!
-
     method testWhileTrue
         let a = 0.
         assert that: { { a < 10 } whileTrue: { a = a + 1 }. a }

@@ -4,4 +4,25 @@ class TestTargetClosure { assert }
     method test_cull
         assert that: { { 53 } cull: 123 } is: 53.
         assert that: { { |x| x } cull: 675 } is: 675!
+
+    method test_finally_block_executes_after_fallthrough
+        let log = StringOutput new.
+        { log print: 1 }
+            finally: { log print: 2 }.
+        assert that: { log content } equals: "12"!
+
+    method test_finally_block_executes_on_unwind
+        let log = StringOutput new.
+        self finally_block_executes_on_unwind_aux: log.
+        assert that: { log content } equals: "AB"!
+
+    method finally_block_executes_on_unwind_aux: log
+        { log print: "A".
+          return False.
+          log print: "X" }
+            finally: { log print: "B" }!
+
+    method test_finally_returns_value_of_main_block_after_fallthrough
+        let res = { 192 } finally: { 666 }.
+        assert that: { res } equals: 192!
 end
