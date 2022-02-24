@@ -1,33 +1,36 @@
-class TestInput { assert input data }
+class TestInput { assert data }
     is TestSuite
 
     direct method assert: assert
-        self assert: assert input: False data: False!
+        self assert: assert data: False!
 
     method system: system
-        input = system input.
         data = system files / "data"!
 
+    method data: fname asInput: block
+        (data / fname) forRead open: { |f| block value: f asInput }!
+
     method test_atEof
-        -- FIXME: restore input after test!
-        input redirect: (data / "empty.txt") forRead.
-        -- EOF isn't detected until a failed read, for better or worse.
-        input readChar_onEof: { False }.
-        assert true: { input atEof }!
+        self data: "empty.txt"
+             asInput: { |input|
+                        -- EOF isn't detected until a failed read, for better or worse.
+                        input readChar_onEof: { False }.
+                        assert true: { input atEof } }!
 
     method test_lines
-        -- FIXME: restore input after test!
-        input redirect: (data / "lorem_ipsum.txt") forRead.
-        assert true: { 6 == input lines size }!
+        self data: "lorem_ipsum.txt"
+             asInput: { |input|
+                        assert true: { 6 == input lines size } }!
 
     method test_input_readline
-        -- FIXME: restore input after test!
-        input redirect: (data / "lorem_ipsum.txt") forRead.
-        assert true: { "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor"
-                           == input readline }!
+        self data: "lorem_ipsum.txt"
+             asInput:  { |input|
+                         assert true: { "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor"
+                                            == input readline } }!
 
     method test_input_readline_long_line
-        -- FIXME: restore input after test!
-        input redirect: (data / "1001-character-line.txt") forRead.
-        assert true: { 1001 == input readline size }!
+        self data: "1001-character-line.txt"
+             asInput: { |input|
+                        assert that: { input readline size }
+                               equals: 1001 }!
 end

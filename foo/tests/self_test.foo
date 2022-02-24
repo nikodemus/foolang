@@ -15,6 +15,7 @@ import lang.test_integer.TestInteger
 import lang.test_interval.TestInterval
 import lang.test_lang.TestLang
 import lang.test_ordered.TestOrdered
+import lang.test_output.TestOutput
 import lang.test_selector.TestSelector
 import lang.test_string.TestString
 import lang.test_target_closure.TestTargetClosure
@@ -47,6 +48,7 @@ class Main { assert system }
             TestInterval,
             TestLang,
             TestOrdered,
+            TestOutput,
             TestSelector,
             TestString,
             -- FIXME: These should be replaced by shared tests

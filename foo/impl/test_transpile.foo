@@ -1015,13 +1015,6 @@ class TestTranspileSystem { assert system }
                           end"
             expect: "#<Boolean True>#<Boolean True>#<Boolean True>"!
 
-    method testOutput
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 system output writeString: \"Hello!\"!
-                         end"
-            expect: "Hello!"!
-
     method test_Main_run_in_command_size
         self transpile: "class Main \{}
                              direct method run: command in: system
