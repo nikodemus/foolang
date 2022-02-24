@@ -1,0 +1,26 @@
+class TestOutput { assert data }
+    is TestSuite
+
+    direct method assert: assert
+        self assert: assert data: False!
+
+    method system: system
+        data = system files / "data"!
+
+    method withOutputToString: block
+        -- The reason for not just using StringOutput is to actually
+        -- test the Output class -- which FileStream#asOutput provides.
+        let path = (data / "test_output.tmp").
+        path forWrite truncateExisting
+            createOrOpen: { |f| block value: f asOutput }.
+        let string = path readString.
+        -- FIXME: #finally: doesn't work right in target evaluator...
+        path deleteFile.
+        string!
+
+    method test_output
+        let output = self withOutputToString: { |output|
+                                                output print: "This is an output test." }.
+        assert that: { output }
+               equals: "This is an output test."!
+end
