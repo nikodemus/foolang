@@ -479,26 +479,9 @@ struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
   foo_panicf(ctx, "INTERNAL ERROR: longjmp() fell through!");
 }
 
-void foo_check_method_argcount(struct FooContext* sender,
-                               size_t nargs,
-                               const struct FooMethod* method) {
-  if (nargs != method->argCount) {
-    foo_panicf(sender, "Wrong number of arguments! %s requires %zu, got %zu",
-               method->selector->name->data, method->argCount, nargs);
-  }
-  if (method->frameSize < nargs) {
-    foo_panicf(sender, "INTERNAL ERROR: Method %s frame too small: %zu, got %zu arguments!",
-               method->selector->name->data,
-               method->frameSize,
-               nargs);
-  }
-}
-
 struct FooContext* foo_context_new_method_no_args(const struct FooMethod* method,
                                                   struct FooContext* sender,
-                                                  struct Foo receiver,
-                                                  size_t nargs) {
-  foo_check_method_argcount(sender, nargs, method);
+                                                  struct Foo receiver) {
   struct FooContext* context = foo_alloc_context(sender, method->frameSize);
   context->type = METHOD_CONTEXT;
   context->depth = sender->depth + 1;
@@ -516,7 +499,7 @@ struct FooContext* foo_context_new_method_array(const struct FooMethod* method,
                                                 struct Foo receiver,
                                                 struct Foo arguments) {
   struct FooContext* context
-    = foo_context_new_method_no_args(method, sender, receiver, method->argCount);
+    = foo_context_new_method_no_args(method, sender, receiver);
   if (selector != method->selector) {
     // DoesNotUnderstand case
     assert(&FOO_perform_with_ == method->selector);
@@ -545,7 +528,7 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
                                              size_t nargs, va_list arguments) {
   // FOO_DEBUG("/foo_context_new_method_va");
   struct FooContext* context
-    = foo_context_new_method_no_args(method, sender, receiver, method->argCount);
+    = foo_context_new_method_no_args(method, sender, receiver);
   if (selector != method->selector) {
     assert(&FOO_perform_with_ == method->selector);
     assert(method->argCount == 2);
@@ -558,7 +541,6 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
     context->frame[1] = (struct Foo){ .class = &FooClass_Array,
                                       .datum = { .ptr = array } };
   } else {
-    foo_check_method_argcount(sender, nargs, method);
     for (size_t i = 0; i < nargs; i++) {
       context->frame[i] = va_arg(arguments, struct Foo);
     }
@@ -608,18 +590,14 @@ void foo_print_backtrace(struct FooContext* context) {
   }
 }
 
-struct Foo foo_activate(struct FooContext* context) {
-  assert(context);
-  if (context->depth > 2000) {
-    foo_panicf(context, "Stack blew up!");
-  }
-  return context->method->function(context->method, context);
-}
-
 struct Foo foo_send_array(struct FooContext* sender,
                           const struct FooSelector* selector,
                           struct Foo receiver,
                           struct Foo array) {
+  assert(sender);
+  if (sender->depth > 2000) {
+    foo_panicf(sender, "Stack blew up!");
+  }
   // FOO_DEBUG("/foo_send_array(?, %s, ...)", selector->name->data);
   if (!receiver.class) {
     foo_panicf(sender, "Invalid receiver for #%s", selector->name->data);
@@ -628,13 +606,17 @@ struct Foo foo_send_array(struct FooContext* sender,
     = foo_class_find_method(sender, receiver.class, selector);
   struct FooContext* context
     = foo_context_new_method_array(method, sender, selector, receiver, array);
-  return foo_activate(context);
+  return method->function(method, context);
 }
 
 struct Foo foo_send(struct FooContext* sender,
                     const struct FooSelector* selector,
                     struct Foo receiver,
                     size_t nargs, ...) {
+  assert(sender);
+  if (sender->depth > 2000) {
+    foo_panicf(sender, "Stack blew up!");
+  }
   // FOO_DEBUG("/foo_send(?, %s, %s, ...)",
   //           selector->name->data, receiver.class->name->data);
   va_list arguments;
@@ -646,7 +628,9 @@ struct Foo foo_send(struct FooContext* sender,
     = foo_class_find_method(sender, receiver.class, selector);
   struct FooContext* context
     = foo_context_new_method_va(method, sender, selector, receiver, nargs, arguments);
-  return foo_activate(context);
+  struct Foo result = method->function(method, context);
+  va_end(arguments);
+  return result;
 }
 
 
