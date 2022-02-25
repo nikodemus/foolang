@@ -11,6 +11,10 @@ class TestFoolang { system ok onFailure }
     ; add: 2
     ; add: 3"!
 
+    method test0_Parse_empty_arglist_in_block
+        self parse: "\{ || 42 \}"
+            expect: "\{ 42 \}"!
+
     method test_Interpret_cascade
         self eval: "List new
                         ; add: 1

@@ -29,6 +29,11 @@ class TestLang { assert }
         block value.
         panic "never"!
 
+    method test_block_with_empty_parameter_list
+        let b = { || 12349678 }.
+        assert that: { b value }
+               is: 12349678!
+
     method test_finally_block_executes_after_fallthrough
         let log = StringOutput new.
         { log print: 1 }

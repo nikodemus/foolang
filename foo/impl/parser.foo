@@ -341,6 +341,13 @@ class OpenBraceToken { precedence string first last }
         parser when: "|"
                do: { return self _parseAsBlockWith: parser }.
 
+        -- Block with empty parameter list
+        -- KLUDGE: Since | isn't a special character, the two pipes
+        -- in { || ... } parse as a single token!
+        parser when: "||"
+               do: { parser nextToken.
+                     return self _parseAsBlockWith: parser }.
+
         -- Block with return type and no parameters
         parser when: "->"
                do: { return self _parseAsBlockWith: parser }.
@@ -416,7 +423,7 @@ class OpenBraceToken { precedence string first last }
                   returnType = parser parsePrefix }.
         self
             _finishBlockWith: parser
-            _parameters: parameters
+            _parameters: parameters asArray
             _returnType: returnType
             _body: parser parseSeq!
 end
