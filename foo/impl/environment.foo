@@ -79,6 +79,27 @@ class Variable { name type index }
 
     method printOn: stream
         stream print: "#<Variable {name}>"!
+
+    method visitBy: visitor
+        visitor visitVariable: self!
+end
+
+class Argument { name type index }
+    is Object
+
+    direct method name: name type: type frame: frame
+        let var = self name: name type: type index: frame size + 1.
+        frame add: var.
+        var!
+
+    method referenceUpwards: offset
+        AstLexicalRef variable: self frameOffset: offset!
+
+    method printOn: stream
+        stream print: "#<Argument {name}>"!
+
+    method visitBy: visitor
+        visitor visitArgument: self!
 end
 
 class Constant { name value }
@@ -306,20 +327,12 @@ class Environment { parent
         -- Debug println: "addVariable: {name}".
         self addVariable: name type: Any!
 
-    method addVariables: names
-        -- Debug println: "addVariables: {names}".
-        self augment: (names collect: { |each|
-                                        Variable
-                                            name: each
-                                            type: Any
-                                            frame: frame })!
-
-    method addVariables: names types: types
-        -- Debug println: "addVariables: {names} types: {types}".
+    method addArguments: names types: types
+        -- Debug println: "addArguments: {names} types: {types}".
         (names size is types size) assert.
         self augment: (names with: types
                              collect: { |name type|
-                                        Variable
+                                        Argument
                                             name: name
                                             type: type
                                             frame: frame })!

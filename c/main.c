@@ -131,36 +131,6 @@ char* foo_debug_context(struct FooContext* ctx) {
   return s;
 }
 
-struct Foo foo_lexical_ref(struct FooContext* context, size_t index, size_t frameOffset) {
-  struct FooContext* context0 = context;
-  size_t frameOffset0 = frameOffset;
-  // FOO_DEBUG("/lexical_ref(index=%zu, frame=%zu)", index, frameOffset);
-  while (frameOffset > 0) {
-    assert(context->outer_context);
-    context = context->outer_context;
-    --frameOffset;
-  }
-  assert(index < context->size);
-  struct Foo res = context->frame[index];
-  if (!res.class) {
-    foo_panicf(context0, "Invalid lexical reference at index: %zu, frameOffset: %zu",
-               index, frameOffset0);
-  }
-  return res;
-}
-
-struct Foo foo_lexical_set(struct FooContext* context, size_t index, size_t frame, struct Foo value) {
-  // FOO_DEBUG("/lexical_set(index=%zu, frame=%zu, ...)", index, frame);
-  while (frame > 0) {
-    assert(context->outer_context);
-    context = context->outer_context;
-    --frame;
-  }
-  assert(index < context->size);
-  context->frame[index] = value;
-  return value;
-}
-
 // Forward declarations for classs are in generated_classes, but we're going
 // to define a few builtin ctors first that need some of them.
 struct FooClass FooClass_Array;
