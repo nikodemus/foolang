@@ -8,7 +8,6 @@ import lang.test_character.TestCharacter
 import lang.test_closure.TestClosure
 import lang.test_file.TestFile
 import lang.test_float.TestFloat
-import lang.test_integer.TestInteger
 import lang.test_interval.TestInterval
 import lang.test_selector.TestSelector
 
@@ -77,7 +76,6 @@ class Main { assert system }
             TestFilePath,
             TestFileStream,
             TestFloat,
-            TestInteger,
             TestInterval,
             TestList,
             TestListAsIterable,
