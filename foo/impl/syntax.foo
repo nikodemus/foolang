@@ -413,6 +413,9 @@ class SyntaxPrefix { receiver selector source }
     method parts
         -- Source left out intentionally, since it doesn't need to compere equal.
         [receiver, selector]!
+
+    method descriptor
+        "{selector name} {receiver descriptor}"!
 end
 
 class SyntaxUnary { receiver selector source }

@@ -29,6 +29,9 @@ class TestClosure { assert }
             testing: "Closure#signature"!
 
     method testArity
+        -- Cannot move to test_target_closure.foo yet, because
+        -- type representation in AST is bad, causing the signature
+        -- to contain globals. (maybe other problems as well?)
         assert forAll: [
             [{ 42 }, 0],
             [{ || 42 }, 0],
