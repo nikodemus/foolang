@@ -3,29 +3,6 @@ import .utils.FileModuleDictionary
 import .ast.AstClass
 import .ast.AstSlot
 
-class GenericDelegator { target }
-    method selector
-        #perform:with:!
-
-    method invoke: args on: _receiver
-        args first sendTo: target
-                   with: args second!
-
-    method isRequired
-        False!
-end
-
-class TypecheckDelegator { target }
-    method selector
-        #typecheck:!
-
-    method invoke: args on: _receiver
-        target typecheck: (args at: 1)!
-
-    method isRequired
-        False!
-end
-
 ---
 TODO:
 - Would be cleaner if AstClass linked directly to the generated class: the
@@ -41,55 +18,6 @@ TODO:
 
 - Instance methods are going to be funky.
 ---
-
-extend AstClass
-    method delegateTo: builtin
-        self __addDirectMethod: (GenericDelegator target: builtin).
-        self __addDirectMethod: (TypecheckDelegator target: builtin)!
-end
-
-class AllInterpreterBuiltins { env }
-    direct method redefineIn: env
-        (self env: env)
-            redefineAll!
-
-    method redefineAll
-        self
-            ; redefine: Array
-            ; redefine: ByteArray
-            ; redefine: Boolean
-            ; redefine: Character
-            ; redefine: Class
-            ; redefine: Closure
-            ; redefine: Clock
-            ; redefine: File
-            ; redefine: FilePath
-            ; redefine: FileStream
-            ; redefine: Float
-            ; redefine: Input
-            ; redefine: Integer
-            ; redefine: Layout
-            ; redefine: Object
-            ; redefine: Output
-            ; redefine: Random
-            ; redefine: Record
-            ; redefine: System
-            ; redefine: SystemRandom
-            ; redefine: Selector
-            ; redefine: String
-            ; redefine: Time!
-
-    method redefine: builtin
-        let theClass = AstClass
-                           name: builtin name
-                           slots: []
-                           interfaces: []
-                           env: env
-                           isBuiltin: True.
-        theClass directMethods: List new.
-        theClass instanceMethods: List new.
-        theClass delegateTo: builtin!
-end
 
 class Interpreter { system }
     direct method run: program in: system with: args
@@ -108,14 +36,6 @@ class Interpreter { system }
                                  "List",
                                  "Object",
                                  "TypeError" ].
-        -- These are the actual builtins. We need to replace AstBuiltins with fresh
-        -- AstClasses so that the host environment stays separate from the
-        -- interpreter.
-        --
-        -- One this is done the AstClass definitions can move to Environment
-        -- instead, and we can get rid of the AstBuiltins, which were a dodgy
-        -- shortcut for referring to the host environment.
-        AllInterpreterBuiltins redefineIn: builtinEnv.
         let env = builtinEnv
                       ; importPrelude: ["lang", "prelude"]
                       ; load: source.
