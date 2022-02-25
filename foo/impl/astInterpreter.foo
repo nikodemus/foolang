@@ -80,6 +80,9 @@ class AstBlockClosure { context block }
     method arity
         block argumentCount!
 
+    method signature
+        block argumentVariables collect: #type as: Array!
+
     method apply: arguments
         let frame = Array new: block frameSize.
         let nArgs = arguments size.
