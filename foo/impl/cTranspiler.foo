@@ -1298,10 +1298,16 @@ class CTranspiler { output selectorMap closureFunctions
                       output println: (aMethod body replace: "\n" with: "\n    ").
                       output println: "}" }
             ifFalse: { -- Debug println: "  - normal method".
-                       output print: "    return ".
+                       output println: "    jmp_buf ret;".
+                       output println: "    ctx->ret = &ret;".
+                       output println: "    if (setjmp(ret)) \{".
+                       output println: "        return ctx->return_value;".
+                       output println: "    } else \{".
+                       output print: "          return ".
                        self _generateTypecheck: aMethod returnType
                             _for: aMethod body.
                        output println: ";".
+                       output println: "    }".
                        output println: "}" }.
         -- Debug println: "  => method done".
         output newline.

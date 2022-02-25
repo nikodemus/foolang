@@ -610,50 +610,10 @@ void foo_print_backtrace(struct FooContext* context) {
 
 struct Foo foo_activate(struct FooContext* context) {
   assert(context);
-
-  // Grab things from context before GC, makes debugging things like
-  // accidentally collected contexts easier.
-  const struct FooMethod* method = context->method;
-  assert(method);
-  struct FooClass* here = context->receiver.class;
-  assert(here);
-  struct FooClass* home = method->home;
-  assert(home);
-  uint32_t depth = context->depth;
-
-  if (depth > 2000) {
+  if (context->depth > 2000) {
     foo_panicf(context, "Stack blew up!");
   }
-
-  jmp_buf ret;
-  context->ret = &ret;
-  int jmp = setjmp(ret);
-
-  if (jmp) {
-    FOO_DEBUG("/foo_activate(%u: %p) -> non-local return from %s#%s (%s)",
-              depth, context,
-              home->name->data,
-              method->selector->name->data,
-              here->name->data);
-    assert(context->method == method);
-    return context->return_value;
-  } else {
-    FooMethodFunction function = method->function;
-    assert(function);
-    FOO_DEBUG("/foo_activate(%u: %p) %s#%s (%s)",
-              depth, context,
-              home->name->data,
-              method->selector->name->data,
-              here->name->data);
-    struct Foo res = function(method, context);
-    FOO_DEBUG("/foo_activate(%u = %p) -> local return from %s#%s (%s)",
-              depth, context,
-              home->name->data,
-              method->selector->name->data,
-              here->name->data);
-    assert(context->method == method);
-    return res;
-  }
+  return context->method->function(context->method, context);
 }
 
 struct Foo foo_send_array(struct FooContext* sender,
