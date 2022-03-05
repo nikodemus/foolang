@@ -199,7 +199,10 @@ void foo_mark_context(struct FooContext* ctx) {
       DEBUG_GC(" selector: %s", ctx->method->selector->name->data);
     }
   }
-  if (ctx && foo_mark_live(ctx)) {
+  if (ctx &&
+      (ctx->header.allocation == STACK ||
+       (ctx->header.allocation == HEAP && foo_mark_live(ctx)))) {
+    // Stack allocated contexts get traced but not marked.
     foo_mark_object(ctx->receiver);
     foo_mark_context(ctx->sender);
     foo_mark_context(ctx->outer_context);

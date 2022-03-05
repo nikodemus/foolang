@@ -38,7 +38,8 @@ struct Foo {
 
 enum FooAllocType {
   STATIC,
-  HEAP
+  HEAP,
+  STACK
 };
 
 struct FooHeader {
@@ -90,22 +91,26 @@ enum FooContextType {
     ROOT_CONTEXT
 };
 
-struct FooContext {
-  enum FooContextType type;
-  uint32_t depth;
-  const struct FooMethod* method;
-  struct Foo receiver;
-  struct FooContext* sender;
-  struct FooContext* outer_context;
-  // FIXME: Doesn't really belong in context, but easier right now.
-  struct FooArray* vars;
-  struct FooCleanup* cleanup;
-  struct Foo return_value;
-  // Only for methods, for others this is NULL.
-  jmp_buf* ret;
-  size_t size;
-  struct Foo frame[];
-};
+// FIXME: vars doesn't really belong in context, but easier right now.
+#define FOOCONTEXT_IMPL(prefix, frameSize)            \
+  prefix {                                            \
+    struct FooHeader header;                          \
+    enum FooContextType type;                         \
+    uint32_t depth;                                   \
+    uint64_t heap;                                    \
+    const struct FooMethod* method;                   \
+    struct Foo receiver;                              \
+    struct FooContext* sender;                        \
+    struct FooContext* outer_context;                 \
+    struct FooArray* vars;                            \
+    struct FooCleanup* cleanup;                       \
+    struct Foo return_value;                          \
+    jmp_buf* ret;                                     \
+    size_t size;                                      \
+    struct Foo frame frameSize;                       \
+}
+FOOCONTEXT_IMPL(struct FooContext, []);
+#define FOOCONTEXT_OF_SIZE(frameSize) (struct FooContext*)&(FOOCONTEXT_IMPL(struct,[frameSize]))
 
 // FIXME: Don't like defining this in C.
 struct FooFile {

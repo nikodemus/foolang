@@ -111,6 +111,7 @@ struct FooSelector* foo_intern(struct FooBytes* name) {
 struct FooContext* foo_alloc_context(struct FooContext* sender, size_t size) {
   struct FooContext* ctx
     = foo_alloc_no_gc(sender, sizeof(struct FooContext) + size * sizeof(struct Foo));
+  ctx->header.allocation = HEAP;
   ctx->size = size;
   return ctx;
 }
