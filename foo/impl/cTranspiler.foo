@@ -563,6 +563,26 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "struct FooSelector* FOO_InternedSelectors = {prev};".
         output!
 
+    method compileMethodBody: aMethod
+        let newOutput = StringOutput new.
+        let methodVisitor = CTranspiler
+                                 output: newOutput
+                                 selectorMap: selectorMap
+                                 closureFunctions: closureFunctions
+                                 constants: constants
+                                 variables: variables
+                                 tmpCounter: tmpCounter
+                                 globals: globals
+                                 globalsCounter: globalsCounter
+                                 recordClasses: recordClasses
+                                 generatedMethods: generatedMethods
+                                 env: env
+                                 builtins: builtins.
+        methodVisitor
+            _generateTypecheck: aMethod returnType
+            _for: aMethod body.
+        newOutput content!
+
     method generateDeclarations
         -- Debug println: "      #generateDeclarations".
         let output = StringOutput new.
@@ -1060,7 +1080,6 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                   output println: "                            .home = &{each methodHomeName},".
-                  output println: "                            .frameSize = {each frameSize},".
                   output println: "                            .function = &{each methodFunctionName},".
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL } } }," }.
         output println: "    }".
@@ -1082,7 +1101,6 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                   output println: "                            .home = &{each methodHomeName},".
-                  output println: "                            .frameSize = {each frameSize},".
                   output println: "                            .function = &{each methodFunctionName},".
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
         output println: "    }".
@@ -1227,7 +1245,6 @@ class CTranspiler { output selectorMap closureFunctions
                            do: { |each|
                                  output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                                  output println: "                            .home = &{each methodHomeName},".
-                                 output println: "                            .frameSize = {each frameSize},".
                                  output println: "                            .function = &{each methodFunctionName},".
                                  output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL } } }," }.
                        output println: "    }".
@@ -1253,7 +1270,6 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                   output println: "                            .home = &{each methodHomeName},".
-                  output println: "                            .frameSize = {each frameSize},".
                   output println: "                            .function = &{each methodFunctionName},".
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
         output println: "    }".
@@ -1291,8 +1307,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "     va_list arguments)".
         output println: "\{".
         aMethod isBuiltin
-            ifTrue: { -- Debug println: "  - builtin method".
-                      output println: "    assert(selector == method->selector);". -- perform:with:?
+            ifTrue: { output println: "    assert(selector == method->selector);". -- perform:with:?
                       aMethod signature
                           doWithIndex: { |type index|
                                          type is Any
@@ -1320,9 +1335,10 @@ class CTranspiler { output selectorMap closureFunctions
                       output print: "    ".
                       output println: aMethod body.
                       output println: "}" }
-            ifFalse: { -- Debug println: "  - normal method".
+            ifFalse: { -- We need to compile the method body to know how the required framesize.
+                       let body = self compileMethodBody: aMethod.
                        output println: "    struct FooContext* ctx".
-                       output println: "        = foo_context_new_method_va(method, sender, selector, receiver, nargs, arguments);".
+                       output println: "        = foo_context_new_method_va(method, sender, selector, receiver, {aMethod frameSize}, nargs, arguments);".
                        output println: "    (void)ctx;".
                        aMethod signature
                            doWithIndex: { |type index|
@@ -1335,8 +1351,7 @@ class CTranspiler { output selectorMap closureFunctions
                        output println: "        return ctx->return_value;".
                        output println: "    } else \{".
                        output print: "          return ".
-                       self _generateTypecheck: aMethod returnType
-                            _for: aMethod body.
+                       output print: body.
                        output println: ";".
                        output println: "    }".
                        output println: "}" }.
