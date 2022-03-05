@@ -1116,7 +1116,6 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "     struct Foo receiver,".
         output println: "     size_t nargs, va_list arguments)".
         output println: "\{".
-        output println: "    (void)method;".
         output println: "    (void)selector;".
         output println: "    (void)nargs;".
         output println: "    struct FooArray* new = FooInstance_alloc(sender, {aClass slots size});".
@@ -1125,7 +1124,7 @@ class CTranspiler { output selectorMap closureFunctions
                            let type = each type. -- FIXME: visit the type
                            type is Any
                                ifTrue: { output println: "new->data[{index-1}] = va_arg(arguments, struct Foo);" }
-                               ifFalse: { output println: "new->data[{index -1}] = foo_class_typecheck(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo));" } }.
+                               ifFalse: { output println: "new->data[{index-1}] = foo_class_typecheck_ctor_argument(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo), method, {index-1});" } }.
         output println: "    return (struct Foo)\{ .class = PTR(FooClass, receiver.datum), .datum = \{ .ptr = new } };".
         output println: "}".
         output newline.

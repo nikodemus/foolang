@@ -303,18 +303,43 @@ bool foo_class_inherits(struct FooClass* want, struct FooClass* class) {
   return false;
 }
 
-struct Foo foo_class_typecheck(struct FooContext* ctx,
+struct Foo foo_class_typecheck(struct FooContext* sender,
                                struct FooClass* class,
                                struct Foo obj) {
   assert(class);
   if (!obj.class) {
-    foo_panicf(ctx, "Object has no class to check: %p, wanted %s",
+    foo_panicf(sender, "Object has no class to check: %p, wanted %s",
                obj.datum.ptr, class->name->data);
   }
   if (class == obj.class || foo_class_inherits(class, obj.class)) {
     return obj;
   }
-  foo_panicf(ctx, "Type error! Wanted: %s, got: %s",
+  foo_panicf(sender, "Type error! Wanted: %s, got: %s",
+             class->name->data, obj.class->name->data);
+}
+
+struct FooContext* foo_context_new_method_dummy(const struct FooMethod* method,
+                                                struct FooContext* sender,
+                                                struct Foo receiver,
+                                                size_t index, struct Foo arg);
+
+// For use in methods which don't allocate their own context:
+// creates a mock context on failure.
+struct Foo foo_class_typecheck_ctor_argument(struct FooContext* sender,
+                                             struct FooClass* class,
+                                             struct Foo obj,
+                                             const struct FooMethod* method,
+                                             size_t index) {
+  assert(class);
+  if (!obj.class) {
+    foo_panicf(sender, "Object has no class to check: %p, wanted %s",
+               obj.datum.ptr, class->name->data);
+  }
+  if (class == obj.class || foo_class_inherits(class, obj.class)) {
+    return obj;
+  }
+  struct FooContext* dummy = foo_context_new_method_dummy(method, sender, sender->receiver, index, obj);
+  foo_panicf(dummy, "Type error! Wanted: %s, got: %s",
              class->name->data, obj.class->name->data);
 }
 
@@ -441,9 +466,9 @@ struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
   foo_panicf(ctx, "INTERNAL ERROR: longjmp() fell through!");
 }
 
-struct FooContext* foo_context_new_method_no_args(const struct FooMethod* method,
-                                                  struct FooContext* sender,
-                                                  struct Foo receiver) {
+struct FooContext* foo_context_new_method_frame(const struct FooMethod* method,
+                                                struct FooContext* sender,
+                                                struct Foo receiver) {
   struct FooContext* context = foo_alloc_context(sender, method->frameSize);
   context->type = METHOD_CONTEXT;
   context->depth = sender->depth + 1;
@@ -455,6 +480,24 @@ struct FooContext* foo_context_new_method_no_args(const struct FooMethod* method
   return context;
 }
 
+// This is a dummy frame containing only a single argument, in a specific
+// frame slot, all others initialized to False.
+struct FooContext* foo_context_new_method_dummy(const struct FooMethod* method,
+                                                struct FooContext* sender,
+                                                struct Foo receiver,
+                                                size_t index, struct Foo arg) {
+  struct FooContext* context
+    = foo_context_new_method_frame(method, sender, receiver);
+  for (size_t i = 0; i < method->frameSize; i++) {
+    if (i == index) {
+      context->frame[i] = arg;
+    } else {
+      context->frame[i] = FOO_BOOLEAN(false);
+    }
+  }
+  return context;
+}
+
 struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
                                              struct FooContext* sender,
                                              const struct FooSelector* selector,
@@ -462,7 +505,7 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
                                              size_t nargs, va_list arguments) {
   // FOO_DEBUG("/foo_context_new_method_va");
   struct FooContext* context
-    = foo_context_new_method_no_args(method, sender, receiver);
+    = foo_context_new_method_frame(method, sender, receiver);
   if (selector != method->selector) {
     assert(&FOO_perform_with_ == method->selector);
     assert(method->argCount == 2);
