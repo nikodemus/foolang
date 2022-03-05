@@ -1424,10 +1424,19 @@ class CTranspiler { output selectorMap closureFunctions
 
     method visitReturn: ret
         -- Tracer trace: #visitReturn:.
-        output print: "foo_return(ctx, ".
+        ret isLocal
+            ifFalse: { output print: "foo_return(ctx, ".
+                       self _generateTypecheck: ret from returnType
+                            _for: ret value.
+                       output print: ")".
+                       return False }.
+        ret isTail
+            ifFalse: { output print: "(\{ return ".
+                       self _generateTypecheck: ret from returnType
+                            _for: ret value.
+                       output print: "; \})" }.
         self _generateTypecheck: ret from returnType
-             _for: ret value.
-        output print: ")"!
+             _for: ret value!
 
     method visitConstant: aConstant
         -- Tracer visitConstant: aConstant.

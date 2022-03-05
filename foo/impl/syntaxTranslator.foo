@@ -111,11 +111,14 @@ class SyntaxTranslator { env currentMethod methodEnv }
 
     method visitReturn: aReturn
         -- Tracer trace: #visitReturn:.
+        let local = True.
         env is methodEnv
-            ifFalse: { currentMethod noteNonLocalReturn }.
+            ifFalse: { local = False.
+                       currentMethod noteNonLocalReturn }.
         AstReturn
             from: currentMethod::AstMethod
-            value: (aReturn value visitBy: self)!
+            value: (aReturn value visitBy: self)
+            isLocal: local!
 
     method visitPanic: aPanic
         -- Tracer trace: #visitPanic:.
@@ -282,12 +285,13 @@ class SyntaxTranslator { env currentMethod methodEnv }
                             isDirect: aMethod isDirect
                             isRequired: aMethod body is False.
         astMethod isRequired
-            ifFalse: { astMethod
-                           body: (aMethod body
+            ifFalse: { let body = aMethod body
                                       visitBy: (SyntaxTranslator
                                                     env: bodyEnv
                                                     currentMethod: astMethod
-                                                    methodEnv: bodyEnv)) }.
+                                                    methodEnv: bodyEnv).
+                       body markTail.
+                       astMethod body: body }.
         astMethod
             frameSize: bodyEnv frame size.
         astMethod!
