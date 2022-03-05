@@ -79,13 +79,6 @@ bool foo_bytes_equal(const struct FooBytes* a, const struct FooBytes* b) {
   return a->size == b->size && !memcmp(a->data, b->data, a->size);
 }
 
-/** Simple intrusive list for interning. O(N), but fine to start with.
- */
-struct FooSelector {
-  struct FooSelector* next;
-  struct FooBytes* name;
-};
-
 #include "generated_selectors.h"
 
 struct FooSelector* foo_intern_new_selector(struct FooBytes* name) {
@@ -117,7 +110,7 @@ struct FooSelector* foo_intern(struct FooBytes* name) {
 
 struct FooContext* foo_alloc_context(struct FooContext* sender, size_t size) {
   struct FooContext* ctx
-    = foo_alloc(sender, sizeof(struct FooContext) + size * sizeof(struct Foo));
+    = foo_alloc_no_gc(sender, sizeof(struct FooContext) + size * sizeof(struct Foo));
   ctx->size = size;
   return ctx;
 }
@@ -144,9 +137,8 @@ struct FooClass FooClass_Selector;
 struct FooClass FooClass_String;
 struct FooClassList FooClassInheritance_Class;
 struct FooArray* FooArray_alloc(struct FooContext* sender, size_t size);
-struct FooArray* FooArray_instance(size_t size);
+struct FooArray* FooArray_alloc_no_gc(struct FooContext* sender, size_t size);
 struct Foo foo_Float_new(double f);
-struct Foo FooString_new(size_t len, const char* s);
 struct Foo foo_class_typecheck(struct FooContext* ctx, struct FooClass* class, struct Foo obj);
 struct Foo FooGlobal_True;
 struct Foo FooGlobal_False;
@@ -311,18 +303,43 @@ bool foo_class_inherits(struct FooClass* want, struct FooClass* class) {
   return false;
 }
 
-struct Foo foo_class_typecheck(struct FooContext* ctx,
+struct Foo foo_class_typecheck(struct FooContext* sender,
                                struct FooClass* class,
                                struct Foo obj) {
   assert(class);
   if (!obj.class) {
-    foo_panicf(ctx, "Object has no class to check: %p, wanted %s",
+    foo_panicf(sender, "Object has no class to check: %p, wanted %s",
                obj.datum.ptr, class->name->data);
   }
   if (class == obj.class || foo_class_inherits(class, obj.class)) {
     return obj;
   }
-  foo_panicf(ctx, "Type error! Wanted: %s, got: %s",
+  foo_panicf(sender, "Type error! Wanted: %s, got: %s",
+             class->name->data, obj.class->name->data);
+}
+
+struct FooContext* foo_context_new_method_dummy(const struct FooMethod* method,
+                                                struct FooContext* sender,
+                                                struct Foo receiver,
+                                                size_t index, struct Foo arg);
+
+// For use in methods which don't allocate their own context:
+// creates a mock context on failure.
+struct Foo foo_class_typecheck_ctor_argument(struct FooContext* sender,
+                                             struct FooClass* class,
+                                             struct Foo obj,
+                                             const struct FooMethod* method,
+                                             size_t index) {
+  assert(class);
+  if (!obj.class) {
+    foo_panicf(sender, "Object has no class to check: %p, wanted %s",
+               obj.datum.ptr, class->name->data);
+  }
+  if (class == obj.class || foo_class_inherits(class, obj.class)) {
+    return obj;
+  }
+  struct FooContext* dummy = foo_context_new_method_dummy(method, sender, sender->receiver, index, obj);
+  foo_panicf(dummy, "Type error! Wanted: %s, got: %s",
              class->name->data, obj.class->name->data);
 }
 
@@ -449,9 +466,9 @@ struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
   foo_panicf(ctx, "INTERNAL ERROR: longjmp() fell through!");
 }
 
-struct FooContext* foo_context_new_method_no_args(const struct FooMethod* method,
-                                                  struct FooContext* sender,
-                                                  struct Foo receiver) {
+struct FooContext* foo_context_new_method_frame(const struct FooMethod* method,
+                                                struct FooContext* sender,
+                                                struct Foo receiver) {
   struct FooContext* context = foo_alloc_context(sender, method->frameSize);
   context->type = METHOD_CONTEXT;
   context->depth = sender->depth + 1;
@@ -463,29 +480,19 @@ struct FooContext* foo_context_new_method_no_args(const struct FooMethod* method
   return context;
 }
 
-struct FooContext* foo_context_new_method_array(const struct FooMethod* method,
+// This is a dummy frame containing only a single argument, in a specific
+// frame slot, all others initialized to False.
+struct FooContext* foo_context_new_method_dummy(const struct FooMethod* method,
                                                 struct FooContext* sender,
-                                                const struct FooSelector* selector,
                                                 struct Foo receiver,
-                                                struct Foo arguments) {
+                                                size_t index, struct Foo arg) {
   struct FooContext* context
-    = foo_context_new_method_no_args(method, sender, receiver);
-  if (selector != method->selector) {
-    // DoesNotUnderstand case
-    assert(&FOO_perform_with_ == method->selector);
-    assert(method->argCount == 2);
-    context->frame[0] = (struct Foo){ .class = &FooClass_Selector,
-                                      .datum = { .ptr = (void*)selector } };
-    context->frame[1] = arguments;
-  } else {
-    // normal case
-    struct FooArray* array = PTR(FooArray, arguments.datum);
-    if (array->size != method->argCount) {
-      foo_panicf(context, "Invalid number of arguments to #%s, wanted %zu, got %zu",
-                 method->selector->name->data, method->argCount, array->size);
-    }
-    for (size_t i = 0; i < array->size; i++) {
-      context->frame[i] = array->data[i];
+    = foo_context_new_method_frame(method, sender, receiver);
+  for (size_t i = 0; i < method->frameSize; i++) {
+    if (i == index) {
+      context->frame[i] = arg;
+    } else {
+      context->frame[i] = FOO_BOOLEAN(false);
     }
   }
   return context;
@@ -498,13 +505,13 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
                                              size_t nargs, va_list arguments) {
   // FOO_DEBUG("/foo_context_new_method_va");
   struct FooContext* context
-    = foo_context_new_method_no_args(method, sender, receiver);
+    = foo_context_new_method_frame(method, sender, receiver);
   if (selector != method->selector) {
     assert(&FOO_perform_with_ == method->selector);
     assert(method->argCount == 2);
     context->frame[0] = (struct Foo){ .class = &FooClass_Selector,
                                       .datum = { .ptr = (void*)selector }};
-    struct FooArray* array = FooArray_alloc(context, nargs);
+    struct FooArray* array = FooArray_alloc_no_gc(context, nargs);
     for (size_t i = 0; i < nargs; i++) {
       array->data[i] = va_arg(arguments, struct Foo);
     }
@@ -560,25 +567,6 @@ void foo_print_backtrace(struct FooContext* context) {
   }
 }
 
-struct Foo foo_send_array(struct FooContext* sender,
-                          const struct FooSelector* selector,
-                          struct Foo receiver,
-                          struct Foo array) {
-  assert(sender);
-  if (sender->depth > 2000) {
-    foo_panicf(sender, "Stack blew up!");
-  }
-  // FOO_DEBUG("/foo_send_array(?, %s, ...)", selector->name->data);
-  if (!receiver.class) {
-    foo_panicf(sender, "Invalid receiver for #%s", selector->name->data);
-  }
-  const struct FooMethod* method
-    = foo_class_find_method(sender, receiver.class, selector);
-  struct FooContext* context
-    = foo_context_new_method_array(method, sender, selector, receiver, array);
-  return method->function(method, context);
-}
-
 struct Foo foo_send(struct FooContext* sender,
                     const struct FooSelector* selector,
                     struct Foo receiver,
@@ -596,43 +584,117 @@ struct Foo foo_send(struct FooContext* sender,
   }
   const struct FooMethod* method
     = foo_class_find_method(sender, receiver.class, selector);
-  struct FooContext* context
-    = foo_context_new_method_va(method, sender, selector, receiver, nargs, arguments);
-  struct Foo result = method->function(method, context);
+  struct Foo result = method->function(method, selector, sender, receiver, nargs, arguments);
   va_end(arguments);
   return result;
 }
 
+struct Foo foo_send_array(struct FooContext* sender,
+                          const struct FooSelector* selector,
+                          struct Foo receiver,
+                          struct Foo argumentsArray) {
+  assert(sender);
+  if (sender->depth > 2000) {
+    foo_panicf(sender, "Stack blew up!");
+  }
+  if (!receiver.class) {
+    foo_panicf(sender, "Invalid receiver for #%s", selector->name->data);
+  }
+  struct FooArray* array = PTR(FooArray, argumentsArray.datum);
+  switch (array->size) {
+  case 0:
+    return foo_send(sender, selector, receiver, 0);
+  case 1:
+    return foo_send(sender, selector, receiver, 1, array->data[0]);
+  case 2:
+    return foo_send(sender, selector, receiver, 2, array->data[0], array->data[1]);
+  case 3:
+    return foo_send(sender, selector, receiver, 3, array->data[0], array->data[1], array->data[2]);
+  case 4:
+    return foo_send(sender, selector, receiver, 4, array->data[0], array->data[1], array->data[2], array->data[3]);
+  case 5:
+    return foo_send(sender, selector, receiver, 5, array->data[0], array->data[1], array->data[2], array->data[3], array->data[4]);
+  case 14:
+    return foo_send(sender, selector, receiver, 14,
+                    array->data[0], array->data[1], array->data[2], array->data[3], array->data[4],
+                    array->data[5], array->data[6], array->data[7], array->data[8], array->data[9],
+                    array->data[10], array->data[11], array->data[12], array->data[13]);
+  default:
+    foo_panicf(sender, "foo_send_array() not implemented for arrays of size %zu",
+               array->size);
+  }
+}
 
 /**
  * Used as method function in methods implemented by objects. */
-struct Foo foo_invoke_on(const struct FooMethod* method, struct FooContext* context) {
-  struct FooArray* args = FooArray_alloc(context, method->argCount);
-  for (size_t i = 0; i < args->size; i++) {
-    args->data[i] = context->frame[i];
+struct Foo foo_invoke_on(const struct FooMethod* method,
+                         const struct FooSelector* selector,
+                         struct FooContext* sender,
+                         struct Foo receiver,
+                         size_t nargs, va_list arguments) {
+  struct FooArray* args = FooArray_alloc_no_gc(sender, nargs);
+  for (size_t i = 0; i < nargs; i++) {
+    args->data[i] = va_arg(arguments, struct Foo);
   }
-  return foo_send(context, &FOO_invoke_on_, method->object,
+  if (method->selector != selector) {
+    assert(&FOO_perform_with_ == method->selector);
+    assert(method->argCount == 2);
+    // #perform:with: -case.
+    //
+    // Consider:
+    //
+    //     receiver foo: 1 bar: 2
+    //
+    //     == perform: #foo:bar: with: [1, 2]
+    //
+    // ...which is how we need to invoke.
+    struct FooArray* perform_with_args = FooArray_alloc_no_gc(sender, 2);
+    perform_with_args->data[0] = FOO_INSTANCE(Selector, selector);
+    perform_with_args->data[1] = FOO_INSTANCE(Array, args);
+    args = perform_with_args;
+  }
+  return foo_send(sender, &FOO_invoke_on_, method->object,
                   2,
-                  (struct Foo)
-                  { .class = &FooClass_Array,
-                    .datum = { .ptr = args } },
-                  context->receiver);
+                  FOO_INSTANCE(Array, args),
+                  receiver);
 }
 
-struct Foo foo_method_classOf(const struct FooMethod* method, struct FooContext* ctx) {
+struct Foo foo_method_classOf(const struct FooMethod* method,
+                              const struct FooSelector* selector,
+                              struct FooContext* sender,
+                              struct Foo receiver,
+                              size_t nargs, va_list arguments) {
   (void)method;
-  return (struct Foo){ .class = ctx->receiver.class->metaclass,
-                       .datum = { .ptr = ctx->receiver.class } };
+  (void)selector;
+  (void)sender;
+  (void)nargs;
+  (void)arguments;
+  return (struct Foo){ .class = receiver.class->metaclass,
+                       .datum = { .ptr = receiver.class } };
 }
 
-struct Foo foo_method_includes_(const struct FooMethod* method, struct FooContext* ctx) {
+struct Foo foo_method_includes_(const struct FooMethod* method,
+                                const struct FooSelector* selector,
+                                struct FooContext* sender,
+                                struct Foo receiver,
+                                size_t nargs, va_list arguments) {
   (void)method;
-  return foo_class_includes(ctx, PTR(FooClass, ctx->receiver.datum), ctx->frame[0]);
+  (void)selector;
+  (void)nargs;
+  return foo_class_includes(sender, PTR(FooClass, receiver.datum), va_arg(arguments, struct Foo));
 }
 
-struct Foo foo_method_name(const struct FooMethod* method, struct FooContext* ctx) {
+struct Foo foo_method_name(const struct FooMethod* method,
+                           const struct FooSelector* selector,
+                           struct FooContext* sender,
+                           struct Foo receiver,
+                           size_t nargs, va_list arguments) {
   (void)method;
-  struct FooClass* class = PTR(FooClass, ctx->receiver.datum);
+  (void)selector;
+  (void)sender;
+  (void)nargs;
+  (void)arguments;
+  struct FooClass* class = PTR(FooClass, receiver.datum);
   return (struct Foo){ .class = &FooClass_String, .datum = { .ptr = class->name } };
 }
 
@@ -680,6 +742,13 @@ struct FooProcessTimes* FooProcessTimes_new(struct FooContext* sender, double us
 
 struct FooArray* FooArray_alloc(struct FooContext* sender, size_t size) {
   struct FooArray* array = foo_alloc(sender, sizeof(struct FooArray) + size*sizeof(struct Foo));
+  array->header.allocation = HEAP;
+  array->size = size;
+  return array;
+}
+
+struct FooArray* FooArray_alloc_no_gc(struct FooContext* sender, size_t size) {
+  struct FooArray* array = foo_alloc_no_gc(sender, sizeof(struct FooArray) + size*sizeof(struct Foo));
   array->header.allocation = HEAP;
   array->size = size;
   return array;

@@ -511,7 +511,7 @@ class CTranspiler { output selectorMap closureFunctions
     method _methodDeclaration: aMethod
         output print: "struct Foo ".
         output print: (Name mangleMethod: aMethod).
-        output println: "(const struct FooMethod*, struct FooContext*);"!
+        output println: "(const struct FooMethod*, const struct FooSelector*, struct FooContext*, struct Foo, size_t, va_list);"!
 
     method writeDefinitions
         -- Processing a definition can produce new global references. Visit
@@ -1110,18 +1110,22 @@ class CTranspiler { output selectorMap closureFunctions
                       methodFunctionName: (Name mangleMethod: ctorProto) }.
         output print: "struct Foo ".
         output println: ctor methodFunctionName.
-        output println: "    (const struct FooMethod* method, struct FooContext* ctx)".
+        output println: "    (const struct FooMethod* method,".
+        output println: "     const struct FooSelector* selector,".
+        output println: "     struct FooContext* sender,".
+        output println: "     struct Foo receiver,".
+        output println: "     size_t nargs, va_list arguments)".
         output println: "\{".
-        output println: "    (void)method;".
-        output println: "    (void)ctx;".
-        output println: "    struct FooArray* new = FooInstance_alloc(ctx, {aClass slots size});".
+        output println: "    (void)selector;".
+        output println: "    (void)nargs;".
+        output println: "    struct FooArray* new = FooInstance_alloc(sender, {aClass slots size});".
         aClass slots
             doWithIndex: { |each index|
                            let type = each type. -- FIXME: visit the type
                            type is Any
-                               ifTrue: { output println: "new->data[{index-1}] = ctx->frame[{index-1}];" }
-                               ifFalse: { output println: "new->data[{index -1}] = foo_class_typecheck(ctx, &{Name mangleClass: type}, ctx->frame[{index-1}]);" } }.
-        output println: "    return (struct Foo)\{ .class = PTR(FooClass, ctx->receiver.datum), .datum = \{ .ptr = new } };".
+                               ifTrue: { output println: "new->data[{index-1}] = va_arg(arguments, struct Foo);" }
+                               ifFalse: { output println: "new->data[{index-1}] = foo_class_typecheck_ctor_argument(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo), method, {index-1});" } }.
+        output println: "    return (struct Foo)\{ .class = PTR(FooClass, receiver.datum), .datum = \{ .ptr = new } };".
         output println: "}".
         output newline.
         ctor!
@@ -1283,9 +1287,15 @@ class CTranspiler { output selectorMap closureFunctions
         let $home = aMethod.
         output print: "struct Foo ".
         output println: name.
-        output println: "    (const struct FooMethod* method, struct FooContext* ctx)".
+        output println: "    (const struct FooMethod* method,".
+        output println: "     const struct FooSelector* selector,".
+        output println: "     struct FooContext* sender,".
+        output println: "     struct Foo receiver,".
+        output println: "     size_t nargs,".
+        output println: "     va_list arguments)".
         output println: "\{".
-        output println: "    (void)method;".
+        output println: "    struct FooContext* ctx".
+        output println: "        = foo_context_new_method_va(method, sender, selector, receiver, nargs, arguments);".
         output println: "    (void)ctx;".
         aMethod signature
             doWithIndex: { |type index|
@@ -1295,7 +1305,7 @@ class CTranspiler { output selectorMap closureFunctions
         aMethod isBuiltin
             ifTrue: { -- Debug println: "  - builtin method".
                       output print: "    ".
-                      output println: (aMethod body replace: "\n" with: "\n    ").
+                      output println: aMethod body.
                       output println: "}" }
             ifFalse: { -- Debug println: "  - normal method".
                        output println: "    jmp_buf ret;".

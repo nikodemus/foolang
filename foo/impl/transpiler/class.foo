@@ -105,16 +105,16 @@ define InstanceMethods
 
                  for (size_t i = 0; i < methods->size; i++) \{
                    struct Foo method_object = methods->data[i];
-                   struct Foo selector = foo_send(ctx, &FOO_selector, method_object, 0);
-                   foo_class_typecheck(ctx, &FooClass_Selector, selector);
+                   struct Foo method_selector = foo_send(ctx, &FOO_selector, method_object, 0);
+                   foo_class_typecheck(ctx, &FooClass_Selector, method_selector);
 
-                   struct Foo selector_arity = foo_send(ctx, &FOO_arity, selector, 0);
+                   struct Foo selector_arity = foo_send(ctx, &FOO_arity, method_selector, 0);
                    foo_class_typecheck(ctx, &FooClass_Integer, selector_arity);
                    int64_t method_arity = selector_arity.datum.int64 - 1;
 
                    struct FooMethod* m = &newclass->methods[i];
                    m->home = newclass;
-                   m->selector = PTR(FooSelector, selector.datum);
+                   m->selector = PTR(FooSelector, method_selector.datum);
                    m->argCount = method_arity;
                    m->frameSize = selector_arity.datum.int64;
                    m->function = foo_invoke_on;
@@ -157,16 +157,16 @@ define InstanceMethods
 
                  for (size_t i = 0; i < methods->size; i++) \{
                    struct Foo method_object = methods->data[i];
-                   struct Foo selector = foo_send(ctx, &FOO_selector, method_object, 0);
-                   foo_class_typecheck(ctx, &FooClass_Selector, selector);
+                   struct Foo method_selector = foo_send(ctx, &FOO_selector, method_object, 0);
+                   foo_class_typecheck(ctx, &FooClass_Selector, method_selector);
 
-                   struct Foo selector_arity = foo_send(ctx, &FOO_arity, selector, 0);
+                   struct Foo selector_arity = foo_send(ctx, &FOO_arity, method_selector, 0);
                    foo_class_typecheck(ctx, &FooClass_Integer, selector_arity);
                    int64_t method_arity = selector_arity.datum.int64 - 1;
 
                    struct FooMethod* m = &newclass->methods[i];
                    m->home = newclass;
-                   m->selector = PTR(FooSelector, selector.datum);
+                   m->selector = PTR(FooSelector, method_selector.datum);
                    m->argCount = method_arity;
                    m->frameSize = selector_arity.datum.int64;
                    m->function = foo_invoke_on;
