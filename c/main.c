@@ -509,7 +509,6 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
     = foo_context_new_method_frame(method, sender, receiver);
   if (selector != method->selector) {
     assert(&FOO_perform_with_ == method->selector);
-    assert(method->argCount == 2);
     context->frame[0] = (struct Foo){ .class = &FooClass_Selector,
                                       .datum = { .ptr = (void*)selector }};
     struct FooArray* array = FooArray_alloc_no_gc(context, nargs);
@@ -639,7 +638,6 @@ struct Foo foo_invoke_on(const struct FooMethod* method,
   }
   if (method->selector != selector) {
     assert(&FOO_perform_with_ == method->selector);
-    assert(method->argCount == 2);
     // #perform:with: -case.
     //
     // Consider:
