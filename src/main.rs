@@ -9,7 +9,7 @@ fn oops<T: std::fmt::Display>(what: T) -> ! {
     std::process::exit(1)
 }
 
-fn find_module_or_abort(spec: &str, app: &App) -> (String, PathBuf) {
+fn find_module_or_abort(spec: &str) -> (String, PathBuf) {
     let path = match std::fs::canonicalize(Path::new(&spec)) {
         Ok(path) => path,
         Err(_) => oops(format!("cannot find module: {}", spec)),
@@ -80,7 +80,7 @@ fn foo_main() {
     let mut module_roots: HashMap<String, PathBuf> = HashMap::new();
     if let Some(values) = matches.values_of("use") {
         for spec in values {
-            let (name, root) = find_module_or_abort(spec, &app);
+            let (name, root) = find_module_or_abort(spec);
             if module_roots.contains_key(&name) && module_roots[&name] != root {
                 panic!("ERROR: module {} specified multiple times with inconsistent paths", name);
             }
@@ -89,7 +89,7 @@ fn foo_main() {
     }
     module_roots.insert(".".to_string(), std::env::current_dir().unwrap());
     if let Some(fname) = matches.value_of("program") {
-        let (_, root) = find_module_or_abort(fname, &app);
+        let (_, root) = find_module_or_abort(fname);
         module_roots.insert(".".to_string(), root);
         let program = match std::fs::read_to_string(fname) {
             Ok(prog) => prog,

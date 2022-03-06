@@ -9,22 +9,24 @@ define Tracer NullTracer!
 define $MethodHome
     False!
 
-class SyntaxTranslator { env currentMethod }
+class SyntaxTranslator { env currentMethod methodEnv }
     is SyntaxVisitor
 
     direct method env: env
         self
             env: env
-            currentMethod: False!
+            currentMethod: False
+            methodEnv: False!
 
     direct method translate: syntax in: env
         syntax
             visitBy: (SyntaxTranslator env: env)!
 
-    method child: env
+    method child: newEnv
         SyntaxTranslator
-            env: env
-            currentMethod: currentMethod!
+            env: newEnv
+            currentMethod: currentMethod
+            methodEnv: methodEnv!
 
     method addVariable: name
         self child: (env addVariable: name)!
@@ -109,9 +111,14 @@ class SyntaxTranslator { env currentMethod }
 
     method visitReturn: aReturn
         -- Tracer trace: #visitReturn:.
+        let local = True.
+        env is methodEnv
+            ifFalse: { local = False.
+                       currentMethod noteNonLocalReturn }.
         AstReturn
             from: currentMethod::AstMethod
-            value: (aReturn value visitBy: self)!
+            value: (aReturn value visitBy: self)
+            isLocal: local!
 
     method visitPanic: aPanic
         -- Tracer trace: #visitPanic:.
@@ -278,11 +285,13 @@ class SyntaxTranslator { env currentMethod }
                             isDirect: aMethod isDirect
                             isRequired: aMethod body is False.
         astMethod isRequired
-            ifFalse: { astMethod
-                           body: (aMethod body
+            ifFalse: { let body = aMethod body
                                       visitBy: (SyntaxTranslator
                                                     env: bodyEnv
-                                                    currentMethod: astMethod)) }.
+                                                    currentMethod: astMethod
+                                                    methodEnv: bodyEnv).
+                       body markTail.
+                       astMethod body: body }.
         astMethod
             frameSize: bodyEnv frame size.
         astMethod!

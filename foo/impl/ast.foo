@@ -577,6 +577,8 @@ class AstReaderMethod { home slot }
         False!
     method isRequired
         False!
+    method hasNonLocalReturns
+        False!
     method returnType
         -- FIXME: Since setters check the type, the readers don't
         -- need to -- but it would be nice for senders to know the type.
@@ -593,7 +595,8 @@ class AstReaderMethod { home slot }
         Name mangleMethodClass: self!
 end
 
-class AstMethod { home selector argumentVariables returnType _body frameSize isDirect isRequired }
+class AstMethod { home selector argumentVariables returnType _body frameSize
+                  isDirect isRequired hasNonLocalReturns }
     is Object
 
     direct method home: home
@@ -610,7 +613,11 @@ class AstMethod { home selector argumentVariables returnType _body frameSize isD
             _body: False
             frameSize: False
             isDirect: isDirect
-            isRequired: isRequired!
+            isRequired: isRequired
+            hasNonLocalReturns: False!
+
+    method noteNonLocalReturn
+        hasNonLocalReturns = True!
 
     method methodFunctionName
         Name mangleMethod: self!
@@ -680,6 +687,12 @@ interface AstNode
     is Ast
 
     method isImmediate
+        False!
+
+    method markTail
+        False!
+
+    method isTail
         False!
 
     required method visitBy: visitor
@@ -985,8 +998,19 @@ class AstSeq { first then }
         visitor visitSeq: self!
 end
 
-class AstReturn { from value }
+class AstReturn { from value isLocal isTail }
     is AstNode
+
+    direct method from: from value: value isLocal: local
+        self from: from
+             value: value
+             isLocal: local
+             isTail: False!
+
+    method markTail
+        -- Do NOT mark value recursively, there may be a
+        -- pending typecheck!
+        isTail = True!
 
     method visitBy: visitor
         visitor visitReturn: self!

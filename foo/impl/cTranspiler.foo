@@ -1345,15 +1345,19 @@ class CTranspiler { output selectorMap closureFunctions
                                           -- FIXME: visit the type
                                           type is Any
                                               ifFalse: { output println: "    foo_class_typecheck(ctx, &{Name mangleClass: type}, ctx->frame[{index-1}ul]);" } }.
-                       output println: "    jmp_buf ret;".
-                       output println: "    ctx->ret = &ret;".
-                       output println: "    if (setjmp(ret)) \{".
-                       output println: "        return ctx->return_value;".
-                       output println: "    } else \{".
-                       output print: "          return ".
-                       output print: body.
-                       output println: ";".
-                       output println: "    }".
+                       aMethod hasNonLocalReturns
+                           ifTrue: { output println: "    jmp_buf ret;".
+                                     output println: "    ctx->ret = &ret;".
+                                     output println: "    if (setjmp(ret)) \{".
+                                     output println: "        return ctx->return_value;".
+                                     output println: "    } else \{".
+                                     output print: "          return ".
+                                     output print: body.
+                                     output println: ";".
+                                     output println: "    }" }
+                           ifFalse: { output print: "    return ".
+                                      output print: body.
+                                      output println: ";" }.
                        output println: "}" }.
         -- Debug println: "  => method done".
         output newline.
@@ -1420,10 +1424,22 @@ class CTranspiler { output selectorMap closureFunctions
 
     method visitReturn: ret
         -- Tracer trace: #visitReturn:.
-        output print: "foo_return(ctx, ".
+        ret isLocal
+            ifFalse: { output print: "foo_return(ctx, ".
+                       self _generateTypecheck: ret from returnType
+                            _for: ret value.
+                       output print: ")".
+                       return False }.
+        ret isTail
+            ifFalse: { output print: "(\{ return ".
+                       self _generateTypecheck: ret from returnType
+                            _for: ret value.
+                       -- The False never happens, but keeps the C-compiler
+                       -- happy.
+                       output print: "; /* never */ FOO_BOOLEAN(false); \})".
+                       return False }.
         self _generateTypecheck: ret from returnType
-             _for: ret value.
-        output print: ")"!
+             _for: ret value!
 
     method visitConstant: aConstant
         -- Tracer visitConstant: aConstant.
