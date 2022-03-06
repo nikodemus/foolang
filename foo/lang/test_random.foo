@@ -1,0 +1,15 @@
+class TestRandom { assert }
+    is TestSuite
+
+    method test_integer
+        let rng = Random new: 4123809.
+        let a :: Integer = rng integer.
+        let b :: Integer = rng integer.
+        assert false: { a == b }!
+
+    method test_float
+        let rng = Random new: 890123.
+        let a :: Float = rng float.
+        let b :: Float = rng float.
+        assert false: { a == b }!
+end
