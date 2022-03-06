@@ -407,7 +407,7 @@ interface Ordered
                            by: block }.
         self!
 
-    method _partition: left to: right by: block :: Closure
+    method _partition: left to: right by: block
         let pivot = self at: right.
         let i = left.
         left to: right
