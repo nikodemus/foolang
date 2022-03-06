@@ -1148,7 +1148,7 @@ class CTranspiler { output selectorMap closureFunctions
                            let type = each type. -- FIXME: visit the type
                            type is Any
                                ifTrue: { output println: "new->data[{index-1}] = va_arg(arguments, struct Foo);" }
-                               ifFalse: { output println: "new->data[{index-1}] = foo_class_typecheck_ctor_argument(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo), method, {index-1});" } }.
+                               ifFalse: { output println: "new->data[{index-1}] = foo_class_typecheck_argument(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo), method);" } }.
         output println: "    return (struct Foo)\{ .class = PTR(FooClass, receiver.datum), .datum = \{ .ptr = new } };".
         output println: "}".
         output newline.
@@ -1315,7 +1315,7 @@ class CTranspiler { output selectorMap closureFunctions
             doWithIndex: { |type index|
                            type is Any
                                ifTrue: { output println: "    struct Foo arg{index} = va_arg(arguments, struct Foo);" }
-                               ifFalse: { output println: "    struct Foo arg{index} = foo_class_typecheck(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo));" } }.
+                               ifFalse: { output println: "    struct Foo arg{index} = foo_class_typecheck_argument(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo), method);" } }.
         output println: "    struct FooContext* ctx = FOOCONTEXT_OF_SIZE({aMethod frameSize}) \{".
         output println: "        .header = \{ .allocation = STACK },".
         output println: "        .type = METHOD_CONTEXT,".
