@@ -1,0 +1,103 @@
+import .utils.Debug
+
+interface Type
+    is Object
+
+    method findMethod: selector for: compiler
+        False!
+end
+
+class EqType { value }
+    is Type
+
+    method displayOn: stream
+        stream writeString: "#<EqType {value classOf name}>"!
+
+    method findMethod: selector for: compiler
+        (Record includes: value)
+            ifTrue: { let recordClass =  compiler _recordClassFromRecord: value.
+                      return recordClass findInstanceMethod: selector }.
+        let isClass = (Class includes: value) or: (Interface includes: value).
+        let hostClass = isClass
+                            ifTrue: { value }
+                            ifFalse: { value classOf }.
+        let targetClass = compiler env classes
+                              at: hostClass
+                              ifNone: { let builtin
+                                            = compiler _findBuiltinFor: hostClass
+                                                       _ifNone: { Debug println: "!!! could not map {hostClass}".
+                                                                  return False }.
+                                        builtin definition }.
+        isClass
+            ifTrue: { targetClass findDirectMethod: selector }
+            ifFalse: { targetClass findInstanceMethod: selector }!
+end
+
+class UnknownType {}
+    is Type
+
+    method displayOn: stream
+        stream writeString: "#<UnknownType>"!
+end
+
+class ReceiverType { definition }
+    is Type
+
+    method displayOn: stream
+        stream writeString: "#<ReceiverType {definition name}>"!
+end
+
+class ClassType { definition }
+    is Type
+
+    method displayOn: stream
+        stream writeString: "#<ClassType {definition name}>"!
+end
+
+class BooleanType {}
+    is Type
+
+    method findMethod: selector for: compiler
+        let boolean = compiler env global: "Boolean".
+        boolean definition findInstanceMethod: selector!
+
+    method displayOn: stream
+        stream writeString: "#<BooleanType>"!
+end
+
+class ClosureType { argumentTypes returnType }
+    is Type
+
+    method findMethod: selector for: compiler
+        let closure = compiler env global: "Closure".
+        closure definition findInstanceMethod: selector!
+
+    method displayOn: stream
+        stream writeString: "#<ClosureType {argumentTypes} -> {returnType}>"!
+end
+
+class ArrayType {}
+    is Type
+
+    method displayOn: stream
+        stream writeString: "#<ArrayType>"!
+end
+
+class CascadeReceiverType {}
+    is Type
+
+    method displayOn: stream
+        stream writeString: "#<CascadeReceiverType>"!
+end
+
+define TheCascadeReceiverType
+    CascadeReceiverType new!
+
+define TheArrayType
+    ArrayType new!
+
+define TheUnknownType
+    UnknownType new!
+
+define TheBooleanType
+    BooleanType new!
