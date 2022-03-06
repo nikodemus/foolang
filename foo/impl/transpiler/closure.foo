@@ -32,7 +32,7 @@ return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
               body: "struct FooContext* closure_ctx = foo_context_new_closure(ctx);
 return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
       #whileFalse:
-          -> {signature: [Block], vars: 0,
+          -> {signature: [Any], vars: 0,
               body: "const struct FooMethod* testMethod
   = foo_class_find_method(ctx, receiver.class, &FOO_value);
 const struct FooMethod* blockMethod
