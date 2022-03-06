@@ -1434,7 +1434,10 @@ class CTranspiler { output selectorMap closureFunctions
             ifFalse: { output print: "(\{ return ".
                        self _generateTypecheck: ret from returnType
                             _for: ret value.
-                       output print: "; \})" }.
+                       -- The False never happens, but keeps the C-compiler
+                       -- happy.
+                       output print: "; /* never */ FOO_BOOLEAN(false); \})".
+                       return False }.
         self _generateTypecheck: ret from returnType
              _for: ret value!
 
