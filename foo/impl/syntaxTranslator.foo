@@ -28,6 +28,14 @@ class SyntaxTranslator { env currentMethod methodEnv }
             currentMethod: currentMethod
             methodEnv: methodEnv!
 
+    method noteNonLocalReference
+        -- "Toplevel expressions" can also contain blocks
+        -- with non-local expressions. Not sure if they
+        -- should be enclosed in anonymous methods, but
+        -- letting this stand for now.
+        currentMethod is False
+            ifFalse: { currentMethod noteNonLocalReference }!
+
     method addVariable: name
         self child: (env addVariable: name)!
 
@@ -199,16 +207,23 @@ class SyntaxTranslator { env currentMethod methodEnv }
 
     method visitSelfInstance: aSelf
         -- Tracer trace: #visitSelfInstance:.
+        env is methodEnv
+            ifFalse: { self noteNonLocalReference }.
         AstSelfInstanceRef new!
 
     method visitSelfClass: aSelf
         -- Tracer trace: #visitSelfClass:.
+        env is methodEnv
+            ifFalse: { self noteNonLocalReference }.
         AstSelfClassRef new!
 
     method visitVariable: aVariable
         -- Tracer visitVariable: aVariable.
-        (env reference: aVariable name)
-            withSource: aVariable source!
+        let ref = (env reference: aVariable name)
+                      withSource: aVariable source.
+        ref isNonLocal
+            ifTrue: { self noteNonLocalReference }.
+        ref!
 
     method visitDynamicVariable: aVariable
         -- Tracer visitDynamicVariable: aVariable.

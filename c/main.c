@@ -144,6 +144,11 @@ struct Foo foo_class_typecheck(struct FooContext* ctx, struct FooClass* class, s
 struct Foo FooGlobal_True;
 struct Foo FooGlobal_False;
 struct FooContext* foo_context_new_closure(struct FooContext* ctx);
+struct FooContext* foo_context_new_method_dummy(const struct FooMethod* method,
+                                                struct FooContext* sender,
+                                                struct Foo receiver,
+                                                struct Foo arg);
+
 
 struct FooContext* foo_context_new_main(struct FooArray* vars) {
   struct FooContext* context = foo_alloc_context(NULL, 0);
@@ -319,18 +324,15 @@ struct Foo foo_class_typecheck(struct FooContext* sender,
              class->name->data, obj.class->name->data);
 }
 
-struct FooContext* foo_context_new_method_dummy(const struct FooMethod* method,
-                                                struct FooContext* sender,
-                                                struct Foo receiver,
-                                                struct Foo arg);
-
-// For use in methods which don't allocate their own context:
-// creates a mock context on failure.
-struct Foo foo_class_typecheck_ctor_argument(struct FooContext* sender,
-                                             struct FooClass* class,
-                                             struct Foo obj,
-                                             const struct FooMethod* method,
-                                             size_t index) {
+// For in method argument typechecking, before the actual method context has
+// been allocateed (...and some methods might not allocate any!)
+//
+// Creates a dummy context on failure, so the backtrace has the right method
+// in place.
+struct Foo foo_class_typecheck_argument(struct FooContext* sender,
+                                        struct FooClass* class,
+                                        struct Foo obj,
+                                        const struct FooMethod* method) {
   assert(class);
   if (!obj.class) {
     foo_panicf(sender, "Object has no class to check: %p, wanted %s",
@@ -453,6 +455,7 @@ const struct FooMethod* foo_class_find_method(struct FooContext* ctx,
 struct Foo foo_return(struct FooContext* ctx, struct Foo value) __attribute__ ((noreturn));
 struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
   // FOO_DEBUG("/foo_return(%s...)", foo_debug_context(ctx));
+  assert(ctx);
   struct FooContext* return_context = ctx;
   while (return_context->outer_context) {
     return_context = return_context->outer_context;

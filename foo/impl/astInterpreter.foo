@@ -1,5 +1,6 @@
 import .utils.Debug
 import .astVisitor.AstVisitor
+import .astPrinter.AstPrinter
 
 class Process {}
     is Object
@@ -67,6 +68,9 @@ end
 
 class AstBlockClosure { context block }
     is Block
+
+    method displayOn: stream
+        AstPrinter print: block to: stream!
 
     method loop
         { self value } loop!

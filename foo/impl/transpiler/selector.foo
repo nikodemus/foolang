@@ -32,7 +32,7 @@ return ctx->receiver;"},
                    return (struct Foo)\{ .class = &FooClass_String,
                                          .datum = \{ .ptr = selectorPtr->name } };"},
     #value:
-        -> {signature: [Any], vars: 0, stackContext: True,
+        -> {signature: [Any], vars: 0,
             body: "struct FooSelector* self = PTR(FooSelector, receiver.datum);
                    return foo_send(ctx, self, ctx->frame[0], 0);"},
     #sendTo:with:

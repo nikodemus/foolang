@@ -144,7 +144,8 @@ class AstPrinter { output indent position stack }
                               do: { |each|
                                     self print: each name.
                                     self print: "::".
-                                    self print: each type name }.
+                                    self print: each type name }
+                              interleaving: { self print: " " }.
                           self print: "|" }.
         self newline.
         aNode body visitBy: self.

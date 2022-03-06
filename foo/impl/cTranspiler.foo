@@ -47,6 +47,10 @@ class BuiltinMethod { home selector definition isDirect }
                                  definition: definition
                                  isDirect: areDirect) }.
         dict!
+    method hasNonLocalReturns
+        False!
+    method stackContext
+        True!
     method isBuiltin
         True!
     method isRequired
@@ -571,7 +575,11 @@ class CTranspiler { output selectorMap closureFunctions
         output!
 
     method compileMethodBody: aMethod
+        aMethod isBuiltin
+            ifTrue: { return aMethod body }.
+        let $home = aMethod.
         let newOutput = StringOutput new.
+        newOutput print: "return ".
         let methodVisitor = CTranspiler
                                  output: newOutput
                                  selectorMap: selectorMap
@@ -1147,7 +1155,7 @@ class CTranspiler { output selectorMap closureFunctions
                            let type = each type. -- FIXME: visit the type
                            type is Any
                                ifTrue: { output println: "new->data[{index-1}] = va_arg(arguments, struct Foo);" }
-                               ifFalse: { output println: "new->data[{index-1}] = foo_class_typecheck_ctor_argument(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo), method, {index-1});" } }.
+                               ifFalse: { output println: "new->data[{index-1}] = foo_class_typecheck_argument(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo), method);" } }.
         output println: "    return (struct Foo)\{ .class = PTR(FooClass, receiver.datum), .datum = \{ .ptr = new } };".
         output println: "}".
         output newline.
@@ -1298,12 +1306,7 @@ class CTranspiler { output selectorMap closureFunctions
             at: name
             ifNonePut: { self _actuallyGenerateMethod: aMethod _as: name _for: aClass }!
 
-    method _actuallyGenerateMethod: aMethod _as: name _for: aClass
-        -- Tracer _actuallyGenerateMethod: aMethod _as: name _for: type.
-        -- Debug println: "_actuallyGenerateMethod: {aMethod}".
-        aMethod isRequired
-            ifTrue: { Error raise: "Cannot generate required method: {aMethod} for: {aClass}." }.
-        let $home = aMethod.
+    method generateMethodFunctionHeader: name
         output print: "struct Foo ".
         output println: name.
         output println: "    (const struct FooMethod* method,".
@@ -1311,61 +1314,76 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "     struct FooContext* sender,".
         output println: "     struct Foo receiver,".
         output println: "     size_t nargs,".
-        output println: "     va_list arguments)".
+        output println: "     va_list arguments)"!
+
+    method generateStackContextFor: aMethod
+        -- Debug println: "stack: {aMethod home name}#{aMethod selector name}".
+        aMethod signature
+            doWithIndex: { |type index|
+                           type is Any
+                               ifTrue: { output println: "    struct Foo arg{index} = va_arg(arguments, struct Foo);" }
+                               ifFalse: { output println: "    struct Foo arg{index} = foo_class_typecheck_argument(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo), method);" } }.
+        output println: "    struct FooContext* ctx = FOOCONTEXT_OF_SIZE({aMethod frameSize}) \{".
+        output println: "        .header = \{ .allocation = STACK },".
+        output println: "        .type = METHOD_CONTEXT,".
+        output println: "        .depth = sender->depth + 1,".
+        output println: "        .method = method,".
+        output println: "        .receiver = receiver,".
+        output println: "        .sender = sender,".
+        output println: "        .outer_context = NULL,".
+        output println: "        .vars = sender->vars,".
+        output println: "        .cleanup = NULL,".
+        output println: "        .return_value = FOO_INTEGER(0),".
+        output println: "        .ret = NULL,".
+        output println: "        .size = {aMethod frameSize},".
+        output println: "        .frame = \{".
+        1 to: aMethod arity
+          do: { |index| output println: "            arg{index}," }.
+        aMethod frameSize - aMethod arity
+            times: { output println: "            FOO_INTEGER(0)," }.
+        output println: "\n        }".
+        output println: "    };".
+        output println: "    (void)ctx;"!
+
+    method generateHeapContextFor: aMethod
+        output println: "    struct FooContext* ctx".
+        output println: "        = foo_context_new_method_va(method, sender, selector, receiver, {aMethod frameSize}, nargs, arguments);".
+        output println: "    (void)ctx;".
+        aMethod signature
+            doWithIndex: { |type index|
+                           type is Any
+                               ifFalse: { output println: "    foo_class_typecheck(ctx, &{Name mangleClass: type}, ctx->frame[{index-1}ul]);" } }!
+
+    method generateUnwindFor: aMethod with: body
+        output println: "    jmp_buf ret;".
+        output println: "    ctx->ret = &ret;".
+        output println: "    if (setjmp(ret)) \{".
+        output println: "        return ctx->return_value;".
+        output println: "    } else \{".
+        output print: "          ".
+        output print: body.
+        output println: ";".
+        output println: "    }"!
+
+    method _actuallyGenerateMethod: aMethod _as: name _for: aClass
+        -- Tracer _actuallyGenerateMethod: aMethod _as: name _for: type.
+        -- Debug println: "_actuallyGenerateMethod: {aMethod}".
+        aMethod isRequired
+            ifTrue: { Error raise: "Required method missing: {aMethod} for: {aClass}." }.
+        self generateMethodFunctionHeader: name.
         output println: "\{".
-        aMethod isBuiltin
-            ifTrue: { output println: "    assert(selector == method->selector);". -- perform:with:?
-                      aMethod signature
-                          doWithIndex: { |type index|
-                                         type is Any
-                                             ifTrue: { output print: "    struct Foo arg{index} = va_arg(arguments, struct Foo);" }
-                                             ifFalse: { output print: "    struct Foo arg{index} = foo_class_typecheck(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo));" } }.
-                      output println: "    struct FooContext* ctx = FOOCONTEXT_OF_SIZE({aMethod frameSize}) \{".
-                      output println: "        .header = \{ .allocation = STACK },".
-                      output println: "        .type = METHOD_CONTEXT,".
-                      output println: "        .depth = sender->depth + 1,".
-                      output println: "        .method = method,".
-                      output println: "        .receiver = receiver,".
-                      output println: "        .sender = sender,".
-                      output println: "        .outer_context = NULL,".
-                      output println: "        .vars = sender->vars,".
-                      output println: "        .cleanup = NULL,".
-                      output println: "        .return_value = FOO_BOOLEAN(false),".
-                      output println: "        .ret = NULL,".
-                      output println: "        .size = {aMethod frameSize},".
-                      output println: "        .frame = \{".
-                      1 to: aMethod arity
-                        do: { |index| output println: "            arg{index}," }.
-                      output println: "\n        }".
-                      output println: "    };".
-                      output println: "    (void)ctx;".
-                      output print: "    ".
-                      output println: aMethod body.
-                      output println: "}" }
-            ifFalse: { -- We need to compile the method body to know how the required framesize.
-                       let body = self compileMethodBody: aMethod.
-                       output println: "    struct FooContext* ctx".
-                       output println: "        = foo_context_new_method_va(method, sender, selector, receiver, {aMethod frameSize}, nargs, arguments);".
-                       output println: "    (void)ctx;".
-                       aMethod signature
-                           doWithIndex: { |type index|
-                                          -- FIXME: visit the type
-                                          type is Any
-                                              ifFalse: { output println: "    foo_class_typecheck(ctx, &{Name mangleClass: type}, ctx->frame[{index-1}ul]);" } }.
-                       aMethod hasNonLocalReturns
-                           ifTrue: { output println: "    jmp_buf ret;".
-                                     output println: "    ctx->ret = &ret;".
-                                     output println: "    if (setjmp(ret)) \{".
-                                     output println: "        return ctx->return_value;".
-                                     output println: "    } else \{".
-                                     output print: "          return ".
-                                     output print: body.
-                                     output println: ";".
-                                     output println: "    }" }
-                           ifFalse: { output print: "    return ".
-                                      output print: body.
-                                      output println: ";" }.
-                       output println: "}" }.
+        -- Need to compile the body before we know how big the frame is, this
+        -- MUST be before context generation.
+        let body = self compileMethodBody: aMethod.
+        aMethod stackContext
+            ifTrue: { self generateStackContextFor: aMethod }
+            ifFalse: { self generateHeapContextFor: aMethod }.
+        aMethod hasNonLocalReturns
+            ifTrue: { self generateUnwindFor: aMethod with: body }
+            ifFalse: { output print: "    ".
+                       output print: body.
+                       output println: ";" }.
+        output println: "}".
         -- Debug println: "  => method done".
         output newline.
         aMethod!

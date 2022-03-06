@@ -1,6 +1,7 @@
 import .any.Any
 import .iterable.Iterable
 import .iterable.Iterator
+import .closure_ext.Closure
 
 class OrderedIterator { object index }
     is Iterator
