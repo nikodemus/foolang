@@ -47,7 +47,7 @@ else
           -> { signature: [Integer], vars: 0,
                body: "return FOO_INTEGER(ctx->receiver.datum.int64 - ctx->frame[0].datum.int64);" },
       #to:do:
-          -> { signature: [Integer, Block], vars: 0,
+          -> { signature: [Integer, Any], vars: 0,
                body: "int64_t from = receiver.datum.int64;
                       int64_t to = arg1.datum.int64;
                       const struct FooMethod* valueMethod
