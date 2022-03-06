@@ -55,7 +55,7 @@ else
                       \}
                       return ctx->receiver;" },
       #times:
-          -> { signature: [Block], vars: 0,
+          -> { signature: [Any], vars: 0,
                body: "int64_t to = receiver.datum.int64;
                       struct Foo block = ctx->frame[0];
                       for (int64_t i = 0; i < to; i++) \{
