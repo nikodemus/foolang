@@ -15,6 +15,7 @@ import .transpiler.integer
 import .transpiler.layout
 import .transpiler.name.Name
 import .transpiler.output
+import .transpiler.random
 import .transpiler.selector
 import .transpiler.string
 import .transpiler.system
@@ -260,6 +261,12 @@ class CompilerBuiltins {}
               mark: "foo_mark_none"
               directMethods: output.DirectMethods
               instanceMethods: output.InstanceMethods,
+          CompilerBuiltin
+              type: Class
+              value: Random
+              mark: "foo_mark_none"
+              directMethods: random.DirectMethods
+              instanceMethods: random.InstanceMethods,
           CompilerBuiltin
               type: Interface
               value: Record

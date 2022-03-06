@@ -71,6 +71,7 @@ class AllInterpreterBuiltins { env }
             ; redefine: Layout
             ; redefine: Object
             ; redefine: Output
+            ; redefine: Random
             ; redefine: Record
             ; redefine: System
             ; redefine: SystemRandom

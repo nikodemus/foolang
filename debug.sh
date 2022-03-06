@@ -27,6 +27,6 @@ clang \
     $(stacksize_options) \
     -fsanitize=address -fsanitize=undefined \
     -fno-omit-frame-pointer -g -Wall --std=c11 \
-    c/main.c c/system_$ostype.c ext/dtoa.c c/mark-and-sweep.c
+    c/main.c c/system_$ostype.c ext/dtoa.c c/mark-and-sweep.c c/random.c
 echo "Built, running!"
 time ./tmp_transpile_test.exe "$@"

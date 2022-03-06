@@ -1,0 +1,26 @@
+import .object.Object
+
+extend Random
+    is Object
+
+    method floats: size
+        let array = Array new: size.
+        1 to: size
+          do: { |each|
+                array
+                    put: self float
+                    at: each }.
+        array!
+
+    method integers: size
+        let array = Array new: size.
+        1 to: size
+          do: { |each|
+                array
+                    put: self integer
+                    at: each }.
+        array!
+
+    method displayOn: stream
+        stream writeString: "#<Random>"!
+end
