@@ -1310,7 +1310,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "     va_list arguments)"!
 
     method generateStackContextFor: aMethod
-        Debug println: "stack: {aMethod home name}#{aMethod selector name}".
+        -- Debug println: "stack: {aMethod home name}#{aMethod selector name}".
         aMethod signature
             doWithIndex: { |type index|
                            type is Any
