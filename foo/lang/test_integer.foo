@@ -55,6 +55,9 @@ class TestInteger { assert }
         assert that: { 20 - 2 }
                is: 18!
 
+    method test_decimal_sepators
+        assert that: { 123_897_789 } is: 123897789!
+
     method test_toString
         assert that: { 1246789 toString }
                equals: "1246789"!
