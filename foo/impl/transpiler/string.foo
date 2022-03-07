@@ -59,6 +59,15 @@ if (!memcmp(argBytes->data, selfBytes->data, argBytes->size)) \{
                        return FOO_BOOLEAN(false);
                    }"},
 
+    #toUppercase
+            -> {signature: [], vars: 0,
+            body: "struct FooBytes* b1 = PTR(FooBytes, receiver.datum);
+struct FooBytes* b2 = FooBytes_alloc(ctx, b1->size);
+for (size_t i = 0; i < b2->size; i++) \{
+    b2->data[i] = (uint8_t)toupper((char)b1->data[i]);
+\}
+return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = b2 } };"},
+
     #append:
         -> {signature: [String], vars: 0,
             body: "struct FooBytes* b1 = PTR(FooBytes, ctx->receiver.datum);
