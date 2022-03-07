@@ -51,6 +51,12 @@ class List { size data }
     method asArray
         Array from: self!
 
+    method append: other
+        let new = List withCapacity: self size + other size + 2.
+        self do: { |each| new add: each }.
+        other do: { |each| new add: each }.
+        new!
+
     method popFirst
         let first = self first.
         1 to: self size - 1

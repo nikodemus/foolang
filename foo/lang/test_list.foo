@@ -6,6 +6,10 @@ class TestList { assert }
     direct method runTests: assert
         (self assert: assert) runTests!
 
+    method test_append
+        assert that: { ([1, 2, 3] asList append: [100, 200]) }
+               equals: [1,2,3,100,200] asList!
+
     method testArrayAsList
         assert true: { List includes: [1,2,3] asList }
                testing: "Array#asList for List".
