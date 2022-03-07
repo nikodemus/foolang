@@ -207,30 +207,33 @@ interface Iterable
                           self anySatisfy: { |each2| each1 == each2 } }!
 
     method inject: value into: block
+        let result = value.
         self do: { |each|
-                   value = block
-                               value: value
+                   result = block
+                               value: result
                                value: each }.
-        value!
+        result!
 
     method with: iterable inject: value into: block
+        let result = value.
         self with: iterable
              do: { |each1 each2|
-                   value = block
-                               value: value
+                   result = block
+                               value: result
                                value: each1
                                value: each2 }.
-        value!
+        result!
 
     method with: iterable inject: value into: block ifExhausted: exhaustedBlock
+        let result = value.
         self with: iterable
              do: { |each1 each2|
-                   value = block
-                               value: value
+                   result = block
+                               value: result
                                value: each1
                                value: each2 }
              ifExhausted: exhaustedBlock.
-        value!
+        result!
 
     method isEmpty
         self iterator hasNext not!
