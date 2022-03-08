@@ -16,6 +16,8 @@ class TestArray { assert }
         assert true: { [1,2,3] toString == "[1, 2, 3]" }!
 
     method test_hash
+        Foolang isSelfHosted
+            ifFalse: { return False }.
         assert that: { [1,2,3] hash }
                is: 938994897039145489.
         assert that: { [3,2,1] hash }
