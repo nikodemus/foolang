@@ -29,15 +29,15 @@ struct FooClass;
 //
 // When constructing an integer the sign bit needs to be masked out
 // unless you actually want a negative hash.
-inline uint64_t foo_hash(uint64_t salt, const void* data, size_t size) {
+static inline uint64_t foo_hash(uint64_t salt, const void* data, size_t size) {
   return XXH3_64bits_withSeed(data, size, salt);
 }
 
-inline uint64_t foo_identity_hash(const void* ptr) {
+static inline uint64_t foo_identity_hash(const void* ptr) {
   return XXH3_64bits(&ptr, sizeof(ptr));
 }
 
-inline uint64_t foo_hashmix(uint64_t a, uint64_t b) {
+static inline uint64_t foo_hashmix(uint64_t a, uint64_t b) {
   a ^= b + 0x9e3779b9 + (a << 6) + (b >> 2);
   return a;
 }
