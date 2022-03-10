@@ -10,6 +10,10 @@ define DirectMethods {
 }!
 
 define InstanceMethods {
+     #hash
+     -> { signature: [], vars: 0,
+          body: "return FOO_INTEGER(0x32d7e071d4c75170);" },
+
     #user
     -> { signature: [], vars: 0,
          body: "struct FooProcessTimes* times = PTR(FooProcessTimes, ctx->receiver.datum);

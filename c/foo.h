@@ -7,6 +7,7 @@
 #include <setjmp.h>
 
 #include "random.h"
+#include "ext.h"
 
 #if 0
 # define FOO_DEBUG(...) { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); fflush(stderr); }
@@ -16,7 +17,30 @@
 
 #define FOO_XXX(...) { fprintf(stderr, "XXX: "); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); fflush(stderr); }
 
+#define PTR(type, datum) \
+  ((struct type*)datum.ptr)
+
 struct FooContext;
+struct FooClass;
+
+#define MASK_SIGN(x) ((x) & 0x7FFFFFFFFFFFFFFF)
+
+// FIXME: inline foo_hash_fixed, out of line for non-fixed
+//
+// When constructing an integer the sign bit needs to be masked out
+// unless you actually want a negative hash.
+static inline uint64_t foo_hash(uint64_t salt, const void* data, size_t size) {
+  return XXH3_64bits_withSeed(data, size, salt);
+}
+
+static inline uint64_t foo_identity_hash(const void* ptr) {
+  return XXH3_64bits(&ptr, sizeof(ptr));
+}
+
+static inline uint64_t foo_hashmix(uint64_t a, uint64_t b) {
+  a ^= b + 0x9e3779b9 + (a << 6) + (b >> 2);
+  return a;
+}
 
 struct Foo foo_panic(struct FooContext* ctx, struct Foo message) __attribute__((noreturn));
 struct Foo foo_panicf(struct FooContext* ctx, const char* fmt, ...) __attribute__((noreturn));

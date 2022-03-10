@@ -29,7 +29,7 @@ printf(\">\");
 return ctx->receiver;"},
     #put:at:
         -> {signature: [Integer, Integer], vars: 0,
-            body: "struct FooBytes* b = PTR(FooBytes, foo_check_modification(ctx, ctx->receiver.datum));
+            body:" struct FooBytes* b = PTR(FooBytes, foo_check_modification(ctx, ctx->receiver.datum));
 int64_t value = ctx->frame[0].datum.int64;
 assert((value & 0xff) >= 0 && value <= 255);
 int64_t index = ctx->frame[1].datum.int64;
@@ -37,6 +37,10 @@ assert(index > 0);
 assert(index <= b->size);
 b->data[index-1] = value;
 return ctx->receiver;"},
+    #hash
+          -> { signature: [], vars: 0,
+               body: "struct FooBytes* b = PTR(FooBytes, receiver.datum);
+                      return FOO_INTEGER(MASK_SIGN(foo_hash(0xD93E80248C1CF910, b->data, b->size)));" },
     #size
         -> {signature: [], vars: 0,
             body: "struct FooBytes* b = PTR(FooBytes, ctx->receiver.datum);

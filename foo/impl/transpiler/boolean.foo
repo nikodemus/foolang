@@ -14,6 +14,13 @@ define InstanceMethods
 } else \{
     return foo_send(ctx, &{Name mangleSelector: #value}, ctx->frame[1], 0);
 }" },
+ #hash
+          -> { signature: [], vars: 0, foldable: True, flushable: True,
+               body: "if (receiver.datum.boolean) \{
+                          return FOO_INTEGER(0xde4bb7be57eb1407);
+                      \} else \{
+                          return FOO_INTEGER(0xbf8ccafb476258e7);
+                      \}" },
  #ifTrue:
           -> { signature: [Any], vars: 0,
                body: "if (ctx->receiver.datum.boolean) \{

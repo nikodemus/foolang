@@ -77,6 +77,11 @@ memcpy(b3->data, b1->data, b1->size);
 memcpy(b3->data+b1->size, b2->data, b2->size);
 return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = b3 } };"},
 
+    #hash
+        -> {signature: [], vars: 0,
+            body: "struct FooBytes* b = PTR(FooBytes, ctx->receiver.datum);
+                   return FOO_INTEGER(MASK_SIGN(foo_hash(0xF372CC4BE4E77B67, b->data, b->size)));"},
+
     #debug
         -> {signature: [], vars: 0,
             body: "printf(\"#<String %s>\", (char*)PTR(FooBytes, ctx->receiver.datum)->data);
