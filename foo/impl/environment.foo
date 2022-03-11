@@ -83,13 +83,14 @@ class AllBuiltins { env }
             assert: "Correct global for builtin class."!
 
     method defineAll
-        -- Wrappers for selected builtins so that
+        -- Wrappers for builtin classes so that
         -- prelude can extend them.
         self
             ; defineClass: Array
             ; defineClass: Boolean
             ; defineClass: ByteArray
             ; defineClass: Class
+            ; defineClass: Clock
             ; defineClass: Character
             ; defineClass: Closure
             ; defineClass: File
@@ -106,19 +107,16 @@ class AllBuiltins { env }
             ; defineClass: String
             ; defineClass: Time
                 .
-        -- Whereas these ones use host definitions directly.
-        -- Yes, this is a mess and a massive KLUDGE.
-        self
-            ; define: Clock
-            ; define: False
-            ; define: True
-                .
         -- These ones don't exist on bootstrap host, but happily
         -- that one doesn't care about undefined variables either...
         Foolang isSelfHosted
             ifTrue: { self
                           ; defineClass: System
                           ; defineClass: SystemRandom }.
+        self
+            ; define: False
+            ; define: True
+                .
         self!
 end
 
