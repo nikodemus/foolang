@@ -312,10 +312,6 @@ class Environment { parent
             modules: modules
             classes: classes!
 
-    method removeBuiltins: names
-        builtins removeAll: names.
-        self!
-
     method makeGlobal: name
         (name startsWith: "$")
             ifTrue: { AstDynamic name: name }
