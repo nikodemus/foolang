@@ -65,6 +65,14 @@ class AllBuiltins { env }
                            slots: []
                            interfaces: []
                            env: env.
+        -- FIXME: I can access the compiler method
+        -- dictionaries here, and define explicit wrappers
+        -- for all methods automatically. Adding a small annotation to
+        -- the compiler method definitions can tell how the result
+        -- should be wrapped.
+        --
+        -- Then I just need to make the interpreter convert
+        -- constants into wrapped objects and pretty well off.
         theClass
             ; directMethods: List new
             ; instanceMethods: List new
@@ -75,13 +83,14 @@ class AllBuiltins { env }
             assert: "Correct global for builtin class."!
 
     method defineAll
-        -- Wrappers for selected builtins so that
+        -- Wrappers for builtin classes so that
         -- prelude can extend them.
         self
             ; defineClass: Array
             ; defineClass: Boolean
             ; defineClass: ByteArray
             ; defineClass: Class
+            ; defineClass: Clock
             ; defineClass: Character
             ; defineClass: Closure
             ; defineClass: File
@@ -98,25 +107,16 @@ class AllBuiltins { env }
             ; defineClass: String
             ; defineClass: Time
                 .
-        -- Whereas these ones use host definitions directly.
-        -- Yes, this is a mess and a massive KLUDGE.
-        self
-            ; define: Any
-            ; define: Clock
-            ; define: DoesNotUnderstand
-            ; define: Error
-            ; define: List
-            ; define: Object
-            ; define: TypeError
-            ; define: False
-            ; define: True
-                .
         -- These ones don't exist on bootstrap host, but happily
         -- that one doesn't care about undefined variables either...
         Foolang isSelfHosted
             ifTrue: { self
                           ; defineClass: System
                           ; defineClass: SystemRandom }.
+        self
+            ; define: False
+            ; define: True
+                .
         self!
 end
 
@@ -311,10 +311,6 @@ class Environment { parent
             builtins: builtins
             modules: modules
             classes: classes!
-
-    method removeBuiltins: names
-        builtins removeAll: names.
-        self!
 
     method makeGlobal: name
         (name startsWith: "$")

@@ -77,8 +77,10 @@ interface Error
                       ifTrue: { return "<<{ e receiver } DoesNotUnderstand { e selector } when printing Error description!>>" }}
             on: Error
             do: { |e|
+                  (DoesNotUnderstand includes: e)
+                      ifTrue: { return "<<Receiver DoesNotUnderstand { e selector } when printing { self classOf name } description!>>" }.
                   -- Catchall
-                  return "<<Error when printing { self classOf name } description!>>"}!
+                  return "<<{e classOf name} when printing { self classOf name } description!>>"}!
 end
 
 define $return False!

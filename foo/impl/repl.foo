@@ -44,14 +44,6 @@ class REPL { system env translator }
                                  "lib"      -> system files / "foo/lib",
                                  "examples" -> system files / "foo/examples" }.
         let env = Environment modules: modules
-                      -- These are things defined in the prelude.
-                      ; removeBuiltins: [
-                          "Any",
-                          "DoesNotUnderstand",
-                          "Error",
-                          "List",
-                          "Object",
-                          "TypeError" ]
                       ; importPrelude: ["lang", "prelude"].
         REPL system: system
              env: env

@@ -27,15 +27,7 @@ class Interpreter { system }
                                  "lib"      -> system files / "foo/lib",
                                  "examples" -> system files / "foo/examples" }.
         let source = (system files / program) readString.
-        let builtinEnv = Environment modules: modules
-                             -- These are things defined in the prelude.
-                             ; removeBuiltins: [
-                                 "Any",
-                                 "DoesNotUnderstand",
-                                 "Error",
-                                 "List",
-                                 "Object",
-                                 "TypeError" ].
+        let builtinEnv = Environment modules: modules.
         let env = builtinEnv
                       ; importPrelude: ["lang", "prelude"]
                       ; load: source.

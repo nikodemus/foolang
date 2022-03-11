@@ -119,7 +119,7 @@ from: '{exprSource}'" }!
                       ifFalse: { Error raise: "Expected error did not pass test, got: {e}" }}.
         Error raise: "Expected error, got: {result}"!
 
-    method without: builtins modules: modules load: defSource eval: exprSource
+    method modules: modules load: defSource eval: exprSource
         -- Debug println: "\n/parseDef".
         self checkParsingBy: { |source| Parser parseDefinitions: source }
              for: defSource.
@@ -127,25 +127,24 @@ from: '{exprSource}'" }!
         self checkParsingBy: { |source| Parser parseExpressions: source }
              for: exprSource.
         let env = Environment modules: modules.
-        env removeBuiltins: builtins.
         -- Debug println: "/load".
         env load: defSource.
         -- Debug println: "/eval".
         env eval: exprSource!
 
     method load: defSource eval: exprSource
+        let modules = FileModuleDictionary
+                          new: { "lang" -> system files / "foo/lang" }.
         self
-            modules: Dictionary new
+            modules: modules
             load: defSource
             eval: exprSource!
 
-    method without: builtins
-           modules: modules
+    method modules: modules
            load: defSource
            eval: exprSource
            expect: expected
         let result = self
-                         without: builtins
                          modules: modules
                          load: defSource
                          eval: exprSource.
@@ -154,21 +153,6 @@ from: '{exprSource}'" }!
 eval: {exprSource}
 load: {defSource}
 modules: {modules}" }!
-
-    method modules: modules load: defSource eval: exprSource expect: expected
-        self
-            without: []
-            modules: modules
-            load: defSource
-            eval: exprSource
-            expect: expected!
-
-    method modules: modules load: defSource eval: exprSource
-        self
-            without: []
-            modules: modules
-            load: defSource
-            eval: exprSource!
 
     method load: defSource eval: exprSource expectError: type where: test
         { self load: defSource eval: exprSource }

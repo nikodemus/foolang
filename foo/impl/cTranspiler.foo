@@ -393,14 +393,6 @@ class CTranspiler { output selectorMap closureFunctions
                     generatedMethods env builtins }
 
     direct method transpile: string in: env with: prelude
-        env removeBuiltins: [
-            "Any",
-            "DoesNotUnderstand",
-            "Error",
-            "List",
-            "Object",
-            "TypeError"
-        ].
         let builtins = CompilerBuiltins all.
         env replaceBuiltins: builtins.
         -- FIXME: move "target class map" to environment?
