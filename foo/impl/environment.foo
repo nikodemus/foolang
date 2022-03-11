@@ -1,69 +1,122 @@
-import .syntaxTranslator.SyntaxTranslator
-import .astInterpreter.AstInterpreter
-import .utils.Debug
-import .ast.AstGlobal
-import .ast.AstDynamic
-import .ast.AstLexicalRef
-import .ast.AstConstantRef
-import .ast.AstSlotRef
-import .ast.AstDefinition
-import .parser.Parser
 import .ast.AstBuiltin
+import .ast.AstClass
+import .ast.AstConstantRef
+import .ast.AstDefinition
+import .ast.AstDynamic
+import .ast.AstGlobal
+import .ast.AstInterface
+import .ast.AstLexicalRef
+import .ast.AstSlotRef
+import .astInterpreter.AstInterpreter
+import .parser.Parser
+import .syntaxTranslator.SyntaxTranslator
+import .utils.Debug
+
+interface SimpleMethod
+    method isRequired
+        False!
+
+    method name
+        self selector name!
+end
+
+class GenericDelegator { target }
+    is SimpleMethod
+
+    method selector
+        #perform:with:!
+
+    method invoke: args on: _receiver
+        args first sendTo: target
+                   with: args second!
+end
+
+class TypecheckDelegator { target }
+    is SimpleMethod
+
+    method selector
+        #typecheck:!
+
+    method invoke: args on: _receiver
+        target typecheck: (args at: 1)!
+
+    method isRequired
+        False!
+end
 
 -- FIXME: cannot differentiate from local definitions!
--- FIXME: use a cascade as soon as they're supported in self-hosted
--- implementation...
 -- FIXME: uncomfortable duplicate vs. CompilerBuiltins
-class BuiltinDictionary { dictionary }
-    direct method new
-        (self dictionary: Dictionary new)
-            _init dictionary!
+class AllBuiltins { env }
+    direct method defineIn: env
+        (self env: env)
+            defineAll.
+        False!
 
-    method _define: builtin
-        let name = builtin name.
-        let global = AstGlobal name: name.
+    method define: builtin
+        let global = env ensureBuiltin: builtin name.
         global define: (AstBuiltin
                             global: global
-                            value: builtin).
-        dictionary
-            put: global
-            at: name!
+                            value: builtin)!
 
-    method _init
+    method defineClass: builtin
+        let global = env ensureBuiltin: builtin name.
+        let theClass = AstClass
+                           name: builtin name
+                           slots: []
+                           interfaces: []
+                           env: env.
+        theClass
+            ; directMethods: List new
+            ; instanceMethods: List new
+            ; __addDirectMethod: (GenericDelegator target: builtin)
+            ; __addDirectMethod: (TypecheckDelegator target: builtin).
+
+        global is theClass global
+            assert: "Correct global for builtin class."!
+
+    method defineAll
+        -- Wrappers for selected builtins so that
+        -- prelude can extend them.
         self
-            ; _define: Any
-            ; _define: Array
-            ; _define: ByteArray
-            ; _define: Boolean
-            ; _define: Character
-            ; _define: Class
-            ; _define: Clock
-            ; _define: Closure
-            ; _define: DoesNotUnderstand
-            ; _define: Error
-            ; _define: False
-            ; _define: File
-            ; _define: FilePath
-            ; _define: FileStream
-            ; _define: Float
-            ; _define: Input
-            ; _define: Integer
-            ; _define: Layout
-            ; _define: List
-            ; _define: Object
-            ; _define: Output
-            ; _define: Random
-            ; _define: Record
-            ; _define: Selector
-            ; _define: String
-            ; _define: Time
-            ; _define: True
-            ; _define: TypeError.
+            ; defineClass: Array
+            ; defineClass: Boolean
+            ; defineClass: ByteArray
+            ; defineClass: Class
+            ; defineClass: Character
+            ; defineClass: Closure
+            ; defineClass: File
+            ; defineClass: FilePath
+            ; defineClass: FileStream
+            ; defineClass: Float
+            ; defineClass: Integer
+            ; defineClass: Input
+            ; defineClass: Layout
+            ; defineClass: Output
+            ; defineClass: Random
+            ; defineClass: Record
+            ; defineClass: Selector
+            ; defineClass: String
+            ; defineClass: Time
+                .
+        -- Whereas these ones use host definitions directly.
+        -- Yes, this is a mess and a massive KLUDGE.
+        self
+            ; define: Any
+            ; define: Clock
+            ; define: DoesNotUnderstand
+            ; define: Error
+            ; define: List
+            ; define: Object
+            ; define: TypeError
+            ; define: False
+            ; define: True
+                .
         -- These ones don't exist on bootstrap host, but happily
-        -- that on doesn't care about undefined variables either...
+        -- that one doesn't care about undefined variables either...
         Foolang isSelfHosted
-            ifTrue: { self; _define: System
-                          ; _define: SystemRandom }.
+            ifTrue: { self
+                          ; defineClass: System
+                          ; defineClass: SystemRandom }.
         self!
 end
 
@@ -147,11 +200,8 @@ class ModuleDictionary { available translated }
     method _translateSource: source _for: path _in: env
         -- Debug println: "_translateSource: {source} _for: {path} _in: ...".
         let $CurrentModulePath = path.
-        { (Environment
-               builtins: env builtins
-               modules: self
-               classes: env classes)
-          load: source }
+        { (env copyForModule: self)
+              load: source }
             on: Error
             do: { |e|
                   let path = "." join: $CurrentModulePath.
@@ -198,26 +248,25 @@ class Environment { parent
             ifFalse: { parent describe }!
 
     direct method new
-        self
-            builtins: BuiltinDictionary new!
-
-    direct method builtins: builtins
-        self
-            builtins: builtins
-            modules: ModuleDictionary new!
+        self modules: []!
 
     direct method modules: modules
-        self
-            builtins: BuiltinDictionary new
-            modules: (ModuleDictionary new: modules)!
+        self modules: modules
+             classes: Dictionary new!
 
-    direct method builtins: builtins modules: modules
-        self
-            builtins: builtins
-            modules: modules
-            classes: Dictionary new!
+    direct method modules: modules classes: classes
+        (Environment
+             parent: False
+             bindings: []
+             frame: List new
+             depth: 1
+             globals: Dictionary new
+             builtins: Dictionary new
+             modules: (ModuleDictionary new: modules)
+             classes: classes)
+        initializeBuiltins!
 
-    direct method builtins: builtins modules: modules classes: classes
+    method copyForModule: modules
         Environment
             parent: False
             bindings: []
@@ -227,6 +276,10 @@ class Environment { parent
             builtins: builtins
             modules: modules
             classes: classes!
+
+    method initializeBuiltins
+        AllBuiltins defineIn: self.
+        self!
 
     method addGlobals: bindings
         self checkToplevel.
@@ -274,6 +327,10 @@ class Environment { parent
                          ifNonePut: { self makeGlobal: definition name }.
         global redefine: definition!
 
+    method ensureBuiltin: name
+        builtins at: name
+                 ifNonePut: { self makeGlobal: name }!
+
     method replaceBuiltins: newBuiltins
         newBuiltins do: { |each| self redefineBuiltin: each }.
         self!
@@ -315,7 +372,8 @@ class Environment { parent
                                  (builtins has: name)
                                      ifTrue: { (builtins at: name)
                                                    redefineUsing: global }
-                                     ifFalse: { builtins put: global at: name } } }!
+                                     ifFalse: { builtins put: global at: name } } }.
+        self!
 
     method addVariable: name type: type
         -- Debug println: "addVariable: {name} type: {type}".
