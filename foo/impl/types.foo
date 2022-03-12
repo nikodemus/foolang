@@ -4,6 +4,13 @@ interface Type
     is Object
 
     method findMethod: selector in: env
+        self earlyBinding
+            => { |name|
+                 return (env global: name)
+                     definition findInstanceMethod: selector }.
+        False!
+
+    method earlyBinding
         False!
 end
 
@@ -40,9 +47,8 @@ class BooleanType {}
 
     -- FIXME: I _really_ mislike this. Should represent the type
     -- directly with the right object.
-    method findMethod: selector in: env
-        let boolean = env global: "Boolean".
-        boolean definition findInstanceMethod: selector!
+    method earlyBinding
+        "Boolean"!
 
     method displayOn: stream
         stream writeString: "#<BooleanType>"!
@@ -50,6 +56,9 @@ end
 
 class ClosureType { argumentTypes returnType }
     is Type
+
+    method earlyBinding
+        "Closure"!
 
     method displayOn: stream
         stream writeString: "#<ClosureType {argumentTypes} -> {returnType}>"!

@@ -124,7 +124,7 @@ class SyntaxTranslator { env currentMethod methodEnv }
             ifFalse: { local = False.
                        currentMethod noteNonLocalReturn }.
         AstReturn
-            from: currentMethod::AstMethod
+            from: currentMethod::AstStandardMethod
             value: (aReturn value visitBy: self)
             isLocal: local!
 
@@ -294,7 +294,7 @@ class SyntaxTranslator { env currentMethod methodEnv }
                                                  self _visitType: each type }).
         let argumentVariables = bodyEnv bindings.
         (argumentVariables size is signature parameters size) assert.
-        let astMethod = AstMethod
+        let astMethod = AstStandardMethod
                             home: $MethodHome
                             selector: (Selector intern: signature selector name)
                             argumentVariables: argumentVariables
