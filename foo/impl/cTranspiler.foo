@@ -1505,8 +1505,9 @@ class CTranspiler { output selectorMap closureFunctions
         -- Tracer visitSend: aSend selector.
         (aSend receiver type findMethod: aSend selector in: env)
             => { |aMethod|
+                 -- Debug println: "HIT {aSend selector} -> {aSend receiver type} ({aSend receiver})".
                  return self generateKnownSend: aSend using: aMethod }.
-        -- Debug println: "{aSend selector} -> {aSend receiver type} ({aSend receiver})".
+        -- Debug println: "MISS {aSend selector} -> {aSend receiver type} ({aSend receiver})".
         output print: "(\{ ".
         let receiver = self _visitTemp: aSend receiver.
         let args = aSend arguments
