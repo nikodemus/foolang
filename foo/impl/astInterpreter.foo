@@ -178,7 +178,7 @@ class AstInterpreter { context process }
 
     method visitTypecheck: aNode
         let value = aNode value visitBy: self.
-        let type = aNode type visitBy: self.
+        let type = aNode assertType visitBy: self.
         type typecheck: value!
 
     method visitConstant: aConstant

@@ -3,7 +3,7 @@ import .utils.Debug
 interface Type
     is Object
 
-    method findMethod: selector for: compiler
+    method findMethod: selector in: env
         False!
 end
 
@@ -12,25 +12,6 @@ class EqType { value }
 
     method displayOn: stream
         stream writeString: "#<EqType {value classOf name}>"!
-
-    method findMethod: selector for: compiler
-        (Record includes: value)
-            ifTrue: { let recordClass =  compiler _recordClassFromRecord: value.
-                      return recordClass findInstanceMethod: selector }.
-        let isClass = (Class includes: value) or: (Interface includes: value).
-        let hostClass = isClass
-                            ifTrue: { value }
-                            ifFalse: { value classOf }.
-        let targetClass = compiler env classes
-                              at: hostClass
-                              ifNone: { let builtin
-                                            = compiler _findBuiltinFor: hostClass
-                                                       _ifNone: { Debug println: "!!! could not map {hostClass}".
-                                                                  return False }.
-                                        builtin definition }.
-        isClass
-            ifTrue: { targetClass findDirectMethod: selector }
-            ifFalse: { targetClass findInstanceMethod: selector }!
 end
 
 class UnknownType {}
@@ -57,8 +38,10 @@ end
 class BooleanType {}
     is Type
 
-    method findMethod: selector for: compiler
-        let boolean = compiler env global: "Boolean".
+    -- FIXME: I _really_ mislike this. Should represent the type
+    -- directly with the right object.
+    method findMethod: selector in: env
+        let boolean = env global: "Boolean".
         boolean definition findInstanceMethod: selector!
 
     method displayOn: stream
@@ -67,10 +50,6 @@ end
 
 class ClosureType { argumentTypes returnType }
     is Type
-
-    method findMethod: selector for: compiler
-        let closure = compiler env global: "Closure".
-        closure definition findInstanceMethod: selector!
 
     method displayOn: stream
         stream writeString: "#<ClosureType {argumentTypes} -> {returnType}>"!

@@ -36,6 +36,8 @@ define CEscapes
 define Tracer NullTracer!
 
 class BuiltinMethod { home selector definition isDirect }
+    is Object
+
     direct method forEach: builtins in: home direct: areDirect
         let dict = Dictionary new.
         builtins
@@ -153,6 +155,13 @@ class CompilerBuiltin { type value markFunction _interfaces
     method _instanceMethods: methods
         (self _instanceMethods is False) assert: "Builtin instance methods already set.".
         _instanceMethods = BuiltinMethod forEach: methods in: self direct: False!
+
+    method findInstanceMethod: selector
+        self instanceMethods
+            do: { |each|
+                  each selector == selector
+                      ifTrue: { return each } }.
+        False!
 
     method visitBy: visitor
         visitor visitBuiltin: self!
@@ -1405,7 +1414,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method visitTypecheck: aCheck
         -- Tracer visitTypecheck: aCheck.
-        self _generateTypecheck: aCheck type
+        self _generateTypecheck: aCheck assertType
              _for: aCheck value!
 
     method visitIs: anIs
@@ -1474,9 +1483,38 @@ class CTranspiler { output selectorMap closureFunctions
     method visitCascadeReceiver: _
         output print: $CascadeReceiverTemp!
 
+    method generateKnownSend: aSend using: aMethod
+        -- These are never #perform:with: or object methods, thanks to #findMethod:in:
+        let methodFunction = Name mangleMethod: aMethod.
+        let selector = self selectorCName: aMethod selector.
+        output print: "(\{ ".
+        let receiver = self _visitTemp: aSend receiver.
+        let args = aSend arguments
+                       collect: { |each| self _visitTemp: each }.
+        output
+            ; print: "foo_call_known_method(ctx, &"
+            ; print: aMethod methodHomeName
+            ; print: ", &"
+            ; print: selector
+            ; print: ", "
+            ; print: aMethod methodFunctionName
+            ; print: ", "
+            ; print: receiver
+            ; print: ", "
+            ; print: args size.
+        args do: { |each|
+                   output
+                       ; print: ", "
+                       ; print: each }.
+        output print: "); })"!
+
     method visitSend: aSend
         -- Tracer visitSend: aSend selector.
-        -- Debug println: "rcv: {aSend receiver type}".
+        Debug println: "rcv: {aSend receiver} is {aSend receiver type}".
+        (aSend receiver type findMethod: aSend selector in: env)
+            => { |aMethod|
+                 Debug println: "found: {aMethod}".
+                 return self generateKnownSend: aSend using: aMethod }.
         output print: "(\{ ".
         let receiver = self _visitTemp: aSend receiver.
         let args = aSend arguments
