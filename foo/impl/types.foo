@@ -17,6 +17,21 @@ end
 class EqType { value }
     is Type
 
+    method findMethod: selector in: env
+        ((Class includes: value) or: (Interface includes: value))
+            ifTrue: { self findDirectMethod: selector in: env }
+            ifFalse: { self findInstanceMethod: selector in: env }!
+
+    method findDirectMethod: selector in: env
+        -- FIXME: should look for builtins, but they're not in the environment!
+        let targetClass = env classes at: value ifNone: { return False }.
+        targetClass findDirectMethod: selector!
+
+    method findInstanceMethod: selector in: env
+        -- FIXME: should look for builtins, but they're not in the environment!
+        let targetClass = env classes at: value classOf ifNone: { return False }.
+        targetClass findInstanceMethod: selector!
+
     method displayOn: stream
         stream writeString: "#<EqType {value classOf name}>"!
 end
@@ -35,11 +50,11 @@ class ReceiverType { definition }
         stream writeString: "#<ReceiverType {definition name}>"!
 end
 
-class ClassType { definition }
+class ReceiverClassType { definition }
     is Type
 
     method displayOn: stream
-        stream writeString: "#<ClassType {definition name}>"!
+        stream writeString: "#<ReceiverClassType {definition name}>"!
 end
 
 class BooleanType {}

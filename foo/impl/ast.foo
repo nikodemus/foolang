@@ -1149,7 +1149,7 @@ class AstSelfClassRef { home }
 
     -- FIXME: meaning of this depends on instance vs direct method!
     method type
-        ClassType definition: home!
+        ReceiverClassType definition: home!
 
     method isImmediate
         True!
