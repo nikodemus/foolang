@@ -31,17 +31,14 @@ class GenericDelegator { target }
                    with: args second!
 end
 
-class TypecheckDelegator { target }
+class DirectDelegator { selector target }
     is SimpleMethod
 
     method selector
-        #typecheck:!
+        #includes:!
 
     method invoke: args on: _receiver
-        target typecheck: (args at: 1)!
-
-    method isRequired
-        False!
+        selector sendTo: target with: args!
 end
 
 -- FIXME: cannot differentiate from local definitions!
@@ -73,11 +70,18 @@ class AllBuiltins { env }
         --
         -- Then I just need to make the interpreter convert
         -- constants into wrapped objects and pretty well off.
+        --
+        -- Care needs to be taken with already materialized objects
+        -- from compiled code crossing over to the interpreter, though!
         theClass
             ; directMethods: List new
             ; instanceMethods: List new
             ; __addDirectMethod: (GenericDelegator target: builtin)
-            ; __addDirectMethod: (TypecheckDelegator target: builtin).
+                -- These need separate delegators, because otherwise they
+                -- get default methods that do the wrong thing.
+            ; __addDirectMethod: (DirectDelegator selector: #includes: target: builtin)
+            ; __addDirectMethod: (DirectDelegator selector: #typecheck: target: builtin)
+                .
 
         global is theClass global
             assert: "Correct global for builtin class."!

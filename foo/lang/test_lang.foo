@@ -16,6 +16,16 @@ define $_LangTestVar 999!
 class TestLang { assert }
     is TestSuite
 
+    method test_class_includes
+        assert true: { Integer includes: 42 }.
+        assert true: { List includes: List new }!
+
+    method BROKEN_ON_INTERPRETER_test_classOf
+        assert that: { 42 classOf }
+               is: Integer.
+        assert that: { List new classOf }
+               is: List!
+
     method _arg_typecheck: arg :: Integer
         arg!
 
