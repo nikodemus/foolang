@@ -2,14 +2,14 @@ import .name.Name
 
 define DirectMethods
     { #parse:
-      -> { signature: [String], vars: 0,
+      -> { signature: [String], vars: 0, returnType: Float,
            body: "struct FooBytes* b = PTR(FooBytes, ctx->frame[0].datum);
                   return FOO_FLOAT(strtod((char*)b->data, NULL));" },
       }!
 
 define InstanceMethods
     { (Selector intern: "prefix-")
-          -> { signature: [], vars: 0,
+          -> { signature: [], vars: 0, returnType: Float,
                body: "return FOO_FLOAT(- ctx->receiver.datum.float64);" },
       #debug
       -> { signature: [], vars: 1,
@@ -18,16 +18,16 @@ define InstanceMethods
                   return ctx->receiver;"},
 
       #square
-      -> { signature: [], vars: 0,
+      -> { signature: [], vars: 0, returnType: Float,
            body: "return FOO_FLOAT(receiver.datum.float64 * receiver.datum.float64);" },
 
       #hash
-          -> { signature: [], vars: 0,
+          -> { signature: [], vars: 0, returnType: Integer,
                body: "double f = receiver.datum.float64;
                       return FOO_INTEGER(MASK_SIGN(foo_hash(0x35F5875BD5391630, &f, sizeof(f))));" },
 
       #toString
-      -> { signature: [], vars: 0,
+      -> { signature: [], vars: 0, returnType: String,
            body: "double arg = ctx->receiver.datum.float64;
                   if (arg == 0.0) \{
                       // FIXME: signed zero!
@@ -84,36 +84,36 @@ define InstanceMethods
                   assert(bytes->size == strlen(data));
                   return FOO_INSTANCE(String, bytes);" },
       #truncate
-          -> { signature: [], vars: 0,
+          -> { signature: [], vars: 0, returnType: Integer,
                body: "return FOO_INTEGER(ctx->receiver.datum.float64);" },
       #round
-           -> { signature: [], vars: 0,
+           -> { signature: [], vars: 0, returnType: Integer,
                 body: "return FOO_INTEGER(round(ctx->receiver.datum.float64));" },
       #floatAdd:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, returnType: Float,
                body: "return FOO_FLOAT(ctx->receiver.datum.float64 + ctx->frame[0].datum.float64);" },
       #floatDiv:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, returnType: Float,
                body: "return FOO_FLOAT(ctx->receiver.datum.float64 / ctx->frame[0].datum.float64);" },
       #floatEq:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, returnType: Boolean,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.float64 == ctx->frame[0].datum.float64);" },
       #floatGt:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, returnType: Boolean,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.float64 > ctx->frame[0].datum.float64);" },
       #floatGte:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, returnType: Boolean,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.float64 >= ctx->frame[0].datum.float64);" },
       #floatLt:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, returnType: Boolean,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.float64 < ctx->frame[0].datum.float64);" },
       #floatLte:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, returnType: Boolean,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.float64 <= ctx->frame[0].datum.float64);" },
       #floatMul:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, returnType: Float,
                body: "return FOO_FLOAT(ctx->receiver.datum.float64 * ctx->frame[0].datum.float64);" },
       #floatSub:
-          -> { signature: [Float], vars: 0,
+          -> { signature: [Float], vars: 0, returnType: Float,
                body: "return FOO_FLOAT(ctx->receiver.datum.float64 - ctx->frame[0].datum.float64);" },
     }!

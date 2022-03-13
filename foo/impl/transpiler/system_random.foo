@@ -3,10 +3,10 @@ define DirectMethods
 
 define InstanceMethods {
     #hash
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Integer,
          body: "return FOO_INTEGER(0x26f2180b05711bfb);" },
 
     #integer
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Integer,
          body: "return FOO_INTEGER(system_random());" },
 }!

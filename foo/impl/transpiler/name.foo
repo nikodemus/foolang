@@ -34,6 +34,12 @@ class Name { out }
         s _mangleSelector: selector.
         s content!
 
+    direct method mangleStandardMethod: selector::Selector
+        let s = self _new.
+        s out print: "foo_method_".
+        s _mangleSelector: selector.
+        s content!
+
     direct method mangleMethod: aMethod
         let s = self _new.
         s _mangleMethod: aMethod.
@@ -101,7 +107,7 @@ class Name { out }
                         ifFalse: { "fooInstanceMethod_" }).
         out print: aMethod home name.
         out print: "_".
-        self _mangleSelector: aMethod selector!
+        self _mangleSelector: aMethod selector toSelector!
 
     method _mangleSelector: selector::Selector
         selector isPrefix

@@ -6,17 +6,17 @@ define DirectMethods
 
 define InstanceMethods {
     #hash
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Integer,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 uint64_t hash = foo_hash(0xF2099A8C7C77D920, file->pathname->data, file->pathname->size);
                 hash = foo_hashmix(hash, foo_hash(0x85926533544C593E, &file->mode, sizeof(file->mode)));
                 return FOO_INTEGER(MASK_SIGN(hash));" },
     #create
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: FileStream,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return foo_FileStream_new(ctx, file, FooFile_CREATE);" },
     #createOrOpen
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: FileStream,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return foo_FileStream_new(ctx, file, FooFile_CREATE_OR_OPEN);" },
     #delete
@@ -24,43 +24,43 @@ define InstanceMethods {
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return FOO_BOOLEAN(0 == remove((char*)(file->pathname->data)));" },
     #forAppend
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: File,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return foo_File_new(ctx, file->pathname, (file->mode | FooFile_APPEND) & ~FooFile_WRITE);" },
     #forRead
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: File,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return foo_File_new(ctx, file->pathname, file->mode | FooFile_READ);" },
     #forWrite
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: File,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return foo_File_new(ctx, file->pathname, (file->mode | FooFile_WRITE) & ~FooFile_APPEND);" },
     #isAppend
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Boolean,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return FOO_BOOLEAN(file->mode & FooFile_APPEND);" },
     #isRead
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Boolean,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return FOO_BOOLEAN(file->mode & FooFile_READ);" },
     #isTruncate
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Boolean,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return FOO_BOOLEAN(file->mode & FooFile_TRUNCATE);" },
     #isWrite
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Boolean,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return FOO_BOOLEAN(file->mode & FooFile_WRITE);" },
     #open
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: FileStream,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return foo_FileStream_new(ctx, file, FooFile_OPEN);" },
     #pathname
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: String,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = file->pathname } };" },
     #truncateExisting
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: File,
          body: "struct FooFile* file = PTR(FooFile, ctx->receiver.datum);
                 return foo_File_new(ctx, file->pathname, file->mode | FooFile_TRUNCATE);" },
 }!

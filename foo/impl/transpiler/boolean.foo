@@ -15,7 +15,7 @@ define InstanceMethods
     return foo_send(ctx, &{Name mangleSelector: #value}, ctx->frame[1], 0);
 }" },
  #hash
-          -> { signature: [], vars: 0, foldable: True, flushable: True,
+          -> { signature: [], vars: 0, returnType: Integer,
                body: "if (receiver.datum.boolean) \{
                           return FOO_INTEGER(0xde4bb7be57eb1407);
                       \} else \{
@@ -35,8 +35,11 @@ define InstanceMethods
 } else \{
     return foo_send(ctx, &{Name mangleSelector: #value}, ctx->frame[0], 0);
 }" },
+      #not
+          -> { signature: [], vars: 0, returnType: Boolean,
+               body: "return FOO_BOOLEAN(!receiver.datum.boolean);" },
       #toString
-          -> { signature: [], vars: 0,
+          -> { signature: [], vars: 0, returnType: String,
                body: "return foo_String_new_from(ctx, ctx->receiver.datum.boolean ? \"True\" : \"False\");" },
       #debug
           -> { signature: [], vars: 0,

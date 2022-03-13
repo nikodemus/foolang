@@ -25,24 +25,24 @@ import .boolean_ext
 extend Character
     is Object
 
-    method isLowercase
+    method isLowercase -> Boolean
         let code = self code.
         ASCII lowerA <= code
             and: code <= ASCII lowerZ!
 
-    method isAlphanumeric
+    method isAlphanumeric -> Boolean
         self isAlpha or: self isDigit!
 
-    method isSymbol
+    method isSymbol -> Boolean
         self code == ASCII underscore
             ifTrue: { False }
             ifFalse: { self isAlpha not }!
 
-    method isHorizontalWhitespace
+    method isHorizontalWhitespace -> Boolean
         HorizontalWhitespaceASCII
             anySatisfy: { |whitespaceCode| whitespaceCode is self code }!
 
-    method isDigit: base
+    method isDigit: base -> Boolean
         let code = self code.
         base <= 10
             ifTrue: { ASCII digit0 <= code
@@ -72,6 +72,6 @@ extend Character
         stream print: self code.
         stream writeString: ">"!
 
-    method isNewline
+    method isNewline -> Boolean
         self code is ASCII lineFeed!
 end

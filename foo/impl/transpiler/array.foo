@@ -1,6 +1,6 @@
 define DirectMethods
     { #of:new:value:
-          -> {signature: [Any, Integer, Any], vars: 0,
+          -> {signature: [Any, Integer, Any], vars: 0, returnType: Array,
               body: "int64_t size = ctx->frame[1].datum.int64;
 // FIXME: error instead!
 if (size < 0)
@@ -12,14 +12,14 @@ for (int64_t i = 0; i < size; i++) \{
 }
 return (struct Foo)\{ .class = &FooClass_Array, .datum = \{ .ptr = new } };"},
       #new:
-          -> {signature: [Integer], vars: 0,
+          -> {signature: [Integer], vars: 0, returnType: Array,
               body: "size_t size = ctx->frame[0].datum.int64;
 // FIXME: error instead!
 if (size < 0)
    foo_panicf(ctx, \"Negative size! size: %\" PRId64, size);
 return foo_Array_new(ctx, size);"},
       #new:value:
-          -> {signature: [Integer, Any], vars: 0,
+          -> {signature: [Integer, Any], vars: 0, returnType: Array,
               body: "int64_t size = ctx->frame[0].datum.int64;
 // FIXME: error instead!
 if (size < 0)
@@ -34,7 +34,7 @@ return (struct Foo)\{ .class = &FooClass_Array, .datum = \{ .ptr = new } };"}
 
 define InstanceMethods
     { #debug
-          -> {signature: [], vars: 0,
+          -> {signature: [], vars: 0, returnType: Array,
               body: "struct FooArray* array = PTR(FooArray, ctx->receiver.datum);
 printf(\"[\");
 for (size_t i = 0; i < array->size; i++) \{
@@ -87,7 +87,7 @@ if (i >= array->size)
    foo_panicf(ctx, \"Index out of bounds! index: %\" PRId64 \"size: %\" PRId64, i + 1, array->size);
 return array->data[i] = ctx->frame[0];"},
       #hash
-          -> { signature: [], vars: 0,
+          -> { signature: [], vars: 0, returnType: Integer,
                body: "struct FooArray* array = PTR(FooArray, receiver.datum);
                       uint64_t hash = 0x82CFE6F1D783A015;
                       for (size_t i = 0; i < array->size; i++) \{
@@ -97,7 +97,7 @@ return array->data[i] = ctx->frame[0];"},
                       \}
                       return FOO_INTEGER(MASK_SIGN(hash));" },
       #from:to:
-          -> {signature: [Integer, Integer], vars: 0,
+          -> {signature: [Integer, Integer], vars: 0, returnType: Array,
               body: "int64_t start = ctx->frame[0].datum.int64 - 1;
 int64_t end = ctx->frame[1].datum.int64;
 struct FooArray* self = PTR(FooArray, ctx->receiver.datum);

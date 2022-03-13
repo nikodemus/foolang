@@ -8,7 +8,7 @@ define DirectMethods {
 
 define InstanceMethods {
     #flush
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: Output,
          body: "fflush(ctx->receiver.datum.ptr);
                 return ctx->receiver;" },
     #writeString:
@@ -17,7 +17,7 @@ define InstanceMethods {
                 fwrite(bytes->data, 1, bytes->size, ctx->receiver.datum.ptr);
                 return ctx->frame[0];" },
     #toString:
-    -> { signature: [], vars: 0,
+    -> { signature: [], vars: 0, returnType: String,
          body: "void* ptr = ctx->receiver.datum.ptr;
                 if (ptr == stdout)
                     return foo_String_new_from(ctx, \"#<Output stdout\");

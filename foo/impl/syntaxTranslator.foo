@@ -210,14 +210,18 @@ class SyntaxTranslator { env currentMethod methodEnv }
         env is methodEnv
             ifFalse: { self noteNonLocalReference }.
         AstSelfInstanceRef
-            home: $MethodHome!
+            type: (currentMethod isDirect
+                       ifTrue: { ReceiverClassType definition: currentMethod home }
+                       ifFalse: { ReceiverType definition: currentMethod home })!
 
     method visitSelfClass: aSelf
         -- Tracer trace: #visitSelfClass:.
         env is methodEnv
             ifFalse: { self noteNonLocalReference }.
         AstSelfClassRef
-            home: $MethodHome!
+            type: (currentMethod isDirect
+                       ifTrue: { ReceiverMetaclassType definition: currentMethod home }
+                       ifFalse: { ReceiverClassType definition: currentMethod home })!
 
     method visitVariable: aVariable
         -- Tracer visitVariable: aVariable.

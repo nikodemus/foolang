@@ -23,6 +23,7 @@ import .transpiler.system_random
 import .transpiler.time
 import .ast.*
 import .utils.*
+import .types.*
 import .environment.ModuleBinding
 
 define CEscapes
@@ -42,6 +43,8 @@ class BuiltinMethod { home selector definition isDirect }
         let dict = Dictionary new.
         builtins
             do: { |selector definition|
+                  -- KLUDGE: host dictionaries don't play well
+                  -- with selectros.
                   dict at: selector name
                        put: (self
                                  home: home
@@ -49,12 +52,20 @@ class BuiltinMethod { home selector definition isDirect }
                                  definition: definition
                                  isDirect: areDirect) }.
         dict!
+    method returnType
+        { definition returnType }
+            on: DoesNotUnderstand
+            do: { return Any }!
     method hasNonLocalReturns
         False!
     method stackContext
         True!
     method isBuiltin
         True!
+    method isConstructor
+        False!
+    method isStandard
+        False!
     method isRequired
         False!
     method arity
@@ -114,6 +125,9 @@ class CompilerBuiltin { type value markFunction _interfaces
         -- See also: AstGlobal#idOr:
         ""!
 
+    method isClass
+        type is Class!
+
     method eval
         _global is False
             => { Error raise: "CompilerBuiltin#eval called too early." }.
@@ -125,6 +139,9 @@ class CompilerBuiltin { type value markFunction _interfaces
         global definition is self
             assert: "Bad global for CompilerBuiltin".
         _global = global!
+
+    method definitionIn: _env
+        self!
 
     method definition
         self!
@@ -732,12 +749,8 @@ class CTranspiler { output selectorMap closureFunctions
                          ifFalse: { value classOf }.
         return env classes
             at: theClass
-            ifNone: { self _findBuiltinFor: theClass
-                           _ifNone: { panic "No 'ast class' for: {value} ({theClass})\nenv classes: {env classes keys}\nbuiltins: {builtins}" } }!
-
-    method _findBuiltinFor: value _ifNone: block
-        builtins find: { |each| each value is value }
-                 ifNone: block!
+            ifNone: { env findBuiltinFor: theClass
+                          ifNone: { panic "No 'ast class' for: {value} ({theClass})\nenv classes: {env classes keys}\nbuiltins: {builtins}" } }!
 
     method _recordClassFromRecord: aRecord
         let keys = (Record keysIn: aRecord) sorted
@@ -1059,12 +1072,12 @@ class CTranspiler { output selectorMap closureFunctions
         let metaclassName = Name mangleMetaclass: anInterface.
         let className = Name mangleClass: anInterface.
         let globalName = self mangleGlobal: anInterface.
-        -- Augmented with #includes: and #name
-        let directMethods = (anInterface directMethods reject: #isRequired) asList.
+        let directMethods = (anInterface directMethods reject: #isRequired)
+                                asList.
+        (directMethods anySatisfy: { |each| each selector toSelector == #includes: })
+            ifFalse: { Error raise: "Every interface must have an #includes: method, {anInterface} didn't:\n{directMethods}." }.
         directMethods
             do: { |each| self _writeMethod: each _for: anInterface }.
-        self _generateDefaultDirectMethodsFor: anInterface
-            _in: directMethods.
         let instanceMethods = anInterface instanceMethods reject: #isRequired.
         instanceMethods
             do: { |each| self _writeMethod: each _for: anInterface }.
@@ -1123,23 +1136,15 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "};".
         output newline!
 
-    method _generateClassConstructor: aClass
-        let ctorProto = { home: aClass,
-                          selector: aClass constructor,
-                          isDirect: True }.
+    method _writeConstructor: ctor for: aClass
         -- Awkward: we need the proto to mangle the names...
-        let ctor =  { selector: aClass constructor,
-                      arity: aClass slots size,
-                      frameSize: aClass slots size,
-                      methodHomeName: (Name mangleMethodClass: ctorProto),
-                      methodFunctionName: (Name mangleMethod: ctorProto) }.
         output print: "struct Foo ".
         output println: ctor methodFunctionName.
         output println: "    (const struct FooMethod* method,".
         output println: "     const struct FooSelector* selector,".
         output println: "     struct FooContext* sender,".
         output println: "     struct Foo receiver,".
-        output println: "     size_t nargs, va_list arguments)".
+        output println: "     size_t nargs, va_list arguments) /* CTOR */".
         output println: "\{".
         output println: "    (void)selector;".
         output println: "    (void)nargs;".
@@ -1152,47 +1157,10 @@ class CTranspiler { output selectorMap closureFunctions
                                ifFalse: { output println: "new->data[{index-1}] = foo_class_typecheck_argument(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo), method);" } }.
         output println: "    return (struct Foo)\{ .class = PTR(FooClass, receiver.datum), .datum = \{ .ptr = new } };".
         output println: "}".
-        output newline.
-        ctor!
-
-
-    method _generateDefaultInstanceMethodsFor: aClass _in: table
-        (table find: { |each| each selector == #classOf }) is False
-            ifTrue: { table add: (self _generateInstanceClassOf: aClass) }!
-
-    method _generateDefaultDirectMethodsFor: aClass _in: table
-        (table find: { |each| each selector == #includes: }) is False
-            ifTrue: { table add: (self _generateDirectMethod_includes: aClass) }.
-        (table find: { |each| each selector == #classOf }) is False
-            ifTrue: { table add: (self _generateDirectMethod_classOf: aClass) }.
-        (table find: { |each| each selector == #name }) is False
-            ifTrue: { table add: (self _generateDirectMethod_name: aClass) }!
-
-    method _generateDirectMethod_includes: aClass
-        { selector: #includes:,
-          arity: 1,
-          frameSize: 1,
-          methodHomeName: (Name mangleMetaclass: aClass),
-          methodFunctionName: "foo_method_includes_" }!
-
-    method _generateDirectMethod_name: aClass
-        { selector: #name,
-          arity: 0,
-          frameSize: 0,
-          methodHomeName: (Name mangleMetaclass: aClass),
-          methodFunctionName: "foo_method_name" }!
-
-    method _generateDirectMethod_classOf: aClass
-        { selector: #classOf,
-          arity: 0,
-          frameSize: 0,
-          methodHomeName: (Name mangleMetaclass: aClass),
-          methodFunctionName: "foo_method_classOf" }!
+        output newline!
 
     method _generateInstanceClassOf: aClass
         { selector: #classOf,
-          arity: 0,
-          frameSize: 0,
           methodHomeName: (Name mangleClass: aClass),
           methodFunctionName: "foo_method_classOf" }!
 
@@ -1212,7 +1180,6 @@ class CTranspiler { output selectorMap closureFunctions
         let className = Name mangleClass: aClass.
         let metaclassName = Name mangleMetaclass: aClass.
         let globalName = self mangleGlobal: aClass.
-        -- Augmented later with: constructor (aka ctor), #includes:, and #name
         let directMethods = aClass directMethods asList.
         -- Debug println: "{aClass name} direct methods:".
         -- directMethods do: { |each| Debug println: "- {each selector}" }.
@@ -1224,16 +1191,12 @@ class CTranspiler { output selectorMap closureFunctions
         -- instanceMethods do: { |each| Debug println: "- {each selector}" }.
         instanceMethods
             do: { |each| self _writeMethod: each _for: aClass }.
-        aClass isBuiltin
-            ifFalse: { directMethods add: (self _generateClassConstructor: aClass) }.
         let classMethods = isTheClass
                                ifTrue: { instanceMethods }
                                ifFalse:{ directMethods }.
-        self _generateDefaultDirectMethodsFor: aClass
-             _in: classMethods.
-        self _generateDefaultInstanceMethodsFor: aClass
-             _in: instanceMethods.
-
+        (classMethods anySatisfy: { |each| each selector toSelector == #includes: })
+            ifFalse: { Error raise: "Every class must have an #includes: method, {aClass} didn't:\n{classMethods}." }.
+        instanceMethods add: (self _generateInstanceClassOf: aClass).
         isTheClass
             ifFalse: { -- Class metaclass, not needed for Class which
                        -- is its own metaclass.
@@ -1295,10 +1258,15 @@ class CTranspiler { output selectorMap closureFunctions
 
     method _writeMethod: aMethod _for: aClass
         -- Tracer _writeMethod: aMethod _for: type.
+        -- Debug println: "_writeMethod: {aMethod}".
+        aMethod isStandard
+            ifTrue: { return False }.
         let name = Name mangleMethod: aMethod.
         generatedMethods
             at: name
-            ifNonePut: { self _actuallyGenerateMethod: aMethod _as: name _for: aClass }!
+            ifNonePut: { aMethod isConstructor
+                             ifTrue: { self _writeConstructor: aMethod for: aClass }
+                             ifFalse: { self _actuallyGenerateMethod: aMethod _as: name _for: aClass } }!
 
     method generateMethodFunctionHeader: name
         output print: "struct Foo ".
@@ -1308,7 +1276,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "     struct FooContext* sender,".
         output println: "     struct Foo receiver,".
         output println: "     size_t nargs,".
-        output println: "     va_list arguments)"!
+        output println: "     va_list arguments) /* MF-header */"!
 
     method generateStackContextFor: aMethod
         -- Debug println: "stack: {aMethod home name}#{aMethod selector name}".

@@ -36,6 +36,7 @@ import .output_ext
 import .random_target_ext
 import .record_target_ext
 import .selector_target_ext
+-- FIXME: should be string_ext
 import .string.String
 import .stringOutput.StringOutput
 import .system_target_ext

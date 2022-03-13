@@ -1,13 +1,13 @@
 define InstanceMethods
 {
      #name
-     -> { signature: [], vars: 0,
+     -> { signature: [], vars: 0, returnType: String,
           body: "struct FooBytes* name = PTR(FooClass, ctx->receiver.datum)->name;
                  return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = name } };"
           },
 
      #classOf
-     -> { signature: [], vars: 0,
+     -> { signature: [], vars: 0, returnType: Class,
           body: "struct FooClass* classOf = ctx->receiver.class;
                  return (struct Foo)\{ .class = classOf->metaclass, .datum = \{ .ptr = classOf } };"
           },
@@ -67,13 +67,17 @@ define InstanceMethods
                  \}
 
                  return ctx->frame[0];" },
+     #includes:
+     -> { signature: [Any], vars: 0, returnType: Boolean,
+          body: "return foo_class_includes(ctx, PTR(FooClass, receiver.datum), arg1);"
+          },
 
      #hash
-     -> { signature: [], vars: 0,
+     -> { signature: [], vars: 0, returnType: Integer,
           body: "return FOO_INTEGER(MASK_SIGN(foo_identity_hash(receiver.datum.ptr)));" },
 
      #subclass:interfaces:methods:
-     -> { signature: [String, Array, Array], vars: 1,
+     -> { signature: [String, Array, Array], vars: 1, returnType: Class,
           body: "struct FooArray* methods = PTR(FooArray, ctx->frame[2].datum);
                  struct FooClass* newclass
                    = foo_alloc(ctx, sizeof(struct FooClass)
@@ -129,7 +133,7 @@ define InstanceMethods
         },
 
      #new:layout:interfaces:methods:
-     -> { signature: [String, Layout, Array, Array], vars: 1,
+     -> { signature: [String, Layout, Array, Array], vars: 1, returnType: Class,
           body: "struct FooArray* methods = PTR(FooArray, ctx->frame[3].datum);
                  struct FooClass* newclass
                    = foo_alloc(ctx, sizeof(struct FooClass)
