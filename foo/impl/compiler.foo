@@ -39,7 +39,7 @@ class Compiler { source target system prelude stackSize addressSanitizer }
              source: (system files / source) readString
              target: system files / target
              system: system
-             prelude: ["lang", "prelude"]
+             prelude: ["lang", "target_prelude"]
              -- 8MiB, default tends to be 1MiB, which is too
              -- little for self-compilation, let alone a metacircular
              -- REPL.

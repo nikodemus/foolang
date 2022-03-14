@@ -44,7 +44,7 @@ class REPL { system env translator }
                                  "lib"      -> system files / "foo/lib",
                                  "examples" -> system files / "foo/examples" }.
         let env = Environment modules: modules
-                      ; importPrelude: ["lang", "prelude"].
+                      ; importPrelude: ["lang", "target_prelude"].
         REPL system: system
              env: env
              translator: (SyntaxTranslator env: env)!

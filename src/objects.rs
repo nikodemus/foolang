@@ -669,7 +669,7 @@ impl Foolang {
     pub fn here() -> Foolang {
         let mut roots = HashMap::new();
         roots.insert(".".to_string(), std::env::current_dir().unwrap());
-        Foolang::new(Path::new("foo/prelude.foo"), roots).unwrap()
+        Foolang::new(Path::new("foo/lang/bootstrap_prelude.foo"), roots).unwrap()
     }
 
     pub fn root(&self) -> &Path {
