@@ -29,7 +29,7 @@ class Interpreter { system }
         let source = (system files / program) readString.
         let builtinEnv = Environment modules: modules.
         let env = builtinEnv
-                      ; importPrelude: ["lang", "prelude"]
+                      ; importPrelude: ["lang", "target_prelude"]
                       ; load: source.
         let main = env global: "Main".
         main eval run: args in: system!

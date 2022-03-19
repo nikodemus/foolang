@@ -66,13 +66,13 @@ interface TranspilerTest
                testing: "transpile:expectCompilerError:"!
 
     method transpileWithPrelude: string expect: output
-        self prelude: ["lang", "prelude"] asList
+        self prelude: ["lang", "target_prelude"] asList
              transpile: string
              ok: True
              expect: output!
 
     method transpileWithPrelude: string check: block
-        self prelude: ["lang", "prelude"] asList
+        self prelude: ["lang", "target_prelude"] asList
              transpile: string
              ok: True
              check: block!
@@ -1002,12 +1002,12 @@ class TestTranspileSystem { assert system }
     method test_System_currentDirectory
         self transpile: "class Main \{}
                              direct method run: command in: system
-                                 let path = system currentDirectory / \"foo/prelude.foo\".
+                                 let path = system currentDirectory / \"foo/foo.foo\".
                                  system output writeString: path pathname.
                                  path exists
                                      ifTrue: \{ system output writeString: \" ok!\" }!
                          end"
-            expect: ".//foo/prelude.foo ok!"!
+            expect: ".//foo/foo.foo ok!"!
 end
 
 class TestTranspileExtend { assert system }

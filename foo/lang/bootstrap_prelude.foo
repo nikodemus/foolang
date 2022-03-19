@@ -1,0 +1,49 @@
+import .any.Any
+import .array.Array
+import .block.Block
+import .block.Function
+import .boolean_ext
+import .byte.Byte
+import .byteArray_ext
+import .character_host.Character
+import .class_host_ext
+import .closure_ext
+import .collection.Collection
+import .dictionary_host_ext
+import .exception.DivideByZero
+import .exception.DoesNotUnderstand
+import .exception.Error
+import .exception.Panic
+import .exception.RequiredMethodMissing
+import .exception.TypeError
+import .file_ext
+import .filepath_ext
+import .filestream_ext
+import .float_ext
+import .integer_ext
+import .interface_host_ext
+import .interval.Interval
+import .iterable.Iterable
+import .layout_host.Layout
+import .list.List
+import .number.Number
+import .object.Object
+import .ordered.Ordered
+import .output_ext
+import .random_host_ext
+import .record_host_ext
+import .selector_host.Selector
+import .string.String
+import .stringOutput.StringOutput
+import .system_host.System
+import .system_random_host.SystemRandom
+import .testSuite.TestSuite
+import .time_ext
+import .build_info
+
+class Foolang {}
+    direct method isSelfHosted
+        False!
+    direct method version
+        "{build_info.Version}-bootstrap-evaluator"!
+end

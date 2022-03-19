@@ -72,7 +72,7 @@ fn foo_main() {
                 .value_name("PRELUDE")
                 .help("Override standard prelude.")
                 .takes_value(true)
-                .default_value("foo/prelude.foo")
+                .default_value("foo/lang/bootstrap_prelude.foo")
                 .multiple(false),
         );
     let matches = app.clone().get_matches();

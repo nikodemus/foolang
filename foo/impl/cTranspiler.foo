@@ -37,7 +37,7 @@ define CEscapes
 define Tracer NullTracer!
 
 class BuiltinMethod { home selector definition isDirect }
-    is Object
+    is AstMethod
 
     direct method forEach: builtins in: home direct: areDirect
         let dict = Dictionary new.
@@ -62,12 +62,6 @@ class BuiltinMethod { home selector definition isDirect }
         True!
     method isBuiltin
         True!
-    method isConstructor
-        False!
-    method isStandard
-        False!
-    method isRequired
-        False!
     method arity
         definition signature size!
     method frameSize
