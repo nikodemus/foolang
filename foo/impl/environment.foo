@@ -17,6 +17,9 @@ import .utils.Debug
 class GenericDelegator { target }
     is AstMethod
 
+    method isDirect
+        True!
+
     method selector
         #perform:with:!
 
@@ -27,6 +30,9 @@ end
 
 class TypecheckDelegator { target }
     is AstMethod
+
+    method isDirect
+        True!
 
     method selector
         #typecheck:!
