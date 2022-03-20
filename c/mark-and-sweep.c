@@ -150,7 +150,9 @@ void foo_mark_class_list(void* ptr) {
 void foo_mark_class(void* ptr)
 {
   struct FooClass* class = ptr;
-  ENTER_TRACE("mark_class %p (%s)", class, class->name->data);
+  ENTER_TRACE("mark_class %p", class);
+  DEBUG_GC(" name = %p", class->name);
+  DEBUG_GC(" (%s)", class->name->data);
   assert(class);
   if (class->header.allocation == HEAP && foo_mark_live(class)) {
     foo_mark_bytes(class->name);
