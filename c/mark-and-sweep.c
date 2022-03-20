@@ -12,7 +12,7 @@ size_t gc_trace_depth = 0;
 #define EXIT_TRACE() if (trace_gc) { gc_trace_depth--; if (!gc_trace_depth) fprintf(stderr, "\n"); }
 
 #if 0
-#define DEBUG_GC(...) { fprintf(stderr, __VA_ARGS__); fflush(stderr); }
+#define DEBUG_GC(...) if (trace_gc) { fprintf(stderr, __VA_ARGS__); fflush(stderr); }
 #else
 #define DEBUG_GC(...)
 #endif
