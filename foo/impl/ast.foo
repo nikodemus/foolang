@@ -243,8 +243,13 @@ interface AstMethodHome
             values: methods!
 end
 
-class AstBuiltin { global value }
+class AstBuiltin { global value compilerInfo }
     is AstMethodHome
+
+    direct method global: global value: value
+        self global: global
+             value: value
+             compilerInfo: List new!
 
     method eval
         global hasValue
@@ -311,7 +316,7 @@ interface AstDefinition
         self!
 end
 
-class AstDefine { global body frameSize }
+class AstDefine { global body frameSize compilerInfo }
     is AstDefinition
 
     direct method name: name
@@ -321,15 +326,13 @@ class AstDefine { global body frameSize }
         let global = env global: name.
         let theDefine = self global: global
                              body: body
-                             frameSize: frameSize.
+                             frameSize: frameSize
+                             compilerInfo: List new.
         global define: theDefine.
         theDefine!
 
     method name
         global name!
-
-    method compilerInfo
-        global compilerInfo!
 
     method isDynamic
         global isDynamic!
@@ -382,7 +385,7 @@ define StandardDirectMethodSelectors
     [#includes:, #name, #classOf]!
 
 class AstInterface { name _interfaces _directMethods _instanceMethods _allInterfaces
-                     global _env }
+                     global _env compilerInfo }
     is AstDefinition
     is AstMethodHome
 
@@ -397,7 +400,8 @@ class AstInterface { name _interfaces _directMethods _instanceMethods _allInterf
                                _instanceMethods: False
                                _allInterfaces: False
                                global: global
-                               _env: env.
+                               _env: env
+                               compilerInfo: List new.
         global define: theInterface.
         theInterface!
 
@@ -415,9 +419,6 @@ class AstInterface { name _interfaces _directMethods _instanceMethods _allInterf
 
     method isClass
         False!
-
-    method compilerInfo
-        global compilerInfo!
 
     method _interfaces
         _interfaces!
@@ -456,7 +457,7 @@ end
 
 class AstClass { name superclass _slots
                  _interfaces _directMethods _instanceMethods
-                 _allInterfaces global _env }
+                 _allInterfaces global _env compilerInfo }
     is AstDefinition
     is AstMethodHome
 
@@ -485,7 +486,8 @@ class AstClass { name superclass _slots
                            _instanceMethods: False
                            _allInterfaces: False
                            global: global
-                           _env: env.
+                           _env: env
+                           compilerInfo: List new.
         isBuiltin
             ifTrue: { global redefine: theClass }
             ifFalse: { global define: theClass }.
@@ -505,7 +507,8 @@ class AstClass { name superclass _slots
                            _instanceMethods: False
                            _allInterfaces: False
                            global: global
-                           _env: env.
+                           _env: env
+                           compilerInfo: List new.
         global define: theClass.
         theClass!
 
@@ -516,9 +519,6 @@ class AstClass { name superclass _slots
         -- This should always be a NOP for AstClass -- make sure it is.
         new is global
             assert: "Cannot accept a new global for AstClass!"!
-
-    method compilerInfo
-        global compilerInfo!
 
     method ifSuperclass: then ifNot: else
         superclass is False
@@ -898,8 +898,7 @@ interface AstGlobalVariable
             _value: False
             _state: _Unevaluated
             _definition: False
-            sources: List new
-            compilerInfo: List new!
+            sources: List new!
 
     direct method name: name definition: definition
         self
@@ -908,8 +907,10 @@ interface AstGlobalVariable
             _value: False
             _state: _Unevaluated
             _definition: definition
-            sources: List new
-            compilerInfo: List new!
+            sources: List new!
+
+    method compilerInfo
+        self definition compilerInfo!
 
     method isBuiltin
         self isDefined
@@ -998,8 +999,7 @@ class AstGlobal { name::String
                   _value
                   _state
                   _definition
-                  sources
-                  compilerInfo }
+                  sources }
     is AstGlobalVariable
 
     method isDynamic
@@ -1079,8 +1079,7 @@ class AstDynamic { name::String
                    _value
                    _state
                    _definition
-                   sources
-                   compilerInfo }
+                   sources }
     is AstGlobalVariable
 
     -- FIXME: AstDefine should include type information.

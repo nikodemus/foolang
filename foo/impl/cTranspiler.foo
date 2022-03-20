@@ -59,7 +59,8 @@ class BuiltinMethod { home selector definition isDirect }
     method hasNonLocalReturns
         False!
     method stackContext
-        True!
+        -- Closure methods need more care.
+        (home value is Closure) not!
     method isBuiltin
         True!
     method arity
@@ -393,12 +394,6 @@ class CompilerDictionary { list }
         list = all!
 end
 
-class CompilerRecordClass { definition compilerInfo }
-    direct method new: theClass
-        self definition: theClass
-             compilerInfo: List new!
-end
-
 class CTranspiler { output selectorMap closureFunctions
                     constants variables tmpCounter
                     globals globalsCounter
@@ -730,7 +725,8 @@ class CTranspiler { output selectorMap closureFunctions
 
     method _astClassOf: value
         (Record includes: value)
-            ifTrue: { return self _recordClassFromRecord: value }.
+            ifTrue: { let recordClass = self _recordClassFromRecord: value.
+                      return recordClass definition }.
         -- KLUDGE: Dictionary is builtin on bootstrap host, so
         -- env classes don't know about it. Instead of this
         -- should somehow include it it compiler builtins,
@@ -753,8 +749,10 @@ class CTranspiler { output selectorMap closureFunctions
                        intern: (StringOutput
                                     with: { |out|
                                             keys do: { |each| out print: each }}).
-        self _ensureRecordClass: { name: name,
-                                   slots: keys }!
+        let recordClass = env _ensureRecordClass: { name: name,
+                                                     slots: keys }.
+        self declare: recordClass.
+        recordClass!
 
     method _writeValue: value _to: out
         -- Tracer _writeValue: value.
@@ -962,38 +960,16 @@ class CTranspiler { output selectorMap closureFunctions
         output println: ";".
         output newline!
 
-    method _ensureRecordClass: aRecord
-        let aRecordClass = recordClasses
-            at: aRecord name name -- Selector don't play nice in bootstrap host dictionary!
-            ifNonePut: { self _createRecordClass: aRecord }.
-        self declare: aRecordClass.
-        aRecordClass definition!
-
-    method _createRecordClass: aRecord
-        let name = String concat: ["Record_", aRecord name name replace: ":" with: "$"].
-        let theClass = AstClass
-                           name: name
-                           slots: (aRecord slots
-                                       collectWithIndex: { |each index|
-                                                           AstSlot name: each
-                                                                   index: index
-                                                                   type: Any })
-                           interfaces: [env global: "Record"]
-                           env: env.
-        theClass directMethods: [].
-        theClass instanceMethods: [].
-        CompilerRecordClass
-            new: theClass!
-
     method visitRecord: aRecord
         -- Tracer visitRecord: aRecord.
-        let recordClass = self _ensureRecordClass: aRecord.
+        let recordClass = env _ensureRecordClass: aRecord.
+        self declare: recordClass.
         output print: "(\{ ".
         let args = aRecord values
                        collect: { |each| self _visitTemp: each }.
         output print: "foo_send(ctx".
         output print: ", &{Name mangleSelector: aRecord name}".
-        output print: ", {self mangleGlobal: recordClass}".
+        output print: ", {self mangleGlobal: recordClass definition}".
         output print: ", ".
         output print: args size.
         args

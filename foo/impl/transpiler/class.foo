@@ -78,10 +78,7 @@ define InstanceMethods
 
      #subclass:interfaces:methods:
      -> { signature: [String, Array, Array], vars: 1, returnType: Class,
-          body: "struct FooArray* methods = PTR(FooArray, ctx->frame[2].datum);
-                 struct FooClass* newclass
-                   = foo_alloc(ctx, sizeof(struct FooClass)
-                               + methods->size * sizeof(struct FooMethod));
+          body: "// Build inheritance list
                  struct FooClass* super = PTR(FooClass, ctx->receiver.datum);
                  struct FooArray* interfaces = PTR(FooArray, ctx->frame[1].datum);
                  struct FooClassList* inherited = FooClassList_alloc(ctx, interfaces->size + 1);
@@ -98,6 +95,12 @@ define InstanceMethods
                      foo_panicf(ctx, \"Superclass has no layout: %s\", super->name->data);
                  \}
 
+                 // Allocate the new class: must use _no_gc since the inherited
+                 // class list is not visible to GC yet!
+                 struct FooArray* methods = PTR(FooArray, ctx->frame[2].datum);
+                 struct FooClass* newclass
+                   = foo_alloc_no_gc(ctx, sizeof(struct FooClass)
+                                     + methods->size * sizeof(struct FooMethod));
                  newclass->header.allocation = HEAP;
                  newclass->name = PTR(FooBytes, ctx->frame[0].datum);
                  newclass->metaclass = super->metaclass;
@@ -134,12 +137,7 @@ define InstanceMethods
 
      #new:layout:interfaces:methods:
      -> { signature: [String, Layout, Array, Array], vars: 1, returnType: Class,
-          body: "struct FooArray* methods = PTR(FooArray, ctx->frame[3].datum);
-                 struct FooClass* newclass
-                   = foo_alloc(ctx, sizeof(struct FooClass)
-                               + methods->size * sizeof(struct FooMethod));
-
-                 struct FooArray* interfaces = PTR(FooArray, ctx->frame[2].datum);
+          body: "struct FooArray* interfaces = PTR(FooArray, ctx->frame[2].datum);
                  struct FooClassList* inherited = FooClassList_alloc(ctx, interfaces->size);
                  for (size_t i = 0; i < interfaces->size; i++) \{
                      struct Foo obj = interfaces->data[i];
@@ -147,6 +145,12 @@ define InstanceMethods
                      inherited->data[i] = obj.datum.ptr;
                  }
 
+                 // Allocate the new class: must use _no_gc since the inherited
+                 // class list is not visible to GC yet!
+                 struct FooArray* methods = PTR(FooArray, ctx->frame[3].datum);
+                 struct FooClass* newclass
+                   = foo_alloc(ctx, sizeof(struct FooClass)
+                               + methods->size * sizeof(struct FooMethod));
                  newclass->header.allocation = HEAP;
                  newclass->name = PTR(FooBytes, ctx->frame[0].datum);
                  newclass->metaclass = PTR(FooClass, ctx->receiver.datum);

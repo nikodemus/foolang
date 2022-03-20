@@ -7,6 +7,7 @@ import .ast.AstGlobal
 import .ast.AstInterface
 import .ast.AstLexicalRef
 import .ast.AstMethod
+import .ast.AstSlot
 import .ast.AstSlotRef
 import .astInterpreter.AstInterpreter
 import .parser.Parser
@@ -224,8 +225,26 @@ class Environment { parent
                     globals
                     builtins
                     modules
-                    classes }
+                    classes
+                    recordClasses }
     is Object
+
+    method _ensureRecordClass: aRecord
+        recordClasses
+            at: aRecord name name -- Selector don't play nice in bootstrap host dictionary!
+            ifNonePut: { let name = String concat: ["Record_", aRecord name name replace: ":" with: "$"].
+                         let theClass = AstClass
+                                            name: name
+                                            slots: (aRecord slots
+                                                        collectWithIndex: { |each index|
+                                                                            AstSlot name: each
+                                                                                    index: index
+                                                                                    type: Any })
+                                            interfaces: [self global: "Record"]
+                                            env: self.
+                         theClass directMethods: [].
+                         theClass instanceMethods: [].
+                         theClass }!
 
     method describe
         Debug println: "---".
@@ -253,7 +272,8 @@ class Environment { parent
              globals: Dictionary new
              builtins: Dictionary new
              modules: (ModuleDictionary new: modules)
-             classes: classes)
+             classes: classes
+             recordClasses: Dictionary new)
         initializeBuiltins!
 
     method copyForModule: modules
@@ -265,7 +285,8 @@ class Environment { parent
             globals: Dictionary new
             builtins: builtins
             modules: modules
-            classes: classes!
+            classes: classes
+            recordClasses: recordClasses!
 
     method initializeBuiltins
         AllBuiltins defineIn: self.
@@ -289,7 +310,8 @@ class Environment { parent
             globals: globals
             builtins: builtins
             modules: modules
-            classes: classes!
+            classes: classes
+            recordClasses: recordClasses!
 
     method augment: bindings
         Environment
@@ -300,7 +322,9 @@ class Environment { parent
             globals: globals
             builtins: builtins
             modules: modules
-            classes: classes!
+            classes: classes
+            recordClasses: recordClasses!
+
 
     method makeGlobal: name
         (name startsWith: "$")

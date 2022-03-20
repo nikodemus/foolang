@@ -7,12 +7,56 @@
 #include <assert.h>
 
 bool trace_gc = false;
+bool identify_gc_epoch = false;
+
 size_t gc_trace_depth = 0;
-#define ENTER_TRACE(...) if (trace_gc) { fprintf(stderr, "\n"); for(size_t i = 0; i < gc_trace_depth; i++) fprintf(stderr, "  "); fprintf(stderr, "%zu: ", gc_trace_depth); fprintf(stderr, __VA_ARGS__); gc_trace_depth++; }
-#define EXIT_TRACE() if (trace_gc) { gc_trace_depth--; if (!gc_trace_depth) fprintf(stderr, "\n"); }
+size_t gc_epoch = 0;
+
+size_t gc_trace_start_epoch = 0;
+size_t gc_trace_end_epoch = 0;
+
+size_t secondary_gc_epoch_start = 0;
+size_t secondary_gc_epoch_end = 0;
+
+static inline size_t zmin(size_t a, size_t b) {
+  if (a <= b)
+    return a;
+  else
+    return b;
+}
+#define ENTER_TRACE(...)                                                \
+  if (trace_gc) {                                                       \
+    fprintf(stderr, "\n");                                              \
+    for (size_t i = 0; i < zmin(120,gc_trace_depth); i++)               \
+      fprintf(stderr, " ");                                             \
+    fprintf(stderr, "%zu: ", gc_trace_depth);                           \
+    fprintf(stderr, __VA_ARGS__);                                       \
+    fflush(stderr);                                                     \
+    gc_trace_depth++;                                                   \
+  }                                                                     \
+
+#define EXIT_TRACE()                                                    \
+  if (trace_gc) {                                                       \
+    gc_trace_depth--;                                                   \
+    if (!gc_trace_depth)                                                \
+      fprintf(stderr, "\n");                                            \
+  }                                                                     \
+
+#define EXIT_TRACE_VERBOSE(...)                                         \
+  if (trace_gc) {                                                       \
+    gc_trace_depth--;                                                   \
+    fprintf(stderr, "\n");                                              \
+    for (size_t i = 0; i < zmin(120,gc_trace_depth); i++)               \
+      fprintf(stderr, " ");                                             \
+    fprintf(stderr, "%zu: ", gc_trace_depth);                           \
+    fprintf(stderr, __VA_ARGS__);                                       \
+    if (!gc_trace_depth)                                                \
+      fprintf(stderr, "\n");                                            \
+    fflush(stderr);                                                     \
+  }                                                                     \
 
 #if 0
-#define DEBUG_GC(...) { fprintf(stderr, __VA_ARGS__); fflush(stderr); }
+#define DEBUG_GC(...) if (trace_gc) { fprintf(stderr, __VA_ARGS__); fflush(stderr); }
 #else
 #define DEBUG_GC(...)
 #endif
@@ -75,9 +119,9 @@ void foo_mark_filestream(void* ptr) {
 void foo_mark_context(struct FooContext* ctx);
 
 void foo_mark_object(struct Foo obj) {
-  ENTER_TRACE("mark_object");
+  ENTER_TRACE("mark_object datum=%p, class=%p", obj.datum.ptr, obj.class);
   if (obj.class) {
-    DEBUG_GC(" %p (%s)", obj.datum.ptr, obj.class->name->data);
+    DEBUG_GC(" (%s)", obj.class->name->data);
     foo_mark_class(obj.class);
     obj.class->mark(obj.datum.ptr);
   } else {
@@ -144,7 +188,9 @@ void foo_mark_class_list(void* ptr) {
 void foo_mark_class(void* ptr)
 {
   struct FooClass* class = ptr;
-  ENTER_TRACE("mark_class %p (%s)", class, class->name->data);
+  ENTER_TRACE("mark_class %p", class);
+  DEBUG_GC(" name = %p", class->name);
+  DEBUG_GC(" (%s)", class->name->data);
   assert(class);
   if (class->header.allocation == HEAP && foo_mark_live(class)) {
     foo_mark_bytes(class->name);
@@ -192,8 +238,9 @@ void foo_mark_cleanup(struct FooCleanup* cleanup) {
 }
 
 void foo_mark_context(struct FooContext* ctx) {
-  ENTER_TRACE("mark_context");
+  ENTER_TRACE("mark_context %p", ctx);
   if (ctx) {
+    DEBUG_GC(" type=%d, alloc=%d", ctx->type, ctx->header.allocation);
     DEBUG_GC(" depth: %u, size: %zu", ctx->depth, ctx->size);
     if (ctx->type == METHOD_CONTEXT) {
       DEBUG_GC(" selector: %s", ctx->method->selector->name->data);
@@ -281,10 +328,7 @@ void foo_sweep() {
   }
 }
 
-void foo_gc(struct FooContext* ctx) {
-  FOO_DEBUG("/foo_gc begin");
-  ENTER_TRACE("GC\n");
-
+void foo_gc_impl(struct FooContext* ctx) {
   // Mark everything dead
   struct FooAlloc* head = allocations;
   while (head) {
@@ -294,17 +338,43 @@ void foo_gc(struct FooContext* ctx) {
 
   // Mark everything from ctx live
   if (ctx->vars) {
-    ENTER_TRACE("vars");
+    ENTER_TRACE("mark root vars");
     foo_mark_array(ctx->vars);
     EXIT_TRACE();
   }
+  ENTER_TRACE("mark root context");
   foo_mark_context(ctx);
+  EXIT_TRACE();
 
   // Free dead things
+  ENTER_TRACE("sweep");
   foo_sweep();
-
   EXIT_TRACE();
-  FOO_DEBUG("/foo_gc end");
+}
+
+void foo_gc(struct FooContext* ctx) {
+    ++gc_epoch;
+
+    // Check if we're in an epoch we want to trace.
+    bool prev_trace = trace_gc;
+    if (gc_trace_start_epoch <= gc_epoch && gc_epoch <= gc_trace_end_epoch) {
+      trace_gc = true;
+    }
+    if (!trace_gc && identify_gc_epoch) {
+      fprintf(stderr, "GC (epoch=%zu)\n", gc_epoch);
+    }
+
+    ENTER_TRACE("Primary GC (epoch=%zu)\n", gc_epoch);
+    foo_gc_impl(ctx);
+    EXIT_TRACE_VERBOSE("Primary GC (epoch=%zu) complete\n", gc_epoch);
+    
+    if (secondary_gc_epoch_start <= gc_epoch && gc_epoch <= secondary_gc_epoch_end) {
+      ENTER_TRACE("secondary GC (epoch=%zu)", gc_epoch);
+      foo_gc_impl(ctx);
+      EXIT_TRACE_VERBOSE("secondary GC (epoch=%zu) complete", gc_epoch);
+    }
+
+    trace_gc = prev_trace;
 }
 
 void* foo_alloc(struct FooContext* sender, size_t size) {

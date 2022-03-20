@@ -3,69 +3,72 @@ define DirectMethods
 
 define InstanceMethods
     { #arity
-          -> {signature: [], vars: 0, returnType: Integer,
-              body: "struct FooClosure* closure = PTR(FooClosure, ctx->receiver.datum);
-return FOO_INTEGER((int64_t)closure->argCount);"},
+          -> { signature: [], vars: 0, returnType: Integer,
+               body: "struct FooClosure* closure = PTR(FooClosure, ctx->receiver.datum);
+                      return FOO_INTEGER((int64_t)closure->argCount);" },
       #apply:
-          -> {signature: [Array], vars: 0,
-              body: "struct FooArray* array = PTR(FooArray, ctx->frame[0].datum);
-struct FooContext* closure_ctx = foo_context_new_closure_array(ctx, array);
-return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
+          -> { signature: [Array], vars: 0,
+               body: "struct FooArray* array = PTR(FooArray, ctx->frame[0].datum);
+                      struct FooContext* closure_ctx = foo_context_new_closure_array(ctx, array);
+                      return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);" },
       #loop
-          -> {signature: [], vars: 0,
-              body: "const struct FooMethod* valueMethod
-  = foo_class_find_method(ctx, receiver.class, &FOO_value);
-for (;;) \{
-    foo_call_method(valueMethod, &FOO_value, ctx, receiver, 0);
-\}
-return FooGlobal_False;"},
+          -> { signature: [], vars: 0,
+               body: "const struct FooMethod* valueMethod
+                        = foo_class_find_method(ctx, receiver.class, &FOO_value);
+                      for (;;) \{
+                          foo_call_method(valueMethod, &FOO_value, ctx, receiver, 0);
+                      \}
+                      return FooGlobal_False;" },
       #hash
           -> { signature: [], vars: 0, returnType: Integer,
                body: "return FOO_INTEGER(MASK_SIGN(foo_identity_hash(receiver.datum.ptr)));" },
       #value
-          -> {signature: [], vars: 0,
-              body: "struct FooContext* closure_ctx = foo_context_new_closure(ctx);
-return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
+          -> { signature: [], vars: 0,
+               body: "struct FooContext* closure_ctx = foo_context_new_closure(ctx);
+                      return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);" },
       #value:
-          -> {signature: [Any], vars: 0,
-              body: "struct FooContext* closure_ctx = foo_context_new_closure(ctx);
-return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
+          -> { signature: [Any], vars: 0,
+               body: "struct FooContext* closure_ctx = foo_context_new_closure(ctx);
+                      return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);" },
       #value:value:
-          -> {signature: [Any, Any], vars: 0,
-              body: "struct FooContext* closure_ctx = foo_context_new_closure(ctx);
-return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
+          -> { signature: [Any, Any], vars: 0,
+               body: "struct FooContext* closure_ctx = foo_context_new_closure(ctx);
+                      return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);" },
       #whileFalse:
-          -> {signature: [Any], vars: 0,
-              body: "const struct FooMethod* testMethod
-  = foo_class_find_method(ctx, receiver.class, &FOO_value);
-const struct FooMethod* blockMethod
-  = foo_class_find_method(ctx, arg1.class, &FOO_value);
-while (foo_eq(FooGlobal_False, foo_call_method(testMethod, &FOO_value, ctx, receiver, 0))) \{
-    foo_call_method(blockMethod, &FOO_value, ctx, arg1, 0);
-};
-return FooGlobal_False;"},
+          -> { signature: [Any], vars: 0,
+               body: "const struct FooMethod* testMethod
+                        = foo_class_find_method(ctx, receiver.class, &FOO_value);
+                      struct Foo arg1 = ctx->frame[0];
+                      const struct FooMethod* blockMethod
+                        = foo_class_find_method(ctx, arg1.class, &FOO_value);
+                      while (foo_eq(FooGlobal_False, foo_call_method(testMethod, &FOO_value, ctx, receiver, 0))) \{
+                          foo_call_method(blockMethod, &FOO_value, ctx, arg1, 0);
+                      \};
+                      return FooGlobal_False;" },
       #whileTrue:
-          -> {signature: [Any], vars: 0,
-              body: "const struct FooMethod* testMethod
-  = foo_class_find_method(ctx, receiver.class, &FOO_value);
-const struct FooMethod* blockMethod
-  = foo_class_find_method(ctx, arg1.class, &FOO_value);
-while (foo_eq(FooGlobal_True, foo_call_method(testMethod, &FOO_value, ctx, receiver, 0))) \{
-    foo_call_method(blockMethod, &FOO_value, ctx, arg1, 0);
-};
-return FooGlobal_False;"},
+          -> { signature: [Any], vars: 0,
+               body: "const struct FooMethod* testMethod
+                        = foo_class_find_method(ctx, receiver.class, &FOO_value);
+                      struct Foo arg1 = ctx->frame[0];
+                      const struct FooMethod* blockMethod
+                        = foo_class_find_method(ctx, arg1.class, &FOO_value);
+                      while (foo_eq(FooGlobal_True, foo_call_method(testMethod, &FOO_value, ctx, receiver, 0))) \{
+                          foo_call_method(blockMethod, &FOO_value, ctx, arg1, 0);
+                      \};
+                      return FooGlobal_False;" },
       #finally:
-          -> {signature: [Closure], vars: 1,
-              body: "struct FooFinally finally = \{
-    .cleanup = \{
-        .function = foo_finally,
-        .next = ctx->cleanup
-    },
-    .closure = foo_class_typecheck(ctx, &FooClass_Closure, ctx->frame[0]).datum.ptr
-};
-ctx->cleanup = &finally.cleanup;
-struct FooContext* closure_ctx = foo_context_new_closure(ctx);
-ctx->frame[1] = PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);
-ctx->cleanup = ctx->cleanup->next;
-foo_finally(ctx, &finally.cleanup);
-return ctx->frame[1];"}}!
+          -> { signature: [Closure], vars: 1,
+               body: "struct FooFinally finally = \{
+                          .cleanup = \{
+                              .function = foo_finally,
+                              .next = ctx->cleanup
+                          \},
+                          .closure = foo_class_typecheck(ctx, &FooClass_Closure, ctx->frame[0]).datum.ptr
+                      \};
+                      ctx->cleanup = &finally.cleanup;
+                      struct FooContext* closure_ctx = foo_context_new_closure(ctx);
+                      ctx->frame[1] = PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);
+                      ctx->cleanup = ctx->cleanup->next;
+                      foo_finally(ctx, &finally.cleanup);
+                      return ctx->frame[1];" }
+}!

@@ -63,9 +63,9 @@ struct Foo {
 };
 
 enum FooAllocType {
-  STATIC,
-  HEAP,
-  STACK
+  STATIC = 0,
+  HEAP = 1,
+  STACK = 2,
 };
 
 struct FooHeader {
@@ -111,10 +111,10 @@ struct FooUnbind {
 };
 
 enum FooContextType {
-    METHOD_CONTEXT,
-    CLOSURE_CONTEXT,
-    UNWIND_CONTEXT,
-    ROOT_CONTEXT
+    METHOD_CONTEXT = 0,
+    CLOSURE_CONTEXT = 1,
+    UNWIND_CONTEXT = 2,
+    ROOT_CONTEXT = 3,
 };
 
 // FIXME: vars doesn't really belong in context, but easier right now.
