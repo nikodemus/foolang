@@ -81,9 +81,9 @@ void foo_mark_filestream(void* ptr) {
 void foo_mark_context(struct FooContext* ctx);
 
 void foo_mark_object(struct Foo obj) {
-  ENTER_TRACE("mark_object");
+  ENTER_TRACE("mark_object datum=%p, class=%p", obj.datum.ptr, obj.class);
   if (obj.class) {
-    DEBUG_GC(" %p (%s)", obj.datum.ptr, obj.class->name->data);
+    DEBUG_GC(" (%s)", obj.class->name->data);
     foo_mark_class(obj.class);
     obj.class->mark(obj.datum.ptr);
   } else {
