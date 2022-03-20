@@ -7,15 +7,16 @@
 #include <assert.h>
 
 bool trace_gc = false;
-size_t gc_trace_depth = 0;
+bool identify_gc_epoch = true;
 
+size_t gc_trace_depth = 0;
 size_t gc_epoch = 0;
 
-size_t gc_trace_start_epoch = 0;
-size_t gc_trace_end_epoch = 0;
+size_t gc_trace_start_epoch = 338;
+size_t gc_trace_end_epoch = 338;
 
-size_t secondary_gc_epoch_start = 0;
-size_t secondary_gc_epoch_end = 0;
+size_t secondary_gc_epoch_start = 337;
+size_t secondary_gc_epoch_end = 337;
 
 static inline size_t zmin(size_t a, size_t b) {
   if (a <= b)
@@ -300,15 +301,6 @@ void foo_sweep() {
 }
 
 void foo_gc_impl(struct FooContext* ctx) {
-  FOO_DEBUG("/foo_gc begin");
-
-  // Check if we're in an epoch we want to trace.
-  bool prev_trace = trace_gc;
-  if (gc_trace_start_epoch <= gc_epoch && gc_epoch <= gc_trace_end_epoch) {
-    trace_gc = true;
-  }
-
-  ENTER_TRACE("GC (epoch=%zu, sp=%p)\n", gc_epoch, __builtin_frame_address(0));
   // Mark everything dead
   struct FooAlloc* head = allocations;
   while (head) {
@@ -330,22 +322,31 @@ void foo_gc_impl(struct FooContext* ctx) {
   ENTER_TRACE("sweep");
   foo_sweep();
   EXIT_TRACE();
-
-  EXIT_TRACE();
-  FOO_DEBUG("/foo_gc end");
-
-  // Restore trace setting.
-  trace_gc = prev_trace;
 }
 
 void foo_gc(struct FooContext* ctx) {
     ++gc_epoch;
+
+    // Check if we're in an epoch we want to trace.
+    bool prev_trace = trace_gc;
+    if (gc_trace_start_epoch <= gc_epoch && gc_epoch <= gc_trace_end_epoch) {
+      trace_gc = true;
+    }
+    if (!trace_gc && identify_gc_epoch) {
+      fprintf(stderr, "GC (epoch=%zu)\n", gc_epoch);
+    }
+
+    ENTER_TRACE("Primary GC (epoch=%zu)\n", gc_epoch);
     foo_gc_impl(ctx);
+    EXIT_TRACE();
+    
     if (secondary_gc_epoch_start <= gc_epoch && gc_epoch <= secondary_gc_epoch_end) {
       ENTER_TRACE("secondary GC (epoch=%zu)", gc_epoch);
       foo_gc_impl(ctx);
       EXIT_TRACE();
     }
+
+    trace_gc = prev_trace;
 }
 
 void* foo_alloc(struct FooContext* sender, size_t size) {
