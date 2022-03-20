@@ -7,16 +7,16 @@
 #include <assert.h>
 
 bool trace_gc = false;
-bool identify_gc_epoch = true;
+bool identify_gc_epoch = false;
 
 size_t gc_trace_depth = 0;
 size_t gc_epoch = 0;
 
-size_t gc_trace_start_epoch = 341;
-size_t gc_trace_end_epoch = 341;
+size_t gc_trace_start_epoch = 0;
+size_t gc_trace_end_epoch = 0;
 
-size_t secondary_gc_epoch_start = 340;
-size_t secondary_gc_epoch_end = 340;
+size_t secondary_gc_epoch_start = 0;
+size_t secondary_gc_epoch_end = 0;
 
 static inline size_t zmin(size_t a, size_t b) {
   if (a <= b)

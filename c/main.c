@@ -734,20 +734,10 @@ struct Foo foo_method_name(const struct FooMethod* method,
   return (struct Foo){ .class = &FooClass_String, .datum = { .ptr = class->name } };
 }
 
-void foo_assert_heap_context(struct FooContext* ctx) {
-  while (ctx) {
-    if (ctx->header.allocation == STACK)
-      foo_panicf(ctx, "Stack allocated context in closure, from %s#%s", ctx->method->home->name->data, ctx->method->selector->name->data);
-    foo_assert_heap_context(ctx->outer_context);
-    ctx = ctx->sender;
-  }
-}
-
 struct Foo foo_closure_new(struct FooContext* sender,
                            FooClosureFunction function,
                            size_t argCount,
                            size_t frameSize) {
-  foo_assert_heap_context(sender);
   struct FooClosure* closure = foo_alloc(sender, sizeof(struct FooClosure));
   closure->context = sender;
   closure->function = function;
