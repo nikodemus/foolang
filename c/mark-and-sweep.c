@@ -200,8 +200,9 @@ void foo_mark_cleanup(struct FooCleanup* cleanup) {
 }
 
 void foo_mark_context(struct FooContext* ctx) {
-  ENTER_TRACE("mark_context");
+  ENTER_TRACE("mark_context %p", ctx);
   if (ctx) {
+    DEBUG_GC(" type=%d, alloc=%d", ctx->type, ctx->header.allocation);
     DEBUG_GC(" depth: %u, size: %zu", ctx->depth, ctx->size);
     if (ctx->type == METHOD_CONTEXT) {
       DEBUG_GC(" selector: %s", ctx->method->selector->name->data);
