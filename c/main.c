@@ -736,8 +736,8 @@ struct Foo foo_method_name(const struct FooMethod* method,
 
 void foo_assert_heap_context(struct FooContext* ctx) {
   while (ctx) {
-    if (ctx->header.allocation != HEAP)
-      foo_panicf(ctx, "Context not heap allocated!");
+    if (ctx->header.allocation == STACK)
+      foo_panicf(ctx, "Stack allocated context in closure, from %s#%s", ctx->method->home->name->data, ctx->method->selector->name->data);
     foo_assert_heap_context(ctx->outer_context);
     ctx = ctx->sender;
   }
