@@ -24,8 +24,36 @@ static inline size_t zmin(size_t a, size_t b) {
   else
     return b;
 }
-#define ENTER_TRACE(...) if (trace_gc) { fprintf(stderr, "\n"); for(size_t i = 0; i < zmin(120,gc_trace_depth); i++) fprintf(stderr, " "); fprintf(stderr, "%zu: ", gc_trace_depth); fprintf(stderr, __VA_ARGS__); fflush(stderr); gc_trace_depth++; }
-#define EXIT_TRACE() if (trace_gc) { gc_trace_depth--; if (!gc_trace_depth) fprintf(stderr, "\n"); }
+#define ENTER_TRACE(...)                                                \
+  if (trace_gc) {                                                       \
+    fprintf(stderr, "\n");                                              \
+    for (size_t i = 0; i < zmin(120,gc_trace_depth); i++)               \
+      fprintf(stderr, " ");                                             \
+    fprintf(stderr, "%zu: ", gc_trace_depth);                           \
+    fprintf(stderr, __VA_ARGS__);                                       \
+    fflush(stderr);                                                     \
+    gc_trace_depth++;                                                   \
+  }                                                                     \
+
+#define EXIT_TRACE()                                                    \
+  if (trace_gc) {                                                       \
+    gc_trace_depth--;                                                   \
+    if (!gc_trace_depth)                                                \
+      fprintf(stderr, "\n");                                            \
+  }                                                                     \
+
+#define EXIT_TRACE_VERBOSE(...)                                         \
+  if (trace_gc) {                                                       \
+    gc_trace_depth--;                                                   \
+    fprintf(stderr, "\n");                                              \
+    for (size_t i = 0; i < zmin(120,gc_trace_depth); i++)               \
+      fprintf(stderr, " ");                                             \
+    fprintf(stderr, "%zu: ", gc_trace_depth);                           \
+    fprintf(stderr, __VA_ARGS__);                                       \
+    if (!gc_trace_depth)                                                \
+      fprintf(stderr, "\n");                                            \
+    fflush(stderr);                                                     \
+  }                                                                     \
 
 #if 0
 #define DEBUG_GC(...) if (trace_gc) { fprintf(stderr, __VA_ARGS__); fflush(stderr); }
@@ -338,12 +366,12 @@ void foo_gc(struct FooContext* ctx) {
 
     ENTER_TRACE("Primary GC (epoch=%zu)\n", gc_epoch);
     foo_gc_impl(ctx);
-    EXIT_TRACE();
+    EXIT_TRACE_VERBOSE("Primary GC (epoch=%zu) complete\n", gc_epoch);
     
     if (secondary_gc_epoch_start <= gc_epoch && gc_epoch <= secondary_gc_epoch_end) {
       ENTER_TRACE("secondary GC (epoch=%zu)", gc_epoch);
       foo_gc_impl(ctx);
-      EXIT_TRACE();
+      EXIT_TRACE_VERBOSE("secondary GC (epoch=%zu) complete", gc_epoch);
     }
 
     trace_gc = prev_trace;
