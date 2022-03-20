@@ -59,7 +59,8 @@ class BuiltinMethod { home selector definition isDirect }
     method hasNonLocalReturns
         False!
     method stackContext
-        True!
+        -- Closure methods need more care.
+        (home value is Closure) not!
     method isBuiltin
         True!
     method arity

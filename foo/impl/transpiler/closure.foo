@@ -38,6 +38,7 @@ return PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);"},
           -> {signature: [Any], vars: 0,
               body: "const struct FooMethod* testMethod
   = foo_class_find_method(ctx, receiver.class, &FOO_value);
+struct Foo arg1 = ctx->frame[0];
 const struct FooMethod* blockMethod
   = foo_class_find_method(ctx, arg1.class, &FOO_value);
 while (foo_eq(FooGlobal_False, foo_call_method(testMethod, &FOO_value, ctx, receiver, 0))) \{
@@ -48,6 +49,7 @@ return FooGlobal_False;"},
           -> {signature: [Any], vars: 0,
               body: "const struct FooMethod* testMethod
   = foo_class_find_method(ctx, receiver.class, &FOO_value);
+struct Foo arg1 = ctx->frame[0];
 const struct FooMethod* blockMethod
   = foo_class_find_method(ctx, arg1.class, &FOO_value);
 while (foo_eq(FooGlobal_True, foo_call_method(testMethod, &FOO_value, ctx, receiver, 0))) \{
