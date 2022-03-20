@@ -12,11 +12,11 @@ bool identify_gc_epoch = true;
 size_t gc_trace_depth = 0;
 size_t gc_epoch = 0;
 
-size_t gc_trace_start_epoch = 338;
-size_t gc_trace_end_epoch = 338;
+size_t gc_trace_start_epoch = 341;
+size_t gc_trace_end_epoch = 341;
 
-size_t secondary_gc_epoch_start = 337;
-size_t secondary_gc_epoch_end = 337;
+size_t secondary_gc_epoch_start = 340;
+size_t secondary_gc_epoch_end = 340;
 
 static inline size_t zmin(size_t a, size_t b) {
   if (a <= b)
