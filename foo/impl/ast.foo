@@ -507,7 +507,8 @@ class AstClass { name superclass _slots
                            _instanceMethods: False
                            _allInterfaces: False
                            global: global
-                           _env: env.
+                           _env: env
+                           compilerInfo: List new.
         global define: theClass.
         theClass!
 
