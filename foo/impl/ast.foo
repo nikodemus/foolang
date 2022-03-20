@@ -276,7 +276,7 @@ class AstBuiltin { global value compilerInfo }
     direct method global: global value: value
         self global: global
              value: value
-             compilerInfo: List new!
+             compilerInfo: CompilerInfo new!
 
     method eval
         global hasValue
@@ -345,38 +345,6 @@ interface AstDefinition
 
     method definition
         self!
-end
-
-class AstBuiltin { global value compilerInfo }
-    is AstDefinition
-
-    direct method global: global value: value
-        self global: global
-             value: value
-             compilerInfo: CompilerInfo new!
-
-    method eval
-        global hasValue
-            ifTrue: { global eval }
-            ifFalse: { global value: value }!
-
-    method isBuiltin
-        True!
-
-    method ownInterfaces
-        value interfaces collect: { |each| { value: each } }!
-
-    method visitBy: visitor
-        visitor visitBuiltin: self!
-
-    method __addInterface: anInterface
-        value __addInterface: anInterface!
-
-    method __addDirectMethod: aDirectMethod
-        value __addDirectMethod: aDirectMethod!
-
-    method __addInstanceMethod: anInstanceMethod
-        value __addInstanceMethod: anInstanceMethod!
 end
 
 class AstDefine { global body frameSize compilerInfo }
