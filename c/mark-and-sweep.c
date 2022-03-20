@@ -8,7 +8,13 @@
 
 bool trace_gc = false;
 size_t gc_trace_depth = 0;
-#define ENTER_TRACE(...) if (trace_gc) { fprintf(stderr, "\n"); for(size_t i = 0; i < gc_trace_depth; i++) fprintf(stderr, "  "); fprintf(stderr, "%zu: ", gc_trace_depth); fprintf(stderr, __VA_ARGS__); gc_trace_depth++; }
+static inline size_t zmin(size_t a, size_t b) {
+  if (a <= b)
+    return a;
+  else
+    return b;
+}
+#define ENTER_TRACE(...) if (trace_gc) { fprintf(stderr, "\n"); for(size_t i = 0; i < zmin(120,gc_trace_depth); i++) fprintf(stderr, " "); fprintf(stderr, "%zu: ", gc_trace_depth); fprintf(stderr, __VA_ARGS__); fflush(stderr); gc_trace_depth++; }
 #define EXIT_TRACE() if (trace_gc) { gc_trace_depth--; if (!gc_trace_depth) fprintf(stderr, "\n"); }
 
 #if 0
