@@ -122,6 +122,13 @@ extend AstLexicalRef
         arguments at: self variable index!
 end
 
+extend AstSlotRef
+    method isSimple
+        True!
+    method inlineOn: receiver withArguments: arguments
+        self!
+end
+
 extend AstSelfInstanceRef
     method isSimple
         True!
@@ -131,7 +138,7 @@ end
 
 extend AstMethod
     method isTrivial
-        self body isTrivial!
+        False!
 
     method inlineOn: receiver withArguments: arguments
         let args = arguments
@@ -145,6 +152,24 @@ extend AstMethod
                         inlineOn: receiver
                         withArguments: args)
             type: self returnType!
+end
+
+---
+-- FIXME: need to be able to represent a ctor in ast.
+extend AstConstructorMethod
+    method isTrivial
+        True!
+end
+---
+
+extend AstReaderMethod
+    method isTrivial
+        True!
+end
+
+extend AstDefinedMethod
+    method isTrivial
+        self body isTrivial!
 end
 
 extend AstSend
