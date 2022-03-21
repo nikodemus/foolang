@@ -146,6 +146,10 @@ class CompilerBuiltin { kind value markFunction _interfaces
     method definitionIn: _env
         self!
 
+    -- FIXME: Why both this and above?
+    method definition
+        self!
+
     method _directMethodCache
         _directMethodCache!
 
