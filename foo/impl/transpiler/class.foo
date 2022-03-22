@@ -75,7 +75,7 @@ define InstanceMethods
                  return ctx->frame[0];" },
      #includes:
      -> { signature: [Any], vars: 0, returnType: Boolean,
-          body: "return foo_class_includes(ctx, PTR(FooClass, receiver.datum), arg1);"
+          body: "return foo_class_includes(ctx, PTR(FooClass, receiver.datum), ctx->frame[0]);"
           },
 
      #subclass:interfaces:methods:

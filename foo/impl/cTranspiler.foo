@@ -1353,9 +1353,15 @@ class CTranspiler { output selectorMap closureFunctions
         -- Need to compile the body before we know how big the frame is, this
         -- MUST be before context generation.
         let body = self compileMethodBody: aMethod.
+        -- FIXME: Stack context allocation disabled, since closures currently
+        -- also capture the dynamic stack, meaning GC might see stack-allocated
+        -- contexts overwritten by other data.
+        self generateHeapContextFor: aMethod.
+        ---
         aMethod stackContext
             ifTrue: { self generateStackContextFor: aMethod }
             ifFalse: { self generateHeapContextFor: aMethod }.
+        ---
         aMethod hasNonLocalReturns
             ifTrue: { self generateUnwindFor: aMethod with: body }
             ifFalse: { output print: "    ".

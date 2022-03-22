@@ -51,20 +51,20 @@ else
       #to:do:
           -> { signature: [Integer, Any], vars: 0,
                body: "int64_t from = receiver.datum.int64;
-                      int64_t to = arg1.datum.int64;
+                      int64_t to = ctx->frame[0].datum.int64;
                       const struct FooMethod* valueMethod
-                        = foo_class_find_method(ctx, arg2.class, &FOO_value_);
+                        = foo_class_find_method(ctx, ctx->frame[1].class, &FOO_value_);
                       for (int64_t i = from; i <= to; i++) \{
-                          foo_call_method(valueMethod, &FOO_value_, ctx, arg2, 1, FOO_INTEGER(i));
+                          foo_call_method(valueMethod, &FOO_value_, ctx, ctx->frame[1], 1, FOO_INTEGER(i));
                       \}
                       return receiver;" },
       #times:
           -> { signature: [Any], vars: 0,
                body: "int64_t to = receiver.datum.int64;
                       const struct FooMethod* valueMethod
-                        = foo_class_find_method(ctx, arg1.class, &FOO_value);
+                        = foo_class_find_method(ctx, ctx->frame[0].class, &FOO_value);
                       for (int64_t i = 0; i < to; i++) \{
-                           foo_call_method(valueMethod, &FOO_value, ctx, arg1, 0);
+                           foo_call_method(valueMethod, &FOO_value, ctx, ctx->frame[0], 0);
                       \}
                       return receiver;" },
       #toString
