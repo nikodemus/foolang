@@ -18,7 +18,7 @@ return ctx->receiver;"},
                       if (mod)
                           return FOO_INTEGER(receiver.datum.int64 % mod);
                       else
-                          return foo_send(ctx, &FOO_raise_, FOO_CLASS(DivideByZero), 1, ctx->receiver);" },
+                          return foo_divide_by_zero(ctx);" },
       #integerAdd:
           -> { signature: [Integer], vars: 0, returnType: Integer,
                body: "return FOO_INTEGER(ctx->receiver.datum.int64 + ctx->frame[0].datum.int64);" },
@@ -28,7 +28,7 @@ return ctx->receiver;"},
                       if (div)
                           return FOO_INTEGER(ctx->receiver.datum.int64 / div);
                       else
-                          return foo_send(ctx, &FOO_raise_, FOO_CLASS(DivideByZero), 1, ctx->receiver);" },
+                          return foo_divide_by_zero(ctx);" },
       #integerEq:
           -> { signature: [Integer], vars: 0, returnType: Boolean,
                body: "return FOO_BOOLEAN(ctx->receiver.datum.int64 == ctx->frame[0].datum.int64);" },

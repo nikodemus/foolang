@@ -525,6 +525,13 @@ class Environment { parent
     method builtin: name
         builtins at: name!
 
+    method has: name
+        (builtins has: name)
+            => { return True }.
+        (globals has: name)
+            => { return True }.
+        False!
+
     method global: name
         -- Debug println: "Environment#global: {name}".
         -- Debug println: "has builtins:\n{builtins}".

@@ -449,9 +449,7 @@ class CTranspiler { output selectorMap closureFunctions
         AlwaysEmittedSelectors
             do: { |each| visitor selectorMap map: each }.
         AlwaysEmittedGlobals
-            do: { |each|
-                  let global = env global: each.
-                  visitor declare: global }.
+            do: { |each| visitor tryEmitGlobal: each }.
         -- Important to do this before emitting the builtins,
         -- so that they've been optimized as well.
         let main = Foolang isSelfHosted
@@ -469,6 +467,12 @@ class CTranspiler { output selectorMap closureFunctions
           constants: visitor generateConstants,
           declarations: visitor generateDeclarations,
           selectors: visitor generateSelectors }!
+
+    method tryEmitGlobal: name
+        (env has: name)
+            ifTrue: { let global = env global: name.
+                      self declare: global.
+                      output println: "#define FOO_{name toUppercase}_AVAILABLE" }!
 
     method addTemp
         $home addTemp!
