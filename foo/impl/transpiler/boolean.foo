@@ -1,10 +1,6 @@
 import .name.Name
 
-define DirectMethods
-    { #debug
-          -> { signature: [], vars: 0,
-               body: "printf(\"#<Class Boolean>\");
-return ctx->receiver;" } }!
+define DirectMethods Dictionary new!
 
 define InstanceMethods
     { #ifTrue:ifFalse:
@@ -40,8 +36,4 @@ define InstanceMethods
                body: "return FOO_BOOLEAN(!receiver.datum.boolean);" },
       #toString
           -> { signature: [], vars: 0, returnType: String,
-               body: "return foo_String_new_from(ctx, ctx->receiver.datum.boolean ? \"True\" : \"False\");" },
-      #debug
-          -> { signature: [], vars: 0,
-               body: "printf(\"#<Boolean %s>\", ctx->receiver.datum.boolean ? \"True\" : \"False\");
-return ctx->receiver;" } }!
+               body: "return foo_String_new_from(ctx, ctx->receiver.datum.boolean ? \"True\" : \"False\");" } }!

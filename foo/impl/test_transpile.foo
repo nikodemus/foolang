@@ -156,12 +156,12 @@ Backtrace:
                              direct method run: command in: system
                                  \{ self bang }
                                      on: Error
-                                     do: \{ 1 debug }.
+                                     do: \{ system output writeString: \"XXX!\" }.
                                  self bang!
                              direct method bang
                                  Error raise: \"Bang!\"!
                          end"
-            expectError: "#<Integer 1>PANIC: UNHANDLED ERROR: Bang!
+            expectError: "XXX!PANIC: UNHANDLED ERROR: Bang!
 Backtrace:
   11: FallbackHandler classOf#raise:
   10: Handler#raise:
@@ -206,28 +206,28 @@ class TestTranspilePreludeFilePath { assert system }
                              direct method run: command in: system
                                  let foo = system files / \"foo\".
                                  let readme = system files / \"README.md\".
-                                 foo isDirectory debug.
-                                 readme isDirectory debug!
+                                 system output writeString: foo isDirectory toString.
+                                 system output writeString: readme isDirectory toString!
                          end"
-            expect: "#<Boolean True>#<Boolean False>"!
+            expect: "TrueFalse"!
 
     method testIsFile
         self transpile: "class Main \{}
                              direct method run: command in: system
                                  let foo = system files / \"foo\".
                                  let readme = system files / \"README.md\".
-                                 readme isFile debug.
-                                 foo isFile debug!
+                                 system output writeString: readme isFile toString.
+                                 system output writeString: foo isFile toString!
                          end"
-             expect: "#<Boolean True>#<Boolean False>"!
+             expect: "TrueFalse"!
 
     method testToString
         self transpile: "import lang.filepath_ext
                          class Main \{}
                               direct method run: command in: system
-                                  (system files / \"foo\") toString debug!
+                                  system output writeString: (system files / \"foo\") toString!
                          end"
-             expect: "#<String foo>"!
+             expect: "foo"!
 
 end
 
@@ -265,9 +265,9 @@ class TestTranspilePreludeFileStream { assert system }
                              direct method run: command in: system
                                  let size = (system files / \"data/132-bytes.txt\") forRead
                                      open: \{ |s| s size }.
-                                 size debug!
+                                 system output writeString: size toString!
                          end"
-            expect: "#<Integer 132>"!
+            expect: "132"!
 end
 
 class TestTranspilePreludeIterable { assert system }
@@ -303,9 +303,9 @@ class TestTranspilePreludeIterable { assert system }
                          class Main \{}
                              direct method run: command in: system
                                  (MyIterable a: 10 b: 20 c: 30)
-                                     do: \{ |each| each debug }!
+                                     do: \{ |each| system output writeString: each toString }!
                          end"
-            expect: "#<Integer 10>#<Integer 20>#<Integer 30>"!
+            expect: "102030"!
 end
 
 class TestTranspilePreludeObject { assert system }
@@ -317,12 +317,12 @@ class TestTranspilePreludeObject { assert system }
                          class Main \{ x }
                              is Object
                              direct method run: command in: system
-                                 ((self x: 1) == (self x: 2)) debug.
-                                 ((self x: 1) == (self x: 1)) debug!
+                                 system output writeString: ((self x: 1) == (self x: 2)) toString.
+                                 system output writeString: ((self x: 1) == (self x: 1)) toString!
                              method isEquivalent: other
                                  (self x is other x)!
                          end"
-            expect: "#<Boolean False>#<Boolean True>"!
+            expect: "FalseTrue"!
 end
 
 class TestTranspilePreludeOutput { assert system }
@@ -348,13 +348,13 @@ class TestTranspilePreludeStringOutput { assert system }
 
                          class Main \{}
                              direct method run: command in: system
-                                 (StringOutput with: \{ |out|
-                                                        out print: \"O\".
-                                                        out print: \"k\".
-                                                        out print: \"!\" })
-                                     debug!
+                                 system output
+                                    writeString: (StringOutput with: \{ |out|
+                                                                        out print: \"O\".
+                                                                        out print: \"k\".
+                                                                        out print: \"!\" })!
                          end"
-            expect: "#<String Ok!>"!
+            expect: "Ok!"!
 end
 
 class TestTranspileInterface { assert system }
@@ -369,9 +369,9 @@ class TestTranspileInterface { assert system }
                          end
                          class Main \{}
                              direct method run: command in: system
-                                 MyInterface boop debug!
+                                 system output writeString: MyInterface boop toString!
                          end"
-            expect: "#<Integer 42>"!
+            expect: "42"!
 
     method testInterfaceInherited
         self transpile: "interface MyInterface
@@ -389,9 +389,9 @@ class TestTranspileInterface { assert system }
                          end
                          class Main \{}
                              direct method run: command in: system
-                                 MyClass boop ding debug!
+                                 system output writeString: MyClass boop ding toString!
                          end"
-            expect: "#<Integer 42>"!
+            expect: "42"!
 
     method testInterfaceOverride
         self transpile: "interface MyInterface
@@ -411,9 +411,9 @@ class TestTranspileInterface { assert system }
                          end
                          class Main \{}
                              direct method run: command in: system
-                                 MyClass boop ding debug!
+                                 system output writeString: MyClass boop ding toString!
                          end"
-            expect: "#<Integer 101>"!
+            expect: "101"!
 
     method testInterfaceRequired
         self transpile: "interface MyInterface
@@ -428,9 +428,9 @@ class TestTranspileInterface { assert system }
                          end
                          class Main \{}
                              direct method run: command in: system
-                                 MyClass new bar debug!
+                                 system output writeString: MyClass new bar toString!
                          end"
-            expect: "#<Integer 4102>"!
+            expect: "4102"!
 end
 
 class TestTranspileSend { assert system }
@@ -439,11 +439,11 @@ class TestTranspileSend { assert system }
     method test_Send_keyword_keyword
         self transpile: "class Main \{}
                              direct method run: command in: system
-                                 (self add: 40 and: 5) debug!
+                                 system output writeString: (self add: 40 and: 5) toString!
                              direct method add: x and: y
                                  x integerAdd: y!
                         end"
-            expect: "#<Integer 45>"!
+            expect: "45"!
 
     method test_Send_eval_order
         self transpile: "class Main \{ out }
@@ -506,28 +506,33 @@ class TestTranspileGlobals { assert system }
             expect: "Any"!
 
     method test_Define_global_array
-        self transpile: "define MyArray [1,2,3]!
+        self transpile: "define MyArray [17234]!
                          class Main \{}
                              direct method run: command in: system
-                                 MyArray debug!
+                                 system output writeString: (MyArray at: 1) toString!
                          end"
-            expect: "[#<Integer 1>, #<Integer 2>, #<Integer 3>]"!
+            expect: "17234"!
 
     method test_Define_global_nested_array
-        self transpile: "define MyArray [[1],[[1]],[[[1]]]]!
+        self transpile: "define MyArray [[1],[[2]],[[[3]]]]!
                          class Main \{}
                              direct method run: command in: system
-                                 MyArray debug!
+                                 let one = (MyArray at: 1) at: 1.
+                                 let two = ((MyArray at: 2) at: 1) at: 1.
+                                 let three = (((MyArray at: 3) at: 1) at: 1) at: 1.
+                                 system output writeString: one toString.
+                                 system output writeString: two toString.
+                                 system output writeString: three toString!
                          end"
-            expect: "[[#<Integer 1>], [[#<Integer 1>]], [[[#<Integer 1>]]]]"!
+            expect: "123"!
 
     method test_Define_global_boolean
         self transpile: "define MyBoolean True!
                          class Main \{}
                              direct method run: command in: system
-                                 MyBoolean debug!
+                                 system output writeString: MyBoolean toString!
                          end"
-            expect: "#<Boolean True>"!
+            expect: "True"!
 
     method test_Define_global_class_instance
         self transpileWithPrelude:
@@ -540,10 +545,11 @@ class TestTranspileGlobals { assert system }
 
              class Main \{}
                  direct method run: command in: system
-                     MyValue value debug.
-                     MyValue x debug!
+                     system output writeString: MyValue value toString.
+                     system output writeString: \", \".
+                     system output writeString: MyValue x toString!
              end"
-                expect: "#<Integer 1242>#<Integer 40>"!
+                expect: "1242, 40"!
 
     method test_Define_depends_on_class_defined_after
         self transpile: "define A_Definition A_Class status: \"yes!\"!
@@ -563,34 +569,33 @@ class TestTranspileGlobals { assert system }
         self transpile: "define MyFloat 12.34!
                          class Main \{}
                              direct method run: command in: system
-                                 MyFloat debug!
+                                 system output writeString: MyFloat toString!
                          end"
-            expect: "#<Float 12.34>"!
+            expect: "12.34"!
 
     method test_Define_global_integer
         self transpile: "define MyInteger 1234!
                          class Main \{}
                              direct method run: command in: system
-                                 MyInteger debug!
+                                 system output writeString: MyInteger toString!
                          end"
-            expect: "#<Integer 1234>"!
+            expect: "1234"!
 
     method test_Define_global_selector
         self transpile: "define MySelector #foobar!
-
                          class Main \{}
                              direct method run: command in: system
-                                 MySelector debug!
+                                 system output writeString: MySelector name!
                          end"
-            expect: "#<Selector foobar>"!
+            expect: "foobar"!
 
     method test_Define_global_string
         self transpile: "define MyString \"foobar\"!
                          class Main \{}
                              direct method run: command in: system
-                                 MyString debug!
+                                 system output writeString: MyString!
                          end"
-            expect: "#<String foobar>"!
+            expect: "foobar"!
 
     method test_Undefined_variable
         self transpile: "class Main \{\}
@@ -702,22 +707,22 @@ class TestTranspileSelf { assert system }
     method testSelf
         self transpile: "class Main \{}
                              direct method run: command in: system
-                                 self foo debug!
+                                 system output writeString: self foo toString!
                              direct method foo
                                  142!
                          end"
-            expect: "#<Integer 142>"!
+            expect: "142"!
 
     method testSelfClass
         self transpile: "class Main \{}
                              direct method run: command in: system
-                                 self new foo debug!
+                                 system output writeString: self new foo toString!
                              method foo
                                  Self bar!
                              direct method bar
                                  242!
                          end"
-            expect: "#<Integer 242>"!
+            expect: "242"!
 end
 
 class TestTranspileSelfHosted { assert system }
@@ -932,10 +937,10 @@ class TestTranspileSelector { assert system }
     method test
         self transpile: "class Main \{}
                              direct method run: command in: system
-                                 #foo debug.
-                                 (#name sendTo: #bar with: []) debug!
+                                 system output writeString: #foo toString.
+                                 system output writeString: (#name sendTo: #bar with: []) toString!
                         end"
-            expect: "#<Selector foo>#<String bar>"!
+            expect: "#foo#bar"!
 end
 
 class TestTranspileIncludes { assert system }
@@ -944,10 +949,10 @@ class TestTranspileIncludes { assert system }
     method testArrayIncludes
         self transpile: "class Main \{}
                              direct method run: command in: system
-                                (Array includes: [1, 2, 3]) debug.
-                                (Array includes: 123) debug!
+                                system output writeString: (Array includes: [1, 2, 3]) toString.
+                                system output writeString: (Array includes: 123) toString!
                          end"
-            expect: "#<Boolean True>#<Boolean False>"!
+            expect: "TrueFalse"!
 end
 
 class TestTranspileSystem { assert system }
@@ -956,9 +961,9 @@ class TestTranspileSystem { assert system }
     method test_Main_run_in_command_size
         self transpile: "class Main \{}
                              direct method run: command in: system
-                                 command size debug!
+                                 system output writeString: command size toString!
                          end"
-            expect: "#<Integer 0>"!
+            expect: "0"!
 end
 
 class TestTranspileExtend { assert system }
@@ -975,9 +980,9 @@ class TestTranspileExtend { assert system }
                          end
                          class Main \{}
                               direct method run: command in: system
-                                  MyClass new foo debug!
+                                  system output writeString: MyClass new foo toString!
                          end"
-            expect: "#<Integer 84>"!
+            expect: "84"!
 
     method testExtendBuiltin
         self transpile: "extend Integer
@@ -986,9 +991,9 @@ class TestTranspileExtend { assert system }
                          end
                          class Main \{}
                              direct method run: command in: system
-                                 0 doopdoop debug!
+                                 system output writeString: 0 doopdoop toString!
                          end"
-            expect: "#<Integer 1239812798>"!
+            expect: "1239812798"!
 
     method testExtendInterface
         self transpile: "interface MyInterface
@@ -1004,9 +1009,9 @@ class TestTranspileExtend { assert system }
                          end
                          class Main \{}
                               direct method run: command in: system
-                                  MyClass new foo debug!
+                                  system output writeString: MyClass new foo toString!
                          end"
-            expect: "#<Integer 84>"!
+            expect: "84"!
 end
 
 class TestTranspileTypecheck { assert system }
@@ -1015,7 +1020,7 @@ class TestTranspileTypecheck { assert system }
     method testIntegerValueOops
         self transpile: "class Main \{}
                              direct method run: command in: system
-                                 (1.2::Integer) debug!
+                                 1.2::Integer!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
@@ -1027,7 +1032,7 @@ Backtrace:
                              direct method run: command in: system
                                  self foo: 1.2!
                              direct method foo: x::Integer
-                                 x debug!
+                                 x!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
@@ -1038,7 +1043,7 @@ Backtrace:
     method testIntegerBlockArgOops
         self transpile: "class Main \{}
                              direct method run: command in: system
-                                 \{ |x::Integer| x debug } value: 1.2!
+                                 \{ |x::Integer| x } value: 1.2!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
@@ -1051,7 +1056,7 @@ Backtrace:
                          end
                          class Main \{}
                              direct method run: command in: system
-                                 42 :: MyInterface value debug!
+                                 42 :: MyInterface value!
                          end"
             expectError: "PANIC: Type error! Wanted: MyInterface, got: Integer
 Backtrace:
@@ -1062,7 +1067,7 @@ Backtrace:
         self transpile: "class Main \{}
                              direct method run: command in: system
                                  let x :: Integer = 42.12.
-                                 x debug!
+                                 x!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
@@ -1074,7 +1079,7 @@ Backtrace:
                              direct method run: command in: system
                                  let x :: Integer = 42.
                                  x = 12.23.
-                                 x debug!
+                                 x!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:
@@ -1084,7 +1089,7 @@ Backtrace:
     method testSlotTypeInitOops
         self transpile: "class Main \{ x::Integer }
                              direct method run: command in: system
-                                 (self x: 42.42) x debug!
+                                 (self x: 42.42) x!
                              method x
                                  x!
                          end"
@@ -1097,7 +1102,7 @@ Backtrace:
     method testSlotTypeAssignOops
         self transpile: "class Main \{ x::Integer }
                              direct method run: command in: system
-                                 (self x: 0) frob debug!
+                                 (self x: 0) frob!
                              method frob
                                  x = 42.123.
                                  x!
@@ -1111,7 +1116,7 @@ Backtrace:
     method testMethodReturnTypeOops
         self transpile: "class Main \{}
                              direct method run: command in: system
-                                 self foo debug!
+                                 self foo!
                              direct method foo -> Integer
                                  42.42!
                          end"
@@ -1124,7 +1129,7 @@ Backtrace:
     method testMethodNonLocalReturnTypeOops
         self transpile: "class Main \{}
                              direct method run: command in: system
-                                 self foo debug!
+                                 self foo!
                              direct method foo -> Integer
                                  self bar: \{ return 42.32 }!
                              direct method bar: block
@@ -1142,7 +1147,7 @@ Backtrace:
     method testBlockReturnTypeOops
         self transpile: "class Main \{}
                              direct method run: command in: system
-                                (\{ |a| -> Integer a } value: 42.32) debug!
+                                (\{ |a| -> Integer a } value: 42.32)!
                          end"
             expectError: "PANIC: Type error! Wanted: Integer, got: Float
 Backtrace:

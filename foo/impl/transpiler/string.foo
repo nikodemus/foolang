@@ -82,11 +82,6 @@ return (struct Foo)\{ .class = &FooClass_String, .datum = \{ .ptr = b3 } };"},
              body: "struct FooBytes* b = PTR(FooBytes, ctx->receiver.datum);
                     return FOO_INTEGER(MASK_SIGN(foo_hash(b->data, b->size)));" },
 
-    #debug
-        -> {signature: [], vars: 0,
-            body: "printf(\"#<String %s>\", (char*)PTR(FooBytes, ctx->receiver.datum)->data);
-return ctx->receiver;"},
-
     #do:
         -> {signature: [Any], vars: 1,
             body: "struct Foo block = ctx->frame[0];
