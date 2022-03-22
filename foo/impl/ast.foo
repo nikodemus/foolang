@@ -418,7 +418,7 @@ class AstInterface { name _interfaces _directMethods _instanceMethods
         let global = env global: name.
         let theInterface = self
                                name: name
-                               _interfaces: interfaces
+                               _interfaces: interfaces asList
                                _directMethods: False
                                _instanceMethods: False
                                _allInterfaces: False
