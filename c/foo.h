@@ -219,6 +219,9 @@ extern struct FooClass FooClass_Character;
 #define FOO_INSTANCE(classname, value) \
   ((struct Foo){ .class = &FooClass_ ## classname, .datum = { .ptr = (void*)(value) } })
 
+#define FOO_CLASS(classname) \
+  ((struct Foo){ .class = &FooMetaclass_ ## classname, .datum = { .ptr = &FooClass_ ## classname } })
+
 #define FOO_FLOAT(value) \
   ((struct Foo){ .class = &FooClass_Float, .datum = { .float64 = (double)(value) } })
 

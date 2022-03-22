@@ -368,6 +368,9 @@ define AlwaysEmittedSelectors
      #selector,
      #writeString:]!
 
+define AlwaysEmittedGlobals
+    ["DivideByZero"]!
+
 define $home
         False!
 
@@ -442,9 +445,13 @@ class CTranspiler { output selectorMap closureFunctions
                           env: env
                           builtins: builtins.
         visitor output println: "#include \"foo.h\"".
-        -- KLUDGE: ensure selectors with references from C code
+        -- KLUDGE: ensure selectors and classes with references from C code
         AlwaysEmittedSelectors
             do: { |each| visitor selectorMap map: each }.
+        AlwaysEmittedGlobals
+            do: { |each|
+                  let global = env global: each.
+                  visitor declare: global }.
         -- Important to do this before emitting the builtins,
         -- so that they've been optimized as well.
         let main = Foolang isSelfHosted
