@@ -17,6 +17,9 @@ import .utils.Debug
 class GenericDelegator { target }
     is AstMethod
 
+    method isDirect
+        True!
+
     method selector
         #perform:with:!
 
@@ -27,6 +30,9 @@ end
 
 class TypecheckDelegator { target }
     is AstMethod
+
+    method isDirect
+        True!
 
     method selector
         #typecheck:!
@@ -71,7 +77,7 @@ class AllBuiltins { env }
             ; __addDirectMethod: (TypecheckDelegator target: builtin).
 
         global is theClass global
-            assert: "Correct global for builtin class."!
+            ifFalse: { Error raise: "#defineClass: {builtin name} went wrong:\nThe following are not the same!\nglobal: {global}\ntheClass global: {theClass global}" }!
 
     method defineAll
         -- Wrappers for builtin classes so that
@@ -107,13 +113,32 @@ class AllBuiltins { env }
                 !
 end
 
-class Variable { name type index }
+class Variable { name declaredType index hasAssignments boundBy }
     is Object
 
     direct method name: name type: type frame: frame
-        let var = self name: name type: type index: frame size + 1.
+        let var = self name: name
+                       declaredType: type
+                       index: frame size + 1
+                       hasAssignments: False
+                       boundBy: False.
         frame add: var.
         var!
+
+    method type
+        hasAssignments
+            ifTrue: { declaredType }
+            ifFalse: { declaredType is Any
+                           ifTrue: { boundBy value type }
+                           ifFalse: { Any } }!
+
+    method boundBy: aBinding
+        boundBy is False
+            ifTrue: { boundBy = aBinding }
+            ifFalse: { Error raise: "{self} already has the bind node set." }!
+
+    method noteAssignment: _source
+        hasAssignments = True!
 
     method referenceUpwards: offset
         AstLexicalRef variable: self frameOffset: offset!
@@ -125,19 +150,28 @@ class Variable { name type index }
         visitor visitVariable: self!
 end
 
-class Argument { name type index }
+class Argument { name declaredType index }
     is Object
 
     direct method name: name type: type frame: frame
-        let var = self name: name type: type index: frame size + 1.
+        let var = self name: name
+                       declaredType: type
+                       index: frame size + 1.
         frame add: var.
         var!
+
+    method type
+        declaredType!
 
     method referenceUpwards: offset
         AstLexicalRef variable: self frameOffset: offset!
 
     method printOn: stream
         stream print: "#<Argument {name}>"!
+
+    method noteAssignment: source
+        let note = "Cannot assign to argument.".
+        Error raise: "{note}\n{source note: note}"!
 
     method visitBy: visitor
         visitor visitArgument: self!
@@ -229,7 +263,17 @@ class Environment { parent
                     recordClasses }
     is Object
 
-    method _ensureRecordClass: aRecord
+    method recordClassFromRecord: aRecord
+        let keys = (Record keysIn: aRecord) sorted
+                       collect: #name.
+        let name = Selector
+                       intern: (StringOutput
+                                    with: { |out|
+                                            keys do: { |each| out print: each }}).
+        self ensureRecordClass: { name: name,
+                                  slots: keys }!
+
+    method ensureRecordClass: aRecord
         recordClasses
             at: aRecord name name -- Selector don't play nice in bootstrap host dictionary!
             ifNonePut: { let name = String concat: ["Record_", aRecord name name replace: ":" with: "$"].

@@ -25,6 +25,8 @@ import .ast.*
 import .utils.*
 import .types.*
 import .environment.ModuleBinding
+import .astOptimizer.AstOptimizer
+import .astPrinter.AstPrinter
 
 define CEscapes
     { "'" -> "\\'",
@@ -69,7 +71,7 @@ class BuiltinMethod { home selector definition isDirect }
         self arity + self definition vars!
     method signature
         definition signature!
-    method body
+    method builtinBody
         definition body!
     method printOn: stream
         stream print: "#<BuiltinMethod {selector}>"!
@@ -86,18 +88,19 @@ end
 define DatumClasses
     [Boolean, Character, Integer, Float]!
 
-class CompilerBuiltin { type value markFunction _interfaces
+class CompilerBuiltin { kind value markFunction _interfaces
                         _directMethods _instanceMethods _allInterfaces
-                        _global compilerInfo }
+                        _global compilerInfo
+                        _directMethodCache _instanceMethodCache }
     is AstMethodHome
 
-    direct method type: type
+    direct method kind: kind
                   value: value
                   mark: mark
                   directMethods: directMethods
                   instanceMethods: instanceMethods
         let theClass = self
-                           type: type
+                           kind: kind
                            value: value
                            markFunction: mark
                            _interfaces: List new
@@ -105,10 +108,15 @@ class CompilerBuiltin { type value markFunction _interfaces
                            _instanceMethods: False
                            _allInterfaces: False
                            _global: False
-                           compilerInfo: List new.
+                           compilerInfo: CompilerInfo new
+                           _directMethodCache: False
+                           _instanceMethodCache: False.
         theClass _directMethods: directMethods.
         theClass _instanceMethods: instanceMethods.
         theClass!
+
+    method type
+        HostType type: kind!
 
     method slots
         []!
@@ -121,7 +129,7 @@ class CompilerBuiltin { type value markFunction _interfaces
         ""!
 
     method isClass
-        type is Class!
+        kind is Class!
 
     method eval
         _global is False
@@ -138,8 +146,21 @@ class CompilerBuiltin { type value markFunction _interfaces
     method definitionIn: _env
         self!
 
+    -- FIXME: Why both this and above?
     method definition
         self!
+
+    method _directMethodCache
+        _directMethodCache!
+
+    method _instanceMethodCache
+        _instanceMethodCache!
+
+    method _directMethodCache: cached
+        _directMethodCache = cached!
+
+    method _instanceMethodCache: cached
+        _instanceMethodCache = cached!
 
     method _interfaces
         _interfaces!
@@ -184,127 +205,127 @@ class CompilerBuiltin { type value markFunction _interfaces
         stream print: self toString!
 
     method toString
-        "#<CompilerBuiltin {self name} ({type name})>"!
+        "#<CompilerBuiltin {self name} ({kind name})>"!
 end
 
 class CompilerBuiltins {}
     direct method all
         [ CompilerBuiltin
-              type: Class
+              kind: Class
               value: Array
               mark: "foo_mark_array"
               directMethods: array.DirectMethods
               instanceMethods: array.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Boolean
               mark: "foo_mark_none"
               directMethods: boolean.DirectMethods
               instanceMethods: boolean.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: ByteArray
               mark: "foo_mark_bytes"
               directMethods: byte_array.DirectMethods
               instanceMethods: byte_array.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Character
               mark: "foo_mark_none"
               directMethods: character.DirectMethods
               instanceMethods: character.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Class
               mark: "foo_mark_class"
               directMethods: class.InstanceMethods -- class is its own instance
               instanceMethods: class.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Clock
               mark: "foo_mark_none"
               directMethods: clock.DirectMethods
               instanceMethods: clock.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Closure
               mark: "foo_mark_closure"
               directMethods: Dictionary new
               instanceMethods: closure.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Layout
               mark: "foo_mark_layout"
               directMethods: layout.DirectMethods
               instanceMethods: layout.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: File
               mark: "foo_mark_file"
               directMethods: file.DirectMethods
               instanceMethods: file.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: FilePath
               mark: "foo_mark_bytes"
               directMethods: filepath.DirectMethods
               instanceMethods: filepath.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: FileStream
               mark: "foo_mark_filestream"
               directMethods: filestream.DirectMethods
               instanceMethods: filestream.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Float
               mark: "foo_mark_none"
               directMethods: float.DirectMethods
               instanceMethods: float.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Input
               mark: "foo_mark_none"
               directMethods: input.DirectMethods
               instanceMethods: input.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Integer
               mark: "foo_mark_none"
               directMethods: Dictionary new
               instanceMethods: integer.IntegerMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Output
               mark: "foo_mark_none"
               directMethods: output.DirectMethods
               instanceMethods: output.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Random
               mark: "foo_mark_none"
               directMethods: random.DirectMethods
               instanceMethods: random.InstanceMethods,
           CompilerBuiltin
-              type: Interface
+              kind: Interface
               value: Record
               mark: "foo_mark_none"
               directMethods: record.DirectMethods
               instanceMethods: record.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Selector
               mark: "foo_mark_none"
               directMethods: selector.DirectMethods
               instanceMethods: selector.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: String
               mark: "foo_mark_bytes"
               directMethods: string.DirectMethods
               instanceMethods: string.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: (Foolang isSelfHosted
                           ifTrue: { System }
                           ifFalse: { { name: "System" } })
@@ -312,7 +333,7 @@ class CompilerBuiltins {}
               directMethods: system.DirectMethods
               instanceMethods: system.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: (Foolang isSelfHosted
                           ifTrue: { SystemRandom }
                           ifFalse: { { name: "SystemRandom" } })
@@ -320,7 +341,7 @@ class CompilerBuiltins {}
               directMethods: system_random.DirectMethods
               instanceMethods: system_random.InstanceMethods,
           CompilerBuiltin
-              type: Class
+              kind: Class
               value: Time
               mark: "foo_mark_ptr"
               directMethods: time.DirectMethods
@@ -365,12 +386,12 @@ class CompilerDictionary { list }
         self list: List new!
 
     method at: global ifNone: block
-        (global compilerInfo contains: #inCompilerDictionary)
+        (global compilerInfo has: #inCompilerDictionary)
             ifTrue: { global definition }
             ifFalse: block!
 
     method ensure: global
-        (global compilerInfo contains: #inCompilerDictionary)
+        (global compilerInfo has: #inCompilerDictionary)
             ifFalse: { global compilerInfo add: #inCompilerDictionary.
                        list add: global }!
 
@@ -387,7 +408,7 @@ class CompilerDictionary { list }
 
     method restoreAll: all
         all do: { |each|
-                  (each compilerInfo contains: #inCompilerDictionary)
+                  (each compilerInfo has: #inCompilerDictionary)
                       assert: "Restoring new things to CompilerDictionary!" }.
         list isEmpty
             assert: "CompilerDictionary not empty on restore.".
@@ -397,13 +418,11 @@ end
 class CTranspiler { output selectorMap closureFunctions
                     constants variables tmpCounter
                     globals globalsCounter
-                    recordClasses
                     generatedMethods env builtins }
 
     direct method transpile: string in: env with: prelude
         let builtins = CompilerBuiltins all.
         env replaceBuiltins: builtins.
-        -- FIXME: move "target class map" to environment?
         prelude is False
             ifFalse: { env importPrelude: prelude }.
         env load: string.
@@ -419,7 +438,6 @@ class CTranspiler { output selectorMap closureFunctions
                           tmpCounter: 0
                           globals: CompilerDictionary new
                           globalsCounter: Counter new
-                          recordClasses: Dictionary new
                           generatedMethods: Dictionary new
                           env: env
                           builtins: builtins.
@@ -427,8 +445,14 @@ class CTranspiler { output selectorMap closureFunctions
         -- KLUDGE: ensure selectors with references from C code
         AlwaysEmittedSelectors
             do: { |each| visitor selectorMap map: each }.
+        -- Important to do this before emitting the builtins,
+        -- so that they've been optimized as well.
+        let main = Foolang isSelfHosted
+                       ifTrue: { AstOptimizer
+                                     optimize: (env global: "Main")
+                                     in: env }
+                       ifFalse: { (env global: "Main") }.
         let builtins = visitor generateBuiltins.
-        let main = env global: "Main".
         visitor declare: main.
         visitor writeDefinitions.
         visitor writeMain: main.
@@ -482,7 +506,7 @@ class CTranspiler { output selectorMap closureFunctions
     method forwardDeclarationFor: aGlobal
         (AstBuiltin includes: aGlobal)
             ifTrue: { return False }.
-        (aGlobal compilerInfo contains: #declared)
+        (aGlobal compilerInfo has: #declared)
             ifTrue: { return False }.
         aGlobal compilerInfo add: #declared.
         -- Debug println: "declare: {aGlobal}".
@@ -531,7 +555,7 @@ class CTranspiler { output selectorMap closureFunctions
         { globals isEmpty }
             whileFalse: { globals takeAll
                               do: { |global|
-                                    (global compilerInfo contains: #inAllGlobals)
+                                    (global compilerInfo has: #inAllGlobals)
                                         ifFalse: { global compilerInfo add: #inAllGlobals.
                                                    allGlobals add: global.
                                                    global definition visitBy: self } } }.
@@ -576,7 +600,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method compileMethodBody: aMethod
         aMethod isBuiltin
-            ifTrue: { return aMethod body }.
+            ifTrue: { return aMethod builtinBody }.
         let $home = aMethod.
         let newOutput = StringOutput new.
         newOutput print: "return ".
@@ -589,7 +613,6 @@ class CTranspiler { output selectorMap closureFunctions
                                  tmpCounter: tmpCounter
                                  globals: globals
                                  globalsCounter: globalsCounter
-                                 recordClasses: recordClasses
                                  generatedMethods: generatedMethods
                                  env: env
                                  builtins: builtins.
@@ -610,7 +633,6 @@ class CTranspiler { output selectorMap closureFunctions
                                  tmpCounter: tmpCounter
                                  globals: globals
                                  globalsCounter: globalsCounter
-                                 recordClasses: recordClasses
                                  generatedMethods: generatedMethods
                                  env: env
                                  builtins: builtins.
@@ -639,7 +661,6 @@ class CTranspiler { output selectorMap closureFunctions
                                  tmpCounter: tmpCounter
                                  globals: globals
                                  globalsCounter: globalsCounter
-                                 recordClasses: recordClasses
                                  generatedMethods: generatedMethods
                                  env: env
                                  builtins: builtins.
@@ -704,7 +725,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method _isPtr: value
         let theClass = value classOf.
-        (DatumClasses contains: theClass)
+        (DatumClasses includes: theClass)
             ifTrue: { return False }.
         True!
 
@@ -725,8 +746,9 @@ class CTranspiler { output selectorMap closureFunctions
 
     method _astClassOf: value
         (Record includes: value)
-            ifTrue: { let recordClass = self _recordClassFromRecord: value.
-                      return recordClass definition }.
+            ifTrue: { let recordClass = env recordClassFromRecord: value.
+                      self declare: recordClass.
+                      return recordClass }.
         -- KLUDGE: Dictionary is builtin on bootstrap host, so
         -- env classes don't know about it. Instead of this
         -- should somehow include it it compiler builtins,
@@ -741,18 +763,6 @@ class CTranspiler { output selectorMap closureFunctions
             at: theClass
             ifNone: { env findBuiltinFor: theClass
                           ifNone: { panic "No 'ast class' for: {value} ({theClass})\nenv classes: {env classes keys}\nbuiltins: {builtins}" } }!
-
-    method _recordClassFromRecord: aRecord
-        let keys = (Record keysIn: aRecord) sorted
-                       collect: #name.
-        let name = Selector
-                       intern: (StringOutput
-                                    with: { |out|
-                                            keys do: { |each| out print: each }}).
-        let recordClass = env _ensureRecordClass: { name: name,
-                                                     slots: keys }.
-        self declare: recordClass.
-        recordClass!
 
     method _writeValue: value _to: out
         -- Tracer _writeValue: value.
@@ -932,7 +942,6 @@ class CTranspiler { output selectorMap closureFunctions
                                tmpCounter: tmpCounter
                                globals: globals
                                globalsCounter: globalsCounter
-                               recordClasses: recordClasses
                                generatedMethods: generatedMethods
                                env: env
                                builtins: builtins.
@@ -949,9 +958,9 @@ class CTranspiler { output selectorMap closureFunctions
         self!
 
     method visitDefine: aDefine
-        (aDefine compilerInfo contains: #visited)
+        (aDefine compilerInfo tag is self)
             ifTrue: { return False }.
-        aDefine compilerInfo add: #visited.
+        aDefine compilerInfo tag: self.
         Tracer visitDefine: aDefine.
         aDefine isDynamic
             ifTrue: { output println: "struct Foo {Name mangleDynamic: aDefine} = " }
@@ -962,7 +971,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method visitRecord: aRecord
         -- Tracer visitRecord: aRecord.
-        let recordClass = env _ensureRecordClass: aRecord.
+        let recordClass = env ensureRecordClass: aRecord.
         self declare: recordClass.
         output print: "(\{ ".
         let args = aRecord values
@@ -1031,9 +1040,9 @@ class CTranspiler { output selectorMap closureFunctions
         inheritance!
 
     method visitInterfaceDefinition: anInterface
-        (anInterface compilerInfo contains: #visited)
+        (anInterface compilerInfo tag is self)
             ifTrue: { return False }.
-        anInterface compilerInfo add: #visited.
+        anInterface compilerInfo tag: self.
         Tracer visitInterfaceDefinition: anInterface name.
         output println: "/**
 * {anInterface name} (an interface)
@@ -1135,9 +1144,9 @@ class CTranspiler { output selectorMap closureFunctions
           methodFunctionName: "foo_method_classOf" }!
 
     method visitClassDefinition: aClass
-        (aClass compilerInfo contains: #visited)
+        (aClass compilerInfo tag is self)
             ifTrue: { return False }.
-        aClass compilerInfo add: #visited.
+        aClass compilerInfo tag: self.
         Tracer visitClassDefinition: aClass name.
         let classNote = aClass isBuiltin
                        ifTrue: { "{aClass name} (builtin)" }
@@ -1323,7 +1332,7 @@ class CTranspiler { output selectorMap closureFunctions
     method _generateTypecheck: type _for: value
         -- Tracer _generateTypecheck: type _for: value.
         -- Debug println: "_generateTypecheck: {type} _for: {value}".
-        type is Any
+        (value type isSubtypeOf: type)
             ifTrue: { return value visitBy: self }.
         let type = type::AstGlobal.
         self declare: type.
@@ -1414,21 +1423,22 @@ class CTranspiler { output selectorMap closureFunctions
     method visitCascadeReceiver: _
         output print: $CascadeReceiverTemp!
 
-    method generateKnownSend: aSend using: aMethod
+    method visitCallMethod: aCall
         -- These are never #perform:with: or object methods, thanks to #findMethod:in:
-        let methodFunction = Name mangleMethod: aMethod.
-        let selector = self selectorCName: aMethod selector.
+        let target = aCall target.
+        let methodFunction = Name mangleMethod: target.
+        let selector = self selectorCName: target selector.
         output print: "(\{ ".
-        let receiver = self _visitTemp: aSend receiver.
-        let args = aSend arguments
+        let receiver = self _visitTemp: aCall receiver.
+        let args = aCall arguments
                        collect: { |each| self _visitTemp: each }.
         output
             ; print: "foo_call_known_method(ctx, &"
-            ; print: aMethod methodHomeName
+            ; print: target methodHomeName
             ; print: ", &"
             ; print: selector
             ; print: ", "
-            ; print: aMethod methodFunctionName
+            ; print: target methodFunctionName
             ; print: ", "
             ; print: receiver
             ; print: ", "
@@ -1441,11 +1451,6 @@ class CTranspiler { output selectorMap closureFunctions
 
     method visitSend: aSend
         -- Tracer visitSend: aSend selector.
-        (aSend receiver type findMethod: aSend selector in: env)
-            => { |aMethod|
-                 -- Debug println: "HIT {aSend selector} -> {aSend receiver type} ({aSend receiver})".
-                 return self generateKnownSend: aSend using: aMethod }.
-        -- Debug println: "MISS {aSend selector} -> {aSend receiver type} ({aSend receiver})".
         output print: "(\{ ".
         let receiver = self _visitTemp: aSend receiver.
         let args = aSend arguments
@@ -1486,7 +1491,7 @@ class CTranspiler { output selectorMap closureFunctions
     method visitBindLexical: aBind
         -- Tracer trace: #visitBindLexical:.
         output print: "(\{ ctx->frame[{aBind variable index - 1}] = ".
-        self _generateTypecheck: aBind variable type
+        self _generateTypecheck: aBind variable declaredType
              _for: aBind value.
         output print: ";".
         aBind body visitBy: self.

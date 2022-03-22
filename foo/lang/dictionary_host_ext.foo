@@ -112,7 +112,7 @@ extend Dictionary
     method do: block
         self doKeys: { |key|
                        block
-                           cull: key
+                           optional: key
                            value: (self at: key) }!
 
     method doValues: block
@@ -127,4 +127,11 @@ extend Dictionary
                        copy put: (self at: key)
                             at: key }.
         copy!
+
+    method collect: block
+        let result = Dictionary new.
+        self do: { |key value|
+                   result put: (block optional: key value: value)
+                          at: key }.
+        result!
 end

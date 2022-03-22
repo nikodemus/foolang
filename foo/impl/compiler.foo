@@ -2,6 +2,9 @@ import .environment.Environment
 import .utils.FileModuleDictionary
 import .cTranspiler.CTranspiler
 
+define AddressSanitizerDefault
+    False!
+
 -- FIXME: POA: doesn't need the whole system, just files and
 -- OS type.
 class Compiler { source target system prelude stackSize addressSanitizer }
@@ -14,7 +17,7 @@ class Compiler { source target system prelude stackSize addressSanitizer }
              system: system
              prelude: prelude
              stackSize: False
-             addressSanitizer: False!
+             addressSanitizer: AddressSanitizerDefault!
 
     direct method compile: source in: system
         let target = self targetNameForSource: source in: system.
@@ -44,7 +47,7 @@ class Compiler { source target system prelude stackSize addressSanitizer }
              -- little for self-compilation, let alone a metacircular
              -- REPL.
              stackSize: 0x800000
-             addressSanitizer: False)
+             addressSanitizer: AddressSanitizerDefault)
         compile!
 
     method compile

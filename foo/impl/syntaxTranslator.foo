@@ -84,7 +84,7 @@ class SyntaxTranslator { env currentMethod methodEnv }
         -- Tracer trace: #visitValueTypeDeclaration.
         AstTypecheck
             value: (aNode value visitBy: self)
-            assertType: (aNode type visitBy: self)!
+            type: (aNode type visitBy: self)!
 
     method visitArray: anArray
         -- Tracer trace: #visitArray:.

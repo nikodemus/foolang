@@ -58,7 +58,7 @@ extend Class
            interfaces: interfaces
            directMethods: directMethods
            instanceMethods: instanceMethods
-        let interfaces = (interfaces contains: Any)
+        let interfaces = (interfaces includes: Any)
                              ifTrue: { interfaces }
                              ifFalse: { interfaces append: [Any] }.
         let layout = self _layoutForSlots: slots.

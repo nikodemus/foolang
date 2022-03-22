@@ -106,7 +106,8 @@ class TestInteger { assert }
                testing: "division by zero (handled)".
 
         assert forAll: SmallIntegers
-               that: { |x|
+               that: { |x0|
+                       let x = x0.
                        x is 0
                            ifTrue: { x = 1 }.
                        [ self auxIntegerDivZeroError: x by: x,

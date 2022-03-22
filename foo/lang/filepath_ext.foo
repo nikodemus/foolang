@@ -30,8 +30,8 @@ extend FilePath
 
     method ifExists: existsBlock ifDoesNotExist: doesNotExistBlock
         self exists
-            ifTrue: { existsBlock cull: self }
-            ifFalse: { doesNotExistBlock cull: self }!
+            ifTrue: { existsBlock optional: self }
+            ifFalse: { doesNotExistBlock optional: self }!
 
     method toString
         self pathname!

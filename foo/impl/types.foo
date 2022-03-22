@@ -3,6 +3,9 @@ import .utils.Debug
 interface Type
     is Object
 
+    method isSubtypeOf: type
+        type is Any!
+
     method findMethod: selector in: env
         self earlyBinding
             => { |name|
@@ -36,27 +39,33 @@ class EqType { value }
              do: { |def| def findDirectMethod: selector }!
 
     method findInstanceMethod: selector in: env
+        (Record includes: value)
+            ifTrue: { let recordClass = env recordClassFromRecord: value.
+                      return recordClass findInstanceMethod: selector }.
         self withDefinitionFor: value classOf
              in: env
              do: { |def| def findInstanceMethod: selector }!
+
+    method isSubtypeOf: type
+        type includes: value!
 
     method displayOn: stream
         stream writeString: "#<EqType {value classOf name}>"!
 end
 
     --- For EqType
-    method findMethod: selector for: compiler
+    method findMethod: selector in: env
         (Record includes: value)
-            ifTrue: { let recordClass =  compiler _recordClassFromRecord: value.
-                      return recordClass definition findInstanceMethod: selector }.
+            ifTrue: { let recordClass = env recordClassFromRecord: value.
+                      return recordClass findInstanceMethod: selector }.
         let wantDirectMethod = (Class includes: value) or: (Interface includes: value).
         let hostClass = wantDirectMethod
                             ifTrue: { value }
                             ifFalse: { value classOf }.
-        let targetClass = compiler env classes
+        let targetClass = env classes
                               at: hostClass
-                              ifNone: { let builtin = compiler env findBuiltinFor: hostClass
-                                                                   ifNone: { return False }.
+                              ifNone: { let builtin = env findBuiltinFor: hostClass
+                                                          ifNone: { return False }.
                                          builtin definition }.
         wantDirectMethod
             ifTrue: { targetClass findDirectMethod: selector }
@@ -77,10 +86,11 @@ class HostType { hostType }
     is Type
 
     direct method type: hostType
+        (Type includes: hostType)
+            => { return hostType }.
         hostType is Any
             ifTrue: { TheUnknownType }
             ifFalse: { self hostType: hostType }!
-
 
     method findMethod: selector in: env
         self withDefinitionFor: hostType
@@ -96,6 +106,9 @@ end
 class UnknownType {}
     is Type
 
+    method name
+        "<<UnknownType>>"!
+
     method displayOn: stream
         stream writeString: "#<UnknownType>"!
 end
@@ -104,7 +117,10 @@ class ReceiverType { definition }
     is Type
 
     method findMethod: selector in: _env
-        -- Interface methods can be overridden!
+        -- Interface methods can be overridden, so cannot early bind
+        -- to them.
+        -- * Clone methods from interfaces to classes.
+        -- * Add final qualifier for non-overridable interface methods.
         definition isClass
             ifTrue: { definition findInstanceMethod: selector }!
 
@@ -116,7 +132,10 @@ class ReceiverClassType { definition }
     is Type
 
     method findMethod: selector in: _env
-        -- Interface methods can be overridden!
+        -- Interface methods can be overridden, so cannot early bind
+        -- to them.
+        -- * Clone methods from interfaces to classes.
+        -- * Add final qualifier for non-overridable interface methods.
         definition isClass
             ifTrue: { definition findDirectMethod: selector }!
 

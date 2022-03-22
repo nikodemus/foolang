@@ -1,0 +1,211 @@
+import .astRewriter.*
+import .ast.*
+import .utils.*
+import .environment.Argument
+
+class AstOptimizer { ast env continue }
+    is Object
+
+    direct method optimize: ast in: env
+        (self ast: ast
+              env: env
+              continue: True)
+            optimize!
+
+    method optimize
+        {
+            self resolveKnownMethods
+                ifTrue: { self inlineTrivialMethods }
+                ifFalse: { False }
+        }
+            whileTrue.
+        ast!
+
+    method resolveKnownMethods
+        let resolver = KnownMethodResolver new: env.
+        ast = ast visitBy: resolver.
+        resolver didNothing not!
+
+    method inlineTrivialMethods
+        -- Trivial methods are such that inlining them
+        -- never blows up code size too much.
+        let didSomething = False.
+        {
+            let inliner = TrivialMethodInliner new.
+            ast = ast visitBy: inliner.
+            let didNow = inliner didNothing not.
+            didSomething = didSomething or: didNow.
+            didNow
+        }
+            whileTrue.
+        didSomething!
+end
+
+class KnownMethodResolver { env didNothing }
+    is AstRewriter
+
+    direct method new: env
+        self env: env
+             didNothing: True!
+
+    method visitSend: aSend
+        let recv = aSend receiver visitBy: self.
+        let args = aSend arguments collect: { |each| each visitBy: self }.
+        let type = recv type.
+        (type findMethod: aSend selector in: env)
+            => { |aMethod|
+                 didNothing = False.
+                 return AstCallMethod
+                     target: (aMethod visitBy: self)
+                     receiver: recv
+                     arguments: args
+                     source: aSend source }.
+        aSend
+            receiver: recv
+            arguments: args!
+end
+
+---
+Trivial methods contain at most one send or call.
+
+We extend selected AST classes with #isTrivial and
+#isSimple methods.
+
+#isSimple is stricter than #isTrivial: it is used
+to check receiver and arguments or a call or send,
+and hence doesn't allow calls or sends.
+---
+class TrivialMethodInliner { didNothing }
+    is AstRewriter
+
+    direct method new
+        self didNothing: True!
+
+    method visitCallMethod: aCall
+        let recv = aCall receiver visitBy: self.
+        let args = aCall arguments collect: { |each| each visitBy: self }.
+        -- Since we're not yet introducing new bindings for arguments
+        -- we need to restrict inlining to simple receiver and
+        -- arguments.
+        (aCall target isTrivial
+            and: recv isSimple
+            and: (args allSatisfy: #isSimple))
+        ifTrue: { didNothing = False.
+                  aCall target
+                      inlineOn: recv
+                      withArguments: args }
+        ifFalse: { AstCallMethod
+                       target: aCall target
+                       receiver: recv
+                       arguments: args
+                       source: aCall source }!
+end
+
+extend Ast
+    method isTrivial
+        self isSimple!
+    method isSimple
+        False!
+end
+
+extend AstConstantRef
+    method isSimple
+        True!
+    method inlineOn: _receiver withArguments: _arguments
+        self!
+end
+
+extend AstLexicalRef
+    method isSimple
+        self frameOffset is 0 and: (Argument includes: self variable)!
+    method inlineOn: _receiver withArguments: arguments
+        arguments at: self variable index!
+end
+
+extend AstSlotRef
+    method isSimple
+        True!
+    method inlineOn: receiver withArguments: arguments
+        self!
+end
+
+extend AstSelfInstanceRef
+    method isSimple
+        True!
+    method inlineOn: receiver withArguments: _arguments
+        receiver!
+end
+
+extend AstMethod
+    method isTrivial
+        False!
+
+    method inlineOn: receiver withArguments: arguments
+        let args = arguments
+                       with: self argumentVariables
+                       collect: { |arg var|
+                                  AstTypecheck
+                                      value: arg
+                                      type: var declaredType }.
+        AstTypecheck
+            value: (self body
+                        inlineOn: receiver
+                        withArguments: args)
+            type: self returnType!
+end
+
+---
+-- FIXME: need to be able to represent a ctor in ast.
+extend AstConstructorMethod
+    method isTrivial
+        True!
+end
+---
+
+extend AstReaderMethod
+    method isTrivial
+        True!
+end
+
+extend AstDefinedMethod
+    method isTrivial
+        self body isTrivial!
+end
+
+extend AstSend
+    method isTrivial
+        self receiver isSimple
+            ifTrue: { self arguments allSatisfy: #isSimple }
+            ifFalse: { False }!
+
+    method inlineOn: receiver withArguments: arguments
+        AstSend
+            receiver: (self receiver
+                           inlineOn: receiver
+                           withArguments: arguments)
+            selector: self selector
+            arguments: (self arguments
+                            collect: { |each|
+                                       each inlineOn: receiver
+                                            withArguments: arguments})
+            source: self source!
+end
+
+extend AstCallMethod
+    method isTrivial
+        self receiver isSimple
+            ifTrue: { self arguments allSatisfy: #isSimple }
+            ifFalse: { False }!
+
+    method inlineOn: receiver withArguments: arguments
+        AstCallMethod
+            target: self target
+            receiver: (self receiver
+                           inlineOn: receiver
+                           withArguments: arguments)
+            arguments: (self arguments
+                            collect: { |each|
+                                       each inlineOn: receiver
+                                            withArguments: arguments})
+            source: self source!
+end
