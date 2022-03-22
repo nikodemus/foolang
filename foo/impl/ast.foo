@@ -387,25 +387,6 @@ class AstDefine { global body frameSize compilerInfo }
         visitor visitDefine: self!
 end
 
-class StandardDirectMethod { selector home }
-    is AstMethod
-
-    method isStandard
-        True!
-
-    method isDirect
-        True!
-
-    method methodHomeName
-        Name mangleMetaclass: self home!
-
-    method methodFunctionName
-        Name mangleStandardMethod: selector!
-
-    method displayOn: stream
-        stream writeString: "#<StandardDirectMethod {home name} {selector name}>"!
-end
-
 define StandardDirectMethodSelectors
     [#includes:, #name, #classOf]!
 
@@ -755,6 +736,25 @@ interface AstMethod
         self selector
             sendTo: receiver
             with: arguments!
+end
+
+class StandardDirectMethod { selector home }
+    is AstMethod
+
+    method isStandard
+        True!
+
+    method isDirect
+        True!
+
+    method methodHomeName
+        Name mangleMetaclass: self home!
+
+    method methodFunctionName
+        Name mangleStandardMethod: selector!
+
+    method displayOn: stream
+        stream writeString: "#<StandardDirectMethod {home name} {selector name}>"!
 end
 
 class AstConstructorMethod { home }
