@@ -37,12 +37,17 @@ class Compiler { source target system prelude stackSize addressSanitizer }
             => { return target append: ".exe" }.
         target!
 
+    direct method prelude
+        Foolang isSelfHosted
+            ifTrue: { ["lang", "target_prelude"] }
+            ifFalse: { ["lang", "bootstrap_compiler_prelude"] }!
+
     direct method compile: source in: system as: target
         (self
              source: (system files / source) readString
              target: system files / target
              system: system
-             prelude: ["lang", "target_prelude"]
+             prelude: self prelude
              -- 8MiB, default tends to be 1MiB, which is too
              -- little for self-compilation, let alone a metacircular
              -- REPL.

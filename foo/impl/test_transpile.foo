@@ -66,13 +66,13 @@ interface TranspilerTest
                testing: "transpile:expectCompilerError:"!
 
     method transpileWithPrelude: string expect: output
-        self prelude: ["lang", "target_prelude"] asList
+        self prelude: ["lang", "bootstrap_compiler_prelude"] asList
              transpile: string
              ok: True
              expect: output!
 
     method transpileWithPrelude: string check: block
-        self prelude: ["lang", "target_prelude"] asList
+        self prelude: ["lang", "bootstrap_compiler_prelude"] asList
              transpile: string
              ok: True
              check: block!

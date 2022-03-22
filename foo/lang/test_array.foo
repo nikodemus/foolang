@@ -18,12 +18,7 @@ class TestArray { assert }
     method test_hash
         Foolang isSelfHosted
             ifFalse: { return False }.
-        assert that: { [1,2,3] hash }
-               is: 938994897039145489.
-        assert that: { [3,2,1] hash }
-               is: 831586986328803217.
-        assert that: { [] hash }
-               is: 202634434632196117!
+        assert false: { [1,2,3] hash == [1,2,2] hash }!
 
     method test_size
         assert true: { 0 == [] size }.

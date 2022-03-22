@@ -86,16 +86,6 @@ if (i < 0)
 if (i >= array->size)
    foo_panicf(ctx, \"Index out of bounds! index: %\" PRId64 \"size: %\" PRId64, i + 1, array->size);
 return array->data[i] = ctx->frame[0];"},
-      #hash
-          -> { signature: [], vars: 0, returnType: Integer,
-               body: "struct FooArray* array = PTR(FooArray, receiver.datum);
-                      uint64_t hash = 0x82CFE6F1D783A015;
-                      for (size_t i = 0; i < array->size; i++) \{
-                          struct Foo value = foo_class_typecheck(
-                              ctx, &FooClass_Integer, foo_send(ctx, &FOO_hash, array->data[i], 0));
-                          hash = foo_hashmix(hash, value.datum.int64);
-                      \}
-                      return FOO_INTEGER(MASK_SIGN(hash));" },
       #from:to:
           -> {signature: [Integer, Integer], vars: 0, returnType: Array,
               body: "int64_t start = ctx->frame[0].datum.int64 - 1;

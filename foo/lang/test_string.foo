@@ -17,9 +17,9 @@ class TestString { assert }
         Foolang isSelfHosted
             ifFalse: { return False }.
         assert that: { "Foolang" hash }
-               is: 5802701093198167323.
+               is: 1819396690405004222.
         assert that: { "" hash }
-               is: 3133334841946951420!
+               is: 3244421341483603138!
 
     method test_isEquivalent
         assert true: { "foo" isEquivalent: "foo" }.

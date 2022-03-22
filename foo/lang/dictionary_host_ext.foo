@@ -16,20 +16,6 @@ extend Dictionary
                        put: v }.
         new!
 
-    method _keys
-        -- To allow dumping in transpiler for target
-        self keys sort!
-
-    method _values
-        -- To allow dumping in transpiler for target
-        let values = Array new: self size.
-        self _keys
-            doWithIndex: { |key index|
-                           values
-                               put: (self at: key)
-                               at: index }.
-        values!
-
     method isEmpty
         self size is 0!
 

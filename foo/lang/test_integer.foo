@@ -57,11 +57,11 @@ class TestInteger { assert }
 
     method test_hash
         assert that: { 0 hash }
-               is: 2800485498833346775.
+               is: 5150775175532752089.
         assert that: { -123 hash }
-               is: 7574510902475996257.
+               is: 815567703416164692.
         assert that: { 123 hash }
-               is: 9083884930233392067!
+               is: 7668608003591710536!
 
 
     method test_decimal_sepators

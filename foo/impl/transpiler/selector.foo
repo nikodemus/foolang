@@ -26,10 +26,24 @@ return FOO_BOOLEAN(name1->size < name2->size);"},
             body: "const char* name = (char*)PTR(FooSelector, ctx->receiver.datum)->name->data;
 printf(\"#<Selector %s>\", name);
 return ctx->receiver;"},
+    #identityHash
+        -> {signature: [], vars: 0,
+            body: "int64_t* cache = &((struct FooHeader*)receiver.datum.ptr)->identity_hash;
+                   int64_t cached = *cache;
+                   if (!cached) \{
+                       struct FooBytes* name = PTR(FooSelector, ctx->receiver.datum)->name;
+                       *cache = cached = foo_hash(name->data, name->size);
+                   }
+                   return FOO_INTEGER(MASK_SIGN(cached));"},
     #hash
         -> {signature: [], vars: 0,
-            body: "struct FooBytes* name = PTR(FooSelector, ctx->receiver.datum)->name;
-                   return FOO_INTEGER(MASK_SIGN(foo_hash(0x71FB0B75F486D43E, name->data, name->size)));"},
+            body: "int64_t* cache = &((struct FooHeader*)receiver.datum.ptr)->identity_hash;
+                   int64_t cached = *cache;
+                   if (!cached) \{
+                       struct FooBytes* name = PTR(FooSelector, ctx->receiver.datum)->name;
+                       *cache = cached = foo_hash(name->data, name->size);
+                   }
+                   return FOO_INTEGER(MASK_SIGN(cached));"},
     #name
         -> {signature: [], vars: 0,
             body: "struct FooSelector* selectorPtr = PTR(FooSelector, ctx->receiver.datum);

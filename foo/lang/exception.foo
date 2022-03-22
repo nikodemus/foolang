@@ -203,7 +203,7 @@ class TypeError { value expected source }
             raise!
 
     method _description
-        "Type error: { expected name } expected, got { value classOf name }: { value displayString }"!
+        "TypeError: { expected name } expected, got { value classOf name }: { value displayString }"!
 
     method displayOn: stream
         stream print: "#<TypeError { expected }, got: { value }>"!
