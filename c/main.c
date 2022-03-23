@@ -343,6 +343,14 @@ struct Foo foo_class_typecheck_argument(struct FooContext* sender,
              class->name->data, obj.class->name->data);
 }
 
+struct Foo foo_divide_by_zero(struct FooContext* sender) {
+#ifdef FOO_DIVIDEBYZERO_AVAILABLE
+  return foo_send(sender, &FOO_raise_, FOO_CLASS(DivideByZero), 1, sender->receiver);
+#else
+  foo_panicf(sender, "Divide by zero!");
+#endif
+}
+
 union FooDatum foo_check_modification(struct FooContext* ctx, union FooDatum datum) {
   if (((struct FooHeader*)datum.ptr)->allocation == STATIC) {
     foo_panicf(ctx, "Cannot modify constant object!");
