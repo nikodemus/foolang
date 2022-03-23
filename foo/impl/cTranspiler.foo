@@ -425,7 +425,7 @@ end
 
 class CTranspiler { output selectorMap closureFunctions
                     constants variables tmpCounter
-                    globals globalsCounter
+                    globals idCounter
                     generatedMethods env builtins }
 
     direct method transpile: string in: env with: prelude
@@ -445,7 +445,7 @@ class CTranspiler { output selectorMap closureFunctions
                           variables: Dictionary new
                           tmpCounter: 0
                           globals: CompilerDictionary new
-                          globalsCounter: Counter new
+                          idCounter: Counter new
                           generatedMethods: Dictionary new
                           env: env
                           builtins: builtins.
@@ -482,14 +482,16 @@ class CTranspiler { output selectorMap closureFunctions
     method addTemp
         $home addTemp!
 
+    method idFor: object
+        object idOr: { idCounter increment }!
+
     method mangleGlobal: global
-        let id = global idOr: { globalsCounter increment }.
-        -- Debug println: "{id}: {global}".
         Name mangleGlobal: global
-             id: id!
+             id: (self idFor: global)!
 
     method mangleMetaclass: aClass
-        Name mangleMetaclass: aClass!
+        Name mangleMetaclass: aClass
+             id: (self idFor: aClass)!
 
     method mangleMethodHome: aMethod
         aMethod isDirect
@@ -636,7 +638,7 @@ class CTranspiler { output selectorMap closureFunctions
                                  variables: variables
                                  tmpCounter: tmpCounter
                                  globals: globals
-                                 globalsCounter: globalsCounter
+                                 idCounter: idCounter
                                  generatedMethods: generatedMethods
                                  env: env
                                  builtins: builtins.
@@ -656,7 +658,7 @@ class CTranspiler { output selectorMap closureFunctions
                                  variables: variables
                                  tmpCounter: tmpCounter
                                  globals: globals
-                                 globalsCounter: globalsCounter
+                                 idCounter: idCounter
                                  generatedMethods: generatedMethods
                                  env: env
                                  builtins: builtins.
@@ -687,7 +689,7 @@ class CTranspiler { output selectorMap closureFunctions
                                  variables: variables
                                  tmpCounter: tmpCounter
                                  globals: globals
-                                 globalsCounter: globalsCounter
+                                 idCounter: idCounter
                                  generatedMethods: generatedMethods
                                  env: env
                                  builtins: builtins.
@@ -970,7 +972,7 @@ class CTranspiler { output selectorMap closureFunctions
                                variables: variables
                                tmpCounter: tmpCounter
                                globals: globals
-                               globalsCounter: globalsCounter
+                               idCounter: idCounter
                                generatedMethods: generatedMethods
                                env: env
                                builtins: builtins.

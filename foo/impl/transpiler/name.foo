@@ -45,9 +45,9 @@ class Name { out }
         s _mangleMethod: aMethod.
         s content!
 
-    direct method mangleMetaclass: aClass
+    direct method mangleMetaclass: aClass id: id
         let s = self _new.
-        s _mangleMetaclass: aClass.
+        s _mangleMetaclass: aClass id: id.
         s content!
 
     direct method mangleClass: aClass
@@ -83,14 +83,20 @@ class Name { out }
         out print: "_".
         out print: aVar name!
 
-    method _mangleMetaclass: aClass
-        -- KLUDGE: Class is its own metaclass.
+    method _mangleMetaclass: aClass id: id
+        -- KLUDGE: This method exists because in the compiler
+        -- our object modeling is incomplete: AstClass represents
+        -- both the metaclass and the class.
+        --
+        -- KLUDGE: Class is its own metaclass, and has direct
+        -- definition in C.
         aClass name == "Class"
             ifTrue: { return out print: "FooClass_Class" }.
-        -- XXX: Why do I need a distinct mangling for metaclasses?
-        -- Why not just FooClass_MyClass$class?
-        out print: "FooMetaclass_".
-        self _mangleName: aClass name!
+        out print: "FooClass".
+        out print: id.
+        out print: "_".
+        self _mangleName: aClass name.
+        out print: "_classOf"!
 
     method _mangleClass: aClass
         out print: "FooClass_".

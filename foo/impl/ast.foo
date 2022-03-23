@@ -430,6 +430,9 @@ class AstInterface { name _interfaces _directMethods _instanceMethods
         global define: theInterface.
         theInterface!
 
+    method idOr: block
+        global idOr: block!
+
     method _directMethodCache
         _directMethodCache!
 
@@ -558,6 +561,9 @@ class AstClass { name superclass _slots
                            markFunction: superclass definition markFunction.
         global define: theClass.
         theClass!
+
+    method idOr: block
+        global idOr: block!
 
     method isClass
         True!
@@ -1143,11 +1149,11 @@ class AstGlobal { name::String
         -- in main.c, and we want their names to be consistent.
         --
         -- See also: CompilerBuiltin#idOr:
-        self isBuiltin
-            ifTrue: { _id = "" }.
         _id is False
-            ifTrue: { _id = block value }
-            ifFalse: { _id }!
+            ifTrue: { self isBuiltin
+                          ifTrue:{ _id = "" }
+                          ifFalse: { _id = block value } }.
+        _id!
 
     method _value: new
         _value = new!
