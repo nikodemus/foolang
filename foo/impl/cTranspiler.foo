@@ -542,7 +542,7 @@ class CTranspiler { output selectorMap closureFunctions
     method _classDeclarations: aClass
         -- Class is it's own metaclass, declare only once.
         ((CompilerBuiltin includes: aClass) and: aClass name == "Class")
-            ifFalse: { output println: "struct FooClass {Name mangleMetaclass: aClass};" }.
+            ifFalse: { output println: "struct FooClass {self mangleMetaclass: aClass};" }.
         output println: "struct FooClass {Name mangleClass: aClass};".
         let isOwnDefinition
                 = { |def| def home is aClass }.
@@ -552,7 +552,7 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each| self _methodDeclaration: each }!
 
     method _interfaceDeclarations: anInterface
-        output println: "struct FooClass {Name mangleMetaclass: anInterface};".
+        output println: "struct FooClass {self mangleMetaclass: anInterface};".
         output println: "struct FooClass {Name mangleClass: anInterface};".
         let isOwnDefinition
                 = { |def| def home is anInterface and: def isRequired not }.
@@ -790,7 +790,7 @@ class CTranspiler { output selectorMap closureFunctions
     method _writeValue: value _to: out
         -- Tracer _writeValue: value.
         ((Class includes: value) or: (Interface includes: value))
-            ifTrue: { out print: "(struct Foo)\{ .class = &{Name mangleMetaclass: (self _astClassOf: value)}, .datum = \{ " }
+            ifTrue: { out print: "(struct Foo)\{ .class = &{self mangleMetaclass: (self _astClassOf: value)}, .datum = \{ " }
             ifFalse: { out print: "(struct Foo)\{ .class = &{Name mangleClass: (self _astClassOf: value)}, .datum = \{ " }.
         self _writeDatum: value _to: out.
         out println: " } }"!
@@ -1051,7 +1051,7 @@ class CTranspiler { output selectorMap closureFunctions
                               ifTrue: { "FooMetaclassInheritance_{anObject name}" }
                               ifFalse: { "FooClassInheritance_{anObject name}" }.
         let mangle = forMetaclass
-                         ifTrue: { { |x| Name mangleMetaclass: x} }
+                         ifTrue: { { |x| self mangleMetaclass: x} }
                          ifFalse: { { |x| Name mangleClass: x } }.
         let interfaces = anObject interfaceGlobals asList.
         forMetaclass
@@ -1081,7 +1081,7 @@ class CTranspiler { output selectorMap closureFunctions
 * {anInterface name} (an interface)
 *
 */".
-        let metaclassName = Name mangleMetaclass: anInterface.
+        let metaclassName = self mangleMetaclass: anInterface.
         let className = Name mangleClass: anInterface.
         let globalName = self mangleGlobal: anInterface.
         let directMethods = (anInterface directMethods reject: #isRequired)
@@ -1187,7 +1187,7 @@ class CTranspiler { output selectorMap closureFunctions
  */".
         let isTheClass = aClass isBuiltin and: aClass name == "Class".
         let className = Name mangleClass: aClass.
-        let metaclassName = Name mangleMetaclass: aClass.
+        let metaclassName = self mangleMetaclass: aClass.
         let globalName = self mangleGlobal: aClass.
         let directMethods = aClass directMethods asList.
         -- Debug println: "{aClass name} direct methods:".
