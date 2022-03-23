@@ -81,8 +81,6 @@ class BuiltinMethod { home selector definition isDirect }
         StringOutput with: { |out| self printOn: out }!
     method methodFunctionName
         Name mangleMethod: self!
-    method methodHomeName
-        Name mangleMethodClass: self!
 end
 
 define DatumClasses
@@ -492,6 +490,11 @@ class CTranspiler { output selectorMap closureFunctions
 
     method mangleMetaclass: aClass
         Name mangleMetaclass: aClass!
+
+    method mangleMethodHome: aMethod
+        aMethod isDirect
+            ifTrue: { self mangleMetaclass: aMethod home }
+            ifFalse: { Name mangleClass: aMethod home }!
 
     method _visitWithOutputToString: value
         let oldOutput = output.
@@ -1114,7 +1117,7 @@ class CTranspiler { output selectorMap closureFunctions
         directMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                  output println: "                            .home = &{each methodHomeName},".
+                  output println: "                            .home = &{self mangleMethodHome: each},".
                   output println: "                            .function = &{each methodFunctionName},".
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL } } }," }.
         output println: "    }".
@@ -1136,7 +1139,7 @@ class CTranspiler { output selectorMap closureFunctions
         instanceMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                  output println: "                            .home = &{each methodHomeName},".
+                  output println: "                            .home = &{self mangleMethodHome: each},".
                   output println: "                            .function = &{each methodFunctionName},".
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
         output println: "    }".
@@ -1225,7 +1228,7 @@ class CTranspiler { output selectorMap closureFunctions
                        directMethods
                            do: { |each|
                                  output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                                 output println: "                            .home = &{each methodHomeName},".
+                                 output println: "                            .home = &{self mangleMethodHome: each},".
                                  output println: "                            .function = &{each methodFunctionName},".
                                  output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL } } }," }.
                        output println: "    }".
@@ -1250,7 +1253,7 @@ class CTranspiler { output selectorMap closureFunctions
         instanceMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                  output println: "                            .home = &{each methodHomeName},".
+                  output println: "                            .home = &{self mangleMethodHome: each},".
                   output println: "                            .function = &{each methodFunctionName},".
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
         output println: "    }".
@@ -1488,7 +1491,7 @@ class CTranspiler { output selectorMap closureFunctions
                        collect: { |each| self _visitTemp: each }.
         output
             ; print: "foo_call_known_method(ctx, &"
-            ; print: target methodHomeName
+            ; print: (self mangleMethodHome: target)
             ; print: ", &"
             ; print: selector
             ; print: ", "

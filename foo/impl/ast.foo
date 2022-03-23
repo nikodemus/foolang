@@ -747,9 +747,6 @@ interface AstMethod
     method methodFunctionName
         Name mangleMethod: self!
 
-    method methodHomeName
-        Name mangleMethodClass: self!
-
     method invoke: arguments on: receiver
         self selector
             sendTo: receiver

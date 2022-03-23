@@ -45,11 +45,6 @@ class Name { out }
         s _mangleMethod: aMethod.
         s content!
 
-    direct method mangleMethodClass: aMethod
-        aMethod isDirect
-            ifTrue: { self mangleMetaclass: aMethod home }
-            ifFalse: { self mangleClass: aMethod home }!
-
     direct method mangleMetaclass: aClass
         let s = self _new.
         s _mangleMetaclass: aClass.
