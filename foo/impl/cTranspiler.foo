@@ -489,6 +489,10 @@ class CTranspiler { output selectorMap closureFunctions
         Name mangleGlobal: global
              id: (self idFor: global)!
 
+    method mangleDynamic: dynamic
+        Name mangleDynamic: dynamic
+             id: (self idFor: dynamic)!
+
     method mangleMetaclass: aClass
         Name mangleMetaclass: aClass
              id: (self idFor: aClass)!
@@ -524,7 +528,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method declareDynamic: var
         self declare: var.
-        variables at: var name ifNonePut: { variables size }!
+        variables at: var ifNonePut: { variables size }!
 
     method genTemp: name
         tmpCounter = tmpCounter + 1.
@@ -545,7 +549,7 @@ class CTranspiler { output selectorMap closureFunctions
             ifTrue: { self _interfaceDeclarations: aGlobal }.
         aGlobal isDynamic
             ifTrue: { self declareDynamic: aGlobal.
-                      output println: "struct Foo {Name mangleDynamic: aGlobal};" }
+                      output println: "struct Foo {self mangleDynamic: aGlobal};" }
             ifFalse: {  output println: "struct Foo {self mangleGlobal: aGlobal};" }!
 
     method _classDeclarations: aClass
@@ -595,10 +599,9 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "    fooinit();".
         output println: "    struct FooArray* vars = FooArray_alloc(NULL, {variables size});".
         variables
-            do: { |name offset|
-                  let var = {name: name}.
+            do: { |var offset|
                   output print: "vars->data[{offset}] = ".
-                  output print: (Name mangleDynamic: var).
+                  output print: (self mangleDynamic: var).
                   output println: ";" }.
         output println: "    struct FooContext* ctx = foo_context_new_main(vars);".
         output println: "    struct FooArray* array = FooArray_alloc(NULL, argc-1);".
@@ -1004,7 +1007,7 @@ class CTranspiler { output selectorMap closureFunctions
         aDefine compilerInfo tag: self.
         Tracer visitDefine: aDefine.
         aDefine isDynamic
-            ifTrue: { output println: "struct Foo {Name mangleDynamic: aDefine} = " }
+            ifTrue: { output println: "struct Foo {self mangleDynamic: aDefine} = " }
             ifFalse: { output println: "struct Foo {self mangleGlobal: aDefine} = " }.
         self _writeValue: aDefine eval _to: output.
         output println: ";".

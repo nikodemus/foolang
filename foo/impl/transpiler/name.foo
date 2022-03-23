@@ -65,16 +65,18 @@ class Name { out }
         s _mangleGlobal: aVar id: n.
         s content!
 
-    direct method mangleDynamic: aVar
+    direct method mangleDynamic: aVar id: n
         let s = self _new.
-        s _mangleDynamic: aVar.
+        s _mangleDynamic: aVar id: n.
         s content!
 
     method content
         out content!
 
-    method _mangleDynamic: aVar
-        out print: "FooDynamic_".
+    method _mangleDynamic: aVar id: n
+        out print: "FooDynamic".
+        out print: n.
+        out print: "_".
         out print: aVar name!
 
     method _mangleGlobal: aVar id: n
