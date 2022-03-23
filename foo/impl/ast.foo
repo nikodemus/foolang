@@ -762,10 +762,6 @@ class StandardMethod { selector home isDirect }
     method isStandard
         True!
 
-    method methodHomeName
-        -- XXX: Is this right for instance methods as well?
-        Name mangleMetaclass: self home!
-
     method methodFunctionName
         Name mangleStandardMethod: selector!
 
