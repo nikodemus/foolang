@@ -50,9 +50,9 @@ class Name { out }
         s _mangleMetaclass: aClass id: id.
         s content!
 
-    direct method mangleClass: aClass
+    direct method mangleClass: aClass id: id
         let s = self _new.
-        s _mangleClass: aClass.
+        s _mangleClass: aClass id: id.
         s content!
 
     direct method mangleName: name
@@ -92,14 +92,13 @@ class Name { out }
         -- definition in C.
         aClass name == "Class"
             ifTrue: { return out print: "FooClass_Class" }.
+        self _mangleClass: aClass id: id.
+        out print: "_classOf"!
+
+    method _mangleClass: aClass id: id
         out print: "FooClass".
         out print: id.
         out print: "_".
-        self _mangleName: aClass name.
-        out print: "_classOf"!
-
-    method _mangleClass: aClass
-        out print: "FooClass_".
         self _mangleName: aClass name!
 
     method _mangleMethod: aMethod
