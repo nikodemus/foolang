@@ -95,7 +95,7 @@ class Name { out }
         aClass name == "Class"
             ifTrue: { return out print: "FooClass_Class" }.
         self _mangleClass: aClass id: id.
-        out print: "_classOf"!
+        out print: "__classOf"!
 
     method _mangleClass: aClass id: id
         out print: "FooClass".
