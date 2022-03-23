@@ -40,9 +40,9 @@ class Name { out }
         s _mangleSelector: aMethod selector.
         s content!
 
-    direct method mangleMethod: aMethod
+    direct method mangleMethod: aMethod id: id
         let s = self _new.
-        s _mangleMethod: aMethod.
+        s _mangleMethod: aMethod id: id.
         s content!
 
     direct method mangleMetaclass: aClass id: id
@@ -103,11 +103,13 @@ class Name { out }
         out print: "_".
         self _mangleName: aClass name!
 
-    method _mangleMethod: aMethod
+    method _mangleMethod: aMethod id: id
         out print: (aMethod isDirect
-                        ifTrue: { "fooDirectMethod_" }
-                        ifFalse: { "fooInstanceMethod_" }).
-        out print: aMethod home name.
+                        ifTrue: { "FooDirectMethod" }
+                        ifFalse: { "FooMethod" }).
+        out print: id.
+        out print: "_".
+        self _mangleName: aMethod home name.
         out print: "_".
         self _mangleSelector: aMethod selector toSelector!
 

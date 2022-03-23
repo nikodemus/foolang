@@ -502,7 +502,8 @@ class CTranspiler { output selectorMap closureFunctions
     method mangleMethod: aMethod
         aMethod isStandard
             ifTrue: { Name mangleStandardMethod: aMethod }
-            ifFalse: { Name mangleMethod: aMethod }!
+            ifFalse: { Name mangleMethod: aMethod
+                            id: (self idFor: aMethod home) }!
 
     method mangleMethodHome: aMethod
         aMethod isDirect
@@ -579,7 +580,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method _methodDeclaration: aMethod
         output print: "struct Foo ".
-        output print: (Name mangleMethod: aMethod).
+        output print: (self mangleMethod: aMethod).
         output println: "(const struct FooMethod*, const struct FooSelector*, struct FooContext*, struct Foo, size_t, va_list);"!
 
     method writeDefinitions
@@ -1306,7 +1307,7 @@ class CTranspiler { output selectorMap closureFunctions
         -- Debug println: "_writeMethod: {aMethod}".
         aMethod isStandard
             ifTrue: { return False }.
-        let name = Name mangleMethod: aMethod.
+        let name = self mangleMethod: aMethod.
         generatedMethods
             at: name
             ifNonePut: { aMethod isConstructor
