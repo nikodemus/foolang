@@ -750,9 +750,6 @@ interface AstMethod
     method isDefined
         True!
 
-    method methodFunctionName
-        Name mangleMethod: self!
-
     method invoke: arguments on: receiver
         self selector
             sendTo: receiver
@@ -764,9 +761,6 @@ class StandardMethod { selector home isDirect }
 
     method isStandard
         True!
-
-    method methodFunctionName
-        Name mangleStandardMethod: selector!
 
     method displayOn: stream
         let maybeClassOf = isDirect

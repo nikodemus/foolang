@@ -79,8 +79,6 @@ class BuiltinMethod { home selector definition isDirect }
         self printOn: stream!
     method toString
         StringOutput with: { |out| self printOn: out }!
-    method methodFunctionName
-        Name mangleMethod: self!
 end
 
 define DatumClasses
@@ -500,6 +498,11 @@ class CTranspiler { output selectorMap closureFunctions
     method mangleClass: aClass
         Name mangleClass: aClass
              id: (self idFor: aClass)!
+
+    method mangleMethod: aMethod
+        aMethod isStandard
+            ifTrue: { Name mangleStandardMethod: aMethod }
+            ifFalse: { Name mangleMethod: aMethod }!
 
     method mangleMethodHome: aMethod
         aMethod isDirect
@@ -1133,7 +1136,7 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                   output println: "                            .home = &{self mangleMethodHome: each},".
-                  output println: "                            .function = &{each methodFunctionName},".
+                  output println: "                            .function = &{self mangleMethod: each},".
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL } } }," }.
         output println: "    }".
         output println: "};".
@@ -1155,7 +1158,7 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                   output println: "                            .home = &{self mangleMethodHome: each},".
-                  output println: "                            .function = &{each methodFunctionName},".
+                  output println: "                            .function = &{self mangleMethod: each},".
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
         output println: "    }".
         output println: "};".
@@ -1171,7 +1174,7 @@ class CTranspiler { output selectorMap closureFunctions
     method _writeConstructor: ctor for: aClass
         -- Awkward: we need the proto to mangle the names...
         output print: "struct Foo ".
-        output println: ctor methodFunctionName.
+        output println: (self mangleMethod: ctor).
         output println: "    (const struct FooMethod* method,".
         output println: "     const struct FooSelector* selector,".
         output println: "     struct FooContext* sender,".
@@ -1244,7 +1247,7 @@ class CTranspiler { output selectorMap closureFunctions
                            do: { |each|
                                  output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                                  output println: "                            .home = &{self mangleMethodHome: each},".
-                                 output println: "                            .function = &{each methodFunctionName},".
+                                 output println: "                            .function = &{self mangleMethod: each},".
                                  output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL } } }," }.
                        output println: "    }".
                        output println: "};".
@@ -1269,7 +1272,7 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
                   output println: "                            .home = &{self mangleMethodHome: each},".
-                  output println: "                            .function = &{each methodFunctionName},".
+                  output println: "                            .function = &{self mangleMethod: each},".
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
         output println: "    }".
         output println: "};".
@@ -1498,8 +1501,6 @@ class CTranspiler { output selectorMap closureFunctions
     method visitCallMethod: aCall
         -- These are never #perform:with: or object methods, thanks to #findMethod:in:
         let target = aCall target.
-        let methodFunction = Name mangleMethod: target.
-        let selector = self selectorCName: target selector.
         output print: "(\{ ".
         let receiver = self _visitTemp: aCall receiver.
         let args = aCall arguments
@@ -1508,9 +1509,9 @@ class CTranspiler { output selectorMap closureFunctions
             ; print: "foo_call_known_method(ctx, &"
             ; print: (self mangleMethodHome: target)
             ; print: ", &"
-            ; print: selector
+            ; print: (self selectorCName: target selector)
             ; print: ", "
-            ; print: target methodFunctionName
+            ; print: (self mangleMethod: target)
             ; print: ", "
             ; print: receiver
             ; print: ", "

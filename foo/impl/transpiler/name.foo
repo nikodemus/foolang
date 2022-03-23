@@ -34,10 +34,10 @@ class Name { out }
         s _mangleSelector: selector.
         s content!
 
-    direct method mangleStandardMethod: selector::Selector
+    direct method mangleStandardMethod: aMethod
         let s = self _new.
         s out print: "foo_method_".
-        s _mangleSelector: selector.
+        s _mangleSelector: aMethod selector.
         s content!
 
     direct method mangleMethod: aMethod
