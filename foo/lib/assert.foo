@@ -41,10 +41,7 @@ class TestCase { name condition successCount failureCount errorCount }
         failureCount + errorCount > 0!
 
     method expect: expected using: block
-        let actual = { condition value }
-                         onPanic: { |p|
-                                    return self errorOn: Nothing
-                                                what: (p description) }.
+        let actual = condition value.
         (block value: actual value: expected)
             ifTrue: { self successOn: Nothing }
             ifFalse: { self failureOn: Nothing

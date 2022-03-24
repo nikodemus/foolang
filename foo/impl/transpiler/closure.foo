@@ -55,10 +55,10 @@ define InstanceMethods
                       return FooGlobal_False;" },
       #finally:
           -> { signature: [Closure], vars: 1,
-               body: "struct FooFinally finally = \{
+               body: "struct FooCleanupClosure finally = \{
                           .cleanup = \{
                               .trigger = FOO_UNWIND,
-                              .function = foo_finally,
+                              .function = foo_cleanup_closure_handler,
                               .next = ctx->cleanup
                           \},
                           .closure = foo_class_typecheck(ctx, &FooClass_Closure, ctx->frame[0]).datum.ptr
@@ -67,6 +67,21 @@ define InstanceMethods
                       struct FooContext* closure_ctx = foo_context_new_closure(ctx);
                       ctx->frame[1] = PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);
                       ctx->cleanup = ctx->cleanup->next;
-                      foo_finally(ctx, &finally.cleanup);
+                      foo_cleanup_closure_handler(ctx, &finally.cleanup);
+                      return ctx->frame[1];" },
+      #onPanic:
+          -> { signature: [Closure], vars: 1,
+               body: "struct FooCleanupClosure on_panic = \{
+                          .cleanup = \{
+                              .trigger = FOO_PANIC,
+                              .function = foo_cleanup_closure_handler,
+                              .next = ctx->cleanup
+                          \},
+                          .closure = foo_class_typecheck(ctx, &FooClass_Closure, ctx->frame[0]).datum.ptr
+                      \};
+                      ctx->cleanup = &on_panic.cleanup;
+                      struct FooContext* closure_ctx = foo_context_new_closure(ctx);
+                      ctx->frame[1] = PTR(FooClosure, ctx->receiver.datum)->function(closure_ctx);
+                      ctx->cleanup = ctx->cleanup->next;
                       return ctx->frame[1];" }
 }!

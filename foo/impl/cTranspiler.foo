@@ -1534,7 +1534,7 @@ class CTranspiler { output selectorMap closureFunctions
         output print: "(\{ struct FooUnbind {unbind} = \{".
         output print: "        .cleanup = \{".
         output print: "            .trigger = FOO_UNWIND,".
-        output print: "            .function = foo_unbind,".
+        output print: "            .function = foo_unbind_handler,".
         output print: "            .next = ctx->cleanup".
         output print: "        \},".
         output print: "        .index = {index},".
@@ -1547,7 +1547,7 @@ class CTranspiler { output selectorMap closureFunctions
         let res = self _visitTemp: aBind body.
         output print: " assert(&{unbind}.cleanup == ctx->cleanup);".
         output print: " ctx->cleanup = ctx->cleanup->next;".
-        output print: " foo_unbind(ctx, &{unbind}.cleanup);".
+        output print: " foo_unbind_handler(ctx, &{unbind}.cleanup);".
         output print: " {res}; })"!
 
     method visitBindLexical: aBind

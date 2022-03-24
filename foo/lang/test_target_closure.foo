@@ -1,9 +1,51 @@
+-- For testing Closure#with:
+class _Closable { closed }
+    method close
+        closed = True!
+end
+
 class TestTargetClosure { assert }
     is TestSuite
 
-    method test_cull
+    method test_optional
         assert that: { { 53 } optional: 123 } is: 53.
         assert that: { { |x| x } optional: 675 } is: 675!
+
+    method aux_onPanic
+        { panic "Foo". False }
+            onPanic: { |p| return True }
+
+    method test_onPanic
+        assert true: { self aux_onPanic }
+               testing: "Closure#onPanic"!
+
+    method aux_with_return: obj
+        { |arg| return 104 }
+            with: obj!
+
+    method aux_with_panic: obj
+        { { |arg| panic "oops" }
+              with: obj }
+        onPanic: { return 678 }!
+
+    method test_with
+        assert false: { (_Closable closed: False) closed }
+               testing: "Closure#with: (sanity check)".
+        assert that: { let obj = _Closable closed: False.
+                       let res = { |arg| 42 } with: obj.
+                       [obj closed, res] }
+               equals: [True, 42]
+               testing: "Closure#with: (normal)".
+        assert that: { let obj = _Closable closed: False.
+                       let res = self aux_with_return: obj.
+                       [obj closed, res] }
+               equals: [True, 104]
+               testing: "Closure#with: (unwind)".
+        assert that: { let obj = _Closable closed: False.
+                       let res = self aux_with_panic: obj.
+                       [obj closed, res] }
+               equals: [True, 678]
+               testing: "Closure#with: (unwind)"!
 
     method test_finally_block_executes_after_fallthrough
         let log = StringOutput new.

@@ -191,38 +191,42 @@ struct FooContext* foo_context_new_closure_array(struct FooContext* sender,
   return context;
 }
 
-struct FooContext* foo_context_new_unwind(struct FooContext* sender, struct FooClosure* closure) {
+struct FooContext* foo_context_new_cleanup(struct FooContext* sender, struct FooClosure* closure) {
   struct FooContext* context = foo_alloc_context(sender, closure->frameSize);
-  context->type = UNWIND_CONTEXT;
+  context->type = CLEANUP_CONTEXT;
   context->depth = sender->depth + 1;
   context->method = NULL;
   context->receiver = closure->context->receiver;
   context->sender = sender;
   context->outer_context = closure->context;
   context->vars = sender->vars;
-  assert(closure->argCount == 0);
+  assert(context->size >= closure->argCount);
+  for (size_t i = 0; i < closure->argCount; ++i)
+    context->frame[i] = sender->frame[i];
   return context;
 }
 
-void foo_cleanup(struct FooContext* sender) {
-  while (sender->cleanup) {
-    struct FooCleanup* cleanup = sender->cleanup;
-    // This sender->cleanup assignment before the cleanup function is run
-    // is done so that cleanups cannot trigger themselves!
-    sender->cleanup = cleanup->next;
-    assert(cleanup->trigger == FOO_UNWIND);
-    cleanup->function(sender, cleanup);
+void foo_cleanup(struct FooContext* sender, struct FooCleanup* next, enum FooCleanupTrigger trigger) {
+  while (next) {
+    struct FooCleanup* cleanup = next;
+    next = cleanup->next;
+    if (cleanup->trigger == trigger) {
+      // Clear trigger before doing the cleanup, so it cannot
+      // trigger itself again.
+      cleanup->trigger = FOO_NO_TRIGGER;
+      cleanup->function(sender, cleanup);
+    }
   }
 }
 
-void foo_finally(struct FooContext* sender, struct FooCleanup* cleanup) {
-  struct FooClosure* closure = ((struct FooFinally*)cleanup)->closure;
+void foo_cleanup_closure_handler(struct FooContext* sender, struct FooCleanup* cleanup) {
+  struct FooClosure* closure = ((struct FooCleanupClosure*)cleanup)->closure;
   // FIXME: Could stack-allocate this context.
-  struct FooContext* closure_ctx = foo_context_new_unwind(sender, closure);
+  struct FooContext* closure_ctx = foo_context_new_cleanup(sender, closure);
   closure->function(closure_ctx);
 }
 
-void foo_unbind(struct FooContext* sender, struct FooCleanup* cleanup) {
+void foo_unbind_handler(struct FooContext* sender, struct FooCleanup* cleanup) {
   struct FooUnbind* unbind = (struct FooUnbind*)cleanup;
   sender->vars->data[unbind->index] = unbind->value;
 }
@@ -469,10 +473,10 @@ struct Foo foo_return(struct FooContext* ctx, struct Foo value) {
     return_context = return_context->outer_context;
   }
   while (ctx != return_context) {
-    foo_cleanup(ctx);
+    foo_cleanup(ctx, ctx->cleanup, FOO_UNWIND);
     ctx = ctx->sender;
   }
-  foo_cleanup(ctx);
+  foo_cleanup(ctx, ctx->cleanup, FOO_UNWIND);
   return_context->return_value = value;
   longjmp(*(jmp_buf*)return_context->ret, 1);
   foo_panicf(ctx, "INTERNAL ERROR: longjmp() fell through!");
@@ -493,6 +497,20 @@ struct FooContext* foo_context_new_method_dummy(const struct FooMethod* method,
   context->outer_context = NULL;
   context->vars = sender->vars;
   context->frame[0] = arg;
+  return context;
+}
+
+// This is a context that provides the panic message to onPanic handlers.
+struct FooContext* foo_context_new_panic(struct FooContext* sender, struct Foo message) {
+  struct FooContext* context = foo_alloc_context(sender, 1);
+  context->type = CLEANUP_CONTEXT;
+  context->depth = sender->depth + 1;
+  context->method = NULL;
+  context->sender = sender;
+  context->receiver = sender->receiver;
+  context->outer_context = NULL;
+  context->vars = sender->vars;
+  context->frame[0] = message;
   return context;
 }
 
@@ -557,8 +575,8 @@ void foo_print_backtrace(struct FooContext* context) {
       // The method frame appears just before this one, not need to
       // print this separately. Even the frame numbers are right.
       break;
-    case UNWIND_CONTEXT:
-      printf("<<unwind>>");
+    case CLEANUP_CONTEXT:
+      printf("<<cleanup>>");
       break;
     default:
       printf("<<unknown context type: %u>", context->type);
@@ -942,7 +960,18 @@ struct Foo foo_String_new_from(struct FooContext* sender, const char* s) {
   return foo_String_new(sender, strlen(s), s);
 }
 
+void foo_try_handle_panic(struct FooContext* sender) {
+  struct FooContext* ctx = sender;
+  while (ctx) {
+    foo_cleanup(sender, ctx->cleanup, FOO_PANIC);
+    ctx = ctx->sender;
+  }
+}
+
 struct Foo foo_panic(struct FooContext* ctx, struct Foo message) {
+  // Try to find a handler
+  foo_try_handle_panic(foo_context_new_panic(ctx, message));
+  // Fallback to printout and exit
   printf("PANIC: ");
   if (&FooClass_String == message.class) {
     struct FooBytes* bytes = PTR(FooBytes, message.datum);
@@ -958,11 +987,18 @@ struct Foo foo_panic(struct FooContext* ctx, struct Foo message) {
 }
 
 struct Foo foo_panicf(struct FooContext* ctx, const char* fmt, ...) {
+  // Format the message.
+  char buffer[2048];
   va_list arguments;
   va_start(arguments, fmt);
-  printf("PANIC: ");
-  vprintf(fmt, arguments);
-  printf("\n");
+  vsnprintf(buffer, sizeof(buffer), fmt, arguments);
+  va_end(arguments);
+  // Turn it into a string.
+  struct Foo message = foo_String_new_from(ctx, buffer);
+  // Find a handler if one exists
+  foo_try_handle_panic(foo_context_new_panic(ctx, message));
+  // Fallback to printout and exit.
+  printf("PANIC: %s\n", buffer);
   foo_print_backtrace(ctx);
   fflush(stdout);
   fflush(stderr);
