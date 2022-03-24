@@ -562,7 +562,7 @@ class CTranspiler { output selectorMap closureFunctions
             ifFalse: { output println: "struct FooClass {self mangleMetaclass: aClass};" }.
         output println: "struct FooClass {self mangleClass: aClass};".
         let isOwnDefinition
-                = { |def| def home is aClass }.
+            = { |def| def isStandard not and: def home is aClass }.
         (aClass directMethods select: isOwnDefinition)
             do: { |each| self _methodDeclaration: each }.
         (aClass instanceMethods select: isOwnDefinition)
