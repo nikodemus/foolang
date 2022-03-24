@@ -1,7 +1,0 @@
-import .block.Block
-
-extend Block
-    method onPanic: other
-        -- bug #848
-        self value!
-end

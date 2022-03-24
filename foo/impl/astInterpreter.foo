@@ -76,10 +76,10 @@ class AstBlockClosure { context block }
         { self value } loop!
 
     method finally: cleanup
-        -- KLUDGE: cleanup not passed directly to builtin
-        -- #finally: since it expects a Closure, which
-        -- AstBlockClosure is currently not.
         { self value } finally: { cleanup value }!
+
+    method onPanic: handler
+        { self value } onPanic: { |p| handler optional: p }!
 
     method arity
         block argumentCount!

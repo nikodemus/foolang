@@ -1,8 +1,3 @@
--- For testing Closure#with:
-class _Closable { closed }
-    method close
-        closed = True!
-end
 
 class TestSelfRefInClosure { cookie }
     direct method test
@@ -45,26 +40,6 @@ class TestClosure { assert }
     method testSelfRefInClosure
         assert true: { TestSelfRefInClosure test }
                testing: "reference to self inside closure"!
-
-    method testOnPanic
-        assert true: { { panic "Foo". False }
-                         onPanic: { |p| True } }
-               testing: "Closure#onPanic"!
-
-    method testWith
-        assert false: { (_Closable closed: False) closed }
-               testing: "Closure#with: (sanity check)".
-        assert that: { let obj = _Closable closed: False.
-                       let res = { |arg| 42 } with: obj.
-                       [obj closed, res] }
-               equals: [True, 42]
-               testing: "Closure#with: (normal)".
-        assert that: { let obj = _Closable closed: False.
-                       let res = { { |arg| panic "Bang" } with: obj }
-                                     onPanic: { |p| 104 }.
-                       [obj closed, res] }
-               equals: [True, 104]
-               testing: "Closure#with: (unwind)"!
 
     method testApply
         assert that: { { |x y| x + y } apply: [1, 2] }

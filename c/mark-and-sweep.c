@@ -229,11 +229,11 @@ void foo_mark_cleanup(struct FooCleanup* cleanup) {
   if (!cleanup) {
     goto exit;
   }
-  if (cleanup->function == foo_finally) {
-    foo_mark_closure(((struct FooFinally*)cleanup)->closure);
+  if (cleanup->function == foo_cleanup_closure_handler) {
+    foo_mark_closure(((struct FooCleanupClosure*)cleanup)->closure);
     goto exit;
   }
-  if (cleanup->function == foo_unbind) {
+  if (cleanup->function == foo_unbind_handler) {
     foo_mark_object(((struct FooUnbind*)cleanup)->value);
     goto exit;
   }

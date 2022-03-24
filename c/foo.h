@@ -105,14 +105,21 @@ struct FooSelector {
 struct FooCleanup;
 typedef void (*FooCleanupFunction)(struct FooContext*, struct FooCleanup*);
 
+enum FooCleanupTrigger {
+  FOO_NO_TRIGGER,
+  FOO_UNWIND,
+  FOO_PANIC,
+};
+
 // Never seen as on object, always stack-allocated: no header.
 struct FooCleanup {
+  enum FooCleanupTrigger trigger;
   FooCleanupFunction function;
   struct FooCleanup* next;
 };
 
 // Never seen as on object, always stack-allocated: no header.
-struct FooFinally {
+struct FooCleanupClosure {
   struct FooCleanup cleanup;
   struct FooClosure* closure;
 };
@@ -127,7 +134,7 @@ struct FooUnbind {
 enum FooContextType {
     METHOD_CONTEXT = 0,
     CLOSURE_CONTEXT = 1,
-    UNWIND_CONTEXT = 2,
+    CLEANUP_CONTEXT = 2,
     ROOT_CONTEXT = 3,
 };
 
@@ -223,8 +230,8 @@ struct FooProcessTimes {
   double real;
 };
 
-void foo_finally(struct FooContext* sender, struct FooCleanup* cleanup);
-void foo_unbind(struct FooContext* sender, struct FooCleanup* cleanup);
+void foo_cleanup_closure_handler(struct FooContext* sender, struct FooCleanup* cleanup);
+void foo_unbind_handler(struct FooContext* sender, struct FooCleanup* cleanup);
 
 extern struct FooLayout TheEmptyLayout;
 extern struct FooLayout TheClassLayout;
