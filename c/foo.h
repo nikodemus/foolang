@@ -105,8 +105,13 @@ struct FooSelector {
 struct FooCleanup;
 typedef void (*FooCleanupFunction)(struct FooContext*, struct FooCleanup*);
 
+enum FooCleanupTrigger {
+  FOO_UNWIND,
+};
+
 // Never seen as on object, always stack-allocated: no header.
 struct FooCleanup {
+  enum FooCleanupTrigger trigger;
   FooCleanupFunction function;
   struct FooCleanup* next;
 };

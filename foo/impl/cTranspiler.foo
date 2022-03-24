@@ -1531,9 +1531,17 @@ class CTranspiler { output selectorMap closureFunctions
         let name = aBind variable name.
         let index = self declareDynamic: aBind variable.
         let unbind = self genTemp: "unbind".
-        output print: "(\{ struct FooUnbind {unbind} = \{ .cleanup = \{ .function = foo_unbind, .next = ctx->cleanup }, .index = {index}, .value = ctx->vars->data[{index}] };".
-        output print: " ctx->cleanup = &{unbind}.cleanup;".
-        output print: " ctx->vars->data[{index}] = ".
+        output print: "(\{ struct FooUnbind {unbind} = \{".
+        output print: "        .cleanup = \{".
+        output print: "            .trigger = FOO_UNWIND,".
+        output print: "            .function = foo_unbind,".
+        output print: "            .next = ctx->cleanup".
+        output print: "        \},".
+        output print: "        .index = {index},".
+        output print: "        .value = ctx->vars->data[{index}]".
+        output print: "    };".
+        output print: "    ctx->cleanup = &{unbind}.cleanup;".
+        output print: "    ctx->vars->data[{index}] = ".
         aBind value visitBy: self.
         output print: ";".
         let res = self _visitTemp: aBind body.

@@ -57,6 +57,7 @@ define InstanceMethods
           -> { signature: [Closure], vars: 1,
                body: "struct FooFinally finally = \{
                           .cleanup = \{
+                              .trigger = FOO_UNWIND,
                               .function = foo_finally,
                               .next = ctx->cleanup
                           \},

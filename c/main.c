@@ -210,6 +210,7 @@ void foo_cleanup(struct FooContext* sender) {
     // This sender->cleanup assignment before the cleanup function is run
     // is done so that cleanups cannot trigger themselves!
     sender->cleanup = cleanup->next;
+    assert(cleanup->trigger == FOO_UNWIND);
     cleanup->function(sender, cleanup);
   }
 }
