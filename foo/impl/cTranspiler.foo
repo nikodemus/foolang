@@ -561,11 +561,10 @@ class CTranspiler { output selectorMap closureFunctions
         ((CompilerBuiltin includes: aClass) and: aClass name == "Class")
             ifFalse: { output println: "struct FooClass {self mangleMetaclass: aClass};" }.
         output println: "struct FooClass {self mangleClass: aClass};".
-        let isOwnDefinition
-            = { |def| def isStandard not and: def home is aClass }.
-        (aClass directMethods select: isOwnDefinition)
+        let isOwnDefinition = { |def| def home is aClass }.
+        ((aClass directMethods select: isOwnDefinition) reject: #isStandard)
             do: { |each| self _methodDeclaration: each }.
-        (aClass instanceMethods select: isOwnDefinition)
+        ((aClass instanceMethods select: isOwnDefinition) reject: #isStandard)
             do: { |each| self _methodDeclaration: each }!
 
     method _interfaceDeclarations: anInterface
@@ -573,9 +572,9 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "struct FooClass {self mangleClass: anInterface};".
         let isOwnDefinition
                 = { |def| def home is anInterface and: def isRequired not }.
-        (anInterface directMethods select: isOwnDefinition)
+        ((anInterface directMethods select: isOwnDefinition) reject: #isStandard)
             do: { |each| self _methodDeclaration: each }.
-        (anInterface instanceMethods select: isOwnDefinition)
+        ((anInterface instanceMethods select: isOwnDefinition) reject: #isStandard)
             do: { |each| self _methodDeclaration: each }!
 
     method _methodDeclaration: aMethod
