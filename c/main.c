@@ -207,6 +207,8 @@ struct FooContext* foo_context_new_unwind(struct FooContext* sender, struct FooC
 void foo_cleanup(struct FooContext* sender) {
   while (sender->cleanup) {
     struct FooCleanup* cleanup = sender->cleanup;
+    // This sender->cleanup assignment before the cleanup function is run
+    // is done so that cleanups cannot trigger themselves!
     sender->cleanup = cleanup->next;
     cleanup->function(sender, cleanup);
   }
