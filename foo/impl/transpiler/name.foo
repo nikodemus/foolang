@@ -34,30 +34,25 @@ class Name { out }
         s _mangleSelector: selector.
         s content!
 
-    direct method mangleStandardMethod: selector::Selector
+    direct method mangleStandardMethod: aMethod
         let s = self _new.
         s out print: "foo_method_".
-        s _mangleSelector: selector.
+        s _mangleSelector: aMethod selector.
         s content!
 
-    direct method mangleMethod: aMethod
+    direct method mangleMethod: aMethod id: id
         let s = self _new.
-        s _mangleMethod: aMethod.
+        s _mangleMethod: aMethod id: id.
         s content!
 
-    direct method mangleMethodClass: aMethod
-        aMethod isDirect
-            ifTrue: { self mangleMetaclass: aMethod home }
-            ifFalse: { self mangleClass: aMethod home }!
-
-    direct method mangleMetaclass: aClass
+    direct method mangleMetaclass: aClass id: id
         let s = self _new.
-        s _mangleMetaclass: aClass.
+        s _mangleMetaclass: aClass id: id.
         s content!
 
-    direct method mangleClass: aClass
+    direct method mangleClass: aClass id: id
         let s = self _new.
-        s _mangleClass: aClass.
+        s _mangleClass: aClass id: id.
         s content!
 
     direct method mangleName: name
@@ -70,16 +65,18 @@ class Name { out }
         s _mangleGlobal: aVar id: n.
         s content!
 
-    direct method mangleDynamic: aVar
+    direct method mangleDynamic: aVar id: n
         let s = self _new.
-        s _mangleDynamic: aVar.
+        s _mangleDynamic: aVar id: n.
         s content!
 
     method content
         out content!
 
-    method _mangleDynamic: aVar
-        out print: "FooDynamic_".
+    method _mangleDynamic: aVar id: n
+        out print: "FooDynamic".
+        out print: n.
+        out print: "_".
         out print: aVar name!
 
     method _mangleGlobal: aVar id: n
@@ -88,24 +85,31 @@ class Name { out }
         out print: "_".
         out print: aVar name!
 
-    method _mangleMetaclass: aClass
-        -- KLUDGE: Class is its own metaclass.
+    method _mangleMetaclass: aClass id: id
+        -- KLUDGE: This method exists because in the compiler
+        -- our object modeling is incomplete: AstClass represents
+        -- both the metaclass and the class.
+        --
+        -- KLUDGE: Class is its own metaclass, and has direct
+        -- definition in C.
         aClass name == "Class"
             ifTrue: { return out print: "FooClass_Class" }.
-        -- XXX: Why do I need a distinct mangling for metaclasses?
-        -- Why not just FooClass_MyClass$class?
-        out print: "FooMetaclass_".
+        self _mangleClass: aClass id: id.
+        out print: "__classOf"!
+
+    method _mangleClass: aClass id: id
+        out print: "FooClass".
+        out print: id.
+        out print: "_".
         self _mangleName: aClass name!
 
-    method _mangleClass: aClass
-        out print: "FooClass_".
-        self _mangleName: aClass name!
-
-    method _mangleMethod: aMethod
+    method _mangleMethod: aMethod id: id
         out print: (aMethod isDirect
-                        ifTrue: { "fooDirectMethod_" }
-                        ifFalse: { "fooInstanceMethod_" }).
-        out print: aMethod home name.
+                        ifTrue: { "FooDirectMethod" }
+                        ifFalse: { "FooMethod" }).
+        out print: id.
+        out print: "_".
+        self _mangleName: aMethod home name.
         out print: "_".
         self _mangleSelector: aMethod selector toSelector!
 

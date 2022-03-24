@@ -79,10 +79,6 @@ class BuiltinMethod { home selector definition isDirect }
         self printOn: stream!
     method toString
         StringOutput with: { |out| self printOn: out }!
-    method methodFunctionName
-        Name mangleMethod: self!
-    method methodHomeName
-        Name mangleMethodClass: self!
 end
 
 define DatumClasses
@@ -427,7 +423,7 @@ end
 
 class CTranspiler { output selectorMap closureFunctions
                     constants variables tmpCounter
-                    globals globalsCounter
+                    globals idCounter
                     generatedMethods env builtins }
 
     direct method transpile: string in: env with: prelude
@@ -447,7 +443,7 @@ class CTranspiler { output selectorMap closureFunctions
                           variables: Dictionary new
                           tmpCounter: 0
                           globals: CompilerDictionary new
-                          globalsCounter: Counter new
+                          idCounter: Counter new
                           generatedMethods: Dictionary new
                           env: env
                           builtins: builtins.
@@ -484,14 +480,35 @@ class CTranspiler { output selectorMap closureFunctions
     method addTemp
         $home addTemp!
 
+    method idFor: object
+        object idOr: { idCounter increment }!
+
     method mangleGlobal: global
-        let id = global idOr: { globalsCounter increment }.
-        -- Debug println: "{id}: {global}".
         Name mangleGlobal: global
-             id: id!
+             id: (self idFor: global)!
+
+    method mangleDynamic: dynamic
+        Name mangleDynamic: dynamic
+             id: (self idFor: dynamic)!
 
     method mangleMetaclass: aClass
-        Name mangleMetaclass: aClass!
+        Name mangleMetaclass: aClass
+             id: (self idFor: aClass)!
+
+    method mangleClass: aClass
+        Name mangleClass: aClass
+             id: (self idFor: aClass)!
+
+    method mangleMethod: aMethod
+        aMethod isStandard
+            ifTrue: { Name mangleStandardMethod: aMethod }
+            ifFalse: { Name mangleMethod: aMethod
+                            id: (self idFor: aMethod home) }!
+
+    method mangleMethodHome: aMethod
+        aMethod isDirect
+            ifTrue: { self mangleMetaclass: aMethod home }
+            ifFalse: { self mangleClass: aMethod home }!
 
     method _visitWithOutputToString: value
         let oldOutput = output.
@@ -515,7 +532,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method declareDynamic: var
         self declare: var.
-        variables at: var name ifNonePut: { variables size }!
+        variables at: var ifNonePut: { variables size }!
 
     method genTemp: name
         tmpCounter = tmpCounter + 1.
@@ -536,34 +553,33 @@ class CTranspiler { output selectorMap closureFunctions
             ifTrue: { self _interfaceDeclarations: aGlobal }.
         aGlobal isDynamic
             ifTrue: { self declareDynamic: aGlobal.
-                      output println: "struct Foo {Name mangleDynamic: aGlobal};" }
+                      output println: "struct Foo {self mangleDynamic: aGlobal};" }
             ifFalse: {  output println: "struct Foo {self mangleGlobal: aGlobal};" }!
 
     method _classDeclarations: aClass
         -- Class is it's own metaclass, declare only once.
         ((CompilerBuiltin includes: aClass) and: aClass name == "Class")
-            ifFalse: { output println: "struct FooClass {Name mangleMetaclass: aClass};" }.
-        output println: "struct FooClass {Name mangleClass: aClass};".
-        let isOwnDefinition
-                = { |def| def home is aClass }.
-        (aClass directMethods select: isOwnDefinition)
+            ifFalse: { output println: "struct FooClass {self mangleMetaclass: aClass};" }.
+        output println: "struct FooClass {self mangleClass: aClass};".
+        let isOwnDefinition = { |def| def home is aClass }.
+        ((aClass directMethods select: isOwnDefinition) reject: #isStandard)
             do: { |each| self _methodDeclaration: each }.
-        (aClass instanceMethods select: isOwnDefinition)
+        ((aClass instanceMethods select: isOwnDefinition) reject: #isStandard)
             do: { |each| self _methodDeclaration: each }!
 
     method _interfaceDeclarations: anInterface
-        output println: "struct FooClass {Name mangleMetaclass: anInterface};".
-        output println: "struct FooClass {Name mangleClass: anInterface};".
+        output println: "struct FooClass {self mangleMetaclass: anInterface};".
+        output println: "struct FooClass {self mangleClass: anInterface};".
         let isOwnDefinition
                 = { |def| def home is anInterface and: def isRequired not }.
-        (anInterface directMethods select: isOwnDefinition)
+        ((anInterface directMethods select: isOwnDefinition) reject: #isStandard)
             do: { |each| self _methodDeclaration: each }.
-        (anInterface instanceMethods select: isOwnDefinition)
+        ((anInterface instanceMethods select: isOwnDefinition) reject: #isStandard)
             do: { |each| self _methodDeclaration: each }!
 
     method _methodDeclaration: aMethod
         output print: "struct Foo ".
-        output print: (Name mangleMethod: aMethod).
+        output print: (self mangleMethod: aMethod).
         output println: "(const struct FooMethod*, const struct FooSelector*, struct FooContext*, struct Foo, size_t, va_list);"!
 
     method writeDefinitions
@@ -586,10 +602,9 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "    fooinit();".
         output println: "    struct FooArray* vars = FooArray_alloc(NULL, {variables size});".
         variables
-            do: { |name offset|
-                  let var = {name: name}.
+            do: { |var offset|
                   output print: "vars->data[{offset}] = ".
-                  output print: (Name mangleDynamic: var).
+                  output print: (self mangleDynamic: var).
                   output println: ";" }.
         output println: "    struct FooContext* ctx = foo_context_new_main(vars);".
         output println: "    struct FooArray* array = FooArray_alloc(NULL, argc-1);".
@@ -633,7 +648,7 @@ class CTranspiler { output selectorMap closureFunctions
                                  variables: variables
                                  tmpCounter: tmpCounter
                                  globals: globals
-                                 globalsCounter: globalsCounter
+                                 idCounter: idCounter
                                  generatedMethods: generatedMethods
                                  env: env
                                  builtins: builtins.
@@ -653,7 +668,7 @@ class CTranspiler { output selectorMap closureFunctions
                                  variables: variables
                                  tmpCounter: tmpCounter
                                  globals: globals
-                                 globalsCounter: globalsCounter
+                                 idCounter: idCounter
                                  generatedMethods: generatedMethods
                                  env: env
                                  builtins: builtins.
@@ -684,7 +699,7 @@ class CTranspiler { output selectorMap closureFunctions
                                  variables: variables
                                  tmpCounter: tmpCounter
                                  globals: globals
-                                 globalsCounter: globalsCounter
+                                 idCounter: idCounter
                                  generatedMethods: generatedMethods
                                  env: env
                                  builtins: builtins.
@@ -730,8 +745,8 @@ class CTranspiler { output selectorMap closureFunctions
                                 value is each value
                                    ifTrue: { return each cname } } }.
         ((Class includes: value) or: (Interface includes: value))
-            ifTrue: { self declare: (self _astClassOf: value).
-                      let cname = Name mangleClass: value.
+            ifTrue: { self declare: (self astClassOf: value).
+                      let cname = self mangleClass: (self astClassFor: value).
                       constants add: { value: value,
                                        cname: cname,
                                        declaration: "",
@@ -767,7 +782,16 @@ class CTranspiler { output selectorMap closureFunctions
             ifTrue: { return out print: ".int64 = {value}" }.
         Error raise: "Don't know how to transpile constant `{value}` into C."!
 
-    method _astClassOf: value
+    method astClassFor: aClass
+        (AstGlobal includes: aClass)
+            ifTrue: { return aClass definition }.
+        env classes
+            at: aClass
+            ifNone: { env findBuiltinFor: aClass
+                          ifNone: { panic "No AST class for {aClass}!\nenv classes: {env classes keys}\nbuiltins: {builtins}" } }!
+
+
+    method astClassOf: value
         (Record includes: value)
             ifTrue: { let recordClass = env recordClassFromRecord: value.
                       self declare: recordClass.
@@ -782,16 +806,13 @@ class CTranspiler { output selectorMap closureFunctions
         let theClass = ((Class includes: value) or: (Interface includes: value))
                          ifTrue: { value }
                          ifFalse: { value classOf }.
-        return env classes
-            at: theClass
-            ifNone: { env findBuiltinFor: theClass
-                          ifNone: { panic "No 'ast class' for: {value} ({theClass})\nenv classes: {env classes keys}\nbuiltins: {builtins}" } }!
+        return self astClassFor: theClass!
 
     method _writeValue: value _to: out
         -- Tracer _writeValue: value.
         ((Class includes: value) or: (Interface includes: value))
-            ifTrue: { out print: "(struct Foo)\{ .class = &{Name mangleMetaclass: (self _astClassOf: value)}, .datum = \{ " }
-            ifFalse: { out print: "(struct Foo)\{ .class = &{Name mangleClass: (self _astClassOf: value)}, .datum = \{ " }.
+            ifTrue: { out print: "(struct Foo)\{ .class = &{self mangleMetaclass: (self astClassOf: value)}, .datum = \{ " }
+            ifFalse: { out print: "(struct Foo)\{ .class = &{self mangleClass: (self astClassOf: value)}, .datum = \{ " }.
         self _writeDatum: value _to: out.
         out println: " } }"!
 
@@ -850,7 +871,7 @@ class CTranspiler { output selectorMap closureFunctions
     -- on bootstrap host.
     method _dictionaryDefinition: value _called: cname
         -- Tracer _instanceDefinition: value _called: cname
-        let theClass = self _astClassOf: value.
+        let theClass = self astClassOf: value.
         self declare: theClass.
         let targetValue = theClass eval new.
         -- Insert in sorted order for consistency.
@@ -877,7 +898,7 @@ class CTranspiler { output selectorMap closureFunctions
 
     method _instanceDefinition: value _called: cname
         -- Tracer _instanceDefinition: value _called: cname
-        let theClass = self _astClassOf: value.
+        let theClass = self astClassOf: value.
         self declare: theClass.
         let slots = theClass definition slots.
         StringOutput
@@ -957,7 +978,7 @@ class CTranspiler { output selectorMap closureFunctions
             do: { |var|
                   let type = var type.
                   type is Any
-                      ifFalse: { output println: "    foo_class_typecheck(ctx, &{Name mangleClass: type}, ctx->frame[{var index-1}]);" } }.
+                      ifFalse: { output println: "    foo_class_typecheck(ctx, &{self mangleClass: type}, ctx->frame[{var index-1}]);" } }.
         output print: "    return ".
         let closureVisitor = CTranspiler
                                output: output
@@ -967,7 +988,7 @@ class CTranspiler { output selectorMap closureFunctions
                                variables: variables
                                tmpCounter: tmpCounter
                                globals: globals
-                               globalsCounter: globalsCounter
+                               idCounter: idCounter
                                generatedMethods: generatedMethods
                                env: env
                                builtins: builtins.
@@ -989,7 +1010,7 @@ class CTranspiler { output selectorMap closureFunctions
         aDefine compilerInfo tag: self.
         Tracer visitDefine: aDefine.
         aDefine isDynamic
-            ifTrue: { output println: "struct Foo {Name mangleDynamic: aDefine} = " }
+            ifTrue: { output println: "struct Foo {self mangleDynamic: aDefine} = " }
             ifFalse: { output println: "struct Foo {self mangleGlobal: aDefine} = " }.
         self _writeValue: aDefine eval _to: output.
         output println: ";".
@@ -1051,8 +1072,8 @@ class CTranspiler { output selectorMap closureFunctions
                               ifTrue: { "FooMetaclassInheritance_{anObject name}" }
                               ifFalse: { "FooClassInheritance_{anObject name}" }.
         let mangle = forMetaclass
-                         ifTrue: { { |x| Name mangleMetaclass: x} }
-                         ifFalse: { { |x| Name mangleClass: x } }.
+                         ifTrue: { { |x| self mangleMetaclass: x} }
+                         ifFalse: { { |x| self mangleClass: x} }.
         let interfaces = anObject interfaceGlobals asList.
         forMetaclass
             ifTrue: { interfaces add: (env global: "Class") }.
@@ -1081,8 +1102,8 @@ class CTranspiler { output selectorMap closureFunctions
 * {anInterface name} (an interface)
 *
 */".
-        let metaclassName = Name mangleMetaclass: anInterface.
-        let className = Name mangleClass: anInterface.
+        let metaclassName = self mangleMetaclass: anInterface.
+        let className = self mangleClass: anInterface.
         let globalName = self mangleGlobal: anInterface.
         let directMethods = (anInterface directMethods reject: #isRequired)
                                 asList.
@@ -1114,8 +1135,8 @@ class CTranspiler { output selectorMap closureFunctions
         directMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                  output println: "                            .home = &{each methodHomeName},".
-                  output println: "                            .function = &{each methodFunctionName},".
+                  output println: "                            .home = &{self mangleMethodHome: each},".
+                  output println: "                            .function = &{self mangleMethod: each},".
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL } } }," }.
         output println: "    }".
         output println: "};".
@@ -1136,8 +1157,8 @@ class CTranspiler { output selectorMap closureFunctions
         instanceMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                  output println: "                            .home = &{each methodHomeName},".
-                  output println: "                            .function = &{each methodFunctionName},".
+                  output println: "                            .home = &{self mangleMethodHome: each},".
+                  output println: "                            .function = &{self mangleMethod: each},".
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
         output println: "    }".
         output println: "};".
@@ -1153,7 +1174,7 @@ class CTranspiler { output selectorMap closureFunctions
     method _writeConstructor: ctor for: aClass
         -- Awkward: we need the proto to mangle the names...
         output print: "struct Foo ".
-        output println: ctor methodFunctionName.
+        output println: (self mangleMethod: ctor).
         output println: "    (const struct FooMethod* method,".
         output println: "     const struct FooSelector* selector,".
         output println: "     struct FooContext* sender,".
@@ -1168,7 +1189,7 @@ class CTranspiler { output selectorMap closureFunctions
                            let type = each type. -- FIXME: visit the type
                            type is Any
                                ifTrue: { output println: "new->data[{index-1}] = va_arg(arguments, struct Foo);" }
-                               ifFalse: { output println: "new->data[{index-1}] = foo_class_typecheck_argument(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo), method);" } }.
+                               ifFalse: { output println: "new->data[{index-1}] = foo_class_typecheck_argument(sender, &{self mangleClass: type}, va_arg(arguments, struct Foo), method);" } }.
         output println: "    return (struct Foo)\{ .class = PTR(FooClass, receiver.datum), .datum = \{ .ptr = new } };".
         output println: "}".
         output newline!
@@ -1186,8 +1207,8 @@ class CTranspiler { output selectorMap closureFunctions
  *
  */".
         let isTheClass = aClass isBuiltin and: aClass name == "Class".
-        let className = Name mangleClass: aClass.
-        let metaclassName = Name mangleMetaclass: aClass.
+        let className = self mangleClass: aClass.
+        let metaclassName = self mangleMetaclass: aClass.
         let globalName = self mangleGlobal: aClass.
         let directMethods = aClass directMethods asList.
         -- Debug println: "{aClass name} direct methods:".
@@ -1225,8 +1246,8 @@ class CTranspiler { output selectorMap closureFunctions
                        directMethods
                            do: { |each|
                                  output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                                 output println: "                            .home = &{each methodHomeName},".
-                                 output println: "                            .function = &{each methodFunctionName},".
+                                 output println: "                            .home = &{self mangleMethodHome: each},".
+                                 output println: "                            .function = &{self mangleMethod: each},".
                                  output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL } } }," }.
                        output println: "    }".
                        output println: "};".
@@ -1250,8 +1271,8 @@ class CTranspiler { output selectorMap closureFunctions
         instanceMethods
             do: { |each|
                   output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                  output println: "                            .home = &{each methodHomeName},".
-                  output println: "                            .function = &{each methodFunctionName},".
+                  output println: "                            .home = &{self mangleMethodHome: each},".
+                  output println: "                            .function = &{self mangleMethod: each},".
                   output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
         output println: "    }".
         output println: "};".
@@ -1285,7 +1306,7 @@ class CTranspiler { output selectorMap closureFunctions
         -- Debug println: "_writeMethod: {aMethod}".
         aMethod isStandard
             ifTrue: { return False }.
-        let name = Name mangleMethod: aMethod.
+        let name = self mangleMethod: aMethod.
         generatedMethods
             at: name
             ifNonePut: { aMethod isConstructor
@@ -1308,7 +1329,7 @@ class CTranspiler { output selectorMap closureFunctions
             doWithIndex: { |type index|
                            type is Any
                                ifTrue: { output println: "    struct Foo arg{index} = va_arg(arguments, struct Foo);" }
-                               ifFalse: { output println: "    struct Foo arg{index} = foo_class_typecheck_argument(sender, &{Name mangleClass: type}, va_arg(arguments, struct Foo), method);" } }.
+                               ifFalse: { output println: "    struct Foo arg{index} = foo_class_typecheck_argument(sender, &{self mangleClass: type}, va_arg(arguments, struct Foo), method);" } }.
         output println: "    struct FooContext* ctx = FOOCONTEXT_OF_SIZE({aMethod frameSize}) \{".
         -- Never hashed.
         output println: "        .header = \{ .allocation = STACK, .identity_hash = 0 },".
@@ -1339,7 +1360,7 @@ class CTranspiler { output selectorMap closureFunctions
         aMethod signature
             doWithIndex: { |type index|
                            type is Any
-                               ifFalse: { output println: "    foo_class_typecheck(ctx, &{Name mangleClass: type}, ctx->frame[{index-1}ul]);" } }!
+                               ifFalse: { output println: "    foo_class_typecheck(ctx, &{self mangleClass: (self astClassFor: type)}, ctx->frame[{index-1}ul]);" } }!
 
     method generateUnwindFor: aMethod with: body
         output println: "    jmp_buf ret;".
@@ -1391,7 +1412,7 @@ class CTranspiler { output selectorMap closureFunctions
         let type = type::AstGlobal.
         self declare: type.
         output print: "foo_class_typecheck(ctx, &".
-        output print: (Name mangleClass: type).
+        output print: (self mangleClass: type).
         output print: ", ".
         value visitBy: self.
         output print: ")"!
@@ -1480,19 +1501,17 @@ class CTranspiler { output selectorMap closureFunctions
     method visitCallMethod: aCall
         -- These are never #perform:with: or object methods, thanks to #findMethod:in:
         let target = aCall target.
-        let methodFunction = Name mangleMethod: target.
-        let selector = self selectorCName: target selector.
         output print: "(\{ ".
         let receiver = self _visitTemp: aCall receiver.
         let args = aCall arguments
                        collect: { |each| self _visitTemp: each }.
         output
             ; print: "foo_call_known_method(ctx, &"
-            ; print: target methodHomeName
+            ; print: (self mangleMethodHome: target)
             ; print: ", &"
-            ; print: selector
+            ; print: (self selectorCName: target selector)
             ; print: ", "
-            ; print: target methodFunctionName
+            ; print: (self mangleMethod: target)
             ; print: ", "
             ; print: receiver
             ; print: ", "
