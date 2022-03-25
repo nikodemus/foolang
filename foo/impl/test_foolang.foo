@@ -323,24 +323,9 @@ end
         self eval: "1 is 1 ifTrue: \{ 123 } ifFalse: \{ 0 }" expect: 123.
         self eval: "1 is 2 ifTrue: \{ 0 } ifFalse: \{ 123 }" expect: 123!
 
-    method testLet
-        self eval: "let x = 1. x + x"
-             expect: 2!
-
     method testParens
         self eval: "(1 + 1) * 2"
              expect: 4!
-
-    method testAssign1
-        self eval: "let x = 20. x = x + 1. x * 2"
-             expect: 42!
-
-    method testAssign2
-        self eval: "let y = 0.
-                    let x = 20.
-                    (let x = 2000. x = x + 100. y = x * 2).
-                    x = x + 1. y + x * 2"
-            expect: 4242!
 
     method testDefine
         self load: "define FourtyTwoForTestDefine

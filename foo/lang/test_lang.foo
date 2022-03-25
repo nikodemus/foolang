@@ -18,6 +18,11 @@ define $_LangTestVar 999!
 class TestLang { assert }
     is TestSuite
 
+    method test_assign
+        let x = 20.
+        x = x + 22.
+        assert that: { x } is: 42!
+
     method test_direct_method_of_interface
         assert that: { _TestLangInterface aDirectMethod }
                is: 2345789!
