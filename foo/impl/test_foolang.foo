@@ -300,12 +300,6 @@ end
     method testPlus
         self eval: "100 + 1000 + 10 + 1" expect: 1111!
 
-    method testPrecedence1
-        self eval: "12 + 10 * 10 - 1" expect: 111!
-
-    method testPrecedence2
-        self eval: "let x = -40. let y = -2. x abs + y abs" expect: 42!
-
     method testPrefixMethod
         self eval: "- 42" expect: -42!
 
