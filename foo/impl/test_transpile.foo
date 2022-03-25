@@ -953,61 +953,12 @@ end
 class TestTranspileSystem { assert system }
     is TranspilerTest
 
-    method test_System_getenv
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 (system getenv: \"no such variable\") is False
-                                     ifTrue: \{ system output writeString: \"undef, \" }.
-                                 (String includes: (system getenv: \"PATH\"))
-                                     ifTrue: \{ system output writeString: \"path\" }!
-                        end"
-            expect: "undef, path"!
-
-    method testClock
-        self transpile: "class Main \{}
-                             -- Just a small smoketest
-                             direct method run: command in: system
-                                 let clock = system clock.
-                                 let t0 = clock seconds.
-                                 let n = 0.
-                                 let t = clock seconds.
-                                 \{ (t0 floatAdd: 0.1) floatLt: t }
-                                     whileFalse: \{ clock sleep: 0.1.
-                                                    t = clock seconds.
-                                                    n = n integerAdd: 1 }.
-                                 -- Sleeps may be short, but let's bet on 3
-                                 -- consequtive sleeps not being short.
-                                 (0 integerLt: n) debug.
-                                 (n integerLte: 3) debug.
-                                 (t floatLt: (t0 floatAdd: 1.0)) debug!
-                          end"
-            expect: "#<Boolean True>#<Boolean True>#<Boolean True>"!
-
     method test_Main_run_in_command_size
         self transpile: "class Main \{}
                              direct method run: command in: system
                                  command size debug!
                          end"
             expect: "#<Integer 0>"!
-
-    method testRandom
-        self transpile: "class Main \{}
-                            direct method run: command in: system
-                                let a = system random integer.
-                                let b = system random integer.
-                                (a is b) debug!
-                        end"
-            expect: "#<Boolean False>"!
-
-    method test_System_currentDirectory
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 let path = system currentDirectory / \"foo/foo.foo\".
-                                 system output writeString: path pathname.
-                                 path exists
-                                     ifTrue: \{ system output writeString: \" ok!\" }!
-                         end"
-            expect: ".//foo/foo.foo ok!"!
 end
 
 class TestTranspileExtend { assert system }

@@ -1,4 +1,6 @@
 interface _TestLangInterface
+    direct method aDirectMethod
+        2345789!
 end
 
 class _TestLangClass { value :: Integer }
@@ -15,6 +17,36 @@ define $_LangTestVar 999!
 
 class TestLang { assert }
     is TestSuite
+
+    method test_is_true
+        assert true: { 1 is 1 }!
+
+    method test_is_false
+        assert false: { 1 is 2 }!
+
+    method test_precedence1
+        assert that: { 12 + 10 * 10 - 1 }
+               is: 111!
+
+    method test_precedence2
+        assert that: { let x = -40. let y = -2. x abs + y abs }
+               is: 42!
+
+    method test_assign
+        let x = 20.
+        x = x + 22.
+        assert that: { x } is: 42!
+
+    method test_direct_method_of_interface
+        assert that: { _TestLangInterface aDirectMethod }
+               is: 2345789!
+
+    method test_interface_includes_negative
+        assert false: { _TestLangInterface includes: 42 }!
+
+    method test_interface_includes_positive
+        assert true: { _TestLangInterface
+                           includes: (_TestLangClass new) }!
 
     method _arg_typecheck: arg :: Integer
         arg!
