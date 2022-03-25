@@ -19,6 +19,7 @@ import lang.test_output.TestOutput
 import lang.test_random.TestRandom
 import lang.test_selector.TestSelector
 import lang.test_string.TestString
+import lang.test_system.TestSystem
 import lang.test_target_closure.TestTargetClosure
 import lang.test_target_dictionary.TestTargetDictionary
 import lang.test_target_record.TestTargetRecord
@@ -53,6 +54,7 @@ class Main { assert system }
             TestRandom,
             TestSelector,
             TestString,
+            TestSystem,
             -- FIXME: These should be replaced by shared tests
             -- but Object#== is broken in evaluator, causing trouble.
             -- FIXME: Another source of trouble is finally: expecting

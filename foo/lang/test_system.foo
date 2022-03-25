@@ -1,0 +1,43 @@
+class TestSystem { assert system }
+    is TestSuite
+
+    direct method assert: assert
+        self assert: assert
+             system: False!
+
+    method system: new
+        system = new!
+
+    method test_currentDirectory
+        let path = system currentDirectory / "foo/foo.foo".
+        assert true: { path exists }.
+        assert that: { path pathname }
+               equals: ".//foo/foo.foo"!
+
+    method test_clock
+        let clock = system clock.
+        let t0 = clock seconds + 0.1.
+        let n = 0.
+        let t = clock seconds.
+        { t0 < t }
+            whileFalse: { clock sleep: 0.1.
+                          t = clock seconds.
+                          n = n + 1 }.
+        -- Sleeps may be short, but let's bet on 3 consequtive
+        -- sleeps being short.
+        assert true: { n > 0 }.
+        assert true: { n < 3 }.
+        assert true: { t < (t0 + 1.0) }!
+
+    method test_getenv
+        assert false: { system getenv: "no such env var" }.
+        -- FIXME: Workaround for interpreter not having proper separation
+        -- of environments.
+        assert true: { (system getenv: "PATH") classOf name == "String" }!
+
+    method test_random_integer
+        assert false: { let a = system random integer :: Integer.
+                        let b = system random integer :: Integer.
+                        a == b }!
+
+end
