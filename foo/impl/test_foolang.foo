@@ -23,31 +23,6 @@ class TestFoolang { system ok onFailure }
                         ; collect: \{ |each| each * 10 \} as: Array"
             expect: [10, 20, 30]!
 
-    method testInterface1
-        self load: "interface TestInterface1
-                        direct method answer
-                           42!
-                    end"
-            eval: "TestInterface1 answer"
-            expect: 42!
-
-    method testInterface2
-        self load: "interface TestInterface2
-                    end"
-            eval: "TestInterface2 includes: 42"
-            expect: False!
-
-    method testInterface3
-        self load: "interface TestInterface3
-                        method foo
-                            self!
-                    end
-                    class TestInterface3Impl \{}
-                        is TestInterface3
-                    end"
-            eval: "TestInterface3 includes: (TestInterface3Impl new foo)"
-            expect: True!
-
     method test_Interface_methods_cannot_use_slots_from_implementing_class
         self load: "interface Corrupted
                         method fallFromGrace
