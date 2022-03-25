@@ -18,6 +18,12 @@ define $_LangTestVar 999!
 class TestLang { assert }
     is TestSuite
 
+    method test_is_true
+        assert true: { 1 is 1 }!
+
+    method test_is_false
+        assert false: { 1 is 2 }!
+
     method test_precedence1
         assert that: { 12 + 10 * 10 - 1 }
                is: 111!
