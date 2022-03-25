@@ -342,20 +342,6 @@ end
                     x = x + 1. y + x * 2"
             expect: 4242!
 
-    method testSimpleBlock
-        self eval: "\{ 32 + 10 } value"
-             expect: 42!
-
-    method testArgBlock
-        self eval: "\{ |x| x + 1 } value: 41"
-             expect: 42!
-
-    method testBlockClosure
-        self eval: "let block = (let x = 21. \{ x = x * 2 }).
-                    let x = 0.
-                    block value. block value"
-            expect: 84!
-
     method testDefine
         self load: "define FourtyTwoForTestDefine
                        42!"

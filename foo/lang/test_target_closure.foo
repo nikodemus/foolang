@@ -102,6 +102,17 @@ class TestTargetClosure { assert }
         assert true: { 1 == { 1 } value }
                testing: "Closure#value"!
 
+    method test_value_arg
+        assert that: { { |arg| arg + 1 } value: 1 }
+               is: 2!
+
+    method test_closure
+        let block = (let x = 21. { x = x * 2 }).
+        let x = 0.
+        block value.
+        assert that: { block value }
+               is: 84!
+
     method test_ascending
         assert that: { ["a", "aaaa", "aa", "", "aaa"]
                            sort: { |array| array size } ascending }
