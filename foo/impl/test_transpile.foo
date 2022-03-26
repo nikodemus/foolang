@@ -931,18 +931,6 @@ class TestTranspileClass { assert system }
             expect: "#pong[123][10, 20, 30]"!
 end
 
-class TestTranspileSelector { assert system }
-    is TranspilerTest
-
-    method test
-        self transpile: "class Main \{}
-                             direct method run: command in: system
-                                 system output writeString: #foo toString.
-                                 system output writeString: (#name sendTo: #bar with: []) toString!
-                        end"
-            expect: "#foo#bar"!
-end
-
 class TestTranspileIncludes { assert system }
     is TranspilerTest
 
@@ -1176,7 +1164,6 @@ class Main {}
             "--prelude-string-output" -> TestTranspilePreludeStringOutput,
             "--self" -> TestTranspileSelf,
             "--self-hosted" -> TestTranspileSelfHosted,
-            "--selector" -> TestTranspileSelector,
             "--send" -> TestTranspileSend,
             "--system" -> TestTranspileSystem,
             "--typecheck" -> TestTranspileTypecheck
