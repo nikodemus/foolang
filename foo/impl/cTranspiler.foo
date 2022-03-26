@@ -1093,6 +1093,22 @@ class CTranspiler { output selectorMap closureFunctions
         output newline.
         inheritance!
 
+    method _generateMethodTable: methods for: classCName
+        let name = "FooMethodTable_{classCName}".
+        output println: "struct FooMethodTable {name} = \{".
+        output println: "    .header = \{ .allocation = STATIC, .identity_hash = {self hash: classCName} \},".
+        output println: "    .size = {methods size},".
+        output println: "    .methods = \{".
+        methods
+            do: { |each|
+                  output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
+                  output println: "                             .home = &{self mangleMethodHome: each},".
+                  output println: "                             .function = &{self mangleMethod: each},".
+                  output println: "                             .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL } } }," }.
+        output println: "    }".
+        output println: "};".
+        return name!
+
     method visitInterfaceDefinition: anInterface
         (anInterface compilerInfo tag is self)
             ifTrue: { return False }.
@@ -1115,11 +1131,15 @@ class CTranspiler { output selectorMap closureFunctions
         instanceMethods
             do: { |each| self _writeMethod: each _for: anInterface }.
         -- Interface metaclass
-        -- FIXME: name says 'Foo interface', should be 'Foo class'!
         let metaclassInheritance
             = self _generateInheritance: anInterface forMetaclass: True.
         let classInheritance
             = self _generateInheritance: anInterface forMetaclass: False.
+        let directMethodTable
+            = self _generateMethodTable: directMethods for: metaclassName.
+        let instanceMethodTable
+            = self _generateMethodTable: instanceMethods for: className.
+        -- FIXME: name says 'Foo interface', should be 'Foo classOf'!
         let metaclassNameString = "{anInterface name} interface".
         output println: "struct FooClass {metaclassName} = ".
         output println: "\{".
@@ -1130,15 +1150,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "    .inherited = &{metaclassInheritance},".
         output println: "    .layout = &TheClassLayout,".
         output println: "    .mark = foo_mark_class,".
-        output println: "    .size = {directMethods size},".
-        output println: "    .methods = \{".
-        directMethods
-            do: { |each|
-                  output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                  output println: "                            .home = &{self mangleMethodHome: each},".
-                  output println: "                            .function = &{self mangleMethod: each},".
-                  output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL } } }," }.
-        output println: "    }".
+        output println: "    .method_table = &{directMethodTable}".
         output println: "};".
         output newline.
         -- Interface class (empty, used for identity only)!
@@ -1152,15 +1164,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "    .inherited = &{classInheritance},".
         output println: "    .layout = NULL,". -- FIXME
         output println: "    .mark = foo_mark_class,".
-        output println: "    .size = {instanceMethods size},".
-        output println: "    .methods = \{".
-        instanceMethods
-            do: { |each|
-                  output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                  output println: "                            .home = &{self mangleMethodHome: each},".
-                  output println: "                            .function = &{self mangleMethod: each},".
-                  output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
-        output println: "    }".
+        output println: "    .method_table = &{instanceMethodTable}".
         output println: "};".
         output newline.
         -- Interface object
@@ -1231,6 +1235,8 @@ class CTranspiler { output selectorMap closureFunctions
                        -- is its own metaclass.
                        let metaclassInheritance
                            = self _generateInheritance: aClass forMetaclass: True.
+                       let directMethodTable
+                           = self _generateMethodTable: directMethods for: metaclassName.
                        let metaclassNameString = "{aClass name} classOf".
                        output println: "struct FooClass {metaclassName} = ".
                        output println: "\{".
@@ -1241,19 +1247,13 @@ class CTranspiler { output selectorMap closureFunctions
                        output println: "    .inherited = &{metaclassInheritance},".
                        output println: "    .layout = &TheClassLayout,".
                        output println: "    .mark = foo_mark_class,".
-                       output println: "    .size = {directMethods size},".
-                       output println: "    .methods = \{".
-                       directMethods
-                           do: { |each|
-                                 output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                                 output println: "                            .home = &{self mangleMethodHome: each},".
-                                 output println: "                            .function = &{self mangleMethod: each},".
-                                 output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL } } }," }.
-                       output println: "    }".
+                       output println: "    .method_table = &{directMethodTable}".
                        output println: "};".
                        output newline }.
         -- Instance Class
         let classInheritance = self _generateInheritance: aClass forMetaclass: False.
+        let instanceMethodTable
+            = self _generateMethodTable: instanceMethods for: className.
         let layout = isTheClass
                          ifTrue: { "&TheClassLayout" }
                          ifFalse: { self _generateLayout: aClass }.
@@ -1266,15 +1266,7 @@ class CTranspiler { output selectorMap closureFunctions
         output println: "    .inherited = &{classInheritance},".
         output println: "    .layout = {layout},".
         output println: "    .mark = {aClass markFunction},".
-        output println: "    .size = {instanceMethods size},".
-        output println: "    .methods = \{".
-        instanceMethods
-            do: { |each|
-                  output println: "        (struct FooMethod)\{ .selector = &{self selectorCName: each selector},".
-                  output println: "                            .home = &{self mangleMethodHome: each},".
-                  output println: "                            .function = &{self mangleMethod: each},".
-                  output println: "                            .object = (struct Foo)\{ .class = NULL, .datum = \{ .ptr = NULL \}\}\}," }.
-        output println: "    }".
+        output println: "    .method_table = &{instanceMethodTable}".
         output println: "};".
         output newline.
         -- Class object

@@ -198,6 +198,18 @@ struct FooLayout {
   size_t size;
 };
 
+struct FooMethodTable {
+  struct FooHeader header;
+  size_t size;
+  struct FooMethod methods[];
+};
+
+/** Plan is to replace class pointers with class IDs, and
+ *  spread the class members across global tables.
+ *
+ *  As a first step towards doing this all accesses should
+ *  be given the same treatment as method tables.
+ */
 struct FooClass {
   struct FooHeader header;
   struct FooBytes* name;
@@ -205,9 +217,11 @@ struct FooClass {
   struct FooClassList* inherited;
   struct FooLayout* layout;
   FooMarkFunction mark;
-  size_t size;
-  struct FooMethod methods[];
+  struct FooMethodTable* method_table;
 };
+
+#define FOO_GET_METHODS(class) ((class)->method_table)
+#define FOO_SET_METHODS(class, table) ((class)->method_table = (table))
 
 struct FooClassList {
   struct FooHeader header;

@@ -386,8 +386,9 @@ const struct FooMethod* foo_class_find_method_in(const struct FooClass* class,
     FOO_XXX("foo_class_find_method_in(%s, #%s)",
             class->name->data, selector->name->data);
   }
-  for (size_t i = 0; i < class->size; ++i) {
-    const struct FooMethod* method = &class->methods[i];
+  struct FooMethodTable* table = FOO_GET_METHODS(class);
+  for (size_t i = 0; i < table->size; ++i) {
+    const struct FooMethod* method = &table->methods[i];
     if (trace)
       FOO_XXX("  ? %s", method->selector->name->data);
     if (method->selector == selector) {
@@ -437,8 +438,9 @@ const struct FooMethod* foo_class_find_method(struct FooContext* ctx,
   }
 
   if (false) {
-    for (size_t i = 0; i < class->size; i++) {
-      const struct FooMethod* method = &class->methods[i];
+    const struct FooMethodTable* table = FOO_GET_METHODS(class);
+    for (size_t i = 0; i < table->size; i++) {
+      const struct FooMethod* method = &table->methods[i];
       printf("- %s\n", method->selector->name->data);
     }
   }
@@ -765,12 +767,12 @@ struct Foo foo_method_doSelectors_(const struct FooMethod* method,
   (void)method;
   (void)selector;
   (void)nargs;
-  struct FooClass* vt = receiver.class;
+  struct FooMethodTable* table = FOO_GET_METHODS(receiver.class);
   struct Foo block = va_arg(arguments, struct Foo);
-  for (size_t i = 0; i < vt->size; i++) {
+  for (size_t i = 0; i < table->size; i++) {
     foo_send(sender, &FOO_value_, block, 1,
              (struct Foo){ .class = &FooClass_Selector,
-                           .datum = { .ptr = vt->methods[i].selector } });
+                           .datum = { .ptr = table->methods[i].selector } });
   }
   return receiver;
 }

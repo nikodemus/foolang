@@ -14,30 +14,32 @@ define InstanceMethods
 define DirectMethods
     { #keysIn:
           -> { signature: [Record], vars: 0,
-               body: "struct FooClass* vt = ctx->frame[0].class;
-// Methods originating in the instance's class are reader methods
-// and correspond to slots, so we can identify them -- except for
-// #classOf.
-size_t n = 0;
-for (size_t i = 0; i < vt->size; i++) \{
-    struct FooSelector* s = vt->methods[i].selector;
-    if (vt == vt->methods[i].home && s != &FOO_classOf)
-   \{
-        n++;
-    }
-}
-struct FooArray* keys = FooArray_alloc(ctx, n);
-size_t j = 0;
-for (size_t i = 0; i < vt->size; i++) \{
-    struct FooSelector* s = vt->methods[i].selector;
-    if (vt == vt->methods[i].home && s != &FOO_classOf)
-   \{
-        const struct FooSelector* selector = vt->methods[i].selector;
-        keys->data[j++] = (struct Foo)\{ .class = &FooClass_Selector,
-                                         .datum = \{ .ptr = (void*)selector }};
-    }
-}
-assert(j == n);
-return (struct Foo)\{ .class = &FooClass_Array,
-                      .datum = \{ .ptr = keys } };"}
+               body: "const struct FooClass* class = ctx->frame[0].class;
+                      const struct FooMethodTable* table = class->method_table;
+                      // Methods originating in the instance's class are reader methods
+                      // and correspond to slots, so we can identify them -- except for
+                      // #classOf.
+                      size_t n = 0;
+                      for (size_t i = 0; i < table->size; i++)
+                      \{
+                          const struct FooSelector* selector = table->methods[i].selector;
+                          if (class == table->methods[i].home && selector != &FOO_classOf)
+                          \{
+                              n++;
+                          }
+                      }
+                      struct FooArray* keys = FooArray_alloc(ctx, n);
+                      size_t j = 0;
+                      for (size_t i = 0; i < table->size; i++)
+                      \{
+                          const struct FooSelector* selector = table->methods[i].selector;
+                          if (class == table->methods[i].home && selector != &FOO_classOf)
+                          \{
+                              keys->data[j++] = (struct Foo)\{ .class = &FooClass_Selector,
+                                                               .datum = \{ .ptr = (void*)selector }};
+                          }
+                      }
+                      assert(j == n);
+                      return (struct Foo)\{ .class = &FooClass_Array,
+                                            .datum = \{ .ptr = keys } };" }
 }!
