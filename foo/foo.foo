@@ -13,10 +13,10 @@ define CommandLineOptions
       "--version" -> #version,
       "-c"        -> #compile,
       "--compile" -> #compile,
-      "-f"       -> #formatToOutput,
-      "--format" -> #formatToOutput,
-      "-F"                -> #formatInPlace,
-      "--format-in-place" -> #formatInPlace }!
+      "-f"                 -> #formatToOutput,
+      "--format-to-output" -> #formatToOutput,
+      "-F"                 -> #formatInPlace,
+      "--format-in-place"  -> #formatInPlace }!
 
 class Main { command system }
     direct method run: command in: system
@@ -27,7 +27,6 @@ class Main { command system }
     method run
         command isEmpty
             => { return REPL runIn: system }.
-        let option = command first.
         (command first startsWith: "-")
             ifTrue: { return self parseOptions }.
         self interpret!
@@ -46,7 +45,6 @@ class Main { command system }
     method help
         self usage.
         system output
-            ; println: "usage: foo [option] [filename] [argument*]"
             ; newline
             ; println: "  When run without any arguments, start a REPL."
             ; newline
@@ -59,9 +57,10 @@ class Main { command system }
             ; println: "  -v, --version  Print the Foolang version."
             ; println: "  -h, --help     Print this message."
             ; println: "  -c, --compile  Compile the specified file."
-            ; println: "  -f, --format   Format the specified file to stdout."
+            ; println: "  -f, --format-to-output"
+            ; println: "                 Format the specified file to standard output."
             ; println: "  -F, --format-in-place"
-            ; println: "                 Format (pretty-print) the specified file."
+            ; println: "                 Format the specified file in place."
             ; newline
             ; println: "  Compiler and formatter both require the filename to have"
             ; println: "  a .foo extension, but files with arbitrary extensions"
