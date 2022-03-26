@@ -15,18 +15,6 @@ struct FooBytes* b = PTR(FooBytes, ctx->receiver.datum);
 assert(index > 0);
 assert(index <= b->size);
 return FOO_INTEGER(b->data[index-1]);"},
-    #debug
-        -> {signature: [], vars: 0,
-            body: "struct FooBytes* b = PTR(FooBytes, ctx->receiver.datum);
-printf(\"#<ByteArray \");
-for (size_t i = 0; i < b->size; i++) \{
-    if (i) \{
-        printf(\", \");
-    }
-    printf(\"%u\", (int)b->data[i]);
-}
-printf(\">\");
-return ctx->receiver;"},
     #put:at:
         -> {signature: [Integer, Integer], vars: 0,
             body:" struct FooBytes* b = PTR(FooBytes, foo_check_modification(ctx, ctx->receiver.datum));

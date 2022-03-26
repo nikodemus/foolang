@@ -21,11 +21,6 @@ for (size_t i = 0; i < n; i++) \{
     }
 }
 return FOO_BOOLEAN(name1->size < name2->size);"},
-    #debug
-        -> {signature: [], vars: 0,
-            body: "const char* name = (char*)PTR(FooSelector, ctx->receiver.datum)->name->data;
-printf(\"#<Selector %s>\", name);
-return ctx->receiver;"},
     #identityHash
         -> {signature: [], vars: 0,
             body: "int64_t* cache = &((struct FooHeader*)receiver.datum.ptr)->identity_hash;

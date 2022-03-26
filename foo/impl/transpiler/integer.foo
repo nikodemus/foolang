@@ -7,9 +7,6 @@ define IntegerMethods
       #asFloat
           -> { signature: [], vars: 0, returnType: Float,
                body: "return FOO_FLOAT(ctx->receiver.datum.int64);" },
-      #debug -> {signature: [], vars: 0,
-                 body: "printf(\"#<Integer %\" PRId64 \">\", ctx->receiver.datum.int64);
-return ctx->receiver;"},
       #%
           -> { signature: [Integer], vars: 0, returnType: Integer,
                body: "int64_t mod = ctx->frame[0].datum.int64;

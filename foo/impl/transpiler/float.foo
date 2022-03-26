@@ -11,11 +11,6 @@ define InstanceMethods
     { (Selector intern: "prefix-")
           -> { signature: [], vars: 0, returnType: Float,
                body: "return FOO_FLOAT(- ctx->receiver.datum.float64);" },
-      #debug
-      -> { signature: [], vars: 1,
-           body: "ctx->frame[0] = foo_send(ctx, &FOO_toString, ctx->receiver, 0);
-                  printf(\"#<Float %s>\", PTR(FooBytes, ctx->frame[0].datum)->data);
-                  return ctx->receiver;"},
 
       #square
       -> { signature: [], vars: 0, returnType: Float,

@@ -33,17 +33,7 @@ return (struct Foo)\{ .class = &FooClass_Array, .datum = \{ .ptr = new } };"}
 }!
 
 define InstanceMethods
-    { #debug
-          -> {signature: [], vars: 0, returnType: Array,
-              body: "struct FooArray* array = PTR(FooArray, ctx->receiver.datum);
-printf(\"[\");
-for (size_t i = 0; i < array->size; i++) \{
-    if (i)
-        printf(\", \");
-    foo_send(ctx, &FOO_debug, array->data[i], 0);
-}
-printf(\"]\");
-return ctx->receiver;"},
+{
       #at:
           -> {signature: [Integer], vars: 0,
               body: "struct FooArray* array = PTR(FooArray, ctx->receiver.datum);
