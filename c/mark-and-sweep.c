@@ -189,6 +189,18 @@ void foo_mark_class_list(void* ptr) {
   EXIT_TRACE();
 }
 
+void foo_mark_method_table(struct FooMethodTable* table) {
+  ENTER_TRACE("mark_method_table %p", table);
+  if (table->header.allocation == HEAP && foo_mark_live(table)) {
+    for (size_t i = 0; i < table->size; i++) {
+      struct FooMethod* method = &table->methods[i];
+      if (method->object.class)
+        foo_mark_object(method->object);
+    }
+  }
+  EXIT_TRACE();
+}
+
 void foo_mark_class(void* ptr)
 {
   struct FooClass* class = ptr;
@@ -206,11 +218,7 @@ void foo_mark_class(void* ptr)
       if (other)
         foo_mark_class(other);
     }
-    for (size_t i = 0; i < class->size; i++) {
-      struct FooMethod* method = &class->methods[i];
-      if (method->object.class)
-        foo_mark_object(method->object);
-    }
+    foo_mark_method_table(FOO_GET_METHODS(class));
   }
   EXIT_TRACE();
 }

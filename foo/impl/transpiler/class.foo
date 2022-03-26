@@ -25,8 +25,9 @@ define InstanceMethods
                  const struct FooSelector* seen[1024];
                  size_t n = 0;
                  // First go through own methods, registering them in seen.
-                 for (size_t i = 0; i < class->size; i++) \{
-                     struct FooSelector* selector = class->methods[i].selector;
+                 const struct FooMethodTable* table = FOO_GET_METHODS(class);
+                 for (size_t i = 0; i < table->size; i++) \{
+                     struct FooSelector* selector = table->methods[i].selector;
 
                      // Skip private selectors.
                      if (selector->name->data[0] == '_') continue;
@@ -44,9 +45,9 @@ define InstanceMethods
                  // Then go through the inherited interfaces
                  const struct FooClassList* interfaces = class->inherited;
                  for (size_t i = 0; i < interfaces->size; i++) \{
-                     const struct FooClass* interface = interfaces->data[i];
-                     for (size_t j = 0; j < interface->size; j++) \{
-                         struct FooSelector* selector = interface->methods[j].selector;
+                     const struct FooMethodTable* table = FOO_GET_METHODS(interfaces->data[i]);
+                     for (size_t j = 0; j < table->size; j++) \{
+                         struct FooSelector* selector = table->methods[j].selector;
 
                          // Skip private selectors.
                          if (selector->name->data[0] == '_') continue;
@@ -100,16 +101,19 @@ define InstanceMethods
                  // Allocate the new class: must use _no_gc since the inherited
                  // class list is not visible to GC yet!
                  struct FooArray* methods = PTR(FooArray, ctx->frame[2].datum);
-                 struct FooClass* newclass
-                   = foo_alloc_no_gc(ctx, sizeof(struct FooClass)
-                                     + methods->size * sizeof(struct FooMethod));
+                 struct FooClass* newclass = foo_alloc_no_gc(ctx, sizeof(struct FooClass));
                  newclass->header.allocation = HEAP;
                  newclass->name = PTR(FooBytes, ctx->frame[0].datum);
                  newclass->metaclass = super->metaclass;
                  newclass->inherited = inherited;
                  newclass->layout = super->layout;
                  newclass->mark = super->mark;
-                 newclass->size = 0;
+                 struct FooMethodTable* table = foo_alloc_no_gc(ctx, sizeof(struct FooMethodTable)
+                                                                + methods->size * sizeof(struct FooMethod));
+                 table->header.allocation = HEAP;
+                 // Hide the uninitialized part from GC.
+                 table->size = 0;
+                 FOO_SET_METHODS(newclass, table);
 
                  /* Make the new class visible to GC. */
                  ctx->frame[3] = (struct Foo)
@@ -124,7 +128,7 @@ define InstanceMethods
                    struct Foo selector_arity = foo_send(ctx, &FOO_arity, method_selector, 0);
                    foo_class_typecheck(ctx, &FooClass_Integer, selector_arity);
 
-                   struct FooMethod* m = &newclass->methods[i];
+                   struct FooMethod* m = &table->methods[i];
                    m->home = newclass;
                    m->selector = PTR(FooSelector, method_selector.datum);
                    m->function = foo_invoke_on;
@@ -132,7 +136,7 @@ define InstanceMethods
 
                    /* Update the size once the method is in place,
                       so GC sees it. */
-                   newclass->size++;
+                   table->size++;
                  }
                  return ctx->frame[3];"
         },
@@ -150,16 +154,19 @@ define InstanceMethods
                  // Allocate the new class: must use _no_gc since the inherited
                  // class list is not visible to GC yet!
                  struct FooArray* methods = PTR(FooArray, ctx->frame[3].datum);
-                 struct FooClass* newclass
-                   = foo_alloc(ctx, sizeof(struct FooClass)
-                               + methods->size * sizeof(struct FooMethod));
+                 struct FooClass* newclass = foo_alloc_no_gc(ctx, sizeof(struct FooClass));
                  newclass->header.allocation = HEAP;
                  newclass->name = PTR(FooBytes, ctx->frame[0].datum);
                  newclass->metaclass = PTR(FooClass, ctx->receiver.datum);
                  newclass->inherited = inherited;
                  newclass->layout = PTR(FooLayout, ctx->frame[1].datum);
                  newclass->mark = newclass->layout->mark;
-                 newclass->size = 0;
+                 struct FooMethodTable* table = foo_alloc_no_gc(ctx, sizeof(struct FooMethodTable)
+                                                                + methods->size * sizeof(struct FooMethod));
+                 table->header.allocation = HEAP;
+                 // Hide the uninitialized part from GC.
+                 table->size = 0;
+                 FOO_SET_METHODS(newclass, table);
 
                  /* Make the new class visible to GC. */
                  ctx->frame[4] = (struct Foo)
@@ -174,7 +181,7 @@ define InstanceMethods
                    struct Foo selector_arity = foo_send(ctx, &FOO_arity, method_selector, 0);
                    foo_class_typecheck(ctx, &FooClass_Integer, selector_arity);
 
-                   struct FooMethod* m = &newclass->methods[i];
+                   struct FooMethod* m = &table->methods[i];
                    m->home = newclass;
                    m->selector = PTR(FooSelector, method_selector.datum);
                    m->function = foo_invoke_on;
@@ -182,7 +189,7 @@ define InstanceMethods
 
                    /* Update the size once the method is in place,
                       so GC sees it. */
-                   newclass->size++;
+                   table->size++;
                  }
                  return ctx->frame[4];"
           }
