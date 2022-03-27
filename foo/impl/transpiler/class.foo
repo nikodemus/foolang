@@ -18,6 +18,58 @@ define InstanceMethods
                  return (struct Foo)\{ .class = classOf->metaclass, .datum = \{ .ptr = classOf } };"
           },
 
+     #__addMethod:
+     -> { signature: [Any], vars: 0, returnType: Boolean,
+          body: "// Check out the method object
+                 struct Foo method_object = ctx->frame[0];
+                 struct Foo selector_object = foo_send(ctx, &FOO_selector, method_object, 0);
+                 foo_class_typecheck(ctx, &FooClass_Selector, selector_object);
+
+                 struct FooClass* class = PTR(FooClass, ctx->receiver.datum);
+                 struct FooMethodTable* old_table = FOO_GET_METHODS(class);
+
+                 // Check that class is heap-allocated
+                 if (old_table->header.allocation != HEAP) \{
+                     foo_panicf(ctx, \"%s is not a dynamically allocated class, #__addMethod: failed.\",
+                                class->name->data);
+                 }
+
+                 struct FooSelector* method_selector = PTR(FooSelector, selector_object.datum);
+                 // If a method with this selector exists, return False
+                 for (size_t i = 0; i < old_table->size; i++) \{
+                     struct FooMethod* m = &old_table->methods[i];
+                     if (m->selector == method_selector) \{
+                         foo_panicf(ctx, \"%s#%s already exists, #__addMethod: failed.\",
+                                    class->name->data, method_selector->name->data);
+                     }
+                 }
+
+                 // Allocate a new method table with space for one more method.
+                 // (FIXME: horribly inefficient...)
+                 struct FooMethodTable* new_table = foo_alloc_no_gc(ctx, sizeof(struct FooMethodTable)
+                                                                    + (old_table->size + 1) * sizeof(struct FooMethod));
+                 new_table->header.allocation = HEAP;
+                 new_table->size = 0;
+
+                 // Copy old methods
+                 for (size_t i = 0; i < old_table->size; i++) \{
+                   new_table->methods[i] = old_table->methods[i];
+                   new_table->size++;
+                 }
+
+                 // Add the new method
+                 struct FooMethod* m = &new_table->methods[old_table->size];
+                 m->home = class;
+                 m->selector = method_selector;
+                 m->function = foo_invoke_on;
+                 m->object = method_object;
+                 new_table->size++;
+
+                 // Replace the table (it's now visible to GC, and old one is not)
+                 FOO_SET_METHODS(class, new_table);
+
+                 return FOO_BOOLEAN(true);" },
+
      #selectorsOf:do:
      -> { signature: [Any, Any], vars: 0,
           body: "const struct FooClass* class = ctx->frame[0].class;
@@ -125,9 +177,6 @@ define InstanceMethods
                    struct Foo method_selector = foo_send(ctx, &FOO_selector, method_object, 0);
                    foo_class_typecheck(ctx, &FooClass_Selector, method_selector);
 
-                   struct Foo selector_arity = foo_send(ctx, &FOO_arity, method_selector, 0);
-                   foo_class_typecheck(ctx, &FooClass_Integer, selector_arity);
-
                    struct FooMethod* m = &table->methods[i];
                    m->home = newclass;
                    m->selector = PTR(FooSelector, method_selector.datum);
@@ -177,9 +226,6 @@ define InstanceMethods
                    struct Foo method_object = methods->data[i];
                    struct Foo method_selector = foo_send(ctx, &FOO_selector, method_object, 0);
                    foo_class_typecheck(ctx, &FooClass_Selector, method_selector);
-
-                   struct Foo selector_arity = foo_send(ctx, &FOO_arity, method_selector, 0);
-                   foo_class_typecheck(ctx, &FooClass_Integer, selector_arity);
 
                    struct FooMethod* m = &table->methods[i];
                    m->home = newclass;
