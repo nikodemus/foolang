@@ -13,9 +13,14 @@
 
 #include "system.h"
 
-void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream) {
+void* system_filestream_as_input_ptr(struct FooContext*, void* filestream) {
   return filestream;
 }
+
+bool system_input_set_echo(struct FooContext* sender, void*, bool) {
+  foo_panicf(sender, "ERROR: system_input_set_echo not implemented!");
+}
+
 
 void foo_mark_input(void*) {
   // Just a FILE*, nothing to mark.

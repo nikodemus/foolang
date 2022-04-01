@@ -15,6 +15,17 @@
 #include "system.h"
 #include "mark-and-sweep.h"
 
+/**
+ * So this is a bit silly. I built this on top of HANDLE's because I had trouble
+ * getting FILE* -> fd -> HANDLE path to work so that Get/SetConsoleMode would
+ * have worked... but it turns out that I had the checking of the return
+ * value the wrong way around. So quite plausibly I could get rid of FooInput
+ * here...
+ *
+ * Then again, it does allow supporting Windows specific extensions, so _maybe_
+ * now that the work has been done it is worth it?
+ */
+
 struct FooInput {
   struct FooHeader header;
   HANDLE handle;
@@ -69,6 +80,23 @@ void system_init_input(void) {
 
 void* system_input(void) {
   return &FooStandardInput;
+}
+
+bool system_input_set_echo(struct FooContext* sender, void* input, bool echo) {
+  struct FooInput* in = input;
+  DWORD mode;
+  if (!GetConsoleMode(in->handle, &mode)) {
+    foo_panicf(sender, "Could not get console mode (%lu)", GetLastError());
+  }
+  if (echo) {
+    mode = mode | (DWORD)ENABLE_ECHO_INPUT;
+  } else {
+    mode = mode & ~(DWORD)ENABLE_ECHO_INPUT;
+  }
+  if (!SetConsoleMode(in->handle, mode)) {
+    foo_panicf(sender, "Could not set console mode (%lu)", GetLastError());
+  }
+  return echo;
 }
 
 bool system_input_at_eof(void* input) {

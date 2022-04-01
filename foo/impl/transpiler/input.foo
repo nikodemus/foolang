@@ -3,6 +3,10 @@ define DirectMethods
 
 define InstanceMethods
 {
+     #echo:
+     -> { signature: [Boolean], vars: 0, returnType: Boolean,
+          body: "return FOO_BOOLEAN(system_input_set_echo(ctx, ctx->receiver.datum.ptr, ctx->frame[0].datum.boolean));" },
+
      #atEof
      -> { signature: [], vars: 0, returnType: Boolean,
           body: "return FOO_BOOLEAN(system_input_at_eof(ctx->receiver.datum.ptr));" },

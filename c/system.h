@@ -6,6 +6,7 @@
 
 #include "foo.h"
 
+bool system_input_set_echo(struct FooContext* sender, void* input, bool echo);
 void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream);
 void* system_input(void);
 bool system_input_at_eof(void* input);

@@ -1,0 +1,23 @@
+
+class Main { input system }
+    direct method run: command in: system
+        (self system: system)
+            run!
+
+    direct method system: system
+        self input: system input
+             system: system!
+
+    method run
+        input echo: False.
+        system output println: "Press q to exit.".
+        { "q" character == self readChar }
+            whileFalse!
+
+    method onEof
+        system output println: "Exit!".
+        system exit!
+
+    method readChar
+        input readChar_onEof: { self onEof }!
+end
