@@ -20,34 +20,26 @@ void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream
   return filestream;
 }
 
-bool system_input_set_echo(struct FooContext* sender, void* input, bool echo) {
+bool system_input_set_termios_cflag(struct FooContext* sender, FILE* file, int flag, bool on) {
   (void)sender;
-  FILE* file = input;
   int fd = fileno(file);
   struct termios mode;
   tcgetattr(fd, &mode);
-  if (echo) {
-    mode.c_lflag &= ECHO;
+  if (on) {
+    mode.c_lflag |= flag;
   } else {
-    mode.c_lflag &= ~ECHO;
+    mode.c_lflag &= ~flag;
   }
   tcsetattr(fd, TCSAFLUSH, &mode);
-  return echo;
+  return on;
+}
+
+bool system_input_set_echo(struct FooContext* sender, void* input, bool echo) {
+  return system_input_set_termios_cflag(sender, input, ECHO, echo);
 }
 
 bool system_input_set_buffering(struct FooContext* sender, void* input, bool buffering) {
-  (void)sender;
-  FILE* file = input;
-  int fd = fileno(file);
-  struct termios mode;
-  tcgetattr(fd, &mode);
-  if (buffering) {
-    mode.c_lflag &= ICANON;
-  } else {
-    mode.c_lflag &= ~ICANON;
-  }
-  tcsetattr(fd, TCSAFLUSH, &mode);
-  return buffering;
+  return system_input_set_termios_cflag(sender, input, ICANON, buffering);
 }
 
 void foo_mark_input(void* ptr) {
