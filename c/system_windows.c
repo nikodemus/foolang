@@ -82,7 +82,7 @@ void* system_input(void) {
   return &FooStandardInput;
 }
 
-bool system_input_set_mode_bit(struct FooContext, struct FooInput* in, DWORD bit, bool on) {
+bool system_input_set_mode_bit(struct FooContext* sender, struct FooInput* in, DWORD bit, bool on) {
   DWORD mode;
   if (!GetConsoleMode(in->handle, &mode)) {
     foo_panicf(sender, "Could not get console mode (%lu)", GetLastError());
@@ -104,6 +104,22 @@ bool system_input_set_echo(struct FooContext* sender, void* input, bool echo) {
 
 bool system_input_set_buffering(struct FooContext* sender, void* input, bool buffering) {
   return system_input_set_mode_bit(sender, input, ENABLE_LINE_INPUT, buffering);
+}
+
+bool system_input_get_mode_bit(struct FooContext* sender, struct FooInput* in, DWORD bit) {
+  DWORD mode;
+  if (!GetConsoleMode(in->handle, &mode)) {
+    foo_panicf(sender, "Could not get console mode (%lu)", GetLastError());
+  }
+  return mode & bit;
+}
+
+bool system_input_get_echo(struct FooContext* sender, void* input) {
+  return system_input_get_mode_bit(sender, input, ENABLE_ECHO_INPUT);
+}
+
+bool system_input_get_buffering(struct FooContext* sender, void* input) {
+  return system_input_get_mode_bit(sender, input, ENABLE_LINE_INPUT);
 }
 
 bool system_input_at_eof(void* input) {

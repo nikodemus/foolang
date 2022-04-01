@@ -20,7 +20,7 @@ void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream
   return filestream;
 }
 
-bool system_input_set_termios_cflag(struct FooContext* sender, FILE* file, int flag, bool on) {
+bool system_input_set_termios_lflag(struct FooContext* sender, FILE* file, int flag, bool on) {
   (void)sender;
   int fd = fileno(file);
   struct termios mode;
@@ -35,11 +35,27 @@ bool system_input_set_termios_cflag(struct FooContext* sender, FILE* file, int f
 }
 
 bool system_input_set_echo(struct FooContext* sender, void* input, bool echo) {
-  return system_input_set_termios_cflag(sender, input, ECHO, echo);
+  return system_input_set_termios_lflag(sender, input, ECHO, echo);
 }
 
 bool system_input_set_buffering(struct FooContext* sender, void* input, bool buffering) {
-  return system_input_set_termios_cflag(sender, input, ICANON, buffering);
+  return system_input_set_termios_lflag(sender, input, ICANON, buffering);
+}
+
+bool system_input_get_termios_lflag(struct FooContext* sender, FILE* file, int flag) {
+  (void)sender;
+  int fd = fileno(file);
+  struct termios mode;
+  tcgetattr(fd, &mode);
+  return mode.c_lflag & flag;
+}
+
+bool system_input_get_echo(struct FooContext* sender, void* input) {
+  return system_input_get_termios_lflag(sender, input, ECHO);
+}
+
+bool system_input_get_buffering(struct FooContext* sender, void* input) {
+  return system_input_get_termios_lflag(sender, input, ICANON);
 }
 
 void foo_mark_input(void* ptr) {
@@ -141,6 +157,10 @@ int64_t system_random(void) {
 
 struct termios original_termios;
 
+// In terms of being a completionist it would be better to provide a system
+// method for this, but I think this is the right thing 99.99% of the time,
+// so I think rather I'll provide System#restoreTerminalOnExit: or similar,
+// and do the right thing by default.
 void system_restore_termios() {
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios);
 }

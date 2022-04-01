@@ -8,6 +8,9 @@
 
 bool system_input_set_echo(struct FooContext* sender, void* input, bool echo);
 bool system_input_set_buffering(struct FooContext* sender, void* input, bool echo);
+bool system_input_get_echo(struct FooContext* sender, void* input);
+bool system_input_get_buffering(struct FooContext* sender, void* input);
+
 void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream);
 void* system_input(void);
 bool system_input_at_eof(void* input);
