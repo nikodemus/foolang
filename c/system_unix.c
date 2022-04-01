@@ -7,25 +7,51 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <termios.h>
+#include <unistd.h>
 
 #undef NDEBUG
 #include <assert.h>
 
 #include "system.h"
 
-void* system_filestream_as_input_ptr(struct FooContext*, void* filestream) {
+void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream) {
+  (void)sender;
   return filestream;
 }
 
-bool system_input_set_echo(struct FooContext* sender, void*, bool) {
-  foo_panicf(sender, "ERROR: system_input_set_echo not implemented!");
+bool system_input_set_echo(struct FooContext* sender, void* input, bool echo) {
+  (void)sender;
+  FILE* file = input;
+  int fd = fileno(file);
+  struct termios mode;
+  tcgetattr(fd, &mode);
+  if (echo) {
+    mode.c_lflag &= ECHO;
+  } else {
+    mode.c_lflag &= ~ECHO;
+  }
+  tcsetattr(fd, TCSAFLUSH, &mode);
+  return echo;
 }
 
-bool system_input_set_buffering(struct FooContext* sender, void*, bool) {
-  foo_panicf(sender, "ERROR: system_input_set_buffering not implemented!");
+bool system_input_set_buffering(struct FooContext* sender, void* input, bool buffering) {
+  (void)sender;
+  FILE* file = input;
+  int fd = fileno(file);
+  struct termios mode;
+  tcgetattr(fd, &mode);
+  if (buffering) {
+    mode.c_lflag &= ICANON;
+  } else {
+    mode.c_lflag &= ~ICANON;
+  }
+  tcsetattr(fd, TCSAFLUSH, &mode);
+  return buffering;
 }
 
-void foo_mark_input(void*) {
+void foo_mark_input(void* ptr) {
+  (void)ptr;
   // Just a FILE*, nothing to mark.
 }
 
@@ -121,7 +147,18 @@ int64_t system_random(void) {
   return r;
 }
 
+struct termios original_termios;
+
+void system_restore_termios() {
+  tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios);
+}
+
 void system_init(void) {
+  // FIXME: split this into multiple functions
+
+  // Init stdin
+  tcgetattr(STDIN_FILENO, &original_termios);
+  atexit(system_restore_termios);
   // Init time
   struct timespec now;
   assert(!clock_gettime(CLOCK_MONOTONIC, &now));
