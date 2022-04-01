@@ -99,6 +99,23 @@ bool system_input_set_echo(struct FooContext* sender, void* input, bool echo) {
   return echo;
 }
 
+bool system_input_set_buffering(struct FooContext* sender, void* input, bool echo) {
+  struct FooInput* in = input;
+  DWORD mode;
+  if (!GetConsoleMode(in->handle, &mode)) {
+    foo_panicf(sender, "Could not get console mode (%lu)", GetLastError());
+  }
+  if (echo) {
+    mode = mode | (DWORD)ENABLE_LINE_INPUT;
+  } else {
+    mode = mode & ~(DWORD)ENABLE_LINE_INPUT;
+  }
+  if (!SetConsoleMode(in->handle, mode)) {
+    foo_panicf(sender, "Could not set console mode (%lu)", GetLastError());
+  }
+  return echo;
+}
+
 bool system_input_at_eof(void* input) {
   struct FooInput* in = input;
   return in->eof;

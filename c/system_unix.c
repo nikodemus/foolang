@@ -21,6 +21,9 @@ bool system_input_set_echo(struct FooContext* sender, void*, bool) {
   foo_panicf(sender, "ERROR: system_input_set_echo not implemented!");
 }
 
+bool system_input_set_buffering(struct FooContext* sender, void*, bool) {
+  foo_panicf(sender, "ERROR: system_input_set_buffering not implemented!");
+}
 
 void foo_mark_input(void*) {
   // Just a FILE*, nothing to mark.
