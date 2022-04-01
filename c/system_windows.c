@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <winsock2.h>
+#include <io.h>
+#include <fcntl.h>
 
 #undef NDEBUG
 #include <assert.h>
@@ -12,20 +14,82 @@
 
 #include "system.h"
 
+struct FooInput {
+  HANDLE handle;
+  int buffer;
+  bool eof;
+};
+
+struct FooInput FooStandardInput;
+
+void system_oops(const char* what) {
+    DWORD code = GetLastError();
+    fprintf(stderr, "%s (%zu)\n", what, (size_t)code);
+    fflush(stderr);
+    _Exit(1);
+}
+
+void system_init_output(void) {
+  _setmode(_fileno(stdout), O_BINARY);
+  _setmode(_fileno(stderr), O_BINARY);
+}
+
+void system_init_input(void) {
+  HANDLE input = GetStdHandle(STD_INPUT_HANDLE);
+  if (input == INVALID_HANDLE_VALUE) {
+    system_oops("ERROR: Could not get STD_INPUT_HANDLE");
+  }
+  FooStandardInput.handle = input;
+  FooStandardInput.buffer = EOF;
+  FooStandardInput.eof = false;
+}
+
 void* system_input(void) {
-  return stdin;
+  return &FooStandardInput;
 }
 
-bool system_input_at_eof(FILE* input) {
-  return 0 != feof(input);
+bool system_input_at_eof(void* input) {
+  struct FooInput* in = input;
+  return in->eof;
 }
 
-int system_input_read_char(FILE* input) {
-  return fgetc(input);
+int system_input_read_char(void* input) {
+  char ch;
+  struct FooInput* in = input;
+
+  if (in->buffer != EOF) {
+    // There's a buffered character, take it.
+    ch = (char)in->buffer;
+    in->buffer = EOF;
+    return ch;
+  }
+
+  // Try to read a single character, set EOF mark on failure.
+  DWORD count = 0;
+  if (!ReadFile(in->handle, &ch, sizeof(ch), &count, NULL)) {
+    system_oops("ERROR: Could not read from input");
+  }
+  if (count) {
+    return ch;
+  } else {
+    in->eof = true;
+    return EOF;
+  }
 }
 
-bool system_input_unread_char(FILE* input, int c) {
-  return EOF != ungetc(c, input);
+bool system_input_unread_char(void* input, int ch) {
+  if (ch == EOF) {
+    // This is just to match ungetc() behaviour for sake
+    // of consistency.
+    return false;
+  }
+  struct FooInput* in = input;
+  if (in->buffer == EOF) {
+    in->buffer = ch;
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void system_exit(int code) {
@@ -123,5 +187,6 @@ int64_t system_random(void) {
 }
 
 void system_init(void) {
-    // nothing to do!
+  system_init_output();
+  system_init_input();
 }

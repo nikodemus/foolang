@@ -1008,10 +1008,7 @@ struct Foo foo_panicf(struct FooContext* ctx, const char* fmt, ...) {
 }
 
 void fooinit(void) {
-#ifdef _WIN32
-  _setmode(_fileno(stdout), O_BINARY);
-  _setmode(_fileno(stderr), O_BINARY);
-#endif
+  system_init();
   foo_random_init(&FooIdentityPRNG, 0x006c25789eff86fe);
 }
 

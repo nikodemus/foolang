@@ -17,15 +17,15 @@ void* system_input(void) {
   return stdin;
 }
 
-bool system_input_at_eof(FILE* input) {
+bool system_input_at_eof(void* input) {
   return 0 != feof(input);
 }
 
-int system_input_read_char(FILE* input) {
+int system_input_read_char(void* input) {
   return fgetc(input);
 }
 
-bool system_input_unread_char(FILE* input, int c) {
+bool system_input_unread_char(void* input, int c) {
   return EOF != ungetc(c, input);
 }
 
