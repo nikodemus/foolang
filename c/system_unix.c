@@ -13,6 +13,18 @@
 
 #include "system.h"
 
+bool system_input_at_eof(FILE* input) {
+  return 0 != feof(input);
+}
+
+int system_input_read_char(FILE* input) {
+  return fgetc(input);
+}
+
+bool system_input_unread_char(FILE* input, int c) {
+  return EOF != ungetc(c, input);
+}
+
 void system_exit(int code) {
   exit(code);
 }

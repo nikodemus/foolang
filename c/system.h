@@ -6,6 +6,10 @@
 
 #include "foo.h"
 
+bool system_input_at_eof(FILE* input);
+int system_input_read_char(FILE* input);
+bool system_input_unread_char(FILE* input, int c);
+
 void system_exit(int)  __attribute__ ((noreturn));
 bool system_is_unix(void);
 bool system_is_windows(void);

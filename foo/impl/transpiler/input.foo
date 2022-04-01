@@ -5,17 +5,17 @@ define InstanceMethods
 {
      #atEof
      -> { signature: [], vars: 0, returnType: Boolean,
-          body: "return FOO_BOOLEAN(0 != feof(ctx->receiver.datum.ptr));" },
+          body: "return FOO_BOOLEAN(system_input_at_eof(ctx->receiver.datum.ptr));" },
 
      #readChar_onEof:
      -> { signature: [Any], vars: 0,
-          body: "int c = fgetc(ctx->receiver.datum.ptr);
+          body: "int c = system_input_read_char(ctx->receiver.datum.ptr);
                  if (c == EOF)
                      return foo_send(ctx, &FOO_value, ctx->frame[0], 0);
                  return FOO_CHARACTER(c);" },
 
      #unreadChar:
      -> { signature: [Character], vars: 0,
-          body: "ungetc((int)ctx->frame[0].datum.int64, ctx->receiver.datum.ptr);
+          body: "system_input_unread_char(ctx->receiver.datum.ptr, (int)ctx->frame[0].datum.int64);
                  return FOO_BOOLEAN(false);" }
 }!
