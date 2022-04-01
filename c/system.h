@@ -6,6 +6,7 @@
 
 #include "foo.h"
 
+void* system_filestream_as_input_ptr(void* filestream);
 void* system_input(void);
 bool system_input_at_eof(void* input);
 int system_input_read_char(void* input);

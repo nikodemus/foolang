@@ -13,6 +13,10 @@
 
 #include "system.h"
 
+void* system_filestream_as_input_ptr(void* filestream) {
+  return filestream;
+}
+
 void* system_input(void) {
   return stdin;
 }

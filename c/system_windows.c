@@ -22,6 +22,15 @@ struct FooInput {
 
 struct FooInput FooStandardInput;
 
+void* system_filestream_as_input_ptr(void* filestream) {
+  // FIXME: Memory leak!
+  struct FooInput* input = calloc(sizeof(struct FooInput), 1);
+  input->handle = (HANDLE)_get_osfhandle(_fileno(filestream));
+  input->buffer = EOF;
+  input->eof = false;
+  return input;
+}
+
 void system_oops(const char* what) {
     DWORD code = GetLastError();
     fprintf(stderr, "%s (%zu)\n", what, (size_t)code);
