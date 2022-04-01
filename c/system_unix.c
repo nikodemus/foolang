@@ -7,11 +7,77 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <termios.h>
+#include <unistd.h>
 
 #undef NDEBUG
 #include <assert.h>
 
 #include "system.h"
+
+void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream) {
+  (void)sender;
+  return filestream;
+}
+
+bool system_input_set_termios_lflag(struct FooContext* sender, FILE* file, int flag, bool on) {
+  (void)sender;
+  int fd = fileno(file);
+  struct termios mode;
+  tcgetattr(fd, &mode);
+  if (on) {
+    mode.c_lflag |= flag;
+  } else {
+    mode.c_lflag &= ~flag;
+  }
+  tcsetattr(fd, TCSAFLUSH, &mode);
+  return on;
+}
+
+bool system_input_set_echo(struct FooContext* sender, void* input, bool echo) {
+  return system_input_set_termios_lflag(sender, input, ECHO, echo);
+}
+
+bool system_input_set_buffering(struct FooContext* sender, void* input, bool buffering) {
+  return system_input_set_termios_lflag(sender, input, ICANON, buffering);
+}
+
+bool system_input_get_termios_lflag(struct FooContext* sender, FILE* file, int flag) {
+  (void)sender;
+  int fd = fileno(file);
+  struct termios mode;
+  tcgetattr(fd, &mode);
+  return mode.c_lflag & flag;
+}
+
+bool system_input_get_echo(struct FooContext* sender, void* input) {
+  return system_input_get_termios_lflag(sender, input, ECHO);
+}
+
+bool system_input_get_buffering(struct FooContext* sender, void* input) {
+  return system_input_get_termios_lflag(sender, input, ICANON);
+}
+
+void foo_mark_input(void* ptr) {
+  (void)ptr;
+  // Just a FILE*, nothing to mark.
+}
+
+void* system_input(void) {
+  return stdin;
+}
+
+bool system_input_at_eof(void* input) {
+  return 0 != feof(input);
+}
+
+int system_input_read_char(void* input) {
+  return fgetc(input);
+}
+
+bool system_input_unread_char(void* input, int c) {
+  return EOF != ungetc(c, input);
+}
 
 void system_exit(int code) {
   exit(code);
@@ -89,7 +155,22 @@ int64_t system_random(void) {
   return r;
 }
 
+struct termios original_termios;
+
+// In terms of being a completionist it would be better to provide a system
+// method for this, but I think this is the right thing 99.99% of the time,
+// so I think rather I'll provide System#restoreTerminalOnExit: or similar,
+// and do the right thing by default.
+void system_restore_termios() {
+  tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios);
+}
+
 void system_init(void) {
+  // FIXME: split this into multiple functions
+
+  // Init stdin
+  tcgetattr(STDIN_FILENO, &original_termios);
+  atexit(system_restore_termios);
   // Init time
   struct timespec now;
   assert(!clock_gettime(CLOCK_MONOTONIC, &now));

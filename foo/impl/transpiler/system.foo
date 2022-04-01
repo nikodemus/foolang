@@ -63,7 +63,7 @@ define InstanceMethods {
                 }" },
     #input
     -> { signature: [], vars: 0, returnType: Input,
-         body: "return FOO_INSTANCE(Input, stdin);"},
+         body: "return FOO_INSTANCE(Input, system_input());"},
 
     #isUnix
     -> { signature: [], vars: 0, returnType: Boolean,

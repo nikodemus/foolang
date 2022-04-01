@@ -275,7 +275,7 @@ class CompilerBuiltins {}
           CompilerBuiltin
               kind: Class
               value: Input
-              mark: "foo_mark_immediate"
+              mark: "foo_mark_input"
               directMethods: input.DirectMethods
               instanceMethods: input.InstanceMethods,
           CompilerBuiltin

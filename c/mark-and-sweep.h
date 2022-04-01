@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+bool foo_mark_live(void* ptr);
+
 void foo_mark_array(void* ptr);
 void foo_mark_binary(void* ptr);
 void foo_mark_class(void* ptr);
@@ -11,6 +13,7 @@ void foo_mark_closure(void* ptr);
 void foo_mark_file(void* ptr);
 void foo_mark_filestream(void* ptr);
 void foo_mark_instance(void* ptr);
+void foo_mark_input(void* ptr);
 void foo_mark_layout(void* ptr);
 void foo_mark_immediate(void* ptr);
 void foo_mark_oops(void* ptr);

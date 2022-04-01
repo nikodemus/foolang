@@ -5,12 +5,166 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <winsock2.h>
+#include <io.h>
+#include <fcntl.h>
 
 #undef NDEBUG
 #include <assert.h>
 #include <stdio.h>
 
 #include "system.h"
+#include "mark-and-sweep.h"
+
+/**
+ * So this is a bit silly. I built this on top of HANDLE's because I had trouble
+ * getting FILE* -> fd -> HANDLE path to work so that Get/SetConsoleMode would
+ * have worked... but it turns out that I had the checking of the return
+ * value the wrong way around. So quite plausibly I could get rid of FooInput
+ * here...
+ *
+ * Then again, it does allow supporting Windows specific extensions, so _maybe_
+ * now that the work has been done it is worth it?
+ */
+
+struct FooInput {
+  struct FooHeader header;
+  HANDLE handle;
+  int buffer;
+  bool eof;
+};
+
+struct FooInput FooStandardInput = {
+  .header = { .allocation = STATIC, .identity_hash = 0 },
+  .handle = NULL,
+  .buffer = EOF,
+  .eof = false
+};
+
+void foo_mark_input(void* ptr) {
+  struct FooInput* input = ptr;
+  if (input->header.allocation == HEAP) {
+    foo_mark_live(input);
+  }
+}
+
+void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream) {
+  struct FooInput* input = foo_alloc(sender, sizeof(struct FooInput));
+  input->header.allocation = HEAP;
+  input->handle = (HANDLE)_get_osfhandle(_fileno(filestream));
+  input->buffer = EOF;
+  input->eof = false;
+  return input;
+}
+
+void system_oops(const char* what) {
+    DWORD code = GetLastError();
+    fprintf(stderr, "%s (%zu)\n", what, (size_t)code);
+    fflush(stderr);
+    _Exit(1);
+}
+
+void system_init_output(void) {
+  _setmode(_fileno(stdout), O_BINARY);
+  _setmode(_fileno(stderr), O_BINARY);
+}
+
+void system_init_input(void) {
+  HANDLE input = GetStdHandle(STD_INPUT_HANDLE);
+  if (input == INVALID_HANDLE_VALUE) {
+    system_oops("ERROR: Could not get STD_INPUT_HANDLE");
+  }
+  FooStandardInput.handle = input;
+  FooStandardInput.buffer = EOF;
+  FooStandardInput.eof = false;
+}
+
+void* system_input(void) {
+  return &FooStandardInput;
+}
+
+bool system_input_set_mode_bit(struct FooContext* sender, struct FooInput* in, DWORD bit, bool on) {
+  DWORD mode;
+  if (!GetConsoleMode(in->handle, &mode)) {
+    foo_panicf(sender, "Could not get console mode (%lu)", GetLastError());
+  }
+  if (on) {
+    mode |= bit;
+  } else {
+    mode &= ~bit;
+  }
+  if (!SetConsoleMode(in->handle, mode)) {
+    foo_panicf(sender, "Could not set console mode (%lu)", GetLastError());
+  }
+  return on;
+}
+
+bool system_input_set_echo(struct FooContext* sender, void* input, bool echo) {
+  return system_input_set_mode_bit(sender, input, ENABLE_ECHO_INPUT, echo);
+}
+
+bool system_input_set_buffering(struct FooContext* sender, void* input, bool buffering) {
+  return system_input_set_mode_bit(sender, input, ENABLE_LINE_INPUT, buffering);
+}
+
+bool system_input_get_mode_bit(struct FooContext* sender, struct FooInput* in, DWORD bit) {
+  DWORD mode;
+  if (!GetConsoleMode(in->handle, &mode)) {
+    foo_panicf(sender, "Could not get console mode (%lu)", GetLastError());
+  }
+  return mode & bit;
+}
+
+bool system_input_get_echo(struct FooContext* sender, void* input) {
+  return system_input_get_mode_bit(sender, input, ENABLE_ECHO_INPUT);
+}
+
+bool system_input_get_buffering(struct FooContext* sender, void* input) {
+  return system_input_get_mode_bit(sender, input, ENABLE_LINE_INPUT);
+}
+
+bool system_input_at_eof(void* input) {
+  struct FooInput* in = input;
+  return in->eof;
+}
+
+int system_input_read_char(void* input) {
+  char ch;
+  struct FooInput* in = input;
+
+  if (in->buffer != EOF) {
+    // There's a buffered character, take it.
+    ch = (char)in->buffer;
+    in->buffer = EOF;
+    return ch;
+  }
+
+  // Try to read a single character, set EOF mark on failure.
+  DWORD count = 0;
+  if (!ReadFile(in->handle, &ch, sizeof(ch), &count, NULL)) {
+    system_oops("ERROR: Could not read from input");
+  }
+  if (count) {
+    return ch;
+  } else {
+    in->eof = true;
+    return EOF;
+  }
+}
+
+bool system_input_unread_char(void* input, int ch) {
+  if (ch == EOF) {
+    // This is just to match ungetc() behaviour for sake
+    // of consistency.
+    return false;
+  }
+  struct FooInput* in = input;
+  if (in->buffer == EOF) {
+    in->buffer = ch;
+    return true;
+  } else {
+    return false;
+  }
+}
 
 void system_exit(int code) {
   exit(code);
@@ -107,5 +261,6 @@ int64_t system_random(void) {
 }
 
 void system_init(void) {
-    // nothing to do!
+  system_init_output();
+  system_init_input();
 }
