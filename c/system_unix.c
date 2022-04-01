@@ -13,8 +13,12 @@
 
 #include "system.h"
 
-void* system_filestream_as_input_ptr(void* filestream) {
+void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream) {
   return filestream;
+}
+
+void foo_mark_input(void*) {
+  // Just a FILE*, nothing to mark.
 }
 
 void* system_input(void) {

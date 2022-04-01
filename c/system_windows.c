@@ -13,18 +13,32 @@
 #include <stdio.h>
 
 #include "system.h"
+#include "mark-and-sweep.h"
 
 struct FooInput {
+  struct FooHeader header;
   HANDLE handle;
   int buffer;
   bool eof;
 };
 
-struct FooInput FooStandardInput;
+struct FooInput FooStandardInput = {
+  .header = { .allocation = STATIC, .identity_hash = 0 },
+  .handle = NULL,
+  .buffer = EOF,
+  .eof = false
+};
 
-void* system_filestream_as_input_ptr(void* filestream) {
-  // FIXME: Memory leak!
-  struct FooInput* input = calloc(sizeof(struct FooInput), 1);
+void foo_mark_input(void* ptr) {
+  struct FooInput* input = ptr;
+  if (input->header.allocation == HEAP) {
+    foo_mark_live(input);
+  }
+}
+
+void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream) {
+  struct FooInput* input = foo_alloc(sender, sizeof(struct FooInput));
+  input->header.allocation = HEAP;
   input->handle = (HANDLE)_get_osfhandle(_fileno(filestream));
   input->buffer = EOF;
   input->eof = false;

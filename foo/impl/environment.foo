@@ -129,7 +129,7 @@ class AllBuiltins { env }
             ; defineClass: FilePath mark: "foo_mark_binary"
             ; defineClass: FileStream mark: "foo_mark_filestream"
             ; defineClass: Float mark: "foo_mark_immediate"
-            ; defineClass: Input mark: "foo_mark_immediate"
+            ; defineClass: Input mark: "foo_mark_input"
             ; defineClass: Integer mark: "foo_mark_immediate"
             ; defineClass: Layout mark: "foo_mark_layout"
             ; defineClass: Output mark: "foo_mark_immediate"
