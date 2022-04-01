@@ -12,6 +12,10 @@
 
 #include "system.h"
 
+void* system_input(void) {
+  return stdin;
+}
+
 bool system_input_at_eof(FILE* input) {
   return 0 != feof(input);
 }
