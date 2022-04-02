@@ -48,6 +48,10 @@ return FOO_BOOLEAN(name1->size < name2->size);"},
         -> {signature: [Any], vars: 0,
             body: "struct FooSelector* self = PTR(FooSelector, receiver.datum);
                    return foo_send(ctx, self, ctx->frame[0], 0);"},
+    #sendTo:
+        -> {signature: [Any], vars: 0,
+            body: "struct FooSelector* target_selector = PTR(FooSelector, ctx->receiver.datum);
+return foo_send(ctx, target_selector, ctx->frame[0], 0);"},
     #sendTo:with:
         -> {signature: [Any, Array], vars: 0,
             body: "struct FooSelector* target_selector = PTR(FooSelector, ctx->receiver.datum);

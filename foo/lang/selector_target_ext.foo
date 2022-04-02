@@ -43,12 +43,9 @@ extend Selector
         self sendTo: arguments first
              with: arguments rest!
 
-    method sendTo: receiver
-        self sendTo: receiver
-             with: []!
-
     method toSelector
-        -- FIXME: Doesn't belong at all.
+        -- FIXME: Doesn't belong at all, needed because there's selector/string
+        -- confusion between host and target.
         self!
 
     method arity
