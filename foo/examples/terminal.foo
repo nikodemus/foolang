@@ -1,4 +1,10 @@
 
+define Esc (Character code: 0x1B) string!
+
+define Foreground
+    { red: "{Esc}[31m",
+      default: "{Esc}[39m" }!
+
 class Main { input output exitBlock }
     direct method run: command in: system
         (self system: system)
@@ -8,6 +14,13 @@ class Main { input output exitBlock }
         self input: system input
              output: system output
              exitBlock: { system exit }!
+
+    method red: string
+        StringOutput
+            with: { |out|
+                    out writeString: Foreground red.
+                    out writeString: string.
+                    out writeString: Foreground default }!
 
     method run
         input
@@ -20,7 +33,7 @@ class Main { input output exitBlock }
             let char = self readChar.
             char isControlCharacter
                 ifTrue: { self println: "-> {char code}" }
-                ifFalse: { self println: "-> {char code} ({char string})" }.
+                ifFalse: { self println: "-> {char code} ({self red: char string})" }.
             "q" character == char
         }
             whileFalse!
