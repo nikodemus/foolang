@@ -192,6 +192,9 @@ class AstInterpreter { context process }
         new!
 
     method visitRecord: aRecord
+        -- FIXME: This works only for those sizes supported
+        -- by foo_send_array. Either needs a workaround, or
+        -- need to decide on max record size.
         aRecord name
             sendTo: Record
             with: (aRecord values

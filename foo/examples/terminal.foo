@@ -5,15 +5,56 @@ define Foreground
     { red: "{Esc}[31m",
       default: "{Esc}[39m" }!
 
-class Main { input output exitBlock }
+class TerminalCommand {}
+    direct method switchToAlternateScreen "{Esc}[?1049h"!
+    direct method switchToMainScreen      "{Esc}[?1049l"!
+    direct method reportCursorPosition  "{Esc}[6n"!
+    direct method saveCursorPosition    "{Esc}7"!
+    direct method restoreCursorPosition "{Esc}8"!
+    direct method clearScreen           "{Esc}[2J"!
+    direct method gotoColumn: x
+        "{Esc}[{x}G"!
+    direct method gotoLine: y column: x
+        "{Esc}[{y};{x}H"!
+end
+
+define DecGraphics
+    { horizontalLine: (Character code: 0x71) string,
+      verticalLine: (Character code: 0x78) string,
+      upperLeftCorner: (Character code: 0x6C) string,
+      upperRightCorner: (Character code: 0x6B) string,
+      lowerLeftCorner: (Character code: 0x6D) string,
+      lowerRightCorner: (Character code: 0x6A) string,
+      startDrawing: "{Esc}(0",
+      stopDrawing: "{Esc}(B" }!
+
+define AsciiGraphics
+    { horizontalLine: "-",
+      verticalLine: "|",
+      upperLeftCorner: "+",
+      upperRightCorner: "+",
+      lowerLeftCorner: "+",
+      lowerRightCorner: "+",
+      startDrawing: "",
+      stopDrawing: "" }!
+
+class Control {}
+    direct method key: string
+        (string codeAt: 1) bitAnd: 0x1f!
+end
+
+class Main { input output exitBlock height width graphics }
     direct method run: command in: system
         (self system: system)
-            run!
+              run!
 
     direct method system: system
         self input: system input
              output: system output
-             exitBlock: { system exit }!
+             exitBlock: { system exit }
+             height: False
+             width: False
+             graphics: DecGraphics!
 
     method red: string
         StringOutput
@@ -23,29 +64,126 @@ class Main { input output exitBlock }
                     out writeString: Foreground default }!
 
     method run
+        { self setup.
+          self banner: "Welcome to Foolang!".
+          self mainLoop }
+        finally: { self cleanup }!
+
+    method clearScreen
+        self write: TerminalCommand clearScreen!
+
+    method startDrawing
+        self write: graphics startDrawing!
+
+    method stopDrawing
+        self write: graphics stopDrawing!
+
+    method draw: element times: size
+        let string = element sendTo: graphics.
+        size times: { self write: string }!
+
+    method draw: element
+        self write: (element sendTo: graphics)!
+
+    method drawBoxFromLine: line1 column: column1
+           toLine: line2 column: column2
+        { self startDrawing.
+          self gotoLine: line1 column: column1.
+          self draw: #upperLeftCorner.
+          self draw: #horizontalLine times: (column2 - column1 - 1).
+          self draw: #upperRightCorner.
+          line1 + 1 to: line2 - 1
+                    do: { |line|
+                          self gotoLine: line column: column1.
+                          self draw: #verticalLine.
+                          self gotoColumn: column2.
+                          self draw: #verticalLine }.
+          self gotoLine: line2 column: column1.
+          self draw: #lowerLeftCorner.
+          self draw: #horizontalLine times: (column2 - column1 - 1).
+          self draw: #lowerRightCorner }
+        finally: { self stopDrawing }!
+
+    method write: text onLine: line column: column
+        self gotoLine: line column: column.
+        self write: text!
+
+    method gotoLine: line column: column
+        self write: (TerminalCommand gotoLine: line column: column)!
+
+    method gotoColumn: column
+        self write: (TerminalCommand gotoColumn: column)!
+
+    method banner: text
+        self clearScreen.
+        let textY = height / 2.
+        let textX = width / 2 - text size / 2.
+        self write: text onLine: textY column: textX.
+        self drawBoxFromLine: textY - 2 column: textX - 2
+             toLine: textY + 2 column: textX + text size + 1.
+        self gotoLine: 1 column: 1.
+        self readChar.
+        self clearScreen!
+
+    method setup
         input
             ; echo: False
             ; buffering: False.
         output
             processed: False.
-        self println: "Press q to exit.".
+        self write: TerminalCommand switchToAlternateScreen.
+        self getScreenSize!
+
+    method getScreenSize
+        self write: TerminalCommand saveCursorPosition.
+        self write: (TerminalCommand gotoLine: 999 column: 999).
+        self write: TerminalCommand reportCursorPosition.
+        self write: TerminalCommand restoreCursorPosition.
+        -- ESC [ Row ; Col R
+        Esc character is self readChar
+            ifFalse: { Error raise: "Invalid response" }.
+        "[" character is self readChar
+            ifFalse: { Error raise: "Invalid response" }.
+        let row = 0.
+        let nextChar = False.
+        { (nextChar = self readChar) isDigit: 10 }
+            whileTrue: { row = row * 10 + nextChar digit }.
+        height = row.
+        ";" character is nextChar
+            ifFalse: { Error raise: "Invalid response" }.
+        let col = 0.
+        { (nextChar = self readChar) isDigit: 10 }
+            whileTrue: { col = col * 10 + nextChar digit }.
+        width = col.
+        "R" character is nextChar
+            ifFalse: { Error raise: "Invalid response" }!
+
+    method write: string
+        output writeString: string!
+
+    method mainLoop
+        self println: "Press Ctrl-q to exit.".
+        let quit = Control key: "q".
         {
             let char = self readChar.
             char isControlCharacter
                 ifTrue: { self println: "-> {char code}" }
                 ifFalse: { self println: "-> {char code} ({self red: char string})" }.
-            "q" character == char
+            char code is quit
         }
             whileFalse!
+
+    method cleanup
+        output writeString: TerminalCommand switchToMainScreen!
 
     method println: line
         output print: line.
         output print: "\r\n"!
 
-    method onEof
-        self println: "Exit!".
+    method exit
+        self cleanup.
         exitBlock value!
 
     method readChar
-        input readChar_onEof: { self onEof }!
+        input readChar_onEof: { self exit }!
 end

@@ -689,15 +689,36 @@ struct Foo foo_send_array(struct FooContext* sender,
   case 0:
     return foo_send(sender, selector, receiver, 0);
   case 1:
-    return foo_send(sender, selector, receiver, 1, array->data[0]);
+    return foo_send(sender, selector, receiver, 1,
+                    array->data[0]);
   case 2:
-    return foo_send(sender, selector, receiver, 2, array->data[0], array->data[1]);
+    return foo_send(sender, selector, receiver, 2,
+                    array->data[0], array->data[1]);
   case 3:
-    return foo_send(sender, selector, receiver, 3, array->data[0], array->data[1], array->data[2]);
+    return foo_send(sender, selector, receiver, 3,
+                    array->data[0], array->data[1], array->data[2]);
   case 4:
-    return foo_send(sender, selector, receiver, 4, array->data[0], array->data[1], array->data[2], array->data[3]);
+    return foo_send(sender, selector, receiver, 4,
+                    array->data[0], array->data[1], array->data[2], array->data[3]);
   case 5:
-    return foo_send(sender, selector, receiver, 5, array->data[0], array->data[1], array->data[2], array->data[3], array->data[4]);
+    return foo_send(sender, selector, receiver, 5,
+                    array->data[0], array->data[1], array->data[2], array->data[3], array->data[4]);
+  case 6:
+    return foo_send(sender, selector, receiver, 6,
+                    array->data[0], array->data[1], array->data[2], array->data[3], array->data[4],
+                    array->data[5]);
+  case 7:
+    return foo_send(sender, selector, receiver, 7,
+                    array->data[0], array->data[1], array->data[2], array->data[3], array->data[4],
+                    array->data[5], array->data[6]);
+  case 8:
+    return foo_send(sender, selector, receiver, 8,
+                    array->data[0], array->data[1], array->data[2], array->data[3], array->data[4],
+                    array->data[5], array->data[6], array->data[7]);
+  case 9:
+    return foo_send(sender, selector, receiver, 9,
+                    array->data[0], array->data[1], array->data[2], array->data[3], array->data[4],
+                    array->data[5], array->data[6], array->data[7], array->data[8]);
   case 14:
     return foo_send(sender, selector, receiver, 14,
                     array->data[0], array->data[1], array->data[2], array->data[3], array->data[4],
