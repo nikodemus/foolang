@@ -5,6 +5,10 @@ define Foreground
     { red: "{Esc}[31m",
       default: "{Esc}[39m" }!
 
+define TerminalCommand
+    { switchToAlternateScreen: "{Esc}[?1049h",
+      switchToMainScreen: "{Esc}[?1049l" }!
+
 class Control {}
     direct method key: string
         (string codeAt: 1) bitAnd: 0x1f!
@@ -13,7 +17,7 @@ end
 class Main { input output exitBlock }
     direct method run: command in: system
         (self system: system)
-            run!
+              run!
 
     direct method system: system
         self input: system input
@@ -28,11 +32,19 @@ class Main { input output exitBlock }
                     out writeString: Foreground default }!
 
     method run
+        { self setup.
+          self mainLoop }
+        finally: { self cleanup }!
+
+    method setup
         input
             ; echo: False
             ; buffering: False.
         output
             processed: False.
+        output writeString: TerminalCommand switchToAlternateScreen!
+
+    method mainLoop
         self println: "Press Ctrl-q to exit.".
         let quit = Control key: "q".
         {
@@ -44,14 +56,17 @@ class Main { input output exitBlock }
         }
             whileFalse!
 
+    method cleanup
+        output writeString: TerminalCommand switchToMainScreen!
+
     method println: line
         output print: line.
         output print: "\r\n"!
 
-    method onEof
-        self println: "Exit!".
+    method exit
+        self cleanup.
         exitBlock value!
 
     method readChar
-        input readChar_onEof: { self onEof }!
+        input readChar_onEof: { self exit }!
 end
