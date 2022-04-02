@@ -27,7 +27,7 @@ class Main { input output exitBlock }
 
     method println: line
         output print: line.
-        output print: "\n"!
+        output print: "\r\n"!
 
     method onEof
         self println: "Exit!".

@@ -46,19 +46,21 @@ bool system_input_unread_char(void* input, int c) {
   return EOF != ungetc(c, input);
 }
 
-bool system_input_set_termios_flags(struct FooContext* sender, FILE* file, int iflag, int lflag, bool on) {
+bool system_set_termios_flags(struct FooContext* sender, FILE* file, int iflag, int oflag, int lflag, bool on) {
   (void)sender;
   int fd = fileno(file);
   struct termios mode;
   tcgetattr(fd, &mode);
   if (on) {
     mode.c_iflag |= iflag;
+    mode.c_oflag |= oflag;
     mode.c_lflag |= lflag;
   } else {
     mode.c_iflag &= ~iflag;
+    mode.c_oflag &= ~oflag;
     mode.c_lflag &= ~lflag;
   }
-  // Should this be TCANOW?
+  // Should this be TCANOW for input and TCADRAIN for output?
   //
   // TCSANOW: the change occurs immediately.
   //
@@ -74,14 +76,15 @@ bool system_input_set_termios_flags(struct FooContext* sender, FILE* file, int i
 }
 
 bool system_input_set_echo(struct FooContext* sender, void* input, bool echo) {
-  return system_input_set_termios_flags(sender, input, 0, ECHO, echo);
+  return system_set_termios_flags(sender, input, 0, 0, ECHO, echo);
 }
 
 bool system_input_set_buffering(struct FooContext* sender, void* input, bool buffering) {
-  return system_input_set_termios_flags(sender, input,
-                                        IXON | ICRNL,
-                                        ICANON | ISIG | IEXTEN,
-                                        buffering);
+  return system_set_termios_flags(sender, input,
+                                  IXON | ICRNL,
+                                  0,
+                                  ICANON | ISIG | IEXTEN,
+                                  buffering);
 }
 
 void system_input_get_termios_flags(struct FooContext* sender, FILE* file, int* iflag, int* lflag) {
@@ -130,9 +133,11 @@ void system_output_write_bytes(struct FooContext* sender, void* output, struct F
 }
 
 bool system_output_set_processed(struct FooContext* sender, void* output, bool processed) {
-  (void)sender;
-  (void)output;
-  return processed;
+  return system_set_termios_flags(sender, output,
+                                  0,
+                                  OPOST,
+                                  0,
+                                  processed);
 }
 
 void system_exit(int code) {
