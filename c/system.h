@@ -6,17 +6,20 @@
 
 #include "foo.h"
 
-bool system_input_set_echo(struct FooContext* sender, void* input, bool echo);
-bool system_input_set_buffering(struct FooContext* sender, void* input, bool echo);
-bool system_input_get_echo(struct FooContext* sender, void* input);
-bool system_input_get_buffering(struct FooContext* sender, void* input);
+void* system_input(void);
+bool  system_input_at_eof(void* input);
+bool  system_input_get_buffering(struct FooContext* sender, void* input);
+bool  system_input_get_echo(struct FooContext* sender, void* input);
+bool  system_input_set_buffering(struct FooContext* sender, void* input, bool echo);
+bool  system_input_set_echo(struct FooContext* sender, void* input, bool echo);
+bool  system_input_unread_char(void* input, int c);
+int   system_input_read_char(void* input);
+
+void* system_output(void);
+void  system_output_flush(struct FooContext* sender, void* output);
+void  system_output_write_bytes(struct FooContext* sender, void* output, struct FooBytes* bytes);
 
 void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream);
-void* system_output(void);
-void* system_input(void);
-bool system_input_at_eof(void* input);
-int system_input_read_char(void* input);
-bool system_input_unread_char(void* input, int c);
 
 void system_exit(int)  __attribute__ ((noreturn));
 bool system_is_unix(void);

@@ -10,19 +10,14 @@ define DirectMethods {
 define InstanceMethods {
     #flush
     -> { signature: [], vars: 0, returnType: Output,
-         body: "fflush(ctx->receiver.datum.ptr);
+         body: "system_output_flush(ctx, ctx->receiver.datum.ptr);
                 return ctx->receiver;" },
     #writeString:
     -> { signature: [String], vars: 0,
          body: "struct FooBytes* bytes = PTR(FooBytes, ctx->frame[0].datum);
-                fwrite(bytes->data, 1, bytes->size, ctx->receiver.datum.ptr);
+                system_output_write_bytes(ctx, ctx->receiver.datum.ptr, bytes);
                 return ctx->frame[0];" },
     #toString:
     -> { signature: [], vars: 0, returnType: String,
-         body: "void* ptr = ctx->receiver.datum.ptr;
-                if (ptr == stdout)
-                    return foo_String_new_from(ctx, \"#<Output stdout\");
-                if (ptr == stderr)
-                    return foo_String_new_from(ctx, \"#<Output stderr>\");
-                return foo_String_new_from(ctx, \"#<Output file>\");" }
+         body: "return foo_String_new_from(ctx, \"#<Output>\");" }
 }!

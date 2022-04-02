@@ -94,6 +94,25 @@ void* system_output(void) {
   return stdout;
 }
 
+void system_output_flush(struct FooContext* sender, void* output) {
+  (void)sender;
+  fflush(output);
+}
+
+void system_output_write_bytes(struct FooContext* sender, void* output, struct FooBytes* bytes) {
+  (void)sender;
+  size_t to_write = bytes->size;
+  size_t offset = 0;
+  while (to_write > 0) {
+    size_t wrote = fwrite(bytes->data+offset, 1, to_write, output);
+    if (!wrote) {
+      foo_panicf(sender, "Could not write to output!");
+    }
+    to_write -= wrote;
+    offset += wrote;
+  }
+}
+
 bool system_input_at_eof(void* input) {
   return 0 != feof(input);
 }
