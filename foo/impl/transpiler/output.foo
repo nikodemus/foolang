@@ -8,6 +8,9 @@ define DirectMethods {
 }!
 
 define InstanceMethods {
+    #processed:
+    -> { signature: [Boolean], vars: 0, returnType: Boolean,
+         body: "return FOO_BOOLEAN(system_output_set_processed(ctx, ctx->receiver.datum.ptr, ctx->frame[0].datum.boolean));" },
     #flush
     -> { signature: [], vars: 0, returnType: Output,
          body: "system_output_flush(ctx, ctx->receiver.datum.ptr);

@@ -105,6 +105,12 @@ void system_output_write_bytes(struct FooContext* sender, void* output, struct F
   }
 }
 
+bool system_output_set_processed(struct FooContext* sender, void* output, bool processed) {
+  (void)sender;
+  (void)output;
+  return processed;
+}
+
 void system_input_set_mode_bits(struct FooContext* sender, struct FooInput* in, DWORD bits, bool on) {
   DWORD mode;
   if (!GetConsoleMode(in->handle, &mode)) {

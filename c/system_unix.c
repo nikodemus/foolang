@@ -113,6 +113,12 @@ void system_output_write_bytes(struct FooContext* sender, void* output, struct F
   }
 }
 
+bool system_output_set_processed(struct FooContext* sender, void* output, bool processed) {
+  (void)sender;
+  (void)output;
+  return processed;
+}
+
 bool system_input_at_eof(void* input) {
   return 0 != feof(input);
 }

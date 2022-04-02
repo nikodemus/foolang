@@ -1,30 +1,37 @@
 
-class Main { input system }
+class Main { input output exitBlock }
     direct method run: command in: system
         (self system: system)
             run!
 
     direct method system: system
         self input: system input
-             system: system!
+             output: system output
+             exitBlock: { system exit }!
 
     method run
         input
             ; echo: False
             ; buffering: False.
-        system output println: "Press q to exit.".
+        output
+            processed: False.
+        self println: "Press q to exit.".
         {
             let char = self readChar.
             char isControlCharacter
-                ifTrue: { system output println: "-> {char code}" }
-                ifFalse: { system output println: "-> {char code} ({char string})" }.
+                ifTrue: { self println: "-> {char code}" }
+                ifFalse: { self println: "-> {char code} ({char string})" }.
             "q" character == char
         }
-        whileFalse!
+            whileFalse!
+
+    method println: line
+        output print: line.
+        output print: "\n"!
 
     method onEof
         system output println: "Exit!".
-        system exit!
+        exitBlock value!
 
     method readChar
         input readChar_onEof: { self onEof }!
