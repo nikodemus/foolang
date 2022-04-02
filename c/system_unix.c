@@ -90,6 +90,10 @@ void* system_input(void) {
   return stdin;
 }
 
+void* system_output(void) {
+  return stdout;
+}
+
 bool system_input_at_eof(void* input) {
   return 0 != feof(input);
 }

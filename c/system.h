@@ -12,6 +12,7 @@ bool system_input_get_echo(struct FooContext* sender, void* input);
 bool system_input_get_buffering(struct FooContext* sender, void* input);
 
 void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream);
+void* system_output(void);
 void* system_input(void);
 bool system_input_at_eof(void* input);
 int system_input_read_char(void* input);

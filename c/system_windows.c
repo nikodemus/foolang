@@ -82,6 +82,10 @@ void* system_input(void) {
   return &FooStandardInput;
 }
 
+void* system_output(void) {
+  return stdout;
+}
+
 void system_input_set_mode_bits(struct FooContext* sender, struct FooInput* in, DWORD bits, bool on) {
   DWORD mode;
   if (!GetConsoleMode(in->handle, &mode)) {

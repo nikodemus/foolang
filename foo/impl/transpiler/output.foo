@@ -3,7 +3,8 @@
 define DirectMethods {
     #debug ->
     { signature: [], vars: 0,
-      body: "return (struct Foo)\{ .class = &FooClass_Output, .datum = \{ .ptr = stdout } };" }
+      body: "// FIXME: Get rid of this method, replace with Log class.
+             return FOO_INSTANCE(Output, system_output());" }
 }!
 
 define InstanceMethods {
