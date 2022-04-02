@@ -47,6 +47,8 @@ void foo_mark_input(void* ptr) {
   }
 }
 
+HANDLE FooStandardOutput = 0;
+
 void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream) {
   struct FooInput* input = foo_alloc(sender, sizeof(struct FooInput));
   input->header.allocation = HEAP;
@@ -63,9 +65,8 @@ void system_oops(const char* what) {
     _Exit(1);
 }
 
-void system_init_output(void) {
-  _setmode(_fileno(stdout), O_BINARY);
-  _setmode(_fileno(stderr), O_BINARY);
+void* system_input(void) {
+  return &FooStandardInput;
 }
 
 void system_init_input(void) {
@@ -76,39 +77,6 @@ void system_init_input(void) {
   FooStandardInput.handle = input;
   FooStandardInput.buffer = EOF;
   FooStandardInput.eof = false;
-}
-
-void* system_input(void) {
-  return &FooStandardInput;
-}
-
-void* system_output(void) {
-  return stdout;
-}
-
-void system_output_flush(struct FooContext* sender, void* output) {
-  (void)sender;
-  fflush(output);
-}
-
-void system_output_write_bytes(struct FooContext* sender, void* output, struct FooBytes* bytes) {
-  (void)sender;
-  size_t to_write = bytes->size;
-  size_t offset = 0;
-  while (to_write > 0) {
-    size_t wrote = fwrite(bytes->data+offset, 1, to_write, output);
-    if (!wrote) {
-      foo_panicf(sender, "Could not write to output!");
-    }
-    to_write -= wrote;
-    offset += wrote;
-  }
-}
-
-bool system_output_set_processed(struct FooContext* sender, void* output, bool processed) {
-  (void)sender;
-  (void)output;
-  return processed;
 }
 
 void system_input_set_mode_bits(struct FooContext* sender, struct FooInput* in, DWORD bits, bool on) {
@@ -205,6 +173,44 @@ bool system_input_unread_char(void* input, int ch) {
   } else {
     return false;
   }
+}
+
+void* system_output(void) {
+  return (void*)FooStandardOutput;
+}
+
+void system_init_output(void) {
+  HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
+  if (output == INVALID_HANDLE_VALUE) {
+    system_oops("ERROR: Could not get STD_OUTPUT_HANDLE");
+  }
+  FooStandardOutput = output;
+}
+
+void system_output_flush(struct FooContext* sender, void* output) {
+  // No buffering at the moment!
+  (void)sender;
+  (void)output;
+}
+
+void system_output_write_bytes(struct FooContext* sender, void* output, struct FooBytes* bytes) {
+  (void)sender;
+  DWORD to_write = bytes->size;
+  DWORD offset = 0;
+  while (to_write > 0) {
+    DWORD wrote;
+    if (!WriteFile((HANDLE)output, bytes->data+offset, to_write, &wrote, NULL)) {
+      foo_panicf(sender, "ERROR: Could not write to output! (%lu)", GetLastError());
+    }
+    to_write -= wrote;
+    offset += wrote;
+  }
+}
+
+bool system_output_set_processed(struct FooContext* sender, void* output, bool processed) {
+  (void)sender;
+  (void)output;
+  return processed;
 }
 
 void system_exit(int code) {

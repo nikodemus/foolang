@@ -20,6 +20,27 @@ void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream
   return filestream;
 }
 
+void* system_input(void) {
+  return stdin;
+}
+
+void foo_mark_input(void* ptr) {
+  (void)ptr;
+  // Just a FILE*, nothing to mark.
+}
+
+bool system_input_at_eof(void* input) {
+  return 0 != feof(input);
+}
+
+int system_input_read_char(void* input) {
+  return fgetc(input);
+}
+
+bool system_input_unread_char(void* input, int c) {
+  return EOF != ungetc(c, input);
+}
+
 bool system_input_set_termios_flags(struct FooContext* sender, FILE* file, int iflag, int lflag, bool on) {
   (void)sender;
   int fd = fileno(file);
@@ -81,15 +102,6 @@ bool system_input_get_buffering(struct FooContext* sender, void* input) {
   return (iflag & (IXON | ICRNL)) && (lflag & (ICANON | ISIG | IEXTEN));
 }
 
-void foo_mark_input(void* ptr) {
-  (void)ptr;
-  // Just a FILE*, nothing to mark.
-}
-
-void* system_input(void) {
-  return stdin;
-}
-
 void* system_output(void) {
   return stdout;
 }
@@ -100,7 +112,6 @@ void system_output_flush(struct FooContext* sender, void* output) {
 }
 
 void system_output_write_bytes(struct FooContext* sender, void* output, struct FooBytes* bytes) {
-  (void)sender;
   size_t to_write = bytes->size;
   size_t offset = 0;
   while (to_write > 0) {
@@ -117,18 +128,6 @@ bool system_output_set_processed(struct FooContext* sender, void* output, bool p
   (void)sender;
   (void)output;
   return processed;
-}
-
-bool system_input_at_eof(void* input) {
-  return 0 != feof(input);
-}
-
-int system_input_read_char(void* input) {
-  return fgetc(input);
-}
-
-bool system_input_unread_char(void* input, int c) {
-  return EOF != ungetc(c, input);
 }
 
 void system_exit(int code) {

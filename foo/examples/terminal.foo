@@ -30,7 +30,7 @@ class Main { input output exitBlock }
         output print: "\n"!
 
     method onEof
-        system output println: "Exit!".
+        self println: "Exit!".
         exitBlock value!
 
     method readChar
