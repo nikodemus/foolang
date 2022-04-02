@@ -190,6 +190,10 @@ void system_init_output(void) {
     system_oops("ERROR: Could not get STD_OUTPUT_HANDLE");
   }
   FooStandardOutput = output;
+  // We do this so that all fprintfs from the C-side
+  // do what we expect -- mainly backtraces.
+  _setmode(_fileno(stdout), O_BINARY);
+  _setmode(_fileno(stderr), O_BINARY);
 }
 
 void system_output_flush(struct FooContext* sender, void* output) {
