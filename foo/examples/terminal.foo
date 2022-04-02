@@ -5,6 +5,11 @@ define Foreground
     { red: "{Esc}[31m",
       default: "{Esc}[39m" }!
 
+class Control {}
+    direct method key: string
+        (string codeAt: 1) bitAnd: 0x1f!
+end
+
 class Main { input output exitBlock }
     direct method run: command in: system
         (self system: system)
@@ -28,13 +33,14 @@ class Main { input output exitBlock }
             ; buffering: False.
         output
             processed: False.
-        self println: "Press q to exit.".
+        self println: "Press Ctrl-q to exit.".
+        let quit = Control key: "q".
         {
             let char = self readChar.
             char isControlCharacter
                 ifTrue: { self println: "-> {char code}" }
                 ifFalse: { self println: "-> {char code} ({self red: char string})" }.
-            "q" character == char
+            char code is quit
         }
             whileFalse!
 
