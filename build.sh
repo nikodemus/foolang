@@ -28,6 +28,10 @@ usage: build.sh [option*]
 
         Skip steps #4 and #5.
 
+    --quick-and-dirty
+
+        Just does the step 3.
+
 EOF
 )
 set -euo pipefail
@@ -45,6 +49,7 @@ FOO2=$(exename build/foo2)
 CLEAN=false
 BOOTSTRAP=false
 NO_INTERPRETER_BUILD=false
+NO_SELF_COMPILER_BUILD=false
 VERIFY=true
 
 for option in $@
@@ -63,6 +68,12 @@ do
         --no-verify)
             # It's just easier to keep verify option this way around.
             VERIFY=false
+            ;;
+        --quick-and-dirty)
+            NO_INTERPRETER_BUILD=true
+            NO_SELF_COMPILER_BUILD=true
+            VERIFY=false
+            BOOTSTRAP=false
             ;;
         *)
             echo "ERROR: unknown option to build.sh: $option"
@@ -86,6 +97,8 @@ elif $BOOTSTRAP; then
     echo "Expected build time: ~6min (bootstrap, self-build, foo)"
 elif $VERIFY; then
     echo "Expected build time: ~3min (self-build, foo, verify)"
+elif $NO_SELF_COMPILER_BUILD; then
+    echo "Expected build time: <1min (foo)"
 else
     echo "Expected build time: ~1.5min (self-build, foo)"
 fi
@@ -120,16 +133,19 @@ if $BOOTSTRAP; then
 
 fi
 
-rm -rf build/self-compiler-c
-start_clock "building self-compiler"
-if $BOOTSTRAP_COMPILER --compile foo/foo.foo \
-    &> build/self-compiler.log
-then
-    ok
-    mv $(exename foo/foo) $SELF_COMPILER
-    cp -a c build/self-compiler-c
-else
-    fail build/self-compiler.log
+if ! $NO_SELF_COMPILER_BUILD; then
+
+    rm -rf build/self-compiler-c
+    start_clock "building self-compiler"
+    if $BOOTSTRAP_COMPILER --compile foo/foo.foo \
+        &> build/self-compiler.log
+    then
+        ok
+        mv $(exename foo/foo) $SELF_COMPILER
+        cp -a c build/self-compiler-c
+    else
+        fail build/self-compiler.log
+    fi
 fi
 
 rm -rf build/foo-c

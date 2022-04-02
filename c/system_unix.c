@@ -20,42 +20,65 @@ void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream
   return filestream;
 }
 
-bool system_input_set_termios_lflag(struct FooContext* sender, FILE* file, int flag, bool on) {
+bool system_input_set_termios_flags(struct FooContext* sender, FILE* file, int iflag, int lflag, bool on) {
   (void)sender;
   int fd = fileno(file);
   struct termios mode;
   tcgetattr(fd, &mode);
   if (on) {
-    mode.c_lflag |= flag;
+    mode.c_iflag |= iflag;
+    mode.c_lflag |= lflag;
   } else {
-    mode.c_lflag &= ~flag;
+    mode.c_iflag &= ~iflag;
+    mode.c_lflag &= ~lflag;
   }
+  // Should this be TCANOW?
+  //
+  // TCSANOW: the change occurs immediately.
+  //
+  // TCSADRAIN: the change occurs after all output written to fd has been
+  //    transmitted. This function should be used when changing parameters that
+  //    affect output.
+  //
+  // TCSAFLUSH: the change occurs after all output written to the object referred
+  //   by fd has been transmitted, and all input that has been received but not
+  //   read will be discarded before the change is made.
   tcsetattr(fd, TCSAFLUSH, &mode);
   return on;
 }
 
 bool system_input_set_echo(struct FooContext* sender, void* input, bool echo) {
-  return system_input_set_termios_lflag(sender, input, ECHO, echo);
+  return system_input_set_termios_flags(sender, input, 0, ECHO, echo);
 }
 
 bool system_input_set_buffering(struct FooContext* sender, void* input, bool buffering) {
-  return system_input_set_termios_lflag(sender, input, ICANON, buffering);
+  return system_input_set_termios_flags(sender, input,
+                                        IXON | ICRNL,
+                                        ICANON | ISIG | IEXTEN,
+                                        buffering);
 }
 
-bool system_input_get_termios_lflag(struct FooContext* sender, FILE* file, int flag) {
+void system_input_get_termios_flags(struct FooContext* sender, FILE* file, int* iflag, int* lflag) {
   (void)sender;
   int fd = fileno(file);
   struct termios mode;
   tcgetattr(fd, &mode);
-  return mode.c_lflag & flag;
+  if (iflag)
+    *iflag = mode.c_iflag;
+  if (lflag)
+    *lflag = mode.c_lflag;
 }
 
 bool system_input_get_echo(struct FooContext* sender, void* input) {
-  return system_input_get_termios_lflag(sender, input, ECHO);
+  int lflag;
+  system_input_get_termios_flags(sender, input, NULL, &lflag);
+  return lflag & ECHO;
 }
 
 bool system_input_get_buffering(struct FooContext* sender, void* input) {
-  return system_input_get_termios_lflag(sender, input, ICANON);
+  int iflag, lflag;
+  system_input_get_termios_flags(sender, input, &iflag, &lflag);
+  return (iflag & (IXON | ICRNL)) && (lflag & (ICANON | ISIG | IEXTEN));
 }
 
 void foo_mark_input(void* ptr) {
