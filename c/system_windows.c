@@ -83,9 +83,9 @@ void system_init_input(void) {
   FooStandardInput.eof = false;
 }
 
-void system_input_set_mode_bits(struct FooContext* sender, struct FooInput* in, DWORD bits, bool on) {
+void system_set_console_mode_bits(struct FooContext* sender, HANDLE console, DWORD bits, bool on) {
   DWORD mode;
-  if (!GetConsoleMode(in->handle, &mode)) {
+  if (!GetConsoleMode(console, &mode)) {
     foo_panicf(sender, "Could not get console mode (%lu)", GetLastError());
   }
   if (on) {
@@ -93,20 +93,21 @@ void system_input_set_mode_bits(struct FooContext* sender, struct FooInput* in, 
   } else {
     mode &= ~bits;
   }
-  if (!SetConsoleMode(in->handle, mode)) {
+  if (!SetConsoleMode(console, mode)) {
     foo_panicf(sender, "Could not set console mode (%lu)", GetLastError());
   }
 }
 
 bool system_input_set_echo(struct FooContext* sender, void* input, bool echo) {
-  system_input_set_mode_bits(sender, input, ENABLE_ECHO_INPUT, echo);
+  system_set_console_mode_bits(sender, ((struct FooInput*)input)->handle, ENABLE_ECHO_INPUT, echo);
   return echo;
 }
 
 bool system_input_set_buffering(struct FooContext* sender, void* input, bool buffering) {
-  system_input_set_mode_bits(sender, input, ENABLE_LINE_INPUT, buffering);
-  system_input_set_mode_bits(sender, input, ENABLE_PROCESSED_INPUT, buffering);
-  system_input_set_mode_bits(sender, input, ENABLE_VIRTUAL_TERMINAL_INPUT, !buffering);
+  HANDLE console = ((struct FooInput*)input)->handle;
+  system_set_console_mode_bits(sender, console, ENABLE_LINE_INPUT, buffering);
+  system_set_console_mode_bits(sender, console, ENABLE_PROCESSED_INPUT, buffering);
+  system_set_console_mode_bits(sender, console, ENABLE_VIRTUAL_TERMINAL_INPUT, !buffering);
   return buffering;
 }
 
@@ -212,8 +213,14 @@ void system_output_write_bytes(struct FooContext* sender, void* output, struct F
 }
 
 bool system_output_set_processed(struct FooContext* sender, void* output, bool processed) {
-  (void)sender;
-  (void)output;
+  HANDLE console = (HANDLE)output;
+  system_set_console_mode_bits(sender, console, ENABLE_PROCESSED_OUTPUT, processed);
+  system_set_console_mode_bits(sender, console, DISABLE_NEWLINE_AUTO_RETURN, !processed);
+  // FIXME: Another sign of the API being wrong...
+  //
+  // I think I want a more "native" layer, on top of which I can then build
+  // a #setupVT or similar.
+  system_set_console_mode_bits(sender, console, ENABLE_VIRTUAL_TERMINAL_PROCESSING, !processed);
   return processed;
 }
 
