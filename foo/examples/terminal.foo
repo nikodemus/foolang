@@ -1,30 +1,50 @@
 
-class Main { input system }
+define Esc (Character code: 0x1B) string!
+
+define Foreground
+    { red: "{Esc}[31m",
+      default: "{Esc}[39m" }!
+
+class Main { input output exitBlock }
     direct method run: command in: system
         (self system: system)
             run!
 
     direct method system: system
         self input: system input
-             system: system!
+             output: system output
+             exitBlock: { system exit }!
+
+    method red: string
+        StringOutput
+            with: { |out|
+                    out writeString: Foreground red.
+                    out writeString: string.
+                    out writeString: Foreground default }!
 
     method run
         input
             ; echo: False
             ; buffering: False.
-        system output println: "Press q to exit.".
+        output
+            processed: False.
+        self println: "Press q to exit.".
         {
             let char = self readChar.
             char isControlCharacter
-                ifTrue: { system output println: "-> {char code}" }
-                ifFalse: { system output println: "-> {char code} ({char string})" }.
+                ifTrue: { self println: "-> {char code}" }
+                ifFalse: { self println: "-> {char code} ({self red: char string})" }.
             "q" character == char
         }
-        whileFalse!
+            whileFalse!
+
+    method println: line
+        output print: line.
+        output print: "\r\n"!
 
     method onEof
-        system output println: "Exit!".
-        system exit!
+        self println: "Exit!".
+        exitBlock value!
 
     method readChar
         input readChar_onEof: { self onEof }!

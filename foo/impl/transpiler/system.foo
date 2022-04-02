@@ -79,7 +79,7 @@ define InstanceMethods {
 
     #output
     -> { signature: [], vars: 0, returnType: Output,
-         body: "return FOO_INSTANCE(Output, stdout);" },
+         body: "return FOO_INSTANCE(Output, system_output());" },
 
     #random
     -> { signature: [], vars: 0, returnType: SystemRandom,

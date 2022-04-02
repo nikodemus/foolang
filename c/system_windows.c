@@ -16,7 +16,7 @@
 #include "mark-and-sweep.h"
 
 /**
- * So this is a bit silly. I built this on top of HANDLE's because I had trouble
+ * So this is a bit silly. I built this on top of HANDLEs because I had trouble
  * getting FILE* -> fd -> HANDLE path to work so that Get/SetConsoleMode would
  * have worked... but it turns out that I had the checking of the return
  * value the wrong way around. So quite plausibly I could get rid of FooInput
@@ -47,6 +47,8 @@ void foo_mark_input(void* ptr) {
   }
 }
 
+HANDLE FooStandardOutput = 0;
+
 void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream) {
   struct FooInput* input = foo_alloc(sender, sizeof(struct FooInput));
   input->header.allocation = HEAP;
@@ -56,6 +58,10 @@ void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream
   return input;
 }
 
+void* system_filestream_as_output_ptr(struct FooContext* sender, void* filestream) {
+  return (void*)_get_osfhandle(_fileno(filestream));
+}
+
 void system_oops(const char* what) {
     DWORD code = GetLastError();
     fprintf(stderr, "%s (%zu)\n", what, (size_t)code);
@@ -63,9 +69,8 @@ void system_oops(const char* what) {
     _Exit(1);
 }
 
-void system_init_output(void) {
-  _setmode(_fileno(stdout), O_BINARY);
-  _setmode(_fileno(stderr), O_BINARY);
+void* system_input(void) {
+  return &FooStandardInput;
 }
 
 void system_init_input(void) {
@@ -78,13 +83,9 @@ void system_init_input(void) {
   FooStandardInput.eof = false;
 }
 
-void* system_input(void) {
-  return &FooStandardInput;
-}
-
-void system_input_set_mode_bits(struct FooContext* sender, struct FooInput* in, DWORD bits, bool on) {
+void system_set_console_mode_bits(struct FooContext* sender, HANDLE console, DWORD bits, bool on) {
   DWORD mode;
-  if (!GetConsoleMode(in->handle, &mode)) {
+  if (!GetConsoleMode(console, &mode)) {
     foo_panicf(sender, "Could not get console mode (%lu)", GetLastError());
   }
   if (on) {
@@ -92,20 +93,21 @@ void system_input_set_mode_bits(struct FooContext* sender, struct FooInput* in, 
   } else {
     mode &= ~bits;
   }
-  if (!SetConsoleMode(in->handle, mode)) {
+  if (!SetConsoleMode(console, mode)) {
     foo_panicf(sender, "Could not set console mode (%lu)", GetLastError());
   }
 }
 
 bool system_input_set_echo(struct FooContext* sender, void* input, bool echo) {
-  system_input_set_mode_bits(sender, input, ENABLE_ECHO_INPUT, echo);
+  system_set_console_mode_bits(sender, ((struct FooInput*)input)->handle, ENABLE_ECHO_INPUT, echo);
   return echo;
 }
 
 bool system_input_set_buffering(struct FooContext* sender, void* input, bool buffering) {
-  system_input_set_mode_bits(sender, input, ENABLE_LINE_INPUT, buffering);
-  system_input_set_mode_bits(sender, input, ENABLE_PROCESSED_INPUT, buffering);
-  system_input_set_mode_bits(sender, input, ENABLE_VIRTUAL_TERMINAL_INPUT, !buffering);
+  HANDLE console = ((struct FooInput*)input)->handle;
+  system_set_console_mode_bits(sender, console, ENABLE_LINE_INPUT, buffering);
+  system_set_console_mode_bits(sender, console, ENABLE_PROCESSED_INPUT, buffering);
+  system_set_console_mode_bits(sender, console, ENABLE_VIRTUAL_TERMINAL_INPUT, !buffering);
   return buffering;
 }
 
@@ -176,6 +178,54 @@ bool system_input_unread_char(void* input, int ch) {
   } else {
     return false;
   }
+}
+
+void* system_output(void) {
+  return (void*)FooStandardOutput;
+}
+
+void system_init_output(void) {
+  HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
+  if (output == INVALID_HANDLE_VALUE) {
+    system_oops("ERROR: Could not get STD_OUTPUT_HANDLE");
+  }
+  FooStandardOutput = output;
+  // We do this so that all fprintfs from the C-side
+  // do what we expect -- mainly backtraces.
+  _setmode(_fileno(stdout), O_BINARY);
+  _setmode(_fileno(stderr), O_BINARY);
+}
+
+void system_output_flush(struct FooContext* sender, void* output) {
+  // No buffering at the moment!
+  (void)sender;
+  (void)output;
+}
+
+void system_output_write_bytes(struct FooContext* sender, void* output, struct FooBytes* bytes) {
+  (void)sender;
+  DWORD to_write = bytes->size;
+  DWORD offset = 0;
+  while (to_write > 0) {
+    DWORD wrote;
+    if (!WriteFile((HANDLE)output, bytes->data+offset, to_write, &wrote, NULL)) {
+      foo_panicf(sender, "ERROR: Could not write to output! (%lu)", GetLastError());
+    }
+    to_write -= wrote;
+    offset += wrote;
+  }
+}
+
+bool system_output_set_processed(struct FooContext* sender, void* output, bool processed) {
+  HANDLE console = (HANDLE)output;
+  system_set_console_mode_bits(sender, console, ENABLE_PROCESSED_OUTPUT, processed);
+  system_set_console_mode_bits(sender, console, DISABLE_NEWLINE_AUTO_RETURN, !processed);
+  // FIXME: Another sign of the API being wrong...
+  //
+  // I think I want a more "native" layer, on top of which I can then build
+  // a #setupVT or similar.
+  system_set_console_mode_bits(sender, console, ENABLE_VIRTUAL_TERMINAL_PROCESSING, !processed);
+  return processed;
 }
 
 void system_exit(int code) {

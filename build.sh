@@ -30,7 +30,7 @@ usage: build.sh [option*]
 
     --quick-and-dirty
 
-        Just does the step 3.
+        Just does the step 3: useful when eg. working with main.c.
 
 EOF
 )

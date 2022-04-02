@@ -20,19 +20,47 @@ void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream
   return filestream;
 }
 
-bool system_input_set_termios_flags(struct FooContext* sender, FILE* file, int iflag, int lflag, bool on) {
+void* system_filestream_as_output_ptr(struct FooContext* sender, void* filestream) {
+  (void)sender;
+  return filestream;
+}
+
+void* system_input(void) {
+  return stdin;
+}
+
+void foo_mark_input(void* ptr) {
+  (void)ptr;
+  // Just a FILE*, nothing to mark.
+}
+
+bool system_input_at_eof(void* input) {
+  return 0 != feof(input);
+}
+
+int system_input_read_char(void* input) {
+  return fgetc(input);
+}
+
+bool system_input_unread_char(void* input, int c) {
+  return EOF != ungetc(c, input);
+}
+
+bool system_set_termios_flags(struct FooContext* sender, FILE* file, int iflag, int oflag, int lflag, bool on) {
   (void)sender;
   int fd = fileno(file);
   struct termios mode;
   tcgetattr(fd, &mode);
   if (on) {
     mode.c_iflag |= iflag;
+    mode.c_oflag |= oflag;
     mode.c_lflag |= lflag;
   } else {
     mode.c_iflag &= ~iflag;
+    mode.c_oflag &= ~oflag;
     mode.c_lflag &= ~lflag;
   }
-  // Should this be TCANOW?
+  // Should this be TCANOW for input and TCADRAIN for output?
   //
   // TCSANOW: the change occurs immediately.
   //
@@ -48,14 +76,15 @@ bool system_input_set_termios_flags(struct FooContext* sender, FILE* file, int i
 }
 
 bool system_input_set_echo(struct FooContext* sender, void* input, bool echo) {
-  return system_input_set_termios_flags(sender, input, 0, ECHO, echo);
+  return system_set_termios_flags(sender, input, 0, 0, ECHO, echo);
 }
 
 bool system_input_set_buffering(struct FooContext* sender, void* input, bool buffering) {
-  return system_input_set_termios_flags(sender, input,
-                                        IXON | ICRNL,
-                                        ICANON | ISIG | IEXTEN,
-                                        buffering);
+  return system_set_termios_flags(sender, input,
+                                  IXON | ICRNL,
+                                  0,
+                                  ICANON | ISIG | IEXTEN,
+                                  buffering);
 }
 
 void system_input_get_termios_flags(struct FooContext* sender, FILE* file, int* iflag, int* lflag) {
@@ -81,25 +110,34 @@ bool system_input_get_buffering(struct FooContext* sender, void* input) {
   return (iflag & (IXON | ICRNL)) && (lflag & (ICANON | ISIG | IEXTEN));
 }
 
-void foo_mark_input(void* ptr) {
-  (void)ptr;
-  // Just a FILE*, nothing to mark.
+void* system_output(void) {
+  return stdout;
 }
 
-void* system_input(void) {
-  return stdin;
+void system_output_flush(struct FooContext* sender, void* output) {
+  (void)sender;
+  fflush(output);
 }
 
-bool system_input_at_eof(void* input) {
-  return 0 != feof(input);
+void system_output_write_bytes(struct FooContext* sender, void* output, struct FooBytes* bytes) {
+  size_t to_write = bytes->size;
+  size_t offset = 0;
+  while (to_write > 0) {
+    size_t wrote = fwrite(bytes->data+offset, 1, to_write, output);
+    if (!wrote) {
+      foo_panicf(sender, "Could not write to output!");
+    }
+    to_write -= wrote;
+    offset += wrote;
+  }
 }
 
-int system_input_read_char(void* input) {
-  return fgetc(input);
-}
-
-bool system_input_unread_char(void* input, int c) {
-  return EOF != ungetc(c, input);
+bool system_output_set_processed(struct FooContext* sender, void* output, bool processed) {
+  return system_set_termios_flags(sender, output,
+                                  0,
+                                  OPOST,
+                                  0,
+                                  processed);
 }
 
 void system_exit(int code) {
