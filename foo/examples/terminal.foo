@@ -12,16 +12,38 @@ class TerminalCommand {}
     direct method saveCursorPosition    "{Esc}7"!
     direct method restoreCursorPosition "{Esc}8"!
     direct method clearScreen           "{Esc}[2J"!
+    direct method gotoColumn: x
+        "{Esc}[{x}G"!
     direct method gotoLine: y column: x
         "{Esc}[{y};{x}H"!
 end
+
+define DecGraphics
+    { horizontalLine: (Character code: 0x71) string,
+      verticalLine: (Character code: 0x78) string,
+      upperLeftCorner: (Character code: 0x6C) string,
+      upperRightCorner: (Character code: 0x6B) string,
+      lowerLeftCorner: (Character code: 0x6D) string,
+      lowerRightCorner: (Character code: 0x6A) string,
+      startDrawing: "{Esc}(0",
+      stopDrawing: "{Esc}(B" }!
+
+define AsciiGraphics
+    { horizontalLine: "-",
+      verticalLine: "|",
+      upperLeftCorner: "+",
+      upperRightCorner: "+",
+      lowerLeftCorner: "+",
+      lowerRightCorner: "+",
+      startDrawing: "",
+      stopDrawing: "" }!
 
 class Control {}
     direct method key: string
         (string codeAt: 1) bitAnd: 0x1f!
 end
 
-class Main { input output exitBlock height width }
+class Main { input output exitBlock height width graphics }
     direct method run: command in: system
         (self system: system)
               run!
@@ -31,7 +53,8 @@ class Main { input output exitBlock height width }
              output: system output
              exitBlock: { system exit }
              height: False
-             width: False!
+             width: False
+             graphics: DecGraphics!
 
     method red: string
         StringOutput
@@ -42,17 +65,65 @@ class Main { input output exitBlock height width }
 
     method run
         { self setup.
-          self banner.
+          self banner: "Welcome to Foolang!".
           self mainLoop }
         finally: { self cleanup }!
 
-    method banner
-        self write: TerminalCommand clearScreen.
-        let banner = "Welcome to Foolang!".
-        self write: (TerminalCommand
-                         gotoLine: height / 2
-                         column: (width / 2) - (banner size / 2)).
-        self println: banner!
+    method clearScreen
+        self write: TerminalCommand clearScreen!
+
+    method startDrawing
+        self write: graphics startDrawing!
+
+    method stopDrawing
+        self write: graphics stopDrawing!
+
+    method draw: element times: size
+        let string = element sendTo: graphics.
+        size times: { self write: string }!
+
+    method draw: element
+        self write: (element sendTo: graphics)!
+
+    method drawBoxFromLine: line1 column: column1
+           toLine: line2 column: column2
+        { self startDrawing.
+          self gotoLine: line1 column: column1.
+          self draw: #upperLeftCorner.
+          self draw: #horizontalLine times: (column2 - column1 - 1).
+          self draw: #upperRightCorner.
+          line1 + 1 to: line2 - 1
+                    do: { |line|
+                          self gotoLine: line column: column1.
+                          self draw: #verticalLine.
+                          self gotoColumn: column2.
+                          self draw: #verticalLine }.
+          self gotoLine: line2 column: column1.
+          self draw: #lowerLeftCorner.
+          self draw: #horizontalLine times: (column2 - column1 - 1).
+          self draw: #lowerRightCorner }
+        finally: { self stopDrawing }!
+
+    method write: text onLine: line column: column
+        self gotoLine: line column: column.
+        self write: text!
+
+    method gotoLine: line column: column
+        self write: (TerminalCommand gotoLine: line column: column)!
+
+    method gotoColumn: column
+        self write: (TerminalCommand gotoColumn: column)!
+
+    method banner: text
+        self clearScreen.
+        let textY = height / 2.
+        let textX = width / 2 - text size / 2.
+        self write: text onLine: textY column: textX.
+        self drawBoxFromLine: textY - 2 column: textX - 2
+             toLine: textY + 2 column: textX + text size + 1.
+        self gotoLine: 1 column: 1.
+        self readChar.
+        self clearScreen!
 
     method setup
         input
