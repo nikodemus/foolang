@@ -20,6 +20,11 @@ void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream
   return filestream;
 }
 
+void* system_filestream_as_output_ptr(struct FooContext* sender, void* filestream) {
+  (void)sender;
+  return filestream;
+}
+
 void* system_input(void) {
   return stdin;
 }

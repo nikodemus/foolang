@@ -30,7 +30,7 @@ define InstanceMethods {
     -> { signature: [], vars: 0,
          body: "struct FooFileStream* stream = PTR(FooFileStream, ctx->receiver.datum);
                 if (stream->ptr) \{
-                    return FOO_INSTANCE(Output, stream->ptr);
+                    return FOO_INSTANCE(Output, system_filestream_as_output_ptr(ctx, stream->ptr));
                 \} else \{
                     foo_panicf(ctx, \"#asOutput on a closed FileStream\");
                 \}" },

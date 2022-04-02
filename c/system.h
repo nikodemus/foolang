@@ -21,6 +21,7 @@ void  system_output_write_bytes(struct FooContext* sender, void* output, struct 
 bool  system_output_set_processed(struct FooContext* sender, void* output, bool processed);
 
 void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream);
+void* system_filestream_as_output_ptr(struct FooContext* sender, void* filestream);
 
 void system_exit(int)  __attribute__ ((noreturn));
 bool system_is_unix(void);

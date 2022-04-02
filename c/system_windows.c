@@ -16,7 +16,7 @@
 #include "mark-and-sweep.h"
 
 /**
- * So this is a bit silly. I built this on top of HANDLE's because I had trouble
+ * So this is a bit silly. I built this on top of HANDLEs because I had trouble
  * getting FILE* -> fd -> HANDLE path to work so that Get/SetConsoleMode would
  * have worked... but it turns out that I had the checking of the return
  * value the wrong way around. So quite plausibly I could get rid of FooInput
@@ -56,6 +56,10 @@ void* system_filestream_as_input_ptr(struct FooContext* sender, void* filestream
   input->buffer = EOF;
   input->eof = false;
   return input;
+}
+
+void* system_filestream_as_output_ptr(struct FooContext* sender, void* filestream) {
+  return (void*)_get_osfhandle(_fileno(filestream));
 }
 
 void system_oops(const char* what) {
