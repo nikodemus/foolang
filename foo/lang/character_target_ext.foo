@@ -42,6 +42,10 @@ extend Character
         HorizontalWhitespaceASCII
             anySatisfy: { |whitespaceCode| whitespaceCode is self code }!
 
+    method isControlCharacter
+        let code = self code.
+        code <= 32 or: code == 127!
+
     method isDigit: base -> Boolean
         let code = self code.
         base <= 10

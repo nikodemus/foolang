@@ -13,8 +13,14 @@ class Main { input system }
             ; echo: False
             ; buffering: False.
         system output println: "Press q to exit.".
-        { "q" character == self readChar }
-            whileFalse!
+        {
+            let char = self readChar.
+            char isControlCharacter
+                ifTrue: { system output println: "-> {char code}" }
+                ifFalse: { system output println: "-> {char code} ({char string})" }.
+            "q" character == char
+        }
+        whileFalse!
 
     method onEof
         system output println: "Exit!".
