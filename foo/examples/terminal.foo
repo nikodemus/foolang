@@ -5,16 +5,23 @@ define Foreground
     { red: "{Esc}[31m",
       default: "{Esc}[39m" }!
 
-define TerminalCommand
-    { switchToAlternateScreen: "{Esc}[?1049h",
-      switchToMainScreen: "{Esc}[?1049l" }!
+class TerminalCommand {}
+    direct method switchToAlternateScreen "{Esc}[?1049h"!
+    direct method switchToMainScreen      "{Esc}[?1049l"!
+    direct method reportCursorPosition  "{Esc}[6n"!
+    direct method saveCursorPosition    "{Esc}7"!
+    direct method restoreCursorPosition "{Esc}8"!
+    direct method clearScreen           "{Esc}[2J"!
+    direct method gotoLine: y column: x
+        "{Esc}[{y};{x}H"!
+end
 
 class Control {}
     direct method key: string
         (string codeAt: 1) bitAnd: 0x1f!
 end
 
-class Main { input output exitBlock }
+class Main { input output exitBlock height width }
     direct method run: command in: system
         (self system: system)
               run!
@@ -22,7 +29,9 @@ class Main { input output exitBlock }
     direct method system: system
         self input: system input
              output: system output
-             exitBlock: { system exit }!
+             exitBlock: { system exit }
+             height: False
+             width: False!
 
     method red: string
         StringOutput
@@ -33,8 +42,17 @@ class Main { input output exitBlock }
 
     method run
         { self setup.
+          self banner.
           self mainLoop }
         finally: { self cleanup }!
+
+    method banner
+        self write: TerminalCommand clearScreen.
+        let banner = "Welcome to Foolang!".
+        self write: (TerminalCommand
+                         gotoLine: height / 2
+                         column: (width / 2) - (banner size / 2)).
+        self println: banner!
 
     method setup
         input
@@ -42,7 +60,35 @@ class Main { input output exitBlock }
             ; buffering: False.
         output
             processed: False.
-        output writeString: TerminalCommand switchToAlternateScreen!
+        self write: TerminalCommand switchToAlternateScreen.
+        self getScreenSize!
+
+    method getScreenSize
+        self write: TerminalCommand saveCursorPosition.
+        self write: (TerminalCommand gotoLine: 999 column: 999).
+        self write: TerminalCommand reportCursorPosition.
+        self write: TerminalCommand restoreCursorPosition.
+        -- ESC [ Row ; Col R
+        Esc character is self readChar
+            ifFalse: { Error raise: "Invalid response" }.
+        "[" character is self readChar
+            ifFalse: { Error raise: "Invalid response" }.
+        let row = 0.
+        let nextChar = False.
+        { (nextChar = self readChar) isDigit: 10 }
+            whileTrue: { row = row * 10 + nextChar digit }.
+        height = row.
+        ";" character is nextChar
+            ifFalse: { Error raise: "Invalid response" }.
+        let col = 0.
+        { (nextChar = self readChar) isDigit: 10 }
+            whileTrue: { col = col * 10 + nextChar digit }.
+        width = col.
+        "R" character is nextChar
+            ifFalse: { Error raise: "Invalid response" }!
+
+    method write: string
+        output writeString: string!
 
     method mainLoop
         self println: "Press Ctrl-q to exit.".
