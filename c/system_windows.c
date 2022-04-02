@@ -82,44 +82,56 @@ void* system_input(void) {
   return &FooStandardInput;
 }
 
-bool system_input_set_mode_bit(struct FooContext* sender, struct FooInput* in, DWORD bit, bool on) {
+void system_input_set_mode_bits(struct FooContext* sender, struct FooInput* in, DWORD bits, bool on) {
   DWORD mode;
   if (!GetConsoleMode(in->handle, &mode)) {
     foo_panicf(sender, "Could not get console mode (%lu)", GetLastError());
   }
   if (on) {
-    mode |= bit;
+    mode |= bits;
   } else {
-    mode &= ~bit;
+    mode &= ~bits;
   }
   if (!SetConsoleMode(in->handle, mode)) {
     foo_panicf(sender, "Could not set console mode (%lu)", GetLastError());
   }
-  return on;
 }
 
 bool system_input_set_echo(struct FooContext* sender, void* input, bool echo) {
-  return system_input_set_mode_bit(sender, input, ENABLE_ECHO_INPUT, echo);
+  system_input_set_mode_bits(sender, input, ENABLE_ECHO_INPUT, echo);
+  return echo;
 }
 
 bool system_input_set_buffering(struct FooContext* sender, void* input, bool buffering) {
-  return system_input_set_mode_bit(sender, input, ENABLE_LINE_INPUT, buffering);
+  system_input_set_mode_bits(sender, input, ENABLE_LINE_INPUT, buffering);
+  system_input_set_mode_bits(sender, input, ENABLE_PROCESSED_INPUT, buffering);
+  system_input_set_mode_bits(sender, input, ENABLE_VIRTUAL_TERMINAL_INPUT, !buffering);
+  return buffering;
 }
 
-bool system_input_get_mode_bit(struct FooContext* sender, struct FooInput* in, DWORD bit) {
+bool system_input_get_mode_bits(struct FooContext* sender, struct FooInput* in, DWORD bits) {
   DWORD mode;
   if (!GetConsoleMode(in->handle, &mode)) {
     foo_panicf(sender, "Could not get console mode (%lu)", GetLastError());
   }
-  return mode & bit;
+  return mode & bits;
 }
 
 bool system_input_get_echo(struct FooContext* sender, void* input) {
-  return system_input_get_mode_bit(sender, input, ENABLE_ECHO_INPUT);
+  return system_input_get_mode_bits(sender, input, ENABLE_ECHO_INPUT);
 }
 
 bool system_input_get_buffering(struct FooContext* sender, void* input) {
-  return system_input_get_mode_bit(sender, input, ENABLE_LINE_INPUT);
+  // FIXME: This is a sign of the API being wrong: what if just one is
+  // true?
+  //
+  // Either need to provide more operating specific support, or need
+  // to privide an Input#virtualTerminalSequences: or similar, which is
+  // then a no-op outside Windows.
+  return system_input_get_mode_bits(sender, input,
+                                    ENABLE_LINE_INPUT |
+                                    ENABLE_PROCESSED_INPUT |
+                                    ~ENABLE_VIRTUAL_TERMINAL_INPUT);
 }
 
 bool system_input_at_eof(void* input) {
