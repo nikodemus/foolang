@@ -14,6 +14,15 @@ define IntegerMethods
                           return FOO_INTEGER(receiver.datum.int64 % mod);
                       else
                           return foo_divide_by_zero(ctx);" },
+      #bitAnd:
+          -> { signature: [Integer], vars: 0, returnType: Integer,
+               body: " return FOO_INTEGER(ctx->receiver.datum.int64 & ctx->frame[0].datum.int64);" },
+      #bitOr:
+          -> { signature: [Integer], vars: 0, returnType: Integer,
+               body: " return FOO_INTEGER(ctx->receiver.datum.int64 | ctx->frame[0].datum.int64);" },
+      #bitNot
+          -> { signature: [], vars: 0, returnType: Integer,
+               body: " return FOO_INTEGER(~ctx->receiver.datum.int64);" },
       #integerAdd:
           -> { signature: [Integer], vars: 0, returnType: Integer,
                body: "return FOO_INTEGER(ctx->receiver.datum.int64 + ctx->frame[0].datum.int64);" },
