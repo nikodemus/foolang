@@ -91,6 +91,29 @@ class TestInteger { assert }
             on: Error
             do: { |error| return "oops" }!
 
+    method test_bitOps
+        Foolang isSelfHosted
+            ifFalse: { return False }.
+        self do_test_bitAnd.
+        self do_test_bitOr.
+        self do_test_bitNot!
+
+    method do_test_bitAnd
+        assert that: { 0b1010 bitAnd: 0b0101 }
+               is: 0b0000.
+        assert that: { 0b0101 bitAnd: 0b0101 }
+               is: 0b0101!
+
+    method do_test_bitOr
+        assert that: { 0b1010 bitOr: 0b0101 }
+               is: 0b1111.
+        assert that: { 0b0101 bitOr: 0b0101 }
+               is: 0b0101!
+
+    method do_test_bitNot
+        assert that: { 0b1010 bitNot bitAnd: 0b1111 }
+               is: 0b0101!
+
     -- BUG: #848
     method no_test_unhandled_DivByZero
         assert forAll: SmallIntegers
