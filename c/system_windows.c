@@ -165,6 +165,46 @@ int system_input_read_char(void* input) {
   }
 }
 
+int system_input_read_char_timeout(struct FooContext* sender, void* input, double seconds) {
+  char ch;
+  struct FooInput* in = input;
+
+  if (in->buffer != EOF) {
+    // There's a buffered character, take it.
+    ch = (char)in->buffer;
+    in->buffer = EOF;
+    return ch;
+  }
+
+  DWORD milliseconds = seconds * 1000.0;
+  DWORD res = WaitForSingleObject(in->handle, milliseconds);
+  switch (res) {
+  case WAIT_OBJECT_0:
+    goto success;
+  case WAIT_TIMEOUT:
+    return EOF;
+  case WAIT_ABANDONED:
+    foo_panicf(sender, "WaitForSingleObject on Input -> WAIT_ABANDONED");
+  case WAIT_FAILED:
+    foo_panicf(sender, "WaitForSingleObject on Input -> WAIT_FAILED: %lu", GetLastError());
+  default:
+    foo_panicf(sender, "WaitForSingleObject on Input -> %lu", res);
+  }
+
+ success:
+  // Try to read a single character, set EOF mark on failure.
+  DWORD count = 0;
+  if (!ReadFile(in->handle, &ch, sizeof(ch), &count, NULL)) {
+    system_oops("ERROR: Could not read from input");
+  }
+  if (count) {
+    return ch;
+  } else {
+    in->eof = true;
+    return EOF;
+  }
+}
+
 bool system_input_unread_char(void* input, int ch) {
   if (ch == EOF) {
     // This is just to match ungetc() behaviour for sake

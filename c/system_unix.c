@@ -9,6 +9,8 @@
 #include <sys/resource.h>
 #include <termios.h>
 #include <unistd.h>
+#include <poll.h>
+#include <errno.h>
 
 #undef NDEBUG
 #include <assert.h>
@@ -40,6 +42,30 @@ bool system_input_at_eof(void* input) {
 
 int system_input_read_char(void* input) {
   return fgetc(input);
+}
+
+int system_input_read_char_timeout(struct FooContext* sender, void* input, double seconds) {
+  // FIXME: timeouts in presence of buffered input!
+  struct pollfd pollfd;
+  pollfd.fd = fileno(input);
+  pollfd.events = POLLIN | POLLERR;
+  int milliseconds = seconds * 1000.0;
+  for (;;) {
+    int nfds = poll(&pollfd, 1, milliseconds);
+    if (nfds > 0) {
+      return system_input_read_char(input);
+    }
+    if (nfds == 0) {
+      return EOF; // timeout case
+    }
+    switch (errno) {
+    case EINTR:
+    case EAGAIN:
+      continue;
+    default:
+      foo_panicf(sender, "poll() failed: %s (%d)", strerror(errno), errno);
+    }
+  }
 }
 
 bool system_input_unread_char(void* input, int c) {

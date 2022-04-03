@@ -1,0 +1,13 @@
+class Main {}
+    direct method run: command in: system
+        10 times: { system output
+                        ; print: "? "
+                        ; flush.
+                    let input = system input.
+                    input echo: False.
+                    input buffering: False.
+                    let res = input readCharTimeout: 1.0.
+                    res is False
+                        ifTrue: { system output println: "Timeout!" }
+                        ifFalse: { system output println: "Got: {res}" } }!
+end

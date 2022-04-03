@@ -19,6 +19,13 @@ define InstanceMethods
      -> { signature: [Boolean], vars: 0, returnType: Boolean,
           body: "return FOO_BOOLEAN(system_input_set_buffering(ctx, ctx->receiver.datum.ptr, ctx->frame[0].datum.boolean));" },
 
+     #readCharTimeout:
+     -> { signature: [Float], vars: 0, returnType: Any,
+          body: "int c = system_input_read_char_timeout(ctx, ctx->receiver.datum.ptr, ctx->frame[0].datum.float64);
+                 if (c == EOF)
+                     return FOO_BOOLEAN(false);
+                 return FOO_CHARACTER(c);" },
+
      #atEof
      -> { signature: [], vars: 0, returnType: Boolean,
           body: "return FOO_BOOLEAN(system_input_at_eof(ctx->receiver.datum.ptr));" },
