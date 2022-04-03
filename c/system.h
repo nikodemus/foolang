@@ -14,6 +14,7 @@ bool  system_input_set_buffering(struct FooContext* sender, void* input, bool ec
 bool  system_input_set_echo(struct FooContext* sender, void* input, bool buffering);
 bool  system_input_unread_char(void* input, int c);
 int   system_input_read_char(void* input);
+int   system_input_read_char_timeout(struct FooContext* sender, void* input, double seconds);
 
 void* system_output(void);
 void  system_output_flush(struct FooContext* sender, void* output);

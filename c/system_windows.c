@@ -165,6 +165,10 @@ int system_input_read_char(void* input) {
   }
 }
 
+int system_input_read_char_timeout(struct FooContext* sender, void* input, double seconds) {
+  return system_input_read_char(input);
+}
+
 bool system_input_unread_char(void* input, int ch) {
   if (ch == EOF) {
     // This is just to match ungetc() behaviour for sake

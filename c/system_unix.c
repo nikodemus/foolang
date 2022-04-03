@@ -42,6 +42,11 @@ int system_input_read_char(void* input) {
   return fgetc(input);
 }
 
+int system_input_read_char_timeout(struct FooContext* sender, void* input, double seconds) {
+  // FIXME: handle timeout!
+  return fgetc(input);
+}
+
 bool system_input_unread_char(void* input, int c) {
   return EOF != ungetc(c, input);
 }
