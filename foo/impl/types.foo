@@ -124,8 +124,7 @@ class ReceiverType { definition }
     method findMethod: selector in: _env
         -- Interface methods can be overridden, so cannot early bind
         -- to them.
-        -- * Clone methods from interfaces to classes.
-        -- * Add final qualifier for non-overridable interface methods.
+        -- TODO: Add final qualifier for non-overridable interface methods.
         definition isClass
             ifTrue: { definition findInstanceMethod: selector }!
 
@@ -139,8 +138,7 @@ class ReceiverClassType { definition }
     method findMethod: selector in: _env
         -- Interface methods can be overridden, so cannot early bind
         -- to them.
-        -- * Clone methods from interfaces to classes.
-        -- * Add final qualifier for non-overridable interface methods.
+        -- TODO: Add final qualifier for non-overridable interface methods.
         definition isClass
             ifTrue: { definition findDirectMethod: selector }!
 
