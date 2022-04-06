@@ -86,11 +86,16 @@ class HostType { hostType }
     is Type
 
     direct method type: hostType
+        -- FIXME: This is a mess. The final part if for handling
+        -- AstGlobals, but due to circular dependency I can't
+        -- easily refer to them here.
+        hostType is Any
+            => { return TheUnknownType }.
         (Type includes: hostType)
             => { return hostType }.
-        hostType is Any
-            ifTrue: { TheUnknownType }
-            ifFalse: { self hostType: hostType }!
+        ((Class includes: hostType) or: (Interface includes: hostType))
+            => { return self hostType: hostType }.
+        DefinitionType definition: hostType definition!
 
     method findMethod: selector in: env
         self withDefinitionFor: hostType
