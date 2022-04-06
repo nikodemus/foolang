@@ -61,6 +61,7 @@ define InstanceMethods {
                 } else \{
                     return FOO_BOOLEAN(false);
                 }" },
+
     #input
     -> { signature: [], vars: 0, returnType: Input,
          body: "return FOO_INSTANCE(Input, system_input());"},

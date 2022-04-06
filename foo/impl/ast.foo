@@ -120,18 +120,12 @@ interface AstMethodHome
         DefinitionType definition: self!
 
     method findInstanceMethod: selector
-        self instanceMethods
-            do: { |each|
-                  each selector == selector
-                      ifTrue: { return each } }.
-        False!
+        -- #name is again KLUDGE re. host not having real selectors
+        self instanceMethodDictionary at: selector name!
 
     method findDirectMethod: selector
-        self directMethods
-            do: { |each|
-                  each selector == selector
-                      ifTrue: { return each } }.
-        False!
+        -- #name is again KLUDGE re. host not having real selectors
+        self directMethodDictionary at: selector name!
 
     method _maybeAddMethod: newMethod to: aDictionary
         let name = newMethod selector name.
@@ -192,7 +186,7 @@ interface AstMethodHome
         let dict = Dictionary new.
         (self isBuiltin not and: self isClass)
             ifTrue: { dict put: (AstConstructorMethod home: self)
-                           at: self constructor }.
+                           at: self constructor name }.
         self _collectMethods: self _directMethods
              _into: dict.
         dict!
@@ -201,18 +195,52 @@ interface AstMethodHome
         self _ownDirectMethods values!
 
     method directMethods
-        self _directMethodCache
-            => { |cached| return cached }.
+        self directMethodCache array!
+
+    method instanceMethods
+        self instanceMethodCache array !
+
+    method directMethodDictionary -> Dictionary
+        self directMethodCache dictionary!
+
+    method instanceMethodDictionary -> Dictionary
+        self instanceMethodCache dictionary!
+
+    method directMethodCache
+        let cached = self _directMethodCache.
+        cached is False
+            => { cached = self
+                     _directMethodCache: self computeDirectMethodCache }.
+        cached!
+
+    method instanceMethodCache
+        let cached = self _instanceMethodCache.
+        cached is False
+            => { cached = self
+                     _instanceMethodCache: self computeInstanceMethodCache }.
+        cached!
+
+    method computeDirectMethodCache
         let dict = self _ownDirectMethods.
         self _collectFromInterfaces: #directMethods
             _into: dict.
         self _collectMethods: self _standardDirectMethods
              _into: dict.
-        let methods = dict values
-                          sort: { |each| each selector name }
-                              ascending.
-        self _directMethodCache: methods.
-        methods!
+        { dictionary: dict,
+          array: (dict values sort: { |each| each selector name }
+                      ascending) }!
+
+    method computeInstanceMethodCache
+        let dict = self _ownInstanceMethods.
+        self _collectMethods: self _readerMethods
+             _into: dict.
+        self _collectFromInterfaces: #instanceMethods
+            _into: dict.
+        self _collectMethods: self _standardInstanceMethods
+             _into: dict.
+        { dictionary: dict,
+          array: (dict values sort: { |each| each selector name }
+                      ascending) }!
 
     method _standardInstanceMethods
         StandardInstanceMethodSelectors
@@ -244,22 +272,6 @@ interface AstMethodHome
 
     method ownInstanceMethods
         self _ownInstanceMethods values!
-
-    method instanceMethods
-        self _instanceMethodCache
-            => { |cached| return cached }.
-        let dict = self _ownInstanceMethods.
-        self _collectMethods: self _readerMethods
-             _into: dict.
-        self _collectFromInterfaces: #instanceMethods
-            _into: dict.
-        self _collectMethods: self _standardInstanceMethods
-             _into: dict.
-        let methods = dict values
-                          sort: { |each| each selector name }
-                              ascending.
-        self _instanceMethodCache: methods.
-        methods!
 
     method _collectFromInterfaces: selector _into: dict
         self interfaceDefinitions :: Ordered
@@ -1449,10 +1461,7 @@ class AstSlotRef { slot source }
     is AstNode
 
     method type
-        let type = slot type.
-        (AstGlobal includes: type)
-            ifTrue: { DefinitionType definition: type definition }
-            ifFalse: { HostType type: type }!
+        HostType type: slot type!
 
     method isImmediate
         True!

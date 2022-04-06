@@ -88,6 +88,7 @@ class Compiler { source target system prelude stackSize addressSanitizer }
 
         let buildOptions
             = " -fno-omit-frame-pointer -g -Wall -Werror --std=c11".
+        let cflags = system getenv: "CFLAGS".
         let buildCmd = StringOutput
                            with: { |out|
                                    out print: "clang -o ".
@@ -95,6 +96,8 @@ class Compiler { source target system prelude stackSize addressSanitizer }
                                    out print: self linkerOptions.
                                    out print: self sanitizerOptions.
                                    out print: buildOptions.
+                                   cflags
+                                       => { out print: " {cflags}" }.
                                    out print: " -I ./".
                                    out print: " c/main.c".
                                    out print: " c/mark-and-sweep.c".

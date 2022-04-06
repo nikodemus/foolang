@@ -34,7 +34,7 @@ extend Character
         self isAlpha or: self isDigit!
 
     method isSymbol -> Boolean
-        self code == ASCII underscore
+        self code is ASCII underscore
             ifTrue: { False }
             ifFalse: { self isAlpha not }!
 
@@ -44,7 +44,7 @@ extend Character
 
     method isControlCharacter
         let code = self code.
-        code <= 32 or: code == 127!
+        code <= 32 or: code is 127!
 
     method isDigit: base -> Boolean
         let code = self code.
