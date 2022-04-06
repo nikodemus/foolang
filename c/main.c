@@ -545,7 +545,7 @@ struct FooContext* foo_context_new_method_va(const struct FooMethod* method,
   return context;
 }
 
-bool foo_eq(struct Foo a, struct Foo b) {
+static inline bool foo_eq(struct Foo a, struct Foo b) {
   return a.class == b.class && a.datum.int64 == b.datum.int64;
 }
 
