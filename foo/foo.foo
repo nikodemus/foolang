@@ -106,7 +106,7 @@ class Main { command system }
     method abort: message
         system output print: "Invalid command-line. "
         system output println: message.
-        self shortHelp.
+        self usage.
         system exit: 1!
 
 end
