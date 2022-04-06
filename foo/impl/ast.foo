@@ -186,7 +186,7 @@ interface AstMethodHome
         let dict = Dictionary new.
         (self isBuiltin not and: self isClass)
             ifTrue: { dict put: (AstConstructorMethod home: self)
-                           at: self constructor }.
+                           at: self constructor name }.
         self _collectMethods: self _directMethods
              _into: dict.
         dict!
