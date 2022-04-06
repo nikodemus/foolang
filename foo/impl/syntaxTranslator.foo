@@ -65,12 +65,16 @@ class SyntaxTranslator { env currentMethod methodEnv }
                                                   receiver: node
                                                   selector: #value
                                                   arguments: []
-                                                  source: "#<interpolation #valie>".
-                                          AstSend
-                                              receiver: value
-                                              selector: #toString
-                                              arguments: []
-                                              source: "#<interpolation #toString>" } }.
+                                                  source: "#<interpolation #value>".
+                                          let string
+                                              = AstSend
+                                                  receiver: value
+                                                  selector: #toString
+                                                  arguments: []
+                                                  source: "#<interpolation #toString>".
+                                          AstTypecheck
+                                              value: string
+                                              type: (env builtin: "String") } }.
         let res = parts pop.
         { parts isEmpty }
             whileFalse: { res = AstSend
