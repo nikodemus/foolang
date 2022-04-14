@@ -75,6 +75,9 @@ interface Literal
     method visitBy: visitor
         visitor visitLiteral: self!
 
+    method visitBy: visitor with: arg
+        visitor visitLiteral: self with: arg!
+
     method isLiteral
         True!
 
@@ -204,6 +207,9 @@ class SyntaxSeq { first then }
 
     method visitBy: visitor
         visitor visitSeq: self!
+
+    method visitBy: visitor with: arg
+        visitor visitSeq: self with: arg!
 
     method weight
         first weight + then weight!
@@ -407,6 +413,12 @@ class SyntaxPrefix { receiver selector source }
     method visitBy: visitor
         visitor visitPrefixMessage: self!
 
+    method visitBy: visitor with: arg
+        visitor visitSend: self with: arg!
+
+    method arguments
+        []!
+
     method weight
         receiver weight + 1!
 
@@ -427,6 +439,12 @@ class SyntaxUnary { receiver selector source }
 
     method visitBy: visitor
         visitor visitUnaryMessage: self!
+
+    method visitBy: visitor with: arg
+        visitor visitSend: self with: arg!
+
+    method arguments
+        []!
 
     method isSimple
         receiver isSimple!
@@ -452,6 +470,12 @@ class SyntaxBinary { receiver selector argument source }
     method visitBy: visitor
         visitor visitBinaryMessage: self!
 
+    method visitBy: visitor with: arg
+        visitor visitSend: self with: arg!
+
+    method arguments
+        [argument]!
+
     method weight
         receiver weight + argument weight + 1!
 
@@ -474,6 +498,9 @@ class SyntaxKeyword { receiver selector arguments source }
 
     method visitBy: visitor
         visitor visitKeywordMessage: self!
+
+    method visitBy: visitor with: arg
+        visitor visitSend: self with: arg!
 
     method weight
         receiver weight + (arguments sum: #weight) + arguments size + 1!
@@ -551,6 +578,11 @@ class SyntaxLet { variable value body }
             ifTrue: { visitor visitDynamicLet: self }
             ifFalse: { visitor visitLet: self }!
 
+    method visitBy: visitor with: arg
+        variable isDynamic
+            ifTrue: { visitor visitDynamicLet: self with: arg }
+            ifFalse: { visitor visitLet: self with: arg }!
+
     method parts
         [variable, value, body]!
 end
@@ -592,6 +624,9 @@ class SyntaxVariable { name::String source }
 
     method visitBy: visitor
         visitor visitVariable: self!
+
+    method visitBy: visitor with: arg
+        visitor visitVariable: self with: arg!
 
     method isDynamic
         False!

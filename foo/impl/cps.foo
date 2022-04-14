@@ -1,0 +1,350 @@
+import impl.parser.Parser
+import impl.syntaxPrinter.SyntaxPrinter
+
+class Set { dict }
+    direct method new
+        self dict: Dictionary new!
+    method add: node
+        dict put: node at: node!
+    method remove: node
+        dict remove: node!
+    method size
+        dict size!
+    method isEmpty
+        dict isEmpty!
+    method isOnly: node
+        dict size is 1
+            ifTrue: { (dict values first) is node }
+            ifFalse: { False }!
+    method replace: node1 with: node2
+        dict doKeys: { |each|
+                       each replace: node1 with: node2 }!
+end
+
+class Counter { count }
+    direct method new
+        self count: 0!
+    method next
+        count = count + 1!
+end
+
+-- Continuations represent control flow and computations:
+-- they can both receive and produce values.
+interface CONT
+    is Object
+
+    method simplify
+        self!
+
+    method isNullary
+        False!
+
+    method flush
+        -- Things which use values need to implement this.
+        False!
+
+    method unlink
+        self pred link: self cont.
+        self pred: False.
+        self cont: False.
+        self flush!
+
+    method link: next
+        next pred: self.
+        self cont: next!
+end
+
+-- Nullary continuations ignore any values they receive.
+interface NULLARY
+    is CONT
+
+    method isNullary
+        True!
+end
+
+-- Nodes represent constants, bound names, and compiler generated
+-- temporaries: values requring no computations. They are used
+-- by continuations, either REF continuations fetching the value
+-- of a node and passing it onwards, or SEND continuations directly
+-- using a node.
+interface NODE
+    is Object
+end
+
+class TMP { id defs uses }
+    is NODE
+    direct method id: id
+        self id: id
+             defs: Set new
+             uses: Set new!
+    method printOn: output
+        output print: "${id}"!
+end
+
+class VAR { id name defs uses }
+    is NODE
+    direct method id: id name: name
+        self id: id
+             name: name
+             defs: Set new
+             uses: Set new!
+    method printOn: output
+        output print: "{name}{id}"!
+end
+
+class CONST { value uses }
+    is NODE
+    direct method value: value
+        self value: value
+             uses: Set new!
+    method printOn: output
+        output writeString: value displayString!
+end
+
+
+class SEND { pred cont selector recv args }
+    is NULLARY
+    direct method cont: cont selector: selector recv: recv args: args
+        let new = self pred: False
+                       cont:cont
+                       selector: selector
+                       recv: recv
+                       args: args.
+        cont pred: new.
+        recv uses add: new.
+        args do: { |each| each uses add: new }.
+        new!
+    method cont: new
+        cont = new!
+    method pred: new
+        pred = new!
+    method replace: node1 with: node2
+        node1 uses remove: self.
+        node2 uses add: self.
+        recv is node1
+            => { recv = node2 }.
+        args doWithIndex: { |each index|
+                            each is node1
+                                => { args at: index put: node2 } }!
+    method printOn: output
+        output print: cont.
+        output writeString: " {recv} ".
+        (selector name splitBy: ":" character)
+            with: args
+            do: { |selectorPart arg|
+                  output writeString: "{selectorPart} {arg}" }!
+end
+
+class BIND { pred cont var }
+    is CONT
+    direct method cont: cont var: var
+        let new = self pred: False
+                       cont: cont
+                       var: var.
+        cont pred: new.
+        var defs add: new.
+        new!
+    method pred: new
+        pred = new!
+    method cont: new
+        cont = new!
+    method simplify
+        (REF includes: pred)
+            => { CONST includes: pred target }
+                => { var defs isOnly: self }
+                    => { Output debug println: "- replacing var with constant".
+                         var uses replace: var with: pred target.
+                         cont simplify }.
+        var uses isEmpty
+            => { self unlink }!
+    method flush
+        Output debug println: "- bind eliminated".
+        var uses isEmpty assert: "Cannot flush a bind whose var has uses left".
+        var defs remove: self!
+    method printOn: output
+        output writeString: "(\\{var}.".
+        output print: cont.
+        output writeString: ")"!
+end
+
+class REF { pred cont target }
+    is NULLARY
+    direct method cont: cont target: target
+        -- If the REF would be dead, don't build it in the
+        -- first place.
+        (NULLARY includes: cont)
+            => { return cont }.
+        let new = self pred: False
+                       cont: cont
+                       target: target.
+        cont pred: new.
+        target uses add: new.
+        new!
+    method cont: new
+        cont = new!
+    method pred: new
+        pred = new!
+    method simplify
+        cont simplify.
+        (NULLARY includes: cont)
+            ifTrue: { self unlink }!
+    method replace: node1 with: node2
+        node1 uses remove: self.
+        node2 uses add: self.
+        target = node2!
+    method flush
+        Output debug println: "- ref eliminated".
+        target uses remove: self!
+    method printOn: output
+        output print: cont.
+        output writeString: " {target}"!
+end
+
+class START { _cont }
+    is CONT
+    direct method cont: cont
+        let new = self _cont: cont.
+        cont pred: new.
+        new!
+    method cont
+        _cont!
+    method cont: new
+        _cont = new!
+    method simplify
+        _cont simplify.
+        self!
+    method printOn: output
+        _cont printOn: output!
+end
+
+class HALT { pred }
+    is CONT
+    direct method new
+        self pred: False!
+    method pred: new
+        pred = new!
+    method printOn: output
+        output writeString: "\\.halt"!
+end
+
+class CpsBuilder { var next counter constants }
+
+    direct method convert: syntax
+        START cont: (self new visit: syntax with: HALT new)!
+
+    direct method new
+        self var: False
+             next: False
+             counter: Counter new
+             constants: Dictionary new!
+
+    method bind: var
+        CpsBuilder
+            var: var
+            next: self
+            counter: counter
+            constants: constants!
+
+    method find: name
+        var is False
+            ifTrue: { Error raise: "Unbound variable in CPSBuilder: {name}" }.
+        var name == name
+            ifTrue: { var }
+            ifFalse: { self next find: name }!
+
+    method constant: value
+        constants
+            at: value
+            ifNonePut: { CONST value: value }!
+
+    method tmp
+        TMP id: counter next!
+
+    method var: name
+        VAR id: counter next name: name!
+
+    method visit: syntax with: cc
+        syntax visitBy: self with: cc!
+
+    method visitLiteral: aLiteral with: cc
+        REF
+            cont: cc
+            target: (self constant: aLiteral value)!
+
+    method visitVariable: aVar with: cc
+        REF
+            cont: cc
+            target: (self find: aVar name)!
+
+    method visitLet: aLet with: cc
+        let var = self var: aLet variable name.
+        let body = (self bind: var)
+                       visit: aLet body
+                       with: cc.
+        let bind = BIND cont: body var: var.
+        self visit: aLet value with: bind!
+
+    method visitSend: aSend with: cc
+        -- We generate TMPs and BINDs for receiver and arguments,
+        -- which would be very nice to avoid if they just end
+        -- up being REFs, since then we could pick up the
+        -- targets directly. Now that's left to simplification
+        -- pass.
+        let recvTmp = self tmp.
+        let argTmps = aSend arguments collect: { |_each| self tmp }.
+        let next = SEND
+                       cont: cc
+                       selector: aSend selector
+                       recv: recvTmp
+                       args: argTmps.
+        let argVals = aSend arguments reverse
+                          with: argTmps reverse
+                          collect: { |arg tmp|
+                                     let bind = BIND cont: next var: tmp.
+                                     next = self visit: arg with: bind }.
+        let recvBind = BIND cont: next var: recvTmp.
+        self visit: aSend receiver with: recvBind!
+
+    method visitSeq: aSeq with: cc
+        let then = self visit: aSeq then with: cc.
+        self visit: aSeq first with: then!
+end
+
+class CpsTest { output }
+    method run
+        self
+            ; test1
+            ; test2
+            ; test3
+            ; test4
+            ; test5
+                !
+    method test1
+        self test: "42"!
+    method test2
+        self test: "let x = 42. x"!
+    method test3
+        self test: "let x = 21. x + x"!
+    method test4
+        self test: "let x = 21. let y = x. y + x"!
+    method test5
+        self test: "let x = 42. let y = 666. x. y. 999. x"!
+    method test: code
+        let syntax = Parser parseExpressions: code.
+        output print: "Source: ".
+        output println: code.
+        syntax do: { |each|
+                     let cps = CpsBuilder convert: each.
+                     output print: "CPS: ".
+                     output println: cps.
+                     cps simplify.
+                     output print: "Simplified: ".
+                         output println: cps }.
+        output println: "--"!
+end
+
+class Main {}
+    direct method run: command in: system
+        (CpsTest output: system output)
+            run!
+end
