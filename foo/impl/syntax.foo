@@ -240,6 +240,10 @@ end
 class SyntaxSelector { name source }
     is Syntax
 
+    direct method name: name
+        self name: name
+             source: False!
+
     method visitBy: visitor
         visitor visitSelector: self!
 
@@ -464,6 +468,12 @@ class SyntaxBinary { receiver selector argument source }
     is CascadeMessage
     is Syntax
 
+    direct method receiver: receiver selector: selector argument: argument
+        self receiver: receiver
+             selector: selector
+             argument: argument
+             source: False!
+
     method receiver: new
         receiver = new!
 
@@ -621,6 +631,10 @@ end
 
 class SyntaxVariable { name::String source }
     is Syntax
+
+    direct method name: name
+        self name: name
+             source: False!
 
     method visitBy: visitor
         visitor visitVariable: self!

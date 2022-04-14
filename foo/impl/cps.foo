@@ -1,5 +1,13 @@
+
+-- For tests
+import lib.assert.Assert
 import impl.parser.Parser
-import impl.syntaxPrinter.SyntaxPrinter
+import impl.syntax.SyntaxLiteral
+import impl.syntax.SyntaxLet
+import impl.syntax.SyntaxBinary
+import impl.syntax.SyntaxVariable
+import impl.syntax.SyntaxSelector
+import impl.syntax.SyntaxSeq
 
 class Set { dict }
     direct method new
@@ -152,13 +160,11 @@ class BIND { pred cont var }
         (REF includes: pred)
             => { CONST includes: pred target }
                 => { var defs isOnly: self }
-                    => { Output debug println: "- replacing var with constant".
-                         var uses replace: var with: pred target.
-                         cont simplify }.
+                    => { var uses replace: var with: pred target }.
+        cont simplify.
         var uses isEmpty
             => { self unlink }!
     method flush
-        Output debug println: "- bind eliminated".
         var uses isEmpty assert: "Cannot flush a bind whose var has uses left".
         var defs remove: self!
     method printOn: output
@@ -193,7 +199,6 @@ class REF { pred cont target }
         node2 uses add: self.
         target = node2!
     method flush
-        Output debug println: "- ref eliminated".
         target uses remove: self!
     method printOn: output
         output print: cont.
@@ -212,7 +217,8 @@ class START { _cont }
         _cont = new!
     method simplify
         _cont simplify.
-        self!
+        _cont is False
+            ifTrue: { panic "Invalid simplifcation: START lost cont!" }!
     method printOn: output
         _cont printOn: output!
 end
@@ -310,26 +316,129 @@ class CpsBuilder { var next counter constants }
         self visit: aSeq first with: then!
 end
 
-class CpsTest { output }
+class TestCPS { assert }
+    is TestSuite
+
+    method convert: syntax
+        let cps = CpsBuilder convert: syntax.
+        assert true: { START includes: cps }.
+        assert true: { cps is cps cont pred }.
+        cps!
+
+    method assertRef: ref ofConst: value
+        assert true: { REF includes: ref }
+               testing: "REF to const expected".
+        assert true: { CONST includes: ref target }
+               testing: "REF target is CONST".
+        assert true: { value == ref target value }
+               testing: "REF target has right value: {value}, got: {ref target value}"!
+
+    method assertRef: ref ofVar: var::VAR
+        assert true: { let target = ref::REF target.
+                       target::VAR is var }
+               testing: "REF to {var} expected, got: {ref}"!
+
+    method assertHalt: cps
+        assert true: { HALT includes: cps }
+               testing: "HALT where expected, got: {cps classOf name}"!
+
+    method assertBind: bind ofVar: name
+        assert true: { let var = bind::BIND var.
+                       name == var::VAR name }
+               testing: "BIND of VAR {name} expected, got: {bind}"!
+
+    method assertBind: bind ofTmp: id
+        assert true: { let var = bind::BIND var.
+                       id is var::TMP id }
+               testing: "BIND of TMP {id} expected, got: {bind}"!
+
+    method test_convert_and_simplify_integer_literal
+        let cps = self convert: (SyntaxLiteral value: 42).
+        self assertRef: cps cont ofConst: 42.
+        self assertHalt: cps cont cont.
+        cps simplify.
+        self assertRef: cps cont ofConst: 42.
+        self assertHalt: cps cont cont!
+
+    method test_convert_and_simplify_let_x_and_ref
+        let syntax = SyntaxLet
+                         variable: (SyntaxVariable name: "x")
+                         value: (SyntaxLiteral value: 1343)
+                         body: (SyntaxVariable name: "x").
+        let cps = self convert: syntax.
+        self assertRef: cps cont ofConst: 1343.
+        let bind = cps cont cont.
+        self assertBind: bind ofVar: "x".
+        self assertRef: bind cont ofVar: bind var.
+        self assertHalt: bind cont cont.
+
+        cps simplify.
+
+        self assertRef: cps cont ofConst: 1343.
+        self assertHalt: cps cont cont!
+
+    method test_convert_and_simplify_let_xy_and_send
+        let syntax = SyntaxLet
+                         variable: (SyntaxVariable name: "x")
+                         value: (SyntaxLiteral value: 322)
+                         body: (SyntaxLet
+                                    variable: (SyntaxVariable name: "y")
+                                    value: (SyntaxVariable name: "x")
+                                    body: (SyntaxBinary
+                                               receiver: (SyntaxVariable name: "y")
+                                               selector: (SyntaxSelector name: "+")
+                                               argument: (SyntaxVariable name: "x"))).
+        let cps = self convert: syntax.
+
+        self assertRef: cps cont ofConst: 322.
+        let number= cps cont target.
+        let bindX = cps cont cont.
+        self assertBind: bindX ofVar: "x".
+        self assertRef: bindX cont ofVar: bindX var.
+        let bindY = bindX cont cont.
+        self assertBind: bindY ofVar: "y".
+        let refY = bindY cont.
+        self assertRef: refY ofVar: bindY var.
+        let bind1 = refY cont.
+        -- ID 1-2 taken by x and y
+        self assertBind: bind1 ofTmp: 3.
+        self assertRef: bind1 cont ofVar: bindX var.
+        let bind2 = bind1 cont cont.
+        self assertBind: bind2 ofTmp: 4.
+        let send = bind2 cont :: SEND.
+        assert true: { send selector name == "+" }.
+        assert true: { send recv is bind1 var }.
+        assert true: { send args == [bind2 var] }.
+        self assertHalt: send cont.
+
+        cps simplify.
+
+        assert true: { cps cont is send }.
+        assert true: { send recv is number }.
+        assert true: { send args == [number] }.
+        self assertHalt: send cont!
+
+
+    method test_convert_and_simplify_seq_with_dead_ref
+        -- Unused referenced are dropped early.
+        let syntax = SyntaxSeq
+                         first: (SyntaxLiteral value: 983)
+                         then: (SyntaxLiteral value: 651).
+        let cps = self convert: syntax.
+        self assertRef: cps cont ofConst: 651.
+        self assertHalt: cps cont cont.
+
+        cps simplify.
+
+        self assertRef: cps cont ofConst: 651.
+        self assertHalt: cps cont cont!
+end
+
+class DemoCPS { output }
     method run
         self
-            ; test1
-            ; test2
-            ; test3
-            ; test4
-            ; test5
-                !
-    method test1
-        self test: "42"!
-    method test2
-        self test: "let x = 42. x"!
-    method test3
-        self test: "let x = 21. x + x"!
-    method test4
-        self test: "let x = 21. let y = x. y + x"!
-    method test5
-        self test: "let x = 42. let y = 666. x. y. 999. x"!
-    method test: code
+            ; demo: "let x = 42. let y = 666. x. y. 999. x"!
+    method demo: code
         let syntax = Parser parseExpressions: code.
         output print: "Source: ".
         output println: code.
@@ -345,6 +454,6 @@ end
 
 class Main {}
     direct method run: command in: system
-        (CpsTest output: system output)
-            run!
+        TestCPS runTests: (Assert reportingTo: system output)
+                in: system!
 end
