@@ -12,6 +12,7 @@ import impl.syntax.SyntaxSelector
 import impl.syntax.SyntaxSeq
 
 class Set { dict }
+    is Object
     direct method new
         self dict: Dictionary new!
     method add: node
@@ -438,7 +439,7 @@ class CpsWalker { block select }
         self doVisit: aHalt!
 end
 
-class CpsOptimizer { worklist context }
+class CpsOptimizer { worklist::Worklist context }
     direct method optimize: cps
         let worklist = Worklist new.
         CpsWalker in: cps do: { |each|
@@ -463,38 +464,7 @@ class CpsOptimizer { worklist context }
         False!
 
     method visitSend: aSend
-        -- If same send has multiple SENDs with same
-        -- selector, break them into FIND_METHOD and CALL_METHOD
-        -- so that CSE can combine the FIND_METHOD part.
-        let selector = aSend selector.
-        let matches = List new.
-        aSend recv uses
-            do: { |each|
-                  (SEND includes: each)
-                      => { (each selector == selector)
-                               => { matches push: each } } }.
-        matches size > 1
-            => { matches
-                     do: { |each|
-                           let pred = each pred.
-                           let cont = each cont.
-                           let methodTmp = context tmp.
-                           let callMethod = CALL_METHOD
-                                                id: context nextId
-                                                cont: cont
-                                                meth: methodTmp
-                                                recv: each recv
-                                                args: each args.
-                           let bindMethod = BIND id: context nextId
-                                                 cont: callMethod
-                                                 var: methodTmp.
-                           let find = FIND_METHOD
-                                          id: context nextId
-                                          cont: bindMethod
-                                          recv: each recv
-                                          selector: selector.
-                           pred link: find.
-                           each flush } }!
+        False!
 
     method visitBind: aBind
         let pred = aBind pred.
@@ -523,9 +493,75 @@ extend CONT
         CpsOptimizer optimize: self!
 end
 
-class CpsFindMethodCSE { finds }
+class CpsOptimizeMatchingSends { allMatches context }
     direct method optimize: cps
-        cps visitBy: (CpsFindMethodCSE finds: List new)!
+        -- 1. Find all sends
+        let sends = Dictionary new.
+        CpsWalker in: cps
+                  select: { |each| SEND includes: each }
+                  do: { |each| self noteSend: each in: sends }.
+        -- 2. Collect those sends that have matches in terms
+        -- of receiver and selector, generate a TMP for each
+        -- set of matches.
+        let allMatches = Dictionary new.
+        self matchingSendsIn: sends
+             do: { |matches|
+                   let tmp = TMP id: cps context nextId.
+                   matches do: { |each| allMatches at: each put: tmp } }.
+        -- 3. If we have any matches, run the visitor from
+        -- start, handling all matching sends in order. First
+        -- is broken into FIND_METHOD + BIND + CALL_METHOD,
+        -- the rest become just CALL_METHOD.
+        allMatches isEmpty
+            ifFalse: { let visitor = CpsOptimizeMatchingSends
+                                         allMatches: allMatches
+                                         context: cps context.
+                       cps visitBy: visitor }!
+
+    direct method noteSend: aSend in: dict
+        let recvSends = dict at: aSend recv
+                             ifNonePut: { Dictionary new }.
+        let matches = recvSends at: aSend selector
+                                ifNonePut: { List new }.
+        matches push: aSend!
+
+    direct method matchingSendsIn: dict do: block
+        dict doValues: { |recvSends|
+                         recvSends doValues: { |matches|
+                                               matches size > 1
+                                                   ifTrue: { block value: matches } } }!
+
+    method breakSend: aSend with: methodTmp
+        let pred = aSend pred.
+        let cont = aSend cont.
+        let callMethod = CALL_METHOD
+                             id: context nextId
+                             cont: cont
+                             meth: methodTmp
+                             recv: aSend recv
+                             args: aSend args.
+        let bindMethod = BIND id: context nextId
+                              cont: callMethod
+                              var: methodTmp.
+        let find = FIND_METHOD
+                       id: context nextId
+                       cont: bindMethod
+                       recv: aSend recv
+                       selector: aSend selector.
+        pred link: find.
+        aSend flush!
+
+    method convert: aSend toCall: methodTmp
+        let pred = aSend pred.
+        let cont = aSend cont.
+        let callMethod = CALL_METHOD
+                             id: context nextId
+                             cont: cont
+                             meth: methodTmp
+                             recv: aSend recv
+                             args: aSend args.
+        pred link: callMethod.
+        aSend flush!
 
     method visitStart: aStart
         aStart cont visitBy: self!
@@ -533,35 +569,19 @@ class CpsFindMethodCSE { finds }
     method visitHalt: _aHalt
         False!
 
-    method find: recv selector: selector
-        finds
-            do: { |each|
-                  (each recv is recv and: each selector == selector)
-                      => { return each var } }.
-        False!
+    method visitSend: aSend
+        (allMatches at: aSend)
+            => { |tmp|
+                 tmp defs isEmpty
+                     ifTrue: { self breakSend: aSend with: tmp }
+                     ifFalse: { self convert: aSend toCall: tmp } }.
+         aSend cont visitBy: self!
 
     method visitFindMethod: aFind
-        (BIND includes: aFind cont)
-            ifTrue: { let newNode = self find: aFind recv selector: aFind selector.
-                      let bind = aFind cont.
-                      let cont = bind cont.
-                      newNode is False
-                          ifTrue: { finds push: { recv: aFind recv,
-                                                  selector: aFind selector,
-                                                  var: bind var } }
-                          ifFalse: { aFind unlink.
-                                     bind var uses
-                                         replace: bind var
-                                         with: newNode.
-                                     bind unlink }.
-                      cont visitBy: self }
-            ifFalse: { aFind cont visitBy: self }!
+        aFind cont visitBy: self!
 
     method visitCallMethod: aCall
         aCall cont visitBy: self!
-
-    method visitSend: aSend
-        aSend cont visitBy: self!
 
     method visitBind: aBind
         aBind cont visitBy: self!
@@ -857,23 +877,22 @@ class TestCPS { assert }
         -- assert output println: source.
         let cps = self convert: syntax.
         -- CpsContPrinter println: cps to: assert output.
-        let sends = List new.
+        let sends1 = List new.
         CpsWalker in: cps
                   select: { |each| SEND includes: each }
-                  do: { |each| sends push: each selector }.
-        assert that: { sends sorted asArray }
+                  do: { |each| sends1 push: each selector }.
+        assert that: { sends1 sorted asArray }
                equals: ["*", "+", "+"].
 
         cps optimize.
-        -- CpsContPrinter println: cps to: assert output.
-        let finds1 = List new.
+        let sends2 = List new.
         CpsWalker in: cps
-                  select: { |each| FIND_METHOD includes: each }
-                  do: { |each| finds1 push: each selector }.
-        assert that: { finds1 sorted asArray }
-               equals: ["+", "+"].
+                  select: { |each| SEND includes: each }
+                  do: { |each| sends2 push: each selector }.
+        assert that: { sends2 sorted asArray }
+               equals: ["*", "+", "+"].
 
-        CpsFindMethodCSE optimize: cps.
+        CpsOptimizeMatchingSends optimize: cps.
         -- CpsContPrinter println: cps to: assert output.
 
         let finds2 = List new.
@@ -885,9 +904,9 @@ class TestCPS { assert }
 
         assert that: { CpsSourcePrinter printToString: cps }
                equals: "
-let $27 = 675 findMethod: #+.
-let $2 = $27 invokeOn: 675 with: 1.
-let $3 = $27 invokeOn: 675 with: 2.
+let $23 = 675 findMethod: #+.
+let $2 = $23 invokeOn: 675 with: 1.
+let $3 = $23 invokeOn: 675 with: 2.
 $2 * $3
 "!
 
