@@ -26,6 +26,26 @@ class Set { dict }
     method replace: node1 with: node2
         dict doKeys: { |each|
                        each replace: node1 with: node2 }!
+    method do: block
+        dict values do: block!
+end
+
+class Worklist { list dict }
+    direct method new
+        self list: List new
+             dict: Dictionary new!
+    method push: thing
+        dict at: thing
+             ifNonePut: { list push: thing.
+                          thing }!
+    method pushAll: aList
+        aList do: { |each| self push: each }!
+    method pop
+        let thing = list pop.
+        dict remove: thing.
+        thing!
+    method isEmpty
+        list isEmpty!
 end
 
 class Counter { count }
@@ -39,9 +59,6 @@ end
 -- they can both receive and produce values.
 interface CONT
     is Object
-
-    method simplify
-        self!
 
     method flush
         -- Things which use values need to implement this.
@@ -150,19 +167,13 @@ class BIND { id pred cont var }
         pred = new!
     method cont: new
         cont = new!
-    method simplify
-        (REF includes: pred)
-            => { CONST includes: pred target }
-                => { var defs isOnly: self }
-                    => { var uses replace: var with: pred target }.
-        cont simplify.
-        var uses isEmpty
-            => { self unlink }!
     method flush
         var uses isEmpty assert: "Cannot flush a bind whose var has uses left".
         var defs remove: self!
     method visitBy: visitor
         visitor visitBind: self!
+    method printOn: output
+        output print: "#<BIND id={id} pred={pred name} cont={cont name} var={var}>"!
 end
 
 class REF { id pred cont target }
@@ -185,10 +196,6 @@ class REF { id pred cont target }
         cont = new!
     method pred: new
         pred = new!
-    method simplify
-        cont simplify.
-        (NULLARY includes: cont)
-            ifTrue: { self unlink }!
     method replace: node1 with: node2
         node1 uses remove: self.
         node2 uses add: self.
@@ -209,10 +216,6 @@ class START { _cont }
         _cont!
     method cont: new
         _cont = new!
-    method simplify
-        _cont simplify.
-        _cont is False
-            ifTrue: { panic "Invalid simplifcation: START lost cont!" }!
     method visitBy: visitor
         visitor visitStart: self!
 end
@@ -226,7 +229,7 @@ class HALT { pred }
     method pred: new
         pred = new!
     method visitBy: visitor
-        visitor visitHalt: visitor!
+        visitor visitHalt: self!
 end
 
 class CpsBuilder { var next counter constants }
@@ -318,6 +321,82 @@ class CpsBuilder { var next counter constants }
     method visitSeq: aSeq with: cc
         let then = self visit: aSeq then with: cc.
         self visit: aSeq first with: then!
+end
+
+class CpsWalker { block seen }
+    is Object
+
+    direct method for: cps do: block
+        cps visitBy: (CpsWalker
+                          block: block
+                          seen: Dictionary new)!
+
+    method visitStart: aStart::CONT
+        block value: aStart.
+        aStart cont visitBy: self!
+
+    method visitRef: aRef::CONT
+        block value: aRef.
+        aRef cont visitBy: self!
+
+    method visitBind: aBind::CONT
+        block value: aBind.
+        aBind cont visitBy: self!
+
+    method visitSend: aSend::CONT
+        block value: aSend.
+        aSend cont visitBy: self!
+
+    method visitHalt: aHalt::CONT
+        block value: aHalt!
+end
+
+class CpsOptimizer { worklist }
+    direct method optimize: cps
+        let worklist = Worklist new.
+        CpsWalker for: cps do: { |each|
+                                 worklist push: each }.
+        (CpsOptimizer worklist: worklist)
+            optimize!
+
+    method optimize
+        { worklist isEmpty }
+            whileFalse: { worklist pop visitBy: self }!
+
+    method visitStart: _aStart
+        False!
+
+    method visitHalt: _aHalt
+        False!
+
+    method visitSend: _aSend
+        False!
+
+    method visitBind: aBind
+        let pred = aBind pred.
+        let var = aBind var.
+        (REF includes: pred)
+            => { (NODE includes: pred target)
+                     => { (var defs isOnly: aBind)
+                              => { worklist pushAll: var uses.
+                                   var uses
+                                       replace: var
+                                       with: pred target } } }.
+        var uses isEmpty
+            => { worklist push: pred.
+                 worklist push: aBind cont.
+                 aBind unlink }!
+
+    method visitRef: aRef
+        (NULLARY includes: aRef cont)
+            ifTrue: { worklist push: aRef cont.
+                      worklist push: aRef pred.
+                      aRef unlink }!
+end
+
+extend CONT
+    method optimize
+        CpsOptimizer optimize: self!
 end
 
 interface CpsPrinter
@@ -420,7 +499,8 @@ class CpsContPrinter { output }
             with: aSend args
             do: { |selectorPart arg|
                   output print: " {selectorPart} {arg}" }.
-        output println: ")"!
+        output println: ")".
+        aSend cont visitBy: self!
 
     method visitHalt: _aHalt
         False!
@@ -470,9 +550,9 @@ class TestCPS { assert }
         self assertRef: cps cont ofConst: 42.
         self assertHalt: cps cont cont!
 
-    method test_simplify_const_ref
+    method test_optimize_const_ref
         let cps = self make_const_ref.
-        cps simplify.
+        cps optimize.
         self assertRef: cps cont ofConst: 42.
         self assertHalt: cps cont cont!
 
@@ -491,9 +571,9 @@ class TestCPS { assert }
         self assertRef: bind cont ofVar: bind var.
         self assertHalt: bind cont cont!
 
-    method test_simplify_let_x_and_ref
+    method test_optimize_let_x_and_ref
         let cps = self make_let_x_and_ref.
-        cps simplify.
+        cps optimize.
         self assertRef: cps cont ofConst: 1343.
         self assertHalt: cps cont cont!
 
@@ -510,7 +590,7 @@ class TestCPS { assert }
                                                argument: (SyntaxVariable name: "x"))).
         self convert: syntax!
 
-    method test_convert_and_simplify_let_xy_and_add
+    method test_convert_and_optimize_let_xy_and_add
         -- Both conversion and simplification in one test
         -- so that the simplification can refer to the send
         -- cont.
@@ -536,14 +616,14 @@ class TestCPS { assert }
         assert true: { send args == [bind2 var] }.
         self assertHalt: send cont.
 
-        cps simplify.
+        cps optimize.
 
         assert true: { cps cont is send }.
         assert true: { send recv is number }.
         assert true: { send args == [number] }.
         self assertHalt: send cont!
 
-    method test_convert_and_simplify_seq_with_dead_ref
+    method test_convert_and_optimize_seq_with_dead_ref
         -- Unused referenced are dropped early.
         let syntax = SyntaxSeq
                          first: (SyntaxLiteral value: 983)
@@ -552,10 +632,28 @@ class TestCPS { assert }
         self assertRef: cps cont ofConst: 651.
         self assertHalt: cps cont cont.
 
-        cps simplify.
+        cps optimize.
 
         self assertRef: cps cont ofConst: 651.
         self assertHalt: cps cont cont!
+
+    method test_optimize_multiple_matching_sends
+        let syntax = SyntaxLet
+                         variable: (SyntaxVariable name: "x")
+                         value: (SyntaxLiteral value: 678)
+                         body: (SyntaxBinary
+                                    receiver: (SyntaxBinary
+                                                   receiver: (SyntaxVariable name: "x")
+                                                   selector: (SyntaxSelector name: "+")
+                                                   argument: (SyntaxLiteral value: 1))
+                                    selector: (SyntaxSelector name: "*")
+                                    argument: (SyntaxBinary
+                                                   receiver: (SyntaxVariable name: "x")
+                                                   selector: (SyntaxSelector name: "+")
+                                                   argument: (SyntaxLiteral value: 2))).
+        let cps = self convert: syntax.
+        cps optimize.
+        CpsContPrinter println: cps to: assert output!
 
     method test_print_lambda_const_ref
         let cps = self make_const_ref.
@@ -652,7 +750,7 @@ class DemoCPS { output }
                      let cps = CpsBuilder convert: each.
                      output print: "CPS: ".
                      CpsLambdaPrinter println: cps to: output.
-                     cps simplify.
+                     cps optimize.
                      output print: "Simplified: ".
                      CpsLambdaPrinter println: cps to: output }!
 end
