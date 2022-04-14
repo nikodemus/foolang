@@ -342,6 +342,9 @@ class CpsBuilder { var next context }
     method visit: syntax with: cc
         syntax visitBy: self with: cc!
 
+    method visitParents: syntax with: cc
+        syntax body visitBy: self with: cc!
+
     method visitLiteral: aLiteral with: cc
         REF
             id: context nextId
@@ -615,25 +618,46 @@ class CpsSourcePrinter { output value }
         self output: output
              value: NoValue!
 
+    method visitStart: aStart
+        output newline.
+        aStart cont visitBy: self!
+
     method visitRef: aRef
         value = aRef target.
         aRef cont visitBy: self!
 
     method visitBind: aBind
-        output print: "let {aBind var} = {value}. ".
+        output println: "let {aBind var} = {value}.".
         value = NoValue.
         aBind cont visitBy: self!
 
     method visitSend: aSend
-        output writeString: "{aSend recv}".
-        (aSend selector splitBy: ":" character)
-            with: aSend args
-            do: { |selectorPart arg|
-                  output writeString: " {selectorPart} {arg}" }!
+        value = StringOutput
+            with: { |out|
+                    out writeString: "{aSend recv}".
+                    (aSend selector splitBy: ":" character)
+                        with: aSend args
+                        do: { |selectorPart arg|
+                              out writeString: " {selectorPart} {arg}" } }.
+        aSend cont visitBy: self!
+
+    method visitFindMethod: aFind
+        value = StringOutput
+            with: { |out|
+                    out writeString: "{aFind recv} findMethod: #{aFind selector}" }.
+        aFind cont visitBy: self!
+
+    method visitCallMethod: aCall
+        value = StringOutput
+            with: { |out|
+                    out writeString: "{aCall meth} invokeOn: {aCall recv}".
+                    aCall args
+                        do: { |each| out writeString: " with: {each}" } }.
+        aCall cont visitBy: self!
 
     method visitHalt: _aHalt
         value is NoValue
-            ifFalse: { output print: value }!
+            ifFalse: { output println: value }!
 end
 
 class CpsContPrinter { output }
@@ -827,20 +851,12 @@ class TestCPS { assert }
         self assertHalt: cps cont cont!
 
     method test_optimize_multiple_matching_sends
-        let syntax = SyntaxLet
-                         variable: (SyntaxVariable name: "x")
-                         value: (SyntaxLiteral value: 678)
-                         body: (SyntaxBinary
-                                    receiver: (SyntaxBinary
-                                                   receiver: (SyntaxVariable name: "x")
-                                                   selector: (SyntaxSelector name: "+")
-                                                   argument: (SyntaxLiteral value: 1))
-                                    selector: (SyntaxSelector name: "*")
-                                    argument: (SyntaxBinary
-                                                   receiver: (SyntaxVariable name: "x")
-                                                   selector: (SyntaxSelector name: "+")
-                                                   argument: (SyntaxLiteral value: 2))).
+        let source = "let x = 675. (x + 1) * (x + 2)".
+        let syntax = (Parser parseExpressions: source) first.
+
+        -- assert output println: source.
         let cps = self convert: syntax.
+        -- CpsContPrinter println: cps to: assert output.
         let sends = List new.
         CpsWalker in: cps
                   select: { |each| SEND includes: each }
@@ -849,6 +865,7 @@ class TestCPS { assert }
                equals: ["*", "+", "+"].
 
         cps optimize.
+        -- CpsContPrinter println: cps to: assert output.
         let finds1 = List new.
         CpsWalker in: cps
                   select: { |each| FIND_METHOD includes: each }
@@ -857,6 +874,8 @@ class TestCPS { assert }
                equals: ["+", "+"].
 
         CpsFindMethodCSE optimize: cps.
+        -- CpsContPrinter println: cps to: assert output.
+
         let finds2 = List new.
         CpsWalker in: cps
                   select: { |each| FIND_METHOD includes: each }
@@ -864,8 +883,13 @@ class TestCPS { assert }
         assert that: { finds2 sorted asArray }
                equals: ["+"].
 
-        -- CpsContPrinter println: cps to: assert output.
-        False!
+        assert that: { CpsSourcePrinter printToString: cps }
+               equals: "
+let $27 = 675 findMethod: #+.
+let $2 = $27 invokeOn: 675 with: 1.
+let $3 = $27 invokeOn: 675 with: 2.
+$2 * $3
+"!
 
     method test_print_lambda_const_ref
         let cps = self make_const_ref.
@@ -885,17 +909,28 @@ class TestCPS { assert }
     method test_print_source_const_ref
         let cps = self make_const_ref.
         assert that: { CpsSourcePrinter printToString: cps }
-               equals: "42"!
+               equals: "
+42
+"!
 
     method test_print_lambda_let_x_and_ref
         let cps = self make_let_x_and_ref.
         assert that: { CpsSourcePrinter printToString: cps }
-               equals: "let x1 = 1343. x1"!
+               equals: "
+let x1 = 1343.
+x1
+"!
 
     method test_print_lambda_let_xy_and_add
         let cps = self make_let_xy_and_add.
         assert that: { CpsSourcePrinter printToString: cps }
-               equals: "let x1 = 322. let y2 = x1. let $3 = y2. let $4 = x1. $3 + $4"!
+               equals: "
+let x1 = 322.
+let y2 = x1.
+let $3 = y2.
+let $4 = x1.
+$3 + $4
+"!
 
     method test_print_cont_const_ref
         let cps = self make_const_ref.

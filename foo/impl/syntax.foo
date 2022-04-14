@@ -725,6 +725,9 @@ class SyntaxParens { body }
     method visitBy: visitor
         visitor visitParens: self!
 
+    method visitBy: visitor with: arg
+        visitor visitParents: self with: arg!
+
     method weight
         body weight + 1!
 
