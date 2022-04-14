@@ -103,10 +103,11 @@ class CONST { value uses }
 end
 
 
-class SEND { pred cont selector recv args }
+class SEND { id pred cont selector recv args }
     is NULLARY
-    direct method cont: cont selector: selector recv: recv args: args
-        let new = self pred: False
+    direct method id: id cont: cont selector: selector recv: recv args: args
+        let new = self id: id
+                       pred: False
                        cont:cont
                        selector: selector
                        recv: recv
@@ -115,6 +116,8 @@ class SEND { pred cont selector recv args }
         recv uses add: new.
         args do: { |each| each uses add: new }.
         new!
+    method name
+        "send{id}"!
     method cont: new
         cont = new!
     method pred: new
@@ -131,17 +134,18 @@ class SEND { pred cont selector recv args }
         visitor visitSend: self!
 end
 
-class BIND { pred cont var }
+class BIND { id pred cont var }
     is CONT
-    direct method cont: cont var: var
-        let new = self pred: False
+    direct method id: id cont: cont var: var
+        let new = self id: id
+                       pred: False
                        cont: cont
                        var: var.
         cont pred: new.
         var defs add: new.
         new!
-    method isLet
-        VAR includes: var!
+    method name
+        "bind{id}"!
     method pred: new
         pred = new!
     method cont: new
@@ -161,19 +165,22 @@ class BIND { pred cont var }
         visitor visitBind: self!
 end
 
-class REF { pred cont target }
+class REF { id pred cont target }
     is NULLARY
-    direct method cont: cont target: target
+    direct method id: id cont: cont target: target
         -- If the REF would be dead, don't build it in the
         -- first place.
         (NULLARY includes: cont)
             => { return cont }.
-        let new = self pred: False
+        let new = self id: id
+                       pred: False
                        cont: cont
                        target: target.
         cont pred: new.
         target uses add: new.
         new!
+    method name
+        "ref{id}"!
     method cont: new
         cont = new!
     method pred: new
@@ -214,6 +221,8 @@ class HALT { pred }
     is CONT
     direct method new
         self pred: False!
+    method name
+        "halt"!
     method pred: new
         pred = new!
     method visitBy: visitor
@@ -261,11 +270,13 @@ class CpsBuilder { var next counter constants }
 
     method visitLiteral: aLiteral with: cc
         REF
+            id: counter next
             cont: cc
             target: (self constant: aLiteral value)!
 
     method visitVariable: aVar with: cc
         REF
+            id: counter next
             cont: cc
             target: (self find: aVar name)!
 
@@ -274,7 +285,7 @@ class CpsBuilder { var next counter constants }
         let body = (self bind: var)
                        visit: aLet body
                        with: cc.
-        let bind = BIND cont: body var: var.
+        let bind = BIND id: 1 cont: body var: var.
         self visit: aLet value with: bind!
 
     method visitSend: aSend with: cc
@@ -286,16 +297,22 @@ class CpsBuilder { var next counter constants }
         let recvTmp = self tmp.
         let argTmps = aSend arguments collect: { |_each| self tmp }.
         let next = SEND
+                       id: counter next
                        cont: cc
                        selector: aSend selector
                        recv: recvTmp
                        args: argTmps.
+        let counter = Counter new.
         let argVals = aSend arguments reverse
                           with: argTmps reverse
                           collect: { |arg tmp|
-                                     let bind = BIND cont: next var: tmp.
+                                     let bind = BIND id: counter next
+                                                     cont: next
+                                                     var: tmp.
                                      next = self visit: arg with: bind }.
-        let recvBind = BIND cont: next var: recvTmp.
+        let recvBind = BIND id: counter next
+                            cont: next
+                            var: recvTmp.
         self visit: aSend receiver with: recvBind!
 
     method visitSeq: aSeq with: cc
@@ -370,6 +387,43 @@ class CpsSourcePrinter { output value }
     method visitHalt: _aHalt
         value is NoValue
             ifFalse: { output print: value }!
+end
+
+class CpsContPrinter { output }
+    is CpsPrinter
+
+    method visitStart: aStart
+        output
+            ; newline
+            ; println: "start():"
+            ; println: "    {aStart cont name}()".
+        aStart cont visitBy: self!
+
+    method visitRef: aRef
+        output
+            ; println: "ref{aRef id}():"
+            ; println: "    {aRef cont name}({aRef target})".
+        aRef cont visitBy: self!
+
+    method visitBind: aBind
+        output
+            ; println: "bind{aBind id}({aBind var}):"
+            ; println: "    {aBind cont name}()".
+        aBind cont visitBy: self!
+
+    method visitSend: aSend
+        output
+            ; println: "send{aSend id}():"
+            ; print: "   {aSend cont name}("
+            ; print: "{aSend recv}".
+        (aSend selector name splitBy: ":" character)
+            with: aSend args
+            do: { |selectorPart arg|
+                  output print: " {selectorPart} {arg}" }.
+        output println: ")"!
+
+    method visitHalt: _aHalt
+        False!
 end
 
 class TestCPS { assert }
@@ -532,6 +586,57 @@ class TestCPS { assert }
         let cps = self make_let_xy_and_add.
         assert that: { CpsSourcePrinter printToString: cps }
                equals: "let x1 = 322. let y2 = x1. let $3 = y2. let $4 = x1. $3 + $4"!
+
+    method test_print_cont_const_ref
+        let cps = self make_const_ref.
+        assert that: { CpsContPrinter printToString: cps }
+               equals: "
+start():
+    ref1()
+ref1():
+    halt(42)
+"!
+
+    method test_print_cont_let_x_and_ref
+        let cps = self make_let_x_and_ref.
+        assert that: { CpsContPrinter printToString: cps }
+               equals: "
+start():
+    ref3()
+ref3():
+    bind1(1343)
+bind1(x1):
+    ref2()
+ref2():
+    halt(x1)
+"!
+
+    method test_print_cont_let_xy_and_add
+        let cps = self make_let_xy_and_add.
+        assert that: { CpsContPrinter printToString: cps }
+               equals: "
+start():
+    ref9()
+ref9():
+    bind1(322)
+bind1(x1):
+    ref8()
+ref8():
+    bind1(x1)
+bind1(y2):
+    ref7()
+ref7():
+    bind2(y2)
+bind2($3):
+    ref6()
+ref6():
+    bind1(x1)
+bind1($4):
+    send5()
+send5():
+   halt($3 + $4)
+"!
+
 end
 
 class DemoCPS { output }
