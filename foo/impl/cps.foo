@@ -140,6 +140,8 @@ class BIND { pred cont var }
         cont pred: new.
         var defs add: new.
         new!
+    method isLet
+        VAR includes: var!
     method pred: new
         pred = new!
     method cont: new
@@ -301,7 +303,7 @@ class CpsBuilder { var next counter constants }
         self visit: aSeq first with: then!
 end
 
-class CpsLambdaPrinter { output }
+interface CpsPrinter
     direct method print: cps to: output
         cps visitBy: (self output: output)!
 
@@ -314,6 +316,10 @@ class CpsLambdaPrinter { output }
 
     method visitStart: aStart
         aStart cont visitBy: self!
+end
+
+class CpsLambdaPrinter { output }
+    is CpsPrinter
 
     method visitRef: aRef
         aRef cont visitBy: self.
@@ -334,6 +340,36 @@ class CpsLambdaPrinter { output }
 
     method visitHalt: _aHalt
         output writeString: "\\_.halt"!
+end
+
+define NoValue ["NoValue"]!
+
+class CpsSourcePrinter { output value }
+    is CpsPrinter
+
+    direct method output: output
+        self output: output
+             value: NoValue!
+
+    method visitRef: aRef
+        value = aRef target.
+        aRef cont visitBy: self!
+
+    method visitBind: aBind
+        output print: "let {aBind var} = {value}. ".
+        value = NoValue.
+        aBind cont visitBy: self!
+
+    method visitSend: aSend
+        output writeString: "{aSend recv}".
+        (aSend selector name splitBy: ":" character)
+            with: aSend args
+            do: { |selectorPart arg|
+                  output writeString: " {selectorPart} {arg}" }!
+
+    method visitHalt: _aHalt
+        value is NoValue
+            ifFalse: { output print: value }!
 end
 
 class TestCPS { assert }
@@ -481,6 +517,21 @@ class TestCPS { assert }
         let cps = self make_let_xy_and_add.
         assert that: { CpsLambdaPrinter printToString: cps }
                equals: "(\\x1.(\\y2.(\\$3.(\\$4.\\_.halt $3 + $4) x1) y2) x1) 322"!
+
+    method test_print_source_const_ref
+        let cps = self make_const_ref.
+        assert that: { CpsSourcePrinter printToString: cps }
+               equals: "42"!
+
+    method test_print_lambda_let_x_and_ref
+        let cps = self make_let_x_and_ref.
+        assert that: { CpsSourcePrinter printToString: cps }
+               equals: "let x1 = 1343. x1"!
+
+    method test_print_lambda_let_xy_and_add
+        let cps = self make_let_xy_and_add.
+        assert that: { CpsSourcePrinter printToString: cps }
+               equals: "let x1 = 322. let y2 = x1. let $3 = y2. let $4 = x1. $3 + $4"!
 end
 
 class DemoCPS { output }
@@ -504,7 +555,6 @@ end
 class Main {}
     direct method run: command in: system
         TestCPS runTests: (Assert reportingTo: system output)
-                in: system.
-        (DemoCPS output: system output)
-            run!
+                in: system!
+        -- (DemoCPS output: system output) run!
 end
