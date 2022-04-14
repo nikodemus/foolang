@@ -115,21 +115,8 @@ class CONST { value uses }
         output writeString: value displayString!
 end
 
-interface RecvAndArgsReplacer
-    method replace: node1 with: node2
-        node1 uses remove: self.
-        node2 uses add: self.
-        self recv is node1
-            => { self recv: node2 }.
-        self args
-            doWithIndex: { |each index|
-                           each is node1
-                               => { self args at: index put: node2 } }!
-end
-
 class SEND { id pred cont selector recv args }
     is NULLARY
-    is RecvAndArgsReplacer
     direct method id: id cont: cont selector: selector recv: recv args: args
         let new = self id: id
                        pred: False
@@ -141,10 +128,17 @@ class SEND { id pred cont selector recv args }
         recv uses add: new.
         args do: { |each| each uses add: new }.
         new!
+    method replace: node1 with: node2
+        node1 uses remove: self.
+        node2 uses add: self.
+        recv is node1
+            => { recv = node2 }.
+        args
+            doWithIndex: { |each index|
+                           each is node1
+                               => { args at: index put: node2 } }!
     method name
         "send{id}"!
-    method recv: new
-        recv = new!
     method cont: new
         cont = new!
     method pred: new
@@ -210,7 +204,6 @@ end
 
 class CALL_METHOD { id pred cont meth recv args }
     is NULLARY
-    is RecvAndArgsReplacer
     direct method id: id cont: cont meth: meth recv: recv args: args
         let new = self id: id
                        pred: False
@@ -223,11 +216,20 @@ class CALL_METHOD { id pred cont meth recv args }
         recv uses add: new.
         args do: { |each| each uses add: new }.
         new!
+    method replace: node1 with: node2
+        node1 uses remove: self.
+        node2 uses add: self.
+        meth is node1
+            => { meth = node2 }.
+        recv is node1
+            => { recv = node2 }.
+        args
+            doWithIndex: { |each index|
+                           each is node1
+                               => { args at: index put: node2 } }!
     method name
         -- FIXME: add the selector to this name!
         "call{id}"!
-    method recv: new
-        recv = new!
     method pred: new
         pred = new!
     method cont: new
@@ -393,38 +395,50 @@ class CpsBuilder { var next context }
         self visit: aSeq first with: then!
 end
 
-class CpsWalker { block seen }
+class CpsWalker { block select }
     is Object
 
-    direct method for: cps do: block
-        cps visitBy: (CpsWalker
-                          block: block
-                          seen: Dictionary new)!
+    direct method in: cps do: block
+        cps visitBy: (CpsWalker block: block select: False)!
 
-    method visitStart: aStart::CONT
-        block value: aStart.
-        aStart cont visitBy: self!
 
-    method visitRef: aRef::CONT
-        block value: aRef.
-        aRef cont visitBy: self!
+    direct method in: cps select: selectBlock do: block
+        cps visitBy: (CpsWalker block: block select: selectBlock)!
 
-    method visitBind: aBind::CONT
-        block value: aBind.
-        aBind cont visitBy: self!
+    method doVisit: cont
+        (select is False)
+            ifTrue: { block value: cont }
+            ifFalse: { (select value: cont)
+                           ifTrue: { block value: cont } }.
+        (HALT includes: cont)
+            ifFalse: { cont cont visitBy: self }!
 
-    method visitSend: aSend::CONT
-        block value: aSend.
-        aSend cont visitBy: self!
+    method visitStart: aStart
+        self doVisit: aStart!
 
-    method visitHalt: aHalt::CONT
-        block value: aHalt!
+    method visitRef: aRef
+        self doVisit: aRef!
+
+    method visitBind: aBind
+        self doVisit: aBind!
+
+    method visitSend: aSend
+        self doVisit: aSend!
+
+    method visitFindMethod: aFind
+        self doVisit: aFind!
+
+    method visitCallMethod: aCall
+        self doVisit: aCall!
+
+    method visitHalt: aHalt
+        self doVisit: aHalt!
 end
 
 class CpsOptimizer { worklist context }
     direct method optimize: cps
         let worklist = Worklist new.
-        CpsWalker for: cps do: { |each|
+        CpsWalker in: cps do: { |each|
                                  worklist push: each }.
         (CpsOptimizer worklist: worklist context: cps context)
             optimize!
@@ -456,27 +470,28 @@ class CpsOptimizer { worklist context }
                   (SEND includes: each)
                       => { (each selector == selector)
                                => { matches push: each } } }.
-        matches
-            do: { |each|
-                  let pred = each pred.
-                  let cont = each cont.
-                  let methodTmp = context tmp.
-                  let callMethod = CALL_METHOD
-                                       id: context nextId
-                                       cont: cont
-                                       meth: methodTmp
-                                       recv: each recv
-                                       args: each args.
-                  let bindMethod = BIND id: context nextId
-                                        cont: callMethod
-                                        var: methodTmp.
-                  let find = FIND_METHOD
-                                 id: context nextId
-                                 cont: bindMethod
-                                 recv: each recv
-                                 selector: selector.
-                  pred link: find.
-                  each flush }!
+        matches size > 1
+            => { matches
+                     do: { |each|
+                           let pred = each pred.
+                           let cont = each cont.
+                           let methodTmp = context tmp.
+                           let callMethod = CALL_METHOD
+                                                id: context nextId
+                                                cont: cont
+                                                meth: methodTmp
+                                                recv: each recv
+                                                args: each args.
+                           let bindMethod = BIND id: context nextId
+                                                 cont: callMethod
+                                                 var: methodTmp.
+                           let find = FIND_METHOD
+                                          id: context nextId
+                                          cont: bindMethod
+                                          recv: each recv
+                                          selector: selector.
+                           pred link: find.
+                           each flush } }!
 
     method visitBind: aBind
         let pred = aBind pred.
@@ -503,6 +518,53 @@ end
 extend CONT
     method optimize
         CpsOptimizer optimize: self!
+end
+
+class CpsFindMethodCSE { finds }
+    direct method optimize: cps
+        cps visitBy: (CpsFindMethodCSE finds: List new)!
+
+    method visitStart: aStart
+        aStart cont visitBy: self!
+
+    method visitHalt: _aHalt
+        False!
+
+    method find: recv selector: selector
+        finds
+            do: { |each|
+                  (each recv is recv and: each selector == selector)
+                      => { return each var } }.
+        False!
+
+    method visitFindMethod: aFind
+        (BIND includes: aFind cont)
+            ifTrue: { let newNode = self find: aFind recv selector: aFind selector.
+                      let bind = aFind cont.
+                      let cont = bind cont.
+                      newNode is False
+                          ifTrue: { finds push: { recv: aFind recv,
+                                                  selector: aFind selector,
+                                                  var: bind var } }
+                          ifFalse: { aFind unlink.
+                                     bind var uses
+                                         replace: bind var
+                                         with: newNode.
+                                     bind unlink }.
+                      cont visitBy: self }
+            ifFalse: { aFind cont visitBy: self }!
+
+    method visitCallMethod: aCall
+        aCall cont visitBy: self!
+
+    method visitSend: aSend
+        aSend cont visitBy: self!
+
+    method visitBind: aBind
+        aBind cont visitBy: self!
+
+    method visitRef: aRef
+        aRef cont visitBy: self!
 end
 
 interface CpsPrinter
@@ -581,46 +643,46 @@ class CpsContPrinter { output }
         output
             ; newline
             ; println: "start():"
-            ; println: "    {aStart cont name}()".
+            ; println: "    _ -> {aStart cont name}".
         aStart cont visitBy: self!
 
     method visitRef: aRef
         output
             ; println: "ref{aRef id}():"
-            ; println: "    {aRef cont name}({aRef target})".
+            ; println: "    {aRef target} -> {aRef cont name}".
         aRef cont visitBy: self!
 
     method visitBind: aBind
         output
             ; println: "bind{aBind id}({aBind var}):"
-            ; println: "    {aBind cont name}()".
+            ; println: "    _ -> {aBind cont name}".
         aBind cont visitBy: self!
 
     method visitFindMethod: aFind
         output
             ; println: "{aFind name}():"
-            ; println: "    {aFind cont name}({aFind recv} findMethod: #{aFind selector})".
+            ; println: "    find_method({aFind recv}, #{aFind selector}) -> {aFind cont name}".
         aFind cont visitBy: self!
 
     method visitCallMethod: aCall
         output
             ; println: "{aCall name}():"
-            ; print: "    call_with_cont({aCall cont name}, {aCall meth}, {aCall recv}".
+            ; print: "    call_method({aCall meth}, {aCall recv}".
         aCall args
             do: { |each| output print: ", {each}" }.
-        output println: ")".
+        output println: ") -> {aCall cont name}".
         aCall cont visitBy: self!
 
     method visitSend: aSend
         output
             ; println: "send{aSend id}():"
-            ; print: "   {aSend cont name}("
+            ; print: "   "
             ; print: "{aSend recv}".
         (aSend selector splitBy: ":" character)
             with: aSend args
             do: { |selectorPart arg|
                   output print: " {selectorPart} {arg}" }.
-        output println: ")".
+        output println: " -> {aSend cont name}".
         aSend cont visitBy: self!
 
     method visitHalt: _aHalt
@@ -732,16 +794,22 @@ class TestCPS { assert }
         let bind2 = bind1 cont cont.
         self assertBind: bind2 ofTmp: 4.
         let send = bind2 cont :: SEND.
-        assert true: { send selector == "+" }.
-        assert true: { send recv is bind1 var }.
-        assert true: { send args == [bind2 var] }.
+        assert true: { send selector == "+" }
+               testing: "Selector is expected".
+        assert true: { send recv is bind1 var }
+               testing: "Recv is right".
+        assert true: { send args == [bind2 var] }
+               testing: "Args match".
         self assertHalt: send cont.
 
         cps optimize.
 
-        assert true: { cps cont is send }.
-        assert true: { send recv is number }.
-        assert true: { send args == [number] }.
+        assert true: { cps cont is send }
+               testing: "Send at head, got: {cps cont}".
+        assert true: { send recv is number }
+               testing: "Send has imm. receiver".
+        assert true: { send args == [number] }
+               testing: "Send has imm. arg".
         self assertHalt: send cont!
 
     method test_convert_and_optimize_seq_with_dead_ref
@@ -773,8 +841,31 @@ class TestCPS { assert }
                                                    selector: (SyntaxSelector name: "+")
                                                    argument: (SyntaxLiteral value: 2))).
         let cps = self convert: syntax.
+        let sends = List new.
+        CpsWalker in: cps
+                  select: { |each| SEND includes: each }
+                  do: { |each| sends push: each selector }.
+        assert that: { sends sorted asArray }
+               equals: ["*", "+", "+"].
+
         cps optimize.
-        CpsContPrinter println: cps to: assert output!
+        let finds1 = List new.
+        CpsWalker in: cps
+                  select: { |each| FIND_METHOD includes: each }
+                  do: { |each| finds1 push: each selector }.
+        assert that: { finds1 sorted asArray }
+               equals: ["+", "+"].
+
+        CpsFindMethodCSE optimize: cps.
+        let finds2 = List new.
+        CpsWalker in: cps
+                  select: { |each| FIND_METHOD includes: each }
+                  do: { |each| finds2 push: each selector }.
+        assert that: { finds2 sorted asArray }
+               equals: ["+"].
+
+        -- CpsContPrinter println: cps to: assert output.
+        False!
 
     method test_print_lambda_const_ref
         let cps = self make_const_ref.
@@ -811,9 +902,9 @@ class TestCPS { assert }
         assert that: { CpsContPrinter printToString: cps }
                equals: "
 start():
-    ref1()
+    _ -> ref1
 ref1():
-    halt(42)
+    42 -> halt
 "!
 
     method test_print_cont_let_x_and_ref
@@ -821,13 +912,13 @@ ref1():
         assert that: { CpsContPrinter printToString: cps }
                equals: "
 start():
-    ref4()
+    _ -> ref4
 ref4():
-    bind3(1343)
+    1343 -> bind3
 bind3(x1):
-    ref2()
+    _ -> ref2
 ref2():
-    halt(x1)
+    x1 -> halt
 "!
 
     method test_print_cont_let_xy_and_add
@@ -835,25 +926,25 @@ ref2():
         assert that: { CpsContPrinter printToString: cps }
                equals: "
 start():
-    ref13()
+    _ -> ref13
 ref13():
-    bind12(322)
+    322 -> bind12
 bind12(x1):
-    ref11()
+    _ -> ref11
 ref11():
-    bind10(x1)
+    x1 -> bind10
 bind10(y2):
-    ref9()
+    _ -> ref9
 ref9():
-    bind8(y2)
+    y2 -> bind8
 bind8($3):
-    ref7()
+    _ -> ref7
 ref7():
-    bind6(x1)
+    x1 -> bind6
 bind6($4):
-    send5()
+    _ -> send5
 send5():
-   halt($3 + $4)
+   $3 + $4 -> halt
 "!
 
 end
