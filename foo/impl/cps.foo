@@ -44,9 +44,6 @@ interface CONT
     method simplify
         self!
 
-    method isNullary
-        False!
-
     method flush
         -- Things which use values need to implement this.
         False!
@@ -65,9 +62,6 @@ end
 -- Nullary continuations ignore any values they receive.
 interface NULLARY
     is CONT
-
-    method isNullary
-        True!
 end
 
 -- Nodes represent constants, bound names, and compiler generated
