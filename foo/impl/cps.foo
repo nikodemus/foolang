@@ -48,13 +48,6 @@ class Worklist { list dict }
         list isEmpty!
 end
 
-class Counter { count }
-    direct method new
-        self count: 0!
-    method next
-        count = count + 1!
-end
-
 -- Continuations represent control flow and computations:
 -- they can both receive and produce values.
 interface CONT
@@ -206,10 +199,10 @@ class REF { id pred cont target }
         visitor visitRef: self!
 end
 
-class START { _cont }
+class START { _cont context }
     is CONT
-    direct method cont: cont
-        let new = self _cont: cont.
+    direct method cont: cont context: context
+        let new = self _cont: cont context: context.
         cont pred: new.
         new!
     method cont
@@ -232,23 +225,39 @@ class HALT { pred }
         visitor visitHalt: self!
 end
 
-class CpsBuilder { var next counter constants }
+-- CpsContext is stored in the START cont, so anyone needed to create more
+-- ids, etc, can pick it up from there.
+class CpsContext { lastId constants }
+    direct method new
+        self lastId: 0
+             constants: Dictionary new!
+    method nextId
+        lastId = lastId + 1!
+    method constant: value
+        constants
+            at: value
+            ifNonePut: { CONST value: value }!
+end
+
+class CpsBuilder { var next context }
 
     direct method convert: syntax
-        START cont: (self new visit: syntax with: HALT new)!
+        let builder = self new.
+        START
+            cont: (builder visit: syntax
+                           with: HALT new)
+            context: builder context!
 
     direct method new
         self var: False
              next: False
-             counter: Counter new
-             constants: Dictionary new!
+             context: CpsContext new!
 
     method bind: var
         CpsBuilder
             var: var
             next: self
-            counter: counter
-            constants: constants!
+            context: context!
 
     method find: name
         var is False
@@ -258,28 +267,26 @@ class CpsBuilder { var next counter constants }
             ifFalse: { self next find: name }!
 
     method constant: value
-        constants
-            at: value
-            ifNonePut: { CONST value: value }!
+        context constant: value!
 
     method tmp
-        TMP id: counter next!
+        TMP id: context nextId!
 
     method var: name
-        VAR id: counter next name: name!
+        VAR id: context nextId name: name!
 
     method visit: syntax with: cc
         syntax visitBy: self with: cc!
 
     method visitLiteral: aLiteral with: cc
         REF
-            id: counter next
+            id: context nextId
             cont: cc
             target: (self constant: aLiteral value)!
 
     method visitVariable: aVar with: cc
         REF
-            id: counter next
+            id: context nextId
             cont: cc
             target: (self find: aVar name)!
 
@@ -288,7 +295,9 @@ class CpsBuilder { var next counter constants }
         let body = (self bind: var)
                        visit: aLet body
                        with: cc.
-        let bind = BIND id: 1 cont: body var: var.
+        let bind = BIND id: context nextId
+                        cont: body
+                        var: var.
         self visit: aLet value with: bind!
 
     method visitSend: aSend with: cc
@@ -300,20 +309,19 @@ class CpsBuilder { var next counter constants }
         let recvTmp = self tmp.
         let argTmps = aSend arguments collect: { |_each| self tmp }.
         let next = SEND
-                       id: counter next
+                       id: context nextId
                        cont: cc
                        selector: aSend selector
                        recv: recvTmp
                        args: argTmps.
-        let counter = Counter new.
         let argVals = aSend arguments reverse
                           with: argTmps reverse
                           collect: { |arg tmp|
-                                     let bind = BIND id: counter next
+                                     let bind = BIND id: context nextId
                                                      cont: next
                                                      var: tmp.
                                      next = self visit: arg with: bind }.
-        let recvBind = BIND id: counter next
+        let recvBind = BIND id: context nextId
                             cont: next
                             var: recvTmp.
         self visit: aSend receiver with: recvBind!
@@ -700,10 +708,10 @@ ref1():
         assert that: { CpsContPrinter printToString: cps }
                equals: "
 start():
-    ref3()
-ref3():
-    bind1(1343)
-bind1(x1):
+    ref4()
+ref4():
+    bind3(1343)
+bind3(x1):
     ref2()
 ref2():
     halt(x1)
@@ -714,22 +722,22 @@ ref2():
         assert that: { CpsContPrinter printToString: cps }
                equals: "
 start():
+    ref13()
+ref13():
+    bind12(322)
+bind12(x1):
+    ref11()
+ref11():
+    bind10(x1)
+bind10(y2):
     ref9()
 ref9():
-    bind1(322)
-bind1(x1):
-    ref8()
-ref8():
-    bind1(x1)
-bind1(y2):
+    bind8(y2)
+bind8($3):
     ref7()
 ref7():
-    bind2(y2)
-bind2($3):
-    ref6()
-ref6():
-    bind1(x1)
-bind1($4):
+    bind6(x1)
+bind6($4):
     send5()
 send5():
    halt($3 + $4)
