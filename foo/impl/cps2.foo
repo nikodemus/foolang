@@ -45,7 +45,7 @@ class TestCPS { assert }
         assert that: { CpsPrinter printToString: cps }
                equals: "
 start():
-  return(42)
+  return(123)
 "!
 end
 
