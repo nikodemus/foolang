@@ -1,0 +1,34 @@
+import lib.assert.Assert
+import impl.parser.Parser
+
+class CpsConverter {}
+    direct method convert: syntax
+        return syntax!
+end
+
+class CpsPrinter {}
+    direct method printToString: cps
+        "
+start():
+  return(42)
+"!
+end
+
+class TestCPS { assert }
+    is TestSuite
+
+    method test_convert_constant_integer
+        let syntax = Parser parseExpression: "123".
+        let cps = CpsConverter convert: syntax.
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+start():
+  return(42)
+"!
+end
+
+class Main {}
+    direct method run: command in: system
+        TestCPS runTests: (Assert reportingTo: system output)
+                in: system!
+end
