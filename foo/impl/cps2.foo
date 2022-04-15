@@ -6,12 +6,18 @@ class CpsConverter {}
         return syntax!
 end
 
-class CpsPrinter {}
+class CpsPrinter { output }
     direct method printToString: cps
-        "
+        StringOutput
+            with: { |out|
+                    cps visitBy: (CpsPrinter output: out) }!
+
+    method visitLiteral: cps
+        output print: "
 start():
   return(42)
 "!
+
 end
 
 class TestCPS { assert }
