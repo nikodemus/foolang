@@ -1,9 +1,25 @@
 import lib.assert.Assert
 import impl.parser.Parser
 
+class ENTRY { succ exit }
+    direct method new
+        self succ: False
+             exit: False!
+    method succ: val
+        succ = val!
+    method visitBy: visitor
+        visitor visitEntry: self!
+end
+
 class CpsConverter {}
     direct method convert: syntax
-        return syntax!
+        let entry = ENTRY new.
+        entry succ: (syntax visitBy: CpsConverter new
+                            with: entry exit).
+        entry!
+
+    method visitLiteral: cps with: cc
+        cps!
 end
 
 class CpsPrinter { output }
@@ -12,7 +28,7 @@ class CpsPrinter { output }
             with: { |out|
                     cps visitBy: (CpsPrinter output: out) }!
 
-    method visitLiteral: cps
+    method visitEntry: cps
         output print: "
 start():
   return(42)
