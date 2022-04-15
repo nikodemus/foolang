@@ -1,6 +1,3 @@
--- FIXME: Should SEND take receiver as parameter,
--- instead of referring to a NODE?
-
 -- For tests
 import lib.assert.Assert
 import impl.parser.Parser

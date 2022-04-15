@@ -1206,6 +1206,13 @@ class Parser { source::String
         (self expressionParser: source)
             _parseAll: #parse!
 
+    direct method parseExpression: source
+        let res = (self expressionParser: source)
+                      _parseAll: #parse.
+        res size > 1
+            ifTrue: { Error raise: "Multiple expressions!" }.
+        res first!
+
     direct method parseDefinitions: source
         (self definitionParser: source)
             parseDefinitions!
