@@ -140,6 +140,22 @@ class Parameter { id::Integer
         visitor visitParameterNode: self!
 end
 
+
+class Discard { id::Integer
+                defs::Set}
+    is Node
+    direct method id: id
+        self id: id
+             defs: Set new!
+    method printName
+        "_:{id}"!
+    method toString
+        "#<Discard {id}>"!
+    method visitNodeBy: visitor
+        visitor visitDiscardNode: self!
+end
+
+
 class Constant { id::Integer
                  uses::Set
                  value }
@@ -266,6 +282,10 @@ class CpsGraph { entry::Continuation
 
     method makeParameter
         Parameter id: self nextId!
+
+
+    method makeDiscard
+        Discard id: self nextId!
 
 
     method ensureConstant: value
@@ -454,7 +474,8 @@ class CpsConverter { graph var next }
 
     method visitSeq: syntax with: cc
         let then = syntax then visitBy: self with: cc.
-        syntax first visitBy: self with: then!
+        let discard = graph bind: graph makeDiscard in: then.
+        syntax first visitBy: self with: discard!
 
 
     method visitVariable: syntax with: cc
@@ -598,10 +619,10 @@ Send_7():
         assert that: { CpsPrinter printToString: cps }
                equals: "
 Entry():
-    Send_17()
-Send_17():
-    Call_12(X:G #some:message: 12 97)
-Call_12():
+    Send_19()
+Send_19():
+    Call_14(X:G #some:message: 12 97)
+Call_14(_:13):
     Send_6()
 Send_6():
     Exit(Y:G #+ Z:G)
