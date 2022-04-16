@@ -52,7 +52,7 @@ class Continuation { _id::Integer
         params do: { |each| each defs add: new }.
         args do: { |each| each uses add: new }.
         new!
-    method name
+    method printName
         kind is ENTRY
             => { return kind name }.
         kind is EXIT
@@ -76,8 +76,21 @@ class Constant { id::Integer
         self id: id
              uses: Set new
              value: value!
-    method name
+    method printName
         value displayString!
+end
+
+class Variable { id::Integer
+                 name::String
+                 defs::Set
+                 uses::Set }
+    direct method id: id name: name
+        self id: id
+             name: name
+             defs: Set new
+             uses: Set new!
+    method printName
+        "{name}:{id}"!
 end
 
 define NO_CONTINUATION
@@ -113,6 +126,8 @@ class CpsGraph { entry::Continuation
             exit: exit
             lastId: 2
             constants: Dictionary new!
+
+
     method entry: cont
         -- We create a separate entry continuation for clarity.
         entry is NO_CONTINUATION
@@ -122,25 +137,49 @@ class CpsGraph { entry::Continuation
                           params: []
                           args: [cont] }
             ifFalse: { Error raise: "CpsGraph already has an entry!" }!
-    method constantCall: target with: value
+
+
+    method call: target with: value
         Continuation
             id: self nextId
             kind: CALL
             params: []
-            args: [target, self constant: value]!
-    method constant: value
+            args: [target, value]!
+
+
+    method makeVariable: name
+        Variable
+            id: self nextId
+            name: name!
+
+
+    method ensureConstant: value
         constants
             at: value
             ifNonePut: { Constant
                              id: self nextId
                              value: value }!
+
+    method bind: variable in: target
+        Continuation
+            id: self nextId
+            kind: CALL
+            params: [variable]
+            args: [target]!
+
+
     method nextId
         lastId = lastId + 1!
 end
 
-class CpsConverter { graph }
+class CpsConverter { graph var next }
+
     direct method new
-        self graph: CpsGraph new!
+        self graph: CpsGraph new
+             var: False
+             next: False!
+
+
     direct method convert: syntax
         let converter = self new.
         converter graph
@@ -148,10 +187,41 @@ class CpsConverter { graph }
                            with: converter graph exit).
         converter graph!
 
+
+    method bindVariable: var
+        CpsConverter
+            graph: graph
+            var: var
+            next: self!
+
+
+    method findVariable: name
+        var is False
+            ifTrue: { Error raise: "Unbound variable in CpsConverter: {name}" }.
+        var name == name
+            ifTrue: { var }
+            ifFalse: { self next findVariable: name }!
+
+
+    method visitLet: syntax with: cc
+        let var = graph makeVariable: syntax variable name.
+        let body = syntax body
+                       visitBy: (self bindVariable: var)
+                       with: cc.
+        let bind = graph bind: var in: body.
+        syntax value visitBy: self with: bind!
+
+
     method visitLiteral: syntax with: cc
         graph
-            constantCall: cc
-            with: syntax value!
+            call: cc
+            with: (graph ensureConstant: syntax value)!
+
+
+    method visitVariable: syntax with: cc
+        graph
+            call: cc
+            with: (self findVariable: syntax name)!
 end
 
 class CpsPrinter { output }
@@ -170,28 +240,28 @@ class CpsPrinter { output }
         let target = args at: 1.
         output
             ; print: "    "
-            ; print: target name
+            ; print: target printName
             ; print: "(".
         2 to: args size
           do: { |index|
-                output print: (args at: index) name }.
+                output print: (args at: index) printName }.
         output println: ")".
         target visitBy: self!
 
     method visitCallContinuation: aCall
         output
-            ; print: aCall name
+            ; print: aCall printName
             ; print: "(".
         aCall params
             do: { |each|
-                  output print: each name }
+                  output print: each printName }
             interleaving: { output print: ", " }.
         output println: "):".
         self visitCallArgs: aCall args!
 
     method visitEntryContinuation: anEntry
         output
-            ; print: anEntry name
+            ; print: anEntry printName
             ; println: "():".
         self visitCallArgs: anEntry args!
 
@@ -212,8 +282,8 @@ class TestCPS { assert }
         assert that: { CpsPrinter printToString: cps }
                equals: "
 Entry():
-    Call_3()
-Call_3():
+    Call_4()
+Call_4():
     Exit(123)
 "!
 
@@ -222,11 +292,13 @@ Call_3():
         assert that: { CpsPrinter printToString: cps }
             equals: "
 Entry():
-    Let_3()
-Let_3():
-    Bind_4(87)
-Bind_4(x:5)
-    Exit(x:5)
+    Call_7()
+Call_7():
+    Call_5(87)
+Call_5(x:3):
+    Call_4()
+Call_4():
+    Exit(x:3)
 "!
 
 end
