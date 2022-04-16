@@ -291,6 +291,11 @@ class CpsConverter { graph var next }
         syntax receiver visitBy: self with: recvBind!
 
 
+    method visitSeq: syntax with: cc
+        let then = syntax then visitBy: self with: cc.
+        syntax first visitBy: self with: then!
+
+
     method visitVariable: syntax with: cc
         graph
             call: cc
@@ -433,6 +438,32 @@ Send_7():
         let cps = self convert: "X some: 12 message: 97. Y + Z".
         assert that: { CpsPrinter printToString: cps }
                equals: "
+Entry():
+    Call_26()
+Call_26():
+    Call_24(X:G)
+Call_24($13):
+    Call_23()
+Call_23():
+    Call_21(12)
+Call_21($14):
+    Call_20()
+Call_20():
+    Call_18(97)
+Call_18($15):
+    Send_17()
+Send_17():
+    Call_12($13 #some:message: $14 $15)
+Call_12():
+    Call_10(Y:G)
+Call_10($3):
+    Call_9()
+Call_9():
+    Call_7(Z:G)
+Call_7($4):
+    Send_6()
+Send_6():
+    Exit($3 #+ $4)
 "!
 
 end
