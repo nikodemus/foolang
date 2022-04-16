@@ -1,39 +1,203 @@
 import lib.assert.Assert
 import impl.parser.Parser
 
-class ENTRY { succ exit }
+class Set { dict }
+    is Object
     direct method new
-        self succ: False
-             exit: False!
-    method succ: val
-        succ = val!
-    method visitBy: visitor
-        visitor visitEntry: self!
+        self dict: Dictionary new!
+    direct method with: node
+        let new = self new.
+        new add: node.
+        new!
+    method add: node
+        dict put: node at: node!
+    method remove: node
+        dict remove: node!
+    method size
+        dict size!
+    method isEmpty
+        dict isEmpty!
+    method isOnly: node
+        dict size is 1
+            ifTrue: { (dict values first) is node }
+            ifFalse: { False }!
+    method replace: node1 with: node2
+        dict doKeys: { |each|
+                       each replace: node1 with: node2 }!
+    method do: block
+        dict values do: block!
 end
 
-class CpsConverter {}
-    direct method convert: syntax
-        let entry = ENTRY new.
-        entry succ: (syntax visitBy: CpsConverter new
-                            with: entry exit).
-        entry!
+class ContinuationKind { name visit }
+    method visit: node by: visitor
+        visit sendTo: visitor with: [node]!
+end
 
-    method visitLiteral: cps with: cc
-        cps!
+define NONE ContinuationKind name: "None" visit: #visitNoContinuation:!
+define ENTRY ContinuationKind name: "Entry" visit: #visitEntryContinuation:!
+define EXIT ContinuationKind name: "Exit" visit: #visitExitContinuation:!
+define CALL ContinuationKind name: "Call" visit: #visitCallContinuation:!
+
+class Continuation { _id::Integer
+                     kind::ContinuationKind
+                     params::Array
+                     args::Array
+                     uses::Set }
+    direct method id: id kind: kind params: params args: args
+        let new = self _id: id
+                       kind: kind
+                       params: params
+                       args: args
+                       uses: Set new.
+        params do: { |each| each defs add: new }.
+        args do: { |each| each uses add: new }.
+        new!
+    method name
+        kind is ENTRY
+            => { return kind name }.
+        kind is EXIT
+            => { return kind name }.
+        "{kind name}_{_id}"!
+    method visitBy: visitor
+        kind visit: self by: visitor!
+end
+
+class Parameter { id::Integer
+                  defs::Set
+                  uses::Set }
+    method visitBy: visitor
+        visitor visitParameter: self!
+end
+
+class Constant { id::Integer
+                 uses::Set
+                 value }
+    direct method id: id value: value
+        self id: id
+             uses: Set new
+             value: value!
+    method name
+        value displayString!
+end
+
+define NO_CONTINUATION
+    -- ID 0 is a convenient error marker in case
+    -- we try to index a bitset with this.
+    Continuation
+        id: 0
+        kind: NONE
+        params: []
+        args: []!
+
+class CpsGraph { entry::Continuation
+                 exit::Continuation
+                 lastId::Integer
+                 constants::Dictionary }
+    direct method new
+        -- We build the graph with the real exit node
+        -- ready made: conversion requires a CC.
+        --
+        -- id=1 is reserved for entry.
+        --
+        -- Entry node gets replaced when we're done.
+        let exitValue = Parameter id: 3
+                                  defs: Set new
+                                  uses: Set new.
+        let exit = Continuation
+                       id: 2
+                       kind: EXIT
+                       params: [exitValue]
+                       args: [exitValue].
+        self
+            entry: NO_CONTINUATION
+            exit: exit
+            lastId: 2
+            constants: Dictionary new!
+    method entry: cont
+        -- We create a separate entry continuation for clarity.
+        entry is NO_CONTINUATION
+            ifTrue: { entry = Continuation
+                          id: 1
+                          kind: ENTRY
+                          params: []
+                          args: [cont] }
+            ifFalse: { Error raise: "CpsGraph already has an entry!" }!
+    method constantCall: target with: value
+        Continuation
+            id: self nextId
+            kind: CALL
+            params: []
+            args: [target, self constant: value]!
+    method constant: value
+        constants
+            at: value
+            ifNonePut: { Constant
+                             id: self nextId
+                             value: value }!
+    method nextId
+        lastId = lastId + 1!
+end
+
+class CpsConverter { graph }
+    direct method new
+        self graph: CpsGraph new!
+    direct method convert: syntax
+        let converter = self new.
+        converter graph
+            entry: (syntax visitBy: converter
+                           with: converter graph exit).
+        converter graph!
+
+    method visitLiteral: syntax with: cc
+        graph
+            constantCall: cc
+            with: syntax value!
 end
 
 class CpsPrinter { output }
-    direct method printToString: cps
+
+    direct method printToString: graph
         StringOutput
             with: { |out|
-                    cps visitBy: (CpsPrinter output: out) }!
+                    self print: graph to: out }!
 
-    method visitEntry: cps
-        output print: "
-start():
-  return(42)
-"!
+    direct method print: graph to: output
+        output newline.
+        graph entry
+            visitBy: (self output: output)!
 
+    method visitCallArgs: args
+        let target = args at: 1.
+        output
+            ; print: "    "
+            ; print: target name
+            ; print: "(".
+        2 to: args size
+          do: { |index|
+                output print: (args at: index) name }.
+        output println: ")".
+        target visitBy: self!
+
+    method visitCallContinuation: aCall
+        output
+            ; print: aCall name
+            ; print: "(".
+        aCall params
+            do: { |each|
+                  output print: each name }
+            interleaving: { output print: ", " }.
+        output println: "):".
+        self visitCallArgs: aCall args!
+
+    method visitEntryContinuation: anEntry
+        output
+            ; print: anEntry name
+            ; println: "():".
+        self visitCallArgs: anEntry args!
+
+    method visitExitContinuation: _
+        -- We don't print the exit.
+        False!
 end
 
 class TestCPS { assert }
@@ -44,8 +208,10 @@ class TestCPS { assert }
         let cps = CpsConverter convert: syntax.
         assert that: { CpsPrinter printToString: cps }
                equals: "
-start():
-  return(123)
+Entry():
+    Call_3()
+Call_3():
+    Exit(123)
 "!
 end
 
