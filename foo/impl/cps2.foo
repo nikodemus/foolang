@@ -93,6 +93,19 @@ class Variable { id::Integer
         "{name}:{id}"!
 end
 
+class Global { id::Integer
+               name::String
+               uses::Set
+               definition }
+    direct method id: id name: name
+        self id: id
+             name: name
+             uses: Set new
+             definition: False!
+    method printName
+        "{name}:G"!
+end
+
 define NO_CONTINUATION
     -- ID 0 is a convenient error marker in case
     -- we try to index a bitset with this.
@@ -105,7 +118,9 @@ define NO_CONTINUATION
 class CpsGraph { entry::Continuation
                  exit::Continuation
                  lastId::Integer
-                 constants::Dictionary }
+                 constants::Dictionary
+                 globals::Dictionary }
+
     direct method new
         -- We build the graph with the real exit node
         -- ready made: conversion requires a CC.
@@ -125,7 +140,8 @@ class CpsGraph { entry::Continuation
             entry: NO_CONTINUATION
             exit: exit
             lastId: 2
-            constants: Dictionary new!
+            constants: Dictionary new
+            globals: Dictionary new!
 
 
     method entry: cont
@@ -159,6 +175,14 @@ class CpsGraph { entry::Continuation
             ifNonePut: { Constant
                              id: self nextId
                              value: value }!
+
+    method ensureGlobal: name
+        globals
+            at: name
+            ifNonePut: { Global
+                             id: self nextId
+                             name: name }!
+
 
     method bind: variable in: target
         Continuation
@@ -195,12 +219,12 @@ class CpsConverter { graph var next }
             next: self!
 
 
-    method findVariable: name
+    method findBinding: name
         var is False
-            ifTrue: { Error raise: "Unbound variable in CpsConverter: {name}" }.
+            ifTrue: { return graph ensureGlobal: name }.
         var name == name
             ifTrue: { var }
-            ifFalse: { self next findVariable: name }!
+            ifFalse: { self next findBinding: name }!
 
 
     method visitLet: syntax with: cc
@@ -221,7 +245,7 @@ class CpsConverter { graph var next }
     method visitVariable: syntax with: cc
         graph
             call: cc
-            with: (self findVariable: syntax name)!
+            with: (self findBinding: syntax name)!
 end
 
 class CpsPrinter { output }
@@ -286,6 +310,18 @@ Entry():
 Call_4():
     Exit(123)
 "!
+
+
+    method test_convert_global
+        let cps = self convert: "ThisIsGlobal".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+Entry():
+    Call_4()
+Call_4():
+    Exit(ThisIsGlobal:G)
+"!
+
 
     method test_convert_let
         let cps = self convert: "let x = 87. x".
