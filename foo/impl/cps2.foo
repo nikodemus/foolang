@@ -37,6 +37,7 @@ define NONE ContinuationKind name: "None" visit: #visitNoContinuation:!
 define ENTRY ContinuationKind name: "Entry" visit: #visitEntryContinuation:!
 define EXIT ContinuationKind name: "Exit" visit: #visitExitContinuation:!
 define CALL ContinuationKind name: "Call" visit: #visitCallContinuation:!
+define SEND ContinuationKind name: "Send" visit: #visitSendContinuation:!
 
 class Continuation { _id::Integer
                      kind::ContinuationKind
@@ -58,6 +59,8 @@ class Continuation { _id::Integer
         kind is EXIT
             => { return kind name }.
         "{kind name}_{_id}"!
+    method toString
+        "#<Continuation {self printName}>"!
     method visitBy: visitor
         kind visit: self by: visitor!
 end
@@ -65,6 +68,14 @@ end
 class Parameter { id::Integer
                   defs::Set
                   uses::Set }
+    direct method id: id
+        self id: id
+             defs: Set new
+             uses: Set new!
+    method printName
+        "${id}"!
+    method toString
+        "#<Parameter {id}>"!
     method visitBy: visitor
         visitor visitParameter: self!
 end
@@ -76,6 +87,8 @@ class Constant { id::Integer
         self id: id
              uses: Set new
              value: value!
+    method toString
+        "#<Constant {self printName}>"!
     method printName
         value displayString!
 end
@@ -119,7 +132,8 @@ class CpsGraph { entry::Continuation
                  exit::Continuation
                  lastId::Integer
                  constants::Dictionary
-                 globals::Dictionary }
+                 globals::Dictionary
+                 selectors::Dictionary }
 
     direct method new
         -- We build the graph with the real exit node
@@ -141,7 +155,8 @@ class CpsGraph { entry::Continuation
             exit: exit
             lastId: 2
             constants: Dictionary new
-            globals: Dictionary new!
+            globals: Dictionary new
+            selectors: Dictionary new!
 
 
     method entry: cont
@@ -169,6 +184,10 @@ class CpsGraph { entry::Continuation
             name: name!
 
 
+    method makeParameter
+        Parameter id: self nextId!
+
+
     method ensureConstant: value
         constants
             at: value
@@ -184,12 +203,25 @@ class CpsGraph { entry::Continuation
                              name: name }!
 
 
+    method ensureSelector: name
+        selectors
+            at: name
+            ifNonePut: { self ensureConstant: name }!
+
+
     method bind: variable in: target
         Continuation
             id: self nextId
             kind: CALL
             params: [variable]
             args: [target]!
+
+    method send: selector to: recv withArguments: args continuation: cc
+        Continuation
+            id: self nextId
+            kind: SEND
+            params: []
+            args: ([cc, recv, selector] append: args)!
 
 
     method nextId
@@ -242,6 +274,23 @@ class CpsConverter { graph var next }
             with: (graph ensureConstant: syntax value)!
 
 
+    method visitSend: syntax with: cc
+        let recv = graph makeParameter.
+        let argParams = syntax arguments collect: { |a| graph makeParameter }.
+        let next = graph
+                       send: (graph ensureSelector: syntax selector name)
+                       to: recv
+                       withArguments: argParams
+                       continuation: cc.
+        syntax arguments reverse
+            with: argParams reverse
+            do: { |argSyntax param|
+                  let bind = graph bind: param in: next.
+                  next = argSyntax visitBy: self with: bind }.
+        let recvBind = graph bind: recv in: next.
+        syntax receiver visitBy: self with: recvBind!
+
+
     method visitVariable: syntax with: cc
         graph
             call: cc
@@ -292,6 +341,25 @@ class CpsPrinter { output }
     method visitExitContinuation: _
         -- We don't print the exit.
         False!
+
+    method visitSendContinuation: aSend
+        let args = aSend args.
+        output
+            ; print: aSend printName
+            ; println: "():"
+            ; print: "    "
+            ; print: args first printName
+            ; print: "("
+            ; print: args second printName
+            ; print: " #"
+            ; print: args third value.
+        (args from: 4 to: args size)
+             do: { |arg|
+                   output
+                       ; print: " "
+                       ; print: arg printName }.
+        output println: ")".
+        args first visitBy: self!
 end
 
 class TestCPS { assert }
@@ -343,11 +411,21 @@ Call_4():
         assert that: { CpsPrinter printToString: cps }
                equals: "
 Entry():
-    Call_1()
-Call_1():
-    Call_2(X:G, 12, 97)
-Call_2($1, $2, $3):
-    Send(Exit, $1 some: $2 message: 97)
+    Call_16()
+Call_16():
+    Call_14(X:G)
+Call_14($3):
+    Call_13()
+Call_13():
+    Call_11(12)
+Call_11($4):
+    Call_10()
+Call_10():
+    Call_8(97)
+Call_8($5):
+    Send_7()
+Send_7():
+    Exit($3 #some:message: $4 $5)
 "!
 
 end
