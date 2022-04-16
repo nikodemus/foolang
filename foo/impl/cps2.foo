@@ -621,10 +621,8 @@ Send_7():
 Entry():
     Send_19()
 Send_19():
-    Call_14(X:G #some:message: 12 97)
-Call_14(_:13):
-    Send_6()
-Send_6():
+    Send_6(X:G #some:message: 12 97)
+Send_6(_:13):
     Exit(Y:G #+ Z:G)
 "!
 
