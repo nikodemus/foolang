@@ -91,12 +91,30 @@ class Continuation { _id::Integer
     method replaceArgsFrom: other
         args do: { |each| each uses remove: self }.
         args = other args.
-        args do: { |each|
-                   each uses add: self.
-                   each uses remove: other }!
+        args do: { |each| each uses add: self }!
+
+
+    method replaceParamsFrom: other
+        params do: { |each| each defs remove: self }.
+        params = other params.
+        params do: { |each| each defs add: self }!
+
+
+    method replaceSuccessorFrom: other
+        let old = args first.
+        let new = other args first.
+        old uses remove: self.
+        new uses add: self.
+        args put: new at: 1!
+
+
+    method successor
+        args at: 1!
 
 
     method unlink
+        self args do: { |each| each uses remove: self }.
+        self params do: { |each| each defs remove: self }.
         self uses replace: self with: args first!
 
 
@@ -364,6 +382,15 @@ class CpsOptimizer { graph worklist }
         worklist push: continuation!
 
 
+    -- FIXME: Not sure I'm actually using the term correctly!
+    method contify: target in: continuation
+        continuation replaceSuccessorFrom: target.
+        continuation successor replaceParamsFrom: target.
+        target unlink.
+        worklist pushAll: continuation uses.
+        worklist push: continuation!
+
+
     method tryInlineSuccessorOf: continuation
         let args = continuation args.
         let target = args first.
@@ -382,10 +409,19 @@ class CpsOptimizer { graph worklist }
         self tryInlineSuccessorOf: call!
 
 
-    method visitExitContinuation: exit
-        False!
-
     method visitSendContinuation: send
+        -- If the continuation just discards the value of the send and
+        -- continues to a unique zero arity followup, move the discard to the
+        -- followup.
+        let target = send args first.
+        (Continuation includes: target)
+            => { (target kind is CALL)
+                     => { (target uses isOnly: send)
+                              => { target args size is 1
+                                       => { (target args first uses isOnly: target)
+                                                => { self contify: target in: send }}}}}!
+
+    method visitExitContinuation: exit
         False!
 
 end
@@ -519,15 +555,19 @@ class CpsPrinter { output seen }
         self visit: target!
 
 
-    method visitCallContinuation: aCall
+    method printHeader: aCont
         output
-            ; print: aCall printName
+            ; print: aCont printName
             ; print: "(".
-        aCall params
+        aCont params
             do: { |each|
                   output print: each printName }
             interleaving: { output print: ", " }.
-        output println: "):".
+        output println: "):"!
+
+
+    method visitCallContinuation: aCall
+        self printHeader: aCall.
         self visitCallArgs: aCall args!
 
 
@@ -539,10 +579,9 @@ class CpsPrinter { output seen }
 
 
     method visitSendContinuation: aSend
+        self printHeader: aSend.
         let args = aSend args.
         output
-            ; print: aSend printName
-            ; println: "():"
             ; print: "    "
             ; print: args first printName
             ; print: "("
@@ -647,10 +686,8 @@ Entry():
 Call_21($3, a:4, b:5, c:6):
     Send_16()
 Send_16():
-    Call_13(a:4 #+ b:5)
-Call_13($7):
-    Send_10()
-Send_10():
+    Send_10(a:4 #+ b:5)
+Send_10($7):
     $3($7 #+ c:6)
 "!
 
