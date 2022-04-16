@@ -245,6 +245,14 @@ class CpsGraph { entry::Continuation
             args: ([cc, recv, selector] append: args)!
 
 
+    method block: body vars: vars continuation: cc
+        Continuation
+            id: self nextId
+            kind: CALL
+            params: ([cc] append: vars)
+            args: [body]!
+
+
     method nextId
         lastId = lastId + 1!
 end
@@ -272,6 +280,13 @@ class CpsConverter { graph var next }
             next: self!
 
 
+    method bindVariables: vars
+        let converter = self.
+        vars do: { |each|
+                   converter = converter bindVariable: each }.
+        converter!
+
+
     method findBinding: name
         var is False
             ifTrue: { return graph ensureGlobal: name }.
@@ -281,10 +296,15 @@ class CpsConverter { graph var next }
 
 
     method visitBlock: syntax with: cc
-        -- FIXME: Zero args!
         let blockReturn = graph makeParameter.
-        let blockBody = syntax body visitBy: self with: blockReturn.
-        let blockEntry = graph bind: blockReturn in: blockBody.
+        let blockVars = syntax parameters
+                            collect: { |each| graph makeVariable: each name }.
+        let blockBody = syntax body
+                            visitBy: (self bindVariables: blockVars)
+                            with: blockReturn.
+        let blockEntry = graph block: blockBody
+                               vars: blockVars
+                               continuation: blockReturn.
         graph call: cc with: blockEntry!
 
     method visitLet: syntax with: cc
@@ -528,6 +548,38 @@ Call_6($3):
 Call_5():
     $3(421)
 "!
+
+
+    method test_convert_arity_3_block
+        let cps = self convert: "\{ |a b c| a + b + c }".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+Entry():
+    Call_22()
+Call_22():
+    Exit(Call_21)
+Call_21($3, a:4, b:5, c:6):
+    Call_20()
+Call_20():
+    Call_19(a:4)
+Call_19($14):
+    Call_18()
+Call_18():
+    Call_17(b:5)
+Call_17($15):
+    Send_16()
+Send_16():
+    Call_13($14 #+ $15)
+Call_13($7):
+    Call_12()
+Call_12():
+    Call_11(c:6)
+Call_11($8):
+    Send_10()
+Send_10():
+    $3($7 #+ $8)
+"!
+
 
 end
 
