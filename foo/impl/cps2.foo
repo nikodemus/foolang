@@ -326,7 +326,7 @@ Call_4():
     method test_convert_let
         let cps = self convert: "let x = 87. x".
         assert that: { CpsPrinter printToString: cps }
-            equals: "
+               equals: "
 Entry():
     Call_7()
 Call_7():
@@ -335,6 +335,19 @@ Call_5(x:3):
     Call_4()
 Call_4():
     Exit(x:3)
+"!
+
+
+    method test_convert_send
+        let cps = self convert: "X some: 12 message: 97".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+Entry():
+    Call_1()
+Call_1():
+    Call_2(X:G, 12, 97)
+Call_2($1, $2, $3):
+    Send(Exit, $1 some: $2 message: 97)
 "!
 
 end
