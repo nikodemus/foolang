@@ -80,12 +80,24 @@ class Continuation { _id::Integer
         new!
 
 
+    method replace: node1 with: node2
+        node1 uses remove: self.
+        node2 uses add: self.
+        args doWithIndex: { |each index|
+                            each is node1
+                                ifTrue: { args put: node2 at: index  } }!
+
+
     method replaceArgsFrom: other
         args do: { |each| each uses remove: self }.
         args = other args.
         args do: { |each|
                    each uses add: self.
                    each uses remove: other }!
+
+
+    method unlink
+        self uses replace: self with: args first!
 
 
     method printName
@@ -97,7 +109,7 @@ class Continuation { _id::Integer
 
 
     method displayOn: stream
-        stream print: "#<Continuation {self printName}>"!
+        stream print: "#<Continuation {self printName} params: {params} args: {args}>"!
 
 
     method visitBy: visitor
@@ -319,17 +331,36 @@ class CpsOptimizer { graph worklist }
         graph cleanup!
 
 
+    method inline: target in: continuation
+        continuation args rest
+            with: target params
+            do: { |arg param|
+                  param uses
+                      replace: param
+                      with: arg }.
+        continuation replaceArgsFrom: target.
+        target unlink.
+        worklist pushAll: continuation uses.
+        worklist push: continuation!
+
+
+    method tryInlineSuccessorOf: continuation
+        let args = continuation args.
+        let target = args first.
+        -- Inline unique call.
+        (Continuation includes: target)
+            => { (target kind is CALL)
+                     => { (target uses isOnly: continuation)
+                              => { self inline: target in: continuation } } }!
+
+
     method visitEntryContinuation: entry
-        let args = entry args.
-        args size is 1
-            => { let next = args first.
-                 next kind is CALL
-                     => { (next uses isOnly: entry)
-                              => { entry replaceArgsFrom: next } } }!
+        self tryInlineSuccessorOf: entry!
 
 
     method visitCallContinuation: call
-        False!
+        self tryInlineSuccessorOf: call!
+
 
     method visitExitContinuation: exit
         False!
@@ -547,11 +578,7 @@ Entry():
         assert that: { CpsPrinter printToString: cps }
                equals: "
 Entry():
-    Call_5(87)
-Call_5(x:3):
-    Call_4()
-Call_4():
-    Exit(x:3)
+    Exit(87)
 "!
 
 
@@ -560,19 +587,9 @@ Call_4():
         assert that: { CpsPrinter printToString: cps }
                equals: "
 Entry():
-    Call_14(X:G)
-Call_14($3):
-    Call_13()
-Call_13():
-    Call_11(12)
-Call_11($4):
-    Call_10()
-Call_10():
-    Call_8(97)
-Call_8($5):
     Send_7()
 Send_7():
-    Exit($3 #some:message: $4 $5)
+    Exit(X:G #some:message: 12 97)
 "!
 
 
@@ -581,29 +598,13 @@ Send_7():
         assert that: { CpsPrinter printToString: cps }
                equals: "
 Entry():
-    Call_24(X:G)
-Call_24($13):
-    Call_23()
-Call_23():
-    Call_21(12)
-Call_21($14):
-    Call_20()
-Call_20():
-    Call_18(97)
-Call_18($15):
     Send_17()
 Send_17():
-    Call_12($13 #some:message: $14 $15)
+    Call_12(X:G #some:message: 12 97)
 Call_12():
-    Call_10(Y:G)
-Call_10($3):
-    Call_9()
-Call_9():
-    Call_7(Z:G)
-Call_7($4):
     Send_6()
 Send_6():
-    Exit($3 #+ $4)
+    Exit(Y:G #+ Z:G)
 "!
 
 
@@ -614,8 +615,6 @@ Send_6():
 Entry():
     Exit(Call_6)
 Call_6($3):
-    Call_5()
-Call_5():
     $3(421)
 "!
 
@@ -627,25 +626,13 @@ Call_5():
 Entry():
     Exit(Call_21)
 Call_21($3, a:4, b:5, c:6):
-    Call_20()
-Call_20():
-    Call_19(a:4)
-Call_19($14):
-    Call_18()
-Call_18():
-    Call_17(b:5)
-Call_17($15):
     Send_16()
 Send_16():
-    Call_13($14 #+ $15)
+    Call_13(a:4 #+ b:5)
 Call_13($7):
-    Call_12()
-Call_12():
-    Call_11(c:6)
-Call_11($8):
     Send_10()
 Send_10():
-    $3($7 #+ $8)
+    $3($7 #+ c:6)
 "!
 
 
