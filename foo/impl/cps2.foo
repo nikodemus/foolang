@@ -203,9 +203,12 @@ end
 class TestCPS { assert }
     is TestSuite
 
+    method convert: source
+        let syntax = Parser parseExpression: source.
+        CpsConverter convert: syntax!
+
     method test_convert_constant_integer
-        let syntax = Parser parseExpression: "123".
-        let cps = CpsConverter convert: syntax.
+        let cps = self convert: "123".
         assert that: { CpsPrinter printToString: cps }
                equals: "
 Entry():
@@ -213,6 +216,19 @@ Entry():
 Call_3():
     Exit(123)
 "!
+
+    method test_convert_let
+        let cps = self convert: "let x = 87. x".
+        assert that: { CpsPrinter printToString: cps }
+            equals: "
+Entry():
+    Let_3()
+Let_3():
+    Bind_4(87)
+Bind_4(x:5)
+    Exit(x:5)
+"!
+
 end
 
 class Main {}
