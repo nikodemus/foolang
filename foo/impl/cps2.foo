@@ -10,7 +10,9 @@ class Set { dict }
         new add: node.
         new!
     method add: node
-        dict put: node at: node!
+        let old = dict at: node.
+        dict put: node at: node.
+        old is False!
     method remove: node
         dict remove: node!
     method size
@@ -44,6 +46,7 @@ class Continuation { _id::Integer
                      params::Array
                      args::Array
                      uses::Set }
+    is Object
     direct method id: id kind: kind params: params args: args
         let new = self _id: id
                        kind: kind
@@ -59,15 +62,24 @@ class Continuation { _id::Integer
         kind is EXIT
             => { return kind name }.
         "{kind name}_{_id}"!
-    method toString
-        "#<Continuation {self printName}>"!
+    method displayOn: stream
+        stream print: "#<Continuation {self printName}>"!
     method visitBy: visitor
         kind visit: self by: visitor!
+end
+
+interface Node
+    method visitBy: visitor
+        -- Visitors interested in nodes can hook
+        -- up to #visitNodeBy: to get the more exact
+        -- info.
+        visitor visitNode: self!
 end
 
 class Parameter { id::Integer
                   defs::Set
                   uses::Set }
+    is Node
     direct method id: id
         self id: id
              defs: Set new
@@ -76,13 +88,14 @@ class Parameter { id::Integer
         "${id}"!
     method toString
         "#<Parameter {id}>"!
-    method visitBy: visitor
-        visitor visitParameter: self!
+    method visitNodeBy: visitor
+        visitor visitParameterNode: self!
 end
 
 class Constant { id::Integer
                  uses::Set
                  value }
+    is Node
     direct method id: id value: value
         self id: id
              uses: Set new
@@ -91,12 +104,15 @@ class Constant { id::Integer
         "#<Constant {self printName}>"!
     method printName
         value displayString!
+    method visitNodeBy: visitor
+        visitor visitConstantNode: self!
 end
 
 class Variable { id::Integer
                  name::String
                  defs::Set
                  uses::Set }
+    is Node
     direct method id: id name: name
         self id: id
              name: name
@@ -104,12 +120,15 @@ class Variable { id::Integer
              uses: Set new!
     method printName
         "{name}:{id}"!
+    method visitNodeBy: visitor
+        visitor visitVariableNode: self!
 end
 
 class Global { id::Integer
                name::String
                uses::Set
                definition }
+    is Node
     direct method id: id name: name
         self id: id
              name: name
@@ -117,6 +136,8 @@ class Global { id::Integer
              definition: False!
     method printName
         "{name}:G"!
+    method visitNodeBy: visitor
+        visitor visitGlobalNode: self!
 end
 
 define NO_CONTINUATION
@@ -259,6 +280,13 @@ class CpsConverter { graph var next }
             ifFalse: { self next findBinding: name }!
 
 
+    method visitBlock: syntax with: cc
+        -- FIXME: Zero args!
+        let blockReturn = graph makeParameter.
+        let blockBody = syntax body visitBy: self with: blockReturn.
+        let blockEntry = graph bind: blockReturn in: blockBody.
+        graph call: cc with: blockEntry!
+
     method visitLet: syntax with: cc
         let var = graph makeVariable: syntax variable name.
         let body = syntax body
@@ -302,17 +330,26 @@ class CpsConverter { graph var next }
             with: (self findBinding: syntax name)!
 end
 
-class CpsPrinter { output }
+class CpsPrinter { output seen }
 
     direct method printToString: graph
         StringOutput
             with: { |out|
                     self print: graph to: out }!
 
+
     direct method print: graph to: output
+        let visitor = self
+                          output: output
+                          seen: Set new.
         output newline.
-        graph entry
-            visitBy: (self output: output)!
+        visitor visit: graph entry!
+
+
+    method visit: other
+        (seen add: other)
+            ifTrue: { other visitBy: self }!
+
 
     method visitCallArgs: args
         let target = args at: 1.
@@ -324,7 +361,9 @@ class CpsPrinter { output }
           do: { |index|
                 output print: (args at: index) printName }.
         output println: ")".
-        target visitBy: self!
+        args do: { |each| self visit: each }.
+        self visit: target!
+
 
     method visitCallContinuation: aCall
         output
@@ -337,15 +376,13 @@ class CpsPrinter { output }
         output println: "):".
         self visitCallArgs: aCall args!
 
+
     method visitEntryContinuation: anEntry
         output
             ; print: anEntry printName
             ; println: "():".
         self visitCallArgs: anEntry args!
 
-    method visitExitContinuation: _
-        -- We don't print the exit.
-        False!
 
     method visitSendContinuation: aSend
         let args = aSend args.
@@ -364,7 +401,18 @@ class CpsPrinter { output }
                        ; print: " "
                        ; print: arg printName }.
         output println: ")".
-        args first visitBy: self!
+        self visit: args first!
+
+
+    method visitExitContinuation: _
+        -- We don't print the exit.
+        False!
+
+    method visitNode: _
+        -- We see nodes from visiting call args, but
+        -- don't need to print them separately: the arg
+        -- to pick up continuations as arguments.
+        False!
 end
 
 class TestCPS { assert }
@@ -464,6 +512,21 @@ Call_7($4):
     Send_6()
 Send_6():
     Exit($3 #+ $4)
+"!
+
+
+    method test_convert_arity_0_block
+        let cps = self convert: "\{ 421 }".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+Entry():
+    Call_7()
+Call_7():
+    Exit(Call_6)
+Call_6($3):
+    Call_5()
+Call_5():
+    $3(421)
 "!
 
 end

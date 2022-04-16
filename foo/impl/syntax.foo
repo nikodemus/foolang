@@ -744,6 +744,9 @@ class SyntaxBlock { parameters returnType body }
     method visitBy: visitor
         visitor visitBlock: self!
 
+    method visitBy: visitor with: arg
+        visitor visitBlock: self with: arg!
+
     method weight
         body weight + 1!
 
