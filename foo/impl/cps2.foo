@@ -428,6 +428,13 @@ Send_7():
     Exit($3 #some:message: $4 $5)
 "!
 
+
+    method test_convert_seq
+        let cps = self convert: "X some: 12 message: 97. Y + Z".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+"!
+
 end
 
 class Main {}
