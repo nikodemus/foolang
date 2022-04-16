@@ -30,6 +30,26 @@ class Set { dict }
         dict values do: block!
 end
 
+
+class Worklist { list dict }
+    direct method new
+        self list: List new
+             dict: Dictionary new!
+    method push: thing
+        dict at: thing
+             ifNonePut: { list push: thing.
+                          thing }!
+    method pushAll: aList
+        aList do: { |each| self push: each }!
+    method pop
+        let thing = list pop.
+        dict remove: thing.
+        thing!
+    method isEmpty
+        list isEmpty!
+end
+
+
 class ContinuationKind { name visit }
     method visit: node by: visitor
         visit sendTo: visitor with: [node]!
@@ -47,6 +67,8 @@ class Continuation { _id::Integer
                      args::Array
                      uses::Set }
     is Object
+
+
     direct method id: id kind: kind params: params args: args
         let new = self _id: id
                        kind: kind
@@ -56,14 +78,28 @@ class Continuation { _id::Integer
         params do: { |each| each defs add: new }.
         args do: { |each| each uses add: new }.
         new!
+
+
+    method replaceArgsFrom: other
+        args do: { |each| each uses remove: self }.
+        args = other args.
+        args do: { |each|
+                   each uses add: self.
+                   each uses remove: other }!
+
+
     method printName
         kind is ENTRY
             => { return kind name }.
         kind is EXIT
             => { return kind name }.
         "{kind name}_{_id}"!
+
+
     method displayOn: stream
         stream print: "#<Continuation {self printName}>"!
+
+
     method visitBy: visitor
         kind visit: self by: visitor!
 end
@@ -154,7 +190,8 @@ class CpsGraph { entry::Continuation
                  lastId::Integer
                  constants::Dictionary
                  globals::Dictionary
-                 selectors::Dictionary }
+                 selectors::Dictionary
+                 continuations::List }
 
     direct method new
         -- We build the graph with the real exit node
@@ -177,26 +214,36 @@ class CpsGraph { entry::Continuation
             lastId: 2
             constants: Dictionary new
             globals: Dictionary new
-            selectors: Dictionary new!
+            selectors: Dictionary new
+            continuations: (List with: exit)!
+
+
+    method doContinuations: block
+        continuations do: block!
+
+
+    method cleanup
+        continuations = continuations
+            reject: { |each| each uses isEmpty }.
+        self!
 
 
     method entry: cont
         -- We create a separate entry continuation for clarity.
         entry is NO_CONTINUATION
-            ifTrue: { entry = Continuation
-                          id: 1
-                          kind: ENTRY
-                          params: []
-                          args: [cont] }
+            ifTrue: { entry = self makeContinuation: ENTRY
+                                   params: []
+                                   args: [cont] }
             ifFalse: { Error raise: "CpsGraph already has an entry!" }!
 
 
-    method call: target with: value
-        Continuation
-            id: self nextId
-            kind: CALL
-            params: []
-            args: [target, value]!
+    method makeContinuation: kind params: params args: args
+        let cont = Continuation id: self nextId
+                                kind: kind
+                                params: params
+                                args: args.
+        continuations push: cont.
+        cont!
 
 
     method makeVariable: name
@@ -230,31 +277,66 @@ class CpsGraph { entry::Continuation
             ifNonePut: { self ensureConstant: name }!
 
 
+    method call: target with: value
+        self makeContinuation: CALL
+             params: []
+             args: [target, value]!
+
+
     method bind: variable in: target
-        Continuation
-            id: self nextId
-            kind: CALL
-            params: [variable]
-            args: [target]!
+        self makeContinuation: CALL
+             params: [variable]
+             args: [target]!
 
     method send: selector to: recv withArguments: args continuation: cc
-        Continuation
-            id: self nextId
-            kind: SEND
-            params: []
-            args: ([cc, recv, selector] append: args)!
+        self makeContinuation: SEND
+             params: []
+             args: ([cc, recv, selector] append: args)!
 
 
     method block: body vars: vars continuation: cc
-        Continuation
-            id: self nextId
-            kind: CALL
-            params: ([cc] append: vars)
-            args: [body]!
+        self makeContinuation: CALL
+             params: ([cc] append: vars)
+             args: [body]!
 
 
     method nextId
         lastId = lastId + 1!
+end
+
+class CpsOptimizer { graph worklist }
+
+    direct method optimize: graph
+        (self graph: graph
+              worklist: Worklist new)
+        optimize!
+
+
+    method optimize
+        graph doContinuations: { |each| worklist push: each }.
+        { worklist isEmpty }
+            whileFalse: { worklist pop visitBy: self }.
+        graph cleanup!
+
+
+    method visitEntryContinuation: entry
+        let args = entry args.
+        args size is 1
+            => { let next = args first.
+                 next kind is CALL
+                     => { (next uses isOnly: entry)
+                              => { entry replaceArgsFrom: next } } }!
+
+
+    method visitCallContinuation: call
+        False!
+
+    method visitExitContinuation: exit
+        False!
+
+    method visitSendContinuation: send
+        False!
+
 end
 
 class CpsConverter { graph var next }
@@ -270,7 +352,7 @@ class CpsConverter { graph var next }
         converter graph
             entry: (syntax visitBy: converter
                            with: converter graph exit).
-        converter graph!
+        CpsOptimizer optimize: converter graph!
 
 
     method bindVariable: var
@@ -447,8 +529,6 @@ class TestCPS { assert }
         assert that: { CpsPrinter printToString: cps }
                equals: "
 Entry():
-    Call_4()
-Call_4():
     Exit(123)
 "!
 
@@ -458,8 +538,6 @@ Call_4():
         assert that: { CpsPrinter printToString: cps }
                equals: "
 Entry():
-    Call_4()
-Call_4():
     Exit(ThisIsGlobal:G)
 "!
 
@@ -469,8 +547,6 @@ Call_4():
         assert that: { CpsPrinter printToString: cps }
                equals: "
 Entry():
-    Call_7()
-Call_7():
     Call_5(87)
 Call_5(x:3):
     Call_4()
@@ -484,8 +560,6 @@ Call_4():
         assert that: { CpsPrinter printToString: cps }
                equals: "
 Entry():
-    Call_16()
-Call_16():
     Call_14(X:G)
 Call_14($3):
     Call_13()
@@ -507,8 +581,6 @@ Send_7():
         assert that: { CpsPrinter printToString: cps }
                equals: "
 Entry():
-    Call_26()
-Call_26():
     Call_24(X:G)
 Call_24($13):
     Call_23()
@@ -540,8 +612,6 @@ Send_6():
         assert that: { CpsPrinter printToString: cps }
                equals: "
 Entry():
-    Call_7()
-Call_7():
     Exit(Call_6)
 Call_6($3):
     Call_5()
@@ -555,8 +625,6 @@ Call_5():
         assert that: { CpsPrinter printToString: cps }
                equals: "
 Entry():
-    Call_22()
-Call_22():
     Exit(Call_21)
 Call_21($3, a:4, b:5, c:6):
     Call_20()
