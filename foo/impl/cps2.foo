@@ -246,6 +246,8 @@ class Operation { id::Integer
             with: { |out|
                     out
                         ; print: op name
+                        ; print: ":"
+                        ; print: id
                         ; print: "(".
                     args
                         do: { |each| out print: each printName }
@@ -704,7 +706,7 @@ $entry:1($return:2):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:1($return:2):
-    findMethod($recv:3, #some:message:)(12, 97, $return:2)
+    findMethod:7($recv:3, #some:message:)(12, 97, $return:2)
 "!
 
 
@@ -713,9 +715,9 @@ $entry:1($return:2):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:1($return:2):
-    findMethod($recv:16, #some:message:)(12, 97, $seq:15)
+    findMethod:20($recv:16, #some:message:)(12, 97, $seq:15)
 $seq:15($ignore:14):
-    findMethod($recv:3, #+)(Z:Global, $return:2)
+    findMethod:6($recv:3, #+)(Z:Global, $return:2)
 "!
 
 
@@ -737,9 +739,9 @@ $block:5($ret:3):
 $entry:1($return:2):
     $return:2($block:22)
 $block:22(a:4, b:5, c:6, $ret:3):
-    findMethod($recv:15, #+)(b:5, $bind_recv:14)
+    findMethod:17($recv:15, #+)(b:5, $bind_recv:14)
 $bind_recv:14($recv:7):
-    findMethod($recv:7, #+)(c:6, $ret:3)
+    findMethod:10($recv:7, #+)(c:6, $ret:3)
 "!
 
 
