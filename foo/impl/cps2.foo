@@ -25,6 +25,10 @@ class Set { dict }
         dict remove: node!
 
 
+    method collect: block
+        dict keys collect: block!
+
+
     method size
         dict size!
 
@@ -111,6 +115,10 @@ interface Expression
         self uses remove: use!
 
 
+    method replaceUsesWith: expr
+        self uses do: { |each| each replaceUses: self with: expr }!
+
+
     method toString
         "#<{self classOf name} {self printName}>"!
 
@@ -138,6 +146,11 @@ class Constant { id::Integer
 
     method visitBy: visitor
         visitor visitConstant: self!
+end
+
+class CpsSelector { name }
+    method displayString
+        "#{name}"!
 end
 
 class Variable { id::Integer
@@ -258,15 +271,36 @@ class Continuation { id::Integer
                        name: name
                        params: params
                        target: target
-                       args: args
+                       args: args asArray
                        uses: Set new.
         params do: { |each| each addDef: new }.
+        target addUse: new.
         args do: { |each| each addUse: new }.
         new!
 
 
     method name: new
         name = new!
+
+
+    method simplify
+        { self hasUniqueTarget }
+            whileTrue: { self inlineUniqueTarget }.
+        self!
+
+
+    method hasUniqueTarget
+        (Continuation includes: target)
+            ifTrue: { target uses isOnly: self }!
+
+
+    method inlineUniqueTarget
+        self args
+            with: target params
+            do: { |arg param|
+                  param replaceUsesWith: arg }.
+        self replaceArgsFrom: target.
+        target unlink!
 
 
     method replaceUses: expr1 with: expr2
@@ -281,7 +315,7 @@ class Continuation { id::Integer
         -- This is more convenient than #args:, since
         -- we usually want to copy the array!
         args do: { |each| each removeUse: self }.
-        args = other args copy.
+        args = other args copy asArray.
         args do: { |each| each addUse: self }!
 
 
@@ -296,6 +330,11 @@ class Continuation { id::Integer
     method removeParams
         params do: { |each| each removeDef: self }.
         params = []!
+
+
+    method removeArgs
+        args do: { |each| each removeUse: self }.
+        args = []!
 
 
     method addParams: new
@@ -316,9 +355,10 @@ class Continuation { id::Integer
 
 
     method unlink
+        self target removeUse: self.
         self args do: { |each| each removeUse: self }.
         self params do: { |each| each removeDef: self }.
-        self uses replaceUses: self with: target!
+        self replaceUsesWith: target!
 
 
     method printName
@@ -386,8 +426,8 @@ class CpsGraph { entry::Continuation
 
 
     method entry: target
-        entry target: target target.
-        entry addArgs: target args!
+        entry target: target.
+        entry simplify!
 
 
     method continuation: name params: params target: target args: args
@@ -429,7 +469,7 @@ class CpsGraph { entry::Continuation
     method ensureSelector: name
         selectors
             at: name
-            ifNonePut: { self ensureConstant: name }!
+            ifNonePut: { self ensureConstant: (CpsSelector name: name) }!
 
 
 
@@ -570,7 +610,7 @@ class CpsConverter { graph var next }
         graph continuation: "$makeClosure"
               params: []
               target: cc
-              args: [block]!
+              args: [block simplify]!
 
 
     method visitLet: syntax with: cc
@@ -582,25 +622,24 @@ class CpsConverter { graph var next }
                          params: [var]
                          target: body
                          args: [].
-        syntax value visitBy: self with: bind!
+        (syntax value visitBy: self with: bind simplify)
+            simplify!
 
 
     method visitLiteral: syntax with: cc
         let const = graph ensureConstant: syntax value.
-        (Continuation includes: cc)
-            ifTrue: { let var = cc args first.
-                      var replaceUses: const.
-                      cc removeParams.
-                      cc }
-            ifFalse: { graph continuation: "$const_ref"
-                             params: []
-                             target: cc
-                             args: [const] }!
+        (graph continuation: "$const_ref"
+              params: []
+              target: cc
+              args: [const])
+        simplify!
 
 
     method visitSend: syntax with: cc
         let recv = graph makeVariable: "$recv".
-        let args = syntax arguments collect: { |a| graph makeVariable: "$arg" }.
+        let args = syntax arguments
+                       collect: { |a| graph makeVariable: "$arg" }
+                       as: Array.
         let selector = graph ensureSelector: syntax selector name.
         let methodFunction = graph ensureOperation: FIND_METHOD
                                    args: [recv, selector].
@@ -615,21 +654,22 @@ class CpsConverter { graph var next }
                                    params: [var]
                                    target: next
                                    args: [].
-                  next = syntaxArg visitBy: self with: bind }.
+                  next = (syntaxArg visitBy: self with: bind)
+                             simplify }.
         let recvBind = graph continuation: "$bind_recv"
                              params: [recv]
                              target: next
                              args: [].
-        syntax receiver visitBy: self with: recvBind!
+        syntax receiver visitBy: self with: recvBind simplify!
 
 
     method visitSeq: syntax with: cc
         let then = syntax then visitBy: self with: cc.
         let discard = graph continuation: "$seq"
-                            params: [graph makeVariable: "$ign"]
+                            params: [graph makeVariable: "$ignore"]
                             target: then
                             args: [].
-        syntax first visitBy: self with: discard!
+        syntax first visitBy: self with: discard simplify!
 
 
     method visitVariable: syntax with: cc
@@ -688,9 +728,14 @@ class CpsPrinter { output seen }
         False!
 
 
+    method visitGlobal: _
+        False!
+
+
     method visitOperation: anOp
         anOp args do: { |each| self visit: each }!
 end
+
 
 class TestCPS { assert }
     is TestSuite
@@ -703,17 +748,17 @@ class TestCPS { assert }
         let cps = self convert: "123".
         assert that: { CpsPrinter printToString: cps }
                equals: "
-Entry():
-    Exit(123)
+$entry:1($return:2):
+    $return:2(123)
 "!
 
 
     method test_convert_global
-        let cps = self convert: "ThisIsGlobal".
+        let cps = self convert: "X".
         assert that: { CpsPrinter printToString: cps }
                equals: "
-Entry():
-    Exit(ThisIsGlobal:G)
+$entry:1($return:2):
+    $return:2(X:Global)
 "!
 
 
@@ -721,8 +766,8 @@ Entry():
         let cps = self convert: "let x = 87. x".
         assert that: { CpsPrinter printToString: cps }
                equals: "
-Entry():
-    Exit(87)
+$entry:1($return:2):
+    $return:2(87)
 "!
 
 
@@ -730,10 +775,8 @@ Entry():
         let cps = self convert: "X some: 12 message: 97".
         assert that: { CpsPrinter printToString: cps }
                equals: "
-Entry():
-    Send_7()
-Send_7():
-    Exit(X:G #some:message: 12 97)
+$entry:1($return:2):
+    findMethod($recv:3, #some:message:)(12, 97, $return:2)
 "!
 
 
@@ -741,12 +784,10 @@ Send_7():
         let cps = self convert: "X some: 12 message: 97. Y + Z".
         assert that: { CpsPrinter printToString: cps }
                equals: "
-Entry():
-    Send_19()
-Send_19():
-    Send_6(X:G #some:message: 12 97)
-Send_6(_:13):
-    Exit(Y:G #+ Z:G)
+$entry:1($return:2):
+    findMethod($recv:16, #some:message:)(12, 97, $seq:15)
+$seq:15($ignore:14):
+    findMethod($recv:3, #+)(Z:Global, $return:2)
 "!
 
 
@@ -765,14 +806,12 @@ $block:5($ret:3):
         let cps = self convert: "\{ |a b c| a + b + c }".
         assert that: { CpsPrinter printToString: cps }
                equals: "
-Entry():
-    Exit(Call_21)
-Call_21($3, a:4, b:5, c:6):
-    Send_16()
-Send_16():
-    Send_10(a:4 #+ b:5)
-Send_10($7):
-    $3($7 #+ c:6)
+$entry:1($return:2):
+    $return:2($block:22)
+$block:22(a:4, b:5, c:6, $ret:3):
+    findMethod($recv:15, #+)(b:5, $bind_recv:14)
+$bind_recv:14($recv:7):
+    findMethod($recv:7, #+)(c:6, $ret:3)
 "!
 
 
