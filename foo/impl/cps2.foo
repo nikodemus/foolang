@@ -487,77 +487,6 @@ class CpsGraph { entry::Continuation
         lastId = lastId + 1!
 end
 
-class CpsOptimizer { graph worklist }
-
-    direct method optimize: graph
-        (self graph: graph
-              worklist: Worklist new)
-        optimize!
-
-
-    method optimize
-        graph doContinuations: { |each| worklist push: each }.
-        { worklist isEmpty }
-            whileFalse: { worklist pop visitBy: self }.
-        graph cleanup!
-
-
-    method inline: target in: continuation
-        continuation args rest
-            with: target params
-            do: { |arg param|
-                  param uses
-                      replace: param
-                      with: arg }.
-        continuation replaceArgsFrom: target.
-        target unlink.
-        worklist pushAll: continuation uses.
-        worklist push: continuation!
-
-
-    -- FIXME: Not sure I'm actually using the term correctly!
-    method contify: target in: continuation
-        continuation replaceSuccessorFrom: target.
-        continuation successor replaceParamsFrom: target.
-        target unlink.
-        worklist pushAll: continuation uses.
-        worklist push: continuation!
-
-
-    method tryInlineSuccessorOf: continuation
-        let args = continuation args.
-        let target = args first.
-        -- Inline unique call.
-        (Continuation includes: target)
-            => { (target kind is CALL)
-                     => { (target uses isOnly: continuation)
-                              => { self inline: target in: continuation } } }!
-
-
-    method visitEntryContinuation: entry
-        self tryInlineSuccessorOf: entry!
-
-
-    method visitCallContinuation: call
-        self tryInlineSuccessorOf: call!
-
-
-    method visitSendContinuation: send
-        -- If the continuation just discards the value of the send and
-        -- continues to a unique zero arity followup, move the discard to the
-        -- followup.
-        let target = send args first.
-        (Continuation includes: target)
-            => { (target kind is CALL)
-                     => { (target uses isOnly: send)
-                              => { target args size is 1
-                                       => { (target args first uses isOnly: target)
-                                                => { self contify: target in: send }}}}}!
-
-    method visitExitContinuation: exit
-        False!
-
-end
 
 class CpsConverter { graph var next }
 
@@ -572,7 +501,6 @@ class CpsConverter { graph var next }
         converter graph
             entry: (syntax visitBy: converter
                            with: converter graph exit).
-        -- CpsOptimizer optimize: converter graph!
         converter graph!
 
 
