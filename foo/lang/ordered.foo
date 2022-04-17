@@ -330,6 +330,13 @@ interface Ordered
                                 value: a
                                 value: b) }!
 
+    method replace: old with: new
+        1 to: self size
+          do: { |index|
+                (self at: index) is old
+                    ifTrue: { self put: new at: index } }.
+        self!
+
     method replaceFrom: first to: last with: source startingAt: sourceFirst
         let j = sourceFirst.
         first

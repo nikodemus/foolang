@@ -1,267 +1,377 @@
 import lib.assert.Assert
 import impl.parser.Parser
 
+
 class Set { dict }
     is Object
+
     direct method new
         self dict: Dictionary new!
+
+
     direct method with: node
         let new = self new.
         new add: node.
         new!
+
+
     method add: node
         let old = dict at: node.
         dict put: node at: node.
         old is False!
+
+
     method remove: node
         dict remove: node!
+
+
     method size
         dict size!
+
+
     method isEmpty
         dict isEmpty!
+
+
     method isOnly: node
         dict size is 1
             ifTrue: { (dict values first) is node }
             ifFalse: { False }!
-    method replace: node1 with: node2
+
+
+    method replaceUses: node1 with: node2
         dict doKeys: { |each|
-                       each replace: node1 with: node2 }!
+                       each replaceUses: node1 with: node2 }!
+
+
     method do: block
         dict values do: block!
 end
 
 
+class OpMap { list }
+    is Object
+
+    direct method new
+        self list: List new!
+
+
+    method at: op and: args ifNonePut: block
+        list do: { |each|
+                   each op is op
+                       => { (each args == args)
+                                => { return each } } }.
+        let new = block value.
+        list push: new.
+        new!
+end
+
+
 class Worklist { list dict }
+    is Object
+
     direct method new
         self list: List new
              dict: Dictionary new!
+
+
     method push: thing
         dict at: thing
              ifNonePut: { list push: thing.
                           thing }!
+
+
     method pushAll: aList
         aList do: { |each| self push: each }!
+
+
     method pop
         let thing = list pop.
         dict remove: thing.
         thing!
+
+
     method isEmpty
         list isEmpty!
 end
 
 
-class ContinuationKind { name visit }
-    method visit: node by: visitor
-        visit sendTo: visitor with: [node]!
-end
-
-define NONE ContinuationKind name: "None" visit: #visitNoContinuation:!
-define ENTRY ContinuationKind name: "Entry" visit: #visitEntryContinuation:!
-define EXIT ContinuationKind name: "Exit" visit: #visitExitContinuation:!
-define CALL ContinuationKind name: "Call" visit: #visitCallContinuation:!
-define SEND ContinuationKind name: "Send" visit: #visitSendContinuation:!
-
-class Continuation { _id::Integer
-                     kind::ContinuationKind
-                     params::Array
-                     args::Array
-                     uses::Set }
+interface Expression
     is Object
 
-
-    direct method id: id kind: kind params: params args: args
-        let new = self _id: id
-                       kind: kind
-                       params: params
-                       args: args
-                       uses: Set new.
-        params do: { |each| each defs add: new }.
-        args do: { |each| each uses add: new }.
-        new!
+    method isUnused
+        self uses isEmpty!
 
 
-    method replace: node1 with: node2
-        node1 uses remove: self.
-        node2 uses add: self.
-        args doWithIndex: { |each index|
-                            each is node1
-                                ifTrue: { args put: node2 at: index  } }!
+    method addUse: use
+        self uses add: use!
 
 
-    method replaceArgsFrom: other
-        args do: { |each| each uses remove: self }.
-        args = other args.
-        args do: { |each| each uses add: self }!
+    method removeUse: use
+        self uses remove: use!
 
 
-    method replaceParamsFrom: other
-        params do: { |each| each defs remove: self }.
-        params = other params.
-        params do: { |each| each defs add: self }!
-
-
-    method replaceSuccessorFrom: other
-        let old = args first.
-        let new = other args first.
-        old uses remove: self.
-        new uses add: self.
-        args put: new at: 1!
-
-
-    method successor
-        args at: 1!
-
-
-    method unlink
-        self args do: { |each| each uses remove: self }.
-        self params do: { |each| each defs remove: self }.
-        self uses replace: self with: args first!
-
-
-    method printName
-        kind is ENTRY
-            => { return kind name }.
-        kind is EXIT
-            => { return kind name }.
-        "{kind name}_{_id}"!
-
-
-    method displayOn: stream
-        stream print: "#<Continuation {self printName} params: {params} args: {args}>"!
-
-
-    method visitBy: visitor
-        kind visit: self by: visitor!
-end
-
-interface Node
-    method visitBy: visitor
-        -- Visitors interested in nodes can hook
-        -- up to #visitNodeBy: to get the more exact
-        -- info.
-        visitor visitNode: self!
-end
-
-class Parameter { id::Integer
-                  defs::Set
-                  uses::Set }
-    is Node
-    direct method id: id
-        self id: id
-             defs: Set new
-             uses: Set new!
-    method printName
-        "${id}"!
     method toString
-        "#<Parameter {id}>"!
-    method visitNodeBy: visitor
-        visitor visitParameterNode: self!
-end
+        "#<{self classOf name} {self printName}>"!
 
 
-class Discard { id::Integer
-                defs::Set}
-    is Node
-    direct method id: id
-        self id: id
-             defs: Set new!
-    method printName
-        "_:{id}"!
-    method toString
-        "#<Discard {id}>"!
-    method visitNodeBy: visitor
-        visitor visitDiscardNode: self!
+    required method uses
+    required method printName
 end
 
 
 class Constant { id::Integer
-                 uses::Set
-                 value }
-    is Node
+                 value
+                 uses::Set }
+    is Expression
+
+
     direct method id: id value: value
         self id: id
-             uses: Set new
-             value: value!
-    method toString
-        "#<Constant {self printName}>"!
+             value: value
+             uses: Set new!
+
+
     method printName
         value displayString!
-    method visitNodeBy: visitor
-        visitor visitConstantNode: self!
+
+
+    method visitBy: visitor
+        visitor visitConstant: self!
 end
 
 class Variable { id::Integer
-                 name::String
+                 name
                  defs::Set
                  uses::Set }
-    is Node
+    is Expression
+
+    direct method id: id
+        self id: id
+             name: False
+             defs: Set new
+             uses: Set new!
+
+
     direct method id: id name: name
         self id: id
              name: name
              defs: Set new
              uses: Set new!
+
+
+    method addDef: def
+        defs add: def!
+
+
+    method removeDef: def
+        defs remove: def!
+
+
     method printName
-        "{name}:{id}"!
-    method visitNodeBy: visitor
-        visitor visitVariableNode: self!
+        name is False
+            ifTrue: { "$var:{id}" }
+            ifFalse: { "{name}:{id}" }!
+
+
+    method visitBy: visitor
+        visitor visitVariable: self!
 end
+
 
 class Global { id::Integer
                name::String
-               uses::Set
-               definition }
-    is Node
+               uses::Set }
+    is Expression
+
     direct method id: id name: name
         self id: id
              name: name
-             uses: Set new
-             definition: False!
+             uses: Set new!
+
+
     method printName
-        "{name}:G"!
-    method visitNodeBy: visitor
-        visitor visitGlobalNode: self!
+        "{name}:Global"!
+
+
+    method visitBy: visitor
+        visitor visitGlobal: self!
 end
 
-define NO_CONTINUATION
-    -- ID 0 is a convenient error marker in case
-    -- we try to index a bitset with this.
-    Continuation
-        id: 0
-        kind: NONE
-        params: []
-        args: []!
+
+
+class PrimitiveOperation { name }
+end
+
+define FIND_METHOD PrimitiveOperation name: "findMethod"!
+define SELECT PrimitiveOperation name: "select"!
+
+class Operation { id::Integer
+                  op::PrimitiveOperation
+                  args::Array
+                  uses::Set }
+    is Expression
+
+    direct method id: id op: op args: args
+        self id: id
+             op: op
+             args: args
+             uses: Set new!
+
+    method addUse: use
+        uses add: use.
+        args do: { |each| each addUse: use }!
+
+
+    method removeUse: use
+        uses remove: use.
+        args do: { |each| each removeUse: use }!
+
+
+    method printName
+        StringOutput
+            with: { |out|
+                    out
+                        ; print: op name
+                        ; print: "(".
+                    args
+                        do: { |each| out print: each printName }
+                        interleaving: { out print: ", " }.
+                    out print: ")" }!
+
+
+    method visitBy: visitor
+        visitor visitOperation: self!
+end
+
+
+class Continuation { id::Integer
+                     name
+                     params::Array
+                     target::Expression
+                     args::Array
+                     uses::Set }
+    is Expression
+
+    direct method id: id name: name params: params target: target args: args
+        let new = self id: id
+                       name: name
+                       params: params
+                       target: target
+                       args: args
+                       uses: Set new.
+        params do: { |each| each addDef: new }.
+        args do: { |each| each addUse: new }.
+        new!
+
+
+    method name: new
+        name = new!
+
+
+    method replaceUses: expr1 with: expr2
+        expr1 removeUse: self.
+        expr2 addUse: self.
+        target is expr1
+            ifTrue: { target = expr2 }.
+        args replace: expr1 with: expr2!
+
+
+    method replaceArgsFrom: other
+        -- This is more convenient than #args:, since
+        -- we usually want to copy the array!
+        args do: { |each| each removeUse: self }.
+        args = other args copy.
+        args do: { |each| each addUse: self }!
+
+
+    method replaceParamsFrom: other
+        -- This is more convenient than #params:, since
+        -- we usually want to copy the array!
+        params do: { |each| each removeDef: self }.
+        params = other params copy.
+        params do: { |each| each addDef: self }!
+
+
+    method removeParams
+        params do: { |each| each removeDef: self }.
+        params = []!
+
+
+    method addParams: new
+        new do: { |each| each addDef: self }.
+        params = params append: new!
+
+
+    method addArgs: new
+        new do: { |each| each addUse: self }.
+        args = args append: new!
+
+
+    method target: new
+        -- No copy needed here, so #target: is the way to go.
+        target removeUse: self.
+        target = new.
+        target addUse: self!
+
+
+    method unlink
+        self args do: { |each| each removeUse: self }.
+        self params do: { |each| each removeDef: self }.
+        self uses replaceUses: self with: target!
+
+
+    method printName
+        name is False
+            ifTrue: { "$cont:{id}" }
+            ifFalse: { "{name}:{id}" }!
+
+
+    method toString
+        "#<Continuation {self printName} -> {target printName}>"!
+
+
+    method visitBy: visitor
+        visitor visitContinuation: self!
+end
+
 
 class CpsGraph { entry::Continuation
-                 exit::Continuation
+                 exit::Variable
                  lastId::Integer
+                 operations::OpMap
                  constants::Dictionary
                  globals::Dictionary
                  selectors::Dictionary
                  continuations::List }
+    is Object
 
     direct method new
-        -- We build the graph with the real exit node
-        -- ready made: conversion requires a CC.
-        --
-        -- id=1 is reserved for entry.
-        --
-        -- Entry node gets replaced when we're done.
-        let exitValue = Parameter id: 3
-                                  defs: Set new
-                                  uses: Set new.
-        let exit = Continuation
-                       id: 2
-                       kind: EXIT
-                       params: [exitValue]
-                       args: [exitValue].
-        self
-            entry: NO_CONTINUATION
-            exit: exit
-            lastId: 2
-            constants: Dictionary new
-            globals: Dictionary new
-            selectors: Dictionary new
-            continuations: (List with: exit)!
+        -- Entry node just binds the exit continuation, the
+        -- initial target of entry is a placeholder that
+        -- gets replaced.
+        let placeholder = Variable
+                           id: 0
+                           name: "$<<PLACEHOLDER>>".
+        let exit = Variable id: 2
+                            name: "$return".
+        let entry = Continuation id: 1
+                                 name: "$entry"
+                                 params: [exit]
+                                 target: placeholder
+                                 args: []
+                                 uses: Set new.
+        let graph = self
+                        entry: entry
+                        exit: exit
+                        lastId: 2
+                        operations: OpMap new
+                        constants: Dictionary new
+                        globals: Dictionary new
+                        selectors: Dictionary new
+                        continuations: (List with: entry).
+        entry addUse: graph.
+        graph!
 
 
     method doContinuations: block
@@ -269,24 +379,22 @@ class CpsGraph { entry::Continuation
 
 
     method cleanup
-        continuations = continuations
-            reject: { |each| each uses isEmpty }.
+        constants = constants reject: #isUnused.
+        continuations = continuations reject: #isUnused.
+        globals = globals reject: #isUnused.
         self!
 
 
-    method entry: cont
-        -- We create a separate entry continuation for clarity.
-        entry is NO_CONTINUATION
-            ifTrue: { entry = self makeContinuation: ENTRY
-                                   params: []
-                                   args: [cont] }
-            ifFalse: { Error raise: "CpsGraph already has an entry!" }!
+    method entry: target
+        entry target: target target.
+        entry addArgs: target args!
 
 
-    method makeContinuation: kind params: params args: args
+    method continuation: name params: params target: target args: args
         let cont = Continuation id: self nextId
-                                kind: kind
+                                name: name
                                 params: params
+                                target: target
                                 args: args.
         continuations push: cont.
         cont!
@@ -298,12 +406,9 @@ class CpsGraph { entry::Continuation
             name: name!
 
 
-    method makeParameter
-        Parameter id: self nextId!
-
-
-    method makeDiscard
-        Discard id: self nextId!
+    method makeTemporary
+        Variable
+            id: self nextId!
 
 
     method ensureConstant: value
@@ -327,27 +432,15 @@ class CpsGraph { entry::Continuation
             ifNonePut: { self ensureConstant: name }!
 
 
-    method call: target with: value
-        self makeContinuation: CALL
-             params: []
-             args: [target, value]!
 
-
-    method bind: variable in: target
-        self makeContinuation: CALL
-             params: [variable]
-             args: [target]!
-
-    method send: selector to: recv withArguments: args continuation: cc
-        self makeContinuation: SEND
-             params: []
-             args: ([cc, recv, selector] append: args)!
-
-
-    method block: body vars: vars continuation: cc
-        self makeContinuation: CALL
-             params: ([cc] append: vars)
-             args: [body]!
+    method ensureOperation: op args: args
+        operations
+            at: op
+            and: args
+            ifNonePut: { Operation
+                             id: self nextId
+                             op: op
+                             args: args }!
 
 
     method nextId
@@ -439,7 +532,8 @@ class CpsConverter { graph var next }
         converter graph
             entry: (syntax visitBy: converter
                            with: converter graph exit).
-        CpsOptimizer optimize: converter graph!
+        -- CpsOptimizer optimize: converter graph!
+        converter graph!
 
 
     method bindVariable: var
@@ -465,59 +559,84 @@ class CpsConverter { graph var next }
 
 
     method visitBlock: syntax with: cc
-        let blockReturn = graph makeParameter.
+        let blockReturn = graph makeVariable: "$ret".
         let blockVars = syntax parameters
                             collect: { |each| graph makeVariable: each name }.
-        let blockBody = syntax body
-                            visitBy: (self bindVariables: blockVars)
-                            with: blockReturn.
-        let blockEntry = graph block: blockBody
-                               vars: blockVars
-                               continuation: blockReturn.
-        graph call: cc with: blockEntry!
+        let block = syntax body
+                        visitBy: (self bindVariables: blockVars)
+                        with: blockReturn.
+        block name: "$block".
+        block addParams: (blockVars append: [blockReturn]).
+        graph continuation: "$makeClosure"
+              params: []
+              target: cc
+              args: [block]!
+
 
     method visitLet: syntax with: cc
         let var = graph makeVariable: syntax variable name.
         let body = syntax body
                        visitBy: (self bindVariable: var)
                        with: cc.
-        let bind = graph bind: var in: body.
+        let bind = graph continuation: "$let"
+                         params: [var]
+                         target: body
+                         args: [].
         syntax value visitBy: self with: bind!
 
 
     method visitLiteral: syntax with: cc
-        graph
-            call: cc
-            with: (graph ensureConstant: syntax value)!
+        let const = graph ensureConstant: syntax value.
+        (Continuation includes: cc)
+            ifTrue: { let var = cc args first.
+                      var replaceUses: const.
+                      cc removeParams.
+                      cc }
+            ifFalse: { graph continuation: "$const_ref"
+                             params: []
+                             target: cc
+                             args: [const] }!
 
 
     method visitSend: syntax with: cc
-        let recv = graph makeParameter.
-        let argParams = syntax arguments collect: { |a| graph makeParameter }.
-        let next = graph
-                       send: (graph ensureSelector: syntax selector name)
-                       to: recv
-                       withArguments: argParams
-                       continuation: cc.
+        let recv = graph makeVariable: "$recv".
+        let args = syntax arguments collect: { |a| graph makeVariable: "$arg" }.
+        let selector = graph ensureSelector: syntax selector name.
+        let methodFunction = graph ensureOperation: FIND_METHOD
+                                   args: [recv, selector].
+        let next = graph continuation: "$send"
+                         params: []
+                         target: methodFunction
+                         args: (args append: [cc]).
         syntax arguments reverse
-            with: argParams reverse
-            do: { |argSyntax param|
-                  let bind = graph bind: param in: next.
-                  next = argSyntax visitBy: self with: bind }.
-        let recvBind = graph bind: recv in: next.
+            with: args reverse
+            do: { |syntaxArg var|
+                  let bind = graph continuation: "$bind_arg"
+                                   params: [var]
+                                   target: next
+                                   args: [].
+                  next = syntaxArg visitBy: self with: bind }.
+        let recvBind = graph continuation: "$bind_recv"
+                             params: [recv]
+                             target: next
+                             args: [].
         syntax receiver visitBy: self with: recvBind!
 
 
     method visitSeq: syntax with: cc
         let then = syntax then visitBy: self with: cc.
-        let discard = graph bind: graph makeDiscard in: then.
+        let discard = graph continuation: "$seq"
+                            params: [graph makeVariable: "$ign"]
+                            target: then
+                            args: [].
         syntax first visitBy: self with: discard!
 
 
     method visitVariable: syntax with: cc
-        graph
-            call: cc
-            with: (self findBinding: syntax name)!
+        graph continuation: "$var_ref"
+              params: []
+              target: cc
+              args: [self findBinding: syntax name]!
 end
 
 class CpsPrinter { output seen }
@@ -541,71 +660,36 @@ class CpsPrinter { output seen }
             ifTrue: { other visitBy: self }!
 
 
-    method visitCallArgs: args
-        let target = args at: 1.
-        output
-            ; print: "    "
-            ; print: target printName
-            ; print: "(".
-        2 to: args size
-          do: { |index|
-                output print: (args at: index) printName }.
-        output println: ")".
-        args do: { |each| self visit: each }.
-        self visit: target!
-
-
-    method printHeader: aCont
+    method visitContinuation: aCont
         output
             ; print: aCont printName
             ; print: "(".
         aCont params
-            do: { |each|
-                  output print: each printName }
+            do: { |each| output print: each printName }
             interleaving: { output print: ", " }.
-        output println: "):"!
-
-
-    method visitCallContinuation: aCall
-        self printHeader: aCall.
-        self visitCallArgs: aCall args!
-
-
-    method visitEntryContinuation: anEntry
-        output
-            ; print: anEntry printName
-            ; println: "():".
-        self visitCallArgs: anEntry args!
-
-
-    method visitSendContinuation: aSend
-        self printHeader: aSend.
-        let args = aSend args.
+        output println: "):".
         output
             ; print: "    "
-            ; print: args first printName
-            ; print: "("
-            ; print: args second printName
-            ; print: " #"
-            ; print: args third value.
-        (args from: 4 to: args size)
-             do: { |arg|
-                   output
-                       ; print: " "
-                       ; print: arg printName }.
+            ; print: aCont target printName
+            ; print: "(".
+        aCont args
+            do: { |arg| output print: arg printName }
+            interleaving: { output print: ", " }.
         output println: ")".
-        self visit: args first!
+        aCont args do: { |each| self visit: each }.
+        self visit: aCont target!
 
 
-    method visitExitContinuation: _
-        -- We don't print the exit.
+    method visitConstant: _
         False!
 
-    method visitNode: _
-        -- We see nodes from visiting call args, but
-        -- don't need to print them separately: the arg
-        -- to pick up continuations as arguments.
+
+    method visitVariable: _
         False!
+
+
+    method visitOperation: anOp
+        anOp args do: { |each| self visit: each }!
 end
 
 class TestCPS { assert }
@@ -670,10 +754,10 @@ Send_6(_:13):
         let cps = self convert: "\{ 421 }".
         assert that: { CpsPrinter printToString: cps }
                equals: "
-Entry():
-    Exit(Call_6)
-Call_6($3):
-    $3(421)
+$entry:1($return:2):
+    $return:2($block:5)
+$block:5($ret:3):
+    $ret:3(421)
 "!
 
 
