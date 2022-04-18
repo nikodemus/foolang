@@ -230,6 +230,7 @@ end
 class PrimitiveOperation { name }
 end
 
+define CLASS_OF PrimitiveOperation name: "classOf"!
 define FIND_METHOD PrimitiveOperation name: "findMethod"!
 define SELECT PrimitiveOperation name: "select"!
 
@@ -510,8 +511,10 @@ class CpsGraph { entry::Continuation
 
     method findMethod: name for: recv
         let selector = self ensureSelector: name.
+        let classOf = self ensureOperation: CLASS_OF
+                           args: [recv].
         self ensureOperation: FIND_METHOD
-             args: [recv, selector]!
+             args: [classOf, selector]!
 
 
     method nextId
@@ -749,7 +752,7 @@ $entry:1($return:2):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:1($return:2):
-    findMethod:7(X:Global, #some:message:)(X:Global, 12, 97, $return:2)
+    findMethod:8(classOf:7(X:Global), #some:message:)(X:Global, 12, 97, $return:2)
 "!
 
 
@@ -758,9 +761,9 @@ $entry:1($return:2):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:1($return:2):
-    findMethod:20(X:Global, #some:message:)(X:Global, 12, 97, $seq:15)
-$seq:15($ignore:14):
-    findMethod:6(Y:Global, #+)(Y:Global, Z:Global, $return:2)
+    findMethod:22(classOf:21(X:Global), #some:message:)(X:Global, 12, 97, $seq:16)
+$seq:16($ignore:15):
+    findMethod:7(classOf:6(Y:Global), #+)(Y:Global, Z:Global, $return:2)
 "!
 
 
@@ -780,11 +783,11 @@ $block:5($ret:3):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:1($return:2):
-    $return:2($block:22)
-$block:22(a:4, b:5, c:6, $ret:3):
-    findMethod:17(a:4, #+)(a:4, b:5, $bind_recv:14)
-$bind_recv:14($recv:7):
-    findMethod:10($recv:7, #+)($recv:7, c:6, $ret:3)
+    $return:2($block:24)
+$block:24(a:4, b:5, c:6, $ret:3):
+    findMethod:19(classOf:18(a:4), #+)(a:4, b:5, $bind_recv:15)
+$bind_recv:15($recv:7):
+    findMethod:11(classOf:10($recv:7), #+)($recv:7, c:6, $ret:3)
 "!
 
 
@@ -793,7 +796,7 @@ $bind_recv:14($recv:7):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:1($return:2):
-    findMethod:6(Integer:Global, #typecheck:)(Integer:Global, X:Global, $return:2)
+    findMethod:7(classOf:6(Integer:Global), #typecheck:)(Integer:Global, X:Global, $return:2)
 "!
 
 end
