@@ -2,7 +2,59 @@ import lib.assert.Assert
 import impl.parser.Parser
 
 
-class ClassDefinition {}
+interface MethodDefinition
+    method displayString
+        "methodFunction({self classDefinition name}#{self name})"!
+end
+
+
+class TypecheckMethodDefinition { classDefinition }
+    is MethodDefinition
+
+    direct method for: classDefinition
+        self classDefinition: classDefinition!
+
+
+    method name
+        "typecheck:"!
+end
+
+
+class ClassDefinition { name metaclassDefinition methodDictionary }
+
+    -- ClassDefinition itself is used as the ClassDefinition for Class.
+    -- Clever, yes?
+    direct method name
+        "Class"!
+
+
+    direct method classProxy
+        self!
+
+
+    direct method name: name metaclassDefinition: metaclassDefinition methods: methods
+        let dict = Dictionary new.
+        let new = self name: name
+                       metaclassDefinition: metaclassDefinition
+                       methodDictionary: dict.
+        methods do: { |each|
+                      each classDefinition: new.
+                      dict put: each at: each name }.
+        dict put: (TypecheckMethodDefinition for: new)
+             at: "typecheck:".
+        new!
+
+
+    method classProxy
+        metaclassDefinition!
+
+
+    method findMethod: name
+        methodDictionary at: name!
+
+
+    method displayString
+        name!
 end
 
 
@@ -73,6 +125,9 @@ class OpMap { list }
         let new = block value.
         list push: new.
         new!
+
+    method do: block
+        list do: block!
 end
 
 
@@ -112,6 +167,10 @@ interface Expression
         self uses isEmpty!
 
 
+    method isConstant
+        False!
+
+
     method addUse: use
         self uses add: use!
 
@@ -146,6 +205,10 @@ class Constant { id::Integer
              uses: Set new!
 
 
+    method isConstant
+        True!
+
+
     method printName
         value displayString!
 
@@ -158,10 +221,47 @@ class Constant { id::Integer
         visitor visitConstant: self!
 end
 
+
 class CpsSelector { name }
     method displayString
         "#{name}"!
 end
+
+
+class Global { id::Integer
+               name::String
+               uses::Set
+               definition }
+    is Expression
+
+    direct method id: id name: name
+        self id: id
+             name: name
+             uses: Set new
+             definition: False!
+
+
+    method definition: new::ClassDefinition
+        definition = new!
+
+
+    method hasDefinition
+        (definition is False) not!
+
+
+    method replaceUses: expr1 with: expr2
+        Error raise: "Global#replaceUses:with: is invalid"!
+
+
+    method printName
+        "{name}:Global"!
+
+
+    method visitBy: visitor
+        visitor visitGlobal: self!
+end
+
+
 
 class Variable { id::Integer
                  name
@@ -188,11 +288,18 @@ class Variable { id::Integer
 
 
     method removeDef: def
-        defs remove: def!
+        defs remove: def.
+        (defs isEmpty and: uses isEmpty not)
+            ifTrue: { Error raise: "Variable lost definitions while still being used."}!
 
 
     method replaceUses: expr1 with: expr2
         Error raise: "Variable#replaceUses:with: is invalid"!
+
+
+    method hasDefinition
+        -- TODO
+        False!
 
 
     method printName
@@ -206,46 +313,65 @@ class Variable { id::Integer
 end
 
 
-class Global { id::Integer
-               name::String
-               uses::Set
-               definition }
-    is Expression
-
-    direct method id: id name: name
-        self id: id
-             name: name
-             uses: Set new
-             definition: False!
-
-
-    method definition: new::ClassDefinition
-        definition = new!
-
-
-    method replaceUses: expr1 with: expr2
-        Error raise: "Global#replaceUses:with: is invalid"!
-
-
-    method printName
-        "{name}:Global"!
-
-
-    method visitBy: visitor
-        visitor visitGlobal: self!
+interface PrimitiveOperation
+    direct method simplify: _ in: _
+        False!
 end
 
 
+class CLASS_OF {}
+    is PrimitiveOperation
 
-class PrimitiveOperation { name }
+    direct method name
+        "classOf"!
+
+
+    direct method simplify: op in: graph
+        let recv = op args first.
+        (recv hasDefinition)
+            ifTrue: { let const = graph ensureConstant: recv definition classProxy.
+                      op replaceUsesWith: const }!
 end
 
-define CLASS_OF PrimitiveOperation name: "classOf"!
-define FIND_METHOD PrimitiveOperation name: "findMethod"!
-define SELECT PrimitiveOperation name: "select"!
+
+class FIND_METHOD {}
+    is PrimitiveOperation
+
+    direct method name
+        "findMethod"!
+
+
+    direct method simplify: op in: graph
+        let classArg = op args at: 1.
+        (Constant includes: classArg)
+            => { let classDef = classArg value.
+                 Output debug println: "{op} -> classArg ok".
+                 (ClassDefinition includes: classDef)
+                     => { let selectorArg = op args at: 2.
+                          Output debug println: "{op} -> classDef ok".
+                          (Constant includes: selectorArg)
+                              => { let selector = selectorArg value.
+                                   Output debug println: "{op} -> selectorArg ok".
+                                   (CpsSelector includes: selector)
+                                       => { Output debug println: "{op} -> selector ok = {selector name}".
+                                            let methodFunction = classDef findMethod: selector name.
+                                            (methodFunction is False) not
+                                                => { let constMethod = graph ensureConstant: methodFunction.
+                                                     return op replaceUsesWith: constMethod } } } } }!
+
+end
+
+
+class SELECT {}
+    is PrimitiveOperation
+
+    direct method name
+        "select"!
+end
+
 
 class Operation { id::Integer
-                  op::PrimitiveOperation
+                  op
                   args::Array
                   uses::Set }
     is Expression
@@ -264,17 +390,6 @@ class Operation { id::Integer
         args do: { |each| each addUse: use }!
 
 
-    method removeUse: use
-        uses remove: use.
-        args do: { |each| each removeUse: use }!
-
-
-    method replaceUses: expr1 with: expr2
-        expr1 removeUse: self.
-        expr2 addUse: self.
-        args = args replace: expr1 with: expr2!
-
-
     method printName
         StringOutput
             with: { |out|
@@ -287,6 +402,21 @@ class Operation { id::Integer
                         do: { |each| out print: each printName }
                         interleaving: { out print: ", " }.
                     out print: ")" }!
+
+
+    method removeUse: use
+        uses remove: use.
+        args do: { |each| each removeUse: use }!
+
+
+    method replaceUses: expr1 with: expr2
+        expr1 removeUse: self.
+        expr2 addUse: self.
+        args = args replace: expr1 with: expr2!
+
+
+    method simplifyIn: graph
+        op simplify: self in: graph!
 
 
     method visitBy: visitor
@@ -454,6 +584,11 @@ class CpsGraph { entry::Continuation
         continuations do: block!
 
 
+    method simplify
+        operations do: { |each| each simplifyIn: self }.
+        self!
+
+
     method cleanup
         constants = constants reject: #isUnused.
         continuations = continuations reject: #isUnused.
@@ -502,10 +637,10 @@ class CpsGraph { entry::Continuation
                              name: name }!
 
 
-    method addDefinitions: dictionary
-        dictionary
-            do: { |name def|
-                  let global = self ensureGlobal: name.
+    method addGlobalDefinitions: definitions
+        definitions
+            do: { |def|
+                  let global = self ensureGlobal: def name.
                   global definition: def }!
 
 
@@ -525,11 +660,16 @@ class CpsGraph { entry::Continuation
                              op: op
                              args: args }!
 
+    method classOf: recv
+        (recv hasDefinition)
+            ifTrue: { recv definition getClass }
+            ifFalse: { self ensureOperation: CLASS_OF
+                            args: [recv] }!
+
 
     method findMethod: name for: recv
         let selector = self ensureSelector: name.
-        let classOf = self ensureOperation: CLASS_OF
-                           args: [recv].
+        let classOf = self classOf: recv.
         self ensureOperation: FIND_METHOD
              args: [classOf, selector]!
 
@@ -547,13 +687,13 @@ class CpsConverter { graph var next }
              next: False!
 
 
-    direct method convert: syntax withDefinitions: defs
+    direct method convert: syntax withGlobalDefinitions: defs
         let converter = self new.
-        converter graph addDefinitions: defs.
+        converter graph addGlobalDefinitions: defs.
         converter graph
             entry: (syntax visitBy: converter
                            with: converter graph exit).
-        converter graph!
+        converter graph simplify!
 
 
     method bindVariable: var
@@ -667,10 +807,16 @@ class CpsConverter { graph var next }
 
 
     method visitVariable: syntax with: cc
+        let var = self findBinding: syntax name.
+        (Continuation includes: cc)
+            => { cc uses isEmpty
+                     => { cc params first replaceUsesWith: var.
+                          cc removeParams.
+                          return cc } }.
         graph continuation: "$var_ref"
               params: []
               target: cc
-              args: [self findBinding: syntax name]!
+              args: [var]!
 end
 
 class CpsPrinter { output seen }
@@ -735,12 +881,36 @@ class TestCPS { assert }
     is TestSuite
 
     method convert: source
-        self convert: source withDefinitions: Dictionary new!
+        self convert: source withGlobalDefinitions: []!
 
 
-    method convert: source withDefinitions: defs
+    method convert: source withGlobalDefinitions: defs
         let syntax = Parser parseExpression: source.
-        CpsConverter convert: syntax withDefinitions: defs!
+        CpsConverter convert: syntax withGlobalDefinitions: defs!
+
+
+    method test_convert_arity_0_block
+        let cps = self convert: "\{ 421 }".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:1($return:2):
+    $return:2($block:5)
+$block:5($ret:3):
+    $ret:3(421)
+"!
+
+
+    method test_convert_arity_3_block
+        let cps = self convert: "\{ |a b c| a + b + c }".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:1($return:2):
+    $return:2($block:21)
+$block:21(a:4, b:5, c:6, $ret:3):
+    findMethod:18(classOf:17(a:4), #+)(a:4, b:5, $bind_recv:14)
+$bind_recv:14($recv:7):
+    findMethod:11(classOf:10($recv:7), #+)($recv:7, c:6, $ret:3)
+"!
 
 
     method test_convert_constant_integer
@@ -784,33 +954,9 @@ $entry:1($return:2):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:1($return:2):
-    findMethod:22(classOf:21(X:Global), #some:message:)(X:Global, 12, 97, $seq:16)
-$seq:16($ignore:15):
+    findMethod:20(classOf:19(X:Global), #some:message:)(X:Global, 12, 97, $seq:14)
+$seq:14($ignore:13):
     findMethod:7(classOf:6(Y:Global), #+)(Y:Global, Z:Global, $return:2)
-"!
-
-
-    method test_convert_arity_0_block
-        let cps = self convert: "\{ 421 }".
-        assert that: { CpsPrinter printToString: cps }
-               equals: "
-$entry:1($return:2):
-    $return:2($block:5)
-$block:5($ret:3):
-    $ret:3(421)
-"!
-
-
-    method test_convert_arity_3_block
-        let cps = self convert: "\{ |a b c| a + b + c }".
-        assert that: { CpsPrinter printToString: cps }
-               equals: "
-$entry:1($return:2):
-    $return:2($block:24)
-$block:24(a:4, b:5, c:6, $ret:3):
-    findMethod:19(classOf:18(a:4), #+)(a:4, b:5, $bind_recv:15)
-$bind_recv:15($recv:7):
-    findMethod:11(classOf:10($recv:7), #+)($recv:7, c:6, $ret:3)
 "!
 
 
@@ -825,9 +971,19 @@ $entry:1($return:2):
 
     method test_convert_typecheck_gives_type
         let cps = self convert: "X::Integer + Y"
-                       withDefinitions: { "Integer" -> ClassDefinition new }.
+                       withGlobalDefinitions: [(ClassDefinition
+                                                    name: "Integer"
+                                                    metaclassDefinition: (ClassDefinition
+                                                                              name: "Integer class"
+                                                                              metaclassDefinition: ClassDefinition
+                                                                              methods: [])
+                                                    methods: [])].
         assert that: { CpsPrinter printToString: cps }
                equals: "
+$entry:1($return:2):
+    builtin(Integer class#typecheck:, X:Global, $bind_recv:13)
+$bind_recv:13($recv:4):
+    builtin(Integer#+, $recv:4:Integer, Y:Global, $return:2)
 "!
 
 end
