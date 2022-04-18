@@ -160,6 +160,11 @@ class OpMap { list }
         list push: new.
         new!
 
+
+    method reject: block
+        Self list: (list reject: block)!
+
+
     method do: block
         list do: block!
 end
@@ -375,8 +380,6 @@ end
 
 
 interface PrimitiveOperation
-    direct method simplify: _ in: _
-        False!
 end
 
 
@@ -387,11 +390,8 @@ class CLASS_OF {}
         "classOf"!
 
 
-    direct method simplify: op in: graph
-        let recv = op args first.
-        (recv hasClassDefinition)
-            ifTrue: { let const = graph ensureConstant: recv classDefinition.
-                      return op replaceUsesWith: const }!
+    direct method visit: operation by: visitor
+        visitor visitClassOf: operation!
 end
 
 
@@ -402,23 +402,8 @@ class FIND_METHOD {}
         "findMethod"!
 
 
-    direct method simplify: op in: graph
-        let classArg = op args at: 1.
-        (Constant includes: classArg)
-            => { let classDef = classArg value.
-                 (ClassDefinition includes: classDef)
-                     => { let selectorArg = op args at: 2.
-                          (Constant includes: selectorArg)
-                              => { let selector = selectorArg value.
-                                   (CpsSelector includes: selector)
-                                       => { let methodFunction = classDef findMethod: selector name.
-                                            (methodFunction is False) not
-                                                => { let constMethod = graph ensureConstant: methodFunction.
-                                                     op replaceUsesWith: constMethod.
-                                                     constMethod uses do: { |each|
-                                                                             each propagateConstantType: constMethod }.
-                                                     return True } } } } }!
-
+    direct method visit: operation by: visitor
+        visitor visitFindMethod: operation!
 end
 
 
@@ -427,6 +412,9 @@ class SELECT {}
 
     direct method name
         "select"!
+
+    direct method visit: operation by: visitor
+        visitor visitSelect: operation!
 end
 
 
@@ -651,19 +639,20 @@ class CpsGraph { entry::Continuation
         graph!
 
 
-    method doContinuations: block
-        continuations do: block!
-
-
-    method simplify
-        2 times: { operations do: { |each| each uses isEmpty ifFalse: { each simplifyIn: self } } }.
-        self!
-
 
     method cleanup
-        constants = constants reject: #isUnused.
         continuations = continuations reject: #isUnused.
-        globals = globals reject: #isUnused.
+        operations = operations reject: #isUnused!
+
+    method doExpressions: block
+        continuations do: { |each| block value: each }.
+        operations do: { |each| block value: each }!
+
+
+    method optimize
+        self cleanup.
+        CpsOptimizer optimize: self.
+        self cleanup.
         self!
 
 
@@ -732,10 +721,8 @@ class CpsGraph { entry::Continuation
                              args: args }!
 
     method classOf: recv
-        (recv hasDefinition)
-            ifTrue: { recv definition getClass }
-            ifFalse: { self ensureOperation: CLASS_OF
-                            args: [recv] }!
+           self ensureOperation: CLASS_OF
+                args: [recv]!
 
 
     method findMethod: name for: recv
@@ -764,7 +751,8 @@ class CpsConverter { graph var next }
         converter graph
             entry: (syntax visitBy: converter
                            with: converter graph exit).
-        converter graph simplify!
+        converter graph optimize.
+        converter graph!
 
 
     method bindVariable: var
@@ -890,6 +878,71 @@ class CpsConverter { graph var next }
               args: [var]!
 end
 
+
+class CpsOptimizer { worklist graph }
+
+    direct method optimize: graph
+        let worklist = Worklist new.
+        graph doExpressions: { |each| worklist push: each }.
+        (self worklist: worklist graph: graph)
+            optimize!
+
+
+    method optimize
+        { worklist isEmpty }
+            whileFalse: { worklist pop visitBy: self }!
+
+
+    method visitContinuation: aCont
+        aCont target visitBy: self.
+        aCont args do: { |each| each visitBy: self }!
+
+
+    method visitOperation: anOperation
+        anOperation op visit: anOperation by: self!
+
+
+    method visitClassOf: aClassOf
+        let recv = aClassOf args first.
+        (recv hasClassDefinition)
+            ifTrue: { let const = graph ensureConstant: recv classDefinition.
+                      aClassOf uses
+                          do: { |each|
+                                each replaceUses: aClassOf with: const.
+                                worklist push: each } }!
+
+
+    method visitFindMethod: aFindMethod
+        let classArg = aFindMethod args at: 1.
+        (Constant includes: classArg)
+            => { let classDef = classArg value.
+                 (ClassDefinition includes: classDef)
+                     => { let selectorArg = aFindMethod args at: 2.
+                          (Constant includes: selectorArg)
+                              => { let selector = selectorArg value.
+                                   (CpsSelector includes: selector)
+                                       => { let methodFunction = classDef findMethod: selector name.
+                                            (methodFunction is False) not
+                                                => { let constMethod = graph ensureConstant: methodFunction.
+                                                     aFindMethod replaceUsesWith: constMethod.
+                                                     constMethod uses do: { |each|
+                                                                            each propagateConstantType: constMethod.
+                                                                            worklist push: each } } } } } }!
+
+
+    method visitGlobal: _
+        False!
+
+
+    method visitVariable: _
+        False!
+
+
+    method visitConstant: _
+        False!
+end
+
+
 class CpsPrinter { output seen }
 
     direct method printToString: graph
@@ -898,7 +951,7 @@ class CpsPrinter { output seen }
                     self print: graph to: out }!
 
 
-    direct method print: graph to: output
+    direct method print: graph::CpsGraph to: output
         let visitor = self
                           output: output
                           seen: Set new.
@@ -1052,7 +1105,6 @@ $entry:1($return:2):
 $bind_recv:12($recv:4):
     methodFunction(Integer#+)($recv:4, Y:Global, $return:2)
 "!
-
 end
 
 class Main {}
