@@ -11,8 +11,41 @@ interface MethodDefinition
         False!
 
 
+    method canOptimizeContinuation
+        False!
+
+
     method toString
         "#<{self classOf name} {self displayString}>"!
+end
+
+
+class BooleanMethodDefinition { name home }
+    is MethodDefinition
+
+    direct method name: name
+        self name: name
+             home: False!
+
+    method home: new
+        (home is False)
+            ifFalse: { Error raise: "BooleanMethodDefintition already has a home: {self}" }.
+        home = new!
+
+
+    method canOptimizeContinuation
+        True!
+
+
+    method optimizeContinuation: aContinuation in: graph
+        let cond = aContinuation args at: 1.
+        let thenCont = aContinuation args at: 2.
+        let elseCont = aContinuation args at: 3.
+        let cc = aContinuation args at: 4.
+        aContinuation target: (graph ensureOperation: SELECT
+                                     args: [cond, thenCont, elseCont]).
+        aContinuation removeArgs.
+        aContinuation addArgs: [cc]!
 end
 
 
@@ -892,11 +925,13 @@ class CpsOptimizer { worklist graph }
         { worklist isEmpty }
             whileFalse: { worklist pop visitBy: self }!
 
-
     method visitContinuation: aCont
-        aCont target visitBy: self.
-        aCont args do: { |each| each visitBy: self }!
-
+        let target = aCont target.
+        (Constant includes: target)
+            => { let aMethod = target value.
+                 (MethodDefinition includes: aMethod)
+                     => { aMethod canOptimizeContinuation
+                              => { aMethod optimizeContinuation: aCont in: graph }}}!
 
     method visitOperation: anOperation
         anOperation op visit: anOperation by: self!
@@ -1105,6 +1140,25 @@ $entry:1($return:2):
 $bind_recv:12($recv:4):
     methodFunction(Integer#+)($recv:4, Y:Global, $return:2)
 "!
+
+
+    method test_convert_boolean_ifTrueIfFalse
+        let cps = self convert: "X :: Boolean ifTrue: \{ 1 } ifFalse: \{ 2 }"
+                       withGlobalDefinitions: [(ClassDefinition
+                                                    name: "Boolean"
+                                                    methods: [(BooleanMethodDefinition name: "ifTrue:ifFalse:")])].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:1($return:2):
+    methodFunction(Boolean class#typecheck:)(Boolean:Global, X:Global, $bind_recv:21)
+$bind_recv:21($recv:4):
+    select:34($recv:4, $block:19, $block:14)($return:2)
+$block:19($ret:17):
+    $ret:17(1)
+$block:14($ret:12):
+    $ret:12(2)
+"!
+
 end
 
 class Main {}
