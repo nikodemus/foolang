@@ -45,6 +45,7 @@ class Set { dict }
 
     method replaceUses: node1 with: node2
         dict doKeys: { |each|
+                       (each is node1) not assert: "Replacement target is an immediate use".
                        each replaceUses: node1 with: node2 }!
 
 
@@ -125,6 +126,7 @@ interface Expression
 
     required method uses
     required method printName
+    required method replaceUses: expr1 with: expr2
 end
 
 
@@ -142,6 +144,10 @@ class Constant { id::Integer
 
     method printName
         value displayString!
+
+
+    method replaceUses: expr1 with: expr2
+        Error raise: "Constant#replaceUses:with: is invalid"!
 
 
     method visitBy: visitor
@@ -181,6 +187,10 @@ class Variable { id::Integer
         defs remove: def!
 
 
+    method replaceUses: expr1 with: expr2
+        Error raise: "Variable#replaceUses:with: is invalid"!
+
+
     method printName
         name is False
             ifTrue: { "$var:{id}" }
@@ -201,6 +211,10 @@ class Global { id::Integer
         self id: id
              name: name
              uses: Set new!
+
+
+    method replaceUses: expr1 with: expr2
+        Error raise: "Global#replaceUses:with: is invalid"!
 
 
     method printName
@@ -226,10 +240,13 @@ class Operation { id::Integer
     is Expression
 
     direct method id: id op: op args: args
-        self id: id
-             op: op
-             args: args
-             uses: Set new!
+        let new = self id: id
+                       op: op
+                       args: args
+                       uses: Set new.
+        args do: { |each| each addUse: new }.
+        new!
+
 
     method addUse: use
         uses add: use.
@@ -239,6 +256,12 @@ class Operation { id::Integer
     method removeUse: use
         uses remove: use.
         args do: { |each| each removeUse: use }!
+
+
+    method replaceUses: expr1 with: expr2
+        expr1 removeUse: self.
+        expr2 addUse: self.
+        args = args replace: expr1 with: expr2!
 
 
     method printName
@@ -485,6 +508,12 @@ class CpsGraph { entry::Continuation
                              args: args }!
 
 
+    method findMethod: name for: recv
+        let selector = self ensureSelector: name.
+        self ensureOperation: FIND_METHOD
+             args: [recv, selector]!
+
+
     method nextId
         lastId = lastId + 1!
 end
@@ -570,13 +599,12 @@ class CpsConverter { graph var next }
         let args = syntax arguments
                        collect: { |a| graph makeVariable: "$arg" }
                        as: Array.
-        let selector = graph ensureSelector: syntax selector name.
-        let methodFunction = graph ensureOperation: FIND_METHOD
-                                   args: [recv, selector].
+        let methodFunction = graph findMethod: syntax selector name
+                                   for: recv.
         let next = graph continuation: "$send"
                          params: []
                          target: methodFunction
-                         args: (args append: [cc]).
+                         args: ([recv] append: args append: [cc]).
         syntax arguments reverse
             with: args reverse
             do: { |syntaxArg var|
@@ -600,6 +628,21 @@ class CpsConverter { graph var next }
                             target: then
                             args: [].
         syntax first visitBy: self with: discard simplify!
+
+
+    method visitValueTypeDeclaration: syntax with: cc
+        let value = graph makeVariable: "$value".
+        let type = graph makeVariable: "$type".
+        let checkCont = graph continuation: "$typecheck"
+                              params: [type]
+                              target: (graph findMethod: "typecheck:" for: type)
+                              args: [type, value, cc].
+        let typeCont = syntax type visitBy: self with: checkCont.
+        let bindValue = graph continuation: "$bind"
+                              params: [value]
+                              target: typeCont
+                              args: [].
+        syntax value visitBy: self with: bindValue!
 
 
     method visitVariable: syntax with: cc
@@ -706,7 +749,7 @@ $entry:1($return:2):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:1($return:2):
-    findMethod:7($recv:3, #some:message:)(12, 97, $return:2)
+    findMethod:7(X:Global, #some:message:)(X:Global, 12, 97, $return:2)
 "!
 
 
@@ -715,9 +758,9 @@ $entry:1($return:2):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:1($return:2):
-    findMethod:20($recv:16, #some:message:)(12, 97, $seq:15)
+    findMethod:20(X:Global, #some:message:)(X:Global, 12, 97, $seq:15)
 $seq:15($ignore:14):
-    findMethod:6($recv:3, #+)(Z:Global, $return:2)
+    findMethod:6(Y:Global, #+)(Y:Global, Z:Global, $return:2)
 "!
 
 
@@ -739,11 +782,19 @@ $block:5($ret:3):
 $entry:1($return:2):
     $return:2($block:22)
 $block:22(a:4, b:5, c:6, $ret:3):
-    findMethod:17($recv:15, #+)(b:5, $bind_recv:14)
+    findMethod:17(a:4, #+)(a:4, b:5, $bind_recv:14)
 $bind_recv:14($recv:7):
-    findMethod:10($recv:7, #+)(c:6, $ret:3)
+    findMethod:10($recv:7, #+)($recv:7, c:6, $ret:3)
 "!
 
+
+    method test_convert_typecheck
+        let cps = self convert: "X :: Integer".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:1($return:2):
+    findMethod:6(Integer:Global, #typecheck:)(Integer:Global, X:Global, $return:2)
+"!
 
 end
 

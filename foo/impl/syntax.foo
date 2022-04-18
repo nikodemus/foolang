@@ -148,6 +148,9 @@ class SyntaxValueTypeDeclaration { value type }
     method visitBy: visitor
         visitor visitValueTypeDeclaration: self!
 
+    method visitBy: visitor with: arg
+        visitor visitValueTypeDeclaration: self with: arg!
+
     method weight
         value weight + 1!
 
