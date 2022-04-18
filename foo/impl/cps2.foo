@@ -2,6 +2,10 @@ import lib.assert.Assert
 import impl.parser.Parser
 
 
+class ClassDefinition {}
+end
+
+
 class Set { dict }
     is Object
 
@@ -204,13 +208,19 @@ end
 
 class Global { id::Integer
                name::String
-               uses::Set }
+               uses::Set
+               definition }
     is Expression
 
     direct method id: id name: name
         self id: id
              name: name
-             uses: Set new!
+             uses: Set new
+             definition: False!
+
+
+    method definition: new::ClassDefinition
+        definition = new!
 
 
     method replaceUses: expr1 with: expr2
@@ -492,6 +502,13 @@ class CpsGraph { entry::Continuation
                              name: name }!
 
 
+    method addDefinitions: dictionary
+        dictionary
+            do: { |name def|
+                  let global = self ensureGlobal: name.
+                  global definition: def }!
+
+
     method ensureSelector: name
         selectors
             at: name
@@ -530,8 +547,9 @@ class CpsConverter { graph var next }
              next: False!
 
 
-    direct method convert: syntax
+    direct method convert: syntax withDefinitions: defs
         let converter = self new.
+        converter graph addDefinitions: defs.
         converter graph
             entry: (syntax visitBy: converter
                            with: converter graph exit).
@@ -717,8 +735,13 @@ class TestCPS { assert }
     is TestSuite
 
     method convert: source
+        self convert: source withDefinitions: Dictionary new!
+
+
+    method convert: source withDefinitions: defs
         let syntax = Parser parseExpression: source.
-        CpsConverter convert: syntax!
+        CpsConverter convert: syntax withDefinitions: defs!
+
 
     method test_convert_constant_integer
         let cps = self convert: "123".
@@ -797,6 +820,14 @@ $bind_recv:15($recv:7):
                equals: "
 $entry:1($return:2):
     findMethod:7(classOf:6(Integer:Global), #typecheck:)(Integer:Global, X:Global, $return:2)
+"!
+
+
+    method test_convert_typecheck_gives_type
+        let cps = self convert: "X::Integer + Y"
+                       withDefinitions: { "Integer" -> ClassDefinition new }.
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
 "!
 
 end
