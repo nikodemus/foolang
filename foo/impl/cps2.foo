@@ -4,15 +4,24 @@ import impl.parser.Parser
 
 interface MethodDefinition
     method displayString
-        "methodFunction({self classDefinition name}#{self name})"!
+        "methodFunction({self home name}#{self name})"!
+
+
+    method returnType
+        False!
+
+
+    method toString
+        "#<{self classOf name} {self displayString}>"!
 end
 
 
-class TypecheckMethodDefinition { classDefinition }
+class TypecheckMethodDefinition { type home }
     is MethodDefinition
 
-    direct method for: classDefinition
-        self classDefinition: classDefinition!
+
+    method returnType
+        type!
 
 
     method name
@@ -20,7 +29,22 @@ class TypecheckMethodDefinition { classDefinition }
 end
 
 
-class ClassDefinition { name metaclassDefinition methodDictionary }
+class BuiltinMethodDefinition { name home }
+    is MethodDefinition
+
+    direct method name: name
+        self name: name
+             home: False!
+
+
+    method home: new
+        (home is False)
+            ifFalse: { Error raise: "BuiltinMethodDefinition already has a home: {self}" }.
+        home= new!
+end
+
+
+class ClassDefinition { name ownClassDefinition methodDictionary }
 
     -- ClassDefinition itself is used as the ClassDefinition for Class.
     -- Clever, yes?
@@ -28,25 +52,32 @@ class ClassDefinition { name metaclassDefinition methodDictionary }
         "Class"!
 
 
-    direct method classProxy
+    direct method classDefinition
         self!
 
 
-    direct method name: name metaclassDefinition: metaclassDefinition methods: methods
-        let dict = Dictionary new.
-        let new = self name: name
-                       metaclassDefinition: metaclassDefinition
-                       methodDictionary: dict.
+    direct method name: name methods: methods
+        let instanceMethodDictionary = Dictionary new.
+        let directMethodDictionary = Dictionary new.
+        let ownClassDefinition = self name: "{name} class"
+                                      ownClassDefinition: ClassDefinition
+                                      methodDictionary: directMethodDictionary.
+        let classDefinition = self name: name
+                                   ownClassDefinition: ownClassDefinition
+                                   methodDictionary: instanceMethodDictionary.
         methods do: { |each|
-                      each classDefinition: new.
-                      dict put: each at: each name }.
-        dict put: (TypecheckMethodDefinition for: new)
-             at: "typecheck:".
-        new!
+                      each home: classDefinition.
+                      instanceMethodDictionary put: each at: each name }.
+        directMethodDictionary
+            put: (TypecheckMethodDefinition
+                      type: classDefinition
+                      home: ownClassDefinition)
+            at: "typecheck:".
+        classDefinition!
 
 
-    method classProxy
-        metaclassDefinition!
+    method classDefinition
+        ownClassDefinition!
 
 
     method findMethod: name
@@ -54,6 +85,9 @@ class ClassDefinition { name metaclassDefinition methodDictionary }
 
 
     method displayString
+        name!
+
+    method toString
         name!
 end
 
@@ -245,8 +279,16 @@ class Global { id::Integer
         definition = new!
 
 
+    method hasClassDefinition
+        (definition is False) not!
+
+
     method hasDefinition
         (definition is False) not!
+
+
+    method classDefinition
+        definition classDefinition!
 
 
     method replaceUses: expr1 with: expr2
@@ -265,6 +307,7 @@ end
 
 class Variable { id::Integer
                  name
+                 type
                  defs::Set
                  uses::Set }
     is Expression
@@ -272,6 +315,7 @@ class Variable { id::Integer
     direct method id: id
         self id: id
              name: False
+             type: False
              defs: Set new
              uses: Set new!
 
@@ -279,6 +323,7 @@ class Variable { id::Integer
     direct method id: id name: name
         self id: id
              name: name
+             type: False
              defs: Set new
              uses: Set new!
 
@@ -295,6 +340,22 @@ class Variable { id::Integer
 
     method replaceUses: expr1 with: expr2
         Error raise: "Variable#replaceUses:with: is invalid"!
+
+
+    method type: new
+        (type is new)
+            ifTrue: { return False }.
+        (type is False)
+            ifFalse: { Error raise: "Variable already has a type: {self}. Old={type}, New={new}" }.
+        type = new!
+
+
+    method hasClassDefinition
+        ClassDefinition includes: type!
+
+
+    method classDefinition
+        type!
 
 
     method hasDefinition
@@ -328,9 +389,9 @@ class CLASS_OF {}
 
     direct method simplify: op in: graph
         let recv = op args first.
-        (recv hasDefinition)
-            ifTrue: { let const = graph ensureConstant: recv definition classProxy.
-                      op replaceUsesWith: const }!
+        (recv hasClassDefinition)
+            ifTrue: { let const = graph ensureConstant: recv classDefinition.
+                      return op replaceUsesWith: const }!
 end
 
 
@@ -345,19 +406,18 @@ class FIND_METHOD {}
         let classArg = op args at: 1.
         (Constant includes: classArg)
             => { let classDef = classArg value.
-                 Output debug println: "{op} -> classArg ok".
                  (ClassDefinition includes: classDef)
                      => { let selectorArg = op args at: 2.
-                          Output debug println: "{op} -> classDef ok".
                           (Constant includes: selectorArg)
                               => { let selector = selectorArg value.
-                                   Output debug println: "{op} -> selectorArg ok".
                                    (CpsSelector includes: selector)
-                                       => { Output debug println: "{op} -> selector ok = {selector name}".
-                                            let methodFunction = classDef findMethod: selector name.
+                                       => { let methodFunction = classDef findMethod: selector name.
                                             (methodFunction is False) not
                                                 => { let constMethod = graph ensureConstant: methodFunction.
-                                                     return op replaceUsesWith: constMethod } } } } }!
+                                                     op replaceUsesWith: constMethod.
+                                                     constMethod uses do: { |each|
+                                                                             each propagateConstantType: constMethod }.
+                                                     return True } } } } }!
 
 end
 
@@ -449,6 +509,17 @@ class Continuation { id::Integer
         name = new!
 
 
+    method propagateConstantType: aConstant
+        (target is aConstant)
+            => { let value = aConstant value .
+                 (MethodDefinition includes: value)
+                     => { let returnType = value returnType.
+                          (returnType is False) not
+                              => { let succ = args last.
+                                   (Continuation includes: succ)
+                                       => { succ params first type: value returnType } } } }!
+
+
     method simplify
         { self hasUniqueTarget }
             whileTrue: { self inlineUniqueTarget }.
@@ -477,7 +548,7 @@ class Continuation { id::Integer
         args replace: expr1 with: expr2!
 
 
-    method replaceArgsFrom: other
+    method replaceArgsFrom: other::Continuation
         -- This is more convenient than #args:, since
         -- we usually want to copy the array!
         args do: { |each| each removeUse: self }.
@@ -485,7 +556,7 @@ class Continuation { id::Integer
         args do: { |each| each addUse: self }!
 
 
-    method replaceParamsFrom: other
+    method replaceParamsFrom: other::Continuation
         -- This is more convenient than #params:, since
         -- we usually want to copy the array!
         params do: { |each| each removeDef: self }.
@@ -585,7 +656,7 @@ class CpsGraph { entry::Continuation
 
 
     method simplify
-        operations do: { |each| each simplifyIn: self }.
+        2 times: { operations do: { |each| each uses isEmpty ifFalse: { each simplifyIn: self } } }.
         self!
 
 
@@ -973,17 +1044,13 @@ $entry:1($return:2):
         let cps = self convert: "X::Integer + Y"
                        withGlobalDefinitions: [(ClassDefinition
                                                     name: "Integer"
-                                                    metaclassDefinition: (ClassDefinition
-                                                                              name: "Integer class"
-                                                                              metaclassDefinition: ClassDefinition
-                                                                              methods: [])
-                                                    methods: [])].
+                                                    methods: [(BuiltinMethodDefinition name: "+")])].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:1($return:2):
-    builtin(Integer class#typecheck:, X:Global, $bind_recv:13)
-$bind_recv:13($recv:4):
-    builtin(Integer#+, $recv:4:Integer, Y:Global, $return:2)
+    methodFunction(Integer class#typecheck:)(Integer:Global, X:Global, $bind_recv:12)
+$bind_recv:12($recv:4):
+    methodFunction(Integer#+)($recv:4, Y:Global, $return:2)
 "!
 
 end
