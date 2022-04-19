@@ -66,7 +66,8 @@ class TypecheckMethodDefinition { type home }
         let cc = aContinuation args last.
         (Continuation includes: cc)
             => { let value = aContinuation args at: 2.
-                 cc params first replaceUsesWith: value }!
+                 cc params first replaceUsesWith: value.
+                 cc simplify }!
 
 
     method name
@@ -99,6 +100,10 @@ class ClassDefinition { name ownClassDefinition methodDictionary }
 
     direct method classDefinition
         self!
+
+
+    direct method name: name
+        self name: name methods: []!
 
 
     direct method name: name methods: methods
@@ -265,6 +270,10 @@ interface Expression
     method debugVerify: what
         DebugVerify
             ifTrue: { self verify: what }!
+
+
+    method type
+        False!
 
 
     method verify: _
@@ -564,7 +573,7 @@ class Continuation { id::Integer
         (target is False)
             ifFalse: { (target uses includes: self)
                            assert: "Continuation should use its target" }.
-        let badParams = params reject: { |each| each defs includes: self }).
+        let badParams = params reject: { |each| each defs includes: self }.
         badParams isEmpty assert: "Continuation should define its params".
         let badArgs = args reject: { |each| each uses includes: self }.
         badArgs isEmpty assert: "Continuation should uses its args".
@@ -1213,6 +1222,16 @@ $entry:1($return:2):
     methodFunction(Integer class#typecheck:)(Integer:Global, X:Global, $bind_recv:12)
 $bind_recv:12($recv:4):
     methodFunction(Integer#+)(X:Global, Y:Global, $return:2)
+"!
+
+
+    method test_convert_typecheck_redundancy
+        let cps = self convert: "X :: Integer :: Integer"
+                       withGlobalDefinitions: [(ClassDefinition name: "Integer")].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:1($return:2):
+    findMethod:7(classOf:6(Integer:Global), #typecheck:)(Integer:Global, X:Global, $return:2)
 "!
 
 
