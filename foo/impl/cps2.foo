@@ -57,6 +57,18 @@ class TypecheckMethodDefinition { type home }
         type!
 
 
+    method canOptimizeContinuation
+        True!
+
+
+    method optimizeContinuation: aContinuation in: graph
+        -- Method function receives continuation as last argument.
+        let cc = aContinuation args last.
+        (Continuation includes: cc)
+            => { let value = aContinuation args at: 2.
+                 cc params first replaceUsesWith: value }!
+
+
     method name
         "typecheck:"!
 end
