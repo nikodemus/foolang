@@ -164,6 +164,10 @@ class Set { dict }
         dict keys collect: block!
 
 
+    method includes: node
+        ((dict at: node) is False) not!
+
+
     method size
         dict size!
 
@@ -210,6 +214,10 @@ class OpMap { list }
         Self list: (list reject: block)!
 
 
+    method select: block
+        Self list: (list select: block)!
+
+
     method do: block
         list do: block!
 end
@@ -244,8 +252,24 @@ class Worklist { list dict }
 end
 
 
+define DebugVerify False!
+
+
 interface Expression
     is Object
+
+    method doSubExpressions: _
+        False!
+
+
+    method debugVerify: what
+        DebugVerify
+            ifTrue: { self verify: what }!
+
+
+    method verify: _
+        False!
+
 
     method isUnused
         self uses isEmpty!
@@ -260,11 +284,13 @@ interface Expression
 
 
     method removeUse: use
-        self uses remove: use!
+        self uses remove: use.
+        self debugVerify: "Expression#removeUse"!
 
 
     method replaceUsesWith: expr
-        self uses do: { |each| each replaceUses: self with: expr }!
+        self uses do: { |each| each replaceUses: self with: expr }.
+        self debugVerify: "Expression#replaceUsesWith:"!
 
 
     method toString
@@ -478,6 +504,13 @@ class Operation { id::Integer
         new!
 
 
+    method doSubExpressions: block
+        args do: block!
+
+
+    method verify: what
+        (args allSatisfy: { |each| each uses includes: self })
+            assert: "{self printName} should use its args: {args collect: #printName}"!
 
 
     method printName
@@ -495,13 +528,10 @@ class Operation { id::Integer
 
 
     method replaceUses: expr1 with: expr2
-        expr1 removeUse: self.
         expr2 addUse: self.
-        args = args replace: expr1 with: expr2!
-
-
-    method simplifyIn: graph
-        op simplify: self in: graph!
+        args = args replace: expr1 with: expr2.
+        expr1 removeUse: self.
+        self debugVerify: "Operation#replaceUses:"!
 
 
     method visitBy: visitor
@@ -512,7 +542,7 @@ end
 class Continuation { id::Integer
                      name
                      params::Array
-                     target::Expression
+                     target
                      args::Array
                      uses::Set }
     is Expression
@@ -530,8 +560,23 @@ class Continuation { id::Integer
         new!
 
 
+    method verify: _
+        (target is False)
+            ifFalse: { (target uses includes: self)
+                           assert: "Continuation should use its target" }.
+        let badParams = params reject: { |each| each defs includes: self }).
+        badParams isEmpty assert: "Continuation should define its params".
+        let badArgs = args reject: { |each| each uses includes: self }.
+        badArgs isEmpty assert: "Continuation should uses its args".
+        self!
+
     method name: new
         name = new!
+
+
+    method doSubExpressions: block
+        target => { block value: target }.
+        args do: block!
 
 
     method propagateConstantType: aConstant
@@ -562,23 +607,27 @@ class Continuation { id::Integer
             do: { |arg param|
                   param replaceUsesWith: arg }.
         self replaceArgsFrom: target.
-        target unlink!
+        target unlink.
+        self debugVerify: "Continuation#inlineUniqueTarget"!
 
 
     method replaceUses: expr1 with: expr2
-        expr1 removeUse: self.
         expr2 addUse: self.
         target is expr1
             ifTrue: { target = expr2 }.
-        args replace: expr1 with: expr2!
+        args replace: expr1 with: expr2.
+        expr1 removeUse: self.
+        self debugVerify: "Continuation#replaceUses:with:"!
+
 
 
     method replaceArgsFrom: other::Continuation
         -- This is more convenient than #args:, since
         -- we usually want to copy the array!
         args do: { |each| each removeUse: self }.
-        args = other args copy asArray.
-        args do: { |each| each addUse: self }!
+        args = other args copy.
+        args do: { |each| each addUse: self }.
+        self debugVerify: "Continuation#replaceArgsFrom:"!
 
 
     method replaceParamsFrom: other::Continuation
@@ -586,41 +635,48 @@ class Continuation { id::Integer
         -- we usually want to copy the array!
         params do: { |each| each removeDef: self }.
         params = other params copy.
-        params do: { |each| each addDef: self }!
+        params do: { |each| each addDef: self }.
+        self debugVerify: "Continuation#replaceParamsFrom:"!
 
 
     method removeParams
         params do: { |each| each removeDef: self }.
-        params = []!
+        params = [].
+        self debugVerify: "Continuation#removeParams"!
 
 
     method removeArgs
         args do: { |each| each removeUse: self }.
-        args = []!
+        args = [].
+        self debugVerify: "Continuation#removeArgs"!
 
 
     method addParams: new
         new do: { |each| each addDef: self }.
-        params = params append: new!
+        params = params append: new.
+        self debugVerify: "Continuation#addParams:"!
 
 
     method addArgs: new
         new do: { |each| each addUse: self }.
-        args = args append: new!
+        args = args append: new.
+        self debugVerify: "Continuation#addArgs:"!
 
 
     method target: new
         -- No copy needed here, so #target: is the way to go.
-        target removeUse: self.
+        target => { target removeUse: self }.
         target = new.
-        target addUse: self!
+        target => { target addUse: self }.
+        self debugVerify: "Continuation#target:"!
 
 
     method unlink
-        self target removeUse: self.
-        self args do: { |each| each removeUse: self }.
-        self params do: { |each| each removeDef: self }.
-        self replaceUsesWith: target!
+        self removeParams.
+        self removeArgs.
+        self replaceUsesWith: target.
+        self target: False.
+        self debugVerify: "Continuation#unlink"!
 
 
     method printName
@@ -661,8 +717,7 @@ class CpsGraph { entry::Continuation
                                  name: "$entry"
                                  params: [exit]
                                  target: placeholder
-                                 args: []
-                                 uses: Set new.
+                                 args: [].
         let graph = self
                         entry: entry
                         exit: exit
@@ -672,30 +727,44 @@ class CpsGraph { entry::Continuation
                         globals: Dictionary new
                         selectors: Dictionary new
                         continuations: (List with: entry).
+        exit addUse: exit.
         entry addUse: graph.
         graph!
 
 
 
     method cleanup
+        continuations do: { |each| each verify: "CpsGrapg#cleanup" }.
+        let worklist = Worklist new.
+        worklist pushAll: (continuations select: #isUnused).
+        worklist pushAll: (operations select: #isUnused).
+        { worklist isEmpty }
+            whileFalse: { let expr = worklist pop.
+                          -- Output debug println: "flushing: {expr printName}".
+                          expr doSubExpressions: { |each|
+                                                   each removeUse: expr.
+                                                   each isUnused
+                                                       ifTrue: { worklist push: each }} }.
         continuations = continuations reject: #isUnused.
         operations = operations reject: #isUnused!
 
+
     method doExpressions: block
-        continuations do: { |each| block value: each }.
-        operations do: { |each| block value: each }!
-
-
-    method optimize
-        self cleanup.
-        CpsOptimizer optimize: self.
-        self cleanup.
-        self!
+        continuations do: block.
+        operations do: block!
 
 
     method entry: target
         entry target: target.
-        entry simplify!
+        entry simplify.
+        self cleanup.
+        self!
+
+
+    method optimize
+        CpsOptimizer optimize: self.
+        self cleanup.
+        self!
 
 
     method continuation: name params: params target: target args: args
@@ -788,8 +857,7 @@ class CpsConverter { graph var next }
         converter graph
             entry: (syntax visitBy: converter
                            with: converter graph exit).
-        converter graph optimize.
-        converter graph!
+        converter graph optimize!
 
 
     method bindVariable: var
@@ -929,6 +997,7 @@ class CpsOptimizer { worklist graph }
         { worklist isEmpty }
             whileFalse: { worklist pop visitBy: self }!
 
+
     method visitContinuation: aCont
         let target = aCont target.
         (Constant includes: target)
@@ -936,6 +1005,7 @@ class CpsOptimizer { worklist graph }
                  (MethodDefinition includes: aMethod)
                      => { aMethod canOptimizeContinuation
                               => { aMethod optimizeContinuation: aCont in: graph }}}!
+
 
     method visitOperation: anOperation
         anOperation op visit: anOperation by: self!
