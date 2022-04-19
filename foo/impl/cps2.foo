@@ -1138,7 +1138,7 @@ $entry:1($return:2):
 $entry:1($return:2):
     methodFunction(Integer class#typecheck:)(Integer:Global, X:Global, $bind_recv:12)
 $bind_recv:12($recv:4):
-    methodFunction(Integer#+)($recv:4, Y:Global, $return:2)
+    methodFunction(Integer#+)(X:Global, Y:Global, $return:2)
 "!
 
 
@@ -1152,7 +1152,7 @@ $bind_recv:12($recv:4):
 $entry:1($return:2):
     methodFunction(Boolean class#typecheck:)(Boolean:Global, X:Global, $bind_recv:21)
 $bind_recv:21($recv:4):
-    select:34($recv:4, $block:19, $block:14)($return:2)
+    select:34(X:Global, $block:19, $block:14)($return:2)
 $block:19($ret:17):
     $ret:17(1)
 $block:14($ret:12):
