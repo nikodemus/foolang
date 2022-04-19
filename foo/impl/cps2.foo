@@ -466,9 +466,6 @@ class Operation { id::Integer
         new!
 
 
-    method addUse: use
-        uses add: use.
-        args do: { |each| each addUse: use }!
 
 
     method printName
@@ -483,11 +480,6 @@ class Operation { id::Integer
                         do: { |each| out print: each printName }
                         interleaving: { out print: ", " }.
                     out print: ")" }!
-
-
-    method removeUse: use
-        uses remove: use.
-        args do: { |each| each removeUse: use }!
 
 
     method replaceUses: expr1 with: expr2
