@@ -3,6 +3,8 @@ import impl.parser.Parser
 
 
 interface MethodDefinition
+    is Object
+
     method displayString
         "methodFunction({self home name}#{self name})"!
 
@@ -20,48 +22,72 @@ interface MethodDefinition
 end
 
 
-class IfTrueIfFalseDefinition { name home }
+class UserMethod { name home }
     is MethodDefinition
 
     direct method name: name
         self name: name
              home: False!
 
+
     method home: new
         (home is False)
-            ifFalse: { Error raise: "IfTrueIfFalseDefinition already has a home: {self}" }.
-        home = new!
+            ifFalse: { Error raise: "{self} already has a home: {self}" }.
+        home= new!
+end
+
+
+class BuiltinMethod { home impl }
+    is MethodDefinition
+
+    direct method new: impl
+        self home: False
+             impl: impl!
+
+
+    method name
+        impl name!
+
+
+    method returnType
+        impl returnType!
 
 
     method canOptimize
         True!
 
 
-    method optimize: aContinuation in: graph
-        let cond = aContinuation args at: 1.
-        let thenCont = aContinuation args at: 2.
-        let elseCont = aContinuation args at: 3.
-        let cc = aContinuation args at: 4.
-        aContinuation target: (graph ensureOperation: SELECT
-                                     args: [cond, thenCont, elseCont]).
-        aContinuation removeArgs.
-        aContinuation addArgs: [cc]!
+    method optimize: aCont in: graph with: worklist
+        impl optimize: aCont in: graph with: worklist!
+
+
+    method home: new
+        (home is False)
+            ifFalse: { Error raise: "BuiltinMethod {name} already has a home: {home}" }.
+        home = new!
+
+
 end
 
 
-class TypecheckMethodDefinition { type home }
-    is MethodDefinition
+interface BuiltinMethodImpl
+    method returnType
+        False!
+end
+
+
+class TypecheckImpl { type }
+    is BuiltinMethodImpl
+
+    method name
+        "typecheck:"!
 
 
     method returnType
         type!
 
 
-    method canOptimize
-        True!
-
-
-    method optimize: aContinuation in: graph
+    method optimize: aContinuation in: graph with: worklist
         let value = aContinuation args at: 2.
         let valueType = value type.
         let cc = aContinuation args last.
@@ -72,7 +98,7 @@ class TypecheckMethodDefinition { type home }
             => { aContinuation removeArgs.
                  aContinuation addArgs: [value].
                  aContinuation target: cc.
-                 cc simplify }.
+                 worklist push: cc }.
 
         -- CC has no other uses we can propagate the type information
         -- there. (Could also propagate the value information, but
@@ -80,33 +106,74 @@ class TypecheckMethodDefinition { type home }
         -- in which case the first leg takes care of it above.)
         (cc uses isOnly: aContinuation)
             => { cc propagateTypes: [type].
-                 cc simplify }!
-
-
-    method name
-        "typecheck:"!
+                 worklist push: cc }!
 end
 
 
-class BuiltinMethodDefinition { name home }
-    is MethodDefinition
+class IfTrueIfFalseImpl {}
+    is BuiltinMethodImpl
 
-    direct method name: name
-        self name: name
-             home: False!
+    method name
+        "ifTrue:ifFalse:"!
+
+    method optimize: aContinuation in: graph with: worklist
+        let args = aContinuation args.
+        let cond = args at: 1.
+        let thenCont = args at: 2.
+        let elseCont = args at: 3.
+        let cc = args at: 4.
+        aContinuation target: (graph ensureOperation: SELECT
+                                     args: [cond, thenCont, elseCont]).
+        aContinuation removeArgs.
+        aContinuation addArgs: [cc]!
+end
 
 
-    method home: new
-        (home is False)
-            ifFalse: { Error raise: "BuiltinMethodDefinition already has a home: {self}" }.
-        home= new!
+class WhileTrueImpl {}
+    is BuiltinMethodImpl
+
+    method name
+        "whileTrue:"!
+
+
+    method optimize: aContinuation in: graph with: worklist
+        let ignore1 = graph makeVariable: "$ignore".
+        let ignore2 = graph makeVariable: "$ignore".
+        -- valueCont args will be patched with the branch
+        let valueCont = graph continuation: "$whileTrueValue"
+                              params: [ignore1]
+                              target: (aContinuation args at: 1)
+                              args: [].
+        let bodyCont = graph continuation: "$whileTrueBody"
+                             params: [ignore2]
+                             target: (aContinuation args at: 2)
+                             args: [valueCont].
+        let exitCont = aContinuation args at: 3.
+        let cond = graph makeVariable: "$cond".
+        let branch = graph continuation: "$whileTrueBranch"
+                           params: [cond]
+                           target: (graph ensureOperation: SELECT
+                                          args: [cond, bodyCont, exitCont])
+                           args: [graph ensureConstant: False].
+        valueCont addArgs: [branch].
+        let headCont = graph continuation: "$whileTrueHead"
+                             params: aContinuation params copy
+                             target: valueCont
+                             args: [graph ensureConstant: False].
+        aContinuation removeParams.
+        aContinuation removeArgs.
+        aContinuation replaceUsesWith: headCont.
+        aContinuation target: False.
+        worklist push: headCont.
+        worklist push: valueCont.
+        worklist push: bodyCont!
 end
 
 
 class ClassDefinition { name ownClassDefinition methodDictionary }
 
     -- ClassDefinition itself is used as the ClassDefinition for Class.
-    -- Clever, yes?
+    -- Clever, yes? Horrible, maybe!
     direct method name
         "Class"!
 
@@ -131,11 +198,13 @@ class ClassDefinition { name ownClassDefinition methodDictionary }
         methods do: { |each|
                       each home: classDefinition.
                       instanceMethodDictionary put: each at: each name }.
+
+        let typecheck = BuiltinMethod home: ownClassDefinition
+                                      impl: (TypecheckImpl type: classDefinition).
         directMethodDictionary
-            put: (TypecheckMethodDefinition
-                      type: classDefinition
-                      home: ownClassDefinition)
-            at: "typecheck:".
+            put: typecheck
+            at: typecheck name.
+
         classDefinition!
 
 
@@ -153,6 +222,11 @@ class ClassDefinition { name ownClassDefinition methodDictionary }
     method toString
         name!
 end
+
+
+define FunctionClassDefinition
+    (ClassDefinition name: "Function"
+                     methods: [BuiltinMethod new: WhileTrueImpl new])!
 
 
 class Set { dict }
@@ -284,6 +358,10 @@ interface Expression
         False!
 
 
+    method hasKnownClass
+        False!
+
+
     method simplify
         False!
 
@@ -303,10 +381,6 @@ interface Expression
 
     method isUnused
         self uses isEmpty!
-
-
-    method isConstant
-        False!
 
 
     method addUse: use
@@ -345,7 +419,7 @@ class Constant { id::Integer
              uses: Set new!
 
 
-    method isConstant
+    method hasKnownClass
         True!
 
 
@@ -385,11 +459,7 @@ class Global { id::Integer
         definition = new!
 
 
-    method hasClassDefinition
-        (definition is False) not!
-
-
-    method hasDefinition
+    method hasKnownClass
         (definition is False) not!
 
 
@@ -456,17 +526,12 @@ class Variable { id::Integer
         type = new!
 
 
-    method hasClassDefinition
+    method hasKnownClass
         ClassDefinition includes: type!
 
 
     method classDefinition
-        type!
-
-
-    method hasDefinition
-        -- TODO
-        False!
+        type :: ClassDefinition!
 
 
     method printName
@@ -521,6 +586,14 @@ class SELECT {}
 end
 
 
+class INVALID {}
+    is PrimitiveOperation
+
+    direct method name
+        "invalid"!
+end
+
+
 class Operation { id::Integer
                   op
                   args::Array
@@ -561,6 +634,13 @@ class Operation { id::Integer
                         do: { |each| out print: each printName }
                         interleaving: { out print: ", " }.
                     out print: ")" }!
+
+
+    method flush
+        args do: { |each| each removeUse: self }.
+        args = [].
+        op = INVALID!
+
 
 
     method replaceUses: expr1 with: expr2
@@ -608,6 +688,13 @@ class Continuation { id::Integer
 
     method name: new
         name = new!
+
+    method hasKnownClass
+        True!
+
+
+    method classDefinition
+        FunctionClassDefinition!
 
 
     method doSubExpressions: block
@@ -769,6 +856,14 @@ class CpsGraph { entry::Continuation
         graph!
 
 
+    method replaceUses: expr1 with: expr2
+        expr1 removeUse: self.
+        exit is expr1
+            ifTrue: { exit = expr2 }.
+        entry is expr1
+            ifTrue: { entry = expr2 }.
+        expr2 addUse: self!
+
 
     method cleanup
         continuations do: { |each| each verify: "CpsGrapg#cleanup" }.
@@ -789,6 +884,13 @@ class CpsGraph { entry::Continuation
     method doExpressions: block
         continuations do: block.
         operations do: block!
+
+
+    method copyContinuation: aCont
+           self continuation: aCont name
+                params: aCont params
+                target: aCont target
+                args: aCont args!
 
 
     method entry: target
@@ -862,6 +964,7 @@ class CpsGraph { entry::Continuation
                              id: self nextId
                              op: op
                              args: args }!
+
 
     method classOf: recv
            self ensureOperation: CLASS_OF
@@ -1036,14 +1139,18 @@ class CpsOptimizer { worklist graph }
 
 
     method visitContinuation: aCont
+        -- Was this continuation eliminated while it was on the worklist?
+        aCont uses isEmpty
+            => { return False }.
+        -- Do strictly local simplifications.
+        aCont simplify.
+        -- If the target is a known method with an optimizer, use that.
         let target = aCont target.
         (Constant includes: target)
             => { let aMethod = target value.
                  (MethodDefinition includes: aMethod)
                      => { aMethod canOptimize
-                              => { aMethod optimize: aCont in: graph.
-                                   worklist push: aCont target.
-                                   worklist pushAll: aCont args } } }!
+                              => { aMethod optimize: aCont in: graph with: worklist } } }!
 
 
     method visitOperation: anOperation
@@ -1052,12 +1159,13 @@ class CpsOptimizer { worklist graph }
 
     method visitClassOf: aClassOf
         let recv = aClassOf args first.
-        (recv hasClassDefinition)
+        (recv hasKnownClass)
             ifTrue: { let const = graph ensureConstant: recv classDefinition.
                       aClassOf uses
                           do: { |each|
                                 each replaceUses: aClassOf with: const.
-                                worklist push: each } }!
+                                worklist push: each }.
+                      aClassOf flush }!
 
 
     method visitFindMethod: aFindMethod
@@ -1114,7 +1222,7 @@ class CpsPrinter { output seen }
         visitor visit: graph entry!
 
 
-    method visit: other
+    method visit: other::Expression
         (seen add: other)
             ifTrue: { other visitBy: self }!
 
@@ -1252,7 +1360,7 @@ $entry:1($return:2):
         let cps = self convert: "X::Integer + Y"
                        withGlobalDefinitions: [(ClassDefinition
                                                     name: "Integer"
-                                                    methods: [(BuiltinMethodDefinition name: "+")])].
+                                                    methods: [(UserMethod name: "+")])].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:1($return:2):
@@ -1278,7 +1386,7 @@ $bind:10($value:4):
         let cps = self convert: "X :: Boolean ifTrue: \{ 1 } ifFalse: \{ 2 }"
                        withGlobalDefinitions: [(ClassDefinition
                                                     name: "Boolean"
-                                                    methods: [(IfTrueIfFalseDefinition name: "ifTrue:ifFalse:")])].
+                                                    methods: [(BuiltinMethod new: IfTrueIfFalseImpl new)])].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:1($return:2):
@@ -1289,6 +1397,20 @@ $block:19($ret:17):
     $ret:17(1)
 $block:14($ret:12):
     $ret:12(2)
+"!
+
+    method test_convert_closure_whileTrue
+        let cps = self convert: "\{ X maybe\} whileTrue: \{ Y something \}".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$whileTrueHead:39($return:2):
+    $whileTrueValue:33(False)
+$whileTrueValue:33($ignore:31):
+    findMethod:24(classOf:23(X:Global), #maybe)(X:Global, $whileTrueBranch:38)
+$whileTrueBranch:38($cond:35):
+    select:36($cond:35, $whileTrueBody:34, $return:2)(False)
+$whileTrueBody:34($ignore:32):
+    findMethod:14(classOf:13(Y:Global), #something)(Y:Global, $whileTrueValue:33)
 "!
 
 end
