@@ -1,4 +1,5 @@
 import .number.Number
+import .stringOutput.StringOutput
 
 extend Float
     is Number
@@ -25,8 +26,13 @@ extend Float
     method decimalString: n
         let int = self truncate.
         let dec = ((self abs - int abs) * (10 ^ n))
-                      round.
-        "{ int }.{ dec }"!
+                      round toString.
+        StringOutput
+            with: { |out|
+                    out print: int.
+                    out writeString: ".".
+                    n - dec size times: { out writeString: "0" }.
+                    out writeString: dec }!
 
     method addNumber: left
         left floatAdd: self!

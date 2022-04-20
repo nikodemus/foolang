@@ -24,7 +24,7 @@ interface TestSuite
         system output flush.
         test sendTo: self with: [].
         let stop = system clock time.
-        system output println: " ({(stop-start) real decimalString: 1}s)"!
+        system output println: " ({(stop-start) real decimalString: 3}s)"!
 
     method doTests: block
         let list = List new.
