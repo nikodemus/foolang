@@ -110,6 +110,54 @@ class TypecheckImpl { type }
 end
 
 
+class IntegerPlusImpl {}
+    is BuiltinMethodImpl
+
+    method name
+        "+"!
+
+
+    method optimize: aContinuation in: graph with: worklist
+        let args = aContinuation args.
+        let int = args at: 1.
+        let other = args at: 2.
+        let cc = args at: 3.
+        let addInteger = graph findMethod: "addInteger:"
+                               for: other.
+        aContinuation target: addInteger.
+        aContinuation removeArgs.
+        aContinuation addArgs: [other, int, cc].
+        worklist push: addInteger args first.
+        worklist push: aContinuation.
+        worklist push: aContinuation target!
+
+end
+
+
+
+class IntegerAddIntegerImpl {}
+    is BuiltinMethodImpl
+
+    method name
+        "addInteger:"!
+
+
+    method optimize: aContinuation in: graph with: worklist
+        let args = aContinuation args.
+        let intA = args at: 1.
+        let intB = args at: 2.
+        let cc = args at: 3.
+        let addi = graph ensureOperation: ADDI
+                         args: [intA, intB].
+        aContinuation removeArgs.
+        aContinuation addArgs: [addi].
+        aContinuation target: cc.
+        cc propagateTypes: [intA type]!
+end
+
+
+
+
 class IfTrueIfFalseImpl {}
     is BuiltinMethodImpl
 
@@ -358,7 +406,7 @@ class Worklist { list dict }
 end
 
 
-define DebugVerify False!
+define DebugVerify True!
 
 
 interface Expression
@@ -565,6 +613,19 @@ interface PrimitiveOperation
 end
 
 
+class ADDI {}
+    is PrimitiveOperation
+
+
+    direct method name
+        "addi"!
+
+
+    direct method visit: operation by: visitor
+        visitor visitAddi: operation!
+end
+
+
 class CLASS_OF {}
     is PrimitiveOperation
 
@@ -690,10 +751,10 @@ class Continuation { id::Integer
         new!
 
 
-    method verify: _
+    method verify: what
         (target is False)
             ifFalse: { (target uses includes: self)
-                           assert: "Continuation should use its target" }.
+                           ifFalse: { Error raise: "{self} does not use its target: {target} ({what})" } }.
         let badParams = params reject: { |each| each defs includes: self }.
         badParams isEmpty assert: "Continuation should define its params".
         let badArgs = args reject: { |each| each uses includes: self }.
@@ -1289,6 +1350,26 @@ class TestCPS { assert }
         let syntax = Parser parseExpression: source.
         CpsConverter convert: syntax withGlobalDefinitions: defs!
 
+
+    method test_convert_addition_of_integers_optimizes_to_operation_addi
+        let cps = self convert: "let a = X a :: Integer. let b = X b :: Integer. a + b"
+                       withGlobalDefinitions: [(ClassDefinition
+                                                    name: "Integer"
+                                                    methods: [BuiltinMethod new: IntegerPlusImpl new,
+                                                              BuiltinMethod new: IntegerAddIntegerImpl new])].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:1($return:2):
+    findMethod:39(classOf:38(X:Global), #a)(X:Global, $bind:35)
+$bind:35($value:30):
+    methodFunction(Integer class#typecheck:)(Integer:Global, $value:30, $let:29)
+$let:29(a:4):
+    findMethod:25(classOf:24(X:Global), #b)(X:Global, $bind:21)
+$bind:21($value:15):
+    methodFunction(Integer class#typecheck:)(Integer:Global, $value:15, $let:14)
+$let:14(b:5):
+    $return:2(addi:50(b:5, a:4))
+"!
 
     method test_convert_arity_0_block
         let cps = self convert: "\{ 421 }".
