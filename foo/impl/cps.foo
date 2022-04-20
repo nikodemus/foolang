@@ -110,29 +110,36 @@ class TypecheckImpl { type }
 end
 
 
-class IntegerPlusImpl {}
+interface InlineMethodImpl
     is BuiltinMethodImpl
+
+    method optimize: aContinuation in: graph with: worklist
+        let args = aContinuation args.
+        let pattern = self inliner apply: args butlast.
+        let newRecv = pattern first.
+        let newSelector = pattern second.
+        let methodExpr = graph findMethod: newSelector
+                               for: newRecv.
+        aContinuation target: methodExpr.
+        aContinuation removeArgs.
+        aContinuation addArgs: [newRecv].
+        aContinuation addArgs: (pattern from: 3 to: pattern size).
+        aContinuation addArgs: [args last].     -- cc
+        worklist push: methodExpr args first. -- CLASS_OF
+        worklist push: aContinuation.
+        worklist push: aContinuation target!
+end
+
+class IntegerPlusImpl {}
+    is InlineMethodImpl
 
     method name
         "+"!
 
 
-    method optimize: aContinuation in: graph with: worklist
-        let args = aContinuation args.
-        let int = args at: 1.
-        let other = args at: 2.
-        let cc = args at: 3.
-        let addInteger = graph findMethod: "addInteger:"
-                               for: other.
-        aContinuation target: addInteger.
-        aContinuation removeArgs.
-        aContinuation addArgs: [other, int, cc].
-        worklist push: addInteger args first.
-        worklist push: aContinuation.
-        worklist push: aContinuation target!
-
+    method inliner
+        { |a b| [b, "addInteger:", a] }!
 end
-
 
 
 class IntegerAddIntegerImpl {}
