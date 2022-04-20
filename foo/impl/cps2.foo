@@ -11,7 +11,7 @@ interface MethodDefinition
         False!
 
 
-    method canOptimizeContinuation
+    method canOptimize
         False!
 
 
@@ -20,7 +20,7 @@ interface MethodDefinition
 end
 
 
-class BooleanMethodDefinition { name home }
+class IfTrueIfFalseDefinition { name home }
     is MethodDefinition
 
     direct method name: name
@@ -29,15 +29,15 @@ class BooleanMethodDefinition { name home }
 
     method home: new
         (home is False)
-            ifFalse: { Error raise: "BooleanMethodDefintition already has a home: {self}" }.
+            ifFalse: { Error raise: "IfTrueIfFalseDefinition already has a home: {self}" }.
         home = new!
 
 
-    method canOptimizeContinuation
+    method canOptimize
         True!
 
 
-    method optimizeContinuation: aContinuation in: graph
+    method optimize: aContinuation in: graph
         let cond = aContinuation args at: 1.
         let thenCont = aContinuation args at: 2.
         let elseCont = aContinuation args at: 3.
@@ -57,16 +57,29 @@ class TypecheckMethodDefinition { type home }
         type!
 
 
-    method canOptimizeContinuation
+    method canOptimize
         True!
 
 
-    method optimizeContinuation: aContinuation in: graph
-        -- Method function receives continuation as last argument.
+    method optimize: aContinuation in: graph
+        let value = aContinuation args at: 2.
+        let valueType = value type.
         let cc = aContinuation args last.
-        (Continuation includes: cc)
-            => { let value = aContinuation args at: 2.
-                 cc params first replaceUsesWith: value.
+
+        -- If value has the correct type, we can eliminate
+        -- the typecheck entirely.
+        valueType is type
+            => { aContinuation removeArgs.
+                 aContinuation addArgs: [value].
+                 aContinuation target: cc.
+                 cc simplify }.
+
+        -- CC has no other uses we can propagate the type information
+        -- there. (Could also propagate the value information, but
+        -- that doesn't seem super useful unless the value is constant,
+        -- in which case the first leg takes care of it above.)
+        (cc uses isOnly: aContinuation)
+            => { cc propagateTypes: [type].
                  cc simplify }!
 
 
@@ -267,6 +280,14 @@ interface Expression
         False!
 
 
+    method propagateTypes: _
+        False!
+
+
+    method simplify
+        False!
+
+
     method debugVerify: what
         DebugVerify
             ifTrue: { self verify: what }!
@@ -460,6 +481,8 @@ end
 
 
 interface PrimitiveOperation
+    direct method typeOf: _
+        False!
 end
 
 
@@ -520,6 +543,10 @@ class Operation { id::Integer
     method verify: what
         (args allSatisfy: { |each| each uses includes: self })
             assert: "{self printName} should use its args: {args collect: #printName}"!
+
+
+    method type
+        op typeOf: self!
 
 
     method printName
@@ -588,15 +615,16 @@ class Continuation { id::Integer
         args do: block!
 
 
-    method propagateConstantType: aConstant
-        (target is aConstant)
-            => { let value = aConstant value .
+    method propagateTypes: types
+        params with: types
+               do: { |param type| param type: type }!
+
+
+    method propagateTargetType
+        (Constant includes: target)
+            => { let value = target value .
                  (MethodDefinition includes: value)
-                     => { let returnType = value returnType.
-                          (returnType is False) not
-                              => { let succ = args last.
-                                   (Continuation includes: succ)
-                                       => { succ params first type: value returnType } } } }!
+                     => { args last propagateTypes: [value returnType] } }!
 
 
     method simplify
@@ -1012,8 +1040,10 @@ class CpsOptimizer { worklist graph }
         (Constant includes: target)
             => { let aMethod = target value.
                  (MethodDefinition includes: aMethod)
-                     => { aMethod canOptimizeContinuation
-                              => { aMethod optimizeContinuation: aCont in: graph }}}!
+                     => { aMethod canOptimize
+                              => { aMethod optimize: aCont in: graph.
+                                   worklist push: aCont target.
+                                   worklist pushAll: aCont args } } }!
 
 
     method visitOperation: anOperation
@@ -1044,8 +1074,15 @@ class CpsOptimizer { worklist graph }
                                                 => { let constMethod = graph ensureConstant: methodFunction.
                                                      aFindMethod replaceUsesWith: constMethod.
                                                      constMethod uses do: { |each|
-                                                                            each propagateConstantType: constMethod.
+                                                                            each propagateTargetType.
                                                                             worklist push: each } } } } } }!
+
+    method visitSelect: _
+        False!
+
+
+    method visitTypeInfo: _
+        False!
 
 
     method visitGlobal: _
@@ -1221,7 +1258,7 @@ $entry:1($return:2):
 $entry:1($return:2):
     methodFunction(Integer class#typecheck:)(Integer:Global, X:Global, $bind_recv:12)
 $bind_recv:12($recv:4):
-    methodFunction(Integer#+)(X:Global, Y:Global, $return:2)
+    methodFunction(Integer#+)($recv:4, Y:Global, $return:2)
 "!
 
 
@@ -1231,7 +1268,9 @@ $bind_recv:12($recv:4):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:1($return:2):
-    findMethod:7(classOf:6(Integer:Global), #typecheck:)(Integer:Global, X:Global, $return:2)
+    methodFunction(Integer class#typecheck:)(Integer:Global, X:Global, $bind:10)
+$bind:10($value:4):
+    $return:2($value:4)
 "!
 
 
@@ -1239,13 +1278,13 @@ $entry:1($return:2):
         let cps = self convert: "X :: Boolean ifTrue: \{ 1 } ifFalse: \{ 2 }"
                        withGlobalDefinitions: [(ClassDefinition
                                                     name: "Boolean"
-                                                    methods: [(BooleanMethodDefinition name: "ifTrue:ifFalse:")])].
+                                                    methods: [(IfTrueIfFalseDefinition name: "ifTrue:ifFalse:")])].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:1($return:2):
     methodFunction(Boolean class#typecheck:)(Boolean:Global, X:Global, $bind_recv:21)
 $bind_recv:21($recv:4):
-    select:34(X:Global, $block:19, $block:14)($return:2)
+    select:34($recv:4, $block:19, $block:14)($return:2)
 $block:19($ret:17):
     $ret:17(1)
 $block:14($ret:12):
