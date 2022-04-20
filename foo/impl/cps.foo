@@ -1,1026 +1,1535 @@
--- For tests
 import lib.assert.Assert
 import impl.parser.Parser
-import impl.syntax.SyntaxLiteral
-import impl.syntax.SyntaxLet
-import impl.syntax.SyntaxBinary
-import impl.syntax.SyntaxVariable
-import impl.syntax.SyntaxSelector
-import impl.syntax.SyntaxSeq
+
+
+interface MethodDefinition
+    is Object
+
+    method displayString
+        "methodFunction({self home name}#{self name})"!
+
+
+    method returnType
+        False!
+
+
+    method canOptimize
+        False!
+
+
+    method toString
+        "#<{self classOf name} {self displayString}>"!
+end
+
+
+class UserMethod { name home }
+    is MethodDefinition
+
+    direct method name: name
+        self name: name
+             home: False!
+
+
+    method home: new
+        (home is False)
+            ifFalse: { Error raise: "{self} already has a home: {self}" }.
+        home= new!
+end
+
+
+class BuiltinMethod { home impl }
+    is MethodDefinition
+
+    direct method new: impl
+        self home: False
+             impl: impl!
+
+
+    method name
+        impl name!
+
+
+    method returnType
+        impl returnType!
+
+
+    method canOptimize
+        True!
+
+
+    method optimize: aCont in: graph with: worklist
+        impl optimize: aCont in: graph with: worklist!
+
+
+    method home: new
+        (home is False)
+            ifFalse: { Error raise: "BuiltinMethod {name} already has a home: {home}" }.
+        home = new!
+
+
+end
+
+
+interface BuiltinMethodImpl
+    method returnType
+        False!
+end
+
+
+class TypecheckImpl { type }
+    is BuiltinMethodImpl
+
+    method name
+        "typecheck:"!
+
+
+    method returnType
+        type!
+
+
+    method optimize: aContinuation in: graph with: worklist
+        let value = aContinuation args at: 2.
+        let valueType = value type.
+        let cc = aContinuation args last.
+
+        -- If value has the correct type, we can eliminate
+        -- the typecheck entirely.
+        valueType is type
+            => { aContinuation removeArgs.
+                 aContinuation addArgs: [value].
+                 aContinuation target: cc.
+                 worklist push: cc }.
+
+        -- CC has no other uses we can propagate the type information
+        -- there. (Could also propagate the value information, but
+        -- that doesn't seem super useful unless the value is constant,
+        -- in which case the first leg takes care of it above.)
+        (cc uses isOnly: aContinuation)
+            => { cc propagateTypes: [type].
+                 worklist push: cc }!
+end
+
+
+class IntegerPlusImpl {}
+    is BuiltinMethodImpl
+
+    method name
+        "+"!
+
+
+    method optimize: aContinuation in: graph with: worklist
+        let args = aContinuation args.
+        let int = args at: 1.
+        let other = args at: 2.
+        let cc = args at: 3.
+        let addInteger = graph findMethod: "addInteger:"
+                               for: other.
+        aContinuation target: addInteger.
+        aContinuation removeArgs.
+        aContinuation addArgs: [other, int, cc].
+        worklist push: addInteger args first.
+        worklist push: aContinuation.
+        worklist push: aContinuation target!
+
+end
+
+
+
+class IntegerAddIntegerImpl {}
+    is BuiltinMethodImpl
+
+    method name
+        "addInteger:"!
+
+
+    method optimize: aContinuation in: graph with: worklist
+        let args = aContinuation args.
+        let intA = args at: 1.
+        let intB = args at: 2.
+        let cc = args at: 3.
+        let addi = graph ensureOperation: ADDI
+                         args: [intA, intB].
+        aContinuation removeArgs.
+        aContinuation addArgs: [addi].
+        aContinuation target: cc.
+        cc propagateTypes: [intA type]!
+end
+
+
+
+
+class IfTrueIfFalseImpl {}
+    is BuiltinMethodImpl
+
+    method name
+        "ifTrue:ifFalse:"!
+
+    method optimize: aContinuation in: graph with: worklist
+        let args = aContinuation args.
+        let cond = args at: 1.
+        let thenCont = args at: 2.
+        let elseCont = args at: 3.
+        let cc = args at: 4.
+        aContinuation target: (graph ensureOperation: SELECT
+                                     args: [cond, thenCont, elseCont]).
+        aContinuation removeArgs.
+        aContinuation addArgs: [cc]!
+end
+
+
+class WhileLoopImpl { name while }
+    is BuiltinMethodImpl
+
+    direct method newWhileTrue
+        self name: "whileTrue:" while: True!
+
+
+    direct method newWhileFalse
+        self name: "whileFalse:" while: False!
+
+
+    method optimize: aContinuation in: graph with: worklist
+        let ignore1 = graph makeVariable: "$ignore".
+        -- valueCont args will be patched with the branch
+        let valueCont = graph continuation: "$loopTest"
+                              params: [ignore1]
+                              target: (aContinuation args at: 1)
+                              args: [].
+        let bodyCont = graph continuation: "$loopBody"
+                             params: []
+                             target: (aContinuation args at: 2)
+                             args: [valueCont].
+        -- Explicit loop exit continuation so we don't need to
+        -- pass False as argument to selected continuation each time
+        -- through the branch.
+        let exitCont = graph continuation: "$loopExit"
+                             params: []
+                             target: (aContinuation args at: 3)
+                             args: [graph ensureConstant: False].
+        let cond = graph makeVariable: "$cond".
+        let selectArgs = while
+                             ifTrue: { [cond, bodyCont, exitCont] }
+                             ifFalse: { [cond, exitCont, bodyCont] }.
+        let branch = graph continuation: "$while{while}"
+                           params: [cond]
+                           target: (graph ensureOperation: SELECT
+                                          args: selectArgs)
+                           args: [].
+        valueCont addArgs: [branch].
+        let headCont = graph continuation: "$loopHead"
+                             params: aContinuation params copy
+                             target: valueCont
+                             args: [graph ensureConstant: False].
+        aContinuation removeParams.
+        aContinuation removeArgs.
+        aContinuation replaceUsesWith: headCont.
+        aContinuation target: False.
+        worklist push: headCont.
+        worklist push: valueCont.
+        worklist push: bodyCont.
+        worklist push: exitCont!
+end
+
+
+class ClassDefinition { name ownClassDefinition methodDictionary }
+
+    -- ClassDefinition itself is used as the ClassDefinition for Class.
+    -- Clever, yes? Horrible, maybe!
+    direct method name
+        "Class"!
+
+
+    direct method classDefinition
+        self!
+
+
+    direct method name: name
+        self name: name methods: []!
+
+
+    direct method name: name methods: methods
+        let instanceMethodDictionary = Dictionary new.
+        let directMethodDictionary = Dictionary new.
+        let ownClassDefinition = self name: "{name} class"
+                                      ownClassDefinition: ClassDefinition
+                                      methodDictionary: directMethodDictionary.
+        let classDefinition = self name: name
+                                   ownClassDefinition: ownClassDefinition
+                                   methodDictionary: instanceMethodDictionary.
+        methods do: { |each|
+                      each home: classDefinition.
+                      instanceMethodDictionary put: each at: each name }.
+
+        let typecheck = BuiltinMethod home: ownClassDefinition
+                                      impl: (TypecheckImpl type: classDefinition).
+        directMethodDictionary
+            put: typecheck
+            at: typecheck name.
+
+        classDefinition!
+
+
+    method classDefinition
+        ownClassDefinition!
+
+
+    method findMethod: name
+        methodDictionary at: name!
+
+
+    method displayString
+        name!
+
+    method toString
+        name!
+end
+
+
+define FunctionClassDefinition
+    (ClassDefinition name: "Function"
+                     methods: [BuiltinMethod new: WhileLoopImpl newWhileTrue,
+                               BuiltinMethod new: WhileLoopImpl newWhileFalse])!
+
 
 class Set { dict }
     is Object
+
     direct method new
         self dict: Dictionary new!
+
+
+    direct method with: node
+        let new = self new.
+        new add: node.
+        new!
+
+
     method add: node
-        dict put: node at: node!
+        let old = dict at: node.
+        dict put: node at: node.
+        old is False!
+
+
     method remove: node
         dict remove: node!
+
+
+    method collect: block
+        dict keys collect: block!
+
+
+    method includes: node
+        ((dict at: node) is False) not!
+
+
     method size
         dict size!
+
+
     method isEmpty
         dict isEmpty!
+
+
     method isOnly: node
         dict size is 1
             ifTrue: { (dict values first) is node }
             ifFalse: { False }!
-    method replace: node1 with: node2
+
+
+    method replaceUses: node1 with: node2
         dict doKeys: { |each|
-                       each replace: node1 with: node2 }!
+                       (each is node1) not assert: "Replacement target is an immediate use".
+                       each replaceUses: node1 with: node2 }!
+
+
     method do: block
         dict values do: block!
 end
 
+
+class OpMap { list }
+    is Object
+
+    direct method new
+        self list: List new!
+
+
+    method at: op and: args ifNonePut: block
+        list do: { |each|
+                   each op is op
+                       => { (each args == args)
+                                => { return each } } }.
+        let new = block value.
+        list push: new.
+        new!
+
+
+    method reject: block
+        Self list: (list reject: block)!
+
+
+    method select: block
+        Self list: (list select: block)!
+
+
+    method do: block
+        list do: block!
+end
+
+
 class Worklist { list dict }
+    is Object
+
     direct method new
         self list: List new
              dict: Dictionary new!
+
+
     method push: thing
         dict at: thing
              ifNonePut: { list push: thing.
                           thing }!
+
+
     method pushAll: aList
         aList do: { |each| self push: each }!
+
+
     method pop
         let thing = list pop.
         dict remove: thing.
         thing!
+
+
     method isEmpty
         list isEmpty!
 end
 
--- Continuations represent control flow and computations:
--- they can both receive and produce values.
-interface CONT
+
+define DebugVerify True!
+
+
+interface Expression
     is Object
 
-    method flush
-        -- Things which use values need to implement this.
+    method doSubExpressions: _
         False!
 
-    method unlink
-        self pred link: self cont.
-        self pred: False.
-        self cont: False.
-        self flush!
 
-    method link: next
-        next pred: self.
-        self cont: next!
+    method propagateTypes: _
+        False!
+
+
+    method hasKnownClass
+        False!
+
+
+    method simplify
+        False!
+
+
+    method debugVerify: what
+        DebugVerify
+            ifTrue: { self verify: what }!
+
+
+    method type
+        False!
+
+
+    method verify: _
+        False!
+
+
+    method isUnused
+        self uses isEmpty!
+
+
+    method addUse: use
+        self uses add: use!
+
+
+    method removeUse: use
+        self uses remove: use.
+        self debugVerify: "Expression#removeUse"!
+
+
+    method replaceUsesWith: expr
+        self uses do: { |each| each replaceUses: self with: expr }.
+        self debugVerify: "Expression#replaceUsesWith:"!
+
+
+    method toString
+        "#<{self classOf name} {self printName}>"!
+
+
+    required method uses
+    required method printName
+    required method replaceUses: expr1 with: expr2
 end
 
--- Nullary continuations ignore any values they receive.
-interface NULLARY
-    is CONT
-end
 
--- Nodes represent constants, bound names, and compiler generated
--- temporaries: values requring no computations. They are used
--- by continuations, either REF continuations fetching the value
--- of a node and passing it onwards, or SEND continuations directly
--- using a node.
-interface NODE
-    is Object
-end
+class Constant { id::Integer
+                 value
+                 uses::Set }
+    is Expression
 
-class TMP { id defs uses }
-    is NODE
-    direct method id: id
+
+    direct method id: id value: value
         self id: id
-             defs: Set new
+             value: value
              uses: Set new!
-    method printOn: output
-        output print: "${id}"!
+
+
+    method hasKnownClass
+        True!
+
+
+    method printName
+        value displayString!
+
+
+    method replaceUses: expr1 with: expr2
+        Error raise: "Constant#replaceUses:with: is invalid"!
+
+
+    method visitBy: visitor
+        visitor visitConstant: self!
 end
 
-class VAR { id name defs uses }
-    is NODE
+
+class CpsSelector { name }
+    method displayString
+        "#{name}"!
+end
+
+
+class Global { id::Integer
+               name::String
+               uses::Set
+               definition }
+    is Expression
+
     direct method id: id name: name
         self id: id
              name: name
+             uses: Set new
+             definition: False!
+
+
+    method definition: new::ClassDefinition
+        definition = new!
+
+
+    method hasKnownClass
+        (definition is False) not!
+
+
+    method classDefinition
+        definition classDefinition!
+
+
+    method replaceUses: expr1 with: expr2
+        Error raise: "Global#replaceUses:with: is invalid"!
+
+
+    method printName
+        "{name}:Global"!
+
+
+    method visitBy: visitor
+        visitor visitGlobal: self!
+end
+
+
+
+class Variable { id::Integer
+                 name
+                 type
+                 defs::Set
+                 uses::Set }
+    is Expression
+
+    direct method id: id
+        self id: id
+             name: False
+             type: False
              defs: Set new
              uses: Set new!
-    method printOn: output
-        output print: "{name}{id}"!
-end
 
-class CONST { value uses }
-    is NODE
-    direct method value: value
-        self value: value
+
+    direct method id: id name: name
+        self id: id
+             name: name
+             type: False
+             defs: Set new
              uses: Set new!
-    method printOn: output
-        output writeString: value displayString!
-end
 
-class SEND { id pred cont selector recv args }
-    is NULLARY
-    direct method id: id cont: cont selector: selector recv: recv args: args
-        let new = self id: id
-                       pred: False
-                       cont:cont
-                       selector: selector
-                       recv: recv
-                       args: args.
-        cont pred: new.
-        recv uses add: new.
-        args do: { |each| each uses add: new }.
-        new!
-    method replace: node1 with: node2
-        node1 uses remove: self.
-        node2 uses add: self.
-        recv is node1
-            => { recv = node2 }.
-        args
-            doWithIndex: { |each index|
-                           each is node1
-                               => { args at: index put: node2 } }!
-    method name
-        "send{id}"!
-    method cont: new
-        cont = new!
-    method pred: new
-        pred = new!
+
+    method addDef: def
+        defs add: def!
+
+
+    method removeDef: def
+        defs remove: def.
+        (defs isEmpty and: uses isEmpty not)
+            ifTrue: { Error raise: "Variable lost definitions while still being used."}!
+
+
+    method replaceUses: expr1 with: expr2
+        Error raise: "Variable#replaceUses:with: is invalid"!
+
+
+    method type: new
+        (type is new)
+            ifTrue: { return False }.
+        (type is False)
+            ifFalse: { Error raise: "Variable already has a type: {self}. Old={type}, New={new}" }.
+        type = new!
+
+
+    method hasKnownClass
+        ClassDefinition includes: type!
+
+
+    method classDefinition
+        type :: ClassDefinition!
+
+
+    method printName
+        name is False
+            ifTrue: { "$var:{id}" }
+            ifFalse: { "{name}:{id}" }!
+
+
     method visitBy: visitor
-        visitor visitSend: self!
+        visitor visitVariable: self!
 end
 
-class BIND { id pred cont var }
-    is CONT
-    direct method id: id cont: cont var: var
+
+interface PrimitiveOperation
+    direct method typeOf: _
+        False!
+end
+
+
+class ADDI {}
+    is PrimitiveOperation
+
+
+    direct method name
+        "addi"!
+
+
+    direct method visit: operation by: visitor
+        visitor visitAddi: operation!
+end
+
+
+class CLASS_OF {}
+    is PrimitiveOperation
+
+    direct method name
+        "classOf"!
+
+
+    direct method visit: operation by: visitor
+        visitor visitClassOf: operation!
+end
+
+
+class FIND_METHOD {}
+    is PrimitiveOperation
+
+    direct method name
+        "findMethod"!
+
+
+    direct method visit: operation by: visitor
+        visitor visitFindMethod: operation!
+end
+
+
+class SELECT {}
+    is PrimitiveOperation
+
+    direct method name
+        "select"!
+
+    direct method visit: operation by: visitor
+        visitor visitSelect: operation!
+end
+
+
+class INVALID {}
+    is PrimitiveOperation
+
+    direct method name
+        "invalid"!
+end
+
+
+class Operation { id::Integer
+                  op
+                  args::Array
+                  uses::Set }
+    is Expression
+
+    direct method id: id op: op args: args
         let new = self id: id
-                       pred: False
-                       cont: cont
-                       var: var.
-        cont pred: new.
-        var defs add: new.
+                       op: op
+                       args: args
+                       uses: Set new.
+        args do: { |each| each addUse: new }.
         new!
-    method name
-        "bind{id}"!
-    method pred: new
-        pred = new!
-    method cont: new
-        cont = new!
+
+
+    method doSubExpressions: block
+        args do: block!
+
+
+    method verify: what
+        (args allSatisfy: { |each| each uses includes: self })
+            assert: "{self printName} should use its args: {args collect: #printName}"!
+
+
+    method type
+        op typeOf: self!
+
+
+    method printName
+        StringOutput
+            with: { |out|
+                    out
+                        ; print: op name
+                        ; print: ":"
+                        ; print: id
+                        ; print: "(".
+                    args
+                        do: { |each| out print: each printName }
+                        interleaving: { out print: ", " }.
+                    out print: ")" }!
+
+
     method flush
-        var uses isEmpty assert: "Cannot flush a bind whose var has uses left".
-        var defs remove: self!
+        args do: { |each| each removeUse: self }.
+        args = [].
+        op = INVALID!
+
+
+
+    method replaceUses: expr1 with: expr2
+        expr2 addUse: self.
+        args = args replace: expr1 with: expr2.
+        expr1 removeUse: self.
+        self debugVerify: "Operation#replaceUses:"!
+
+
     method visitBy: visitor
-        visitor visitBind: self!
-    method printOn: output
-        output print: "#<BIND id={id} pred={pred name} cont={cont name} var={var}>"!
+        visitor visitOperation: self!
 end
 
-class REF { id pred cont target }
-    is NULLARY
-    direct method id: id cont: cont target: target
-        -- If the REF would be dead, don't build it in the
-        -- first place.
-        (NULLARY includes: cont)
-            => { return cont }.
+
+class Continuation { id::Integer
+                     name
+                     params::Array
+                     target
+                     args::Array
+                     uses::Set }
+    is Expression
+
+    direct method id: id name: name params: params target: target args: args
         let new = self id: id
-                       pred: False
-                       cont: cont
-                       target: target.
-        cont pred: new.
-        target uses add: new.
+                       name: name
+                       params: params
+                       target: target
+                       args: args asArray
+                       uses: Set new.
+        params do: { |each| each addDef: new }.
+        target addUse: new.
+        args do: { |each| each addUse: new }.
         new!
-    method name
-        "ref{id}"!
-    method cont: new
-        cont = new!
-    method pred: new
-        pred = new!
-    method replace: node1 with: node2
-        node1 uses remove: self.
-        node2 uses add: self.
-        target = node2!
-    method flush
-        target uses remove: self!
+
+
+    method verify: what
+        (target is False)
+            ifFalse: { (target uses includes: self)
+                           ifFalse: { Error raise: "{self} does not use its target: {target} ({what})" } }.
+        let badParams = params reject: { |each| each defs includes: self }.
+        badParams isEmpty assert: "Continuation should define its params".
+        let badArgs = args reject: { |each| each uses includes: self }.
+        badArgs isEmpty assert: "Continuation should uses its args".
+        self!
+
+    method name: new
+        name = new!
+
+    method hasKnownClass
+        True!
+
+
+    method classDefinition
+        FunctionClassDefinition!
+
+
+    method doSubExpressions: block
+        target => { block value: target }.
+        args do: block!
+
+
+    method propagateTypes: types
+        params with: types
+               do: { |param type| param type: type }!
+
+
+    method propagateTargetType
+        (Constant includes: target)
+            => { let value = target value .
+                 (MethodDefinition includes: value)
+                     => { args last propagateTypes: [value returnType] } }!
+
+
+    method simplify
+        { self hasUniqueTarget }
+            whileTrue: { self inlineUniqueTarget }.
+        self!
+
+
+    method hasUniqueTarget
+        (Continuation includes: target)
+            ifTrue: { target uses isOnly: self }!
+
+
+    method inlineUniqueTarget
+        self args
+            with: target params
+            do: { |arg param|
+                  param replaceUsesWith: arg }.
+        self replaceArgsFrom: target.
+        target unlink.
+        self debugVerify: "Continuation#inlineUniqueTarget"!
+
+
+    method replaceUses: expr1 with: expr2
+        expr2 addUse: self.
+        target is expr1
+            ifTrue: { target = expr2 }.
+        args replace: expr1 with: expr2.
+        expr1 removeUse: self.
+        self debugVerify: "Continuation#replaceUses:with:"!
+
+
+
+    method replaceArgsFrom: other::Continuation
+        -- This is more convenient than #args:, since
+        -- we usually want to copy the array!
+        args do: { |each| each removeUse: self }.
+        args = other args copy.
+        args do: { |each| each addUse: self }.
+        self debugVerify: "Continuation#replaceArgsFrom:"!
+
+
+    method replaceParamsFrom: other::Continuation
+        -- This is more convenient than #params:, since
+        -- we usually want to copy the array!
+        params do: { |each| each removeDef: self }.
+        params = other params copy.
+        params do: { |each| each addDef: self }.
+        self debugVerify: "Continuation#replaceParamsFrom:"!
+
+
+    method removeParams
+        params do: { |each| each removeDef: self }.
+        params = [].
+        self debugVerify: "Continuation#removeParams"!
+
+
+    method removeArgs
+        args do: { |each| each removeUse: self }.
+        args = [].
+        self debugVerify: "Continuation#removeArgs"!
+
+
+    method addParams: new
+        new do: { |each| each addDef: self }.
+        params = params append: new.
+        self debugVerify: "Continuation#addParams:"!
+
+
+    method addArgs: new
+        new do: { |each| each addUse: self }.
+        args = args append: new.
+        self debugVerify: "Continuation#addArgs:"!
+
+
+    method target: new
+        -- No copy needed here, so #target: is the way to go.
+        target => { target removeUse: self }.
+        target = new.
+        target => { target addUse: self }.
+        self debugVerify: "Continuation#target:"!
+
+
+    method unlink
+        self removeParams.
+        self removeArgs.
+        self replaceUsesWith: target.
+        self target: False.
+        self debugVerify: "Continuation#unlink"!
+
+
+    method printName
+        name is False
+            ifTrue: { "$cont:{id}" }
+            ifFalse: { "{name}:{id}" }!
+
+
+    method toString
+        "#<Continuation {self printName} -> {target printName}>"!
+
+
     method visitBy: visitor
-        visitor visitRef: self!
+        visitor visitContinuation: self!
 end
 
-class CALL_METHOD { id pred cont meth recv args }
-    is NULLARY
-    direct method id: id cont: cont meth: meth recv: recv args: args
-        let new = self id: id
-                       pred: False
-                       cont: cont
-                       meth: meth
-                       recv: recv
-                       args: args.
-        cont pred: new.
-        meth uses add: new.
-        recv uses add: new.
-        args do: { |each| each uses add: new }.
-        new!
-    method replace: node1 with: node2
-        node1 uses remove: self.
-        node2 uses add: self.
-        meth is node1
-            => { meth = node2 }.
-        recv is node1
-            => { recv = node2 }.
-        args
-            doWithIndex: { |each index|
-                           each is node1
-                               => { args at: index put: node2 } }!
-    method name
-        -- FIXME: add the selector to this name!
-        "call{id}"!
-    method pred: new
-        pred = new!
-    method cont: new
-        cont = new!
-    method visitBy: visitor
-        visitor visitCallMethod: self!
-end
 
-class FIND_METHOD { id pred cont recv selector }
-    is NULLARY
-    direct method id: id cont: cont recv: recv selector: selector
-        let new = self id: id
-                       pred: False
-                       cont: cont
-                       recv: recv
-                       selector: selector.
-        cont pred: new.
-        recv uses add: new.
-        new!
-    method name
-        "findMethod{id}"!
-    method replace: node1 with: node2
-        node1 uses remove: self.
-        node2 uses add: self.
-        recv is node1
-            => { recv = node2 }!
-    method pred: new
-        pred = new!
-    method cont: new
-        cont = new!
-    method visitBy: visitor
-        visitor visitFindMethod: self!
-end
-
-class START { _cont context }
-    is CONT
-    direct method cont: cont context: context
-        let new = self _cont: cont context: context.
-        cont pred: new.
-        new!
-    method cont
-        _cont!
-    method cont: new
-        _cont = new!
-    method visitBy: visitor
-        visitor visitStart: self!
-end
-
-class HALT { pred }
-    is CONT
-    direct method new
-        self pred: False!
-    method name
-        "halt"!
-    method pred: new
-        pred = new!
-    method visitBy: visitor
-        visitor visitHalt: self!
-end
-
--- CpsContext is stored in the START cont, so anyone needed to create more
--- ids, etc, can pick it up from there.
-class CpsContext { lastId constants }
-    direct method new
-        self lastId: 0
-             constants: Dictionary new!
-    method nextId
-        lastId = lastId + 1!
-    method constant: value
-        constants
-            at: value
-            ifNonePut: { CONST value: value }!
-    method tmp
-        TMP id: self nextId!
-end
-
-class CpsBuilder { var next context }
-
-    direct method convert: syntax
-        let builder = self new.
-        START
-            cont: (builder visit: syntax
-                           with: HALT new)
-            context: builder context!
-
-    direct method new
-        self var: False
-             next: False
-             context: CpsContext new!
-
-    method bind: var
-        CpsBuilder
-            var: var
-            next: self
-            context: context!
-
-    method find: name
-        var is False
-            ifTrue: { Error raise: "Unbound variable in CPSBuilder: {name}" }.
-        var name == name
-            ifTrue: { var }
-            ifFalse: { self next find: name }!
-
-    method constant: value
-        context constant: value!
-
-    method var: name
-        VAR id: context nextId name: name!
-
-    method visit: syntax with: cc
-        syntax visitBy: self with: cc!
-
-    method visitParents: syntax with: cc
-        syntax body visitBy: self with: cc!
-
-    method visitLiteral: aLiteral with: cc
-        REF
-            id: context nextId
-            cont: cc
-            target: (self constant: aLiteral value)!
-
-    method visitVariable: aVar with: cc
-        REF
-            id: context nextId
-            cont: cc
-            target: (self find: aVar name)!
-
-    method visitLet: aLet with: cc
-        let var = self var: aLet variable name.
-        let body = (self bind: var)
-                       visit: aLet body
-                       with: cc.
-        let bind = BIND id: context nextId
-                        cont: body
-                        var: var.
-        self visit: aLet value with: bind!
-
-    method visitSend: aSend with: cc
-        -- We generate TMPs and BINDs for receiver and arguments,
-        -- which would be very nice to avoid if they just end
-        -- up being REFs, since then we could pick up the
-        -- targets directly. Now that's left to simplification
-        -- pass.
-        let recvTmp = context tmp.
-        let argTmps = aSend arguments collect: { |_each| context tmp }.
-        let next = SEND
-                       id: context nextId
-                       cont: cc
-                       selector: aSend selector name
-                       recv: recvTmp
-                       args: argTmps.
-        let argVals = aSend arguments reverse
-                          with: argTmps reverse
-                          collect: { |arg tmp|
-                                     let bind = BIND id: context nextId
-                                                     cont: next
-                                                     var: tmp.
-                                     next = self visit: arg with: bind }.
-        let recvBind = BIND id: context nextId
-                            cont: next
-                            var: recvTmp.
-        self visit: aSend receiver with: recvBind!
-
-    method visitSeq: aSeq with: cc
-        let then = self visit: aSeq then with: cc.
-        self visit: aSeq first with: then!
-end
-
-class CpsWalker { block select }
+class CpsGraph { entry::Continuation
+                 exit::Variable
+                 lastId::Integer
+                 operations::OpMap
+                 constants::Dictionary
+                 globals::Dictionary
+                 selectors::Dictionary
+                 continuations::List }
     is Object
 
-    direct method in: cps do: block
-        cps visitBy: (CpsWalker block: block select: False)!
+    direct method new
+        -- Entry node just binds the exit continuation, the
+        -- initial target of entry is a placeholder that
+        -- gets replaced.
+        let placeholder = Variable
+                           id: 0
+                           name: "$<<PLACEHOLDER>>".
+        let exit = Variable id: 2
+                            name: "$return".
+        let entry = Continuation id: 1
+                                 name: "$entry"
+                                 params: [exit]
+                                 target: placeholder
+                                 args: [].
+        let graph = self
+                        entry: entry
+                        exit: exit
+                        lastId: 2
+                        operations: OpMap new
+                        constants: Dictionary new
+                        globals: Dictionary new
+                        selectors: Dictionary new
+                        continuations: (List with: entry).
+        exit addUse: exit.
+        entry addUse: graph.
+        graph!
 
 
-    direct method in: cps select: selectBlock do: block
-        cps visitBy: (CpsWalker block: block select: selectBlock)!
+    method replaceUses: expr1 with: expr2
+        expr1 removeUse: self.
+        exit is expr1
+            ifTrue: { exit = expr2 }.
+        entry is expr1
+            ifTrue: { entry = expr2 }.
+        expr2 addUse: self!
 
-    method doVisit: cont
-        (select is False)
-            ifTrue: { block value: cont }
-            ifFalse: { (select value: cont)
-                           ifTrue: { block value: cont } }.
-        (HALT includes: cont)
-            ifFalse: { cont cont visitBy: self }!
 
-    method visitStart: aStart
-        self doVisit: aStart!
+    method cleanup
+        continuations do: { |each| each verify: "CpsGrapg#cleanup" }.
+        let worklist = Worklist new.
+        worklist pushAll: (continuations select: #isUnused).
+        worklist pushAll: (operations select: #isUnused).
+        { worklist isEmpty }
+            whileFalse: { let expr = worklist pop.
+                          -- Output debug println: "flushing: {expr printName}".
+                          expr doSubExpressions: { |each|
+                                                   each removeUse: expr.
+                                                   each isUnused
+                                                       ifTrue: { worklist push: each }} }.
+        continuations = continuations reject: #isUnused.
+        operations = operations reject: #isUnused!
 
-    method visitRef: aRef
-        self doVisit: aRef!
 
-    method visitBind: aBind
-        self doVisit: aBind!
+    method doExpressions: block
+        continuations do: block.
+        operations do: block!
 
-    method visitSend: aSend
-        self doVisit: aSend!
 
-    method visitFindMethod: aFind
-        self doVisit: aFind!
+    method copyContinuation: aCont
+           self continuation: aCont name
+                params: aCont params
+                target: aCont target
+                args: aCont args!
 
-    method visitCallMethod: aCall
-        self doVisit: aCall!
 
-    method visitHalt: aHalt
-        self doVisit: aHalt!
+    method entry: target
+        entry target: target.
+        entry simplify.
+        self cleanup.
+        self!
+
+
+    method optimize
+        CpsOptimizer optimize: self.
+        self cleanup.
+        self!
+
+
+    method continuation: name params: params target: target args: args
+        let cont = Continuation id: self nextId
+                                name: name
+                                params: params
+                                target: target
+                                args: args.
+        continuations push: cont.
+        cont!
+
+
+    method makeVariable: name
+        Variable
+            id: self nextId
+            name: name!
+
+
+    method makeTemporary
+        Variable
+            id: self nextId!
+
+
+    method ensureConstant: value
+        constants
+            at: value
+            ifNonePut: { Constant
+                             id: self nextId
+                             value: value }!
+
+    method ensureGlobal: name
+        globals
+            at: name
+            ifNonePut: { Global
+                             id: self nextId
+                             name: name }!
+
+
+    method addGlobalDefinitions: definitions
+        definitions
+            do: { |def|
+                  let global = self ensureGlobal: def name.
+                  global definition: def }!
+
+
+    method ensureSelector: name
+        selectors
+            at: name
+            ifNonePut: { self ensureConstant: (CpsSelector name: name) }!
+
+
+
+    method ensureOperation: op args: args
+        operations
+            at: op
+            and: args
+            ifNonePut: { Operation
+                             id: self nextId
+                             op: op
+                             args: args }!
+
+
+    method classOf: recv
+           self ensureOperation: CLASS_OF
+                args: [recv]!
+
+
+    method findMethod: name for: recv
+        let selector = self ensureSelector: name.
+        let classOf = self classOf: recv.
+        self ensureOperation: FIND_METHOD
+             args: [classOf, selector]!
+
+
+    method nextId
+        lastId = lastId + 1!
 end
 
-class CpsOptimizer { worklist::Worklist context }
-    direct method optimize: cps
+
+class CpsConverter { graph var next }
+
+    direct method new
+        self graph: CpsGraph new
+             var: False
+             next: False!
+
+
+    direct method convert: syntax withGlobalDefinitions: defs
+        let converter = self new.
+        converter graph addGlobalDefinitions: defs.
+        converter graph
+            entry: (syntax visitBy: converter
+                           with: converter graph exit).
+        converter graph optimize!
+
+
+    method bindVariable: var
+        CpsConverter
+            graph: graph
+            var: var
+            next: self!
+
+
+    method bindVariables: vars
+        let converter = self.
+        vars do: { |each|
+                   converter = converter bindVariable: each }.
+        converter!
+
+
+    method findBinding: name
+        var is False
+            ifTrue: { return graph ensureGlobal: name }.
+        var name == name
+            ifTrue: { var }
+            ifFalse: { self next findBinding: name }!
+
+
+    method visitBlock: syntax with: cc
+        let blockReturn = graph makeVariable: "$ret".
+        let blockVars = syntax parameters
+                            collect: { |each| graph makeVariable: each name }.
+        let block = syntax body
+                        visitBy: (self bindVariables: blockVars)
+                        with: blockReturn.
+        block name: "$block".
+        block addParams: (blockVars append: [blockReturn]).
+        graph continuation: "$makeClosure"
+              params: []
+              target: cc
+              args: [block simplify]!
+
+
+    method visitLet: syntax with: cc
+        let var = graph makeVariable: syntax variable name.
+        let body = syntax body
+                       visitBy: (self bindVariable: var)
+                       with: cc.
+        let bind = graph continuation: "$let"
+                         params: [var]
+                         target: body
+                         args: [].
+        (syntax value visitBy: self with: bind simplify)
+            simplify!
+
+
+    method visitLiteral: syntax with: cc
+        let const = graph ensureConstant: syntax value.
+        (graph continuation: "$const_ref"
+              params: []
+              target: cc
+              args: [const])
+        simplify!
+
+
+    method visitSend: syntax with: cc
+        let recv = graph makeVariable: "$recv".
+        let args = syntax arguments
+                       collect: { |a| graph makeVariable: "$arg" }
+                       as: Array.
+        let methodFunction = graph findMethod: syntax selector name
+                                   for: recv.
+        let next = graph continuation: "$send"
+                         params: []
+                         target: methodFunction
+                         args: ([recv] append: args append: [cc]).
+        syntax arguments reverse
+            with: args reverse
+            do: { |syntaxArg var|
+                  let bind = graph continuation: "$bind_arg"
+                                   params: [var]
+                                   target: next
+                                   args: [].
+                  next = (syntaxArg visitBy: self with: bind)
+                             simplify }.
+        let recvBind = graph continuation: "$bind_recv"
+                             params: [recv]
+                             target: next
+                             args: [].
+        syntax receiver visitBy: self with: recvBind simplify!
+
+
+    method visitSeq: syntax with: cc
+        let then = syntax then visitBy: self with: cc.
+        let discard = graph continuation: "$seq"
+                            params: [graph makeVariable: "$ignore"]
+                            target: then
+                            args: [].
+        syntax first visitBy: self with: discard simplify!
+
+
+    method visitValueTypeDeclaration: syntax with: cc
+        let value = graph makeVariable: "$value".
+        let type = graph makeVariable: "$type".
+        let checkCont = graph continuation: "$typecheck"
+                              params: [type]
+                              target: (graph findMethod: "typecheck:" for: type)
+                              args: [type, value, cc].
+        let typeCont = syntax type visitBy: self with: checkCont.
+        let bindValue = graph continuation: "$bind"
+                              params: [value]
+                              target: typeCont
+                              args: [].
+        syntax value visitBy: self with: bindValue!
+
+
+    method visitVariable: syntax with: cc
+        let var = self findBinding: syntax name.
+        (Continuation includes: cc)
+            => { cc uses isEmpty
+                     => { cc params first replaceUsesWith: var.
+                          cc removeParams.
+                          return cc } }.
+        graph continuation: "$var_ref"
+              params: []
+              target: cc
+              args: [var]!
+end
+
+
+class CpsOptimizer { worklist graph }
+
+    direct method optimize: graph
         let worklist = Worklist new.
-        CpsWalker in: cps do: { |each|
-                                 worklist push: each }.
-        (CpsOptimizer worklist: worklist context: cps context)
+        graph doExpressions: { |each| worklist push: each }.
+        (self worklist: worklist graph: graph)
             optimize!
+
 
     method optimize
         { worklist isEmpty }
             whileFalse: { worklist pop visitBy: self }!
 
-    method visitStart: _aStart
+
+    method visitContinuation: aCont
+        -- Was this continuation eliminated while it was on the worklist?
+        aCont uses isEmpty
+            => { return False }.
+        -- Do strictly local simplifications.
+        aCont simplify.
+        -- If the target is a known method with an optimizer, use that.
+        let target = aCont target.
+        (Constant includes: target)
+            => { let aMethod = target value.
+                 (MethodDefinition includes: aMethod)
+                     => { aMethod canOptimize
+                              => { aMethod optimize: aCont in: graph with: worklist } } }!
+
+
+    method visitOperation: anOperation
+        anOperation op visit: anOperation by: self!
+
+
+    method visitClassOf: aClassOf
+        let recv = aClassOf args first.
+        (recv hasKnownClass)
+            ifTrue: { let const = graph ensureConstant: recv classDefinition.
+                      aClassOf uses
+                          do: { |each|
+                                each replaceUses: aClassOf with: const.
+                                worklist push: each }.
+                      aClassOf flush }!
+
+
+    method visitFindMethod: aFindMethod
+        let classArg = aFindMethod args at: 1.
+        (Constant includes: classArg)
+            => { let classDef = classArg value.
+                 (ClassDefinition includes: classDef)
+                     => { let selectorArg = aFindMethod args at: 2.
+                          (Constant includes: selectorArg)
+                              => { let selector = selectorArg value.
+                                   (CpsSelector includes: selector)
+                                       => { let methodFunction = classDef findMethod: selector name.
+                                            (methodFunction is False) not
+                                                => { let constMethod = graph ensureConstant: methodFunction.
+                                                     aFindMethod replaceUsesWith: constMethod.
+                                                     constMethod uses do: { |each|
+                                                                            each propagateTargetType.
+                                                                            worklist push: each } } } } } }!
+
+    method visitSelect: _
         False!
 
-    method visitHalt: _aHalt
+
+    method visitTypeInfo: _
         False!
 
-    method visitFindMethod: _aFind
+
+    method visitGlobal: _
         False!
 
-    method visitCallMethod: _aCall
+
+    method visitVariable: _
         False!
 
-    method visitSend: aSend
+
+    method visitConstant: _
         False!
-
-    method visitBind: aBind
-        let pred = aBind pred.
-        let var = aBind var.
-        (REF includes: pred)
-            => { (NODE includes: pred target)
-                     => { (var defs isOnly: aBind)
-                              => { worklist pushAll: var uses.
-                                   var uses
-                                       replace: var
-                                       with: pred target } } }.
-        var uses isEmpty
-            => { worklist push: pred.
-                 worklist push: aBind cont.
-                 aBind unlink }!
-
-    method visitRef: aRef
-        (NULLARY includes: aRef cont)
-            ifTrue: { worklist push: aRef cont.
-                      worklist push: aRef pred.
-                      aRef unlink }!
 end
 
-extend CONT
-    method optimize
-        CpsOptimizer optimize: self!
-end
 
-class CpsOptimizeMatchingSends { allMatches context }
-    direct method optimize: cps
-        -- 1. Find all sends
-        let sends = Dictionary new.
-        CpsWalker in: cps
-                  select: { |each| SEND includes: each }
-                  do: { |each| self noteSend: each in: sends }.
-        -- 2. Collect those sends that have matches in terms
-        -- of receiver and selector, generate a TMP for each
-        -- set of matches.
-        let allMatches = Dictionary new.
-        self matchingSendsIn: sends
-             do: { |matches|
-                   let tmp = TMP id: cps context nextId.
-                   matches do: { |each| allMatches at: each put: tmp } }.
-        -- 3. If we have any matches, run the visitor from
-        -- start, handling all matching sends in order. First
-        -- is broken into FIND_METHOD + BIND + CALL_METHOD,
-        -- the rest become just CALL_METHOD.
-        allMatches isEmpty
-            ifFalse: { let visitor = CpsOptimizeMatchingSends
-                                         allMatches: allMatches
-                                         context: cps context.
-                       cps visitBy: visitor }!
+class CpsPrinter { output seen }
 
-    direct method noteSend: aSend in: dict
-        let recvSends = dict at: aSend recv
-                             ifNonePut: { Dictionary new }.
-        let matches = recvSends at: aSend selector
-                                ifNonePut: { List new }.
-        matches push: aSend!
+    direct method printToString: graph
+        StringOutput
+            with: { |out|
+                    self print: graph to: out }!
 
-    direct method matchingSendsIn: dict do: block
-        dict doValues: { |recvSends|
-                         recvSends doValues: { |matches|
-                                               matches size > 1
-                                                   ifTrue: { block value: matches } } }!
 
-    method breakSend: aSend with: methodTmp
-        let pred = aSend pred.
-        let cont = aSend cont.
-        let callMethod = CALL_METHOD
-                             id: context nextId
-                             cont: cont
-                             meth: methodTmp
-                             recv: aSend recv
-                             args: aSend args.
-        let bindMethod = BIND id: context nextId
-                              cont: callMethod
-                              var: methodTmp.
-        let find = FIND_METHOD
-                       id: context nextId
-                       cont: bindMethod
-                       recv: aSend recv
-                       selector: aSend selector.
-        pred link: find.
-        aSend flush!
-
-    method convert: aSend toCall: methodTmp
-        let pred = aSend pred.
-        let cont = aSend cont.
-        let callMethod = CALL_METHOD
-                             id: context nextId
-                             cont: cont
-                             meth: methodTmp
-                             recv: aSend recv
-                             args: aSend args.
-        pred link: callMethod.
-        aSend flush!
-
-    method visitStart: aStart
-        aStart cont visitBy: self!
-
-    method visitHalt: _aHalt
-        False!
-
-    method visitSend: aSend
-        (allMatches at: aSend)
-            => { |tmp|
-                 tmp defs isEmpty
-                     ifTrue: { self breakSend: aSend with: tmp }
-                     ifFalse: { self convert: aSend toCall: tmp } }.
-         aSend cont visitBy: self!
-
-    method visitFindMethod: aFind
-        aFind cont visitBy: self!
-
-    method visitCallMethod: aCall
-        aCall cont visitBy: self!
-
-    method visitBind: aBind
-        aBind cont visitBy: self!
-
-    method visitRef: aRef
-        aRef cont visitBy: self!
-end
-
-interface CpsPrinter
-    direct method print: cps to: output
-        cps visitBy: (self output: output)!
-
-    direct method println: cps to: output
-        self print: cps to: output.
-        output newline!
-
-    direct method printToString: cps
-        StringOutput with: { |out| self print: cps to: out }!
-
-    method visitStart: aStart
-        aStart cont visitBy: self!
-end
-
-class CpsLambdaPrinter { output }
-    is CpsPrinter
-
-    method visitRef: aRef
-        aRef cont visitBy: self.
-        output writeString: " {aRef target}"!
-
-    method visitBind: aBind
-        output writeString: "(\\{aBind var}.".
-        aBind cont visitBy: self.
-        output writeString: ")"!
-
-    method visitSend: aSend
-        aSend cont visitBy: self.
-        output writeString: " {aSend recv}".
-        (aSend selector splitBy: ":" character)
-            with: aSend args
-            do: { |selectorPart arg|
-                  output writeString: " {selectorPart} {arg}" }!
-
-    method visitHalt: _aHalt
-        output writeString: "\\_.halt"!
-end
-
-define NoValue ["NoValue"]!
-
-class CpsSourcePrinter { output value }
-    is CpsPrinter
-
-    direct method output: output
-        self output: output
-             value: NoValue!
-
-    method visitStart: aStart
+    direct method print: graph::CpsGraph to: output
+        let visitor = self
+                          output: output
+                          seen: Set new.
         output newline.
-        aStart cont visitBy: self!
+        visitor visit: graph entry!
 
-    method visitRef: aRef
-        value = aRef target.
-        aRef cont visitBy: self!
 
-    method visitBind: aBind
-        output println: "let {aBind var} = {value}.".
-        value = NoValue.
-        aBind cont visitBy: self!
+    method visit: other::Expression
+        (seen add: other)
+            ifTrue: { other visitBy: self }!
 
-    method visitSend: aSend
-        value = StringOutput
-            with: { |out|
-                    out writeString: "{aSend recv}".
-                    (aSend selector splitBy: ":" character)
-                        with: aSend args
-                        do: { |selectorPart arg|
-                              out writeString: " {selectorPart} {arg}" } }.
-        aSend cont visitBy: self!
 
-    method visitFindMethod: aFind
-        value = StringOutput
-            with: { |out|
-                    out writeString: "{aFind recv} findMethod: #{aFind selector}" }.
-        aFind cont visitBy: self!
-
-    method visitCallMethod: aCall
-        value = StringOutput
-            with: { |out|
-                    out writeString: "{aCall meth} invokeOn: {aCall recv}".
-                    aCall args
-                        do: { |each| out writeString: " with: {each}" } }.
-        aCall cont visitBy: self!
-
-    method visitHalt: _aHalt
-        value is NoValue
-            ifFalse: { output println: value }!
-end
-
-class CpsContPrinter { output }
-    is CpsPrinter
-
-    method visitStart: aStart
+    method visitContinuation: aCont
         output
-            ; newline
-            ; println: "start():"
-            ; println: "    _ -> {aStart cont name}".
-        aStart cont visitBy: self!
-
-    method visitRef: aRef
+            ; print: aCont printName
+            ; print: "(".
+        aCont params
+            do: { |each| output print: each printName }
+            interleaving: { output print: ", " }.
+        output println: "):".
         output
-            ; println: "ref{aRef id}():"
-            ; println: "    {aRef target} -> {aRef cont name}".
-        aRef cont visitBy: self!
+            ; print: "    "
+            ; print: aCont target printName
+            ; print: "(".
+        aCont args
+            do: { |arg| output print: arg printName }
+            interleaving: { output print: ", " }.
+        output println: ")".
+        aCont args do: { |each| self visit: each }.
+        self visit: aCont target!
 
-    method visitBind: aBind
-        output
-            ; println: "bind{aBind id}({aBind var}):"
-            ; println: "    _ -> {aBind cont name}".
-        aBind cont visitBy: self!
 
-    method visitFindMethod: aFind
-        output
-            ; println: "{aFind name}():"
-            ; println: "    find_method({aFind recv}, #{aFind selector}) -> {aFind cont name}".
-        aFind cont visitBy: self!
-
-    method visitCallMethod: aCall
-        output
-            ; println: "{aCall name}():"
-            ; print: "    call_method({aCall meth}, {aCall recv}".
-        aCall args
-            do: { |each| output print: ", {each}" }.
-        output println: ") -> {aCall cont name}".
-        aCall cont visitBy: self!
-
-    method visitSend: aSend
-        output
-            ; println: "send{aSend id}():"
-            ; print: "   "
-            ; print: "{aSend recv}".
-        (aSend selector splitBy: ":" character)
-            with: aSend args
-            do: { |selectorPart arg|
-                  output print: " {selectorPart} {arg}" }.
-        output println: " -> {aSend cont name}".
-        aSend cont visitBy: self!
-
-    method visitHalt: _aHalt
+    method visitConstant: _
         False!
+
+
+    method visitVariable: _
+        False!
+
+
+    method visitGlobal: _
+        False!
+
+
+    method visitOperation: anOp
+        anOp args do: { |each| self visit: each }!
 end
+
 
 class TestCPS { assert }
     is TestSuite
 
-    method convert: syntax
-        let cps = CpsBuilder convert: syntax.
-        assert true: { START includes: cps }.
-        assert true: { cps is cps cont pred }.
-        cps!
+    method convert: source
+        self convert: source withGlobalDefinitions: []!
 
-    method assertRef: ref ofConst: value
-        assert true: { REF includes: ref }
-               testing: "REF to const expected".
-        assert true: { CONST includes: ref target }
-               testing: "REF target is CONST".
-        assert true: { value == ref target value }
-               testing: "REF target has right value: {value}, got: {ref target value}"!
 
-    method assertRef: ref ofVar: var::VAR
-        assert true: { let target = ref::REF target.
-                       target::VAR is var }
-               testing: "REF to {var} expected, got: {ref}"!
+    method convert: source withGlobalDefinitions: defs
+        let syntax = Parser parseExpression: source.
+        CpsConverter convert: syntax withGlobalDefinitions: defs!
 
-    method assertHalt: cps
-        assert true: { HALT includes: cps }
-               testing: "HALT where expected, got: {cps classOf name}"!
 
-    method assertBind: bind ofVar: name
-        assert true: { let var = bind::BIND var.
-                       name == var::VAR name }
-               testing: "BIND of VAR {name} expected, got: {bind}"!
-
-    method assertBind: bind ofTmp: id
-        assert true: { let var = bind::BIND var.
-                       id is var::TMP id }
-               testing: "BIND of TMP {id} expected, got: {bind}"!
-
-    method make_const_ref
-        self convert: (SyntaxLiteral value: 42)!
-
-    method test_convert_const_ref
-        let cps = self make_const_ref.
-        self assertRef: cps cont ofConst: 42.
-        self assertHalt: cps cont cont!
-
-    method test_optimize_const_ref
-        let cps = self make_const_ref.
-        cps optimize.
-        self assertRef: cps cont ofConst: 42.
-        self assertHalt: cps cont cont!
-
-    method make_let_x_and_ref
-        let syntax = SyntaxLet
-                         variable: (SyntaxVariable name: "x")
-                         value: (SyntaxLiteral value: 1343)
-                         body: (SyntaxVariable name: "x").
-        self convert: syntax!
-
-    method test_convert_let_x_and_ref
-        let cps = self make_let_x_and_ref.
-        self assertRef: cps cont ofConst: 1343.
-        let bind = cps cont cont.
-        self assertBind: bind ofVar: "x".
-        self assertRef: bind cont ofVar: bind var.
-        self assertHalt: bind cont cont!
-
-    method test_optimize_let_x_and_ref
-        let cps = self make_let_x_and_ref.
-        cps optimize.
-        self assertRef: cps cont ofConst: 1343.
-        self assertHalt: cps cont cont!
-
-    method make_let_xy_and_add
-        let syntax = SyntaxLet
-                         variable: (SyntaxVariable name: "x")
-                         value: (SyntaxLiteral value: 322)
-                         body: (SyntaxLet
-                                    variable: (SyntaxVariable name: "y")
-                                    value: (SyntaxVariable name: "x")
-                                    body: (SyntaxBinary
-                                               receiver: (SyntaxVariable name: "y")
-                                               selector: (SyntaxSelector name: "+")
-                                               argument: (SyntaxVariable name: "x"))).
-        self convert: syntax!
-
-    method test_convert_and_optimize_let_xy_and_add
-        -- Both conversion and simplification in one test
-        -- so that the simplification can refer to the send
-        -- cont.
-        let cps = self make_let_xy_and_add.
-        self assertRef: cps cont ofConst: 322.
-        let number= cps cont target.
-        let bindX = cps cont cont.
-        self assertBind: bindX ofVar: "x".
-        self assertRef: bindX cont ofVar: bindX var.
-        let bindY = bindX cont cont.
-        self assertBind: bindY ofVar: "y".
-        let refY = bindY cont.
-        self assertRef: refY ofVar: bindY var.
-        let bind1 = refY cont.
-        -- ID 1-2 taken by x and y
-        self assertBind: bind1 ofTmp: 3.
-        self assertRef: bind1 cont ofVar: bindX var.
-        let bind2 = bind1 cont cont.
-        self assertBind: bind2 ofTmp: 4.
-        let send = bind2 cont :: SEND.
-        assert true: { send selector == "+" }
-               testing: "Selector is expected".
-        assert true: { send recv is bind1 var }
-               testing: "Recv is right".
-        assert true: { send args == [bind2 var] }
-               testing: "Args match".
-        self assertHalt: send cont.
-
-        cps optimize.
-
-        assert true: { cps cont is send }
-               testing: "Send at head, got: {cps cont}".
-        assert true: { send recv is number }
-               testing: "Send has imm. receiver".
-        assert true: { send args == [number] }
-               testing: "Send has imm. arg".
-        self assertHalt: send cont!
-
-    method test_convert_and_optimize_seq_with_dead_ref
-        -- Unused referenced are dropped early.
-        let syntax = SyntaxSeq
-                         first: (SyntaxLiteral value: 983)
-                         then: (SyntaxLiteral value: 651).
-        let cps = self convert: syntax.
-        self assertRef: cps cont ofConst: 651.
-        self assertHalt: cps cont cont.
-
-        cps optimize.
-
-        self assertRef: cps cont ofConst: 651.
-        self assertHalt: cps cont cont!
-
-    method test_optimize_multiple_matching_sends
-        let source = "let x = 675. (x + 1) * (x + 2)".
-        let syntax = (Parser parseExpressions: source) first.
-
-        -- assert output println: source.
-        let cps = self convert: syntax.
-        -- CpsContPrinter println: cps to: assert output.
-        let sends1 = List new.
-        CpsWalker in: cps
-                  select: { |each| SEND includes: each }
-                  do: { |each| sends1 push: each selector }.
-        assert that: { sends1 sorted asArray }
-               equals: ["*", "+", "+"].
-
-        cps optimize.
-        let sends2 = List new.
-        CpsWalker in: cps
-                  select: { |each| SEND includes: each }
-                  do: { |each| sends2 push: each selector }.
-        assert that: { sends2 sorted asArray }
-               equals: ["*", "+", "+"].
-
-        CpsOptimizeMatchingSends optimize: cps.
-        -- CpsContPrinter println: cps to: assert output.
-
-        let finds2 = List new.
-        CpsWalker in: cps
-                  select: { |each| FIND_METHOD includes: each }
-                  do: { |each| finds2 push: each selector }.
-        assert that: { finds2 sorted asArray }
-               equals: ["+"].
-
-        assert that: { CpsSourcePrinter printToString: cps }
+    method test_convert_addition_of_integers_optimizes_to_operation_addi
+        let cps = self convert: "let a = X a :: Integer. let b = X b :: Integer. a + b"
+                       withGlobalDefinitions: [(ClassDefinition
+                                                    name: "Integer"
+                                                    methods: [BuiltinMethod new: IntegerPlusImpl new,
+                                                              BuiltinMethod new: IntegerAddIntegerImpl new])].
+        assert that: { CpsPrinter printToString: cps }
                equals: "
-let $23 = 675 findMethod: #+.
-let $2 = $23 invokeOn: 675 with: 1.
-let $3 = $23 invokeOn: 675 with: 2.
-$2 * $3
+$entry:1($return:2):
+    findMethod:39(classOf:38(X:Global), #a)(X:Global, $bind:35)
+$bind:35($value:30):
+    methodFunction(Integer class#typecheck:)(Integer:Global, $value:30, $let:29)
+$let:29(a:4):
+    findMethod:25(classOf:24(X:Global), #b)(X:Global, $bind:21)
+$bind:21($value:15):
+    methodFunction(Integer class#typecheck:)(Integer:Global, $value:15, $let:14)
+$let:14(b:5):
+    $return:2(addi:50(b:5, a:4))
 "!
 
-    method test_print_lambda_const_ref
-        let cps = self make_const_ref.
-        assert that: { CpsLambdaPrinter printToString: cps }
-               equals: "\\_.halt 42"!
-
-    method test_print_lambda_let_x_and_ref
-        let cps = self make_let_x_and_ref.
-        assert that: { CpsLambdaPrinter printToString: cps }
-               equals: "(\\x1.\\_.halt x1) 1343"!
-
-    method test_print_lambda_let_xy_and_add
-        let cps = self make_let_xy_and_add.
-        assert that: { CpsLambdaPrinter printToString: cps }
-               equals: "(\\x1.(\\y2.(\\$3.(\\$4.\\_.halt $3 + $4) x1) y2) x1) 322"!
-
-    method test_print_source_const_ref
-        let cps = self make_const_ref.
-        assert that: { CpsSourcePrinter printToString: cps }
+    method test_convert_arity_0_block
+        let cps = self convert: "\{ 421 }".
+        assert that: { CpsPrinter printToString: cps }
                equals: "
-42
+$entry:1($return:2):
+    $return:2($block:5)
+$block:5($ret:3):
+    $ret:3(421)
 "!
 
-    method test_print_lambda_let_x_and_ref
-        let cps = self make_let_x_and_ref.
-        assert that: { CpsSourcePrinter printToString: cps }
+
+    method test_convert_arity_3_block
+        let cps = self convert: "\{ |a b c| a + b + c }".
+        assert that: { CpsPrinter printToString: cps }
                equals: "
-let x1 = 1343.
-x1
+$entry:1($return:2):
+    $return:2($block:21)
+$block:21(a:4, b:5, c:6, $ret:3):
+    findMethod:18(classOf:17(a:4), #+)(a:4, b:5, $bind_recv:14)
+$bind_recv:14($recv:7):
+    findMethod:11(classOf:10($recv:7), #+)($recv:7, c:6, $ret:3)
 "!
 
-    method test_print_lambda_let_xy_and_add
-        let cps = self make_let_xy_and_add.
-        assert that: { CpsSourcePrinter printToString: cps }
+
+    method test_convert_constant_integer
+        let cps = self convert: "123".
+        assert that: { CpsPrinter printToString: cps }
                equals: "
-let x1 = 322.
-let y2 = x1.
-let $3 = y2.
-let $4 = x1.
-$3 + $4
+$entry:1($return:2):
+    $return:2(123)
 "!
 
-    method test_print_cont_const_ref
-        let cps = self make_const_ref.
-        assert that: { CpsContPrinter printToString: cps }
+
+    method test_convert_global
+        let cps = self convert: "X".
+        assert that: { CpsPrinter printToString: cps }
                equals: "
-start():
-    _ -> ref1
-ref1():
-    42 -> halt
+$entry:1($return:2):
+    $return:2(X:Global)
 "!
 
-    method test_print_cont_let_x_and_ref
-        let cps = self make_let_x_and_ref.
-        assert that: { CpsContPrinter printToString: cps }
+
+    method test_convert_let
+        let cps = self convert: "let x = 87. x".
+        assert that: { CpsPrinter printToString: cps }
                equals: "
-start():
-    _ -> ref4
-ref4():
-    1343 -> bind3
-bind3(x1):
-    _ -> ref2
-ref2():
-    x1 -> halt
+$entry:1($return:2):
+    $return:2(87)
 "!
 
-    method test_print_cont_let_xy_and_add
-        let cps = self make_let_xy_and_add.
-        assert that: { CpsContPrinter printToString: cps }
+
+    method test_convert_send
+        let cps = self convert: "X some: 12 message: 97".
+        assert that: { CpsPrinter printToString: cps }
                equals: "
-start():
-    _ -> ref13
-ref13():
-    322 -> bind12
-bind12(x1):
-    _ -> ref11
-ref11():
-    x1 -> bind10
-bind10(y2):
-    _ -> ref9
-ref9():
-    y2 -> bind8
-bind8($3):
-    _ -> ref7
-ref7():
-    x1 -> bind6
-bind6($4):
-    _ -> send5
-send5():
-   $3 + $4 -> halt
+$entry:1($return:2):
+    findMethod:8(classOf:7(X:Global), #some:message:)(X:Global, 12, 97, $return:2)
 "!
 
-end
 
-class DemoCPS { output }
-    method run
-        self
-            ; demo: "let x = 42. let y = 666. x. y. 999. x + x"!
-    method demo: code
-        let syntax = Parser parseExpressions: code.
-        output println: "--".
-        output print: "Source: ".
-        output println: code.
-        syntax do: { |each|
-                     let cps = CpsBuilder convert: each.
-                     output print: "CPS: ".
-                     CpsLambdaPrinter println: cps to: output.
-                     cps optimize.
-                     output print: "Simplified: ".
-                     CpsLambdaPrinter println: cps to: output }!
+    method test_convert_seq
+        let cps = self convert: "X some: 12 message: 97. Y + Z".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:1($return:2):
+    findMethod:20(classOf:19(X:Global), #some:message:)(X:Global, 12, 97, $seq:14)
+$seq:14($ignore:13):
+    findMethod:7(classOf:6(Y:Global), #+)(Y:Global, Z:Global, $return:2)
+"!
+
+
+    method test_convert_typecheck
+        let cps = self convert: "X :: Integer".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:1($return:2):
+    findMethod:7(classOf:6(Integer:Global), #typecheck:)(Integer:Global, X:Global, $return:2)
+"!
+
+
+    method test_convert_typecheck_gives_type
+        let cps = self convert: "X::Integer + Y"
+                       withGlobalDefinitions: [(ClassDefinition
+                                                    name: "Integer"
+                                                    methods: [(UserMethod name: "+")])].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:1($return:2):
+    methodFunction(Integer class#typecheck:)(Integer:Global, X:Global, $bind_recv:12)
+$bind_recv:12($recv:4):
+    methodFunction(Integer#+)($recv:4, Y:Global, $return:2)
+"!
+
+
+    method test_convert_typecheck_redundancy
+        let cps = self convert: "X :: Integer :: Integer"
+                       withGlobalDefinitions: [(ClassDefinition name: "Integer")].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:1($return:2):
+    methodFunction(Integer class#typecheck:)(Integer:Global, X:Global, $bind:10)
+$bind:10($value:4):
+    $return:2($value:4)
+"!
+
+
+    method test_convert_boolean_ifTrueIfFalse
+        let cps = self convert: "X :: Boolean ifTrue: \{ 1 } ifFalse: \{ 2 }"
+                       withGlobalDefinitions: [(ClassDefinition
+                                                    name: "Boolean"
+                                                    methods: [(BuiltinMethod new: IfTrueIfFalseImpl new)])].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:1($return:2):
+    methodFunction(Boolean class#typecheck:)(Boolean:Global, X:Global, $bind_recv:21)
+$bind_recv:21($recv:4):
+    select:34($recv:4, $block:19, $block:14)($return:2)
+$block:19($ret:17):
+    $ret:17(1)
+$block:14($ret:12):
+    $ret:12(2)
+"!
+
+    method test_convert_closure_whileTrue
+        let cps = self convert: "\{ X maybe\} whileTrue: \{ Y something \}".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$loopHead:39($return:2):
+    $loopTest:32(False)
+$loopTest:32($ignore:31):
+    findMethod:24(classOf:23(X:Global), #maybe)(X:Global, $whileTrue:38)
+$whileTrue:38($cond:36):
+    select:37($cond:36, $loopBody:33, $loopExit:35)()
+$loopBody:33():
+    findMethod:14(classOf:13(Y:Global), #something)(Y:Global, $loopTest:32)
+$loopExit:35():
+    $return:2(False)
+"!
+
+    method test_convert_closure_whileFalse
+        let cps = self convert: "\{ X maybe\} whileFalse: \{ Y something \}".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$loopHead:39($return:2):
+    $loopTest:32(False)
+$loopTest:32($ignore:31):
+    findMethod:24(classOf:23(X:Global), #maybe)(X:Global, $whileFalse:38)
+$whileFalse:38($cond:36):
+    select:37($cond:36, $loopExit:35, $loopBody:33)()
+$loopExit:35():
+    $return:2(False)
+$loopBody:33():
+    findMethod:14(classOf:13(Y:Global), #something)(Y:Global, $loopTest:32)
+"!
+
 end
 
 class Main {}
     direct method run: command in: system
         TestCPS runTests: (Assert reportingTo: system output)
                 in: system!
-        -- (DemoCPS output: system output) run!
 end
