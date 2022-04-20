@@ -142,17 +142,22 @@ class WhileLoopImpl { name while }
 
     method optimize: aContinuation in: graph with: worklist
         let ignore1 = graph makeVariable: "$ignore".
-        let ignore2 = graph makeVariable: "$ignore".
         -- valueCont args will be patched with the branch
         let valueCont = graph continuation: "$loopTest"
                               params: [ignore1]
                               target: (aContinuation args at: 1)
                               args: [].
         let bodyCont = graph continuation: "$loopBody"
-                             params: [ignore2]
+                             params: []
                              target: (aContinuation args at: 2)
                              args: [valueCont].
-        let exitCont = aContinuation args at: 3.
+        -- Explicit loop exit continuation so we don't need to
+        -- pass False as argument to selected continuation each time
+        -- through the branch.
+        let exitCont = graph continuation: "$loopExit"
+                             params: []
+                             target: (aContinuation args at: 3)
+                             args: [graph ensureConstant: False].
         let cond = graph makeVariable: "$cond".
         let selectArgs = while
                              ifTrue: { [cond, bodyCont, exitCont] }
@@ -161,7 +166,7 @@ class WhileLoopImpl { name while }
                            params: [cond]
                            target: (graph ensureOperation: SELECT
                                           args: selectArgs)
-                           args: [graph ensureConstant: False].
+                           args: [].
         valueCont addArgs: [branch].
         let headCont = graph continuation: "$loopHead"
                              params: aContinuation params copy
@@ -173,7 +178,8 @@ class WhileLoopImpl { name while }
         aContinuation target: False.
         worklist push: headCont.
         worklist push: valueCont.
-        worklist push: bodyCont!
+        worklist push: bodyCont.
+        worklist push: exitCont!
 end
 
 
@@ -1412,13 +1418,15 @@ $block:14($ret:12):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $loopHead:39($return:2):
-    $loopTest:33(False)
-$loopTest:33($ignore:31):
+    $loopTest:32(False)
+$loopTest:32($ignore:31):
     findMethod:24(classOf:23(X:Global), #maybe)(X:Global, $whileTrue:38)
-$whileTrue:38($cond:35):
-    select:36($cond:35, $loopBody:34, $return:2)(False)
-$loopBody:34($ignore:32):
-    findMethod:14(classOf:13(Y:Global), #something)(Y:Global, $loopTest:33)
+$whileTrue:38($cond:36):
+    select:37($cond:36, $loopBody:33, $loopExit:35)()
+$loopBody:33():
+    findMethod:14(classOf:13(Y:Global), #something)(Y:Global, $loopTest:32)
+$loopExit:35():
+    $return:2(False)
 "!
 
     method test_convert_closure_whileFalse
@@ -1426,13 +1434,15 @@ $loopBody:34($ignore:32):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $loopHead:39($return:2):
-    $loopTest:33(False)
-$loopTest:33($ignore:31):
+    $loopTest:32(False)
+$loopTest:32($ignore:31):
     findMethod:24(classOf:23(X:Global), #maybe)(X:Global, $whileFalse:38)
-$whileFalse:38($cond:35):
-    select:36($cond:35, $return:2, $loopBody:34)(False)
-$loopBody:34($ignore:32):
-    findMethod:14(classOf:13(Y:Global), #something)(Y:Global, $loopTest:33)
+$whileFalse:38($cond:36):
+    select:37($cond:36, $loopExit:35, $loopBody:33)()
+$loopExit:35():
+    $return:2(False)
+$loopBody:33():
+    findMethod:14(classOf:13(Y:Global), #something)(Y:Global, $loopTest:32)
 "!
 
 end
