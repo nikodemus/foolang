@@ -101,6 +101,27 @@ extend Array
           startingAt: 1.
         a!
 
+    method append: other1 append: other2
+        let s1 = self size.
+        let s2 = s1 + other1 size.
+        let s3 = s2 + other2 size.
+        let a = Array
+                    of: (self elementType)
+                    new: s3.
+        a replaceFrom: 1
+          to: s1
+          with: self
+          startingAt: 1.
+        a replaceFrom: s1 + 1
+          to: s2
+          with: other1
+          startingAt: 1.
+        a replaceFrom: s2 + 1
+          to: s3
+          with: other2
+          startingAt: 1.
+        a!
+
     method + x
         x broadcast: { |a b| a + b }
           to: self!
