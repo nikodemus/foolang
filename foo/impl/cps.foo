@@ -142,27 +142,32 @@ class IntegerPlusImpl {}
 end
 
 
-class IntegerAddIntegerImpl {}
+interface PrimitiveInlineMethodImpl
     is BuiltinMethodImpl
+
+    method optimize: aContinuation in: graph with: worklist
+        let args = aContinuation args.
+        let pattern = self primitiveInliner apply: args butlast.
+        let cc = args last.
+        let primop = graph ensureOperation: pattern first
+                           args: pattern rest.
+        aContinuation removeArgs.
+        aContinuation addArgs: [primop].
+        aContinuation target: cc.
+        cc propagateTypes: [primop type]!
+end
+
+
+class IntegerAddIntegerImpl {}
+    is PrimitiveInlineMethodImpl
 
     method name
         "addInteger:"!
 
 
-    method optimize: aContinuation in: graph with: worklist
-        let args = aContinuation args.
-        let intA = args at: 1.
-        let intB = args at: 2.
-        let cc = args at: 3.
-        let addi = graph ensureOperation: ADDI
-                         args: [intA, intB].
-        aContinuation removeArgs.
-        aContinuation addArgs: [addi].
-        aContinuation target: cc.
-        cc propagateTypes: [intA type]!
+    method primitiveInliner
+        { |a b| [ADDI, b, a] }!
 end
-
-
 
 
 class IfTrueIfFalseImpl {}
@@ -1375,7 +1380,7 @@ $let:29(a:4):
 $bind:21($value:15):
     methodFunction(Integer class#typecheck:)(Integer:Global, $value:15, $let:14)
 $let:14(b:5):
-    $return:2(addi:50(b:5, a:4))
+    $return:2(addi:50(a:4, b:5))
 "!
 
     method test_convert_arity_0_block
