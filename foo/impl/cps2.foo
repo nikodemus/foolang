@@ -129,75 +129,41 @@ class IfTrueIfFalseImpl {}
 end
 
 
-class WhileTrueImpl {}
+class WhileLoopImpl { name while }
     is BuiltinMethodImpl
 
-    method name
-        "whileTrue:"!
+    direct method newWhileTrue
+        self name: "whileTrue:" while: True!
+
+
+    direct method newWhileFalse
+        self name: "whileFalse:" while: False!
 
 
     method optimize: aContinuation in: graph with: worklist
         let ignore1 = graph makeVariable: "$ignore".
         let ignore2 = graph makeVariable: "$ignore".
         -- valueCont args will be patched with the branch
-        let valueCont = graph continuation: "$whileTrueValue"
+        let valueCont = graph continuation: "$loopTest"
                               params: [ignore1]
                               target: (aContinuation args at: 1)
                               args: [].
-        let bodyCont = graph continuation: "$whileTrueBody"
+        let bodyCont = graph continuation: "$loopBody"
                              params: [ignore2]
                              target: (aContinuation args at: 2)
                              args: [valueCont].
         let exitCont = aContinuation args at: 3.
         let cond = graph makeVariable: "$cond".
-        let branch = graph continuation: "$whileTrueBranch"
+        let selectArgs = while
+                             ifTrue: { [cond, bodyCont, exitCont] }
+                             ifFalse: { [cond, exitCont, bodyCont] }.
+        let branch = graph continuation: "$while{while}"
                            params: [cond]
                            target: (graph ensureOperation: SELECT
-                                          args: [cond, bodyCont, exitCont])
+                                          args: selectArgs)
                            args: [graph ensureConstant: False].
         valueCont addArgs: [branch].
-        let headCont = graph continuation: "$whileTrueHead"
-                             params: aContinuation params copy
-                             target: valueCont
-                             args: [graph ensureConstant: False].
-        aContinuation removeParams.
-        aContinuation removeArgs.
-        aContinuation replaceUsesWith: headCont.
-        aContinuation target: False.
-        worklist push: headCont.
-        worklist push: valueCont.
-        worklist push: bodyCont!
-end
-
-
-class WhileFalseImpl {}
-    is BuiltinMethodImpl
-
-    method name
-        "whileFalse:"!
-
-
-    method optimize: aContinuation in: graph with: worklist
-        let ignore1 = graph makeVariable: "$ignore".
-        let ignore2 = graph makeVariable: "$ignore".
-        -- valueCont args will be patched with the branch
-        let valueCont = graph continuation: "$whileFalseValue"
-                              params: [ignore1]
-                              target: (aContinuation args at: 1)
-                              args: [].
-        let bodyCont = graph continuation: "$whileFalseBody"
-                             params: [ignore2]
-                             target: (aContinuation args at: 2)
-                             args: [valueCont].
-        let exitCont = aContinuation args at: 3.
-        let cond = graph makeVariable: "$cond".
-        let branch = graph continuation: "$whileFalseBranch"
-                           params: [cond]
-                           target: (graph ensureOperation: SELECT
-                                          args: [cond, exitCont, bodyCont])
-                           args: [graph ensureConstant: False].
-        valueCont addArgs: [branch].
-        let headCont = graph continuation: "$whileFalseHead"
+        let headCont = graph continuation: "$loopHead"
                              params: aContinuation params copy
                              target: valueCont
                              args: [graph ensureConstant: False].
@@ -267,8 +233,8 @@ end
 
 define FunctionClassDefinition
     (ClassDefinition name: "Function"
-                     methods: [BuiltinMethod new: WhileTrueImpl new,
-                               BuiltinMethod new: WhileFalseImpl new])!
+                     methods: [BuiltinMethod new: WhileLoopImpl newWhileTrue,
+                               BuiltinMethod new: WhileLoopImpl newWhileFalse])!
 
 
 class Set { dict }
@@ -1445,28 +1411,28 @@ $block:14($ret:12):
         let cps = self convert: "\{ X maybe\} whileTrue: \{ Y something \}".
         assert that: { CpsPrinter printToString: cps }
                equals: "
-$whileTrueHead:39($return:2):
-    $whileTrueValue:33(False)
-$whileTrueValue:33($ignore:31):
-    findMethod:24(classOf:23(X:Global), #maybe)(X:Global, $whileTrueBranch:38)
-$whileTrueBranch:38($cond:35):
-    select:36($cond:35, $whileTrueBody:34, $return:2)(False)
-$whileTrueBody:34($ignore:32):
-    findMethod:14(classOf:13(Y:Global), #something)(Y:Global, $whileTrueValue:33)
+$loopHead:39($return:2):
+    $loopTest:33(False)
+$loopTest:33($ignore:31):
+    findMethod:24(classOf:23(X:Global), #maybe)(X:Global, $whileTrue:38)
+$whileTrue:38($cond:35):
+    select:36($cond:35, $loopBody:34, $return:2)(False)
+$loopBody:34($ignore:32):
+    findMethod:14(classOf:13(Y:Global), #something)(Y:Global, $loopTest:33)
 "!
 
     method test_convert_closure_whileFalse
         let cps = self convert: "\{ X maybe\} whileFalse: \{ Y something \}".
         assert that: { CpsPrinter printToString: cps }
                equals: "
-$whileFalseHead:39($return:2):
-    $whileFalseValue:33(False)
-$whileFalseValue:33($ignore:31):
-    findMethod:24(classOf:23(X:Global), #maybe)(X:Global, $whileFalseBranch:38)
-$whileFalseBranch:38($cond:35):
-    select:36($cond:35, $return:2, $whileFalseBody:34)(False)
-$whileFalseBody:34($ignore:32):
-    findMethod:14(classOf:13(Y:Global), #something)(Y:Global, $whileFalseValue:33)
+$loopHead:39($return:2):
+    $loopTest:33(False)
+$loopTest:33($ignore:31):
+    findMethod:24(classOf:23(X:Global), #maybe)(X:Global, $whileFalse:38)
+$whileFalse:38($cond:35):
+    select:36($cond:35, $return:2, $loopBody:34)(False)
+$loopBody:34($ignore:32):
+    findMethod:14(classOf:13(Y:Global), #something)(Y:Global, $loopTest:33)
 "!
 
 end
