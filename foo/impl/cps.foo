@@ -13,7 +13,7 @@ interface MethodDefinition
         False!
 
 
-    method canOptimize
+    method lowerToCps: _ in: _ with: _
         False!
 
 
@@ -53,12 +53,8 @@ class BuiltinMethod { home impl }
         impl returnType!
 
 
-    method canOptimize
-        True!
-
-
-    method optimize: aCont in: graph with: worklist
-        impl optimize: aCont in: graph with: worklist!
+    method lowerToCps: aCont in: graph with: worklist
+        impl lowerToCps: aCont in: graph with: worklist!
 
 
     method home: new
@@ -87,7 +83,7 @@ class TypecheckImpl { type }
         type!
 
 
-    method optimize: aContinuation in: graph with: worklist
+    method lowerToCps: aContinuation in: graph with: worklist
         let value = aContinuation args at: 2.
         let valueType = value type.
         let cc = aContinuation args last.
@@ -113,7 +109,7 @@ end
 interface InlineMethodImpl
     is BuiltinMethodImpl
 
-    method optimize: aContinuation in: graph with: worklist
+    method lowerToCps: aContinuation in: graph with: worklist
         let args = aContinuation args.
         let pattern = self inliner apply: args butlast.
         let newRecv = pattern first.
@@ -145,7 +141,7 @@ end
 interface PrimitiveInlineMethodImpl
     is BuiltinMethodImpl
 
-    method optimize: aContinuation in: graph with: worklist
+    method lowerToCps: aContinuation in: graph with: worklist
         let args = aContinuation args.
         let pattern = self primitiveInliner apply: args butlast.
         let cc = args last.
@@ -176,7 +172,7 @@ class IfTrueIfFalseImpl {}
     method name
         "ifTrue:ifFalse:"!
 
-    method optimize: aContinuation in: graph with: worklist
+    method lowerToCps: aContinuation in: graph with: worklist
         let args = aContinuation args.
         let cond = args at: 1.
         let thenCont = args at: 2.
@@ -200,7 +196,7 @@ class WhileLoopImpl { name while }
         self name: "whileFalse:" while: False!
 
 
-    method optimize: aContinuation in: graph with: worklist
+    method lowerToCps: aContinuation in: graph with: worklist
         let ignore1 = graph makeVariable: "$ignore".
         -- valueCont args will be patched with the branch
         let valueCont = graph continuation: "$loopTest"
@@ -1236,8 +1232,7 @@ class CpsOptimizer { worklist graph }
         (Constant includes: target)
             => { let aMethod = target value.
                  (MethodDefinition includes: aMethod)
-                     => { aMethod canOptimize
-                              => { aMethod optimize: aCont in: graph with: worklist } } }!
+                     => { aMethod lowerToCps: aCont in: graph with: worklist } }!
 
 
     method visitOperation: anOperation
