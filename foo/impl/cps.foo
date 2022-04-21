@@ -231,10 +231,10 @@ class WhileLoopImpl { name while }
                              params: aContinuation params copy
                              target: valueCont
                              args: [graph ensureConstant: False].
-        aContinuation removeParams.
         aContinuation removeArgs.
         aContinuation replaceUsesWith: headCont.
         aContinuation target: False.
+        aContinuation removeParams.
         worklist push: headCont.
         worklist push: valueCont.
         worklist push: bodyCont.
@@ -883,10 +883,11 @@ class Continuation { id::Integer
 
 
     method unlink
-        self removeParams.
         self removeArgs.
         self replaceUsesWith: target.
         self target: False.
+        -- args and target may use params, so need to remove last!
+        self removeParams.
         self debugVerify: "Continuation#unlink"!
 
 
