@@ -584,7 +584,7 @@ class Variable { id::Integer
     method removeDef: def
         defs remove: def.
         (defs isEmpty and: uses isEmpty not)
-            ifTrue: { Error raise: "Variable lost definitions while still being used."}!
+            ifTrue: { Error raise: "Variable {self} lost definitions while still being used by: {self uses collect: #printName}"}!
 
 
     method replaceUses: expr1 with: expr2
