@@ -13,7 +13,7 @@ interface MethodDefinition
         False!
 
 
-    method canOptimize
+    method lowerToCps: _ in: _ with: _
         False!
 
 
@@ -53,12 +53,8 @@ class BuiltinMethod { home impl }
         impl returnType!
 
 
-    method canOptimize
-        True!
-
-
-    method optimize: aCont in: graph with: worklist
-        impl optimize: aCont in: graph with: worklist!
+    method lowerToCps: aCont in: graph with: worklist
+        impl lowerToCps: aCont in: graph with: worklist!
 
 
     method home: new
@@ -87,7 +83,8 @@ class TypecheckImpl { type }
         type!
 
 
-    method optimize: aContinuation in: graph with: worklist
+    method lowerToCps: aContinuation in: graph with: worklist
+        (aContinuation args size is 3) assert: "TypecheckImpl#lowerToCps:in:with".
         let value = aContinuation args at: 2.
         let valueType = value type.
         let cc = aContinuation args last.
@@ -113,7 +110,7 @@ end
 interface InlineMethodImpl
     is BuiltinMethodImpl
 
-    method optimize: aContinuation in: graph with: worklist
+    method lowerToCps: aContinuation in: graph with: worklist
         let args = aContinuation args.
         let pattern = self inliner apply: args butlast.
         let newRecv = pattern first.
@@ -145,7 +142,7 @@ end
 interface PrimitiveInlineMethodImpl
     is BuiltinMethodImpl
 
-    method optimize: aContinuation in: graph with: worklist
+    method lowerToCps: aContinuation in: graph with: worklist
         let args = aContinuation args.
         let pattern = self primitiveInliner apply: args butlast.
         let cc = args last.
@@ -176,7 +173,8 @@ class IfTrueIfFalseImpl {}
     method name
         "ifTrue:ifFalse:"!
 
-    method optimize: aContinuation in: graph with: worklist
+    method lowerToCps: aContinuation in: graph with: worklist
+        (aContinuation args size is 4) assert: "IfTrueIfFalseImpl#lowerToCps:in:with".
         let args = aContinuation args.
         let cond = args at: 1.
         let thenCont = args at: 2.
@@ -200,7 +198,8 @@ class WhileLoopImpl { name while }
         self name: "whileFalse:" while: False!
 
 
-    method optimize: aContinuation in: graph with: worklist
+    method lowerToCps: aContinuation in: graph with: worklist
+        (aContinuation args size is 3) assert: "WhileLoopImpl#lowerToCps:in:with".
         let ignore1 = graph makeVariable: "$ignore".
         -- valueCont args will be patched with the branch
         let valueCont = graph continuation: "$loopTest"
@@ -232,10 +231,10 @@ class WhileLoopImpl { name while }
                              params: aContinuation params copy
                              target: valueCont
                              args: [graph ensureConstant: False].
-        aContinuation removeParams.
         aContinuation removeArgs.
         aContinuation replaceUsesWith: headCont.
         aContinuation target: False.
+        aContinuation removeParams.
         worklist push: headCont.
         worklist push: valueCont.
         worklist push: bodyCont.
@@ -418,7 +417,7 @@ class Worklist { list dict }
 end
 
 
-define DebugVerify True!
+define DebugVerify False!
 
 
 interface Expression
@@ -585,7 +584,7 @@ class Variable { id::Integer
     method removeDef: def
         defs remove: def.
         (defs isEmpty and: uses isEmpty not)
-            ifTrue: { Error raise: "Variable lost definitions while still being used."}!
+            ifTrue: { Error raise: "Variable {self} lost definitions while still being used by: {self uses collect: #printName}"}!
 
 
     method replaceUses: expr1 with: expr2
@@ -758,7 +757,8 @@ class Continuation { id::Integer
                        args: args asArray
                        uses: Set new.
         params do: { |each| each addDef: new }.
-        target addUse: new.
+        target is False
+            ifFalse: {target addUse: new }.
         args do: { |each| each addUse: new }.
         new!
 
@@ -841,15 +841,6 @@ class Continuation { id::Integer
         self debugVerify: "Continuation#replaceArgsFrom:"!
 
 
-    method replaceParamsFrom: other::Continuation
-        -- This is more convenient than #params:, since
-        -- we usually want to copy the array!
-        params do: { |each| each removeDef: self }.
-        params = other params copy.
-        params do: { |each| each addDef: self }.
-        self debugVerify: "Continuation#replaceParamsFrom:"!
-
-
     method removeParams
         params do: { |each| each removeDef: self }.
         params = [].
@@ -883,10 +874,11 @@ class Continuation { id::Integer
 
 
     method unlink
-        self removeParams.
         self removeArgs.
         self replaceUsesWith: target.
         self target: False.
+        -- args and target may use params, so need to remove last!
+        self removeParams.
         self debugVerify: "Continuation#unlink"!
 
 
@@ -916,23 +908,19 @@ class CpsGraph { entry::Continuation
     is Object
 
     direct method new
-        -- Entry node just binds the exit continuation, the
-        -- initial target of entry is a placeholder that
-        -- gets replaced.
-        let placeholder = Variable
-                           id: 0
-                           name: "$<<PLACEHOLDER>>".
-        let exit = Variable id: 2
+        -- Entry node just binds the exit continuation. ID 1
+        -- is reserved for graph itself
+        let exit = Variable id: 3
                             name: "$return".
-        let entry = Continuation id: 1
+        let entry = Continuation id: 2
                                  name: "$entry"
                                  params: [exit]
-                                 target: placeholder
+                                 target: False
                                  args: [].
         let graph = self
                         entry: entry
                         exit: exit
-                        lastId: 2
+                        lastId: 3
                         operations: OpMap new
                         constants: Dictionary new
                         globals: Dictionary new
@@ -941,6 +929,14 @@ class CpsGraph { entry::Continuation
         exit addUse: exit.
         entry addUse: graph.
         graph!
+
+
+    method id
+        1!
+
+
+    method printName
+        "graph:1"!
 
 
     method replaceUses: expr1 with: expr2
@@ -1236,8 +1232,7 @@ class CpsOptimizer { worklist graph }
         (Constant includes: target)
             => { let aMethod = target value.
                  (MethodDefinition includes: aMethod)
-                     => { aMethod canOptimize
-                              => { aMethod optimize: aCont in: graph with: worklist } } }!
+                     => { aMethod lowerToCps: aCont in: graph with: worklist } }!
 
 
     method visitOperation: anOperation
@@ -1371,26 +1366,26 @@ class TestCPS { assert }
                                                               BuiltinMethod new: IntegerAddIntegerImpl new])].
         assert that: { CpsPrinter printToString: cps }
                equals: "
-$entry:1($return:2):
-    findMethod:39(classOf:38(X:Global), #a)(X:Global, $bind:35)
-$bind:35($value:30):
-    methodFunction(Integer class#typecheck:)(Integer:Global, $value:30, $let:29)
-$let:29(a:4):
-    findMethod:25(classOf:24(X:Global), #b)(X:Global, $bind:21)
-$bind:21($value:15):
-    methodFunction(Integer class#typecheck:)(Integer:Global, $value:15, $let:14)
-$let:14(b:5):
-    $return:2(addi:50(a:4, b:5))
+$entry:2($return:3):
+    findMethod:40(classOf:39(X:Global), #a)(X:Global, $bind:36)
+$bind:36($value:31):
+    methodFunction(Integer class#typecheck:)(Integer:Global, $value:31, $let:30)
+$let:30(a:5):
+    findMethod:26(classOf:25(X:Global), #b)(X:Global, $bind:22)
+$bind:22($value:16):
+    methodFunction(Integer class#typecheck:)(Integer:Global, $value:16, $let:15)
+$let:15(b:6):
+    $return:3(addi:51(a:5, b:6))
 "!
 
     method test_convert_arity_0_block
         let cps = self convert: "\{ 421 }".
         assert that: { CpsPrinter printToString: cps }
                equals: "
-$entry:1($return:2):
-    $return:2($block:5)
-$block:5($ret:3):
-    $ret:3(421)
+$entry:2($return:3):
+    $return:3($block:6)
+$block:6($ret:4):
+    $ret:4(421)
 "!
 
 
@@ -1398,94 +1393,12 @@ $block:5($ret:3):
         let cps = self convert: "\{ |a b c| a + b + c }".
         assert that: { CpsPrinter printToString: cps }
                equals: "
-$entry:1($return:2):
-    $return:2($block:21)
-$block:21(a:4, b:5, c:6, $ret:3):
-    findMethod:18(classOf:17(a:4), #+)(a:4, b:5, $bind_recv:14)
-$bind_recv:14($recv:7):
-    findMethod:11(classOf:10($recv:7), #+)($recv:7, c:6, $ret:3)
-"!
-
-
-    method test_convert_constant_integer
-        let cps = self convert: "123".
-        assert that: { CpsPrinter printToString: cps }
-               equals: "
-$entry:1($return:2):
-    $return:2(123)
-"!
-
-
-    method test_convert_global
-        let cps = self convert: "X".
-        assert that: { CpsPrinter printToString: cps }
-               equals: "
-$entry:1($return:2):
-    $return:2(X:Global)
-"!
-
-
-    method test_convert_let
-        let cps = self convert: "let x = 87. x".
-        assert that: { CpsPrinter printToString: cps }
-               equals: "
-$entry:1($return:2):
-    $return:2(87)
-"!
-
-
-    method test_convert_send
-        let cps = self convert: "X some: 12 message: 97".
-        assert that: { CpsPrinter printToString: cps }
-               equals: "
-$entry:1($return:2):
-    findMethod:8(classOf:7(X:Global), #some:message:)(X:Global, 12, 97, $return:2)
-"!
-
-
-    method test_convert_seq
-        let cps = self convert: "X some: 12 message: 97. Y + Z".
-        assert that: { CpsPrinter printToString: cps }
-               equals: "
-$entry:1($return:2):
-    findMethod:20(classOf:19(X:Global), #some:message:)(X:Global, 12, 97, $seq:14)
-$seq:14($ignore:13):
-    findMethod:7(classOf:6(Y:Global), #+)(Y:Global, Z:Global, $return:2)
-"!
-
-
-    method test_convert_typecheck
-        let cps = self convert: "X :: Integer".
-        assert that: { CpsPrinter printToString: cps }
-               equals: "
-$entry:1($return:2):
-    findMethod:7(classOf:6(Integer:Global), #typecheck:)(Integer:Global, X:Global, $return:2)
-"!
-
-
-    method test_convert_typecheck_gives_type
-        let cps = self convert: "X::Integer + Y"
-                       withGlobalDefinitions: [(ClassDefinition
-                                                    name: "Integer"
-                                                    methods: [(UserMethod name: "+")])].
-        assert that: { CpsPrinter printToString: cps }
-               equals: "
-$entry:1($return:2):
-    methodFunction(Integer class#typecheck:)(Integer:Global, X:Global, $bind_recv:12)
-$bind_recv:12($recv:4):
-    methodFunction(Integer#+)($recv:4, Y:Global, $return:2)
-"!
-
-
-    method test_convert_typecheck_redundancy
-        let cps = self convert: "X :: Integer :: Integer"
-                       withGlobalDefinitions: [(ClassDefinition name: "Integer")].
-        assert that: { CpsPrinter printToString: cps }
-               equals: "
-$entry:1($return:2):
-    methodFunction(Integer class#typecheck:)(Integer:Global, X:Global, $bind:10)
-$bind:10($value:4):
-    $return:2($value:4)
+$entry:2($return:3):
+    $return:3($block:22)
+$block:22(a:5, b:6, c:7, $ret:4):
+    findMethod:19(classOf:18(a:5), #+)(a:5, b:6, $bind_recv:15)
+$bind_recv:15($recv:8):
+    findMethod:12(classOf:11($recv:8), #+)($recv:8, c:7, $ret:4)
 "!
 
 
@@ -1496,47 +1409,131 @@ $bind:10($value:4):
                                                     methods: [(BuiltinMethod new: IfTrueIfFalseImpl new)])].
         assert that: { CpsPrinter printToString: cps }
                equals: "
-$entry:1($return:2):
-    methodFunction(Boolean class#typecheck:)(Boolean:Global, X:Global, $bind_recv:21)
-$bind_recv:21($recv:4):
-    select:34($recv:4, $block:19, $block:14)($return:2)
-$block:19($ret:17):
-    $ret:17(1)
-$block:14($ret:12):
-    $ret:12(2)
+$entry:2($return:3):
+    methodFunction(Boolean class#typecheck:)(Boolean:Global, X:Global, $bind_recv:22)
+$bind_recv:22($recv:5):
+    select:35($recv:5, $block:20, $block:15)($return:3)
+$block:20($ret:18):
+    $ret:18(1)
+$block:15($ret:13):
+    $ret:13(2)
 "!
 
-    method test_convert_closure_whileTrue
-        let cps = self convert: "\{ X maybe\} whileTrue: \{ Y something \}".
-        assert that: { CpsPrinter printToString: cps }
-               equals: "
-$loopHead:39($return:2):
-    $loopTest:32(False)
-$loopTest:32($ignore:31):
-    findMethod:24(classOf:23(X:Global), #maybe)(X:Global, $whileTrue:38)
-$whileTrue:38($cond:36):
-    select:37($cond:36, $loopBody:33, $loopExit:35)()
-$loopBody:33():
-    findMethod:14(classOf:13(Y:Global), #something)(Y:Global, $loopTest:32)
-$loopExit:35():
-    $return:2(False)
-"!
 
     method test_convert_closure_whileFalse
         let cps = self convert: "\{ X maybe\} whileFalse: \{ Y something \}".
         assert that: { CpsPrinter printToString: cps }
                equals: "
-$loopHead:39($return:2):
-    $loopTest:32(False)
-$loopTest:32($ignore:31):
-    findMethod:24(classOf:23(X:Global), #maybe)(X:Global, $whileFalse:38)
-$whileFalse:38($cond:36):
-    select:37($cond:36, $loopExit:35, $loopBody:33)()
-$loopExit:35():
-    $return:2(False)
-$loopBody:33():
-    findMethod:14(classOf:13(Y:Global), #something)(Y:Global, $loopTest:32)
+$loopHead:40($return:3):
+    $loopTest:33(False)
+$loopTest:33($ignore:32):
+    findMethod:25(classOf:24(X:Global), #maybe)(X:Global, $whileFalse:39)
+$whileFalse:39($cond:37):
+    select:38($cond:37, $loopExit:36, $loopBody:34)()
+$loopExit:36():
+    $return:3(False)
+$loopBody:34():
+    findMethod:15(classOf:14(Y:Global), #something)(Y:Global, $loopTest:33)
 "!
+
+
+    method test_convert_closure_whileTrue
+        let cps = self convert: "\{ X maybe\} whileTrue: \{ Y something \}".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$loopHead:40($return:3):
+    $loopTest:33(False)
+$loopTest:33($ignore:32):
+    findMethod:25(classOf:24(X:Global), #maybe)(X:Global, $whileTrue:39)
+$whileTrue:39($cond:37):
+    select:38($cond:37, $loopBody:34, $loopExit:36)()
+$loopBody:34():
+    findMethod:15(classOf:14(Y:Global), #something)(Y:Global, $loopTest:33)
+$loopExit:36():
+    $return:3(False)
+"!
+
+    method test_convert_constant_integer
+        let cps = self convert: "123".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    $return:3(123)
+"!
+
+
+    method test_convert_global
+        let cps = self convert: "X".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    $return:3(X:Global)
+"!
+
+
+    method test_convert_let
+        let cps = self convert: "let x = 87. x".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    $return:3(87)
+"!
+
+
+    method test_convert_send
+        let cps = self convert: "X some: 12 message: 97".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    findMethod:9(classOf:8(X:Global), #some:message:)(X:Global, 12, 97, $return:3)
+"!
+
+
+    method test_convert_seq
+        let cps = self convert: "X some: 12 message: 97. Y + Z".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    findMethod:21(classOf:20(X:Global), #some:message:)(X:Global, 12, 97, $seq:15)
+$seq:15($ignore:14):
+    findMethod:8(classOf:7(Y:Global), #+)(Y:Global, Z:Global, $return:3)
+"!
+
+
+    method test_convert_typecheck
+        let cps = self convert: "X :: Integer".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    findMethod:8(classOf:7(Integer:Global), #typecheck:)(Integer:Global, X:Global, $return:3)
+"!
+
+
+    method test_convert_typecheck_gives_type
+        let cps = self convert: "X::Integer + Y"
+                       withGlobalDefinitions: [(ClassDefinition
+                                                    name: "Integer"
+                                                    methods: [(UserMethod name: "+")])].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    methodFunction(Integer class#typecheck:)(Integer:Global, X:Global, $bind_recv:13)
+$bind_recv:13($recv:5):
+    methodFunction(Integer#+)($recv:5, Y:Global, $return:3)
+"!
+
+
+    method test_convert_typecheck_redundancy
+        let cps = self convert: "X :: Integer :: Integer"
+                       withGlobalDefinitions: [(ClassDefinition name: "Integer")].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    methodFunction(Integer class#typecheck:)(Integer:Global, X:Global, $bind:11)
+$bind:11($value:5):
+    $return:3($value:5)
+"!
+
 
 end
 
