@@ -841,15 +841,6 @@ class Continuation { id::Integer
         self debugVerify: "Continuation#replaceArgsFrom:"!
 
 
-    method replaceParamsFrom: other::Continuation
-        -- This is more convenient than #params:, since
-        -- we usually want to copy the array!
-        params do: { |each| each removeDef: self }.
-        params = other params copy.
-        params do: { |each| each addDef: self }.
-        self debugVerify: "Continuation#replaceParamsFrom:"!
-
-
     method removeParams
         params do: { |each| each removeDef: self }.
         params = [].
