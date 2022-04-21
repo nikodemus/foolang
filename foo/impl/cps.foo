@@ -414,7 +414,7 @@ class Worklist { list dict }
 end
 
 
-define DebugVerify True!
+define DebugVerify False!
 
 
 interface Expression
