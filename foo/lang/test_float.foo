@@ -87,16 +87,20 @@ class TestFloat { assert }
                testing: "Float#round"!
 
     method test_decimalString
-        assert forAll: [[1.01, "1.0"],
-                        [1.11, "1.1"],
-                        [1.54, "1.5"],
-                        [1.56, "1.6"],
-                        [-1.01, "-1.0"],
-                        [-1.11, "-1.1"],
-                        [-1.54, "-1.5"],
-                        [-1.56, "-1.6"]]
+        assert forAll: [[1.01, 1, "1.0"],
+                        [1.01, 2, "1.01"],
+                        [1.01, 3, "1.010"],
+                        [1.11, 1, "1.1"],
+                        [1.11, 2, "1.11"],
+                        [1.11, 3, "1.110"],
+                        [1.54, 1, "1.5"],
+                        [1.56, 1, "1.6"],
+                        [-1.01, 1, "-1.0"],
+                        [-1.11, 1, "-1.1"],
+                        [-1.54, 1, "-1.5"],
+                        [-1.56, 1, "-1.6"]]
                that: { |case|
-                       (case first decimalString: 1) == case second }
+                       (case first decimalString: case second) == case third }
                testing: "Float#decimalString:"!
 
     method test_to_do
