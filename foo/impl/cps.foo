@@ -84,6 +84,7 @@ class TypecheckImpl { type }
 
 
     method lowerToCps: aContinuation in: graph with: worklist
+        (aContinuation args size is 3) assert: "TypecheckImpl#lowerToCps:in:with".
         let value = aContinuation args at: 2.
         let valueType = value type.
         let cc = aContinuation args last.
@@ -173,6 +174,7 @@ class IfTrueIfFalseImpl {}
         "ifTrue:ifFalse:"!
 
     method lowerToCps: aContinuation in: graph with: worklist
+        (aContinuation args size is 4) assert: "IfTrueIfFalseImpl#lowerToCps:in:with".
         let args = aContinuation args.
         let cond = args at: 1.
         let thenCont = args at: 2.
@@ -197,6 +199,7 @@ class WhileLoopImpl { name while }
 
 
     method lowerToCps: aContinuation in: graph with: worklist
+        (aContinuation args size is 3) assert: "WhileLoopImpl#lowerToCps:in:with".
         let ignore1 = graph makeVariable: "$ignore".
         -- valueCont args will be patched with the branch
         let valueCont = graph continuation: "$loopTest"
