@@ -773,8 +773,36 @@ class Continuation { id::Integer
         badArgs isEmpty assert: "Continuation should uses its args".
         self!
 
+
     method name: new
         name = new!
+
+
+    method doSuccessors: block
+        -- Iterate over all possible successors of the block.
+        --
+        -- FIXME: Overly conservative since we don't propagate types
+        -- well enough to be able to filter out variables only bound
+        -- to integers as successors.
+        let filteredBlock = { |each|
+                              (Constant includes: each)
+                                  ifTrue: { (MethodDefinition includes: each value)
+                                                ifTrue: { block value: each } }
+                                  ifFalse: { block value: each } }.
+        let target = self target.
+        (Operation includes: target)
+            => { -- FIND_METHOD is a known case: only successor is the last argument.
+                 target op is FIND_METHOD
+                     => { return block value: self args last }.
+                 -- SELECT is partially known: 2nd and 3rd SELECT arguments are successors,
+                 -- as are all continuation arguments.
+                 target op is SELECT
+                     => { target args rest do: filteredBlock.
+                          return args do: filteredBlock } }.
+        -- General case
+        block value: target.
+        return args do: filteredBlock!
+
 
     method hasKnownClass
         True!
@@ -905,7 +933,7 @@ class CpsGraph { entry::Continuation
                  globals::Dictionary
                  selectors::Dictionary
                  continuations::List }
-    is Object
+    is Expression
 
     direct method new
         -- Entry node just binds the exit continuation. ID 1
@@ -933,6 +961,10 @@ class CpsGraph { entry::Continuation
 
     method id
         1!
+
+
+    method uses
+        Set new!
 
 
     method printName
@@ -1350,8 +1382,92 @@ class CpsPrinter { output seen }
 end
 
 
-class TestCPS { assert }
+class CpsGraphwizPrinter { output seen }
+
+    direct method printToString: graph
+        StringOutput
+            with: { |out|
+                    self print: graph to: out }!
+
+
+    direct method print: graph::CpsGraph to: output
+        let visitor = self
+                          output: output
+                          seen: Set new.
+        output writeString: "\nstrict digraph \{\n".
+        output writeString: "    \"{graph entry printName}\" [color=red]".
+        visitor visit: graph entry.
+        output writeString: "\}\n"!
+
+
+    method visit: other::Expression
+        (seen add: other)
+            ifTrue: { other visitBy: self }!
+
+
+    method visitAll: nodes
+        nodes do: { |each| self visit: each }!
+
+
+    method visitContinuation: aCont
+        output writeString: "    \"{aCont printName}\" [shape=box];\n".
+        aCont params
+            do: { |each|
+                  each uses isEmpty
+                      ifFalse: { output writeString: "    \"".
+                                 output writeString: aCont printName.
+                                 output writeString: "\" -> \"".
+                                 output writeString: each printName.
+                                 output writeString: "\"[dir=both, arrowhead=none, arrowtail=box, style=dotted]\n" } }.
+        aCont doSuccessors: { |each|
+                              output writeString: "    \"".
+                              output writeString: aCont printName.
+                              output writeString: "\" -> \"".
+                              output writeString: each printName.
+                              output writeString: "\" [arrowhead=vee]\n" }.
+        self visit: aCont target.
+        self visitAll: aCont args!
+
+    method visitVariable: _
+        False!
+
+
+    method visitConstant: aConst
+        False!
+
+
+    method visitGlobal: aGlobal
+        False!
+
+
+    method visitOperation: anOperation
+        anOperation uses
+            do: { |each|
+                  output writeString: "    \"".
+                  output writeString: anOperation printName.
+                  output writeString: "\" -> \"".
+                  output writeString: each printName.
+                  output writeString: "\"[style=dotted]\n" }.
+        anOperation args
+            do: { |each|
+                  (Variable includes: each)
+                      => { output writeString: "    \"".
+                           output writeString: each printName.
+                           output writeString: "\" -> \"".
+                           output writeString: anOperation printName.
+                           output writeString: "\"[style=dotted]\n" } }.
+        self visitAll: anOperation args!
+end
+
+
+class TestCPS { assert system }
     is TestSuite
+
+    direct method assert: assert
+        self assert: assert system: False!
+
+    method system: new
+        system = new!
 
     method convert: source
         self convert: source withGlobalDefinitions: []!
@@ -1456,6 +1572,37 @@ $loopBody:34():
 $loopExit:36():
     $return:3(False)
 "!
+
+    method test_graphwiz_closure_whileTrue
+        let cps = self convert: "\{ X maybe\} whileTrue: \{ Y something \}".
+        (system currentDirectory / "closure_whileTrue.dot")
+            truncateExisting forWrite
+                createOrOpen: { |dot| CpsGraphwizPrinter print: cps to: dot }.
+        assert that: { CpsGraphwizPrinter printToString: cps }
+               equals: "
+strict digraph \{
+    \"$loopHead:40\" [color=red]    \"$loopHead:40\" [shape=box];
+    \"$loopHead:40\" -> \"$return:3\"[dir=both, arrowhead=none, arrowtail=box, style=dotted]
+    \"$loopHead:40\" -> \"$loopTest:33\" [arrowhead=vee]
+    \"$loopTest:33\" [shape=box];
+    \"$loopTest:33\" -> \"$whileTrue:39\" [arrowhead=vee]
+    \"findMethod:25(classOf:24(X:Global), #maybe)\" -> \"$loopTest:33\"[style=dotted]
+    \"classOf:24(X:Global)\" -> \"findMethod:25(classOf:24(X:Global), #maybe)\"[style=dotted]
+    \"$whileTrue:39\" [shape=box];
+    \"$whileTrue:39\" -> \"$cond:37\"[dir=both, arrowhead=none, arrowtail=box, style=dotted]
+    \"$whileTrue:39\" -> \"$loopBody:34\" [arrowhead=vee]
+    \"$whileTrue:39\" -> \"$loopExit:36\" [arrowhead=vee]
+    \"select:38($cond:37, $loopBody:34, $loopExit:36)\" -> \"$whileTrue:39\"[style=dotted]
+    \"$cond:37\" -> \"select:38($cond:37, $loopBody:34, $loopExit:36)\"[style=dotted]
+    \"$loopBody:34\" [shape=box];
+    \"$loopBody:34\" -> \"$loopTest:33\" [arrowhead=vee]
+    \"findMethod:15(classOf:14(Y:Global), #something)\" -> \"$loopBody:34\"[style=dotted]
+    \"classOf:14(Y:Global)\" -> \"findMethod:15(classOf:14(Y:Global), #something)\"[style=dotted]
+    \"$loopExit:36\" [shape=box];
+    \"$loopExit:36\" -> \"$return:3\" [arrowhead=vee]
+}
+"!
+
 
     method test_convert_constant_integer
         let cps = self convert: "123".
