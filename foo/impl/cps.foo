@@ -1142,6 +1142,10 @@ class CpsConverter { graph var next }
         simplify!
 
 
+    method visitReturn: syntax with: _
+        syntax value visitBy: self with: graph exit!
+
+
     method visitSend: syntax with: cc
         let recv = graph makeVariable: "$recv".
         let args = syntax arguments
@@ -1477,6 +1481,15 @@ $entry:2($return:3):
                equals: "
 $entry:2($return:3):
     $return:3(87)
+"!
+
+
+    method test_convert_return
+        let cps = self convert: "return 421. X boom".
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    $return:3(421)
 "!
 
 

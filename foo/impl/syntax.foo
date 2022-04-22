@@ -230,6 +230,9 @@ class SyntaxReturn { value }
     method visitBy: visitor
         visitor visitReturn: self!
 
+    method visitBy: visitor with: arg
+        visitor visitReturn: self with: arg!
+
     method weight
         value weight + 1!
 
