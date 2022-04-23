@@ -644,8 +644,6 @@ end
 
 
 interface PrimitiveOperation
-    direct method typeOf: _
-        False!
 end
 
 
@@ -727,10 +725,6 @@ class Operation { id::Integer
     method verify: what
         (args allSatisfy: { |each| each uses includes: self })
             assert: "{self printName} should use its args: {args collect: #printName}"!
-
-
-    method type
-        op typeOf: self!
 
 
     method printName
