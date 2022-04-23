@@ -369,10 +369,11 @@ class OpMap { list }
 
 
     method at: op and: args ifNonePut: block
-        list do: { |each|
-                   each op is op
-                       => { (each args == args)
-                                => { return each } } }.
+        op isFoldable
+            ifTrue: { list do: { |each|
+                                 each op is op
+                                     => { (each args == args)
+                                              => { return each } } } }.
         let new = block value.
         list push: new.
         new!
@@ -380,14 +381,25 @@ class OpMap { list }
 
     method mergeDuplicates
         -- FIXME: O(N^2) with current OpMap!
-        list do: { |each1|
-                   each1 isUnused
-                       ifFalse: { list do: { |each2|
-                                             each1 is each2
-                                                 ifFalse: { each2 isUnused
-                                                                ifFalse: { each1 op is each2 op
-                                                                               ifTrue: { each1 args == each2 args
-                                                                                             ifTrue: { each2 replaceUsesWith: each1 } } } } } } }!
+        list do: { |each| self tryMerge: each }!
+
+
+    method tryMerge: operation
+        operation isFoldable
+            ifFalse: { return False }.
+        operation isUnused
+            ifTrue: { return False }.
+        list do: { |each| self tryMerge: operation with: each }!
+
+
+    method tryMerge: op1 with: op2
+        op1 is op2
+            ifTrue: { return False }.
+        op2 isUnused
+            ifTrue: { return False }.
+        op1 op is op2 op
+            ifTrue: { op1 args == op2 args
+                          ifTrue: { op2 replaceUsesWith: op1 } }!
 
 
     method reject: block
@@ -644,6 +656,8 @@ end
 
 
 interface PrimitiveOperation
+    direct method isFoldable
+        True!
 end
 
 
@@ -716,6 +730,10 @@ class Operation { id::Integer
                        uses: Set new.
         args do: { |each| each addUse: new }.
         new!
+
+
+    method isFoldable
+        op isFoldable!
 
 
     method doSubExpressions: block
