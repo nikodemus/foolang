@@ -655,14 +655,14 @@ class Variable { id::Integer
 end
 
 
-interface PrimitiveOperation
+interface OperationKind
     direct method isFoldable
         True!
 end
 
 
 class ADDI {}
-    is PrimitiveOperation
+    is OperationKind
 
 
     direct method name
@@ -675,7 +675,7 @@ end
 
 
 class CLASS_OF {}
-    is PrimitiveOperation
+    is OperationKind
 
     direct method name
         "classOf"!
@@ -687,7 +687,7 @@ end
 
 
 class FIND_METHOD {}
-    is PrimitiveOperation
+    is OperationKind
 
     direct method name
         "findMethod"!
@@ -699,7 +699,7 @@ end
 
 
 class SELECT {}
-    is PrimitiveOperation
+    is OperationKind
 
     direct method name
         "select"!
@@ -710,7 +710,7 @@ end
 
 
 class INVALID {}
-    is PrimitiveOperation
+    is OperationKind
 
     direct method name
         "invalid"!
