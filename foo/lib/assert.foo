@@ -12,13 +12,33 @@ class TestFailure { case input expected result }
         let valueMessage = input is Nothing
                                ifTrue: { "" }
                                ifFalse: { " on {input displayString}" }.
-        let resultMessage = expected is Nothing
-                                ifTrue: { "" }
-                                ifFalse: { ", expected '{expected}', got '{result}'" }.
         let name = case name.
         name is False
-            ifTrue: { output print: "\n! FAILURE{valueMessage}{resultMessage}" }
-            ifFalse: { output print: "\n! FAILUREin {case name}{valueMessage}{resultMessage}" }!
+            ifTrue: { output print: "\n! FAILURE{valueMessage}{self resultMessage}" }
+            ifFalse: { output print: "\n! FAILUREin {case name}{valueMessage}{self resultMessage}" }!
+
+    method resultMessage
+        expected is Nothing
+            ifTrue: { return "" }.
+        ((String includes: expected) and: (String includes: result))
+            ifFalse: { return ", expected {expected displayString}, got {result displayString}." }.
+        StringOutput with: { |out|
+                             out println: ", expected '{expected}', got '{result}'.".
+                             self printStringDifference: out }!
+
+    method printStringDifference: output
+        output print: "First difference on ".
+        let line = 1.
+        expected lines
+            with: result lines
+            do: { |e r|
+                  e == r
+                      ifFalse: { output println: "line {line}:".
+                                 output println: "Expected: {e displayString}".
+                                 output println: "     Got: {r displayString}".
+                                 return False }.
+                  line = line + 1 }!
+
 end
 
 class TestError { case input what }
