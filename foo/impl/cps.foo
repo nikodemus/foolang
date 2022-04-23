@@ -368,10 +368,10 @@ class OpMap { list }
         self list: List new!
 
 
-    method at: op and: args ifNonePut: block
-        op isFoldable
+    method kind: kind withArguments: args ifNonePut: block
+        kind isFoldable
             ifTrue: { list do: { |each|
-                                 each op is op
+                                 each kind is kind
                                      => { (each args == args)
                                               => { return each } } } }.
         let new = block value.
@@ -397,7 +397,7 @@ class OpMap { list }
             ifTrue: { return False }.
         op2 isUnused
             ifTrue: { return False }.
-        op1 op is op2 op
+        op1 kind is op2 kind
             ifTrue: { op1 args == op2 args
                           ifTrue: { op2 replaceUsesWith: op1 } }!
 
@@ -718,14 +718,14 @@ end
 
 
 class Operation { id::Integer
-                  op
+                  kind
                   args::Array
                   uses::Set }
     is Expression
 
-    direct method id: id op: op args: args
+    direct method id: id kind: kind args: args
         let new = self id: id
-                       op: op
+                       kind: kind
                        args: args
                        uses: Set new.
         args do: { |each| each addUse: new }.
@@ -733,7 +733,7 @@ class Operation { id::Integer
 
 
     method isFoldable
-        op isFoldable!
+        kind isFoldable!
 
 
     method doSubExpressions: block
@@ -749,7 +749,7 @@ class Operation { id::Integer
         StringOutput
             with: { |out|
                     out
-                        ; print: op name
+                        ; print: kind name
                         ; print: ":"
                         ; print: id
                         ; print: "(".
@@ -762,7 +762,7 @@ class Operation { id::Integer
     method flush
         args do: { |each| each removeUse: self }.
         args = [].
-        op = INVALID!
+        kind = INVALID!
 
 
 
@@ -829,11 +829,11 @@ class Continuation { id::Integer
         let target = self target.
         (Operation includes: target)
             => { -- FIND_METHOD is a known case: only successor is the last argument.
-                 target op is FIND_METHOD
+                 target kind is FIND_METHOD
                      => { return block value: self args last }.
                  -- SELECT is partially known: 2nd and 3rd SELECT arguments are successors,
                  -- as are all continuation arguments.
-                 target op is SELECT
+                 target kind is SELECT
                      => { target args rest do: filteredBlock.
                           return args do: filteredBlock } }.
         -- General case
@@ -1109,13 +1109,13 @@ class CpsGraph { entry::Continuation
 
 
 
-    method ensureOperation: op args: args
+    method ensureOperation: kind args: args
         operations
-            at: op
-            and: args
+            kind: kind
+            withArguments: args
             ifNonePut: { Operation
                              id: self nextId
-                             op: op
+                             kind: kind
                              args: args }!
 
 
@@ -1310,7 +1310,7 @@ class CpsOptimizer { worklist graph }
 
 
     method visitOperation: anOperation
-        anOperation op visit: anOperation by: self!
+        anOperation kind visit: anOperation by: self!
 
 
     method visitClassOf: aClassOf
