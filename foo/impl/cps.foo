@@ -1039,13 +1039,6 @@ class CpsGraph { entry::Continuation
         operations do: block!
 
 
-    method copyContinuation: aCont
-           self continuation: aCont name
-                params: aCont params
-                target: aCont target
-                args: aCont args!
-
-
     method entry: target
         entry target: target.
         entry simplify.
