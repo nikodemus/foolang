@@ -355,6 +355,9 @@ class Set { dict }
 
     method do: block
         dict values do: block!
+
+    method doSorted: block
+        dict values sort do: block!
 end
 
 
@@ -422,6 +425,11 @@ define DebugVerify False!
 
 interface Expression
     is Object
+
+
+    method < other
+        self id < other id!
+
 
     method doSubExpressions: _
         False!
@@ -1435,12 +1443,12 @@ class CpsGraphwizPrinter { output seen }
 
     method visitVariable: aVar
         aVar uses
-            do: { |each|
-                  output writeString: "    \"".
-                  output writeString: aVar printName.
-                  output writeString: "\" -> \"".
-                  output writeString: each printName.
-                  output writeString: "\" [style=dotted]\n" }.
+            doSorted: { |each|
+                        output writeString: "    \"".
+                        output writeString: aVar printName.
+                        output writeString: "\" -> \"".
+                        output writeString: each printName.
+                        output writeString: "\" [style=dotted]\n" }.
         False!
 
 
@@ -1454,12 +1462,12 @@ class CpsGraphwizPrinter { output seen }
 
     method visitOperation: anOperation
         anOperation uses
-            do: { |each|
-                  output writeString: "    \"".
-                  output writeString: anOperation printName.
-                  output writeString: "\" -> \"".
-                  output writeString: each printName.
-                  output writeString: "\" [style=dotted]\n" }.
+            doSorted: { |each|
+                        output writeString: "    \"".
+                        output writeString: anOperation printName.
+                        output writeString: "\" -> \"".
+                        output writeString: each printName.
+                        output writeString: "\" [style=dotted]\n" }.
         self visitAll: anOperation args!
 end
 
