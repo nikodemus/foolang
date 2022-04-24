@@ -1047,7 +1047,7 @@ class Application { id::Integer
 
 
     method printName
-        "apply:{id}({function printName}, {target printName})"!
+        "apply:{id}({target printName}, {function printName})"!
 
 
     method visitBy: visitor
@@ -1718,13 +1718,13 @@ class TestCPS { assert system }
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:45(findMethod:44(classOf:27(X:Global), #a), $bind:40)(X:Global)
+    apply:45($bind:40, findMethod:44(classOf:27(X:Global), #a))(X:Global)
 $bind:40($value:34):
-    apply:38(Integer class#typecheck:, $let:33)(Integer:Global, $value:34)
+    apply:38($let:33, Integer class#typecheck:)(Integer:Global, $value:34)
 $let:33(a:5):
-    apply:29(findMethod:28(classOf:27(X:Global), #b), $bind:24)(X:Global)
+    apply:29($bind:24, findMethod:28(classOf:27(X:Global), #b))(X:Global)
 $bind:24($value:17):
-    apply:22(Integer class#typecheck:, $let:16)(Integer:Global, $value:17)
+    apply:22($let:16, Integer class#typecheck:)(Integer:Global, $value:17)
 $let:16(b:6):
     $return:3(addi:57(a:5, b:6))
 "!
@@ -1747,9 +1747,9 @@ $block:6($ret:4):
 $entry:2($return:3):
     $return:3($block:24)
 $block:24(a:5, b:6, c:7, $ret:4):
-    apply:21(findMethod:20(classOf:19(a:5), #+), $bind_recv:16)(a:5, b:6)
+    apply:21($bind_recv:16, findMethod:20(classOf:19(a:5), #+))(a:5, b:6)
 $bind_recv:16($recv:8):
-    apply:13(findMethod:12(classOf:11($recv:8), #+), $ret:4)($recv:8, c:7)
+    apply:13($ret:4, findMethod:12(classOf:11($recv:8), #+))($recv:8, c:7)
 "!
 
 
@@ -1761,7 +1761,7 @@ $bind_recv:16($recv:8):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:29(Boolean class#typecheck:, $bind_recv:23)(Boolean:Global, X:Global)
+    apply:29($bind_recv:23, Boolean class#typecheck:)(Boolean:Global, X:Global)
 $bind_recv:23($recv:5):
     select:37($recv:5, $block:21, $block:16)($return:3)
 $block:21($ret:19):
@@ -1778,13 +1778,13 @@ $block:16($ret:14):
 $loopHead:43($return:3):
     $loopTest:36(False)
 $loopTest:36($ignore:35):
-    apply:28(findMethod:27(classOf:26(X:Global), #maybe), $whileFalse:42)(X:Global)
+    apply:28($whileFalse:42, findMethod:27(classOf:26(X:Global), #maybe))(X:Global)
 $whileFalse:42($cond:40):
     select:41($cond:40, $loopExit:39, $loopBody:37)()
 $loopExit:39():
     $return:3(False)
 $loopBody:37():
-    apply:17(findMethod:16(classOf:15(Y:Global), #something), $loopTest:36)(Y:Global)
+    apply:17($loopTest:36, findMethod:16(classOf:15(Y:Global), #something))(Y:Global)
 "!
 
 
@@ -1795,11 +1795,11 @@ $loopBody:37():
 $loopHead:42($return:3):
     $loopTest:35(False)
 $loopTest:35($ignore:34):
-    apply:28(findMethod:27(classOf:15(X:Global), #maybe), $whileTrue:41)(X:Global)
+    apply:28($whileTrue:41, findMethod:27(classOf:15(X:Global), #maybe))(X:Global)
 $whileTrue:41($cond:39):
     select:40($cond:39, $loopBody:36, $loopExit:38)()
 $loopBody:36():
-    apply:17(findMethod:16(classOf:15(X:Global), #something), $loopTest:35)(X:Global)
+    apply:17($loopTest:35, findMethod:16(classOf:15(X:Global), #something))(X:Global)
 $loopExit:38():
     $return:3(False)
 "!
@@ -1882,23 +1882,14 @@ $entry:2($return:3):
 "!
 
 
-    method test_convert_send
-        let cps = self convert: "X some: 12 message: 97".
-        assert that: { CpsPrinter printToString: cps }
-               equals: "
-$entry:2($return:3):
-    apply:10(findMethod:9(classOf:8(X:Global), #some:message:), $return:3)(X:Global, 12, 97)
-"!
-
-
     method test_convert_seq
         let cps = self convert: "X some: 12 message: 97. Y + Z".
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:23(findMethod:22(classOf:21(X:Global), #some:message:), $seq:16)(X:Global, 12, 97)
+    apply:23($seq:16, findMethod:22(classOf:21(X:Global), #some:message:))(X:Global, 12, 97)
 $seq:16($ignore:15):
-    apply:9(findMethod:8(classOf:7(Y:Global), #+), $return:3)(Y:Global, Z:Global)
+    apply:9($return:3, findMethod:8(classOf:7(Y:Global), #+))(Y:Global, Z:Global)
 "!
 
 
@@ -1907,7 +1898,7 @@ $seq:16($ignore:15):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:9(findMethod:8(classOf:7(Integer:Global), #typecheck:), $return:3)(Integer:Global, X:Global)
+    apply:9($return:3, findMethod:8(classOf:7(Integer:Global), #typecheck:))(Integer:Global, X:Global)
 "!
 
 
@@ -1919,9 +1910,9 @@ $entry:2($return:3):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:20(Integer class#typecheck:, $bind_recv:14)(Integer:Global, X:Global)
+    apply:20($bind_recv:14, Integer class#typecheck:)(Integer:Global, X:Global)
 $bind_recv:14($recv:5):
-    apply:10(Integer#+, $return:3)($recv:5, Y:Global)
+    apply:10($return:3, Integer#+)($recv:5, Y:Global)
 "!
 
 
@@ -1931,7 +1922,7 @@ $bind_recv:14($recv:5):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:17(Integer class#typecheck:, $bind:12)(Integer:Global, X:Global)
+    apply:17($bind:12, Integer class#typecheck:)(Integer:Global, X:Global)
 $bind:12($value:5):
     $return:3($value:5)
 "!
