@@ -96,7 +96,7 @@ class TypecheckImpl { type }
         let apply = aContinuation target.
         let value = aContinuation args at: 2.
         let valueType = value type.
-        let cc = apply args last.
+        let cc = apply target.
 
         -- If value has the correct type, we can eliminate
         -- the typecheck entirely.
@@ -124,8 +124,8 @@ interface InlineMethodImpl
         let newSelector = pattern second.
         let newMethod = graph findMethod: newSelector
                               for: newRecv.
-        let newApply = graph ensureOperation: APPLY
-                             args: [newMethod, apply args last].
+        let newApply = graph application: newMethod
+                             target: apply target.
         aContinuation target: newApply.
         aContinuation removeArgs.
         aContinuation addArgs: [newRecv].
@@ -159,9 +159,9 @@ interface PrimitiveInlineMethodImpl
         let apply = aContinuation target.
         let args = aContinuation args.
         let pattern = self primitiveInliner apply: args.
-        let cc = apply args last.
         let primop = graph ensureOperation: pattern first
                            args: pattern rest.
+        let cc = apply target.
         aContinuation removeArgs.
         aContinuation addArgs: [primop].
         aContinuation target: cc.
@@ -194,11 +194,11 @@ class IfTrueIfFalseImpl {}
         let cond = args at: 1.
         let thenCont = args at: 2.
         let elseCont = args at: 3.
-        let cc = apply args last.
-        aContinuation target: (graph ensureOperation: SELECT
-                                     args: [cond, thenCont, elseCont]).
+        aContinuation target: (graph select: cond
+                                     then: thenCont
+                                     else: elseCont).
         aContinuation removeArgs.
-        aContinuation addArgs: [cc]!
+        aContinuation addArgs: [apply target]!
 end
 
 
@@ -230,16 +230,17 @@ class WhileLoopImpl { name while }
         -- through the branch.
         let exitCont = graph continuation: "$loopExit"
                              params: []
-                             target: (aContinuation target args last)
+                             target: (aContinuation target target)
                              args: [graph ensureConstant: False].
         let cond = graph makeVariable: "$cond".
-        let selectArgs = while
-                             ifTrue: { [cond, bodyCont, exitCont] }
-                             ifFalse: { [cond, exitCont, bodyCont] }.
+        let thenElse = while
+                           ifTrue: { [bodyCont, exitCont] }
+                           ifFalse: { [exitCont, bodyCont] }.
         let branch = graph continuation: "$while{while}"
                            params: [cond]
-                           target: (graph ensureOperation: SELECT
-                                          args: selectArgs)
+                           target: (graph select: cond
+                                          then: thenElse first
+                                          else: thenElse second)
                            args: [].
         valueCont addArgs: [branch].
         let headCont = graph continuation: "$loopHead"
@@ -248,7 +249,7 @@ class WhileLoopImpl { name while }
                              args: [graph ensureConstant: False].
         aContinuation removeArgs.
         aContinuation replaceUsesWith: headCont.
-        aContinuation target: False.
+        aContinuation target: INVALID_TARGET.
         aContinuation removeParams.
         worklist push: headCont.
         worklist push: valueCont.
@@ -376,6 +377,35 @@ class Set { dict }
 end
 
 
+interface UseTracking
+    method isUnused
+        self uses isEmpty!
+
+
+    method addUse: use
+        self uses add: use!
+
+
+    method removeUse: use
+        self uses remove: use.
+        self debugVerify: "#removeUse"!
+
+
+    method replaceUsesWith: new
+        self uses do: { |each| each replaceUses: self with: new }.
+        self debugVerify: "#replaceUsesWith:"!
+
+
+    method debugVerify: what
+        DebugVerify
+            ifTrue: { self verify: what }!
+
+
+    required method uses
+    required method replaceUses: expr1 with: expr2
+end
+
+
 class OpMap { list }
     is Object
 
@@ -462,16 +492,17 @@ end
 define DebugVerify False!
 
 
-interface Expression
-    is Object
-
-
+interface Node
     method < other
         self id < other id!
+    required method id
+end
 
 
-    method doSubExpressions: _
-        False!
+interface Expression
+    is Object
+    is UseTracking
+    is Node
 
 
     method propagateTypes: _
@@ -486,11 +517,6 @@ interface Expression
         False!
 
 
-    method debugVerify: what
-        DebugVerify
-            ifTrue: { self verify: what }!
-
-
     method type
         False!
 
@@ -499,31 +525,17 @@ interface Expression
         False!
 
 
-    method isUnused
-        self uses isEmpty!
-
-
-    method addUse: use
-        self uses add: use!
-
-
-    method removeUse: use
-        self uses remove: use.
-        self debugVerify: "Expression#removeUse"!
-
-
-    method replaceUsesWith: expr
-        self uses do: { |each| each replaceUses: self with: expr }.
-        self debugVerify: "Expression#replaceUsesWith:"!
-
-
     method toString
         "#<{self classOf name} {self printName}>"!
 
 
-    required method uses
     required method printName
-    required method replaceUses: expr1 with: expr2
+end
+
+
+interface Childless
+    method doChildren: _
+        False!
 end
 
 
@@ -531,6 +543,7 @@ class Constant { id::Integer
                  value
                  uses::Set }
     is Expression
+    is Childless
 
 
     direct method id: id value: value
@@ -567,6 +580,7 @@ class Global { id::Integer
                uses::Set
                definition }
     is Expression
+    is Childless
 
     direct method id: id name: name
         self id: id
@@ -600,6 +614,47 @@ class Global { id::Integer
 end
 
 
+interface ContinuationTarget
+    is Node
+
+    method doChildren: block
+        self doSuccessors: block.
+        self doValues: block!
+end
+
+
+interface AtomicContinuationTarget
+    is ContinuationTarget
+end
+
+
+class InvalidTarget {}
+    is Object
+    is ContinuationTarget
+    is UseTracking
+
+    method id
+        0!
+
+    method uses
+        Set new!
+
+    method replaceUses: _ with: _
+        False!
+
+    method printName
+        "INVALID"!
+
+    method doSuccessors: _
+        False!
+
+    method doValues: _
+        False!
+end
+
+
+define INVALID_TARGET InvalidTarget new!
+
 
 class Variable { id::Integer
                  name
@@ -607,6 +662,8 @@ class Variable { id::Integer
                  defs::Set
                  uses::Set }
     is Expression
+    is Childless
+    is AtomicContinuationTarget
 
     direct method id: id
         self id: id
@@ -689,17 +746,6 @@ class ADDI {}
 end
 
 
-class APPLY {}
-    is OperationKind
-
-    direct method name
-        "apply"!
-
-    direct method visit: operation by: visitor
-        visitor visitApply: operation!
-end
-
-
 class CLASS_OF {}
     is OperationKind
 
@@ -721,17 +767,6 @@ class FIND_METHOD {}
 
     direct method visit: operation by: visitor
         visitor visitFindMethod: operation!
-end
-
-
-class SELECT {}
-    is OperationKind
-
-    direct method name
-        "select"!
-
-    direct method visit: operation by: visitor
-        visitor visitSelect: operation!
 end
 
 
@@ -762,7 +797,7 @@ class Operation { id::Integer
         kind isFoldable!
 
 
-    method doSubExpressions: block
+    method doChildren: block
         args do: block!
 
 
@@ -811,6 +846,7 @@ class Continuation { id::Integer
                      args::Array
                      uses::Set }
     is Expression
+    is AtomicContinuationTarget
 
     direct method id: id name: name params: params target: target args: args
         let new = self id: id
@@ -827,7 +863,7 @@ class Continuation { id::Integer
 
 
     method verify: what
-        (target is False)
+        (target is INVALID_TARGET)
             ifFalse: { (target uses includes: self)
                            ifFalse: { Error raise: "{self} does not use its target: {target} ({what})" } }.
         let badParams = params reject: { |each| each defs includes: self }.
@@ -841,18 +877,6 @@ class Continuation { id::Integer
         name = new!
 
 
-    method doSuccessors: block
-        (Continuation includes: target)
-            ifTrue: { return block value: target }.
-        (Variable includes: target)
-            ifTrue: { return block value: target }.
-        target kind is APPLY
-            ifTrue: { return block value: target args last }.
-        target kind is SELECT
-            ifTrue: { return target args do: block }.
-        Error raise: "Continuation {self printName} has invalid target: {target printName}"!
-
-
     method hasKnownClass
         True!
 
@@ -861,8 +885,15 @@ class Continuation { id::Integer
         FunctionClassDefinition!
 
 
-    method doSubExpressions: block
-        target => { block value: target }.
+    method doSuccessors: block
+        (AtomicContinuationTarget includes: target)
+            ifTrue: { block value: target }
+            ifFalse: { target doSuccessors: block }!
+
+
+    method doValues: block
+        (AtomicContinuationTarget includes: target)
+            ifFalse: { target doValues: block }.
         args do: block!
 
 
@@ -879,6 +910,11 @@ class Continuation { id::Integer
 
 
     method simplify
+        -- Log println: "\nSIMPLIFY: {self printName}".
+        -- Log println: "   uniqueTarget: {self hasUniqueTarget}".
+        -- Log println: "   target: {target classOf name}".
+        -- (UseTracking includes: target)
+        --     => { Log println: "   uses: {target uses collect: #printName}" }.
         { self hasUniqueTarget }
             whileTrue: { self inlineUniqueTarget }.
         self!
@@ -944,16 +980,16 @@ class Continuation { id::Integer
 
     method target: new
         -- No copy needed here, so #target: is the way to go.
-        target => { target removeUse: self }.
+        target removeUse: self.
         target = new.
-        target => { target addUse: self }.
+        target addUse: self.
         self debugVerify: "Continuation#target:"!
 
 
     method unlink
         self removeArgs.
         self replaceUsesWith: target.
-        self target: False.
+        self target: INVALID_TARGET.
         -- args and target may use params, so need to remove last!
         self removeParams.
         self debugVerify: "Continuation#unlink"!
@@ -974,6 +1010,105 @@ class Continuation { id::Integer
 end
 
 
+class Application { id::Integer
+                    target::AtomicContinuationTarget
+                    function
+                    uses::Set }
+    is Object
+    is ContinuationTarget
+    is UseTracking
+
+    direct method id: id target: target function: function
+        let new = self id: id
+                       target: target
+                       function: function
+                       uses: Set new.
+        target addUse: new.
+        function addUse: new.
+        new!
+
+
+    method doDeps: block
+        block value: target.
+        block value: function!
+
+
+    method doValues: block
+        block value: function!
+
+
+    method replaceUses: node1 with: node2
+        node1 removeUse: self.
+        target is node1
+            => { target = node2 }.
+        function is node1
+            => { function = node2 }.
+        node2 addUse: self!
+
+
+    method printName
+        "apply:{id}({function printName}, {target printName})"!
+
+
+    method visitBy: visitor
+        visitor visitApplication: self!
+
+    method doSuccessors: block
+        block value: target!
+end
+
+
+class Select { id::Integer
+               cond::Variable
+               then::AtomicContinuationTarget
+               else::AtomicContinuationTarget
+               uses::Set }
+    is Object
+    is ContinuationTarget
+    is UseTracking
+
+    direct method id: id cond: cond then: then else: else
+        let new = self id: id
+                       cond: cond
+                       then: then
+                       else: else
+                       uses: Set new.
+        cond addUse: new.
+        then addUse: new.
+        else addUse: new.
+        new!
+
+
+    method printName
+        "select:{id}({cond printName}, {then printName}, {else printName})"!
+
+
+    method replaceUses: node1 with: node2
+        node1 removeUse: self.
+        cond is node1
+            => { cond = node2 }.
+        then is node1
+            => { then = node2 }.
+        else is node1
+            => { else = node2 }.
+        node2 addUse: self!
+
+
+    method visitBy: visitor
+        visitor visitSelect: self!
+
+
+    method doSuccessors: block
+        block value: then.
+        block value: else!
+
+
+    method doValues: block
+        block value: cond!
+end
+
+
+
 class CpsGraph { entry::Continuation
                  exit::Variable
                  lastId::Integer
@@ -992,7 +1127,7 @@ class CpsGraph { entry::Continuation
         let entry = Continuation id: 2
                                  name: "$entry"
                                  params: [exit]
-                                 target: False
+                                 target: INVALID_TARGET
                                  args: [].
         let graph = self
                         entry: entry
@@ -1038,7 +1173,7 @@ class CpsGraph { entry::Continuation
         { worklist isEmpty }
             whileFalse: { let expr = worklist pop.
                           -- Output debug println: "flushing: {expr printName}".
-                          expr doSubExpressions: { |each|
+                          expr doChildren: { |each|
                                                    each removeUse: expr.
                                                    each isUnused
                                                        ifTrue: { worklist push: each }} }.
@@ -1046,7 +1181,7 @@ class CpsGraph { entry::Continuation
         operations = operations reject: #isUnused!
 
 
-    method doExpressions: block
+    method doNodes: block
         continuations do: block.
         operations do: block!
 
@@ -1122,6 +1257,22 @@ class CpsGraph { entry::Continuation
                              id: self nextId
                              kind: kind
                              args: args }!
+
+    method application: function target: continuation
+        -- FIXME: hashcons
+        Application
+            id: self nextId
+            target: continuation
+            function: function!
+
+
+    method select: cond then: then else: else
+        -- FIXME: hashcons
+        Select
+            id: self nextId
+            cond: cond
+            then: then
+            else: else!
 
 
     method classOf: recv
@@ -1230,8 +1381,8 @@ class CpsConverter { graph var next }
                                    for: recv.
         let next = graph continuation: "$send"
                          params: []
-                         target: (graph ensureOperation: APPLY
-                                        args: [methodFunction, cc])
+                         target: (graph application: methodFunction
+                                        target: cc)
                          args: ([recv] append: args).
         syntax arguments reverse
             with: args reverse
@@ -1264,8 +1415,8 @@ class CpsConverter { graph var next }
         let typecheck = graph findMethod: "typecheck:" for: type.
         let checkCont = graph continuation: "$typecheck"
                               params: [type]
-                              target: (graph ensureOperation: APPLY
-                                             args: [typecheck, cc])
+                              target: (graph application: typecheck
+                                             target: cc)
                               args: [type, value].
         let typeCont = syntax type visitBy: self with: checkCont.
         let bindValue = graph continuation: "$bind"
@@ -1278,7 +1429,7 @@ class CpsConverter { graph var next }
     method visitVariable: syntax with: cc
         let var = self findBinding: syntax name.
         (Continuation includes: cc)
-            => { cc uses isEmpty
+            => { cc isUnused
                      => { cc params first replaceUsesWith: var.
                           cc removeParams.
                           return cc } }.
@@ -1293,7 +1444,7 @@ class CpsOptimizer { worklist graph }
 
     direct method optimize: graph
         let worklist = Worklist new.
-        graph doExpressions: { |each| worklist push: each }.
+        graph doNodes: { |each| worklist push: each }.
         (self worklist: worklist graph: graph)
             optimize!
 
@@ -1303,6 +1454,7 @@ class CpsOptimizer { worklist graph }
             whileFalse: { let node = worklist pop.
                           -- Was node eliminated while it was on the worklist?
                           node isUnused
+                              -- ifTrue: { Log println: "DEAD: {node}" }
                               ifFalse: { node visitBy: self } }!
 
 
@@ -1314,7 +1466,7 @@ class CpsOptimizer { worklist graph }
         -- of APPLY the continuation is the user of the arguments, but the
         -- apply is
         let target = aCont target.
-        (Operation includes: target)
+        (Application includes: target)
             => { worklist push: target }!
 
 
@@ -1333,16 +1485,15 @@ class CpsOptimizer { worklist graph }
                       aClassOf flush }!
 
 
-    method visitApply: anApply
+    method visitApplication: anApply
         -- Lower constant method functions when possible.
-        let func = anApply args first.
+        let func = anApply function.
         (Constant includes: func)
             ifTrue: { let value = func value.
                       (MethodDefinition includes: value)
                           => { anApply uses
-                                   do: { |each|
-                                         (Continuation includes: each)
-                                             => { value lowerToCps: each in: graph with: worklist } } } }!
+                                   do: { |each::Continuation|
+                                         value lowerToCps: each in: graph with: worklist } } }!
 
 
     method visitFindMethod: aFindMethod
@@ -1404,7 +1555,7 @@ class CpsPrinter { output seen }
         visitor visit: graph entry!
 
 
-    method visit: other::Expression
+    method visit: other
         (seen add: other)
             ifTrue: { other visitBy: self }!
 
@@ -1441,6 +1592,16 @@ class CpsPrinter { output seen }
         False!
 
 
+    method visitApplication: anApplication
+        self visit: anApplication target!
+
+
+    method visitSelect: aSelect
+        self visit: aSelect cond.
+        self visit: aSelect then.
+        self visit: aSelect else!
+
+
     method visitOperation: anOp
         anOp args do: { |each| self visit: each }!
 end
@@ -1464,7 +1625,7 @@ class CpsGraphwizPrinter { output seen }
         output writeString: "\}\n"!
 
 
-    method visit: other::Expression
+    method visit: other
         (seen add: other)
             ifTrue: { other visitBy: self }!
 
@@ -1483,42 +1644,49 @@ class CpsGraphwizPrinter { output seen }
                                  output writeString: "\" -> \"".
                                  output writeString: each printName.
                                  output writeString: "\" [dir=both, arrowhead=none, arrowtail=box, style=dotted]\n" } }.
+        aCont doValues: { |each|
+                          output writeString: "    \"".
+                          output writeString: each printName.
+                          output writeString: "\" -> \"".
+                          output writeString: aCont printName.
+                          output writeString: "\" [style=dotted]\n" }.
         aCont doSuccessors: { |each|
                               output writeString: "    \"".
                               output writeString: aCont printName.
                               output writeString: "\" -> \"".
                               output writeString: each printName.
                               output writeString: "\" [arrowhead=vee]\n" }.
-        self visit: aCont target.
+        aCont doChildren: { |each|
+                            self visit: each }.
         self visitAll: aCont args!
 
+
     method visitVariable: aVar
-        aVar uses
-            doSorted: { |each|
-                        output writeString: "    \"".
-                        output writeString: aVar printName.
-                        output writeString: "\" -> \"".
-                        output writeString: each printName.
-                        output writeString: "\" [style=dotted]\n" }.
         False!
 
 
-    method visitConstant: aConst
+    method visitConstant: _
         False!
 
 
-    method visitGlobal: aGlobal
+    method visitGlobal: _
+        False!
+
+
+    method visitApplication: _
         False!
 
 
     method visitOperation: anOperation
         anOperation uses
-            doSorted: { |each|
-                        output writeString: "    \"".
-                        output writeString: anOperation printName.
-                        output writeString: "\" -> \"".
-                        output writeString: each printName.
-                        output writeString: "\" [style=dotted]\n" }.
+            doSorted: { |each| each visitBy: self }.
+        anOperation args
+            do: { |each|
+                  output writeString: "    \"".
+                  output writeString: each printName.
+                  output writeString: "\" -> \"".
+                  output writeString: anOperation printName.
+                  output writeString: "\" [style=dotted]\n" }.
         self visitAll: anOperation args!
 end
 
@@ -1647,27 +1815,33 @@ strict digraph \{
     \"$loopHead:42\" [color=red]
     \"$loopHead:42\" [shape=box]
     \"$loopHead:42\" -> \"$return:3\" [dir=both, arrowhead=none, arrowtail=box, style=dotted]
+    \"False\" -> \"$loopHead:42\" [style=dotted]
     \"$loopHead:42\" -> \"$loopTest:35\" [arrowhead=vee]
     \"$loopTest:35\" [shape=box]
+    \"findMethod:27(classOf:15(X:Global), #maybe)\" -> \"$loopTest:35\" [style=dotted]
+    \"X:Global\" -> \"$loopTest:35\" [style=dotted]
     \"$loopTest:35\" -> \"$whileTrue:41\" [arrowhead=vee]
-    \"apply:28(findMethod:27(classOf:15(X:Global), #maybe), $whileTrue:41)\" -> \"$loopTest:35\" [style=dotted]
-    \"findMethod:27(classOf:15(X:Global), #maybe)\" -> \"apply:28(findMethod:27(classOf:15(X:Global), #maybe), $whileTrue:41)\" [style=dotted]
-    \"classOf:15(X:Global)\" -> \"findMethod:16(classOf:15(X:Global), #something)\" [style=dotted]
-    \"classOf:15(X:Global)\" -> \"findMethod:27(classOf:15(X:Global), #maybe)\" [style=dotted]
     \"$whileTrue:41\" [shape=box]
     \"$whileTrue:41\" -> \"$cond:39\" [dir=both, arrowhead=none, arrowtail=box, style=dotted]
-    \"$whileTrue:41\" -> \"$cond:39\" [arrowhead=vee]
+    \"$cond:39\" -> \"$whileTrue:41\" [style=dotted]
     \"$whileTrue:41\" -> \"$loopBody:36\" [arrowhead=vee]
     \"$whileTrue:41\" -> \"$loopExit:38\" [arrowhead=vee]
-    \"select:40($cond:39, $loopBody:36, $loopExit:38)\" -> \"$whileTrue:41\" [style=dotted]
-    \"$cond:39\" -> \"select:40($cond:39, $loopBody:36, $loopExit:38)\" [style=dotted]
     \"$loopBody:36\" [shape=box]
+    \"findMethod:16(classOf:15(X:Global), #something)\" -> \"$loopBody:36\" [style=dotted]
+    \"X:Global\" -> \"$loopBody:36\" [style=dotted]
     \"$loopBody:36\" -> \"$loopTest:35\" [arrowhead=vee]
-    \"apply:17(findMethod:16(classOf:15(X:Global), #something), $loopTest:35)\" -> \"$loopBody:36\" [style=dotted]
-    \"findMethod:16(classOf:15(X:Global), #something)\" -> \"apply:17(findMethod:16(classOf:15(X:Global), #something), $loopTest:35)\" [style=dotted]
+    \"classOf:15(X:Global)\" -> \"findMethod:16(classOf:15(X:Global), #something)\" [style=dotted]
+    \"#something\" -> \"findMethod:16(classOf:15(X:Global), #something)\" [style=dotted]
+    \"classOf:15(X:Global)\" -> \"findMethod:16(classOf:15(X:Global), #something)\" [style=dotted]
+    \"#something\" -> \"findMethod:16(classOf:15(X:Global), #something)\" [style=dotted]
+    \"classOf:15(X:Global)\" -> \"findMethod:27(classOf:15(X:Global), #maybe)\" [style=dotted]
+    \"#maybe\" -> \"findMethod:27(classOf:15(X:Global), #maybe)\" [style=dotted]
+    \"X:Global\" -> \"classOf:15(X:Global)\" [style=dotted]
     \"$loopExit:38\" [shape=box]
+    \"False\" -> \"$loopExit:38\" [style=dotted]
     \"$loopExit:38\" -> \"$return:3\" [arrowhead=vee]
-    \"$return:3\" -> \"$loopExit:38\" [style=dotted]
+    \"classOf:15(X:Global)\" -> \"findMethod:27(classOf:15(X:Global), #maybe)\" [style=dotted]
+    \"#maybe\" -> \"findMethod:27(classOf:15(X:Global), #maybe)\" [style=dotted]
 }
 "!
 
