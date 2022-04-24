@@ -2,11 +2,19 @@ import lib.assert.Assert
 import impl.parser.Parser
 
 
+interface Log
+    direct method newline
+        Output debug newline!
+    direct method println: what
+        Output debug println: what!
+end
+
+
 interface MethodDefinition
     is Object
 
     method displayString
-        "methodFunction({self home name}#{self name})"!
+        "{self home name}#{self name}"!
 
 
     method returnType
@@ -84,26 +92,24 @@ class TypecheckImpl { type }
 
 
     method lowerToCps: aContinuation in: graph with: worklist
-        (aContinuation args size is 3) assert: "TypecheckImpl#lowerToCps:in:with".
+        (aContinuation args size is 2) assert: "TypecheckImpl#lowerToCps:in:with".
+        let apply = aContinuation target.
         let value = aContinuation args at: 2.
         let valueType = value type.
-        let cc = aContinuation args last.
+        let cc = apply args last.
 
         -- If value has the correct type, we can eliminate
         -- the typecheck entirely.
+        --
+        -- Otherwise we propagate the type to cc.
         valueType is type
-            => { aContinuation removeArgs.
-                 aContinuation addArgs: [value].
-                 aContinuation target: cc.
-                 worklist push: cc }.
-
-        -- CC has no other uses we can propagate the type information
-        -- there. (Could also propagate the value information, but
-        -- that doesn't seem super useful unless the value is constant,
-        -- in which case the first leg takes care of it above.)
-        (cc uses isOnly: aContinuation)
-            => { cc propagateTypes: [type].
-                 worklist push: cc }!
+            ifTrue: { aContinuation removeArgs.
+                      aContinuation addArgs: [value].
+                      aContinuation target: cc }
+            ifFalse: { (cc uses isOnly: apply)
+                           => { cc propagateTypes: [type] } }.
+        (Continuation includes: cc)
+            ifTrue: { worklist pushAll: cc params first uses }!
 end
 
 
@@ -111,20 +117,27 @@ interface InlineMethodImpl
     is BuiltinMethodImpl
 
     method lowerToCps: aContinuation in: graph with: worklist
+        let apply = aContinuation target.
         let args = aContinuation args.
-        let pattern = self inliner apply: args butlast.
+        let pattern = self inliner apply: args.
         let newRecv = pattern first.
         let newSelector = pattern second.
-        let methodExpr = graph findMethod: newSelector
-                               for: newRecv.
-        aContinuation target: methodExpr.
+        let newMethod = graph findMethod: newSelector
+                              for: newRecv.
+        let newApply = graph ensureOperation: APPLY
+                             args: [newMethod, apply args last].
+        aContinuation target: newApply.
         aContinuation removeArgs.
         aContinuation addArgs: [newRecv].
         aContinuation addArgs: (pattern from: 3 to: pattern size).
-        aContinuation addArgs: [args last].     -- cc
-        worklist push: methodExpr args first. -- CLASS_OF
-        worklist push: aContinuation.
-        worklist push: aContinuation target!
+        -- CLASS_OF is new
+        worklist push: newMethod args first.
+        -- FIND_METHOD is new
+        worklist push: newMethod.
+        -- APPLY is new
+        worklist push: newApply.
+        -- Continuation has changed.
+        worklist push: aContinuation!
 end
 
 class IntegerPlusImpl {}
@@ -143,9 +156,10 @@ interface PrimitiveInlineMethodImpl
     is BuiltinMethodImpl
 
     method lowerToCps: aContinuation in: graph with: worklist
+        let apply = aContinuation target.
         let args = aContinuation args.
-        let pattern = self primitiveInliner apply: args butlast.
-        let cc = args last.
+        let pattern = self primitiveInliner apply: args.
+        let cc = apply args last.
         let primop = graph ensureOperation: pattern first
                            args: pattern rest.
         aContinuation removeArgs.
@@ -174,12 +188,13 @@ class IfTrueIfFalseImpl {}
         "ifTrue:ifFalse:"!
 
     method lowerToCps: aContinuation in: graph with: worklist
-        (aContinuation args size is 4) assert: "IfTrueIfFalseImpl#lowerToCps:in:with".
+        (aContinuation args size is 3) assert: "IfTrueIfFalseImpl#lowerToCps:in:with".
+        let apply = aContinuation target.
         let args = aContinuation args.
         let cond = args at: 1.
         let thenCont = args at: 2.
         let elseCont = args at: 3.
-        let cc = args at: 4.
+        let cc = apply args last.
         aContinuation target: (graph ensureOperation: SELECT
                                      args: [cond, thenCont, elseCont]).
         aContinuation removeArgs.
@@ -199,7 +214,7 @@ class WhileLoopImpl { name while }
 
 
     method lowerToCps: aContinuation in: graph with: worklist
-        (aContinuation args size is 3) assert: "WhileLoopImpl#lowerToCps:in:with".
+        (aContinuation args size is 2) assert: "WhileLoopImpl#lowerToCps:in:with".
         let ignore1 = graph makeVariable: "$ignore".
         -- valueCont args will be patched with the branch
         let valueCont = graph continuation: "$loopTest"
@@ -215,7 +230,7 @@ class WhileLoopImpl { name while }
         -- through the branch.
         let exitCont = graph continuation: "$loopExit"
                              params: []
-                             target: (aContinuation args at: 3)
+                             target: (aContinuation target args last)
                              args: [graph ensureConstant: False].
         let cond = graph makeVariable: "$cond".
         let selectArgs = while
@@ -674,6 +689,17 @@ class ADDI {}
 end
 
 
+class APPLY {}
+    is OperationKind
+
+    direct method name
+        "apply"!
+
+    direct method visit: operation by: visitor
+        visitor visitApply: operation!
+end
+
+
 class CLASS_OF {}
     is OperationKind
 
@@ -807,7 +833,7 @@ class Continuation { id::Integer
         let badParams = params reject: { |each| each defs includes: self }.
         badParams isEmpty assert: "Continuation should define its params".
         let badArgs = args reject: { |each| each uses includes: self }.
-        badArgs isEmpty assert: "Continuation should uses its args".
+        badArgs isEmpty assert: "Continuation should use its args".
         self!
 
 
@@ -816,29 +842,15 @@ class Continuation { id::Integer
 
 
     method doSuccessors: block
-        -- Iterate over all possible successors of the block.
-        --
-        -- FIXME: Overly conservative since we don't propagate types
-        -- well enough to be able to filter out variables only bound
-        -- to integers as successors.
-        let filteredBlock = { |each|
-                              (Constant includes: each)
-                                  ifTrue: { (MethodDefinition includes: each value)
-                                                ifTrue: { block value: each } }
-                                  ifFalse: { block value: each } }.
-        let target = self target.
-        (Operation includes: target)
-            => { -- FIND_METHOD is a known case: only successor is the last argument.
-                 target kind is FIND_METHOD
-                     => { return block value: self args last }.
-                 -- SELECT is partially known: 2nd and 3rd SELECT arguments are successors,
-                 -- as are all continuation arguments.
-                 target kind is SELECT
-                     => { target args rest do: filteredBlock.
-                          return args do: filteredBlock } }.
-        -- General case
-        block value: target.
-        return args do: filteredBlock!
+        (Continuation includes: target)
+            ifTrue: { return block value: target }.
+        (Variable includes: target)
+            ifTrue: { return block value: target }.
+        target kind is APPLY
+            ifTrue: { return block value: target args last }.
+        target kind is SELECT
+            ifTrue: { return target args do: block }.
+        Error raise: "Continuation {self printName} has invalid target: {target printName}"!
 
 
     method hasKnownClass
@@ -1218,8 +1230,9 @@ class CpsConverter { graph var next }
                                    for: recv.
         let next = graph continuation: "$send"
                          params: []
-                         target: methodFunction
-                         args: ([recv] append: args append: [cc]).
+                         target: (graph ensureOperation: APPLY
+                                        args: [methodFunction, cc])
+                         args: ([recv] append: args).
         syntax arguments reverse
             with: args reverse
             do: { |syntaxArg var|
@@ -1248,10 +1261,12 @@ class CpsConverter { graph var next }
     method visitValueTypeDeclaration: syntax with: cc
         let value = graph makeVariable: "$value".
         let type = graph makeVariable: "$type".
+        let typecheck = graph findMethod: "typecheck:" for: type.
         let checkCont = graph continuation: "$typecheck"
                               params: [type]
-                              target: (graph findMethod: "typecheck:" for: type)
-                              args: [type, value, cc].
+                              target: (graph ensureOperation: APPLY
+                                             args: [typecheck, cc])
+                              args: [type, value].
         let typeCont = syntax type visitBy: self with: checkCont.
         let bindValue = graph continuation: "$bind"
                               params: [value]
@@ -1285,21 +1300,22 @@ class CpsOptimizer { worklist graph }
 
     method optimize
         { worklist isEmpty }
-            whileFalse: { worklist pop visitBy: self }!
+            whileFalse: { let node = worklist pop.
+                          -- Was node eliminated while it was on the worklist?
+                          node isUnused
+                              ifFalse: { node visitBy: self } }!
 
 
     method visitContinuation: aCont
-        -- Was this continuation eliminated while it was on the worklist?
-        aCont uses isEmpty
-            => { return False }.
-        -- Do strictly local simplifications.
+        -- Do strictly local simplifications: basically zipping up chains of
+        -- of known continuations into a single one.
         aCont simplify.
-        -- If the target is a known method with an optimizer, use that.
+        -- If target is an operation, let its optimizers kick in. In case
+        -- of APPLY the continuation is the user of the arguments, but the
+        -- apply is
         let target = aCont target.
-        (Constant includes: target)
-            => { let aMethod = target value.
-                 (MethodDefinition includes: aMethod)
-                     => { aMethod lowerToCps: aCont in: graph with: worklist } }!
+        (Operation includes: target)
+            => { worklist push: target }!
 
 
     method visitOperation: anOperation
@@ -1317,6 +1333,18 @@ class CpsOptimizer { worklist graph }
                       aClassOf flush }!
 
 
+    method visitApply: anApply
+        -- Lower constant method functions when possible.
+        let func = anApply args first.
+        (Constant includes: func)
+            ifTrue: { let value = func value.
+                      (MethodDefinition includes: value)
+                          => { anApply uses
+                                   do: { |each|
+                                         (Continuation includes: each)
+                                             => { value lowerToCps: each in: graph with: worklist } } } }!
+
+
     method visitFindMethod: aFindMethod
         let classArg = aFindMethod args at: 1.
         (Constant includes: classArg)
@@ -1329,12 +1357,17 @@ class CpsOptimizer { worklist graph }
                                        => { let methodFunction = classDef findMethod: selector name.
                                             (methodFunction is False) not
                                                 => { let constMethod = graph ensureConstant: methodFunction.
-                                                     aFindMethod replaceUsesWith: constMethod.
-                                                     constMethod uses do: { |each|
-                                                                            each propagateTargetType.
-                                                                            worklist push: each } } } } } }!
+                                                     aFindMethod uses
+                                                         do: { |each|
+                                                               each replaceUses: aFindMethod with: constMethod.
+                                                               worklist push: each } } } } } }!
+
 
     method visitSelect: _
+        False!
+
+
+    method visitAddi: _
         False!
 
 
@@ -1517,15 +1550,15 @@ class TestCPS { assert system }
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    findMethod:40(classOf:25(X:Global), #a)(X:Global, $bind:36)
-$bind:36($value:31):
-    methodFunction(Integer class#typecheck:)(Integer:Global, $value:31, $let:30)
-$let:30(a:5):
-    findMethod:26(classOf:25(X:Global), #b)(X:Global, $bind:22)
-$bind:22($value:16):
-    methodFunction(Integer class#typecheck:)(Integer:Global, $value:16, $let:15)
-$let:15(b:6):
-    $return:3(addi:51(a:5, b:6))
+    apply:45(findMethod:44(classOf:27(X:Global), #a), $bind:40)(X:Global)
+$bind:40($value:34):
+    apply:38(Integer class#typecheck:, $let:33)(Integer:Global, $value:34)
+$let:33(a:5):
+    apply:29(findMethod:28(classOf:27(X:Global), #b), $bind:24)(X:Global)
+$bind:24($value:17):
+    apply:22(Integer class#typecheck:, $let:16)(Integer:Global, $value:17)
+$let:16(b:6):
+    $return:3(addi:57(a:5, b:6))
 "!
 
     method test_convert_arity_0_block
@@ -1544,11 +1577,11 @@ $block:6($ret:4):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    $return:3($block:22)
-$block:22(a:5, b:6, c:7, $ret:4):
-    findMethod:19(classOf:18(a:5), #+)(a:5, b:6, $bind_recv:15)
-$bind_recv:15($recv:8):
-    findMethod:12(classOf:11($recv:8), #+)($recv:8, c:7, $ret:4)
+    $return:3($block:24)
+$block:24(a:5, b:6, c:7, $ret:4):
+    apply:21(findMethod:20(classOf:19(a:5), #+), $bind_recv:16)(a:5, b:6)
+$bind_recv:16($recv:8):
+    apply:13(findMethod:12(classOf:11($recv:8), #+), $ret:4)($recv:8, c:7)
 "!
 
 
@@ -1560,13 +1593,13 @@ $bind_recv:15($recv:8):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    methodFunction(Boolean class#typecheck:)(Boolean:Global, X:Global, $bind_recv:22)
-$bind_recv:22($recv:5):
-    select:35($recv:5, $block:20, $block:15)($return:3)
-$block:20($ret:18):
-    $ret:18(1)
-$block:15($ret:13):
-    $ret:13(2)
+    apply:29(Boolean class#typecheck:, $bind_recv:23)(Boolean:Global, X:Global)
+$bind_recv:23($recv:5):
+    select:37($recv:5, $block:21, $block:16)($return:3)
+$block:21($ret:19):
+    $ret:19(1)
+$block:16($ret:14):
+    $ret:14(2)
 "!
 
 
@@ -1574,16 +1607,16 @@ $block:15($ret:13):
         let cps = self convert: "\{ X maybe\} whileFalse: \{ Y something \}".
         assert that: { CpsPrinter printToString: cps }
                equals: "
-$loopHead:40($return:3):
-    $loopTest:33(False)
-$loopTest:33($ignore:32):
-    findMethod:25(classOf:24(X:Global), #maybe)(X:Global, $whileFalse:39)
-$whileFalse:39($cond:37):
-    select:38($cond:37, $loopExit:36, $loopBody:34)()
-$loopExit:36():
+$loopHead:43($return:3):
+    $loopTest:36(False)
+$loopTest:36($ignore:35):
+    apply:28(findMethod:27(classOf:26(X:Global), #maybe), $whileFalse:42)(X:Global)
+$whileFalse:42($cond:40):
+    select:41($cond:40, $loopExit:39, $loopBody:37)()
+$loopExit:39():
     $return:3(False)
-$loopBody:34():
-    findMethod:15(classOf:14(Y:Global), #something)(Y:Global, $loopTest:33)
+$loopBody:37():
+    apply:17(findMethod:16(classOf:15(Y:Global), #something), $loopTest:36)(Y:Global)
 "!
 
 
@@ -1591,15 +1624,15 @@ $loopBody:34():
         let cps = self convert: "\{ X maybe\} whileTrue: \{ X something \}".
         assert that: { CpsPrinter printToString: cps }
                equals: "
-$loopHead:39($return:3):
-    $loopTest:32(False)
-$loopTest:32($ignore:31):
-    findMethod:25(classOf:14(X:Global), #maybe)(X:Global, $whileTrue:38)
-$whileTrue:38($cond:36):
-    select:37($cond:36, $loopBody:33, $loopExit:35)()
-$loopBody:33():
-    findMethod:15(classOf:14(X:Global), #something)(X:Global, $loopTest:32)
-$loopExit:35():
+$loopHead:42($return:3):
+    $loopTest:35(False)
+$loopTest:35($ignore:34):
+    apply:28(findMethod:27(classOf:15(X:Global), #maybe), $whileTrue:41)(X:Global)
+$whileTrue:41($cond:39):
+    select:40($cond:39, $loopBody:36, $loopExit:38)()
+$loopBody:36():
+    apply:17(findMethod:16(classOf:15(X:Global), #something), $loopTest:35)(X:Global)
+$loopExit:38():
     $return:3(False)
 "!
 
@@ -1611,27 +1644,30 @@ $loopExit:35():
         assert that: { CpsGraphwizPrinter printToString: cps }
                equals: "
 strict digraph \{
-    \"$loopHead:39\" [color=red]
-    \"$loopHead:39\" [shape=box]
-    \"$loopHead:39\" -> \"$return:3\" [dir=both, arrowhead=none, arrowtail=box, style=dotted]
-    \"$loopHead:39\" -> \"$loopTest:32\" [arrowhead=vee]
-    \"$loopTest:32\" [shape=box]
-    \"$loopTest:32\" -> \"$whileTrue:38\" [arrowhead=vee]
-    \"findMethod:25(classOf:14(X:Global), #maybe)\" -> \"$loopTest:32\" [style=dotted]
-    \"classOf:14(X:Global)\" -> \"findMethod:15(classOf:14(X:Global), #something)\" [style=dotted]
-    \"classOf:14(X:Global)\" -> \"findMethod:25(classOf:14(X:Global), #maybe)\" [style=dotted]
-    \"$whileTrue:38\" [shape=box]
-    \"$whileTrue:38\" -> \"$cond:36\" [dir=both, arrowhead=none, arrowtail=box, style=dotted]
-    \"$whileTrue:38\" -> \"$loopBody:33\" [arrowhead=vee]
-    \"$whileTrue:38\" -> \"$loopExit:35\" [arrowhead=vee]
-    \"select:37($cond:36, $loopBody:33, $loopExit:35)\" -> \"$whileTrue:38\" [style=dotted]
-    \"$cond:36\" -> \"select:37($cond:36, $loopBody:33, $loopExit:35)\" [style=dotted]
-    \"$loopBody:33\" [shape=box]
-    \"$loopBody:33\" -> \"$loopTest:32\" [arrowhead=vee]
-    \"findMethod:15(classOf:14(X:Global), #something)\" -> \"$loopBody:33\" [style=dotted]
-    \"$loopExit:35\" [shape=box]
-    \"$loopExit:35\" -> \"$return:3\" [arrowhead=vee]
-    \"$return:3\" -> \"$loopExit:35\" [style=dotted]
+    \"$loopHead:42\" [color=red]
+    \"$loopHead:42\" [shape=box]
+    \"$loopHead:42\" -> \"$return:3\" [dir=both, arrowhead=none, arrowtail=box, style=dotted]
+    \"$loopHead:42\" -> \"$loopTest:35\" [arrowhead=vee]
+    \"$loopTest:35\" [shape=box]
+    \"$loopTest:35\" -> \"$whileTrue:41\" [arrowhead=vee]
+    \"apply:28(findMethod:27(classOf:15(X:Global), #maybe), $whileTrue:41)\" -> \"$loopTest:35\" [style=dotted]
+    \"findMethod:27(classOf:15(X:Global), #maybe)\" -> \"apply:28(findMethod:27(classOf:15(X:Global), #maybe), $whileTrue:41)\" [style=dotted]
+    \"classOf:15(X:Global)\" -> \"findMethod:16(classOf:15(X:Global), #something)\" [style=dotted]
+    \"classOf:15(X:Global)\" -> \"findMethod:27(classOf:15(X:Global), #maybe)\" [style=dotted]
+    \"$whileTrue:41\" [shape=box]
+    \"$whileTrue:41\" -> \"$cond:39\" [dir=both, arrowhead=none, arrowtail=box, style=dotted]
+    \"$whileTrue:41\" -> \"$cond:39\" [arrowhead=vee]
+    \"$whileTrue:41\" -> \"$loopBody:36\" [arrowhead=vee]
+    \"$whileTrue:41\" -> \"$loopExit:38\" [arrowhead=vee]
+    \"select:40($cond:39, $loopBody:36, $loopExit:38)\" -> \"$whileTrue:41\" [style=dotted]
+    \"$cond:39\" -> \"select:40($cond:39, $loopBody:36, $loopExit:38)\" [style=dotted]
+    \"$loopBody:36\" [shape=box]
+    \"$loopBody:36\" -> \"$loopTest:35\" [arrowhead=vee]
+    \"apply:17(findMethod:16(classOf:15(X:Global), #something), $loopTest:35)\" -> \"$loopBody:36\" [style=dotted]
+    \"findMethod:16(classOf:15(X:Global), #something)\" -> \"apply:17(findMethod:16(classOf:15(X:Global), #something), $loopTest:35)\" [style=dotted]
+    \"$loopExit:38\" [shape=box]
+    \"$loopExit:38\" -> \"$return:3\" [arrowhead=vee]
+    \"$return:3\" -> \"$loopExit:38\" [style=dotted]
 }
 "!
 
@@ -1677,7 +1713,7 @@ $entry:2($return:3):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    findMethod:9(classOf:8(X:Global), #some:message:)(X:Global, 12, 97, $return:3)
+    apply:10(findMethod:9(classOf:8(X:Global), #some:message:), $return:3)(X:Global, 12, 97)
 "!
 
 
@@ -1686,9 +1722,9 @@ $entry:2($return:3):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    findMethod:21(classOf:20(X:Global), #some:message:)(X:Global, 12, 97, $seq:15)
-$seq:15($ignore:14):
-    findMethod:8(classOf:7(Y:Global), #+)(Y:Global, Z:Global, $return:3)
+    apply:23(findMethod:22(classOf:21(X:Global), #some:message:), $seq:16)(X:Global, 12, 97)
+$seq:16($ignore:15):
+    apply:9(findMethod:8(classOf:7(Y:Global), #+), $return:3)(Y:Global, Z:Global)
 "!
 
 
@@ -1697,7 +1733,7 @@ $seq:15($ignore:14):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    findMethod:8(classOf:7(Integer:Global), #typecheck:)(Integer:Global, X:Global, $return:3)
+    apply:9(findMethod:8(classOf:7(Integer:Global), #typecheck:), $return:3)(Integer:Global, X:Global)
 "!
 
 
@@ -1709,9 +1745,9 @@ $entry:2($return:3):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    methodFunction(Integer class#typecheck:)(Integer:Global, X:Global, $bind_recv:13)
-$bind_recv:13($recv:5):
-    methodFunction(Integer#+)($recv:5, Y:Global, $return:3)
+    apply:20(Integer class#typecheck:, $bind_recv:14)(Integer:Global, X:Global)
+$bind_recv:14($recv:5):
+    apply:10(Integer#+, $return:3)($recv:5, Y:Global)
 "!
 
 
@@ -1721,8 +1757,8 @@ $bind_recv:13($recv:5):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    methodFunction(Integer class#typecheck:)(Integer:Global, X:Global, $bind:11)
-$bind:11($value:5):
+    apply:17(Integer class#typecheck:, $bind:12)(Integer:Global, X:Global)
+$bind:12($value:5):
     $return:3($value:5)
 "!
 
