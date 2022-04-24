@@ -886,6 +886,7 @@ class Continuation { id::Integer
 
 
     method doSuccessors: block
+        -- Log println: "   {self printName} target: {target printName}".
         (AtomicContinuationTarget includes: target)
             ifTrue: { block value: target }
             ifFalse: { target doSuccessors: block }!
@@ -1107,6 +1108,56 @@ class Select { id::Integer
         block value: cond!
 end
 
+
+class PreOrder { seen block }
+    direct method for: entry do: block
+        (self seen: Set new block: block)
+            traverse: entry!
+
+    method traverse: cont
+        (Continuation includes: cont)
+            ifFalse: { return False }.
+        (seen includes: cont)
+            ifTrue: { return False }.
+        seen add: cont.
+        block value: cont.
+        cont doSuccessors: { |each| self traverse: each }!
+end
+
+
+class PostOrder { seen block }
+    direct method for: entry do: block
+        (self seen: Set new
+              block: block)
+            traverse: entry!
+
+    method traverse: cont
+        (Continuation includes: cont)
+            ifFalse: { return False }.
+        (seen includes: cont)
+            ifTrue: { return False }.
+        seen add: cont.
+        cont doSuccessors: { |each| self traverse: each }.
+        block value: cont!
+end
+
+
+class ReversePostOrder { seen stack }
+    direct method for: entry do: block
+        let stack = List new.
+        (self seen: Set new stack: stack)
+            traverse: entry.
+        stack reverse do: block!
+
+    method traverse: cont
+        (Continuation includes: cont)
+            ifFalse: { return False }.
+        (seen includes: cont)
+            ifTrue: { return False }.
+        seen add: cont.
+        cont doSuccessors: { |each| self traverse: each }.
+        stack push: cont!
+end
 
 
 class CpsGraph { entry::Continuation
@@ -1606,6 +1657,32 @@ class CpsPrinter { output seen }
         anOp args do: { |each| self visit: each }!
 end
 
+class CpsGraphwizOrderPrinter { output }
+    direct method printToString: graph in: order
+        StringOutput
+            with: { |out|
+                    self print: graph to: out }!
+
+
+    direct method print: graph::CpsGraph in: order to: output
+        output writeString: "\nstrict digraph \{\n".
+        output writeString: "    \"{graph entry printName}\" [color=red]\n".
+        let prev = False.
+        order for: graph entry
+              do: { |cont|
+                    output writeString: "   \"".
+                    output writeString: cont printName.
+                    output writeString: "\" [shape=box]\n".
+                    prev => {
+                        output writeString: "    \"".
+                        output writeString: prev printName.
+                        output writeString: "\" -> \"".
+                        output writeString: cont printName.
+                        output writeString: "\"\n" }.
+                    prev = cont }.
+        output writeString: "\}\n"!
+end
+
 
 class CpsGraphwizPrinter { output seen }
 
@@ -1804,11 +1881,42 @@ $loopExit:38():
     $return:3(False)
 "!
 
+
+    method test_preOrder_whileTrue
+        let cps = self convert: "\{ X maybe\} whileTrue: \{ X something \}".
+        let order = List new.
+        PreOrder for: cps entry
+                 do: { |each| order push: each id }.
+        assert that: { order asArray }
+               equals: [42, 35, 41, 36, 38]!
+
+
+    method test_postOrder_whileTrue
+        let cps = self convert: "\{ X maybe\} whileTrue: \{ X something \}".
+        let order = List new.
+        PostOrder for: cps entry
+                  do: { |each| order push: each id }.
+        assert that: { order asArray }
+               equals: [36, 38, 41, 35, 42]!
+
+
+    method test_reversePostOrder_whileTrue
+        let cps = self convert: "\{ X maybe\} whileTrue: \{ X something \}".
+        let order = List new.
+        ReversePostOrder for: cps entry
+                         do: { |each| order push: each id }.
+        assert that: { order asArray }
+               equals: [42, 35, 41, 38, 36]!
+
+
     method test_graphwiz_closure_whileTrue
         let cps = self convert: "\{ X maybe\} whileTrue: \{ X something \}".
         (system currentDirectory / "closure_whileTrue.dot")
             truncateExisting forWrite
-                createOrOpen: { |dot| CpsGraphwizPrinter print: cps to: dot }.
+                createOrOpen: { |dot|
+                                CpsGraphwizPrinter
+                                    print: cps
+                                    to: dot }.
         assert that: { CpsGraphwizPrinter printToString: cps }
                equals: "
 strict digraph \{
