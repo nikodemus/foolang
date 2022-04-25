@@ -406,6 +406,11 @@ class Set { dict }
         ((dict at: node) is False) not!
 
 
+    method singular
+        dict size is 1
+            ifTrue: { dict values first }!
+
+
     method size
         dict size!
 
@@ -415,9 +420,7 @@ class Set { dict }
 
 
     method isOnly: node
-        dict size is 1
-            ifTrue: { (dict values first) is node }
-            ifFalse: { False }!
+        node is self singular!
 
 
     method replaceUses: node1 with: node2
@@ -1152,6 +1155,29 @@ class Select { id::Integer
         node2 addUse: self!
 
 
+    method simplify
+        uses singular
+            => { |use|
+                 (self hasUniqueTarget: then)
+                     ifTrue: { self propagateArgsFrom: use to: then }.
+                 (self hasUniqueTarget: else)
+                     ifTrue: { self propagateArgsFrom: use to: else }.
+                 use removeArgs }!
+
+
+    method hasUniqueTarget: node
+        (Continuation includes: node)
+            ifTrue: { node uses isOnly: self }!
+
+
+    method propagateArgsFrom: cont1 to: cont2
+        cont1 args
+            with: cont2 params
+            do: { |arg param|
+                  param replaceUsesWith: arg }.
+        cont2 removeParams!
+
+
     method visitBy: visitor
         visitor visitSelect: self!
 
@@ -1622,8 +1648,8 @@ class CpsOptimizer { worklist graph }
                                                                worklist push: each } } } } } }!
 
 
-    method visitSelect: _
-        False!
+    method visitSelect: aSelect
+        aSelect simplify!
 
 
     method visitAddi: _
@@ -1895,11 +1921,11 @@ $bind_recv:16($recv:8):
 $entry:2($return:3):
     apply:23($bind_recv:17, Boolean class#typecheck:)(Boolean:Global, X:Global)
 $bind_recv:17($recv:5):
-    select:34($recv:5, $ifTrue:33, $block:15)($return:3)
-$ifTrue:33($ret:31):
-    $ret:31(False)
-$block:15($ret:13):
-    $ret:13(1)
+    select:34($recv:5, $ifTrue:33, $block:15)()
+$ifTrue:33():
+    $return:3(False)
+$block:15():
+    $return:3(1)
 "!
 
 
@@ -1911,11 +1937,11 @@ $block:15($ret:13):
 $entry:2($return:3):
     apply:23($bind_recv:17, Boolean class#typecheck:)(Boolean:Global, X:Global)
 $bind_recv:17($recv:5):
-    select:34($recv:5, $block:15, $ifFalse:33)($return:3)
-$block:15($ret:13):
-    $ret:13(1)
-$ifFalse:33($ret:31):
-    $ret:31(False)
+    select:34($recv:5, $block:15, $ifFalse:33)()
+$block:15():
+    $return:3(1)
+$ifFalse:33():
+    $return:3(False)
 "!
 
 
@@ -1927,11 +1953,11 @@ $ifFalse:33($ret:31):
 $entry:2($return:3):
     apply:29($bind_recv:23, Boolean class#typecheck:)(Boolean:Global, X:Global)
 $bind_recv:23($recv:5):
-    select:37($recv:5, $block:21, $block:16)($return:3)
-$block:21($ret:19):
-    $ret:19(1)
-$block:16($ret:14):
-    $ret:14(2)
+    select:37($recv:5, $block:21, $block:16)()
+$block:21():
+    $return:3(1)
+$block:16():
+    $return:3(2)
 "!
 
 
