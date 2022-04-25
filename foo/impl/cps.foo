@@ -200,14 +200,14 @@ class IfTrueIfFalseImpl { ifTrue ifFalse }
         let args = aContinuation args.
         let cond = args at: 1.
         let thenCont = ifTrue
-                           ifTrue: { args at: 2 }
+                           ifTrue: { (args at: 2) renameIfSingleUse: "$ifTrue" }
                            ifFalse: { let ret = graph makeVariable: "$ret".
                                       graph continuation: "$ifTrue"
                                             params: [ret]
                                             target: ret
                                             args: [graph ensureConstant: False] }.
         let elseCont = ifFalse
-                           ifTrue: { args at: lastArg }
+                           ifTrue: { (args at: lastArg) renameIfSingleUse: "$ifFalse" }
                            ifFalse: { let ret = graph makeVariable: "$ret".
                                       graph continuation: "$ifFalse"
                                             params: [ret]
@@ -899,6 +899,12 @@ class Continuation { id::Integer
         badParams isEmpty assert: "Continuation should define its params".
         let badArgs = args reject: { |each| each uses includes: self }.
         badArgs isEmpty assert: "Continuation should use its args".
+        self!
+
+
+    method renameIfSingleUse: new
+        uses size is 1
+            => { name = new }.
         self!
 
 
@@ -1890,10 +1896,10 @@ $bind_recv:16($recv:8):
 $entry:2($return:3):
     apply:23($bind_recv:17, Boolean class#typecheck:)(Boolean:Global, X:Global)
 $bind_recv:17($recv:5):
-    select:34($recv:5, $ifTrue:33, $block:15)()
+    select:34($recv:5, $ifTrue:33, $ifFalse:15)()
 $ifTrue:33():
     $return:3(False)
-$block:15():
+$ifFalse:15():
     $return:3(1)
 "!
 
@@ -1906,8 +1912,8 @@ $block:15():
 $entry:2($return:3):
     apply:23($bind_recv:17, Boolean class#typecheck:)(Boolean:Global, X:Global)
 $bind_recv:17($recv:5):
-    select:34($recv:5, $block:15, $ifFalse:33)()
-$block:15():
+    select:34($recv:5, $ifTrue:15, $ifFalse:33)()
+$ifTrue:15():
     $return:3(1)
 $ifFalse:33():
     $return:3(False)
@@ -1922,10 +1928,10 @@ $ifFalse:33():
 $entry:2($return:3):
     apply:29($bind_recv:23, Boolean class#typecheck:)(Boolean:Global, X:Global)
 $bind_recv:23($recv:5):
-    select:37($recv:5, $block:21, $block:16)()
-$block:21():
+    select:37($recv:5, $ifTrue:21, $ifFalse:16)()
+$ifTrue:21():
     $return:3(1)
-$block:16():
+$ifFalse:16():
     $return:3(2)
 "!
 
