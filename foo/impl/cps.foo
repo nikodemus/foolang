@@ -146,7 +146,6 @@ class IntegerPlusImpl {}
     method name
         "+"!
 
-
     method inliner
         { |a b| [b, "addInteger:", a] }!
 end
@@ -194,6 +193,56 @@ class IfTrueIfFalseImpl {}
         let cond = args at: 1.
         let thenCont = args at: 2.
         let elseCont = args at: 3.
+        aContinuation target: (graph select: cond
+                                     then: thenCont
+                                     else: elseCont).
+        aContinuation removeArgs.
+        aContinuation addArgs: [apply target]!
+end
+
+
+class IfTrueImpl {}
+    is BuiltinMethodImpl
+
+    method name
+        "ifTrue:"!
+
+    method lowerToCps: aContinuation in: graph with: worklist
+        (aContinuation args size is 2) assert: "IfTrueImpl#lowerToCps:in:with".
+        let apply = aContinuation target.
+        let args = aContinuation args.
+        let cond = args at: 1.
+        let thenCont = args at: 2.
+        let ret = graph makeVariable: "$ret".
+        let elseCont = graph continuation: "$ifFalse"
+                             params: [ret]
+                             target: ret
+                             args: [graph ensureConstant: False].
+        aContinuation target: (graph select: cond
+                                     then: thenCont
+                                     else: elseCont).
+        aContinuation removeArgs.
+        aContinuation addArgs: [apply target]!
+end
+
+
+class IfFalseImpl {}
+    is BuiltinMethodImpl
+
+    method name
+        "ifFalse:"!
+
+    method lowerToCps: aContinuation in: graph with: worklist
+        (aContinuation args size is 2) assert: "IfFalseImpl#lowerToCps:in:with".
+        let apply = aContinuation target.
+        let args = aContinuation args.
+        let cond = args at: 1.
+        let elseCont = args at: 2.
+        let ret = graph makeVariable: "$ret".
+        let thenCont = graph continuation: "$ifTrue"
+                             params: [ret]
+                             target: ret
+                             args: [graph ensureConstant: False].
         aContinuation target: (graph select: cond
                                      then: thenCont
                                      else: elseCont).
@@ -310,6 +359,14 @@ class ClassDefinition { name ownClassDefinition methodDictionary }
     method toString
         name!
 end
+
+
+define BooleanClassDefinition
+    (ClassDefinition name: "Boolean"
+                     methods: [BuiltinMethod new: IfTrueIfFalseImpl new,
+                               BuiltinMethod new: IfFalseImpl new,
+                               BuiltinMethod new: IfTrueImpl new])!
+
 
 
 define FunctionClassDefinition
@@ -1830,11 +1887,41 @@ $bind_recv:16($recv:8):
 "!
 
 
+    method test_convert_boolean_ifFalse
+        let cps = self convert: "X :: Boolean ifFalse: \{ 1 }"
+                       withGlobalDefinitions: [BooleanClassDefinition].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    apply:23($bind_recv:17, Boolean class#typecheck:)(Boolean:Global, X:Global)
+$bind_recv:17($recv:5):
+    select:34($recv:5, $ifTrue:33, $block:15)($return:3)
+$ifTrue:33($ret:31):
+    $ret:31(False)
+$block:15($ret:13):
+    $ret:13(1)
+"!
+
+
+    method test_convert_boolean_ifTrue
+        let cps = self convert: "X :: Boolean ifTrue: \{ 1 }"
+                       withGlobalDefinitions: [BooleanClassDefinition].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    apply:23($bind_recv:17, Boolean class#typecheck:)(Boolean:Global, X:Global)
+$bind_recv:17($recv:5):
+    select:34($recv:5, $block:15, $ifFalse:33)($return:3)
+$block:15($ret:13):
+    $ret:13(1)
+$ifFalse:33($ret:31):
+    $ret:31(False)
+"!
+
+
     method test_convert_boolean_ifTrueIfFalse
         let cps = self convert: "X :: Boolean ifTrue: \{ 1 } ifFalse: \{ 2 }"
-                       withGlobalDefinitions: [(ClassDefinition
-                                                    name: "Boolean"
-                                                    methods: [(BuiltinMethod new: IfTrueIfFalseImpl new)])].
+                       withGlobalDefinitions: [BooleanClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
