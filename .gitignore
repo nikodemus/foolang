@@ -1,7 +1,6 @@
 /target
 **/*.rs.bk
 **/*~
-site/**
 **/\#*
 **/.\#*
 generated_*.*
@@ -19,7 +18,7 @@ cmake-build-debug
 c/.idea
 old.*
 .idea
-gmon/**
+gmon/
 *.o
 *.d
 *.dot
