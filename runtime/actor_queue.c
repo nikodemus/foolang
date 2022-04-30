@@ -6,7 +6,6 @@
 #include <stdio.h>
 
 #include "config.h"
-#include "fatal.h"
 #include "system.h"
 #include "utils.h"
 

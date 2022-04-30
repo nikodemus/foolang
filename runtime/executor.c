@@ -1,8 +1,8 @@
 #include "executor.h"
 
 #include "actor_queue.h"
-#include "fatal.h"
 #include "system.h"
+#include "utils.h"
 
 #include <stdatomic.h>
 #include <stdlib.h>

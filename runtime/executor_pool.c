@@ -1,7 +1,7 @@
 #include "executor_pool.h"
 
 #include "executor.h"
-#include "fatal.h"
+#include "utils.h"
 
 #include <stdlib.h>
 

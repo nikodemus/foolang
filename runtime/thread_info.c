@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-#include "fatal.h"
+#include "utils.h"
 
 struct ThreadInfo* make_ThreadInfo(ThreadFunction function, void* parameter) {
   struct ThreadInfo* info = malloc(sizeof(struct ThreadInfo));

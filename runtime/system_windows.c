@@ -1,8 +1,8 @@
 #include "system.h"
 
 #include "config.h"
-#include "fatal.h"
 #include "thread_info.h"
+#include "utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>

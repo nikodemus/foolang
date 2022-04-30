@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-#include "fatal.h"
+#include "utils.h"
 
 struct Actor* make_Actor(size_t id) {
   struct Actor* actor = malloc(sizeof(struct Actor*));
