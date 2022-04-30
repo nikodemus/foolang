@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "config.h"
 #include "fatal.h"
 #include "system.h"
 #include "utils.h"
@@ -13,7 +14,8 @@ size_t queue_size(struct ActorQueue* queue) {
   return queue->size;
 }
 
-struct ActorQueue* make_ActorQueue(size_t size) {
+struct ActorQueue* make_ActorQueue() {
+  size_t size = FOO_INITIAL_ACTOR_QUEUE_SIZE;
   struct ActorQueue* queue = malloc(sizeof(struct ActorQueue));
   if (!queue)
     fatal("Could not allocate memory for actor queue.");

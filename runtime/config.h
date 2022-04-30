@@ -1,0 +1,7 @@
+#ifndef __CONFIG_H_
+#define __CONFIG_H_
+
+#define FOO_INITIAL_ACTOR_QUEUE_SIZE 8
+#define FOO_SYSTEM_LOCK_SPIN_COUNT 1024
+
+#endif // __CONFIG_H_

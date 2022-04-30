@@ -1,11 +1,10 @@
 #include "system.h"
 
+#include "config.h"
 #include "fatal.h"
 
 #include <stdlib.h>
 #include <sysinfoapi.h>
-
-#define FOO_CRITICAL_SECTION_SPIN_COUNT 1024
 
 size_t system_number_of_cpu_cores() {
     SYSTEM_INFO system_info;
@@ -18,7 +17,8 @@ SystemLock_t make_SystemLock() {
     if (!critical_section) {
         fatal("Coult no allocate memory for a system lock.");
     }
-    InitializeCriticalSectionAndSpinCount(critical_section, FOO_CRITICAL_SECTION_SPIN_COUNT);
+    InitializeCriticalSectionAndSpinCount
+        (critical_section, FOO_SYSTEM_LOCK_SPIN_COUNT);
     return critical_section;
 }
 

@@ -1,5 +1,6 @@
 #include "executor.h"
 
+#include "actor_queue.h"
 #include "fatal.h"
 #include "system.h"
 
@@ -14,6 +15,7 @@ struct Executor* make_Executor(size_t id) {
   executor->id = id;
   atomic_init(&executor->state, ExecutorIdle);
   executor->lock = make_SystemLock();
+  executor->queue = make_ActorQueue(8);
   return executor;
 }
 

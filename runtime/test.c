@@ -29,7 +29,7 @@ void test_SystemLock() {
 }
 
 void test_ActorQueue() {
-    struct ActorQueue* queue = make_ActorQueue(2);
+    struct ActorQueue* queue = make_ActorQueue();
     // Initialize a test set of 1024 actors.
     const size_t test_size = 1024;
     struct Actor* test_actors[test_size];
