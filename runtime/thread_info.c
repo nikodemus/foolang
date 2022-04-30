@@ -1,4 +1,4 @@
-#include "thread.h"
+#include "thread_info.h"
 
 #include <stdlib.h>
 

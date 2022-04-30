@@ -2,7 +2,7 @@
 
 #include "config.h"
 #include "fatal.h"
-#include "thread.h"
+#include "thread_info.h"
 
 #include <stdio.h>
 #include <stdlib.h>

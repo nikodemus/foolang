@@ -5,7 +5,7 @@
 #include "system_windows.h"
 #endif
 
-#include "thread.h"
+#include "thread_info.h"
 
 #include <stdbool.h>
 
