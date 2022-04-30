@@ -15,6 +15,7 @@ struct Executor {
 };
 
 struct Executor* make_Executor(size_t id);
+void free_Executor(struct Executor*);
 enum ExecutorState executor_get_state(struct Executor* executor);
 
 #endif // __EXECUTOR_H_

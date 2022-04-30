@@ -20,3 +20,10 @@ struct ExecutorPool* make_ExecutorPool(size_t size) {
   }
   return pool;
 }
+
+void free_ExecutorPool(struct ExecutorPool* pool) {
+  for (size_t i = 0; i < pool->size; i++)
+    free_Executor(pool->executors[i]);
+  free(pool->executors);
+  free(pool);
+}

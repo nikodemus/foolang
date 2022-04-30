@@ -22,6 +22,11 @@ SystemLock_t make_SystemLock() {
     return critical_section;
 }
 
+void free_SystemLock(SystemLock_t lock) {
+    DeleteCriticalSection(lock);
+    free(lock);
+}
+
 void system_lock(SystemLock_t lock) {
     EnterCriticalSection(lock);
 }

@@ -17,6 +17,12 @@ struct Executor* make_Executor(size_t id) {
   return executor;
 }
 
+
+void free_Executor(struct Executor* executor) {
+  free_SystemLock(executor->lock);
+  free(executor);
+}
+
 enum ExecutorState executor_get_state(struct Executor* executor) {
   return atomic_load(&executor->state);
 }

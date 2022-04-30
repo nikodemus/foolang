@@ -10,6 +10,7 @@
 size_t system_number_of_cpu_cores();
 
 SystemLock_t make_SystemLock();
+void free_SystemLock(SystemLock_t lock);
 void system_lock(SystemLock_t lock);
 void system_unlock(SystemLock_t lock);
 
