@@ -57,3 +57,7 @@ SystemThread_t make_SystemThread(struct ThreadInfo* info) {
 bool system_join_thread(SystemThread_t thread) {
     return (WAIT_OBJECT_0 == WaitForSingleObject(thread, INFINITE));
 }
+
+void system_sleep_ms(size_t ms) {
+    Sleep((DWORD)ms);
+}

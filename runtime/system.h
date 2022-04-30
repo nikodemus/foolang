@@ -19,4 +19,6 @@ void system_unlock(SystemLock_t);
 SystemThread_t make_SystemThread(struct ThreadInfo*);
 bool system_join_thread(SystemThread_t);
 
+void system_sleep_ms(size_t);
+
 #endif // __SYSTEM_H_
