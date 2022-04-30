@@ -28,6 +28,28 @@ void test_SystemLock() {
     free_SystemLock(mylock);
 }
 
+size_t aux_test_SystemThread_var = 0;
+
+const size_t aux_test_SystemThread_incs = 100000;
+void aux_test_SystemThread_function(void* data) {
+    _Atomic size_t* ptr = data;
+    for (size_t i = 0; i < aux_test_SystemThread_incs; i++)
+        (*ptr)++;
+}
+
+void test_SystemThread() {
+    struct ThreadInfo* info = make_ThreadInfo(aux_test_SystemThread_function,
+                                              &aux_test_SystemThread_var);
+    size_t test_size = 10;
+    SystemThread_t thread[test_size];
+    for (size_t i = 0; i < test_size; i++)
+        thread[i] = make_SystemThread(info);
+    for (size_t i = 0; i < test_size; i++)
+        TEST_ASSERT(system_join_thread(thread[i]));
+    free_ThreadInfo(info);
+    TEST_CHECK_(aux_test_SystemThread_var == aux_test_SystemThread_incs * test_size, "var = %zu", aux_test_SystemThread_var);
+}
+
 void test_ActorQueue() {
     struct ActorQueue* queue = make_ActorQueue();
     // Initialize a test set of 1024 actors.
@@ -80,8 +102,9 @@ void test_ActorQueue() {
 
 TEST_LIST = {
     DO(ActorQueue),
-    DO(SystemLock),
     DO(ExecutorPool),
+    DO(SystemLock),
+    DO(SystemThread),
     DO(system_number_of_cpu_cores),
     { NULL, NULL }
 };

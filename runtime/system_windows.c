@@ -2,7 +2,9 @@
 
 #include "config.h"
 #include "fatal.h"
+#include "thread.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <sysinfoapi.h>
 
@@ -33,4 +35,25 @@ void system_lock(SystemLock_t lock) {
 
 void system_unlock(SystemLock_t lock) {
     LeaveCriticalSection(lock);
+}
+
+DWORD WINAPI run_thread(void* data) {
+    struct ThreadInfo* info = data;
+    info->function(info->parameter);
+    return 0;
+}
+
+typedef LPTHREAD_START_ROUTINE SystemThreadFunction_t;
+
+SystemThread_t make_SystemThread(struct ThreadInfo* info) {
+    return CreateThread(NULL,  // cannot be inherited by child processes
+                        0,     // default stack size
+                        run_thread,
+                        (void*)info,
+                        0,     // run immediately after creation
+                        NULL); // we don't need the thread id
+}
+
+bool system_join_thread(SystemThread_t thread) {
+    return (WAIT_OBJECT_0 == WaitForSingleObject(thread, INFINITE));
 }
