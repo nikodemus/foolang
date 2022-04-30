@@ -21,25 +21,42 @@ void test_ExecutorPool(void) {
     free_ExecutorPool(pool);
 }
 
-void test_SystemLock() {
-    SystemLock_t mylock = make_SystemLock();
-    system_lock(mylock);
-    system_unlock(mylock);
-    free_SystemLock(mylock);
+SystemLock_t test_SystemLock_lock;
+int test_SystemLock_state = 0;
+
+void test_SystemLock_function(void* data) {
+    (void)data;
+    system_lock(test_SystemLock_lock);
+    TEST_CHECK(test_SystemLock_state == 1);
+    test_SystemLock_state = 2;
+    system_unlock(test_SystemLock_lock);
 }
 
-size_t aux_test_SystemThread_var = 0;
+void test_SystemLock() {
+    struct ThreadInfo* info = make_ThreadInfo(test_SystemLock_function, NULL);
+    test_SystemLock_lock = make_SystemLock();
+    system_lock(test_SystemLock_lock);
+    SystemThread_t thread = make_SystemThread(info);
+    system_sleep_ms(1);
+    test_SystemLock_state = 1;
+    system_unlock(test_SystemLock_lock);
+    system_join_thread(thread);
+    TEST_CHECK(test_SystemLock_state == 2);
+    free_SystemLock(test_SystemLock_lock);
+}
 
-const size_t aux_test_SystemThread_incs = 100000;
-void aux_test_SystemThread_function(void* data) {
+size_t test_SystemThread_var = 0;
+const size_t test_SystemThread_incs = 100000;
+
+void test_SystemThread_function(void* data) {
     _Atomic size_t* ptr = data;
-    for (size_t i = 0; i < aux_test_SystemThread_incs; i++)
+    for (size_t i = 0; i < test_SystemThread_incs; i++)
         (*ptr)++;
 }
 
 void test_SystemThread() {
-    struct ThreadInfo* info = make_ThreadInfo(aux_test_SystemThread_function,
-                                              &aux_test_SystemThread_var);
+    struct ThreadInfo* info = make_ThreadInfo(test_SystemThread_function,
+                                              &test_SystemThread_var);
     size_t test_size = 10;
     SystemThread_t thread[test_size];
     for (size_t i = 0; i < test_size; i++)
@@ -47,7 +64,7 @@ void test_SystemThread() {
     for (size_t i = 0; i < test_size; i++)
         TEST_ASSERT(system_join_thread(thread[i]));
     free_ThreadInfo(info);
-    TEST_CHECK_(aux_test_SystemThread_var == aux_test_SystemThread_incs * test_size, "var = %zu", aux_test_SystemThread_var);
+    TEST_CHECK_(test_SystemThread_var == test_SystemThread_incs * test_size, "var = %zu", test_SystemThread_var);
 }
 
 void test_ActorQueue() {
