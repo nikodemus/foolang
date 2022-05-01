@@ -10,7 +10,7 @@ struct ActorQueue {
   // start == end means either empty of full -- must consult size.
   size_t start;
   size_t end;
-  size_t size;
+  _Atomic size_t size;
   size_t capacity;
   struct Actor** actors;
 };

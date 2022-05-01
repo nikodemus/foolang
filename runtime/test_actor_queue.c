@@ -12,7 +12,7 @@ void test_enqueue_and_dequeue() {
     const size_t test_size = 210;
     struct Actor* test_actors[test_size];
     for (size_t i = 0; i < test_size; i++)
-        test_actors[i] = make_Actor(i);
+        test_actors[i] = (void*)(intptr_t)i;
 
     // Enqueue 100
     for (size_t i = 0; i < 100; i++)
@@ -23,7 +23,7 @@ void test_enqueue_and_dequeue() {
 
     // Dequeue 10
     for (size_t i = 0; i < 10; i++)
-        TEST_CHECK(test_actors[i]->id == dequeue_actor(queue)->id);
+        TEST_CHECK(test_actors[i] == dequeue_actor(queue));
     TEST_CHECK(queue_size(queue) == 90);
     TEST_CHECK(queue->start == 10);
     TEST_CHECK(queue->end == 100);

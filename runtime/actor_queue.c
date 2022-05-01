@@ -1,7 +1,6 @@
 #include "actor_queue.h"
 
-#undef NDEBUG
-#include <assert.h>
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -9,23 +8,26 @@
 #include "system.h"
 #include "utils.h"
 
+#undef NDEBUG
+#include <assert.h>
+
 size_t queue_size(struct ActorQueue* queue) {
   return queue->size;
 }
 
 struct ActorQueue* make_ActorQueue() {
-  size_t size = FOO_INITIAL_ACTOR_QUEUE_SIZE;
+  size_t capacity = FOO_ACTOR_QUEUE_INITIAL_CAPACITY;
   struct ActorQueue* queue = malloc(sizeof(struct ActorQueue));
   if (!queue)
     fatal("Could not allocate memory for actor queue.");
-  queue->actors = malloc(size * sizeof(struct Actor*));
+  queue->actors = malloc(capacity * sizeof(struct Actor*));
   if (!queue->actors)
     fatal("Could not allocate memory for actor queue actors.");
   queue->lock = make_SystemLock();
   queue->start = 0;
   queue->end = 0;
-  queue->size = 0;
-  queue->capacity = size;
+  atomic_init(&queue->size, 0);
+  queue->capacity = capacity;
   return queue;
 }
 
