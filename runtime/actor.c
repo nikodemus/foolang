@@ -12,7 +12,7 @@
 #include <assert.h>
 
 struct Actor* make_Actor(ActorContinuation entry, void* data) {
-  struct Actor* actor = malloc(sizeof(struct Actor*));
+  struct Actor* actor = malloc(sizeof(struct Actor));
   if (!actor)
     fatal("Could not allocate memory for an actor.");
   atomic_init(&actor->state, ActorReady);
