@@ -3,7 +3,8 @@ all:
 	@echo "targets:"
 	@echo " - test (unit tests for new runtime)"
 	@echo " - clean (delete new runtime objects)"
-	@echo " - commit (asks for message)"
+	@echo " - commit (tests and commits)"
+	@echo " - amend (tests and amends last commit)"
 
 CC := clang
 CPPFLAGS := -I.
