@@ -70,7 +70,7 @@ void test_SystemThread() {
 void test_ActorQueue() {
     struct ActorQueue* queue = make_ActorQueue();
     // Initialize a test set of 1024 actors.
-    const size_t test_size = 1024;
+    const size_t test_size = 210;
     struct Actor* test_actors[test_size];
     for (size_t i = 0; i < test_size; i++)
         test_actors[i] = make_Actor(i);
@@ -99,8 +99,8 @@ void test_ActorQueue() {
         TEST_CHECK(test_actors[i] == dequeue_actor(queue));
     TEST_CHECK(queue_size(queue) == 180);
 
-    // Enqueue 10 more
-    for (size_t i = 200; i < 210; i++)
+    // Enqueue the rest
+    for (size_t i = 200; i < test_size; i++)
         enqueue_actor(queue, test_actors[i]);
     TEST_CHECK(queue_size(queue) == 190);
 
@@ -115,10 +115,100 @@ void test_ActorQueue() {
     TEST_CHECK_(queue_size(queue) == 0, "size: %zu", queue_size(queue));
 }
 
+void test_ActorQueue_enqueue_at_capacity() {
+    // Setup and sanity check.
+    struct ActorQueue* queue = make_ActorQueue();
+    intptr_t n = (intptr_t)queue->capacity;
+    TEST_ASSERT(n > 1);
+    for (intptr_t i = 0; i < n; i++) {
+        enqueue_actor(queue, (void*)i);
+    }
+    TEST_ASSERT(queue->size == (size_t)n);
+    TEST_ASSERT(queue->size == queue->capacity);
+    TEST_ASSERT(queue->start == 0);
+    TEST_ASSERT(queue->end == queue->capacity);
+    for (intptr_t i = 0; i < n; i++) {
+        TEST_ASSERT(i == (intptr_t)queue->actors[i]);
+    }
+
+
+    // Test growing the queue at capacity with end == capacity.
+    for (intptr_t i = n; i < n * 2; i++) {
+        enqueue_actor(queue, (void*)i);
+    }
+    n = n * 2;
+    TEST_ASSERT(queue->size == (size_t)n);
+    TEST_ASSERT(queue->size == queue->capacity);
+    TEST_ASSERT(queue->start == 0);
+    TEST_ASSERT(queue->end == queue->capacity);
+    for (intptr_t i = 0; i < (intptr_t)queue->size; i++) {
+        TEST_CHECK(i == (intptr_t)queue->actors[i]);
+    }
+
+
+    // Test growing the queue at capacity with end == 0
+    // (rotate start and end manually).
+    intptr_t last = (intptr_t)(queue->actors[queue->end-1]);
+    TEST_ASSERT(last == n-1);
+    queue->start = queue->capacity - 1;
+    queue->end = 0;
+    for (intptr_t i = n; i < n * 2; i++) {
+        enqueue_actor(queue, (void*)i);
+    }
+    n = n * 2;
+    TEST_ASSERT(queue->size == (size_t)n);
+    TEST_ASSERT(queue->size == queue->capacity);
+    TEST_ASSERT(queue->start == 0);
+    TEST_ASSERT(queue->end == queue->capacity);
+    // We should get "last" first, then everything from 0 to last-1,
+    // then last+1 to capacity.
+    TEST_CHECK(last == (intptr_t)queue->actors[0]);
+    for (intptr_t i = 1; i < last; i++) {
+        TEST_CHECK(i-1 == (intptr_t)queue->actors[i]);
+    }
+    for (intptr_t i = last+1; i < (intptr_t)queue->capacity; i++) {
+        TEST_CHECK(i == (intptr_t)queue->actors[i]);
+    }
+
+    // First re-number everything from 0 up for ease.
+    for (intptr_t i = 0; i < (intptr_t)queue->capacity; i++) {
+        queue->actors[i] = (void*)i;
+    }
+
+    // Test growing the queue at capacity with end in the middle
+    // (rotate start and end manually).
+    intptr_t end = queue->end;
+    intptr_t pivot = queue->capacity / 2;
+    intptr_t pivot_value = (intptr_t)queue->actors[pivot];
+    TEST_ASSERT(pivot == pivot_value);
+    queue->start = (size_t)pivot;
+    queue->end = (size_t)pivot;
+    for (intptr_t i = n; i < n * 2; i++) {
+        enqueue_actor(queue, (void*)i);
+    }
+    n = n * 2;
+    TEST_ASSERT(queue->size == (size_t)n);
+    TEST_ASSERT(queue->size == queue->capacity);
+    TEST_ASSERT(queue->start == 0);
+    TEST_ASSERT(queue->end == queue->capacity);
+    // We should get pivot to end-1, then 0 to pivot-1,
+    // then end to capacity.
+    for (intptr_t i = 0; i < pivot; i++) {
+        TEST_CHECK(i+pivot == (intptr_t)queue->actors[i]);
+    }
+    for (intptr_t i = pivot; i < end; i++) {
+        TEST_CHECK(i-pivot == (intptr_t)queue->actors[i]);
+    }
+    for (intptr_t i = end; i < (intptr_t)queue->capacity; i++) {
+        TEST_CHECK(i == (intptr_t)queue->actors[i]);
+    }
+}
+
 #define DO(name) { #name, test_ ## name }
 
 TEST_LIST = {
     DO(ActorQueue),
+    DO(ActorQueue_enqueue_at_capacity),
     DO(ExecutorPool),
     DO(SystemLock),
     DO(SystemThread),

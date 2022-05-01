@@ -31,6 +31,9 @@ struct ActorQueue* make_ActorQueue() {
 
 void enqueue_actor(struct ActorQueue* queue, struct Actor* actor) {
   system_lock(queue->lock);
+  assert(queue->start < queue->capacity);
+  assert(queue->end <= queue->capacity);
+  assert(queue->size <= queue->capacity);
 
   // Case 1: empty
   if (queue->size == 0)
@@ -88,6 +91,7 @@ void enqueue_actor(struct ActorQueue* queue, struct Actor* actor) {
  enqueue:
     queue->actors[queue->end++] = actor;
     queue->size++;
+    assert(queue->start < queue->capacity);
     assert(queue->end <= queue->capacity);
     assert(queue->size <= queue->capacity);
     system_unlock(queue->lock);
