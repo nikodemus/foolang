@@ -48,6 +48,7 @@ in in progress, this is the current status:
 - 015 - [WASM Support](design/015-wasm-support.md)
 - 016 - [Class Extensions](design/016-class-extensions.md)
 - 017 - [CPS IR](design/017-cps-ir.md)
+- 018 - [Immutability](design/018-immutability.md)
 
 ## Old Design Notes
 
