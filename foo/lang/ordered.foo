@@ -238,6 +238,12 @@ interface Ordered
                     value: i }.
         self!
 
+    method positionOf: item
+        self doWithIndex: { |each index|
+                            item == each
+                                ifTrue: { return index } }.
+        False!
+
     method position: block ifNone: noneBlock
         self doWithIndex: { |each index|
                             (block value: each)
