@@ -13,10 +13,6 @@ end
 interface MethodDefinition
     is Object
 
-    method displayString
-        "{self home name}#{self name}"!
-
-
     method returnType
         False!
 
@@ -25,8 +21,16 @@ interface MethodDefinition
         False!
 
 
+    method displayString
+        "{self home name}#{self name}"!
+
+
     method toString
-        "#<{self classOf name} {self displayString}>"!
+        "#<{self classOf name} {self home name}#{self name}>"!
+
+
+    method visitBy: visitor
+        visitor visitMethodDefinition: self!
 end
 
 
@@ -57,6 +61,10 @@ class BuiltinMethod { home impl }
         impl name!
 
 
+    method apply: args
+        impl apply: args in: home!
+
+
     method returnType
         impl returnType!
 
@@ -69,8 +77,6 @@ class BuiltinMethod { home impl }
         (home is False)
             ifFalse: { Error raise: "BuiltinMethod {name} already has a home: {home}" }.
         home = new!
-
-
 end
 
 
@@ -83,8 +89,16 @@ end
 class TypecheckImpl { type }
     is BuiltinMethodImpl
 
+
     method name
         "typecheck:"!
+
+
+    method apply: args in: _
+        let value = args second.
+        (Instance classOf: value) is type
+            ifFalse: { Error raise: "CPS type error! Wanted: {type}, got: {value} ({Instance classOf: value})" }.
+        value!
 
 
     method returnType
@@ -277,6 +291,7 @@ class WhileLoopImpl { name while }
 end
 
 
+
 class ClassDefinition { name ownClassDefinition methodDictionary }
 
     -- ClassDefinition itself is used as the ClassDefinition for Class.
@@ -331,6 +346,35 @@ class ClassDefinition { name ownClassDefinition methodDictionary }
 end
 
 
+class Instance { _class::ClassDefinition
+                 _datum }
+
+    direct method class: aClass datum: aDatum
+        self _class: aClass
+             _datum: aDatum!
+
+    direct method classOf: instance::Instance
+        instance _class!
+
+    method toString
+        "#<Instance {_class} {_datum}>"!
+
+    method displayString
+        self toString!
+
+    method == other
+        (Instance includes: other)
+            ifTrue: { _class is other _class
+                          ifTrue: { _datum == other _datum } }!
+
+    method hostValue
+        _datum!
+
+    method _class _class!
+    method _datum _datum!
+end
+
+
 define BooleanClassDefinition
     (ClassDefinition name: "Boolean"
                      methods: [BuiltinMethod new: (IfTrueIfFalseImpl ifTrue: True ifFalse: True),
@@ -342,6 +386,14 @@ define FunctionClassDefinition
     (ClassDefinition name: "Function"
                      methods: [BuiltinMethod new: WhileLoopImpl newWhileTrue,
                                BuiltinMethod new: WhileLoopImpl newWhileFalse])!
+
+
+define IntegerClassDefinition
+    (ClassDefinition
+         name: "Integer"
+         methods: [BuiltinMethod new: IntegerPlusImpl new,
+                   BuiltinMethod new: IntegerAddIntegerImpl new])!
+
 
 
 class Set { dict }
@@ -595,6 +647,10 @@ class Constant { id::Integer
 
     method visitBy: visitor
         visitor visitConstant: self!
+
+
+    method visitBy: visitor with: arg
+        visitor visitConstant: self with: arg!
 end
 
 
@@ -1094,6 +1150,9 @@ class Application { id::Integer
 
     method visitBy: visitor
         visitor visitApplication: self!
+
+    method visitBy: visitor with: arg
+        visitor visitApplication: self with: arg!
 
     method doSuccessors: block
         block value: target!
@@ -1654,34 +1713,48 @@ class CpsOptimizer { worklist graph }
 end
 
 
-class CpsEvaluator { bound values parent }
-    direct method new
+class CpsEvaluator { bound values parent classes }
+
+    direct method new: classes
         self bound: False
              values: False
-             parent: False!
-    direct method eval: cps
+             parent: False
+             classes: classes!
+
+
+    direct method eval: cps with: classes
         cps entry
-            visitBy: CpsEvaluator new
+            visitBy: (CpsEvaluator new: classes)
             with: [{ |value| return value }]!
+
+
+    method bind: params to: args
+        CpsEvaluator
+            bound: params
+            values: args
+            parent: parent
+            classes: classes!
+
 
     method visitAll: seq
         seq collect: { |each| each visitBy: self }!
+
 
     method visitContinuation: aCont with: args
         let params = aCont params.
         params size is args size
             ifFalse: { Error raise: "Argument count mismatch, wanted: {aCont params size}, got {args size}" }.
-        let eval = CpsEvaluator
-                       bound: params
-                       values: args
-                       parent: self.
+        let eval = self bind: params
+                        to: args.
         aCont target
             visitBy: eval
             with: (eval visitAll: aCont args)!
 
+
     method visitVariable: aVar with: args
         (self visitVariable: aVar)
             apply: args!
+
 
     method visitVariable: var
         bound is False
@@ -1691,8 +1764,26 @@ class CpsEvaluator { bound values parent }
             ifTrue: { parent visitVariable: var }
             ifFalse: { values at: index }!
 
+
+    method visitApplication: app with: args
+        app target
+            visitBy: self
+            with: [(app function visitBy: self with: args)]!
+
+
     method visitConstant: constant
-        constant value!
+        let value = constant value.
+        let classDef = classes at: value classOf
+                               ifNone: { Error raise: "No CPS class corresponding to {value classOf}" }.
+        Instance class: classDef datum: value!
+
+
+    method visitConstant: constant with: args
+        constant value apply: args!
+
+
+    method visitGlobal: aGlobal
+        aGlobal definition!
 
 end
 
@@ -1895,10 +1986,7 @@ class TestCPS { assert system }
 
     method test_convert_addition_of_integers_optimizes_to_operation_addi
         let cps = self convert: "let a = X a :: Integer. let b = X b :: Integer. a + b"
-                       withGlobalDefinitions: [(ClassDefinition
-                                                    name: "Integer"
-                                                    methods: [BuiltinMethod new: IntegerPlusImpl new,
-                                                              BuiltinMethod new: IntegerAddIntegerImpl new])].
+                       withGlobalDefinitions: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2172,11 +2260,16 @@ $bind:12($value:5):
     $return:3($value:5)
 "!
 
-    method test_eval_literal
-        let cps = self convert: "123".
-        assert that: { (CpsEvaluator eval: cps) }
+    -- FIXME: refactor: IntegerClassDefinition should know it relates to
+    -- host class Integer.
+    method test_eval_typecheck_literal
+        let cps = self convert: "123 :: Integer"
+                       withGlobalDefinitions: [IntegerClassDefinition].
+        assert that: { (CpsEvaluator
+                            eval: cps
+                            with: { Integer -> IntegerClassDefinition })
+                       hostValue }
                equals: 123!
-
 end
 
 class Main {}
