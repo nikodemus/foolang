@@ -753,6 +753,9 @@ class Variable { id::Integer
 
     method visitBy: visitor
         visitor visitVariable: self!
+
+    method visitBy: visitor with: arg
+        visitor visitVariable: self with: arg!
 end
 
 
@@ -1043,6 +1046,9 @@ class Continuation { id::Integer
 
     method visitBy: visitor
         visitor visitContinuation: self!
+
+    method visitBy: visitor with: arg
+        visitor visitContinuation: self with: arg!
 end
 
 
@@ -1648,6 +1654,49 @@ class CpsOptimizer { worklist graph }
 end
 
 
+class CpsEvaluator { bound values parent }
+    direct method new
+        self bound: False
+             values: False
+             parent: False!
+    direct method eval: cps
+        cps entry
+            visitBy: CpsEvaluator new
+            with: [{ |value| return value }]!
+
+    method visitAll: seq
+        seq collect: { |each| each visitBy: self }!
+
+    method visitContinuation: aCont with: args
+        let params = aCont params.
+        params size is args size
+            ifFalse: { Error raise: "Argument count mismatch, wanted: {aCont params size}, got {args size}" }.
+        let eval = CpsEvaluator
+                       bound: params
+                       values: args
+                       parent: self.
+        aCont target
+            visitBy: eval
+            with: (eval visitAll: aCont args)!
+
+    method visitVariable: aVar with: args
+        (self visitVariable: aVar)
+            apply: args!
+
+    method visitVariable: var
+        bound is False
+            ifTrue: { Error raise: "Unbound variable: {var printName}" }.
+        let index = bound positionOf: var.
+        index is False
+            ifTrue: { parent visitVariable: var }
+            ifFalse: { values at: index }!
+
+    method visitConstant: constant
+        constant value!
+
+end
+
+
 class CpsPrinter { output seen }
 
     direct method printToString: graph
@@ -2123,6 +2172,10 @@ $bind:12($value:5):
     $return:3($value:5)
 "!
 
+    method test_eval_literal
+        let cps = self convert: "123".
+        assert that: { (CpsEvaluator eval: cps) }
+               equals: 123!
 
 end
 
