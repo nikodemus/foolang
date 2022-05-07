@@ -2320,8 +2320,6 @@ $bind:12($value:5):
     $return:3($value:5)
 "!
 
-    -- FIXME: refactor: IntegerClassDefinition should know it relates to
-    -- host class Integer.
     method test_eval_typecheck_literal
         let cps = self convert: "123 :: Integer"
                        with: [IntegerClassDefinition].
