@@ -31,6 +31,10 @@ interface MethodDefinition
 
     method visitBy: visitor
         visitor visitMethodDefinition: self!
+
+
+    method hostValue
+        self!
 end
 
 
@@ -219,14 +223,14 @@ class IfTrueIfFalseImpl { ifTrue ifFalse }
                                       graph continuation: "$ifTrue"
                                             params: [ret]
                                             target: ret
-                                            args: [graph ensureConstant: False] }.
+                                            args: [graph ensureConstant: FalseDefinition] }.
         let elseCont = ifFalse
                            ifTrue: { (args at: lastArg) renameIfSingleUse: "$ifFalse" }
                            ifFalse: { let ret = graph makeVariable: "$ret".
                                       graph continuation: "$ifFalse"
                                             params: [ret]
                                             target: ret
-                                            args: [graph ensureConstant: False] }.
+                                            args: [graph ensureConstant: FalseDefinition] }.
         aContinuation target: (graph select: cond
                                      then: thenCont
                                      else: elseCont).
@@ -264,7 +268,7 @@ class WhileLoopImpl { name while }
         let exitCont = graph continuation: "$loopExit"
                              params: []
                              target: (aContinuation target target)
-                             args: [graph ensureConstant: False].
+                             args: [graph ensureConstant: FalseDefinition].
         let cond = graph makeVariable: "$cond".
         let thenElse = while
                            ifTrue: { [bodyCont, exitCont] }
@@ -279,7 +283,7 @@ class WhileLoopImpl { name while }
         let headCont = graph continuation: "$loopHead"
                              params: aContinuation params copy
                              target: valueCont
-                             args: [graph ensureConstant: False].
+                             args: [graph ensureConstant: FalseDefinition].
         aContinuation removeArgs.
         aContinuation replaceUsesWith: headCont.
         aContinuation target: INVALID_TARGET.
@@ -292,7 +296,8 @@ end
 
 
 
-class ClassDefinition { name ownClassDefinition methodDictionary }
+class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
+    is Object
 
     -- ClassDefinition itself is used as the ClassDefinition for Class.
     -- Clever, yes? Horrible, maybe!
@@ -305,16 +310,35 @@ class ClassDefinition { name ownClassDefinition methodDictionary }
 
 
     direct method name: name
-        self name: name methods: []!
+        self
+            name: name
+            hostClass: False
+            methods: []!
 
 
     direct method name: name methods: methods
+        self
+            name: name
+            hostClass: False
+            methods: methods!
+
+
+    direct method hostClass: hostClass methods: methods
+        self
+            name: hostClass name
+            hostClass: hostClass
+            methods: methods!
+
+
+    direct method name: name hostClass: hostClass methods: methods
         let instanceMethodDictionary = Dictionary new.
         let directMethodDictionary = Dictionary new.
         let ownClassDefinition = self name: "{name} class"
+                                      hostClass: hostClass classOf
                                       ownClassDefinition: ClassDefinition
                                       methodDictionary: directMethodDictionary.
         let classDefinition = self name: name
+                                   hostClass: hostClass
                                    ownClassDefinition: ownClassDefinition
                                    methodDictionary: instanceMethodDictionary.
         methods do: { |each|
@@ -332,6 +356,12 @@ class ClassDefinition { name ownClassDefinition methodDictionary }
 
     method classDefinition
         ownClassDefinition!
+
+
+    method hostValue
+        hostClass is False
+            ifTrue: { Error raise: "No host definition for {self}" }
+            ifFalse: { hostClass }!
 
 
     method findMethod: name
@@ -376,24 +406,32 @@ end
 
 
 define BooleanClassDefinition
-    (ClassDefinition name: "Boolean"
-                     methods: [BuiltinMethod new: (IfTrueIfFalseImpl ifTrue: True ifFalse: True),
-                               BuiltinMethod new: (IfTrueIfFalseImpl ifTrue: True ifFalse: False),
-                               BuiltinMethod new: (IfTrueIfFalseImpl ifTrue: False ifFalse: True)])!
+    (ClassDefinition
+         hostClass: Boolean
+         methods: [BuiltinMethod new: (IfTrueIfFalseImpl ifTrue: True ifFalse: True),
+                   BuiltinMethod new: (IfTrueIfFalseImpl ifTrue: True ifFalse: False),
+                   BuiltinMethod new: (IfTrueIfFalseImpl ifTrue: False ifFalse: True)])!
+
+
+define FalseDefinition
+    (Instance
+         class: BooleanClassDefinition
+         datum: False)!
 
 
 define FunctionClassDefinition
-    (ClassDefinition name: "Function"
-                     methods: [BuiltinMethod new: WhileLoopImpl newWhileTrue,
-                               BuiltinMethod new: WhileLoopImpl newWhileFalse])!
+    (ClassDefinition
+         name: "Function"
+         hostClass: Closure
+         methods: [BuiltinMethod new: WhileLoopImpl newWhileTrue,
+                   BuiltinMethod new: WhileLoopImpl newWhileFalse])!
 
 
 define IntegerClassDefinition
     (ClassDefinition
-         name: "Integer"
+         hostClass: Integer
          methods: [BuiltinMethod new: IntegerPlusImpl new,
                    BuiltinMethod new: IntegerAddIntegerImpl new])!
-
 
 
 class Set { dict }
@@ -638,7 +676,7 @@ class Constant { id::Integer
 
 
     method printName
-        value displayString!
+        value hostValue displayString!
 
 
     method replaceUses: expr1 with: expr2
@@ -657,6 +695,9 @@ end
 class CpsSelector { name }
     method displayString
         "#{name}"!
+
+    method hostValue
+        self!
 end
 
 
@@ -1401,6 +1442,7 @@ class CpsGraph { entry::Continuation
                              id: self nextId
                              value: value }!
 
+
     method ensureGlobal: name
         globals
             at: name
@@ -1466,16 +1508,23 @@ class CpsGraph { entry::Continuation
 end
 
 
-class CpsConverter { graph var next }
+class CpsConverter { graph var next classes }
 
-    direct method new
+    direct method with: classes
+        let classMap = Dictionary new.
+        classes
+            do: { |each|
+                  let hostClass = each hostClass.
+                  hostClass is False
+                      ifFalse: { classMap put: each at: hostClass } }.
         self graph: CpsGraph new
              var: False
-             next: False!
+             next: False
+             classes: classMap!
 
 
     direct method convert: syntax withGlobalDefinitions: defs
-        let converter = self new.
+        let converter = self with: defs.
         converter graph addGlobalDefinitions: defs.
         converter graph
             entry: (syntax visitBy: converter
@@ -1487,7 +1536,8 @@ class CpsConverter { graph var next }
         CpsConverter
             graph: graph
             var: var
-            next: self!
+            next: self
+            classes: classes!
 
 
     method bindVariables: vars
@@ -1534,7 +1584,14 @@ class CpsConverter { graph var next }
 
 
     method visitLiteral: syntax with: cc
-        let const = graph ensureConstant: syntax value.
+        let value = syntax value.
+        let classDef = classes
+                           at: value classOf
+                           ifNone: { Error raise: "No target class for {value} in: {classes}" }.
+        let instance =  Instance
+                           class: classDef
+                           datum: value.
+        let const = graph ensureConstant: instance.
         (graph continuation: "$const_ref"
               params: []
               target: cc
@@ -1713,18 +1770,17 @@ class CpsOptimizer { worklist graph }
 end
 
 
-class CpsEvaluator { bound values parent classes }
+class CpsEvaluator { bound values parent }
 
-    direct method new: classes
+    direct method new
         self bound: False
              values: False
-             parent: False
-             classes: classes!
+             parent: False!
 
 
-    direct method eval: cps with: classes
+    direct method eval: cps
         cps entry
-            visitBy: (CpsEvaluator new: classes)
+            visitBy: (CpsEvaluator new)
             with: [{ |value| return value }]!
 
 
@@ -1732,8 +1788,7 @@ class CpsEvaluator { bound values parent classes }
         CpsEvaluator
             bound: params
             values: args
-            parent: parent
-            classes: classes!
+            parent: parent!
 
 
     method visitAll: seq
@@ -1772,10 +1827,7 @@ class CpsEvaluator { bound values parent classes }
 
 
     method visitConstant: constant
-        let value = constant value.
-        let classDef = classes at: value classOf
-                               ifNone: { Error raise: "No CPS class corresponding to {value classOf}" }.
-        Instance class: classDef datum: value!
+        constant value :: Instance!
 
 
     method visitConstant: constant with: args
@@ -2002,13 +2054,14 @@ $let:16(b:6):
 "!
 
     method test_convert_arity_0_block
-        let cps = self convert: "\{ 421 }".
+        let cps = self convert: "\{ 421 }"
+                       withGlobalDefinitions: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    $return:3($block:6)
-$block:6($ret:4):
-    $ret:4(421)
+    $return:3($block:7)
+$block:7($ret:5):
+    $ret:5(421)
 "!
 
 
@@ -2027,48 +2080,51 @@ $bind_recv:16($recv:8):
 
     method test_convert_boolean_ifFalse
         let cps = self convert: "X :: Boolean ifFalse: \{ 1 }"
-                       withGlobalDefinitions: [BooleanClassDefinition].
+                       withGlobalDefinitions: [BooleanClassDefinition,
+                                               IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:23($bind_recv:17, Boolean class#typecheck:)(Boolean:Global, X:Global)
-$bind_recv:17($recv:5):
-    select:34($recv:5, $ifTrue:33, $ifFalse:15)()
-$ifTrue:33():
+    apply:24($bind_recv:18, Boolean class#typecheck:)(Boolean:Global, X:Global)
+$bind_recv:18($recv:6):
+    select:35($recv:6, $ifTrue:34, $ifFalse:16)()
+$ifTrue:34():
     $return:3(False)
-$ifFalse:15():
+$ifFalse:16():
     $return:3(1)
 "!
 
 
     method test_convert_boolean_ifTrue
         let cps = self convert: "X :: Boolean ifTrue: \{ 1 }"
-                       withGlobalDefinitions: [BooleanClassDefinition].
+                       withGlobalDefinitions: [BooleanClassDefinition,
+                                               IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:23($bind_recv:17, Boolean class#typecheck:)(Boolean:Global, X:Global)
-$bind_recv:17($recv:5):
-    select:34($recv:5, $ifTrue:15, $ifFalse:33)()
-$ifTrue:15():
+    apply:24($bind_recv:18, Boolean class#typecheck:)(Boolean:Global, X:Global)
+$bind_recv:18($recv:6):
+    select:35($recv:6, $ifTrue:16, $ifFalse:34)()
+$ifTrue:16():
     $return:3(1)
-$ifFalse:33():
+$ifFalse:34():
     $return:3(False)
 "!
 
 
     method test_convert_boolean_ifTrueIfFalse
         let cps = self convert: "X :: Boolean ifTrue: \{ 1 } ifFalse: \{ 2 }"
-                       withGlobalDefinitions: [BooleanClassDefinition].
+                       withGlobalDefinitions: [BooleanClassDefinition,
+                                               IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:29($bind_recv:23, Boolean class#typecheck:)(Boolean:Global, X:Global)
-$bind_recv:23($recv:5):
-    select:37($recv:5, $ifTrue:21, $ifFalse:16)()
-$ifTrue:21():
+    apply:30($bind_recv:24, Boolean class#typecheck:)(Boolean:Global, X:Global)
+$bind_recv:24($recv:6):
+    select:38($recv:6, $ifTrue:22, $ifFalse:17)()
+$ifTrue:22():
     $return:3(1)
-$ifFalse:16():
+$ifFalse:17():
     $return:3(2)
 "!
 
@@ -2180,7 +2236,8 @@ strict digraph \{
 
 
     method test_convert_constant_integer
-        let cps = self convert: "123".
+        let cps = self convert: "123"
+                       withGlobalDefinitions: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2198,7 +2255,8 @@ $entry:2($return:3):
 
 
     method test_convert_let
-        let cps = self convert: "let x = 87. x".
+        let cps = self convert: "let x = 87. x"
+                       withGlobalDefinitions: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2207,7 +2265,8 @@ $entry:2($return:3):
 
 
     method test_convert_return
-        let cps = self convert: "return 421. X boom".
+        let cps = self convert: "return 421. X boom"
+                       withGlobalDefinitions: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2216,13 +2275,14 @@ $entry:2($return:3):
 
 
     method test_convert_seq
-        let cps = self convert: "X some: 12 message: 97. Y + Z".
+        let cps = self convert: "X some: 12 message: 97. Y + Z"
+                       withGlobalDefinitions: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:23($seq:16, findMethod:22(classOf:21(X:Global), #some:message:))(X:Global, 12, 97)
-$seq:16($ignore:15):
-    apply:9($return:3, findMethod:8(classOf:7(Y:Global), #+))(Y:Global, Z:Global)
+    apply:24($seq:17, findMethod:23(classOf:22(X:Global), #some:message:))(X:Global, 12, 97)
+$seq:17($ignore:16):
+    apply:10($return:3, findMethod:9(classOf:8(Y:Global), #+))(Y:Global, Z:Global)
 "!
 
 
@@ -2265,10 +2325,7 @@ $bind:12($value:5):
     method test_eval_typecheck_literal
         let cps = self convert: "123 :: Integer"
                        withGlobalDefinitions: [IntegerClassDefinition].
-        assert that: { (CpsEvaluator
-                            eval: cps
-                            with: { Integer -> IntegerClassDefinition })
-                       hostValue }
+        assert that: { (CpsEvaluator eval: cps) hostValue }
                equals: 123!
 end
 
