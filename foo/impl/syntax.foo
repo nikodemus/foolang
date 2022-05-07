@@ -917,6 +917,9 @@ interface SyntaxMethod
     method visitBy: visitor
         visitor visitMethod: self!
 
+    method visitBy: visitor with: arg
+        visitor visitMethod: self with: arg!
+
     method isRequired
         self body is False!
 
