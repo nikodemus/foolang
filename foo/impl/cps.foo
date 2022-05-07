@@ -1659,6 +1659,16 @@ class CpsConverter { graph var next classes }
         converter graph optimize!
 
 
+    -- KLUDGE: putting definition visiting into direct methods
+    direct method convertDefinition: syntax with: defs
+        syntax visitBy: self with: defs!
+
+
+    direct method visitClass: aClass with: _defs
+        ClassDefinition
+            name: aClass name!
+
+
     method bindVariable: var
         CpsConverter
             graph: graph
@@ -1680,6 +1690,9 @@ class CpsConverter { graph var next classes }
         var name == name
             ifTrue: { var }
             ifFalse: { self next findBinding: name }!
+
+
+
 
 
     method visitBlock: syntax with: cc
@@ -2186,6 +2199,15 @@ class TestCPS { assert system }
         CpsConverter convertExpr: syntax with: defs!
 
 
+    method convertDefinition: source
+        self convertDefinition: source with: []!
+
+
+    method convertDefinition: source with: defs
+        let syntax = Parser parseDefinition: source.
+        CpsConverter convertDefinition: syntax with: defs!
+
+
     method test_convert_addition_of_integers_optimizes_to_operation_addi
         let cps = self convertExpr: "let a = X a :: Integer. let b = X b :: Integer. a + b"
                        with: [IntegerClassDefinition].
@@ -2492,6 +2514,10 @@ $bind_arg:12($arg:6):
                        with: [IntegerClassDefinition].
         assert that: { (CpsEvaluator eval: cps) hostValue }
                equals: 444!
+
+    method test_convert_class
+        let cps = self convertDefinition: "class A \{} end".
+        assert true: { ClassDefinition includes: cps }!
 end
 
 class Main {}
