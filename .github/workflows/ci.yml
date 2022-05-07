@@ -213,6 +213,30 @@ jobs:
       - name: Test Transpile
         run: ./bin/bootstrap-interpreter foo/impl/test_transpile.foo --use=foo/lib
 
+  test-cps:
+    name: "Test CPS"
+    needs: build-host
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download bootstrap interpreter
+        uses: actions/download-artifact@v2
+        with:
+          name: bootstrap-interpreter-${{ runner.os }}
+          path: bin/
+
+      - name: Make bootstrap interpreter executable
+        run: chmod a+x bin/bootstrap-interpreter
+        if: ${{ runner.os != 'Windows' }}
+
+      - name: Test CPS
+        run: ./bin/bootstrap-interpreter foo/impl/cps.foo --use=foo/lib
+
   test-full-bootstrap:
     # Not running this on Windows because the linker clang uses
     # there doesn't accept either VS style nor GNU style stack-
