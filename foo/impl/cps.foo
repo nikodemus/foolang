@@ -5,6 +5,8 @@ import .parser.Parser
 interface Log
     direct method newline
         Output debug newline!
+    direct method print: what
+        Output debug print: what!
     direct method println: what
         Output debug println: what!
 end
@@ -22,6 +24,15 @@ end
 class CpsSelector { name }
     is Object
     is CpsValue
+
+    method < other
+        name < other name!
+
+    method toString
+        "#<CpsSelector {name}>"!
+
+    method displayOn: stream
+        stream writeString: "#<CpsSelector {name}>"!
 
     method printName
         "#{name}"!
@@ -81,20 +92,41 @@ interface MethodDefinition
 
     method classDefinition
         MethodClassDefinition!
+
+    method isStandard
+        True!
 end
 
 
-class UserMethod { name home }
+class UserMethod { name home cps }
     is MethodDefinition
 
     direct method name: name
         self name: name
-             home: False!
+             home: False
+             cps: False!
+
+    direct method name: name cps: cps
+        self name: name
+             home: False
+             cps: cps!
 
     method home: new
         (home is False)
             ifFalse: { Error raise: "{self} already has a home: {self}" }.
         home= new!
+
+    method displayOn: stream
+        stream writeString: "#<UserMethod {name}>"!
+
+    method isStandard
+        False!
+
+    method apply: args
+        cps is False
+            ifTrue: { Error raise: "{self} has no body, cannot apply!" }.
+        -- FIXME: receiver...
+        cps apply: args rest!
 end
 
 
@@ -198,7 +230,7 @@ interface InlineMethodImpl
         let pattern = self inliner apply: args.
         let newRecv = pattern first.
         let newSelector = pattern second.
-        (newRecv classDefinition findMethod: (classDefinition intern: newSelector))
+        (newRecv classDefinition findMethod: (classDefinition findSelector: newSelector))
             apply: ([newRecv]
                         append: (pattern
                                      from: 3
@@ -371,7 +403,7 @@ class WhileLoopImpl { name while }
 end
 
 
-class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
+class ClassDefinition { name hostClass ownClassDefinition methodDictionary selectors }
     is Object
     is CpsValue
 
@@ -389,54 +421,95 @@ class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
         self
             name: name
             hostClass: False
-            methods: []!
+            methods: []
+            directMethods: []!
 
 
     direct method name: name methods: methods
         self
             name: name
             hostClass: False
-            methods: methods!
+            methods: methods
+            directMethods: []!
+
+
+    direct method name: name methods: methods directMethods: directMethods
+        self
+            name: name
+            hostClass: False
+            methods: methods
+            directMethods: directMethods!
 
 
     direct method hostClass: hostClass methods: methods
         self
             name: hostClass name
             hostClass: hostClass
-            methods: methods!
+            methods: methods
+            directMethods: []!
 
 
     direct method name: name hostClass: hostClass methods: methods
+        self
+            name: name
+            hostClass: hostClass
+            methods: methods
+            directMethods: []!
+
+
+    direct method name: name hostClass: hostClass
+                  methods: methods directMethods: directMethods
+        let selectors = Dictionary new.
         let instanceMethodDictionary = Dictionary new.
         let directMethodDictionary = Dictionary new.
         let ownClassDefinition = self name: "{name} class"
                                       hostClass: hostClass classOf
                                       ownClassDefinition: ClassDefinition
-                                      methodDictionary: directMethodDictionary.
+                                      methodDictionary: directMethodDictionary
+                                      selectors: selectors.
         let classDefinition = self name: name
                                    hostClass: hostClass
                                    ownClassDefinition: ownClassDefinition
-                                   methodDictionary: instanceMethodDictionary.
+                                   methodDictionary: instanceMethodDictionary
+                                   selectors: selectors.
         methods do: { |each|
                       each home: classDefinition.
                       instanceMethodDictionary
                           put: each
-                          at: (classDefinition intern: each name) }.
+                          at: (classDefinition internMethodSelector: each) }.
 
-        let typecheck = BuiltinMethod home: ownClassDefinition
-                                      impl: (TypecheckImpl type: classDefinition).
-        directMethodDictionary
-            put: typecheck
-            at: (ownClassDefinition intern: typecheck name).
+        directMethods do: { |each|
+                            each home: ownClassDefinition.
+                            directMethodDictionary
+                                put: each
+                                at: (ownClassDefinition internMethodSelector: each) }.
+
+        let typecheckSelector = StandardSelectors at: "typecheck:".
+        (directMethodDictionary has: typecheckSelector)
+            ifFalse: { let typecheck = BuiltinMethod
+                                           home: ownClassDefinition
+                                           impl: (TypecheckImpl type: classDefinition).
+                       directMethodDictionary
+                           put: typecheck
+                           at: typecheckSelector }.
 
         classDefinition!
 
 
-    method intern: name
-        StandardSelectors
+    method internMethodSelector: aMethod
+        let name = aMethod name.
+        selectors
             at: name
-            ifNone: { Error raise: "Standard selectors is missing: #{name}" }!
+            ifNonePut: { aMethod isStandard
+                             ifTrue: { StandardSelectors
+                                           at: name
+                                           ifNone: { Error raise: "Standard selector is missing: #{name}" } }
+                             ifFalse: { CpsSelector name: name } }!
 
+    method findSelector: name
+        selectors
+            at: name
+            ifNone: { Error raise: "No such s#{name} in class definition {name}" }!
 
     method printName
         name!
@@ -1579,9 +1652,21 @@ class CpsGraph { entry::Continuation
 
     method addGlobalDefinitions: definitions
         definitions
-            do: { |def|
-                  let global = self ensureGlobal: def name.
-                  global definition: def }!
+            do: { |def| self addDefinition: def }!
+
+
+    method addDefinition: definition
+        let global = self ensureGlobal: definition name.
+        global definition: definition.
+
+        (ClassDefinition includes: definition)
+            ifTrue: { definition selectors
+                          do: { |name selector|
+                                let constant = selectors
+                                                   at: name
+                                                   ifNonePut: { self ensureConstant: selector }.
+                                constant value is selector
+                                    ifFalse: { Error raise: "Multiple selectors with same name: {name}" } } }!
 
 
     method ensureSelector: name
@@ -1632,6 +1717,10 @@ class CpsGraph { entry::Continuation
 
     method nextId
         lastId = lastId + 1!
+
+
+    method apply: args
+        CpsEvaluator eval: self with: args!
 end
 
 
@@ -1650,13 +1739,46 @@ class CpsConverter { graph var next classes }
              classes: classMap!
 
 
-    direct method convert: syntax with: defs
+    direct method convertExpr: syntax with: defs
         let converter = self with: defs.
         converter graph addGlobalDefinitions: defs.
         converter graph
             entry: (syntax visitBy: converter
                            with: converter graph exit).
         converter graph optimize!
+
+
+    direct method convertMethod: aMethod with: defs
+        let converter = self with: defs.
+        let graph = converter graph.
+        graph addGlobalDefinitions: defs.
+        graph entry: (aMethod body visitBy: converter
+                                   with: converter graph exit).
+        graph optimize!
+
+
+    -- KLUDGE: putting definition visiting into direct methods
+    direct method convertDefinition: syntax with: defs
+        syntax visitBy: self with: defs!
+
+
+    direct method visitClass: aClass with: defs
+        let methods
+            = aClass instanceMethods
+                collect: { |each| each visitBy: self with: defs }.
+        let directMethods
+            = aClass directMethods
+                collect: { |each| each visitBy: self with: defs }.
+        ClassDefinition
+            name: aClass name
+            methods: methods
+            directMethods: directMethods!
+
+
+    direct method visitMethod: aMethod with: defs
+        UserMethod
+            name: aMethod selector name
+            cps: (CpsConverter convertMethod: aMethod with: defs)!
 
 
     method bindVariable: var
@@ -1912,6 +2034,13 @@ class CpsEvaluator { bound values parent }
             with: [{ |value| return value }]!
 
 
+    direct method eval: cps with: args
+        -- Log println: (CpsPrinter printToString: cps).
+        cps entry
+            visitBy: (CpsEvaluator new)
+            with: ([{ |value| return value }] append: args)!
+
+
     method bind: params to: args
         CpsEvaluator
             bound: params
@@ -1926,7 +2055,7 @@ class CpsEvaluator { bound values parent }
     method visitContinuation: aCont with: args
         let params = aCont params.
         params size is args size
-            ifFalse: { Error raise: "Argument count mismatch, wanted: {aCont params size}, got {args size}" }.
+            ifFalse: { Error raise: "Argument count mismatch, wanted: {aCont params collect: #printName}, got {args collect: #toString}" }.
         let eval = self bind: params
                         to: args.
         aCont target
@@ -1963,7 +2092,10 @@ class CpsEvaluator { bound values parent }
 
 
     method visitGlobal: aGlobal
-        aGlobal definition!
+        let def = aGlobal definition.
+        def is False
+            ifTrue: { Error raise: "Undefined global in CpsEvaluator: {aGlobal name}" }
+            ifFalse: { def }!
 
 
     method visitOperation: anOp
@@ -2177,46 +2309,55 @@ class TestCPS { assert system }
     method system: new
         system = new!
 
-    method convert: source
-        self convert: source with: []!
+    method convertExpr: source
+        self convertExpr: source with: []!
 
 
-    method convert: source with: defs
+    method convertExpr: source with: defs
         let syntax = Parser parseExpression: source.
-        CpsConverter convert: syntax with: defs!
+        CpsConverter convertExpr: syntax with: defs!
+
+
+    method convertDefinition: source
+        self convertDefinition: source with: []!
+
+
+    method convertDefinition: source with: defs
+        let syntax = Parser parseDefinition: source.
+        CpsConverter convertDefinition: syntax with: defs!
 
 
     method test_convert_addition_of_integers_optimizes_to_operation_addi
-        let cps = self convert: "let a = X a :: Integer. let b = X b :: Integer. a + b"
+        let cps = self convertExpr: "let a = X a :: Integer. let b = X b :: Integer. a + b"
                        with: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:45($bind:40, findMethod:44(classOf:27(X:Global), #a))(X:Global)
-$bind:40($value:34):
-    apply:38($let:33, Integer class#typecheck:)(Integer:Global, $value:34)
-$let:33(a:5):
-    apply:29($bind:24, findMethod:28(classOf:27(X:Global), #b))(X:Global)
-$bind:24($value:17):
-    apply:22($let:16, Integer class#typecheck:)(Integer:Global, $value:17)
-$let:16(b:6):
-    $return:3(addi:57(a:5, b:6))
+    apply:47($bind:42, findMethod:46(classOf:29(X:Global), #a))(X:Global)
+$bind:42($value:36):
+    apply:40($let:35, Integer class#typecheck:)(Integer:Global, $value:36)
+$let:35(a:8):
+    apply:31($bind:26, findMethod:30(classOf:29(X:Global), #b))(X:Global)
+$bind:26($value:19):
+    apply:24($let:18, Integer class#typecheck:)(Integer:Global, $value:19)
+$let:18(b:9):
+    $return:3(addi:58(a:8, b:9))
 "!
 
     method test_convert_arity_0_block
-        let cps = self convert: "\{ 421 }"
+        let cps = self convertExpr: "\{ 421 }"
                        with: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    $return:3($block:7)
-$block:7($ret:5):
-    $ret:5(421)
+    $return:3($block:10)
+$block:10($ret:8):
+    $ret:8(421)
 "!
 
 
     method test_convert_arity_3_block
-        let cps = self convert: "\{ |a b c| a + b + c }".
+        let cps = self convertExpr: "\{ |a b c| a + b + c }".
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2229,58 +2370,58 @@ $bind_recv:16($recv:8):
 
 
     method test_convert_boolean_ifFalse
-        let cps = self convert: "X :: Boolean ifFalse: \{ 1 }"
+        let cps = self convertExpr: "X :: Boolean ifFalse: \{ 1 }"
                        with: [BooleanClassDefinition,
                               IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:24($bind_recv:18, Boolean class#typecheck:)(Boolean:Global, X:Global)
-$bind_recv:18($recv:6):
-    select:35($recv:6, $ifTrue:34, $ifFalse:16)()
-$ifTrue:34():
+    apply:29($bind_recv:23, Boolean class#typecheck:)(Boolean:Global, X:Global)
+$bind_recv:23($recv:12):
+    select:40($recv:12, $ifTrue:39, $ifFalse:21)()
+$ifTrue:39():
     $return:3(False)
-$ifFalse:16():
+$ifFalse:21():
     $return:3(1)
 "!
 
 
     method test_convert_boolean_ifTrue
-        let cps = self convert: "X :: Boolean ifTrue: \{ 1 }"
+        let cps = self convertExpr: "X :: Boolean ifTrue: \{ 1 }"
                        with: [BooleanClassDefinition,
                               IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:24($bind_recv:18, Boolean class#typecheck:)(Boolean:Global, X:Global)
-$bind_recv:18($recv:6):
-    select:35($recv:6, $ifTrue:16, $ifFalse:34)()
-$ifTrue:16():
+    apply:29($bind_recv:23, Boolean class#typecheck:)(Boolean:Global, X:Global)
+$bind_recv:23($recv:12):
+    select:40($recv:12, $ifTrue:21, $ifFalse:39)()
+$ifTrue:21():
     $return:3(1)
-$ifFalse:34():
+$ifFalse:39():
     $return:3(False)
 "!
 
 
     method test_convert_boolean_ifTrueIfFalse
-        let cps = self convert: "X :: Boolean ifTrue: \{ 1 } ifFalse: \{ 2 }"
+        let cps = self convertExpr: "X :: Boolean ifTrue: \{ 1 } ifFalse: \{ 2 }"
                        with: [BooleanClassDefinition,
                               IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:30($bind_recv:24, Boolean class#typecheck:)(Boolean:Global, X:Global)
-$bind_recv:24($recv:6):
-    select:38($recv:6, $ifTrue:22, $ifFalse:17)()
-$ifTrue:22():
+    apply:35($bind_recv:29, Boolean class#typecheck:)(Boolean:Global, X:Global)
+$bind_recv:29($recv:12):
+    select:43($recv:12, $ifTrue:27, $ifFalse:22)()
+$ifTrue:27():
     $return:3(1)
-$ifFalse:17():
+$ifFalse:22():
     $return:3(2)
 "!
 
 
     method test_convert_closure_whileFalse
-        let cps = self convert: "\{ X maybe\} whileFalse: \{ Y something \}".
+        let cps = self convertExpr: "\{ X maybe\} whileFalse: \{ Y something \}".
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $loopHead:43($return:3):
@@ -2297,7 +2438,7 @@ $loopBody:37():
 
 
     method test_convert_closure_whileTrue
-        let cps = self convert: "\{ X maybe\} whileTrue: \{ X something \}".
+        let cps = self convertExpr: "\{ X maybe\} whileTrue: \{ X something \}".
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $loopHead:42($return:3):
@@ -2314,7 +2455,7 @@ $loopExit:38():
 
 
     method test_preOrder_whileTrue
-        let cps = self convert: "\{ X maybe\} whileTrue: \{ X something \}".
+        let cps = self convertExpr: "\{ X maybe\} whileTrue: \{ X something \}".
         let order = List new.
         PreOrder for: cps entry
                  do: { |each| order push: each id }.
@@ -2323,7 +2464,7 @@ $loopExit:38():
 
 
     method test_postOrder_whileTrue
-        let cps = self convert: "\{ X maybe\} whileTrue: \{ X something \}".
+        let cps = self convertExpr: "\{ X maybe\} whileTrue: \{ X something \}".
         let order = List new.
         PostOrder for: cps entry
                   do: { |each| order push: each id }.
@@ -2332,7 +2473,7 @@ $loopExit:38():
 
 
     method test_reversePostOrder_whileTrue
-        let cps = self convert: "\{ X maybe\} whileTrue: \{ X something \}".
+        let cps = self convertExpr: "\{ X maybe\} whileTrue: \{ X something \}".
         let order = List new.
         ReversePostOrder for: cps entry
                          do: { |each| order push: each id }.
@@ -2341,7 +2482,7 @@ $loopExit:38():
 
 
     method test_graphwiz_closure_whileTrue
-        let cps = self convert: "\{ X maybe\} whileTrue: \{ X something \}".
+        let cps = self convertExpr: "\{ X maybe\} whileTrue: \{ X something \}".
         (system currentDirectory / "closure_whileTrue.dot")
             truncateExisting forWrite
                 createOrOpen: { |dot|
@@ -2385,8 +2526,20 @@ strict digraph \{
 "!
 
 
+    method test_convert_constant_add
+        let cps = self convertExpr: "123 + X::Integer"
+                       with: [IntegerClassDefinition].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    apply:20($bind_arg:14, Integer class#typecheck:)(Integer:Global, X:Global)
+$bind_arg:14($arg:9):
+    $return:3(addi:35(123, $arg:9))
+"!
+
+
     method test_convert_constant_integer
-        let cps = self convert: "123"
+        let cps = self convertExpr: "123"
                        with: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
@@ -2396,7 +2549,7 @@ $entry:2($return:3):
 
 
     method test_convert_global
-        let cps = self convert: "X".
+        let cps = self convertExpr: "X".
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2405,7 +2558,7 @@ $entry:2($return:3):
 
 
     method test_convert_let
-        let cps = self convert: "let x = 87. x"
+        let cps = self convertExpr: "let x = 87. x"
                        with: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
@@ -2415,7 +2568,7 @@ $entry:2($return:3):
 
 
     method test_convert_return
-        let cps = self convert: "return 421. X boom"
+        let cps = self convertExpr: "return 421. X boom"
                        with: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
@@ -2425,19 +2578,19 @@ $entry:2($return:3):
 
 
     method test_convert_seq
-        let cps = self convert: "X some: 12 message: 97. Y + Z"
+        let cps = self convertExpr: "X some: 12 message: 97. Y + Z"
                        with: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:24($seq:17, findMethod:23(classOf:22(X:Global), #some:message:))(X:Global, 12, 97)
-$seq:17($ignore:16):
-    apply:10($return:3, findMethod:9(classOf:8(Y:Global), #+))(Y:Global, Z:Global)
+    apply:26($seq:19, findMethod:25(classOf:24(X:Global), #some:message:))(X:Global, 12, 97)
+$seq:19($ignore:18):
+    apply:12($return:3, findMethod:11(classOf:10(Y:Global), #+))(Y:Global, Z:Global)
 "!
 
 
     method test_convert_typecheck
-        let cps = self convert: "X :: Integer".
+        let cps = self convertExpr: "X :: Integer".
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2446,7 +2599,7 @@ $entry:2($return:3):
 
 
     method test_convert_typecheck_gives_type
-        let cps = self convert: "X::Integer + Y"
+        let cps = self convertExpr: "X::Integer + Y"
                        with: [(ClassDefinition
                                    name: "Integer"
                                    methods: [(UserMethod name: "+")])].
@@ -2454,13 +2607,13 @@ $entry:2($return:3):
                equals: "
 $entry:2($return:3):
     apply:20($bind_recv:14, Integer class#typecheck:)(Integer:Global, X:Global)
-$bind_recv:14($recv:5):
-    apply:10($return:3, Integer#+)($recv:5, Y:Global)
+$bind_recv:14($recv:6):
+    apply:10($return:3, Integer#+)($recv:6, Y:Global)
 "!
 
 
     method test_convert_typecheck_redundancy
-        let cps = self convert: "X :: Integer :: Integer"
+        let cps = self convertExpr: "X :: Integer :: Integer"
                        with: [(ClassDefinition name: "Integer")].
         assert that: { CpsPrinter printToString: cps }
                equals: "
@@ -2470,28 +2623,30 @@ $bind:12($value:5):
     $return:3($value:5)
 "!
 
-    method test_convert_constant_add
-        let cps = self convert: "123 + X::Integer"
-                       with: [IntegerClassDefinition].
-        assert that: { CpsPrinter printToString: cps }
-               equals: "
-$entry:2($return:3):
-    apply:18($bind_arg:12, Integer class#typecheck:)(Integer:Global, X:Global)
-$bind_arg:12($arg:6):
-    $return:3(addi:34(123, $arg:6))
-"!
-
     method test_eval_typecheck_literal
-        let cps = self convert: "123 :: Integer"
+        let cps = self convertExpr: "123 :: Integer"
                        with: [IntegerClassDefinition].
         assert that: { (CpsEvaluator eval: cps) hostValue }
                equals: 123!
 
     method test_eval_send_message
-        let cps = self convert: "123 opaqueIdentity + 321"
+        let cps = self convertExpr: "123 opaqueIdentity + 321"
                        with: [IntegerClassDefinition].
         assert that: { (CpsEvaluator eval: cps) hostValue }
                equals: 444!
+
+    method test_convert_class
+        let def = self convertDefinition: "class A \{} end".
+        assert true: { ClassDefinition includes: def }!
+
+    method test_convert_class_with_direct_method
+        let def = self convertDefinition: "class A \{} direct method test 8092183! end"
+                       with: [IntegerClassDefinition].
+        assert true: { ClassDefinition includes: def }.
+        let cps = self convertExpr: "A test"
+                       with: [def].
+        assert that: { (CpsEvaluator eval: cps) hostValue }
+               equals: 8092183!
 end
 
 class Main {}

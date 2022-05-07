@@ -814,6 +814,9 @@ class SyntaxClass { name superclass slots interfaces directMethods instanceMetho
     method visitBy: visitor
         visitor visitClass: self!
 
+    method visitBy: visitor with: arg
+        visitor visitClass: self with: arg!
+
     method parts
         [name, superclass, slots, interfaces, directMethods, instanceMethods]!
 
@@ -913,6 +916,9 @@ interface SyntaxMethod
 
     method visitBy: visitor
         visitor visitMethod: self!
+
+    method visitBy: visitor with: arg
+        visitor visitMethod: self with: arg!
 
     method isRequired
         self body is False!

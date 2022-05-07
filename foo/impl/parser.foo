@@ -1207,8 +1207,7 @@ class Parser { source::String
             _parseAll: #parse!
 
     direct method parseExpression: source
-        let res = (self expressionParser: source)
-                      _parseAll: #parse.
+        let res = self parseExpressions: source.
         res size > 1
             ifTrue: { Error raise: "Multiple expressions!" }.
         res first!
@@ -1216,6 +1215,12 @@ class Parser { source::String
     direct method parseDefinitions: source
         (self definitionParser: source)
             parseDefinitions!
+
+    direct method parseDefinition: source
+        let res = self parseDefinitions: source.
+        res size > 1
+            ifTrue: { Error raise: "Multiple definitions!" }.
+        res first!
 
     direct method parseMixed: source
         -- for REPL where both definitions and expressions may
