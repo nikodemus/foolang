@@ -1952,8 +1952,13 @@ class CpsEvaluator { bound values parent }
             = (findMethod args first) visitBy: self.
         let theSelector :: CpsSelector
             = (findMethod args second) visitBy: self.
-        -- FIXME: Intern CpsSelectors properly so host dictionaries
-        -- can use them as keys instead of strings.
+        -- FIXME: CpsSelectors are interned in the CpsGraph,
+        -- but since ClassDefinitions are created _outside_ it,
+        -- they have their method dictionaries keyd by strings.
+        --
+        -- The fix is to have a table of pre-interned selectors
+        -- for built-in methods, and use that when interning
+        -- into CpsGraph.
         theClass findMethod: theSelector name
                  ifNone: { Error raise: "Method missing: {theClass name}#{theSelector name}\nAvailable:\n{theClass methodDictionary}" }!
 end
