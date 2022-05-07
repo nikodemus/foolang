@@ -19,6 +19,39 @@ interface CpsValue
 end
 
 
+class CpsSelector { name }
+    is Object
+    is CpsValue
+
+    method printName
+        "#{name}"!
+
+    method hostValue
+        Selector intern: name!
+
+    method classDefinition
+        self classDefinitionImpl!
+end
+
+
+define StandardSelectors
+    let dict = Dictionary new.
+    [
+         "+",
+         "addInteger:",
+         "ifFalse:",
+         "ifTrue:",
+         "ifTrue:ifFalse:",
+         "opaqueIdentity",
+         "typecheck:",
+         "whileFalse:",
+         "whileTrue:"
+    ]
+    do: { |each|
+          dict put: (CpsSelector name: each) at: each  }.
+    dict!
+
+
 interface MethodDefinition
     is Object
     is CpsValue
@@ -161,11 +194,11 @@ interface InlineMethodImpl
     is BuiltinMethodImpl
 
 
-    method apply: args in: _classDefinition
+    method apply: args in: classDefinition
         let pattern = self inliner apply: args.
         let newRecv = pattern first.
         let newSelector = pattern second.
-        (newRecv classDefinition findMethod: newSelector)
+        (newRecv classDefinition findMethod: (classDefinition intern: newSelector))
             apply: ([newRecv]
                         append: (pattern
                                      from: 3
@@ -178,7 +211,7 @@ interface InlineMethodImpl
         let pattern = self inliner apply: args.
         let newRecv = pattern first.
         let newSelector = pattern second.
-        let newMethod = graph findMethod: newSelector
+        let newMethod = graph ensureFindMethod: newSelector
                               for: newRecv.
         let newApply = graph application: newMethod
                              target: apply target.
@@ -338,7 +371,6 @@ class WhileLoopImpl { name while }
 end
 
 
-
 class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
     is Object
     is CpsValue
@@ -387,15 +419,23 @@ class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
                                    methodDictionary: instanceMethodDictionary.
         methods do: { |each|
                       each home: classDefinition.
-                      instanceMethodDictionary put: each at: each name }.
+                      instanceMethodDictionary
+                          put: each
+                          at: (classDefinition intern: each name) }.
 
         let typecheck = BuiltinMethod home: ownClassDefinition
                                       impl: (TypecheckImpl type: classDefinition).
         directMethodDictionary
             put: typecheck
-            at: typecheck name.
+            at: (ownClassDefinition intern: typecheck name).
 
         classDefinition!
+
+
+    method intern: name
+        StandardSelectors
+            at: name
+            ifNone: { Error raise: "Standard selectors is missing: #{name}" }!
 
 
     method printName
@@ -412,11 +452,11 @@ class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
             ifFalse: { hostClass }!
 
 
-    method findMethod: name::String
+    method findMethod: name::CpsSelector
         methodDictionary at: name!
 
 
-    method findMethod: name::String ifNone: block
+    method findMethod: name::CpsSelector ifNone: block
         methodDictionary at: name ifNone: block!
 
 
@@ -499,6 +539,13 @@ define SelectorClassDefinition
     (ClassDefinition
          name: "Selector"
          methods: [])!
+
+
+-- KLUDGE: Bootstrap evaluator is picky about order of definitions
+extend CpsSelector
+    method classDefinitionImpl
+        SelectorClassDefinition!
+end
 
 
 class Set { dict }
@@ -760,21 +807,6 @@ class Constant { id::Integer
 
     method visitBy: visitor with: arg
         visitor visitConstant: self with: arg!
-end
-
-
-class CpsSelector { name }
-    is Object
-    is CpsValue
-
-    method printName
-        "#{name}"!
-
-    method hostValue
-        Selector intern: name!
-
-    method classDefinition
-        SelectorClassDefinition!
 end
 
 
@@ -1555,8 +1587,9 @@ class CpsGraph { entry::Continuation
     method ensureSelector: name
         selectors
             at: name
-            ifNonePut: { self ensureConstant: (CpsSelector name: name) }!
-
+            ifNonePut: { (self ensureConstant: (StandardSelectors
+                                                    at: name
+                                                    ifNone: { (CpsSelector name: name) })) }!
 
 
     method ensureOperation: kind args: args
@@ -1590,7 +1623,7 @@ class CpsGraph { entry::Continuation
                 args: [recv]!
 
 
-    method findMethod: name for: recv
+    method ensureFindMethod: name for: recv
         let selector = self ensureSelector: name.
         let classOf = self classOf: recv.
         self ensureOperation: FIND_METHOD
@@ -1702,7 +1735,7 @@ class CpsConverter { graph var next classes }
         let args = syntax arguments
                        collect: { |a| graph makeVariable: "$arg" }
                        as: Array.
-        let methodFunction = graph findMethod: syntax selector name
+        let methodFunction = graph ensureFindMethod: syntax selector name
                                    for: recv.
         let next = graph continuation: "$send"
                          params: []
@@ -1737,7 +1770,7 @@ class CpsConverter { graph var next classes }
     method visitValueTypeDeclaration: syntax with: cc
         let value = graph makeVariable: "$value".
         let type = graph makeVariable: "$type".
-        let typecheck = graph findMethod: "typecheck:" for: type.
+        let typecheck = graph ensureFindMethod: "typecheck:" for: type.
         let checkCont = graph continuation: "$typecheck"
                               params: [type]
                               target: (graph application: typecheck
@@ -1830,7 +1863,7 @@ class CpsOptimizer { worklist graph }
                           (Constant includes: selectorArg)
                               => { let selector = selectorArg value.
                                    (CpsSelector includes: selector)
-                                       => { let methodFunction = classDef findMethod: selector name.
+                                       => { let methodFunction = classDef findMethod: selector.
                                             (methodFunction is False) not
                                                 => { let constMethod = graph ensureConstant: methodFunction.
                                                      aFindMethod uses
@@ -1952,14 +1985,7 @@ class CpsEvaluator { bound values parent }
             = (findMethod args first) visitBy: self.
         let theSelector :: CpsSelector
             = (findMethod args second) visitBy: self.
-        -- FIXME: CpsSelectors are interned in the CpsGraph,
-        -- but since ClassDefinitions are created _outside_ it,
-        -- they have their method dictionaries keyd by strings.
-        --
-        -- The fix is to have a table of pre-interned selectors
-        -- for built-in methods, and use that when interning
-        -- into CpsGraph.
-        theClass findMethod: theSelector name
+        theClass findMethod: theSelector
                  ifNone: { Error raise: "Method missing: {theClass name}#{theSelector name}\nAvailable:\n{theClass methodDictionary}" }!
 end
 
