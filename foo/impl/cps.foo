@@ -675,6 +675,10 @@ class Constant { id::Integer
         True!
 
 
+    method classDefinition
+        Instance classOf: value!
+
+
     method printName
         value hostValue displayString!
 
@@ -2318,6 +2322,17 @@ $entry:2($return:3):
     apply:17($bind:12, Integer class#typecheck:)(Integer:Global, X:Global)
 $bind:12($value:5):
     $return:3($value:5)
+"!
+
+    method test_convert_constant_add
+        let cps = self convert: "123 + X::Integer"
+                       with: [IntegerClassDefinition].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    apply:18($bind_arg:12, Integer class#typecheck:)(Integer:Global, X:Global)
+$bind_arg:12($arg:6):
+    $return:3(addi:34(123, $arg:6))
 "!
 
     method test_eval_typecheck_literal
