@@ -1,5 +1,5 @@
 import lib.assert.Assert
-import impl.parser.Parser
+import .parser.Parser
 
 
 interface Log
