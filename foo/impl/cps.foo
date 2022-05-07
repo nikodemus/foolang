@@ -10,8 +10,18 @@ interface Log
 end
 
 
+interface CpsValue
+    -- Valid value to flow through CPS in evaluator
+    -- or as a constant.
+    required method printName
+    required method classDefinition
+    required method hostValue
+end
+
+
 interface MethodDefinition
     is Object
+    is CpsValue
 
     method returnType
         False!
@@ -21,7 +31,7 @@ interface MethodDefinition
         False!
 
 
-    method displayString
+    method printName
         "{self home name}#{self name}"!
 
 
@@ -35,6 +45,9 @@ interface MethodDefinition
 
     method hostValue
         self!
+
+    method classDefinition
+        MethodClassDefinition!
 end
 
 
@@ -44,7 +57,6 @@ class UserMethod { name home }
     direct method name: name
         self name: name
              home: False!
-
 
     method home: new
         (home is False)
@@ -90,6 +102,20 @@ interface BuiltinMethodImpl
 end
 
 
+class OpaqueIdentityImpl {}
+    is BuiltinMethodImpl
+
+    method name
+        "opaqueIdentity"!
+
+    method lowerToCps: _aCont in: _aGraph with: _worklist
+        False!
+
+    method apply: args in: _classDefinition
+        args first!
+end
+
+
 class TypecheckImpl { type }
     is BuiltinMethodImpl
 
@@ -100,8 +126,8 @@ class TypecheckImpl { type }
 
     method apply: args in: _
         let value = args second.
-        (Instance classOf: value) is type
-            ifFalse: { Error raise: "CPS type error! Wanted: {type}, got: {value} ({Instance classOf: value})" }.
+        value classDefinition is type
+            ifFalse: { Error raise: "CPS type error! Wanted: {type}, got: {value} ({value classDefinition})" }.
         value!
 
 
@@ -134,6 +160,18 @@ end
 interface InlineMethodImpl
     is BuiltinMethodImpl
 
+
+    method apply: args in: _classDefinition
+        let pattern = self inliner apply: args.
+        let newRecv = pattern first.
+        let newSelector = pattern second.
+        (newRecv classDefinition findMethod: newSelector)
+            apply: ([newRecv]
+                        append: (pattern
+                                     from: 3
+                                     to: pattern size))!
+
+
     method lowerToCps: aContinuation in: graph with: worklist
         let apply = aContinuation target.
         let args = aContinuation args.
@@ -158,6 +196,7 @@ interface InlineMethodImpl
         worklist push: aContinuation!
 end
 
+
 class IntegerPlusImpl {}
     is InlineMethodImpl
 
@@ -171,6 +210,10 @@ end
 
 interface PrimitiveInlineMethodImpl
     is BuiltinMethodImpl
+
+    method apply: args in: _classDefinition
+        let pattern = self primitiveInliner apply: args.
+        pattern first apply: pattern rest!
 
     method lowerToCps: aContinuation in: graph with: worklist
         let apply = aContinuation target.
@@ -298,6 +341,7 @@ end
 
 class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
     is Object
+    is CpsValue
 
     -- ClassDefinition itself is used as the ClassDefinition for Class.
     -- Clever, yes? Horrible, maybe!
@@ -354,6 +398,10 @@ class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
         classDefinition!
 
 
+    method printName
+        name!
+
+
     method classDefinition
         ownClassDefinition!
 
@@ -364,8 +412,12 @@ class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
             ifFalse: { hostClass }!
 
 
-    method findMethod: name
+    method findMethod: name::String
         methodDictionary at: name!
+
+
+    method findMethod: name::String ifNone: block
+        methodDictionary at: name ifNone: block!
 
 
     method displayString
@@ -378,13 +430,21 @@ end
 
 class Instance { _class::ClassDefinition
                  _datum }
+    is Object
+    is CpsValue
 
     direct method class: aClass datum: aDatum
         self _class: aClass
              _datum: aDatum!
 
-    direct method classOf: instance::Instance
-        instance _class!
+    method classDefinition
+        _class!
+
+    method hostValue
+        _datum!
+
+    method printName
+        _datum toString!
 
     method toString
         "#<Instance {_class} {_datum}>"!
@@ -394,14 +454,8 @@ class Instance { _class::ClassDefinition
 
     method == other
         (Instance includes: other)
-            ifTrue: { _class is other _class
-                          ifTrue: { _datum == other _datum } }!
-
-    method hostValue
-        _datum!
-
-    method _class _class!
-    method _datum _datum!
+            ifTrue: { _class is other classDefinition
+                          ifTrue: { _datum == other hostValue } }!
 end
 
 
@@ -431,7 +485,20 @@ define IntegerClassDefinition
     (ClassDefinition
          hostClass: Integer
          methods: [BuiltinMethod new: IntegerPlusImpl new,
-                   BuiltinMethod new: IntegerAddIntegerImpl new])!
+                   BuiltinMethod new: IntegerAddIntegerImpl new,
+                   BuiltinMethod new: OpaqueIdentityImpl new])!
+
+
+define MethodClassDefinition
+    (ClassDefinition
+         name: "Method"
+         methods: [])!
+
+
+define SelectorClassDefinition
+    (ClassDefinition
+         name: "Selector"
+         methods: [])!
 
 
 class Set { dict }
@@ -659,7 +726,7 @@ end
 
 
 class Constant { id::Integer
-                 value
+                 value::CpsValue
                  uses::Set }
     is Expression
     is Childless
@@ -675,8 +742,12 @@ class Constant { id::Integer
         True!
 
 
+    method classDefinition
+        value classDefinition!
+
+
     method printName
-        value hostValue displayString!
+        value printName!
 
 
     method replaceUses: expr1 with: expr2
@@ -693,11 +764,17 @@ end
 
 
 class CpsSelector { name }
-    method displayString
+    is Object
+    is CpsValue
+
+    method printName
         "#{name}"!
 
     method hostValue
-        self!
+        Selector intern: name!
+
+    method classDefinition
+        SelectorClassDefinition!
 end
 
 
@@ -872,6 +949,13 @@ class ADDI {}
 
     direct method visit: operation by: visitor
         visitor visitAddi: operation!
+
+
+    direct method apply: args
+        Instance
+            class: IntegerClassDefinition
+            datum: (args first hostValue :: Integer +
+                    args second hostValue :: Integer)!
 end
 
 
@@ -896,6 +980,9 @@ class FIND_METHOD {}
 
     direct method visit: operation by: visitor
         visitor visitFindMethod: operation!
+
+    direct method visit: operation by: visitor with: arg
+        visitor visitFindMethod: operation with: arg!
 end
 
 
@@ -955,7 +1042,6 @@ class Operation { id::Integer
         kind = INVALID!
 
 
-
     method replaceUses: expr1 with: expr2
         expr2 addUse: self.
         args = args replace: expr1 with: expr2.
@@ -965,6 +1051,10 @@ class Operation { id::Integer
 
     method visitBy: visitor
         visitor visitOperation: self!
+
+
+    method visitBy: visitor with: arg
+        visitor visitOperation: self with: arg!
 end
 
 
@@ -1187,6 +1277,10 @@ class Application { id::Integer
 
     method printName
         "apply:{id}({target printName}, {function printName})"!
+
+
+    method toString
+        self printName!
 
 
     method visitBy: visitor
@@ -1773,12 +1867,13 @@ end
 class CpsEvaluator { bound values parent }
 
     direct method new
-        self bound: False
-             values: False
+        self bound: []
+             values: []
              parent: False!
 
 
     direct method eval: cps
+        -- Log println: (CpsPrinter printToString: cps).
         cps entry
             visitBy: (CpsEvaluator new)
             with: [{ |value| return value }]!
@@ -1788,7 +1883,7 @@ class CpsEvaluator { bound values parent }
         CpsEvaluator
             bound: params
             values: args
-            parent: parent!
+            parent: self!
 
 
     method visitAll: seq
@@ -1812,11 +1907,11 @@ class CpsEvaluator { bound values parent }
 
 
     method visitVariable: var
-        bound is False
-            ifTrue: { Error raise: "Unbound variable: {var printName}" }.
         let index = bound positionOf: var.
         index is False
-            ifTrue: { parent visitVariable: var }
+            ifTrue: { parent is False
+                          ifTrue: { Error raise: "Unbound variable: {var printName}" }.
+                      parent visitVariable: var }
             ifFalse: { values at: index }!
 
 
@@ -1827,7 +1922,7 @@ class CpsEvaluator { bound values parent }
 
 
     method visitConstant: constant
-        constant value :: Instance!
+        constant value :: CpsValue!
 
 
     method visitConstant: constant with: args
@@ -1837,6 +1932,30 @@ class CpsEvaluator { bound values parent }
     method visitGlobal: aGlobal
         aGlobal definition!
 
+
+    method visitOperation: anOp
+        anOp kind visit: anOp by: self!
+
+
+    method visitOperation: anOp with: args
+        (anOp kind visit: anOp by: self)
+            apply: args!
+
+
+    method visitClassOf: classOf
+        let arg = classOf args first visitBy: self.
+        arg classDefinition!
+
+
+    method visitFindMethod: findMethod
+        let theClass :: ClassDefinition
+            = (findMethod args first) visitBy: self.
+        let theSelector :: CpsSelector
+            = (findMethod args second) visitBy: self.
+        -- FIXME: Intern CpsSelectors properly so host dictionaries
+        -- can use them as keys instead of strings.
+        theClass findMethod: theSelector name
+                 ifNone: { Error raise: "Method missing: {theClass name}#{theSelector name}\nAvailable:\n{theClass methodDictionary}" }!
 end
 
 
@@ -2320,11 +2439,28 @@ $bind:12($value:5):
     $return:3($value:5)
 "!
 
+    method test_convert_constant_add
+        let cps = self convert: "123 + X::Integer"
+                       with: [IntegerClassDefinition].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    apply:18($bind_arg:12, Integer class#typecheck:)(Integer:Global, X:Global)
+$bind_arg:12($arg:6):
+    $return:3(addi:34(123, $arg:6))
+"!
+
     method test_eval_typecheck_literal
         let cps = self convert: "123 :: Integer"
                        with: [IntegerClassDefinition].
         assert that: { (CpsEvaluator eval: cps) hostValue }
                equals: 123!
+
+    method test_eval_send_message
+        let cps = self convert: "123 opaqueIdentity + 321"
+                       with: [IntegerClassDefinition].
+        assert that: { (CpsEvaluator eval: cps) hostValue }
+               equals: 444!
 end
 
 class Main {}
