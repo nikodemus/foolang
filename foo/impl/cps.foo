@@ -1523,7 +1523,7 @@ class CpsConverter { graph var next classes }
              classes: classMap!
 
 
-    direct method convert: syntax withGlobalDefinitions: defs
+    direct method convert: syntax with: defs
         let converter = self with: defs.
         converter graph addGlobalDefinitions: defs.
         converter graph
@@ -2028,17 +2028,17 @@ class TestCPS { assert system }
         system = new!
 
     method convert: source
-        self convert: source withGlobalDefinitions: []!
+        self convert: source with: []!
 
 
-    method convert: source withGlobalDefinitions: defs
+    method convert: source with: defs
         let syntax = Parser parseExpression: source.
-        CpsConverter convert: syntax withGlobalDefinitions: defs!
+        CpsConverter convert: syntax with: defs!
 
 
     method test_convert_addition_of_integers_optimizes_to_operation_addi
         let cps = self convert: "let a = X a :: Integer. let b = X b :: Integer. a + b"
-                       withGlobalDefinitions: [IntegerClassDefinition].
+                       with: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2055,7 +2055,7 @@ $let:16(b:6):
 
     method test_convert_arity_0_block
         let cps = self convert: "\{ 421 }"
-                       withGlobalDefinitions: [IntegerClassDefinition].
+                       with: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2080,8 +2080,8 @@ $bind_recv:16($recv:8):
 
     method test_convert_boolean_ifFalse
         let cps = self convert: "X :: Boolean ifFalse: \{ 1 }"
-                       withGlobalDefinitions: [BooleanClassDefinition,
-                                               IntegerClassDefinition].
+                       with: [BooleanClassDefinition,
+                              IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2097,8 +2097,8 @@ $ifFalse:16():
 
     method test_convert_boolean_ifTrue
         let cps = self convert: "X :: Boolean ifTrue: \{ 1 }"
-                       withGlobalDefinitions: [BooleanClassDefinition,
-                                               IntegerClassDefinition].
+                       with: [BooleanClassDefinition,
+                              IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2114,8 +2114,8 @@ $ifFalse:34():
 
     method test_convert_boolean_ifTrueIfFalse
         let cps = self convert: "X :: Boolean ifTrue: \{ 1 } ifFalse: \{ 2 }"
-                       withGlobalDefinitions: [BooleanClassDefinition,
-                                               IntegerClassDefinition].
+                       with: [BooleanClassDefinition,
+                              IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2237,7 +2237,7 @@ strict digraph \{
 
     method test_convert_constant_integer
         let cps = self convert: "123"
-                       withGlobalDefinitions: [IntegerClassDefinition].
+                       with: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2256,7 +2256,7 @@ $entry:2($return:3):
 
     method test_convert_let
         let cps = self convert: "let x = 87. x"
-                       withGlobalDefinitions: [IntegerClassDefinition].
+                       with: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2266,7 +2266,7 @@ $entry:2($return:3):
 
     method test_convert_return
         let cps = self convert: "return 421. X boom"
-                       withGlobalDefinitions: [IntegerClassDefinition].
+                       with: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2276,7 +2276,7 @@ $entry:2($return:3):
 
     method test_convert_seq
         let cps = self convert: "X some: 12 message: 97. Y + Z"
-                       withGlobalDefinitions: [IntegerClassDefinition].
+                       with: [IntegerClassDefinition].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2297,9 +2297,9 @@ $entry:2($return:3):
 
     method test_convert_typecheck_gives_type
         let cps = self convert: "X::Integer + Y"
-                       withGlobalDefinitions: [(ClassDefinition
-                                                    name: "Integer"
-                                                    methods: [(UserMethod name: "+")])].
+                       with: [(ClassDefinition
+                                   name: "Integer"
+                                   methods: [(UserMethod name: "+")])].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2311,7 +2311,7 @@ $bind_recv:14($recv:5):
 
     method test_convert_typecheck_redundancy
         let cps = self convert: "X :: Integer :: Integer"
-                       withGlobalDefinitions: [(ClassDefinition name: "Integer")].
+                       with: [(ClassDefinition name: "Integer")].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2324,7 +2324,7 @@ $bind:12($value:5):
     -- host class Integer.
     method test_eval_typecheck_literal
         let cps = self convert: "123 :: Integer"
-                       withGlobalDefinitions: [IntegerClassDefinition].
+                       with: [IntegerClassDefinition].
         assert that: { (CpsEvaluator eval: cps) hostValue }
                equals: 123!
 end
