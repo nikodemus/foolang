@@ -609,6 +609,9 @@ class SyntaxSelfInstance {}
     method visitBy: visitor
         visitor visitSelfInstance: self!
 
+    method visitBy: visitor with: arg
+        visitor visitSelfInstance: self with: arg!
+
     method weight
         0!
 
