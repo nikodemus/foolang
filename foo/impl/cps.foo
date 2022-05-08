@@ -45,8 +45,38 @@ class CpsSelector { name }
 end
 
 
-define StandardSelectors
-    let dict = Dictionary new.
+class Namespace { _dictionary _sealed }
+    -- For interning selectors
+    direct method empty
+        self _dictionary: Dictionary new
+             _sealed: False!
+
+
+    direct method standard
+        StandardNamespace copy!
+
+
+    method intern: name
+        _dictionary
+            at: name
+            ifNonePut: { _sealed
+                             ifTrue: { Error raise: "Cannot intern {name displayString} in a sealed namespace!" }.
+                         CpsSelector name: name }!
+
+
+    method seal
+        _sealed = True.
+        self!
+
+
+    method copy
+        Namespace _dictionary: _dictionary copy
+                  _sealed: False!
+end
+
+
+define StandardNamespace
+    let namespace = Namespace empty.
     [
          "+",
          "addInteger:",
@@ -59,8 +89,17 @@ define StandardSelectors
          "whileTrue:"
     ]
     do: { |each|
-          dict put: (CpsSelector name: each) at: each  }.
-    dict!
+          namespace intern: each }.
+    namespace seal!
+
+
+extend String
+    -- This is the solution to allowing users to
+    -- intern without special objects: they cannot
+    -- intern new things!
+    method intern
+        StandardNamespace intern: self!
+end
 
 
 interface MethodDefinition
@@ -76,7 +115,7 @@ interface MethodDefinition
 
 
     method printName
-        "{self home name}#{self name}"!
+        "{self home name}#{self selector name}"!
 
 
     method toString
@@ -90,37 +129,44 @@ interface MethodDefinition
     method hostValue
         self!
 
+
     method classDefinition
         MethodClassDefinition!
+
 
     method isStandard
         True!
 end
 
 
-class UserMethod { name home cps }
+class UserMethod { selector home cps }
     is MethodDefinition
 
     direct method name: name
-        self name: name
+        self selector: name intern
              home: False
              cps: False!
 
-    direct method name: name cps: cps
-        self name: name
+
+    direct method selector: selector cps: cps
+        self selector: selector
              home: False
              cps: cps!
+
 
     method home: new
         (home is False)
             ifFalse: { Error raise: "{self} already has a home: {self}" }.
         home= new!
 
+
     method displayOn: stream
-        stream writeString: "#<UserMethod {name}>"!
+        stream writeString: "#<UserMethod {selector name}>"!
+
 
     method isStandard
         False!
+
 
     method apply: args
         cps is False
@@ -138,8 +184,8 @@ class BuiltinMethod { home impl }
              impl: impl!
 
 
-    method name
-        impl name!
+    method selector
+        impl selector!
 
 
     method apply: args
@@ -156,7 +202,7 @@ class BuiltinMethod { home impl }
 
     method home: new
         (home is False)
-            ifFalse: { Error raise: "BuiltinMethod {name} already has a home: {home}" }.
+            ifFalse: { Error raise: "BuiltinMethod {self selector name} already has a home: {home}" }.
         home = new!
 end
 
@@ -168,13 +214,16 @@ end
 
 
 class OpaqueIdentityImpl {}
+    -- Very useful for compiler testing.
     is BuiltinMethodImpl
 
-    method name
-        "opaqueIdentity"!
+    method selector
+        "opaqueIdentity" intern!
+
 
     method lowerToCps: _aCont in: _aGraph with: _worklist
         False!
+
 
     method apply: args in: _classDefinition
         args first!
@@ -185,8 +234,8 @@ class TypecheckImpl { type }
     is BuiltinMethodImpl
 
 
-    method name
-        "typecheck:"!
+    method selector
+        "typecheck:" intern!
 
 
     method apply: args in: _
@@ -230,7 +279,7 @@ interface InlineMethodImpl
         let pattern = self inliner apply: args.
         let newRecv = pattern first.
         let newSelector = pattern second.
-        (newRecv classDefinition findMethod: (classDefinition findSelector: newSelector))
+        (newRecv classDefinition findMethod: newSelector)
             apply: ([newRecv]
                         append: (pattern
                                      from: 3
@@ -265,11 +314,11 @@ end
 class IntegerPlusImpl {}
     is InlineMethodImpl
 
-    method name
-        "+"!
+    method selector
+        "+" intern!
 
     method inliner
-        { |a b| [b, "addInteger:", a] }!
+        { |a b| [b, "addInteger:" intern, a] }!
 end
 
 
@@ -297,8 +346,8 @@ end
 class IntegerAddIntegerImpl {}
     is PrimitiveInlineMethodImpl
 
-    method name
-        "addInteger:"!
+    method selector
+        "addInteger:" intern!
 
 
     method primitiveInliner
@@ -309,13 +358,14 @@ end
 class IfTrueIfFalseImpl { ifTrue ifFalse }
     is BuiltinMethodImpl
 
-    method name
-        let name = StringOutput
-                       with: { |out|
-                               ifTrue => { out writeString: "ifTrue:" }.
-                               ifFalse => { out writeString: "ifFalse:" } }.
-        name isEmpty not assert: "IfTrueIfFalseImpl#name".
-        name!
+    method selector
+        (ifTrue and: ifFalse)
+            => { return "ifTrue:ifFalse:" intern }.
+        ifTrue
+            => { return "ifTrue:" intern }.
+        ifFalse
+            => { return "ifFalse:" intern }.
+        Error raise: "Invalid IfTrueIfFalseImpl!"!
 
     method lowerToCps: aContinuation in: graph with: worklist
         let lastArg = (ifTrue and: ifFalse)
@@ -347,15 +397,12 @@ class IfTrueIfFalseImpl { ifTrue ifFalse }
 end
 
 
-class WhileLoopImpl { name while }
+class WhileLoopImpl { selector while }
     is BuiltinMethodImpl
 
-    direct method newWhileTrue
-        self name: "whileTrue:" while: True!
-
-
-    direct method newWhileFalse
-        self name: "whileFalse:" while: False!
+    direct method while: maybe
+        self selector: ("while{maybe}:" intern)
+             while: maybe!
 
 
     method lowerToCps: aContinuation in: graph with: worklist
@@ -403,7 +450,7 @@ class WhileLoopImpl { name while }
 end
 
 
-class ClassDefinition { name hostClass ownClassDefinition methodDictionary selectors }
+class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
     is Object
     is CpsValue
 
@@ -459,32 +506,22 @@ class ClassDefinition { name hostClass ownClassDefinition methodDictionary selec
 
     direct method name: name hostClass: hostClass
                   methods: methods directMethods: directMethods
-        let selectors = Dictionary new.
         let instanceMethodDictionary = Dictionary new.
         let directMethodDictionary = Dictionary new.
         let ownClassDefinition = self name: "{name} class"
                                       hostClass: hostClass classOf
                                       ownClassDefinition: ClassDefinition
-                                      methodDictionary: directMethodDictionary
-                                      selectors: selectors.
+                                      methodDictionary: directMethodDictionary.
         let classDefinition = self name: name
                                    hostClass: hostClass
                                    ownClassDefinition: ownClassDefinition
-                                   methodDictionary: instanceMethodDictionary
-                                   selectors: selectors.
+                                   methodDictionary: instanceMethodDictionary.
         methods do: { |each|
-                      each home: classDefinition.
-                      instanceMethodDictionary
-                          put: each
-                          at: (classDefinition internMethodSelector: each) }.
-
+                      classDefinition addMethod: each }.
         directMethods do: { |each|
-                            each home: ownClassDefinition.
-                            directMethodDictionary
-                                put: each
-                                at: (ownClassDefinition internMethodSelector: each) }.
+                            ownClassDefinition addMethod: each }.
 
-        let typecheckSelector = StandardSelectors at: "typecheck:".
+        let typecheckSelector = "typecheck:" intern.
         (directMethodDictionary has: typecheckSelector)
             ifFalse: { let typecheck = BuiltinMethod
                                            home: ownClassDefinition
@@ -496,20 +533,12 @@ class ClassDefinition { name hostClass ownClassDefinition methodDictionary selec
         classDefinition!
 
 
-    method internMethodSelector: aMethod
-        let name = aMethod name.
-        selectors
-            at: name
-            ifNonePut: { aMethod isStandard
-                             ifTrue: { StandardSelectors
-                                           at: name
-                                           ifNone: { Error raise: "Standard selector is missing: #{name}" } }
-                             ifFalse: { CpsSelector name: name } }!
+    method addMethod: aMethod
+        aMethod home: self.
+        methodDictionary
+            put: aMethod
+            at: aMethod selector!
 
-    method findSelector: name
-        selectors
-            at: name
-            ifNone: { Error raise: "No such s#{name} in class definition {name}" }!
 
     method printName
         name!
@@ -590,8 +619,8 @@ define FunctionClassDefinition
     (ClassDefinition
          name: "Function"
          hostClass: Closure
-         methods: [BuiltinMethod new: WhileLoopImpl newWhileTrue,
-                   BuiltinMethod new: WhileLoopImpl newWhileFalse])!
+         methods: [BuiltinMethod new: (WhileLoopImpl while: True),
+                   BuiltinMethod new: (WhileLoopImpl while: False)])!
 
 
 define IntegerClassDefinition
@@ -1529,7 +1558,6 @@ class CpsGraph { entry::Continuation
                  operations::OpMap
                  constants::Dictionary
                  globals::Dictionary
-                 selectors::Dictionary
                  continuations::List }
     is Expression
 
@@ -1550,7 +1578,6 @@ class CpsGraph { entry::Continuation
                         operations: OpMap new
                         constants: Dictionary new
                         globals: Dictionary new
-                        selectors: Dictionary new
                         continuations: (List with: entry).
         exit addUse: exit.
         entry addUse: graph.
@@ -1657,24 +1684,7 @@ class CpsGraph { entry::Continuation
 
     method addDefinition: definition
         let global = self ensureGlobal: definition name.
-        global definition: definition.
-
-        (ClassDefinition includes: definition)
-            ifTrue: { definition selectors
-                          do: { |name selector|
-                                let constant = selectors
-                                                   at: name
-                                                   ifNonePut: { self ensureConstant: selector }.
-                                constant value is selector
-                                    ifFalse: { Error raise: "Multiple selectors with same name: {name}" } } }!
-
-
-    method ensureSelector: name
-        selectors
-            at: name
-            ifNonePut: { (self ensureConstant: (StandardSelectors
-                                                    at: name
-                                                    ifNone: { (CpsSelector name: name) })) }!
+        global definition: definition!
 
 
     method ensureOperation: kind args: args
@@ -1708,8 +1718,8 @@ class CpsGraph { entry::Continuation
                 args: [recv]!
 
 
-    method ensureFindMethod: name for: recv
-        let selector = self ensureSelector: name.
+    method ensureFindMethod: selector for: recv
+        let selector = self ensureConstant: selector::CpsSelector.
         let classOf = self classOf: recv.
         self ensureOperation: FIND_METHOD
              args: [classOf, selector]!
@@ -1724,9 +1734,9 @@ class CpsGraph { entry::Continuation
 end
 
 
-class CpsConverter { graph var next classes }
+class CpsConverter { graph var next classes namespace }
 
-    direct method with: classes
+    direct method with: classes in: namespace
         let classMap = Dictionary new.
         classes
             do: { |each|
@@ -1736,11 +1746,12 @@ class CpsConverter { graph var next classes }
         self graph: CpsGraph new
              var: False
              next: False
-             classes: classMap!
+             classes: classMap
+             namespace: namespace!
 
 
-    direct method convertExpr: syntax with: defs
-        let converter = self with: defs.
+    direct method convertExpr: syntax with: defs in: namespace
+        let converter = self with: defs in: namespace.
         converter graph addGlobalDefinitions: defs.
         converter graph
             entry: (syntax visitBy: converter
@@ -1748,37 +1759,34 @@ class CpsConverter { graph var next classes }
         converter graph optimize!
 
 
-    direct method convertMethod: aMethod with: defs
-        let converter = self with: defs.
+    direct method convertMethod: aMethod with: defs in: namespace
+        let converter = self with: defs in: namespace.
         let graph = converter graph.
         graph addGlobalDefinitions: defs.
         graph entry: (aMethod body visitBy: converter
                                    with: converter graph exit).
-        graph optimize!
-
-
-    -- KLUDGE: putting definition visiting into direct methods
-    direct method convertDefinition: syntax with: defs
-        syntax visitBy: self with: defs!
-
-
-    direct method visitClass: aClass with: defs
-        let methods
-            = aClass instanceMethods
-                collect: { |each| each visitBy: self with: defs }.
-        let directMethods
-            = aClass directMethods
-                collect: { |each| each visitBy: self with: defs }.
-        ClassDefinition
-            name: aClass name
-            methods: methods
-            directMethods: directMethods!
-
-
-    direct method visitMethod: aMethod with: defs
         UserMethod
-            name: aMethod selector name
-            cps: (CpsConverter convertMethod: aMethod with: defs)!
+            selector: (namespace intern: aMethod selector name)
+            cps: graph optimize!
+
+
+    direct method convertClass: aClass with: defs in: namespace
+        let newClass = ClassDefinition name: aClass name.
+        aClass instanceMethods
+            do: { |each|
+                  let converted = self
+                                      convertMethod: each
+                                      with: defs
+                                      in: namespace.
+                  newClass addMethod: converted }.
+        let ownClass = newClass ownClassDefinition.
+        aClass directMethods
+            do: { |each|
+                  let converted = self convertMethod: each
+                                       with: defs
+                                       in: namespace.
+                  ownClass addMethod: converted }.
+        newClass!
 
 
     method bindVariable: var
@@ -1786,7 +1794,8 @@ class CpsConverter { graph var next classes }
             graph: graph
             var: var
             next: self
-            classes: classes!
+            classes: classes
+            namespace: namespace!
 
 
     method bindVariables: vars
@@ -1857,7 +1866,8 @@ class CpsConverter { graph var next classes }
         let args = syntax arguments
                        collect: { |a| graph makeVariable: "$arg" }
                        as: Array.
-        let methodFunction = graph ensureFindMethod: syntax selector name
+        let selector = namespace intern: syntax selector name.
+        let methodFunction = graph ensureFindMethod: selector
                                    for: recv.
         let next = graph continuation: "$send"
                          params: []
@@ -1892,7 +1902,7 @@ class CpsConverter { graph var next classes }
     method visitValueTypeDeclaration: syntax with: cc
         let value = graph makeVariable: "$value".
         let type = graph makeVariable: "$type".
-        let typecheck = graph ensureFindMethod: "typecheck:" for: type.
+        let typecheck = graph ensureFindMethod: "typecheck:" intern for: type.
         let checkCont = graph continuation: "$typecheck"
                               params: [type]
                               target: (graph application: typecheck
@@ -2310,21 +2320,41 @@ class TestCPS { assert system }
         system = new!
 
     method convertExpr: source
-        self convertExpr: source with: []!
+        self convertExpr: source
+             with: []
+             in: Namespace standard!
 
 
     method convertExpr: source with: defs
+        self convertExpr: source
+             with: defs
+             in: Namespace standard!
+
+
+    method convertExpr: source with: defs in: namespace
         let syntax = Parser parseExpression: source.
-        CpsConverter convertExpr: syntax with: defs!
+        CpsConverter convertExpr: syntax
+                     with: defs
+                     in: namespace!
 
 
-    method convertDefinition: source
-        self convertDefinition: source with: []!
+    method convertClass: source
+        self convertClass: source
+             with: []
+             in: Namespace standard!
 
 
-    method convertDefinition: source with: defs
+    method convertClass: source with: defs
+        self convertClass: source
+             with: defs
+             in: Namespace standard!
+
+
+    method convertClass: source with: defs in: namespace
         let syntax = Parser parseDefinition: source.
-        CpsConverter convertDefinition: syntax with: defs!
+        CpsConverter convertClass: syntax
+                     with: defs
+                     in: namespace!
 
 
     method test_convert_addition_of_integers_optimizes_to_operation_addi
@@ -2333,15 +2363,15 @@ class TestCPS { assert system }
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:47($bind:42, findMethod:46(classOf:29(X:Global), #a))(X:Global)
-$bind:42($value:36):
-    apply:40($let:35, Integer class#typecheck:)(Integer:Global, $value:36)
-$let:35(a:8):
-    apply:31($bind:26, findMethod:30(classOf:29(X:Global), #b))(X:Global)
-$bind:26($value:19):
-    apply:24($let:18, Integer class#typecheck:)(Integer:Global, $value:19)
-$let:18(b:9):
-    $return:3(addi:58(a:8, b:9))
+    apply:45($bind:40, findMethod:44(classOf:27(X:Global), #a))(X:Global)
+$bind:40($value:34):
+    apply:38($let:33, Integer class#typecheck:)(Integer:Global, $value:34)
+$let:33(a:5):
+    apply:29($bind:24, findMethod:28(classOf:27(X:Global), #b))(X:Global)
+$bind:24($value:17):
+    apply:22($let:16, Integer class#typecheck:)(Integer:Global, $value:17)
+$let:16(b:6):
+    $return:3(addi:57(a:5, b:6))
 "!
 
     method test_convert_arity_0_block
@@ -2350,9 +2380,9 @@ $let:18(b:9):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    $return:3($block:10)
-$block:10($ret:8):
-    $ret:8(421)
+    $return:3($block:7)
+$block:7($ret:5):
+    $ret:5(421)
 "!
 
 
@@ -2376,12 +2406,12 @@ $bind_recv:16($recv:8):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:29($bind_recv:23, Boolean class#typecheck:)(Boolean:Global, X:Global)
-$bind_recv:23($recv:12):
-    select:40($recv:12, $ifTrue:39, $ifFalse:21)()
-$ifTrue:39():
+    apply:24($bind_recv:18, Boolean class#typecheck:)(Boolean:Global, X:Global)
+$bind_recv:18($recv:6):
+    select:35($recv:6, $ifTrue:34, $ifFalse:16)()
+$ifTrue:34():
     $return:3(False)
-$ifFalse:21():
+$ifFalse:16():
     $return:3(1)
 "!
 
@@ -2393,12 +2423,12 @@ $ifFalse:21():
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:29($bind_recv:23, Boolean class#typecheck:)(Boolean:Global, X:Global)
-$bind_recv:23($recv:12):
-    select:40($recv:12, $ifTrue:21, $ifFalse:39)()
-$ifTrue:21():
+    apply:24($bind_recv:18, Boolean class#typecheck:)(Boolean:Global, X:Global)
+$bind_recv:18($recv:6):
+    select:35($recv:6, $ifTrue:16, $ifFalse:34)()
+$ifTrue:16():
     $return:3(1)
-$ifFalse:39():
+$ifFalse:34():
     $return:3(False)
 "!
 
@@ -2410,12 +2440,12 @@ $ifFalse:39():
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:35($bind_recv:29, Boolean class#typecheck:)(Boolean:Global, X:Global)
-$bind_recv:29($recv:12):
-    select:43($recv:12, $ifTrue:27, $ifFalse:22)()
-$ifTrue:27():
+    apply:30($bind_recv:24, Boolean class#typecheck:)(Boolean:Global, X:Global)
+$bind_recv:24($recv:6):
+    select:38($recv:6, $ifTrue:22, $ifFalse:17)()
+$ifTrue:22():
     $return:3(1)
-$ifFalse:22():
+$ifFalse:17():
     $return:3(2)
 "!
 
@@ -2532,9 +2562,9 @@ strict digraph \{
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:20($bind_arg:14, Integer class#typecheck:)(Integer:Global, X:Global)
-$bind_arg:14($arg:9):
-    $return:3(addi:35(123, $arg:9))
+    apply:18($bind_arg:12, Integer class#typecheck:)(Integer:Global, X:Global)
+$bind_arg:12($arg:6):
+    $return:3(addi:34(123, $arg:6))
 "!
 
 
@@ -2583,9 +2613,9 @@ $entry:2($return:3):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    apply:26($seq:19, findMethod:25(classOf:24(X:Global), #some:message:))(X:Global, 12, 97)
-$seq:19($ignore:18):
-    apply:12($return:3, findMethod:11(classOf:10(Y:Global), #+))(Y:Global, Z:Global)
+    apply:24($seq:17, findMethod:23(classOf:22(X:Global), #some:message:))(X:Global, 12, 97)
+$seq:17($ignore:16):
+    apply:10($return:3, findMethod:9(classOf:8(Y:Global), #+))(Y:Global, Z:Global)
 "!
 
 
@@ -2607,8 +2637,8 @@ $entry:2($return:3):
                equals: "
 $entry:2($return:3):
     apply:20($bind_recv:14, Integer class#typecheck:)(Integer:Global, X:Global)
-$bind_recv:14($recv:6):
-    apply:10($return:3, Integer#+)($recv:6, Y:Global)
+$bind_recv:14($recv:5):
+    apply:10($return:3, Integer#+)($recv:5, Y:Global)
 "!
 
 
@@ -2636,15 +2666,18 @@ $bind:12($value:5):
                equals: 444!
 
     method test_convert_class
-        let def = self convertDefinition: "class A \{} end".
+        let def = self convertClass: "class A \{} end".
         assert true: { ClassDefinition includes: def }!
 
     method test_convert_class_with_direct_method
-        let def = self convertDefinition: "class A \{} direct method test 8092183! end"
-                       with: [IntegerClassDefinition].
+        let namespace = Namespace standard.
+        let def = self convertClass: "class A \{} direct method test 8092183! end"
+                       with: [IntegerClassDefinition]
+                       in: namespace.
         assert true: { ClassDefinition includes: def }.
         let cps = self convertExpr: "A test"
-                       with: [def].
+                       with: [def]
+                       in: namespace.
         assert that: { (CpsEvaluator eval: cps) hostValue }
                equals: 8092183!
 end
