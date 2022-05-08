@@ -1007,7 +1007,7 @@ end
 
 class InvalidTarget {}
     is Object
-    is ContinuationTarget
+    is AtomicContinuationTarget
     is UseTracking
 
     method id
