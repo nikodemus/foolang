@@ -217,6 +217,10 @@ class OpaqueIdentityImpl {}
     -- Very useful for compiler testing.
     is BuiltinMethodImpl
 
+    direct method for: _
+        self new!
+
+
     method selector
         "opaqueIdentity" intern!
 
@@ -232,6 +236,10 @@ end
 
 class ConstructorImpl { classDefinition }
     is BuiltinMethodImpl
+
+    direct method for: classDefinition
+        self classDefinition: classDefinition!
+
 
     method selector
         "new" intern!
@@ -250,6 +258,9 @@ end
 
 class TypecheckImpl { type }
     is BuiltinMethodImpl
+
+    direct method for: type
+        self type: type!
 
 
     method selector
@@ -535,12 +546,17 @@ class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
                                    ownClassDefinition: ownClassDefinition
                                    methodDictionary: instanceMethodDictionary.
 
-        methods do: { |each|
-                      classDefinition addMethod: each }.
-        directMethods do: { |each|
-                            ownClassDefinition addMethod: each }.
-        ownClassDefinition addMethod: (BuiltinMethod new: (TypecheckImpl type: classDefinition)).
-        ownClassDefinition addMethod: (BuiltinMethod new: (ConstructorImpl classDefinition: classDefinition)).
+        methods
+            do: { |each| classDefinition addMethod: each }.
+        self standardInstanceMethodImpls
+            do: { |each|
+                  classDefinition addMethod: (BuiltinMethod new: (each for: classDefinition)) }.
+
+        directMethods
+            do: { |each| ownClassDefinition addMethod: each }.
+        self standardDirectMethodImpls
+            do: { |each|
+                  ownClassDefinition addMethod: (BuiltinMethod new: (each for: classDefinition)) }.
 
         classDefinition!
 
@@ -550,6 +566,18 @@ class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
         methodDictionary
             put: aMethod
             at: aMethod selector!
+
+
+    direct method standardInstanceMethodImpls
+        [OpaqueIdentityImpl]!
+
+
+    direct method standardDirectMethodImpls
+        [
+            ConstructorImpl,
+            OpaqueIdentityImpl,
+            TypecheckImpl,
+        ]!
 
 
     method printName
@@ -2722,7 +2750,7 @@ $bind:12($value:5):
         let def = self convertClass: "
 class A \{}
     direct method test
-        self a + self b!
+        self opaqueIdentity a + self opaqueIdentity b!
     direct method a
         90!
     direct method b
@@ -2745,7 +2773,7 @@ class A \{}
     direct method test
         self new a!
     method a
-        self b + self c!
+        self opaqueIdentity b + self opaqueIdentity c!
     method b
         981!
     method c
