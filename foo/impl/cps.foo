@@ -83,6 +83,7 @@ define StandardNamespace
          "ifFalse:",
          "ifTrue:",
          "ifTrue:ifFalse:",
+         "new",
          "opaqueIdentity",
          "typecheck:",
          "whileFalse:",
@@ -226,6 +227,24 @@ class OpaqueIdentityImpl {}
 
     method apply: args in: _classDefinition
         args first!
+end
+
+
+class ConstructorImpl { classDefinition }
+    is BuiltinMethodImpl
+
+    method selector
+        "new" intern!
+
+
+    method lowerToCps: _aCont in: _aGraph with: _worklist
+        -- FIXME
+        False!
+
+
+    method apply: _args in: _classDefinition
+        Instance class: classDefinition
+                 datum: False!
 end
 
 
@@ -520,15 +539,8 @@ class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
                       classDefinition addMethod: each }.
         directMethods do: { |each|
                             ownClassDefinition addMethod: each }.
-
-        let typecheckSelector = "typecheck:" intern.
-        (directMethodDictionary has: typecheckSelector)
-            ifFalse: { let typecheck = BuiltinMethod
-                                           home: ownClassDefinition
-                                           impl: (TypecheckImpl type: classDefinition).
-                       directMethodDictionary
-                           put: typecheck
-                           at: typecheckSelector }.
+        ownClassDefinition addMethod: (BuiltinMethod new: (TypecheckImpl type: classDefinition)).
+        ownClassDefinition addMethod: (BuiltinMethod new: (ConstructorImpl classDefinition: classDefinition)).
 
         classDefinition!
 
@@ -2705,7 +2717,7 @@ $bind:12($value:5):
         assert that: { (CpsEvaluator eval: cps) hostValue }
                equals: 444!
 
-    method test_eval_sends_to_self
+    method test_eval_sends_to_self_in_direct_method
         let namespace = Namespace standard.
         let def = self convertClass: "
 class A \{}
@@ -2724,6 +2736,29 @@ end"
                        in: namespace.
         assert that: { (CpsEvaluator eval: cps) hostValue }
                equals: 178!
+
+
+    method test_eval_sends_to_self_in_instance_method
+        let namespace = Namespace standard.
+        let def = self convertClass: "
+class A \{}
+    direct method test
+        self new a!
+    method a
+        self b + self c!
+    method b
+        981!
+    method c
+        231!
+end"
+                      with: [IntegerClassDefinition]
+                      in: namespace.
+        assert true: { ClassDefinition includes: def }.
+        let cps = self convertExpr: "A test"
+                       with: [def]
+                       in: namespace.
+        assert that: { (CpsEvaluator eval: cps) hostValue }
+               equals: 1212!
 end
 
 class Main {}
