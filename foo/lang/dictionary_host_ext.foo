@@ -16,6 +16,15 @@ extend Dictionary
                        put: v }.
         new!
 
+
+    method reject: block
+        let new = Dictionary new.
+        self do: { |key value|
+                   (block optional: key value: value)
+                       ifFalse: { new put: value at: key } }.
+        new!
+
+
     method isEmpty
         self size is 0!
 
