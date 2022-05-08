@@ -19,3 +19,9 @@ cmake-build-debug
 c/.idea
 old.*
 .idea
+gmon/**
+*.o
+*.d
+*.dot
+*.tmp
+*.log
