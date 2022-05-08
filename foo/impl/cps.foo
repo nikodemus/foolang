@@ -520,15 +520,7 @@ class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
                       classDefinition addMethod: each }.
         directMethods do: { |each|
                             ownClassDefinition addMethod: each }.
-
-        let typecheckSelector = "typecheck:" intern.
-        (directMethodDictionary has: typecheckSelector)
-            ifFalse: { let typecheck = BuiltinMethod
-                                           home: ownClassDefinition
-                                           impl: (TypecheckImpl type: classDefinition).
-                       directMethodDictionary
-                           put: typecheck
-                           at: typecheckSelector }.
+        ownClassDefinition addMethod: (BuiltinMethod new: (TypecheckImpl type: classDefinition)).
 
         classDefinition!
 
