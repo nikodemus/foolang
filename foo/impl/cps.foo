@@ -422,7 +422,8 @@ class IfTrueIfFalseImpl { ifTrue ifFalse }
                                      then: thenCont
                                      else: elseCont).
         aContinuation removeArgs.
-        aContinuation addArgs: [apply target]!
+        aContinuation addArgs: [apply target].
+        aContinuation target simplifyIn: graph!
 end
 
 
@@ -888,7 +889,7 @@ interface Expression
         False!
 
 
-    method simplify
+    method simplifyIn: _
         False!
 
 
@@ -1148,6 +1149,13 @@ class CLASS_OF {}
         "classOf"!
 
 
+    direct method simplify: operation in: graph
+        let arg = operation args first.
+        arg hasKnownClass
+            ifTrue: { let constant = graph ensureConstant: arg classDefinition.
+                      operation replaceUsesWith: constant }!
+
+
     direct method visit: operation by: visitor
         visitor visitClassOf: operation!
 end
@@ -1160,8 +1168,22 @@ class FIND_METHOD {}
         "findMethod"!
 
 
+
+    direct method simplify: operation in: graph
+        operation args first simplifyIn: graph.
+        -- Need to refetch the args, in case they
+        -- got simplified!
+        let args = operation args.
+        (Constant includes: args first)
+            ifTrue: { (args first value findMethod: args second value)
+                          => { |theMethod|
+                               let constant = graph ensureConstant: theMethod.
+                               operation replaceUsesWith: constant } }!
+
+
     direct method visit: operation by: visitor
         visitor visitFindMethod: operation!
+
 
     direct method visit: operation by: visitor with: arg
         visitor visitFindMethod: operation with: arg!
@@ -1193,6 +1215,10 @@ class Operation { id::Integer
 
     method isFoldable
         kind isFoldable!
+
+
+    method simplifyIn: graph
+        kind simplify: self in: graph!
 
 
     method doChildren: block
@@ -1317,14 +1343,15 @@ class Continuation { id::Integer
                      => { args last propagateTypes: [value returnType] } }!
 
 
-    method simplify
-        -- Log println: "\nSIMPLIFY: {self printName}".
-        -- Log println: "   uniqueTarget: {self hasUniqueTarget}".
-        -- Log println: "   target: {target classOf name}".
-        -- (UseTracking includes: target)
-        --     => { Log println: "   uses: {target uses collect: #printName}" }.
+    method simplifyIn: graph
         { self hasUniqueTarget }
             whileTrue: { self inlineUniqueTarget }.
+        -- The above zips up chains of local continuations
+        -- nicely, which in turn leaves us with a Select
+        -- or Application here, with a good chance of constant
+        -- arguments thanks to the inlinining.
+        (Continuation includes: target)
+            ifFalse: { target simplifyIn: graph }.
         self!
 
 
@@ -1461,6 +1488,10 @@ class Application { id::Integer
         "apply:{id}({target printName}, {function printName})"!
 
 
+    method simplifyIn: graph
+        function simplifyIn: graph!
+
+
     method toString
         self printName!
 
@@ -1512,7 +1543,7 @@ class Select { id::Integer
         node2 addUse: self!
 
 
-    method simplify
+    method simplifyIn: _
         uses singular
             => { |use|
                  (self hasUniqueTarget: then)
@@ -1711,7 +1742,7 @@ class CpsGraph { entry::Continuation
 
     method entry: target
         entry target: target.
-        entry simplify.
+        entry simplifyIn: self.
         self cleanup.
         self!
 
@@ -1905,7 +1936,7 @@ class CpsConverter { graph var next classMap namespace }
         graph continuation: "$makeClosure"
               params: []
               target: cc
-              args: [block simplify]!
+              args: [block simplifyIn: graph]!
 
 
     method visitLet: syntax with: cc
@@ -1917,8 +1948,9 @@ class CpsConverter { graph var next classMap namespace }
                          params: [var]
                          target: body
                          args: [].
-        (syntax value visitBy: self with: bind simplify)
-            simplify!
+        (syntax value visitBy: self
+                      with: (bind simplifyIn: graph))
+            simplifyIn: graph!
 
 
     method visitLiteral: syntax with: cc
@@ -1934,7 +1966,7 @@ class CpsConverter { graph var next classMap namespace }
               params: []
               target: cc
               args: [const])
-        simplify!
+        simplifyIn: graph!
 
 
     method visitReturn: syntax with: _
@@ -1969,12 +2001,13 @@ class CpsConverter { graph var next classMap namespace }
                                    target: next
                                    args: [].
                   next = (syntaxArg visitBy: self with: bind)
-                             simplify }.
+                             simplifyIn: graph }.
         let recvBind = graph continuation: "$bind_recv"
                              params: [recv]
                              target: next
                              args: [].
-        syntax receiver visitBy: self with: recvBind simplify!
+        syntax receiver visitBy: self
+                        with: (recvBind simplifyIn: graph)!
 
 
     method visitSeq: syntax with: cc
@@ -1983,7 +2016,8 @@ class CpsConverter { graph var next classMap namespace }
                             params: [graph makeVariable: "$ignore"]
                             target: then
                             args: [].
-        syntax first visitBy: self with: discard simplify!
+        syntax first visitBy: self
+                     with: (discard simplifyIn: graph)!
 
 
     method visitValueTypeDeclaration: syntax with: cc
@@ -2038,7 +2072,9 @@ class CpsOptimizer { worklist graph }
     method visitContinuation: aCont
         -- Do strictly local simplifications: basically zipping up chains of
         -- of known continuations into a single one.
-        aCont simplify.
+        --
+        -- FIXME: It seems to me this should always be a no-op here?
+        aCont simplifyIn: graph.
         -- If target is an operation, let its optimizers kick in. In case
         -- of APPLY the continuation is the user of the arguments, but the
         -- apply is
@@ -2092,7 +2128,7 @@ class CpsOptimizer { worklist graph }
 
 
     method visitSelect: aSelect
-        aSelect simplify!
+        aSelect simplifyIn: graph!
 
 
     method visitAddi: _
