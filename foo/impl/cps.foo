@@ -388,7 +388,8 @@ interface PrimitiveInlineMethodImpl
         aContinuation removeArgs.
         aContinuation addArgs: [primop].
         aContinuation target: cc.
-        cc propagateTypes: [primop type]!
+        cc propagateTypes: [primop type].
+        worklist push: aContinuation!
 end
 
 
@@ -913,6 +914,14 @@ interface Expression
         False!
 
 
+    method isConstant
+        False!
+
+
+    method isOperation
+        False!
+
+
     method simplifyIn: _
         False!
 
@@ -953,6 +962,10 @@ class Constant { id::Integer
 
 
     method hasKnownClass
+        True!
+
+
+    method isConstant
         True!
 
 
@@ -1150,6 +1163,12 @@ end
 interface OperationKind
     direct method isFoldable
         True!
+
+    direct method simplify: op in: graph
+        (op args allSatisfy: #isConstant)
+            ifTrue: { let argVals = op args collect: #value.
+                      let value = graph ensureConstant: (op kind apply: argVals).
+                      op replaceUsesWith: value }!
 end
 
 
@@ -1180,11 +1199,8 @@ class CLASS_OF {}
         "classOf"!
 
 
-    direct method simplify: operation in: graph
-        let arg = operation args first.
-        arg hasKnownClass
-            ifTrue: { let constant = graph ensureConstant: arg classDefinition.
-                      operation replaceUsesWith: constant }!
+    direct method apply: args
+        args first classDefinition!
 
 
     direct method visit: operation by: visitor
@@ -1213,6 +1229,10 @@ class FIND_METHOD {}
                           => { |theMethod|
                                let constant = graph ensureConstant: theMethod.
                                operation replaceUsesWith: constant } }!
+
+
+    direct method apply: args
+        args first findMethod: args second!
 
 
     direct method visit: operation by: visitor
@@ -1249,6 +1269,10 @@ class Operation { id::Integer
 
     method returnType
         kind returnType: self!
+
+
+    method isOperation
+        True!
 
 
     method isFoldable
@@ -1390,6 +1414,8 @@ class Continuation { id::Integer
         -- arguments thanks to the inlinining.
         (Continuation includes: target)
             ifFalse: { target simplifyIn: graph }.
+        (args select: #isOperation)
+            do: { |each| each simplifyIn: graph }.
         self!
 
 
@@ -2824,14 +2850,14 @@ class A \{}
     method b
         174!
     method c
-        213!
+        214!
 end"
                       with: [IntegerClassDefinition]
                       in: namespace.
         assert that: { CpsPrinter printToString: (def findMethod: (namespace intern: "a")) cps }
                equals: "
 $entry:2($return:3, $receiver::A:4):
-    $return:3(addi:49(174, 213))
+    $return:3(388)
 "!
 
 
@@ -2857,7 +2883,7 @@ end"
 $entry:2($return:3, $receiver::A class:4):
     apply:17($bind_recv:12, A class#new)($receiver::A class:4)
 $bind_recv:12($recv::A:6):
-    $return:3(addi:30(174, 213))
+    $return:3(387)
 "!
 
 
