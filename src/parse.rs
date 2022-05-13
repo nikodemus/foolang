@@ -579,7 +579,17 @@ fn array_prefix(parser: &Parser) -> Parse {
                 break data;
             }
             if token == Token::SIGIL && parser.slice() == "," {
-                continue;
+                match parser.lookahead()? {
+                    // Handle trailing comma
+                    (Token::SIGIL, span) if "]" == parser.slice_at(span.clone()) => {
+                        parser.next_token()?;
+                        source_location.extend_span_to(parser.span().end);
+                        break data;
+                    }
+                    _ => {
+                        continue;
+                    }
+                }
             }
             return parser.error("Expected ] or ,");
         }

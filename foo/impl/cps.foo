@@ -217,6 +217,10 @@ class OpaqueIdentityImpl {}
     -- Very useful for compiler testing.
     is BuiltinMethodImpl
 
+    direct method for: _
+        self new!
+
+
     method selector
         "opaqueIdentity" intern!
 
@@ -232,6 +236,10 @@ end
 
 class ConstructorImpl { classDefinition }
     is BuiltinMethodImpl
+
+    direct method for: classDefinition
+        self classDefinition: classDefinition!
+
 
     method selector
         "new" intern!
@@ -250,6 +258,9 @@ end
 
 class TypecheckImpl { type }
     is BuiltinMethodImpl
+
+    direct method for: type
+        self type: type!
 
 
     method selector
@@ -535,12 +546,17 @@ class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
                                    ownClassDefinition: ownClassDefinition
                                    methodDictionary: instanceMethodDictionary.
 
-        methods do: { |each|
-                      classDefinition addMethod: each }.
-        directMethods do: { |each|
-                            ownClassDefinition addMethod: each }.
-        ownClassDefinition addMethod: (BuiltinMethod new: (TypecheckImpl type: classDefinition)).
-        ownClassDefinition addMethod: (BuiltinMethod new: (ConstructorImpl classDefinition: classDefinition)).
+        methods
+            do: { |each| classDefinition addMethod: each }.
+        self standardInstanceMethodImpls
+            do: { |each|
+                  classDefinition addMethod: (BuiltinMethod new: (each for: classDefinition)) }.
+
+        directMethods
+            do: { |each| ownClassDefinition addMethod: each }.
+        self standardDirectMethodImpls
+            do: { |each|
+                  ownClassDefinition addMethod: (BuiltinMethod new: (each for: classDefinition)) }.
 
         classDefinition!
 
@@ -550,6 +566,18 @@ class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
         methodDictionary
             put: aMethod
             at: aMethod selector!
+
+
+    direct method standardInstanceMethodImpls
+        [OpaqueIdentityImpl]!
+
+
+    direct method standardDirectMethodImpls
+        [
+            ConstructorImpl,
+            OpaqueIdentityImpl,
+            TypecheckImpl,
+        ]!
 
 
     method printName
@@ -979,7 +1007,7 @@ end
 
 class InvalidTarget {}
     is Object
-    is ContinuationTarget
+    is AtomicContinuationTarget
     is UseTracking
 
     method id
@@ -1006,7 +1034,7 @@ define INVALID_TARGET InvalidTarget new!
 
 
 class Variable { id::Integer
-                 name
+                 name::String
                  type
                  defs::Set
                  uses::Set }
@@ -1074,9 +1102,9 @@ class Variable { id::Integer
 
 
     method printName
-        name is False
-            ifTrue: { "$var:{id}" }
-            ifFalse: { "{name}:{id}" }!
+        type is False
+            ifTrue: { "{name}:{id}" }
+            ifFalse: { "{name}::{type name}:{id}" }!
 
 
     method visitBy: visitor
@@ -1708,11 +1736,6 @@ class CpsGraph { entry::Continuation
         Variable
             id: self nextId
             name: name!
-
-
-    method makeTemporary
-        Variable
-            id: self nextId!
 
 
     method ensureConstant: value
@@ -2418,12 +2441,12 @@ $entry:2($return:3):
     apply:45($bind:40, findMethod:44(classOf:27(X:Global), #a))(X:Global)
 $bind:40($value:34):
     apply:38($let:33, Integer class#typecheck:)(Integer:Global, $value:34)
-$let:33(a:5):
+$let:33(a::Integer:5):
     apply:29($bind:24, findMethod:28(classOf:27(X:Global), #b))(X:Global)
 $bind:24($value:17):
     apply:22($let:16, Integer class#typecheck:)(Integer:Global, $value:17)
-$let:16(b:6):
-    $return:3(addi:57(a:5, b:6))
+$let:16(b::Integer:6):
+    $return:3(addi:57(a::Integer:5, b::Integer:6))
 "!
 
     method test_convert_arity_0_block
@@ -2459,8 +2482,8 @@ $bind_recv:16($recv:8):
                equals: "
 $entry:2($return:3):
     apply:24($bind_recv:18, Boolean class#typecheck:)(Boolean:Global, X:Global)
-$bind_recv:18($recv:6):
-    select:35($recv:6, $ifTrue:34, $ifFalse:16)()
+$bind_recv:18($recv::Boolean:6):
+    select:35($recv::Boolean:6, $ifTrue:34, $ifFalse:16)()
 $ifTrue:34():
     $return:3(False)
 $ifFalse:16():
@@ -2476,8 +2499,8 @@ $ifFalse:16():
                equals: "
 $entry:2($return:3):
     apply:24($bind_recv:18, Boolean class#typecheck:)(Boolean:Global, X:Global)
-$bind_recv:18($recv:6):
-    select:35($recv:6, $ifTrue:16, $ifFalse:34)()
+$bind_recv:18($recv::Boolean:6):
+    select:35($recv::Boolean:6, $ifTrue:16, $ifFalse:34)()
 $ifTrue:16():
     $return:3(1)
 $ifFalse:34():
@@ -2493,8 +2516,8 @@ $ifFalse:34():
                equals: "
 $entry:2($return:3):
     apply:30($bind_recv:24, Boolean class#typecheck:)(Boolean:Global, X:Global)
-$bind_recv:24($recv:6):
-    select:38($recv:6, $ifTrue:22, $ifFalse:17)()
+$bind_recv:24($recv::Boolean:6):
+    select:38($recv::Boolean:6, $ifTrue:22, $ifFalse:17)()
 $ifTrue:22():
     $return:3(1)
 $ifFalse:17():
@@ -2536,78 +2559,6 @@ $loopExit:38():
 "!
 
 
-    method test_preOrder_whileTrue
-        let cps = self convertExpr: "\{ X maybe\} whileTrue: \{ X something \}".
-        let order = List new.
-        PreOrder for: cps entry
-                 do: { |each| order push: each id }.
-        assert that: { order asArray }
-               equals: [42, 35, 41, 36, 38]!
-
-
-    method test_postOrder_whileTrue
-        let cps = self convertExpr: "\{ X maybe\} whileTrue: \{ X something \}".
-        let order = List new.
-        PostOrder for: cps entry
-                  do: { |each| order push: each id }.
-        assert that: { order asArray }
-               equals: [36, 38, 41, 35, 42]!
-
-
-    method test_reversePostOrder_whileTrue
-        let cps = self convertExpr: "\{ X maybe\} whileTrue: \{ X something \}".
-        let order = List new.
-        ReversePostOrder for: cps entry
-                         do: { |each| order push: each id }.
-        assert that: { order asArray }
-               equals: [42, 35, 41, 38, 36]!
-
-
-    method test_graphwiz_closure_whileTrue
-        let cps = self convertExpr: "\{ X maybe\} whileTrue: \{ X something \}".
-        (system currentDirectory / "closure_whileTrue.dot")
-            truncateExisting forWrite
-                createOrOpen: { |dot|
-                                CpsGraphwizPrinter
-                                    print: cps
-                                    to: dot }.
-        assert that: { CpsGraphwizPrinter printToString: cps }
-               equals: "
-strict digraph \{
-    \"$loopHead:42\" [color=red]
-    \"$loopHead:42\" [shape=box]
-    \"$loopHead:42\" -> \"$return:3\" [dir=both, arrowhead=none, arrowtail=box, style=dotted]
-    \"False\" -> \"$loopHead:42\" [style=dotted]
-    \"$loopHead:42\" -> \"$loopTest:35\" [arrowhead=vee]
-    \"$loopTest:35\" [shape=box]
-    \"findMethod:27(classOf:15(X:Global), #maybe)\" -> \"$loopTest:35\" [style=dotted]
-    \"X:Global\" -> \"$loopTest:35\" [style=dotted]
-    \"$loopTest:35\" -> \"$whileTrue:41\" [arrowhead=vee]
-    \"$whileTrue:41\" [shape=box]
-    \"$whileTrue:41\" -> \"$cond:39\" [dir=both, arrowhead=none, arrowtail=box, style=dotted]
-    \"$cond:39\" -> \"$whileTrue:41\" [style=dotted]
-    \"$whileTrue:41\" -> \"$loopBody:36\" [arrowhead=vee]
-    \"$whileTrue:41\" -> \"$loopExit:38\" [arrowhead=vee]
-    \"$loopBody:36\" [shape=box]
-    \"findMethod:16(classOf:15(X:Global), #something)\" -> \"$loopBody:36\" [style=dotted]
-    \"X:Global\" -> \"$loopBody:36\" [style=dotted]
-    \"$loopBody:36\" -> \"$loopTest:35\" [arrowhead=vee]
-    \"classOf:15(X:Global)\" -> \"findMethod:16(classOf:15(X:Global), #something)\" [style=dotted]
-    \"#something\" -> \"findMethod:16(classOf:15(X:Global), #something)\" [style=dotted]
-    \"classOf:15(X:Global)\" -> \"findMethod:16(classOf:15(X:Global), #something)\" [style=dotted]
-    \"#something\" -> \"findMethod:16(classOf:15(X:Global), #something)\" [style=dotted]
-    \"classOf:15(X:Global)\" -> \"findMethod:27(classOf:15(X:Global), #maybe)\" [style=dotted]
-    \"#maybe\" -> \"findMethod:27(classOf:15(X:Global), #maybe)\" [style=dotted]
-    \"X:Global\" -> \"classOf:15(X:Global)\" [style=dotted]
-    \"$loopExit:38\" [shape=box]
-    \"False\" -> \"$loopExit:38\" [style=dotted]
-    \"$loopExit:38\" -> \"$return:3\" [arrowhead=vee]
-    \"classOf:15(X:Global)\" -> \"findMethod:27(classOf:15(X:Global), #maybe)\" [style=dotted]
-    \"#maybe\" -> \"findMethod:27(classOf:15(X:Global), #maybe)\" [style=dotted]
-}
-"!
-
-
     method test_convert_constant_add
         let cps = self convertExpr: "123 + X::Integer"
                        with: [IntegerClassDefinition].
@@ -2615,8 +2566,8 @@ strict digraph \{
                equals: "
 $entry:2($return:3):
     apply:18($bind_arg:12, Integer class#typecheck:)(Integer:Global, X:Global)
-$bind_arg:12($arg:6):
-    $return:3(addi:34(123, $arg:6))
+$bind_arg:12($arg::Integer:6):
+    $return:3(addi:34(123, $arg::Integer:6))
 "!
 
 
@@ -2689,8 +2640,8 @@ $entry:2($return:3):
                equals: "
 $entry:2($return:3):
     apply:20($bind_recv:14, Integer class#typecheck:)(Integer:Global, X:Global)
-$bind_recv:14($recv:5):
-    apply:10($return:3, Integer#+)($recv:5, Y:Global)
+$bind_recv:14($recv::Integer:5):
+    apply:10($return:3, Integer#+)($recv::Integer:5, Y:Global)
 "!
 
 
@@ -2701,15 +2652,10 @@ $bind_recv:14($recv:5):
                equals: "
 $entry:2($return:3):
     apply:17($bind:12, Integer class#typecheck:)(Integer:Global, X:Global)
-$bind:12($value:5):
-    $return:3($value:5)
+$bind:12($value::Integer:5):
+    $return:3($value::Integer:5)
 "!
 
-    method test_eval_typecheck_literal
-        let cps = self convertExpr: "123 :: Integer"
-                       with: [IntegerClassDefinition].
-        assert that: { (CpsEvaluator eval: cps) hostValue }
-               equals: 123!
 
     method test_eval_send_message
         let cps = self convertExpr: "123 opaqueIdentity + 321"
@@ -2717,12 +2663,58 @@ $bind:12($value:5):
         assert that: { (CpsEvaluator eval: cps) hostValue }
                equals: 444!
 
+
+    method test_graphwiz_closure_whileTrue
+        let cps = self convertExpr: "\{ X maybe\} whileTrue: \{ X something \}".
+        (system currentDirectory / "closure_whileTrue.dot")
+            truncateExisting forWrite
+                createOrOpen: { |dot|
+                                CpsGraphwizPrinter
+                                    print: cps
+                                    to: dot }.
+        assert that: { CpsGraphwizPrinter printToString: cps }
+               equals: "
+strict digraph \{
+    \"$loopHead:42\" [color=red]
+    \"$loopHead:42\" [shape=box]
+    \"$loopHead:42\" -> \"$return:3\" [dir=both, arrowhead=none, arrowtail=box, style=dotted]
+    \"False\" -> \"$loopHead:42\" [style=dotted]
+    \"$loopHead:42\" -> \"$loopTest:35\" [arrowhead=vee]
+    \"$loopTest:35\" [shape=box]
+    \"findMethod:27(classOf:15(X:Global), #maybe)\" -> \"$loopTest:35\" [style=dotted]
+    \"X:Global\" -> \"$loopTest:35\" [style=dotted]
+    \"$loopTest:35\" -> \"$whileTrue:41\" [arrowhead=vee]
+    \"$whileTrue:41\" [shape=box]
+    \"$whileTrue:41\" -> \"$cond:39\" [dir=both, arrowhead=none, arrowtail=box, style=dotted]
+    \"$cond:39\" -> \"$whileTrue:41\" [style=dotted]
+    \"$whileTrue:41\" -> \"$loopBody:36\" [arrowhead=vee]
+    \"$whileTrue:41\" -> \"$loopExit:38\" [arrowhead=vee]
+    \"$loopBody:36\" [shape=box]
+    \"findMethod:16(classOf:15(X:Global), #something)\" -> \"$loopBody:36\" [style=dotted]
+    \"X:Global\" -> \"$loopBody:36\" [style=dotted]
+    \"$loopBody:36\" -> \"$loopTest:35\" [arrowhead=vee]
+    \"classOf:15(X:Global)\" -> \"findMethod:16(classOf:15(X:Global), #something)\" [style=dotted]
+    \"#something\" -> \"findMethod:16(classOf:15(X:Global), #something)\" [style=dotted]
+    \"classOf:15(X:Global)\" -> \"findMethod:16(classOf:15(X:Global), #something)\" [style=dotted]
+    \"#something\" -> \"findMethod:16(classOf:15(X:Global), #something)\" [style=dotted]
+    \"classOf:15(X:Global)\" -> \"findMethod:27(classOf:15(X:Global), #maybe)\" [style=dotted]
+    \"#maybe\" -> \"findMethod:27(classOf:15(X:Global), #maybe)\" [style=dotted]
+    \"X:Global\" -> \"classOf:15(X:Global)\" [style=dotted]
+    \"$loopExit:38\" [shape=box]
+    \"False\" -> \"$loopExit:38\" [style=dotted]
+    \"$loopExit:38\" -> \"$return:3\" [arrowhead=vee]
+    \"classOf:15(X:Global)\" -> \"findMethod:27(classOf:15(X:Global), #maybe)\" [style=dotted]
+    \"#maybe\" -> \"findMethod:27(classOf:15(X:Global), #maybe)\" [style=dotted]
+}
+"!
+
+
     method test_eval_sends_to_self_in_direct_method
         let namespace = Namespace standard.
         let def = self convertClass: "
 class A \{}
     direct method test
-        self a + self b!
+        self opaqueIdentity a + self opaqueIdentity b!
     direct method a
         90!
     direct method b
@@ -2745,7 +2737,7 @@ class A \{}
     direct method test
         self new a!
     method a
-        self b + self c!
+        self opaqueIdentity b + self opaqueIdentity c!
     method b
         981!
     method c
@@ -2759,7 +2751,42 @@ end"
                        in: namespace.
         assert that: { (CpsEvaluator eval: cps) hostValue }
                equals: 1212!
+
+
+    method test_eval_typecheck_literal
+        let cps = self convertExpr: "123 :: Integer"
+                       with: [IntegerClassDefinition].
+        assert that: { (CpsEvaluator eval: cps) hostValue }
+               equals: 123!
+
+
+    method test_postOrder_whileTrue
+        let cps = self convertExpr: "\{ X maybe\} whileTrue: \{ X something \}".
+        let order = List new.
+        PostOrder for: cps entry
+                  do: { |each| order push: each id }.
+        assert that: { order asArray }
+               equals: [36, 38, 41, 35, 42]!
+
+
+    method test_preOrder_whileTrue
+        let cps = self convertExpr: "\{ X maybe\} whileTrue: \{ X something \}".
+        let order = List new.
+        PreOrder for: cps entry
+                 do: { |each| order push: each id }.
+        assert that: { order asArray }
+               equals: [42, 35, 41, 36, 38]!
+
+
+    method test_reversePostOrder_whileTrue
+        let cps = self convertExpr: "\{ X maybe\} whileTrue: \{ X something \}".
+        let order = List new.
+        ReversePostOrder for: cps entry
+                         do: { |each| order push: each id }.
+        assert that: { order asArray }
+               equals: [42, 35, 41, 38, 36]!
 end
+
 
 class Main {}
     direct method run: command in: system
