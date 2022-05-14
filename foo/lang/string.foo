@@ -13,6 +13,27 @@ extend String
     direct method default
         ""!
 
+
+    method match: other at: index
+        let before = index - 1.
+        before + other size <= self size
+            ifFalse: { return False }.
+        1 to: other size
+          do: { |p|
+                ((self codeAt: before + p) is (other codeAt: p))
+                    ifFalse: { return False } }.
+        True!
+
+
+    method search: other
+        -- FIXME: Naive search, replace with eg. Boyer-Moore.
+        1 to: self size
+          do: { |p|
+                (self match: other at: p)
+                    ifTrue: { return p } }.
+        False!
+
+
     method toSelector
         Selector intern: self!
 

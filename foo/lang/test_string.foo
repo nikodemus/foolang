@@ -5,6 +5,17 @@ class TestString { assert }
         assert that: { ("aaaxbbb" codeAt: 4) }
                is: 120!
 
+    method test_search
+        assert forAll: [ ["", "", False],
+                         ["", "a", False],
+                         ["xyxyyxx", "xyy", 3],
+                         ["aaxfoo", "oo", 5],
+                         ["aaxfoo", "ooo", False] ]
+               that: { |test|
+                       (test first search: test second) is test third }
+               testing: "String#search:"!
+
+
     method test_size
         assert that: { "foo" size }
                equals: 3.
