@@ -3088,5 +3088,6 @@ end
 class Main {}
     direct method run: command in: system
         TestCPS runTests: (Assert reportingTo: system output)
-                in: system!
+                in: system
+                with: command!
 end
