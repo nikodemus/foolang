@@ -6,16 +6,33 @@ interface TestSuite
     is Object
 
     direct method runTests: assert in: system
-        (self assert: assert) runTestsIn: system!
+        (self assert: assert) runTestsIn: system with: []!
+
+
+    direct method runTests: assert in: system with: testNames
+        (self assert: assert) runTestsIn: system with: testNames!
+
 
     method system: system
         False!
 
-    method runTestsIn: system
+
+    method match: full in: parts
+        parts anySatisfy: { |part|
+                            ((full search: part) is False) not }!
+
+
+    method runTestsIn: system with: testNames
+        let testSelector = testNames isEmpty
+                               ifTrue: { { |_aTest| True } }
+                               ifFalse: { { |aTest| self match: aTest name in: testNames } }.
         -- Extension spot for grabbing the system.
         self system: system.
-        self doTests: { |each| self runTest: each in: system }.
+        self doTests: { |each|
+                        (testSelector value: each)
+                            => { self runTest: each in: system } }.
         self!
+
 
     method runTest: test in: system
         let start = system clock time.

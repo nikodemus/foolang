@@ -111,7 +111,7 @@ interface MethodDefinition
         False!
 
 
-    method lowerToCps: _ in: _ with: _
+    method inlineIn: _ in: _ with: _
         False!
 
 
@@ -143,8 +143,8 @@ end
 class UserMethod { selector home cps }
     is MethodDefinition
 
-    direct method name: name
-        self selector: name intern
+    direct method selector: selector
+        self selector: selector
              home: False
              cps: False!
 
@@ -157,8 +157,14 @@ class UserMethod { selector home cps }
 
     method home: new
         (home is False)
-            ifFalse: { Error raise: "{self} already has a home: {self}" }.
-        home= new!
+            ifFalse: { Error raise: "{self} already has a home: {home}" }.
+        home = new!
+
+
+    method cps: new
+        (cps is False)
+            ifFalse: { Error raise: "{self} already has a cps: {cps}" }.
+        cps = new!
 
 
     method displayOn: stream
@@ -173,6 +179,16 @@ class UserMethod { selector home cps }
         cps is False
             ifTrue: { Error raise: "{self} has no body, cannot apply!" }.
         cps apply: args!
+
+
+    method inlineIn: aCont in: graph with: worklist
+        cps is False
+            ifTrue: { return False }.
+        let cc = aCont target target.
+        aCont target: (CpsCopier copy: cps entry to: graph).
+        aCont prependArgs: [cc].
+        worklist push: aCont!
+
 end
 
 
@@ -196,8 +212,8 @@ class BuiltinMethod { home impl }
         impl returnType!
 
 
-    method lowerToCps: aCont in: graph with: worklist
-        impl lowerToCps: aCont in: graph with: worklist!
+    method inlineIn: aCont in: graph with: worklist
+        impl inlineIn: aCont in: graph with: worklist!
 
 
     method home: new
@@ -225,7 +241,7 @@ class OpaqueIdentityImpl {}
         "opaqueIdentity" intern!
 
 
-    method lowerToCps: _aCont in: _aGraph with: _worklist
+    method inlineIn: _aCont in: _aGraph with: _worklist
         False!
 
 
@@ -241,11 +257,15 @@ class ConstructorImpl { classDefinition }
         self classDefinition: classDefinition!
 
 
+    method returnType
+        classDefinition!
+
+
     method selector
         "new" intern!
 
 
-    method lowerToCps: _aCont in: _aGraph with: _worklist
+    method inlineIn: _aCont in: _aGraph with: _worklist
         -- FIXME
         False!
 
@@ -278,8 +298,8 @@ class TypecheckImpl { type }
         type!
 
 
-    method lowerToCps: aContinuation in: graph with: worklist
-        (aContinuation args size is 2) assert: "TypecheckImpl#lowerToCps:in:with".
+    method inlineIn: aContinuation in: graph with: worklist
+        (aContinuation args size is 2) assert: "TypecheckImpl#inlineIn:in:with".
         let apply = aContinuation target.
         let value = aContinuation args at: 2.
         let valueType = value type.
@@ -315,7 +335,7 @@ interface InlineMethodImpl
                                      to: pattern size))!
 
 
-    method lowerToCps: aContinuation in: graph with: worklist
+    method inlineIn: aContinuation in: graph with: worklist
         let apply = aContinuation target.
         let args = aContinuation args.
         let pattern = self inliner apply: args.
@@ -358,7 +378,7 @@ interface PrimitiveInlineMethodImpl
         let pattern = self primitiveInliner apply: args.
         pattern first apply: pattern rest!
 
-    method lowerToCps: aContinuation in: graph with: worklist
+    method inlineIn: aContinuation in: graph with: worklist
         let apply = aContinuation target.
         let args = aContinuation args.
         let pattern = self primitiveInliner apply: args.
@@ -368,7 +388,9 @@ interface PrimitiveInlineMethodImpl
         aContinuation removeArgs.
         aContinuation addArgs: [primop].
         aContinuation target: cc.
-        cc propagateTypes: [primop type]!
+        cc propagateTypes: [primop type].
+        worklist push: primop.
+        worklist push: aContinuation!
 end
 
 
@@ -396,33 +418,38 @@ class IfTrueIfFalseImpl { ifTrue ifFalse }
             => { return "ifFalse:" intern }.
         Error raise: "Invalid IfTrueIfFalseImpl!"!
 
-    method lowerToCps: aContinuation in: graph with: worklist
+    method inlineIn: aContinuation in: graph with: worklist
         let lastArg = (ifTrue and: ifFalse)
                           ifTrue: { 3 }
                           ifFalse: { 2 }.
-        (aContinuation args size is lastArg) assert: "IfTrueIfFalseImpl#lowerToCps:in:with".
+        (aContinuation args size is lastArg) assert: "IfTrueIfFalseImpl#inlineIn:in:with".
         let apply = aContinuation target.
         let args = aContinuation args.
         let cond = args at: 1.
         let thenCont = ifTrue
-                           ifTrue: { (args at: 2) renameIfSingleUse: "$ifTrue" }
+                           ifTrue: { (args at: 2) }
                            ifFalse: { let ret = graph makeVariable: "$ret".
                                       graph continuation: "$ifTrue"
                                             params: [ret]
                                             target: ret
                                             args: [graph ensureConstant: FalseDefinition] }.
         let elseCont = ifFalse
-                           ifTrue: { (args at: lastArg) renameIfSingleUse: "$ifFalse" }
+                           ifTrue: { (args at: lastArg) }
                            ifFalse: { let ret = graph makeVariable: "$ret".
                                       graph continuation: "$ifFalse"
                                             params: [ret]
                                             target: ret
                                             args: [graph ensureConstant: FalseDefinition] }.
+        -- Need to change args before replacing target: otherwise old
+        -- apply target would become unused and get flushed!
+        aContinuation removeArgs.
+        aContinuation addArgs: [apply target].
         aContinuation target: (graph select: cond
                                      then: thenCont
                                      else: elseCont).
-        aContinuation removeArgs.
-        aContinuation addArgs: [apply target]!
+        -- Log println: "INLINED IF".
+        -- Log println: (CpsPrinter printToString: graph).
+        False!
 end
 
 
@@ -434,8 +461,8 @@ class WhileLoopImpl { selector while }
              while: maybe!
 
 
-    method lowerToCps: aContinuation in: graph with: worklist
-        (aContinuation args size is 2) assert: "WhileLoopImpl#lowerToCps:in:with".
+    method inlineIn: aContinuation in: graph with: worklist
+        (aContinuation args size is 2) assert: "WhileLoopImpl#inlineIn:in:with".
         let ignore1 = graph makeVariable: "$ignore".
         -- valueCont args will be patched with the branch
         let valueCont = graph continuation: "$loopTest"
@@ -469,7 +496,7 @@ class WhileLoopImpl { selector while }
                              target: valueCont
                              args: [graph ensureConstant: FalseDefinition].
         aContinuation removeArgs.
-        aContinuation replaceUsesWith: headCont.
+        aContinuation replaceUsesWith: headCont in: worklist.
         aContinuation target: INVALID_TARGET.
         aContinuation removeParams.
         worklist push: headCont.
@@ -738,14 +765,9 @@ class Set { dict }
         node is self singular!
 
 
-    method replaceUses: node1 with: node2
-        dict doKeys: { |each|
-                       (each is node1) not assert: "Replacement target is an immediate use".
-                       each replaceUses: node1 with: node2 }!
-
-
     method do: block
         dict values do: block!
+
 
     method doSorted: block
         dict values sort do: block!
@@ -767,8 +789,16 @@ interface UseTracking
 
 
     method replaceUsesWith: new
-        self uses do: { |each| each replaceUses: self with: new }.
-        self debugVerify: "#replaceUsesWith:"!
+        self uses do: { |each|
+                        each replaceUses: self with: new }.
+        self flush!
+
+
+    method replaceUsesWith: new in: worklist
+        self uses do: { |each|
+                        each replaceUses: self with: new.
+                        worklist push: each }.
+        self flush!
 
 
     method debugVerify: what
@@ -819,7 +849,10 @@ class OpMap { list }
             ifTrue: { return False }.
         op1 kind is op2 kind
             ifTrue: { op1 args == op2 args
-                          ifTrue: { op2 replaceUsesWith: op1 } }!
+                          ifTrue: { -- Doesn't use #replaceUsesWith: because
+                                    -- there's no worklist or need for one.
+                                    op2 uses do: { |each|
+                                                   each replaceUses: op2 with: op1 } } }!
 
 
     method reject: block
@@ -888,7 +921,15 @@ interface Expression
         False!
 
 
-    method simplify
+    method isConstant
+        False!
+
+
+    method isOperation
+        False!
+
+
+    method simplifyIn: _ with: _
         False!
 
 
@@ -929,6 +970,14 @@ class Constant { id::Integer
 
     method hasKnownClass
         True!
+
+
+    method isConstant
+        True!
+
+
+    method returnType
+        value returnType!
 
 
     method classDefinition
@@ -1027,6 +1076,9 @@ class InvalidTarget {}
 
     method doValues: _
         False!
+
+    method flush
+        False!
 end
 
 
@@ -1066,6 +1118,12 @@ class Variable { id::Integer
              uses: Set new!
 
 
+    method renameIfSingleUse: new
+        uses size <= 1
+            => { name = new }.
+        self!
+
+
     method addDef: def
         defs add: def!
 
@@ -1078,7 +1136,7 @@ class Variable { id::Integer
     method removeDef: def
         defs remove: def.
         (defs isEmpty and: uses isEmpty not)
-            ifTrue: { Error raise: "Variable {self} lost definitions while still being used by: {self uses collect: #printName}"}!
+            ifTrue: { Error raise: "{self} lost definition {def printName} while still being used by: {self uses collect: #printName}"}!
 
 
     method replaceUses: expr1 with: expr2
@@ -1112,12 +1170,23 @@ class Variable { id::Integer
 
     method visitBy: visitor with: arg
         visitor visitVariable: self with: arg!
+
+    method flush
+        self isUnused assert: "Variable must be unused to flush"!
 end
 
 
 interface OperationKind
     direct method isFoldable
         True!
+
+    direct method simplify: op in: graph with: worklist
+        -- General-purpose constant-folding for ops. Must opt-out via
+        -- #isFoldable.
+        (op args allSatisfy: #isConstant)
+            ifTrue: { let argVals = op args collect: #value.
+                      let value = graph ensureConstant: (op kind apply: argVals).
+                      op replaceUsesWith: value in: worklist }!
 end
 
 
@@ -1148,6 +1217,19 @@ class CLASS_OF {}
         "classOf"!
 
 
+    direct method apply: args
+        args first classDefinition!
+
+
+    direct method simplify: operation in: graph with: worklist
+        -- This is slightly more powerful than the general-purpose
+        -- constant folding.
+        let recv = operation args first.
+        (recv hasKnownClass)
+            ifTrue: { let const = graph ensureConstant: recv classDefinition.
+                      operation replaceUsesWith: const in: worklist }!
+
+
     direct method visit: operation by: visitor
         visitor visitClassOf: operation!
 end
@@ -1160,8 +1242,17 @@ class FIND_METHOD {}
         "findMethod"!
 
 
+    direct method returnType: _
+        False!
+
+
+    direct method apply: args
+        args first findMethod: args second!
+
+
     direct method visit: operation by: visitor
         visitor visitFindMethod: operation!
+
 
     direct method visit: operation by: visitor with: arg
         visitor visitFindMethod: operation with: arg!
@@ -1191,8 +1282,20 @@ class Operation { id::Integer
         new!
 
 
+    method returnType
+        kind returnType: self!
+
+
+    method isOperation
+        True!
+
+
     method isFoldable
         kind isFoldable!
+
+
+    method simplifyIn: graph with: worklist
+        kind simplify: self in: graph with: worklist!
 
 
     method doChildren: block
@@ -1219,6 +1322,7 @@ class Operation { id::Integer
 
 
     method flush
+        self isUnused assert: "Operation must be unused to flush".
         args do: { |each| each removeUse: self }.
         args = [].
         kind = INVALID!
@@ -1275,7 +1379,7 @@ class Continuation { id::Integer
 
 
     method renameIfSingleUse: new
-        uses size is 1
+        uses size <= 1
             => { name = new }.
         self!
 
@@ -1293,7 +1397,6 @@ class Continuation { id::Integer
 
 
     method doSuccessors: block
-        -- Log println: "   {self printName} target: {target printName}".
         (AtomicContinuationTarget includes: target)
             ifTrue: { block value: target }
             ifFalse: { target doSuccessors: block }!
@@ -1317,14 +1420,19 @@ class Continuation { id::Integer
                      => { args last propagateTypes: [value returnType] } }!
 
 
-    method simplify
-        -- Log println: "\nSIMPLIFY: {self printName}".
-        -- Log println: "   uniqueTarget: {self hasUniqueTarget}".
-        -- Log println: "   target: {target classOf name}".
-        -- (UseTracking includes: target)
-        --     => { Log println: "   uses: {target uses collect: #printName}" }.
+    method simplifyIn: _ with: worklist
         { self hasUniqueTarget }
-            whileTrue: { self inlineUniqueTarget }.
+            whileTrue: { self inlineUniqueTargetWith: worklist }.
+        -- The above zips up chains of local continuations
+        -- nicely, which in turn leaves us with a Select
+        -- or Application here, with a good chance of constant
+        -- arguments thanks to the inlinining.
+        ---
+        (Continuation includes: target)
+            ifFalse: { target simplifyIn: graph }.
+        (args select: #isOperation)
+            do: { |each| each simplifyIn: graph }.
+        ---
         self!
 
 
@@ -1333,13 +1441,13 @@ class Continuation { id::Integer
             ifTrue: { target uses isOnly: self }!
 
 
-    method inlineUniqueTarget
+    method inlineUniqueTargetWith: worklist
         self args
             with: target params
             do: { |arg param|
-                  param replaceUsesWith: arg }.
+                  param replaceUsesWith: arg in: worklist }.
         self replaceArgsFrom: target.
-        target unlink.
+        target unlinkWith: worklist.
         self debugVerify: "Continuation#inlineUniqueTarget"!
 
 
@@ -1386,21 +1494,38 @@ class Continuation { id::Integer
         self debugVerify: "Continuation#addArgs:"!
 
 
+    method prependArgs: new
+        new do: { |each| each addUse: self }.
+        args = new append: args.
+        self debugVerify: "Continuation#prependArgs:"!
+
+
     method target: new
-        -- No copy needed here, so #target: is the way to go.
+        -- No copy needed here
+        let old = target.
         target removeUse: self.
         target = new.
         target addUse: self.
+        old isUnused
+            ifTrue: { old flush }.
         self debugVerify: "Continuation#target:"!
 
 
-    method unlink
+    method unlinkWith: worklist
         self removeArgs.
-        self replaceUsesWith: target.
+        self replaceUsesWith: target in: worklist.
         self target: INVALID_TARGET.
         -- args and target may use params, so need to remove last!
         self removeParams.
-        self debugVerify: "Continuation#unlink"!
+        self debugVerify: "Continuation#unlinkWith:"!
+
+
+    method flush
+        self isUnused assert: "Continuation must be unused to flush".
+        self removeArgs.
+        self target: INVALID_TARGET.
+        -- args and target may use params, so need to remove last!
+        self removeParams!
 
 
     method printName
@@ -1435,8 +1560,30 @@ class Application { id::Integer
                        function: function
                        uses: Set new.
         target addUse: new.
-        function addUse: new.
+        function
+            => { function addUse: new }.
         new!
+
+
+    method flush
+        self isUnused assert: "Application must be unused to flush".
+        target removeUse: self.
+        target = INVALID_TARGET.
+        function removeUse: self.
+        function = False!
+
+
+    method target: new
+        target removeUse: self.
+        target = new.
+        target addUse: self!
+
+
+    method function: new
+        function
+            => { function removeUse: self }.
+        function = new.
+        function addUse: self!
 
 
     method doDeps: block
@@ -1459,6 +1606,10 @@ class Application { id::Integer
 
     method printName
         "apply:{id}({target printName}, {function printName})"!
+
+
+    method simplifyIn: graph with: worklist
+        function simplifyIn: graph with: worklist!
 
 
     method toString
@@ -1512,14 +1663,18 @@ class Select { id::Integer
         node2 addUse: self!
 
 
-    method simplify
+    method simplifyIn: graph with: worklist
         uses singular
             => { |use|
-                 (self hasUniqueTarget: then)
-                     ifTrue: { self propagateArgsFrom: use to: then }.
-                 (self hasUniqueTarget: else)
-                     ifTrue: { self propagateArgsFrom: use to: else }.
-                 use removeArgs }!
+                 ((self hasUniqueTarget: then) and: (self hasUniqueTarget: else))
+                     ifTrue: { -- Log println: "SIMPLIFY SELECT".
+                               -- Log println: (CpsPrinter printToString: graph).
+                               self propagateArgsFrom: use to: then in: worklist.
+                               self propagateArgsFrom: use to: else in: worklist.
+                               use removeArgs
+                               -- Log println: "===>".
+                               -- Log println: (CpsPrinter printToString: graph)
+                               }} !
 
 
     method hasUniqueTarget: node
@@ -1527,11 +1682,11 @@ class Select { id::Integer
             ifTrue: { node uses isOnly: self }!
 
 
-    method propagateArgsFrom: cont1 to: cont2
+    method propagateArgsFrom: cont1 to: cont2 in: worklist
         cont1 args
             with: cont2 params
             do: { |arg param|
-                  param replaceUsesWith: arg }.
+                  param replaceUsesWith: arg in: worklist }.
         cont2 removeParams!
 
 
@@ -1711,13 +1866,13 @@ class CpsGraph { entry::Continuation
 
     method entry: target
         entry target: target.
-        entry simplify.
         self cleanup.
+        -- Log println: "\nGRAPH:\n{CpsPrinter printToString: self}".
         self!
 
 
     method optimize
-        CpsOptimizer optimize: self.
+        CpsOptimizer optimize: self with: LocalOptimizationPolicy.
         self cleanup.
         self!
 
@@ -1736,6 +1891,13 @@ class CpsGraph { entry::Continuation
         Variable
             id: self nextId
             name: name!
+
+
+    method makeVariable: name type: type
+        Variable
+            id: self nextId
+            name: name
+            type: type!
 
 
     method ensureConstant: value
@@ -1786,8 +1948,8 @@ class CpsGraph { entry::Continuation
 
 
     method classOf: recv
-           self ensureOperation: CLASS_OF
-                args: [recv]!
+        self ensureOperation: CLASS_OF
+             args: [recv]!
 
 
     method ensureFindMethod: selector for: recv
@@ -1836,36 +1998,61 @@ class CpsConverter { graph var next classMap namespace }
         graph optimize!
 
 
-    direct method convertMethod: aMethod for: aClass with: defs in: namespace
+    direct method convertMethod: syntax as: aMethod for: aClass with: defs in: namespace
         let graph = CpsGraph methodFor: aClass.
         let converter = self makeConverter: graph
                              classDefinitions: defs
                              in: namespace.
-        graph entry: (aMethod body visitBy: converter
-                                   with: graph exit).
+        graph entry: (syntax body visitBy: converter
+                                  with: graph exit).
+        aMethod cps: graph optimize!
+
+
+    direct method userMethodFor: syntax in: namespace
         UserMethod
-            selector: (namespace intern: aMethod selector name)
-            cps: graph optimize!
+            selector: (namespace intern: syntax selector name)!
 
 
     direct method convertClass: aClass with: defs in: namespace
         let newClass = ClassDefinition name: aClass name.
-        aClass instanceMethods
-            do: { |each|
-                  let converted = self
-                                      convertMethod: each
-                                      for: newClass
-                                      with: defs
-                                      in: namespace.
-                  newClass addMethod: converted }.
+        -- First we add placeholder methods, so that all methods
+        -- can be immediately resolved to each other.
+        let userMethods =  aClass instanceMethods
+                              collect: { |each|
+                                         let m = self userMethodFor: each in: namespace.
+                                         newClass addMethod: m.
+                                         m }.
         let ownClass = newClass ownClassDefinition.
+        let directMethods = aClass directMethods
+                                collect: { |each|
+                                           let m = self userMethodFor: each in: namespace.
+                                           ownClass addMethod: m.
+                                           m }.
+        -- Then as actually convert all methods.
+        aClass instanceMethods
+            with: userMethods
+            do: { |syntax userMethod|
+                  self convertMethod: syntax
+                       as: userMethod
+                       for: newClass
+                       with: defs
+                       in: namespace }.
         aClass directMethods
+            with: directMethods
+            do: { |syntax userMethod|
+                  self convertMethod: syntax
+                       as: userMethod
+                       for: ownClass
+                       with: defs
+                       in: namespace }.
+        (newClass methodDictionary reject: #isStandard)
             do: { |each|
-                  let converted = self convertMethod: each
-                                       for: ownClass
-                                       with: defs
-                                       in: namespace.
-                  ownClass addMethod: converted }.
+                  CpsOptimizer optimize: each cps
+                               with: GlobalOptimizationPolicy }.
+        (ownClass methodDictionary reject: #isStandard)
+            do: { |each|
+                  CpsOptimizer optimize: each cps
+                               with: GlobalOptimizationPolicy }.
         newClass!
 
 
@@ -1905,7 +2092,7 @@ class CpsConverter { graph var next classMap namespace }
         graph continuation: "$makeClosure"
               params: []
               target: cc
-              args: [block simplify]!
+              args: [block]!
 
 
     method visitLet: syntax with: cc
@@ -1917,8 +2104,8 @@ class CpsConverter { graph var next classMap namespace }
                          params: [var]
                          target: body
                          args: [].
-        (syntax value visitBy: self with: bind simplify)
-            simplify!
+        syntax value visitBy: self
+                     with: bind!
 
 
     method visitLiteral: syntax with: cc
@@ -1930,11 +2117,10 @@ class CpsConverter { graph var next classMap namespace }
                            class: classDef
                            datum: value.
         let const = graph ensureConstant: instance.
-        (graph continuation: "$const_ref"
+        graph continuation: "$const_ref"
               params: []
               target: cc
-              args: [const])
-        simplify!
+              args: [const]!
 
 
     method visitReturn: syntax with: _
@@ -1968,13 +2154,13 @@ class CpsConverter { graph var next classMap namespace }
                                    params: [var]
                                    target: next
                                    args: [].
-                  next = (syntaxArg visitBy: self with: bind)
-                             simplify }.
+                  next = syntaxArg visitBy: self with: bind }.
         let recvBind = graph continuation: "$bind_recv"
                              params: [recv]
                              target: next
                              args: [].
-        syntax receiver visitBy: self with: recvBind simplify!
+        syntax receiver visitBy: self
+                        with: recvBind!
 
 
     method visitSeq: syntax with: cc
@@ -1983,7 +2169,8 @@ class CpsConverter { graph var next classMap namespace }
                             params: [graph makeVariable: "$ignore"]
                             target: then
                             args: [].
-        syntax first visitBy: self with: discard simplify!
+        syntax first visitBy: self
+                     with: discard!
 
 
     method visitValueTypeDeclaration: syntax with: cc
@@ -2017,12 +2204,31 @@ class CpsConverter { graph var next classMap namespace }
 end
 
 
-class CpsOptimizer { worklist graph }
 
-    direct method optimize: graph
+class OptimizationPolicy { inlineUserMethods }
+    method shouldInline: aMethod
+        (BuiltinMethod includes: aMethod)
+            ifTrue: { return True }.
+        inlineUserMethods!
+end
+
+
+define LocalOptimizationPolicy
+    (OptimizationPolicy
+         inlineUserMethods: False)!
+
+
+define GlobalOptimizationPolicy
+    (OptimizationPolicy
+         inlineUserMethods: True)!
+
+
+class CpsOptimizer { worklist graph policy }
+
+    direct method optimize: graph with: policy
         let worklist = Worklist new.
         graph doNodes: { |each| worklist push: each }.
-        (self worklist: worklist graph: graph)
+        (self worklist: worklist graph: graph policy: policy)
             optimize!
 
 
@@ -2036,9 +2242,9 @@ class CpsOptimizer { worklist graph }
 
 
     method visitContinuation: aCont
-        -- Do strictly local simplifications: basically zipping up chains of
-        -- of known continuations into a single one.
-        aCont simplify.
+        -- Do strictly local simplifications: zipping up chains of
+        -- of known continuations into a single one, etc.
+        aCont simplifyIn: graph with: worklist.
         -- If target is an operation, let its optimizers kick in. In case
         -- of APPLY the continuation is the user of the arguments, but the
         -- apply is
@@ -2048,55 +2254,29 @@ class CpsOptimizer { worklist graph }
 
 
     method visitOperation: anOperation
-        anOperation kind visit: anOperation by: self!
-
-
-    method visitClassOf: aClassOf
-        let recv = aClassOf args first.
-        (recv hasKnownClass)
-            ifTrue: { let const = graph ensureConstant: recv classDefinition.
-                      aClassOf uses
-                          do: { |each|
-                                each replaceUses: aClassOf with: const.
-                                worklist push: each }.
-                      aClassOf flush }!
+        anOperation kind simplify: anOperation in: graph with: worklist!
 
 
     method visitApplication: anApply
-        -- Lower constant method functions when possible.
         let func = anApply function.
+        let target = anApply target.
+        -- Propagate return type for unique uses
+        (target uses isOnly: anApply)
+            ifTrue: { func returnType
+                          => { |returnType|
+                               target propagateTypes: [returnType].
+                               worklist push: target } }.
+        -- Lower constant method functions when possible.
         (Constant includes: func)
             ifTrue: { let value = func value.
-                      (MethodDefinition includes: value)
+                      (policy shouldInline: value)
                           => { anApply uses
                                    do: { |each::Continuation|
-                                         value lowerToCps: each in: graph with: worklist } } }!
-
-
-    method visitFindMethod: aFindMethod
-        let classArg = aFindMethod args at: 1.
-        (Constant includes: classArg)
-            => { let classDef = classArg value.
-                 (ClassDefinition includes: classDef)
-                     => { let selectorArg = aFindMethod args at: 2.
-                          (Constant includes: selectorArg)
-                              => { let selector = selectorArg value.
-                                   (CpsSelector includes: selector)
-                                       => { let methodFunction = classDef findMethod: selector.
-                                            (methodFunction is False) not
-                                                => { let constMethod = graph ensureConstant: methodFunction.
-                                                     aFindMethod uses
-                                                         do: { |each|
-                                                               each replaceUses: aFindMethod with: constMethod.
-                                                               worklist push: each } } } } } }!
+                                         value inlineIn: each in: graph with: worklist } } }!
 
 
     method visitSelect: aSelect
-        aSelect simplify!
-
-
-    method visitAddi: _
-        False!
+        aSelect simplifyIn: graph with: worklist!
 
 
     method visitTypeInfo: _
@@ -2113,6 +2293,68 @@ class CpsOptimizer { worklist graph }
 
     method visitConstant: _
         False!
+end
+
+
+class CpsCopier { graph copied }
+
+    direct method copy: cps to: graph
+        cps visitBy: (self graph: graph
+                           copied: Dictionary new)!
+
+
+    method visitAll: seq
+        seq collect: { |each| each visitBy: self } as: Array!
+
+
+    method visitContinuation: aCont
+        -- Continuations can be in cycles, so we need to be
+        -- careful and put in the copy of the continuation
+        -- before copying its children.
+        copied
+            at: aCont
+            ifNone: { let new = graph continuation: aCont name
+                                      params: []
+                                      target: INVALID_TARGET
+                                      args: [].
+                       copied put: new at: aCont.
+                       new addParams: (self visitAll: aCont params).
+                       new target: (aCont target visitBy: self).
+                       new addArgs: (self visitAll: aCont args).
+                       new }!
+
+
+    method visitVariable: aVar
+        copied
+            at: aVar
+            ifNonePut: { graph makeVariable: aVar name
+                               type: aVar type }!
+
+
+    method visitOperation: anOp
+        copied
+            at: anOp
+            ifNonePut: { graph ensureOperation: anOp kind
+                               args: (self visitAll: anOp args) }!
+
+
+    method visitConstant: aConstant
+        copied
+            at: aConstant
+            ifNonePut: { graph ensureConstant: aConstant value }!
+
+
+    method visitApplication: anApp
+        -- Same care as with continuation applies here!
+        copied
+            at: anApp
+            ifNone: { let new = graph application: False
+                                      target: INVALID_TARGET.
+                       copied put: new at: anApp.
+                       new target: (anApp target visitBy: self).
+                       new function: (anApp function visitBy: self).
+                       new }!
+
 end
 
 
@@ -2483,10 +2725,10 @@ $bind_recv:16($recv:8):
 $entry:2($return:3):
     apply:24($bind_recv:18, Boolean class#typecheck:)(Boolean:Global, X:Global)
 $bind_recv:18($recv::Boolean:6):
-    select:35($recv::Boolean:6, $ifTrue:34, $ifFalse:16)()
+    select:35($recv::Boolean:6, $ifTrue:34, $block:16)()
 $ifTrue:34():
     $return:3(False)
-$ifFalse:16():
+$block:16():
     $return:3(1)
 "!
 
@@ -2500,8 +2742,8 @@ $ifFalse:16():
 $entry:2($return:3):
     apply:24($bind_recv:18, Boolean class#typecheck:)(Boolean:Global, X:Global)
 $bind_recv:18($recv::Boolean:6):
-    select:35($recv::Boolean:6, $ifTrue:16, $ifFalse:34)()
-$ifTrue:16():
+    select:35($recv::Boolean:6, $block:16, $ifFalse:34)()
+$block:16():
     $return:3(1)
 $ifFalse:34():
     $return:3(False)
@@ -2517,10 +2759,10 @@ $ifFalse:34():
 $entry:2($return:3):
     apply:30($bind_recv:24, Boolean class#typecheck:)(Boolean:Global, X:Global)
 $bind_recv:24($recv::Boolean:6):
-    select:38($recv::Boolean:6, $ifTrue:22, $ifFalse:17)()
-$ifTrue:22():
+    select:38($recv::Boolean:6, $block:22, $block:17)()
+$block:22():
     $return:3(1)
-$ifFalse:17():
+$block:17():
     $return:3(2)
 "!
 
@@ -2529,7 +2771,7 @@ $ifFalse:17():
         let cps = self convertExpr: "\{ X maybe\} whileFalse: \{ Y something \}".
         assert that: { CpsPrinter printToString: cps }
                equals: "
-$loopHead:43($return:3):
+$entry:2($return:3):
     $loopTest:36(False)
 $loopTest:36($ignore:35):
     apply:28($whileFalse:42, findMethod:27(classOf:26(X:Global), #maybe))(X:Global)
@@ -2546,7 +2788,7 @@ $loopBody:37():
         let cps = self convertExpr: "\{ X maybe\} whileTrue: \{ X something \}".
         assert that: { CpsPrinter printToString: cps }
                equals: "
-$loopHead:42($return:3):
+$entry:2($return:3):
     $loopTest:35(False)
 $loopTest:35($ignore:34):
     apply:28($whileTrue:41, findMethod:27(classOf:15(X:Global), #maybe))(X:Global)
@@ -2587,6 +2829,52 @@ $entry:2($return:3):
                equals: "
 $entry:2($return:3):
     $return:3(X:Global)
+"!
+
+
+    method test_convert_sends_to_self_resolved
+        let namespace = Namespace standard.
+        let def = self convertClass: "
+class A \{}
+    method a
+        self b + self c!
+    method b
+        174!
+    method c
+        214!
+end"
+                      with: [IntegerClassDefinition]
+                      in: namespace.
+        assert that: { CpsPrinter printToString: (def findMethod: (namespace intern: "a")) cps }
+               equals: "
+$entry:2($return:3, $receiver::A:4):
+    $return:3(388)
+"!
+
+
+    method test_convert_inline_sends_to_self
+        let namespace = Namespace standard.
+        let def = self convertClass: "
+class A \{}
+    direct method test
+        self new a!
+    method a
+        self b + self c!
+    method b
+        174!
+    method c
+        213!
+end"
+                      with: [IntegerClassDefinition]
+                      in: namespace.
+        let cps = (def classDefinition findMethod: (namespace intern: "test")) cps.
+        -- FIXME: Doesn't yet flush the ctor.
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3, $receiver::A class:4):
+    apply:17($bind_recv:12, A class#new)($receiver::A class:4)
+$bind_recv:12($recv::A:6):
+    $return:3(387)
 "!
 
 
@@ -2635,7 +2923,7 @@ $entry:2($return:3):
         let cps = self convertExpr: "X::Integer + Y"
                        with: [(ClassDefinition
                                    name: "Integer"
-                                   methods: [(UserMethod name: "+")])].
+                                   methods: [(UserMethod selector: "+" intern)])].
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
@@ -2675,11 +2963,11 @@ $bind:12($value::Integer:5):
         assert that: { CpsGraphwizPrinter printToString: cps }
                equals: "
 strict digraph \{
-    \"$loopHead:42\" [color=red]
-    \"$loopHead:42\" [shape=box]
-    \"$loopHead:42\" -> \"$return:3\" [dir=both, arrowhead=none, arrowtail=box, style=dotted]
-    \"False\" -> \"$loopHead:42\" [style=dotted]
-    \"$loopHead:42\" -> \"$loopTest:35\" [arrowhead=vee]
+    \"$entry:2\" [color=red]
+    \"$entry:2\" [shape=box]
+    \"$entry:2\" -> \"$return:3\" [dir=both, arrowhead=none, arrowtail=box, style=dotted]
+    \"False\" -> \"$entry:2\" [style=dotted]
+    \"$entry:2\" -> \"$loopTest:35\" [arrowhead=vee]
     \"$loopTest:35\" [shape=box]
     \"findMethod:27(classOf:15(X:Global), #maybe)\" -> \"$loopTest:35\" [style=dotted]
     \"X:Global\" -> \"$loopTest:35\" [style=dotted]
@@ -2766,7 +3054,7 @@ end"
         PostOrder for: cps entry
                   do: { |each| order push: each id }.
         assert that: { order asArray }
-               equals: [36, 38, 41, 35, 42]!
+               equals: [36, 38, 41, 35, 2]!
 
 
     method test_preOrder_whileTrue
@@ -2775,7 +3063,7 @@ end"
         PreOrder for: cps entry
                  do: { |each| order push: each id }.
         assert that: { order asArray }
-               equals: [42, 35, 41, 36, 38]!
+               equals: [2, 35, 41, 36, 38]!
 
 
     method test_reversePostOrder_whileTrue
@@ -2784,12 +3072,13 @@ end"
         ReversePostOrder for: cps entry
                          do: { |each| order push: each id }.
         assert that: { order asArray }
-               equals: [42, 35, 41, 38, 36]!
+               equals: [2, 35, 41, 38, 36]!
 end
 
 
 class Main {}
     direct method run: command in: system
         TestCPS runTests: (Assert reportingTo: system output)
-                in: system!
+                in: system
+                with: command!
 end
