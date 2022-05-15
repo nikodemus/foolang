@@ -265,14 +265,19 @@ class ConstructorImpl { classDefinition }
         "new" intern!
 
 
-    method inlineIn: _aCont in: _aGraph with: _worklist
-        -- FIXME
-        False!
+    method inlineIn: continuation in: graph with: worklist
+        continuation removeArgs.
+        continuation addArgs: [graph ensureOperation: MAKE_INSTANCE
+                                     args: [graph ensureConstant: classDefinition,
+                                            graph ensureConstant: (Instance class: IntegerClassDefinition
+                                                                            datum: 0)]].
+        continuation target: continuation target :: Application target!
 
 
-    method apply: _args in: _classDefinition
-        Instance class: classDefinition
-                 datum: False!
+    method apply: args in: _classDefinition
+        Log println: "\nNEW: {args}".
+        Instance class: args first
+                 datum: args second!
 end
 
 
@@ -506,7 +511,10 @@ class WhileLoopImpl { selector while }
 end
 
 
-class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
+class ClassDefinition { name
+                        hostClass
+                        ownClassDefinition
+                        methodDictionary }
     is Object
     is CpsValue
 
@@ -588,13 +596,6 @@ class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
         classDefinition!
 
 
-    method addMethod: aMethod
-        aMethod home: self.
-        methodDictionary
-            put: aMethod
-            at: aMethod selector!
-
-
     direct method standardInstanceMethodImpls
         [OpaqueIdentityImpl]!
 
@@ -607,8 +608,25 @@ class ClassDefinition { name hostClass ownClassDefinition methodDictionary }
         ]!
 
 
+    method addMethod: aMethod
+        aMethod home: self.
+        methodDictionary
+            put: aMethod
+            at: aMethod selector!
+
+
+    method isPrimitive
+        (hostClass is False) not!
+
+
     method printName
         name!
+
+
+    method toString: datum
+        self isPrimitive
+            ifTrue: { datum displayString }
+            ifFalse: { "#<Instance {name}>" }!
 
 
     method classDefinition
@@ -653,10 +671,10 @@ class Instance { _class::ClassDefinition
         _datum!
 
     method printName
-        _datum toString!
+        self toString!
 
     method toString
-        "#<Instance {_class} {_datum}>"!
+        _class toString: _datum!
 
     method displayString
         self toString!
@@ -1264,6 +1282,23 @@ class INVALID {}
 
     direct method name
         "invalid"!
+end
+
+
+class MAKE_INSTANCE {}
+    is OperationKind
+
+    direct method name
+        "makeInstance"!
+
+
+    direct method apply: args
+        Instance class: args first
+                 datum: args second!
+
+
+    direct method visit: operation by: visitor
+        visitor visitMakeInstance: operation!
 end
 
 
@@ -2809,6 +2844,23 @@ $entry:2($return:3):
 "!
 
 
+    method test_convert_constructor
+        let namespace = Namespace standard.
+        let def = self convertClass: "
+class A \{}
+    direct method test
+        self new!
+end"
+                      with: [IntegerClassDefinition]
+                      in: namespace.
+        let cps = (def classDefinition findMethod: (namespace intern: "test")) cps.
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3, $receiver::A class:4):
+    $return:3(#<Instance A>)
+"!
+
+
     method test_convert_global
         let cps = self convertExpr: "X".
         assert that: { CpsPrinter printToString: cps }
@@ -2854,12 +2906,9 @@ end"
                       with: [IntegerClassDefinition]
                       in: namespace.
         let cps = (def classDefinition findMethod: (namespace intern: "test")) cps.
-        -- FIXME: Doesn't yet flush the ctor.
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3, $receiver::A class:4):
-    apply:17($bind_recv:12, A class#new)($receiver::A class:4)
-$bind_recv:12($recv::A:6):
     $return:3(387)
 "!
 
