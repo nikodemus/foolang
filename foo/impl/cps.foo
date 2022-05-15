@@ -2438,26 +2438,12 @@ class CpsEvaluator { bound values parent }
 
 
     method visitOperation: anOp
-        anOp kind visit: anOp by: self!
+        anOp kind apply: (self visitAll: anOp args)!
 
 
     method visitOperation: anOp with: args
-        (anOp kind visit: anOp by: self)
+        (anOp visitBy: self)
             apply: args!
-
-
-    method visitClassOf: classOf
-        let arg = classOf args first visitBy: self.
-        arg classDefinition!
-
-
-    method visitFindMethod: findMethod
-        let theClass :: ClassDefinition
-            = (findMethod args first) visitBy: self.
-        let theSelector :: CpsSelector
-            = (findMethod args second) visitBy: self.
-        theClass findMethod: theSelector
-                 ifNone: { Error raise: "Method missing: {theClass name}#{theSelector name}\nAvailable:\n{theClass methodDictionary}" }!
 end
 
 
