@@ -998,6 +998,10 @@ class Constant { id::Integer
         value returnType!
 
 
+    method type
+        value classDefinition!
+
+
     method classDefinition
         value classDefinition!
 
@@ -1198,6 +1202,15 @@ interface OperationKind
     direct method isFoldable
         True!
 
+
+    direct method returnType: _
+        False!
+
+
+    direct method type: _
+        False!
+
+
     direct method simplify: op in: graph with: worklist
         -- General-purpose constant-folding for ops. Must opt-out via
         -- #isFoldable.
@@ -1214,6 +1227,10 @@ class ADDI {}
 
     direct method name
         "addi"!
+
+
+    direct method type: _
+        IntegerClassDefinition!
 
 
     direct method visit: operation by: visitor
@@ -1258,10 +1275,6 @@ class FIND_METHOD {}
 
     direct method name
         "findMethod"!
-
-
-    direct method returnType: _
-        False!
 
 
     direct method apply: args
@@ -1315,6 +1328,10 @@ class Operation { id::Integer
                        uses: Set new.
         args do: { |each| each addUse: new }.
         new!
+
+
+    method type
+        kind type: self!
 
 
     method returnType
@@ -2158,6 +2175,10 @@ class CpsConverter { graph var next classMap namespace }
               args: [const]!
 
 
+    method visitParens: syntax with: cc
+        syntax body visitBy: self with: cc!
+
+
     method visitReturn: syntax with: _
         syntax value visitBy: self with: graph exit!
 
@@ -2785,6 +2806,18 @@ $block:22():
     $return:3(1)
 $block:17():
     $return:3(2)
+"!
+
+
+    method test_convert_result_type_of_addi_known
+        let cps = self convertExpr: "let x = X :: Integer. (x + x) :: Integer"
+                       with: [IntegerClassDefinition].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    apply:28($let:23, Integer class#typecheck:)(Integer:Global, X:Global)
+$let:23(x::Integer:5):
+    $return:3(addi:41(x::Integer:5, x::Integer:5))
 "!
 
 
