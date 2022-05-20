@@ -16,7 +16,7 @@ interface CpsValue
     -- Valid value to flow through CPS in evaluator
     -- or as a constant.
     required method printName
-    required method classDefinition
+    required method type
     required method hostValue
 end
 
@@ -40,7 +40,7 @@ class CpsSelector { name }
     method hostValue
         Selector intern: name!
 
-    method classDefinition
+    method type
         self classDefinitionImpl!
 end
 
@@ -131,7 +131,7 @@ interface MethodDefinition
         self!
 
 
-    method classDefinition
+    method type
         MethodClassDefinition!
 
 
@@ -294,8 +294,8 @@ class TypecheckImpl { type }
 
     method apply: args in: _
         let value = args second.
-        value classDefinition is type
-            ifFalse: { Error raise: "CPS type error! Wanted: {type}, got: {value} ({value classDefinition})" }.
+        value type is type
+            ifFalse: { Error raise: "CPS type error! Wanted: {type}, got: {value} ({value type})" }.
         value!
 
 
@@ -333,7 +333,7 @@ interface InlineMethodImpl
         let pattern = self inliner apply: args.
         let newRecv = pattern first.
         let newSelector = pattern second.
-        (newRecv classDefinition findMethod: newSelector)
+        (newRecv type :: ClassDefinition findMethod: newSelector)
             apply: ([newRecv]
                         append: (pattern
                                      from: 3
@@ -524,7 +524,7 @@ class ClassDefinition { name
         "Class"!
 
 
-    direct method classDefinition
+    direct method type
         self!
 
 
@@ -629,7 +629,7 @@ class ClassDefinition { name
             ifFalse: { "#<Instance {name}>" }!
 
 
-    method classDefinition
+    method type
         ownClassDefinition!
 
 
@@ -664,7 +664,7 @@ class Instance { _class::ClassDefinition
         self _class: aClass
              _datum: aDatum!
 
-    method classDefinition
+    method type
         _class!
 
     method hostValue
@@ -681,7 +681,7 @@ class Instance { _class::ClassDefinition
 
     method == other
         (Instance includes: other)
-            ifTrue: { _class is other classDefinition
+            ifTrue: { _class is other type
                           ifTrue: { _datum == other hostValue } }!
 end
 
@@ -991,11 +991,7 @@ class Constant { id::Integer
 
 
     method type
-        value classDefinition!
-
-
-    method classDefinition
-        value classDefinition!
+        value type!
 
 
     method printName
@@ -1033,9 +1029,10 @@ class Global { id::Integer
         definition = new!
 
 
-    method classDefinition
-        (ClassDefinition includes: definition)
-            ifTrue: { definition classDefinition }!
+    method type
+        definition is False
+            ifTrue: { False }
+            ifFalse: { definition type }!
 
 
     method replaceUses: expr1 with: expr2
@@ -1162,9 +1159,11 @@ class Variable { id::Integer
         type = new!
 
 
-    method classDefinition
+    method type
         (ClassDefinition includes: type)
-            ifTrue: { type }!
+            ifTrue: { type }
+            ifFalse: { (type is False) assert: "sanity check".
+                       False }!
 
 
     method printName
@@ -1239,16 +1238,16 @@ class CLASS_OF {}
 
 
     direct method apply: args
-        args first classDefinition!
+        args first type :: ClassDefinition!
 
 
     direct method simplify: operation in: graph with: worklist
         -- This is slightly more powerful than the general-purpose
         -- constant folding.
         let recv = operation args first.
-        recv classDefinition
-            => { |classDefinition|
-                 let const = graph ensureConstant: recv classDefinition.
+        let type = recv type.
+        (ClassDefinition includes: type)
+            => { let const = graph ensureConstant: type.
                  operation replaceUsesWith: const in: worklist }!
 
 
@@ -1315,10 +1314,6 @@ class Operation { id::Integer
                        uses: Set new.
         args do: { |each| each addUse: new }.
         new!
-
-
-    method classDefinition
-        kind type: self!
 
 
     method type
@@ -1431,7 +1426,7 @@ class Continuation { id::Integer
         name = new!
 
 
-    method classDefinition
+    method type
         FunctionClassDefinition!
 
 
@@ -2873,7 +2868,7 @@ class A \{}
 end"
                       with: [IntegerClassDefinition]
                       in: namespace.
-        let cps = (def classDefinition findMethod: (namespace intern: "test")) cps.
+        let cps = (def type findMethod: (namespace intern: "test")) cps.
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3, $receiver::A class:4):
@@ -2925,7 +2920,7 @@ class A \{}
 end"
                       with: [IntegerClassDefinition]
                       in: namespace.
-        let cps = (def classDefinition findMethod: (namespace intern: "test")) cps.
+        let cps = (def type findMethod: (namespace intern: "test")) cps.
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3, $receiver::A class:4):
