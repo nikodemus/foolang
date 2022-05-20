@@ -935,10 +935,6 @@ interface Expression
         False!
 
 
-    method hasKnownClass
-        False!
-
-
     method isConstant
         False!
 
@@ -984,10 +980,6 @@ class Constant { id::Integer
         self id: id
              value: value
              uses: Set new!
-
-
-    method hasKnownClass
-        True!
 
 
     method isConstant
@@ -1041,12 +1033,9 @@ class Global { id::Integer
         definition = new!
 
 
-    method hasKnownClass
-        (definition is False) not!
-
-
     method classDefinition
-        definition classDefinition!
+        (ClassDefinition includes: definition)
+            ifTrue: { definition classDefinition }!
 
 
     method replaceUses: expr1 with: expr2
@@ -1173,12 +1162,9 @@ class Variable { id::Integer
         type = new!
 
 
-    method hasKnownClass
-        ClassDefinition includes: type!
-
-
     method classDefinition
-        type :: ClassDefinition!
+        (ClassDefinition includes: type)
+            ifTrue: { type }!
 
 
     method printName
@@ -1260,9 +1246,10 @@ class CLASS_OF {}
         -- This is slightly more powerful than the general-purpose
         -- constant folding.
         let recv = operation args first.
-        (recv hasKnownClass)
-            ifTrue: { let const = graph ensureConstant: recv classDefinition.
-                      operation replaceUsesWith: const in: worklist }!
+        recv classDefinition
+            => { |classDefinition|
+                 let const = graph ensureConstant: recv classDefinition.
+                 operation replaceUsesWith: const in: worklist }!
 
 
     direct method visit: operation by: visitor
@@ -1328,6 +1315,10 @@ class Operation { id::Integer
                        uses: Set new.
         args do: { |each| each addUse: new }.
         new!
+
+
+    method classDefinition
+        kind type: self!
 
 
     method type
@@ -1438,10 +1429,6 @@ class Continuation { id::Integer
 
     method name: new
         name = new!
-
-
-    method hasKnownClass
-        True!
 
 
     method classDefinition
