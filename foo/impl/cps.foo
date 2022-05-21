@@ -1246,6 +1246,10 @@ interface OperationKind
 
 
     direct method simplify: op in: graph with: worklist
+        self simplifyIfConstant: op in: graph with: worklist!
+
+
+    direct method simplifyIfConstant: op in: graph with: worklist
         -- General-purpose constant-folding for ops. Must opt-out via
         -- #isFoldable.
         (op args allSatisfy: #isConstant)
@@ -1319,6 +1323,15 @@ class DATUM_OF {}
 
     direct method apply: args
         Datum value: args first hostValue!
+
+
+    direct method simplify: op in: graph with: worklist
+        let arg = op args first.
+        (Operation includes: arg)
+            => { arg kind is MAKE_INSTANCE
+                     => { let datum = arg args second.
+                          return op replaceUsesWith: datum in: worklist } }.
+        self simplifyIfConstant: op in: graph with: worklist!
 end
 
 
@@ -3169,6 +3182,24 @@ end"
         assert that: { (CpsEvaluator eval: cps) hostValue }
                equals: 123!
 
+
+    method test_optimize_datumOf_makeInstance_pairs_eliminated
+        let cps = self convertExpr: "let a = X a :: Integer.
+                                     let b = X b :: Integer. a + b + a + b"
+                       with: [IntegerClassDefinition].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    apply:61($bind:56, findMethod:60(classOf:43(X:Global), #a))(X:Global)
+$bind:56($value:50):
+    apply:54($let:49, Integer class#typecheck:)(Integer:Global, $value:50)
+$let:49(a::Integer:5):
+    apply:45($bind:40, findMethod:44(classOf:43(X:Global), #b))(X:Global)
+$bind:40($value:33):
+    apply:38($let:32, Integer class#typecheck:)(Integer:Global, $value:33)
+$let:32(b::Integer:6):
+    $return:3(makeInstance:88(Integer, addi:87(datumOf:73(b::Integer:6), addi:81(datumOf:74(a::Integer:5), addi:75(datumOf:73(b::Integer:6), datumOf:74(a::Integer:5))))))
+"!
 
     method test_postOrder_whileTrue
         let cps = self convertExpr: "\{ X maybe\} whileTrue: \{ X something \}".
