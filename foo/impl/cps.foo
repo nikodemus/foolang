@@ -677,10 +677,13 @@ class ClassDefinition { name
 
 
     method displayString
-        name!
+        "#<Class {name}>"!
 
     method toString
         name!
+
+    method visitBy: visitor
+        visitor visitClassDefinition: self!
 end
 
 
@@ -2759,7 +2762,7 @@ class CpsGraphwizPrinter { output seen }
 end
 
 
-class CBackend { output cNames }
+class CBackend { output cInfo }
 
     direct method emitToString: classDef
         StringOutput with: { |out|
@@ -2769,7 +2772,7 @@ class CBackend { output cNames }
     direct method emit: classDef
                   to: output
         let backend = (self output: output
-                            cNames: Dictionary new).
+                            cInfo: Dictionary new).
         backend writeHeaders.
         backend emitClass: classDef!
 
@@ -2779,20 +2782,32 @@ class CBackend { output cNames }
 
 
     method emitClass: classDef::ClassDefinition
-        let cName = self ensureCName: classDef.
-        output print: "// class ".
-        output print: classDef name.
-        output print: " = ".
-        output println: cName.
-        output print: "const struct FooClass ".
-        output print: cName.
-        output println: ";"!
+        self declare: classDef!
 
-
-    method ensureCName: thing
-        cNames
+    method declare: thing
+        cInfo
             at: thing
-            ifNonePut: { "foo_{cNames size + 1}_{thing species}_{thing name}" }!
+            ifNonePut: {
+                let cName = self generateCName: thing.
+                let cType = CType of: thing.
+                output println: "// {cName}: {thing displayString}".
+                output println: "{cType} {cName};".
+                { name: cName, type: cType }
+            }!
+
+    method generateCName: thing
+        "foo_{cInfo size + 1}_{thing species}_{thing name}"!
+
+
+end
+
+
+class CType {}
+    direct method of: thing
+        thing visitBy: self!
+
+    direct method visitClassDefinition: classDef
+        "struct FooClass"!
 end
 
 
@@ -2843,11 +2858,18 @@ class TestCPS { assert system }
         assert that: { CBackend emitToString: def }
                equals: "#include \"foolang.h\"
 
-// class Test = foo_1_class_Test
-const struct FooClass foo_1_class_Test;
+// foo_1_class_Test: #<Class Test>
+struct FooClass foo_1_class_Test;
 "!
 
+---
+// foo_2_constant: \"Test\"
+struct FooInstance foo_2_constant = FOO_STRING(\"Test\");
 
+struct FooClass foo_1_class_Test = \{
+    .name = &foo_2_String_Test,
+}
+---
 
     method test_convert_addition_of_integers_optimizes_to_operation_addi
         let cps = self convertExpr: "let a = X a :: Integer. let b = X b :: Integer. a + b"
