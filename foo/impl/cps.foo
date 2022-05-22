@@ -637,6 +637,12 @@ class ClassDefinition { name
         ]!
 
 
+    method species
+        -- Used by the C-backend to provide human-readable context
+        -- for generated names.
+        "class"!
+
+
     method addMethod: aMethod
         aMethod home: self.
         methodDictionary
@@ -2753,9 +2759,35 @@ class CpsGraphwizPrinter { output seen }
 end
 
 
-class CBackend {}
-    direct method emitToString: cps
-        "XXX"!
+class CBackend { output cNames }
+
+    direct method emitToString: classDef
+        StringOutput with: { |out|
+                             self emit: classDef to: out }!
+
+
+    direct method emit: classDef
+                  to: output
+        (self output: output
+              cNames: Dictionary new)
+        emitClass: classDef!
+
+
+    method emitClass: classDef::ClassDefinition
+        let cName = self ensureCName: classDef.
+        output print: "\n// class ".
+        output print: classDef name.
+        output print: " = ".
+        output println: cName.
+        output print: "const struct FooClass ".
+        output print: cName.
+        output println: ";"!
+
+
+    method ensureCName: thing
+        cNames
+            at: thing
+            ifNonePut: { "foo_{cNames size + 1}_{thing species}_{thing name}" }!
 end
 
 
@@ -2801,10 +2833,13 @@ class TestCPS { assert system }
 
 
     method test_c_backend_trivial_method
-        let cps = self convertClass: "class Test \{} direct method test 1823! end"
+        let def = self convertClass: "class Test \{} direct method test 1823! end"
                        with: [IntegerClassDefinition].
-        assert that: { CBackend emitToString: cps }
-               equals: "XXX"!
+        assert that: { CBackend emitToString: def }
+               equals: "
+// class Test = foo_1_class_Test
+const struct FooClass foo_1_class_Test;
+"!
 
 
 
