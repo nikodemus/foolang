@@ -2886,7 +2886,8 @@ struct FooBytes foo_string_2; // \"Test\"
 
 // #<Class Test>
 struct FooClass foo_class_1 = \{
-    .name = &foo_string_2
+    .name = &foo_string_2,
+    .methods = &foo_methods_3
 \};
 
 // \"Test\"
