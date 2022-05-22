@@ -775,6 +775,11 @@ define SelectorClassDefinition
          methods: [])!
 
 
+define StandardDefinitions
+    [BooleanClassDefinition,
+     IntegerClassDefinition]!
+
+
 -- KLUDGE: Bootstrap evaluator is picky about order of definitions
 extend CpsSelector
     method classDefinitionImpl
@@ -2748,6 +2753,12 @@ class CpsGraphwizPrinter { output seen }
 end
 
 
+class CBackend {}
+    direct method emitToString: cps
+        "XXX"!
+end
+
+
 class TestCPS { assert system }
     is TestSuite
 
@@ -2757,10 +2768,11 @@ class TestCPS { assert system }
     method system: new
         system = new!
 
-    method convertExpr: source
-        self convertExpr: source
-             with: []
-             in: Namespace standard!
+    method convertExpr: source with: defs in: namespace
+        let syntax = Parser parseExpression: source.
+        CpsConverter convertExpr: syntax
+                     with: defs
+                     in: namespace!
 
 
     method convertExpr: source with: defs
@@ -2769,11 +2781,10 @@ class TestCPS { assert system }
              in: Namespace standard!
 
 
-    method convertExpr: source with: defs in: namespace
-        let syntax = Parser parseExpression: source.
-        CpsConverter convertExpr: syntax
-                     with: defs
-                     in: namespace!
+    method convertExpr: source
+        self convertExpr: source
+             with: []
+             in: Namespace standard!
 
 
     method convertClass: source with: defs in: namespace
@@ -2781,6 +2792,20 @@ class TestCPS { assert system }
         CpsConverter convertClass: syntax
                      with: defs
                      in: namespace!
+
+
+    method convertClass: source with: defs
+        self convertClass: source
+             with: defs
+             in: Namespace standard!
+
+
+    method test_c_backend_trivial_method
+        let cps = self convertClass: "class Test \{} direct method test 1823! end"
+                       with: [IntegerClassDefinition].
+        assert that: { CBackend emitToString: cps }
+               equals: "XXX"!
+
 
 
     method test_convert_addition_of_integers_optimizes_to_operation_addi
