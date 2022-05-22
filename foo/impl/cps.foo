@@ -2775,14 +2775,35 @@ class CBackend { output cInfo }
     method emitClass: classDef::ClassDefinition
         let classInfo = self declare: classDef.
         let nameInfo = self declare: classDef name.
+
         output newline.
+        output print: "// ".
+        output println: classDef displayString.
         output print: classInfo type.
         output print: " ".
         output print: classInfo name.
         output println: " = \{".
         output print: "    .name = &".
         output println: nameInfo name.
-        output println: "\};"!
+        output println: "\};".
+
+        output newline.
+        output print: "// ".
+        output println: classDef name displayString.
+        output print: nameInfo type.
+        output print: " ".
+        output print: nameInfo name.
+        output print: " = ".
+        self emitString: classDef name.
+        output println: ";"!
+
+
+    method emitString: name
+        output print: "\{\n    .size = ".
+        output print: name size.
+        output print: ",\n    .data = \{ ".
+        name do: { |each| output print: "'{each}'," }.
+        output print: " 0 \}\n\}"!
 
 
     method declare: thing
@@ -2807,7 +2828,7 @@ class CBackend { output cInfo }
         (ClassDefinition includes: thing)
             ifTrue: { return "struct FooClass" }.
         (String includes: thing)
-            ifTrue: { return "struct FooString" }.
+            ifTrue: { return "struct FooBytes" }.
         Error raise: "Don't know how to generate C-type for: {thing displayString} :: {thing className}"!
 
 end
@@ -2861,10 +2882,17 @@ class TestCPS { assert system }
                equals: "#include \"foolang.h\"
 
 struct FooClass foo_class_1; // #<Class Test>
-struct FooString foo_string_2; // \"Test\"
+struct FooBytes foo_string_2; // \"Test\"
 
+// #<Class Test>
 struct FooClass foo_class_1 = \{
     .name = &foo_string_2
+\};
+
+// \"Test\"
+struct FooBytes foo_string_2 = \{
+    .size = 4,
+    .data = \{ 'T','e','s','t', 0 \}
 \};
 "!
 
