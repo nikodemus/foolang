@@ -637,12 +637,6 @@ class ClassDefinition { name
         ]!
 
 
-    method species
-        -- Used by the C-backend to provide human-readable context
-        -- for generated names.
-        "class"!
-
-
     method addMethod: aMethod
         aMethod home: self.
         methodDictionary
@@ -681,9 +675,6 @@ class ClassDefinition { name
 
     method toString
         name!
-
-    method visitBy: visitor
-        visitor visitClassDefinition: self!
 end
 
 
@@ -2782,32 +2773,36 @@ class CBackend { output cInfo }
 
 
     method emitClass: classDef::ClassDefinition
-        self declare: classDef!
+        self declare: classDef.
+        self declare: classDef name.
+        False!
+
 
     method declare: thing
         cInfo
             at: thing
             ifNonePut: {
                 let cName = self generateCName: thing.
-                let cType = CType of: thing.
-                output println: "// {cName}: {thing displayString}".
-                output println: "{cType} {cName};".
+                let cType = self cTypeOf: thing.
+                output print: "{cType} {cName}; // ".
+                output println: thing displayString.
                 { name: cName, type: cType }
             }!
 
     method generateCName: thing
-        "foo_{cInfo size + 1}_{thing species}_{thing name}"!
+        (ClassDefinition includes: thing)
+            ifTrue: { return "foo_class_{cInfo size + 1}" }.
+        (String includes: thing)
+            ifTrue: { return "foo_string_{cInfo size + 1}" }.
+        Error raise: "Don't know how to generate C-name for: {thing displayString} :: {thing className}"!
 
+    method cTypeOf: thing
+        (ClassDefinition includes: thing)
+            ifTrue: { return "struct FooClass" }.
+        (String includes: thing)
+            ifTrue: { return "struct FooString" }.
+        Error raise: "Don't know how to generate C-type for: {thing displayString} :: {thing className}"!
 
-end
-
-
-class CType {}
-    direct method of: thing
-        thing visitBy: self!
-
-    direct method visitClassDefinition: classDef
-        "struct FooClass"!
 end
 
 
@@ -2858,8 +2853,8 @@ class TestCPS { assert system }
         assert that: { CBackend emitToString: def }
                equals: "#include \"foolang.h\"
 
-// foo_1_class_Test: #<Class Test>
-struct FooClass foo_1_class_Test;
+struct FooClass foo_class_1; // #<Class Test>
+struct FooString foo_string_2; // \"Test\"
 "!
 
 ---
