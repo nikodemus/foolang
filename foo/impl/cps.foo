@@ -112,6 +112,10 @@ interface MethodDefinition
         self selector name!
 
 
+    method < other
+        self name < other name!
+
+
     method returnType
         False!
 
@@ -126,6 +130,10 @@ interface MethodDefinition
 
     method toString
         "#<{self classOf name} {self home name}#{self name}>"!
+
+
+    method displayString
+        self toString!
 
 
     method visitBy: visitor
@@ -558,6 +566,10 @@ class MethodDictionary { home methods }
             ifFalse: { Error raise: "{self displayString} already has a home!" }!
 
 
+    method size
+        methods size!
+
+
     method at: selector
         methods at: selector!
 
@@ -567,11 +579,20 @@ class MethodDictionary { home methods }
 
 
     method reject: testBlock do: doBlock
-        methods
-            do: { |key value|
-                  (testBlock optional: key value: value)
-                      ifFalse: { doBlock optional: key value: value } }.
+        methods values sort
+            do: { |value|
+                  (testBlock value: value)
+                      ifFalse: { doBlock value: value } }.
         False!
+
+
+    method do: block
+        methods values sort do: block!
+
+
+    method do: eachBlock interleaving: betweenBlock
+        methods values sort
+            do: eachBlock interleaving: betweenBlock!
 
 end
 
@@ -2817,6 +2838,8 @@ class CBackend { output cInfo }
         let classInfo = self declare: classDef.
         let nameInfo = self declare: classDef name.
         let methodInfo = self declare: classDef methodDictionary.
+        classDef methodDictionary
+            do: { |each| self declare: each }.
 
         output newline.
         output print: "// ".
@@ -2840,6 +2863,16 @@ class CBackend { output cInfo }
         output print: nameInfo name.
         output print: " = ".
         self emitString: classDef name.
+        output println: ";".
+
+        output newline.
+        output print: "// ".
+        output println: classDef methodDictionary displayString.
+        output print: methodInfo type.
+        output print: " ".
+        output print: methodInfo name.
+        output print: " = ".
+        self emitMethods: classDef methodDictionary.
         output println: ";"!
 
 
@@ -2849,6 +2882,19 @@ class CBackend { output cInfo }
         output print: ",\n    .data = \{ ".
         name do: { |each| output print: "'{each}'," }.
         output print: " 0 \}\n\}"!
+
+
+    method emitMethods: methods
+        output print: "\{\n    .size = ".
+        output print: methods size.
+        output println: ",\n    .data = \{".
+        methods do: { |each|
+                      let info = self declaration: each.
+                      output print: "        &".
+                      output print: info name }
+                interleaving: { output println: "," }.
+        output println: "\n    \}".
+        output print: "\}"!
 
 
     method declare: thing
@@ -2862,12 +2908,21 @@ class CBackend { output cInfo }
                 { name: cName, type: cType }
             }!
 
+
+    method declaration: thing
+        cInfo
+            at: thing
+            ifNone: { Error raise: "{thing displayString} is not declared yet!" }!
+
+
     method generateCName: thing
         let n = cInfo size + 1.
         (ClassDefinition includes: thing)
             ifTrue: { return "foo_class_{n}" }.
         (MethodDictionary includes: thing)
             ifTrue: { return "foo_methods_{n}" }.
+        (MethodDefinition includes: thing)
+            ifTrue: { return "foo_method_{n}" }.
         (String includes: thing)
             ifTrue: { return "foo_string_{n}" }.
         Error raise: "Don't know how to generate C-name for: {thing displayString} :: {thing className}"!
@@ -2877,6 +2932,8 @@ class CBackend { output cInfo }
             ifTrue: { return "struct FooClass" }.
         (MethodDictionary includes: thing)
             ifTrue: { return "struct FooMethodDictionary" }.
+        (MethodDefinition includes: thing)
+            ifTrue: { return "struct FooMethod" }.
         (String includes: thing)
             ifTrue: { return "struct FooBytes" }.
         Error raise: "Don't know how to generate C-type for: {thing displayString} :: {thing className}"!
@@ -2926,7 +2983,7 @@ class TestCPS { assert system }
 
 
     method test_c_backend_trivial_method
-        let def = self convertClass: "class Test \{} direct method test 1823! end"
+        let def = self convertClass: "class Test \{} method test 1823! end"
                        with: [IntegerClassDefinition].
         assert that: { CBackend emitToString: def }
                equals: "#include \"foolang.h\"
@@ -2934,6 +2991,8 @@ class TestCPS { assert system }
 struct FooClass foo_class_1; // #<Class Test>
 struct FooBytes foo_string_2; // \"Test\"
 struct FooMethodDictionary foo_methods_3; // #<MethodDictionary Test>
+struct FooMethod foo_method_4; // #<BuiltinMethod Test#opaqueIdentity>
+struct FooMethod foo_method_5; // #<UserMethod Test#test>
 
 // #<Class Test>
 struct FooClass foo_class_1 = \{
@@ -2945,6 +3004,15 @@ struct FooClass foo_class_1 = \{
 struct FooBytes foo_string_2 = \{
     .size = 4,
     .data = \{ 'T','e','s','t', 0 \}
+\};
+
+// #<MethodDictionary Test>
+struct FooMethodDictionary foo_methods_3 = \{
+    .size = 2,
+    .data = \{
+        &foo_method_4,
+        &foo_method_5
+    \}
 \};
 "!
 
