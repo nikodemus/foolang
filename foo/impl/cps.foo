@@ -2985,6 +2985,12 @@ class TestCPS { assert system }
     method test_c_backend_trivial_method
         let def = self convertClass: "class Test \{} method test 1823! end"
                        with: [IntegerClassDefinition].
+        ---
+        - emit metaclass
+        - emit method definitions, incl. ctor and typecheck for metaclass
+        - emit selectors
+        - hash method dictionary
+        ---
         assert that: { CBackend emitToString: def }
                equals: "#include \"foolang.h\"
 
