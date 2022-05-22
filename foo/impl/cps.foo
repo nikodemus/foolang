@@ -16,7 +16,7 @@ interface CpsValue
     -- Valid value to flow through CPS in evaluator
     -- or as a constant.
     required method printName
-    required method classDefinition
+    required method type
     required method hostValue
 end
 
@@ -40,7 +40,7 @@ class CpsSelector { name }
     method hostValue
         Selector intern: name!
 
-    method classDefinition
+    method type
         self classDefinitionImpl!
 end
 
@@ -107,6 +107,11 @@ interface MethodDefinition
     is Object
     is CpsValue
 
+    method name
+        -- FIXME: why is this needed? some errors provoke it in turn
+        self selector name!
+
+
     method returnType
         False!
 
@@ -131,7 +136,7 @@ interface MethodDefinition
         self!
 
 
-    method classDefinition
+    method type
         MethodClassDefinition!
 
 
@@ -294,8 +299,8 @@ class TypecheckImpl { type }
 
     method apply: args in: _
         let value = args second.
-        value classDefinition is type
-            ifFalse: { Error raise: "CPS type error! Wanted: {type}, got: {value} ({value classDefinition})" }.
+        value type is type
+            ifFalse: { Error raise: "CPS type error! Wanted: {type}, got: {value} ({value type})" }.
         value!
 
 
@@ -333,7 +338,7 @@ interface InlineMethodImpl
         let pattern = self inliner apply: args.
         let newRecv = pattern first.
         let newSelector = pattern second.
-        (newRecv classDefinition findMethod: newSelector)
+        (newRecv type :: ClassDefinition findMethod: newSelector)
             apply: ([newRecv]
                         append: (pattern
                                      from: 3
@@ -381,21 +386,43 @@ interface PrimitiveInlineMethodImpl
 
     method apply: args in: _classDefinition
         let pattern = self primitiveInliner apply: args.
-        pattern first apply: pattern rest!
+        self evalPattern: pattern!
 
     method inlineIn: aContinuation in: graph with: worklist
         let apply = aContinuation target.
-        let args = aContinuation args.
-        let pattern = self primitiveInliner apply: args.
-        let primop = graph ensureOperation: pattern first
-                           args: pattern rest.
+        let pattern = self primitiveInliner apply: aContinuation args.
+        let primop = self buildPattern: pattern in: graph with: worklist.
+        -- Log println: "XXX: inline: {primop printName}".
         let cc = apply target.
         aContinuation removeArgs.
         aContinuation addArgs: [primop].
         aContinuation target: cc.
         cc propagateTypes: [primop type].
-        worklist push: primop.
         worklist push: aContinuation!
+
+    method evalPattern: pattern
+        (Array includes: pattern)
+            ifTrue: { let op = pattern first.
+                      let args = pattern rest collect: { |each| self evalPattern: each }.
+                      return op apply: args }
+            ifFalse: { pattern }!
+
+    method buildPattern: pattern in: graph with: worklist
+        (Expression includes: pattern)
+            ifTrue: { return pattern }.
+        (Array includes: pattern)
+            ifTrue: { let op = graph ensureOperation: pattern first
+                                     args: (pattern rest
+                                                collect: { |each|
+                                                           self buildPattern: each
+                                                                in: graph
+                                                                with: worklist }).
+                      worklist push: op.
+                      return op }.
+        -- Eg. "inline reference" to IntegerClassDefinition.
+        (CpsValue includes: pattern)
+            ifFalse: { Error raise: "Unexpected value in builPattern: {pattern}" }.
+        graph ensureConstant: pattern!
 end
 
 
@@ -407,7 +434,9 @@ class IntegerAddIntegerImpl {}
 
 
     method primitiveInliner
-        { |a b| [ADDI, b, a] }!
+        { |a b|
+          [MAKE_INSTANCE, IntegerClassDefinition,
+           [ADDI, [DATUM_OF, a], [DATUM_OF, b]]] }!
 end
 
 
@@ -524,7 +553,7 @@ class ClassDefinition { name
         "Class"!
 
 
-    direct method classDefinition
+    direct method type
         self!
 
 
@@ -623,13 +652,7 @@ class ClassDefinition { name
         name!
 
 
-    method toString: datum
-        self isPrimitive
-            ifTrue: { datum displayString }
-            ifFalse: { "#<Instance {name}>" }!
-
-
-    method classDefinition
+    method type
         ownClassDefinition!
 
 
@@ -655,6 +678,28 @@ class ClassDefinition { name
 end
 
 
+class Datum { value }
+    is Object
+    is CpsValue
+
+    method toString
+        -- Instances don't get an explicit marker of
+        -- being such.
+        "{value displayString}::Datum"!
+
+    method printName
+        self toString!
+
+    method displayString
+        self toString!
+
+    method hostValue
+        value!
+
+    method type
+        Error raise: "Datum has no type!"!
+end
+
 class Instance { _class::ClassDefinition
                  _datum }
     is Object
@@ -664,7 +709,7 @@ class Instance { _class::ClassDefinition
         self _class: aClass
              _datum: aDatum!
 
-    method classDefinition
+    method type
         _class!
 
     method hostValue
@@ -674,14 +719,16 @@ class Instance { _class::ClassDefinition
         self toString!
 
     method toString
-        _class toString: _datum!
+        _class isPrimitive
+            ifTrue: { _datum displayString }
+            ifFalse: { "#<Instance {_class name}>" }!
 
     method displayString
         self toString!
 
     method == other
         (Instance includes: other)
-            ifTrue: { _class is other classDefinition
+            ifTrue: { _class is other type
                           ifTrue: { _datum == other hostValue } }!
 end
 
@@ -935,10 +982,6 @@ interface Expression
         False!
 
 
-    method hasKnownClass
-        False!
-
-
     method isConstant
         False!
 
@@ -981,13 +1024,11 @@ class Constant { id::Integer
 
 
     direct method id: id value: value
+        (CpsValue includes: value)
+            ifFalse: { Error raise: "Constant value not CpsValue: {value} :: {value classOf name}" }.
         self id: id
              value: value
              uses: Set new!
-
-
-    method hasKnownClass
-        True!
 
 
     method isConstant
@@ -998,8 +1039,8 @@ class Constant { id::Integer
         value returnType!
 
 
-    method classDefinition
-        value classDefinition!
+    method type
+        value type!
 
 
     method printName
@@ -1037,12 +1078,10 @@ class Global { id::Integer
         definition = new!
 
 
-    method hasKnownClass
-        (definition is False) not!
-
-
-    method classDefinition
-        definition classDefinition!
+    method type
+        definition is False
+            ifTrue: { False }
+            ifFalse: { definition type }!
 
 
     method replaceUses: expr1 with: expr2
@@ -1169,12 +1208,11 @@ class Variable { id::Integer
         type = new!
 
 
-    method hasKnownClass
-        ClassDefinition includes: type!
-
-
-    method classDefinition
-        type :: ClassDefinition!
+    method type
+        (ClassDefinition includes: type)
+            ifTrue: { type }
+            ifFalse: { (type is False) assert: "sanity check, type = {type} :: {type className}".
+                       False }!
 
 
     method printName
@@ -1198,13 +1236,27 @@ interface OperationKind
     direct method isFoldable
         True!
 
+
+    direct method returnType: _
+        False!
+
+
+    direct method type: _
+        False!
+
+
     direct method simplify: op in: graph with: worklist
+        self simplifyIfConstant: op in: graph with: worklist!
+
+
+    direct method simplifyIfConstant: op in: graph with: worklist
         -- General-purpose constant-folding for ops. Must opt-out via
         -- #isFoldable.
         (op args allSatisfy: #isConstant)
             ifTrue: { let argVals = op args collect: #value.
-                      let value = graph ensureConstant: (op kind apply: argVals).
-                      op replaceUsesWith: value in: worklist }!
+                      let value = op kind apply: argVals.
+                      let constant = graph ensureConstant: value.
+                      op replaceUsesWith: constant in: worklist }!
 end
 
 
@@ -1216,15 +1268,23 @@ class ADDI {}
         "addi"!
 
 
+    direct method type: _
+        IntegerClassDefinition!
+
+
     direct method visit: operation by: visitor
         visitor visitAddi: operation!
 
 
     direct method apply: args
-        Instance
-            class: IntegerClassDefinition
-            datum: (args first hostValue :: Integer +
-                    args second hostValue :: Integer)!
+        Datum value: (args first hostValue :: Integer +
+                      args second hostValue :: Integer)!
+end
+
+
+extend Object
+    method className
+        self classOf name!
 end
 
 
@@ -1236,20 +1296,42 @@ class CLASS_OF {}
 
 
     direct method apply: args
-        args first classDefinition!
+        args first type :: ClassDefinition!
 
 
     direct method simplify: operation in: graph with: worklist
         -- This is slightly more powerful than the general-purpose
         -- constant folding.
         let recv = operation args first.
-        (recv hasKnownClass)
-            ifTrue: { let const = graph ensureConstant: recv classDefinition.
-                      operation replaceUsesWith: const in: worklist }!
+        let type = recv type.
+        -- Log println: "\nXXX: CLASS_OF {recv toString} => {type}".
+        (ClassDefinition includes: type)
+            => { let const = graph ensureConstant: type.
+                 operation replaceUsesWith: const in: worklist }!
 
 
     direct method visit: operation by: visitor
         visitor visitClassOf: operation!
+end
+
+
+class DATUM_OF {}
+    is OperationKind
+
+    direct method name
+        "datumOf"!
+
+    direct method apply: args
+        Datum value: args first hostValue!
+
+
+    direct method simplify: op in: graph with: worklist
+        let arg = op args first.
+        (Operation includes: arg)
+            => { arg kind is MAKE_INSTANCE
+                     => { let datum = arg args second.
+                          return op replaceUsesWith: datum in: worklist } }.
+        self simplifyIfConstant: op in: graph with: worklist!
 end
 
 
@@ -1258,10 +1340,6 @@ class FIND_METHOD {}
 
     direct method name
         "findMethod"!
-
-
-    direct method returnType: _
-        False!
 
 
     direct method apply: args
@@ -1292,9 +1370,15 @@ class MAKE_INSTANCE {}
         "makeInstance"!
 
 
+    direct method type: operation
+        let classDef = operation args first.
+        classDef isConstant
+            ifTrue: { classDef value }!
+
+
     direct method apply: args
         Instance class: args first
-                 datum: args second!
+                 datum: args second hostValue!
 
 
     direct method visit: operation by: visitor
@@ -1315,6 +1399,10 @@ class Operation { id::Integer
                        uses: Set new.
         args do: { |each| each addUse: new }.
         new!
+
+
+    method type
+        kind type: self!
 
 
     method returnType
@@ -1423,11 +1511,7 @@ class Continuation { id::Integer
         name = new!
 
 
-    method hasKnownClass
-        True!
-
-
-    method classDefinition
+    method type
         FunctionClassDefinition!
 
 
@@ -2158,6 +2242,10 @@ class CpsConverter { graph var next classMap namespace }
               args: [const]!
 
 
+    method visitParens: syntax with: cc
+        syntax body visitBy: self with: cc!
+
+
     method visitReturn: syntax with: _
         syntax value visitBy: self with: graph exit!
 
@@ -2709,7 +2797,7 @@ $let:33(a::Integer:5):
 $bind:24($value:17):
     apply:22($let:16, Integer class#typecheck:)(Integer:Global, $value:17)
 $let:16(b::Integer:6):
-    $return:3(addi:57(a::Integer:5, b::Integer:6))
+    $return:3(makeInstance:60(Integer, addi:59(datumOf:57(b::Integer:6), datumOf:58(a::Integer:5))))
 "!
 
     method test_convert_arity_0_block
@@ -2788,6 +2876,18 @@ $block:17():
 "!
 
 
+    method test_convert_result_type_of_addi_known
+        let cps = self convertExpr: "let x = X :: Integer. (x + x) :: Integer"
+                       with: [IntegerClassDefinition].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    apply:28($let:23, Integer class#typecheck:)(Integer:Global, X:Global)
+$let:23(x::Integer:5):
+    $return:3(makeInstance:43(Integer, addi:42(datumOf:41(x::Integer:5), datumOf:41(x::Integer:5))))
+"!
+
+
     method test_convert_closure_whileFalse
         let cps = self convertExpr: "\{ X maybe\} whileFalse: \{ Y something \}".
         assert that: { CpsPrinter printToString: cps }
@@ -2830,7 +2930,7 @@ $loopExit:38():
 $entry:2($return:3):
     apply:18($bind_arg:12, Integer class#typecheck:)(Integer:Global, X:Global)
 $bind_arg:12($arg::Integer:6):
-    $return:3(addi:34(123, $arg::Integer:6))
+    $return:3(makeInstance:37(Integer, addi:36(datumOf:34($arg::Integer:6), 123::Datum)))
 "!
 
 
@@ -2853,7 +2953,7 @@ class A \{}
 end"
                       with: [IntegerClassDefinition]
                       in: namespace.
-        let cps = (def classDefinition findMethod: (namespace intern: "test")) cps.
+        let cps = (def type findMethod: (namespace intern: "test")) cps.
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3, $receiver::A class:4):
@@ -2905,7 +3005,7 @@ class A \{}
 end"
                       with: [IntegerClassDefinition]
                       in: namespace.
-        let cps = (def classDefinition findMethod: (namespace intern: "test")) cps.
+        let cps = (def type findMethod: (namespace intern: "test")) cps.
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3, $receiver::A class:4):
@@ -3082,6 +3182,24 @@ end"
         assert that: { (CpsEvaluator eval: cps) hostValue }
                equals: 123!
 
+
+    method test_optimize_datumOf_makeInstance_pairs_eliminated
+        let cps = self convertExpr: "let a = X a :: Integer.
+                                     let b = X b :: Integer. a + b + a + b"
+                       with: [IntegerClassDefinition].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    apply:61($bind:56, findMethod:60(classOf:43(X:Global), #a))(X:Global)
+$bind:56($value:50):
+    apply:54($let:49, Integer class#typecheck:)(Integer:Global, $value:50)
+$let:49(a::Integer:5):
+    apply:45($bind:40, findMethod:44(classOf:43(X:Global), #b))(X:Global)
+$bind:40($value:33):
+    apply:38($let:32, Integer class#typecheck:)(Integer:Global, $value:33)
+$let:32(b::Integer:6):
+    $return:3(makeInstance:88(Integer, addi:87(datumOf:73(b::Integer:6), addi:81(datumOf:74(a::Integer:5), addi:75(datumOf:73(b::Integer:6), datumOf:74(a::Integer:5))))))
+"!
 
     method test_postOrder_whileTrue
         let cps = self convertExpr: "\{ X maybe\} whileTrue: \{ X something \}".
