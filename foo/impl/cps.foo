@@ -112,6 +112,10 @@ interface MethodDefinition
         self selector name!
 
 
+    method < other
+        self name < other name!
+
+
     method returnType
         False!
 
@@ -126,6 +130,10 @@ interface MethodDefinition
 
     method toString
         "#<{self classOf name} {self home name}#{self name}>"!
+
+
+    method displayString
+        self toString!
 
 
     method visitBy: visitor
@@ -540,21 +548,61 @@ class WhileLoopImpl { selector while }
 end
 
 
+class MethodDictionary { home methods }
+    is Object
+
+    direct method new
+        self home: False
+             methods: Dictionary new!
+
+
+    method displayString
+        "#<MethodDictionary {home name}>"!
+
+
+    method home: new
+        home is False
+            ifTrue: { home = new }
+            ifFalse: { Error raise: "{self displayString} already has a home!" }!
+
+
+    method size
+        methods size!
+
+
+    method at: selector
+        methods at: selector!
+
+
+    method put: aMethod at: selector
+        methods put: aMethod at: selector!
+
+
+    method reject: testBlock do: doBlock
+        methods values sort
+            do: { |value|
+                  (testBlock value: value)
+                      ifFalse: { doBlock value: value } }.
+        False!
+
+
+    method do: block
+        methods values sort do: block!
+
+
+    method do: eachBlock interleaving: betweenBlock
+        methods values sort
+            do: eachBlock interleaving: betweenBlock!
+
+end
+
+
 class ClassDefinition { name
                         hostClass
                         ownClassDefinition
                         methodDictionary }
     is Object
     is CpsValue
-
-    -- ClassDefinition itself is used as the ClassDefinition for Class.
-    -- Clever, yes? Horrible, maybe!
-    direct method name
-        "Class"!
-
-
-    direct method type
-        self!
 
 
     direct method name: name
@@ -597,18 +645,23 @@ class ClassDefinition { name
             directMethods: []!
 
 
-    direct method name: name hostClass: hostClass
-                  methods: methods directMethods: directMethods
-        let instanceMethodDictionary = Dictionary new.
-        let directMethodDictionary = Dictionary new.
+    direct method name: name
+                  hostClass: hostClass
+                  methods: methods
+                  directMethods: directMethods
+        let instanceMethodDictionary = MethodDictionary new.
+        let directMethodDictionary = MethodDictionary new.
         let ownClassDefinition = self name: "{name} class"
                                       hostClass: hostClass classOf
-                                      ownClassDefinition: ClassDefinition
+                                      ownClassDefinition: ClassClassDefinition
                                       methodDictionary: directMethodDictionary.
         let classDefinition = self name: name
                                    hostClass: hostClass
                                    ownClassDefinition: ownClassDefinition
                                    methodDictionary: instanceMethodDictionary.
+
+        instanceMethodDictionary home: classDefinition.
+        directMethodDictionary home: ownClassDefinition.
 
         methods
             do: { |each| classDefinition addMethod: each }.
@@ -634,7 +687,13 @@ class ClassDefinition { name
             ConstructorImpl,
             OpaqueIdentityImpl,
             TypecheckImpl,
-        ]!
+            ]!
+
+
+    method ownClassDefinition: new
+        ownClassDefinition is False
+            ifTrue: { ownClassDefinition = new }
+            ifFalse: { Error raise: "{self} ownClassDefinition already set!" }!
 
 
     method addMethod: aMethod
@@ -671,11 +730,20 @@ class ClassDefinition { name
 
 
     method displayString
-        name!
+        self is ClassClassDefinition
+            ifTrue: { "#<Class>" }
+            ifFalse: { "#<Class {name}>" }!
+
 
     method toString
         name!
 end
+
+
+define ClassMethodDictionary
+    let new = MethodDictionary new.
+    new home: ClassDefinition.
+    new!
 
 
 class Datum { value }
@@ -733,6 +801,19 @@ class Instance { _class::ClassDefinition
 end
 
 
+define ClassClassDefinition
+    let classMethodDictionary = MethodDictionary new.
+    let new = (ClassDefinition name: "Class"
+                               hostClass: Class
+                               ownClassDefinition: False
+                               methodDictionary: classMethodDictionary).
+    new ownClassDefinition: new.
+    classMethodDictionary home: new.
+    ClassDefinition standardDirectMethodImpls
+        do: { |each| new addMethod: (BuiltinMethod new: (each for: new)) }.
+    new!
+
+
 define BooleanClassDefinition
     (ClassDefinition
          hostClass: Boolean
@@ -773,6 +854,11 @@ define SelectorClassDefinition
     (ClassDefinition
          name: "Selector"
          methods: [])!
+
+
+define StandardDefinitions
+    [BooleanClassDefinition,
+     IntegerClassDefinition]!
 
 
 -- KLUDGE: Bootstrap evaluator is picky about order of definitions
@@ -2164,11 +2250,13 @@ class CpsConverter { graph var next classMap namespace }
                        for: ownClass
                        with: defs
                        in: namespace }.
-        (newClass methodDictionary reject: #isStandard)
+        newClass methodDictionary
+            reject: #isStandard
             do: { |each|
                   CpsOptimizer optimize: each cps
                                with: GlobalOptimizationPolicy }.
-        (ownClass methodDictionary reject: #isStandard)
+        ownClass methodDictionary
+            reject: #isStandard
             do: { |each|
                   CpsOptimizer optimize: each cps
                                with: GlobalOptimizationPolicy }.
@@ -2748,6 +2836,142 @@ class CpsGraphwizPrinter { output seen }
 end
 
 
+class CBackend { output cInfo }
+
+    direct method emitToString: classDef
+        StringOutput with: { |out|
+                             self emit: classDef to: out }!
+
+
+    direct method emit: classDef
+                  to: output
+        let backend = (self output: output
+                            cInfo: Dictionary new).
+        backend writeHeaders.
+        backend emitClass: classDef!
+
+
+    method writeHeaders
+        output println: "#include \"foolang.h\"\n"!
+
+
+    method emitClass: classDef
+        (self declaration: classDef)
+            => { |info| return info }.
+
+        let classInfo = self declare: classDef.
+
+        let nameInfo = self emitString: classDef name.
+        let methodInfo = self emitMethodDictionary: classDef methodDictionary.
+        let metaclassInfo = self emitClass: classDef ownClassDefinition.
+        output print: "// ".
+        output println: classDef displayString.
+        output print: classInfo type.
+        output print: " ".
+        output print: classInfo name.
+        output println: " = \{".
+
+        output print: "    .name = &".
+        output print: nameInfo name.
+        output println: ",".
+
+        output print: "    .own_class = &".
+        output print: metaclassInfo name.
+        output println: ",".
+
+        output print: "    .methods = &".
+        output println: methodInfo name.
+        output println: "\};\n".
+        classInfo!
+
+
+    method emitString: string
+        let info = self declare: string.
+        output print: "// ".
+        output println: string displayString.
+        output print: info type.
+        output print: " ".
+        output print: info name.
+        output print: " = \{\n    .size = ".
+        output print: string size.
+        output print: ",\n    .data = \{ ".
+        string  do: { |each| output print: "'{each}'," }.
+        output println: " 0 \}\n\};\n".
+        info!
+
+
+    method emitDeclaration: thing
+        let info = self declare: thing.
+        output print: info type.
+        output print: " ".
+        output print: info name.
+        output print: "; // ".
+        output println: thing displayString!
+
+
+    method emitMethodDictionary: methodDictionary
+        methodDictionary
+            do: { |each|
+                  self emitDeclaration: each }.
+        let methodInfo = self declare: methodDictionary.
+        output print: "\n// ".
+        output println: methodDictionary displayString.
+        output print: methodInfo type.
+        output print: " ".
+        output print: methodInfo name.
+        output print: " = \{\n    .size = ".
+        output print: methodDictionary size.
+        output println: ",\n    .data = \{".
+        methodDictionary
+            do: { |each|
+                  let info = self declaration: each.
+                  output print: "        &".
+                  output print: info name }
+            interleaving: { output println: "," }.
+        output println: "\n    \}\n\};\n".
+        methodInfo!
+
+
+    method declare: thing
+        cInfo
+            at: thing
+            ifNonePut: {
+                let cName = self generateCName: thing.
+                let cType = self cTypeOf: thing.
+                { name: cName, type: cType }
+            }!
+
+
+    method declaration: thing
+        cInfo at: thing!
+
+
+    method generateCName: thing
+        let n = cInfo size + 1.
+        (ClassDefinition includes: thing)
+            ifTrue: { return "foo_class_{n}" }.
+        (MethodDictionary includes: thing)
+            ifTrue: { return "foo_methods_{n}" }.
+        (MethodDefinition includes: thing)
+            ifTrue: { return "foo_method_{n}" }.
+        (String includes: thing)
+            ifTrue: { return "foo_string_{n}" }.
+        Error raise: "Don't know how to generate C-name for: {thing displayString} :: {thing classOf name}"!
+
+    method cTypeOf: thing
+        (ClassDefinition includes: thing)
+            ifTrue: { return "struct FooClass" }.
+        (MethodDictionary includes: thing)
+            ifTrue: { return "struct FooMethodDictionary" }.
+        (MethodDefinition includes: thing)
+            ifTrue: { return "struct FooMethod" }.
+        (String includes: thing)
+            ifTrue: { return "struct FooBytes" }.
+        Error raise: "Don't know how to generate C-type for: {thing displayString} :: {thing className}"!
+
+end
+
+
 class TestCPS { assert system }
     is TestSuite
 
@@ -2757,10 +2981,11 @@ class TestCPS { assert system }
     method system: new
         system = new!
 
-    method convertExpr: source
-        self convertExpr: source
-             with: []
-             in: Namespace standard!
+    method convertExpr: source with: defs in: namespace
+        let syntax = Parser parseExpression: source.
+        CpsConverter convertExpr: syntax
+                     with: defs
+                     in: namespace!
 
 
     method convertExpr: source with: defs
@@ -2769,11 +2994,10 @@ class TestCPS { assert system }
              in: Namespace standard!
 
 
-    method convertExpr: source with: defs in: namespace
-        let syntax = Parser parseExpression: source.
-        CpsConverter convertExpr: syntax
-                     with: defs
-                     in: namespace!
+    method convertExpr: source
+        self convertExpr: source
+             with: []
+             in: Namespace standard!
 
 
     method convertClass: source with: defs in: namespace
@@ -2781,6 +3005,100 @@ class TestCPS { assert system }
         CpsConverter convertClass: syntax
                      with: defs
                      in: namespace!
+
+
+    method convertClass: source with: defs
+        self convertClass: source
+             with: defs
+             in: Namespace standard!
+
+
+    method test_c_backend_trivial_method
+        let def = self convertClass: "class Test \{} method test 1823! end"
+                       with: [IntegerClassDefinition].
+        assert that: { CBackend emitToString: def }
+               equals: "#include \"foolang.h\"
+
+// \"Test\"
+struct FooBytes foo_string_2 = \{
+    .size = 4,
+    .data = \{ 'T','e','s','t', 0 }
+};
+
+struct FooMethod foo_method_3; // #<BuiltinMethod Test#opaqueIdentity>
+struct FooMethod foo_method_4; // #<UserMethod Test#test>
+
+// #<MethodDictionary Test>
+struct FooMethodDictionary foo_methods_5 = \{
+    .size = 2,
+    .data = \{
+        &foo_method_3,
+        &foo_method_4
+    \}
+\};
+
+// \"Test class\"
+struct FooBytes foo_string_7 = \{
+    .size = 10,
+    .data = \{ 'T','e','s','t',' ','c','l','a','s','s', 0 }
+};
+
+struct FooMethod foo_method_8; // #<BuiltinMethod Test class#new>
+struct FooMethod foo_method_9; // #<BuiltinMethod Test class#opaqueIdentity>
+struct FooMethod foo_method_10; // #<BuiltinMethod Test class#typecheck:>
+
+// #<MethodDictionary Test class>
+struct FooMethodDictionary foo_methods_11 = \{
+    .size = 3,
+    .data = \{
+        &foo_method_8,
+        &foo_method_9,
+        &foo_method_10
+    \}
+\};
+
+// \"Class\"
+struct FooBytes foo_string_13 = \{
+    .size = 5,
+    .data = \{ 'C','l','a','s','s', 0 }
+};
+
+struct FooMethod foo_method_14; // #<BuiltinMethod Class#new>
+struct FooMethod foo_method_15; // #<BuiltinMethod Class#opaqueIdentity>
+struct FooMethod foo_method_16; // #<BuiltinMethod Class#typecheck:>
+
+// #<MethodDictionary Class>
+struct FooMethodDictionary foo_methods_17 = \{
+    .size = 3,
+    .data = \{
+        &foo_method_14,
+        &foo_method_15,
+        &foo_method_16
+    \}
+\};
+
+// #<Class>
+struct FooClass foo_class_12 = \{
+    .name = &foo_string_13,
+    .own_class = &foo_class_12,
+    .methods = &foo_methods_17
+\};
+
+// #<Class Test class>
+struct FooClass foo_class_6 = \{
+    .name = &foo_string_7,
+    .own_class = &foo_class_12,
+    .methods = &foo_methods_11
+\};
+
+// #<Class Test>
+struct FooClass foo_class_1 = \{
+    .name = &foo_string_2,
+    .own_class = &foo_class_6,
+    .methods = &foo_methods_5
+\};
+
+"!
 
 
     method test_convert_addition_of_integers_optimizes_to_operation_addi
