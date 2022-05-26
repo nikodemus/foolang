@@ -2836,12 +2836,8 @@ class CBackend { output cInfo }
 
     method emitClass: classDef::ClassDefinition
         let nameInfo = self emitString: classDef name.
-
+        let methodInfo = self emitMethodDictionary: classDef methodDictionary.
         let classInfo = self declare: classDef.
-        let nameInfo = self declare: classDef name.
-        let methodInfo = self declare: classDef methodDictionary.
-
-        output newline.
         output print: "// ".
         output println: classDef displayString.
         output print: classInfo type.
@@ -2853,14 +2849,14 @@ class CBackend { output cInfo }
         output println: ",".
         output print: "    .methods = &".
         output println: methodInfo name.
-        output println: "\};".
-
-        self emitMethodDictionary: classDef methodDictionary
-             with: methodInfo!
+        output println: "\};\n".
+        classInfo!
 
 
     method emitString: string
         let info = self declare: string.
+        output print: "// ".
+        output println: string displayString.
         output print: info type.
         output print: " ".
         output print: info name.
@@ -2872,9 +2868,20 @@ class CBackend { output cInfo }
         info!
 
 
-    method emitMethodDictionary: methodDictionary with: methodInfo
-        output newline.
-        methodDictionary do: { |each| self declare: each }.
+    method emitDeclaration: thing
+        let info = self declare: thing.
+        output print: info type.
+        output print: " ".
+        output print: info name.
+        output print: "; // ".
+        output println: thing displayString!
+
+
+    method emitMethodDictionary: methodDictionary
+        methodDictionary
+            do: { |each|
+                  self emitDeclaration: each }.
+        let methodInfo = self declare: methodDictionary.
         output print: "\n// ".
         output println: methodDictionary displayString.
         output print: methodInfo type.
@@ -2889,7 +2896,8 @@ class CBackend { output cInfo }
                   output print: "        &".
                   output print: info name }
             interleaving: { output println: "," }.
-        output println: "\n    \}\n\};"!
+        output println: "\n    \}\n\};\n".
+        methodInfo!
 
 
     method declare: thing
@@ -2898,8 +2906,6 @@ class CBackend { output cInfo }
             ifNonePut: {
                 let cName = self generateCName: thing.
                 let cType = self cTypeOf: thing.
-                output print: "{cType} {cName}; // ".
-                output println: thing displayString.
                 { name: cName, type: cType }
             }!
 
@@ -2989,32 +2995,30 @@ class TestCPS { assert system }
         assert that: { CBackend emitToString: def }
                equals: "#include \"foolang.h\"
 
-struct FooBytes foo_string_1; // \"Test\"
+// \"Test\"
 struct FooBytes foo_string_1 = \{
     .size = 4,
     .data = \{ 'T','e','s','t', 0 }
 };
 
-struct FooClass foo_class_2; // #<Class Test>
-struct FooMethodDictionary foo_methods_3; // #<MethodDictionary Test>
-
-// #<Class Test>
-struct FooClass foo_class_2 = \{
-    .name = &foo_string_1,
-    .methods = &foo_methods_3
-\};
-
-struct FooMethod foo_method_4; // #<BuiltinMethod Test#opaqueIdentity>
-struct FooMethod foo_method_5; // #<UserMethod Test#test>
+struct FooMethod foo_method_2; // #<BuiltinMethod Test#opaqueIdentity>
+struct FooMethod foo_method_3; // #<UserMethod Test#test>
 
 // #<MethodDictionary Test>
-struct FooMethodDictionary foo_methods_3 = \{
+struct FooMethodDictionary foo_methods_4 = \{
     .size = 2,
     .data = \{
-        &foo_method_4,
-        &foo_method_5
+        &foo_method_2,
+        &foo_method_3
     \}
 \};
+
+// #<Class Test>
+struct FooClass foo_class_5 = \{
+    .name = &foo_string_1,
+    .methods = &foo_methods_4
+\};
+
 "!
 
 ---
