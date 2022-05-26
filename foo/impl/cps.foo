@@ -269,6 +269,10 @@ class OpaqueIdentityImpl {}
 
     method apply: args in: _classDefinition
         args first!
+
+
+    method emitOn: backend
+        backend emitOpaqueIdentity: self!
 end
 
 
@@ -304,6 +308,10 @@ class ConstructorImpl { classDefinition }
         Log println: "\nNEW: {args}".
         Instance class: args first
                  datum: args second!
+
+
+    method emitOn: backend
+        backend emitConstructor: self!
 end
 
 
@@ -348,6 +356,11 @@ class TypecheckImpl { type }
                            => { cc propagateTypes: [type] } }.
         (Continuation includes: cc)
             ifTrue: { worklist pushAll: cc params first uses }!
+
+
+    method emitOn: backend
+        --
+        backend emitTypecheck: self!
 end
 
 
@@ -2187,6 +2200,10 @@ class CpsGraph { entry::Continuation
 
     method apply: args
         CpsEvaluator eval: self with: args!
+
+
+    method emitOn: backend
+        backend emitCpsGraph: self!
 end
 
 
@@ -2944,8 +2961,61 @@ class CBackend { output cInfo }
         output print: "char* ".
         output print: info name.
         output print: "(char* sp, struct Actor* actor) \{\n".
+        function emitOn: self.
         output print: "\}\n\n".
         info!
+
+
+    method emitCpsGraph: graph
+        output print: "    // TODO: entry {graph entry printName}\n"!
+
+
+    method emitConstructor: ctor
+        let classInfo = self declaration: ctor classDefinition.
+        classInfo is False
+            ifTrue: { Error raise: "Class definition for {ctor} not yet declared" }.
+        -- 3     2      1
+        -- cont, Class, own-class, argInfo
+        output print: "    datum_t cont = POP_FRAME(sp, 3);\n".
+        output print: "    PUSH_DATUM(sp, &".
+        output print: classInfo name.
+        output print: ");\n".
+        output print: "    PUSH_DATUM(sp, 0); // only empty classes for now!\n".
+        output print: "    PUSH_DATUM(sp, ARG_OBJS(1));\n".
+        output print: "    PUSH_DATUM(sp, cont);\n".
+        output print: "    return sp;\n"!
+
+
+    method emitOpaqueIdentity: _
+        -- 3     2               1               0
+        -- cont, receiver class, receiver datum, argInfo
+        output print: "    datum_t class = ARG_DATUM(sp, 2);\n".
+        output print: "    datum_t datum = ARG_DATUM(sp, 1);\n".
+        output print: "    datum_t cont = POP_FRAME(sp, 3);\n".
+        output print: "    PUSH_DATUM(sp, class);\n".
+        output print: "    PUSH_DATUM(sp, datum);\n".
+        output print: "    PUSH_DATUM(sp, ARG_OBJS(1));\n".
+        output print: "    PUSH_DATUM(sp, cont);\n".
+        output print: "    return sp;\n"!
+
+
+    method emitTypecheck: typecheck
+        -- 5     4               3           2          1          0
+        -- cont, recv own-class, recv class, arg-class, arg-datum, argInfo
+        output print: "    datum_t expectedClass = ARG_DATUM(sp, 3);\n".
+        output print: "    datum_t actualClass = ARG_DATUM(sp, 2);\n".
+        output print: "    if (want == got) \{\n".
+        output print: "        datum_t actualDatum = ARG_DATUM(sp, 1);\n".
+        output print: "        datum_t cont = POP_FRAME(sp, 5);\n".
+        output print: "        PUSH_DATUM(sp, actualClass);\n".
+        output print: "        PUSH_DATUM(sp, actualDatum);\n".
+        output print: "        PUSH_DATUM(sp, ARG_OBJS(1));\n".
+        output print: "        PUSH_DATUM(sp, cont);\n".
+        output print: "        return sp;\n".
+        output print: "    \} else \{\n".
+        -- The only reason this calls out to runtime is because I can't
+        -- write the error handler code yet!
+        output print: "        return runtime_type_error(sp, actor);\n    \}\n"!
 
 
     method emitMethod: aMethod
@@ -3115,6 +3185,14 @@ struct FooSelector foo_selector_4 = \{
 
 // #<BuiltinMethodImpl opaqueIdentity>
 char* foo_builtin_6(char* sp, struct Actor* actor) \{
+    datum_t class = ARG_DATUM(sp, 2);
+    datum_t datum = ARG_DATUM(sp, 1);
+    datum_t cont = POP_FRAME(sp, 3);
+    PUSH_DATUM(sp, class);
+    PUSH_DATUM(sp, datum);
+    PUSH_DATUM(sp, ARG_OBJS(1));
+    PUSH_DATUM(sp, cont);
+    return sp;
 }
 
 // #<BuiltinMethod Test#opaqueIdentity>
@@ -3137,6 +3215,7 @@ struct FooSelector foo_selector_8 = \{
 
 // #<CpsGraph ???>
 char* foo_method_function_10(char* sp, struct Actor* actor) \{
+    // TODO: entry $entry:2
 }
 
 // #<UserMethod Test#test>
@@ -3174,6 +3253,12 @@ struct FooSelector foo_selector_15 = \{
 
 // #<BuiltinMethodImpl new>
 char* foo_builtin_17(char* sp, struct Actor* actor) \{
+    datum_t cont = POP_FRAME(sp, 3);
+    PUSH_DATUM(sp, &foo_class_1);
+    PUSH_DATUM(sp, 0); // only empty classes for now!
+    PUSH_DATUM(sp, ARG_OBJS(1));
+    PUSH_DATUM(sp, cont);
+    return sp;
 }
 
 // #<BuiltinMethod Test class#new>
@@ -3203,6 +3288,19 @@ struct FooSelector foo_selector_20 = \{
 
 // #<BuiltinMethodImpl typecheck:>
 char* foo_builtin_22(char* sp, struct Actor* actor) \{
+    datum_t expectedClass = ARG_DATUM(sp, 3);
+    datum_t actualClass = ARG_DATUM(sp, 2);
+    if (want == got) \{
+        datum_t actualDatum = ARG_DATUM(sp, 1);
+        datum_t cont = POP_FRAME(sp, 5);
+        PUSH_DATUM(sp, actualClass);
+        PUSH_DATUM(sp, actualDatum);
+        PUSH_DATUM(sp, ARG_OBJS(1));
+        PUSH_DATUM(sp, cont);
+        return sp;
+    } else \{
+        return runtime_type_error(sp, actor);
+    }
 }
 
 // #<BuiltinMethod Test class#typecheck:>
@@ -3230,6 +3328,12 @@ struct FooBytes foo_string_25 = \{
 
 // #<BuiltinMethodImpl new>
 char* foo_builtin_27(char* sp, struct Actor* actor) \{
+    datum_t cont = POP_FRAME(sp, 3);
+    PUSH_DATUM(sp, &foo_class_24);
+    PUSH_DATUM(sp, 0); // only empty classes for now!
+    PUSH_DATUM(sp, ARG_OBJS(1));
+    PUSH_DATUM(sp, cont);
+    return sp;
 }
 
 // #<BuiltinMethod Class#new>
@@ -3248,6 +3352,19 @@ struct FooMethod foo_method_28 = \{
 
 // #<BuiltinMethodImpl typecheck:>
 char* foo_builtin_30(char* sp, struct Actor* actor) \{
+    datum_t expectedClass = ARG_DATUM(sp, 3);
+    datum_t actualClass = ARG_DATUM(sp, 2);
+    if (want == got) \{
+        datum_t actualDatum = ARG_DATUM(sp, 1);
+        datum_t cont = POP_FRAME(sp, 5);
+        PUSH_DATUM(sp, actualClass);
+        PUSH_DATUM(sp, actualDatum);
+        PUSH_DATUM(sp, ARG_OBJS(1));
+        PUSH_DATUM(sp, cont);
+        return sp;
+    } else \{
+        return runtime_type_error(sp, actor);
+    }
 }
 
 // #<BuiltinMethod Class#typecheck:>
