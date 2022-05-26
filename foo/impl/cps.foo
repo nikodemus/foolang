@@ -2835,11 +2835,11 @@ class CBackend { output cInfo }
 
 
     method emitClass: classDef::ClassDefinition
+        let nameInfo = self emitString: classDef name.
+
         let classInfo = self declare: classDef.
         let nameInfo = self declare: classDef name.
         let methodInfo = self declare: classDef methodDictionary.
-        classDef methodDictionary
-            do: { |each| self declare: each }.
 
         output newline.
         output print: "// ".
@@ -2855,46 +2855,41 @@ class CBackend { output cInfo }
         output println: methodInfo name.
         output println: "\};".
 
-        output newline.
-        output print: "// ".
-        output println: classDef name displayString.
-        output print: nameInfo type.
-        output print: " ".
-        output print: nameInfo name.
-        output print: " = ".
-        self emitString: classDef name.
-        output println: ";".
+        self emitMethodDictionary: classDef methodDictionary
+             with: methodInfo!
 
+
+    method emitString: string
+        let info = self declare: string.
+        output print: info type.
+        output print: " ".
+        output print: info name.
+        output print: " = \{\n    .size = ".
+        output print: string size.
+        output print: ",\n    .data = \{ ".
+        string  do: { |each| output print: "'{each}'," }.
+        output println: " 0 \}\n\};\n".
+        info!
+
+
+    method emitMethodDictionary: methodDictionary with: methodInfo
         output newline.
-        output print: "// ".
-        output println: classDef methodDictionary displayString.
+        methodDictionary do: { |each| self declare: each }.
+        output print: "\n// ".
+        output println: methodDictionary displayString.
         output print: methodInfo type.
         output print: " ".
         output print: methodInfo name.
-        output print: " = ".
-        self emitMethods: classDef methodDictionary.
-        output println: ";"!
-
-
-    method emitString: name
-        output print: "\{\n    .size = ".
-        output print: name size.
-        output print: ",\n    .data = \{ ".
-        name do: { |each| output print: "'{each}'," }.
-        output print: " 0 \}\n\}"!
-
-
-    method emitMethods: methods
-        output print: "\{\n    .size = ".
-        output print: methods size.
+        output print: " = \{\n    .size = ".
+        output print: methodDictionary size.
         output println: ",\n    .data = \{".
-        methods do: { |each|
-                      let info = self declaration: each.
-                      output print: "        &".
-                      output print: info name }
-                interleaving: { output println: "," }.
-        output println: "\n    \}".
-        output print: "\}"!
+        methodDictionary
+            do: { |each|
+                  let info = self declaration: each.
+                  output print: "        &".
+                  output print: info name }
+            interleaving: { output println: "," }.
+        output println: "\n    \}\n\};"!
 
 
     method declare: thing
@@ -2994,23 +2989,23 @@ class TestCPS { assert system }
         assert that: { CBackend emitToString: def }
                equals: "#include \"foolang.h\"
 
-struct FooClass foo_class_1; // #<Class Test>
-struct FooBytes foo_string_2; // \"Test\"
+struct FooBytes foo_string_1; // \"Test\"
+struct FooBytes foo_string_1 = \{
+    .size = 4,
+    .data = \{ 'T','e','s','t', 0 }
+};
+
+struct FooClass foo_class_2; // #<Class Test>
 struct FooMethodDictionary foo_methods_3; // #<MethodDictionary Test>
-struct FooMethod foo_method_4; // #<BuiltinMethod Test#opaqueIdentity>
-struct FooMethod foo_method_5; // #<UserMethod Test#test>
 
 // #<Class Test>
-struct FooClass foo_class_1 = \{
-    .name = &foo_string_2,
+struct FooClass foo_class_2 = \{
+    .name = &foo_string_1,
     .methods = &foo_methods_3
 \};
 
-// \"Test\"
-struct FooBytes foo_string_2 = \{
-    .size = 4,
-    .data = \{ 'T','e','s','t', 0 \}
-\};
+struct FooMethod foo_method_4; // #<BuiltinMethod Test#opaqueIdentity>
+struct FooMethod foo_method_5; // #<UserMethod Test#test>
 
 // #<MethodDictionary Test>
 struct FooMethodDictionary foo_methods_3 = \{
