@@ -168,6 +168,10 @@ class UserMethod { selector home cps }
              cps: cps!
 
 
+    method impl
+        cps!
+
+
     method home: new
         (home is False)
             ifFalse: { Error raise: "{self} already has a home: {home}" }.
@@ -237,6 +241,11 @@ end
 
 
 interface BuiltinMethodImpl
+    is Object
+
+    method displayString
+        "#<BuiltinMethodImpl {self selector name}>"!
+
     method returnType
         False!
 end
@@ -247,7 +256,7 @@ class OpaqueIdentityImpl {}
     is BuiltinMethodImpl
 
     direct method for: _
-        self new!
+        OpaqueIdentityInstance!
 
 
     method selector
@@ -261,6 +270,10 @@ class OpaqueIdentityImpl {}
     method apply: args in: _classDefinition
         args first!
 end
+
+
+define OpaqueIdentityInstance
+    OpaqueIdentityImpl new!
 
 
 class ConstructorImpl { classDefinition }
@@ -2858,7 +2871,6 @@ class CBackend { output cInfo }
     method emitClass: classDef
         (self declaration: classDef)
             => { |info| return info }.
-
         let classInfo = self declare: classDef.
 
         let nameInfo = self emitString: classDef name.
@@ -2918,10 +2930,21 @@ class CBackend { output cInfo }
         info!
 
 
+    method emitMethodFunction: aMethod
+        let impl = aMethod impl.
+        (self declaration: impl)
+            => { |info| return info }.
+        let info = self declare: impl.
+        output print: "// ".
+        output println: impl displayString.
+        info!
+
+
     method emitMethod: aMethod
         let info = self declare: aMethod.
         let selectorInfo = self emitSelector: aMethod selector.
         let homeInfo = self emitClass: aMethod home.
+        let functionInfo = self emitMethodFunction: aMethod.
         output print: "// ".
         output println: aMethod displayString.
         output print: info type.
@@ -2978,8 +3001,12 @@ class CBackend { output cInfo }
         let n = cInfo size + 1.
         (MethodDefinition includes: thing)
             ifTrue: { return "foo_method_{n}" }.
+        (CpsGraph includes: thing)
+            ifTrue: { return "foo_function_{n}" }.
         (CpsSelector includes: thing)
             ifTrue: { return "foo_selector_{n}" }.
+        (BuiltinMethodImpl includes: thing)
+            ifTrue: { return "foo_builtin_{n}" }.
         (ClassDefinition includes: thing)
             ifTrue: { return "foo_class_{n}" }.
         (MethodDictionary includes: thing)
@@ -2991,8 +3018,12 @@ class CBackend { output cInfo }
     method cTypeOf: thing
         (MethodDefinition includes: thing)
             ifTrue: { return "struct FooMethod" }.
+        (CpsGraph includes: thing)
+            ifTrue: { return "FooMethodFunction" }.
         (CpsSelector includes: thing)
             ifTrue: { return "struct FooSelector" }.
+        (BuiltinMethodImpl includes: thing)
+            ifTrue: { return "FooMethodFunction" }.
         (ClassDefinition includes: thing)
             ifTrue: { return "struct FooClass" }.
         (MethodDictionary includes: thing)
@@ -3079,140 +3110,140 @@ struct FooMethod foo_method_3 = \{
 };
 
 // \"test\"
-struct FooBytes foo_string_8 = \{
+struct FooBytes foo_string_9 = \{
     .size = 4,
     .data = \{ 't','e','s','t', 0 }
 };
 
 // #test
-struct FooSelector foo_selector_7 = \{
-    .name = &foo_string_8
+struct FooSelector foo_selector_8 = \{
+    .name = &foo_string_9
 };
 
 // #<UserMethod Test#test>
-struct FooMethod foo_method_6 = \{
+struct FooMethod foo_method_7 = \{
     .home = &foo_class_1,
-    .selector = &foo_selector_7
+    .selector = &foo_selector_8
 };
 
 // #<MethodDictionary Test>
-struct FooMethodDictionary foo_methods_9 = \{
+struct FooMethodDictionary foo_methods_11 = \{
     .size = 2,
     .data = \{
         &foo_method_3, // #<BuiltinMethod Test#opaqueIdentity>
-        &foo_method_6, // #<UserMethod Test#test>
+        &foo_method_7, // #<UserMethod Test#test>
     }
 };
 
 // \"Test class\"
-struct FooBytes foo_string_11 = \{
+struct FooBytes foo_string_13 = \{
     .size = 10,
     .data = \{ 'T','e','s','t',' ','c','l','a','s','s', 0 }
 };
 
 // \"new\"
-struct FooBytes foo_string_14 = \{
+struct FooBytes foo_string_16 = \{
     .size = 3,
     .data = \{ 'n','e','w', 0 }
 };
 
 // #new
-struct FooSelector foo_selector_13 = \{
-    .name = &foo_string_14
+struct FooSelector foo_selector_15 = \{
+    .name = &foo_string_16
 };
 
 // #<BuiltinMethod Test class#new>
-struct FooMethod foo_method_12 = \{
-    .home = &foo_class_10,
-    .selector = &foo_selector_13
+struct FooMethod foo_method_14 = \{
+    .home = &foo_class_12,
+    .selector = &foo_selector_15
 };
 
 // #<BuiltinMethod Test class#opaqueIdentity>
-struct FooMethod foo_method_15 = \{
-    .home = &foo_class_10,
+struct FooMethod foo_method_18 = \{
+    .home = &foo_class_12,
     .selector = &foo_selector_4
 };
 
 // \"typecheck:\"
-struct FooBytes foo_string_18 = \{
+struct FooBytes foo_string_21 = \{
     .size = 10,
     .data = \{ 't','y','p','e','c','h','e','c','k',':', 0 }
 };
 
 // #typecheck:
-struct FooSelector foo_selector_17 = \{
-    .name = &foo_string_18
+struct FooSelector foo_selector_20 = \{
+    .name = &foo_string_21
 };
 
 // #<BuiltinMethod Test class#typecheck:>
-struct FooMethod foo_method_16 = \{
-    .home = &foo_class_10,
-    .selector = &foo_selector_17
+struct FooMethod foo_method_19 = \{
+    .home = &foo_class_12,
+    .selector = &foo_selector_20
 };
 
 // #<MethodDictionary Test class>
-struct FooMethodDictionary foo_methods_19 = \{
+struct FooMethodDictionary foo_methods_23 = \{
     .size = 3,
     .data = \{
-        &foo_method_12, // #<BuiltinMethod Test class#new>
-        &foo_method_15, // #<BuiltinMethod Test class#opaqueIdentity>
-        &foo_method_16, // #<BuiltinMethod Test class#typecheck:>
+        &foo_method_14, // #<BuiltinMethod Test class#new>
+        &foo_method_18, // #<BuiltinMethod Test class#opaqueIdentity>
+        &foo_method_19, // #<BuiltinMethod Test class#typecheck:>
     \}
 \};
 
 // \"Class\"
-struct FooBytes foo_string_21 = \{
+struct FooBytes foo_string_25 = \{
     .size = 5,
     .data = \{ 'C','l','a','s','s', 0 }
 };
 
 // #<BuiltinMethod Class#new>
-struct FooMethod foo_method_22 = \{
-    .home = &foo_class_20,
-    .selector = &foo_selector_13
+struct FooMethod foo_method_26 = \{
+    .home = &foo_class_24,
+    .selector = &foo_selector_15
 };
 
 // #<BuiltinMethod Class#opaqueIdentity>
-struct FooMethod foo_method_23 = \{
-    .home = &foo_class_20,
+struct FooMethod foo_method_28 = \{
+    .home = &foo_class_24,
     .selector = &foo_selector_4
 };
 
 // #<BuiltinMethod Class#typecheck:>
-struct FooMethod foo_method_24 = \{
-    .home = &foo_class_20,
-    .selector = &foo_selector_17
+struct FooMethod foo_method_29 = \{
+    .home = &foo_class_24,
+    .selector = &foo_selector_20
 };
 
 // #<MethodDictionary Class>
-struct FooMethodDictionary foo_methods_25 = \{
+struct FooMethodDictionary foo_methods_31 = \{
     .size = 3,
     .data = \{
-        &foo_method_22, // #<BuiltinMethod Class#new>
-        &foo_method_23, // #<BuiltinMethod Class#opaqueIdentity>
-        &foo_method_24, // #<BuiltinMethod Class#typecheck:>
+        &foo_method_26, // #<BuiltinMethod Class#new>
+        &foo_method_28, // #<BuiltinMethod Class#opaqueIdentity>
+        &foo_method_29, // #<BuiltinMethod Class#typecheck:>
     \}
 \};
 
 // #<Class>
-struct FooClass foo_class_20 = \{
-    .name = &foo_string_21,
-    .own_class = &foo_class_20,
-    .methods = &foo_methods_25
+struct FooClass foo_class_24 = \{
+    .name = &foo_string_25,
+    .own_class = &foo_class_24,
+    .methods = &foo_methods_31
 \};
 
 // #<Class Test class>
-struct FooClass foo_class_10 = \{
-    .name = &foo_string_11,
-    .own_class = &foo_class_20,
-    .methods = &foo_methods_19
+struct FooClass foo_class_12 = \{
+    .name = &foo_string_13,
+    .own_class = &foo_class_24,
+    .methods = &foo_methods_23
 \};
 
 // #<Class Test>
 struct FooClass foo_class_1 = \{
     .name = &foo_string_2,
-    .own_class = &foo_class_10,
-    .methods = &foo_methods_9
+    .own_class = &foo_class_12,
+    .methods = &foo_methods_11
 \};
 
 "!
