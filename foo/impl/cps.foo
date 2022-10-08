@@ -2265,6 +2265,7 @@ class CpsConverter { graph var next classMap namespace }
 
     direct method convertClass: aClass with: defs in: namespace
         let newClass = ClassDefinition name: aClass name.
+        let newDefs = defs append: [newClass].
         -- First we add placeholder methods, so that all methods
         -- can be immediately resolved to each other.
         let userMethods =  aClass instanceMethods
@@ -2285,7 +2286,7 @@ class CpsConverter { graph var next classMap namespace }
                   self convertMethod: syntax
                        as: userMethod
                        for: newClass
-                       with: defs
+                       with: newDefs
                        in: namespace }.
         aClass directMethods
             with: directMethods
@@ -2293,7 +2294,7 @@ class CpsConverter { graph var next classMap namespace }
                   self convertMethod: syntax
                        as: userMethod
                        for: ownClass
-                       with: defs
+                       with: newDefs
                        in: namespace }.
         newClass methodDictionary
             reject: #isStandard
@@ -3167,6 +3168,22 @@ class TestCPS { assert system }
              in: Namespace standard!
 
 
+    method test_class_type_defined_inside_its_own_methods
+        let ns = Namespace standard.
+        let def = self convertClass: "class Test \{}
+                                          method test
+                                              self :: Test!
+                                      end"
+                      with: []
+                      in: ns.
+        let m = def findMethod: (ns intern: "test").
+        assert that: { CpsPrinter printToString: m cps }
+               equals: "
+$entry:2($return:3, $receiver::Test:4):
+    $return:3($receiver::Test:4)
+"!
+
+
     method test_c_backend_trivial_method
         let ns = Namespace standard.
         let def = self convertClass: "class Test \{}
@@ -3182,8 +3199,8 @@ class TestCPS { assert system }
                equals: "
 $entry:2($return:3, $receiver::Test:4):
     apply:18($bind:13, Test#opaqueIdentity)($receiver::Test:4)
-$bind:13($value:5):
-    apply:10($return:3, findMethod:9(classOf:8(Test:Global), #typecheck:))(Test:Global, $value:5)
+$bind:13($value:6):
+    apply:11($return:3, Test class#typecheck:)(Test:Global, $value:6)
 ".
         -- Check the code
         assert that: { CBackend emitToString: def }
