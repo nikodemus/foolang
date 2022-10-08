@@ -252,7 +252,7 @@ end
 
 
 class OpaqueIdentityImpl {}
-    -- Very useful for compiler testing.
+    -- Very useful for compiler testing: never inlined!
     is BuiltinMethodImpl
 
     direct method for: _
@@ -3168,12 +3168,24 @@ class TestCPS { assert system }
 
 
     method test_c_backend_trivial_method
-        -- opaqueIdentity is a builtin method for all classes:
+        let ns = Namespace standard.
         let def = self convertClass: "class Test \{}
                                           method test
                                               self opaqueIdentity :: Test!
                                       end"
-                       with: [].
+                      with: []
+                      in: ns.
+        -- Sanity check the CPS: OpaqueIdentity is explicitly never
+        -- inlined, so must be via an Application.
+        let m = def findMethod: (ns intern: "test").
+        assert that: { CpsPrinter printToString: m cps }
+               equals: "
+$entry:2($return:3, $receiver::Test:4):
+    apply:18($bind:13, Test#opaqueIdentity)($receiver::Test:4)
+$bind:13($value:5):
+    apply:10($return:3, findMethod:9(classOf:8(Test:Global), #typecheck:))(Test:Global, $value:5)
+".
+        -- Check the code
         assert that: { CBackend emitToString: def }
                equals: "
 #include \"foolang.h\"
