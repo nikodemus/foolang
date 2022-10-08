@@ -95,7 +95,7 @@ define StandardNamespace
 
 
 extend String
-    -- This is the solution to allowing users to
+    -- This is _a_ solution to allowing users to
     -- intern without special objects: they cannot
     -- intern new things!
     method intern
