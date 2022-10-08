@@ -3256,8 +3256,27 @@ struct FooSelector foo_selector_8 = \{
 
 // #<CpsGraph Test#test>
 char* foo_method_function_10(char* sp, struct Actor* actor) \{
-    // TODO: entry $entry:2
+    PUSH_DATUM(sp, foo_method_function_10_cont_13);
+    PUSH_DATUM(sp, ARG_DATUM(sp, 2));
+    PUSH_DATUM(sp, ARG_DATUM(sp, 1));
+    PUSH_DATUM(sp, ARG_OBJS(1));
+    PUSH_DATUM(sp, foo_builtin_6);
+    return sp;
 }
+
+// #<Continuation $bind:13>
+char* foo_method_function_10_cont_13(char* sp, struct Actor* actor) \{
+    datum_t arg_class = ARG_DATUM(sp, 2);
+    datum_t arg_datum = ARG_DATUM(sp, 1);
+    PUSH_DATUM(sp, XXX_$return:3_XXX);
+    PUSH_DATUM(sp, &foo_class_12);
+    PUSH_DATUM(sp, &foo_class_1);
+    PUSH_DATUM(sp, ARG_DATUM(sp, 2);
+    PUSH_DATUM(sp, ARG_DATUM(sp, 1);
+    PUSH_DATUM(sp, ARG_IMMS_AND_OBJS(1, 2));
+    PUSH_DATUM(sp, foo_builtin_22); // typecheck
+    return sp;
+\}
 
 // #<UserMethod Test#test>
 struct FooMethod foo_method_7 = \{
@@ -3295,7 +3314,7 @@ struct FooSelector foo_selector_15 = \{
 // #<BuiltinMethodImpl new>
 char* foo_builtin_17(char* sp, struct Actor* actor) \{
     datum_t cont = POP_FRAME(sp, 3);
-    PUSH_DATUM(sp, &foo_class_1);
+    PUSH_DATUM(sp, &o_class_1);
     PUSH_DATUM(sp, 0); // only empty classes for now!
     PUSH_DATUM(sp, ARG_OBJS(1));
     PUSH_DATUM(sp, cont);
