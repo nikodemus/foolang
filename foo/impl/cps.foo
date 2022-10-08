@@ -3168,11 +3168,12 @@ class TestCPS { assert system }
 
 
     method test_c_backend_trivial_method
+        -- opaqueIdentity is a builtin method for all classes:
         let def = self convertClass: "class Test \{}
                                           method test
-                                              1823 opaqueIdentity :: Integer!
+                                              self opaqueIdentity :: Test!
                                       end"
-                       with: [IntegerClassDefinition].
+                       with: [].
         assert that: { CBackend emitToString: def }
                equals: "
 #include \"foolang.h\"
