@@ -1993,7 +1993,9 @@ class CpsGraph { entry::Continuation
                  operations::OpMap
                  constants::Dictionary
                  globals::Dictionary
-                 continuations::List }
+                 continuations::List
+                 name -- False or String
+               }
     is Expression
 
     direct method newExpr
@@ -2016,7 +2018,8 @@ class CpsGraph { entry::Continuation
                         operations: OpMap new
                         constants: Dictionary new
                         globals: Dictionary new
-                        continuations: (List with: entry).
+                        continuations: (List with: entry)
+                        name: False.
         exit addUse: exit.
         entry addUse: graph.
         graph!
@@ -2046,10 +2049,15 @@ class CpsGraph { entry::Continuation
                         operations: OpMap new
                         constants: Dictionary new
                         globals: Dictionary new
-                        continuations: (List with: entry).
+                        continuations: (List with: entry)
+                        name: False.
         exit addUse: exit.
         entry addUse: graph.
         graph!
+
+
+    method name: newName
+        name = newName!
 
 
     method id
@@ -2061,7 +2069,9 @@ class CpsGraph { entry::Continuation
 
 
     method displayString
-        "#<CpsGraph ???>"!
+        name is False
+            ifTrue: { "#<CpsGraph>" }
+            ifFalse: { "#<CpsGraph {name}>"}!
 
 
     method printName
@@ -2239,6 +2249,7 @@ class CpsConverter { graph var next classMap namespace }
 
     direct method convertMethod: syntax as: aMethod for: aClass with: defs in: namespace
         let graph = CpsGraph methodFor: aClass.
+        graph name: "{aClass name}#{aMethod name}".
         let converter = self makeConverter: graph
                              classDefinitions: defs
                              in: namespace.
@@ -3213,7 +3224,7 @@ struct FooSelector foo_selector_8 = \{
     .name = &foo_string_9
 };
 
-// #<CpsGraph ???>
+// #<CpsGraph Test#test>
 char* foo_method_function_10(char* sp, struct Actor* actor) \{
     // TODO: entry $entry:2
 }
