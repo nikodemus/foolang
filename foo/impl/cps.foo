@@ -2036,7 +2036,7 @@ class CpsGraph { entry::Continuation
                  lastId::Integer
                  operations::OpMap
                  constants::Dictionary
-                 globals::Dictionary
+                 globals::Dictionary -- XXX: why here???
                  continuations::List
                  receiver -- False or Variable
                  home     -- False or Method
@@ -2303,6 +2303,11 @@ class CpsConverter { graph var next classMap namespace }
         let converter = self makeConverter: graph
                              classDefinitions: defs
                              in: namespace.
+        syntax signature parameters
+            do: { |each|
+                  converter = converter
+                      convertMethodParameter: each
+                      in: graph }.
         graph entry: (syntax body visitBy: converter
                                   with: graph exit).
         aMethod cps: graph optimize!
@@ -2355,6 +2360,17 @@ class CpsConverter { graph var next classMap namespace }
                   CpsOptimizer optimize: each cps
                                with: GlobalOptimizationPolicy }.
         newClass!
+
+
+
+    method convertMethodParameter: syntax in: graph
+        let var = syntax type is Any
+                      ifTrue: { graph makeVariable: syntax name }
+                      ifFalse: { graph makeVariable: syntax name
+                                       type: (syntax type visitBy: self)
+                                                 definition }.
+        graph entry addParams: [var].
+        self bindVariable: var!
 
 
     method bindVariable: var
@@ -2495,8 +2511,12 @@ class CpsConverter { graph var next classMap namespace }
         syntax value visitBy: self with: bindValue!
 
 
+    method visitVariable: syntax
+        self findBinding: syntax name!
+
+
     method visitVariable: syntax with: cc
-        let var = self findBinding: syntax name.
+        let var  =self findBinding: syntax name.
         (Continuation includes: cc)
             => { cc isUnused
                      => { cc params first replaceUsesWith: var.
@@ -2918,6 +2938,11 @@ end
 
 class CBackend { output declared emitted }
 
+    direct method output: output
+        self output: output
+             declared: Dictionary new
+             emitted: Dictionary new!
+
     direct method emitToString: classDef
         StringOutput with: { |out|
                              self emit: classDef to: out }!
@@ -2925,9 +2950,7 @@ class CBackend { output declared emitted }
 
     direct method emit: classDef
                   to: output
-        let backend = (self output: output
-                            declared: Dictionary new
-                            emitted: Dictionary new).
+        let backend = self output: output.
         backend writeHeaders.
         backend emitClass: classDef!
 
@@ -2962,7 +2985,7 @@ class CBackend { output declared emitted }
 
 
     method writeHeaders
-        output println: "\n#include \"foolang.h\"\n"!
+        output print: "\n#include \"foolang.h\"\n"!
 
 
     method emitClass: classDef
@@ -2972,7 +2995,7 @@ class CBackend { output declared emitted }
         let nameInfo = self emitString: classDef name.
         let methodInfo = self emitMethodDictionary: classDef methodDictionary.
         let metaclassInfo = self emitClass: classDef ownClassDefinition.
-        output print: "// ".
+        output print: "\n// ".
         output println: classDef displayString.
         output print: classInfo type.
         output print: " ".
@@ -2989,7 +3012,7 @@ class CBackend { output declared emitted }
 
         output print: "    .methods = &".
         output println: methodInfo name.
-        output println: "\};\n".
+        output print: "\};\n".
         classInfo!
 
 
@@ -2997,7 +3020,7 @@ class CBackend { output declared emitted }
         (self emittedInfo: string)
             => { |info| return info }.
         let info = self markEmitted: string.
-        output print: "// ".
+        output print: "\n// ".
         output println: string displayString.
         output print: info type.
         output print: " ".
@@ -3006,7 +3029,7 @@ class CBackend { output declared emitted }
         output print: string size.
         output print: ",\n    .data = \{ ".
         string  do: { |each| output print: "'{each}'," }.
-        output println: " 0 \}\n\};\n".
+        output print: " 0 \}\n\};\n".
         info!
 
 
@@ -3015,14 +3038,14 @@ class CBackend { output declared emitted }
             => { |info| return info }.
         let info = self markEmitted: aSelector.
         let nameInfo = self emitString: aSelector name.
-        output print: "// #".
+        output print: "\n// #".
         output println: aSelector name.
         output print: info type.
         output print: " ".
         output print: info name.
         output print: " = \{\n    .name = &".
         output print: nameInfo name.
-        output print: "\n\};\n\n".
+        output print: "\n\};\n".
         info!
 
 
@@ -3036,7 +3059,7 @@ class CBackend { output declared emitted }
 
     method emitFunctionHeader: function
         output
-            ; print: "// "
+            ; print: "\n// "
             ; println: function displayString
             ; print: "char* "
             ; print: (self declaration: function) name
@@ -3044,7 +3067,7 @@ class CBackend { output declared emitted }
 
 
     method emitFunctionFooter
-        output print: "\}\n\n"!
+        output print: "\}\n"!
 
 
     method emitCpsGraph: graph
@@ -3123,7 +3146,7 @@ class CBackend { output declared emitted }
         let selectorInfo = self emitSelector: aMethod selector.
         let homeInfo = self emitClass: aMethod home.
         let functionInfo = self emitFunction: aMethod impl.
-        output print: "// ".
+        output print: "\n// ".
         output println: aMethod displayString.
         output print: info type.
         output print: " ".
@@ -3134,7 +3157,7 @@ class CBackend { output declared emitted }
         output print: selectorInfo name.
         output print: ",\n    .method_function = ".
         output print: functionInfo name.
-        output print: "\n\};\n\n".
+        output print: "\n\};\n".
         info!
 
 
@@ -3143,14 +3166,14 @@ class CBackend { output declared emitted }
             do: { |each|
                   self emitMethod: each }.
         let methodInfo = self declare: methodDictionary.
-        output print: "// ".
+        output print: "\n// ".
         output println: methodDictionary displayString.
         output print: methodInfo type.
         output print: " ".
         output print: methodInfo name.
         output print: " = \{\n    .size = ".
         output print: methodDictionary size.
-        output println: ",\n    .data = \{".
+        output print: ",\n    .data = \{\n".
         methodDictionary
             do: { |each|
                   let info = self declaration: each.
@@ -3159,7 +3182,7 @@ class CBackend { output declared emitted }
                   output print: ", // ".
                   output print: each displayString }
             interleaving: { output newline }.
-        output println: "\n    \}\n\};\n".
+        output print: "\n    \}\n\};\n".
         methodInfo!
 
 
@@ -3379,7 +3402,47 @@ $entry:2($return:3, $receiver::Test:4):
 $bind:13($value:6):
     apply:11($return:3, Test class#typecheck:)(Test:Global, $value:6)
 ".
-        -- Check the code
+
+               let backend = CBackend output: StringOutput new.
+        backend emitFunction: m impl.
+        assert that: { backend output content }
+               equals: "
+// #<CpsGraph Test#test>
+char* foo_method_function_1(char* sp, struct Actor* actor) \{
+    actor->bp = sp;
+    PUSH_DATUM(sp, foo_continuation_2);
+    PUSH_DATUM(sp, READ_DATUM(actor->bp, -2));
+    PUSH_DATUM(sp, READ_DATUM(actor->bp, -1));
+    PUSH_DATUM(sp, ARG_IMMS_AND_OBJS(1, 1));
+    PUSH_DATUM(sp, foo_builtin_3); // Test#opaqueIdentity
+    return sp;
+}
+
+// #<Continuation $bind:13>
+char* foo_continuation_2(char* sp, struct Actor* actor) \{
+    PUSH_DATUM(sp, READ_DATUM(sp, -3));
+    PUSH_DATUM(sp, &foo_class_5);
+    PUSH_DATUM(sp, &foo_class_6);
+    PUSH_DATUM(sp, READ_DATUM(actor->bp, 0));
+    PUSH_DATUM(sp, READ_DATUM(actor->bp, 1));
+    PUSH_DATUM(sp, ARG_IMMS_AND_OBJS(1, 2));
+    PUSH_DATUM(sp, foo_builtin_4); // Test class#typecheck:
+    return sp;
+\}
+"!
+
+
+    method test_c_backend_integration_test
+        -- This is the only test that emits the full C code
+        -- all the others emit just a single CPS graph's worth
+        -- without globals, or even less.
+        let ns = Namespace standard.
+        let def = self convertClass: "class Test \{}
+                                          method test
+                                              self opaqueIdentity :: Test!
+                                      end"
+                      with: []
+                      in: ns.
         assert that: { CBackend emitToString: def }
                equals: "
 #include \"foolang.h\"
@@ -3640,7 +3703,6 @@ struct FooClass foo_class_1 = \{
     .own_class = &foo_class_13,
     .methods = &foo_methods_14
 \};
-
 "!
 
 
@@ -3819,6 +3881,37 @@ end"
                equals: "
 $entry:2($return:3, $receiver::A class:4):
     $return:3(#<Instance A>)
+"!
+
+    method test_convert_untyped_method_argument
+        let ns = Namespace standard.
+        let def = self convertClass: "class UntypedArgTest \{}
+                                          method succ: x
+                                              x + 1!
+                                      end"
+                      with: [IntegerClassDefinition]
+                      in: ns.
+        let cps = (def findMethod: (ns intern: "succ:")) cps.
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3, $receiver::UntypedArgTest:4, x:7):
+    apply:13($return:3, findMethod:12(classOf:11(x:7), #+))(x:7, 1)
+"!
+
+
+    method test_convert_typed_method_argument
+        let ns = Namespace standard.
+        let def = self convertClass: "class TypedArgTest \{}
+                                          method next: x::Integer
+                                              x + 1!
+                                          end"
+                      with: [IntegerClassDefinition]
+                      in: ns.
+        let cps = (def findMethod: (ns intern: "next:")) cps.
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3, $receiver::TypedArgTest:4, x::Integer:7):
+    $return:3(makeInstance:29(Integer, addi:28(1::Datum, datumOf:27(x::Integer:7))))
 "!
 
 
