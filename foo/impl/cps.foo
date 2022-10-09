@@ -1777,6 +1777,10 @@ class Continuation { id::Integer
                     out print: ">" }!
 
 
+    method displayString
+        "#<Continuation {self printName}>"!
+
+
     method printTo: output
         self printTo: output pretty: False!
 
@@ -2997,18 +3001,32 @@ class CBackend { output cInfo }
         (self declaration: function)
             => { |info| return info }.
         let info = self declare: function.
-        output print: "// ".
-        output println: function displayString.
-        -- All functions return the continuation stack pointer
-        output print: "char* ".
-        output print: info name.
-        output print: "(char* sp, struct Actor* actor) \{\n".
         function emitOn: self.
-        output print: "\}\n\n".
         info!
 
 
+    method emitFunctionHeader: function
+        output
+            ; print: "// "
+            ; println: function displayString
+            ; print: "char* "
+            ; print: (self declaration: function) name
+            ; print: "(char* sp, struct Actor* actor) \{\n"!
+
+
+    method emitFunctionFooter
+        output print: "\}\n\n"!
+
+
     method emitCpsGraph: graph
+        -- FIXME: This gets called from emitFunction via emitOn,
+        -- which leaves it "inside braces", but may generate
+        -- N functions.
+        --
+        -- Should instead make this and other backend emitters
+        -- be responsible for the whgile function output.
+        --
+        -- Common code can still be factored out.
         (CpsGraphCBackend backend: self graph: graph)
             emit!
 
@@ -3017,48 +3035,58 @@ class CBackend { output cInfo }
         let classInfo = self declaration: ctor classDefinition.
         classInfo is False
             ifTrue: { Error raise: "Class definition for {ctor} not yet declared" }.
+        self emitFunctionHeader: ctor.
         -- 3     2      1
         -- cont, Class, own-class, argInfo
-        output print: "    datum_t cont = POP_FRAME(sp, 3);\n".
-        output print: "    PUSH_DATUM(sp, &".
-        output print: classInfo name.
-        output print: ");\n".
-        output print: "    PUSH_DATUM(sp, 0); // only empty classes for now!\n".
-        output print: "    PUSH_DATUM(sp, ARG_OBJS(1));\n".
-        output print: "    PUSH_DATUM(sp, cont);\n".
-        output print: "    return sp;\n"!
+        output
+            ; print: "    datum_t cont = POP_FRAME(sp, 3);\n"
+            ; print: "    PUSH_DATUM(sp, &"
+            ; print: classInfo name
+            ; print: ");\n"
+            ; print: "    PUSH_DATUM(sp, 0); // only empty classes for now!\n"
+            ; print: "    PUSH_DATUM(sp, ARG_OBJS(1));\n"
+            ; print: "    PUSH_DATUM(sp, cont);\n"
+            ; print: "    return sp;\n".
+        self emitFunctionFooter!
 
 
-    method emitOpaqueIdentity: _
+    method emitOpaqueIdentity: identity
+        self emitFunctionHeader: identity.
         -- 3     2               1               0
         -- cont, receiver class, receiver datum, argInfo
-        output print: "    datum_t class = ARG_DATUM(sp, 2);\n".
-        output print: "    datum_t datum = ARG_DATUM(sp, 1);\n".
-        output print: "    datum_t cont = POP_FRAME(sp, 3);\n".
-        output print: "    PUSH_DATUM(sp, class);\n".
-        output print: "    PUSH_DATUM(sp, datum);\n".
-        output print: "    PUSH_DATUM(sp, ARG_OBJS(1));\n".
-        output print: "    PUSH_DATUM(sp, cont);\n".
-        output print: "    return sp;\n"!
+        output
+            ; print: "    datum_t class = ARG_DATUM(sp, 2);\n"
+            ; print: "    datum_t datum = ARG_DATUM(sp, 1);\n"
+            ; print: "    datum_t cont = POP_FRAME(sp, 3);\n"
+            ; print: "    PUSH_DATUM(sp, class);\n"
+            ; print: "    PUSH_DATUM(sp, datum);\n"
+            ; print: "    PUSH_DATUM(sp, ARG_OBJS(1));\n"
+            ; print: "    PUSH_DATUM(sp, cont);\n"
+            ; print: "    return sp;\n".
+        self emitFunctionFooter!
 
 
     method emitTypecheck: typecheck
+        self emitFunctionHeader: typecheck.
         -- 5     4               3           2          1          0
         -- cont, recv own-class, recv class, arg-class, arg-datum, argInfo
-        output print: "    datum_t expectedClass = ARG_DATUM(sp, 3);\n".
-        output print: "    datum_t actualClass = ARG_DATUM(sp, 2);\n".
-        output print: "    if (want == got) \{\n".
-        output print: "        datum_t actualDatum = ARG_DATUM(sp, 1);\n".
-        output print: "        datum_t cont = POP_FRAME(sp, 5);\n".
-        output print: "        PUSH_DATUM(sp, actualClass);\n".
-        output print: "        PUSH_DATUM(sp, actualDatum);\n".
-        output print: "        PUSH_DATUM(sp, ARG_OBJS(1));\n".
-        output print: "        PUSH_DATUM(sp, cont);\n".
-        output print: "        return sp;\n".
-        output print: "    \} else \{\n".
+        --
         -- The only reason this calls out to runtime is because I can't
         -- write the error handler code yet!
-        output print: "        return runtime_type_error(sp, actor);\n    \}\n"!
+        output
+            ; print: "    datum_t expectedClass = ARG_DATUM(sp, 3);\n"
+            ; print: "    datum_t actualClass = ARG_DATUM(sp, 2);\n"
+            ; print: "    if (want == got) \{\n"
+            ; print: "        datum_t actualDatum = ARG_DATUM(sp, 1);\n"
+            ; print: "        datum_t cont = POP_FRAME(sp, 5);\n"
+            ; print: "        PUSH_DATUM(sp, actualClass);\n"
+            ; print: "        PUSH_DATUM(sp, actualDatum);\n"
+            ; print: "        PUSH_DATUM(sp, ARG_OBJS(1));\n"
+            ; print: "        PUSH_DATUM(sp, cont);\n"
+            ; print: "        return sp;\n"
+            ; print: "    \} else \{\n"
+            ; print: "        return runtime_type_error(sp, actor);\n    \}\n".
+        self emitFunctionFooter!
 
 
     method emitMethod: aMethod
@@ -3174,19 +3202,27 @@ class CpsGraphCBackend { backend graph stackmap }
 
     method emit
         self generateStackmap.
+        backend emitFunctionHeader: graph.
         self emitPrelude.
-        self emitBody: graph entry!
+        self emitBody: graph entry.
+        backend emitFunctionFooter.
+        (graph continuations reject: { |each| each is graph entry })
+            do: { |each|
+                  Log println: "\nHEADER {each}".
+                  backend emitFunctionHeader: each.
+                  Log println: "BODY".
+                  self emitBody: each.
+                  backend emitFunctionFooter }!
 
 
     method generateStackmap
         (stackmap is False) assert: "Stackmap exists already!".
         let map = Dictionary new.
+        map put: { address: -3 }
+            at: graph exit.
+        map put: { varClass: -2, varDatum: -1 }
+            at: graph receiver.
         let nextFree = 0.
-        graph receiver
-            => { |recv|
-                 map put: { varClass: 0, varDatum: 1 }
-                     at: recv.
-                 nextFree = 2 }.
         graph variables
             doSorted: { |each|
                         (map has: each)
@@ -3197,32 +3233,62 @@ class CpsGraphCBackend { backend graph stackmap }
 
 
     method emitPrelude
-        -- FIXME...
-        backend output println: "    SET_ACTOR_BP_FOR_N_ARGS(actor, sp, 1);"!
+        backend output println: "    actor->bp = sp;"!
 
 
     method emitBody: aCont
         (Application includes: aCont target)
             => { return self emitApplication: aCont target
                              with: aCont args }.
-        Error raise: "UNIMPLEMENTED: {aCont}"!
+        Error raise: "UNIMPLEMENTED emitBody: {aCont}"!
+
+
+    method locateTarget: target
+        (Continuation includes: target)
+            => { return (backend declare: target) name }.
+        (Variable includes: target)
+            => { return "READ_DATUM(sp, {(stackmap at: target) address})" }.
+        Error raise: "UNIMPLEMENTED locateTarget: {target}"!
+            -- backend declare:
+
 
     method emitApplication: anApp with: args
-        let targetInfo = backend declare: anApp target.
+        let targetAddr = self locateTarget: anApp target.
         let function = (anApp function :: Constant) value.
         let functionInfo = backend declare: function impl.
         backend output
-            println: "    PUSH_DATUM(sp, {targetInfo name});".
-        args
-            do: { |each|
-                  let slotOf = stackmap at: each.
-                  backend output
-                      ; println: "    PUSH_DATUM(sp, READ_DATUM(actor->bp, {slotOf varClass}));"
-                      ; println: "    PUSH_DATUM(sp, READ_DATUM(actor->bp, {slotOf varDatum}));" }.
+            ; print: "    PUSH_DATUM(sp, "
+            ; print: targetAddr
+            ; print: ");\n".
+        args do: { |each| self emitArgument: each }.
         backend output
             ; println: "    PUSH_DATUM(sp, ARG_OBJS({args size}));"
             ; println: "    PUSH_DATUM(sp, {functionInfo name});"
             ; println: "    return sp;"!
+
+
+    method emitArgument: arg
+        (Variable includes: arg)
+            => { let slotOf = stackmap at: arg.
+                 backend output
+                     ; println: "    PUSH_DATUM(sp, READ_DATUM(actor->bp, {slotOf varClass}));"
+                     ; println: "    PUSH_DATUM(sp, READ_DATUM(actor->bp, {slotOf varDatum}));".
+                 return arg }.
+        (Global includes: arg)
+            => { let info = backend declaration: arg.
+                 Log println: "XXX GLO {info}".
+                 backend output
+                     ; println: "    PUSH_DATUM(sp, XXX_GLOBAL_CLASS {info});"
+                     ; println: "    PUSH_DATUM(sp, XXX_GLOBAL_DATUM {info});".
+                 return arg }.
+        Error raise: "UNIMPLEMENTED emitArgument: {arg}"!
+
+
+    method visitContinuation: aCont
+        backend emitFunctionHeader: graph.
+        self emitPrelude.
+        self emitBody: graph entry.
+        backend emitFunctionFooter!
 end
 
 
@@ -3355,20 +3421,18 @@ struct FooSelector foo_selector_8 = \{
 
 // #<CpsGraph Test#test>
 char* foo_method_function_10(char* sp, struct Actor* actor) \{
-    SET_ACTOR_BP_FOR_N_ARGS(actor, sp, 1);
+    actor->bp = sp;
     PUSH_DATUM(sp, foo_continuation_11);
-    PUSH_DATUM(sp, READ_DATUM(actor->bp, 0));
-    PUSH_DATUM(sp, READ_DATUM(actor->bp, 1));
+    PUSH_DATUM(sp, READ_DATUM(actor->bp, -2));
+    PUSH_DATUM(sp, READ_DATUM(actor->bp, -1));
     PUSH_DATUM(sp, ARG_OBJS(1));
     PUSH_DATUM(sp, foo_builtin_6);
     return sp;
 }
 
 // #<Continuation $bind:13>
-char* foo_method_function_10_cont_13(char* sp, struct Actor* actor) \{
-    datum_t arg_class = ARG_DATUM(sp, 2);
-    datum_t arg_datum = ARG_DATUM(sp, 1);
-    PUSH_DATUM(sp, XXX_$return:3_XXX);
+char* foo_continuation_11(char* sp, struct Actor* actor) \{
+    PUSH_DATUM(sp, READ_DATUM(sp, -3));
     PUSH_DATUM(sp, &foo_class_12);
     PUSH_DATUM(sp, &foo_class_1);
     PUSH_DATUM(sp, ARG_DATUM(sp, 2);
