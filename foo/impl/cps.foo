@@ -913,6 +913,10 @@ class Set { dict }
         old is False!
 
 
+    method addAll: collection
+        collection do: { |each| self add: each }!
+
+
     method remove: node
         dict remove: node!
 
@@ -2146,6 +2150,12 @@ class CpsGraph { entry::Continuation
         operations do: block!
 
 
+    method variables
+        let vars = Set new.
+        self doNodes: { |each| vars addAll: each params }.
+        vars!
+
+
     method entry: target
         entry target: target.
         self cleanup.
@@ -3157,11 +3167,31 @@ class CBackend { output cInfo }
 end
 
 
-class CpsGraphCBackend { backend graph }
+class CpsGraphCBackend { backend graph stackmap }
+
+    direct method backend: backend graph: graph
+        self backend: backend
+             graph: graph
+             stackmap: False!
+
 
     method emit
+        self generateStackmap.
         -- XXX should probably emit prelude / parameter stuff here.
         self emitBody: graph entry!
+
+
+    method generateStackmap
+        (stackmap is False) assert: "Stackmap exists already!".
+        let map = Dictionary new.
+        let p = 0.
+        graph variables
+            doSorted: { |each|
+                        map put: { varClass: p, varDatum: p + 1 }
+                            at: each.
+                        p = p + 2 }.
+        stackmap = map!
+
 
     method emitBody: aCont
         (Application includes: aCont target)
@@ -3170,27 +3200,21 @@ class CpsGraphCBackend { backend graph }
         Error raise: "UNIMPLEMENTED: {aCont}"!
 
     method emitApplication: anApp with: args
-        -- SIMPLEST THING THAT COULD POSSIBLY WORK
-        --
-        -- 0. Add bp to runtime convention.
-        -- 1. On #emit, walk over the CPS, collecting
-        --    all variables from defs.
-        -- 2. Reserve space on stack for each. (2 words, always)
-        -- 3. Keep a variable -> stackslot map
-        -- 4. emit PUSH_DATUM(sp, READ_DATUM(bp, {stackslot}))
-        --
-        -- Later improvements:
-        -- * Don't reserve space for class when statically known.
-        -- * Live ranges to use less space.
         let targetInfo = backend declare: anApp target.
+        let function = (anApp function :: Constant) value.
+        let functionInfo = backend declare: function impl.
         backend output
             println: "    PUSH_DATUM(sp, {targetInfo name});".
         args
             do: { |each|
+                  let slotOf = stackmap at: each.
                   backend output
-                      ; println: "    PUSH_DATUM(sp, XXX_CLASS_OF_{each});"
-                      ; println: "    PUSH_DATUM(sp, XXX_DATUM_OF_{each});"
-                  }!
+                      ; println: "    PUSH_DATUM(sp, READ_DATUM(bp, {slotOf varClass}));"
+                      ; println: "    PUSH_DATUM(sp, READ_DATUM(bp, {slotOf varDatum}));" }.
+        backend output
+            ; println: "    PUSH_DATUM(sp, ARG_OBJS({args size}));"
+            ; println: "    PUSH_DATUM(sp, {functionInfo name});"
+            ; println: "    return sp;"!
 end
 
 
@@ -3324,8 +3348,8 @@ struct FooSelector foo_selector_8 = \{
 // #<CpsGraph Test#test>
 char* foo_method_function_10(char* sp, struct Actor* actor) \{
     PUSH_DATUM(sp, foo_continuation_11);
-    PUSH_DATUM(sp, ARG_DATUM(sp, 2));
-    PUSH_DATUM(sp, ARG_DATUM(sp, 1));
+    PUSH_DATUM(sp, READ_DATUM(bp, 2));
+    PUSH_DATUM(sp, READ_DATUM(bp, 3));
     PUSH_DATUM(sp, ARG_OBJS(1));
     PUSH_DATUM(sp, foo_builtin_6);
     return sp;
