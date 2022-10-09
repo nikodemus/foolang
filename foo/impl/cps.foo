@@ -2156,7 +2156,7 @@ class CpsGraph { entry::Continuation
 
     method variables
         let vars = Set new.
-        self doNodes: { |each| vars addAll: each params }.
+        continuations do: { |each| vars addAll: each params }.
         vars!
 
 
@@ -3276,7 +3276,10 @@ class CpsGraphCBackend { backend graph stackmap }
         (Application includes: aCont target)
             => { return self emitApplication: aCont target
                              with: aCont args }.
-        Error raise: "UNIMPLEMENTED emitBody: {aCont}"!
+        (Variable includes: aCont target)
+            => { return self emitCall: aCont target
+                             with: aCont args }.
+        Error raise: "UNIMPLEMENTED emitBody: {aCont target}"!
 
 
     method locateTarget: target
@@ -3286,6 +3289,14 @@ class CpsGraphCBackend { backend graph stackmap }
             => { return "READ_DATUM(sp, {(stackmap at: target) address})" }.
         Error raise: "UNIMPLEMENTED locateTarget: {target}"!
             -- backend declare:
+
+
+    method emitCall: aCont with: args
+        let targetAddr = self locateTarget: aCont.
+        args do: { |each| self emitArgument: each }.
+        backend output
+            ; print: "    PUSH_DATUM(sp, {targetAddr});\n"
+            ; print: "    return sp;\n"!
 
 
     method emitApplication: anApp with: args
@@ -3316,6 +3327,8 @@ class CpsGraphCBackend { backend graph stackmap }
                      ; println: "    PUSH_DATUM(sp, &{classInfo name});"
                      ; println: "    PUSH_DATUM(sp, &{ownClassInfo name});".
                  return arg }.
+        (Operation includes: arg)
+            => { Error raise: "TODO: {arg}" }.
         Error raise: "UNIMPLEMENTED emitArgument: {arg}"!
 
 
