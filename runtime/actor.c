@@ -46,7 +46,7 @@ enum ActorState run_actor_timeslice(struct Actor* actor) {
   if (sp)
     actor->sp = sp;
   else
-    assert(actor->sp);
+    assert(actor->sp); // Yielding actors must save sp!
 
   if (actor->state == ActorRunning) {
     atomic_store(&actor->state, ActorReady);

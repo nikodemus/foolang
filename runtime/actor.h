@@ -11,6 +11,7 @@ enum ActorState {
 
 struct Actor {
   _Atomic enum ActorState state;
+  char* bp;
   char* sp;
   char* stack;
   char* stacktop;

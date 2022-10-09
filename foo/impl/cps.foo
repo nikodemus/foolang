@@ -2029,17 +2029,17 @@ end
 
 class CpsGraph { entry::Continuation
                  exit::Variable
-                 receiver -- False or Variable, identifies methods
                  lastId::Integer
                  operations::OpMap
                  constants::Dictionary
                  globals::Dictionary
                  continuations::List
-                 name -- False or String
+                 receiver -- False or Variable
+                 home     -- False or Method
                }
     is Expression
 
-    direct method newExpr
+    direct method forExpr
         -- ID 1 is reserved for graph.
         --
         -- Entry node just binds the exit continuation,
@@ -2054,26 +2054,26 @@ class CpsGraph { entry::Continuation
         let graph = self
                         entry: entry
                         exit: exit
-                        receiver: False
                         lastId: 3
                         operations: OpMap new
                         constants: Dictionary new
                         globals: Dictionary new
                         continuations: (List with: entry)
-                        name: False.
+                        receiver: False
+                        home: False.
         exit addUse: exit.
         entry addUse: graph.
         graph!
 
 
-    direct method methodFor: aClass
+    direct method forMethod: aMethod
         -- ID 1 is reserved for graph.
         --
         -- Entry node just binds the exit continuation and
         -- receiver, target patched in later.
         let receiver = Variable id: 4
                                 name: "$receiver"
-                                type: aClass.
+                                type: aMethod home.
         let exit = Variable id: 3
                             name: "$return".
         let entry = Continuation id: 2
@@ -2085,13 +2085,13 @@ class CpsGraph { entry::Continuation
         let graph = self
                         entry: entry
                         exit: exit
-                        receiver: receiver
                         lastId: 4
                         operations: OpMap new
                         constants: Dictionary new
                         globals: Dictionary new
                         continuations: (List with: entry)
-                        name: False.
+                        receiver: receiver
+                        home: aMethod.
         exit addUse: exit.
         entry addUse: graph.
         graph!
@@ -2110,9 +2110,9 @@ class CpsGraph { entry::Continuation
 
 
     method displayString
-        name is False
+        home is False
             ifTrue: { "#<CpsGraph>" }
-            ifFalse: { "#<CpsGraph {name}>"}!
+            ifFalse: { "#<CpsGraph {home home name}#{home name}>" }!
 
 
     method printName
@@ -2285,7 +2285,7 @@ class CpsConverter { graph var next classMap namespace }
 
 
     direct method convertExpr: syntax with: defs in: namespace
-        let graph = CpsGraph newExpr.
+        let graph = CpsGraph forExpr.
         let converter = self makeConverter: graph
                              classDefinitions: defs
                              in: namespace.
@@ -2294,9 +2294,8 @@ class CpsConverter { graph var next classMap namespace }
         graph optimize!
 
 
-    direct method convertMethod: syntax as: aMethod for: aClass with: defs in: namespace
-        let graph = CpsGraph methodFor: aClass.
-        graph name: "{aClass name}#{aMethod name}".
+    direct method convertMethod: syntax as: aMethod with: defs in: namespace
+        let graph = CpsGraph forMethod: aMethod.
         let converter = self makeConverter: graph
                              classDefinitions: defs
                              in: namespace.
@@ -2332,7 +2331,6 @@ class CpsConverter { graph var next classMap namespace }
             do: { |syntax userMethod|
                   self convertMethod: syntax
                        as: userMethod
-                       for: newClass
                        with: newDefs
                        in: namespace }.
         aClass directMethods
@@ -2340,7 +2338,6 @@ class CpsConverter { graph var next classMap namespace }
             do: { |syntax userMethod|
                   self convertMethod: syntax
                        as: userMethod
-                       for: ownClass
                        with: newDefs
                        in: namespace }.
         newClass methodDictionary
@@ -3177,20 +3174,31 @@ class CpsGraphCBackend { backend graph stackmap }
 
     method emit
         self generateStackmap.
-        -- XXX should probably emit prelude / parameter stuff here.
+        self emitPrelude.
         self emitBody: graph entry!
 
 
     method generateStackmap
         (stackmap is False) assert: "Stackmap exists already!".
         let map = Dictionary new.
-        let p = 0.
+        let nextFree = 0.
+        graph receiver
+            => { |recv|
+                 map put: { varClass: 0, varDatum: 1 }
+                     at: recv.
+                 nextFree = 2 }.
         graph variables
             doSorted: { |each|
-                        map put: { varClass: p, varDatum: p + 1 }
-                            at: each.
-                        p = p + 2 }.
+                        (map has: each)
+                            ifFalse: { map put: { varClass: nextFree, varDatum: nextFree + 1 }
+                                           at: each.
+                                       nextFree = nextFree + 2 } }.
         stackmap = map!
+
+
+    method emitPrelude
+        -- FIXME...
+        backend output println: "    SET_ACTOR_BP_FOR_N_ARGS(actor, sp, 1);"!
 
 
     method emitBody: aCont
@@ -3209,8 +3217,8 @@ class CpsGraphCBackend { backend graph stackmap }
             do: { |each|
                   let slotOf = stackmap at: each.
                   backend output
-                      ; println: "    PUSH_DATUM(sp, READ_DATUM(bp, {slotOf varClass}));"
-                      ; println: "    PUSH_DATUM(sp, READ_DATUM(bp, {slotOf varDatum}));" }.
+                      ; println: "    PUSH_DATUM(sp, READ_DATUM(actor->bp, {slotOf varClass}));"
+                      ; println: "    PUSH_DATUM(sp, READ_DATUM(actor->bp, {slotOf varDatum}));" }.
         backend output
             ; println: "    PUSH_DATUM(sp, ARG_OBJS({args size}));"
             ; println: "    PUSH_DATUM(sp, {functionInfo name});"
@@ -3347,9 +3355,10 @@ struct FooSelector foo_selector_8 = \{
 
 // #<CpsGraph Test#test>
 char* foo_method_function_10(char* sp, struct Actor* actor) \{
+    SET_ACTOR_BP_FOR_N_ARGS(actor, sp, 1);
     PUSH_DATUM(sp, foo_continuation_11);
-    PUSH_DATUM(sp, READ_DATUM(bp, 2));
-    PUSH_DATUM(sp, READ_DATUM(bp, 3));
+    PUSH_DATUM(sp, READ_DATUM(actor->bp, 0));
+    PUSH_DATUM(sp, READ_DATUM(actor->bp, 1));
     PUSH_DATUM(sp, ARG_OBJS(1));
     PUSH_DATUM(sp, foo_builtin_6);
     return sp;
