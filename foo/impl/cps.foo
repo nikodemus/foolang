@@ -3002,7 +3002,8 @@ class CBackend { output cInfo }
 
 
     method emitCpsGraph: graph
-        output print: "    // TODO: entry {graph entry printName}\n"!
+        (CpsGraphCBackend backend: self graph: graph)
+            emit!
 
 
     method emitConstructor: ctor
@@ -3128,6 +3129,10 @@ class CBackend { output cInfo }
             ifTrue: { return "foo_methods_{n}" }.
         (String includes: thing)
             ifTrue: { return "foo_string_{n}" }.
+        -- FIXME: Would be nice if the name identified which graph
+        -- aka method_function_<id> the continuation belonged to.
+        (Continuation includes: thing)
+            ifTrue: { return "foo_continuation_{n}" }.
         Error raise: "Don't know how to generate C-name for: {thing displayString} :: {thing classOf name}"!
 
     method cTypeOf: thing
@@ -3135,6 +3140,8 @@ class CBackend { output cInfo }
             ifTrue: { return "struct FooMethod" }.
         (CpsGraph includes: thing)
             ifTrue: { return "FooMethodFunction" }.
+        (Continuation includes: thing)
+            ifTrue: { return "FooContinuation" }.
         (CpsSelector includes: thing)
             ifTrue: { return "struct FooSelector" }.
         (BuiltinMethodImpl includes: thing)
@@ -3147,6 +3154,31 @@ class CBackend { output cInfo }
             ifTrue: { return "struct FooBytes" }.
         Error raise: "Don't know how to generate C-type for: {thing displayString} :: {thing className}"!
 
+end
+
+
+class CpsGraphCBackend { backend graph }
+
+    method emit
+        -- XXX should probably emit prelude / parameter stuff here.
+        self emitBody: graph entry!
+
+    method emitBody: aCont
+        (Application includes: aCont target)
+            => { return self emitApplication: aCont target
+                             with: aCont args }.
+        Error raise: "UNIMPLEMENTED: {aCont}"!
+
+    method emitApplication: anApp with: args
+        let targetInfo = backend declare: anApp target.
+        backend output
+            println: "    PUSH_DATUM(sp, {targetInfo name});".
+        args
+            do: { |each|
+                  backend output
+                      ; println: "    PUSH_DATUM(sp, XXX_CLASS_OF_{each});"
+                      ; println: "    PUSH_DATUM(sp, XXX_DATUM_OF_{each});"
+                  }!
 end
 
 
@@ -3279,7 +3311,7 @@ struct FooSelector foo_selector_8 = \{
 
 // #<CpsGraph Test#test>
 char* foo_method_function_10(char* sp, struct Actor* actor) \{
-    PUSH_DATUM(sp, foo_method_function_10_cont_13);
+    PUSH_DATUM(sp, foo_continuation_11);
     PUSH_DATUM(sp, ARG_DATUM(sp, 2));
     PUSH_DATUM(sp, ARG_DATUM(sp, 1));
     PUSH_DATUM(sp, ARG_OBJS(1));
