@@ -3883,27 +3883,25 @@ $entry:2($return:3, $receiver::A class:4):
     $return:3(#<Instance A>)
 "!
 
-    method test_convert_method_arg
+    method test_convert_untyped_method_argument
         let ns = Namespace standard.
-        let def = self convertClass: "
-class ArgTest \{}
-    method asd: x
-       x!
-end
-"
-                      with: []
+        let def = self convertClass: "class UntypedArgTest \{}
+                                          method succ: x
+                                              x + 1!
+                                      end"
+                      with: [IntegerClassDefinition]
                       in: ns.
-        let cps = (def findMethod: (ns intern: "asd:")) cps.
+        let cps = (def findMethod: (ns intern: "succ:")) cps.
         assert that: { CpsPrinter printToString: cps }
                equals: "
-$entry:2($return:3, $receiver::ArgTest:4, x:6):
-    $return:3(x:6)
+$entry:2($return:3, $receiver::UntypedArgTest:4, x:7):
+    apply:13($return:3, findMethod:12(classOf:11(x:7), #+))(x:7, 1)
 "!
 
 
-    method test_convert_integer_addition_in_method
+    method test_convert_typed_method_argument
         let ns = Namespace standard.
-        let def = self convertClass: "class AddTest \{}
+        let def = self convertClass: "class TypedArgTest \{}
                                           method next: x::Integer
                                               x + 1!
                                           end"
@@ -3912,7 +3910,7 @@ $entry:2($return:3, $receiver::ArgTest:4, x:6):
         let cps = (def findMethod: (ns intern: "next:")) cps.
         assert that: { CpsPrinter printToString: cps }
                equals: "
-$entry:2($return:3, $receiver::AddTest:4, x::Integer:7):
+$entry:2($return:3, $receiver::TypedArgTest:4, x::Integer:7):
     $return:3(makeInstance:29(Integer, addi:28(1::Datum, datumOf:27(x::Integer:7))))
 "!
 
