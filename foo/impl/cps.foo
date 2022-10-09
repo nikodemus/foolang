@@ -3432,6 +3432,42 @@ char* foo_continuation_2(char* sp, struct Actor* actor) \{
 "!
 
 
+    method test_c_backend_integer_addition
+        let ns = Namespace standard.
+        let def = self convertClass: "class AddiTest \{}
+                                          method double: x::Integer
+                                              x + x!
+                                      end"
+                      with: [IntegerClassDefinition]
+                      in: ns.
+        -- Sanity check the CPS first
+        let m = def findMethod: (ns intern: "double:").
+        assert that: { CpsPrinter printToString: m cps }
+               equals: "
+$entry:2($return:3, $receiver::AddiTest:4, x::Integer:7):
+    $return:3(makeInstance:26(Integer, addi:25(datumOf:24(x::Integer:7), datumOf:24(x::Integer:7))))
+".
+
+               let backend = CBackend output: StringOutput new.
+        backend emitFunction: m impl.
+        assert that: { backend output content }
+               equals: "
+// #<CpsGraph AddiTest#double:>
+char* foo_method_function_1(char* sp, struct Actor* actor) \{
+    actor->bp = sp;
+    if (READ_DATUM(actor->bp, -2) != XXX_INTEGER_CLASS)
+        return runtime_type_error(sp, actor);
+    int64_t tmp1 = READ_DATUM(actor->bp, -1)).int64;
+    datum_t cont2 = POP_FRAME(sp, 5);
+    PUSH_DATUM(sp, XXX_INTEGER_CLASS);
+    PUSH_DATUM(sp, tmp1 + tmp1);
+    PUSH_DATUM(sp, ARG_OBJS(0, 1));
+    PUSH_DATUM(sp, cont);
+    return sp;
+}
+"!
+
+
     method test_c_backend_integration_test
         -- This is the only test that emits the full C code
         -- all the others emit just a single CPS graph's worth
