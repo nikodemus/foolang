@@ -88,8 +88,14 @@ Actors have following states:
 Actors have:
 - Stack
 - Stack pointer
+- Base pointer
 - Heap
 - Yieldpoint (A pointer to a C jmp_buf.)
+
+Base pointer is _only_ used from inside actor code. As far as the
+runtime is concerned, it could point to the moon. Actually it is
+set by the method prelude to point to the start of the arguments,
+ie. (1 + nargs) * 2 words down from stack pointer. (1 for receiver.)
 
 ### Actor Stack
 
@@ -101,3 +107,6 @@ The from top down when READY or WAITING:
 4. Next Continuation.
 5. Etc.
 
+# SKETCH
+
+## 

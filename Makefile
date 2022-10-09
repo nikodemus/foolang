@@ -1,7 +1,7 @@
 .PHONY: all
 all:
 	@echo "targets:"
-	@echo " - test (unit tests for new runtime)"
+	@echo " - test (unit tests for new runtime & CPS compiler)"
 	@echo " - clean (delete new runtime objects)"
 	@echo " - commit (tests and commits)"
 	@echo " - amend (tests and amends last commit)"
@@ -39,7 +39,14 @@ build/test-runtime$(EXE): $(OBJS)
 	@clang -o $@ $(OBJS) $(CFLAGS)
 
 .PHONY: test
-test: build/test-runtime$(EXE)
+test: test-cps test-runtime
+
+.PHONY: test-cps
+test-cps:
+	cargo run foo/impl/cps.foo --use=foo/lib
+
+.PHONY: test-runtime
+test-runtime: build/test-runtime$(EXE)
 	@$<
 
 .PHONY: commit

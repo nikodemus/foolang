@@ -95,7 +95,7 @@ define StandardNamespace
 
 
 extend String
-    -- This is the solution to allowing users to
+    -- This is _a_ solution to allowing users to
     -- intern without special objects: they cannot
     -- intern new things!
     method intern
@@ -252,7 +252,7 @@ end
 
 
 class OpaqueIdentityImpl {}
-    -- Very useful for compiler testing.
+    -- Very useful for compiler testing: never inlined!
     is BuiltinMethodImpl
 
     direct method for: _
@@ -305,7 +305,7 @@ class ConstructorImpl { classDefinition }
 
 
     method apply: args in: _classDefinition
-        Log println: "\nNEW: {args}".
+        -- Log println: "\nNEW: {args}".
         Instance class: args first
                  datum: args second!
 
@@ -911,6 +911,10 @@ class Set { dict }
         let old = dict at: node.
         dict put: node at: node.
         old is False!
+
+
+    method addAll: collection
+        collection do: { |each| self add: each }!
 
 
     method remove: node
@@ -1766,14 +1770,55 @@ class Continuation { id::Integer
 
 
     method toString
-        "#<Continuation {self printName} -> {target printName}>"!
+        StringOutput
+            with: { |out|
+                    out print: "#<Continuation ".
+                    self printTo: out.
+                    out print: ">" }!
+
+
+    method displayString
+        "#<Continuation {self printName}>"!
+
+
+    method printTo: output
+        self printTo: output pretty: False!
+
+
+    method prettyPrintTo: output
+        self printTo: output pretty: True!
+
+
+    method printTo: output pretty: pretty
+        output
+            ; print: self printName
+            ; print: "(".
+        params
+            do: { |each| output print: each printName }
+            interleaving: { output print: ", " }.
+        output print: ")".
+        pretty
+            ifTrue: { output println: ":".
+                      output print: "    " }
+            ifFalse: { output print: " -> " }.
+        output
+            ; print: target printName
+            ; print: "(".
+        args
+            do: { |arg| output print: arg printName }
+            interleaving: { output print: ", " }.
+        output print: ")".
+        pretty
+            ifTrue: { output newline }!
 
 
     method visitBy: visitor
         visitor visitContinuation: self!
 
+
     method visitBy: visitor with: arg
         visitor visitContinuation: self with: arg!
+
 end
 
 
@@ -1988,15 +2033,17 @@ end
 
 class CpsGraph { entry::Continuation
                  exit::Variable
-                 receiver -- False or Variable, identifies methods
                  lastId::Integer
                  operations::OpMap
                  constants::Dictionary
                  globals::Dictionary
-                 continuations::List }
+                 continuations::List
+                 receiver -- False or Variable
+                 home     -- False or Method
+               }
     is Expression
 
-    direct method newExpr
+    direct method forExpr
         -- ID 1 is reserved for graph.
         --
         -- Entry node just binds the exit continuation,
@@ -2011,25 +2058,26 @@ class CpsGraph { entry::Continuation
         let graph = self
                         entry: entry
                         exit: exit
-                        receiver: False
                         lastId: 3
                         operations: OpMap new
                         constants: Dictionary new
                         globals: Dictionary new
-                        continuations: (List with: entry).
+                        continuations: (List with: entry)
+                        receiver: False
+                        home: False.
         exit addUse: exit.
         entry addUse: graph.
         graph!
 
 
-    direct method methodFor: aClass
+    direct method forMethod: aMethod
         -- ID 1 is reserved for graph.
         --
         -- Entry node just binds the exit continuation and
         -- receiver, target patched in later.
         let receiver = Variable id: 4
                                 name: "$receiver"
-                                type: aClass.
+                                type: aMethod home.
         let exit = Variable id: 3
                             name: "$return".
         let entry = Continuation id: 2
@@ -2041,15 +2089,20 @@ class CpsGraph { entry::Continuation
         let graph = self
                         entry: entry
                         exit: exit
-                        receiver: receiver
                         lastId: 4
                         operations: OpMap new
                         constants: Dictionary new
                         globals: Dictionary new
-                        continuations: (List with: entry).
+                        continuations: (List with: entry)
+                        receiver: receiver
+                        home: aMethod.
         exit addUse: exit.
         entry addUse: graph.
         graph!
+
+
+    method name: newName
+        name = newName!
 
 
     method id
@@ -2061,7 +2114,9 @@ class CpsGraph { entry::Continuation
 
 
     method displayString
-        "#<CpsGraph ???>"!
+        home is False
+            ifTrue: { "#<CpsGraph>" }
+            ifFalse: { "#<CpsGraph {home home name}#{home name}>" }!
 
 
     method printName
@@ -2097,6 +2152,12 @@ class CpsGraph { entry::Continuation
     method doNodes: block
         continuations do: block.
         operations do: block!
+
+
+    method variables
+        let vars = Set new.
+        self doNodes: { |each| vars addAll: each params }.
+        vars!
 
 
     method entry: target
@@ -2228,7 +2289,7 @@ class CpsConverter { graph var next classMap namespace }
 
 
     direct method convertExpr: syntax with: defs in: namespace
-        let graph = CpsGraph newExpr.
+        let graph = CpsGraph forExpr.
         let converter = self makeConverter: graph
                              classDefinitions: defs
                              in: namespace.
@@ -2237,8 +2298,8 @@ class CpsConverter { graph var next classMap namespace }
         graph optimize!
 
 
-    direct method convertMethod: syntax as: aMethod for: aClass with: defs in: namespace
-        let graph = CpsGraph methodFor: aClass.
+    direct method convertMethod: syntax as: aMethod with: defs in: namespace
+        let graph = CpsGraph forMethod: aMethod.
         let converter = self makeConverter: graph
                              classDefinitions: defs
                              in: namespace.
@@ -2254,6 +2315,7 @@ class CpsConverter { graph var next classMap namespace }
 
     direct method convertClass: aClass with: defs in: namespace
         let newClass = ClassDefinition name: aClass name.
+        let newDefs = defs append: [newClass].
         -- First we add placeholder methods, so that all methods
         -- can be immediately resolved to each other.
         let userMethods =  aClass instanceMethods
@@ -2273,16 +2335,14 @@ class CpsConverter { graph var next classMap namespace }
             do: { |syntax userMethod|
                   self convertMethod: syntax
                        as: userMethod
-                       for: newClass
-                       with: defs
+                       with: newDefs
                        in: namespace }.
         aClass directMethods
             with: directMethods
             do: { |syntax userMethod|
                   self convertMethod: syntax
                        as: userMethod
-                       for: ownClass
-                       with: defs
+                       with: newDefs
                        in: namespace }.
         newClass methodDictionary
             reject: #isStandard
@@ -2714,21 +2774,7 @@ class CpsPrinter { output seen }
 
 
     method visitContinuation: aCont
-        output
-            ; print: aCont printName
-            ; print: "(".
-        aCont params
-            do: { |each| output print: each printName }
-            interleaving: { output print: ", " }.
-        output println: "):".
-        output
-            ; print: "    "
-            ; print: aCont target printName
-            ; print: "(".
-        aCont args
-            do: { |arg| output print: arg printName }
-            interleaving: { output print: ", " }.
-        output println: ")".
+        aCont prettyPrintTo: output.
         aCont args do: { |each| self visit: each }.
         self visit: aCont target!
 
@@ -2870,7 +2916,7 @@ class CpsGraphwizPrinter { output seen }
 end
 
 
-class CBackend { output cInfo }
+class CBackend { output declared emitted }
 
     direct method emitToString: classDef
         StringOutput with: { |out|
@@ -2880,9 +2926,39 @@ class CBackend { output cInfo }
     direct method emit: classDef
                   to: output
         let backend = (self output: output
-                            cInfo: Dictionary new).
+                            declared: Dictionary new
+                            emitted: Dictionary new).
         backend writeHeaders.
         backend emitClass: classDef!
+
+
+    method declare: thing
+        declared
+            at: thing
+            ifNonePut: {
+                let cName = self generateCName: thing.
+                let cType = self cTypeOf: thing.
+                { name: cName, type: cType }
+            }!
+
+
+    method declaration: thing
+        declared
+            at: thing
+            ifNone: { Error raise: "No declaration for {thing}" }!
+
+
+    method markEmitted: thing
+        (self emittedInfo: thing)
+            => { Error raise: "Already emitted: {thing}" }.
+        let info = self declare: thing.
+        emitted put: info at: thing.
+        info!
+
+
+    method emittedInfo: thing
+        -- Ie. returns info or False
+        emitted at: thing!
 
 
     method writeHeaders
@@ -2890,10 +2966,9 @@ class CBackend { output cInfo }
 
 
     method emitClass: classDef
-        (self declaration: classDef)
+        (self emittedInfo: classDef)
             => { |info| return info }.
-        let classInfo = self declare: classDef.
-
+        let classInfo = self markEmitted: classDef.
         let nameInfo = self emitString: classDef name.
         let methodInfo = self emitMethodDictionary: classDef methodDictionary.
         let metaclassInfo = self emitClass: classDef ownClassDefinition.
@@ -2919,9 +2994,9 @@ class CBackend { output cInfo }
 
 
     method emitString: string
-        (self declaration: string)
+        (self emittedInfo: string)
             => { |info| return info }.
-        let info = self declare: string.
+        let info = self markEmitted: string.
         output print: "// ".
         output println: string displayString.
         output print: info type.
@@ -2936,9 +3011,9 @@ class CBackend { output cInfo }
 
 
     method emitSelector: aSelector
-        (self declaration: aSelector)
+        (self emittedInfo: aSelector)
             => { |info| return info }.
-        let info = self declare: aSelector.
+        let info = self markEmitted: aSelector.
         let nameInfo = self emitString: aSelector name.
         output print: "// #".
         output println: aSelector name.
@@ -2952,70 +3027,95 @@ class CBackend { output cInfo }
 
 
     method emitFunction: function
-        (self declaration: function)
+        (self emittedInfo: function)
             => { |info| return info }.
-        let info = self declare: function.
-        output print: "// ".
-        output println: function displayString.
-        -- All functions return the continuation stack pointer
-        output print: "char* ".
-        output print: info name.
-        output print: "(char* sp, struct Actor* actor) \{\n".
+        let info = self markEmitted: function.
         function emitOn: self.
-        output print: "\}\n\n".
         info!
 
 
+    method emitFunctionHeader: function
+        output
+            ; print: "// "
+            ; println: function displayString
+            ; print: "char* "
+            ; print: (self declaration: function) name
+            ; print: "(char* sp, struct Actor* actor) \{\n"!
+
+
+    method emitFunctionFooter
+        output print: "\}\n\n"!
+
+
     method emitCpsGraph: graph
-        output print: "    // TODO: entry {graph entry printName}\n"!
+        -- FIXME: This gets called from emitFunction via emitOn,
+        -- which leaves it "inside braces", but may generate
+        -- N functions.
+        --
+        -- Should instead make this and other backend emitters
+        -- be responsible for the whgile function output.
+        --
+        -- Common code can still be factored out.
+        (CpsGraphCBackend backend: self graph: graph)
+            emit!
 
 
     method emitConstructor: ctor
         let classInfo = self declaration: ctor classDefinition.
         classInfo is False
             ifTrue: { Error raise: "Class definition for {ctor} not yet declared" }.
+        self emitFunctionHeader: ctor.
         -- 3     2      1
         -- cont, Class, own-class, argInfo
-        output print: "    datum_t cont = POP_FRAME(sp, 3);\n".
-        output print: "    PUSH_DATUM(sp, &".
-        output print: classInfo name.
-        output print: ");\n".
-        output print: "    PUSH_DATUM(sp, 0); // only empty classes for now!\n".
-        output print: "    PUSH_DATUM(sp, ARG_OBJS(1));\n".
-        output print: "    PUSH_DATUM(sp, cont);\n".
-        output print: "    return sp;\n"!
+        output
+            ; print: "    datum_t cont = POP_FRAME(sp, 3);\n"
+            ; print: "    PUSH_DATUM(sp, &"
+            ; print: classInfo name
+            ; print: ");\n"
+            ; print: "    PUSH_DATUM(sp, 0); // only empty classes for now!\n"
+            ; print: "    PUSH_DATUM(sp, ARG_OBJS(1));\n"
+            ; print: "    PUSH_DATUM(sp, cont);\n"
+            ; print: "    return sp;\n".
+        self emitFunctionFooter!
 
 
-    method emitOpaqueIdentity: _
+    method emitOpaqueIdentity: identity
+        self emitFunctionHeader: identity.
         -- 3     2               1               0
         -- cont, receiver class, receiver datum, argInfo
-        output print: "    datum_t class = ARG_DATUM(sp, 2);\n".
-        output print: "    datum_t datum = ARG_DATUM(sp, 1);\n".
-        output print: "    datum_t cont = POP_FRAME(sp, 3);\n".
-        output print: "    PUSH_DATUM(sp, class);\n".
-        output print: "    PUSH_DATUM(sp, datum);\n".
-        output print: "    PUSH_DATUM(sp, ARG_OBJS(1));\n".
-        output print: "    PUSH_DATUM(sp, cont);\n".
-        output print: "    return sp;\n"!
+        output
+            ; print: "    datum_t class = ARG_DATUM(sp, 2);\n"
+            ; print: "    datum_t datum = ARG_DATUM(sp, 1);\n"
+            ; print: "    datum_t cont = POP_FRAME(sp, 3);\n"
+            ; print: "    PUSH_DATUM(sp, class);\n"
+            ; print: "    PUSH_DATUM(sp, datum);\n"
+            ; print: "    PUSH_DATUM(sp, ARG_OBJS(1));\n"
+            ; print: "    PUSH_DATUM(sp, cont);\n"
+            ; print: "    return sp;\n".
+        self emitFunctionFooter!
 
 
     method emitTypecheck: typecheck
+        self emitFunctionHeader: typecheck.
         -- 5     4               3           2          1          0
         -- cont, recv own-class, recv class, arg-class, arg-datum, argInfo
-        output print: "    datum_t expectedClass = ARG_DATUM(sp, 3);\n".
-        output print: "    datum_t actualClass = ARG_DATUM(sp, 2);\n".
-        output print: "    if (want == got) \{\n".
-        output print: "        datum_t actualDatum = ARG_DATUM(sp, 1);\n".
-        output print: "        datum_t cont = POP_FRAME(sp, 5);\n".
-        output print: "        PUSH_DATUM(sp, actualClass);\n".
-        output print: "        PUSH_DATUM(sp, actualDatum);\n".
-        output print: "        PUSH_DATUM(sp, ARG_OBJS(1));\n".
-        output print: "        PUSH_DATUM(sp, cont);\n".
-        output print: "        return sp;\n".
-        output print: "    \} else \{\n".
+        --
         -- The only reason this calls out to runtime is because I can't
         -- write the error handler code yet!
-        output print: "        return runtime_type_error(sp, actor);\n    \}\n"!
+        output
+            ; print: "    datum_t expectedClass = ARG_DATUM(sp, 3);\n"
+            ; print: "    datum_t actualClass = ARG_DATUM(sp, 2);\n"
+            ; print: "    if (want == got) \{\n"
+            ; print: "        datum_t actualDatum = ARG_DATUM(sp, 1);\n"
+            ; print: "        datum_t cont = POP_FRAME(sp, 5);\n"
+            ; print: "        PUSH_DATUM(sp, actualClass);\n"
+            ; print: "        PUSH_DATUM(sp, actualDatum);\n"
+            ; print: "        PUSH_DATUM(sp, ARG_OBJS(1));\n"
+            ; print: "        PUSH_DATUM(sp, cont);\n"
+            ; print: "        return sp;\n"
+            ; print: "    \} else \{\n"
+            ; print: "        return runtime_type_error(sp, actor);\n    \}\n".
+        self emitFunctionFooter!
 
 
     method emitMethod: aMethod
@@ -3063,22 +3163,8 @@ class CBackend { output cInfo }
         methodInfo!
 
 
-    method declare: thing
-        cInfo
-            at: thing
-            ifNonePut: {
-                let cName = self generateCName: thing.
-                let cType = self cTypeOf: thing.
-                { name: cName, type: cType }
-            }!
-
-
-    method declaration: thing
-        cInfo at: thing!
-
-
     method generateCName: thing
-        let n = cInfo size + 1.
+        let n = declared size + 1.
         (MethodDefinition includes: thing)
             ifTrue: { return "foo_method_{n}" }.
         (CpsGraph includes: thing)
@@ -3093,6 +3179,10 @@ class CBackend { output cInfo }
             ifTrue: { return "foo_methods_{n}" }.
         (String includes: thing)
             ifTrue: { return "foo_string_{n}" }.
+        -- FIXME: Would be nice if the name identified which graph
+        -- aka method_function_<id> the continuation belonged to.
+        (Continuation includes: thing)
+            ifTrue: { return "foo_continuation_{n}" }.
         Error raise: "Don't know how to generate C-name for: {thing displayString} :: {thing classOf name}"!
 
     method cTypeOf: thing
@@ -3100,6 +3190,8 @@ class CBackend { output cInfo }
             ifTrue: { return "struct FooMethod" }.
         (CpsGraph includes: thing)
             ifTrue: { return "FooMethodFunction" }.
+        (Continuation includes: thing)
+            ifTrue: { return "FooContinuation" }.
         (CpsSelector includes: thing)
             ifTrue: { return "struct FooSelector" }.
         (BuiltinMethodImpl includes: thing)
@@ -3112,6 +3204,103 @@ class CBackend { output cInfo }
             ifTrue: { return "struct FooBytes" }.
         Error raise: "Don't know how to generate C-type for: {thing displayString} :: {thing className}"!
 
+end
+
+
+class CpsGraphCBackend { backend graph stackmap }
+
+    direct method backend: backend graph: graph
+        self backend: backend
+             graph: graph
+             stackmap: False!
+
+
+    method emit
+        self generateStackmap.
+        backend emitFunctionHeader: graph.
+        self emitPrelude.
+        self emitBody: graph entry.
+        backend emitFunctionFooter.
+        (graph continuations reject: { |each| each is graph entry })
+            do: { |each|
+                  backend emitFunctionHeader: each.
+                  self emitBody: each.
+                  backend emitFunctionFooter }!
+
+
+    method generateStackmap
+        (stackmap is False) assert: "Stackmap exists already!".
+        let map = Dictionary new.
+        map put: { address: -3 }
+            at: graph exit.
+        map put: { varClass: -2, varDatum: -1 }
+            at: graph receiver.
+        let nextFree = 0.
+        graph variables
+            doSorted: { |each|
+                        (map has: each)
+                            ifFalse: { map put: { varClass: nextFree, varDatum: nextFree + 1 }
+                                           at: each.
+                                       nextFree = nextFree + 2 } }.
+        stackmap = map!
+
+
+    method emitPrelude
+        backend output println: "    actor->bp = sp;"!
+
+
+    method emitBody: aCont
+        (Application includes: aCont target)
+            => { return self emitApplication: aCont target
+                             with: aCont args }.
+        Error raise: "UNIMPLEMENTED emitBody: {aCont}"!
+
+
+    method locateTarget: target
+        (Continuation includes: target)
+            => { return (backend declare: target) name }.
+        (Variable includes: target)
+            => { return "READ_DATUM(sp, {(stackmap at: target) address})" }.
+        Error raise: "UNIMPLEMENTED locateTarget: {target}"!
+            -- backend declare:
+
+
+    method emitApplication: anApp with: args
+        let targetAddr = self locateTarget: anApp target.
+        let function = (anApp function :: Constant) value.
+        let functionInfo = backend declare: function impl.
+        backend output
+            ; print: "    PUSH_DATUM(sp, {targetAddr});\n".
+        args do: { |each| self emitArgument: each }.
+        backend output
+            ; print: "    PUSH_DATUM(sp, ARG_IMMS_AND_OBJS(1, {args size}));\n"
+            ; print: "    PUSH_DATUM(sp, {functionInfo name}); // {function printName}\n"
+            ; print: "    return sp;\n"!
+
+
+    method emitArgument: arg
+        (Variable includes: arg)
+            => { let slotOf = stackmap at: arg.
+                 backend output
+                     ; println: "    PUSH_DATUM(sp, READ_DATUM(actor->bp, {slotOf varClass}));"
+                     ; println: "    PUSH_DATUM(sp, READ_DATUM(actor->bp, {slotOf varDatum}));".
+                 return arg }.
+        (Global includes: arg)
+            => { let definition = arg definition :: ClassDefinition.
+                 let classInfo = backend declare: definition.
+                 let ownClassInfo = backend declare: definition ownClassDefinition.
+                 backend output
+                     ; println: "    PUSH_DATUM(sp, &{classInfo name});"
+                     ; println: "    PUSH_DATUM(sp, &{ownClassInfo name});".
+                 return arg }.
+        Error raise: "UNIMPLEMENTED emitArgument: {arg}"!
+
+
+    method visitContinuation: aCont
+        backend emitFunctionHeader: graph.
+        self emitPrelude.
+        self emitBody: graph entry.
+        backend emitFunctionFooter!
 end
 
 
@@ -3156,12 +3345,41 @@ class TestCPS { assert system }
              in: Namespace standard!
 
 
-    method test_c_backend_trivial_method
+    method test_class_type_defined_inside_its_own_methods
+        let ns = Namespace standard.
         let def = self convertClass: "class Test \{}
                                           method test
-                                              1823 opaqueIdentity :: Integer!
+                                              self :: Test!
                                       end"
-                       with: [IntegerClassDefinition].
+                      with: []
+                      in: ns.
+        let m = def findMethod: (ns intern: "test").
+        assert that: { CpsPrinter printToString: m cps }
+               equals: "
+$entry:2($return:3, $receiver::Test:4):
+    $return:3($receiver::Test:4)
+"!
+
+
+    method test_c_backend_trivial_method
+        let ns = Namespace standard.
+        let def = self convertClass: "class Test \{}
+                                          method test
+                                              self opaqueIdentity :: Test!
+                                      end"
+                      with: []
+                      in: ns.
+        -- Sanity check the CPS: OpaqueIdentity is explicitly never
+        -- inlined, so must be via an Application.
+        let m = def findMethod: (ns intern: "test").
+        assert that: { CpsPrinter printToString: m cps }
+               equals: "
+$entry:2($return:3, $receiver::Test:4):
+    apply:18($bind:13, Test#opaqueIdentity)($receiver::Test:4)
+$bind:13($value:6):
+    apply:11($return:3, Test class#typecheck:)(Test:Global, $value:6)
+".
+        -- Check the code
         assert that: { CBackend emitToString: def }
                equals: "
 #include \"foolang.h\"
@@ -3213,10 +3431,28 @@ struct FooSelector foo_selector_8 = \{
     .name = &foo_string_9
 };
 
-// #<CpsGraph ???>
+// #<CpsGraph Test#test>
 char* foo_method_function_10(char* sp, struct Actor* actor) \{
-    // TODO: entry $entry:2
+    actor->bp = sp;
+    PUSH_DATUM(sp, foo_continuation_11);
+    PUSH_DATUM(sp, READ_DATUM(actor->bp, -2));
+    PUSH_DATUM(sp, READ_DATUM(actor->bp, -1));
+    PUSH_DATUM(sp, ARG_IMMS_AND_OBJS(1, 1));
+    PUSH_DATUM(sp, foo_builtin_6); // Test#opaqueIdentity
+    return sp;
 }
+
+// #<Continuation $bind:13>
+char* foo_continuation_11(char* sp, struct Actor* actor) \{
+    PUSH_DATUM(sp, READ_DATUM(sp, -3));
+    PUSH_DATUM(sp, &foo_class_1);
+    PUSH_DATUM(sp, &foo_class_13);
+    PUSH_DATUM(sp, READ_DATUM(actor->bp, 0));
+    PUSH_DATUM(sp, READ_DATUM(actor->bp, 1));
+    PUSH_DATUM(sp, ARG_IMMS_AND_OBJS(1, 2));
+    PUSH_DATUM(sp, foo_builtin_12); // Test class#typecheck:
+    return sp;
+\}
 
 // #<UserMethod Test#test>
 struct FooMethod foo_method_7 = \{
@@ -3226,7 +3462,7 @@ struct FooMethod foo_method_7 = \{
 };
 
 // #<MethodDictionary Test>
-struct FooMethodDictionary foo_methods_11 = \{
+struct FooMethodDictionary foo_methods_14 = \{
     .size = 2,
     .data = \{
         &foo_method_3, // #<BuiltinMethod Test#opaqueIdentity>
@@ -3235,24 +3471,24 @@ struct FooMethodDictionary foo_methods_11 = \{
 };
 
 // \"Test class\"
-struct FooBytes foo_string_13 = \{
+struct FooBytes foo_string_15 = \{
     .size = 10,
     .data = \{ 'T','e','s','t',' ','c','l','a','s','s', 0 }
 };
 
 // \"new\"
-struct FooBytes foo_string_16 = \{
+struct FooBytes foo_string_18 = \{
     .size = 3,
     .data = \{ 'n','e','w', 0 }
 };
 
 // #new
-struct FooSelector foo_selector_15 = \{
-    .name = &foo_string_16
+struct FooSelector foo_selector_17 = \{
+    .name = &foo_string_18
 };
 
 // #<BuiltinMethodImpl new>
-char* foo_builtin_17(char* sp, struct Actor* actor) \{
+char* foo_builtin_19(char* sp, struct Actor* actor) \{
     datum_t cont = POP_FRAME(sp, 3);
     PUSH_DATUM(sp, &foo_class_1);
     PUSH_DATUM(sp, 0); // only empty classes for now!
@@ -3262,32 +3498,32 @@ char* foo_builtin_17(char* sp, struct Actor* actor) \{
 }
 
 // #<BuiltinMethod Test class#new>
-struct FooMethod foo_method_14 = \{
-    .home = &foo_class_12,
-    .selector = &foo_selector_15,
-    .method_function = foo_builtin_17
+struct FooMethod foo_method_16 = \{
+    .home = &foo_class_13,
+    .selector = &foo_selector_17,
+    .method_function = foo_builtin_19
 };
 
 // #<BuiltinMethod Test class#opaqueIdentity>
-struct FooMethod foo_method_18 = \{
-    .home = &foo_class_12,
+struct FooMethod foo_method_20 = \{
+    .home = &foo_class_13,
     .selector = &foo_selector_4,
     .method_function = foo_builtin_6
 };
 
 // \"typecheck:\"
-struct FooBytes foo_string_21 = \{
+struct FooBytes foo_string_23 = \{
     .size = 10,
     .data = \{ 't','y','p','e','c','h','e','c','k',':', 0 }
 };
 
 // #typecheck:
-struct FooSelector foo_selector_20 = \{
-    .name = &foo_string_21
+struct FooSelector foo_selector_22 = \{
+    .name = &foo_string_23
 };
 
 // #<BuiltinMethodImpl typecheck:>
-char* foo_builtin_22(char* sp, struct Actor* actor) \{
+char* foo_builtin_12(char* sp, struct Actor* actor) \{
     datum_t expectedClass = ARG_DATUM(sp, 3);
     datum_t actualClass = ARG_DATUM(sp, 2);
     if (want == got) \{
@@ -3304,32 +3540,32 @@ char* foo_builtin_22(char* sp, struct Actor* actor) \{
 }
 
 // #<BuiltinMethod Test class#typecheck:>
-struct FooMethod foo_method_19 = \{
-    .home = &foo_class_12,
-    .selector = &foo_selector_20,
-    .method_function = foo_builtin_22
+struct FooMethod foo_method_21 = \{
+    .home = &foo_class_13,
+    .selector = &foo_selector_22,
+    .method_function = foo_builtin_12
 };
 
 // #<MethodDictionary Test class>
-struct FooMethodDictionary foo_methods_23 = \{
+struct FooMethodDictionary foo_methods_24 = \{
     .size = 3,
     .data = \{
-        &foo_method_14, // #<BuiltinMethod Test class#new>
-        &foo_method_18, // #<BuiltinMethod Test class#opaqueIdentity>
-        &foo_method_19, // #<BuiltinMethod Test class#typecheck:>
+        &foo_method_16, // #<BuiltinMethod Test class#new>
+        &foo_method_20, // #<BuiltinMethod Test class#opaqueIdentity>
+        &foo_method_21, // #<BuiltinMethod Test class#typecheck:>
     \}
 \};
 
 // \"Class\"
-struct FooBytes foo_string_25 = \{
+struct FooBytes foo_string_26 = \{
     .size = 5,
     .data = \{ 'C','l','a','s','s', 0 }
 };
 
 // #<BuiltinMethodImpl new>
-char* foo_builtin_27(char* sp, struct Actor* actor) \{
+char* foo_builtin_28(char* sp, struct Actor* actor) \{
     datum_t cont = POP_FRAME(sp, 3);
-    PUSH_DATUM(sp, &foo_class_24);
+    PUSH_DATUM(sp, &foo_class_25);
     PUSH_DATUM(sp, 0); // only empty classes for now!
     PUSH_DATUM(sp, ARG_OBJS(1));
     PUSH_DATUM(sp, cont);
@@ -3337,21 +3573,21 @@ char* foo_builtin_27(char* sp, struct Actor* actor) \{
 }
 
 // #<BuiltinMethod Class#new>
-struct FooMethod foo_method_26 = \{
-    .home = &foo_class_24,
-    .selector = &foo_selector_15,
-    .method_function = foo_builtin_27
+struct FooMethod foo_method_27 = \{
+    .home = &foo_class_25,
+    .selector = &foo_selector_17,
+    .method_function = foo_builtin_28
 };
 
 // #<BuiltinMethod Class#opaqueIdentity>
-struct FooMethod foo_method_28 = \{
-    .home = &foo_class_24,
+struct FooMethod foo_method_29 = \{
+    .home = &foo_class_25,
     .selector = &foo_selector_4,
     .method_function = foo_builtin_6
 };
 
 // #<BuiltinMethodImpl typecheck:>
-char* foo_builtin_30(char* sp, struct Actor* actor) \{
+char* foo_builtin_31(char* sp, struct Actor* actor) \{
     datum_t expectedClass = ARG_DATUM(sp, 3);
     datum_t actualClass = ARG_DATUM(sp, 2);
     if (want == got) \{
@@ -3368,41 +3604,41 @@ char* foo_builtin_30(char* sp, struct Actor* actor) \{
 }
 
 // #<BuiltinMethod Class#typecheck:>
-struct FooMethod foo_method_29 = \{
-    .home = &foo_class_24,
-    .selector = &foo_selector_20,
-    .method_function = foo_builtin_30
+struct FooMethod foo_method_30 = \{
+    .home = &foo_class_25,
+    .selector = &foo_selector_22,
+    .method_function = foo_builtin_31
 };
 
 // #<MethodDictionary Class>
-struct FooMethodDictionary foo_methods_31 = \{
+struct FooMethodDictionary foo_methods_32 = \{
     .size = 3,
     .data = \{
-        &foo_method_26, // #<BuiltinMethod Class#new>
-        &foo_method_28, // #<BuiltinMethod Class#opaqueIdentity>
-        &foo_method_29, // #<BuiltinMethod Class#typecheck:>
+        &foo_method_27, // #<BuiltinMethod Class#new>
+        &foo_method_29, // #<BuiltinMethod Class#opaqueIdentity>
+        &foo_method_30, // #<BuiltinMethod Class#typecheck:>
     \}
 \};
 
 // #<Class>
-struct FooClass foo_class_24 = \{
-    .name = &foo_string_25,
-    .own_class = &foo_class_24,
-    .methods = &foo_methods_31
+struct FooClass foo_class_25 = \{
+    .name = &foo_string_26,
+    .own_class = &foo_class_25,
+    .methods = &foo_methods_32
 \};
 
 // #<Class Test class>
-struct FooClass foo_class_12 = \{
-    .name = &foo_string_13,
-    .own_class = &foo_class_24,
-    .methods = &foo_methods_23
+struct FooClass foo_class_13 = \{
+    .name = &foo_string_15,
+    .own_class = &foo_class_25,
+    .methods = &foo_methods_24
 \};
 
 // #<Class Test>
 struct FooClass foo_class_1 = \{
     .name = &foo_string_2,
-    .own_class = &foo_class_12,
-    .methods = &foo_methods_11
+    .own_class = &foo_class_13,
+    .methods = &foo_methods_14
 \};
 
 "!
@@ -3856,7 +4092,9 @@ end
 
 class Main {}
     direct method run: command in: system
-        TestCPS runTests: (Assert reportingTo: system output)
+        let assert = Assert reportingTo: system output.
+        TestCPS runTests: assert
                 in: system
-                with: command!
+                with: command.
+        system exit: assert exitCode!
 end
