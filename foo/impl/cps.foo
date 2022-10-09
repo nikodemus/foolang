@@ -2303,6 +2303,11 @@ class CpsConverter { graph var next classMap namespace }
         let converter = self makeConverter: graph
                              classDefinitions: defs
                              in: namespace.
+        let methodParams = syntax signature parameters
+                               collect: { |each|
+                                          graph makeVariable: each name }.
+        graph entry addParams: methodParams.
+        converter = converter bindVariables: methodParams.
         graph entry: (syntax body visitBy: converter
                                   with: graph exit).
         aMethod cps: graph optimize!
@@ -3876,8 +3881,8 @@ end
         let cps = (def findMethod: (ns intern: "asd:")) cps.
         assert that: { CpsPrinter printToString: cps }
                equals: "
-$entry:2($return:3, $receiver::ArgTest:4, x:5):
-    $return:3(x:5)
+$entry:2($return:3, $receiver::ArgTest:4, x:6):
+    $return:3(x:6)
 "!
 
 
