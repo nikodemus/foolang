@@ -3916,7 +3916,9 @@ end
 
 class Main {}
     direct method run: command in: system
-        TestCPS runTests: (Assert reportingTo: system output)
+        let assert = Assert reportingTo: system output.
+        TestCPS runTests: assert
                 in: system
-                with: command!
+                with: command.
+        system exit: assert exitCode!
 end
