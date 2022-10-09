@@ -1766,14 +1766,51 @@ class Continuation { id::Integer
 
 
     method toString
-        "#<Continuation {self printName} -> {target printName}>"!
+        StringOutput
+            with: { |out|
+                    out print: "#<Continuation ".
+                    self printTo: out.
+                    out print: ">" }!
+
+
+    method printTo: output
+        self printTo: output pretty: False!
+
+
+    method prettyPrintTo: output
+        self printTo: output pretty: True!
+
+
+    method printTo: output pretty: pretty
+        output
+            ; print: self printName
+            ; print: "(".
+        params
+            do: { |each| output print: each printName }
+            interleaving: { output print: ", " }.
+        output print: ")".
+        pretty
+            ifTrue: { output println: ":".
+                      output print: "    " }
+            ifFalse: { output print: " -> " }.
+        output
+            ; print: target printName
+            ; print: "(".
+        args
+            do: { |arg| output print: arg printName }
+            interleaving: { output print: ", " }.
+        output print: ")".
+        pretty
+            ifTrue: { output newline }!
 
 
     method visitBy: visitor
         visitor visitContinuation: self!
 
+
     method visitBy: visitor with: arg
         visitor visitContinuation: self with: arg!
+
 end
 
 
@@ -2726,21 +2763,7 @@ class CpsPrinter { output seen }
 
 
     method visitContinuation: aCont
-        output
-            ; print: aCont printName
-            ; print: "(".
-        aCont params
-            do: { |each| output print: each printName }
-            interleaving: { output print: ", " }.
-        output println: "):".
-        output
-            ; print: "    "
-            ; print: aCont target printName
-            ; print: "(".
-        aCont args
-            do: { |arg| output print: arg printName }
-            interleaving: { output print: ", " }.
-        output println: ")".
+        aCont prettyPrintTo: output.
         aCont args do: { |each| self visit: each }.
         self visit: aCont target!
 
